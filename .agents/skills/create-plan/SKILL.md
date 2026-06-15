@@ -18,6 +18,7 @@ Create or update actionable, numbered, documentation-backed implementation plans
 7. Load project-specific plan requirements deterministically:
    - Read `.agents/skills/create-plan/references/default.md` if it exists.
    - Read `.agents/skills/create-plan/references/<git-root-basename>.md` if it exists.
+   - Read `.agents/skills/create-plan/references/prism-wiki.md` if it exists.
    - Apply all loaded requirements before finalizing tasks.
 8. If `.agents/skills/project-wiki/` exists, include exactly one final code-wiki task after implementation/verification and project-specific maintenance tasks. Use `.agents/skills/create-plan/references/wiki-task.md` when present.
 9. Write the plan using the structure below.
@@ -61,6 +62,12 @@ Create or update actionable, numbered, documentation-backed implementation plans
       - <docs, code paths, examples, decisions, issues, or patterns>
   - Test Cases to Write:
     - <test/scenario>: <what it validates>
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: <yes/no and why>
+    - Docs pages to create/edit:
+      - `<path>`: <planned documentation change, or `none` with reason>
+    - `docs/index.md` update: <yes/no and navigation entry>
+    - Documentation structure reference: <reference file or reason not applicable>
 
 ## Compromises Made
 - To be filled after tasks are completed and tests pass.
@@ -78,6 +85,7 @@ Create or update actionable, numbered, documentation-backed implementation plans
 - For new JS packages or mode implementations, add a primitive-first task before package work: read primitive docs/wiki, assess existing Rust-side primitives, identify generic primitive gaps, reject mode-specific Rust logic, and include tests/docs so the primitive library becomes easier to reuse for later modes.
 - List every expected file. If uncertain, mark the list tentative and explain why.
 - Write test cases before implementation, derived from acceptance criteria.
+- Every task must include a `Documentation/Wiki Assessment`; if it adds or changes a public API, extension point, configuration surface, protocol, event, registry, provider/tool/session behavior, or package subpath, plan matching `/docs` updates and a `docs/index.md` navigation update.
 - Apply loaded project-specific requirements before finalizing the task list.
 - Do not fill `Compromises Made` or `Further Actions` before execution unless known constraints already exist.
 

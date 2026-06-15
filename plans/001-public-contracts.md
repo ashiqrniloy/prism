@@ -12,7 +12,7 @@
 
 ## Tasks
 
-- [ ] Primitive review: inventory existing public API and generic gaps
+- [x] Primitive review: inventory existing public API and generic gaps
   - Acceptance Criteria:
     - Functional: Current exports, package metadata, test pattern, and missing Phase 1 contracts are recorded before source edits.
     - Performance: Review adds no runtime code and preserves the zero-runtime nature of type contracts.
@@ -42,8 +42,15 @@
       - TypeScript type-only import/re-export docs from Context7 `/microsoft/typescript`.
   - Test Cases to Write:
     - `primitive_inventory_recorded`: manual check that execution notes list existing exports, missing contracts, and rejected domain/runtime assumptions.
+  - Execution Notes:
+    - Existing public API: `src/index.ts` exports only runtime constants `name`, `version`, and `description`.
+    - Existing package surface: ESM package, root export points to `./dist/index.js`, CLI bin points to `./dist/cli.js`, published files are limited to `dist`, and Node `>=20` is required.
+    - Existing build/test pattern: `tsc` only, strict `NodeNext`, declarations emitted to `dist`, tests use `node:test` plus `node:assert/strict` after build.
+    - Missing Phase 1 contracts: messages/content, agent/session/run options, agent/provider events, provider/model/usage, tool registry/execution/result, context provider/block, skill registry, extension API/lifecycle, session store, resource loader, settings provider, and credential resolver.
+    - Generic gaps to fill next: add a type-only `src/contracts.ts`, re-export with `export type`, add declaration metadata in `package.json`, and add compile-only host examples.
+    - Rejected for Phase 1: hidden globals, runtime registries, provider SDKs, built-in tools, shell/filesystem/browser concepts, safe/dangerous tool categories, business-domain terms, stored credentials, and secret-bearing event/history shapes.
 
-- [ ] Define the Phase 1 public contract types
+- [x] Define the Phase 1 public contract types
   - Acceptance Criteria:
     - Functional: Public types cover messages/content, `Agent`, `AgentConfig`, `AgentSession`, `AgentSessionConfig`, `RunOptions`, `AgentEvent`, `AIProvider`, `ProviderRequest`, `ProviderEvent`, `ModelConfig`, `Usage`, `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, `ContextProvider`, `ContextBlock`, `Skill`, `SkillRegistry`, `Extension`, `ExtensionAPI`, lifecycle event names, `SessionStore`, `ResourceLoader`, `SettingsProvider`, and `CredentialResolver`.
     - Performance: Contracts are interfaces/types only; importing them has no side effects and creates no registries, stores, clients, or network work.
@@ -75,8 +82,13 @@
   - Test Cases to Write:
     - `contracts_compile_under_strict_nodenext`: validates all exported contract types compile with the existing `tsconfig.json`.
     - `agent_event_narrows_by_type`: compile-only example narrows an `AgentEvent` by its discriminator.
+  - Execution Notes:
+    - Added `src/contracts.ts` as a type-only Phase 1 contract module.
+    - Covered the planned contract inventory: content/messages, agent/session/run options, agent/provider events, provider/model/usage, tools, context, skills, extensions, session store, resource loader, settings, and credential resolver.
+    - Kept contracts generic and host-owned: no runtime registry implementation, provider SDK, built-in tool, hidden global, storage implementation, or app-domain import.
+    - Ran `npm run typecheck` successfully.
 
-- [ ] Export contracts through the public barrel and package metadata
+- [x] Export contracts through the public barrel and package metadata
   - Acceptance Criteria:
     - Functional: `src/index.ts` exports the Phase 1 contracts from `src/contracts.ts`, and package metadata exposes generated declarations to consumers.
     - Performance: Public type exports do not import runtime implementations or add startup work.
@@ -105,8 +117,12 @@
   - Test Cases to Write:
     - `build_emits_root_declarations`: `npm run build` produces `dist/index.d.ts` containing the public type exports.
     - `package_root_export_points_at_declarations`: static package metadata check for `types` and `exports["."].types`.
+  - Execution Notes:
+    - Added `export type * from "./contracts.js"` to `src/index.ts` while keeping existing value exports.
+    - Added root declaration metadata to `package.json`: `types` and `exports["."].types` point at `./dist/index.d.ts`.
+    - Ran `npm run build` and checked `dist/index.d.ts` plus package declaration metadata successfully.
 
-- [ ] Add compile-only host configuration examples
+- [x] Add compile-only host configuration examples
   - Acceptance Criteria:
     - Functional: A test/example configures an agent with a mock provider, context provider, skill, and host tool using only public `prism` imports.
     - Performance: The example performs no network calls, no tool execution, and no session runtime work.
@@ -142,8 +158,12 @@
   - Test Cases to Write:
     - `host_can_configure_agent_with_provider_context_skill_and_tool`: compile-only example for the core host path.
     - `host_can_type_extension_resource_settings_and_credentials`: compile-only example for extension/resource/settings/credential contracts.
+  - Execution Notes:
+    - Added `src/__tests__/public-contracts.test.ts` with typed host examples for `AgentConfig`, `AIProvider`, `ContextProvider`, `Skill`, `ToolDefinition`, `Extension`, `ResourceLoader`, `SettingsProvider`, `CredentialResolver`, and `AgentEvent` narrowing.
+    - Updated `package.json` test script to run every compiled `dist/__tests__/*.test.js` file so new examples stay checked.
+    - Ran `npm run typecheck` and `npm test` successfully.
 
-- [ ] Add public boundary checks for app-specific contract leaks
+- [x] Add public boundary checks for app-specific contract leaks
   - Acceptance Criteria:
     - Functional: Tests fail if public source/declaration text introduces safe/dangerous tool names or business-domain terms forbidden by the roadmap.
     - Performance: Boundary checks are simple local text scans and keep the full test suite under 10 seconds.
@@ -170,8 +190,12 @@
   - Test Cases to Write:
     - `public_contracts_do_not_mention_safe_or_dangerous_tools`: validates the specific Phase 1 acceptance.
     - `public_contracts_do_not_mention_business_or_app_tools`: validates no Synapta/shell/filesystem/browser leak.
+  - Execution Notes:
+    - Added a boundary test in `src/__tests__/public-contracts.test.ts` that scans `src/index.ts`, `src/contracts.ts`, `dist/index.d.ts`, and `dist/contracts.d.ts`.
+    - The banned public-contract terms are `safe.?tool`, `dangerous`, `synapta`, `shell`, `filesystem`, and `browser`.
+    - Ran `npm run build && node --test dist/__tests__/*.test.js` successfully.
 
-- [ ] Verify Phase 1 and refresh README scope
+- [x] Verify Phase 1 and refresh README scope
   - Acceptance Criteria:
     - Functional: `npm run build`, `npm run typecheck`, and `npm test` pass; README reflects that Phase 1 public contracts exist but runtime remains minimal.
     - Performance: Build and tests stay dependency-free and under the existing lightweight toolchain.
@@ -202,9 +226,16 @@
     - `npm run build`: validates emitted JavaScript and declarations.
     - `npm run typecheck`: validates strict compile-only contracts.
     - `npm test`: validates baseline tests, host examples, and boundary checks.
+  - Execution Notes:
+    - Updated `README.md` to list the Phase 1 public contract surface and a type-only import example.
+    - README now states runtime factories, registries, session loops, persistence adapters, and provider adapters are deferred to later phases.
+    - README repeats that hosts own tools, provider implementations, credentials, permissions, storage, and UI.
+    - Ran `npm run build`, `npm run typecheck`, and `command npm test` successfully.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- Kept all Phase 1 contracts in one `src/contracts.ts` file. Split by domain only when implementation phases make that useful.
+- README documents the contract inventory only; full API guide remains deferred to the docs/release phase.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- Priority high: Phase 2 should implement provider/model registries and validate the current `AIProvider`/`ProviderEvent` shapes against the first mock provider.
+- Priority medium: Revisit contract file organization after runtime modules exist.
