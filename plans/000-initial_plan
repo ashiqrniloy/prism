@@ -1,0 +1,581 @@
+# Synapta AI Core — Standalone TypeScript Agent Engine
+
+## Objectives
+- Build `packages/synapta-ai-core/` as a normal, reusable TypeScript npm package that can be installed by Synapta and unrelated apps.
+- Keep the core product-agnostic: provider connectivity, streaming, agents, sessions, context, skills, and a host-tool harness only.
+- Define the structure for app-provided tools; do not ship Synapta business tools, shell tools, filesystem tools, or any default app tool set in the core package.
+- Keep Synapta workflow catalogs, Phase A1 schemas, backend facades, and platform tools outside AI Core as host/app adapters.
+- Use the least tooling possible: TypeScript, Node built-ins, native `fetch`, and small interfaces before new dependencies.
+
+## Expected Outcome
+- `packages/synapta-ai-core/` builds, typechecks, and tests as an independent npm package.
+- Consumers can create an agent, create/resume sessions, stream LLM output, cancel work, and inspect session history.
+- Consumers can register provider implementations and/or use a minimal OpenAI-compatible provider adapter.
+- Consumers can register their own tools, context providers, and skills; AI Core dispatches only registered host tools.
+- The package has no hard dependency on Synapta backend internals, protos, workflow catalogs, Svelte, APISIX, Keto, Temporal, NATS, database code, shell, or filesystem access.
+- Synapta-specific catalog/tool integration is deferred to an app adapter after the generic core API is stable.
+
+## Capability Impact
+- New modules: None. This is a standalone npm package, not a Synapta application module.
+- New functionalities: None.
+- Changed functionalities: None.
+- Protected routes/actions: None.
+- License allocation exposure: None.
+- Role/Keto wiring: None.
+
+## API Architecture Impact
+- API classification: None. This plan does not create or change Synapta backend APIs.
+- External HTTP routes: None.
+- Protobuf RPCs: None.
+- APISIX transcode: None.
+- AuthZ policy: None.
+- Domain service: None.
+- Database impact: None.
+- Frontend/agent access: None. This is a Node/TypeScript library; host apps decide where it runs.
+- Architecture exceptions: None.
+
+## AI Agent JS Facade Impact
+- Agent-exposed backend capabilities: None. AI Core is the harness, not a `synapta:platform` facade.
+- JS facade modules/functions: None.
+- Runtime context: Core accepts host-provided context providers but does not forge Synapta actor, organization, license, AuthZ, or workflow context.
+- Permission/capability gates: None in the core package. Host tools enforce their own app permissions.
+- Internal backend mapping: None.
+- Non-exposed backend APIs: Synapta backend APIs, raw gRPC, database, Keto admin/write, NATS, Temporal, APISIX trusted headers, and service credentials remain outside AI Core.
+
+## API Documentation Impact
+- Paged docs index: Update `docs/index.md` to link a package page for `packages/synapta-ai-core`.
+- Business/application domains: None.
+- Developer API docs: Add package README and typed API reference for agents, sessions, provider registry, provider adapters, tool contracts, context providers, skills, session stores, and events.
+- JS facade API docs: None.
+- Examples and property reference: Add minimal examples for `createAgent`, `createAgentSession`, streaming subscription, host tool registration, context provider registration, skill registration, and provider configuration.
+
+## Tasks
+
+- [x] Scaffold package structure and toolchain
+  - Acceptance Criteria:
+    - Functional: `packages/synapta-ai-core/` exists with `package.json`, `tsconfig.json`, `src/index.ts`, and a `build` script that emits ESM and `.d.ts` files.
+    - Performance: Build completes quickly with `tsc`; no bundler is required.
+    - Code Quality: TypeScript strict mode is enabled; source files live under `src/`.
+    - Security: No secrets, credentials, backend URLs, or Synapta service endpoints are committed in package config.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: keep package setup small and avoid bundler debt.
+      - `create-plan`: keep the plan current as tasks complete.
+    - Library Documentation to Check Before Implementation:
+      - No external library docs required. Inspect existing repo TypeScript package conventions first.
+    - Documentation Reviewed:
+      - `decision-logs/2026-06-03-2127-ai-core-harness-and-deno-core-sandbox-two-contexts.md`.
+      - `roadmap.md` Phase A3.
+    - Options Considered:
+      - Use `tsc` only: simplest and dependency-light.
+      - Add `tsup`/Rollup: unnecessary until a consumer reports import/bundling issues.
+    - Chosen Approach:
+      - Use `tsc` only.
+    - API Notes and Examples:
+      ```json
+      {
+        "type": "module",
+        "main": "./dist/index.js",
+        "types": "./dist/index.d.ts",
+        "scripts": { "build": "tsc", "typecheck": "tsc --noEmit" }
+      }
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/package.json`: package manifest and scripts.
+      - `packages/synapta-ai-core/tsconfig.json`: strict TypeScript config targeting Node 20+.
+      - `packages/synapta-ai-core/src/index.ts`: public export barrel.
+      - `packages/synapta-ai-core/.gitignore`: ignore `dist/` and `node_modules/`.
+    - References:
+      - `roadmap.md` Phase A3.
+      - `decision-logs/2026-06-03-2127-ai-core-harness-and-deno-core-sandbox-two-contexts.md`.
+  - Test Cases to Write:
+    - `build emits dist/index.js and dist/index.d.ts`: validates toolchain output.
+    - `tsc --noEmit passes on src/`: validates strict mode.
+  - Execution Notes:
+    - Package scaffold exists and `npm run build` / `npm run typecheck` pass.
+    - Current `npm test` runs but discovers 0 tests; later tasks must add real tests.
+
+- [x] Define initial core type spike
+  - Acceptance Criteria:
+    - Functional: Initial `AgentSession`, `AgentSessionConfig`, `AgentEvent`, `Gateway`, `Tool`, `ToolSet`, `CredentialStore`, and `ModelRegistry` interfaces exist and are exported.
+    - Performance: Types are plain TypeScript interfaces with no runtime overhead.
+    - Code Quality: Types are documented with JSDoc.
+    - Security: Tool schemas are visible in type definitions rather than hidden inside implementation code.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: keep types minimal.
+    - Library Documentation to Check Before Implementation:
+      - No external library docs required.
+    - Documentation Reviewed:
+      - `plans/017-WorkflowPrimitiveCatalogAndCanonicalIr.md` for the old Synapta catalog direction.
+      - `docs/apis/runtime-agents/index.md` for existing facade naming style.
+    - Options Considered:
+      - Plain interfaces: dependency-free and easy for host apps.
+      - Runtime schema library: deferred until proven necessary.
+    - Chosen Approach:
+      - Plain interfaces.
+    - API Notes and Examples:
+      ```ts
+      export interface Tool {
+        name: string;
+        description: string;
+        parameters: object;
+        execute(args: Record<string, unknown>): Promise<unknown>;
+      }
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/types.ts`: initial interfaces.
+      - `packages/synapta-ai-core/src/index.ts`: type exports.
+    - References:
+      - `roadmap.md` Phase A3.
+  - Test Cases to Write:
+    - `types compile without circular dependencies`: validates import graph.
+  - Execution Notes:
+    - This task is complete as an initial spike, but the design has changed.
+    - Task 3 below must realign these types: remove safe/dangerous tool assumptions, make credentials provider-owned/optional, add agents/context/skills/session stores, and make events discriminated.
+
+- [ ] Realign public API to a product-agnostic agent engine
+  - Acceptance Criteria:
+    - Functional: Public types include `Agent`, `AgentConfig`, `AgentSession`, `AgentSessionConfig`, `AIProvider`, `ModelConfig`, `AgentEvent`, `ToolDefinition`, `ToolRegistry`, `ContextProvider`, `Skill`, and `SessionStore`.
+    - Performance: Type exports remain static and side-effect-free.
+    - Code Quality: Remove comments and examples implying AI Core owns `safe` or `dangerous` tools; no Synapta workflow catalog types are exported from core.
+    - Security: `credentials` are not required at session creation; provider adapters own credential resolution and must not expose secrets through events or history.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: make a surgical type replacement before implementation continues.
+      - `create-plan`: keep completed-task status accurate after replanning.
+    - Library Documentation to Check Before Implementation:
+      - No external library docs required. Inspect current `src/types.ts`, `src/index.ts`, and this plan.
+    - Documentation Reviewed:
+      - User-stated design goals in this review.
+      - `decision-logs/2026-06-03-2127-ai-core-harness-and-deno-core-sandbox-two-contexts.md`.
+      - Current `packages/synapta-ai-core/src/types.ts`.
+    - Options Considered:
+      - Keep `Gateway` as the only abstraction: too thin for context, tools, abort, and model metadata.
+      - Rename to `AIProvider` and pass a normalized request object: chosen because it cleanly supports multiple providers and host tools.
+    - Chosen Approach:
+      - Introduce a normalized provider request/event contract and keep `createAgentSession` as convenience over the richer `createAgent` API.
+    - API Notes and Examples:
+      ```ts
+      const agent = createAgent({
+        name: "support-agent",
+        model: { provider: "openai-compatible", model: "gpt-4o-mini" },
+        instructions: "Answer briefly.",
+        tools: toolRegistry,
+        context: [workspaceContext],
+        skills: [triageSkill]
+      });
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/types.ts`: replace/extend exported interfaces.
+      - `packages/synapta-ai-core/src/index.ts`: export new public contract.
+    - References:
+      - Current completed type spike.
+      - This plan's revised objectives.
+  - Test Cases to Write:
+    - `public_types_support_agent_context_skill_and_tool_contracts`: compile-only fixture proves host apps can configure an agent without Synapta imports.
+    - `public_exports_do_not_mention_safe_or_dangerous_tools`: source-boundary test or simple assertion over exported docs/examples.
+
+- [ ] Implement provider registry and normalized streaming provider contract
+  - Acceptance Criteria:
+    - Functional: Hosts can register providers by ID and resolve them by `ModelConfig.provider`; provider calls receive messages, tools, context metadata, and an `AbortSignal`.
+    - Performance: Provider lookup is O(1) via a plain `Map`.
+    - Code Quality: Registry does not store credentials, SDK clients, or global mutable session state beyond provider instances supplied by the host.
+    - Security: Unknown provider/model selection fails closed before any network call.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: one small registry; no lifecycle/event abstraction until needed.
+    - Library Documentation to Check Before Implementation:
+      - No external docs required for the generic registry. Check provider SDK/API docs only when implementing a concrete adapter.
+    - Documentation Reviewed:
+      - Current `ModelRegistry` spike in `src/types.ts`.
+    - Options Considered:
+      - Global singleton registry: convenient but awkward for tests and multi-app embedding.
+      - Explicit `ProviderRegistry` object with optional default instance: chosen for testability while keeping a simple default export possible.
+    - Chosen Approach:
+      - Implement a tiny `createProviderRegistry()` plus optional `defaultProviderRegistry`.
+    - API Notes and Examples:
+      ```ts
+      const providers = createProviderRegistry();
+      providers.register("openai-compatible", provider);
+      const provider = providers.get("openai-compatible");
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/providers.ts`: provider registry.
+      - `packages/synapta-ai-core/src/types.ts`: provider request/event types.
+      - `packages/synapta-ai-core/src/index.ts`: exports.
+    - References:
+      - Revised product-agnostic API boundary.
+  - Test Cases to Write:
+    - `register_and_get_provider_returns_same_instance`: validates lookup.
+    - `get_unknown_provider_throws_or_returns_result_error`: validates fail-closed behavior.
+    - `registry_does_not_require_credentials`: validates credentials are adapter-owned.
+
+- [ ] Implement minimal OpenAI-compatible streaming adapter
+  - Acceptance Criteria:
+    - Functional: A host can configure an OpenAI-compatible base URL/API key/model and stream text responses through the normalized provider contract.
+    - Performance: Streaming yields chunks as they arrive; it does not buffer the full response before emitting text events.
+    - Code Quality: Use native `fetch` and a small SSE parser; do not add an SDK dependency unless official API changes make it necessary.
+    - Security: API keys are accepted as a callback/resolver or constructor option and are never emitted, logged, stored in session history, or included in errors.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: implement one provider adapter first; avoid a provider framework.
+      - `find-docs`: verify current OpenAI-compatible Chat Completions or Responses streaming API before coding.
+    - Library Documentation to Check Before Implementation:
+      - Official OpenAI API docs for the chosen streaming endpoint and tool/function-call payload shape.
+      - Node.js docs for `fetch`, `ReadableStream`, `AbortController`, and package subpath exports if needed.
+    - Documentation Reviewed:
+      - No external provider docs reviewed during replanning; must be checked immediately before implementation.
+    - Options Considered:
+      - Use official SDK: simpler mapping but adds dependency weight and version coupling.
+      - Use native `fetch`: chosen for first pass because the adapter only needs one streaming endpoint.
+    - Chosen Approach:
+      - Add `providers/openai-compatible` as an optional subpath export backed by native `fetch`.
+    - API Notes and Examples:
+      ```ts
+      import { createOpenAICompatibleProvider } from "synapta-ai-core/providers/openai-compatible";
+
+      const provider = createOpenAICompatibleProvider({
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: () => process.env.OPENAI_API_KEY ?? ""
+      });
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/providers/openai-compatible.ts`: adapter.
+      - `packages/synapta-ai-core/package.json`: subpath export.
+      - `packages/synapta-ai-core/src/index.ts`: no secret-bearing defaults.
+    - References:
+      - Provider registry task.
+  - Test Cases to Write:
+    - `openai_compatible_adapter_maps_streaming_text_to_agent_events`: uses mocked `fetch` response.
+    - `openai_compatible_adapter_passes_abort_signal`: validates cancellation path.
+    - `openai_compatible_adapter_redacts_api_key_from_errors`: validates secret safety.
+
+- [ ] Implement `createAgent()` and session lifecycle
+  - Acceptance Criteria:
+    - Functional: `createAgent(config)` returns an `Agent` that can create sessions; `createAgentSession(config)` remains as a convenience for one-off sessions.
+    - Performance: Agent/session creation is synchronous and performs no network calls.
+    - Code Quality: Agent config is immutable after creation except explicit registry references supplied by the host.
+    - Security: `abort()` cancels in-flight provider calls and prevents later tool execution for that run.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: factory + closures, no class hierarchy unless needed.
+    - Library Documentation to Check Before Implementation:
+      - Node.js `AbortController` docs if cancellation behavior is uncertain.
+    - Documentation Reviewed:
+      - Original decision log target surface: `createAgentSession`, `subscribe`, provider registry, host-injected tools.
+    - Options Considered:
+      - Class-based agents/sessions: familiar but adds `this` and inheritance debt.
+      - Factory-returned plain objects: chosen for fewer moving parts.
+    - Chosen Approach:
+      - `createAgent()` owns static config; each session owns history, subscribers, current abort controller, and run state.
+    - API Notes and Examples:
+      ```ts
+      const agent = createAgent({ name: "demo", model, providerRegistry: providers });
+      const session = agent.createSession({ id: "s1" });
+      session.run("Hello");
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/agent.ts`: agent factory.
+      - `packages/synapta-ai-core/src/session.ts`: session lifecycle.
+      - `packages/synapta-ai-core/src/index.ts`: exports.
+    - References:
+      - Revised objectives in this plan.
+  - Test Cases to Write:
+    - `create_agent_returns_agent_with_create_session`: validates factory shape.
+    - `create_agent_session_convenience_works`: validates legacy/simple surface.
+    - `session_creation_does_not_call_provider`: validates no eager network.
+    - `abort_prevents_tool_execution_after_cancel`: validates cancellation.
+
+- [ ] Implement event-stream `subscribe()` API
+  - Acceptance Criteria:
+    - Functional: `session.subscribe()` returns an `AsyncIterable<AgentEvent>` yielding normalized events in order for active subscribers.
+    - Performance: Streaming does not buffer the entire LLM response; active subscriber queues are bounded or cleaned up on completion.
+    - Code Quality: Use native async iterables/generators; no event-emitter dependency.
+    - Security: Subscribers receive readonly event objects and cannot mutate internal session history.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: native async iterator over dependency.
+    - Library Documentation to Check Before Implementation:
+      - No external docs required; use TypeScript/Node async iterator primitives.
+    - Documentation Reviewed:
+      - Current plan's old subscribe task.
+    - Options Considered:
+      - Replay every historical event to late subscribers: convenient but requires unbounded buffering.
+      - Active-subscriber streaming plus separate history access: chosen because it is simpler and memory-safe.
+    - Chosen Approach:
+      - Maintain small per-subscriber queues while a run is active; session store/history is the durable transcript source.
+    - API Notes and Examples:
+      ```ts
+      for await (const event of session.subscribe()) {
+        if (event.type === "text.delta") process.stdout.write(event.text);
+      }
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/session.ts`: stream implementation.
+      - `packages/synapta-ai-core/src/types.ts`: discriminated `AgentEvent` union.
+    - References:
+      - Node async iterable semantics.
+  - Test Cases to Write:
+    - `subscribe_yields_events_in_provider_order`: validates sequencing.
+    - `two_active_subscribers_receive_same_future_events`: validates broadcast behavior.
+    - `completed_subscriber_queue_is_cleaned_up`: validates no leak.
+    - `abort_terminates_async_iterator`: validates cancellation propagation.
+
+- [ ] Implement host-owned tool registry and dispatch loop
+  - Acceptance Criteria:
+    - Functional: Hosts can register `ToolDefinition` objects; provider tool-call events dispatch only to matching registered tools and append tool results to the session transcript.
+    - Performance: Tool dispatch is an O(1) `Map` lookup.
+    - Code Quality: Tool schemas are passed to providers without mutation; core does not include built-in safe, dangerous, shell, filesystem, or Synapta business tools.
+    - Security: Unregistered tool calls emit an error event and are not executed; tool args must be object-shaped; optional host validators can reject args before `execute`.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: Map lookup, no dynamic import/resource loader magic in core.
+    - Library Documentation to Check Before Implementation:
+      - Check chosen provider docs for tool/function-call request and response mapping before provider integration.
+    - Documentation Reviewed:
+      - User goal: apps own tools; AI Core defines the structure.
+    - Options Considered:
+      - Core ships safe tools: rejected because it makes core opinionated and app-specific.
+      - Core defines only the contract and dispatcher: chosen.
+    - Chosen Approach:
+      - `ToolRegistry` is host-populated. `ToolDefinition.execute(args, context)` receives a minimal `ToolExecutionContext` with session/run IDs, abort signal, and host metadata.
+    - API Notes and Examples:
+      ```ts
+      tools.register({
+        name: "lookupCustomer",
+        description: "Find a customer by email",
+        parameters: { type: "object", properties: { email: { type: "string" } }, required: ["email"] },
+        async execute(args, ctx) { return app.lookupCustomer(args.email, ctx); }
+      });
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/tools.ts`: registry and dispatcher.
+      - `packages/synapta-ai-core/src/session.ts`: tool-call loop integration.
+      - `packages/synapta-ai-core/src/types.ts`: tool types.
+    - References:
+      - Revised plan objectives.
+  - Test Cases to Write:
+    - `registered_tool_dispatches_and_emits_result`: validates routing.
+    - `unregistered_tool_call_emits_error_without_execute`: validates fail-closed behavior.
+    - `tool_result_is_added_to_history`: validates transcript threading.
+    - `core_exports_no_safe_or_dangerous_tool_modules`: validates package boundary.
+
+- [ ] Implement session history and session store abstraction
+  - Acceptance Criteria:
+    - Functional: Default in-memory session store persists messages/events for the lifetime of the process; hosts can provide a custom `SessionStore`.
+    - Performance: In-memory lookup by session ID is O(1).
+    - Code Quality: Store interface is async so hosts can use databases or remote stores without changing agent code.
+    - Security: Default store is process-local only and does not persist credentials or provider secrets.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: one in-memory implementation; no database adapter in core.
+    - Library Documentation to Check Before Implementation:
+      - No external docs required.
+    - Documentation Reviewed:
+      - User goal: session management is part of core.
+    - Options Considered:
+      - Keep history only in closures: simplest, but prevents resume/list use cases.
+      - Add `SessionStore`: chosen because session management is a core requirement and async interface costs little.
+    - Chosen Approach:
+      - `MemorySessionStore` plus interface; no persistence adapter.
+    - API Notes and Examples:
+      ```ts
+      const store = new MemorySessionStore();
+      const session = agent.createSession({ id: "thread-1", store });
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/session-store.ts`: interface and memory implementation.
+      - `packages/synapta-ai-core/src/session.ts`: store integration.
+      - `packages/synapta-ai-core/src/index.ts`: exports.
+    - References:
+      - Revised expected outcome.
+  - Test Cases to Write:
+    - `memory_session_store_saves_and_loads_history`: validates default store.
+    - `session_resume_uses_existing_history`: validates resume path.
+    - `store_does_not_receive_api_keys`: validates secret separation.
+
+- [ ] Implement context provider pipeline
+  - Acceptance Criteria:
+    - Functional: Hosts can register context providers that add bounded context blocks/messages before each provider turn.
+    - Performance: Context providers run sequentially in registration order; no hidden parallelism or background work.
+    - Code Quality: Context is data-only; providers return typed context blocks/messages, not executable code.
+    - Security: Context providers receive only host-supplied metadata and session state; core does not fetch Synapta backend context or trusted headers.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: simple ordered pipeline; no vector store/RAG abstraction yet.
+    - Library Documentation to Check Before Implementation:
+      - No external docs required.
+    - Documentation Reviewed:
+      - User goal: context management is part of core.
+    - Options Considered:
+      - Build retrieval/RAG into core: rejected as app-specific.
+      - Let hosts provide context blocks: chosen.
+    - Chosen Approach:
+      - Add `ContextProvider.resolve(ctx): Promise<ContextBlock[]>`; session converts blocks into provider messages using a simple default format.
+    - API Notes and Examples:
+      ```ts
+      const workspaceContext: ContextProvider = {
+        name: "workspace",
+        async resolve() { return [{ title: "Workspace", content: "Acme Inc." }]; }
+      };
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/context.ts`: context provider pipeline.
+      - `packages/synapta-ai-core/src/session.ts`: inject context per run.
+      - `packages/synapta-ai-core/src/types.ts`: context types.
+    - References:
+      - Revised objectives.
+  - Test Cases to Write:
+    - `context_provider_output_is_sent_to_provider`: validates injection.
+    - `context_providers_run_in_order`: validates deterministic ordering.
+    - `context_provider_error_emits_error_event`: validates error handling.
+
+- [ ] Implement skill registry and skill application
+  - Acceptance Criteria:
+    - Functional: Hosts can register `Skill` objects containing instructions, optional context providers, and optional allowed/required tool names; agents can enable skills explicitly.
+    - Performance: Skill lookup is O(1) by name; applying skills is linear in enabled skill count.
+    - Code Quality: Skills are plain data/functions supplied by the host; core does not read `.pi` skill files or filesystem paths.
+    - Security: A skill cannot grant tools the host did not register or bypass a tool's own permission checks.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: no automatic skill discovery; explicit host registration only.
+    - Library Documentation to Check Before Implementation:
+      - No external docs required.
+    - Documentation Reviewed:
+      - User goal: skills are part of core.
+    - Options Considered:
+      - File-based skill loader: rejected because filesystem behavior is app/runtime-specific.
+      - In-memory explicit registry: chosen.
+    - Chosen Approach:
+      - `SkillRegistry` stores host-defined skills. Enabling a skill appends its instructions/context and filters/requests tool names, but cannot create tools.
+    - API Notes and Examples:
+      ```ts
+      skills.register({
+        name: "support-triage",
+        instructions: "Classify severity before answering.",
+        toolNames: ["lookupCustomer"]
+      });
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/skills.ts`: registry and skill application.
+      - `packages/synapta-ai-core/src/agent.ts`: enable skills in agent config.
+      - `packages/synapta-ai-core/src/types.ts`: skill types.
+    - References:
+      - Revised objectives.
+  - Test Cases to Write:
+    - `enabled_skill_adds_instructions`: validates prompt assembly.
+    - `skill_tool_names_do_not_register_missing_tools`: validates no privilege expansion.
+    - `unknown_skill_fails_closed`: validates explicit registration.
+
+- [ ] Implement bounded agent run loop
+  - Acceptance Criteria:
+    - Functional: A run sends assembled messages to the provider, streams text events, executes registered tool calls, sends tool results back to the provider, and stops on done/error/abort/max tool rounds.
+    - Performance: Text streams incrementally; tool calls are not polled.
+    - Code Quality: The loop is a single readable implementation with explicit states; no speculative planner/executor abstraction.
+    - Security: Tool execution is bounded by `maxToolRounds`; aborted runs stop before starting another provider or tool call.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: direct loop; no graph engine.
+    - Library Documentation to Check Before Implementation:
+      - Provider docs for normalized tool-call mapping, especially if OpenAI-compatible adapter is included.
+    - Documentation Reviewed:
+      - This revised plan and completed type spike.
+    - Options Considered:
+      - One provider call only: insufficient for tool result round trips.
+      - Bounded loop: chosen; enough for agent harness behavior without workflow orchestration.
+    - Chosen Approach:
+      - Implement `while (!done && toolRounds < maxToolRounds)` around provider streaming and tool dispatch.
+    - API Notes and Examples:
+      ```ts
+      await session.run("Find the customer and summarize open issues", { maxToolRounds: 4 });
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/session.ts`: run loop.
+      - `packages/synapta-ai-core/src/tools.ts`: tool result mapping.
+      - `packages/synapta-ai-core/src/types.ts`: run options/events.
+    - References:
+      - Agent/session/tool tasks above.
+  - Test Cases to Write:
+    - `run_streams_text_then_done`: validates simplest provider path.
+    - `run_executes_tool_and_continues_with_result`: validates tool round trip.
+    - `run_stops_at_max_tool_rounds`: validates loop bound.
+    - `abort_during_tool_call_stops_next_provider_call`: validates cancellation.
+
+- [ ] Add tests and mock-provider demo
+  - Acceptance Criteria:
+    - Functional: Core exports have passing tests and a demo runs an end-to-end mock session with context, skill, and host tool use.
+    - Performance: Full package test suite runs in under 10 seconds locally.
+    - Code Quality: Use Node's built-in `node:test` and `node:assert`; no test framework dependency.
+    - Security: Demo uses a mock provider and fake tool; no real API keys, shell, filesystem, Synapta backend, or network calls.
+  - Approach:
+    - Skills to Use:
+      - `karpathy-guidelines`: one small test per behavior; no fixture framework.
+    - Library Documentation to Check Before Implementation:
+      - Node.js `node:test` and `node:assert` docs if syntax is uncertain.
+    - Documentation Reviewed:
+      - Current `package.json` test script.
+    - Options Considered:
+      - Vitest: more features, but unnecessary dependency.
+      - Node test runner: chosen.
+    - Chosen Approach:
+      - Compile tests with `tsc`, run `node --test dist/**/*.test.js`, and keep a tiny `demo.ts`.
+    - API Notes and Examples:
+      ```bash
+      cd packages/synapta-ai-core && npm run build && npm test
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/src/**/*.test.ts`: unit tests near source.
+      - `packages/synapta-ai-core/src/test-helpers/mock-provider.ts`: mock provider if useful.
+      - `packages/synapta-ai-core/demo.ts` or `examples/mock-session.ts`: demo.
+      - `packages/synapta-ai-core/package.json`: demo script if added.
+    - References:
+      - Revised expected outcome.
+  - Test Cases to Write:
+    - `mock_provider_session_streams_text_and_done`: end-to-end smoke.
+    - `mock_provider_tool_call_round_trip`: tool integration.
+    - `context_and_skill_instructions_are_sent`: context/skills integration.
+    - `package_has_no_builtin_tool_exports`: boundary check.
+
+- [ ] Document package API inventory and usage examples
+  - Acceptance Criteria:
+    - Functional: `packages/synapta-ai-core/README.md` and `docs/packages/synapta-ai-core.md` document install/build, concepts, quickstart, API reference, and examples.
+    - Performance: N/A.
+    - Code Quality: Documentation matches actual exports and does not promise Synapta workflow catalog support in core.
+    - Security: Docs clearly state that tools are host-owned, app permissions belong in tool implementations, and provider credentials must not be placed in prompts/context/history.
+  - Approach:
+    - Skills to Use:
+      - `create-plan`: documentation expectations and completion notes.
+      - `karpathy-guidelines`: concise docs with runnable examples.
+    - Library Documentation to Check Before Implementation:
+      - npm package `exports` docs if subpath examples are unclear.
+    - Documentation Reviewed:
+      - This plan.
+      - Existing `docs/index.md` package/documentation style.
+    - Options Considered:
+      - README only: enough for npm, weak for repo agent memory.
+      - README plus docs page: chosen.
+    - Chosen Approach:
+      - README for package consumers, `docs/packages/synapta-ai-core.md` for project memory.
+    - API Notes and Examples:
+      ```ts
+      import { createAgent, createToolRegistry } from "synapta-ai-core";
+      ```
+    - Files to Create/Edit:
+      - `packages/synapta-ai-core/README.md`: npm-facing docs.
+      - `docs/packages/synapta-ai-core.md`: repo docs page.
+      - `docs/index.md`: link package docs.
+    - References:
+      - Revised objectives and expected outcome.
+  - Test Cases to Write:
+    - `readme_examples_compile`: optional compile-only snippets if cheap.
+    - Manual accuracy check against `src/index.ts` exports.
+
+## Compromises Made
+- The completed type spike remains in place but is no longer the final API contract; Task 3 realigns it before implementation continues.
+- AI Core will not implement Synapta workflow catalog validation in this package. That work belongs in a host adapter after the generic core API is stable.
+- AI Core will not ship built-in safe/dangerous tools. Host apps own all tools.
+
+## Further Actions
+- After this package API stabilizes, create a separate Synapta adapter plan for wiring Phase A1 workflow catalogs, Synapta platform tools, capability checks, and workflow authoring surfaces into AI Core as host-provided tools/context/skills.
+- If multiple real providers need first-party support, add provider-adapter subpath plans one at a time instead of introducing a provider framework now.
