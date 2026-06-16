@@ -1,3 +1,6 @@
+import type { ContributionRegistries } from "./contributions.js";
+import type { Middleware, MiddlewareHookName, MiddlewareRegistry } from "./middleware.js";
+
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 export interface JsonObject {
@@ -102,6 +105,13 @@ export interface RunOptions {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface AgentDefinition {
+  readonly name: string;
+  readonly description?: string;
+  create(config?: AgentConfig): Promise<Agent> | Agent;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface AgentConfig {
   readonly id?: string;
   readonly name?: string;
@@ -147,8 +157,10 @@ export type AgentEvent =
   | { readonly type: "message_delta"; readonly sessionId: string; readonly runId: string; readonly content: ContentBlock }
   | { readonly type: "message_finished"; readonly sessionId: string; readonly runId: string; readonly message: Message }
   | { readonly type: "tool_execution_started"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent }
+  | { readonly type: "tool_execution_progress"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly progress?: unknown; readonly metadata?: Readonly<Record<string, unknown>> }
   | { readonly type: "tool_execution_finished"; readonly sessionId: string; readonly runId: string; readonly result: ToolResult }
   | { readonly type: "tool_execution_error"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent; readonly error: ErrorInfo }
+  | { readonly type: "tool_execution_blocked"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly reason: string; readonly error: ErrorInfo }
   | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
   | { readonly type: "compaction_finished"; readonly sessionId: string; readonly runId?: string; readonly summary: string }
@@ -165,6 +177,7 @@ export interface ToolDefinition {
 export interface ToolRegistry {
   register(tool: ToolDefinition): void;
   get(name: string): ToolDefinition | undefined;
+  resolve(name: string): ToolDefinition;
   list(): readonly ToolDefinition[];
 }
 
@@ -174,10 +187,34 @@ export interface ToolExecutionContext {
   readonly toolCallId: string;
   readonly signal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  progress?(progress?: unknown, metadata?: Readonly<Record<string, unknown>>): void | Promise<void>;
 }
 
 export interface ToolResult {
   readonly toolCallId: string;
+  readonly name: string;
+  readonly content?: readonly ContentBlock[];
+  readonly value?: unknown;
+  readonly error?: ErrorInfo;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface CommandDefinition {
+  readonly name: string;
+  readonly description?: string;
+  readonly parameters?: JsonObject;
+  execute(args: JsonObject, context: CommandExecutionContext): Promise<CommandResult> | CommandResult;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface CommandExecutionContext {
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly signal?: AbortSignal;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface CommandResult {
   readonly name: string;
   readonly content?: readonly ContentBlock[];
   readonly value?: unknown;
@@ -202,6 +239,34 @@ export interface ContextResolutionContext {
   readonly sessionId?: string;
   readonly runId?: string;
   readonly messages: readonly Message[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly signal?: AbortSignal;
+}
+
+export interface InputBuilder {
+  readonly name: string;
+  build(input: string | Message | readonly Message[], context?: InputBuildContext): Promise<readonly Message[]> | readonly Message[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface InputBuildContext {
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly signal?: AbortSignal;
+}
+
+export interface PromptBuilder {
+  readonly name: string;
+  build(request: PromptBuildRequest): Promise<readonly Message[]> | readonly Message[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface PromptBuildRequest {
+  readonly messages: readonly Message[];
+  readonly context?: readonly ContextBlock[];
+  readonly skills?: readonly Skill[];
+  readonly tools?: readonly ToolDefinition[];
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly signal?: AbortSignal;
 }
@@ -236,8 +301,10 @@ export type ExtensionLifecycleEventName =
   | "retry";
 
 export interface ExtensionEvent {
-  readonly type: ExtensionLifecycleEventName | string;
+  readonly type: ExtensionLifecycleEventName | "extension_error" | string;
   readonly payload?: unknown;
+  readonly extension?: string;
+  readonly error?: ErrorInfo;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -247,12 +314,25 @@ export interface Extension {
 }
 
 export interface ExtensionAPI {
-  on(type: ExtensionLifecycleEventName | string, handler: (event: ExtensionEvent) => void | Promise<void>): void;
-  emit(event: ExtensionEvent): void | Promise<void>;
-  registerTool(tool: ToolDefinition): void;
+  readonly registries: ContributionRegistries;
+  readonly middleware: MiddlewareRegistry;
+  on(type: ExtensionLifecycleEventName | string, handler: (event: ExtensionEvent) => void | Promise<void>): () => void;
+  emit(event: ExtensionEvent): Promise<void>;
+  use<T>(hook: MiddlewareHookName | string, middleware: Middleware<T>): () => void;
   registerProvider(provider: AIProvider): void;
+  registerModel(model: ModelConfig): void;
+  registerTool(tool: ToolDefinition): void;
   registerContextProvider(provider: ContextProvider): void;
   registerSkill(skill: Skill): void;
+  registerCommand(command: CommandDefinition): void;
+  registerAgent(agent: AgentDefinition): void;
+  registerInputBuilder(builder: InputBuilder): void;
+  registerPromptBuilder(builder: PromptBuilder): void;
+  registerCompactionStrategy(strategy: CompactionStrategy): void;
+  registerStoreFactory(factory: StoreFactory): void;
+  registerResourceLoader(key: string, loader: ResourceLoader): void;
+  registerSettingsProvider(key: string, provider: SettingsProvider): void;
+  registerCredentialResolver(key: string, resolver: CredentialResolver): void;
 }
 
 export interface SessionEntry {
@@ -270,6 +350,31 @@ export interface SessionStore {
   append(entry: SessionEntry): Promise<void>;
   list(sessionId: string): Promise<readonly SessionEntry[]>;
   get?(id: string): Promise<SessionEntry | undefined>;
+}
+
+export interface StoreFactory {
+  readonly name: string;
+  create(config?: JsonObject): Promise<SessionStore> | SessionStore;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface CompactionStrategy {
+  readonly name: string;
+  compact(context: CompactionContext): Promise<CompactionResult> | CompactionResult;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface CompactionContext {
+  readonly sessionId: string;
+  readonly entries: readonly SessionEntry[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly signal?: AbortSignal;
+}
+
+export interface CompactionResult {
+  readonly summary: string;
+  readonly entries?: readonly SessionEntry[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 export interface Resource {

@@ -10,7 +10,7 @@ The provider layer contains the small runtime pieces Prism already ships for hos
 - `toolCallContent()`: create a `ToolCallContent` block.
 - `createMockProvider()` / `MockProviderOptions`: create a deterministic scripted `AIProvider` for tests and examples.
 
-These APIs are exported from the root `prism` package.
+These APIs are exported from the root `prism` package. `ProviderRegistry` and `ModelRegistry` are public runtime API types that live beside their factory implementations, not in the type-only `contracts.ts` file.
 
 ## When to use it
 
@@ -145,6 +145,7 @@ for await (const event of resolvedProvider.generate({
 - Registries are explicit objects returned by factories. Prism does not create a hidden global provider/model registry.
 - Extension packages can contribute `AIProvider` and `ModelConfig` values by registering them with host-owned registries.
 - Model resolution and provider resolution are separate on purpose: hosts can validate a model exists before selecting a provider.
+- Credential resolvers stay outside these registries; pass credentials directly to the provider adapter or runtime edge that needs them.
 - Mock provider is for deterministic tests/examples. Real providers should implement `AIProvider` directly or through adapter packages.
 
 ## Security and performance notes

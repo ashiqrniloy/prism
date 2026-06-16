@@ -54,6 +54,10 @@ const provider = createOpenAICompatibleProvider({
 
 Hosts own credentials. Do not put secrets in prompts, messages, events, stores, or logs.
 
+## Docs
+
+See [`docs/index.md`](docs/index.md) for detailed API docs.
+
 ## Scripts
 
 | command | action |

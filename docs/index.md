@@ -9,6 +9,23 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Provider layer](provider-layer.md): register and resolve host-owned providers/models, create provider events, and use the mock provider for tests.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider subpath using native or injected `fetch` for Chat Completions streaming.
 
+## Input, prompt, and context assembly
+- [Input and prompt assembly](input-and-prompt-assembly.md): turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
+- [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned.
+
+## Tools
+- [Tools](tools.md): register host-owned active tools, apply exact allow/deny filtering, and dispatch tool calls.
+
+## Extensions/plugins
+- [Contribution registries](contribution-registries.md): explicit host-owned registries for extension/package contributions without hidden globals.
+- [Extension kernel and event bus](extensions.md): load host-provided extensions in order, register contributions, emit lifecycle events, and isolate extension errors.
+- [Middleware hooks](middleware-hooks.md): ordered hook registry for provider, input, context, tool, retry, compaction, and session lifecycle boundaries.
+
+## Configuration/manifests
+- [Configuration and manifests](configuration-and-manifests.md): merge in-memory JSON config layers and validate data-only package manifests.
+- [Node filesystem config loader](node-filesystem-config.md): explicitly read caller-named JSON config files in Node hosts.
+- [Resource loading](resource-loading.md): decode text, JSON, and manifest resources through caller-provided loaders.
+
 ## Security and credentials
 - [Credentials and redaction](credentials-and-redaction.md): resolve host-owned credentials at request time and redact known secret values from strings, objects, and errors.
 
@@ -19,11 +36,6 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 These groups are planned but not implemented yet. Add links when their public APIs exist.
 
 - Agent/session runtime
-- Input and prompt assembly
-- Tools and tool dispatch
-- Context and skills runtime
-- Extensions/plugins
-- Configuration/manifests
 - Compaction/session memory
 - CLI/RPC
 - Settings/auth/trust

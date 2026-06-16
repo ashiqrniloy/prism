@@ -36,6 +36,15 @@ describe("credential boundary", () => {
 
     assert.deepEqual(Object.keys(registry.resolve("mock")), ["id", "generate"]);
   });
+
+  it("credential resolution is explicit and not global", async () => {
+    process.env.PRISM_TEST_API_KEY = "unused-test-secret";
+    try {
+      assert.equal(await resolveCredentialValue(undefined, { name: "apiKey", provider: "mock" }), undefined);
+    } finally {
+      delete process.env.PRISM_TEST_API_KEY;
+    }
+  });
 });
 
 describe("redaction", () => {

@@ -3,16 +3,31 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type {
   AgentConfig,
+  AgentDefinition,
   AgentEvent,
   AIProvider,
+  CommandDefinition,
+  CompactionStrategy,
+  ConfigLayer,
+  ConfigProvider,
   ContextProvider,
   CredentialResolver,
+  AssembleProviderInputOptions,
+  DefaultInputBuildContext,
   Extension,
+  InputBuilder,
+  ManifestContributionDeclaration,
+  ManifestResourceDeclaration,
+  PrismManifest,
+  PromptBuilder,
   ResourceLoader,
   SettingsProvider,
   Skill,
+  StoreFactory,
   ToolDefinition,
 } from "../index.js";
+import { assembleProviderInput, createContributionRegistries, createDefaultInputBuilder, createDefaultPromptBuilder, createExtensionKernel, createToolRegistry, dispatchToolCall, filterTools, resolveContextProviders } from "../index.js";
+import type { DispatchToolCallOptions, ToolFilter, ToolValidator } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -94,16 +109,124 @@ describe("public contracts", () => {
     assert.equal(await credentials.resolve({ name: "demo" }), undefined);
   });
 
-  it("agent event narrows by type", () => {
-    const event: AgentEvent = {
-      type: "message_delta",
-      sessionId: "s1",
-      runId: "r1",
-      content: { type: "text", text: "hello" },
+  it("host can type phase 2 contribution contracts", async () => {
+    const command: CommandDefinition = {
+      name: "say",
+      execute() {
+        return { name: "say", value: "ok" };
+      },
+    };
+    const agentDefinition: AgentDefinition = {
+      name: "agent",
+      create() {
+        return {
+          config: { model: { provider: "mock", model: "demo" }, provider },
+          createSession() {
+            throw new Error("not implemented in public contract test");
+          },
+        };
+      },
+    };
+    const inputBuilder: InputBuilder = {
+      name: "input",
+      build(input) {
+        return typeof input === "string" ? [{ role: "user", content: [{ type: "text", text: input }] }] : [];
+      },
+    };
+    const promptBuilder: PromptBuilder = { name: "prompt", build: (request) => request.messages };
+    const compaction: CompactionStrategy = { name: "compact", compact: () => ({ summary: "ok" }) };
+    const storeFactory: StoreFactory = { name: "memory", create: () => ({ append: async () => undefined, list: async () => [] }) };
+
+    assert.equal(command.name, "say");
+    assert.equal(agentDefinition.name, "agent");
+    assert.equal((await inputBuilder.build("hi"))[0]?.role, "user");
+    assert.equal(promptBuilder.name, "prompt");
+    assert.equal((await compaction.compact({ sessionId: "s1", entries: [] })).summary, "ok");
+    assert.equal((await storeFactory.create()).list("s1") instanceof Promise, true);
+  });
+
+  it("host can type phase 3 config and manifest contracts", async () => {
+    const provider: ConfigProvider = {
+      name: "host",
+      load() {
+        return { demo: { enabled: true } };
+      },
+    };
+    const layer: ConfigLayer = { name: provider.name, config: (await provider.load()) ?? {} };
+    const contribution: ManifestContributionDeclaration = { kind: "tool", name: "demo.echo", module: "./tool.js" };
+    const resource: ManifestResourceDeclaration = { uri: "package://demo/prompt.md", purpose: "prompt" };
+    const manifest: PrismManifest = {
+      name: "demo-package",
+      configDefaults: layer.config,
+      contributions: [contribution],
+      resources: [resource],
     };
 
-    if (event.type === "message_delta" && event.content.type === "text") {
-      assert.equal(event.content.text, "hello");
+    assert.equal(manifest.name, "demo-package");
+    assert.equal(manifest.contributions?.[0]?.kind, "tool");
+    assert.equal(manifest.resources?.[0]?.uri, "package://demo/prompt.md");
+  });
+
+  it("host can type phase 4 tool registry filters dispatch and contributions", async () => {
+    const contributions = createContributionRegistries();
+    const kernel = createExtensionKernel({ registries: contributions });
+    await kernel.load([{ name: "tools", setup: (api) => { api.registerTool(tool); } }]);
+    const registry = createToolRegistry([contributions.tools.resolve("echo")]);
+    const filter: ToolFilter = { allow: ["echo"] };
+    const validate: ToolValidator = (_tool, args) => typeof args.text === "string" ? undefined : "text is required";
+    const options: DispatchToolCallOptions = {
+      call: { type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } },
+      registry,
+      context: { sessionId: "s1", runId: "r1", toolCallId: "call_1" },
+      filter,
+      validate,
+    };
+
+    assert.equal(registry.resolve("echo"), tool);
+    assert.deepEqual(filterTools(registry.list(), filter), [tool]);
+    assert.equal((await dispatchToolCall(options)).name, "echo");
+  });
+
+  it("host can type phase 5 default input assembly", async () => {
+    const context: DefaultInputBuildContext = {
+      systemInstructions: "Follow host policy.",
+      attachments: [{ name: "notes.md", text: "notes" }],
+      toolResults: [{ toolCallId: "call_1", name: "echo", value: "ok" }],
+      metadata: { requestId: "r1" },
+    };
+
+    const messages = await createDefaultInputBuilder().build("Hello", context);
+
+    assert.equal(messages[0]?.role, "system");
+    assert.equal(messages.at(-1)?.role, "tool");
+  });
+
+  it("host can type phase 5 context prompt assembly", async () => {
+    const options: AssembleProviderInputOptions = {
+      model: { provider: "mock", model: "demo" },
+      input: "Hello",
+      contextProviders: [context],
+      promptBuilder: createDefaultPromptBuilder(),
+      tools: [tool],
+      skills: [skill],
+    };
+
+    assert.equal((await resolveContextProviders({ providers: [context], messages: [] })).length, 1);
+    assert.equal((await assembleProviderInput(options)).model.model, "demo");
+  });
+
+  it("agent event narrows by type", () => {
+    const event: AgentEvent = {
+      type: "tool_execution_progress",
+      sessionId: "s1",
+      runId: "r1",
+      toolCallId: "call_1",
+      name: "echo",
+      progress: { step: 1 },
+    };
+
+    if (event.type === "tool_execution_progress") {
+      assert.equal(event.toolCallId, "call_1");
       return;
     }
 

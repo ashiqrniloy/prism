@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createModelRegistry, createProviderRegistry } from "../index.js";
-import type { AIProvider } from "../index.js";
+import type { AIProvider, ModelRegistry, ProviderRegistry } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -12,7 +12,7 @@ const provider: AIProvider = {
 
 describe("provider registry", () => {
   it("registers gets lists and resolves providers", () => {
-    const registry = createProviderRegistry();
+    const registry: ProviderRegistry = createProviderRegistry();
 
     registry.register(provider);
 
@@ -20,6 +20,14 @@ describe("provider registry", () => {
     assert.deepEqual(registry.list(), [provider]);
     assert.equal(registry.resolve({ provider: "mock" }), provider);
     assert.equal(registry.resolve("mock"), provider);
+  });
+
+  it("hosts can select providers with explicit registries", () => {
+    const providers = createProviderRegistry([provider]);
+    const models = createModelRegistry([{ provider: "mock", model: "demo" }]);
+    const model = models.resolve("mock", "demo");
+
+    assert.equal(providers.resolve(model), provider);
   });
 
   it("unknown provider fails before generate", async () => {
@@ -42,7 +50,7 @@ describe("provider registry", () => {
 describe("model registry", () => {
   it("registers gets lists and resolves models", () => {
     const model = { provider: "mock", model: "demo", parameters: { temperature: 0 } };
-    const registry = createModelRegistry();
+    const registry: ModelRegistry = createModelRegistry();
 
     registry.register(model);
 

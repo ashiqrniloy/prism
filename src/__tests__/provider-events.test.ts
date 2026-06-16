@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  providerContentDelta,
   providerDone,
   providerError,
   providerTextDelta,
@@ -12,7 +13,7 @@ import {
 } from "../index.js";
 
 describe("provider event helpers", () => {
-  it("creates text and thinking content deltas", () => {
+  it("creates text thinking and image content deltas", () => {
     assert.deepEqual(providerTextDelta("Hello"), {
       type: "content_delta",
       content: { type: "text", text: "Hello" },
@@ -21,6 +22,11 @@ describe("provider event helpers", () => {
     assert.deepEqual(providerThinkingDelta("plan", "sig"), {
       type: "content_delta",
       content: { type: "thinking", text: "plan", signature: "sig" },
+    });
+
+    assert.deepEqual(providerContentDelta({ type: "image", url: "https://example.test/image.png" }), {
+      type: "content_delta",
+      content: { type: "image", url: "https://example.test/image.png" },
     });
   });
 

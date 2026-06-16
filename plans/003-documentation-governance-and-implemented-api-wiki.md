@@ -301,7 +301,7 @@
     - Kept the check dependency-free and no-network.
     - Ran `npm run build`, `npm run typecheck`, and `command npm test`; all passed with 29 tests in 10 suites.
 
-- [ ] Verify Phase 0 and link README to docs
+- [x] Verify Phase 0 and link README to docs
   - Acceptance Criteria:
     - Functional: `npm run build`, `npm run typecheck`, and `command npm test` pass; README points users to `/docs/index.md` for detailed API docs.
     - Performance: Full test suite remains under 10 seconds and docs checks do not perform network I/O.
@@ -339,9 +339,17 @@
       - `none`: detailed docs are created by prior tasks.
     - `docs/index.md` update: No, unless final review finds missing navigation.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Execution Notes:
+    - Added a concise `README.md` docs section linking to `docs/index.md`.
+    - Kept detailed API content in `/docs` instead of duplicating it in README.
+    - Ran `npm run build`, `npm run typecheck`, and `command npm test`; all passed with 29 tests in 10 suites.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- The docs consistency check is intentionally small: it validates local links, required headings, and obvious `sk-`-style secrets only. Full Markdown linting and exhaustive API/export drift detection are deferred.
+- Current docs cover implemented Phase 1/2 APIs only. Future runtime, extension, config, session, tool-dispatch, compaction, CLI/RPC, and security/trust APIs remain listed as future areas in `docs/index.md` until implemented.
+- API examples are concise and compile conceptually; they are not extracted/compiled as standalone docs examples yet.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- Priority high: Every future implementation plan must include `/docs` updates for public APIs, extension points, events, strategies, config surfaces, and package subpaths.
+- Priority high: Phase 1 current-implementation alignment should update docs if contracts or provider event shapes change.
+- Priority medium: Add stronger docs/export drift checks once public API volume grows.

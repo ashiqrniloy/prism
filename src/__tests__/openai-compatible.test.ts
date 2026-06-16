@@ -61,6 +61,21 @@ describe("openai-compatible provider", () => {
     ]);
   });
 
+  it("maps reasoning content to thinking deltas", async () => {
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      fetch: okFetch([
+        JSON.stringify({ choices: [{ delta: { reasoning_content: "think" } }] }),
+        "[DONE]",
+      ]),
+    });
+
+    assert.deepEqual(await collect(provider), [
+      { type: "content_delta", content: { type: "thinking", text: "think", signature: undefined } },
+      { type: "done", usage: undefined },
+    ]);
+  });
+
   it("reconstructs tool call fragments", async () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
