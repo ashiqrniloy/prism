@@ -13,7 +13,7 @@ APIs:
 
 ## When to use it
 
-Use `createToolRegistry()` when a host has selected the tools that may be active for an agent, session, or run. Use `dispatchToolCall()` when provider output or host code requests one of those tools and the host wants Prism to enforce lookup, filtering, object arguments, validation, middleware order, and lifecycle events.
+Use `createToolRegistry()` when a host has selected the tools that may be active for an agent, session, or run. Use `dispatchToolCall()` when provider output or host code requests one of those tools and the host wants Prism to enforce lookup, filtering, object arguments, validation, middleware order, and lifecycle events. `session.run()` uses these same primitives for its bounded tool loop.
 
 Do not use the harness as a sandbox, package loader, app-tool pack, permission policy engine, provider loop, or schema validator.
 
@@ -124,7 +124,7 @@ const activeTools = createToolRegistry([contributions.tools.resolve("echo")]);
 
 Middleware can transform `tool_call` and `tool_result` payloads, but dispatch re-checks active registry lookup, filters, and object arguments after `tool_call` middleware. Middleware cannot grant permission by changing a tool name.
 
-Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set.
+Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set. Skills may reference `toolNames`, but `resolveActiveSkills()` only checks those names against the host-active tool list; it does not register, allow, or execute tools.
 
 ## Security and performance notes
 
@@ -139,8 +139,10 @@ Configuration can carry allow/deny names, but Prism does not define a policy cla
 
 ## Related APIs
 
+- [Agent/session runtime](agent-session-runtime.md): dispatches complete provider tool calls through the host-active tool harness and returns tool results on the next provider turn.
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, and tool `AgentEvent` contracts.
 - [Contribution registries](contribution-registries.md): inert extension/package tool contribution storage.
 - [Extension kernel and event bus](extensions.md): `ExtensionAPI.registerTool()` contribution registration.
+- [Context and skills](context-and-skills.md): skill `toolNames` validation against host-active tools.
 - [Middleware hooks](middleware-hooks.md): `tool_call` and `tool_result` middleware used during dispatch.
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.

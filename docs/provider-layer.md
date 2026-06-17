@@ -88,6 +88,7 @@ createMockProvider(events?: readonly ProviderEvent[], options?: MockProviderOpti
 - Provider event helpers return plain `ProviderEvent` objects.
 - `providerError()` converts unknown errors to redacted `ErrorInfo` through `errorToErrorInfo()`.
 - `createMockProvider()` returns an `AIProvider` whose `generate()` yields the scripted events in order and checks `request.signal?.aborted` before each event.
+- The agent/session runtime passes its per-run abort signal as `ProviderRequest.signal`.
 
 ## Request/response example
 
@@ -159,6 +160,7 @@ for await (const event of resolvedProvider.generate({
 
 ## Related APIs
 
+- [Agent/session runtime](agent-session-runtime.md): passes abort signals to providers and maps provider errors to session `error` events.
 - [Public contracts](public-contracts.md): `AIProvider`, `ProviderRequest`, `ProviderEvent`, `ModelConfig`, `Usage`, and content/tool-call contracts.
 - [Credentials and redaction](credentials-and-redaction.md): credential and redaction helpers used by provider adapters.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter that emits these normalized provider events.

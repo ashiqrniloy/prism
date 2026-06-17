@@ -3,14 +3,21 @@
 Prism is a TypeScript/Node.js agent harness. Host apps and extension packages own providers, tools, resources, credentials, storage, UI, and business behavior. Prism supplies contracts, registries, streaming events, and replaceable runtime primitives.
 
 ## Public contracts
-- [Public contracts](public-contracts.md): type-only shapes for messages, content, agents, sessions, providers, tools, context, skills, extensions, stores, resources, settings, credentials, and events.
+- [Public contracts](public-contracts.md): type shapes for messages, content, agents, sessions, providers, tools, context, skills, extensions, stores, resources, settings, credentials, and events.
+
+## Agent/session runtime
+- [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, and subscribe to normalized session events.
+
+## Compaction/session memory
+- [Session stores and branching](session-stores-and-branching.md): store session entries, rebuild branch context, and navigate branch leaves.
+- [Node JSONL session store](node-jsonl-session-store.md): persist session entries to caller-named JSONL files in Node hosts.
 
 ## Provider and model connection
 - [Provider layer](provider-layer.md): register and resolve host-owned providers/models, create provider events, and use the mock provider for tests.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider subpath using native or injected `fetch` for Chat Completions streaming.
 
 ## Input, prompt, and context assembly
-- [Input and prompt assembly](input-and-prompt-assembly.md): turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
+- [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
 - [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned.
 
 ## Tools
@@ -35,7 +42,5 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 ## Future API areas
 These groups are planned but not implemented yet. Add links when their public APIs exist.
 
-- Agent/session runtime
-- Compaction/session memory
 - CLI/RPC
 - Settings/auth/trust

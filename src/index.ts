@@ -1,4 +1,5 @@
 export type * from "./contracts.js";
+export { createAgent, createAgentSession } from "./agents.js";
 export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
 export { createContributionRegistries, createContributionRegistry } from "./contributions.js";
@@ -14,9 +15,11 @@ export type { ManifestContributionDeclaration, ManifestContributionKind, Manifes
 export { loadJsonResource, loadManifestResource, loadTextResource } from "./resources.js";
 export { createMiddlewareRegistry } from "./middleware.js";
 export type { Middleware, MiddlewareHookName, MiddlewareNext, MiddlewareRegistry, MiddlewareRegistryOptions } from "./middleware.js";
-export { assembleProviderInput, createDefaultInputBuilder, createDefaultPromptBuilder, resolveContextProviders } from "./input.js";
-export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuilder, DefaultInputBuildContext, DefaultPromptBuilder, InputAttachment, PromptInstruction, ResolveContextOptions } from "./input.js";
+export { assembleProviderInput, createDefaultInputBuilder, createDefaultPromptBuilder, renderPromptTemplate, resolveContextProviders } from "./input.js";
+export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuilder, DefaultInputBuildContext, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions } from "./input.js";
 export { createMockProvider } from "./mock-provider.js";
+export { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, listSessionBranches, rebuildSessionContext } from "./session-stores.js";
+export type { CreateSessionEntryOptions, SessionBranch, SessionBranchOptions, SessionContextSnapshot } from "./session-stores.js";
 export type { MockProviderOptions } from "./mock-provider.js";
 export {
   providerContentDelta,
@@ -32,6 +35,8 @@ export {
 export { createProviderRegistry } from "./providers.js";
 export type { ProviderRegistry } from "./providers.js";
 export { errorToErrorInfo, redactSecrets } from "./redaction.js";
+export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
+export type { ResolveActiveSkillsOptions } from "./skills.js";
 export { createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
 export type { DispatchToolCallOptions, ToolFilter, ToolFilterInput, ToolValidator } from "./tools.js";
 

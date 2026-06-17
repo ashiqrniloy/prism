@@ -5,6 +5,8 @@ import type {
   ContextResolutionContext,
   InputBuilder,
   InputBuildContext,
+  JsonObject,
+  JsonValue,
   Message,
   ModelConfig,
   PromptBuilder,
@@ -60,6 +62,10 @@ export interface ResolveContextOptions extends Omit<ContextResolutionContext, "m
 
 export interface DefaultPromptBuilder extends PromptBuilder {
   build(request: PromptBuildRequest): Promise<readonly Message[]>;
+}
+
+export interface PromptTemplateOptions {
+  readonly missing?: "throw" | "preserve";
 }
 
 export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
@@ -119,6 +125,16 @@ export function createDefaultPromptBuilder(): DefaultPromptBuilder {
       ];
     },
   };
+}
+
+export function renderPromptTemplate(template: string, variables: JsonObject, options: PromptTemplateOptions = {}): string {
+  return template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, name: string) => {
+    if (!Object.prototype.hasOwnProperty.call(variables, name)) {
+      if (options.missing === "preserve") return match;
+      throw new Error(`Missing prompt template variable: ${name}`);
+    }
+    return templateValue(variables[name]!);
+  });
 }
 
 export async function assembleProviderInput(options: AssembleProviderInputOptions): Promise<ProviderRequest> {
@@ -260,6 +276,18 @@ function blockText(block: ContextBlock): string {
     if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
     return part.url ?? part.mimeType ?? "[image]";
   }).join("\n");
+}
+
+function templateValue(value: JsonValue): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || value === null) return String(value);
+  return JSON.stringify(sortJson(value));
+}
+
+function sortJson(value: JsonValue): JsonValue {
+  if (!value || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(sortJson);
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortJson(value[key]!)]));
 }
 
 function throwIfAborted(signal: AbortSignal | undefined): void {

@@ -51,7 +51,7 @@ Registering the same key replaces the contribution deterministically. Registries
 ## Implementation example
 
 ```ts
-import { createContributionRegistries, type ToolDefinition } from "prism";
+import { createAgent, createContributionRegistries, type ToolDefinition } from "prism";
 
 const tool: ToolDefinition = {
   name: "echo",
@@ -62,9 +62,24 @@ const tool: ToolDefinition = {
 
 const registries = createContributionRegistries();
 registries.tools.register(tool.name, tool);
+registries.agents.register("demo", {
+  name: "demo",
+  create: () => createAgent({ model, provider, tools: [tool] }),
+});
 
 const resolved = registries.tools.resolve("echo");
 console.log(resolved.name); // contributed only, not active for dispatch yet
+
+const inputBuilder = registries.inputBuilders.get("custom-input");
+const contextProviders = registries.contextProviders.get("project") ? [registries.contextProviders.resolve("project")] : [];
+const promptBuilder = registries.promptBuilders.get("custom-prompt");
+const skill = registries.skills.get("brief");
+const agent = await registries.agents.resolve("demo").create();
+void agent;
+void inputBuilder;
+void contextProviders;
+void promptBuilder;
+void skill;
 ```
 
 ## Extension and configuration notes
@@ -74,7 +89,8 @@ console.log(resolved.name); // contributed only, not active for dispatch yet
 - Registry keys are explicit strings. Prefer stable ids/names such as `provider.id`, `tool.name`, `skill.name`, or package-qualified names when collisions matter.
 - Manifest and configuration loading are separate APIs; this page only covers in-memory registration.
 - Tool contributions are inert. They are not executable until the host registers selected definitions in an active tool registry and passes that registry to `dispatchToolCall()`.
-- Input builders, prompt builders, and context providers are inert until the host resolves them and calls or passes them to the Phase 5 assembly helpers.
+- Input builders, prompt builders, context providers, and skills are inert until the host resolves them and calls, passes, registers, or selects them for the Phase 5 assembly helpers.
+- Agent definitions are inert until the host resolves one and calls `create()`. A definition may call `createAgent()` with explicit provider/tools/context/skills; registries are not hidden globals for the runtime.
 
 ## Security and performance notes
 
@@ -84,12 +100,14 @@ console.log(resolved.name); // contributed only, not active for dispatch yet
 - `credentialResolvers` may store resolver objects, but resolved credentials must stay at the edge that needs them.
 - Registry operations do not perform network, filesystem, provider, credential, tool, or resource work.
 - Resolving a tool contribution returns data/code supplied by the host or extension; it does not grant allow-list permission or execute the tool.
+- Resolving Phase 5 builder/context/skill contributions only returns data/code. The host still chooses which builder, provider, or skill to pass into input/prompt assembly.
 
 ## Related APIs
 
 - [Provider layer](provider-layer.md): existing provider/model registries reused by `ContributionRegistries`.
+- [Agent/session runtime](agent-session-runtime.md): selected `AgentDefinition` values can create runtime agents with explicit config.
 - [Input and prompt assembly](input-and-prompt-assembly.md): default builders and provider-input assembly for selected contributions.
-- [Context and skills](context-and-skills.md): ordered resolution for selected context providers.
+- [Context and skills](context-and-skills.md): ordered resolution for selected context providers and progressive disclosure for selected skills.
 - [Tools](tools.md): active host tool registry, filtering, and dispatch for selected tool definitions.
 - [Public contracts](public-contracts.md): contribution contract types stored in these registries.
 - [Credentials and redaction](credentials-and-redaction.md): credential resolver and secret-redaction rules.

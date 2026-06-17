@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 const docsDir = "docs";
 const apiPages = [
   "docs/public-contracts.md",
+  "docs/agent-session-runtime.md",
+  "docs/session-stores-and-branching.md",
   "docs/provider-layer.md",
   "docs/input-and-prompt-assembly.md",
   "docs/context-and-skills.md",
@@ -15,6 +17,7 @@ const apiPages = [
   "docs/middleware-hooks.md",
   "docs/tools.md",
   "docs/node-filesystem-config.md",
+  "docs/node-jsonl-session-store.md",
   "docs/resource-loading.md",
   "docs/credentials-and-redaction.md",
   "docs/providers/openai-compatible.md",
@@ -84,7 +87,15 @@ describe("docs", () => {
       ["docs/tools.md", "dispatchToolCall"],
       ["docs/input-and-prompt-assembly.md", "createDefaultInputBuilder"],
       ["docs/input-and-prompt-assembly.md", "assembleProviderInput"],
+      ["docs/input-and-prompt-assembly.md", "renderPromptTemplate"],
       ["docs/context-and-skills.md", "resolveContextProviders"],
+      ["docs/context-and-skills.md", "createSkillRegistry"],
+      ["docs/context-and-skills.md", "resolveActiveSkills"],
+      ["docs/agent-session-runtime.md", "createAgent"],
+      ["docs/agent-session-runtime.md", "createAgentSession"],
+      ["docs/session-stores-and-branching.md", "createSessionEntry"],
+      ["docs/session-stores-and-branching.md", "createMemorySessionStore"],
+      ["docs/session-stores-and-branching.md", "rebuildSessionContext"],
     ] as const;
 
     for (const [page, exportName] of documentedExports) {
@@ -93,11 +104,13 @@ describe("docs", () => {
     }
   });
 
-  it("phase 5 input docs are linked from the docs index", () => {
+  it("phase 5 and 6 docs are linked from the docs index", () => {
     const index = readFileSync("docs/index.md", "utf8");
 
     assert.ok(index.includes("(input-and-prompt-assembly.md)"));
     assert.ok(index.includes("(context-and-skills.md)"));
+    assert.ok(index.includes("(agent-session-runtime.md)"));
+    assert.ok(index.includes("(session-stores-and-branching.md)"));
   });
 
   it("phase 3 docs state explicit non-goals", () => {
@@ -112,14 +125,20 @@ describe("docs", () => {
     }
   });
 
-  it("node config docs reference existing package subpath", () => {
+  it("node docs reference existing package subpaths", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown> };
-    const docs = readFileSync("docs/node-filesystem-config.md", "utf8");
+    const configDocs = readFileSync("docs/node-filesystem-config.md", "utf8");
+    const jsonlDocs = readFileSync("docs/node-jsonl-session-store.md", "utf8");
 
-    assert.ok(docs.includes("prism/node/config"));
+    assert.ok(configDocs.includes("prism/node/config"));
     assert.deepEqual(packageJson.exports["./node/config"], {
       types: "./dist/node/config.d.ts",
       default: "./dist/node/config.js",
+    });
+    assert.ok(jsonlDocs.includes("prism/node/session-store-jsonl"));
+    assert.deepEqual(packageJson.exports["./node/session-store-jsonl"], {
+      types: "./dist/node/session-store-jsonl.d.ts",
+      default: "./dist/node/session-store-jsonl.js",
     });
   });
 

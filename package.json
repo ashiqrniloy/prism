@@ -17,6 +17,10 @@
     "./node/config": {
       "types": "./dist/node/config.d.ts",
       "default": "./dist/node/config.js"
+    },
+    "./node/session-store-jsonl": {
+      "types": "./dist/node/session-store-jsonl.d.ts",
+      "default": "./dist/node/session-store-jsonl.js"
     }
   },
   "bin": {

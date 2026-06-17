@@ -5,6 +5,8 @@ import type {
   AgentConfig,
   AgentDefinition,
   AgentEvent,
+  AgentSessionCloneOptions,
+  AgentSessionForkOptions,
   AIProvider,
   CommandDefinition,
   CompactionStrategy,
@@ -20,14 +22,18 @@ import type {
   ManifestResourceDeclaration,
   PrismManifest,
   PromptBuilder,
+  PromptTemplateOptions,
   ResourceLoader,
   SettingsProvider,
   Skill,
+  SessionEntry,
+  SessionStore,
+  SkillRegistry,
   StoreFactory,
   ToolDefinition,
 } from "../index.js";
-import { assembleProviderInput, createContributionRegistries, createDefaultInputBuilder, createDefaultPromptBuilder, createExtensionKernel, createToolRegistry, dispatchToolCall, filterTools, resolveContextProviders } from "../index.js";
-import type { DispatchToolCallOptions, ToolFilter, ToolValidator } from "../index.js";
+import { assembleProviderInput, createAgent, createAgentSession, createContributionRegistries, createDefaultInputBuilder, createDefaultPromptBuilder, createExtensionKernel, createMemorySessionStore, createSessionEntry, createSkillRegistry, createToolRegistry, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "../index.js";
+import type { DispatchToolCallOptions, SessionContextSnapshot, ToolFilter, ToolValidator } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -201,6 +207,23 @@ describe("public contracts", () => {
     assert.equal(messages.at(-1)?.role, "tool");
   });
 
+  it("host can type phase 5 skill registry", () => {
+    const registry: SkillRegistry = createSkillRegistry([skill]);
+    const active = resolveActiveSkills({ registry, names: ["brief"], tools: [tool] });
+
+    assert.equal(registry.resolve("brief"), skill);
+    assert.deepEqual(active, [skill]);
+  });
+
+  it("host can type phase 5 prompt template rendering", async () => {
+    const options: PromptTemplateOptions = { missing: "throw" };
+    const prompt = renderPromptTemplate("Hello {{name}}", { name: "world" }, options);
+    const messages = await createDefaultInputBuilder().build(prompt);
+
+    assert.equal(messages[0]?.role, "user");
+    assert.equal(messages[0]?.content[0]?.type === "text" ? messages[0].content[0].text : undefined, "Hello world");
+  });
+
   it("host can type phase 5 context prompt assembly", async () => {
     const options: AssembleProviderInputOptions = {
       model: { provider: "mock", model: "demo" },
@@ -213,6 +236,73 @@ describe("public contracts", () => {
 
     assert.equal((await resolveContextProviders({ providers: [context], messages: [] })).length, 1);
     assert.equal((await assembleProviderInput(options)).model.model, "demo");
+  });
+
+  it("host can type phase 5 extension contribution wiring", async () => {
+    const extension: Extension = { name: "phase5", setup(api) {
+      api.registerInputBuilder({ name: "input", build: () => [{ role: "user", content: [{ type: "text", text: "from extension" }] }] });
+      api.registerPromptBuilder({ name: "prompt", build: (request) => request.messages });
+      api.registerContextProvider(context);
+      api.registerSkill(skill);
+    } };
+    const kernel = createExtensionKernel();
+    await kernel.load([extension]);
+    const skillRegistry = createSkillRegistry([kernel.registries.skills.resolve("brief")]);
+    const selectedSkills = resolveActiveSkills({ registry: skillRegistry, names: ["brief"], tools: [tool] });
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Hello",
+      inputBuilder: kernel.registries.inputBuilders.resolve("input"),
+      promptBuilder: kernel.registries.promptBuilders.resolve("prompt"),
+      contextProviders: [kernel.registries.contextProviders.resolve("demo-context")],
+      skills: selectedSkills,
+      tools: [tool],
+      middleware: kernel.middleware,
+    });
+
+    assert.equal(request.context?.[0]?.title, "Demo");
+  });
+
+  it("host can create minimal phase 6 agent sessions", async () => {
+    const definition: AgentDefinition = {
+      name: "runtime-agent",
+      create: () => createAgent({ model: { provider: "mock", model: "demo" }, provider }),
+    };
+    const agent = await definition.create();
+    const session = createAgentSession({ agent, id: "s1", leafId: undefined });
+    const forkOptions: AgentSessionForkOptions = { leafId: undefined };
+    const cloneOptions: AgentSessionCloneOptions = { id: "s2" };
+
+    assert.equal(agent.config.provider?.id, "mock");
+    assert.equal(session.id, "s1");
+    assert.equal(session.fork(forkOptions).id, "s1");
+    assert.equal((await session.clone(cloneOptions)).id, "s2");
+  });
+
+  it("public contracts accept branch aware session entries", () => {
+    const root: SessionEntry = createSessionEntry({
+      id: "entry_1",
+      sessionId: "s1",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "Hi" }] },
+    });
+    const label: SessionEntry = createSessionEntry({ id: "entry_2", parentId: root.id, sessionId: "s1", timestamp: root.timestamp, kind: "label", label: "demo" });
+    const snapshot: SessionContextSnapshot = rebuildSessionContext([root, label], { leafId: label.id });
+
+    assert.equal(snapshot.leafId, "entry_2");
+    assert.equal(snapshot.messages[0]?.role, "user");
+  });
+
+  it("public contracts can use memory store as session store", async () => {
+    const store: SessionStore = createMemorySessionStore();
+    const factory: StoreFactory = { name: "memory", create: () => createMemorySessionStore() };
+    const item = createSessionEntry({ id: "memory_1", sessionId: "s1", kind: "custom", data: { ok: true } });
+
+    await store.append(item);
+
+    assert.equal((await store.get?.("memory_1"))?.id, item.id);
+    assert.equal((await factory.create()).list("s1") instanceof Promise, true);
   });
 
   it("agent event narrows by type", () => {

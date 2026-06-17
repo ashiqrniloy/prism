@@ -48,7 +48,7 @@ Built-in hook names:
 
 ## Outputs / response / events
 
-`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value.
+`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The agent/session runtime also invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls.
 
 With default `errorPolicy: "event"`, middleware errors become `extension_error` events when `onError` is provided, and later middleware still runs with the current value. With `errorPolicy: "throw"`, `run()` rejects on the first middleware error.
 
@@ -96,7 +96,7 @@ export const extension: Extension = {
 ## Extension and configuration notes
 
 - Middleware registration is explicit through `createMiddlewareRegistry()` or `ExtensionAPI.use()`.
-- Middleware runs only when the host/runtime calls `run()`.
+- Middleware runs only when the host/runtime calls `run()` or passes the registry to a helper that documents a call site.
 - The registry does not discover packages, read manifests, load config, call providers, execute tools, read resources, or start sessions.
 - Hosts may pass a middleware registry into `createExtensionKernel({ middleware })` to share it with direct host code.
 
@@ -111,6 +111,7 @@ export const extension: Extension = {
 
 - [Extension kernel and event bus](extensions.md): `ExtensionAPI.use()` and shared error policy.
 - [Contribution registries](contribution-registries.md): direct contribution registration separate from middleware.
+- [Agent/session runtime](agent-session-runtime.md): bounded tool loop call site for `tool_call` and `tool_result` hooks.
 - [Tools](tools.md): tool dispatch behavior that runs `tool_call` and `tool_result` hooks.
 - [Input and prompt assembly](input-and-prompt-assembly.md): `input_assembly` and `prompt_build` helper call sites.
 - [Context and skills](context-and-skills.md): `context` helper call site.

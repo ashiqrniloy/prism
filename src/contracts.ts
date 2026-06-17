@@ -121,6 +121,10 @@ export interface AgentConfig {
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
   readonly context?: readonly ContextProvider[];
   readonly skills?: SkillRegistry | readonly Skill[];
+  readonly inputBuilder?: InputBuilder;
+  readonly promptBuilder?: PromptBuilder;
+  readonly middleware?: MiddlewareRegistry;
+  readonly resourceLoader?: ResourceLoader;
   readonly extensions?: readonly Extension[];
   readonly store?: SessionStore;
   readonly settings?: SettingsProvider;
@@ -137,7 +141,17 @@ export interface AgentSessionConfig {
   readonly id?: string;
   readonly agent?: Agent;
   readonly store?: SessionStore;
+  readonly leafId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface AgentSessionForkOptions {
+  readonly leafId?: string;
+}
+
+export interface AgentSessionCloneOptions {
+  readonly id?: string;
+  readonly leafId?: string;
 }
 
 export interface AgentSession {
@@ -146,6 +160,10 @@ export interface AgentSession {
   prompt(input: string, options?: RunOptions): Promise<void>;
   subscribe(): AsyncIterable<AgentEvent>;
   abort(reason?: unknown): void;
+  entries(): Promise<readonly SessionEntry[]>;
+  checkout(leafId?: string): Promise<void>;
+  fork(options?: AgentSessionForkOptions): AgentSession;
+  clone(options?: AgentSessionCloneOptions): Promise<AgentSession>;
 }
 
 export type AgentEvent =
@@ -283,6 +301,7 @@ export interface Skill {
 export interface SkillRegistry {
   register(skill: Skill): void;
   get(name: string): Skill | undefined;
+  resolve(name: string): Skill;
   list(): readonly Skill[];
 }
 
@@ -340,10 +359,16 @@ export interface SessionEntry {
   readonly parentId?: string;
   readonly sessionId: string;
   readonly timestamp: string;
-  readonly kind: "message" | "event" | "summary" | "metadata";
+  readonly kind: "message" | "event" | "summary" | "metadata" | "model_change" | "label" | "custom" | "compaction";
+  readonly runId?: string;
   readonly message?: Message;
   readonly event?: AgentEvent;
+  readonly model?: ModelConfig;
+  readonly previousModel?: ModelConfig;
+  readonly label?: string;
+  readonly summary?: string;
   readonly data?: unknown;
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 export interface SessionStore {

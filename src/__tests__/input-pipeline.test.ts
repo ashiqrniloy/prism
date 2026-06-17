@@ -4,7 +4,11 @@ import {
   assembleProviderInput,
   createDefaultInputBuilder,
   createDefaultPromptBuilder,
+  createExtensionKernel,
   createMiddlewareRegistry,
+  createSkillRegistry,
+  renderPromptTemplate,
+  resolveActiveSkills,
   resolveContextProviders,
   type ContextProvider,
   type Message,
@@ -81,6 +85,124 @@ describe("default input builder", () => {
 
     assert.equal((await createDefaultInputBuilder().build("Hi")).length, 1);
     assert.equal((await createDefaultInputBuilder().build("Hi", { middleware })).length, 2);
+  });
+});
+
+describe("prompt template rendering", () => {
+  it("replaces variables", () => {
+    assert.equal(renderPromptTemplate("Review {{file}} for {{focus}}", { file: "src/index.ts", focus: "exports" }), "Review src/index.ts for exports");
+  });
+
+  it("stringifies json values deterministically", () => {
+    assert.equal(renderPromptTemplate("{{count}} {{ok}} {{nothing}} {{items}} {{object}}", {
+      count: 2,
+      ok: true,
+      nothing: null,
+      items: ["b", { z: 1, a: 2 }],
+      object: { z: 1, a: 2 },
+    }), "2 true null [\"b\",{\"a\":2,\"z\":1}] {\"a\":2,\"z\":1}");
+  });
+
+  it("missing variable fails closed unless preserved", () => {
+    assert.throws(() => renderPromptTemplate("Hello {{name}}", {}), /Missing prompt template variable: name/);
+    assert.equal(renderPromptTemplate("Hello {{name}}", {}, { missing: "preserve" }), "Hello {{name}}");
+  });
+
+  it("does not eval expressions or prototype properties", () => {
+    assert.equal(renderPromptTemplate("{{name.toUpperCase()}}", { name: "demo" }), "{{name.toUpperCase()}}");
+    assert.throws(() => renderPromptTemplate("{{constructor}}", {}), /Missing prompt template variable: constructor/);
+  });
+
+  it("can feed default input assembly", async () => {
+    const prompt = renderPromptTemplate("Explain {{file}}", { file: "src/input.ts" });
+    const messages = await createDefaultInputBuilder().build(prompt);
+
+    assert.equal(text(messages[0]!), "Explain src/input.ts");
+  });
+});
+
+describe("extension contribution integration", () => {
+  it("extension registered input builder is inert until host uses it", async () => {
+    const kernel = createExtensionKernel();
+    await kernel.load([{ name: "input", setup: (api) => {
+      api.registerInputBuilder({ name: "custom-input", build: () => [{ role: "user", content: [{ type: "text", text: "custom" }] }] });
+    } }]);
+
+    const defaultRequest = await assembleProviderInput({ model: { provider: "mock", model: "demo" }, input: "default" });
+    const customRequest = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "default",
+      inputBuilder: kernel.registries.inputBuilders.resolve("custom-input"),
+    });
+
+    assert.equal(text(defaultRequest.messages.at(-1)!), "default");
+    assert.equal(text(customRequest.messages.at(-1)!), "custom");
+  });
+
+  it("extension registered context provider is selected explicitly", async () => {
+    const kernel = createExtensionKernel();
+    await kernel.load([{ name: "context", setup: (api) => {
+      api.registerContextProvider({ name: "project", resolve: () => [{ title: "Project", content: "selected" }] });
+    } }]);
+
+    const withoutContext = await assembleProviderInput({ model: { provider: "mock", model: "demo" }, input: "Hi" });
+    const withContext = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Hi",
+      contextProviders: [kernel.registries.contextProviders.resolve("project")],
+    });
+
+    assert.equal(withoutContext.context?.length, 0);
+    assert.equal(withContext.context?.[0]?.title, "Project");
+  });
+
+  it("extension registered prompt builder can replace default", async () => {
+    const kernel = createExtensionKernel();
+    await kernel.load([{ name: "prompt", setup: (api) => {
+      api.registerPromptBuilder({ name: "custom-prompt", build: () => [{ role: "system", content: [{ type: "text", text: "custom prompt" }] }] });
+    } }]);
+
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "ignored",
+      promptBuilder: kernel.registries.promptBuilders.resolve("custom-prompt"),
+    });
+
+    assert.deepEqual(request.messages, [{ role: "system", content: [{ type: "text", text: "custom prompt" }] }]);
+  });
+
+  it("input context prompt middleware runs in documented order", async () => {
+    const order: string[] = [];
+    const kernel = createExtensionKernel();
+    await kernel.load([{ name: "mw", setup: (api) => {
+      api.use<readonly Message[]>("input_assembly", (messages) => { order.push("input"); return messages; });
+      api.use("context", (blocks: readonly { content: string }[]) => { order.push("context"); return blocks; });
+      api.use("prompt_build", (request) => { order.push("prompt"); return request; });
+      api.registerContextProvider({ name: "ctx", resolve: () => [{ content: "ctx" }] });
+    } }]);
+
+    await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Hi",
+      contextProviders: [kernel.registries.contextProviders.resolve("ctx")],
+      middleware: kernel.middleware,
+    });
+
+    assert.deepEqual(order, ["input", "context", "prompt"]);
+  });
+
+  it("extension registered skill is selected explicitly before prompt use", async () => {
+    const tool: ToolDefinition = { name: "echo", execute: () => ({ toolCallId: "c", name: "echo" }) };
+    const kernel = createExtensionKernel();
+    await kernel.load([{ name: "skill", setup: (api) => {
+      api.registerSkill({ name: "brief", instructions: "Be brief.", toolNames: ["echo"] });
+    } }]);
+    const registry = createSkillRegistry([kernel.registries.skills.resolve("brief")]);
+    const skills = resolveActiveSkills({ registry, names: ["brief"], tools: [tool] });
+
+    const request = await assembleProviderInput({ model: { provider: "mock", model: "demo" }, input: "Hi", skills, tools: [tool] });
+
+    assert.match(request.messages.map((message) => text(message) ?? "").join("\n"), /Skill brief:\nBe brief\./);
   });
 });
 

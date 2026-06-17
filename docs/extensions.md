@@ -57,13 +57,18 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 ## Implementation example
 
 ```ts
-import { createExtensionKernel, type Extension } from "prism";
+import { createAgent, createExtensionKernel, type Extension } from "prism";
 
 const extension: Extension = {
   name: "demo-extension",
   setup(api) {
     api.registerModel({ provider: "mock", model: "demo" });
     api.registerTool({ name: "echo", execute: (args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo", value: args }) });
+    api.registerContextProvider({ name: "project", resolve: () => [{ title: "Project", content: "Context" }] });
+    api.registerInputBuilder({ name: "input", build: async () => [{ role: "user", content: [{ type: "text", text: "Hello" }] }] });
+    api.registerPromptBuilder({ name: "prompt", build: async (request) => request.messages });
+    api.registerSkill({ name: "brief", instructions: "Answer briefly.", toolNames: ["echo"] });
+    api.registerAgent({ name: "demo", create: () => createAgent({ model, provider }) });
     api.on("session_start", (event) => {
       console.log(event.type);
     });
@@ -76,6 +81,11 @@ await kernel.load([extension]);
 
 console.log(kernel.registries.models.resolve("mock", "demo").model);
 console.log(kernel.registries.tools.resolve("echo").name); // contributed only; host must activate before dispatch
+console.log(kernel.registries.contextProviders.resolve("project").name); // contributed only; host must select before context resolution
+console.log(kernel.registries.inputBuilders.resolve("input").name); // contributed only; host must pass it to assembly
+console.log(kernel.registries.promptBuilders.resolve("prompt").name); // contributed only; host must pass it to assembly
+console.log(kernel.registries.skills.resolve("brief").name); // contributed only; host must select before prompt use
+console.log(kernel.registries.agents.resolve("demo").name); // contributed only; host must create/select before runtime use
 await kernel.middleware.run("provider_request", { metadata: {} });
 ```
 
@@ -85,6 +95,9 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - Setup order is the order provided by the host.
 - The kernel writes only to explicit registries returned by `createContributionRegistries()` or provided by the host.
 - `api.registerTool()` contributes an inert `ToolDefinition` to `registries.tools`; it does not add the tool to an active tool registry, allow list, or dispatch loop.
+- `api.registerInputBuilder()`, `api.registerPromptBuilder()`, and `api.registerContextProvider()` contribute inert builders/providers; they do not replace defaults or run until the host passes selected entries to Phase 5 helpers.
+- `api.registerSkill()` contributes an inert `Skill` to `registries.skills`; it does not disclose instructions, activate referenced tools, or grant permissions until the host selects it.
+- `api.registerAgent()` contributes an inert `AgentDefinition`; its `create()` can call `createAgent()`, but the runtime is not started until host code resolves the definition and creates/runs a session.
 - The kernel registers middleware only into the explicit registry returned by `createMiddlewareRegistry()` or provided by the host.
 - Manifest and configuration APIs are later-phase work.
 
@@ -94,12 +107,15 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - Error events use `ErrorInfo` and redact only known secret values passed in `secrets`.
 - Do not put resolved credential values in extension events, registry metadata, docs, logs, prompts, or session stores.
 - Event and middleware dispatch are ordered and dependency-free. They use no timers, background workers, filesystem discovery, network calls, provider calls, or tool execution.
-- Extension middleware cannot bypass host tool permissions: tool dispatch re-checks active registry lookup, filters, and object arguments after `tool_call` middleware.
+- Extension middleware cannot bypass host tool permissions: tool dispatch re-checks active registry lookup, filters, and object arguments after `tool_call` middleware. Skills that reference `toolNames` are checked against host-active tools by `resolveActiveSkills()`.
 
 ## Related APIs
 
 - [Middleware hooks](middleware-hooks.md): ordered hook registry populated by `ExtensionAPI.use()`.
 - [Contribution registries](contribution-registries.md): registry bundle populated by `ExtensionAPI`.
 - [Tools](tools.md): host activation, filtering, and dispatch for contributed tool definitions.
+- [Input and prompt assembly](input-and-prompt-assembly.md): host selection for contributed input/prompt builders.
+- [Context and skills](context-and-skills.md): host selection and tool checks for contributed context providers and skills.
+- [Agent/session runtime](agent-session-runtime.md): `AgentDefinition.create()` can return agents built with `createAgent()` from explicit host-selected config.
 - [Public contracts](public-contracts.md): `Extension`, `ExtensionAPI`, and contribution contract types.
 - [Credentials and redaction](credentials-and-redaction.md): secret-redaction behavior used for extension errors.

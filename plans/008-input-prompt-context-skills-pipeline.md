@@ -247,7 +247,7 @@
     - Created `docs/context-and-skills.md`, expanded `docs/input-and-prompt-assembly.md`, updated `docs/index.md`, `docs/public-contracts.md`, `docs/middleware-hooks.md`, and `docs/contribution-registries.md`, and extended docs checks in `src/__tests__/docs.test.ts`.
     - Verification: `npm run typecheck` passed; `npm run build && command npm test` passed with 97 tests across 23 suites and 0 failures.
 
-- [ ] Add `SkillRegistry` implementation with progressive disclosure and tool checks
+- [x] Add `SkillRegistry` implementation with progressive disclosure and tool checks
   - Acceptance Criteria:
     - Functional: `createSkillRegistry()` supports explicit host/extension registration, lookup, fail-closed resolve if chosen, and list; active skill selection includes only host-selected skills and validates each skill's `toolNames` against host-active tools.
     - Performance: Registry lookup is `Map`-backed/O(1), skill selection is O(skill count + tool count), and no skill operation executes tools, loads resources, imports packages, calls providers, or resolves credentials.
@@ -315,8 +315,19 @@
       - `docs/index.md`: add/update Context and skills navigation entry.
     - `docs/index.md` update: Yes; add `Context and skills - Skill registry and progressive disclosure` entry.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Execution Notes:
+    - Added `src/skills.ts` with `createSkillRegistry()` and `resolveActiveSkills()`, plus exported `ResolveActiveSkillsOptions`.
+    - Extended the public `SkillRegistry` contract in `src/contracts.ts` with `resolve(name)` to match active registry fail-closed behavior used by tools.
+    - `createSkillRegistry()` is `Map`-backed, supports `register()`, `get()`, `resolve()`, `list()`, and deterministic same-name replacement.
+    - `resolveActiveSkills()` discloses only explicitly requested skill names, returns no skills when no names are requested, throws on unknown skills through `registry.resolve()`, and throws when a selected skill references a tool name missing from the host-active `tools` list.
+    - Skills remain data-only: no tool registration, tool activation, permission grants, resource loading, provider calls, credential resolution, package imports, or tool execution were added.
+    - Updated root exports in `src/index.ts`; no package subpath or dependency was added.
+    - Added `src/__tests__/skills.test.ts` for registry behavior, explicit selection, missing-tool fail-closed behavior, inert extension-contributed skills, and prompt inclusion of selected skill instructions only.
+    - Updated `src/__tests__/public-contracts.test.ts` with root-export compile/runtime coverage for `SkillRegistry`, `createSkillRegistry()`, and `resolveActiveSkills()`.
+    - Updated `docs/context-and-skills.md`, `docs/public-contracts.md`, `docs/tools.md`, `docs/extensions.md`, `docs/contribution-registries.md`, and docs export checks in `src/__tests__/docs.test.ts`.
+    - Verification: `npm run typecheck` passed; `npm run build && command npm test` passed with 103 tests across 24 suites and 0 failures.
 
-- [ ] Add safe prompt template expansion for CLI/RPC callers
+- [x] Add safe prompt template expansion for CLI/RPC callers
   - Acceptance Criteria:
     - Functional: A tiny public helper expands `{{name}}`-style variables from caller-supplied JSON-compatible values and can feed the default input assembly path for CLI/RPC prompt strings.
     - Performance: Expansion is a single pass over the template plus matched variables, dependency-free, and performs no filesystem, network, resource loading, package import, provider call, tool execution, or eval.
@@ -368,8 +379,20 @@
       - `docs/index.md`: ensure Input and prompt assembly entry mentions prompt templates.
     - `docs/index.md` update: Yes; update Input and prompt assembly description to include template expansion.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Execution Notes:
+    - Added `renderPromptTemplate(template, variables, options?)` in `src/input.ts`, plus exported `PromptTemplateOptions`.
+    - Syntax is intentionally tiny: only top-level `{{name}}` variables matching letters/numbers/underscore are replaced; expression-like text such as `{{name.toUpperCase()}}` is left as data and never evaluated.
+    - Missing variables fail closed by default with `Missing prompt template variable: <name>`; callers can pass `{ missing: "preserve" }` to leave missing placeholders unchanged.
+    - Values come from caller-supplied `JsonObject`; strings are inserted directly, primitives use `String()`, and arrays/objects use deterministic `JSON.stringify()` with sorted object keys.
+    - The helper checks own properties only, so prototype names such as `constructor` are not treated as variables unless explicitly supplied by the caller.
+    - No dependency, eval, filesystem/network/resource loading, package import, provider call, tool execution, logging, or credential resolution was added.
+    - Updated root exports in `src/index.ts`; no package subpath was added.
+    - Added template tests in `src/__tests__/input-pipeline.test.ts` for replacement, deterministic JSON stringification, missing-variable behavior, no expression/prototype evaluation, and feeding rendered strings into default input assembly.
+    - Updated `src/__tests__/public-contracts.test.ts` with root-export compile/runtime coverage for `renderPromptTemplate()` and `PromptTemplateOptions`.
+    - Updated `docs/input-and-prompt-assembly.md`, `docs/index.md`, `docs/public-contracts.md`, and docs export checks in `src/__tests__/docs.test.ts`.
+    - Verification: `npm run typecheck` passed; `npm run build && command npm test` passed with 109 tests across 25 suites and 0 failures.
 
-- [ ] Wire extension/contribution integration and compile-time host examples
+- [x] Wire extension/contribution integration and compile-time host examples
   - Acceptance Criteria:
     - Functional: Input builders, prompt builders, context providers, and skills registered through `ContributionRegistries` or `ExtensionAPI` can be selected by the host and used by the Phase 5 helpers without becoming active automatically.
     - Performance: Integration is in-memory and performs no dynamic import, manifest execution, filesystem/network access, provider call, credential resolution, or tool execution during registration/selection.
@@ -429,8 +452,19 @@
       - `docs/index.md`: ensure active Phase 5 docs are linked.
     - `docs/index.md` update: No new group beyond prior Phase 5 entries unless docs structure changes.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Execution Notes:
+    - Added Phase 5 extension/contribution integration coverage to `src/__tests__/input-pipeline.test.ts`.
+    - Verified extension-registered input builders are inert until passed as `inputBuilder` to `assembleProviderInput()`.
+    - Verified extension-registered context providers are inert until passed in `contextProviders`.
+    - Verified extension-registered prompt builders can replace the default only when passed as `promptBuilder`.
+    - Verified extension middleware call order through `assembleProviderInput()` is `input_assembly`, then `context`, then `prompt_build` when a middleware registry is supplied.
+    - Verified extension-registered skills remain inert until the host copies them into an active `SkillRegistry`, calls `resolveActiveSkills()`, and passes selected skills into prompt assembly.
+    - Added a compile/runtime host wiring example to `src/__tests__/public-contracts.test.ts` using `createExtensionKernel()`, contribution registries, selected builders/providers/skills, middleware, and `assembleProviderInput()` from root exports.
+    - Updated docs in `docs/input-and-prompt-assembly.md`, `docs/context-and-skills.md`, `docs/extensions.md`, `docs/contribution-registries.md`, and `docs/middleware-hooks.md` to clarify contribution vs active selection and middleware call sites.
+    - No new helper, package subpath, dependency, package discovery, filesystem/network access, provider call, credential resolution, or tool execution was added.
+    - Verification: `npm run typecheck` passed; `npm run build && command npm test` passed with 115 tests across 26 suites and 0 failures.
 
-- [ ] Final verification and wiki consistency check
+- [x] Final verification and wiki consistency check
   - Acceptance Criteria:
     - Functional: Phase 5 acceptance is covered by tests/docs: common host input assembles, extensions can replace/intercept stages, context resolves in order, skills are progressively disclosed, and skills cannot grant missing tool permissions.
     - Performance: Test suite remains fast/offline; no new dependencies, background workers, timers, watchers, network calls, filesystem scans, package discovery, provider calls, tool execution, or hidden globals were added.
@@ -472,9 +506,18 @@
       - `none`: only update docs if verification finds missing/incorrect Phase 5 documentation.
     - `docs/index.md` update: No unless verification finds navigation missing.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Execution Notes:
+    - Reviewed Phase 5 docs navigation and API pages: `docs/index.md`, `docs/input-and-prompt-assembly.md`, and `docs/context-and-skills.md` link and describe the implemented helpers, host-owned boundaries, extension contribution behavior, and security/performance notes.
+    - Existing docs checks also cover `docs/public-contracts.md`, `docs/extensions.md`, `docs/contribution-registries.md`, `docs/middleware-hooks.md`, `docs/resource-loading.md`, `docs/tools.md`, and `docs/credentials-and-redaction.md` through the API-page and link tests.
+    - No extra end-to-end agent runtime, token budget fixture, docs tooling dependency, package subpath, or public API was added during verification.
+    - Final verification command run: `npm run build && npm run typecheck && command npm test`.
+    - Result: build passed, typecheck passed, and tests passed with 115 tests across 26 suites and 0 failures.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- Prompt templates are intentionally only top-level `{{name}}` replacement, with no dotted paths, filters, conditionals, loops, partials, or template-engine dependency.
+- Context resolution is sequential and deterministic; no parallel fan-out, cache, retry, or token budgeting was added.
+- Phase 5 stops at provider-input assembly. It does not build the Phase 6 agent/session loop, compaction/runtime memory, CLI/RPC command surface, or provider-specific prompt adapters.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- Phase 6 should consume these helpers from the future agent/session runtime instead of duplicating input, context, prompt, skill, or tool gating logic.
+- Add richer prompt templates only if real CLI/RPC usage proves top-level variables insufficient.
