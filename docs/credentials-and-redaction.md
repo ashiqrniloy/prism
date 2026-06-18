@@ -106,3 +106,5 @@ console.log(error.message);
 - [Public contracts](public-contracts.md): `CredentialRequest`, `Credential`, `CredentialResolver`, and `ErrorInfo`.
 - [Provider layer](provider-layer.md): `providerError()` uses `errorToErrorInfo()` for redacted provider error events.
 - [OpenAI-compatible provider](providers/openai-compatible.md): resolves API keys per request and redacts known values from adapter errors.
+
+Phase 10 adds `createMemoryCredentialStore()`, `createChainedCredentialResolver()`, and `createSecretRedactor()` for opt-in in-memory auth and runtime redaction. Core still has no persistent secret store and does not read environment variables or files for credentials. See [Security/auth/trust](settings-auth-trust-security.md).

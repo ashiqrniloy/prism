@@ -9,6 +9,7 @@ import type {
   AgentSessionForkOptions,
   AIProvider,
   CommandDefinition,
+  CompactionOptions,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,
@@ -24,6 +25,8 @@ import type {
   PromptBuilder,
   PromptTemplateOptions,
   ResourceLoader,
+  RetryOptions,
+  RetryPolicy,
   SettingsProvider,
   Skill,
   SessionEntry,
@@ -32,7 +35,7 @@ import type {
   StoreFactory,
   ToolDefinition,
 } from "../index.js";
-import { assembleProviderInput, createAgent, createAgentSession, createContributionRegistries, createDefaultInputBuilder, createDefaultPromptBuilder, createExtensionKernel, createMemorySessionStore, createSessionEntry, createSkillRegistry, createToolRegistry, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "../index.js";
+import { assembleProviderInput, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createExtensionKernel, createMemorySessionStore, createSessionEntry, createSkillRegistry, createToolRegistry, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "../index.js";
 import type { DispatchToolCallOptions, SessionContextSnapshot, ToolFilter, ToolValidator } from "../index.js";
 
 const provider: AIProvider = {
@@ -292,6 +295,28 @@ describe("public contracts", () => {
 
     assert.equal(snapshot.leafId, "entry_2");
     assert.equal(snapshot.messages[0]?.role, "user");
+  });
+
+  it("public contracts cover default compaction strategy", async () => {
+    const strategy: CompactionStrategy = createDefaultCompactionStrategy({ keepRecentEntries: 1 });
+    const options: CompactionOptions = { strategy, thresholdEntries: 10, keepRecentEntries: 1 };
+    const root = createSessionEntry({ id: "entry_1", sessionId: "s1", kind: "message", message: { role: "user", content: [{ type: "text", text: "Hi" }] } });
+    const result = await strategy.compact({ sessionId: "s1", entries: [root], trigger: "manual" });
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, compaction: options });
+    const session = createAgentSession({ agent, id: "compact-contract" });
+
+    assert.equal(strategy.name, "default-compaction");
+    assert.equal(result.entries?.[0]?.kind, "compaction");
+    assert.equal((await session.compact({ keepRecentEntries: 1 })).entries?.[0]?.kind, "compaction");
+  });
+
+  it("public contracts cover retry policy", async () => {
+    const policy: RetryPolicy = createDefaultRetryPolicy({ maxAttempts: 2, baseDelayMs: 0 });
+    const options: RetryOptions = { policy, maxAttempts: 2 };
+    const decision = await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: { message: "busy", code: 503 } });
+
+    assert.equal(options.policy?.name, "default-retry");
+    assert.equal(decision.retry, true);
   });
 
   it("public contracts can use memory store as session store", async () => {

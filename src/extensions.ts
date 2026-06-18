@@ -12,6 +12,7 @@ import type {
   ModelConfig,
   PromptBuilder,
   ResourceLoader,
+  RetryPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
@@ -20,6 +21,7 @@ import type {
 import { createContributionRegistries, type ContributionRegistries } from "./contributions.js";
 import { createMiddlewareRegistry, type MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo } from "./redaction.js";
+import { assertPermission, type PermissionPolicy } from "./security.js";
 
 export type ExtensionEventHandler = (event: ExtensionEvent) => void | Promise<void>;
 export type ExtensionErrorPolicy = "event" | "throw";
@@ -29,6 +31,7 @@ export interface ExtensionKernelOptions {
   readonly middleware?: MiddlewareRegistry;
   readonly errorPolicy?: ExtensionErrorPolicy;
   readonly secrets?: readonly (string | undefined)[];
+  readonly permission?: PermissionPolicy;
 }
 
 export interface ExtensionEventBus {
@@ -121,6 +124,9 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
     registerCompactionStrategy(strategy: CompactionStrategy) {
       registries.compactionStrategies.register(strategy.name, strategy);
     },
+    registerRetryPolicy(policy: RetryPolicy) {
+      registries.retryPolicies.register(policy.name, policy);
+    },
     registerStoreFactory(factory: StoreFactory) {
       registries.storeFactories.register(factory.name, factory);
     },
@@ -142,6 +148,7 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
     async load(extensions) {
       for (const extension of extensions) {
         try {
+          await assertPermission(options.permission, { kind: "extension", action: "setup", target: extension.name });
           await extension.setup(api);
         } catch (error) {
           if (errorPolicy === "throw") throw error;

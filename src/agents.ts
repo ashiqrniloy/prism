@@ -4,10 +4,16 @@ import type {
   AgentEvent,
   AgentSession,
   AgentSessionConfig,
+  CompactionMiddlewarePayload,
+  CompactionOptions,
+  CompactionResult,
   ContentBlock,
   ErrorInfo,
   Message,
   ProviderEvent,
+  ProviderRequest,
+  RetryMiddlewarePayload,
+  RetryOptions,
   RunOptions,
   SessionEntry,
   SessionStore,
@@ -17,8 +23,10 @@ import type {
   ToolResult,
   Usage,
 } from "./contracts.js";
+import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
-import { errorToErrorInfo } from "./redaction.js";
+import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
+import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "./session-stores.js";
 import { createToolRegistry, dispatchToolCall } from "./tools.js";
 
@@ -44,6 +52,7 @@ class RuntimeAgentSession implements AgentSession {
   private currentLeafId?: string;
   private history: Message[] = [];
   private activeRun?: AbortController;
+  private activeRedactor?: SecretRedactor;
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -71,6 +80,7 @@ class RuntimeAgentSession implements AgentSession {
     const controller = new AbortController();
     const cleanupSignal = bridgeAbort(options.signal, controller);
     this.activeRun = controller;
+    this.activeRedactor = options.redactor ?? this.agent.config.redactor;
 
     try {
       this.requireProvider();
@@ -81,8 +91,9 @@ class RuntimeAgentSession implements AgentSession {
       if (options.model && JSON.stringify(options.model) !== JSON.stringify(this.agent.config.model)) {
         await this.appendEntry(createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "model_change", previousModel: this.agent.config.model, model: options.model }));
       }
-      const inputMessages = inputToMessages(input);
+      const inputMessages = inputToMessages(input).map((message) => this.redact(message));
       for (const message of inputMessages) await this.appendMessage(message, runId);
+      await this.autoCompact(runId, options, controller.signal, inputMessages);
 
       const metadata = { ...this.agent.config.metadata, ...this.metadata, ...options.metadata };
       const { registry, tools } = activeTools(this.agent.config.tools);
@@ -115,35 +126,8 @@ class RuntimeAgentSession implements AgentSession {
         });
 
         throwIfAborted(controller.signal);
-        const content: ContentBlock[] = [];
-        const calls: ToolCallContent[] = [];
-        let messageId: string | undefined;
-        let started = false;
-        for await (const event of this.agent.config.provider!.generate(request)) {
-          throwIfAborted(controller.signal);
-          if (event.type === "error") throw errorFromInfo(event.error);
-          if (event.type === "usage") usage = event.usage;
-          if (event.type === "done") {
-            usage = event.usage ?? usage;
-            break;
-          }
-          if (event.type === "message_start") {
-            started = true;
-            messageId = event.messageId;
-            this.emit({ type: "message_started", sessionId: this.id, runId, message: { id: messageId, role: "assistant", content: [] } });
-            continue;
-          }
-          if (event.type === "content_delta" || event.type === "tool_call") {
-            if (!started) {
-              started = true;
-              this.emit({ type: "message_started", sessionId: this.id, runId, message: { role: "assistant", content: [] } });
-            }
-            const block = providerContent(event);
-            content.push(block);
-            if (block.type === "tool_call") calls.push(block);
-            this.emit({ type: "message_delta", sessionId: this.id, runId, content: block });
-          }
-        }
+        const { content, calls, messageId, started, usage: turnUsage } = await this.generateWithRetry(this.redactProviderRequest(request), runId, options, controller.signal);
+        usage = turnUsage ?? usage;
 
         if (turn === 1) this.history.push(...inputMessages);
         if (started) {
@@ -163,6 +147,8 @@ class RuntimeAgentSession implements AgentSession {
             context: { sessionId: this.id, runId, toolCallId: call.id, signal: controller.signal, metadata },
             middleware: this.agent.config.middleware,
             emit: (event) => this.emit(event),
+            permission: this.agent.config.permission,
+            redactor: this.activeRedactor,
           });
           toolResults.push(result);
           await this.appendMessage(toolResultMessage(result), runId);
@@ -178,6 +164,7 @@ class RuntimeAgentSession implements AgentSession {
       throw error;
     } finally {
       if (this.activeRun === controller) this.activeRun = undefined;
+      this.activeRedactor = undefined;
       cleanupSignal();
       this.closeSubscribers();
     }
@@ -185,6 +172,11 @@ class RuntimeAgentSession implements AgentSession {
 
   prompt(input: string, options?: RunOptions): Promise<void> {
     return this.run(input, options);
+  }
+
+  async compact(options: CompactionOptions = {}): Promise<CompactionResult> {
+    if (this.activeRun) throw new Error("Agent session already has an active run");
+    return this.compactBranch(options, undefined, options.signal, "manual");
   }
 
   abort(reason?: unknown): void {
@@ -222,7 +214,8 @@ class RuntimeAgentSession implements AgentSession {
   }
 
   private emit(event: AgentEvent): void {
-    for (const subscriber of this.subscribers) subscriber.push(event);
+    const redacted = redactAgentEvent(event, this.activeRedactor);
+    for (const subscriber of this.subscribers) subscriber.push(redacted);
   }
 
   private closeSubscribers(): void {
@@ -230,13 +223,115 @@ class RuntimeAgentSession implements AgentSession {
     this.subscribers.clear();
   }
 
+  private async generateWithRetry(request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal): Promise<ProviderTurnResult> {
+    const retry = mergeRetry(this.agent.config.retry, options.retry);
+    const secrets = retry?.secrets ?? [];
+    const policy = retry?.policy ?? (retry ? createDefaultRetryPolicy(retry) : undefined);
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.generateProviderTurn(request, runId, signal);
+      } catch (error) {
+        const failure = error instanceof ProviderTurnFailure ? error : undefined;
+        const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
+        if (!policy || failure?.observable) throw errorFromInfo(info);
+        const context = { sessionId: this.id, runId, attempt, error: info, metadata: retry?.metadata, signal };
+        let decision = await policy.decide(context);
+        const payload: RetryMiddlewarePayload = await this.agent.config.middleware?.run("retry", { context, decision }) ?? { context, decision };
+        decision = payload.decision;
+        if (!decision.retry) throw errorFromInfo(info);
+        const delayMs = decision.delayMs ?? 0;
+        this.emit({ type: "retry_scheduled", sessionId: this.id, runId, attempt, delayMs, error: info });
+        await waitForRetry(decision, signal);
+      }
+    }
+  }
+
+  private async generateProviderTurn(request: ProviderRequest, runId: string, signal: AbortSignal): Promise<ProviderTurnResult> {
+    const content: ContentBlock[] = [];
+    const calls: ToolCallContent[] = [];
+    let messageId: string | undefined;
+    let started = false;
+    let usage: Usage | undefined;
+    try {
+      for await (const event of this.agent.config.provider!.generate(request)) {
+        throwIfAborted(signal);
+        if (event.type === "error") throw new ProviderTurnFailure(event.error, started);
+        if (event.type === "usage") usage = event.usage;
+        if (event.type === "done") {
+          usage = event.usage ?? usage;
+          break;
+        }
+        if (event.type === "message_start") {
+          started = true;
+          messageId = event.messageId;
+          this.emit({ type: "message_started", sessionId: this.id, runId, message: { id: messageId, role: "assistant", content: [] } });
+          continue;
+        }
+        if (event.type === "content_delta" || event.type === "tool_call") {
+          if (!started) {
+            started = true;
+            this.emit({ type: "message_started", sessionId: this.id, runId, message: { role: "assistant", content: [] } });
+          }
+          const block = providerContent(event);
+          content.push(block);
+          if (block.type === "tool_call") calls.push(block);
+          this.emit({ type: "message_delta", sessionId: this.id, runId, content: block });
+        }
+      }
+      return { content, calls, messageId, started, usage };
+    } catch (error) {
+      if (error instanceof ProviderTurnFailure) throw error;
+      throw new ProviderTurnFailure(errorToErrorInfo(error), started);
+    }
+  }
+
   private async appendMessage(message: Message, runId: string): Promise<void> {
     await this.appendEntry(createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "message", message }));
   }
 
+  private async autoCompact(runId: string, options: RunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void> {
+    const compaction = mergeCompaction(this.agent.config.compaction, options.compaction);
+    if (!compaction || compaction.thresholdEntries === undefined) return;
+    const snapshot = await this.snapshot();
+    if (snapshot.entries.length <= compaction.thresholdEntries || snapshot.entries.at(-1)?.kind === "compaction") return;
+    await this.compactBranch(compaction, runId, signal, "auto");
+    const compacted = await this.snapshot();
+    this.history = withoutTrailingInput(compacted.messages, inputMessages);
+  }
+
+  private async compactBranch(options: CompactionOptions, runId: string | undefined, signal: AbortSignal | undefined, trigger: "manual" | "auto"): Promise<CompactionResult> {
+    throwIfAbortedSignal(signal);
+    const entries = await this.entries();
+    const secrets = options.secrets ?? [];
+    const strategy = options.strategy ?? createDefaultCompactionStrategy({ keepRecentEntries: options.keepRecentEntries, maxSummaryChars: options.maxSummaryChars, secrets });
+    const context = { sessionId: this.id, entries, keepRecentEntries: options.keepRecentEntries, trigger, secrets, metadata: options.metadata, signal };
+    this.emit({ type: "compaction_started", sessionId: this.id, runId });
+    let result = await strategy.compact(context);
+    result = { ...result, summary: redactSecrets(result.summary, secrets) };
+    const payload: CompactionMiddlewarePayload = await this.agent.config.middleware?.run("compaction", { context, result }) ?? { context, result };
+    result = { ...payload.result, summary: redactSecrets(payload.result.summary, secrets) };
+    const source = result.entries?.find((entry) => entry.kind === "compaction");
+    const data = isCompactionEntryData(source?.data) ? source.data : undefined;
+    const entry = createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "compaction", summary: result.summary, data });
+    await this.appendEntry(entry);
+    const finalResult = { ...result, entries: [entry] };
+    this.emit({ type: "compaction_finished", sessionId: this.id, runId, summary: finalResult.summary });
+    await this.rebuildHistory();
+    return finalResult;
+  }
+
   private async appendEntry(entry: SessionEntry): Promise<void> {
-    await this.store.append(entry);
-    this.currentLeafId = entry.id;
+    const redacted = redactSessionEntry(entry, this.activeRedactor);
+    await this.store.append(redacted);
+    this.currentLeafId = redacted.id;
+  }
+
+  private redact<T>(value: T): T {
+    return this.activeRedactor?.redact(value) ?? value;
+  }
+
+  private redactProviderRequest(request: ProviderRequest): ProviderRequest {
+    return redactProviderRequest(request, this.activeRedactor);
   }
 
   private async rebuildHistory(): Promise<void> {
@@ -313,6 +408,41 @@ function errorFromInfo(error: ErrorInfo): Error {
   return Object.assign(new Error(error.message), { name: error.name ?? "Error", cause: error.cause });
 }
 
+interface ProviderTurnResult {
+  readonly content: ContentBlock[];
+  readonly calls: ToolCallContent[];
+  readonly messageId?: string;
+  readonly started: boolean;
+  readonly usage?: Usage;
+}
+
+class ProviderTurnFailure extends Error {
+  constructor(readonly info: ErrorInfo, readonly observable: boolean) {
+    super(info.message);
+  }
+}
+
+function mergeRetry(agent: false | RetryOptions | undefined, run: false | RetryOptions | undefined): RetryOptions | undefined {
+  if (run === false) return undefined;
+  if (run) return { ...(agent || {}), ...run };
+  return agent || undefined;
+}
+
+function mergeCompaction(agent: false | CompactionOptions | undefined, run: false | CompactionOptions | undefined): CompactionOptions | undefined {
+  if (run === false) return undefined;
+  if (run) return { ...(agent || {}), ...run };
+  return agent || undefined;
+}
+
+function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[] {
+  const next = [...messages];
+  for (let i = input.length - 1; i >= 0; i -= 1) {
+    const last = next.at(-1);
+    if (last && JSON.stringify(last) === JSON.stringify(input[i])) next.pop();
+  }
+  return next;
+}
+
 function bridgeAbort(signal: AbortSignal | undefined, controller: AbortController): () => void {
   if (!signal) return () => undefined;
   const abort = () => controller.abort(signal.reason);
@@ -322,7 +452,11 @@ function bridgeAbort(signal: AbortSignal | undefined, controller: AbortControlle
 }
 
 function throwIfAborted(signal: AbortSignal): void {
-  if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
+  throwIfAbortedSignal(signal);
+}
+
+function throwIfAbortedSignal(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
 }
 
 function randomId(prefix: string): string {

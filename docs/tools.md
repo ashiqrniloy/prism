@@ -146,3 +146,5 @@ Configuration can carry allow/deny names, but Prism does not define a policy cla
 - [Context and skills](context-and-skills.md): skill `toolNames` validation against host-active tools.
 - [Middleware hooks](middleware-hooks.md): `tool_call` and `tool_result` middleware used during dispatch.
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.
+
+`DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

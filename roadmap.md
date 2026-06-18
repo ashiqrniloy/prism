@@ -1,6 +1,6 @@
 # prism Roadmap
 
-Updated: 2026-06-15
+Updated: 2026-06-18
 
 `prism` is a TypeScript/Node.js agent harness package. Host apps and extension
 packages bring providers, models, tools, resources, credentials, UI, storage,
@@ -56,6 +56,21 @@ Compromises/follow-ups from `plans/002-provider-streaming-and-mock-provider.md`:
 - Credential handling resolves per request and redacts known values, but credential storage/env/settings integration belongs to the security/settings phase.
 - Phase 3 must build agent/session runtime on top of `AIProvider`, `ProviderEvent`, registries, and `createMockProvider`.
 - Revisit OpenAI-compatible multimodal request mapping after image-capable runtime examples exist.
+
+### Deferred work review from `plans/001-013.md`
+
+The completed plans intentionally deferred these items; the new post-Phase-10 work pulls only the pieces that now have real demand:
+
+- Real provider wiring stayed out of core: CLI uses only mock bootstrap, the built-in OpenAI-compatible adapter is Chat Completions-only, and adapter conformance was deferred until a second real adapter exists.
+- Credential storage stayed in memory/explicit files; persistent encrypted keychains and automatic env/project discovery remain host/package concerns.
+- Provider-specific retry and request quirks were deferred to adapter packages instead of expanding the generic retry classifier.
+- Provider-backed compaction was explicitly left for optional packages; the current default compaction is local, conservative, and entry-count based.
+- Observational/vector/semantic memory was not added to core; session stores already preserve raw entries and custom/compaction data that memory packages can build on.
+- Package discovery, URI routing, schema generation, and trust prompts stayed out of core unless a host/runtime proves they are needed.
+- System prompt support exists as `AgentConfig.instructions` and input-builder instructions, but package/app layered prompt contributions are not yet a documented configurable surface.
+- Docs/export drift checks, compiled examples, network-free provider conformance, and release packaging remain hardening work.
+
+Conclusion: add generic provider/auth/cache/system-prompt primitives only where current contracts are insufficient, then implement the requested providers and compaction strategies as separate packages.
 
 ## Target architecture
 
@@ -318,31 +333,103 @@ Acceptance:
 - CLI does not load project-local executable resources without trust.
 - Secrets are not serialized into events, prompts, compaction, or sessions.
 
-### Phase 11 — Hardening, docs, examples, and release
+### Phase 11 — Provider, auth, cache, and system-prompt primitives
 
-**Goal:** publishable v1 with extension-developer documentation.
+**Goal:** add only generic surfaces needed by real provider packages and package/app prompts.
 
 Deliver:
-- Complete `/docs` API set linked from `/docs/index.md`.
-- Typed examples for SDK, provider, model, tool, context, skill, extension, manifest, config, compaction, CLI, and RPC.
-- End-to-end mock demo.
-- Contract tests for public exports and JSON/RPC events.
-- Golden session JSONL fixtures.
-- Provider adapter tests for streaming, abort, tool calls, usage, and redaction.
-- Changelog and release workflow.
+- Provider-package contract for registering models, providers, auth methods, request policies, and docs without hidden globals.
+- OAuth/API-key credential contracts modeled after Pi's `OAuthLoginCallbacks`, refreshable credentials, and explicit API-key resolution order.
+- Generic provider request/cache policy hook that can add headers, payload fields, session ids, cache retention, and model-specific compatibility data before `AIProvider.generate()`.
+- Model metadata/compat extension for prompt caching, reasoning/thinking formats, OpenRouter routing passthrough, and provider-specific usage mapping without hard-coded provider names in core.
+- Layered system prompt contributions for apps/packages/users/runs with explicit merge/replace order; keep `AgentConfig.instructions` as the simple direct path.
+- Network-free provider conformance harness covering stream order, abort, tool-call reconstruction, usage/cache accounting, redaction, and request-policy payload checks.
+- `/docs` updates for provider packages, OAuth/API keys, cache policy, model compat metadata, and system prompt layering.
 
 Acceptance:
-- Tests run under 10 seconds without network.
+- Core can still run fully in memory with mock providers and no package loading.
+- No OpenAI/OpenRouter/ZAI/Kimi/OpenCode literals are added to core behavior.
+- A package can provide OAuth or API-key auth, cache policy, and model metadata through public contracts only.
+- Apps can choose, replace, or disable system prompt layers and cache policy per run/model.
+
+### Phase 12 — Real provider packages
+
+**Goal:** ship the requested provider connections as separate packages that follow Pi's proven provider implementations.
+
+Deliver:
+- `@prism/provider-openai`: OpenAI API-key Responses support plus ChatGPT Plus/Pro/Codex subscription OAuth using Pi's PKCE browser/device-code flow and Codex Responses request shape.
+- `@prism/provider-opencode-go`: OpenCode Go API-key provider using Pi's model metadata, OpenAI-compatible/Anthropic-compatible routes, and `x-opencode-session` cache/session headers.
+- `@prism/provider-openrouter`: OpenRouter API-key provider with app-controlled model catalog, routing passthrough, reasoning controls, and model-level cache policy overrides.
+- `@prism/provider-zai`: ZAI GLM API-key provider using Pi's OpenAI-compatible `thinkingFormat: "zai"`, developer-role fallback, and GLM tool-stream quirks.
+- `@prism/provider-kimi`: Kimi For Coding subscription/API-key provider using Pi's Anthropic-compatible Kimi endpoint and headers; keep Moonshot API-key models as optional model metadata, not core behavior.
+- Provider cache policies copied/adapted from Pi where applicable: OpenAI `prompt_cache_key`/`prompt_cache_retention`, Codex session/request ids, Anthropic-style `cache_control`, OpenCode session headers, OpenRouter per-model cache control, and provider usage cache-read/write mapping.
+- Unit tests use mocked `fetch`/streams/OAuth callbacks only; live integration tests are opt-in behind explicit env vars and skipped by default.
+- Docs/examples for each package: OAuth login, API key, model selection, cache control, OpenRouter model override, and secret redaction.
+
+Acceptance:
+- Requested providers can be registered without modifying Prism core.
+- Secrets never appear in events, summaries, docs fixtures, or stored session entries.
+- Provider conformance tests pass for all packages without network.
+- OpenRouter users/apps can control cache behavior per model instead of accepting a single hard-coded policy.
+
+### Phase 13 — LLM compaction strategy package
+
+**Goal:** provide provider-backed compaction as a replaceable strategy, based on Pi's compaction implementation.
+
+Deliver:
+- `@prism/compaction-llm` with token-estimated cut points, `reserveTokens`, `keepRecentTokens`, previous-summary update prompts, split-turn prefix summaries, custom instructions, and structured markdown summary format.
+- Conversation serialization that prevents continuation, truncates oversized tool results, preserves exact file paths/errors/decisions, and redacts known secrets.
+- Optional file-operation tracking in compaction details, following Pi's read/modified file summary pattern but using Prism tool-result/message contracts.
+- Strategy options for summary provider/model, thinking level, cache policy, max summary tokens, and host-supplied credential resolver.
+- Manual and auto-compaction integration through existing `CompactionStrategy`, middleware, session store, and branch APIs; raw history remains append-only.
+- Docs/examples showing how an app picks a cheap summarization model or reuses the active model.
+
+Acceptance:
+- LLM compaction is not the core default unless a host explicitly selects the package strategy.
+- Failed/aborted summarization does not delete raw history or corrupt the session branch.
+- Tests cover normal, repeated, split-turn, branch-summary, redaction, and provider-error paths with mock providers only.
+
+### Phase 14 — Observational memory compaction package
+
+**Goal:** provide observational memory as a replaceable package, based on `pi-observational-memory` V3.
+
+Deliver:
+- `@prism/compaction-observational-memory` with observer, reflector, and dropper workers that run from session events and store append-only custom memory ledger entries.
+- Observation/reflection/drop data model with 12-character source-backed ids, relevance levels, coverage tiers, active/full projections, and folded compaction details.
+- Compaction strategy that renders prepared memory immediately instead of calling a model during compaction.
+- Optional recall tool/command contributions that recover exact source entries for a known observation/reflection id; no semantic search.
+- Settings namespace for thresholds, passive mode, worker model, thinking level, pool targets, and debug logging through explicit `SettingsProvider`/host config.
+- Primitive review before implementation: use existing `SessionEntry.kind: "custom"` and `data` first; add only generic custom-entry typing if package evidence shows the current contract is insufficient.
+- Docs/examples for passive mode, worker model selection, memory status/view, recall, and compaction handoff.
+
+Acceptance:
+- Observational memory can be installed/registered without changing Prism core or provider packages.
+- Background workers never run without explicit host/package activation and credentials.
+- Compaction remains fast because it renders existing memory; model work happens before compaction.
+- Recall returns source evidence from the current branch and fails closed for invalid/missing ids.
+
+### Phase 15 — Hardening, docs, examples, and release
+
+**Goal:** publishable v1 after real providers, cache policy, system prompts, and compaction packages are documented.
+
+Deliver:
+- Complete `/docs` API set linked from `/docs/index.md`, including provider package authoring, OAuth/API-key auth, cache policy, model compat metadata, system prompt layering, LLM compaction, and observational memory.
+- Typed examples for SDK, provider package, OAuth login, API key, OpenRouter model/cache override, model, tool, context, skill, extension, manifest, config, system prompt, compaction, CLI, and RPC.
+- End-to-end mock demos for provider packages, LLM compaction, observational memory recall, CLI, and RPC.
+- Contract tests for public exports, package subpaths, provider conformance, JSON/RPC events, cache-policy payloads, system-prompt layering, and session/memory entries.
+- Golden session JSONL fixtures covering branching, compaction, LLM summaries, and observational-memory ledger entries.
+- Changelog and release workflow for core plus first-party packages.
+
+Acceptance:
+- Tests run under 10 seconds without network by default.
 - Examples compile.
-- `npm pack --dry-run` includes only needed files.
+- `npm pack --dry-run` includes only needed files for core and first-party packages.
 
 ## Suggested implementation-plan order
 
 Completed:
 1. `001-public-contracts.md`
 2. `002-provider-streaming-and-mock-provider.md`
-
-Next:
 3. `003-documentation-governance-and-implemented-api-wiki.md`
 4. `004-current-implementation-alignment.md`
 5. `005-extension-kernel-and-contribution-registries.md`
@@ -354,7 +441,13 @@ Next:
 11. `011-compaction-strategies-and-retry.md`
 12. `012-cli-json-rpc.md`
 13. `013-settings-auth-trust-security.md`
-14. `014-docs-examples-release.md`
+
+Next:
+14. `014-provider-auth-cache-and-system-prompt-primitives.md`
+15. `015-real-provider-packages.md`
+16. `016-llm-compaction-strategy.md`
+17. `017-observational-memory-strategy.md`
+18. `018-docs-examples-release.md`
 
 ## Defer until after v1
 
@@ -362,4 +455,5 @@ Next:
 - MCP bridge. Build as an external extension package after extension APIs settle.
 - Full TUI. Optional separate package if CLI/RPC is not enough.
 - Workflow graph engine. Start with bounded agent loops; add graph orchestration only when real host apps need it.
-- Multiple first-party provider adapters beyond OpenAI-compatible unless users ask.
+- Additional first-party provider adapters beyond OpenAI, OpenCode Go, OpenRouter, ZAI, and Kimi unless users ask.
+- Encrypted/keychain credential storage. Keep persistent secret UX host-owned until a real app needs it.

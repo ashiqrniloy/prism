@@ -70,7 +70,7 @@ The builder returns `readonly Message[]`.
 - String input becomes one user text message.
 - `Message` and `Message[]` input are preserved.
 - History is prepended before current input.
-- Instructions and summaries are system messages.
+- Instructions and summaries are system messages; compacted branch summaries from `rebuildSessionContext()` use the same path.
 - Text attachments and explicit text resources are user messages.
 - Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn.
 - Middleware runs only when `middleware` is supplied in the context.
@@ -164,3 +164,4 @@ const request = await assembleProviderInput({
 - [Contribution registries](contribution-registries.md): inert input, prompt, context, and skill contributions.
 - [Agent/session runtime](agent-session-runtime.md): calls assembly each turn and supplies runtime tool results to the next provider request.
 - [Tools](tools.md): host-owned tool registry and tool result boundary.
+- [Compaction and retry policies](compaction-and-retry.md): default compaction strategy that feeds summaries into input assembly.

@@ -1,4 +1,4 @@
-import type { Message, SessionEntry, SessionStore } from "./contracts.js";
+import type { CompactionEntryData, Message, SessionEntry, SessionStore } from "./contracts.js";
 
 export interface CreateSessionEntryOptions extends Omit<SessionEntry, "id" | "timestamp"> {
   readonly id?: string;
@@ -57,12 +57,31 @@ export function listSessionBranches(entries: readonly SessionEntry[]): readonly 
 
 export function rebuildSessionContext(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): SessionContextSnapshot {
   const branch = getSessionBranchEntries(entries, options);
-  return {
-    leafId: branch.at(-1)?.id,
-    entries: branch,
-    messages: branch.flatMap((entry) => entry.kind === "message" && entry.message ? [entry.message] : []),
-    summaries: branch.flatMap((entry) => entry.kind === "summary" && entry.summary ? [entry.summary] : []),
-  };
+  const compaction = [...branch].reverse().find((entry) => entry.kind === "compaction" && entry.summary && isCompactionEntryData(entry.data));
+  if (!compaction || !isCompactionEntryData(compaction.data)) {
+    return {
+      leafId: branch.at(-1)?.id,
+      entries: branch,
+      messages: branch.flatMap((entry) => entry.kind === "message" && entry.message ? [entry.message] : []),
+      summaries: branch.flatMap((entry) => entry.kind === "summary" && entry.summary ? [entry.summary] : []),
+    };
+  }
+
+  const keepIds = new Set(compaction.data.keepEntryIds ?? []);
+  let afterThrough = !compaction.data.throughEntryId;
+  const messages: Message[] = [];
+  const summaries: string[] = [compaction.summary!];
+  for (const entry of branch) {
+    if (entry.id === compaction.data.throughEntryId) {
+      afterThrough = true;
+      continue;
+    }
+    if (entry.id === compaction.id) continue;
+    if (entry.kind === "message" && entry.message && (afterThrough || keepIds.has(entry.id))) messages.push(entry.message);
+    if (entry.kind === "summary" && entry.summary && afterThrough) summaries.push(entry.summary);
+  }
+
+  return { leafId: branch.at(-1)?.id, entries: branch, messages, summaries };
 }
 
 export function createMemorySessionStore(initialEntries: readonly SessionEntry[] = []): SessionStore {
@@ -90,6 +109,13 @@ export function createMemorySessionStore(initialEntries: readonly SessionEntry[]
     entries.push(entry);
     bySession.set(entry.sessionId, entries);
   }
+}
+
+function isCompactionEntryData(value: unknown): value is CompactionEntryData {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const data = value as Record<string, unknown>;
+  return (data.throughEntryId === undefined || typeof data.throughEntryId === "string")
+    && (data.keepEntryIds === undefined || (Array.isArray(data.keepEntryIds) && data.keepEntryIds.every((item) => typeof item === "string")));
 }
 
 function indexEntries(entries: readonly SessionEntry[]): { byId: Map<string, SessionEntry>; parentIds: Set<string> } {

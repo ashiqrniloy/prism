@@ -86,7 +86,7 @@ createMockProvider(events?: readonly ProviderEvent[], options?: MockProviderOpti
 
 - Registry `resolve()` returns the matching provider/model or throws before any provider `generate()` call.
 - Provider event helpers return plain `ProviderEvent` objects.
-- `providerError()` converts unknown errors to redacted `ErrorInfo` through `errorToErrorInfo()`.
+- `providerError()` converts unknown errors to redacted `ErrorInfo` through `errorToErrorInfo()` and preserves safe string/number `code` fields for retry classification.
 - `createMockProvider()` returns an `AIProvider` whose `generate()` yields the scripted events in order and checks `request.signal?.aborted` before each event.
 - The agent/session runtime passes its per-run abort signal as `ProviderRequest.signal`.
 
@@ -157,10 +157,11 @@ for await (const event of resolvedProvider.generate({
 - `createMockProvider()` uses scripted events only: no timers, credentials, SDKs, or network.
 - Do not hide real secrets in mock event fixtures. If an error event must include secret-like text, use fake placeholders and redaction helpers.
 - `providerError(error, secrets)` only redacts the provided secret values. It is not a general secret scanner.
+- Providers may set safe `ErrorInfo.code` values such as `429`, `503`, or `ETIMEDOUT`; retry policy code treats them as classification hints, not trusted provider metadata.
 
 ## Related APIs
 
-- [Agent/session runtime](agent-session-runtime.md): passes abort signals to providers and maps provider errors to session `error` events.
+- [Agent/session runtime](agent-session-runtime.md): passes abort signals to providers, maps provider errors to session `error` events, and can retry configured transient provider-turn failures before output.
 - [Public contracts](public-contracts.md): `AIProvider`, `ProviderRequest`, `ProviderEvent`, `ModelConfig`, `Usage`, and content/tool-call contracts.
 - [Credentials and redaction](credentials-and-redaction.md): credential and redaction helpers used by provider adapters.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter that emits these normalized provider events.

@@ -12,6 +12,7 @@ export type ManifestContributionKind =
   | "inputBuilder"
   | "promptBuilder"
   | "compactionStrategy"
+  | "retryPolicy"
   | "storeFactory"
   | "resourceLoader"
   | "settingsProvider"
@@ -113,6 +114,7 @@ function readKind(value: unknown, index: number): ManifestContributionKind {
     "inputBuilder",
     "promptBuilder",
     "compactionStrategy",
+    "retryPolicy",
     "storeFactory",
     "resourceLoader",
     "settingsProvider",

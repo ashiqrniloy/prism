@@ -1,7 +1,8 @@
 import type { AgentEvent, ErrorInfo, JsonObject, ToolCallContent, ToolDefinition, ToolExecutionContext, ToolRegistry, ToolResult } from "./contracts.js";
 import { isJsonObject } from "./config.js";
 import type { MiddlewareRegistry } from "./middleware.js";
-import { errorToErrorInfo, redactSecrets } from "./redaction.js";
+import { errorToErrorInfo, redactSecrets, type SecretRedactor } from "./redaction.js";
+import { assertPermission, type PermissionPolicy } from "./security.js";
 
 export interface ToolFilter {
   readonly allow?: readonly string[];
@@ -20,6 +21,8 @@ export interface DispatchToolCallOptions {
   readonly validate?: ToolValidator;
   readonly emit?: (event: AgentEvent) => void | Promise<void>;
   readonly secrets?: readonly (string | undefined)[];
+  readonly permission?: PermissionPolicy;
+  readonly redactor?: SecretRedactor;
 }
 
 export function createToolRegistry(tools: readonly ToolDefinition[] = []): ToolRegistry {
@@ -81,6 +84,12 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     },
   };
 
+  try {
+    await assertPermission(options.permission, { kind: "tool", action: "execute", target: mediatedCall.name, metadata: options.context.metadata });
+  } catch (error) {
+    return blocked(mediatedCall, context, "permission_denied", errorToErrorInfo(error, secrets), options.emit);
+  }
+
   const validation = await options.validate?.(tool!, mediatedCall.arguments, context);
   if (validation) return blocked(mediatedCall, context, "validation_failed", toErrorInfo(validation, secrets), options.emit);
 
@@ -88,7 +97,8 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
 
   try {
     const raw = await tool!.execute(mediatedCall.arguments, context);
-    const result = await (options.middleware?.run<ToolResult>("tool_result", raw) ?? raw);
+    const mediatedResult = await (options.middleware?.run<ToolResult>("tool_result", raw) ?? raw);
+    const result = options.redactor?.redact(mediatedResult) ?? mediatedResult;
     await options.emit?.({ type: "tool_execution_finished", sessionId: context.sessionId, runId: context.runId, result });
     return result;
   } catch (error) {

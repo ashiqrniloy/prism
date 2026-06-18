@@ -9,6 +9,7 @@ The agent/session runtime adds the minimal shared SDK surface for running provid
 - `agent.createSession(config)`
 - `session.run(input, options)`
 - `session.prompt(input, options)`
+- `session.compact(options?)`
 - `session.subscribe()`
 - `session.abort()`
 - `session.entries()`
@@ -22,7 +23,7 @@ The runtime streams provider text/tool-call content into `AgentEvent` values. Co
 
 Use this runtime when a host already has an explicit `AIProvider` and wants to run a prompt through Prism's default input/prompt assembly, optionally execute selected host tools, and observe normalized session events.
 
-Do not use it as a CLI/RPC adapter, retry framework, compaction engine, provider registry, credential resolver, or app-tool pack.
+Do not use it as a CLI/RPC adapter, whole-run retry framework, vector memory engine, provider registry, credential resolver, or app-tool pack.
 
 ## Inputs / request
 
@@ -41,7 +42,7 @@ string | Message | readonly Message[]
 
 `AgentSessionConfig.store` overrides `AgentConfig.store`; otherwise the session gets a private memory store. `AgentSessionConfig.leafId` selects the branch leaf to resume from.
 
-`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. `RunOptions.maxToolRounds` bounds repeated tool turns and defaults to `1`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, and tools.
+`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `RunOptions.compaction` can enable auto-compaction for that run or use `false` to disable configured auto-compaction. `RunOptions.retry` can enable provider-turn retry for that run or use `false` to disable configured retry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. `RunOptions.maxToolRounds` bounds repeated tool turns and defaults to `1`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, tools, auto-compaction, and retry backoff.
 
 ## Outputs / response / events
 
@@ -59,11 +60,13 @@ For a text-only provider turn, the runtime emits:
 
 For complete tool calls, the runtime emits the assistant `tool_call` as `message_delta`, dispatches sequentially through `dispatchToolCall()`, emits tool execution events, appends a tool-result session entry, adds returned `ToolResult` values to the next provider turn, and stops when the provider returns no tool calls or `maxToolRounds` is reached.
 
+`session.compact(options?)` runs the selected compaction strategy, appends one `kind: "compaction"` entry under the current leaf, updates the leaf, emits `compaction_started` and `compaction_finished`, and returns the appended `CompactionResult`. If `AgentConfig.compaction` or `RunOptions.compaction` includes `thresholdEntries`, auto-compaction checks once after input/model-change entries are appended and before provider input assembly; `RunOptions.compaction: false` skips that run's auto-compaction.
+
 `entries()` returns the current branch entries. `checkout(leafId?)` moves the session to an existing leaf and rebuilds history. `fork()` returns a session on the same store/session id at the selected leaf without copying entries. `clone({ id })` copies the current branch to a new session id with new entry ids.
 
-Missing providers fail closed: `run()` emits `error` and rejects before calling any provider. Provider `error` events emit session `error` and reject. Unknown tools fail closed through the tool harness and do not execute. Tool exceptions emit `tool_execution_error`, return an error `ToolResult`, and may still continue to the next provider turn.
+Missing providers fail closed: `run()` emits `error` and rejects before calling any provider. Provider `error` events emit session `error` and reject unless configured retry handles a transient provider-turn failure before output. Unknown tools fail closed through the tool harness and do not execute. Tool exceptions emit `tool_execution_error`, return an error `ToolResult`, and may still continue to the next provider turn.
 
-Only one `run()` may be active per session. Concurrent `run()` calls emit `error` and reject immediately; Prism does not queue them.
+Only one `run()` may be active per session. Concurrent `run()` calls emit `error` and reject immediately; Prism does not queue them. Manual `compact()` also rejects while a run is active.
 
 `session.abort(reason)` aborts the active run. The abort signal is passed to input assembly, provider requests, and tool execution; if a tool/provider path aborts after a tool call, Prism does not start another provider turn.
 
@@ -100,7 +103,8 @@ const reader = (async () => {
   for await (const event of session.subscribe()) console.log(event.type);
 })();
 
-await session.run("Hi", { maxToolRounds: 1 });
+await session.run("Hi", { maxToolRounds: 1, compaction: { thresholdEntries: 20, keepRecentEntries: 6 }, retry: { maxAttempts: 3, baseDelayMs: 50 } });
+await session.compact({ keepRecentEntries: 4 });
 const branch = await session.entries();
 await session.checkout(branch.at(-1)?.id);
 const clone = await session.clone({ id: "s2" });
@@ -109,7 +113,11 @@ await reader;
 
 ## Extension and configuration notes
 
-The runtime calls `assembleProviderInput()` on every turn and uses only values supplied on `AgentConfig`: `inputBuilder`, `promptBuilder`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, and `RunOptions.model`. Contributions remain inert until a host passes selected values into the agent config.
+The runtime calls `assembleProviderInput()` on every turn and uses only values supplied on `AgentConfig`: `inputBuilder`, `promptBuilder`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, `compaction`, `retry`, and `RunOptions.model`/`compaction`/`retry`. Contributions remain inert until a host passes selected values into the agent config.
+
+The runtime calls `middleware.run("compaction", { context, result })` after a compaction strategy returns and before appending the standard compaction entry. Middleware can adjust the result summary/data, but the runtime still owns store append ordering and branch parent ids.
+
+The runtime calls `middleware.run("retry", { context, decision })` after the retry policy decision and before emitting `retry_scheduled`. Middleware can stop retrying or adjust the delay. Retry wraps only the current provider turn, reuses the same assembled request, and never retries after assistant output has been emitted.
 
 `createAgent()` is a thin wrapper over explicit config. It does not load `AgentConfig.extensions`, scan packages, resolve credentials, read settings, or consult hidden registries. External `AgentDefinition` implementations can call it from their own `create()` method:
 
@@ -131,11 +139,13 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - No hidden provider, tool, credential, resource, settings, or extension globals are created.
 - Unknown providers fail before provider streaming.
 - Unknown, denied, or malformed tool calls fail closed through `dispatchToolCall()`.
-- Abort uses native `AbortController`/`AbortSignal` only; no polling, queue, retry, or dependency is added.
+- Abort uses native `AbortController`/`AbortSignal` only; no polling, queue, or dependency is added. Retry backoff uses native abort-aware timers only when configured.
 - Concurrent runs fail fast instead of creating a scheduler.
+- Retry context contains session/run ids, attempt, redacted error info, optional metadata, and signal only; it excludes provider request messages/content, provider objects, credentials, credential resolvers, settings, and hidden metadata.
+- Compaction context contains branch entries and explicit compaction options only; it does not include provider objects, provider requests, credential resolvers, resolved credentials, settings, or hidden metadata.
 - Store entries contain explicit session data only; Prism does not store provider objects, credential resolvers, resolved credentials, full provider requests, settings, or hidden metadata.
 - Runtime events contain messages/content only; do not put secrets in prompts, metadata, provider events, session entries, or docs examples.
-- The event broadcaster is in-memory and live-only. It adds no dependency, timer, filesystem/network discovery, retry loop, worker, or durable queue.
+- The event broadcaster is in-memory and live-only. It adds no dependency, timer, filesystem/network discovery, worker, or durable queue.
 
 ## Related APIs
 
@@ -143,5 +153,9 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - [Provider layer](provider-layer.md): `AIProvider`, provider events, and `createMockProvider()`.
 - [Input and prompt assembly](input-and-prompt-assembly.md): request assembly used by `session.run()`.
 - [Session stores and branching](session-stores-and-branching.md): `SessionStore`, memory store, branch helpers, and context rebuild.
+- [Compaction and retry policies](compaction-and-retry.md): compaction strategy/config APIs used by `session.compact()` and auto-compaction, plus retry policy/config APIs.
 - [Tools](tools.md): host-owned tool harness used by the bounded runtime tool loop.
-- [Middleware hooks](middleware-hooks.md): hooks that configured assembly can run.
+- [Middleware hooks](middleware-hooks.md): hooks that configured assembly/runtime can run.
+- [CLI/RPC](cli-rpc.md): terminal and JSONL adapters over this runtime.
+
+`AgentConfig.redactor` and `RunOptions.redactor` redact exact known secret strings from provider requests, emitted events, and stored session entries. Redaction is opt-in and exact-match only.

@@ -2,7 +2,7 @@
 
 ## What it does
 
-Middleware hooks are ordered, host-owned functions that transform a payload only when a host/runtime explicitly calls `run()`. They are a primitive for future provider, input, tool, retry, compaction, and session runtime phases.
+Middleware hooks are ordered, host-owned functions that transform a payload only when a host/runtime explicitly calls `run()`. They are a primitive for provider, input, tool, compaction, retry, and session runtime phases.
 
 APIs:
 
@@ -14,7 +14,7 @@ APIs:
 
 Use middleware hooks when a host wants extension/package code to observe or transform a value at a named runtime boundary.
 
-Do not use middleware hooks as a provider adapter, prompt builder, retry policy, compaction implementation, tool dispatcher, permission system, or agent/session runtime.
+Do not use middleware hooks as a provider adapter, prompt builder, retry policy, compaction strategy, tool dispatcher, permission system, or agent/session runtime.
 
 ## Inputs / request
 
@@ -48,7 +48,7 @@ Built-in hook names:
 
 ## Outputs / response / events
 
-`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The agent/session runtime also invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls.
+`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The agent/session runtime invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry.
 
 With default `errorPolicy: "event"`, middleware errors become `extension_error` events when `onError` is provided, and later middleware still runs with the current value. With `errorPolicy: "throw"`, `run()` rejects on the first middleware error.
 
@@ -97,6 +97,8 @@ export const extension: Extension = {
 
 - Middleware registration is explicit through `createMiddlewareRegistry()` or `ExtensionAPI.use()`.
 - Middleware runs only when the host/runtime calls `run()` or passes the registry to a helper that documents a call site.
+- `compaction` middleware may adjust the compaction result summary/data, but runtime still owns session store append ordering and branch parent ids.
+- `retry` middleware may stop retrying or adjust delay, but runtime still owns retry event emission, abort-aware waiting, and provider-turn boundaries.
 - The registry does not discover packages, read manifests, load config, call providers, execute tools, read resources, or start sessions.
 - Hosts may pass a middleware registry into `createExtensionKernel({ middleware })` to share it with direct host code.
 
@@ -111,8 +113,11 @@ export const extension: Extension = {
 
 - [Extension kernel and event bus](extensions.md): `ExtensionAPI.use()` and shared error policy.
 - [Contribution registries](contribution-registries.md): direct contribution registration separate from middleware.
-- [Agent/session runtime](agent-session-runtime.md): bounded tool loop call site for `tool_call` and `tool_result` hooks.
+- [Agent/session runtime](agent-session-runtime.md): bounded tool loop call site for `tool_call`/`tool_result` hooks and runtime call sites for `compaction` and `retry`.
 - [Tools](tools.md): tool dispatch behavior that runs `tool_call` and `tool_result` hooks.
 - [Input and prompt assembly](input-and-prompt-assembly.md): `input_assembly` and `prompt_build` helper call sites.
+- [Compaction and retry policies](compaction-and-retry.md): compaction/retry middleware payloads and runtime timing.
 - [Context and skills](context-and-skills.md): `context` helper call site.
 - [Public contracts](public-contracts.md): provider, tool, context, session, and extension contracts that runtimes can pass through hooks.
+
+Permission checks for tools, extensions, and resources are hard guards; middleware can transform payloads but cannot bypass a denied `PermissionPolicy`.

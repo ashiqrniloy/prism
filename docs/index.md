@@ -9,6 +9,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, and subscribe to normalized session events.
 
 ## Compaction/session memory
+- [Compaction and retry policies](compaction-and-retry.md): summarize branch history and retry transient provider failures with host-replaceable policies.
 - [Session stores and branching](session-stores-and-branching.md): store session entries, rebuild branch context, and navigate branch leaves.
 - [Node JSONL session store](node-jsonl-session-store.md): persist session entries to caller-named JSONL files in Node hosts.
 
@@ -33,14 +34,13 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Node filesystem config loader](node-filesystem-config.md): explicitly read caller-named JSON config files in Node hosts.
 - [Resource loading](resource-loading.md): decode text, JSON, and manifest resources through caller-provided loaders.
 
+## CLI/RPC
+- [CLI/RPC](cli-rpc.md): Run print/json modes and LF-delimited RPC over the public AgentSession runtime.
+
 ## Security and credentials
+- [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, and redaction controls.
 - [Credentials and redaction](credentials-and-redaction.md): resolve host-owned credentials at request time and redact known secret values from strings, objects, and errors.
 
 ## Testing and examples
 - [Provider layer](provider-layer.md): use `createMockProvider()` and provider event helpers for deterministic tests without timers, credentials, or network.
 
-## Future API areas
-These groups are planned but not implemented yet. Add links when their public APIs exist.
-
-- CLI/RPC
-- Settings/auth/trust

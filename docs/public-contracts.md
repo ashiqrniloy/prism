@@ -14,13 +14,13 @@ Current contract groups:
 - Input/prompt/context/skills: `InputBuilder`, `InputBuildContext`, `AgentInput`, `DefaultInputBuilder`, `DefaultInputBuildContext`, `InputAttachment`, `PromptInstruction`, `PromptBuilder`, `PromptBuildRequest`, `ContextBlock`, `ContextProvider`, `ContextResolutionContext`, `Skill`, `SkillRegistry`
 - Extensions/middleware: `ExtensionLifecycleEventName`, `ExtensionEvent`, `Extension`, `ExtensionAPI`, `MiddlewareHookName`, `Middleware`, `MiddlewareNext`, `MiddlewareRegistry`
 - Configuration/manifests: `ConfigProvider`, `ConfigLayer`, `ConfigLoadContext`, `PrismManifest`, `ManifestContributionDeclaration`, `ManifestResourceDeclaration`, `ManifestContributionKind`
-- Stores/resources/settings/credentials/compaction: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`
+- Stores/resources/settings/credentials/compaction/retry: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`, `CompactionOptions`, `CompactionMiddlewarePayload`, `CompactionEntryData`, `DefaultCompactionStrategyOptions`, `RetryPolicy`, `RetryContext`, `RetryDecision`, `RetryOptions`, `RetryMiddlewarePayload`, `DefaultRetryPolicyOptions`
 
 ## When to use it
 
 Use these contracts when a host app or external package needs to type Prism-compatible providers, tools, context providers, skills, extensions, sessions, stores, resources, settings, or credential resolvers.
 
-Do not use a contract as proof that every behavior exists. The minimal agent/session shell now exists; tool loops, persistence adapters, compaction, retries, CLI/RPC, and configuration loading are implemented in later phases.
+Do not use a contract as proof that every behavior exists. The agent/session runtime, tool loops, persistence adapters, config helpers, compaction helpers, and retry helpers now exist; CLI/RPC is implemented in later phases.
 
 ## Inputs / request
 
@@ -71,7 +71,7 @@ Important request shapes:
 | `SkillRegistry` | Host active skill registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `CredentialRequest` | Credential lookup request: credential `name`, optional provider id, and metadata. |
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
-| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, and metadata. |
+| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, compaction, retry, and metadata. |
 | `ConfigLayer` | Named JSON config layer consumed by `mergeConfigLayers()`. |
 | `PrismManifest` | Data-only package manifest with config defaults, contribution declarations, and resource declarations. |
 
@@ -260,6 +260,8 @@ const config: AgentConfig = {
   context: [context],
   skills: [skill],
   tools: [tool],
+  compaction: { strategy: compaction, thresholdEntries: 40, keepRecentEntries: 8 },
+  retry: { maxAttempts: 3, baseDelayMs: 50 },
 };
 
 const extension: Extension = {
@@ -328,14 +330,14 @@ void credentials;
 - Resource helper functions decode resources from a caller-provided `ResourceLoader`; Prism does not include filesystem, network, package, or URI router loaders.
 - `createDefaultInputBuilder()` is a small default implementation of `InputBuilder`. It is replaceable and only loads explicit URI resources through a caller-provided `ResourceLoader`.
 - `resolveContextProviders()`, `createDefaultPromptBuilder()`, `assembleProviderInput()`, `createSkillRegistry()`, `resolveActiveSkills()`, and `renderPromptTemplate()` are replaceable Phase 5 helpers. They do not execute tools, evaluate template code, or grant tool permissions.
-- `createAgent()` and `createAgentSession()` implement the session runtime. They use explicit providers only; no hidden provider registry is created. Store-backed sessions use explicit `SessionStore` values and branch methods on `AgentSession`.
-- `createMemorySessionStore()` is the built-in in-memory `SessionStore`. Node hosts can opt into file durability with `prism/node/session-store-jsonl`. `createSessionEntry()`, `getSessionBranchEntries()`, `listSessionBranches()`, and `rebuildSessionContext()` are pure Phase 7 helpers for branch-aware session entries. They do not read files or call providers.
+- `createAgent()` and `createAgentSession()` implement the session runtime. They use explicit providers only; no hidden provider registry is created. Store-backed sessions use explicit `SessionStore` values and branch methods on `AgentSession`. `AgentSession.compact()` and `AgentConfig`/`RunOptions.compaction` provide manual and opt-in auto-compaction. `AgentConfig`/`RunOptions.retry` provide bounded provider-turn retry before observable output.
+- `createMemorySessionStore()` is the built-in in-memory `SessionStore`. Node hosts can opt into file durability with `prism/node/session-store-jsonl`. `createSessionEntry()`, `getSessionBranchEntries()`, `listSessionBranches()`, and `rebuildSessionContext()` are pure helpers for branch-aware session entries. `rebuildSessionContext()` understands compaction entries produced by `createDefaultCompactionStrategy()`, reducing provider-context messages while keeping raw entries. They do not read files or call providers.
 
 ## Security and performance notes
 
 - Type-only imports have no runtime side effects.
 - Contracts do not create clients, stores, registries, background work, config discovery, package imports, or network calls.
-- Host apps own credentials. Do not put secrets in messages, prompts, provider events, agent events, session entries, tool results, logs, or docs examples.
+- Host apps own credentials. Do not put secrets in messages, prompts, provider events, agent events, session entries, tool results, logs, or docs examples. Pass known secret strings to compaction options when summaries may include sensitive text.
 - Use `unknown`/metadata fields for host data, but validate at trust boundaries before executing tools or loading resources.
 - App-specific tool categories and business domains do not belong in public contracts.
 
@@ -349,8 +351,11 @@ void credentials;
 - [Middleware hooks](middleware-hooks.md): ordered hook registry for runtime boundaries.
 - [Contribution registries](contribution-registries.md): explicit registries for contribution contracts.
 - [Tools](tools.md): active tool registry and exact allow/deny filtering built on `ToolDefinition`.
-- [Agent/session runtime](agent-session-runtime.md): minimal `createAgent()` / `createAgentSession()` shell built on these contracts.
+- [Agent/session runtime](agent-session-runtime.md): `createAgent()` / `createAgentSession()` runtime, `AgentSession.compact()`, and auto-compaction config built on these contracts.
 - [Session stores and branching](session-stores-and-branching.md): branch-aware `SessionEntry` helpers and context rebuild.
+- [Compaction and retry policies](compaction-and-retry.md): default compaction strategy, default retry policy, runtime compaction/retry options, middleware payloads, and compaction entry data.
 - [Provider layer](provider-layer.md): runtime registries, provider event helpers, and mock provider built on these contracts.
 - [Credentials and redaction](credentials-and-redaction.md): helpers for resolving host-owned credentials and redacting known secret values.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter implementing `AIProvider`.
+
+Phase 10 public helpers include `createStaticSettingsProvider`, `createChainedSettingsProvider`, `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createStaticTrustPolicy`, `assertTrusted`, `createStaticPermissionPolicy`, `assertPermission`, and `createSecretRedactor`. Node subpaths `prism/node/settings` and `prism/node/trust` are explicit filesystem/path helpers.

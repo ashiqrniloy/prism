@@ -59,13 +59,14 @@ describe("configuration and manifests", () => {
     const manifest = definePrismManifest({
       name: "demo-package",
       configDefaults: { demo: { enabled: true } },
-      contributions: [{ kind: "tool", name: "demo.echo", module: "./tool.js", exportName: "tool" }],
+      contributions: [{ kind: "tool", name: "demo.echo", module: "./tool.js", exportName: "tool" }, { kind: "retryPolicy", name: "demo.retry", module: "./retry.js" }],
       resources: [{ uri: "package://demo/prompt.md", purpose: "prompt", mediaType: "text/markdown" }],
     });
 
     assert.equal(manifest.name, "demo-package");
     assert.deepEqual(manifest.configDefaults, { demo: { enabled: true } });
     assert.equal(manifest.contributions?.[0]?.kind, "tool");
+    assert.equal(manifest.contributions?.[1]?.kind, "retryPolicy");
     assert.equal(manifest.resources?.[0]?.purpose, "prompt");
   });
 

@@ -18,6 +18,14 @@
       "types": "./dist/node/config.d.ts",
       "default": "./dist/node/config.js"
     },
+    "./node/settings": {
+      "types": "./dist/node/settings.d.ts",
+      "default": "./dist/node/settings.js"
+    },
+    "./node/trust": {
+      "types": "./dist/node/trust.d.ts",
+      "default": "./dist/node/trust.js"
+    },
     "./node/session-store-jsonl": {
       "types": "./dist/node/session-store-jsonl.d.ts",
       "default": "./dist/node/session-store-jsonl.js"

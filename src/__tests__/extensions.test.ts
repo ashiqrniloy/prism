@@ -31,6 +31,7 @@ function allContributionsExtension(): Extension {
       api.registerInputBuilder({ name: "input", build: () => [] });
       api.registerPromptBuilder({ name: "prompt", build: (request) => request.messages });
       api.registerCompactionStrategy({ name: "compact", compact: () => ({ summary: "summary" }) });
+      api.registerRetryPolicy({ name: "retry", decide: () => ({ retry: false }) });
       api.registerStoreFactory({ name: "memory", create: () => ({ append: async () => undefined, list: async () => [] }) });
       api.registerResourceLoader("memory", { load: async (uri) => ({ uri, text: "resource" }) });
       api.registerSettingsProvider("settings", { get: () => undefined });
@@ -97,6 +98,7 @@ describe("extension kernel", () => {
     assert.equal(kernel.registries.inputBuilders.resolve("input").name, "input");
     assert.equal(kernel.registries.promptBuilders.resolve("prompt").name, "prompt");
     assert.equal(kernel.registries.compactionStrategies.resolve("compact").name, "compact");
+    assert.equal(kernel.registries.retryPolicies.resolve("retry").name, "retry");
     assert.equal(kernel.registries.storeFactories.resolve("memory").name, "memory");
     assert.equal(await kernel.registries.resourceLoaders.resolve("memory").load("memory:x").then((item) => item.text), "resource");
     assert.equal(kernel.registries.settingsProviders.resolve("settings").get("x"), undefined);

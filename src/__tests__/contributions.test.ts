@@ -11,6 +11,7 @@ import type {
   InputBuilder,
   PromptBuilder,
   ResourceLoader,
+  RetryPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
@@ -86,6 +87,7 @@ const resourceLoader: ResourceLoader = {
   },
 };
 const settingsProvider: SettingsProvider = { get: () => undefined };
+const retryPolicy: RetryPolicy = { name: "retry", decide: () => ({ retry: false }) };
 const credentialResolver: CredentialResolver = { resolve: () => undefined };
 
 describe("contribution registry", () => {
@@ -120,6 +122,7 @@ describe("contribution registry", () => {
     registries.inputBuilders.register(inputBuilder.name, inputBuilder);
     registries.promptBuilders.register(promptBuilder.name, promptBuilder);
     registries.compactionStrategies.register(compactionStrategy.name, compactionStrategy);
+    registries.retryPolicies.register(retryPolicy.name, retryPolicy);
     registries.storeFactories.register(storeFactory.name, storeFactory);
     registries.resourceLoaders.register("memory", resourceLoader);
     registries.settingsProviders.register("settings", settingsProvider);
@@ -135,6 +138,7 @@ describe("contribution registry", () => {
     assert.equal(registries.inputBuilders.resolve("input"), inputBuilder);
     assert.equal(registries.promptBuilders.resolve("prompt"), promptBuilder);
     assert.equal(registries.compactionStrategies.resolve("compact"), compactionStrategy);
+    assert.equal(registries.retryPolicies.resolve("retry"), retryPolicy);
     assert.equal(registries.storeFactories.resolve("memory"), storeFactory);
     assert.equal(registries.resourceLoaders.resolve("memory"), resourceLoader);
     assert.equal(registries.settingsProviders.resolve("settings"), settingsProvider);

@@ -92,3 +92,5 @@ console.log(manifest.name, prompt);
 - [Configuration and manifests](configuration-and-manifests.md): data-only manifests and manifest resource declarations.
 - [Contribution registries](contribution-registries.md): host-owned registries can store resource loaders.
 - [Public contracts](public-contracts.md): base `ResourceLoader`, `Resource`, and `ResourceLoadContext` contracts.
+
+`ResourceLoadContext.permission` checks `resource:<uri>:load` before calling the loader. Prism still does no resource discovery, package discovery, or trust prompts; hosts own those decisions. See [Security/auth/trust](settings-auth-trust-security.md).

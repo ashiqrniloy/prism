@@ -1,5 +1,7 @@
 import type { ContributionRegistries } from "./contributions.js";
 import type { Middleware, MiddlewareHookName, MiddlewareRegistry } from "./middleware.js";
+import type { SecretRedactor } from "./redaction.js";
+import type { PermissionPolicy } from "./security.js";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -10,7 +12,7 @@ export interface JsonObject {
 export interface ErrorInfo {
   readonly name?: string;
   readonly message: string;
-  readonly code?: string;
+  readonly code?: string | number;
   readonly cause?: unknown;
 }
 
@@ -102,7 +104,10 @@ export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly model?: ModelConfig;
   readonly maxToolRounds?: number;
+  readonly compaction?: false | CompactionOptions;
+  readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly redactor?: SecretRedactor;
 }
 
 export interface AgentDefinition {
@@ -129,6 +134,10 @@ export interface AgentConfig {
   readonly store?: SessionStore;
   readonly settings?: SettingsProvider;
   readonly credentials?: CredentialResolver;
+  readonly permission?: PermissionPolicy;
+  readonly redactor?: SecretRedactor;
+  readonly compaction?: false | CompactionOptions;
+  readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -158,6 +167,7 @@ export interface AgentSession {
   readonly id: string;
   run(input: string | Message | readonly Message[], options?: RunOptions): Promise<void>;
   prompt(input: string, options?: RunOptions): Promise<void>;
+  compact(options?: CompactionOptions): Promise<CompactionResult>;
   subscribe(): AsyncIterable<AgentEvent>;
   abort(reason?: unknown): void;
   entries(): Promise<readonly SessionEntry[]>;
@@ -348,6 +358,7 @@ export interface ExtensionAPI {
   registerInputBuilder(builder: InputBuilder): void;
   registerPromptBuilder(builder: PromptBuilder): void;
   registerCompactionStrategy(strategy: CompactionStrategy): void;
+  registerRetryPolicy(policy: RetryPolicy): void;
   registerStoreFactory(factory: StoreFactory): void;
   registerResourceLoader(key: string, loader: ResourceLoader): void;
   registerSettingsProvider(key: string, provider: SettingsProvider): void;
@@ -392,6 +403,9 @@ export interface CompactionStrategy {
 export interface CompactionContext {
   readonly sessionId: string;
   readonly entries: readonly SessionEntry[];
+  readonly keepRecentEntries?: number;
+  readonly trigger?: "manual" | "auto" | string;
+  readonly secrets?: readonly (string | undefined)[];
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly signal?: AbortSignal;
 }
@@ -400,6 +414,63 @@ export interface CompactionResult {
   readonly summary: string;
   readonly entries?: readonly SessionEntry[];
   readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface CompactionOptions {
+  readonly strategy?: CompactionStrategy;
+  readonly thresholdEntries?: number;
+  readonly keepRecentEntries?: number;
+  readonly maxSummaryChars?: number;
+  readonly secrets?: readonly (string | undefined)[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly signal?: AbortSignal;
+}
+
+export interface CompactionMiddlewarePayload {
+  readonly context: CompactionContext;
+  readonly result: CompactionResult;
+}
+
+export interface CompactionEntryData {
+  readonly throughEntryId?: string;
+  readonly keepEntryIds?: readonly string[];
+  readonly strategy?: string;
+  readonly trigger?: "manual" | "auto" | string;
+}
+
+export interface RetryPolicy {
+  readonly name: string;
+  decide(context: RetryContext): Promise<RetryDecision> | RetryDecision;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface RetryContext {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly attempt: number;
+  readonly error: ErrorInfo;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly signal?: AbortSignal;
+}
+
+export interface RetryDecision {
+  readonly retry: boolean;
+  readonly delayMs?: number;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface RetryOptions {
+  readonly policy?: RetryPolicy;
+  readonly maxAttempts?: number;
+  readonly baseDelayMs?: number;
+  readonly maxDelayMs?: number;
+  readonly secrets?: readonly (string | undefined)[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface RetryMiddlewarePayload {
+  readonly context: RetryContext;
+  readonly decision: RetryDecision;
 }
 
 export interface Resource {
@@ -418,6 +489,7 @@ export interface ResourceLoader {
 export interface ResourceLoadContext {
   readonly signal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly permission?: PermissionPolicy;
 }
 
 export interface SettingsProvider {

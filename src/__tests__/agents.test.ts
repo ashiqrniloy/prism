@@ -26,6 +26,21 @@ async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[
   return events;
 }
 
+async function take(iterable: AsyncIterable<AgentEvent>, count: number): Promise<AgentEvent[]> {
+  const iterator = iterable[Symbol.asyncIterator]();
+  const events: AgentEvent[] = [];
+  try {
+    while (events.length < count) {
+      const next = await iterator.next();
+      if (next.done) break;
+      events.push(next.value);
+    }
+    return events;
+  } finally {
+    await iterator.return?.();
+  }
+}
+
 describe("agent session runtime", () => {
   it("streams mock provider text to subscriber", async () => {
     const agent = createAgent({
@@ -406,6 +421,163 @@ describe("agent session runtime", () => {
     await createAgent({ model: { provider: "mock", model: "demo" }, provider, store, credentials: { resolve: () => ({ type: "bearer", value: "secret" }) } }).createSession({ id: "s1" }).run("Hi");
 
     assert.equal(JSON.stringify(await store.list("s1")).includes("secret"), false);
+  });
+
+  it("manual compact appends compaction entry and updates leaf", async () => {
+    const store = createMemorySessionStore();
+    const provider = createMockProvider([providerTextDelta("reply"), providerDone()]);
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
+
+    await session.run("old");
+    const previousLeaf = (await session.entries()).at(-1)!.id;
+    const result = await session.compact({ keepRecentEntries: 1 });
+    const entries = await session.entries();
+
+    assert.equal(result.entries?.[0]?.kind, "compaction");
+    assert.equal(result.entries?.[0]?.parentId, previousLeaf);
+    assert.equal(entries.at(-1)?.kind, "compaction");
+    assert.equal(entries.at(-1)?.id, result.entries?.[0]?.id);
+  });
+
+  it("auto compacts before provider input when threshold is exceeded", async () => {
+    const requests: ProviderRequest[] = [];
+    const provider: AIProvider = { id: "mock", async *generate(request) {
+      requests.push(request);
+      yield providerTextDelta(`reply ${requests.length}`);
+      yield providerDone();
+    } };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, compaction: { thresholdEntries: 2, keepRecentEntries: 1 } });
+    const session = agent.createSession({ id: "s1" });
+
+    await session.run("old");
+    await session.run("new");
+
+    const text = requests[1]!.messages.flatMap((message) => message.content).map((block) => block.type === "text" ? block.text : "").join("\n");
+    assert.equal(text.includes("Summary:"), true);
+    assert.equal(requests[1]!.messages.filter((message) => message.role === "user").length, 1);
+    assert.equal(text.includes("new"), true);
+  });
+
+  it("compaction events are emitted with redacted summary", async () => {
+    const secret = "secret-value";
+    const provider = createMockProvider([providerDone()]);
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "s1" });
+
+    await session.run(`old ${secret}`);
+    const eventsPromise = take(session.subscribe(), 2);
+    await session.compact({ keepRecentEntries: 0, secrets: [secret] });
+    const events = await eventsPromise;
+
+    assert.deepEqual(events.map((event) => event.type), ["compaction_started", "compaction_finished"]);
+    const finished = events[1];
+    assert.equal(finished?.type === "compaction_finished" && finished.summary.includes(secret), false);
+    assert.equal(finished?.type === "compaction_finished" && finished.summary.includes("[REDACTED]"), true);
+  });
+
+  it("compaction middleware can adjust summary payload", async () => {
+    const middleware = createMiddlewareRegistry();
+    middleware.use("compaction", (payload: { readonly result: { readonly summary: string } }, next) => next({ ...payload, result: { ...payload.result, summary: "middleware summary" } }));
+    const provider = createMockProvider([providerDone()]);
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, middleware }).createSession({ id: "s1" });
+
+    await session.run("old");
+    const result = await session.compact();
+
+    assert.equal(result.summary, "middleware summary");
+    assert.equal((await session.entries()).at(-1)?.summary, "middleware summary");
+  });
+
+  it("run compaction false disables configured auto compaction", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = { id: "mock", async *generate(input) {
+      request = input;
+      yield providerDone();
+    } };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, compaction: { thresholdEntries: 0 } }).createSession({ id: "s1" });
+
+    await session.run("Hi", { compaction: false });
+
+    assert.equal(request.messages.some((message) => message.content.some((block) => block.type === "text" && block.text.includes("Summary:"))), false);
+    assert.equal((await session.entries()).some((entry) => entry.kind === "compaction"), false);
+  });
+
+  it("compaction context excludes credentials and provider objects", async () => {
+    let keys: string[] = [];
+    const strategy = { name: "inspect", compact(context: object) { keys = Object.keys(context); return { summary: "ok" }; } };
+    const provider = createMockProvider([providerDone()]);
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, credentials: { resolve: () => ({ type: "bearer", value: "secret" }) } }).createSession({ id: "s1" });
+
+    await session.compact({ strategy });
+
+    assert.equal(keys.includes("provider"), false);
+    assert.equal(keys.includes("credentials"), false);
+  });
+
+  it("retries provider turn before output and emits retry_scheduled", async () => {
+    let calls = 0;
+    const provider: AIProvider = { id: "mock", async *generate() {
+      calls += 1;
+      if (calls === 1) yield { type: "error", error: { message: "busy", code: 503 } };
+      else yield providerTextDelta("ok");
+      yield providerDone();
+    } };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, retry: { baseDelayMs: 0, maxAttempts: 2 } }).createSession();
+    const reader = collect(session.subscribe());
+
+    await session.run("Hi");
+    const events = await reader;
+
+    assert.equal(calls, 2);
+    assert.equal(events.some((event) => event.type === "retry_scheduled" && event.attempt === 1 && event.delayMs === 0), true);
+    assert.equal(events.some((event) => event.type === "message_delta" && event.content.type === "text" && event.content.text === "ok"), true);
+  });
+
+  it("does not retry after observable output", async () => {
+    let calls = 0;
+    const provider: AIProvider = { id: "mock", async *generate() {
+      calls += 1;
+      yield providerTextDelta("partial");
+      yield { type: "error", error: { message: "busy", code: 503 } };
+    } };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, retry: { baseDelayMs: 0, maxAttempts: 2 } }).createSession();
+    const reader = collect(session.subscribe());
+
+    await assert.rejects(session.run("Hi"), /busy/);
+    const events = await reader;
+
+    assert.equal(calls, 1);
+    assert.equal(events.some((event) => event.type === "retry_scheduled"), false);
+  });
+
+  it("retry backoff honors abort signal", async () => {
+    let calls = 0;
+    const provider: AIProvider = { id: "mock", async *generate() {
+      calls += 1;
+      yield { type: "error", error: { message: "busy", code: 503 } };
+    } };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, retry: { baseDelayMs: 100, maxAttempts: 2 } }).createSession();
+    const controller = new AbortController();
+    const run = session.run("Hi", { signal: controller.signal });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    controller.abort(new Error("cancelled"));
+
+    await assert.rejects(run, /cancelled|aborted/i);
+    assert.equal(calls, 1);
+  });
+
+  it("retry middleware can stop or adjust retry decision", async () => {
+    let calls = 0;
+    const middleware = createMiddlewareRegistry();
+    middleware.use("retry", (payload: { readonly decision: { readonly retry: boolean; readonly delayMs?: number } }) => ({ ...payload, decision: { retry: false, delayMs: 0 } }));
+    const provider: AIProvider = { id: "mock", async *generate() {
+      calls += 1;
+      yield { type: "error", error: { message: "busy", code: 503 } };
+    } };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, middleware, retry: { baseDelayMs: 0, maxAttempts: 2 } }).createSession();
+
+    await assert.rejects(session.run("Hi"), /busy/);
+    assert.equal(calls, 1);
   });
 
   it("run model override changes provider request model", async () => {

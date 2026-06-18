@@ -332,7 +332,7 @@
     - `docs/index.md` update: Yes; add navigation for the new Node subpath page.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Final verification and session-store wiki consistency
+- [x] Final verification and session-store wiki consistency
   - Acceptance Criteria:
     - Functional: All Phase 7 acceptance scenarios pass; public root exports and Node subpath compile; docs link every new public store/session API, branch behavior, JSONL adapter, and security boundary.
     - Performance: Full test suite remains under the roadmap target of 10 seconds locally, uses no network, and adds no dependency, watcher, or long-running timer.
@@ -350,10 +350,10 @@
       - Add CLI/RPC golden session fixtures now: rejected; CLI/RPC is Phase 9 and release fixtures are Phase 11.
       - Add compaction strategy tests now: rejected; Phase 8 owns compaction behavior, Phase 7 only stores summary/compaction entries.
     - Chosen Approach:
-      - Run the existing validation commands after implementation.
-      - Ensure docs tests cover new docs pages, root exports, and Node subpath export.
-      - Review store entries produced by runtime tests for credential/provider-object leakage.
-      - Fill `Compromises Made` and `Further Actions` only after implementation and tests pass.
+      - Ran the existing validation commands after implementation.
+      - Confirmed docs tests cover new docs pages, root exports, and Node subpath export.
+      - Reviewed runtime/store tests and docs for credential/provider-object leakage boundaries.
+      - Filled `Compromises Made` and `Further Actions` after implementation and tests passed.
     - API Notes and Examples:
       ```sh
       npm run build && npm run typecheck && command npm test
@@ -368,22 +368,26 @@
       - `roadmap.md` Phase 7 acceptance.
       - `.agents/skills/create-plan/references/prism-wiki.md`.
   - Test Cases to Write:
-    - `npm run build`: validates emitted JS/types and package exports.
-    - `npm run typecheck`: validates strict TypeScript types.
-    - `command npm test`: validates runtime, stores, JSONL, docs, and public contracts.
-    - `docs_index_links_session_store_pages`: validates new docs navigation.
-    - `docs_reference_existing_session_store_exports`: validates docs do not mention missing exports/subpaths.
+    - `npm run build`: validates emitted JS/types and package exports. Passed.
+    - `npm run typecheck`: validates strict TypeScript types. Passed.
+    - `command npm test`: validates runtime, stores, JSONL, docs, and public contracts. Passed with 157 tests, 29 suites, 0 failures.
+    - `docs_index_links_session_store_pages`: validates new docs navigation. Covered by `src/__tests__/docs.test.ts`.
+    - `docs_reference_existing_session_store_exports`: validates docs do not mention missing exports/subpaths. Covered by `src/__tests__/docs.test.ts`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: No new API by verification alone; it validates docs for APIs added by earlier tasks.
     - Docs pages to create/edit:
-      - `docs/session-stores-and-branching.md`: update only if verification finds missing/incorrect store or branch documentation.
-      - `docs/node-jsonl-session-store.md`: update only if verification finds missing/incorrect Node adapter documentation.
-      - `docs/index.md`: update only if navigation is missing or stale.
+      - `docs/session-stores-and-branching.md`: no final change needed after verification.
+      - `docs/node-jsonl-session-store.md`: removed an unused example import during final consistency review.
+      - `docs/index.md`: no final change needed after verification.
     - `docs/index.md` update: No unless verification finds navigation missing.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- JSONL appends are serialized only per store instance; no cross-process locking was added because Phase 7 explicitly keeps the adapter dependency-free and minimal.
+- JSONL reads are linear `readFile()` scans; no stream parser, index, cache, migration layer, or compaction strategy was added.
+- Runtime persistence stores normalized session entries only; full provider requests, credentials, resolved settings, provider objects, and hidden metadata remain out of scope.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- Phase 8: add compaction/retry behavior on top of existing summary/compaction entry support.
+- Phase 9+: add CLI/RPC flows only after the store/session APIs have stayed stable.
+- If multiple processes must write the same JSONL file, add a host-level lock or use a database-backed `SessionStore` outside the minimal built-in adapter.

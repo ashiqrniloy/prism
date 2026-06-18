@@ -77,6 +77,7 @@ const manifest = definePrismManifest({
   configDefaults: { demo: { enabled: true, tools: ["echo"] } },
   contributions: [
     { kind: "tool", name: "demo.echo", module: "./tool.js", exportName: "tool" },
+    { kind: "retryPolicy", name: "demo.retry", module: "./retry.js", exportName: "retry" },
   ],
   resources: [{ uri: "package://demo/prompt.md", purpose: "prompt" }],
 });
@@ -94,7 +95,7 @@ console.log(config.demo);
 
 - Hosts choose the layer order. Prism documents `built-in -> manifest defaults -> host app -> optional user/global -> runtime overrides` but does not load those layers automatically.
 - Manifest contribution declarations are data. Hosts may later choose to import the declared module/export and register it, but parsing the manifest never does that.
-- Contribution `kind` values match the Phase 2 registry categories.
+- Contribution `kind` values match registry categories, including `compactionStrategy` and `retryPolicy`.
 - Filesystem config loading is intentionally outside the root API and belongs to the optional [`prism/node/config`](node-filesystem-config.md) subpath.
 - Manifest `resources` entries are URI declarations; use [resource loading](resource-loading.md) helpers with a host-provided loader to fetch them.
 

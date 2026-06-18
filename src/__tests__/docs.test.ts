@@ -8,6 +8,7 @@ const apiPages = [
   "docs/public-contracts.md",
   "docs/agent-session-runtime.md",
   "docs/session-stores-and-branching.md",
+  "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
   "docs/input-and-prompt-assembly.md",
   "docs/context-and-skills.md",
@@ -20,6 +21,8 @@ const apiPages = [
   "docs/node-jsonl-session-store.md",
   "docs/resource-loading.md",
   "docs/credentials-and-redaction.md",
+  "docs/settings-auth-trust-security.md",
+  "docs/cli-rpc.md",
   "docs/providers/openai-compatible.md",
 ];
 const requiredHeadings = [
@@ -96,6 +99,8 @@ describe("docs", () => {
       ["docs/session-stores-and-branching.md", "createSessionEntry"],
       ["docs/session-stores-and-branching.md", "createMemorySessionStore"],
       ["docs/session-stores-and-branching.md", "rebuildSessionContext"],
+      ["docs/compaction-and-retry.md", "createDefaultCompactionStrategy"],
+      ["docs/compaction-and-retry.md", "createDefaultRetryPolicy"],
     ] as const;
 
     for (const [page, exportName] of documentedExports) {
@@ -111,6 +116,52 @@ describe("docs", () => {
     assert.ok(index.includes("(context-and-skills.md)"));
     assert.ok(index.includes("(agent-session-runtime.md)"));
     assert.ok(index.includes("(session-stores-and-branching.md)"));
+    assert.ok(index.includes("(compaction-and-retry.md)"));
+  });
+
+  it("compaction and retry docs cover public surfaces and safety boundaries", () => {
+    const rootExports = readFileSync("src/index.ts", "utf8");
+    const compactionRetry = readFileSync("docs/compaction-and-retry.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const registries = readFileSync("docs/contribution-registries.md", "utf8");
+    const extensions = readFileSync("docs/extensions.md", "utf8");
+    const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
+    const middleware = readFileSync("docs/middleware-hooks.md", "utf8");
+    const provider = readFileSync("docs/provider-layer.md", "utf8");
+
+    for (const exportName of [
+      "createDefaultCompactionStrategy",
+      "isCompactionEntryData",
+      "createDefaultRetryPolicy",
+      "isTransientErrorInfo",
+      "waitForRetry",
+    ]) {
+      assert.match(rootExports, new RegExp(`\\b${exportName}\\b`), `src/index.ts does not export ${exportName}`);
+      assert.ok(compactionRetry.includes(exportName), `docs/compaction-and-retry.md does not document ${exportName}`);
+    }
+
+    for (const phrase of [
+      "compaction_started",
+      "compaction_finished",
+      "retry_scheduled",
+      "AgentConfig.compaction",
+      "RunOptions.compaction",
+      "AgentConfig.retry",
+      "RunOptions.retry",
+      "RetryMiddlewarePayload",
+      "provider request messages/content",
+      "credential resolvers",
+      "Raw session entries are never deleted",
+    ]) {
+      assert.ok(compactionRetry.includes(phrase), `compaction/retry docs missing ${phrase}`);
+    }
+
+    assert.ok(index.includes("retry transient provider failures"));
+    assert.ok(registries.includes("retryPolicies"));
+    assert.ok(extensions.includes("registerRetryPolicy"));
+    assert.ok(manifests.includes("retryPolicy"));
+    assert.ok(middleware.includes("invokes `retry`"));
+    assert.ok(provider.includes("ErrorInfo.code"));
   });
 
   it("phase 3 docs state explicit non-goals", () => {
@@ -140,6 +191,36 @@ describe("docs", () => {
       types: "./dist/node/session-store-jsonl.d.ts",
       default: "./dist/node/session-store-jsonl.js",
     });
+  });
+
+  it("phase 10 docs link security auth trust surfaces", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const docs = readFileSync("docs/settings-auth-trust-security.md", "utf8");
+    const rootExports = readFileSync("src/index.ts", "utf8");
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown> };
+
+    assert.ok(index.includes("(settings-auth-trust-security.md)"));
+    for (const name of ["createStaticSettingsProvider", "createMemoryCredentialStore", "assertTrusted", "assertPermission", "createSecretRedactor"]) {
+      assert.ok(docs.includes(name), `security docs missing ${name}`);
+      assert.match(rootExports, new RegExp(`\\b${name}\\b`), `src/index.ts does not export ${name}`);
+    }
+    for (const phrase of ["does not sandbox", "does not read environment variables", "no persistent secret store", "auto-load project-local"]) {
+      assert.ok(docs.includes(phrase), `security docs missing ${phrase}`);
+    }
+    assert.deepEqual(packageJson.exports["./node/settings"], { types: "./dist/node/settings.d.ts", default: "./dist/node/settings.js" });
+    assert.deepEqual(packageJson.exports["./node/trust"], { types: "./dist/node/trust.d.ts", default: "./dist/node/trust.js" });
+  });
+
+  it("docs_index_links_cli_rpc_page", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(index.includes("(cli-rpc.md)"));
+  });
+
+  it("cli_rpc_docs_cover_modes_flags_and_rpc_commands", () => {
+    const docs = readFileSync("docs/cli-rpc.md", "utf8");
+    for (const phrase of ["--mode print", "--provider", "--model", "prompt", "abort", "compact", "cloneSession", "No built-in app tools", "No full TUI"]) {
+      assert.ok(docs.includes(phrase), `cli/rpc docs missing ${phrase}`);
+    }
   });
 
   it("docs avoid real-looking secret examples", () => {

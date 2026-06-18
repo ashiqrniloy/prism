@@ -69,10 +69,14 @@ const extension: Extension = {
     api.registerPromptBuilder({ name: "prompt", build: async (request) => request.messages });
     api.registerSkill({ name: "brief", instructions: "Answer briefly.", toolNames: ["echo"] });
     api.registerAgent({ name: "demo", create: () => createAgent({ model, provider }) });
+    api.registerCompactionStrategy({ name: "compact", compact: () => ({ summary: "summary" }) });
+    api.registerRetryPolicy({ name: "retry", decide: () => ({ retry: false }) });
     api.on("session_start", (event) => {
       console.log(event.type);
     });
     api.use("provider_request", (request) => request);
+    api.use("compaction", (payload) => payload);
+    api.use("retry", (payload) => payload);
   },
 };
 
@@ -99,6 +103,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - `api.registerSkill()` contributes an inert `Skill` to `registries.skills`; it does not disclose instructions, activate referenced tools, or grant permissions until the host selects it.
 - `api.registerAgent()` contributes an inert `AgentDefinition`; its `create()` can call `createAgent()`, but the runtime is not started until host code resolves the definition and creates/runs a session.
 - The kernel registers middleware only into the explicit registry returned by `createMiddlewareRegistry()` or provided by the host.
+- `api.use("compaction", middleware)` and `api.use("retry", middleware)` observe or adjust runtime compaction/retry payloads only when the host passes that middleware registry to `createAgent({ middleware })`; compaction strategy and retry policy contributions remain inert until selected by the host.
 - Manifest and configuration APIs are later-phase work.
 
 ## Security and performance notes
@@ -117,5 +122,8 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - [Input and prompt assembly](input-and-prompt-assembly.md): host selection for contributed input/prompt builders.
 - [Context and skills](context-and-skills.md): host selection and tool checks for contributed context providers and skills.
 - [Agent/session runtime](agent-session-runtime.md): `AgentDefinition.create()` can return agents built with `createAgent()` from explicit host-selected config.
+- [Compaction and retry policies](compaction-and-retry.md): compaction strategy/retry policy contributions and `compaction`/`retry` middleware runtime behavior.
 - [Public contracts](public-contracts.md): `Extension`, `ExtensionAPI`, and contribution contract types.
 - [Credentials and redaction](credentials-and-redaction.md): secret-redaction behavior used for extension errors.
+
+`createExtensionKernel({ permission })` checks `extension:<name>:setup` before each extension `setup()`. Denied extensions do not run. Prism does not sandbox extension code or auto-load project-local extensions. See [Security/auth/trust](settings-auth-trust-security.md).

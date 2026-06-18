@@ -50,7 +50,7 @@ Missing files read as empty stores. Invalid JSON or non-entry lines fail with th
 ## Implementation example
 
 ```ts
-import { createAgent, createMemorySessionStore } from "prism";
+import { createAgent } from "prism";
 import { createJsonlSessionStore } from "prism/node/session-store-jsonl";
 
 const store = createJsonlSessionStore("./sessions.jsonl");

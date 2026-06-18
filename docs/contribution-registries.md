@@ -2,7 +2,7 @@
 
 ## What it does
 
-Contribution registries are explicit, host-owned maps for extension/package contributions. They let hosts register and resolve providers, models, tools, context providers, skills, commands, agents, input builders, prompt builders, compaction strategies, store factories, resource loaders, settings providers, and credential resolvers without hidden globals.
+Contribution registries are explicit, host-owned maps for extension/package contributions. They let hosts register and resolve providers, models, tools, context providers, skills, commands, agents, input builders, prompt builders, compaction strategies, retry policies, store factories, resource loaders, settings providers, and credential resolvers without hidden globals.
 
 APIs:
 
@@ -31,7 +31,7 @@ createContributionRegistries(): ContributionRegistries
 | `resolve(key)` | string key | Returns the contribution or throws `Unknown <label>: <key>`. |
 | `list()` | none | Returns contributions in insertion order. |
 
-`ContributionRegistries` includes existing `providers` and `models` registries plus generic registries for `tools`, `contextProviders`, `skills`, `commands`, `agents`, `inputBuilders`, `promptBuilders`, `compactionStrategies`, `storeFactories`, `resourceLoaders`, `settingsProviders`, and `credentialResolvers`.
+`ContributionRegistries` includes existing `providers` and `models` registries plus generic registries for `tools`, `contextProviders`, `skills`, `commands`, `agents`, `inputBuilders`, `promptBuilders`, `compactionStrategies`, `retryPolicies`, `storeFactories`, `resourceLoaders`, `settingsProviders`, and `credentialResolvers`.
 
 ## Outputs / response / events
 
@@ -89,7 +89,7 @@ void skill;
 - Registry keys are explicit strings. Prefer stable ids/names such as `provider.id`, `tool.name`, `skill.name`, or package-qualified names when collisions matter.
 - Manifest and configuration loading are separate APIs; this page only covers in-memory registration.
 - Tool contributions are inert. They are not executable until the host registers selected definitions in an active tool registry and passes that registry to `dispatchToolCall()`.
-- Input builders, prompt builders, context providers, and skills are inert until the host resolves them and calls, passes, registers, or selects them for the Phase 5 assembly helpers.
+- Input builders, prompt builders, context providers, skills, compaction strategies, and retry policies are inert until the host resolves them and calls, passes, registers, or selects them for runtime helpers.
 - Agent definitions are inert until the host resolves one and calls `create()`. A definition may call `createAgent()` with explicit provider/tools/context/skills; registries are not hidden globals for the runtime.
 
 ## Security and performance notes
@@ -109,5 +109,6 @@ void skill;
 - [Input and prompt assembly](input-and-prompt-assembly.md): default builders and provider-input assembly for selected contributions.
 - [Context and skills](context-and-skills.md): ordered resolution for selected context providers and progressive disclosure for selected skills.
 - [Tools](tools.md): active host tool registry, filtering, and dispatch for selected tool definitions.
+- [Compaction and retry policies](compaction-and-retry.md): selected compaction strategy and retry policy behavior.
 - [Public contracts](public-contracts.md): contribution contract types stored in these registries.
 - [Credentials and redaction](credentials-and-redaction.md): credential resolver and secret-redaction rules.

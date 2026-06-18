@@ -7,6 +7,7 @@ import type {
   InputBuilder,
   PromptBuilder,
   ResourceLoader,
+  RetryPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
@@ -59,6 +60,7 @@ export interface ContributionRegistries {
   readonly inputBuilders: ContributionRegistry<InputBuilder>;
   readonly promptBuilders: ContributionRegistry<PromptBuilder>;
   readonly compactionStrategies: ContributionRegistry<CompactionStrategy>;
+  readonly retryPolicies: ContributionRegistry<RetryPolicy>;
   readonly storeFactories: ContributionRegistry<StoreFactory>;
   readonly resourceLoaders: ContributionRegistry<ResourceLoader>;
   readonly settingsProviders: ContributionRegistry<SettingsProvider>;
@@ -77,6 +79,7 @@ export function createContributionRegistries(): ContributionRegistries {
     inputBuilders: createContributionRegistry({ label: "input builder" }),
     promptBuilders: createContributionRegistry({ label: "prompt builder" }),
     compactionStrategies: createContributionRegistry({ label: "compaction strategy" }),
+    retryPolicies: createContributionRegistry({ label: "retry policy" }),
     storeFactories: createContributionRegistry({ label: "store factory" }),
     resourceLoaders: createContributionRegistry({ label: "resource loader" }),
     settingsProviders: createContributionRegistry({ label: "settings provider" }),

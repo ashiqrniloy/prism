@@ -1,12 +1,14 @@
 import { parsePrismManifest, type PrismManifest } from "./manifests.js";
 import type { JsonObject, ResourceLoader, ResourceLoadContext } from "./contracts.js";
 import { assertJsonObject } from "./config.js";
+import { assertPermission } from "./security.js";
 
 export async function loadTextResource(
   loader: ResourceLoader,
   uri: string,
   context?: ResourceLoadContext,
 ): Promise<string> {
+  await assertPermission(context?.permission, { kind: "resource", action: "load", target: uri, metadata: context?.metadata });
   const resource = await loader.load(uri, context);
   if (resource.text !== undefined) return resource.text;
   if (resource.data !== undefined) return new TextDecoder().decode(resource.data);
