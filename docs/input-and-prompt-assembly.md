@@ -4,7 +4,7 @@
 
 `createDefaultInputBuilder()` turns common host input into Prism `Message[]` without starting an agent loop or calling a provider. It accepts strings, `Message`, or `Message[]`, and can add host-supplied instructions, history, summaries, attachments, explicit text resources, tool results, metadata, and optional `input_assembly` middleware.
 
-`createDefaultPromptBuilder()` composes messages, context blocks, selected skills, and host-supplied active tools into provider-ready messages. `assembleProviderInput()` wires input assembly, ordered context resolution, prompt middleware, and prompt composition into a `ProviderRequest` without calling a provider. `renderPromptTemplate()` expands tiny `{{name}}` variables for CLI/RPC prompt strings before input assembly.
+`createDefaultPromptBuilder()` composes messages, context blocks, selected skills, and host-supplied active tools into provider-ready messages. `assembleProviderInput()` wires input assembly, ordered context resolution, prompt middleware, and prompt composition into a `ProviderRequest` without calling a provider. Layered system prompts are composed before this helper and passed as `systemInstructions`. `renderPromptTemplate()` expands tiny `{{name}}` variables for CLI/RPC prompt strings before input assembly.
 
 ## When to use it
 
@@ -60,7 +60,7 @@ Useful exported types:
 - `InputAttachment`: already-loaded text/content or an explicit URI loaded through a caller-provided `ResourceLoader`.
 - `PromptInstruction`: labeled system instruction text.
 - `DefaultPromptBuilder`: the default `PromptBuilder`.
-- `AssembleProviderInputOptions`: model, input, optional builders, context providers, selected skills, active tools, metadata, and signal.
+- `AssembleProviderInputOptions`: model, input, optional builders, context providers, selected skills, active tools, generic provider options, metadata, and signal.
 - `PromptTemplateOptions`: missing-variable behavior for `renderPromptTemplate()`.
 
 ## Outputs / response / events
@@ -74,7 +74,7 @@ The builder returns `readonly Message[]`.
 - Text attachments and explicit text resources are user messages.
 - Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn.
 - Middleware runs only when `middleware` is supplied in the context.
-- `assembleProviderInput()` returns a `ProviderRequest` with the caller's model/tools/metadata/signal and composed messages/context.
+- `assembleProviderInput()` returns a `ProviderRequest` with the caller's model/tools/provider options/metadata/signal and composed messages/context.
 - `renderPromptTemplate()` replaces top-level `{{name}}` variables with caller-supplied JSON-compatible values. Strings are inserted directly; numbers, booleans, `null`, arrays, and objects are stringified deterministically with sorted object keys. Missing variables throw by default or stay unchanged with `{ missing: "preserve" }`.
 
 ## Request/response example
@@ -161,6 +161,7 @@ const request = await assembleProviderInput({
 - [Context and skills](context-and-skills.md): ordered context resolution feeding prompt composition.
 - [Resource loading](resource-loading.md): `loadTextResource()` behavior used for explicit URI resources.
 - [Middleware hooks](middleware-hooks.md): ordered middleware registry and `input_assembly`, `context`, and `prompt_build` hooks.
+- [System prompts](system-prompts.md): compose layered package/app/user/run prompts before input assembly.
 - [Contribution registries](contribution-registries.md): inert input, prompt, context, and skill contributions.
 - [Agent/session runtime](agent-session-runtime.md): calls assembly each turn and supplies runtime tool results to the next provider request.
 - [Tools](tools.md): host-owned tool registry and tool result boundary.

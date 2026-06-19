@@ -4,17 +4,21 @@ import { createContributionRegistries, createContributionRegistry } from "../ind
 import type {
   AgentDefinition,
   AIProvider,
+  AuthMethod,
   CommandDefinition,
   CompactionStrategy,
   ContextProvider,
   CredentialResolver,
   InputBuilder,
   PromptBuilder,
+  ProviderPackage,
+  ProviderRequestPolicy,
   ResourceLoader,
   RetryPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
+  SystemPromptContribution,
   ToolDefinition,
 } from "../index.js";
 
@@ -89,6 +93,10 @@ const resourceLoader: ResourceLoader = {
 const settingsProvider: SettingsProvider = { get: () => undefined };
 const retryPolicy: RetryPolicy = { name: "retry", decide: () => ({ retry: false }) };
 const credentialResolver: CredentialResolver = { resolve: () => undefined };
+const providerPackage: ProviderPackage = { name: "demo-provider", setup: () => undefined };
+const authMethod: AuthMethod = { provider: "mock", kind: "api_key", credentialName: "apiKey" };
+const requestPolicy: ProviderRequestPolicy = { name: "cache", apply: ({ request }) => request };
+const promptContribution: SystemPromptContribution = { id: "demo-prompt", source: "package", mode: "append", text: "Be brief." };
 
 describe("contribution registry", () => {
   it("registers gets resolves lists and replaces contributions", () => {
@@ -127,6 +135,10 @@ describe("contribution registry", () => {
     registries.resourceLoaders.register("memory", resourceLoader);
     registries.settingsProviders.register("settings", settingsProvider);
     registries.credentialResolvers.register("credentials", credentialResolver);
+    registries.providerPackages.register(providerPackage.name, providerPackage);
+    registries.authMethods.register("mock\0api_key", authMethod);
+    registries.providerRequestPolicies.register(requestPolicy.name, requestPolicy);
+    registries.systemPromptContributions.register(promptContribution.id, promptContribution);
 
     assert.equal(registries.providers.resolve("mock"), provider);
     assert.equal(registries.models.resolve("mock", "demo").model, "demo");
@@ -143,6 +155,10 @@ describe("contribution registry", () => {
     assert.equal(registries.resourceLoaders.resolve("memory"), resourceLoader);
     assert.equal(registries.settingsProviders.resolve("settings"), settingsProvider);
     assert.equal(registries.credentialResolvers.resolve("credentials"), credentialResolver);
+    assert.equal(registries.providerPackages.resolve("demo-provider"), providerPackage);
+    assert.equal(registries.authMethods.resolve("mock\0api_key"), authMethod);
+    assert.equal(registries.providerRequestPolicies.resolve("cache"), requestPolicy);
+    assert.equal(registries.systemPromptContributions.resolve("demo-prompt"), promptContribution);
   });
 
   it("separate registry bundles do not share state", () => {

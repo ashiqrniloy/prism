@@ -1,6 +1,7 @@
 import type {
   AgentDefinition,
   AIProvider,
+  AuthMethod,
   CommandDefinition,
   CompactionStrategy,
   ContextProvider,
@@ -11,15 +12,19 @@ import type {
   InputBuilder,
   ModelConfig,
   PromptBuilder,
+  ProviderPackage,
+  ProviderRequestPolicy,
   ResourceLoader,
   RetryPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
+  SystemPromptContribution,
   ToolDefinition,
 } from "./contracts.js";
 import { createContributionRegistries, type ContributionRegistries } from "./contributions.js";
 import { createMiddlewareRegistry, type MiddlewareRegistry } from "./middleware.js";
+import { authMethodKey, systemPromptContributionKey } from "./provider-packages.js";
 import { errorToErrorInfo } from "./redaction.js";
 import { assertPermission, type PermissionPolicy } from "./security.js";
 
@@ -138,6 +143,18 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
     },
     registerCredentialResolver(key: string, resolver: CredentialResolver) {
       registries.credentialResolvers.register(key, resolver);
+    },
+    registerProviderPackage(providerPackage: ProviderPackage) {
+      registries.providerPackages.register(providerPackage.name, providerPackage);
+    },
+    registerAuthMethod(method: AuthMethod) {
+      registries.authMethods.register(authMethodKey(method), method);
+    },
+    registerProviderRequestPolicy(policy: ProviderRequestPolicy) {
+      registries.providerRequestPolicies.register(policy.name, policy);
+    },
+    registerSystemPromptContribution(contribution: SystemPromptContribution) {
+      registries.systemPromptContributions.register(systemPromptContributionKey(contribution), contribution);
     },
   };
 

@@ -8,6 +8,7 @@ import type {
   AgentSessionCloneOptions,
   AgentSessionForkOptions,
   AIProvider,
+  AuthMethod,
   CommandDefinition,
   CompactionOptions,
   CompactionStrategy,
@@ -15,6 +16,8 @@ import type {
   ConfigProvider,
   ContextProvider,
   CredentialResolver,
+  OAuthLoginCallbacks,
+  OAuthProvider,
   AssembleProviderInputOptions,
   DefaultInputBuildContext,
   Extension,
@@ -24,6 +27,9 @@ import type {
   PrismManifest,
   PromptBuilder,
   PromptTemplateOptions,
+  ProviderPackage,
+  ProviderRequestOptions,
+  ProviderRequestPolicy,
   ResourceLoader,
   RetryOptions,
   RetryPolicy,
@@ -33,9 +39,12 @@ import type {
   SessionStore,
   SkillRegistry,
   StoreFactory,
+  SystemPromptConfig,
+  SystemPromptContribution,
+  SystemPromptMode,
   ToolDefinition,
 } from "../index.js";
-import { assembleProviderInput, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createExtensionKernel, createMemorySessionStore, createSessionEntry, createSkillRegistry, createToolRegistry, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "../index.js";
+import { assembleProviderInput, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "../index.js";
 import type { DispatchToolCallOptions, SessionContextSnapshot, ToolFilter, ToolValidator } from "../index.js";
 
 const provider: AIProvider = {
@@ -116,6 +125,83 @@ describe("public contracts", () => {
     assert.equal((await resources.load("memory:demo")).text, "example");
     assert.equal(await settings.get("demo.enabled"), true);
     assert.equal(await credentials.resolve({ name: "demo" }), undefined);
+  });
+
+  it("host can type phase 11 provider package and model metadata contracts", async () => {
+    const auth: AuthMethod = { provider: "mock", kind: "api_key", credentialName: "apiKey" };
+    const requestPolicy: ProviderRequestPolicy = { name: "cache", apply: ({ request }) => request };
+    const promptContribution: SystemPromptContribution = { id: "package-prompt", source: "package", mode: "append", text: "Use package rules." };
+    const providerPackage: ProviderPackage = defineProviderPackage({
+      name: "demo-provider",
+      docs: { description: "Demo provider package." },
+      setup(api) {
+        api.registerProvider(provider);
+        api.registerModel({
+          provider: "mock",
+          model: "demo-metadata",
+          displayName: "Demo Metadata",
+          capabilities: { input: ["text"], reasoning: true, tools: true, streaming: true },
+          limits: { contextWindow: 128_000, maxOutputTokens: 8_192 },
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, currency: "USD" },
+          compat: { vendorSpecific: true },
+          metadata: { safe: true },
+        });
+        api.registerAuthMethod(auth);
+        api.registerProviderRequestPolicy(requestPolicy);
+        api.registerSystemPromptContribution(promptContribution);
+      },
+    });
+    const kernel = createExtensionKernel();
+    await kernel.load([{ name: "package-loader", setup: (api) => {
+      api.registerProviderPackage(providerPackage);
+      return providerPackage.setup(api);
+    } }]);
+
+    assert.equal(kernel.registries.providerPackages.resolve("demo-provider"), providerPackage);
+    assert.equal(kernel.registries.models.resolve("mock", "demo-metadata").capabilities?.reasoning, true);
+    assert.equal(kernel.registries.authMethods.resolve("mock\0api_key"), auth);
+    assert.equal(kernel.registries.providerRequestPolicies.resolve("cache"), requestPolicy);
+    assert.equal(kernel.registries.systemPromptContributions.resolve("package-prompt"), promptContribution);
+  });
+
+  it("host can type OAuth and explicit credential resolver contracts", async () => {
+    const callbacks: OAuthLoginCallbacks = { onPrompt: () => "device" };
+    const oauth: OAuthProvider = {
+      id: "mock-oauth",
+      login: () => ({ access: "access-token", refresh: "refresh-token" }),
+      refresh: (credentials) => ({ ...credentials, access: "refreshed-token" }),
+      getCredential: (credentials) => credentials.access ? { type: "bearer", value: credentials.access } : undefined,
+    };
+    const auth: AuthMethod = { provider: "mock", kind: "oauth", oauth };
+    const resolver = createExplicitCredentialResolver([
+      { name: "runtime", resolver: { resolve: () => undefined } },
+      { name: "env", resolver: createEnvCredentialResolver({ DEMO_API_KEY: "demo-key" }, { mock: "DEMO_API_KEY" }) },
+    ]);
+
+    assert.equal(await callbacks.onPrompt?.("mode?"), "device");
+    assert.equal(auth.kind, "oauth");
+    assert.equal((await resolver.resolve({ name: "apiKey", provider: "mock" }))?.value, "demo-key");
+  });
+
+  it("host can type layered system prompt contracts", () => {
+    const mode: SystemPromptMode = "append";
+    const config: SystemPromptConfig = [{ id: "app", source: "app", mode, text: "App rules." }];
+    const agentConfig: AgentConfig = { model: { provider: "mock", model: "demo" }, provider, instructions: "Base", systemPrompt: config };
+    const prompt = composeSystemPrompt(agentConfig.systemPrompt, { base: agentConfig.instructions });
+
+    assert.equal(prompt, "Base\n\nApp rules.");
+  });
+
+  it("host can type provider request options and cache policy contracts", async () => {
+    const options: ProviderRequestOptions = { sessionId: "s1", cacheRetention: "short", headers: { "x-demo": "1" } };
+    const cache = createSessionCachePolicy({ retention: "long" });
+    const chain = createProviderRequestPolicyChain([cache]);
+    const result = await chain.apply({
+      sessionId: "s1",
+      request: { model: { provider: "mock", model: "demo" }, messages: [], options },
+    });
+
+    assert.equal("request" in result ? result.request.options?.cacheRetention : result.options?.cacheRetention, "long");
   });
 
   it("host can type phase 2 contribution contracts", async () => {

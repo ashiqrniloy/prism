@@ -12,6 +12,7 @@ import type {
   Message,
   ProviderEvent,
   ProviderRequest,
+  ProviderRequestPolicy,
   RetryMiddlewarePayload,
   RetryOptions,
   RunOptions,
@@ -25,7 +26,9 @@ import type {
 } from "./contracts.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
+import { createProviderRequestPolicyChain, mergeProviderRequestOptions, normalizeProviderRequestPolicyResult } from "./provider-request-policy.js";
 import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
+import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
 import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "./session-stores.js";
 import { createToolRegistry, dispatchToolCall } from "./tools.js";
@@ -111,13 +114,14 @@ class RuntimeAgentSession implements AgentSession {
           history: this.history,
           summaries: (await this.snapshot()).summaries,
           toolResults,
-          systemInstructions: this.agent.config.instructions,
+          systemInstructions: composeSystemPrompt(mergeSystemPromptConfig(this.agent.config.systemPrompt, options.systemPrompt), { base: this.agent.config.instructions }),
           inputBuilder: this.agent.config.inputBuilder,
           promptBuilder: this.agent.config.promptBuilder,
           contextProviders: this.agent.config.context,
           skills: this.agent.config.skills ? ("list" in this.agent.config.skills ? this.agent.config.skills.list() : this.agent.config.skills) : undefined,
           tools,
           resourceLoader: this.agent.config.resourceLoader,
+          providerOptions: mergeProviderRequestOptions(this.agent.config.providerOptions, options.providerOptions),
           middleware: this.agent.config.middleware,
           sessionId: this.id,
           runId,
@@ -126,7 +130,9 @@ class RuntimeAgentSession implements AgentSession {
         });
 
         throwIfAborted(controller.signal);
-        const { content, calls, messageId, started, usage: turnUsage } = await this.generateWithRetry(this.redactProviderRequest(request), runId, options, controller.signal);
+        const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
+        const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
+        const { content, calls, messageId, started, usage: turnUsage } = await this.generateWithRetry(this.redactProviderRequest(middlewareRequest), runId, options, controller.signal, policyResult.secrets);
         usage = turnUsage ?? usage;
 
         if (turn === 1) this.history.push(...inputMessages);
@@ -223,13 +229,13 @@ class RuntimeAgentSession implements AgentSession {
     this.subscribers.clear();
   }
 
-  private async generateWithRetry(request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal): Promise<ProviderTurnResult> {
+  private async generateWithRetry(request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets: readonly (string | undefined)[] = []): Promise<ProviderTurnResult> {
     const retry = mergeRetry(this.agent.config.retry, options.retry);
-    const secrets = retry?.secrets ?? [];
+    const secrets = [...requestSecrets, ...(retry?.secrets ?? [])];
     const policy = retry?.policy ?? (retry ? createDefaultRetryPolicy(retry) : undefined);
     for (let attempt = 1; ; attempt += 1) {
       try {
-        return await this.generateProviderTurn(request, runId, signal);
+        return await this.generateProviderTurn(request, runId, signal, secrets);
       } catch (error) {
         const failure = error instanceof ProviderTurnFailure ? error : undefined;
         const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
@@ -246,7 +252,7 @@ class RuntimeAgentSession implements AgentSession {
     }
   }
 
-  private async generateProviderTurn(request: ProviderRequest, runId: string, signal: AbortSignal): Promise<ProviderTurnResult> {
+  private async generateProviderTurn(request: ProviderRequest, runId: string, signal: AbortSignal, secrets: readonly (string | undefined)[] = []): Promise<ProviderTurnResult> {
     const content: ContentBlock[] = [];
     const calls: ToolCallContent[] = [];
     let messageId: string | undefined;
@@ -281,8 +287,15 @@ class RuntimeAgentSession implements AgentSession {
       return { content, calls, messageId, started, usage };
     } catch (error) {
       if (error instanceof ProviderTurnFailure) throw error;
-      throw new ProviderTurnFailure(errorToErrorInfo(error), started);
+      throw new ProviderTurnFailure(errorToErrorInfo(error, secrets), started);
     }
+  }
+
+  private async applyProviderRequestPolicies(request: ProviderRequest, runId: string, options: RunOptions, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal) {
+    const policies = [...policyList(this.agent.config.providerRequestPolicies), ...policyList(options.providerRequestPolicies)];
+    if (policies.length === 0) return { request, secrets: [] as readonly (string | undefined)[] };
+    const result = await createProviderRequestPolicyChain(policies).apply({ request, sessionId: this.id, runId, metadata, signal });
+    return normalizeProviderRequestPolicyResult(result);
   }
 
   private async appendMessage(message: Message, runId: string): Promise<void> {
@@ -402,6 +415,11 @@ function activeTools(tools: AgentConfig["tools"]): { registry: ToolRegistry; too
   if ("list" in tools) return { registry: tools, tools: tools.list() };
   const registry = createToolRegistry(tools);
   return { registry, tools };
+}
+
+function policyList(policies: ProviderRequestPolicy | readonly ProviderRequestPolicy[] | undefined): readonly ProviderRequestPolicy[] {
+  if (!policies) return [];
+  return "apply" in policies ? [policies] : policies;
 }
 
 function errorFromInfo(error: ErrorInfo): Error {

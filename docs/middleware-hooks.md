@@ -48,7 +48,7 @@ Built-in hook names:
 
 ## Outputs / response / events
 
-`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The agent/session runtime invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry.
+`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The agent/session runtime applies configured provider request policies, then invokes `provider_request` once with the `ProviderRequest` before `AIProvider.generate()`, invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry.
 
 With default `errorPolicy: "event"`, middleware errors become `extension_error` events when `onError` is provided, and later middleware still runs with the current value. With `errorPolicy: "throw"`, `run()` rejects on the first middleware error.
 
@@ -96,6 +96,7 @@ export const extension: Extension = {
 ## Extension and configuration notes
 
 - Middleware registration is explicit through `createMiddlewareRegistry()` or `ExtensionAPI.use()`.
+- `provider_request` middleware sees generic `ProviderRequest.options` after request policies have run; do not add secrets unless a redactor/policy secret list covers that boundary.
 - Middleware runs only when the host/runtime calls `run()` or passes the registry to a helper that documents a call site.
 - `compaction` middleware may adjust the compaction result summary/data, but runtime still owns session store append ordering and branch parent ids.
 - `retry` middleware may stop retrying or adjust delay, but runtime still owns retry event emission, abort-aware waiting, and provider-turn boundaries.
@@ -113,7 +114,7 @@ export const extension: Extension = {
 
 - [Extension kernel and event bus](extensions.md): `ExtensionAPI.use()` and shared error policy.
 - [Contribution registries](contribution-registries.md): direct contribution registration separate from middleware.
-- [Agent/session runtime](agent-session-runtime.md): bounded tool loop call site for `tool_call`/`tool_result` hooks and runtime call sites for `compaction` and `retry`.
+- [Agent/session runtime](agent-session-runtime.md): provider request policy/middleware timing, bounded tool loop call site for `tool_call`/`tool_result` hooks, and runtime call sites for `compaction` and `retry`.
 - [Tools](tools.md): tool dispatch behavior that runs `tool_call` and `tool_result` hooks.
 - [Input and prompt assembly](input-and-prompt-assembly.md): `input_assembly` and `prompt_build` helper call sites.
 - [Compaction and retry policies](compaction-and-retry.md): compaction/retry middleware payloads and runtime timing.

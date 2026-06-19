@@ -2,7 +2,7 @@
 
 ## What it does
 
-Contribution registries are explicit, host-owned maps for extension/package contributions. They let hosts register and resolve providers, models, tools, context providers, skills, commands, agents, input builders, prompt builders, compaction strategies, retry policies, store factories, resource loaders, settings providers, and credential resolvers without hidden globals.
+Contribution registries are explicit, host-owned maps for extension/package contributions. They let hosts register and resolve providers, models, provider packages, auth methods, provider request policies, system prompt contributions, tools, context providers, skills, commands, agents, input builders, prompt builders, compaction strategies, retry policies, store factories, resource loaders, settings providers, and credential resolvers without hidden globals.
 
 APIs:
 
@@ -31,11 +31,11 @@ createContributionRegistries(): ContributionRegistries
 | `resolve(key)` | string key | Returns the contribution or throws `Unknown <label>: <key>`. |
 | `list()` | none | Returns contributions in insertion order. |
 
-`ContributionRegistries` includes existing `providers` and `models` registries plus generic registries for `tools`, `contextProviders`, `skills`, `commands`, `agents`, `inputBuilders`, `promptBuilders`, `compactionStrategies`, `retryPolicies`, `storeFactories`, `resourceLoaders`, `settingsProviders`, and `credentialResolvers`.
+`ContributionRegistries` includes existing `providers` and `models` registries plus generic registries for `providerPackages`, `authMethods`, `providerRequestPolicies`, `systemPromptContributions`, `tools`, `contextProviders`, `skills`, `commands`, `agents`, `inputBuilders`, `promptBuilders`, `compactionStrategies`, `retryPolicies`, `storeFactories`, `resourceLoaders`, `settingsProviders`, and `credentialResolvers`.
 
 ## Outputs / response / events
 
-Registry calls return plain contribution objects. Unknown `resolve()` calls throw before provider, model, tool, credential, resource, or session behavior can run.
+Registry calls return plain contribution objects. Unknown `resolve()` calls throw before provider, model, tool, credential, prompt, resource, or session behavior can run. `systemPromptContributions` are inert until a host passes selected values to `AgentConfig.systemPrompt` or `RunOptions.systemPrompt`.
 
 Registering the same key replaces the contribution deterministically. Registries do not emit events by themselves; the extension kernel may emit events when it uses them.
 
@@ -89,6 +89,7 @@ void skill;
 - Registry keys are explicit strings. Prefer stable ids/names such as `provider.id`, `tool.name`, `skill.name`, or package-qualified names when collisions matter.
 - Manifest and configuration loading are separate APIs; this page only covers in-memory registration.
 - Tool contributions are inert. They are not executable until the host registers selected definitions in an active tool registry and passes that registry to `dispatchToolCall()`.
+- Provider packages, auth methods, provider request policies, and system prompt contributions are inert until the host resolves them and explicitly calls setup or passes them to a runtime/helper that documents the call site.
 - Input builders, prompt builders, context providers, skills, compaction strategies, and retry policies are inert until the host resolves them and calls, passes, registers, or selects them for runtime helpers.
 - Agent definitions are inert until the host resolves one and calls `create()`. A definition may call `createAgent()` with explicit provider/tools/context/skills; registries are not hidden globals for the runtime.
 
@@ -104,9 +105,11 @@ void skill;
 
 ## Related APIs
 
+- [Provider packages](provider-packages.md): provider package and model metadata contribution primitives.
 - [Provider layer](provider-layer.md): existing provider/model registries reused by `ContributionRegistries`.
 - [Agent/session runtime](agent-session-runtime.md): selected `AgentDefinition` values can create runtime agents with explicit config.
 - [Input and prompt assembly](input-and-prompt-assembly.md): default builders and provider-input assembly for selected contributions.
+- [System prompts](system-prompts.md): composing selected system prompt contributions.
 - [Context and skills](context-and-skills.md): ordered resolution for selected context providers and progressive disclosure for selected skills.
 - [Tools](tools.md): active host tool registry, filtering, and dispatch for selected tool definitions.
 - [Compaction and retry policies](compaction-and-retry.md): selected compaction strategy and retry policy behavior.

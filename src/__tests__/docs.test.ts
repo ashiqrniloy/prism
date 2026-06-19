@@ -10,7 +10,9 @@ const apiPages = [
   "docs/session-stores-and-branching.md",
   "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
+  "docs/provider-conformance.md",
   "docs/input-and-prompt-assembly.md",
+  "docs/system-prompts.md",
   "docs/context-and-skills.md",
   "docs/configuration-and-manifests.md",
   "docs/contribution-registries.md",
@@ -220,6 +222,39 @@ describe("docs", () => {
     const docs = readFileSync("docs/cli-rpc.md", "utf8");
     for (const phrase of ["--mode print", "--provider", "--model", "prompt", "abort", "compact", "cloneSession", "No built-in app tools", "No full TUI"]) {
       assert.ok(docs.includes(phrase), `cli/rpc docs missing ${phrase}`);
+    }
+  });
+
+  it("auth docs cover explicit resolver order and no hidden env", () => {
+    const docs = readFileSync("docs/credentials-and-redaction.md", "utf8");
+    for (const phrase of ["createExplicitCredentialResolver", "createEnvCredentialResolver", "refreshOAuthCredential", "runtime override", "Prism does not read `process.env`"]){
+      assert.ok(docs.includes(phrase), `credential docs missing ${phrase}`);
+    }
+  });
+
+  it("system prompt docs cover layers and secret warning", () => {
+    const docs = readFileSync("docs/system-prompts.md", "utf8");
+    for (const phrase of ["composeSystemPrompt", "package`, `app`, `user`, then `run`", "RunOptions.systemPrompt: false", "Do not put secrets in prompts"]){
+      assert.ok(docs.includes(phrase), `system prompt docs missing ${phrase}`);
+    }
+  });
+
+  it("provider conformance docs cover testing subpath and no network", () => {
+    const docs = readFileSync("docs/provider-conformance.md", "utf8");
+    for (const phrase of ["prism/testing/provider-conformance", "assertAbortIsObserved", "assertToolCallDeltasReconstruct", "No credentials", "network calls"]){
+      assert.ok(docs.includes(phrase), `provider conformance docs missing ${phrase}`);
+    }
+  });
+
+  it("provider request policy docs cover runtime timing and cache usage", () => {
+    const combined = [
+      "docs/provider-packages.md",
+      "docs/provider-layer.md",
+      "docs/middleware-hooks.md",
+      "docs/agent-session-runtime.md",
+    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    for (const phrase of ["createSessionCachePolicy", "ProviderRequest.options", "cacheRetention", "provider_request", "cache read/write"]){
+      assert.ok(combined.includes(phrase), `provider request docs missing ${phrase}`);
     }
   });
 

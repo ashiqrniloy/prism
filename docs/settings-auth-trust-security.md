@@ -1,7 +1,7 @@
 # Settings, auth, trust, and security controls
 
 ## What it does
-Prism exposes small host-owned helpers for settings, in-memory credentials, trust checks, permission checks, and exact known-secret redaction. It does not add hidden settings discovery, hidden credential loading, a persistent secret store, automatic project-local code loading, or a sandbox.
+Prism exposes small host-owned helpers for settings, in-memory credentials, trust checks, permission checks, and exact known-secret redaction. It adds no hidden settings discovery, no hidden credential loading, no persistent secret store, does not auto-load project-local code, and no sandbox.
 
 ## When to use it
 Use these APIs when a host wants one explicit place to compose settings, resolve caller-supplied credentials, deny untrusted resources/extensions/tools, or redact known secret strings before runtime serialization.
@@ -11,6 +11,8 @@ Use these APIs when a host wants one explicit place to compose settings, resolve
 - `createChainedSettingsProvider(providers)` returns the first defined setting.
 - `createMemoryCredentialStore(initial?)` stores explicit credentials in memory only.
 - `createChainedCredentialResolver(resolvers)` returns the first credential found.
+- `createExplicitCredentialResolver(sources)` documents and applies named source order such as runtime override → stored → host env object → fallback.
+- `createEnvCredentialResolver(env, map)` reads only the caller-supplied object; it does not read `process.env`.
 - `assertTrusted(policy, request)` and `assertPermission(policy, request)` fail closed on denial.
 - `createSecretRedactor(secrets)` redacts exact known strings.
 - Node-only subpaths: `prism/node/settings` for caller-named JSON settings files and `prism/node/trust` for explicit trusted path roots.
@@ -54,14 +56,14 @@ void agent;
 ```
 
 ## Extension and configuration notes
-Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, and persistent credentials belong in the host or an extension package.
+Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, OAuth token storage, environment-variable selection, and persistent credentials belong in the host or an extension package.
 
 ## Security and performance notes
 Prism does not sandbox host tools or extensions. Prism does not read environment variables, keychains, user config files, package manifests, resources, or project-local extensions unless the host explicitly wires those operations. Redaction is exact known-secret replacement only; it is not secret detection. Permission and trust checks are one operation per guarded call and add no workers, watchers, retries, network, or filesystem scans.
 
 ## Related APIs
 - `createStaticSettingsProvider`, `createChainedSettingsProvider`
-- `createMemoryCredentialStore`, `createChainedCredentialResolver`, `resolveCredentialValue`
+- `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `resolveCredentialValue`
 - `createStaticTrustPolicy`, `assertTrusted`, `isTrusted`, `TrustDeniedError`
 - `createStaticPermissionPolicy`, `assertPermission`, `checkPermission`, `PermissionDeniedError`
 - `createSecretRedactor`, `redactMessage`, `redactAgentEvent`, `redactSessionEntry`, `redactProviderRequest`

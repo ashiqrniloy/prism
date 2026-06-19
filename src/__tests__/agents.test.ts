@@ -7,8 +7,10 @@ import {
   createMemorySessionStore,
   createMiddlewareRegistry,
   createMockProvider,
+  createSessionCachePolicy,
   providerDone,
   providerTextDelta,
+  providerUsage,
   toolCallContent,
   type AgentDefinition,
   type AgentEvent,
@@ -24,6 +26,10 @@ async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[
   const events: AgentEvent[] = [];
   for await (const event of iterable) events.push(event);
   return events;
+}
+
+function textOf(message: ProviderRequest["messages"][number] | undefined): string {
+  return message?.content.map((block) => block.type === "text" ? block.text : "").join("") ?? "";
 }
 
 async function take(iterable: AsyncIterable<AgentEvent>, count: number): Promise<AgentEvent[]> {
@@ -304,6 +310,41 @@ describe("agent session runtime", () => {
     assert.deepEqual(request.metadata, { source: "agent", session: true, run: true });
   });
 
+  it("agent_config_instructions_preserves_existing_default_prompt_path", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = { id: "mock", async *generate(input) { request = input; yield providerDone(); } };
+    await createAgent({ model: { provider: "mock", model: "demo" }, provider, instructions: "Base" }).createSession().run("Hi");
+
+    assert.equal(textOf(request.messages[0]), "System instruction:\nBase");
+  });
+
+  it("run_system_prompt_override_can_disable_configured_layers", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = { id: "mock", async *generate(input) { request = input; yield providerDone(); } };
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      instructions: "Base",
+      systemPrompt: { id: "app", source: "app", text: "App" },
+    }).createSession().run("Hi", { systemPrompt: false });
+
+    assert.equal(textOf(request.messages[0]), "System instruction:\nBase");
+    assert.equal(request.messages.some((message) => textOf(message).includes("App")), false);
+  });
+
+  it("uses layered system prompts before provider generate", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = { id: "mock", async *generate(input) { request = input; yield providerDone(); } };
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      instructions: "Base",
+      systemPrompt: [{ id: "pkg", source: "package", text: "Package" }, { id: "app", source: "app", mode: "replace", text: "App" }],
+    }).createSession().run("Hi", { systemPrompt: { id: "run", source: "run", text: "Run" } });
+
+    assert.equal(textOf(request.messages[0]), "System instruction:\nApp\n\nRun");
+  });
+
   it("uses context providers and selected skills", async () => {
     let request!: ProviderRequest;
     const provider: AIProvider = { id: "mock", async *generate(input) {
@@ -578,6 +619,81 @@ describe("agent session runtime", () => {
 
     await assert.rejects(session.run("Hi"), /busy/);
     assert.equal(calls, 1);
+  });
+
+  it("provider request policy adds session cache options before provider generate", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = { id: "mock", async *generate(input) {
+      request = input;
+      yield providerDone();
+    } };
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      providerRequestPolicies: createSessionCachePolicy({ retention: "long" }),
+    }).createSession({ id: "cache-session" });
+
+    await session.run("Hi");
+
+    assert.equal(request.options?.sessionId, "cache-session");
+    assert.equal(request.options?.cacheKey, "cache-session");
+    assert.equal(request.options?.cacheRetention, "long");
+    assert.equal(JSON.stringify(request.messages).includes("Hi"), true);
+    assert.equal(request.options?.cacheKey?.includes("Hi"), false);
+  });
+
+  it("provider request middleware runs once after policy", async () => {
+    const order: string[] = [];
+    let request!: ProviderRequest;
+    const middleware = createMiddlewareRegistry();
+    middleware.use("provider_request", (input: ProviderRequest) => {
+      order.push(`middleware:${input.options?.cacheRetention}`);
+      return { ...input, metadata: { ...input.metadata, middleware: true } };
+    });
+    const provider: AIProvider = { id: "mock", async *generate(input) {
+      request = input;
+      yield providerDone();
+    } };
+
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      middleware,
+      providerRequestPolicies: { name: "mark", apply(context) { order.push("policy"); return { ...context.request, options: { ...context.request.options, cacheRetention: "short" } }; } },
+    }).createSession().run("Hi");
+
+    assert.deepEqual(order, ["policy", "middleware:short"]);
+    assert.equal(request.metadata?.middleware, true);
+  });
+
+  it("usage supports cache read and write tokens", async () => {
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerUsage({ inputTokens: 10, cacheReadTokens: 4, cacheWriteTokens: 2 }), providerDone()]),
+    }).createSession();
+    const reader = collect(session.subscribe());
+
+    await session.run("Hi");
+
+    const finished = (await reader).find((event) => event.type === "agent_finished");
+    assert.equal(finished?.type === "agent_finished" ? finished.usage?.cacheReadTokens : undefined, 4);
+    assert.equal(finished?.type === "agent_finished" ? finished.usage?.cacheWriteTokens : undefined, 2);
+  });
+
+  it("request policy redacts secret from provider errors", async () => {
+    const secret = "policy-secret-value";
+    const provider: AIProvider = { id: "mock", async *generate() { throw new Error(`bad ${secret}`); } };
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      providerRequestPolicies: { name: "secret", apply: ({ request }) => ({ request: { ...request, options: { ...request.options, headers: { authorization: secret } } }, secrets: [secret] }) },
+    }).createSession();
+    const reader = collect(session.subscribe());
+
+    await assert.rejects(session.run("Hi"), /\[REDACTED\]/);
+
+    const error = (await reader).find((event) => event.type === "error");
+    assert.equal(error?.type === "error" ? error.error.message.includes(secret) : true, false);
   });
 
   it("run model override changes provider request model", async () => {

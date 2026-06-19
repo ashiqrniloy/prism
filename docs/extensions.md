@@ -13,7 +13,7 @@ APIs:
 
 ## When to use it
 
-Use the extension kernel when a host wants packages to contribute providers, models, tools, context providers, skills, commands, agents, builders, strategies, stores, resources, settings providers, or credential resolvers without editing Prism internals.
+Use the extension kernel when a host wants packages to contribute provider packages, providers, models, auth methods, provider request policies, system prompt contributions, tools, context providers, skills, commands, agents, builders, strategies, stores, resources, settings providers, or credential resolvers without editing Prism internals.
 
 Skip the kernel and use contribution registries directly when the host does not need extension setup lifecycle or events.
 
@@ -33,7 +33,7 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 | `errorPolicy` | `"event" | "throw"` | Defaults to `"event"`; use `"throw"` for fail-fast setup/listener/middleware errors. |
 | `secrets` | readonly strings | Known secret values to redact from extension error events. |
 
-`ExtensionAPI` includes `registries`, `middleware`, `on()`, `emit()`, `use()`, and registration methods for all Phase 2 contribution categories.
+`ExtensionAPI` includes `registries`, `middleware`, `on()`, `emit()`, `use()`, and registration methods for all contribution categories, including provider packages, auth methods, provider request policies, and system prompt contributions.
 
 ## Outputs / response / events
 
@@ -62,7 +62,11 @@ import { createAgent, createExtensionKernel, type Extension } from "prism";
 const extension: Extension = {
   name: "demo-extension",
   setup(api) {
-    api.registerModel({ provider: "mock", model: "demo" });
+    api.registerProviderPackage({ name: "demo-provider", setup: () => undefined });
+    api.registerModel({ provider: "mock", model: "demo", capabilities: { input: ["text"] } });
+    api.registerAuthMethod({ provider: "mock", kind: "api_key", credentialName: "apiKey" });
+    api.registerProviderRequestPolicy({ name: "cache", apply: ({ request }) => request });
+    api.registerSystemPromptContribution({ id: "demo-prompt", source: "package", mode: "append", text: "Use demo rules." });
     api.registerTool({ name: "echo", execute: (args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo", value: args }) });
     api.registerContextProvider({ name: "project", resolve: () => [{ title: "Project", content: "Context" }] });
     api.registerInputBuilder({ name: "input", build: async () => [{ role: "user", content: [{ type: "text", text: "Hello" }] }] });
@@ -90,6 +94,7 @@ console.log(kernel.registries.inputBuilders.resolve("input").name); // contribut
 console.log(kernel.registries.promptBuilders.resolve("prompt").name); // contributed only; host must pass it to assembly
 console.log(kernel.registries.skills.resolve("brief").name); // contributed only; host must select before prompt use
 console.log(kernel.registries.agents.resolve("demo").name); // contributed only; host must create/select before runtime use
+console.log(kernel.registries.systemPromptContributions.resolve("demo-prompt").text); // contributed only; host must select before prompt use
 await kernel.middleware.run("provider_request", { metadata: {} });
 ```
 
@@ -101,6 +106,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - `api.registerTool()` contributes an inert `ToolDefinition` to `registries.tools`; it does not add the tool to an active tool registry, allow list, or dispatch loop.
 - `api.registerInputBuilder()`, `api.registerPromptBuilder()`, and `api.registerContextProvider()` contribute inert builders/providers; they do not replace defaults or run until the host passes selected entries to Phase 5 helpers.
 - `api.registerSkill()` contributes an inert `Skill` to `registries.skills`; it does not disclose instructions, activate referenced tools, or grant permissions until the host selects it.
+- `api.registerProviderPackage()`, `api.registerAuthMethod()`, `api.registerProviderRequestPolicy()`, and `api.registerSystemPromptContribution()` contribute inert provider-package data; they do not load packages, resolve credentials, mutate provider payloads, or change prompts until selected by a host/runtime helper that documents that behavior.
 - `api.registerAgent()` contributes an inert `AgentDefinition`; its `create()` can call `createAgent()`, but the runtime is not started until host code resolves the definition and creates/runs a session.
 - The kernel registers middleware only into the explicit registry returned by `createMiddlewareRegistry()` or provided by the host.
 - `api.use("compaction", middleware)` and `api.use("retry", middleware)` observe or adjust runtime compaction/retry payloads only when the host passes that middleware registry to `createAgent({ middleware })`; compaction strategy and retry policy contributions remain inert until selected by the host.
@@ -117,9 +123,11 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 ## Related APIs
 
 - [Middleware hooks](middleware-hooks.md): ordered hook registry populated by `ExtensionAPI.use()`.
+- [Provider packages](provider-packages.md): provider package and model metadata registration through `ExtensionAPI`.
 - [Contribution registries](contribution-registries.md): registry bundle populated by `ExtensionAPI`.
 - [Tools](tools.md): host activation, filtering, and dispatch for contributed tool definitions.
 - [Input and prompt assembly](input-and-prompt-assembly.md): host selection for contributed input/prompt builders.
+- [System prompts](system-prompts.md): host selection for contributed system prompt layers.
 - [Context and skills](context-and-skills.md): host selection and tool checks for contributed context providers and skills.
 - [Agent/session runtime](agent-session-runtime.md): `AgentDefinition.create()` can return agents built with `createAgent()` from explicit host-selected config.
 - [Compaction and retry policies](compaction-and-retry.md): compaction strategy/retry policy contributions and `compaction`/`retry` middleware runtime behavior.

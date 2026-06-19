@@ -12,6 +12,7 @@ import type {
   PromptBuilder,
   PromptBuildRequest,
   ProviderRequest,
+  ProviderRequestOptions,
   ResourceLoader,
   Skill,
   ToolDefinition,
@@ -76,6 +77,7 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly promptBuilder?: PromptBuilder;
   readonly skills?: readonly Skill[];
   readonly tools?: readonly ToolDefinition[];
+  readonly providerOptions?: ProviderRequestOptions;
 }
 
 export function createDefaultInputBuilder(): DefaultInputBuilder {
@@ -177,6 +179,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     messages: providerMessages,
     tools: options.tools,
     context,
+    options: options.providerOptions,
     metadata: options.metadata,
     signal: options.signal,
   };

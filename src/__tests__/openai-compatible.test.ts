@@ -50,13 +50,13 @@ describe("openai-compatible provider", () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
       fetch: okFetch([
-        JSON.stringify({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 } }),
+        JSON.stringify({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3, prompt_tokens_details: { cached_tokens: 4, cache_write_tokens: 5 } } }),
         "[DONE]",
       ]),
     });
 
     assert.deepEqual(await collect(provider), [
-      { type: "usage", usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 } },
+      { type: "usage", usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3, cacheReadTokens: 4, cacheWriteTokens: 5 } },
       { type: "done", usage: undefined },
     ]);
   });
@@ -130,6 +130,27 @@ describe("openai-compatible provider", () => {
       assert.equal(event.error.message.includes("sk-test-123"), false);
       assert.equal(event.error.message.includes("[REDACTED]"), true);
     }
+  });
+
+  it("passes generic request headers", async () => {
+    let headers: Headers;
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      fetch: (async (_url, init) => {
+        headers = new Headers(init?.headers);
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+
+    for await (const _ of provider.generate({
+      model: { provider: provider.id, model: "demo" },
+      messages: [],
+      options: { headers: { "x-demo": "1" } },
+    })) {
+      // drain
+    }
+
+    assert.equal(headers!.get("x-demo"), "1");
   });
 
   it("uses injected fetch only", async () => {

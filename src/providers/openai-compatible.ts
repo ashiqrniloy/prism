@@ -52,6 +52,7 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
           method: "POST",
           headers: {
             "content-type": "application/json",
+            ...request.options?.headers,
             ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
           },
           body: JSON.stringify(toOpenAIRequest(request)),
@@ -179,6 +180,8 @@ function toUsage(usage: OpenAIUsage | undefined): Usage | undefined {
     inputTokens: usage.prompt_tokens,
     outputTokens: usage.completion_tokens,
     totalTokens: usage.total_tokens,
+    cacheReadTokens: usage.prompt_tokens_details?.cached_tokens ?? usage.prompt_cache_hit_tokens,
+    cacheWriteTokens: usage.prompt_tokens_details?.cache_write_tokens,
   };
 }
 
@@ -201,4 +204,9 @@ interface OpenAIUsage {
   readonly prompt_tokens?: number;
   readonly completion_tokens?: number;
   readonly total_tokens?: number;
+  readonly prompt_cache_hit_tokens?: number;
+  readonly prompt_tokens_details?: {
+    readonly cached_tokens?: number;
+    readonly cache_write_tokens?: number;
+  };
 }

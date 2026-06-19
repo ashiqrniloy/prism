@@ -8,7 +8,7 @@ Current contract groups:
 
 - JSON/data: `JsonPrimitive`, `JsonValue`, `JsonObject`, `ErrorInfo`
 - Content/messages: `ContentBlock`, `TextContent`, `ImageContent`, `ThinkingContent`, `ToolCallContent`, `ToolResultContent`, `Message`
-- Providers/models: `ModelConfig`, `Usage`, `ProviderRequest`, `ProviderEvent`, `AIProvider`
+- Providers/models/auth: `ModelConfig`, `ModelCapabilities`, `ModelLimits`, `ModelCost`, `Usage`, `CacheRetention`, `ProviderRequestOptions`, `ProviderRequest`, `ProviderEvent`, `AIProvider`, `ProviderPackage`, `ProviderPackageAPI`, `ProviderPackageDocs`, `AuthMethod`, `ApiKeyAuthMethod`, `OAuthAuthMethod`, `CustomAuthMethod`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, `CredentialResolverSource`, `OAuthCredentialStore`, `ProviderRequestPolicy`, `ProviderRequestPolicyContext`, `ProviderRequestPolicyResult`, `SystemPromptContribution`, `SystemPromptMode`, `SystemPromptSource`, `SystemPromptConfig`
 - Agents/sessions: `AgentConfig`, `AgentDefinition`, `Agent`, `AgentSessionConfig`, `AgentSessionForkOptions`, `AgentSessionCloneOptions`, `AgentSession`, `RunOptions`, `AgentEvent`
 - Tools/commands: `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, `CommandDefinition`, `CommandExecutionContext`, `CommandResult`
 - Input/prompt/context/skills: `InputBuilder`, `InputBuildContext`, `AgentInput`, `DefaultInputBuilder`, `DefaultInputBuildContext`, `InputAttachment`, `PromptInstruction`, `PromptBuilder`, `PromptBuildRequest`, `ContextBlock`, `ContextProvider`, `ContextResolutionContext`, `Skill`, `SkillRegistry`
@@ -31,12 +31,15 @@ import type {
   AgentConfig,
   AgentDefinition,
   AIProvider,
+  AuthMethod,
   CommandDefinition,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,
   ContextProvider,
   CredentialResolver,
+  OAuthProvider,
+  ProviderRequestOptions,
   DefaultInputBuildContext,
   Extension,
   InputBuilder,
@@ -48,10 +51,14 @@ import type {
   PrismManifest,
   PromptBuilder,
   PromptTemplateOptions,
+  ProviderPackage,
+  ProviderRequestPolicy,
   ResourceLoader,
   SettingsProvider,
   Skill,
   StoreFactory,
+  SystemPromptContribution,
+  SystemPromptConfig,
   ToolDefinition,
 } from "prism";
 ```
@@ -60,7 +67,11 @@ Important request shapes:
 
 | Contract | Purpose |
 | --- | --- |
-| `ProviderRequest` | Normalized provider input: `model`, `messages`, optional `tools`, `context`, `metadata`, and `signal`. |
+| `ModelConfig` | Provider/model id plus optional display name, capabilities, limits, cost/cache pricing, opaque compat JSON, parameters, and metadata. |
+| `ProviderPackage` | Inert provider package definition with docs metadata and explicit `setup(api)` registration. |
+| `ProviderRequest` | Normalized provider input: `model`, `messages`, optional `tools`, `context`, generic `options`, `metadata`, and `signal`. |
+| `ProviderRequestOptions` | Generic provider adapter hints: session/cache identifiers, cache retention, headers, timeout/retry hints, compat, and opaque `extra`. |
+| `ProviderRequestPolicy` | Ordered pre-provider hook that can patch the request and return exact secrets for provider-error redaction. |
 | `ToolRegistry` | Host active tool registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `ToolExecutionContext` | Host tool execution context: session/run ids, tool call id, optional abort signal, metadata, and progress callback. |
 | `ContextResolutionContext` | Context provider input: messages plus optional session/run ids, metadata, and signal. |
@@ -70,8 +81,10 @@ Important request shapes:
 | `PromptTemplateOptions` | Missing-variable behavior for tiny `renderPromptTemplate()` substitutions. |
 | `SkillRegistry` | Host active skill registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `CredentialRequest` | Credential lookup request: credential `name`, optional provider id, and metadata. |
+| `OAuthProvider` | Host/package OAuth callbacks for login, optional refresh, and conversion to a `Credential`. |
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
-| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, compaction, retry, and metadata. |
+| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, and metadata. |
+| `SystemPromptContribution` | Explicit caller-selected prompt layer with source, mode, text, and metadata. |
 | `ConfigLayer` | Named JSON config layer consumed by `mergeConfigLayers()`. |
 | `PrismManifest` | Data-only package manifest with config defaults, contribution declarations, and resource declarations. |
 
@@ -355,7 +368,8 @@ void credentials;
 - [Session stores and branching](session-stores-and-branching.md): branch-aware `SessionEntry` helpers and context rebuild.
 - [Compaction and retry policies](compaction-and-retry.md): default compaction strategy, default retry policy, runtime compaction/retry options, middleware payloads, and compaction entry data.
 - [Provider layer](provider-layer.md): runtime registries, provider event helpers, and mock provider built on these contracts.
-- [Credentials and redaction](credentials-and-redaction.md): helpers for resolving host-owned credentials and redacting known secret values.
+- [Provider conformance](provider-conformance.md): testing subpath for network-free provider adapter checks.
+- [Credentials and redaction](credentials-and-redaction.md): helpers for resolving host-owned credentials, explicit resolver order, OAuth refresh, env-object lookup, and redacting known secret values.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter implementing `AIProvider`.
 
-Phase 10 public helpers include `createStaticSettingsProvider`, `createChainedSettingsProvider`, `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createStaticTrustPolicy`, `assertTrusted`, `createStaticPermissionPolicy`, `assertPermission`, and `createSecretRedactor`. Node subpaths `prism/node/settings` and `prism/node/trust` are explicit filesystem/path helpers.
+Phase 10 public helpers include `createStaticSettingsProvider`, `createChainedSettingsProvider`, `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createStaticTrustPolicy`, `assertTrusted`, `createStaticPermissionPolicy`, `assertPermission`, and `createSecretRedactor`. Phase 11 auth/request/prompt helpers include `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `createProviderRequestPolicyChain`, `createSessionCachePolicy`, `mergeProviderRequestOptions`, `composeSystemPrompt`, and `mergeSystemPromptConfig`; they do not read env vars, persist OAuth tokens, create cache stores, discover prompt files, or load packages unless the host supplies that behavior. `prism/testing/provider-conformance` exports network-free provider assertion helpers. Node subpaths `prism/node/settings` and `prism/node/trust` are explicit filesystem/path helpers.

@@ -8,11 +8,16 @@ export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./
 export type { DefaultRetryPolicyOptions } from "./retry.js";
 export { createContributionRegistries, createContributionRegistry } from "./contributions.js";
 export type { ContributionRegistries, ContributionRegistry, ContributionRegistryOptions } from "./contributions.js";
-export { createChainedCredentialResolver, createMemoryCredentialStore, resolveCredentialValue } from "./credentials.js";
+export { createChainedCredentialResolver, createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore, refreshOAuthCredential, resolveCredentialValue } from "./credentials.js";
 export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
 export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions } from "./extensions.js";
 export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore } from "./credentials.js";
 export { createModelRegistry } from "./models.js";
+export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
+export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProviderRequestOptions } from "./provider-request-policy.js";
+export type { SessionCachePolicyOptions } from "./provider-request-policy.js";
+export { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
+export type { ComposeSystemPromptOptions } from "./system-prompts.js";
 export type { ModelRegistry } from "./models.js";
 export { definePrismManifest, parsePrismManifest } from "./manifests.js";
 export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js";

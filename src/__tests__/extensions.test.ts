@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createExtensionEventBus, createExtensionKernel } from "../index.js";
+import { createExtensionEventBus, createExtensionKernel, defineProviderPackage } from "../index.js";
 import type { AIProvider, Extension, ExtensionEvent, ToolDefinition } from "../index.js";
 
 const provider: AIProvider = {
@@ -36,6 +36,10 @@ function allContributionsExtension(): Extension {
       api.registerResourceLoader("memory", { load: async (uri) => ({ uri, text: "resource" }) });
       api.registerSettingsProvider("settings", { get: () => undefined });
       api.registerCredentialResolver("credentials", { resolve: () => undefined });
+      api.registerProviderPackage(defineProviderPackage({ name: "demo-provider", setup: () => undefined }));
+      api.registerAuthMethod({ provider: "mock", kind: "api_key", credentialName: "apiKey" });
+      api.registerProviderRequestPolicy({ name: "cache", apply: ({ request }) => request });
+      api.registerSystemPromptContribution({ id: "demo-prompt", source: "package", mode: "append", text: "Be brief." });
     },
   };
 }
@@ -103,6 +107,10 @@ describe("extension kernel", () => {
     assert.equal(await kernel.registries.resourceLoaders.resolve("memory").load("memory:x").then((item) => item.text), "resource");
     assert.equal(kernel.registries.settingsProviders.resolve("settings").get("x"), undefined);
     assert.equal(kernel.registries.credentialResolvers.resolve("credentials").resolve({ name: "apiKey" }), undefined);
+    assert.equal(kernel.registries.providerPackages.resolve("demo-provider").name, "demo-provider");
+    assert.equal(kernel.registries.authMethods.resolve("mock\0api_key").provider, "mock");
+    assert.equal(kernel.registries.providerRequestPolicies.resolve("cache").name, "cache");
+    assert.equal(kernel.registries.systemPromptContributions.resolve("demo-prompt").text, "Be brief.");
   });
 
   it("lets extensions register middleware", async () => {

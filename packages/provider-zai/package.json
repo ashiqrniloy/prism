@@ -1,0 +1,36 @@
+{
+  "name": "@prism/provider-zai",
+  "version": "0.0.1",
+  "description": "Z.AI provider package for Prism.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "prism": "0.0.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependenciesMeta": {
+    "prism": {
+      "optional": true
+    }
+  }
+}

@@ -1,12 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  createEnvCredentialResolver,
+  createExplicitCredentialResolver,
   createProviderRegistry,
   errorToErrorInfo,
   redactSecrets,
+  refreshOAuthCredential,
   resolveCredentialValue,
 } from "../index.js";
-import type { CredentialResolver } from "../index.js";
+import type { CredentialResolver, OAuthLoginCallbacks, OAuthProvider } from "../index.js";
 
 describe("credential boundary", () => {
   it("resolves credentials from direct value callback or resolver", async () => {
@@ -44,6 +47,66 @@ describe("credential boundary", () => {
     } finally {
       delete process.env.PRISM_TEST_API_KEY;
     }
+  });
+
+  it("explicit credential resolver uses documented order", async () => {
+    const resolver = createExplicitCredentialResolver([
+      { name: "runtime", resolver: { resolve: () => ({ type: "api_key", value: "runtime-key" }) } },
+      { name: "stored", resolver: { resolve: () => ({ type: "api_key", value: "stored-key" }) } },
+      { name: "fallback", resolver: { resolve: () => ({ type: "api_key", value: "fallback-key" }) } },
+    ]);
+
+    assert.equal(await resolveCredentialValue(resolver, { name: "apiKey", provider: "mock" }), "runtime-key");
+  });
+
+  it("env credential resolver reads only passed env object", async () => {
+    process.env.PRISM_TEST_API_KEY = "real-env-is-ignored";
+    try {
+      const resolver = createEnvCredentialResolver(
+        { DEMO_API_KEY: "passed-env-key" },
+        { "mock:apiKey": "DEMO_API_KEY" },
+      );
+
+      assert.equal(await resolveCredentialValue(resolver, { name: "apiKey", provider: "mock" }), "passed-env-key");
+      assert.equal(await resolveCredentialValue(createEnvCredentialResolver({}, { mock: "PRISM_TEST_API_KEY" }), { name: "apiKey", provider: "mock" }), undefined);
+    } finally {
+      delete process.env.PRISM_TEST_API_KEY;
+    }
+  });
+
+  it("oauth callbacks typecheck and refresh updates caller store", async () => {
+    const callbacks: OAuthLoginCallbacks = {
+      onAuth(url) { assert.equal(url.startsWith("https://"), true); },
+      onDeviceCode(code) { assert.equal(code.userCode, "ABCD"); },
+      onPrompt() { return "browser"; },
+      onSelect() { return "device"; },
+    };
+    const provider: OAuthProvider = {
+      id: "mock-oauth",
+      async login(cb = callbacks) {
+        await cb.onAuth?.("https://example.test/login");
+        await cb.onDeviceCode?.({ userCode: "ABCD", verificationUri: "https://example.test/device" });
+        return { access: "old-access", refresh: "refresh-token" };
+      },
+      refresh(credentials) {
+        assert.equal(credentials.refresh, "refresh-token");
+        return { access: "new-access", refresh: credentials.refresh };
+      },
+      getCredential(credentials) {
+        return credentials.access ? { type: "bearer", value: credentials.access } : undefined;
+      },
+    };
+    const stored: Array<[string, string | undefined]> = [];
+    const credentials = await provider.login(callbacks);
+    const refreshed = await refreshOAuthCredential({
+      provider,
+      credentials,
+      store: { set: (providerId, next) => { stored.push([providerId, next.access]); } },
+    });
+
+    assert.equal(refreshed.access, "new-access");
+    assert.deepEqual(stored, [["mock-oauth", "new-access"]]);
+    assert.equal((await provider.getCredential?.(refreshed))?.value, "new-access");
   });
 });
 

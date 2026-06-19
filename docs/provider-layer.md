@@ -6,9 +6,11 @@ The provider layer contains the small runtime pieces Prism already ships for hos
 
 - `createProviderRegistry()` / `ProviderRegistry`: register and resolve `AIProvider` instances by id.
 - `createModelRegistry()` / `ModelRegistry`: register and resolve `ModelConfig` values by provider/model key.
-- Provider event helpers: create normalized `ProviderEvent` values for text, thinking, tool calls, usage, done, and errors.
+- `ModelConfig` metadata fields for display names, capabilities, limits, cost/cache pricing, opaque provider compat data, and host metadata.
+- Provider event helpers: create normalized `ProviderEvent` values for text, thinking, tool calls, usage, done, and errors, including optional cache read/write usage fields.
 - `toolCallContent()`: create a `ToolCallContent` block.
 - `createMockProvider()` / `MockProviderOptions`: create a deterministic scripted `AIProvider` for tests and examples.
+- `prism/testing/provider-conformance`: optional network-free assertion helpers for provider adapter tests.
 
 These APIs are exported from the root `prism` package. `ProviderRegistry` and `ModelRegistry` are public runtime API types that live beside their factory implementations, not in the type-only `contracts.ts` file.
 
@@ -21,7 +23,7 @@ Use this layer when a host app, extension package, or test needs to:
 - Emit provider events without hand-writing event objects.
 - Test agent/provider flows without timers, credentials, SDKs, or network calls.
 
-Do not use this layer for credential storage, settings loading, tool dispatch, agent loops, or provider SDK configuration. Those stay host-owned or belong to later Prism phases.
+Do not use this layer for credential storage, settings loading, tool dispatch, agent loops, package discovery, cache stores, or provider SDK configuration. Those stay host-owned or belong to provider packages.
 
 ## Inputs / request
 
@@ -50,7 +52,7 @@ createModelRegistry(models?: readonly ModelConfig[]): ModelRegistry
 
 | Method | Input | Result |
 | --- | --- | --- |
-| `register(model)` | `ModelConfig` | Stores model by provider/model key. |
+| `register(model)` | `ModelConfig` | Stores model by provider/model key, preserving inert metadata. |
 | `get(provider, model)` | provider id and model id | Returns model config or `undefined`. |
 | `resolve(provider, model)` | provider id and model id | Returns model config or throws `Unknown model: <provider>/<model>`. |
 | `list()` | none | Returns registered model configs in insertion order. |
@@ -136,6 +138,7 @@ const resolvedModel = models.resolve("mock", "demo");
 for await (const event of resolvedProvider.generate({
   model: resolvedModel,
   messages: [{ role: "user", content: [{ type: "text", text: "Hi" }] }],
+  options: { sessionId: "session-1", cacheRetention: "short" },
 })) {
   console.log(event.type);
 }
@@ -162,6 +165,8 @@ for await (const event of resolvedProvider.generate({
 ## Related APIs
 
 - [Agent/session runtime](agent-session-runtime.md): passes abort signals to providers, maps provider errors to session `error` events, and can retry configured transient provider-turn failures before output.
+- [Provider packages](provider-packages.md): explicit package primitive for registering providers, models, auth descriptors, request/cache policies, and prompt contributions.
 - [Public contracts](public-contracts.md): `AIProvider`, `ProviderRequest`, `ProviderEvent`, `ModelConfig`, `Usage`, and content/tool-call contracts.
 - [Credentials and redaction](credentials-and-redaction.md): credential and redaction helpers used by provider adapters.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter that emits these normalized provider events.
+- [Provider conformance](provider-conformance.md): reusable network-free provider adapter checks.

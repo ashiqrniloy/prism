@@ -66,15 +66,59 @@ export interface Message {
 export interface ModelConfig {
   readonly provider: string;
   readonly model: string;
+  readonly displayName?: string;
+  readonly capabilities?: ModelCapabilities;
+  readonly limits?: ModelLimits;
+  readonly cost?: ModelCost;
+  readonly compat?: JsonObject;
   readonly parameters?: Readonly<Record<string, unknown>>;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ModelCapabilities {
+  readonly input?: readonly string[];
+  readonly output?: readonly string[];
+  readonly reasoning?: boolean;
+  readonly tools?: boolean;
+  readonly streaming?: boolean;
+}
+
+export interface ModelLimits {
+  readonly contextWindow?: number;
+  readonly maxOutputTokens?: number;
+}
+
+export interface ModelCost {
+  readonly input?: number;
+  readonly output?: number;
+  readonly cacheRead?: number;
+  readonly cacheWrite?: number;
+  readonly currency?: string;
+  readonly unit?: string;
 }
 
 export interface Usage {
   readonly inputTokens?: number;
   readonly outputTokens?: number;
   readonly totalTokens?: number;
+  readonly cacheReadTokens?: number;
+  readonly cacheWriteTokens?: number;
   readonly cost?: number;
   readonly currency?: string;
+}
+
+export type CacheRetention = "none" | "short" | "long";
+
+export interface ProviderRequestOptions {
+  readonly sessionId?: string;
+  readonly cacheRetention?: CacheRetention;
+  readonly cacheKey?: string;
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly timeoutMs?: number;
+  readonly maxRetries?: number;
+  readonly maxRetryDelayMs?: number;
+  readonly compat?: JsonObject;
+  readonly extra?: JsonObject;
 }
 
 export interface ProviderRequest {
@@ -82,6 +126,7 @@ export interface ProviderRequest {
   readonly messages: readonly Message[];
   readonly tools?: readonly ToolDefinition[];
   readonly context?: readonly ContextBlock[];
+  readonly options?: ProviderRequestOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly signal?: AbortSignal;
 }
@@ -104,6 +149,9 @@ export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly model?: ModelConfig;
   readonly maxToolRounds?: number;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
+  readonly systemPrompt?: SystemPromptConfig;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -135,6 +183,9 @@ export interface AgentConfig {
   readonly settings?: SettingsProvider;
   readonly credentials?: CredentialResolver;
   readonly permission?: PermissionPolicy;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
+  readonly systemPrompt?: SystemPromptConfig;
   readonly redactor?: SecretRedactor;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
@@ -342,6 +393,103 @@ export interface Extension {
   setup(api: ExtensionAPI): void | Promise<void>;
 }
 
+export interface ProviderPackage {
+  readonly name: string;
+  readonly version?: string;
+  readonly description?: string;
+  readonly docs?: ProviderPackageDocs;
+  setup(api: ProviderPackageAPI): void | Promise<void>;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ProviderPackageDocs {
+  readonly description?: string;
+  readonly links?: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ProviderPackageAPI extends ExtensionAPI {}
+
+export type AuthMethod = ApiKeyAuthMethod | OAuthAuthMethod | CustomAuthMethod;
+
+export interface ApiKeyAuthMethod {
+  readonly kind: "api_key";
+  readonly provider: string;
+  readonly name?: string;
+  readonly credentialName?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface OAuthAuthMethod {
+  readonly kind: "oauth";
+  readonly provider: string;
+  readonly name?: string;
+  readonly oauth?: OAuthProvider;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface OAuthLoginCallbacks {
+  onAuth?(url: string): void | Promise<void>;
+  onDeviceCode?(code: { readonly userCode: string; readonly verificationUri: string; readonly expiresAt?: string }): void | Promise<void>;
+  onPrompt?(message: string): string | undefined | Promise<string | undefined>;
+  onSelect?(prompt: { readonly message: string; readonly choices: readonly string[] }): string | undefined | Promise<string | undefined>;
+}
+
+export interface OAuthCredentials {
+  readonly access?: string;
+  readonly refresh?: string;
+  readonly expires?: string | number;
+  readonly accountId?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface OAuthProvider {
+  readonly id: string;
+  login(callbacks?: OAuthLoginCallbacks): Promise<OAuthCredentials> | OAuthCredentials;
+  refresh?(credentials: OAuthCredentials): Promise<OAuthCredentials> | OAuthCredentials;
+  getCredential?(credentials: OAuthCredentials): Promise<Credential | undefined> | Credential | undefined;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface CustomAuthMethod {
+  readonly kind: "custom" | string;
+  readonly provider: string;
+  readonly name?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ProviderRequestPolicy {
+  readonly name: string;
+  apply(context: ProviderRequestPolicyContext): Promise<ProviderRequest | ProviderRequestPolicyResult> | ProviderRequest | ProviderRequestPolicyResult;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ProviderRequestPolicyContext {
+  readonly request: ProviderRequest;
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly signal?: AbortSignal;
+}
+
+export interface ProviderRequestPolicyResult {
+  readonly request: ProviderRequest;
+  readonly secrets?: readonly (string | undefined)[];
+}
+
+export type SystemPromptMode = "append" | "prepend" | "replace" | "disable";
+export type SystemPromptSource = "package" | "app" | "user" | "run" | string;
+
+export interface SystemPromptContribution {
+  readonly id: string;
+  readonly source?: SystemPromptSource;
+  readonly mode?: SystemPromptMode;
+  readonly text: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export type SystemPromptConfig = false | SystemPromptContribution | readonly SystemPromptContribution[];
+
 export interface ExtensionAPI {
   readonly registries: ContributionRegistries;
   readonly middleware: MiddlewareRegistry;
@@ -363,6 +511,10 @@ export interface ExtensionAPI {
   registerResourceLoader(key: string, loader: ResourceLoader): void;
   registerSettingsProvider(key: string, provider: SettingsProvider): void;
   registerCredentialResolver(key: string, resolver: CredentialResolver): void;
+  registerProviderPackage(providerPackage: ProviderPackage): void;
+  registerAuthMethod(method: AuthMethod): void;
+  registerProviderRequestPolicy(policy: ProviderRequestPolicy): void;
+  registerSystemPromptContribution(contribution: SystemPromptContribution): void;
 }
 
 export interface SessionEntry {
@@ -510,4 +662,13 @@ export interface Credential {
 
 export interface CredentialResolver {
   resolve(request: CredentialRequest): Promise<Credential | undefined> | Credential | undefined;
+}
+
+export interface CredentialResolverSource {
+  readonly name: string;
+  readonly resolver: CredentialResolver;
+}
+
+export interface OAuthCredentialStore {
+  set(provider: string, credentials: OAuthCredentials): void | Promise<void>;
 }

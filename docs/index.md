@@ -14,11 +14,14 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Node JSONL session store](node-jsonl-session-store.md): persist session entries to caller-named JSONL files in Node hosts.
 
 ## Provider and model connection
-- [Provider layer](provider-layer.md): register and resolve host-owned providers/models, create provider events, and use the mock provider for tests.
+- [Provider layer](provider-layer.md): register and resolve host-owned providers/models, create provider events, use generic provider request options, and test with the mock provider.
+- [Provider packages](provider-packages.md): define explicit provider packages, model metadata, auth descriptors, and request/cache policies without package discovery or provider-specific core behavior.
+  - Phase 12 package workspaces: [`@prism/provider-openai`](providers/openai.md), [`@prism/provider-opencode-go`](providers/opencode-go.md), [`@prism/provider-openrouter`](providers/openrouter.md), [`@prism/provider-zai`](providers/zai.md), and [`@prism/provider-kimi`](providers/kimi.md).
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider subpath using native or injected `fetch` for Chat Completions streaming.
 
 ## Input, prompt, and context assembly
 - [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
+- [System prompts](system-prompts.md): compose explicit package/app/user/run system prompt layers without filesystem discovery or hidden globals.
 - [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned.
 
 ## Tools
@@ -39,8 +42,9 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 
 ## Security and credentials
 - [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, and redaction controls.
-- [Credentials and redaction](credentials-and-redaction.md): resolve host-owned credentials at request time and redact known secret values from strings, objects, and errors.
+- [Credentials and redaction](credentials-and-redaction.md): compose explicit credential resolver order, use caller-supplied env objects/OAuth refresh helpers, and redact known secret values.
 
 ## Testing and examples
 - [Provider layer](provider-layer.md): use `createMockProvider()` and provider event helpers for deterministic tests without timers, credentials, or network.
+- [Provider conformance](provider-conformance.md): run network-free provider adapter assertions from `prism/testing/provider-conformance`.
 

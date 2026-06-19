@@ -1,16 +1,20 @@
 import type {
   AgentDefinition,
+  AuthMethod,
   CommandDefinition,
   CompactionStrategy,
   ContextProvider,
   CredentialResolver,
   InputBuilder,
   PromptBuilder,
+  ProviderPackage,
+  ProviderRequestPolicy,
   ResourceLoader,
   RetryPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
+  SystemPromptContribution,
   ToolDefinition,
 } from "./contracts.js";
 import { createModelRegistry, type ModelRegistry } from "./models.js";
@@ -65,6 +69,10 @@ export interface ContributionRegistries {
   readonly resourceLoaders: ContributionRegistry<ResourceLoader>;
   readonly settingsProviders: ContributionRegistry<SettingsProvider>;
   readonly credentialResolvers: ContributionRegistry<CredentialResolver>;
+  readonly providerPackages: ContributionRegistry<ProviderPackage>;
+  readonly authMethods: ContributionRegistry<AuthMethod>;
+  readonly providerRequestPolicies: ContributionRegistry<ProviderRequestPolicy>;
+  readonly systemPromptContributions: ContributionRegistry<SystemPromptContribution>;
 }
 
 export function createContributionRegistries(): ContributionRegistries {
@@ -84,5 +92,9 @@ export function createContributionRegistries(): ContributionRegistries {
     resourceLoaders: createContributionRegistry({ label: "resource loader" }),
     settingsProviders: createContributionRegistry({ label: "settings provider" }),
     credentialResolvers: createContributionRegistry({ label: "credential resolver" }),
+    providerPackages: createContributionRegistry({ label: "provider package" }),
+    authMethods: createContributionRegistry({ label: "auth method" }),
+    providerRequestPolicies: createContributionRegistry({ label: "provider request policy" }),
+    systemPromptContributions: createContributionRegistry({ label: "system prompt contribution" }),
   };
 }

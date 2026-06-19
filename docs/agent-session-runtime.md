@@ -42,7 +42,7 @@ string | Message | readonly Message[]
 
 `AgentSessionConfig.store` overrides `AgentConfig.store`; otherwise the session gets a private memory store. `AgentSessionConfig.leafId` selects the branch leaf to resume from.
 
-`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `RunOptions.compaction` can enable auto-compaction for that run or use `false` to disable configured auto-compaction. `RunOptions.retry` can enable provider-turn retry for that run or use `false` to disable configured retry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. `RunOptions.maxToolRounds` bounds repeated tool turns and defaults to `1`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, tools, auto-compaction, and retry backoff.
+`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `AgentConfig.providerOptions`/`RunOptions.providerOptions` supply generic provider request options. `AgentConfig.providerRequestPolicies`/`RunOptions.providerRequestPolicies` run before `AIProvider.generate()` and before `provider_request` middleware. `AgentConfig.systemPrompt` and `RunOptions.systemPrompt` add explicit layered system prompt contributions; `RunOptions.systemPrompt: false` disables configured prompt layers for that run while keeping `AgentConfig.instructions` as the base path. `RunOptions.compaction` can enable auto-compaction for that run or use `false` to disable configured auto-compaction. `RunOptions.retry` can enable provider-turn retry for that run or use `false` to disable configured retry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. `RunOptions.maxToolRounds` bounds repeated tool turns and defaults to `1`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, tools, auto-compaction, and retry backoff.
 
 ## Outputs / response / events
 
@@ -113,9 +113,11 @@ await reader;
 
 ## Extension and configuration notes
 
-The runtime calls `assembleProviderInput()` on every turn and uses only values supplied on `AgentConfig`: `inputBuilder`, `promptBuilder`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, `compaction`, `retry`, and `RunOptions.model`/`compaction`/`retry`. Contributions remain inert until a host passes selected values into the agent config.
+The runtime calls `assembleProviderInput()` on every turn and uses only values supplied on `AgentConfig`: `instructions`, `systemPrompt`, `inputBuilder`, `promptBuilder`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, `compaction`, `retry`, and `RunOptions.model`/`systemPrompt`/`compaction`/`retry`. Contributions remain inert until a host passes selected values into the agent config.
 
 The runtime calls `middleware.run("compaction", { context, result })` after a compaction strategy returns and before appending the standard compaction entry. Middleware can adjust the result summary/data, but the runtime still owns store append ordering and branch parent ids.
+
+Provider request policy application is one ordered in-memory pass per provider turn. Policies can patch `ProviderRequest.options` and return exact secret values for provider-error redaction. The runtime then calls `middleware.run("provider_request", request)` once before provider generation.
 
 The runtime calls `middleware.run("retry", { context, decision })` after the retry policy decision and before emitting `retry_scheduled`. Middleware can stop retrying or adjust the delay. Retry wraps only the current provider turn, reuses the same assembled request, and never retries after assistant output has been emitted.
 
@@ -141,6 +143,9 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - Unknown, denied, or malformed tool calls fail closed through `dispatchToolCall()`.
 - Abort uses native `AbortController`/`AbortSignal` only; no polling, queue, or dependency is added. Retry backoff uses native abort-aware timers only when configured.
 - Concurrent runs fail fast instead of creating a scheduler.
+- System prompt composition uses caller-supplied strings only; Prism does not discover `SYSTEM.md`, settings, manifests, packages, or prompt files.
+- Provider request policies are in-memory only; they add no cache store, tokenizer, filesystem, network, or worker.
+- Cache keys should be safe caller/session identifiers, not prompt text or credential values.
 - Retry context contains session/run ids, attempt, redacted error info, optional metadata, and signal only; it excludes provider request messages/content, provider objects, credentials, credential resolvers, settings, and hidden metadata.
 - Compaction context contains branch entries and explicit compaction options only; it does not include provider objects, provider requests, credential resolvers, resolved credentials, settings, or hidden metadata.
 - Store entries contain explicit session data only; Prism does not store provider objects, credential resolvers, resolved credentials, full provider requests, settings, or hidden metadata.
@@ -152,6 +157,7 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - [Public contracts](public-contracts.md): `Agent`, `AgentSession`, `RunOptions`, and `AgentEvent` contracts.
 - [Provider layer](provider-layer.md): `AIProvider`, provider events, and `createMockProvider()`.
 - [Input and prompt assembly](input-and-prompt-assembly.md): request assembly used by `session.run()`.
+- [System prompts](system-prompts.md): layered prompt composition used before default input assembly.
 - [Session stores and branching](session-stores-and-branching.md): `SessionStore`, memory store, branch helpers, and context rebuild.
 - [Compaction and retry policies](compaction-and-retry.md): compaction strategy/config APIs used by `session.compact()` and auto-compaction, plus retry policy/config APIs.
 - [Tools](tools.md): host-owned tool harness used by the bounded runtime tool loop.
