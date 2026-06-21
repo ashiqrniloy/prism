@@ -1,7 +1,9 @@
 import type {
   AIProvider,
+  ContentBlock,
   JsonObject,
   Message,
+  ModelCapabilities,
   ProviderEvent,
   ProviderRequest,
   ToolDefinition,
@@ -112,7 +114,7 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
 function toOpenAIRequest(request: ProviderRequest): JsonObject {
   return {
     model: request.model.model,
-    messages: request.messages.map(toOpenAIMessage),
+    messages: request.messages.map((message) => toOpenAIMessage(message, request.model.capabilities ?? {})),
     tools: request.tools?.map(toOpenAITool),
     stream: true,
     stream_options: { include_usage: true },
@@ -120,11 +122,57 @@ function toOpenAIRequest(request: ProviderRequest): JsonObject {
   } as JsonObject;
 }
 
-function toOpenAIMessage(message: Message): JsonObject {
-  return {
-    role: message.role === "tool" ? "tool" : message.role,
-    content: message.content.map((part) => (part.type === "text" ? part.text : "")).join(""),
-  };
+function toOpenAIMessage(message: Message, capabilities: ModelCapabilities = {}): JsonObject {
+  if (message.role === "tool") {
+    const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
+    return {
+      role: "tool",
+      tool_call_id: result?.toolCallId ?? "",
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+    };
+  }
+  if (message.role === "assistant") {
+    const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
+    const textParts = message.content.filter((part) => part.type === "text" || part.type === "thinking");
+    if (toolCalls.length > 0) {
+      return {
+        role: "assistant",
+        content: textParts.map((part) => (part.type === "text" ? part.text : part.text)).join("\n") || null,
+        tool_calls: toolCalls.map((call) => ({
+          id: call.id,
+          type: "function",
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+        })),
+      };
+    }
+  }
+
+  const content: JsonObject[] = [];
+  for (const part of message.content) {
+    if (part.type === "text" || part.type === "thinking") {
+      content.push({ type: "text", text: part.text });
+    } else if (part.type === "image") {
+      if (!capabilities.input?.includes("image")) {
+        throw new Error(`Provider ${message.role} message includes image but model does not declare image input capability`);
+      }
+      content.push(toOpenAIImage(part));
+    } else if (part.type === "tool_call") {
+      throw new Error("Provider assistant tool_call blocks must be the only content on the message");
+    } else if (part.type === "tool_result") {
+      throw new Error("Provider tool_result blocks must appear in role=tool messages");
+    }
+  }
+
+  if (content.length === 1 && content[0]!.type === "text") {
+    return { role: message.role, content: content[0]!.text };
+  }
+  return { role: message.role, content };
+}
+
+function toOpenAIImage(part: Extract<ContentBlock, { type: "image" }>): JsonObject {
+  const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
+  if (!url) throw new Error("Provider image block missing url or data");
+  return { type: "image_url", image_url: { url } };
 }
 
 function toOpenAITool(tool: ToolDefinition): JsonObject {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
 import { createOpenAIProviderPackage, createOpenAIResponsesProvider } from "../index.js";
 
 const request: ProviderRequest = {
@@ -51,6 +51,25 @@ describe("@prism/provider-openai responses", () => {
     await assert.rejects(async () => {
       for await (const _ of provider.generate({ ...request, signal: controller.signal })) { /* drain */ }
     }, /stop/);
+  });
+
+  it("openai_responses_serializes_full_prism_content_replay", async () => {
+    const replay: ProviderRequest = {
+      model: { provider: "openai", model: "gpt-5.1", capabilities: { input: ["text", "image"] } },
+      messages: [
+        { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
+        { role: "user", content: [{ type: "text", text: "hi" }, { type: "image", url: "https://example.invalid/img.png" }] },
+      ],
+    };
+    let body: unknown;
+    const provider = createOpenAIResponsesProvider({ apiKey: "fake-openai-key", fetch: async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    } });
+
+    await assertProviderStreamConforms({ provider, request: replay });
+    assertSerializedRequestCoversContent(replay, body);
   });
 
   it("openai_package_passes_provider_conformance_without_network", async () => {

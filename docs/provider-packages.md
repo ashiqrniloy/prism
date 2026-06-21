@@ -70,6 +70,7 @@ These workspaces still follow the same rule as external packages: no provider SD
 - Keep resolved credential values out of `ModelConfig`, provider package metadata, docs metadata, auth method metadata, and registries.
 - Registration is in-memory only and does no filesystem, network, env, OAuth refresh, or command access.
 - Provider-specific behavior belongs in provider packages, not Prism core.
+- Adapter serializers should preserve Prism content blocks (text, thinking, tool_call, tool_result, and image when the model declares image input) in provider-native request shape, or fail explicitly when a block is unsupported.
 
 ## Related APIs
 

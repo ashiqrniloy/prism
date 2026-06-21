@@ -106,7 +106,8 @@ const provider = createOpenAICompatibleProvider({
 - Extension packages can create this provider and register it with a host-owned provider registry.
 - Hosts choose the provider id, base URL, model configs, credential source, and fetch implementation.
 - The adapter resolves `apiKey` per request through `resolveCredentialValue()`.
-- This adapter currently targets Chat Completions streaming only. Responses API and richer multimodal mapping are deferred until a real consumer needs them.
+- This adapter currently targets Chat Completions streaming only.
+- The serializer preserves text, thinking (downgraded to text), assistant `tool_call` blocks as `tool_calls`, `tool_result` blocks as role `tool` messages, and image blocks when the model declares `capabilities.input` includes `"image"`. Unsupported block placements or unclaimed images fail before fetch.
 
 ## Security and performance notes
 

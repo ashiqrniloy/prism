@@ -10,6 +10,8 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 
 ## Compaction/session memory
 - [Compaction and retry policies](compaction-and-retry.md): summarize branch history and retry transient provider failures with host-replaceable policies.
+- [LLM compaction package](compaction-llm.md): optional provider-backed compaction strategy package.
+- [Observational memory compaction package](compaction-observational-memory.md): optional source-backed memory, fast compaction, recall tool, and status/view command package.
 - [Session stores and branching](session-stores-and-branching.md): store session entries, rebuild branch context, and navigate branch leaves.
 - [Node JSONL session store](node-jsonl-session-store.md): persist session entries to caller-named JSONL files in Node hosts.
 

@@ -169,4 +169,4 @@ for await (const event of resolvedProvider.generate({
 - [Public contracts](public-contracts.md): `AIProvider`, `ProviderRequest`, `ProviderEvent`, `ModelConfig`, `Usage`, and content/tool-call contracts.
 - [Credentials and redaction](credentials-and-redaction.md): credential and redaction helpers used by provider adapters.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter that emits these normalized provider events.
-- [Provider conformance](provider-conformance.md): reusable network-free provider adapter checks.
+- [Provider conformance](provider-conformance.md): reusable network-free provider adapter checks, including content-preservation canaries for text/thinking/tool-call/tool-result/image blocks and secret-leak assertions.

@@ -25,7 +25,6 @@ createMiddlewareRegistry(options?: MiddlewareRegistryOptions): MiddlewareRegistr
 Built-in hook names:
 
 - `provider_request`
-- `provider_response`
 - `input_assembly`
 - `prompt_build`
 - `context`
@@ -48,7 +47,7 @@ Built-in hook names:
 
 ## Outputs / response / events
 
-`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The agent/session runtime applies configured provider request policies, then invokes `provider_request` once with the `ProviderRequest` before `AIProvider.generate()`, invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry.
+`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The agent/session runtime applies configured provider request policies, then invokes `provider_request` once with the `ProviderRequest` before `AIProvider.generate()`, invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry. There is no `provider_response` hook; observing provider output belongs to the provider adapter or subscriber events.
 
 With default `errorPolicy: "event"`, middleware errors become `extension_error` events when `onError` is provided, and later middleware still runs with the current value. With `errorPolicy: "throw"`, `run()` rejects on the first middleware error.
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
 import { createOpenRouterProvider, createOpenRouterProviderPackage, defineOpenRouterModel } from "../index.js";
 
 const model = defineOpenRouterModel({
@@ -70,6 +70,29 @@ describe("@prism/provider-openrouter", () => {
     ])) });
     const events = await assertProviderStreamConforms({ provider, request, expect: { text: "hi", usage: { inputTokens: 5, outputTokens: 2, totalTokens: 7, cacheReadTokens: 1, cacheWriteTokens: 3 } } });
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "lookup", arguments: { q: "x" } }]);
+  });
+
+  it("openrouter_body_covers_non_text_blocks_when_model_claims_them", async () => {
+    const replay: ProviderRequest = {
+      ...request,
+      model: defineOpenRouterModel({
+        model: "anthropic/claude-sonnet-4",
+        compat: { openRouterCache: true },
+        capabilities: { input: ["text", "image"] },
+      }),
+      messages: [
+        { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
+        { role: "user", content: [{ type: "text", text: "hi" }, { type: "image", url: "https://example.invalid/img.png" }] },
+      ],
+    };
+    let body: unknown;
+    const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: replay });
+    assertSerializedRequestCoversContent(replay, body);
   });
 
   it("openrouter_redacts_api_key_from_errors", async () => {

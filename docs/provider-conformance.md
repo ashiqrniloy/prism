@@ -11,10 +11,12 @@ Exported from `prism/testing/provider-conformance`:
 - `assertAbortIsObserved(options)`
 - `assertToolCallDeltasReconstruct(events, expected)`
 - `assertUsageAccounting(events, expected)`
+- `assertSerializedRequestCoversContent(request, body, options?)`
+- `assertNoSecretLeak(events, secrets)`
 
 ## When to use it
 
-Use these helpers in provider package tests to check event order, terminal events, abort propagation, streamed tool-call deltas, and usage/cache accounting.
+Use these helpers in provider package tests to check event order, terminal events, abort propagation, streamed tool-call deltas, usage/cache accounting, request body content preservation, and secret redaction.
 
 Do not use them as a live integration runner, provider simulator, retry framework, credential loader, or test framework replacement.
 
@@ -33,7 +35,7 @@ await assertProviderStreamConforms({
 });
 ```
 
-Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, and `Usage` objects. They throw `Error` on failed assertions so any runner can use them.
+Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`, and request body objects. They throw `Error` on failed assertions so any runner can use them.
 
 ## Outputs / response / events
 
@@ -42,6 +44,8 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, and `Usa
 - `assertAbortIsObserved()` passes an already-aborted signal and expects provider generation to reject.
 - `assertToolCallDeltasReconstruct()` rebuilds streamed `tool_call_delta` fragments into tool calls and validates expected id/name/arguments.
 - `assertUsageAccounting()` finds `usage` or `done.usage` and checks selected token fields including `cacheReadTokens` and `cacheWriteTokens`.
+- `assertSerializedRequestCoversContent()` scans a serialized provider request body for primitive canaries from each Prism content block and fails if any supported block type is silently dropped.
+- `assertNoSecretLeak()` stringifies all collected events and fails if any known secret string is present.
 
 ## Request/response example
 
@@ -50,6 +54,27 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, and `Usa
   "events": ["content_delta", "usage", "done"],
   "usage": { "inputTokens": 10, "cacheReadTokens": 4, "cacheWriteTokens": 2 }
 }
+```
+
+Content-preservation example:
+
+```ts
+import { assertSerializedRequestCoversContent } from "prism/testing/provider-conformance";
+
+const request = {
+  model: { provider: "demo", model: "demo-model" },
+  messages: [{
+    role: "user",
+    content: [
+      { type: "text", text: "Hello" },
+      { type: "image", url: "https://example.invalid/img.png" },
+      { type: "tool_result", toolCallId: "call_1", name: "lookup", result: { id: "42" } },
+    ],
+  }],
+};
+
+const body = JSON.parse(String(fetchInit.body));
+assertSerializedRequestCoversContent(request, body, { unsupported: ["image"] });
 ```
 
 ## Implementation example
@@ -74,7 +99,7 @@ The helpers are a testing subpath only. Provider packages can use them with thei
 - No credentials, env vars, OAuth tokens, filesystem discovery, provider SDKs, or network calls are required.
 - Use fake credentials only in fixtures.
 - The helpers collect one stream into memory; keep conformance fixtures small.
-- Redaction remains the provider/runtime boundary's job. These helpers can assert emitted errors, but they do not scan for secrets.
+- Redaction remains the provider/runtime boundary's job. Use `assertNoSecretLeak()` with known fake secrets to catch regressions, not as a general secret scanner.
 
 ## Related APIs
 

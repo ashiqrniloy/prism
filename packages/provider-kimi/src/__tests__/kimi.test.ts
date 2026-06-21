@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
 import { createKimiCodingProvider, createKimiProviderPackage, kimiCodingModels, moonshotKimiModels } from "../index.js";
 
 const request: ProviderRequest = {
@@ -47,7 +47,7 @@ describe("@prism/provider-kimi", () => {
     }) as typeof fetch });
     await assertProviderStreamConforms({ provider, request });
     assert.equal(body.system, "instructions");
-    assert.equal(body.messages[0].content, "prior reasoning");
+    assert.deepEqual(body.messages[0].content, [{ type: "thinking", thinking: "prior reasoning" }]);
   });
 
   it("kimi_optional_moonshot_metadata_is_app_selected", async () => {
@@ -58,6 +58,23 @@ describe("@prism/provider-kimi", () => {
       registerAuthMethod: (method: AuthMethod) => registered.push(method),
     } as any);
     assert(registered.some((item: any) => item.provider === "moonshot" && item.model === "kimi-k2.7-code-preview"));
+  });
+
+  it("kimi_anthropic_preserves_thinking_tool_use_and_tool_result", async () => {
+    const replay: ProviderRequest = {
+      model: kimiCodingModels[0],
+      messages: [
+        { role: "assistant", content: [{ type: "tool_call", id: "tool_1", name: "lookup", arguments: { q: "x" } }, { type: "thinking", text: "plan" }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "tool_1", name: "lookup", result: { ok: true } }] },
+      ],
+    };
+    let body: unknown;
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: replay });
+    assertSerializedRequestCoversContent(replay, body);
   });
 
   it("kimi_redacts_subscription_or_api_key_errors", async () => {

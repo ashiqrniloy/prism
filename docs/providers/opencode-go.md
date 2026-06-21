@@ -19,6 +19,8 @@ Exports:
 Behavior:
 - Package setup registers static OpenCode Go model metadata and one API-key auth method.
 - Model `compat.route` selects the package-local OpenAI-compatible or Anthropic-compatible stream mapper.
+- The OpenAI route preserves text, thinking (downgraded to text), assistant `tool_call` blocks as `tool_calls`, `tool_result` blocks as role `tool` messages, and image blocks when `capabilities.input` includes `"image"`.
+- The Anthropic route preserves text, thinking (preserved only when `model.compat.preserveThinking` is true, otherwise downgraded to text), `tool_call` blocks as `tool_use`, `tool_result` blocks as `tool_result`, and image blocks when `capabilities.input` includes `"image"`. Unsupported block placements or unclaimed images fail before fetch.
 - `ProviderRequest.options.sessionId` maps to `x-opencode-session` after a conservative header-safe cleanup.
 - Credentials are resolved per request from caller-supplied values/resolvers only.
 

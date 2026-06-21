@@ -22,6 +22,7 @@ Behavior:
 - No package import, setup, build, or default test performs a live network call.
 - Credentials are resolved per request from caller-supplied values/resolvers only.
 - `ProviderRequest.options.sessionId`, `cacheKey`, `cacheRetention`, `headers`, `compat`, and `extra` map to request headers/payload fields.
+- The Responses adapter preserves text, thinking (downgraded to text), assistant `tool_call` blocks as `function_call` input items, `tool_result` blocks as `function_call_output` input items, and image blocks when `capabilities.input` includes `"image"`. Unsupported block placements or unclaimed images fail before fetch.
 - OAuth browser/device-code flows only run when the caller explicitly invokes the OAuth provider.
 
 Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` and fake-safe provider-specific env names.

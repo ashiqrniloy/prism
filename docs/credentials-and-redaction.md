@@ -114,6 +114,7 @@ console.log(error.message);
 
 - [Public contracts](public-contracts.md): `CredentialRequest`, `Credential`, `CredentialResolver`, `CredentialResolverSource`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, and `ErrorInfo`.
 - [Provider layer](provider-layer.md): `providerError()` uses `errorToErrorInfo()` for redacted provider error events.
+- [LLM compaction package](compaction-llm.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
 - [OpenAI-compatible provider](providers/openai-compatible.md): resolves API keys per request and redacts known values from adapter errors.
 
 Phase 10 added `createMemoryCredentialStore()`, `createChainedCredentialResolver()`, and `createSecretRedactor()` for opt-in in-memory auth and runtime redaction. Phase 11 adds OAuth/API-key contracts plus explicit resolver order helpers. Core still has no persistent secret store and does not read environment variables or files for credentials. See [Security/auth/trust](settings-auth-trust-security.md).

@@ -131,6 +131,8 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - [Context and skills](context-and-skills.md): host selection and tool checks for contributed context providers and skills.
 - [Agent/session runtime](agent-session-runtime.md): `AgentDefinition.create()` can return agents built with `createAgent()` from explicit host-selected config.
 - [Compaction and retry policies](compaction-and-retry.md): compaction strategy/retry policy contributions and `compaction`/`retry` middleware runtime behavior.
+- [LLM compaction package](compaction-llm.md): optional extension helper that registers a provider-backed compaction strategy.
+- [Observational memory compaction package](compaction-observational-memory.md): optional extension helper that registers an inert fast memory compaction strategy.
 - [Public contracts](public-contracts.md): `Extension`, `ExtensionAPI`, and contribution contract types.
 - [Credentials and redaction](credentials-and-redaction.md): secret-redaction behavior used for extension errors.
 

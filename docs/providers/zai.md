@@ -14,5 +14,6 @@ Behavior:
 - Maps model/request compat to `thinking`, `reasoning_effort`, and `tool_stream`.
 - Keeps developer-style instructions as `system` messages because Z.AI does not need a developer role.
 - Emits Prism text, thinking, tool-call delta/final, usage, done, and redacted error events.
+- The serializer preserves text, thinking (downgraded to text), assistant `tool_call` blocks as `tool_calls`, `tool_result` blocks as role `tool` messages, and image blocks when `capabilities.input` includes `"image"`. Unsupported block placements or unclaimed images fail before fetch.
 
 Use `createZaiProviderPackage({ id, baseUrl, models })` for CN/private endpoints or custom model metadata. Credentials are caller-owned and resolved per request. Default tests are mocked and network-free; live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1`.

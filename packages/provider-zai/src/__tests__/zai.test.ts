@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
 import { createZaiProvider, createZaiProviderPackage, zaiModels } from "../index.js";
 
 const request: ProviderRequest = {
@@ -60,6 +60,34 @@ describe("@prism/provider-zai", () => {
     assert.equal(body.tool_stream, true);
     assert(events.some((event: ProviderEvent) => event.type === "content_delta" && event.content.type === "thinking"));
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "lookup", arguments: { q: "x" } }]);
+  });
+
+  it("zai_text_only_serializer_rejects_image_blocks", async () => {
+    const imageRequest: ProviderRequest = {
+      ...request,
+      messages: [{ role: "user", content: [{ type: "image", url: "https://example.invalid/img.png" }] }],
+    };
+    const imageProvider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async () => ok(sse([]))) as typeof fetch });
+    const events: ProviderEvent[] = [];
+    for await (const event of imageProvider.generate(imageRequest)) events.push(event);
+    assert.equal(events.at(-1)?.type, "error");
+  });
+
+  it("zai_replays_tool_call_and_tool_result", async () => {
+    const replay: ProviderRequest = {
+      ...request,
+      messages: [
+        { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
+      ],
+    };
+    let body: unknown;
+    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: replay });
+    assertSerializedRequestCoversContent(replay, body);
   });
 
   it("zai_redacts_api_key_from_http_errors", async () => {

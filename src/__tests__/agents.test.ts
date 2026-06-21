@@ -15,6 +15,7 @@ import {
   type AgentDefinition,
   type AgentEvent,
   type AIProvider,
+  type ContentBlock,
   type ContextProvider,
   type InputBuilder,
   type PromptBuilder,
@@ -134,6 +135,61 @@ describe("agent session runtime", () => {
     const deltas = events.filter((event) => event.type === "message_delta");
     const lastDelta = deltas[deltas.length - 1];
     assert.equal(lastDelta?.type === "message_delta" && lastDelta.content.type === "text" ? lastDelta.content.text : undefined, "done");
+  });
+
+  it("runtime_replays_provider_tool_call_and_tool_result_before_final_response", async () => {
+    const requests: ProviderRequest[] = [];
+    const provider: AIProvider = { id: "mock", async *generate(request) {
+      requests.push(request);
+      if (requests.length === 1) yield { type: "tool_call", call: toolCallContent("call_1", "echo", { text: "hi" }) };
+      else yield providerTextDelta("done");
+      yield providerDone();
+    } };
+    const echo: ToolDefinition = { name: "echo", execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }) };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
+    const session = agent.createSession();
+    const reader = collect(session.subscribe());
+
+    await session.run("Hi", { maxToolRounds: 1 });
+    const events = await reader;
+
+    assert.equal(requests.length, 2);
+    const replay = requests[1]!;
+    const assistant = replay.messages.find((message) => message.role === "assistant");
+    assert.ok(assistant, "expected assistant message in replay");
+    assert.ok(assistant.content.some((block) => block.type === "tool_call" && block.id === "call_1" && block.name === "echo"), "expected tool_call in assistant message");
+    const tool = replay.messages.find((message) => message.role === "tool");
+    assert.ok(tool, "expected tool message in replay");
+    assert.ok(tool.content.some((block) => block.type === "tool_result" && block.toolCallId === "call_1" && block.name === "echo"), "expected tool_result in tool message");
+    assert.ok(replay.messages.indexOf(assistant) < replay.messages.indexOf(tool), "assistant tool_call must precede tool_result");
+    const deltas = events.filter((event) => event.type === "message_delta");
+    const lastDelta = deltas[deltas.length - 1];
+    assert.equal(lastDelta?.type === "message_delta" && lastDelta.content.type === "text" ? lastDelta.content.text : undefined, "done");
+  });
+
+  it("runtime_tool_replay_preserves_tool_error_result", async () => {
+    const requests: ProviderRequest[] = [];
+    const provider: AIProvider = { id: "mock", async *generate(request) {
+      requests.push(request);
+      if (requests.length === 1) yield { type: "tool_call", call: toolCallContent("call_1", "boom") };
+      else yield providerTextDelta("after error");
+      yield providerDone();
+    } };
+    const boom: ToolDefinition = { name: "boom", execute: () => { throw new Error("tool failed"); } };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [boom] }).createSession();
+    const reader = collect(session.subscribe());
+
+    await session.run("Hi", { maxToolRounds: 1 });
+    await reader;
+
+    const replay = requests[1]!;
+    const tool = replay.messages.find((message) => message.role === "tool");
+    assert.ok(tool, "expected tool message in replay");
+    const result = tool.content.find((block): block is Extract<ContentBlock, { type: "tool_result" }> => block.type === "tool_result");
+    assert.ok(result, "expected tool_result block");
+    assert.equal(result.toolCallId, "call_1");
+    assert.equal(result.name, "boom");
+    assert.equal(result.error?.message ?? result.error, "tool failed");
   });
 
   it("blocks unknown tool without executing", async () => {

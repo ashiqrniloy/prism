@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
 import { createOpenCodeGoProvider, createOpenCodeGoProviderPackage } from "../index.js";
 
 const baseRequest: ProviderRequest = {
@@ -57,6 +57,38 @@ describe("@prism/provider-opencode-go", () => {
     assert.equal(url.endsWith("/chat/completions"), true);
     assert.equal(headers.get("x-opencode-session"), "session-with-spaces");
     assert.equal(headers.get("authorization"), "Bearer fake-opencode-key");
+  });
+
+  it("opencode_go_openai_and_anthropic_routes_cover_tool_result_replay", async () => {
+    const replayOpenAI: ProviderRequest = {
+      model: { provider: "opencode-go", model: "gpt-5.1-go", compat: { route: "openai" }, capabilities: { input: ["text"] } },
+      messages: [
+        { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
+      ],
+    };
+    let bodyOpenAI: unknown;
+    const openAI = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      bodyOpenAI = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider: openAI, request: replayOpenAI });
+    assertSerializedRequestCoversContent(replayOpenAI, bodyOpenAI);
+
+    const replayAnthropic: ProviderRequest = {
+      model: { provider: "opencode-go", model: "claude-sonnet-4.5-go", compat: { route: "anthropic" }, capabilities: { input: ["text"] } },
+      messages: [
+        { role: "assistant", content: [{ type: "tool_call", id: "tool_1", name: "lookup", arguments: { q: "y" } }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "tool_1", name: "lookup", result: { ok: true } }] },
+      ],
+    };
+    let bodyAnthropic: unknown;
+    const anthropic = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      bodyAnthropic = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider: anthropic, request: replayAnthropic });
+    assertSerializedRequestCoversContent(replayAnthropic, bodyAnthropic);
   });
 
   it("opencode_go_redacts_api_key_from_errors", async () => {

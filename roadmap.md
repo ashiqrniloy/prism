@@ -1,6 +1,6 @@
 # prism Roadmap
 
-Updated: 2026-06-18
+Updated: 2026-06-21
 
 `prism` is a TypeScript/Node.js agent harness package. Host apps and extension
 packages bring providers, models, tools, resources, credentials, UI, storage,
@@ -408,22 +408,95 @@ Acceptance:
 - Compaction remains fast because it renders existing memory; model work happens before compaction.
 - Recall returns source evidence from the current branch and fails closed for invalid/missing ids.
 
-### Phase 15 — Hardening, docs, examples, and release
+### Phase 15 — Provider and runtime correctness hardening
 
-**Goal:** publishable v1 after real providers, cache policy, system prompts, and compaction packages are documented.
+**Goal:** fix behavior that can make an installed agent fail despite passing unit tests.
 
 Deliver:
-- Complete `/docs` API set linked from `/docs/index.md`, including provider package authoring, OAuth/API-key auth, cache policy, model compat metadata, system prompt layering, LLM compaction, and observational memory.
-- Typed examples for SDK, provider package, OAuth login, API key, OpenRouter model/cache override, model, tool, context, skill, extension, manifest, config, system prompt, compaction, CLI, and RPC.
-- End-to-end mock demos for provider packages, LLM compaction, observational memory recall, CLI, and RPC.
-- Contract tests for public exports, package subpaths, provider conformance, JSON/RPC events, cache-policy payloads, system-prompt layering, and session/memory entries.
-- Golden session JSONL fixtures covering branching, compaction, LLM summaries, and observational-memory ledger entries.
-- Changelog and release workflow for core plus first-party packages.
+- Preserve provider round trips for text, thinking, `tool_call`, `tool_result`, and supported image blocks across core OpenAI-compatible support and all first-party provider packages; if a provider cannot support a block, fail or downgrade explicitly instead of silently dropping it.
+- Add provider conformance coverage for request serialization, full tool-call/tool-result replay, malformed SSE/JSON/tool-argument recovery, usage/cache accounting, abort, and redaction.
+- Fix RPC so `abort`, state, and follow-up/control requests can be processed while a prompt is running, with responses and streamed events still correlated by request id.
+- Resolve the `provider_response` middleware mismatch by either invoking it in runtime or removing it from public hook docs/types.
+- Bring manifest contribution kinds back in sync with current registries, including provider packages, auth methods, provider request policies, and system prompt contributions.
+- Align advertised model capabilities with serializers: image-capable models must serialize images or not claim image input.
 
 Acceptance:
-- Tests run under 10 seconds without network by default.
+- Mock end-to-end tests prove a provider tool call is executed, appended to history, replayed as a provider-native tool result, and followed by a final assistant response.
+- RPC abort works during an active provider stream/tool wait.
+- Provider conformance catches text-only serializers that drop required non-text blocks.
+- Docs and exported types agree on every middleware hook and manifest contribution kind.
+
+### Phase 16 — Auth, redaction, and session-data hardening
+
+**Goal:** make security-sensitive and persistence boundaries boring before packaging.
+
+Deliver:
+- Fix OpenAI Codex OAuth using cryptographically secure PKCE/device-code behavior, redirect/scopes where required, and clear API-vs-Codex base URL options; otherwise remove/downgrade the OAuth surface from stable docs.
+- Make redaction cycle-safe and JSON-shape preserving enough for events, errors, prompts, tool results, and session metadata.
+- Harden JSONL session parsing so invalid `message`, `summary`, `parentId`, `model`, and custom `data` shapes are rejected or quarantined before runtime use.
+- Return defensive copies from in-memory session-store reads so callers cannot mutate stored history accidentally.
+- Review Node path trust against symlink/realpath escapes for filesystem resource loading; keep any deeper sandboxing out of core.
+- Keep live provider/worker tests opt-in behind explicit environment variables and network-free by default.
+
+Acceptance:
+- Cyclic metadata/tool results do not crash redaction.
+- Corrupt JSONL fixtures fail closed with useful errors and do not poison a session branch.
+- Memory-store callers cannot mutate persisted entries by editing `list()` results.
+- OAuth tests use mocked callbacks/fetch only and no credentials enter events, docs fixtures, or stored sessions.
+
+### Phase 17 — Package boundaries, installability, and release mechanics
+
+**Goal:** prove the published tarballs contain only what users need and install cleanly.
+
+Deliver:
+- Split build/test or packaging so `dist/__tests__` and accidental maps are not published unless intentionally retained.
+- Include required release files and package metadata: `LICENSE`, `CHANGELOG.md`, repository, bugs, homepage, license, keywords, and `sideEffects` where appropriate.
+- Include shipped API docs where packages claim docs ship with APIs; avoid publishing unrelated plans, tests, fixtures, or internal generated output.
+- Make first-party packages' `prism` peer dependency non-optional unless a tested install story proves otherwise.
+- Add tarball install/import smoke tests for `prism`, every exported subpath, and every first-party workspace package by package specifier, including `@prism/compaction-observational-memory`.
+- Make `npm ls --all --depth=0`, `npm pack --dry-run --json`, and package import smoke checks clean in a fresh install/workspace.
+- Add a minimal release workflow/dry-run for core plus first-party packages.
+- Reduce default no-network test time to the release target or explicitly adjust that target in this roadmap with rationale.
+
+Acceptance:
+- Packed core and package tarballs contain README/LICENSE/CHANGELOG/docs plus public compiled output only.
+- No published tarball includes built test artifacts.
+- Fresh install smoke tests import every documented package/subpath without workspace-relative paths.
+- Default tests remain network-free and meet the chosen time budget.
+
+### Phase 18 — Documentation, examples, and fixtures catch-up
+
+**Goal:** make the implemented package usable without reading source.
+
+Deliver:
+- Update `README.md` to describe the current Phase 14+ runtime instead of earlier placeholder scope.
+- Complete provider-specific docs for OpenAI, OpenCode Go, OpenRouter, ZAI, and Kimi using the required API-page headings; extend docs tests so provider-specific pages are enforced, not only the generic OpenAI-compatible page.
+- Complete `/docs` coverage and `/docs/index.md` links for provider package authoring, OAuth/API-key auth, cache policy, model compat metadata, system prompt layering, LLM compaction, observational memory, CLI/RPC, manifests, and release/install behavior.
+- Add compile-checked typed examples for SDK basics, provider registration, API-key auth, OAuth login, OpenRouter model/cache override, tools, context, skills, extensions, manifests, config/settings, system prompts, JSONL stores/branching, compaction, observational-memory recall/status/view, CLI, and RPC.
+- Add end-to-end mock demos for provider packages, LLM compaction, observational memory recall, CLI, and RPC.
+- Add golden session JSONL fixtures covering branching, compaction, LLM summaries, observational-memory ledger entries, corrupt entries, and tool-result replay.
+- Document optional live provider/worker smoke-test environment variables without making them part of default verification.
+
+Acceptance:
+- Every public API, extension point, event, config surface, package manifest field, default strategy, and first-party package has a linked docs page.
+- Examples compile without network or real credentials.
+- Golden fixtures are used by tests and avoid real-looking secrets.
+- Docs tests fail when a provider-specific page lacks the standard API headings.
+
+### Phase 19 — Final release validation
+
+**Goal:** final publish gate after Phases 15–18 finish; this replaces the old broad Phase 15 implementation bucket.
+
+Deliver:
+- Run final network-free tests, typecheck, examples compile, audit, tarball dry-runs, fresh-install import smoke tests, docs checks, and public export contract tests for core plus first-party packages.
+- Review package contents, release notes, changelog, versioning, and release workflow output before publishing.
+- Confirm no built-in app tools, hidden provider/credential globals, automatic package discovery, or secret persistence slipped into core.
+
+Acceptance:
+- Tests run under the chosen release time budget without network by default.
 - Examples compile.
 - `npm pack --dry-run` includes only needed files for core and first-party packages.
+- Fresh install users can follow README/docs examples without workspace paths.
 
 ## Suggested implementation-plan order
 
@@ -441,13 +514,17 @@ Completed:
 11. `011-compaction-strategies-and-retry.md`
 12. `012-cli-json-rpc.md`
 13. `013-settings-auth-trust-security.md`
-
-Next:
 14. `014-provider-auth-cache-and-system-prompt-primitives.md`
 15. `015-real-provider-packages.md`
 16. `016-llm-compaction-strategy.md`
 17. `017-observational-memory-strategy.md`
-18. `018-docs-examples-release.md`
+
+Next:
+18. `018-provider-runtime-correctness-hardening.md`
+19. `019-auth-redaction-session-data-hardening.md`
+20. `020-package-boundaries-installability-release-mechanics.md`
+21. `021-documentation-examples-fixtures-catch-up.md`
+22. `022-final-release-validation.md`
 
 ## Defer until after v1
 

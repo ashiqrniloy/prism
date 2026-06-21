@@ -39,7 +39,7 @@
     "prism": "./dist/cli.js"
   },
   "files": ["dist"],
-  "workspaces": ["packages/provider-*"],
+  "workspaces": ["packages/provider-*", "packages/compaction-*"],
   "scripts": {
     "build:core": "tsc",
     "build": "npm run build:core && npm run build --workspaces --if-present",

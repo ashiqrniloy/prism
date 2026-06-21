@@ -26,7 +26,8 @@ Behavior:
 - Passes `model.compat.openRouterRouting` to the request `provider` field.
 - Passes `model.compat.reasoning` or `ProviderRequest.options.compat.reasoning` to `reasoning`.
 - Maps `sessionId`/`cacheKey` to `session_id` and `x-session-id`.
-- Adds `cache_control: { type: "ephemeral" }` only when `model.compat.openRouterCache` is `true` and cache retention is not `none`.
+- Adds `cache_control: { type: "ephemeral" }` to every message content item when `model.compat.openRouterCache` is `true` and cache retention is not `none`.
+- The serializer preserves text, thinking (downgraded to text), assistant `tool_call` blocks as `tool_calls`, `tool_result` blocks as role `tool` messages, and image blocks when `capabilities.input` includes `"image"`. Unsupported block placements or unclaimed images fail before fetch.
 - Sends attribution headers only when `appUrl` or `appTitle` are supplied.
 
 Credentials are caller-owned and resolved per request. Default tests are mocked and network-free; live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1`.

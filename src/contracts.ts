@@ -374,7 +374,6 @@ export type ExtensionLifecycleEventName =
   | "turn"
   | "context"
   | "provider_request"
-  | "provider_response"
   | "tool_call"
   | "tool_result"
   | "compaction"

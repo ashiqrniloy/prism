@@ -58,7 +58,7 @@ For a text-only provider turn, the runtime emits:
 6. `turn_finished`
 7. `agent_finished`
 
-For complete tool calls, the runtime emits the assistant `tool_call` as `message_delta`, dispatches sequentially through `dispatchToolCall()`, emits tool execution events, appends a tool-result session entry, adds returned `ToolResult` values to the next provider turn, and stops when the provider returns no tool calls or `maxToolRounds` is reached.
+For complete tool calls, the runtime emits the assistant `tool_call` as `message_delta`, dispatches sequentially through `dispatchToolCall()`, emits tool execution events, appends a tool-result session entry, adds returned `ToolResult` values to the next provider turn, and stops when the provider returns no tool calls or `maxToolRounds` is reached. The next provider turn therefore receives the assistant `tool_call` followed by the matching role `tool` `tool_result` before any final assistant content.
 
 `session.compact(options?)` runs the selected compaction strategy, appends one `kind: "compaction"` entry under the current leaf, updates the leaf, emits `compaction_started` and `compaction_finished`, and returns the appended `CompactionResult`. If `AgentConfig.compaction` or `RunOptions.compaction` includes `thresholdEntries`, auto-compaction checks once after input/model-change entries are appended and before provider input assembly; `RunOptions.compaction: false` skips that run's auto-compaction.
 

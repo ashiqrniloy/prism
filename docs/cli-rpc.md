@@ -116,5 +116,6 @@ RPC `command` executes only explicitly registered `CommandDefinition` values. `s
 - [Node filesystem config loader](node-filesystem-config.md): optional explicit config file loading for Node hosts.
 - [Resource loading](resource-loading.md): explicit resource loading primitives.
 - [Credentials and redaction](credentials-and-redaction.md): secret redaction helpers and credential boundaries.
+- [Observational memory compaction package](compaction-observational-memory.md): optional `om:status` and `om:view` command factories for explicitly wired hosts.
 
 The CLI records flags but does not auto-load project-local resources, extensions, tools, or config. Hosts must make explicit trust and permission decisions before wiring any future local loading.

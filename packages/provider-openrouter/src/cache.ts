@@ -1,13 +1,21 @@
 import type { JsonObject, Message, ProviderRequest, Usage } from "prism";
 
+type OpenRouterContent = string | JsonObject[];
+
 export function openRouterSessionId(request: ProviderRequest): string | undefined {
   return (request.options?.cacheKey ?? request.options?.sessionId)?.replace(/[^A-Za-z0-9_.:-]/g, "-").slice(0, 128);
 }
 
-export function withOpenRouterCache(message: Message, enabled: boolean): JsonObject {
-  const content = text(message);
-  if (!enabled || message.role === "tool") return { role: message.role, content };
-  return { role: message.role, content: [{ type: "text", text: content, cache_control: { type: "ephemeral" } }] };
+export function withOpenRouterCache(message: JsonObject, enabled: boolean): JsonObject {
+  if (!enabled || message.role === "tool") return message;
+  const content = message.content as OpenRouterContent;
+  if (typeof content === "string") {
+    return { role: message.role, content: [{ type: "text", text: content, cache_control: { type: "ephemeral" } }] };
+  }
+  return {
+    role: message.role,
+    content: (content ?? []).map((item) => ({ ...item, cache_control: { type: "ephemeral" } })),
+  };
 }
 
 export function openRouterUsage(usage: OpenRouterUsage | undefined): Usage | undefined {

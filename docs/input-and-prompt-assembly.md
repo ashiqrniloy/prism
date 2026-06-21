@@ -72,7 +72,7 @@ The builder returns `readonly Message[]`.
 - History is prepended before current input.
 - Instructions and summaries are system messages; compacted branch summaries from `rebuildSessionContext()` use the same path.
 - Text attachments and explicit text resources are user messages.
-- Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn.
+- Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn, placing the assistant `tool_call` and the matching role `tool` `tool_result` before any final assistant content.
 - Middleware runs only when `middleware` is supplied in the context.
 - `assembleProviderInput()` returns a `ProviderRequest` with the caller's model/tools/provider options/metadata/signal and composed messages/context.
 - `renderPromptTemplate()` replaces top-level `{{name}}` variables with caller-supplied JSON-compatible values. Strings are inserted directly; numbers, booleans, `null`, arrays, and objects are stringified deterministically with sorted object keys. Missing variables throw by default or stay unchanged with `{ missing: "preserve" }`.

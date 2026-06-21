@@ -1,14 +1,15 @@
-import type { JsonObject, Message, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "prism";
+import type { ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "prism";
 import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "prism";
 import { readSseData } from "./sse.js";
 
 interface PartialBlock { id?: string; name?: string; argumentsText: string }
 
 export function anthropicMessagesBody(request: ProviderRequest): JsonObject {
+  const preserveThinking = request.model.compat?.preserveThinking === true;
   return clean({
     model: request.model.model,
-    messages: request.messages.filter((m) => m.role !== "system").map(toMessage),
-    system: request.messages.filter((m) => m.role === "system").map(text).join("\n\n") || undefined,
+    messages: request.messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model.capabilities ?? {}, preserveThinking)),
+    system: request.messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
     max_tokens: request.model.limits?.maxOutputTokens ?? 4096,
@@ -46,16 +47,57 @@ export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>)
   yield providerDone(usage);
 }
 
-function toMessage(message: Message): JsonObject {
-  return { role: message.role === "assistant" ? "assistant" : "user", content: text(message) };
+function toMessage(message: Message, capabilities: ModelCapabilities = {}, preserveThinking = false): JsonObject {
+  if (message.role === "tool") {
+    const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
+    return {
+      role: "user",
+      content: [{
+        type: "tool_result",
+        tool_use_id: result?.toolCallId ?? "",
+        content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      }],
+    };
+  }
+
+  const content: JsonObject[] = [];
+  for (const part of message.content) {
+    if (part.type === "text") {
+      content.push({ type: "text", text: part.text });
+    } else if (part.type === "thinking") {
+      if (preserveThinking) {
+        content.push(part.signature ? { type: "thinking", thinking: part.text, signature: part.signature } : { type: "thinking", thinking: part.text });
+      } else {
+        content.push({ type: "text", text: part.text });
+      }
+    } else if (part.type === "image") {
+      if (!capabilities.input?.includes("image")) {
+        throw new Error(`OpenCode Go Anthropic route request includes image but model does not declare image input capability`);
+      }
+      const source: JsonObject = part.url
+        ? { type: "url", url: part.url }
+        : { type: "base64", media_type: part.mimeType ?? "image/png", data: part.data ?? "" };
+      content.push({ type: "image", source });
+    } else if (part.type === "tool_call") {
+      content.push({ type: "tool_use", id: part.id, name: part.name, input: part.arguments });
+    } else if (part.type === "tool_result") {
+      throw new Error("OpenCode Go Anthropic route tool_result blocks must appear in role=tool messages");
+    }
+  }
+
+  return { role: message.role === "assistant" ? "assistant" : "user", content: content.length > 0 ? content : [{ type: "text", text: "" }] };
 }
 
 function toTool(tool: ToolDefinition): JsonObject {
   return clean({ name: tool.name, description: tool.description, input_schema: tool.parameters ?? { type: "object" } });
 }
 
-function text(message: Message): string {
-  return message.content.map((part) => part.type === "text" ? part.text : "").join("");
+function text(message: Message, preserveThinking = false): string {
+  return message.content.map((part) => {
+    if (part.type === "text") return part.text;
+    if (part.type === "thinking") return preserveThinking ? part.text : part.text;
+    return "";
+  }).join("");
 }
 
 function toUsage(usage: AnthropicUsage | undefined): Usage | undefined {

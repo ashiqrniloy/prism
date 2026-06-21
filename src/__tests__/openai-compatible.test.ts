@@ -1,7 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createOpenAICompatibleProvider } from "../providers/openai-compatible.js";
-import type { ProviderEvent } from "../index.js";
+import { assertSerializedRequestCoversContent } from "../testing/provider-conformance.js";
+import type { ProviderEvent, ProviderRequest } from "../index.js";
 
 function sse(lines: readonly string[]) {
   const encoder = new TextEncoder();
@@ -166,5 +167,29 @@ describe("openai-compatible provider", () => {
     await collect(provider);
 
     assert.equal(called, true);
+  });
+
+  it("serializes_tool_result_replay_and_images_or_fails_explicitly", async () => {
+    const request: ProviderRequest = {
+      model: { provider: "openai-compatible", model: "demo", capabilities: { input: ["text", "image"] } },
+      messages: [
+        { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
+        { role: "user", content: [{ type: "text", text: "hi" }, { type: "image", url: "https://example.invalid/img.png" }] },
+      ],
+    };
+    let body: unknown;
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+
+    const events: ProviderEvent[] = [];
+    for await (const event of provider.generate(request)) events.push(event);
+    assert.equal(events.at(-1)?.type, "done");
+    assertSerializedRequestCoversContent(request, body);
   });
 });

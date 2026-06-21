@@ -1,4 +1,4 @@
-import type { AIProvider, JsonObject, ProviderEvent, ProviderRequest, ToolCallContent, Usage } from "../contracts.js";
+import type { AIProvider, ContentBlock, JsonObject, ProviderEvent, ProviderRequest, ToolCallContent, Usage } from "../contracts.js";
 
 export interface ProviderStreamConformanceOptions {
   readonly provider: AIProvider;
@@ -20,6 +20,15 @@ export interface ToolCallDeltaExpectation {
   readonly id?: string;
   readonly name?: string;
   readonly arguments?: JsonObject;
+}
+
+export interface SerializedContentCoverageOptions {
+  readonly unsupported?: readonly ContentBlock["type"][];
+}
+
+export interface ProviderSecretLeakConformanceOptions {
+  readonly events: readonly ProviderEvent[];
+  readonly secrets: readonly string[];
 }
 
 export async function collectProviderEvents(provider: AIProvider, request: ProviderRequest): Promise<readonly ProviderEvent[]> {
@@ -63,6 +72,30 @@ export function assertToolCallDeltasReconstruct(events: readonly ProviderEvent[]
   return calls;
 }
 
+export function assertSerializedRequestCoversContent(request: ProviderRequest, body: unknown, options: SerializedContentCoverageOptions = {}): void {
+  const unsupported = new Set(options.unsupported ?? []);
+  const bodyText = JSON.stringify(body);
+  for (const message of request.messages) {
+    for (const block of message.content) {
+      if (unsupported.has(block.type)) continue;
+      const canaries = contentBlockCanaries(block);
+      if (canaries.length === 0) continue;
+      const missing = canaries.filter((canary) => !bodyText.includes(canary));
+      if (missing.length > 0) {
+        throw new Error(`Serialized request dropped ${block.type} content; missing canaries: ${JSON.stringify(missing)}`);
+      }
+    }
+  }
+}
+
+export function assertNoSecretLeak(events: readonly ProviderEvent[], secrets: readonly string[]): void {
+  const eventText = JSON.stringify(events);
+  for (const secret of secrets) {
+    if (!secret) continue;
+    if (eventText.includes(secret)) throw new Error(`Secret leaked into provider events: ${secret.slice(0, 8)}...`);
+  }
+}
+
 export function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage {
   const usage = [...events].reverse().find((event) => event.type === "done" && event.usage || event.type === "usage") as Extract<ProviderEvent, { type: "usage" | "done" }> | undefined;
   const actual = usage?.type === "usage" ? usage.usage : usage?.usage;
@@ -97,6 +130,47 @@ function parseArguments(text: string, index: number): JsonObject {
   } catch (error) {
     throw new Error(`Invalid tool call arguments at index ${index}: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+function contentBlockCanaries(block: ContentBlock): string[] {
+  switch (block.type) {
+    case "text":
+      return block.text ? [block.text] : [];
+    case "thinking":
+      return block.text ? [block.text] : [];
+    case "image":
+      return [block.url, block.data, block.mimeType].filter((value): value is string => typeof value === "string" && value.length > 0);
+    case "tool_call":
+      return [block.id, block.name, ...jsonPrimitives(block.arguments)];
+    case "tool_result": {
+      const values = [block.toolCallId, block.name, ...jsonPrimitives(block.result), ...jsonPrimitives(block.error)];
+      return values.filter((value) => typeof value === "string" && value.length > 0);
+    }
+    default:
+      return [];
+  }
+}
+
+function jsonPrimitives(value: unknown): string[] {
+  const primitives: string[] = [];
+  const seen = new Set<unknown>();
+  function walk(current: unknown) {
+    if (seen.has(current)) return;
+    if (current && typeof current === "object") {
+      seen.add(current);
+      if (Array.isArray(current)) {
+        for (const item of current) walk(item);
+      } else {
+        for (const item of Object.values(current)) walk(item);
+      }
+    } else if (typeof current === "string" && current.length > 0) {
+      primitives.push(current);
+    } else if (typeof current === "number" || typeof current === "boolean") {
+      primitives.push(String(current));
+    }
+  }
+  walk(value);
+  return primitives;
 }
 
 function textFrom(events: readonly ProviderEvent[]): string {

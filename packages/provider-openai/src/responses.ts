@@ -1,4 +1,4 @@
-import type { AIProvider, CredentialValueSource, JsonObject, Message, ProviderRequest, ToolDefinition, Usage } from "prism";
+import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderRequest, ToolDefinition, Usage } from "prism";
 import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "prism";
 import { promptCacheKey, promptCacheRetention } from "./cache.js";
 import { readSseData } from "./sse.js";
@@ -67,7 +67,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
 function toResponsesRequest(request: ProviderRequest): JsonObject {
   const payload: Record<string, unknown> = {
     model: request.model.model,
-    input: request.messages.map(toInputMessage),
+    input: request.messages.map((message) => toInputMessage(message, request.model.capabilities ?? {})),
     tools: request.tools?.map(toTool),
     stream: true,
     store: false,
@@ -80,8 +80,47 @@ function toResponsesRequest(request: ProviderRequest): JsonObject {
   return clean(payload);
 }
 
-function toInputMessage(message: Message): JsonObject {
-  return clean({ role: message.role === "tool" ? "user" : message.role, content: message.content.map((part) => part.type === "text" ? part.text : "").join("") });
+function toInputMessage(message: Message, capabilities: ModelCapabilities = {}): JsonObject {
+  if (message.role === "tool") {
+    const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
+    return clean({
+      type: "function_call_output",
+      call_id: result?.toolCallId ?? "",
+      output: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+    });
+  }
+
+  const items: JsonObject[] = [];
+  for (const part of message.content) {
+    if (part.type === "text" || part.type === "thinking") {
+      items.push({ type: "input_text", text: part.text });
+    } else if (part.type === "image") {
+      if (!capabilities.input?.includes("image")) {
+        throw new Error(`OpenAI Responses request includes image but model does not declare image input capability`);
+      }
+      items.push(toResponsesImage(part));
+    } else if (part.type === "tool_call") {
+      items.push({
+        type: "function_call",
+        id: part.id,
+        name: part.name,
+        arguments: JSON.stringify(part.arguments),
+      });
+    } else if (part.type === "tool_result") {
+      throw new Error("OpenAI Responses tool_result blocks must appear in role=tool messages");
+    }
+  }
+
+  if (message.role === "assistant") {
+    return clean({ role: "assistant", content: items });
+  }
+  return clean({ role: message.role, content: items });
+}
+
+function toResponsesImage(part: Extract<ContentBlock, { type: "image" }>): JsonObject {
+  const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
+  if (!url) throw new Error("OpenAI Responses image block missing url or data");
+  return { type: "input_image", image_url: url };
 }
 
 function toTool(tool: ToolDefinition): JsonObject {

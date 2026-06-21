@@ -3,7 +3,6 @@ import { errorToErrorInfo } from "./redaction.js";
 
 export type MiddlewareHookName =
   | "provider_request"
-  | "provider_response"
   | "input_assembly"
   | "prompt_build"
   | "context"

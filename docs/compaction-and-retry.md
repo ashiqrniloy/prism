@@ -149,7 +149,7 @@ Retry policies are ordinary `RetryPolicy` implementations and can be registered 
 
 Compaction strategies are ordinary `CompactionStrategy` implementations. Extensions can register strategies through the existing compaction strategy contribution registry, but registration is inert until a host explicitly selects and passes a strategy to runtime code. Extensions can also register `compaction` middleware; the runtime calls it only when the agent/session has that middleware registry configured.
 
-The default strategy does not call a provider. Hosts that need model-generated summaries should implement their own strategy and keep credential handling at that provider edge.
+The default strategy does not call a provider. Hosts that need model-generated summaries can use the optional [`@prism/compaction-llm` package](compaction-llm.md). Hosts that need prepared source-backed memory without a compaction-time model call can use [`@prism/compaction-observational-memory`](compaction-observational-memory.md).
 
 ## Security and performance notes
 
@@ -163,6 +163,8 @@ The default strategy does not call a provider. Hosts that need model-generated s
 
 ## Related APIs
 
+- [LLM compaction package](compaction-llm.md): optional provider-backed compaction preparation helpers.
+- [Observational memory compaction package](compaction-observational-memory.md): optional source-backed memory ledger, worker runtime, fast no-model compaction strategy, projection, render, and recall utilities.
 - [Session stores and branching](session-stores-and-branching.md): branch entries, compaction entries, and `rebuildSessionContext()` behavior.
 - [Input and prompt assembly](input-and-prompt-assembly.md): compacted summaries become default summary messages for provider input.
 - [Agent/session runtime](agent-session-runtime.md): `session.compact()`, opt-in auto-compaction, `RunOptions.retry`, and `retry_scheduled` runtime behavior.
