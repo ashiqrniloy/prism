@@ -33,10 +33,11 @@ import { createJsonlSessionStore } from "prism/node/session-store-jsonl";
 `createJsonlSessionStore()` returns a `SessionStore`:
 
 - `append(entry)` appends one JSON line and rejects duplicate entry ids.
-- `list(sessionId)` reads the file and returns entries for that session id.
-- `get(id)` reads the file and returns the matching entry, if any.
+- `list(sessionId)` reads the file and returns valid entries for that session id. Corrupt or shape-invalid lines are skipped; they do not poison the whole file.
+- `get(id)` reads the file and returns the matching valid entry, if any.
+- `readJsonlSessionEntries(path)` returns `{ entries: SessionEntry[]; errors: SessionEntryParseError[] }` so hosts/tests can inspect per-line parse errors.
 
-Missing files read as empty stores. Invalid JSON or non-entry lines fail with the line number and do not include file contents.
+Missing files read as empty stores. Invalid JSON, missing required fields, or wrong per-kind shapes (`message`, `summary`, `model_change`, `custom`, `compaction`, `label`, or non-string `parentId`) are quarantined per line with line number and reason; the raw line is included in `SessionEntryParseError.raw`.
 
 ## Request/response example
 
@@ -50,16 +51,11 @@ Missing files read as empty stores. Invalid JSON or non-entry lines fail with th
 ## Implementation example
 
 ```ts
-import { createAgent } from "prism";
-import { createJsonlSessionStore } from "prism/node/session-store-jsonl";
+import { createJsonlSessionStore, readJsonlSessionEntries } from "prism/node/session-store-jsonl";
 
 const store = createJsonlSessionStore("./sessions.jsonl");
-const session = createAgent({
-  model: { provider: "mock", model: "demo" },
-  store,
-}).createSession({ id: "s1" });
-
-await session.entries();
+const { entries, errors } = await readJsonlSessionEntries("./sessions.jsonl");
+if (errors.length) console.warn("quarantined lines", errors);
 ```
 
 Use `createMemorySessionStore()` for tests or throwaway sessions; use the JSONL store when entries should survive a process restart.

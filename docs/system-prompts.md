@@ -84,6 +84,21 @@ await agent.createSession().run("Hi", {
 
 Extensions and provider packages can register `SystemPromptContribution` values, but registration is inert. Hosts must select contributions and pass them to `AgentConfig.systemPrompt` or `RunOptions.systemPrompt`.
 
+Manifests can declare `systemPromptContribution` kinds as data-only references:
+
+```ts
+import { definePrismManifest } from "prism";
+
+export default definePrismManifest({
+  name: "demo-prompts",
+  contributions: [
+    { kind: "systemPromptContribution", name: "demo.prompt", metadata: { id: "demo-prompt", source: "package", mode: "append" } },
+  ],
+});
+```
+
+The manifest entry does not load or apply the prompt. The host must still select it and pass the `SystemPromptContribution` to the runtime.
+
 No `SYSTEM.md`, `APPEND_SYSTEM.md`, prompt template, settings, or manifest discovery happens in core.
 
 ## Security and performance notes

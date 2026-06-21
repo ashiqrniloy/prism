@@ -39,10 +39,10 @@ Do not use them as a database layer, migration system, lock service, compaction 
 | Helper | Output |
 | --- | --- |
 | `createSessionEntry()` | A `SessionEntry` with generated `id` and `timestamp` when omitted. |
-| `getSessionBranchEntries()` | Ordered entries from root to selected leaf. |
-| `listSessionBranches()` | Leaf ids and their root-to-leaf entry paths. |
-| `rebuildSessionContext()` | `{ leafId, entries, messages, summaries }` for provider input rebuild; with a compaction entry, raw `entries` stay intact while `messages` becomes recent context and `summaries` includes the compaction summary. |
-| `createMemorySessionStore()` | Async `SessionStore` with `append()`, `list(sessionId)`, and `get(id)`. |
+| `getSessionBranchEntries()` | Ordered entries from root to selected leaf (deep copies). |
+| `listSessionBranches()` | Leaf ids and their root-to-leaf entry paths (deep copies). |
+| `rebuildSessionContext()` | `{ leafId, entries, messages, summaries }` for provider input rebuild; with a compaction entry, raw `entries` stay intact while `messages` becomes recent context and `summaries` includes the compaction summary. All arrays and objects are deep copies. |
+| `createMemorySessionStore()` | Async `SessionStore` with `append()`, `list(sessionId)`, and `get(id)`. `list()` and `get()` return deep copies. |
 
 Helpers throw on duplicate entry ids, unknown leaves, or missing parents. They do not mutate input arrays.
 
@@ -86,7 +86,9 @@ const context = rebuildSessionContext(await store.list("s1"), { leafId: label.id
 
 Stores and extensions can use these data helpers directly. Store adapters only need append/list/get behavior; branch queries are derived in memory from listed entries.
 
-`createMemorySessionStore()` is the built-in in-memory implementation. It preserves append order per session, isolates session ids, returns entries by id in O(1), and rejects duplicate entry ids. It is process memory only; hosts that need durability should pass another `SessionStore`.
+`createMemorySessionStore()` is the built-in in-memory implementation. It preserves append order per session, isolates session ids, returns entries by id in O(1), rejects duplicate entry ids, and returns deep copies from `list()` and `get()`. It is process memory only; hosts that need durability should pass another `SessionStore`.
+
+`getSessionBranchEntries()` and `rebuildSessionContext()` also return deep copies of entries and messages, so callers cannot mutate the input arrays or the memory store by editing returned objects.
 
 `AgentSession` uses `AgentSessionConfig.store` before `AgentConfig.store`, otherwise a private memory store. It appends user, assistant, tool-result, and model-change entries, resumes from `leafId`, rebuilds provider history from the selected branch, checks out old leaves, forks by selecting a leaf in the same session, and clones the selected branch to a new session id.
 

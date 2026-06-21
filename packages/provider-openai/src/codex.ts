@@ -7,9 +7,11 @@ export interface OpenAICodexProviderOptions extends Omit<OpenAIResponsesProvider
 }
 
 export function createOpenAICodexProvider(options: OpenAICodexProviderOptions = {}): AIProvider {
+  // ponytail: Codex subscription Responses endpoint is distinct from the plain
+  // API-key base URL; keep them separate so OAuth tokens never silently hit /v1.
   return createOpenAIResponsesProvider({
     id: options.id ?? "openai-codex",
-    baseUrl: options.baseUrl ?? "https://api.openai.com/v1",
+    baseUrl: options.baseUrl ?? "https://chatgpt.com/backend-api/codex",
     apiKey: options.accessToken,
     fetch: options.fetch,
   });

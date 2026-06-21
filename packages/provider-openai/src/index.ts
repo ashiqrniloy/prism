@@ -9,6 +9,7 @@ export interface OpenAIProviderPackageOptions {
   readonly codexAccessToken?: CredentialValueSource;
   readonly fetch?: typeof fetch;
   readonly baseUrl?: string;
+  readonly codexBaseUrl?: string;
 }
 
 export function createOpenAIProviderPackage(options: OpenAIProviderPackageOptions = {}): ProviderPackage {
@@ -17,8 +18,8 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
     description: "OpenAI provider package for Prism.",
     docs: { links: ["docs/providers/openai.md"] },
     setup(api) {
-      api.registerProvider(createOpenAIResponsesProvider(options));
-      api.registerProvider(createOpenAICodexProvider({ accessToken: options.codexAccessToken, fetch: options.fetch, baseUrl: options.baseUrl }));
+      api.registerProvider(createOpenAIResponsesProvider({ apiKey: options.apiKey, baseUrl: options.baseUrl, fetch: options.fetch }));
+      api.registerProvider(createOpenAICodexProvider({ accessToken: options.codexAccessToken, baseUrl: options.codexBaseUrl, fetch: options.fetch }));
       for (const model of openAIModels) api.registerModel(model);
       for (const model of openAICodexModels) api.registerModel(model);
       api.registerAuthMethod({ kind: "api_key", provider: "openai", credentialName: "apiKey" });
@@ -30,4 +31,4 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
 export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions } from "./responses.js";
 export { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js";
 export { openAIModels, openAICodexModels } from "./models.js";
-export { createOpenAICodexOAuthProvider, openAICodexOAuthProvider, type OpenAICodexOAuthOptions } from "./oauth.js";
+export { createOpenAICodexOAuthProvider, openAICodexOAuthProvider, type OpenAICodexOAuthOptions, createPkceVerifier, computeS256Challenge } from "./oauth.js";

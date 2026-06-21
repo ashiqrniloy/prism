@@ -15,7 +15,7 @@ Use these APIs when a host wants one explicit place to compose settings, resolve
 - `createEnvCredentialResolver(env, map)` reads only the caller-supplied object; it does not read `process.env`.
 - `assertTrusted(policy, request)` and `assertPermission(policy, request)` fail closed on denial.
 - `createSecretRedactor(secrets)` redacts exact known strings.
-- Node-only subpaths: `prism/node/settings` for caller-named JSON settings files and `prism/node/trust` for explicit trusted path roots.
+- Node-only subpaths: `prism/node/settings` for caller-named JSON settings files and `prism/node/trust` for explicit trusted path roots with symlink-aware realpath checks.
 
 ## Outputs / response / events
 Settings and credential helpers return existing `SettingsProvider` and `CredentialResolver` contracts. Permission denial blocks tool execution, extension setup, and resource loader calls before side effects. A configured `AgentConfig.redactor` or `RunOptions.redactor` redacts provider requests, emitted `AgentEvent` payloads, and stored `SessionEntry` values.
@@ -61,6 +61,8 @@ Root imports stay filesystem-free. Node settings files are caller-named and read
 ## Security and performance notes
 Prism does not sandbox host tools or extensions. Prism does not read environment variables, keychains, user config files, package manifests, resources, or project-local extensions unless the host explicitly wires those operations. Redaction is exact known-secret replacement only; it is not secret detection. Permission and trust checks are one operation per guarded call and add no workers, watchers, retries, network, or filesystem scans.
 
+`prism/node/trust` resolves symlinks on both the trusted root and the target path. A path that is lexically inside a trusted root but escapes it through a symlink is rejected, and realpath failures (missing root, permission error) fail closed.
+
 ## Related APIs
 - `createStaticSettingsProvider`, `createChainedSettingsProvider`
 - `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `resolveCredentialValue`
@@ -68,4 +70,4 @@ Prism does not sandbox host tools or extensions. Prism does not read environment
 - `createStaticPermissionPolicy`, `assertPermission`, `checkPermission`, `PermissionDeniedError`
 - `createSecretRedactor`, `redactMessage`, `redactAgentEvent`, `redactSessionEntry`, `redactProviderRequest`
 - `prism/node/settings`: `defaultUserSettingsPath`, `readSettingsFile`, `loadSettingsFiles`
-- `prism/node/trust`: `createPathTrustPolicy`, `isPathInside`
+- `prism/node/trust`: `createPathTrustPolicy`, `isPathInside`, `isPathInsideReal`

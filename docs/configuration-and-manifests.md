@@ -46,6 +46,30 @@ parsePrismManifest(value: unknown): PrismManifest
 | `resources` | `ManifestResourceDeclaration[]` | Optional prompt/skill/package resource declarations by URI. |
 | `metadata` | `JsonObject` | Optional JSON metadata. |
 
+`ManifestContributionKind` values match `createContributionRegistries()` categories:
+
+| Kind | Registry | Notes |
+| --- | --- | --- |
+| `provider` | `providers` | Provider adapter declaration. |
+| `model` | `models` | Model metadata declaration. |
+| `tool` | `tools` | Tool definition declaration. |
+| `contextProvider` | `contextProviders` | Context provider declaration. |
+| `skill` | `skills` | Skill declaration. |
+| `command` | `commands` | RPC command declaration. |
+| `agent` | `agents` | Agent definition declaration. |
+| `inputBuilder` | `inputBuilders` | Input builder declaration. |
+| `promptBuilder` | `promptBuilders` | Prompt builder declaration. |
+| `compactionStrategy` | `compactionStrategies` | Compaction strategy declaration. |
+| `retryPolicy` | `retryPolicies` | Retry policy declaration. |
+| `storeFactory` | `storeFactories` | Session store factory declaration. |
+| `resourceLoader` | `resourceLoaders` | Resource loader declaration. |
+| `settingsProvider` | `settingsProviders` | Settings provider declaration. |
+| `credentialResolver` | `credentialResolvers` | Credential resolver declaration. |
+| `providerPackage` | `providerPackages` | Provider package declaration. |
+| `authMethod` | `authMethods` | Auth method descriptor; uses `credentialName`, never a resolved credential value. |
+| `providerRequestPolicy` | `providerRequestPolicies` | Provider request policy declaration. |
+| `systemPromptContribution` | `systemPromptContributions` | System prompt contribution declaration. |
+
 ## Outputs / response / events
 
 - `mergeConfigLayers()` returns a new JSON object and does not mutate inputs.
@@ -78,6 +102,10 @@ const manifest = definePrismManifest({
   contributions: [
     { kind: "tool", name: "demo.echo", module: "./tool.js", exportName: "tool" },
     { kind: "retryPolicy", name: "demo.retry", module: "./retry.js", exportName: "retry" },
+    { kind: "providerPackage", name: "demo-provider" },
+    { kind: "authMethod", name: "demo.api-key", metadata: { credentialName: "apiKey" } },
+    { kind: "providerRequestPolicy", name: "demo.cache" },
+    { kind: "systemPromptContribution", name: "demo.prompt" },
   ],
   resources: [{ uri: "package://demo/prompt.md", purpose: "prompt" }],
 });
@@ -95,7 +123,7 @@ console.log(config.demo);
 
 - Hosts choose the layer order. Prism documents `built-in -> manifest defaults -> host app -> optional user/global -> runtime overrides` but does not load those layers automatically.
 - Manifest contribution declarations are data. Hosts may later choose to import the declared module/export and register it, but parsing the manifest never does that.
-- Contribution `kind` values match registry categories, including `compactionStrategy` and `retryPolicy`.
+- Contribution `kind` values match `createContributionRegistries()` categories, including the Phase 14 provider primitives `providerPackage`, `authMethod`, `providerRequestPolicy`, and `systemPromptContribution`.
 - Filesystem config loading is intentionally outside the root API and belongs to the optional [`prism/node/config`](node-filesystem-config.md) subpath.
 - Manifest `resources` entries are URI declarations; use [resource loading](resource-loading.md) helpers with a host-provided loader to fetch them.
 

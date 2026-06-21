@@ -41,6 +41,11 @@ interface RpcState {
   readonly createSession: (id?: string) => AgentSession;
 }
 
+interface ActiveRun {
+  readonly requestId: string | number;
+  readonly promise: Promise<void>;
+}
+
 export async function runRpcServer(options: RpcServerOptions): Promise<void> {
   const first = options.createSession();
   const state: RpcState = {
@@ -49,6 +54,7 @@ export async function runRpcServer(options: RpcServerOptions): Promise<void> {
     commands: new Map((options.commands ?? []).map((command) => [command.name, command])),
     createSession: options.createSession,
   };
+  const activeRuns = new Map<string, ActiveRun>();
   const lines = createInterface({ input: options.stdin, crlfDelay: Infinity });
   for await (const line of lines) {
     if (!line.trim()) continue;
@@ -62,11 +68,13 @@ export async function runRpcServer(options: RpcServerOptions): Promise<void> {
       continue;
     }
     try {
-      await handleRequest(request, state, options.stdout);
+      await handleRequest(request, state, options.stdout, activeRuns);
     } catch (error) {
       write(options.stdout, { id: request.id, ok: false, error: errorToErrorInfo(error) });
     }
   }
+  // Await any active runs before returning so callers do not lose final envelopes.
+  await Promise.allSettled([...activeRuns.values()].map((run) => run.promise));
 }
 
 export function parseRpcRequest(value: unknown): RpcRequest {
@@ -78,17 +86,32 @@ export function parseRpcRequest(value: unknown): RpcRequest {
   return { id, command, params: params as Record<string, unknown> | undefined };
 }
 
-async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writable): Promise<void> {
+async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writable, activeRuns: Map<string, ActiveRun>): Promise<void> {
   switch (request.command) {
     case "prompt":
     case "followUp": {
       const input = stringParam(request.params, "input") ?? stringParam(request.params, "prompt");
       if (!input) throw new Error(`${request.command} requires params.input`);
       const session = state.current;
+      const existing = activeRuns.get(session.id);
+      if (existing) {
+        write(stdout, { id: request.id, ok: false, error: errorToErrorInfo(new Error(`Session ${session.id} already has an active run for request ${existing.requestId}`)) });
+        return;
+      }
       const events = pumpEvents(session, stdout, request.id);
-      await session.run(input, runOptions(state, request.params));
-      await events;
-      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id } });
+      const promise = (async () => {
+        try {
+          await session.run(input, runOptions(state, request.params));
+        } finally {
+          await events;
+        }
+        write(stdout, { id: request.id, ok: true, result: { sessionId: session.id } });
+      })().catch((error) => {
+        write(stdout, { id: request.id, ok: false, error: errorToErrorInfo(error) });
+      }).finally(() => {
+        activeRuns.delete(session.id);
+      });
+      activeRuns.set(session.id, { requestId: request.id, promise });
       break;
     }
     case "steer":

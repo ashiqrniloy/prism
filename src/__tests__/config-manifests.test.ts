@@ -1,11 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  createContributionRegistries,
   definePrismManifest,
   loadConfigLayers,
   mergeConfigLayers,
   parsePrismManifest,
   type ConfigProvider,
+  type ManifestContributionKind,
 } from "../index.js";
 
 const base = {
@@ -80,5 +82,72 @@ describe("configuration and manifests", () => {
       () => parsePrismManifest({ name: "demo", contributions: [{ kind: "missing", name: "x" }] }),
       /known contribution kind/,
     );
+  });
+
+  it("manifest_accepts_current_provider_package_auth_policy_and_prompt_kinds", () => {
+    const manifest = definePrismManifest({
+      name: "demo-provider-package",
+      contributions: [
+        { kind: "providerPackage", name: "demo" },
+        { kind: "authMethod", name: "demo.api-key" },
+        { kind: "providerRequestPolicy", name: "demo.cache" },
+        { kind: "systemPromptContribution", name: "demo.prompt" },
+      ],
+    });
+
+    assert.deepEqual(
+      manifest.contributions?.map((c) => c.kind),
+      ["providerPackage", "authMethod", "providerRequestPolicy", "systemPromptContribution"],
+    );
+  });
+
+  it("manifest_kind_list_matches_current_data_only_registry_categories", () => {
+    const registries = createContributionRegistries();
+    const registryToKind: Record<keyof typeof registries, ManifestContributionKind> = {
+      providers: "provider",
+      models: "model",
+      tools: "tool",
+      contextProviders: "contextProvider",
+      skills: "skill",
+      commands: "command",
+      agents: "agent",
+      inputBuilders: "inputBuilder",
+      promptBuilders: "promptBuilder",
+      compactionStrategies: "compactionStrategy",
+      retryPolicies: "retryPolicy",
+      storeFactories: "storeFactory",
+      resourceLoaders: "resourceLoader",
+      settingsProviders: "settingsProvider",
+      credentialResolvers: "credentialResolver",
+      providerPackages: "providerPackage",
+      authMethods: "authMethod",
+      providerRequestPolicies: "providerRequestPolicy",
+      systemPromptContributions: "systemPromptContribution",
+    };
+
+    const expectedKinds = new Set(Object.values(registryToKind));
+    const actualKinds = new Set<ManifestContributionKind>(Object.values(registryToKind));
+
+    assert.deepEqual(new Set(Object.keys(registries)), new Set(Object.keys(registryToKind)));
+    assert.deepEqual(actualKinds, expectedKinds);
+  });
+
+  it("manifest_auth_method_examples_do_not_allow_secret_values", () => {
+    const manifest = parsePrismManifest({
+      name: "demo",
+      contributions: [
+        {
+          kind: "authMethod",
+          name: "demo.api-key",
+          metadata: { credentialName: "apiKey" },
+        },
+      ],
+    });
+
+    const authMethod = manifest.contributions?.[0];
+    assert.equal(authMethod?.kind, "authMethod");
+    assert.equal((authMethod?.metadata as Record<string, unknown> | undefined)?.credentialName, "apiKey");
+    assert.equal((authMethod?.metadata as Record<string, unknown> | undefined)?.value, undefined);
+    assert.equal((authMethod?.metadata as Record<string, unknown> | undefined)?.token, undefined);
   });
 });

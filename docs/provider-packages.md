@@ -72,11 +72,32 @@ These workspaces still follow the same rule as external packages: no provider SD
 - Provider-specific behavior belongs in provider packages, not Prism core.
 - Adapter serializers should preserve Prism content blocks (text, thinking, tool_call, tool_result, and image when the model declares image input) in provider-native request shape, or fail explicitly when a block is unsupported.
 
+## Manifest declarations
+
+Provider packages, auth methods, provider request policies, and system prompt contributions can also be declared in data-only Prism manifests:
+
+```ts
+import { definePrismManifest } from "prism";
+
+export default definePrismManifest({
+  name: "demo-provider-manifest",
+  contributions: [
+    { kind: "providerPackage", name: "demo-provider" },
+    { kind: "authMethod", name: "demo.api-key", metadata: { credentialName: "apiKey" } },
+    { kind: "providerRequestPolicy", name: "demo.cache" },
+    { kind: "systemPromptContribution", name: "demo.prompt" },
+  ],
+});
+```
+
+Manifest declarations are inert. The host must later resolve them through registries or extension setup and make explicit trust decisions before activating any package, auth flow, request policy, or prompt contribution.
+
 ## Related APIs
 
 - [Provider layer](provider-layer.md): provider/model registries and provider events.
 - [Provider conformance](provider-conformance.md): reusable network-free checks for provider adapters.
 - [Contribution registries](contribution-registries.md): registry bundle and extension contribution points.
+- [Configuration and manifests](configuration-and-manifests.md): data-only manifest `kind` values.
 - [System prompts](system-prompts.md): composing selected package/app/user/run prompt layers.
 - [Credentials and redaction](credentials-and-redaction.md): host-owned credential helpers.
 - [Public contracts](public-contracts.md): public type inventory.

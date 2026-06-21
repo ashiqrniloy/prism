@@ -264,4 +264,58 @@ describe("docs", () => {
       assert.equal(/sk-[A-Za-z0-9_-]{8,}/.test(text), false, `${file} has real-looking secret`);
     }
   });
+
+  it("docs_provider_conformance_lists_new_helpers", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown> };
+    const docs = readFileSync("docs/provider-conformance.md", "utf8");
+
+    assert.deepEqual(packageJson.exports["./testing/provider-conformance"], {
+      types: "./dist/testing/provider-conformance.d.ts",
+      default: "./dist/testing/provider-conformance.js",
+    });
+    for (const helper of ["assertSerializedRequestCoversContent", "assertNoSecretLeak"]) {
+      assert.ok(docs.includes(helper), `docs/provider-conformance.md does not document ${helper}`);
+    }
+  });
+
+  it("docs_middleware_hooks_match_runtime_supported_hooks", () => {
+    const rootExports = readFileSync("src/index.ts", "utf8");
+    const middlewareTs = readFileSync("src/middleware.ts", "utf8");
+    const docs = readFileSync("docs/middleware-hooks.md", "utf8");
+    const supported = [
+      "provider_request",
+      "input_assembly",
+      "prompt_build",
+      "context",
+      "tool_call",
+      "tool_result",
+      "retry",
+      "compaction",
+      "session_start",
+      "session_shutdown",
+    ];
+
+    assert.match(rootExports, /\bMiddlewareHookName\b/, "src/index.ts does not export MiddlewareHookName");
+    for (const hook of supported) {
+      assert.ok(middlewareTs.includes(`"${hook}"`), `src/middleware.ts missing hook ${hook}`);
+      assert.ok(docs.includes(hook), `docs/middleware-hooks.md missing hook ${hook}`);
+    }
+    assert.ok(!middlewareTs.includes('"provider_response"'), "src/middleware.ts still contains removed provider_response hook");
+    assert.ok(docs.includes("There is no `provider_response` hook"), "docs/middleware-hooks.md does not state provider_response is removed");
+  });
+
+  it("docs_manifest_kinds_include_current_provider_primitives", () => {
+    const rootExports = readFileSync("src/index.ts", "utf8");
+    const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
+
+    assert.match(rootExports, /\bManifestContributionKind\b/, "src/index.ts does not export ManifestContributionKind");
+    for (const kind of [
+      "providerPackage",
+      "authMethod",
+      "providerRequestPolicy",
+      "systemPromptContribution",
+    ]) {
+      assert.ok(manifests.includes(kind), `docs/configuration-and-manifests.md does not document ${kind}`);
+    }
+  });
 });

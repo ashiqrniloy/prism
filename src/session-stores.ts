@@ -45,7 +45,7 @@ export function getSessionBranchEntries(entries: readonly SessionEntry[], option
     branch.push(entry);
     id = entry.parentId;
   }
-  return branch.reverse();
+  return branch.reverse().map(cloneEntry);
 }
 
 export function listSessionBranches(entries: readonly SessionEntry[]): readonly SessionBranch[] {
@@ -77,7 +77,7 @@ export function rebuildSessionContext(entries: readonly SessionEntry[], options:
       continue;
     }
     if (entry.id === compaction.id) continue;
-    if (entry.kind === "message" && entry.message && (afterThrough || keepIds.has(entry.id))) messages.push(entry.message);
+    if (entry.kind === "message" && entry.message && (afterThrough || keepIds.has(entry.id))) messages.push(cloneEntry(entry.message));
     if (entry.kind === "summary" && entry.summary && afterThrough) summaries.push(entry.summary);
   }
 
@@ -95,10 +95,11 @@ export function createMemorySessionStore(initialEntries: readonly SessionEntry[]
       add(entry);
     },
     async list(sessionId) {
-      return bySession.get(sessionId) ?? [];
+      return (bySession.get(sessionId) ?? []).map(cloneEntry);
     },
     async get(id) {
-      return byId.get(id);
+      const entry = byId.get(id);
+      return entry ? cloneEntry(entry) : undefined;
     },
   };
 
@@ -109,6 +110,10 @@ export function createMemorySessionStore(initialEntries: readonly SessionEntry[]
     entries.push(entry);
     bySession.set(entry.sessionId, entries);
   }
+}
+
+function cloneEntry<T>(entry: T): T {
+  return structuredClone(entry);
 }
 
 function isCompactionEntryData(value: unknown): value is CompactionEntryData {

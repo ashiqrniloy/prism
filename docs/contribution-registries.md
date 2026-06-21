@@ -87,6 +87,7 @@ void skill;
 - Hosts can use contribution registries directly and skip extension loading entirely.
 - Extension packages should register contributions through the host-provided extension API once the extension kernel is in use.
 - Registry keys are explicit strings. Prefer stable ids/names such as `provider.id`, `tool.name`, `skill.name`, or package-qualified names when collisions matter.
+- Manifest contribution `kind` values match these registry keys. For example, `authMethods` accepts `authMethod` manifest declarations, `providerPackages` accepts `providerPackage`, `providerRequestPolicies` accepts `providerRequestPolicy`, and `systemPromptContributions` accepts `systemPromptContribution`.
 - Manifest and configuration loading are separate APIs; this page only covers in-memory registration.
 - Tool contributions are inert. They are not executable until the host registers selected definitions in an active tool registry and passes that registry to `dispatchToolCall()`.
 - Provider packages, auth methods, provider request policies, and system prompt contributions are inert until the host resolves them and explicitly calls setup or passes them to a runtime/helper that documents the call site.

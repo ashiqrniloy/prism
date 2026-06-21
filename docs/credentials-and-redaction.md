@@ -106,7 +106,9 @@ console.log(error.message);
 - Redaction only removes exact known secret values passed to the helper. It is not a general-purpose secret detector.
 - Do not pass empty strings as secrets; they are ignored.
 - `redactSecrets()` recursively walks arrays and object entries, so avoid using it on huge objects unless needed.
+- Cycle and non-JSON value handling: `redactSecrets()` is cycle-safe via a `WeakSet` visited-set. Self-referential or mutually referenced objects render `"[Circular]"` at the back-reference instead of throwing. `Date` and `RegExp` values are passed through unchanged; `ArrayBuffer` and typed arrays are passed through unchanged; `Map` is normalized to a plain object and `Set` to an array so the output stays JSON-compatible. `errorToErrorInfo()` tolerates a cyclic `error.cause` (rendered via `String()`).
 - Use placeholders in tests and docs. Never commit real tokens.
+- Live provider/worker tests are gated behind explicit environment variables and skipped by default: `PRISM_LIVE_PROVIDER_TESTS`, `PRISM_LIVE_COMPACTION_TESTS`, `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS`. Default `npm test` is network-free; do not add ungated network calls to default tests.
 - `resolveCredentialValue()` and `createExplicitCredentialResolver()` do not cache values. Add host-side caching only if a real credential source needs it.
 - `refreshOAuthCredential()` only calls the supplied OAuth provider and optional store; it has no built-in persistence or retry loop.
 

@@ -125,4 +125,76 @@ describe("redaction", () => {
 
     assert.equal(info.message, "bad key [REDACTED]");
   });
+
+  it("handles self-referential objects without crashing", () => {
+    const secret = "sk-cycle-1";
+    const payload: { token: string; self?: unknown } = { token: secret };
+    payload.self = payload;
+
+    const redacted = redactSecrets(payload, [secret]) as { token: string; self: string };
+
+    assert.equal(redacted.token, "[REDACTED]");
+    assert.equal(redacted.self, "[Circular]");
+  });
+
+  it("handles mutual references and cyclic error cause", () => {
+    const secret = "sk-cycle-2";
+    const a: { secret: string; b?: unknown } = { secret };
+    const b: { a?: unknown } = {};
+    a.b = b;
+    b.a = a;
+
+    const redacted = redactSecrets(a, [secret]) as { secret: string; b: { a: string } };
+
+    assert.equal(redacted.secret, "[REDACTED]");
+    assert.equal(redacted.b.a, "[Circular]");
+
+    const cyclic = new Error("boom");
+    (cyclic as Error & { cause: unknown }).cause = cyclic;
+    assert.doesNotThrow(() => errorToErrorInfo(cyclic, [secret]));
+  });
+
+  it("handles map set date regexp and typed arrays", () => {
+    const secret = "sk-collection";
+    const map = new Map([["key", `Bearer ${secret}`]]);
+    const set = new Set([secret]);
+    const date = new Date();
+    const re = /pattern/;
+    const bytes = new Uint8Array([1, 2, 3]);
+
+    const redacted = redactSecrets({ map, set, date, re, bytes }, [secret]) as unknown as {
+      map: Record<string, string>;
+      set: string[];
+      date: Date;
+      re: RegExp;
+      bytes: Uint8Array;
+    };
+
+    assert.equal(redacted.map.key, "Bearer [REDACTED]");
+    assert.deepEqual(redacted.set, ["[REDACTED]"]);
+    assert.equal(redacted.date, date);
+    assert.equal(redacted.re, re);
+    assert.equal(redacted.bytes, bytes);
+  });
+
+  it("does not mutate the input graph", () => {
+    const secret = "sk-immutable";
+    const payload = { nested: { token: secret }, list: [secret] };
+
+    redactSecrets(payload, [secret]);
+
+    assert.equal(payload.nested.token, secret);
+    assert.equal(payload.list[0], secret);
+  });
+
+  it("errorToErrorInfo tolerates cyclic cause", () => {
+    const secret = "sk-cause";
+    const cyclic = new Error(`failed ${secret}`) as Error & { cause?: unknown };
+    cyclic.cause = cyclic;
+
+    const info = errorToErrorInfo(cyclic, [secret]);
+
+    assert.equal(info.message, "failed [REDACTED]");
+    assert.ok(typeof info.cause === "string");
+  });
 });

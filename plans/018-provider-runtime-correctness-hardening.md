@@ -241,7 +241,7 @@
     - `docs/index.md` update: No new page; existing Agent/session runtime and Middleware hooks links remain.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Make RPC process abort, state, and control requests while a prompt is active
+- [x] Make RPC process abort, state, and control requests while a prompt is active
   - Acceptance Criteria:
     - Functional: `runRpcServer()` continues reading JSONL while a prompt/follow-up run is active; `abort` cancels the active run, `state`/`messages` respond immediately, events stay correlated to the prompt request id, and concurrent prompt/follow-up requests receive an immediate clear response instead of blocking the input loop.
     - Performance: Uses one in-memory active-run record and existing `AgentSession` APIs; no job queue, worker, timer loop, or persistent RPC state store.
@@ -288,7 +288,7 @@
     - `docs/index.md` update: No new page; existing CLI/RPC link remains.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Sync manifest contribution kinds, public contracts, and docs with current registries
+- [x] Sync manifest contribution kinds, public contracts, and docs with current registries
   - Acceptance Criteria:
     - Functional: `ManifestContributionKind` accepts every current contribution registry kind, including provider packages, auth methods, provider request policies, and system prompt contributions; docs and examples use the same names as types/tests.
     - Performance: Manifest parsing remains JSON-only and O(n) over contribution declarations with no imports, package discovery, credential resolution, or registry mutation.
@@ -343,7 +343,7 @@
     - `docs/index.md` update: No new page; verify Configuration/manifests and Provider packages entries still cover the changed behavior.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Run final docs/export verification for Phase 15 hardening
+- [x] Run final docs/export verification for Phase 15 hardening
   - Acceptance Criteria:
     - Functional: Final verification proves provider conformance tests, provider package tests, runtime tests, RPC tests, manifest tests, docs checks, typecheck, and default network-free test suite pass.
     - Performance: Default verification remains network-free and uses existing npm scripts; no live provider tests run unless explicit env vars are set.
@@ -393,6 +393,13 @@
 ## Compromises Made
 - Malformed SSE/JSON recovery checks remain package-local instead of adding a generic helper; the generic helpers cover terminal events, content preservation, usage/cache, abort, and redaction. A reusable malformed-stream helper would need to know each adapter's wire format.
 - No new shared serializer abstraction was added. Each adapter has its own small serializer; duplication is accepted because provider-native request shapes differ and a generic serializer would need to understand every provider's wire format.
+- RPC concurrency is limited to one active run per session using an in-memory `Map<sessionId, ActiveRun>`; concurrent prompts for the same session fail immediately rather than queueing. This matches `AgentSession`'s single-active-run contract and avoids adding a scheduler or worker.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- RPC: the `rpc_compact_and_session_branch_commands_use_session_api` test was reordered to compact before prompting because `compact` is now fail-closed during an active run. This is the intended behavior and is covered by the new `rpc_compact_fails_closed_during_active_prompt` test.
+- RPC: event ordering between an emitted error event and the prompt's `ok: false` response is deterministic only in that the response is written after the event pump closes; the abort response may arrive before or after the prompt error response depending on event loop timing. Docs describe correlation, not strict envelope ordering.
+- RPC: `steer` remains unsupported and synchronous; adding steer would require a runtime contract change beyond Phase 15.
+- Manifest: `ManifestContributionKind` now includes `providerPackage`, `authMethod`, `providerRequestPolicy`, and `systemPromptContribution`. The new `manifest_kind_list_matches_current_data_only_registry_categories` test guards drift by mapping every `createContributionRegistries()` key to a manifest kind.
+- Final verification: `npm run typecheck`, `npm test`, and targeted workspace provider tests (`@prism/provider-openai`, `@prism/provider-opencode-go`, `@prism/provider-openrouter`, `@prism/provider-zai`, `@prism/provider-kimi`) all pass with zero failures. All tests are network-free by default.
+- Docs drift checks added: `docs_provider_conformance_lists_new_helpers`, `docs_middleware_hooks_match_runtime_supported_hooks`, and `docs_manifest_kinds_include_current_provider_primitives`.
+- Phase 15 is complete.

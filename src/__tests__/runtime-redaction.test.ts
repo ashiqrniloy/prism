@@ -31,4 +31,15 @@ describe("runtime redaction", () => {
     assert.equal(JSON.stringify(events).includes("token-value"), false);
     assert.equal(JSON.stringify(await store.list("s1")).includes("token-value"), false);
   });
+
+  it("createSecretRedactor does not throw on cyclic graphs", () => {
+    const redactor = createSecretRedactor(["token-value"]);
+    const payload: { token: string; self?: unknown } = { token: "token-value" };
+    payload.self = payload;
+
+    const redacted = redactor.redact(payload) as { token: string; self: string };
+
+    assert.equal(redacted.token, "[REDACTED]");
+    assert.equal(redacted.self, "[Circular]");
+  });
 });

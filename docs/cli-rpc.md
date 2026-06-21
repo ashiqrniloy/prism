@@ -73,6 +73,25 @@ Invalid CLI flags return exit code `2`. Invalid JSON, missing ids, unknown RPC c
 {"id":"1","ok":true,"result":{"sessionId":"s1"}}
 ```
 
+## Active run behavior
+
+`prompt` and `followUp` start an asynchronous run and write their final response only when the run finishes. While a run is active, the RPC loop continues to read and respond to other requests:
+
+- `abort` cancels the active run for the current session and responds immediately.
+- `state`, `messages`, `setModel`, `switchSession`, `forkSession`, `cloneSession`, and registered `command` requests are processed immediately.
+- `compact` is fail-closed: if the current session has an active run, it returns `ok: false` because the session rejects compaction during a run.
+- A second `prompt` or `followUp` for the same session while it already has an active run returns `ok: false` immediately instead of blocking the input loop.
+
+Events streamed during a run keep the original prompt request id, even when an `abort` with a different request id cancels the run. The completion or error response for the prompt also uses the original prompt request id.
+
+```json
+{"id":"run-1","command":"prompt","params":{"input":"Hi"}}
+{"id":"abort-1","command":"abort","params":{"reason":"stop"}}
+{"type":"event","id":"run-1","sessionId":"s1","runId":"run_1","event":{"type":"error","error":{"message":"Agent run aborted"}}}
+{"id":"abort-1","ok":true,"result":{"sessionId":"s1"}}
+{"id":"run-1","ok":false,"error":{"message":"Agent run aborted"}}
+```
+
 ## Implementation example
 
 ```sh

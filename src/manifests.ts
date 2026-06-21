@@ -16,7 +16,11 @@ export type ManifestContributionKind =
   | "storeFactory"
   | "resourceLoader"
   | "settingsProvider"
-  | "credentialResolver";
+  | "credentialResolver"
+  | "providerPackage"
+  | "authMethod"
+  | "providerRequestPolicy"
+  | "systemPromptContribution";
 
 export interface ManifestContributionDeclaration {
   readonly kind: ManifestContributionKind;
@@ -119,6 +123,10 @@ function readKind(value: unknown, index: number): ManifestContributionKind {
     "resourceLoader",
     "settingsProvider",
     "credentialResolver",
+    "providerPackage",
+    "authMethod",
+    "providerRequestPolicy",
+    "systemPromptContribution",
   ]);
   if (typeof value !== "string" || !kinds.has(value as ManifestContributionKind)) {
     throw new Error(`manifest.contributions[${index}].kind must be a known contribution kind`);

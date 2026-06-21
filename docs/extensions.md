@@ -110,7 +110,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - `api.registerAgent()` contributes an inert `AgentDefinition`; its `create()` can call `createAgent()`, but the runtime is not started until host code resolves the definition and creates/runs a session.
 - The kernel registers middleware only into the explicit registry returned by `createMiddlewareRegistry()` or provided by the host.
 - `api.use("compaction", middleware)` and `api.use("retry", middleware)` observe or adjust runtime compaction/retry payloads only when the host passes that middleware registry to `createAgent({ middleware })`; compaction strategy and retry policy contributions remain inert until selected by the host.
-- Manifest and configuration APIs are later-phase work.
+- Manifest contribution `kind` values for provider packages, auth methods, provider request policies, and system prompt contributions match the registry keys populated by the extension API. See [Configuration and manifests](configuration-and-manifests.md) for data-only declaration examples.
 
 ## Security and performance notes
 

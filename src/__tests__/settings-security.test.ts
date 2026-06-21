@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -19,7 +19,7 @@ import {
   createToolRegistry,
 } from "../index.js";
 import { loadSettingsFiles } from "../node/settings.js";
-import { createPathTrustPolicy, isPathInside } from "../node/trust.js";
+import { createPathTrustPolicy, isPathInside, isPathInsideReal } from "../node/trust.js";
 
 const tmp = () => mkdtemp(join(tmpdir(), "prism-test-"));
 
@@ -60,9 +60,49 @@ describe("settings auth trust security", () => {
   });
 
   it("checks normalized path trust roots", async () => {
-    assert.equal(isPathInside("/tmp/root", "/tmp/root/file"), true);
-    assert.equal(isPathInside("/tmp/root", "/tmp/root/../sibling"), false);
-    assert.equal((await createPathTrustPolicy({ trustedRoots: ["/tmp/root"] }).check({ kind: "resource", target: "/tmp/root/file" })).trusted, true);
+    const dir = await tmp();
+    const root = join(dir, "root");
+    const file = join(root, "file");
+    await mkdir(root, { recursive: true });
+    await writeFile(file, "");
+
+    assert.equal(isPathInside(root, file), true);
+    assert.equal(isPathInside(root, join(root, "..", "sibling")), false);
+    assert.equal((await createPathTrustPolicy({ trustedRoots: [root] }).check({ kind: "resource", target: file })).trusted, true);
+  });
+
+  it("rejects symlink escape from trusted root", async () => {
+    const dir = await tmp();
+    const root = join(dir, "root");
+    const outside = join(dir, "outside");
+    const link = join(root, "escape");
+    await mkdir(root, { recursive: true });
+    await mkdir(outside, { recursive: true });
+    await writeFile(join(outside, "secret.txt"), "secret");
+    await symlink(outside, link);
+
+    const target = join(link, "secret.txt");
+    assert.equal(isPathInside(root, target), true);
+    assert.equal(await isPathInsideReal(root, target), false);
+    const decision = await createPathTrustPolicy({ trustedRoots: [root] }).check({ kind: "resource", target });
+    assert.equal(decision.trusted, false);
+  });
+
+  it("accepts realpath inside trusted root through symlinked root", async () => {
+    const dir = await tmp();
+    const root = join(dir, "root");
+    const file = join(root, "file");
+    await mkdir(root, { recursive: true });
+    await writeFile(file, "");
+    const link = join(dir, "link");
+    await symlink(root, link);
+
+    assert.equal(await isPathInsideReal(link, file), true);
+    assert.equal((await createPathTrustPolicy({ trustedRoots: [link] }).check({ kind: "resource", target: file })).trusted, true);
+  });
+
+  it("fails closed when trusted root cannot be resolved", async () => {
+    assert.equal(await isPathInsideReal("/nonexistent/root", "/nonexistent/root/file"), false);
   });
 
   it("blocks extension setup before side effects", async () => {

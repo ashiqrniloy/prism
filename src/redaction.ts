@@ -33,13 +33,20 @@ export function redactSecrets<T>(value: T, secrets: readonly (string | undefined
   const redactString = (text: string) =>
     needles.reduce((current, secret) => current.split(secret).join(REDACTED), text);
 
-  const redact = (input: unknown): unknown => {
+  // ponytail: WeakSet cycle guard + leaf passthrough for Date/RegExp/ArrayBuffer/typed
+  // arrays. Map/Set are normalized to plain object/array so output stays JSON-shaped.
+  // Upgrade path: if callers need original Map/Set preserved, thread a mode flag.
+  const redact = (input: unknown, seen: WeakSet<object> = new WeakSet()): unknown => {
     if (typeof input === "string") return redactString(input);
-    if (Array.isArray(input)) return input.map(redact);
-    if (input && typeof input === "object") {
-      return Object.fromEntries(Object.entries(input).map(([key, item]) => [key, redact(item)]));
-    }
-    return input;
+    if (input === null || typeof input !== "object") return input;
+    if (input instanceof Date || input instanceof RegExp) return input;
+    if (ArrayBuffer.isView(input) || input instanceof ArrayBuffer) return input;
+    if (seen.has(input)) return "[Circular]";
+    seen.add(input);
+    if (Array.isArray(input)) return input.map((item) => redact(item, seen));
+    if (input instanceof Map) return Object.fromEntries([...input].map(([key, item]) => [key, redact(item, seen)]));
+    if (input instanceof Set) return [...input].map((item) => redact(item, seen));
+    return Object.fromEntries(Object.entries(input).map(([key, item]) => [key, redact(item, seen)]));
   };
 
   return redact(value) as T;
