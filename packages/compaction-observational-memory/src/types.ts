@@ -1,4 +1,4 @@
-import type { SessionEntry } from "prism";
+import type { SessionEntry } from "@arnilo/prism";
 
 export const OBSERVATIONS_RECORDED = "om.observations.recorded";
 export const REFLECTIONS_RECORDED = "om.reflections.recorded";

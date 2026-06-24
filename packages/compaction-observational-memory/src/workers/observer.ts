@@ -1,4 +1,4 @@
-import type { AIProvider, ModelConfig, ProviderRequestOptions, SessionEntry, ToolDefinition } from "prism";
+import type { AIProvider, ModelConfig, ProviderRequestOptions, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
 import { serializeSourceEntries } from "../serialize.js";
 import { estimateTextTokens } from "../tokens.js";

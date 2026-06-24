@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createStaticSettingsProvider } from "prism";
+import { createStaticSettingsProvider } from "@arnilo/prism";
 import { defaultObservationalMemorySettings, resolveObservationalMemorySettings } from "../index.js";
 
 describe("observational memory settings", () => {

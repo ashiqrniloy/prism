@@ -1,5 +1,5 @@
-import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderRequest, ToolDefinition, Usage } from "prism";
-import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "prism";
+import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
+import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
 import { promptCacheKey, promptCacheRetention } from "./cache.js";
 import { readSseData } from "./sse.js";
 

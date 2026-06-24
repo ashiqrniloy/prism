@@ -1,4 +1,4 @@
-import type { JsonObject, Message, ProviderRequest, Usage } from "prism";
+import type { JsonObject, Message, ProviderRequest, Usage } from "@arnilo/prism";
 
 type OpenRouterContent = string | JsonObject[];
 

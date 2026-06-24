@@ -66,7 +66,7 @@ describe("phase 12 provider package boundaries", () => {
     for (const name of packages) {
       const pkg = JSON.parse(readFileSync(`packages/provider-${name}/package.json`, "utf8"));
       assert.deepEqual(pkg.exports["."], { types: "./dist/index.d.ts", default: "./dist/index.js" });
-      assert.deepEqual(pkg.files, ["dist", "README.md"]);
+      assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
       assert.deepEqual(pkg.dependencies ?? {}, {});
       assert.equal(pkg.scripts.postinstall, undefined);
     }

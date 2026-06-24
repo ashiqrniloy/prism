@@ -1,5 +1,5 @@
-import type { AIProvider, CredentialValueSource, ProviderRequest } from "prism";
-import { providerError, resolveCredentialValue } from "prism";
+import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
+import { providerError, resolveCredentialValue } from "@arnilo/prism";
 import { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
 import { opencodeHeaders } from "./cache.js";
 import { openAIChatBody, openAIChatEvents } from "./openai-chat.js";

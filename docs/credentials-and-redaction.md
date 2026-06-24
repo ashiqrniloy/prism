@@ -72,7 +72,7 @@ import {
   errorToErrorInfo,
   redactSecrets,
   resolveCredentialValue,
-} from "prism";
+} from "@arnilo/prism";
 
 const runtime = { resolve: () => undefined };
 const stored = { resolve: () => undefined };

@@ -1,4 +1,4 @@
-import { createSessionEntry, redactSecrets, type CompactionContext, type CompactionEntryData, type CompactionResult, type CompactionStrategy, type SessionEntry } from "prism";
+import { createSessionEntry, redactSecrets, type CompactionContext, type CompactionEntryData, type CompactionResult, type CompactionStrategy, type SessionEntry } from "@arnilo/prism";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails } from "./projection.js";
 import { renderObservationalMemory } from "./render.js";

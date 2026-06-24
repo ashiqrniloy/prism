@@ -1,4 +1,4 @@
-import type { SessionEntry } from "prism";
+import type { SessionEntry } from "@arnilo/prism";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { serializeSourceEntries } from "./serialize.js";
 import { isMemoryId, type MemoryObservation, type MemoryReflection } from "./types.js";

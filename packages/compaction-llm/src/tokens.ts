@@ -1,4 +1,4 @@
-import type { ContentBlock, Message, SessionEntry } from "prism";
+import type { ContentBlock, Message, SessionEntry } from "@arnilo/prism";
 
 export function estimateTextTokens(text: string): number {
   return Math.ceil(text.length / 4);

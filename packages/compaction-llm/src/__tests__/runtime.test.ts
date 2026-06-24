@@ -12,7 +12,7 @@ import {
   rebuildSessionContext,
   type AgentEvent,
   type ProviderRequest,
-} from "prism";
+} from "@arnilo/prism";
 import { createLlmCompactionExtension, createLlmCompactionStrategy } from "../index.js";
 
 const model = { provider: "mock", model: "demo" };

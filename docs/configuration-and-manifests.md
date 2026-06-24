@@ -94,7 +94,7 @@ parsePrismManifest(value: unknown): PrismManifest
 ## Implementation example
 
 ```ts
-import { definePrismManifest, mergeConfigLayers } from "prism";
+import { definePrismManifest, mergeConfigLayers } from "@arnilo/prism";
 
 const manifest = definePrismManifest({
   name: "demo-package",
@@ -124,7 +124,7 @@ console.log(config.demo);
 - Hosts choose the layer order. Prism documents `built-in -> manifest defaults -> host app -> optional user/global -> runtime overrides` but does not load those layers automatically.
 - Manifest contribution declarations are data. Hosts may later choose to import the declared module/export and register it, but parsing the manifest never does that.
 - Contribution `kind` values match `createContributionRegistries()` categories, including the Phase 14 provider primitives `providerPackage`, `authMethod`, `providerRequestPolicy`, and `systemPromptContribution`.
-- Filesystem config loading is intentionally outside the root API and belongs to the optional [`prism/node/config`](node-filesystem-config.md) subpath.
+- Filesystem config loading is intentionally outside the root API and belongs to the optional [`@arnilo/prism/node/config`](node-filesystem-config.md) subpath.
 - Manifest `resources` entries are URI declarations; use [resource loading](resource-loading.md) helpers with a host-provided loader to fetch them.
 
 ## Security and performance notes

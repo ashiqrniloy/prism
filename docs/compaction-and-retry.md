@@ -115,7 +115,7 @@ Provider-turn retry wraps only the current provider request after input assembly
 ## Implementation example
 
 ```ts
-import { createAgent, createDefaultCompactionStrategy, createDefaultRetryPolicy, rebuildSessionContext } from "prism";
+import { createAgent, createDefaultCompactionStrategy, createDefaultRetryPolicy, rebuildSessionContext } from "@arnilo/prism";
 
 const strategy = createDefaultCompactionStrategy({
   keepRecentEntries: 4,
@@ -149,7 +149,7 @@ Retry policies are ordinary `RetryPolicy` implementations and can be registered 
 
 Compaction strategies are ordinary `CompactionStrategy` implementations. Extensions can register strategies through the existing compaction strategy contribution registry, but registration is inert until a host explicitly selects and passes a strategy to runtime code. Extensions can also register `compaction` middleware; the runtime calls it only when the agent/session has that middleware registry configured.
 
-The default strategy does not call a provider. Hosts that need model-generated summaries can use the optional [`@prism/compaction-llm` package](compaction-llm.md). Hosts that need prepared source-backed memory without a compaction-time model call can use [`@prism/compaction-observational-memory`](compaction-observational-memory.md).
+The default strategy does not call a provider. Hosts that need model-generated summaries can use the optional [`@arnilo/prism-compaction-llm` package](compaction-llm.md). Hosts that need prepared source-backed memory without a compaction-time model call can use [`@arnilo/prism-compaction-observational-memory`](compaction-observational-memory.md).
 
 ## Security and performance notes
 

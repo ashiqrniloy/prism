@@ -1,5 +1,5 @@
-import type { AgentSession, AIProvider, CredentialRequest, CredentialValueSource, ModelConfig, ProviderRequestOptions, SessionEntry, SessionStore, SettingsProvider } from "prism";
-import { createSessionEntry, redactSecrets, resolveCredentialValue } from "prism";
+import type { AgentSession, AIProvider, CredentialRequest, CredentialValueSource, ModelConfig, ProviderRequestOptions, SessionEntry, SessionStore, SettingsProvider } from "@arnilo/prism";
+import { createSessionEntry, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { resolveObservationalMemorySettings, type ObservationalMemorySettingsInput } from "./settings.js";
 import { estimateEntryTokens } from "./tokens.js";

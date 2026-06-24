@@ -2,7 +2,7 @@
 
 ## What it does
 
-`prism/providers/openai-compatible` exports `createOpenAICompatibleProvider()` and `OpenAICompatibleProviderOptions`.
+`@arnilo/prism/providers/openai-compatible` exports `createOpenAICompatibleProvider()` and `OpenAICompatibleProviderOptions`.
 
 The adapter implements `AIProvider` for OpenAI-compatible Chat Completions streaming APIs using native or injected `fetch`. It maps streaming Server-Sent Events into Prism `ProviderEvent` values for text, thinking, tool-call fragments, final tool calls, usage, done, and errors.
 
@@ -19,7 +19,7 @@ Do not use it for the OpenAI Responses API, provider-specific non-streaming APIs
 Import from the subpath:
 
 ```ts
-import { createOpenAICompatibleProvider } from "prism/providers/openai-compatible";
+import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 ```
 
 Options:
@@ -77,7 +77,7 @@ Example Prism events:
 ## Implementation example
 
 ```ts
-import { createOpenAICompatibleProvider } from "prism/providers/openai-compatible";
+import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 
 const provider = createOpenAICompatibleProvider({
   baseUrl: "https://api.openai.com/v1",

@@ -83,7 +83,7 @@ Only one `run()` may be active per session. Concurrent `run()` calls emit `error
 ## Implementation example
 
 ```ts
-import { createAgent, createMemorySessionStore, createMockProvider, providerDone, providerTextDelta, type ToolDefinition } from "prism";
+import { createAgent, createMemorySessionStore, createMockProvider, providerDone, providerTextDelta, type ToolDefinition } from "@arnilo/prism";
 
 const echo: ToolDefinition = {
   name: "echo",
@@ -124,7 +124,7 @@ The runtime calls `middleware.run("retry", { context, decision })` after the ret
 `createAgent()` is a thin wrapper over explicit config. It does not load `AgentConfig.extensions`, scan packages, resolve credentials, read settings, or consult hidden registries. External `AgentDefinition` implementations can call it from their own `create()` method:
 
 ```ts
-import { createAgent, createContributionRegistries } from "prism";
+import { createAgent, createContributionRegistries } from "@arnilo/prism";
 
 const contributions = createContributionRegistries();
 contributions.agents.register("demo", {

@@ -1,4 +1,4 @@
-import type { CacheRetention, ProviderRequestOptions } from "prism";
+import type { CacheRetention, ProviderRequestOptions } from "@arnilo/prism";
 
 export function promptCacheKey(options: ProviderRequestOptions | undefined): string | undefined {
   const key = options?.cacheKey ?? options?.sessionId;

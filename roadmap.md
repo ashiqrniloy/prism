@@ -357,11 +357,11 @@ Acceptance:
 **Goal:** ship the requested provider connections as separate packages that follow Pi's proven provider implementations.
 
 Deliver:
-- `@prism/provider-openai`: OpenAI API-key Responses support plus ChatGPT Plus/Pro/Codex subscription OAuth using Pi's PKCE browser/device-code flow and Codex Responses request shape.
-- `@prism/provider-opencode-go`: OpenCode Go API-key provider using Pi's model metadata, OpenAI-compatible/Anthropic-compatible routes, and `x-opencode-session` cache/session headers.
-- `@prism/provider-openrouter`: OpenRouter API-key provider with app-controlled model catalog, routing passthrough, reasoning controls, and model-level cache policy overrides.
-- `@prism/provider-zai`: ZAI GLM API-key provider using Pi's OpenAI-compatible `thinkingFormat: "zai"`, developer-role fallback, and GLM tool-stream quirks.
-- `@prism/provider-kimi`: Kimi For Coding subscription/API-key provider using Pi's Anthropic-compatible Kimi endpoint and headers; keep Moonshot API-key models as optional model metadata, not core behavior.
+- `@arnilo/prism-provider-openai`: OpenAI API-key Responses support plus ChatGPT Plus/Pro/Codex subscription OAuth using Pi's PKCE browser/device-code flow and Codex Responses request shape.
+- `@arnilo/prism-provider-opencode-go`: OpenCode Go API-key provider using Pi's model metadata, OpenAI-compatible/Anthropic-compatible routes, and `x-opencode-session` cache/session headers.
+- `@arnilo/prism-provider-openrouter`: OpenRouter API-key provider with app-controlled model catalog, routing passthrough, reasoning controls, and model-level cache policy overrides.
+- `@arnilo/prism-provider-zai`: ZAI GLM API-key provider using Pi's OpenAI-compatible `thinkingFormat: "zai"`, developer-role fallback, and GLM tool-stream quirks.
+- `@arnilo/prism-provider-kimi`: Kimi For Coding subscription/API-key provider using Pi's Anthropic-compatible Kimi endpoint and headers; keep Moonshot API-key models as optional model metadata, not core behavior.
 - Provider cache policies copied/adapted from Pi where applicable: OpenAI `prompt_cache_key`/`prompt_cache_retention`, Codex session/request ids, Anthropic-style `cache_control`, OpenCode session headers, OpenRouter per-model cache control, and provider usage cache-read/write mapping.
 - Unit tests use mocked `fetch`/streams/OAuth callbacks only; live integration tests are opt-in behind explicit env vars and skipped by default.
 - Docs/examples for each package: OAuth login, API key, model selection, cache control, OpenRouter model override, and secret redaction.
@@ -377,7 +377,7 @@ Acceptance:
 **Goal:** provide provider-backed compaction as a replaceable strategy, based on Pi's compaction implementation.
 
 Deliver:
-- `@prism/compaction-llm` with token-estimated cut points, `reserveTokens`, `keepRecentTokens`, previous-summary update prompts, split-turn prefix summaries, custom instructions, and structured markdown summary format.
+- `@arnilo/prism-compaction-llm` with token-estimated cut points, `reserveTokens`, `keepRecentTokens`, previous-summary update prompts, split-turn prefix summaries, custom instructions, and structured markdown summary format.
 - Conversation serialization that prevents continuation, truncates oversized tool results, preserves exact file paths/errors/decisions, and redacts known secrets.
 - Optional file-operation tracking in compaction details, following Pi's read/modified file summary pattern but using Prism tool-result/message contracts.
 - Strategy options for summary provider/model, thinking level, cache policy, max summary tokens, and host-supplied credential resolver.
@@ -394,7 +394,7 @@ Acceptance:
 **Goal:** provide observational memory as a replaceable package, based on `pi-observational-memory` V3.
 
 Deliver:
-- `@prism/compaction-observational-memory` with observer, reflector, and dropper workers that run from session events and store append-only custom memory ledger entries.
+- `@arnilo/prism-compaction-observational-memory` with observer, reflector, and dropper workers that run from session events and store append-only custom memory ledger entries.
 - Observation/reflection/drop data model with 12-character source-backed ids, relevance levels, coverage tiers, active/full projections, and folded compaction details.
 - Compaction strategy that renders prepared memory immediately instead of calling a model during compaction.
 - Optional recall tool/command contributions that recover exact source entries for a known observation/reflection id; no semantic search.
@@ -453,16 +453,16 @@ Deliver:
 - Include required release files and package metadata: `LICENSE`, `CHANGELOG.md`, repository, bugs, homepage, license, keywords, and `sideEffects` where appropriate.
 - Include shipped API docs where packages claim docs ship with APIs; avoid publishing unrelated plans, tests, fixtures, or internal generated output.
 - Make first-party packages' `prism` peer dependency non-optional unless a tested install story proves otherwise.
-- Add tarball install/import smoke tests for `prism`, every exported subpath, and every first-party workspace package by package specifier, including `@prism/compaction-observational-memory`.
+- Add tarball install/import smoke tests for `prism`, every exported subpath, and every first-party workspace package by package specifier, including `@arnilo/prism-compaction-observational-memory`.
 - Make `npm ls --all --depth=0`, `npm pack --dry-run --json`, and package import smoke checks clean in a fresh install/workspace.
 - Add a minimal release workflow/dry-run for core plus first-party packages.
-- Reduce default no-network test time to the release target or explicitly adjust that target in this roadmap with rationale.
+- Reduce default no-network test time to the release target or explicitly adjust that target in this roadmap with rationale. Baseline measured on Node 20: `npm test` medians ~22s wall (build ~12.5s + tests ~9.5s, tests parallelized); budget pinned at < 30s — see `docs/release-and-install.md`.
 
 Acceptance:
 - Packed core and package tarballs contain README/LICENSE/CHANGELOG/docs plus public compiled output only.
 - No published tarball includes built test artifacts.
 - Fresh install smoke tests import every documented package/subpath without workspace-relative paths.
-- Default tests remain network-free and meet the chosen time budget.
+- Default tests remain network-free and meet the chosen time budget (< 30s for `npm test` on Node 20; baseline ~22s).
 
 ### Phase 18 — Documentation, examples, and fixtures catch-up
 

@@ -1,4 +1,4 @@
-import { createProviderRequestPolicyChain, createSessionEntry, mergeProviderRequestOptions, redactSecrets, resolveCredentialValue, type AIProvider, type CompactionContext, type CompactionResult, type CompactionStrategy, type CredentialRequest, type CredentialValueSource, type Message, type ModelConfig, type ProviderEvent, type ProviderRequest, type ProviderRequestOptions, type ProviderRequestPolicy } from "prism";
+import { createProviderRequestPolicyChain, createSessionEntry, mergeProviderRequestOptions, redactSecrets, resolveCredentialValue, type AIProvider, type CompactionContext, type CompactionResult, type CompactionStrategy, type CredentialRequest, type CredentialValueSource, type Message, type ModelConfig, type ProviderEvent, type ProviderRequest, type ProviderRequestOptions, type ProviderRequestPolicy } from "@arnilo/prism";
 import { formatFileOperations } from "./file-ops.js";
 import { prepareLlmCompaction, type LlmCompactionPreparation, type PrepareLlmCompactionOptions } from "./prepare.js";
 import { SUMMARIZATION_SYSTEM_PROMPT, TURN_PREFIX_SYSTEM_PROMPT } from "./prompts.js";

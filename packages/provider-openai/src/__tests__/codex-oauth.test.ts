@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { ProviderRequest } from "prism";
+import type { ProviderRequest } from "@arnilo/prism";
 import { createOpenAICodexProvider, createOpenAICodexOAuthProvider, createOpenAIResponsesProvider } from "../index.js";
 import { computeS256Challenge, createPkceVerifier } from "../oauth.js";
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
-describe("@prism/provider-openai codex oauth", () => {
+describe("@arnilo/prism-provider-openai codex oauth", () => {
   it("codex_oauth_browser_uses_s256_pkce_challenge", async () => {
     let authUrl = "";
     let tokenBody: Record<string, string> | undefined;

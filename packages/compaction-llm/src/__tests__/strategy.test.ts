@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createMockProvider, createSessionEntry, providerError, providerTextDelta, type ProviderRequest, type SessionEntry } from "prism";
+import { createMockProvider, createSessionEntry, providerError, providerTextDelta, type ProviderRequest, type SessionEntry } from "@arnilo/prism";
 import { createLlmCompactionStrategy } from "../strategy.js";
 
 const timestamp = "2026-01-01T00:00:00.000Z";

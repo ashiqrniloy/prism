@@ -15,7 +15,7 @@ Do not use it for tool execution, provider calls, file discovery, credential loo
 ## Inputs / request
 
 ```ts
-import { createDefaultInputBuilder } from "prism";
+import { createDefaultInputBuilder } from "@arnilo/prism";
 
 const messages = await createDefaultInputBuilder().build("Summarize", {
   systemInstructions: "Be accurate.",
@@ -30,7 +30,7 @@ const messages = await createDefaultInputBuilder().build("Summarize", {
 Prompt templates:
 
 ```ts
-import { renderPromptTemplate } from "prism";
+import { renderPromptTemplate } from "@arnilo/prism";
 
 const prompt = renderPromptTemplate("Review {{file}} for {{focus}}", {
   file: "src/index.ts",
@@ -41,7 +41,7 @@ const prompt = renderPromptTemplate("Review {{file}} for {{focus}}", {
 Prompt/provider assembly:
 
 ```ts
-import { assembleProviderInput, createDefaultPromptBuilder } from "prism";
+import { assembleProviderInput, createDefaultPromptBuilder } from "@arnilo/prism";
 
 const request = await assembleProviderInput({
   model: { provider: "mock", model: "demo" },
@@ -108,7 +108,7 @@ The builder returns `readonly Message[]`.
 ## Implementation example
 
 ```ts
-import { createDefaultInputBuilder, createMiddlewareRegistry, renderPromptTemplate } from "prism";
+import { createDefaultInputBuilder, createMiddlewareRegistry, renderPromptTemplate } from "@arnilo/prism";
 
 const middleware = createMiddlewareRegistry();
 middleware.use("input_assembly", (messages) => messages);

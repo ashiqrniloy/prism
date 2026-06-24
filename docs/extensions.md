@@ -57,7 +57,7 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 ## Implementation example
 
 ```ts
-import { createAgent, createExtensionKernel, type Extension } from "prism";
+import { createAgent, createExtensionKernel, type Extension } from "@arnilo/prism";
 
 const extension: Extension = {
   name: "demo-extension",

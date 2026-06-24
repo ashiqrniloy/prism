@@ -1,9 +1,9 @@
-# @prism/provider-openrouter
+# @arnilo/prism-provider-openrouter
 
 OpenRouter provider package for Prism.
 
 ```ts
-import { createOpenRouterProviderPackage, defineOpenRouterModel } from "@prism/provider-openrouter";
+import { createOpenRouterProviderPackage, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
 
 const model = defineOpenRouterModel({
   model: "anthropic/claude-sonnet-4",

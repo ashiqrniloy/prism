@@ -1,4 +1,4 @@
-import type { AIProvider, CredentialValueSource } from "prism";
+import type { AIProvider, CredentialValueSource } from "@arnilo/prism";
 import { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions } from "./responses.js";
 
 export interface OpenAICodexProviderOptions extends Omit<OpenAIResponsesProviderOptions, "id" | "apiKey"> {

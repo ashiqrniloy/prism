@@ -1,0 +1,3 @@
+{"sessionId":"s1","kind":"message","id":"b1","timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"branch root"}]}}
+{"sessionId":"s1","kind":"message","parentId":"b1","id":"b2","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"left leaf"}]}}
+{"sessionId":"s1","kind":"message","parentId":"b1","id":"b3","timestamp":"2026-01-01T00:00:03.000Z","message":{"role":"assistant","content":[{"type":"text","text":"right leaf"}]}}

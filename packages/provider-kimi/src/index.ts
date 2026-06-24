@@ -1,4 +1,4 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "prism";
+import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
 import { kimiCodingModels, moonshotKimiModels } from "./models.js";
 import { createKimiCodingProvider, type KimiCodingProviderOptions } from "./provider.js";
 
@@ -16,7 +16,7 @@ export interface KimiProviderPackageOptions {
 export function createKimiProviderPackage(options: KimiProviderPackageOptions = {}): ProviderPackage {
   const providerId = options.id ?? "kimi-coding";
   return defineProviderPackage({
-    name: "@prism/provider-kimi",
+    name: "@arnilo/prism-provider-kimi",
     description: "Kimi provider package for Prism.",
     docs: { links: ["docs/providers/kimi.md"] },
     setup(api) {

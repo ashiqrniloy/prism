@@ -1,0 +1,40 @@
+{
+  "name": "@arnilo/prism-all",
+  "version": "0.0.1",
+  "description": "Umbrella package: installs the Prism core runtime plus all first-party provider adapters and compaction strategies. Imports come from @arnilo/prism and the individual @arnilo/prism-* packages.",
+  "license": "MIT",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "files": [
+    "README.md"
+  ],
+  "dependencies": {
+    "@arnilo/prism": "0.0.1",
+    "@arnilo/prism-providers": "0.0.1",
+    "@arnilo/prism-compaction": "0.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-all"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-all#readme",
+  "keywords": [
+    "prism",
+    "umbrella",
+    "agent",
+    "llm",
+    "harness"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

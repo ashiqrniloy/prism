@@ -54,4 +54,4 @@ export type {
   ReflectionsRecordedData,
 } from "./types.js";
 
-export const packageName = "@prism/compaction-observational-memory";
+export const packageName = "@arnilo/prism-compaction-observational-memory";

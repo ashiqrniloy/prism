@@ -1,0 +1,42 @@
+{
+  "name": "@arnilo/prism-providers",
+  "version": "0.0.1",
+  "description": "Umbrella package: installs all first-party Prism provider adapters. Imports come from the individual @arnilo/prism-provider-* packages.",
+  "license": "MIT",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "files": [
+    "README.md"
+  ],
+  "dependencies": {
+    "@arnilo/prism-provider-openai": "0.0.1",
+    "@arnilo/prism-provider-opencode-go": "0.0.1",
+    "@arnilo/prism-provider-openrouter": "0.0.1",
+    "@arnilo/prism-provider-zai": "0.0.1",
+    "@arnilo/prism-provider-kimi": "0.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-providers"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-providers#readme",
+  "keywords": [
+    "prism",
+    "providers",
+    "umbrella",
+    "agent",
+    "llm"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

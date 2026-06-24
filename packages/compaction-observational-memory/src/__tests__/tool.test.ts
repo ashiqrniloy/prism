@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createSessionEntry } from "prism";
+import { createSessionEntry } from "@arnilo/prism";
 import { createRecallMemoryTool, OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED, type MemoryObservation, type MemoryReflection } from "../index.js";
 
 const now = "2026-06-20T00:00:00.000Z";

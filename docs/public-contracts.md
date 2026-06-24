@@ -2,7 +2,7 @@
 
 ## What it does
 
-The root `prism` export provides TypeScript contracts for host-owned agent systems plus small runtime helpers as phases land. These contracts describe data shapes and extension points; they do not create providers, stores, credentials, tools, or network calls by themselves.
+The root `@arnilo/prism` export provides TypeScript contracts for host-owned agent systems plus small runtime helpers as phases land. These contracts describe data shapes and extension points; they do not create providers, stores, credentials, tools, or network calls by themselves.
 
 Current contract groups:
 
@@ -60,7 +60,7 @@ import type {
   SystemPromptContribution,
   SystemPromptConfig,
   ToolDefinition,
-} from "prism";
+} from "@arnilo/prism";
 ```
 
 Important request shapes:
@@ -153,8 +153,8 @@ import type {
   Skill,
   StoreFactory,
   ToolDefinition,
-} from "prism";
-import { assembleProviderInput, createDefaultInputBuilder, createDefaultPromptBuilder, createSkillRegistry, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "prism";
+} from "@arnilo/prism";
+import { assembleProviderInput, createDefaultInputBuilder, createDefaultPromptBuilder, createSkillRegistry, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "@arnilo/prism";
 
 const provider: AIProvider = {
   id: "mock",
@@ -344,7 +344,7 @@ void credentials;
 - `createDefaultInputBuilder()` is a small default implementation of `InputBuilder`. It is replaceable and only loads explicit URI resources through a caller-provided `ResourceLoader`.
 - `resolveContextProviders()`, `createDefaultPromptBuilder()`, `assembleProviderInput()`, `createSkillRegistry()`, `resolveActiveSkills()`, and `renderPromptTemplate()` are replaceable Phase 5 helpers. They do not execute tools, evaluate template code, or grant tool permissions.
 - `createAgent()` and `createAgentSession()` implement the session runtime. They use explicit providers only; no hidden provider registry is created. Store-backed sessions use explicit `SessionStore` values and branch methods on `AgentSession`. `AgentSession.compact()` and `AgentConfig`/`RunOptions.compaction` provide manual and opt-in auto-compaction. `AgentConfig`/`RunOptions.retry` provide bounded provider-turn retry before observable output.
-- `createMemorySessionStore()` is the built-in in-memory `SessionStore`. Node hosts can opt into file durability with `prism/node/session-store-jsonl`. `createSessionEntry()`, `getSessionBranchEntries()`, `listSessionBranches()`, and `rebuildSessionContext()` are pure helpers for branch-aware session entries. `rebuildSessionContext()` understands compaction entries produced by `createDefaultCompactionStrategy()`, reducing provider-context messages while keeping raw entries. They do not read files or call providers.
+- `createMemorySessionStore()` is the built-in in-memory `SessionStore`. Node hosts can opt into file durability with `@arnilo/prism/node/session-store-jsonl`. `createSessionEntry()`, `getSessionBranchEntries()`, `listSessionBranches()`, and `rebuildSessionContext()` are pure helpers for branch-aware session entries. `rebuildSessionContext()` understands compaction entries produced by `createDefaultCompactionStrategy()`, reducing provider-context messages while keeping raw entries. They do not read files or call providers.
 
 ## Security and performance notes
 
@@ -372,4 +372,4 @@ void credentials;
 - [Credentials and redaction](credentials-and-redaction.md): helpers for resolving host-owned credentials, explicit resolver order, OAuth refresh, env-object lookup, and redacting known secret values.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter implementing `AIProvider`.
 
-Phase 10 public helpers include `createStaticSettingsProvider`, `createChainedSettingsProvider`, `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createStaticTrustPolicy`, `assertTrusted`, `createStaticPermissionPolicy`, `assertPermission`, and `createSecretRedactor`. Phase 11 auth/request/prompt helpers include `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `createProviderRequestPolicyChain`, `createSessionCachePolicy`, `mergeProviderRequestOptions`, `composeSystemPrompt`, and `mergeSystemPromptConfig`; they do not read env vars, persist OAuth tokens, create cache stores, discover prompt files, or load packages unless the host supplies that behavior. `prism/testing/provider-conformance` exports network-free provider assertion helpers. Node subpaths `prism/node/settings` and `prism/node/trust` are explicit filesystem/path helpers.
+Phase 10 public helpers include `createStaticSettingsProvider`, `createChainedSettingsProvider`, `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createStaticTrustPolicy`, `assertTrusted`, `createStaticPermissionPolicy`, `assertPermission`, and `createSecretRedactor`. Phase 11 auth/request/prompt helpers include `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `createProviderRequestPolicyChain`, `createSessionCachePolicy`, `mergeProviderRequestOptions`, `composeSystemPrompt`, and `mergeSystemPromptConfig`; they do not read env vars, persist OAuth tokens, create cache stores, discover prompt files, or load packages unless the host supplies that behavior. `@arnilo/prism/testing/provider-conformance` exports network-free provider assertion helpers. Node subpaths `@arnilo/prism/node/settings` and `@arnilo/prism/node/trust` are explicit filesystem/path helpers.

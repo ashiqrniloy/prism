@@ -1,5 +1,5 @@
-import type { ContentBlock, Message, SessionEntry } from "prism";
-import { redactSecrets } from "prism";
+import type { ContentBlock, Message, SessionEntry } from "@arnilo/prism";
+import { redactSecrets } from "@arnilo/prism";
 
 export interface SerializeCompactionConversationOptions {
   readonly secrets?: readonly (string | undefined)[];
