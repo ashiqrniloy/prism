@@ -45,7 +45,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -n "${NPM_TOKEN:-}" ]; then
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
             # Core first: first-party packages declare @arnilo/prism as a required peer,
             # so it must exist on the registry for consumers.
             npm publish --access public
