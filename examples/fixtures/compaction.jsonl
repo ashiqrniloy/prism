@@ -1,0 +1,4 @@
+{"sessionId":"s1","kind":"message","id":"c1","timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"old turn one"}]}}
+{"sessionId":"s1","kind":"message","parentId":"c1","id":"c2","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"old turn two"}]}}
+{"sessionId":"s1","kind":"message","parentId":"c2","id":"c3","timestamp":"2026-01-01T00:00:03.000Z","message":{"role":"user","content":[{"type":"text","text":"recent"}]}}
+{"sessionId":"s1","kind":"compaction","parentId":"c3","id":"c4","timestamp":"2026-01-01T00:00:04.000Z","summary":"Compacted earlier turns: b1 b2.","data":{"droppedEntryIds":["c1","c2"],"keptRecent":1}}

@@ -10,9 +10,9 @@ The provider layer contains the small runtime pieces Prism already ships for hos
 - Provider event helpers: create normalized `ProviderEvent` values for text, thinking, tool calls, usage, done, and errors, including optional cache read/write usage fields.
 - `toolCallContent()`: create a `ToolCallContent` block.
 - `createMockProvider()` / `MockProviderOptions`: create a deterministic scripted `AIProvider` for tests and examples.
-- `prism/testing/provider-conformance`: optional network-free assertion helpers for provider adapter tests.
+- `@arnilo/prism/testing/provider-conformance`: optional network-free assertion helpers for provider adapter tests.
 
-These APIs are exported from the root `prism` package. `ProviderRegistry` and `ModelRegistry` are public runtime API types that live beside their factory implementations, not in the type-only `contracts.ts` file.
+These APIs are exported from the root `@arnilo/prism` package. `ProviderRegistry` and `ModelRegistry` are public runtime API types that live beside their factory implementations, not in the type-only `contracts.ts` file.
 
 ## When to use it
 
@@ -121,7 +121,7 @@ import {
   providerTextDelta,
   providerToolCall,
   toolCallContent,
-} from "prism";
+} from "@arnilo/prism";
 
 const provider = createMockProvider([
   providerTextDelta("Hello"),

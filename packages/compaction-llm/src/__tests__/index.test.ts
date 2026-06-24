@@ -4,7 +4,7 @@ import test from "node:test";
 import { packageName } from "../index.js";
 
 test("compaction_llm_package_entrypoint_exists", () => {
-  assert.equal(packageName, "@prism/compaction-llm");
+  assert.equal(packageName, "@arnilo/prism-compaction-llm");
 });
 
 test("compaction_llm_live_tests_are_skipped_by_default", async () => {
@@ -15,9 +15,9 @@ test("compaction_llm_live_tests_are_skipped_by_default", async () => {
 
 test("compaction_llm_package_metadata_is_minimal", async () => {
   const pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
-  assert.deepEqual(pkg.files, ["dist", "README.md"]);
-  assert.equal(pkg.peerDependencies.prism, "0.0.1");
-  assert.deepEqual(pkg.devDependencies, {});
+  assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
+  assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.1");
+  assert.deepEqual(pkg.devDependencies, { "@arnilo/prism": "file:../.." });
   assert.equal(pkg.dependencies, undefined);
   assert.equal(pkg.scripts.postinstall, undefined);
 });

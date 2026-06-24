@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createExtensionKernel } from "prism";
+import { createExtensionKernel } from "@arnilo/prism";
 import { createObservationalMemoryExtension } from "../index.js";
 
 describe("observational memory extension", () => {

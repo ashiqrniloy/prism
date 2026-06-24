@@ -1,5 +1,5 @@
 {
-  "name": "@prism/provider-openrouter",
+  "name": "@arnilo/prism-provider-openrouter",
   "version": "0.0.1",
   "description": "OpenRouter provider package for Prism.",
   "type": "module",
@@ -13,7 +13,10 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -22,15 +25,33 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "prism": "0.0.1"
+    "@arnilo/prism": "0.0.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@arnilo/prism": "file:../.."
+  },
   "engines": {
     "node": ">=20"
   },
-  "peerDependenciesMeta": {
-    "prism": {
-      "optional": true
-    }
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/provider-openrouter"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-openrouter#readme",
+  "keywords": [
+    "prism",
+    "provider",
+    "openrouter",
+    "agent",
+    "llm"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,4 +1,4 @@
-import { redactSecrets } from "prism";
+import { redactSecrets } from "@arnilo/prism";
 import type { MemoryObservation, MemoryReflection } from "./types.js";
 
 export function renderObservationalMemory(

@@ -2,7 +2,7 @@
 
 ## What it does
 
-The optional `prism/node/config` subpath reads JSON config files that a Node host explicitly names. It also computes the conventional user config path, such as `~/.config/prism/config.json`.
+The optional `@arnilo/prism/node/config` subpath reads JSON config files that a Node host explicitly names. It also computes the conventional user config path, such as `~/.config/prism/config.json`.
 
 APIs:
 
@@ -20,7 +20,7 @@ Do not use it from core root imports, browsers, package manifests, agent/session
 ## Inputs / request
 
 ```ts
-import { defaultUserConfigPath, loadConfigFiles, readConfigFile } from "prism/node/config";
+import { defaultUserConfigPath, loadConfigFiles, readConfigFile } from "@arnilo/prism/node/config";
 ```
 
 `NodeConfigFile`:
@@ -51,8 +51,8 @@ import { defaultUserConfigPath, loadConfigFiles, readConfigFile } from "prism/no
 ## Implementation example
 
 ```ts
-import { mergeConfigLayers } from "prism";
-import { defaultUserConfigPath, loadConfigFiles } from "prism/node/config";
+import { mergeConfigLayers } from "@arnilo/prism";
+import { defaultUserConfigPath, loadConfigFiles } from "@arnilo/prism/node/config";
 
 const layers = await loadConfigFiles([
   { name: "user", path: defaultUserConfigPath(), optional: true },
@@ -65,7 +65,7 @@ console.log(config);
 
 ## Extension and configuration notes
 
-- This loader is an explicit Node subpath. Importing `prism` does not read files or compute config layers.
+- This loader is an explicit Node subpath. Importing `@arnilo/prism` does not read files or compute config layers.
 - Hosts choose which paths to read and which missing files are optional.
 - The loader returns `ConfigLayer[]`; use `mergeConfigLayers()` from the root package to combine layers.
 - It does not discover packages, scan directories, watch files, import extension modules, load manifests, or start agent/session runtime behavior.

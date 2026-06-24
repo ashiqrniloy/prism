@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@prism/compaction-observational-memory` is an optional package for source-backed observational memory and fast compaction.
+`@arnilo/prism-compaction-observational-memory` is an optional package for source-backed observational memory and fast compaction.
 
 Current status: ledger/projection/render/recall utilities, explicit worker runtime, fast compaction strategy, inert extension helper, recall tool, and status/view command factories are available.
 
@@ -65,7 +65,7 @@ import {
   createRecallMemoryTool,
   recallObservationalMemory,
   renderObservationalMemory,
-} from "@prism/compaction-observational-memory";
+} from "@arnilo/prism-compaction-observational-memory";
 
 const entries = await session.entries();
 const projection = buildObservationalMemoryProjection(entries);

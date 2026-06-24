@@ -1,9 +1,9 @@
-# @prism/provider-kimi
+# @arnilo/prism-provider-kimi
 
 Kimi provider package for Prism.
 
 ```ts
-import { createKimiProviderPackage } from "@prism/provider-kimi";
+import { createKimiProviderPackage } from "@arnilo/prism-provider-kimi";
 
 api.registerProviderPackage(createKimiProviderPackage({ kimiApiKey: "fake-kimi-key" }));
 ```

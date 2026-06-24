@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, ProviderEvent, SessionEntry } from "prism";
-import { providerDone, providerToolCall, toolCallContent } from "prism";
+import type { AIProvider, ProviderEvent, SessionEntry } from "@arnilo/prism";
+import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { runDropper, runObserver, runReflector, type MemoryObservation } from "../index.js";
 
 const model = { provider: "mock", model: "memory" };

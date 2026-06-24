@@ -1,4 +1,4 @@
-import type { CompactionContext, CompactionEntryData, Message, SessionEntry } from "prism";
+import type { CompactionContext, CompactionEntryData, Message, SessionEntry } from "@arnilo/prism";
 import { collectFileOperations, type FileOperationDetails } from "./file-ops.js";
 import { estimateEntryTokens } from "./tokens.js";
 

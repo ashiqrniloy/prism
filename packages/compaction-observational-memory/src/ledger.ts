@@ -1,4 +1,4 @@
-import type { SessionEntry } from "prism";
+import type { SessionEntry } from "@arnilo/prism";
 import {
   foldedMemoryFromEntry,
   isMemoryObservation,

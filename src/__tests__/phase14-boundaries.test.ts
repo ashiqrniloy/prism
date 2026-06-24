@@ -28,7 +28,7 @@ describe("phase 14 observational memory boundaries", () => {
       "resolveObservationalMemorySettings",
       "createMemoryId",
     ]) assert.equal(typeof mod[name], "function", `missing ${name}`);
-    assert.equal(mod.packageName, "@prism/compaction-observational-memory");
+    assert.equal(mod.packageName, "@arnilo/prism-compaction-observational-memory");
     assert.equal(mod.OBSERVATIONS_RECORDED, "om.observations.recorded");
     assert.equal(mod.REFLECTIONS_RECORDED, "om.reflections.recorded");
     assert.equal(mod.OBSERVATIONS_DROPPED, "om.observations.dropped");
@@ -64,10 +64,10 @@ describe("phase 14 observational memory boundaries", () => {
   it("phase14_package_exports_files_are_minimal", () => {
     const pkg = JSON.parse(readFileSync("packages/compaction-observational-memory/package.json", "utf8"));
     assert.deepEqual(pkg.exports["."], { types: "./dist/index.d.ts", default: "./dist/index.js" });
-    assert.deepEqual(pkg.files, ["dist", "README.md"]);
+    assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
-    assert.deepEqual(pkg.devDependencies ?? {}, {});
-    assert.equal(pkg.peerDependencies.prism, "0.0.1");
+    assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.1");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 
@@ -80,7 +80,7 @@ describe("phase 14 observational memory boundaries", () => {
   it("phase14_core_does_not_default_to_observational_memory", () => {
     const text = files("src", (path) => path.endsWith(".ts") && !path.includes("src/__tests__"))
       .map((path) => readFileSync(path, "utf8")).join("\n");
-    assert.equal(text.includes("@prism/compaction-observational-memory"), false);
+    assert.equal(text.includes("@arnilo/prism-compaction-observational-memory"), false);
     assert.equal(text.includes("createObservationalMemoryCompactionStrategy"), false);
     assert.equal(text.includes("observational-memory"), false);
   });

@@ -1,9 +1,9 @@
-# @prism/provider-openai
+# @arnilo/prism-provider-openai
 
 OpenAI provider package for Prism.
 
 ```ts
-import { createOpenAIProviderPackage } from "@prism/provider-openai";
+import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
 
 api.registerProviderPackage(createOpenAIProviderPackage({ apiKey: "fake-openai-key" }));
 ```

@@ -4,7 +4,7 @@
 
 Provider conformance helpers are dependency-free assertions for provider package tests. They exercise normalized Prism `AIProvider` streams without live network or credentials.
 
-Exported from `prism/testing/provider-conformance`:
+Exported from `@arnilo/prism/testing/provider-conformance`:
 
 - `collectProviderEvents(provider, request)`
 - `assertProviderStreamConforms(options)`
@@ -23,7 +23,7 @@ Do not use them as a live integration runner, provider simulator, retry framewor
 ## Inputs / request
 
 ```ts
-import { assertProviderStreamConforms } from "prism/testing/provider-conformance";
+import { assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
 
 await assertProviderStreamConforms({
   provider,
@@ -59,7 +59,7 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`,
 Content-preservation example:
 
 ```ts
-import { assertSerializedRequestCoversContent } from "prism/testing/provider-conformance";
+import { assertSerializedRequestCoversContent } from "@arnilo/prism/testing/provider-conformance";
 
 const request = {
   model: { provider: "demo", model: "demo-model" },
@@ -80,8 +80,8 @@ assertSerializedRequestCoversContent(request, body, { unsupported: ["image"] });
 ## Implementation example
 
 ```ts
-import { createMockProvider, providerDone, providerTextDelta } from "prism";
-import { assertProviderStreamConforms } from "prism/testing/provider-conformance";
+import { createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
 
 await assertProviderStreamConforms({
   provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),

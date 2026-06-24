@@ -1,5 +1,5 @@
-import type { AIProvider, JsonObject, Message, ModelConfig, ProviderRequestOptions, ToolCallContent, ToolDefinition, ToolResult } from "prism";
-import { mergeProviderRequestOptions, redactSecrets } from "prism";
+import type { AIProvider, JsonObject, Message, ModelConfig, ProviderRequestOptions, ToolCallContent, ToolDefinition, ToolResult } from "@arnilo/prism";
+import { mergeProviderRequestOptions, redactSecrets } from "@arnilo/prism";
 
 export interface MemoryWorkerLoopOptions {
   readonly provider: AIProvider;

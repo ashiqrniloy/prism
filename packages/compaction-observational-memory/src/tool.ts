@@ -1,4 +1,4 @@
-import { redactSecrets, type JsonObject, type SessionEntry, type ToolDefinition } from "prism";
+import { redactSecrets, type JsonObject, type SessionEntry, type ToolDefinition } from "@arnilo/prism";
 import { isMemoryId } from "./ids.js";
 import { recallObservationalMemory } from "./recall.js";
 

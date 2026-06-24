@@ -1,5 +1,5 @@
-import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition } from "prism";
-import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "prism";
+import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
 import { openRouterSessionId, openRouterUsage, withOpenRouterCache, type OpenRouterUsage } from "./cache.js";
 import { readSseData } from "./sse.js";
 

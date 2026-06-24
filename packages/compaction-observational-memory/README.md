@@ -1,4 +1,4 @@
-# @prism/compaction-observational-memory
+# @arnilo/prism-compaction-observational-memory
 
 Optional observational-memory compaction package for Prism.
 
@@ -10,7 +10,7 @@ import {
   createObservationalMemoryCompactionStrategy,
   createObservationalMemoryRuntime,
   createRecallMemoryTool,
-} from "@prism/compaction-observational-memory";
+} from "@arnilo/prism-compaction-observational-memory";
 
 const memory = createObservationalMemoryRuntime({
   session,

@@ -1,4 +1,4 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "prism";
+import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
 import { openCodeGoModels } from "./models.js";
 import { createOpenCodeGoProvider, type OpenCodeGoProviderOptions } from "./provider.js";
 
@@ -11,7 +11,7 @@ export interface OpenCodeGoProviderPackageOptions {
 
 export function createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions = {}): ProviderPackage {
   return defineProviderPackage({
-    name: "@prism/provider-opencode-go",
+    name: "@arnilo/prism-provider-opencode-go",
     description: "OpenCode Go provider package for Prism.",
     docs: { links: ["docs/providers/opencode-go.md"] },
     setup(api) {

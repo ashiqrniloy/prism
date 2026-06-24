@@ -51,7 +51,7 @@ Registering the same key replaces the contribution deterministically. Registries
 ## Implementation example
 
 ```ts
-import { createAgent, createContributionRegistries, type ToolDefinition } from "prism";
+import { createAgent, createContributionRegistries, type ToolDefinition } from "@arnilo/prism";
 
 const tool: ToolDefinition = {
   name: "echo",

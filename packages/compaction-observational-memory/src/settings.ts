@@ -1,4 +1,4 @@
-import type { ModelConfig, SettingsProvider } from "prism";
+import type { ModelConfig, SettingsProvider } from "@arnilo/prism";
 
 export interface ObservationalMemorySettings {
   readonly observeAfterTokens: number;

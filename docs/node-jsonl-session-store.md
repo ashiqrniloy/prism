@@ -2,7 +2,7 @@
 
 ## What it does
 
-The optional `prism/node/session-store-jsonl` subpath stores `SessionEntry` records in a caller-named JSONL file: one JSON object per line.
+The optional `@arnilo/prism/node/session-store-jsonl` subpath stores `SessionEntry` records in a caller-named JSONL file: one JSON object per line.
 
 APIs:
 
@@ -18,7 +18,7 @@ Do not use it for browser code, automatic discovery, shared multi-process lockin
 ## Inputs / request
 
 ```ts
-import { createJsonlSessionStore } from "prism/node/session-store-jsonl";
+import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl";
 ```
 
 `pathOrOptions` can be a string path or:
@@ -51,7 +51,7 @@ Missing files read as empty stores. Invalid JSON, missing required fields, or wr
 ## Implementation example
 
 ```ts
-import { createJsonlSessionStore, readJsonlSessionEntries } from "prism/node/session-store-jsonl";
+import { createJsonlSessionStore, readJsonlSessionEntries } from "@arnilo/prism/node/session-store-jsonl";
 
 const store = createJsonlSessionStore("./sessions.jsonl");
 const { entries, errors } = await readJsonlSessionEntries("./sessions.jsonl");
@@ -62,7 +62,7 @@ Use `createMemorySessionStore()` for tests or throwaway sessions; use the JSONL 
 
 ## Extension and configuration notes
 
-- This adapter is an explicit Node subpath. Importing `prism` does not touch the filesystem.
+- This adapter is an explicit Node subpath. Importing `@arnilo/prism` does not touch the filesystem.
 - Hosts choose the file path. Prism does not discover, watch, rotate, compact, or migrate files.
 - The adapter stores only `SessionEntry` data passed to `append()`.
 

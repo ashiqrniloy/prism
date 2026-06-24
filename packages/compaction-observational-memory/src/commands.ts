@@ -1,4 +1,4 @@
-import type { CommandDefinition, JsonObject, SessionEntry } from "prism";
+import type { CommandDefinition, JsonObject, SessionEntry } from "@arnilo/prism";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { buildObservationalMemoryProjection } from "./projection.js";
 import { renderObservationalMemory } from "./render.js";

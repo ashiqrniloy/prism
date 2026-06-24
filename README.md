@@ -1,76 +1,139 @@
 # prism
 
-Agent harness for AI providers, agents, sessions, and tools. A TypeScript/Node.js
-package that host apps use to build AI-powered features — not an app itself.
+`prism` is a TypeScript/Node.js agent harness. Host apps and extension packages
+bring their tools, providers, credentials, storage, and UI; Prism supplies the
+common contracts, registries, agent/session runtime, replaceable input/prompt
+and compaction strategies, CLI/RPC adapters, and first-party provider/compaction
+packages. Prism defines contracts, not apps.
 
 ## Current scope
 
-- ESM TypeScript package with strict mode.
-- CLI entry point (`prism` bin, placeholder).
-- Public barrel (`prism` package import).
-- Public TypeScript contracts for host-owned agents, sessions, providers, tools, context, skills, extensions, stores, resources, settings, and credentials.
-- Provider/model registries, provider event helpers, credential redaction helpers, and mock provider.
-- Optional OpenAI-compatible provider subpath using native `fetch`.
-- Compile-only host examples for provider/context/skill/tool wiring.
-- `node:test`-based test (no test framework dependency).
-- TypeScript build-only toolchain (no bundler).
+- **Agent/session runtime**: `createAgent`/`createAgentSession`, run prompts,
+  dispatch host tools, subscribe to normalized `AgentEvent` streams, abort runs,
+  compact, and navigate branches.
+- **Providers and models**: provider/model registries, provider event helpers,
+  credential redaction helpers, mock provider, and an optional
+  OpenAI-compatible provider subpath.
+- **First-party packages**: `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-opencode-go`,
+  `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-zai`, `@arnilo/prism-provider-kimi`,
+  `@arnilo/prism-compaction-llm`, and `@arnilo/prism-compaction-observational-memory`.
+- **Tools, context, skills**: host-owned tool registry with allow/deny filtering
+  and dispatch, context providers, and a skill registry with progressive
+  disclosure.
+- **Input/prompt/context**: default input and prompt builders, system-prompt
+  layering, and provider-input assembly — every stage replaceable.
+- **Sessions and memory**: in-memory and JSONL session stores, branching/fork/
+  clone, default and LLM compaction strategies, retry policy, and
+  observational-memory recall/status/view.
+- **Extensions and manifests**: extension kernel + event bus, contribution
+  registries, middleware hooks, and data-only package manifests.
+- **Config, settings, security**: layered config merge, settings providers,
+  credential resolvers, trust/permission policies, and secret redaction.
+- **CLI/RPC**: `prism --mode print|json|rpc` over the same `AgentSession` API.
 
-**prism defines contracts, not apps.** No built-in tools, no provider SDKs,
-no default credentials, no app-specific integrations. Host apps own their
-tools, provider implementations, credentials, permissions, storage, and UI layer.
+## Install
 
-## Public contracts
-
-```ts
-import type { AgentConfig, AIProvider, ContextProvider, Skill, ToolDefinition } from "prism";
+```bash
+npm install @arnilo/prism
 ```
 
-The current runtime covers provider/model lookup and provider streaming helpers only.
-Agent/session loops, tool dispatch, persistence adapters, and CLI/RPC runtime arrive in later phases.
+First-party provider/compaction packages are separate installs and require
+`@arnilo/prism` as a non-optional peer. Install a single package, or use an
+umbrella to grab a whole family in one line:
 
-## Provider layer
-
-```ts
-import { createModelRegistry, createMockProvider, createProviderRegistry } from "prism";
-
-const provider = createMockProvider([{ type: "done" }]);
-const providers = createProviderRegistry([provider]);
-const models = createModelRegistry([{ provider: "mock", model: "demo" }]);
-
-providers.resolve("mock");
-models.resolve("mock", "demo");
+```bash
+npm install @arnilo/prism @arnilo/prism-provider-openai   # core + one provider
+npm install @arnilo/prism @arnilo/prism-providers          # core + all providers
+npm install @arnilo/prism-all                               # everything
 ```
 
-Optional OpenAI-compatible adapter:
+See [docs/release-and-install.md](docs/release-and-install.md) for install
+specifiers, tarball contents, and the offline test budget.
+
+## Quick start
 
 ```ts
-import { createOpenAICompatibleProvider } from "prism/providers/openai-compatible";
+import { createAgent, createAgentSession, createMockProvider } from "@arnilo/prism";
 
-const provider = createOpenAICompatibleProvider({
-  baseUrl: "https://api.openai.com/v1",
-  apiKey: () => process.env.OPENAI_API_KEY,
+// Host owns the provider. createMockProvider is for tests/demos only.
+const agent = createAgent({
+  model: { provider: "mock", model: "demo" },
+  provider: createMockProvider([{ type: "text", text: "Hello" }, { type: "done" }]),
 });
+
+const session = createAgentSession({ agent });
+
+(async () => {
+  for await (const event of session.subscribe()) {
+    // AgentEvent: agent_started, message_delta, turn_finished, ...
+  }
+  await session.run("Hi");
+})();
 ```
 
-Hosts own credentials. Do not put secrets in prompts, messages, events, stores, or logs.
+Register a first-party provider package through the extension kernel:
+
+```ts
+import { createExtensionKernel, createEnvCredentialResolver } from "@arnilo/prism";
+import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+
+const kernel = createExtensionKernel();
+await kernel.load([
+  createOpenAIProviderPackage({
+    apiKey: createEnvCredentialResolver({ OPENAI_API_KEY: "fake" }, { openai: "OPENAI_API_KEY" }),
+  }),
+]);
+```
+
+Hosts own credentials. Do not put secrets in prompts, messages, events, stores,
+or logs. Prism never reads `process.env` on its own; credential resolvers are
+caller-supplied.
+
+## CLI
+
+```bash
+prism --provider mock --model demo -p "Hi"          # print mode (default)
+prism --provider mock --mode json -p "Hi"            # one event envelope per line
+printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
+  | prism --provider mock --mode rpc                 # LF-delimited JSONL RPC
+```
 
 ## Docs
 
-See [`docs/index.md`](docs/index.md) for detailed API docs.
+- [docs/index.md](docs/index.md) — navigational map of every public surface.
+- The `examples/` directory holds compile-checked typed examples and runnable
+  mock demos (provider registration, auth, tools, stores/branching, compaction,
+  observational-memory recall, CLI, RPC).
+
+## Packages
+
+| package | purpose |
+|---------|---------|
+| `@arnilo/prism` | core contracts, runtime, registries, CLI/RPC |
+| `@arnilo/prism-provider-openai` | OpenAI Responses + Codex OAuth provider |
+| `@arnilo/prism-provider-opencode-go` | OpenCode Go provider |
+| `@arnilo/prism-provider-openrouter` | OpenRouter provider with per-model cache control |
+| `@arnilo/prism-provider-zai` | ZAI GLM provider |
+| `@arnilo/prism-provider-kimi` | Kimi For Coding provider |
+| `@arnilo/prism-compaction-llm` | provider-backed compaction strategy |
+| `@arnilo/prism-compaction-observational-memory` | source-backed memory + recall tool |
+| `@arnilo/prism-providers` | umbrella: all 5 provider adapters |
+| `@arnilo/prism-compaction` | umbrella: both compaction strategies |
+| `@arnilo/prism-all` | umbrella: core + providers + compaction |
 
 ## Scripts
 
 | command | action |
 |---------|--------|
-| `npm run build` | Compile TypeScript to `dist/` |
+| `npm run build` | Compile TypeScript to `dist/` (core + workspaces) |
 | `npm run typecheck` | Type-check without emitting |
-| `npm test` | Build + run tests |
-| `prism --help` | CLI placeholder |
+| `npm test` | Build + run network-free tests |
+| `prism --help` | CLI help |
 
 ## Non-goals (v1)
 
-- Built-in shell/filesystem/browser tools
-- MCP bridge
-- TUI or interactive terminal
-- Workflow/graph orchestration
-- First-party provider adapters beyond OpenAI-compatible
+- Built-in shell/filesystem/browser tools — ship as separate packages only.
+- MCP bridge — external extension package after extension APIs settle.
+- TUI or interactive terminal — CLI/RPC only in core.
+- Workflow/graph orchestration — bounded agent loops first.
+- Encrypted/keychain credential storage — host-owned until a real app needs it.

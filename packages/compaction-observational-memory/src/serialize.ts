@@ -1,5 +1,5 @@
-import type { SessionEntry } from "prism";
-import { redactSecrets } from "prism";
+import type { SessionEntry } from "@arnilo/prism";
+import { redactSecrets } from "@arnilo/prism";
 
 export function serializeSessionEntry(entry: SessionEntry, secrets: readonly (string | undefined)[] = []): string {
   const text = entry.message ? JSON.stringify(entry.message) : entry.summary ?? JSON.stringify(entry.data ?? entry.event ?? entry.metadata ?? {});

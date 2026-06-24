@@ -61,7 +61,7 @@ composeSystemPrompt([
 ## Implementation example
 
 ```ts
-import { composeSystemPrompt, createAgent } from "prism";
+import { composeSystemPrompt, createAgent } from "@arnilo/prism";
 
 const prompt = composeSystemPrompt([
   { id: "app", source: "app", mode: "replace", text: "You are concise." },
@@ -87,7 +87,7 @@ Extensions and provider packages can register `SystemPromptContribution` values,
 Manifests can declare `systemPromptContribution` kinds as data-only references:
 
 ```ts
-import { definePrismManifest } from "prism";
+import { definePrismManifest } from "@arnilo/prism";
 
 export default definePrismManifest({
   name: "demo-prompts",

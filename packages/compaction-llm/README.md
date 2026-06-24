@@ -1,9 +1,9 @@
-# @prism/compaction-llm
+# @arnilo/prism-compaction-llm
 
 Optional LLM-backed compaction strategy package for Prism. It is inert until a host imports it and passes a strategy to `session.compact()` or `AgentConfig.compaction`.
 
 ```ts
-import { createLlmCompactionStrategy } from "@prism/compaction-llm";
+import { createLlmCompactionStrategy } from "@arnilo/prism-compaction-llm";
 
 const strategy = createLlmCompactionStrategy({
   provider: summaryProvider,
@@ -20,8 +20,8 @@ await session.compact({ strategy, secrets: [apiKey] });
 Extension registration is optional and inert until the host selects the contribution:
 
 ```ts
-import { createExtensionKernel } from "prism";
-import { createLlmCompactionExtension } from "@prism/compaction-llm";
+import { createExtensionKernel } from "@arnilo/prism";
+import { createLlmCompactionExtension } from "@arnilo/prism-compaction-llm";
 
 const kernel = createExtensionKernel();
 await kernel.load([createLlmCompactionExtension({ provider: summaryProvider, model: summaryModel })]);

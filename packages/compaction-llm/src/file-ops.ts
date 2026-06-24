@@ -1,4 +1,4 @@
-import type { Message } from "prism";
+import type { Message } from "@arnilo/prism";
 
 export interface FileOperationDetails {
   readonly readFiles: readonly string[];

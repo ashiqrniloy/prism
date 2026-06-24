@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProvider } from "prism";
+import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProvider } from "@arnilo/prism";
 
 export interface OpenAICodexOAuthOptions {
   readonly clientId?: string;

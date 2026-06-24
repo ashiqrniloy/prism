@@ -11,4 +11,4 @@ export { createLlmCompactionStrategy } from "./strategy.js";
 export type { LlmCompactionStrategyOptions } from "./strategy.js";
 export { estimateEntryTokens, estimateMessageTokens, estimateTextTokens } from "./tokens.js";
 
-export const packageName = "@prism/compaction-llm";
+export const packageName = "@arnilo/prism-compaction-llm";

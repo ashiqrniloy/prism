@@ -1,0 +1,13 @@
+{"id":"x1","sessionId":"s1","timestamp":"2026-01-01T00:00:01Z","kind":"message","message":{"role":"user","content":[{"type":"text","text":"valid preceding entry, included for context"}]}}
+this line is not valid JSON at all
+{"id":"x2","sessionId":"s1","timestamp":"2026-01-01T00:00:02Z","kind":"message"}
+{"id":"x3","sessionId":"s1","timestamp":"2026-01-01T00:00:03Z","kind":"message","message":{"role":"user"},"extra":"content must be an array"}
+{"id":"x4","sessionId":"s1","timestamp":"2026-01-01T00:00:04Z","kind":"summary","summary":12345}
+{"id":"x5","sessionId":"s1","timestamp":"2026-01-01T00:00:05Z","kind":"model_change","model":{"provider":"mock"}}
+{"id":"x6","sessionId":"s1","timestamp":"2026-01-01T00:00:06Z","kind":"custom","data":"data must be an object not a string"}
+{"id":"x7","sessionId":"s1","timestamp":"2026-01-01T00:00:07Z","kind":"compaction","summary":null,"data":{"a":1}}
+{"id":"x8","sessionId":"s1","timestamp":"2026-01-01T00:00:08Z","kind":"compaction","summary":"ok","data":"not an object"}
+{"id":"x9","sessionId":"s1","timestamp":"2026-01-01T00:00:09Z","kind":"label","label":42}
+{"id":"x10","sessionId":"s1","timestamp":"2026-01-01T00:00:10Z","kind":"message","parentId":99,"message":{"role":"user","content":[]}}
+{"id":"x11","timestamp":"2026-01-01T00:00:11Z","kind":"message","message":{"role":"user","content":[]}}
+{"sessionId":"s1","kind":"message","timestamp":"2026-01-01T00:00:12Z","message":{"role":"user","content":[]}}

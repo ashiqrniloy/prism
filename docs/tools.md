@@ -85,7 +85,7 @@ Dispatch can emit these `AgentEvent` types:
 ## Implementation example
 
 ```ts
-import { createToolRegistry, dispatchToolCall, filterTools, type ToolDefinition } from "prism";
+import { createToolRegistry, dispatchToolCall, filterTools, type ToolDefinition } from "@arnilo/prism";
 
 const echo: ToolDefinition = {
   name: "echo",
@@ -114,7 +114,7 @@ console.log(result.value);
 Extensions can contribute tool definitions through `ExtensionAPI.registerTool()`, which stores them in `ContributionRegistries.tools`. Contributions are inert until the host explicitly selects/registers them in a tool registry and calls dispatch.
 
 ```ts
-import { createContributionRegistries, createToolRegistry } from "prism";
+import { createContributionRegistries, createToolRegistry } from "@arnilo/prism";
 
 const contributions = createContributionRegistries();
 contributions.tools.register("echo", echo);

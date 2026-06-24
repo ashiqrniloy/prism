@@ -60,7 +60,7 @@ For `kind: "compaction"`, `data` may contain `throughEntryId`, `keepEntryIds`, `
 ## Implementation example
 
 ```ts
-import { createMemorySessionStore, createSessionEntry, rebuildSessionContext } from "prism";
+import { createMemorySessionStore, createSessionEntry, rebuildSessionContext } from "@arnilo/prism";
 
 const first = createSessionEntry({
   id: "entry_1",
@@ -92,7 +92,7 @@ Stores and extensions can use these data helpers directly. Store adapters only n
 
 `AgentSession` uses `AgentSessionConfig.store` before `AgentConfig.store`, otherwise a private memory store. It appends user, assistant, tool-result, and model-change entries, resumes from `leafId`, rebuilds provider history from the selected branch, checks out old leaves, forks by selecting a leaf in the same session, and clones the selected branch to a new session id.
 
-Node hosts that need simple file durability can import `createJsonlSessionStore()` from the explicit `prism/node/session-store-jsonl` subpath.
+Node hosts that need simple file durability can import `createJsonlSessionStore()` from the explicit `@arnilo/prism/node/session-store-jsonl` subpath.
 
 Use `createDefaultCompactionStrategy()` to create compaction entries that `rebuildSessionContext()` understands. Compaction adds summaries; it does not delete or rewrite raw store entries.
 

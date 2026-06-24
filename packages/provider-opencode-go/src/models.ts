@@ -1,4 +1,4 @@
-import type { ModelConfig } from "prism";
+import type { ModelConfig } from "@arnilo/prism";
 
 export const openCodeGoModels = [
   {

@@ -1,4 +1,4 @@
-import type { AIProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "prism";
+import type { AIProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
 import { estimateTextTokens } from "../tokens.js";
 import { isMemoryReflection, type MemoryObservation, type MemoryReflection } from "../types.js";

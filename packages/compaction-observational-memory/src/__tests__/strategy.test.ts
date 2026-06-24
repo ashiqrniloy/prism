@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createAgent, createMemorySessionStore, createMockProvider, createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "prism";
+import { createAgent, createMemorySessionStore, createMockProvider, createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "@arnilo/prism";
 import { createObservationalMemoryCompactionStrategy, FOLDED_MEMORY, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED, type MemoryObservation, type MemoryReflection } from "../index.js";
 
 const model = { provider: "mock", model: "demo" };

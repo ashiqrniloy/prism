@@ -1,9 +1,9 @@
-# @prism/provider-zai
+# @arnilo/prism-provider-zai
 
 Z.AI GLM provider package for Prism.
 
 ```ts
-import { createZaiProviderPackage } from "@prism/provider-zai";
+import { createZaiProviderPackage } from "@arnilo/prism-provider-zai";
 
 api.registerProviderPackage(createZaiProviderPackage({ apiKey: "fake-zai-key" }));
 ```

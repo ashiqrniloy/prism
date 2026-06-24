@@ -13,7 +13,7 @@ Do not use these helpers as an agent loop, package discovery mechanism, context 
 ## Inputs / request
 
 ```ts
-import { resolveContextProviders } from "prism";
+import { resolveContextProviders } from "@arnilo/prism";
 
 const context = await resolveContextProviders({
   providers: [projectContext],
@@ -30,7 +30,7 @@ const context = await resolveContextProviders({
 Skill selection:
 
 ```ts
-import { createSkillRegistry, resolveActiveSkills } from "prism";
+import { createSkillRegistry, resolveActiveSkills } from "@arnilo/prism";
 
 const registry = createSkillRegistry([{ name: "brief", instructions: "Answer briefly.", toolNames: ["echo"] }]);
 const active = resolveActiveSkills({
@@ -68,7 +68,7 @@ const active = resolveActiveSkills({
 ## Implementation example
 
 ```ts
-import { assembleProviderInput, createDefaultPromptBuilder, resolveActiveSkills, resolveContextProviders } from "prism";
+import { assembleProviderInput, createDefaultPromptBuilder, resolveActiveSkills, resolveContextProviders } from "@arnilo/prism";
 
 const blocks = await resolveContextProviders({ providers, messages });
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenCodeGoProvider, createOpenCodeGoProviderPackage } from "../index.js";
 
 const baseRequest: ProviderRequest = {
@@ -11,7 +11,7 @@ const baseRequest: ProviderRequest = {
   options: { sessionId: "session with spaces" },
 };
 
-describe("@prism/provider-opencode-go", () => {
+describe("@arnilo/prism-provider-opencode-go", () => {
   it("opencode_go_registers_pi_model_metadata", async () => {
     const registered: unknown[] = [];
     await createOpenCodeGoProviderPackage({ apiKey: "fake-opencode-key", fetch: mockFetch(sse([])) }).setup({

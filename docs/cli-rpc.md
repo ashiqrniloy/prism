@@ -103,7 +103,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' | prism --provi
 Programmatic hosts should use the public runtime directly:
 
 ```ts
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "prism";
+import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 
 const agent = createAgent({
   model: { provider: "mock", model: "demo" },

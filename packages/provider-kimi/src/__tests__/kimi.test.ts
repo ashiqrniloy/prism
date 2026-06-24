@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createKimiCodingProvider, createKimiProviderPackage, kimiCodingModels, moonshotKimiModels } from "../index.js";
 
 const request: ProviderRequest = {
@@ -14,7 +14,7 @@ const request: ProviderRequest = {
   tools: [{ name: "lookup", parameters: { type: "object" }, execute: () => ({ toolCallId: "tool_1", name: "lookup", content: [] }) }],
 };
 
-describe("@prism/provider-kimi", () => {
+describe("@arnilo/prism-provider-kimi", () => {
   it("kimi_registers_kimi_coding_models_by_default", async () => {
     const registered: unknown[] = [];
     await createKimiProviderPackage({ kimiApiKey: "fake-kimi-key", fetch: mockFetch(sse([])) }).setup({

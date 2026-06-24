@@ -55,7 +55,7 @@ Inputs:
 ## Implementation example
 
 ```ts
-import { loadManifestResource, loadTextResource, type ResourceLoader } from "prism";
+import { loadManifestResource, loadTextResource, type ResourceLoader } from "@arnilo/prism";
 
 const loader: ResourceLoader = {
   async load(uri, context) {
@@ -83,7 +83,7 @@ console.log(manifest.name, prompt);
 ## Security and performance notes
 
 - The caller-provided loader owns URI trust, permissions, filesystem/network access, and credential boundaries.
-- Node hosts can use `prism/node/trust` (`createPathTrustPolicy`) to guard filesystem paths. It resolves symlinks on the trusted root and target and rejects paths whose realpath escapes the root; missing roots or realpath errors fail closed.
+- Node hosts can use `@arnilo/prism/node/trust` (`createPathTrustPolicy`) to guard filesystem paths. It resolves symlinks on the trusted root and target and rejects paths whose realpath escapes the root; missing roots or realpath errors fail closed.
 - Helpers call `loader.load()` once per helper call and do not cache, scan, list, watch, poll, or discover packages.
 - JSON parsing fails closed for invalid JSON or non-object JSON.
 - Do not put resolved credential values, tokens, headers, or executable code in loaded config, manifests, prompts, skills, or metadata.

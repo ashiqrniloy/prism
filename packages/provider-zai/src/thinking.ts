@@ -1,4 +1,4 @@
-import type { JsonObject, ProviderRequest } from "prism";
+import type { JsonObject, ProviderRequest } from "@arnilo/prism";
 
 export function zaiThinking(request: ProviderRequest): JsonObject | undefined {
   const value = request.options?.compat?.thinking ?? request.model.compat?.thinking;

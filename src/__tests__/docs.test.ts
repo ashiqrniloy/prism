@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join, normalize } from "node:path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -11,6 +12,7 @@ const apiPages = [
   "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
   "docs/provider-conformance.md",
+  "docs/provider-packages.md",
   "docs/input-and-prompt-assembly.md",
   "docs/system-prompts.md",
   "docs/context-and-skills.md",
@@ -25,8 +27,31 @@ const apiPages = [
   "docs/credentials-and-redaction.md",
   "docs/settings-auth-trust-security.md",
   "docs/cli-rpc.md",
-  "docs/providers/openai-compatible.md",
+  "docs/release-and-install.md",
 ];
+
+const providerPackagePages: ReadonlyArray<[string, string]> = [
+  ["docs/providers/openai.md", "packages/provider-openai/src/index.ts"],
+  ["docs/providers/opencode-go.md", "packages/provider-opencode-go/src/index.ts"],
+  ["docs/providers/openrouter.md", "packages/provider-openrouter/src/index.ts"],
+  ["docs/providers/zai.md", "packages/provider-zai/src/index.ts"],
+  ["docs/providers/kimi.md", "packages/provider-kimi/src/index.ts"],
+];
+
+function exportedIdentifiers(packageIndex: string): string[] {
+  const text = readFileSync(packageIndex, "utf8");
+  const ids = new Set<string>();
+  for (const m of text.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}/g)) {
+    for (const part of m[1].split(",")) {
+      const id = part.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0].trim();
+      if (id) ids.add(id);
+    }
+  }
+  for (const m of text.matchAll(/export\s+(?:function|const|class|interface|type)\s+([A-Za-z0-9_]+)/g)) {
+    ids.add(m[1]);
+  }
+  return [...ids];
+}
 const requiredHeadings = [
   "## What it does",
   "## When to use it",
@@ -58,10 +83,66 @@ describe("docs", () => {
     }
   });
 
+  // ponytail: guard against plan-022 regression — the buggy pattern
+  // `const { api } = createExtensionKernel(); api.registerProviderPackage(...)`
+  // throws on copy-paste because createExtensionKernel() returns
+  // { registries, middleware, events, load } with no `api` property.
+  it("no broken createExtensionKernel() destructure with api.registerProviderPackage", () => {
+    const files = ["README.md", ...markdownFiles("docs")];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      assert.ok(
+        !text.includes("const { api } = createExtensionKernel()"),
+        `${file} still has the broken 'const { api } = createExtensionKernel()' snippet`,
+      );
+    }
+  });
+
+  // ponytail: plan 023 Task 4 guard — no bare `prism` import/install specifiers
+  // remain in shipped docs; core is `@arnilo/prism`. The `prism` CLI bin name and
+  // `~/.prism` paths are allowed (brand/path, not specifiers).
+  it("no bare 'prism' import/install specifiers in README or docs", () => {
+    const files = ["README.md", ...markdownFiles("docs")];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      const offenders = [
+        ...text.matchAll(/from "prism"(?!\b)/g),
+        ...text.matchAll(/from "prism\//g),
+        ...text.matchAll(/npm install prism\b(?![-.])/g),
+        ...text.matchAll(/"prism":(?!\"\/cli\.js")/g),
+      ];
+      assert.equal(offenders.length, 0, `${file} has bare 'prism' specifier(s)`);
+    }
+  });
+
+  // ponytail: plan 023 Task 7 guard — no old-scope `@prism/` specifiers remain
+  // after the re-scope to `@arnilo/`. Double regression guard against re-scoping drift.
+  it("no old-scope '@prism/' specifiers in README or docs", () => {
+    const files = ["README.md", ...markdownFiles("docs")];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      const offenders = [...text.matchAll(/@prism\//g)];
+      assert.equal(offenders.length, 0, `${file} has old-scope '@prism/' specifier(s)`);
+    }
+  });
+
   it("api pages include required headings", () => {
-    for (const page of apiPages) {
+    const pages = [...apiPages, ...markdownFiles("docs/providers")];
+    for (const page of pages) {
       const text = readFileSync(page, "utf8");
       for (const heading of requiredHeadings) assert.ok(text.includes(heading), `${page} missing ${heading}`);
+    }
+  });
+
+  it("provider docs document a real export from their package", () => {
+    for (const [page, packageIndex] of providerPackagePages) {
+      const text = readFileSync(page, "utf8");
+      const ids = exportedIdentifiers(packageIndex);
+      assert.ok(ids.length > 0, `${packageIndex} has no exports`);
+      assert.ok(
+        ids.some((id) => text.includes(id)),
+        `${page} does not document any export from ${packageIndex}`,
+      );
     }
   });
 
@@ -183,12 +264,12 @@ describe("docs", () => {
     const configDocs = readFileSync("docs/node-filesystem-config.md", "utf8");
     const jsonlDocs = readFileSync("docs/node-jsonl-session-store.md", "utf8");
 
-    assert.ok(configDocs.includes("prism/node/config"));
+    assert.ok(configDocs.includes("@arnilo/prism/node/config"));
     assert.deepEqual(packageJson.exports["./node/config"], {
       types: "./dist/node/config.d.ts",
       default: "./dist/node/config.js",
     });
-    assert.ok(jsonlDocs.includes("prism/node/session-store-jsonl"));
+    assert.ok(jsonlDocs.includes("@arnilo/prism/node/session-store-jsonl"));
     assert.deepEqual(packageJson.exports["./node/session-store-jsonl"], {
       types: "./dist/node/session-store-jsonl.d.ts",
       default: "./dist/node/session-store-jsonl.js",
@@ -218,6 +299,31 @@ describe("docs", () => {
     assert.ok(index.includes("(cli-rpc.md)"));
   });
 
+  it("release_and_install_page_is_linked_from_index", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const docs = readFileSync("docs/release-and-install.md", "utf8");
+    assert.ok(index.includes("(release-and-install.md)"), "docs/index.md does not link release-and-install.md");
+    for (const phrase of ["required `@arnilo/prism` peer", "map-retention knob", "offline test budget", "sideEffects", "peerDependencies"]) {
+      assert.ok(docs.includes(phrase), `docs/release-and-install.md missing ${phrase}`);
+    }
+  });
+
+  it("release_and_install_docs_list_every_live_test_gate_env_var", () => {
+    const docs = readFileSync("docs/release-and-install.md", "utf8");
+    // Every opt-in gate var read by a live.test.ts must be enumerated here.
+    for (const gate of [
+      "PRISM_LIVE_PROVIDER_TESTS",
+      "PRISM_LIVE_COMPACTION_TESTS",
+      "PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS",
+    ]) {
+      assert.ok(docs.includes(gate), `docs/release-and-install.md does not document ${gate}`);
+    }
+    // The default suite must be stated as network-free so the opt-in status is unambiguous.
+    assert.ok(/network-free/.test(docs), "docs/release-and-install.md must state default suite is network-free");
+    // The guarded bodies are fake-safe placeholders and never read real provider keys.
+    assert.ok(docs.includes("placeholder"), "docs/release-and-install.md must mark live tests as placeholder");
+  });
+
   it("cli_rpc_docs_cover_modes_flags_and_rpc_commands", () => {
     const docs = readFileSync("docs/cli-rpc.md", "utf8");
     for (const phrase of ["--mode print", "--provider", "--model", "prompt", "abort", "compact", "cloneSession", "No built-in app tools", "No full TUI"]) {
@@ -241,7 +347,7 @@ describe("docs", () => {
 
   it("provider conformance docs cover testing subpath and no network", () => {
     const docs = readFileSync("docs/provider-conformance.md", "utf8");
-    for (const phrase of ["prism/testing/provider-conformance", "assertAbortIsObserved", "assertToolCallDeltasReconstruct", "No credentials", "network calls"]){
+    for (const phrase of ["@arnilo/prism/testing/provider-conformance", "assertAbortIsObserved", "assertToolCallDeltasReconstruct", "No credentials", "network calls"]){
       assert.ok(docs.includes(phrase), `provider conformance docs missing ${phrase}`);
     }
   });
@@ -317,5 +423,85 @@ describe("docs", () => {
     ]) {
       assert.ok(manifests.includes(kind), `docs/configuration-and-manifests.md does not document ${kind}`);
     }
+  });
+
+  it("provider_packages_docs_cover_cache_policy_and_request_options", () => {
+    const docs = readFileSync("docs/provider-packages.md", "utf8");
+    for (const phrase of ["cache policy", "createSessionCachePolicy", "ProviderRequest.options", "cacheRetention"]) {
+      assert.ok(docs.includes(phrase), `docs/provider-packages.md missing ${phrase}`);
+    }
+  });
+
+  it("readme_describes_current_runtime_provider_packages_cli_and_examples", () => {
+    const readme = readFileSync("README.md", "utf8");
+    for (const name of ["createAgent", "createAgentSession"]) {
+      assert.ok(readme.includes(name), `README.md does not mention ${name}`);
+    }
+    for (const pkg of [
+      "@arnilo/prism-provider-openai",
+      "@arnilo/prism-provider-opencode-go",
+      "@arnilo/prism-provider-openrouter",
+      "@arnilo/prism-provider-zai",
+      "@arnilo/prism-provider-kimi",
+    ]) {
+      assert.ok(readme.includes(pkg), `README.md does not mention ${pkg}`);
+    }
+    for (const mode of ["--mode print", "--mode json", "--mode rpc"]) {
+      assert.ok(readme.includes(mode), `README.md does not document CLI ${mode}`);
+    }
+    assert.ok(readme.includes("examples/"), "README.md does not reference examples/");
+  });
+
+  it("examples_files_exist_and_index_links_examples", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(index.includes("examples/"), "docs/index.md does not mention examples/");
+    assert.ok(existsSync("examples/README.md"), "missing examples/README.md");
+    const exampleFiles = [
+      "examples/sdk-basics.ts",
+      "examples/provider-registration.ts",
+      "examples/api-key-auth.ts",
+      "examples/oauth-login.ts",
+      "examples/openrouter-model-cache-override.ts",
+      "examples/tools.ts",
+      "examples/context.ts",
+      "examples/skills.ts",
+      "examples/extensions.ts",
+      "examples/manifests.ts",
+      "examples/config-settings.ts",
+      "examples/system-prompts.ts",
+      "examples/jsonl-stores-branching.ts",
+      "examples/compaction.ts",
+      "examples/observational-memory-recall-status-view.ts",
+      "examples/cli.ts",
+      "examples/rpc.ts",
+    ];
+    for (const file of exampleFiles) {
+      assert.equal(existsSync(file), true, `missing example file: ${file}`);
+    }
+  });
+
+  it("examples_demos_run_to_completion_and_emit_no_secret", () => {
+    // Node 24 strips TypeScript types natively; building core (the test suite
+    // already built dist/) is enough for the `prism` and @arnilo/prism-* resolvers.
+    const demos = [
+      "examples/provider-registration.ts",
+      "examples/compaction.ts",
+      "examples/observational-memory-recall-status-view.ts",
+      "examples/cli.ts",
+      "examples/rpc.ts",
+    ];
+    const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
+    for (const file of demos) {
+      const result = spawnSync(process.execPath, [file], { encoding: "utf8" });
+      assert.equal(result.status, 0, `${file} exited ${result.status}\n${result.stderr}`);
+      const out = `${result.stdout}\n${result.stderr}`;
+      assert.ok(out.trim().length > 0, `${file} produced no output`);
+      assert.ok(!secret.test(out), `${file} emitted a real-looking secret`);
+    }
+  });
+
+  it("readme_has_no_real_looking_secrets", () => {
+    const readme = readFileSync("README.md", "utf8");
+    assert.equal(/sk-[A-Za-z0-9_-]{8,}/.test(readme), false, "README.md has real-looking secret");
   });
 });

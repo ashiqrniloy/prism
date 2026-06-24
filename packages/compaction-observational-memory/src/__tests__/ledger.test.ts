@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { SessionEntry } from "prism";
+import type { SessionEntry } from "@arnilo/prism";
 import {
   buildObservationalMemoryProjection,
   createFoldedMemoryDetails,

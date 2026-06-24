@@ -1,0 +1,23 @@
+{
+  "extends": "../tsconfig.packages.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@arnilo/prism": ["./dist/index.d.ts"],
+      "@arnilo/prism/testing/provider-conformance": ["./dist/testing/provider-conformance.d.ts"],
+      "@arnilo/prism/node/config": ["./dist/node/config.d.ts"],
+      "@arnilo/prism/node/settings": ["./dist/node/settings.d.ts"],
+      "@arnilo/prism/node/trust": ["./dist/node/trust.d.ts"],
+      "@arnilo/prism/node/session-store-jsonl": ["./dist/node/session-store-jsonl.d.ts"],
+      "@arnilo/prism/*": ["./dist/*"],
+      "@arnilo/prism-provider-openai": ["./packages/provider-openai/src/index.ts"],
+      "@arnilo/prism-provider-opencode-go": ["./packages/provider-opencode-go/src/index.ts"],
+      "@arnilo/prism-provider-openrouter": ["./packages/provider-openrouter/src/index.ts"],
+      "@arnilo/prism-provider-zai": ["./packages/provider-zai/src/index.ts"],
+      "@arnilo/prism-provider-kimi": ["./packages/provider-kimi/src/index.ts"],
+      "@arnilo/prism-compaction-llm": ["./packages/compaction-llm/src/index.ts"],
+      "@arnilo/prism-compaction-observational-memory": ["./packages/compaction-observational-memory/src/index.ts"]
+    }
+  },
+  "include": ["**/*.ts"]
+}

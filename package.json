@@ -1,5 +1,5 @@
 {
-  "name": "prism",
+  "name": "@arnilo/prism",
   "version": "0.0.1",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
@@ -38,14 +38,27 @@
   "bin": {
     "prism": "./dist/cli.js"
   },
-  "files": ["dist"],
-  "workspaces": ["packages/provider-*", "packages/compaction-*"],
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "docs",
+    "CHANGELOG.md"
+  ],
+  "workspaces": [
+    "packages/provider-*",
+    "packages/compaction-*",
+    "packages/prism-providers",
+    "packages/prism-compaction",
+    "packages/prism-all"
+  ],
   "scripts": {
     "build:core": "tsc",
     "build": "npm run build:core && npm run build --workspaces --if-present",
-    "typecheck": "npm run build:core && npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run build:core && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
     "test": "npm run build && node --test dist/__tests__/*.test.js && npm run test --workspaces --if-present",
-    "pack:dry-run": "npm pack --dry-run && npm run pack:dry-run --workspaces --if-present"
+    "pack:dry-run": "npm pack --dry-run && npm run pack:dry-run --workspaces --if-present",
+    "release:dry-run": "npm test && npm run pack:dry-run"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
@@ -53,5 +66,28 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism#readme",
+  "keywords": [
+    "prism",
+    "agent",
+    "llm",
+    "ai",
+    "framework",
+    "chatbot"
+  ],
+  "sideEffects": [
+    "dist/cli.js"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

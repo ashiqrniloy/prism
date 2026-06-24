@@ -1,0 +1,4 @@
+{"sessionId":"s1","kind":"message","id":"t1","timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"check status"}]}}
+{"sessionId":"s1","kind":"message","parentId":"t1","id":"t2","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"tool_call","id":"tc_1","name":"status","arguments":{"detail":true}}]}}
+{"sessionId":"s1","kind":"message","parentId":"t2","id":"t3","timestamp":"2026-01-01T00:00:03.000Z","message":{"role":"user","content":[{"type":"tool_result","toolCallId":"tc_1","name":"status","content":[{"type":"text","text":"ok"}]}]}}
+{"sessionId":"s1","kind":"message","parentId":"t3","id":"t4","timestamp":"2026-01-01T00:00:04.000Z","message":{"role":"assistant","content":[{"type":"text","text":"status: ok"}]}}

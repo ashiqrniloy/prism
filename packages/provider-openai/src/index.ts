@@ -1,4 +1,4 @@
-import { defineProviderPackage, type CredentialValueSource, type ProviderPackage } from "prism";
+import { defineProviderPackage, type CredentialValueSource, type ProviderPackage } from "@arnilo/prism";
 import { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js";
 import { openAICodexModels, openAIModels } from "./models.js";
 import { createOpenAICodexOAuthProvider, openAICodexOAuthProvider } from "./oauth.js";
@@ -14,7 +14,7 @@ export interface OpenAIProviderPackageOptions {
 
 export function createOpenAIProviderPackage(options: OpenAIProviderPackageOptions = {}): ProviderPackage {
   return defineProviderPackage({
-    name: "@prism/provider-openai",
+    name: "@arnilo/prism-provider-openai",
     description: "OpenAI provider package for Prism.",
     docs: { links: ["docs/providers/openai.md"] },
     setup(api) {

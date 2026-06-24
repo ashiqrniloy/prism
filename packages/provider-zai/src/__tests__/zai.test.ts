@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createZaiProvider, createZaiProviderPackage, zaiModels } from "../index.js";
 
 const request: ProviderRequest = {
@@ -13,7 +13,7 @@ const request: ProviderRequest = {
   tools: [{ name: "lookup", parameters: { type: "object" }, execute: () => ({ toolCallId: "call_1", name: "lookup", content: [] }) }],
 };
 
-describe("@prism/provider-zai", () => {
+describe("@arnilo/prism-provider-zai", () => {
   it("zai_registers_glm_model_metadata", async () => {
     const registered: unknown[] = [];
     await createZaiProviderPackage({ apiKey: "fake-zai-key", fetch: mockFetch(sse([])) }).setup({

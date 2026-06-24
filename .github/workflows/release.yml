@@ -1,0 +1,56 @@
+name: release
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  verify:
+    name: verify (build, test, packaging + install-smoke guards, pack dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      # npm test builds core + all workspaces first, so no separate build step.
+      # Budget: < 30s on Node 20 (baseline ~22s); timeout guards hangs without flapping.
+      - run: npm test
+        timeout-minutes: 3
+      - run: npm run pack:dry-run
+
+  publish:
+    name: publish (dry-run unless NPM_TOKEN is set)
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci
+      - run: npm run build
+      - name: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NPM_TOKEN:-}" ]; then
+            # Core first: first-party packages declare @arnilo/prism as a required peer,
+            # so it must exist on the registry for consumers.
+            npm publish --access public
+            npm publish --workspaces --access public
+          else
+            echo "NPM_TOKEN not set; running publish dry-run"
+            npm publish --dry-run --access public
+            npm publish --workspaces --dry-run --access public
+          fi

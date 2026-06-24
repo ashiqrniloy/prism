@@ -1,0 +1,39 @@
+{
+  "name": "@arnilo/prism-compaction",
+  "version": "0.0.1",
+  "description": "Umbrella package: installs all first-party Prism compaction strategies. Imports come from the individual @arnilo/prism-compaction-* packages.",
+  "license": "MIT",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "files": [
+    "README.md"
+  ],
+  "dependencies": {
+    "@arnilo/prism-compaction-llm": "0.0.1",
+    "@arnilo/prism-compaction-observational-memory": "0.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-compaction"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-compaction#readme",
+  "keywords": [
+    "prism",
+    "compaction",
+    "umbrella",
+    "agent",
+    "llm"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

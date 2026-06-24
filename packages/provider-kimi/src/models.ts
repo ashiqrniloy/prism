@@ -1,4 +1,4 @@
-import type { JsonObject, ModelConfig } from "prism";
+import type { JsonObject, ModelConfig } from "@arnilo/prism";
 
 export interface KimiModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
   readonly provider?: "kimi-coding" | "moonshot";

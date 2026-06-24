@@ -1,4 +1,4 @@
-import type { ProviderRequestOptions } from "prism";
+import type { ProviderRequestOptions } from "@arnilo/prism";
 
 export function opencodeHeaders(options: ProviderRequestOptions | undefined): Record<string, string> {
   return {

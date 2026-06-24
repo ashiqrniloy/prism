@@ -11,9 +11,9 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "prism": ["./dist/index.d.ts"],
-      "prism/testing/provider-conformance": ["./dist/testing/provider-conformance.d.ts"],
-      "prism/*": ["./dist/*"]
+      "@arnilo/prism": ["./dist/index.d.ts"],
+      "@arnilo/prism/testing/provider-conformance": ["./dist/testing/provider-conformance.d.ts"],
+      "@arnilo/prism/*": ["./dist/*"]
     }
   }
 }

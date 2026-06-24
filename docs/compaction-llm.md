@@ -1,7 +1,7 @@
 # LLM compaction package
 
 ## What it does
-`@prism/compaction-llm` is an optional provider-backed compaction package. It prepares branch history, calls an explicit summary provider/model, and returns a standard Prism `CompactionStrategy`. The core default compaction remains local and conservative.
+`@arnilo/prism-compaction-llm` is an optional provider-backed compaction package. It prepares branch history, calls an explicit summary provider/model, and returns a standard Prism `CompactionStrategy`. The core default compaction remains local and conservative.
 
 ## When to use it
 Use it when a host wants model-generated summaries while preserving raw append-only session history. Do not use it as a core default, provider SDK loader, hidden credential discovery layer, vector memory, or store rewrite.
@@ -57,7 +57,7 @@ Provider `error` events, empty summaries, or abort signals throw before returnin
 
 ## Implementation example
 ```ts
-import { createLlmCompactionStrategy } from "@prism/compaction-llm";
+import { createLlmCompactionStrategy } from "@arnilo/prism-compaction-llm";
 
 const strategy = createLlmCompactionStrategy({
   provider: summaryProvider,
@@ -86,8 +86,8 @@ const strategy = createLlmCompactionStrategy({
 This package is inert until imported. Direct strategy use works with `session.compact({ strategy })` and opt-in auto-compaction through existing `thresholdEntries` when the host selects the strategy.
 
 ```ts
-import { createAgent, createExtensionKernel } from "prism";
-import { createLlmCompactionExtension } from "@prism/compaction-llm";
+import { createAgent, createExtensionKernel } from "@arnilo/prism";
+import { createLlmCompactionExtension } from "@arnilo/prism-compaction-llm";
 
 const kernel = createExtensionKernel();
 await kernel.load([createLlmCompactionExtension({ provider: summaryProvider, model: summaryModel })]);

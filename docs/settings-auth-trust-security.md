@@ -15,14 +15,14 @@ Use these APIs when a host wants one explicit place to compose settings, resolve
 - `createEnvCredentialResolver(env, map)` reads only the caller-supplied object; it does not read `process.env`.
 - `assertTrusted(policy, request)` and `assertPermission(policy, request)` fail closed on denial.
 - `createSecretRedactor(secrets)` redacts exact known strings.
-- Node-only subpaths: `prism/node/settings` for caller-named JSON settings files and `prism/node/trust` for explicit trusted path roots with symlink-aware realpath checks.
+- Node-only subpaths: `@arnilo/prism/node/settings` for caller-named JSON settings files and `@arnilo/prism/node/trust` for explicit trusted path roots with symlink-aware realpath checks.
 
 ## Outputs / response / events
 Settings and credential helpers return existing `SettingsProvider` and `CredentialResolver` contracts. Permission denial blocks tool execution, extension setup, and resource loader calls before side effects. A configured `AgentConfig.redactor` or `RunOptions.redactor` redacts provider requests, emitted `AgentEvent` payloads, and stored `SessionEntry` values.
 
 ## Request/response example
 ```ts
-import { createSecretRedactor, createStaticPermissionPolicy, createStaticSettingsProvider } from "prism";
+import { createSecretRedactor, createStaticPermissionPolicy, createStaticSettingsProvider } from "@arnilo/prism";
 
 const settings = createStaticSettingsProvider({ demo: { enabled: true } });
 const permission = createStaticPermissionPolicy({ allow: ["tool:echo:execute"] });
@@ -33,9 +33,9 @@ console.log(await settings.get("demo.enabled"));
 
 ## Implementation example
 ```ts
-import { createAgent, createMemoryCredentialStore, createSecretRedactor, resolveCredentialValue } from "prism";
-import { loadSettingsFiles, defaultUserSettingsPath } from "prism/node/settings";
-import { createPathTrustPolicy } from "prism/node/trust";
+import { createAgent, createMemoryCredentialStore, createSecretRedactor, resolveCredentialValue } from "@arnilo/prism";
+import { loadSettingsFiles, defaultUserSettingsPath } from "@arnilo/prism/node/settings";
+import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 
 const settings = await loadSettingsFiles([
   { name: "user", path: defaultUserSettingsPath(), optional: true },
@@ -61,7 +61,7 @@ Root imports stay filesystem-free. Node settings files are caller-named and read
 ## Security and performance notes
 Prism does not sandbox host tools or extensions. Prism does not read environment variables, keychains, user config files, package manifests, resources, or project-local extensions unless the host explicitly wires those operations. Redaction is exact known-secret replacement only; it is not secret detection. Permission and trust checks are one operation per guarded call and add no workers, watchers, retries, network, or filesystem scans.
 
-`prism/node/trust` resolves symlinks on both the trusted root and the target path. A path that is lexically inside a trusted root but escapes it through a symlink is rejected, and realpath failures (missing root, permission error) fail closed.
+`@arnilo/prism/node/trust` resolves symlinks on both the trusted root and the target path. A path that is lexically inside a trusted root but escapes it through a symlink is rejected, and realpath failures (missing root, permission error) fail closed.
 
 ## Related APIs
 - `createStaticSettingsProvider`, `createChainedSettingsProvider`
@@ -69,5 +69,5 @@ Prism does not sandbox host tools or extensions. Prism does not read environment
 - `createStaticTrustPolicy`, `assertTrusted`, `isTrusted`, `TrustDeniedError`
 - `createStaticPermissionPolicy`, `assertPermission`, `checkPermission`, `PermissionDeniedError`
 - `createSecretRedactor`, `redactMessage`, `redactAgentEvent`, `redactSessionEntry`, `redactProviderRequest`
-- `prism/node/settings`: `defaultUserSettingsPath`, `readSettingsFile`, `loadSettingsFiles`
-- `prism/node/trust`: `createPathTrustPolicy`, `isPathInside`, `isPathInsideReal`
+- `@arnilo/prism/node/settings`: `defaultUserSettingsPath`, `readSettingsFile`, `loadSettingsFiles`
+- `@arnilo/prism/node/trust`: `createPathTrustPolicy`, `isPathInside`, `isPathInsideReal`

@@ -21,7 +21,7 @@ Do not use provider packages as a package manager, credential store, env loader,
 ## Inputs / request
 
 ```ts
-import { defineProviderPackage } from "prism";
+import { defineProviderPackage } from "@arnilo/prism";
 
 export default defineProviderPackage({
   name: "demo-provider",
@@ -45,7 +45,7 @@ export default defineProviderPackage({
 Provider packages can also contribute auth descriptors and request policies without resolving credentials:
 
 ```ts
-import { createSessionCachePolicy } from "prism";
+import { createSessionCachePolicy } from "@arnilo/prism";
 
 api.registerAuthMethod({ provider: "demo", kind: "api_key", credentialName: "apiKey" });
 api.registerAuthMethod({ provider: "demo", kind: "oauth", oauth: demoOAuthProvider });
@@ -57,13 +57,81 @@ Hosts decide which credential resolvers, env objects, OAuth stores, request poli
 
 ## First-party provider package skeletons
 
-Phase 12 adds explicit npm workspaces for [`@prism/provider-openai`](providers/openai.md), [`@prism/provider-opencode-go`](providers/opencode-go.md), [`@prism/provider-openrouter`](providers/openrouter.md), [`@prism/provider-zai`](providers/zai.md), and [`@prism/provider-kimi`](providers/kimi.md). Each package starts with a side-effect-free `create*ProviderPackage()` export, README, TypeScript build, network-free default tests, and an env-gated live-test placeholder.
+Phase 12 adds explicit npm workspaces for [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), and [`@arnilo/prism-provider-kimi`](providers/kimi.md). Each package starts with a side-effect-free `create*ProviderPackage()` export, README, TypeScript build, network-free default tests, and an env-gated live-test placeholder.
 
-These workspaces still follow the same rule as external packages: no provider SDK dependency, catalog fetch, env scan, keychain/file credential lookup, shell auth command, OAuth login, or live provider call runs by default. `@prism/provider-openai` now registers OpenAI Responses and OpenAI Codex providers from caller-supplied credentials only. `@prism/provider-opencode-go` now registers static OpenCode Go metadata and package-local OpenAI/Anthropic-compatible routes from caller-supplied credentials only. `@prism/provider-openrouter` now registers an app-controlled OpenRouter catalog with routing/reasoning/cache passthrough and no setup catalog fetch. `@prism/provider-zai` now registers static GLM metadata with Z.AI thinking/reasoning/tool-stream request mapping. `@prism/provider-kimi` now registers Kimi Coding Anthropic-compatible behavior by default and optional Moonshot metadata only when requested.
+These workspaces still follow the same rule as external packages: no provider SDK dependency, catalog fetch, env scan, keychain/file credential lookup, shell auth command, OAuth login, or live provider call runs by default. `@arnilo/prism-provider-openai` now registers OpenAI Responses and OpenAI Codex providers from caller-supplied credentials only. `@arnilo/prism-provider-opencode-go` now registers static OpenCode Go metadata and package-local OpenAI/Anthropic-compatible routes from caller-supplied credentials only. `@arnilo/prism-provider-openrouter` now registers an app-controlled OpenRouter catalog with routing/reasoning/cache passthrough and no setup catalog fetch. `@arnilo/prism-provider-zai` now registers static GLM metadata with Z.AI thinking/reasoning/tool-stream request mapping. `@arnilo/prism-provider-kimi` now registers Kimi Coding Anthropic-compatible behavior by default and optional Moonshot metadata only when requested.
 
 ## Outputs / response / events
 
 `defineProviderPackage()` returns the same package object or throws when `name` is blank. A package contributes only when a host passes it to an extension/kernel/setup flow and calls `setup()` explicitly.
+
+## Request/response example
+
+Provider package manifest contribution and the generic request options a provider request policy can set:
+
+```json
+{
+  "manifest": {
+    "name": "demo-provider-manifest",
+    "contributions": [
+      { "kind": "providerPackage", "name": "demo-provider" },
+      { "kind": "providerRequestPolicy", "name": "demo.cache" }
+    ]
+  },
+  "providerRequest.options": {
+    "sessionId": "sess_123",
+    "cacheKey": "demo",
+    "cacheRetention": "short",
+    "headers": { "x-demo": "1" }
+  }
+}
+```
+
+## Implementation example
+
+Wire a provider package with model metadata plus a session cache policy through the extension kernel:
+
+```ts
+import { createExtensionKernel, defineProviderPackage, createSessionCachePolicy } from "@arnilo/prism";
+
+const pkg = defineProviderPackage({
+  name: "demo-provider",
+  setup(api) {
+    api.registerProvider(/* host-owned AIProvider */ null as never);
+    api.registerModel({
+      provider: "demo",
+      model: "demo-large",
+      displayName: "Demo Large",
+      capabilities: { input: ["text"], reasoning: true, tools: true },
+      limits: { contextWindow: 128_000, maxOutputTokens: 8_192 },
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, currency: "USD" },
+      compat: { vendorSpecific: true },
+    });
+    api.registerProviderRequestPolicy(createSessionCachePolicy({ retention: "short" }));
+  },
+});
+
+const kernel = createExtensionKernel();
+await kernel.load([pkg]);
+```
+
+## Extension and configuration notes
+
+- Hosts decide which credential resolvers, env objects, OAuth stores, request
+  policies, and prompt contributions become active; the package only *declares*
+  them.
+- `createSessionCachePolicy()` acts as a concrete cache policy hook
+  (`provider_request`) that sets generic `ProviderRequest.options`
+  (`sessionId`, `cacheKey`, `cacheRetention`, `headers`, opaque `extra`) before
+  `AIProvider.generate()`; provider adapters map those options to provider payloads.
+- `ModelConfig.compat` is provider-owned inert JSON: cache policy overrides,
+  reasoning/thinking formats, and provider-specific usage mapping live there
+  rather than in core, so Prism never branches on provider names.
+- A package contributes auth methods and request policies without resolving
+  credentials; OAuth/api-key resolution runs only when the host wires the
+  matching credential resolver.
+- Packages can also be declared as inert manifest contributions and resolved
+  later through registries (see the Manifest declarations section below).
 
 ## Security and performance notes
 
@@ -77,7 +145,7 @@ These workspaces still follow the same rule as external packages: no provider SD
 Provider packages, auth methods, provider request policies, and system prompt contributions can also be declared in data-only Prism manifests:
 
 ```ts
-import { definePrismManifest } from "prism";
+import { definePrismManifest } from "@arnilo/prism";
 
 export default definePrismManifest({
   name: "demo-provider-manifest",

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenAIProviderPackage, createOpenAIResponsesProvider } from "../index.js";
 
 const request: ProviderRequest = {
@@ -11,7 +11,7 @@ const request: ProviderRequest = {
   options: { sessionId: "session-1", cacheKey: "x".repeat(80), cacheRetention: "short" },
 };
 
-describe("@prism/provider-openai responses", () => {
+describe("@arnilo/prism-provider-openai responses", () => {
   it("openai_responses_stream_maps_text_thinking_tool_usage_and_done", async () => {
     const provider = createOpenAIResponsesProvider({ apiKey: "fake-openai-key", fetch: mockFetch(sse([
       { type: "response.output_text.delta", delta: "hello" },

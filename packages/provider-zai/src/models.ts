@@ -1,4 +1,4 @@
-import type { JsonObject, ModelConfig } from "prism";
+import type { JsonObject, ModelConfig } from "@arnilo/prism";
 
 export interface ZaiModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
   readonly provider?: "zai";

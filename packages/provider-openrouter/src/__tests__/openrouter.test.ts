@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "prism/testing/provider-conformance";
+import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenRouterProvider, createOpenRouterProviderPackage, defineOpenRouterModel } from "../index.js";
 
 const model = defineOpenRouterModel({
@@ -21,7 +21,7 @@ const request: ProviderRequest = {
   options: { sessionId: "session with spaces" },
 };
 
-describe("@prism/provider-openrouter", () => {
+describe("@arnilo/prism-provider-openrouter", () => {
   it("openrouter_registers_only_app_supplied_models", async () => {
     const registered: unknown[] = [];
     await createOpenRouterProviderPackage({ apiKey: "fake-openrouter-key", models: [model], fetch: mockFetch(sse([])) }).setup({

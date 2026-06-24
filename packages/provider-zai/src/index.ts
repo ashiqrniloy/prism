@@ -1,4 +1,4 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "prism";
+import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
 import { createZaiProvider, type ZaiProviderOptions } from "./provider.js";
 import { zaiModels } from "./models.js";
 
@@ -13,7 +13,7 @@ export interface ZaiProviderPackageOptions {
 export function createZaiProviderPackage(options: ZaiProviderPackageOptions = {}): ProviderPackage {
   const providerId = options.id ?? "zai";
   return defineProviderPackage({
-    name: "@prism/provider-zai",
+    name: "@arnilo/prism-provider-zai",
     description: "Z.AI provider package for Prism.",
     docs: { links: ["docs/providers/zai.md"] },
     setup(api) {

@@ -64,7 +64,7 @@ With default `errorPolicy: "event"`, middleware errors become `extension_error` 
 ## Implementation example
 
 ```ts
-import { createMiddlewareRegistry } from "prism";
+import { createMiddlewareRegistry } from "@arnilo/prism";
 
 const middleware = createMiddlewareRegistry();
 
@@ -82,7 +82,7 @@ console.log(request.metadata.source);
 Extensions can register middleware through the runtime API:
 
 ```ts
-import type { Extension } from "prism";
+import type { Extension } from "@arnilo/prism";
 
 export const extension: Extension = {
   name: "demo-middleware",

@@ -1,9 +1,9 @@
-# @prism/provider-opencode-go
+# @arnilo/prism-provider-opencode-go
 
 OpenCode Go provider package for Prism.
 
 ```ts
-import { createOpenCodeGoProviderPackage } from "@prism/provider-opencode-go";
+import { createOpenCodeGoProviderPackage } from "@arnilo/prism-provider-opencode-go";
 
 api.registerProviderPackage(createOpenCodeGoProviderPackage({ apiKey: "fake-opencode-key" }));
 ```
