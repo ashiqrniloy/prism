@@ -14,11 +14,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
       - run: npm ci
       # npm test builds core + all workspaces first, so no separate build step.
-      # Budget: < 30s on Node 20 (baseline ~22s); timeout guards hangs without flapping.
+      # Budget: < 30s (baseline ~22s on Node 20); timeout guards hangs without flapping.
+      # Node 24: docs.test.ts runs examples/*.ts via native type stripping (Node < 22.6 can't).
       - run: npm test
         timeout-minutes: 3
       - run: npm run pack:dry-run
@@ -34,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
