@@ -8,6 +8,9 @@ const docsDir = "docs";
 const apiPages = [
   "docs/public-contracts.md",
   "docs/agent-session-runtime.md",
+  "docs/agent-loops.md",
+  "docs/agent-events.md",
+  "docs/structured-output.md",
   "docs/session-stores-and-branching.md",
   "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
@@ -459,6 +462,7 @@ describe("docs", () => {
     const exampleFiles = [
       "examples/sdk-basics.ts",
       "examples/provider-registration.ts",
+      "examples/provider-resolver.ts",
       "examples/api-key-auth.ts",
       "examples/oauth-login.ts",
       "examples/openrouter-model-cache-override.ts",
@@ -485,6 +489,7 @@ describe("docs", () => {
     // already built dist/) is enough for the `prism` and @arnilo/prism-* resolvers.
     const demos = [
       "examples/provider-registration.ts",
+      "examples/provider-resolver.ts",
       "examples/compaction.ts",
       "examples/observational-memory-recall-status-view.ts",
       "examples/cli.ts",
@@ -503,5 +508,153 @@ describe("docs", () => {
   it("readme_has_no_real_looking_secrets", () => {
     const readme = readFileSync("README.md", "utf8");
     assert.equal(/sk-[A-Za-z0-9_-]{8,}/.test(readme), false, "README.md has real-looking secret");
+  });
+
+  it("provider_resolver_docs_cover_resolver_and_third_party_packaging", () => {
+    const providerLayer = readFileSync("docs/provider-layer.md", "utf8");
+    assert.ok(providerLayer.includes("### Provider resolver"), "provider-layer.md missing Provider resolver section");
+    assert.ok(providerLayer.includes("createProviderResolver"), "provider-layer.md does not surface createProviderResolver");
+    assert.ok(providerLayer.includes("RunOptions.providerSource"), "provider-layer.md does not document RunOptions.providerSource");
+    assert.ok(providerLayer.includes("AgentConfig.provider"), "provider-layer.md does not document direct provider precedence");
+
+    const packages = readFileSync("docs/provider-packages.md", "utf8");
+    assert.ok(packages.includes("## Third-party provider packaging"), "provider-packages.md missing Third-party provider packaging section");
+    assert.ok(packages.includes("providerSource"), "provider-packages.md does not mention providerSource");
+    assert.ok(packages.includes("opt-in and individually installable"), "provider-packages.md does not state first-party packages are opt-in");
+
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    assert.ok(runtime.includes("providerSource"), "agent-session-runtime.md does not mention providerSource");
+  });
+
+  it("tools_docs_cover_runtime_validator_seam", () => {
+    const tools = readFileSync("docs/tools.md", "utf8");
+    const rootExports = readFileSync("src/index.ts", "utf8");
+    const contracts = readFileSync("src/contracts.ts", "utf8");
+
+    assert.match(rootExports, /\bToolValidator\b/, "src/index.ts does not export ToolValidator");
+    assert.ok(contracts.includes("validator?: ToolValidator"), "AgentConfig does not declare validator");
+    assert.ok(contracts.includes("validate?: ToolValidator"), "RunOptions does not declare validate");
+
+    for (const phrase of [
+      "Runtime-supplied validators",
+      "AgentConfig.validator?",
+      "RunOptions.validate?",
+      "RunOptions.validate ?? AgentConfig.validator",
+      "validation_failed",
+      "SecretRedactor",
+      "runs after the permission assertion",
+    ]) {
+      assert.ok(tools.includes(phrase), `docs/tools.md missing ${phrase}`);
+    }
+  });
+
+  it("context_and_skills_docs_cover_runtime_selection_and_activation", () => {
+    const page = readFileSync("docs/context-and-skills.md", "utf8");
+    const rootExports = readFileSync("src/index.ts", "utf8");
+    const contracts = readFileSync("src/contracts.ts", "utf8");
+
+    assert.match(rootExports, /\bresolveActiveSkills\b/, "src/index.ts does not export resolveActiveSkills");
+    assert.ok(contracts.includes("activeSkills?: readonly string[]"), "RunOptions does not declare activeSkills");
+    assert.ok(contracts.includes("readonly skills?: readonly Skill[]"), "RunOptions does not declare skills override");
+
+    for (const phrase of [
+      "Runtime skill selection and activation",
+      "RunOptions.activeSkills",
+      "RunOptions.skills",
+      "names win when a registry exists",
+      "Skill.context",
+      "after",
+      "toolNames",
+      "requires inactive tool",
+      "before the first provider turn",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/context-and-skills.md missing ${phrase}`);
+    }
+  });
+
+  it("agent_loops_docs_cover_loop_strategies_and_artifact_contracts", () => {
+    const page = readFileSync("docs/agent-loops.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    const contracts = readFileSync("docs/public-contracts.md", "utf8");
+    const barrel = readFileSync("src/index.ts", "utf8");
+
+    // required headings covered by the apiPages loop; assert key content here.
+    assert.ok(index.includes("agent-loops.md"), "docs/index.md does not link agent-loops.md");
+    assert.ok(runtime.includes("agent-loops.md"), "docs/agent-session-runtime.md does not cross-reference agent-loops.md");
+    for (const name of ["singleShotLoop", "generateValidateReviseLoop", "resolveLoop"]) {
+      assert.ok(new RegExp(`\\b${name}\\b`).test(barrel), `src/index.ts does not export ${name}`);
+      assert.ok(page.includes(name), `docs/agent-loops.md missing ${name}`);
+    }
+    assert.ok(barrel.includes("isAgentLoopOptions"), "src/index.ts does not export isAgentLoopOptions");
+    for (const phrase of [
+      "AgentLoopStrategy",
+      "AgentLoopOptions",
+      "LoopContext",
+      "ProviderTurnResult",
+      "ArtifactValidation",
+      "ArtifactContext",
+      "ArtifactParser",
+      "ArtifactValidator",
+      "ArtifactRepairer",
+      "RunOptions.loop",
+      "AgentConfig.loop",
+      "generate-validate-revise",
+      "maxRevisions",
+      "never instantiates",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/agent-loops.md missing ${phrase}`);
+    }
+    for (const phrase of ["AgentLoopStrategy", "AgentLoopOptions", "LoopContext", "ProviderTurnResult", "ArtifactValidation", "ArtifactValidator"]) {
+      assert.ok(contracts.includes(phrase), `docs/public-contracts.md missing ${phrase}`);
+    }
+  });
+
+  it("agent_events_docs_cover_artifact_variants", () => {
+    const page = readFileSync("docs/agent-events.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const phrase of [
+      "artifact_validation_started",
+      "artifact_validation_finished",
+      "artifact_revision_started",
+      "artifact_finished",
+      "artifact_failed",
+      "attempt",
+      "retry_scheduled",
+      "tool_execution_blocked",
+      "redactAgentEvent",
+      "recoverable",
+      "budget exhausted",
+      "singleShotLoop",
+      "generateValidateReviseLoop",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/agent-events.md missing ${phrase}`);
+    }
+    assert.ok(index.includes("agent-events.md"), "docs/index.md does not link agent-events.md");
+  });
+
+  it("structured_output_docs_cover_parser_validator_repairer", () => {
+    const page = readFileSync("docs/structured-output.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const phrase of [
+      "ArtifactParser",
+      "ArtifactValidator",
+      "ArtifactRepairer",
+      "ArtifactValidation",
+      "ArtifactContext",
+      "ArtifactParseResult",
+      "never instantiates",
+      "generate-validate-revise",
+      "maxRevisions",
+      "redactAgentEvent",
+      "createSecretRedactor",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/structured-output.md missing ${phrase}`);
+    }
+    // ponytail: boundary guard — page states the Synapta-free lock (not absence of the
+    // consuming-app name, which legitimately appears as "Synapta-style").
+    assert.ok(page.includes("never instantiates"), "docs/structured-output.md missing never-instantiates lock");
+    assert.ok(/no .*domain (control-flow )?vocabulary/.test(page), "docs/structured-output.md missing domain-vocabulary lock");
+    assert.ok(index.includes("structured-output.md"), "docs/index.md does not link structured-output.md");
   });
 });

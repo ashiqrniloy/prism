@@ -52,7 +52,7 @@ When multiple filters are provided, each non-empty allow list must include the t
 | `context` | `ToolExecutionContext` with session/run/tool call ids, signal, metadata, and optional progress callback. |
 | `filter` | Optional exact allow/deny filter or ordered filters. |
 | `middleware` | Optional `MiddlewareRegistry`; `tool_call` runs before validation/execution and `tool_result` runs after execution. |
-| `validate` | Optional host validator returning `void`, a message string, or `ErrorInfo`. |
+| `validate` | Optional host validator returning `void`, a message string, or `ErrorInfo`. A non-`void` return blocks dispatch with reason `validation_failed` (redacted). Runs after the permission assertion and before `tool.execute()`. |
 | `emit` | Optional `AgentEvent` callback for lifecycle events. |
 | `secrets` | Known secret values to redact from thrown tool errors. |
 
@@ -126,6 +126,34 @@ Middleware can transform `tool_call` and `tool_result` payloads, but dispatch re
 
 Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set. Skills may reference `toolNames`, but `resolveActiveSkills()` only checks those names against the host-active tool list; it does not register, allow, or execute tools.
 
+### Runtime-supplied validators
+
+`AgentConfig.validator?` and `RunOptions.validate?` expose the same `ToolValidator` seam that `DispatchToolCallOptions.validate` already uses. The runtime threads `validate: RunOptions.validate ?? AgentConfig.validator` into every `dispatchToolCall` it issues during the tool loop, so an app can supply argument validation without taking ownership of dispatch itself. `RunOptions.validate` overrides `AgentConfig.validator` on a per-run basis (RunOptions wins). When neither is set, dispatch runs unmodified.
+
+The validator runs after the permission assertion and before `tool.execute()`. A `void` return lets the tool run. A non-`void` return (a string message or `ErrorInfo`) blocks the call: `dispatchToolCall` emits `tool_execution_blocked` with reason `validation_failed` and a redacted error, and the tool is not executed. This is the same redaction path as thrown tool errors, so a validator that echoes a secret is scrubbed through the active `SecretRedactor`. Composition of multiple validators is deferred (YAGNI); wrap or call both in a host-supplied function if needed.
+
+```ts
+import { createAgent, createSecretRedactor, type ToolValidator } from "@arnilo/prism";
+
+const validator: ToolValidator = (_tool, args) =>
+  typeof args.query === "string" && args.query.length <= 1000
+    ? undefined
+    : "query too long";
+
+const agent = createAgent({
+  model,
+  provider,
+  tools,
+  // applied to every run of this agent
+  validator,
+  // redacts validator output (and tool errors) the same way as secrets
+  redactor: createSecretRedactor([process.env.APP_KEY!]),
+});
+
+// override per run only
+await session.run(input, { validate: (_t, args) => args.dry ? "dry-run blocked" : undefined });
+```
+
 ## Security and performance notes
 
 - Tool lookup uses a `Map` for O(1) name lookup.
@@ -148,4 +176,4 @@ Configuration can carry allow/deny names, but Prism does not define a policy cla
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.
 - [Observational memory compaction package](compaction-observational-memory.md): optional exact-id recall tool factory.
 
-`DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).
+`DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. `AgentConfig.validator`/`RunOptions.validate` run after this guard; their output is redacted through the active `SecretRedactor`. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

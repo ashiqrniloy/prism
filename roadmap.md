@@ -1,6 +1,6 @@
 # prism Roadmap
 
-Updated: 2026-06-21
+Updated: 2026-06-25
 
 `prism` is a TypeScript/Node.js agent harness package. Host apps and extension
 packages bring providers, models, tools, resources, credentials, UI, storage,
@@ -525,12 +525,318 @@ Next:
 20. `020-package-boundaries-installability-release-mechanics.md`
 21. `021-documentation-examples-fixtures-catch-up.md`
 22. `022-final-release-validation.md`
+23. `023-publish-to-npm-0.0.1.md` (done — v0.0.1 published)
 
-## Defer until after v1
+Synapta third-party-ergonomics track (post-v0.0.1):
+24. `024-provider-resolver-seam-and-third-party-provider-packaging.md` (done)
+25. `025-runtime-tool-validation-hook.md`
+26. `026-skill-semantics-active-selection-context-toolnames.md`
+27. `027-generic-agent-loop-strategy-single-shot-and-generate-validate-revise.md`
+28. `028-validation-refinement-events-and-structured-output-contracts.md`
+29. `029-workspace-and-global-package-discovery.md`
+30. `030-package-context-and-instruction-injection.md`
+31. `031-system-and-project-prompts-agents-and-system-md.md`
+32. `032-synapta-facing-integration-example-and-boundary-lock.md`
+33. `033-agent-definitions-declarative-requirements-and-resolver.md`
+
+## Synapta integration feedback — third-party-ergonomics phase track
+
+After v0.0.1 publishing (plan 023), Prism enters a second design track driven by
+real third-party consumption (Synapta). The recurring theme across the gaps
+below: Prism has the registries, hooks, and policy seams, but the agent runtime
+and `AgentConfig`/`RunOptions` do not expose them, one declared field
+(`Skill.context`) is inert, and the single-shot turn loop is the only loop
+shape). Every gap is "plumb the existing seam through to config," not new
+architecture — except the generic loop concept and the workspace/global
+package-discovery + system-prompt surfaces, which are net-new but each a
+single minimal seam.
+
+Design principles enforced across this track:
+
+- **First-party is opt-in, never mandatory.** A third party may ship its own
+  providers, tools, and skills and use Prism with zero first-party packages.
+  Prism's first-party provider packages, tool packs, and skills are
+  individually installable and individually selectable; a third party picks
+  none, some, or all.
+- **Standard workspace/global discovery for contributions.** Skills discovered
+  from `<workspace>/.agent/skills/<name>/` and `~/.prism/agent/skills/<name>/`;
+  the same discovery applies to providers, tools, context providers, and
+  instruction injectors contributed as packages. Discovery is host/CLI-driven
+  (explicit filesystem loader), never a hidden global in core; apps using the
+  SDK directly can skip discovery entirely.
+- **Generic seams only; no Synapta types in core.** Loops, validators,
+  parsers, repairers, events, and context injectors carry only Prism-native
+  contracts. Domain vocabulary (workflow/node/step) stays in the third-party
+  package that owns it. Boundary tests enforce this.
+- **Single-shot stays the default loop.** The current single-turn strategy
+  remains the default agent loop. Loop strategies are a generic
+  `AgentLoopStrategy` concept; the generate-validate-revise loop is the first
+  implementation, selectable per request/session/config. Additional loops can
+  be added later without runtime forking.
+- **Config over code.** Every new seam lives on `AgentConfig` and/or
+  `RunOptions` (RunOptions overrides AgentConfig per run), mirroring how
+  compaction, retry, `providerRequestPolicies`, `systemPrompt`, and
+  `redactor` already work.
+
+### Phase 24 — Provider resolver seam and third-party provider packaging
+
+**Goal:** let a host hand Prism a provider resolver (or a registry/list) and
+have the agent resolve its provider from `model.provider` per run, instead of
+requiring every app to resolve and stuff a direct `AIProvider` into
+`AgentConfig.provider`.
+
+Deliver:
+- `ProviderResolver` contract: `(model: ModelConfig) => AIProvider | undefined`.
+- `createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver` generic helper (one-liner over `model.provider`; registries are one way to build one, not the only way).
+- `AgentConfig.providerSource?: ProviderResolver` and `RunOptions.providerSource?: ProviderResolver` (RunOptions wins, mirroring `model`). The direct `AgentConfig.provider: AIProvider` path stays fully supported and takes precedence when set.
+- `requireProvider()` becomes `provider = config.provider ?? providerSource?.(model)` then fail closed with the existing `Unknown provider: ${model.provider}` error.
+- Third-party provider package authoring doc: a package can register provider contributions via `ExtensionAPI.registerProvider()` (already exists) and the host builds a resolver from either the kernel registries or its own list; first-party provider packages (`@arnilo/prism-provider-*`) are opt-in, individually installable, individually selectable.
+- Workspace/global provider discovery is **not** added here (providers need credentials and are config/package-driven, not file-scanned); Phase 28 covers file-based discovery for skills/tools/context only.
+
+Acceptance:
+- An app passes a registry or a list of providers (mix of first-party and its own) and `createAgent({ model, providerSource })` resolves per run.
+- Direct `provider: AIProvider` still works unchanged.
+- No registry/contribution object is coupled into `AgentConfig`; only a resolver function is.
+- No first-party provider package is required for core to run (mock provider only).
+- Docs updated for `providerSource`, `createProviderResolver`, and third-party provider package authoring.
+
+### Phase 25 — Runtime tool validation hook
+
+**Goal:** expose the existing `dispatchToolCall({validate})` seam through the
+agent runtime and `AgentConfig`/`RunOptions`, so an app can supply
+app-level argument validation that emits the existing `tool_execution_blocked`
+reason `validation_failed` event with redaction.
+
+Deliver:
+- `AgentConfig.validator?: ToolValidator` and `RunOptions.validate?: ToolValidator` (named to match `DispatchToolCallOptions.validate`; RunOptions wins).
+- `RuntimeAgentSession.run()` passes `validate: options.validate ?? this.agent.config.validator` into `dispatchToolCall`.
+- Compose-later: if both needed, accept arrays; for now, RunOptions override only (YAGNI).
+- No new validator concept — `ToolValidator = (tool, args, context) => void | string | ErrorInfo` is already generic and Synapta-free.
+
+Acceptance:
+- A validator returning a string/`ErrorInfo` results in a `tool_execution_blocked` event with reason `validation_failed` and a redacted error, without executing the tool.
+- `void` validator return executes normally.
+- Existing tool dispatch tests still pass; new test covers runtime-supplied validator.
+- Docs `tools.md` updated to show validator on `AgentConfig`/`RunOptions` (the `validate` field is already documented on `DispatchToolCallOptions`).
+
+### Phase 26 — Skill semantics: active selection, Skill.context activation, toolNames enforcement
+
+**Goal:** close the three Skill gaps where the runtime bypasses the skill
+machinery: active-skill selection is not per-run, `Skill.context` is a dead
+field, and `toolNames` is unenforced in the live loop.
+
+Deliver:
+- `RunOptions.activeSkills?: readonly string[]` (names). When set against a `SkillRegistry`, the runtime calls `resolveActiveSkills({registry, names, tools})` instead of `registry.list()`. When `AgentConfig.skills` is a plain `Skill[]` array (no registry), names are not resolvable — in that case an explicit `RunOptions.skills?: readonly Skill[]` override is accepted; names win when a registry exists.
+- No `activeSkills` set → all configured skills active (current behavior preserved).
+- Activate `Skill.context`: when building provider input, collect `activeSkills.flatMap(s => s.context ?? [])`, resolve via the existing `resolveContextProviders(...)`, and merge resulting `ContextBlock[]` into the request `context` after host `AgentConfig.context` blocks. `skillMessages()` still renders `skill.instructions`. Mark merge priority as a `ponytail:` comment (no per-skill token budgeting yet).
+- `toolNames` enforcement becomes free once selection routes through `resolveActiveSkills()` (it already throws on missing tools). Add test: skill with `toolNames: ["missing"]` against a config missing that tool throws before the first provider turn. This also satisfies the docs' existing "skills cannot register missing tools" claim that the runtime currently contradicts.
+
+Acceptance:
+- Run A uses skill "summarize", run B uses "translate" via `activeSkills`, same agent config.
+- A skill with `context: [schemaProvider]` injects schema context only when active.
+- A skill demanding an inactive tool fails fast at activation, not at dispatch.
+- `docs/context-and-skills.md` updated: describe `activeSkills`, `Skill.context` activation, and the now-enforced `toolNames`.
+
+### Phase 27 — Generic agent loop strategy (single-shot default + generate-validate-revise)
+
+**Goal:** make the agent's per-run control loop a replaceable strategy. The
+current single-shot turn loop (assemble → provider → optional tool calls →
+tool results → next turn) stays the **default**. A third party may opt a
+particular request or session into a different loop, starting with
+generate-validate-revise. Loops are a generic concept designed so more loops
+can be added later without forking the runtime.
+
+Deliver:
+- `AgentLoopStrategy` contract: owns the per-run turn-control flow, receiving a loop context that exposes the shared primitives — `assembleProviderInput`, provider streaming, `dispatchToolCall`, abort signal, store append, event emit, and `RunOptions`. The loop does not re-implement provider calls, retry, abort, store, or events; it orchestrates them.
+- `SingleShotLoop` (extracted from current `RuntimeAgentSession.run` behavior) registered as the default. Existing behavior bit-for-bit preserved when no loop is configured.
+- `GenerateValidateReviseLoop` as the first alternative loop, parameterized by Prism-native callbacks only:
+  - `parser?: ArtifactParser<T>` — parse model output to a typed value (`T` host-defined, Prism never instantiates it).
+  - `validator: ArtifactValidator<T>` — returns `ArtifactValidation`.
+  - `repairer?: ArtifactRepairer<T>` — builds the "fix this" follow-up input (default = stringify validation errors as a user message; host supplies richer one).
+  - `maxRevisions?: number` (budget, mirrors `maxToolRounds`).
+- Generic callback + result types in `contracts.ts`, all Synapta-free: `ArtifactValidation { ok: boolean; errors?: readonly { path?: string; message: string }[]; metadata?: ... }`, `ArtifactContext { sessionId, runId, turn, signal, metadata }`, `ArtifactParseResult<T>`, `ArtifactParser<T>`, `ArtifactValidator<T>`, `ArtifactRepairer<T>`. No `workflow`/`node`/`step` field names; `T` is host-defined.
+- `AgentConfig.loop?: AgentLoopStrategy | AgentLoopOptions` and `RunOptions.loop?: AgentLoopStrategy | AgentLoopOptions` (RunOptions wins). Default: `SingleShotLoop`. A loop can be selected per request (Synapta opts a generation request into generate-validate-revise) or pinned per session/agent config.
+- Naming: do **not** register generate-validate-revise as the only way to interact with agents. Single-shot remains default; the loop is opt-in.
+- Boundary tests mirroring `phase*-boundaries.test.ts`: `src/` imports no `synapta*` package; `ArtifactValidation`/`ArtifactContext`/`ArtifactParseResult` carry no workflow vocabulary.
+
+Acceptance:
+- Default behavior unchanged when no `loop` is configured.
+- A run with `RunOptions.loop = { strategy: "generate-validate-revise", validator, parser, maxRevisions: 3 }` loops generate→validate→revise until `ok` or budget exhausted, emitting the Phase-29 events, and appends revision turns as store entries.
+- A third party (Synapta) supplies only `validator`/`parser`/`repairer` callbacks implementing its own schema; no Synapta type is imported by `src/`.
+- `SingleShotLoop` and `GenerateValidateReviseLoop` are independently testable with the mock provider.
+- The loop contract is generic enough that a future loop (e.g. plan-authoring, multi-agent) can be added without runtime changes.
+- Docs: new `/docs/agent-loops.md` page, `docs/index.md` entry, `docs/agent-session-runtime.md` cross-reference.
+
+### Phase 28 — Validation/refinement events and structured-output contracts
+
+**Goal:** make artifact loops and structured output observable through the
+existing `AgentEvent` stream, and lock the generic parse/validate/repair
+callback contracts as the only structured-output seam (no Synapta workflow
+types).
+
+Deliver:
+- `Artifact*` contract types pinned in `contracts.ts` (from Phase 27) and exported from `src/index.ts` with boundary tests passing.
+- Add `AgentEvent` variants emitted by artifact loops (zero emitted when single-shot loop runs):
+  - `artifact_validation_started` `{sessionId, runId, turn, attempt}`
+  - `artifact_validation_finished` `{sessionId, runId, turn, attempt, result: ArtifactValidation}`
+  - `artifact_revision_started` `{sessionId, runId, turn, attempt, failure: ArtifactValidation}`
+  - `artifact_finished` `{sessionId, runId, turn, attempt, result: ArtifactValidation}` (loop ended successfully)
+  - `artifact_failed` `{sessionId, runId, turn, attempt, result: ArtifactValidation}` (budget exhausted)
+- Validation-failure-triggering-a-revision is **not** an `error` event (recoverable, like `tool_execution_blocked`); only terminal exhaustion emits `artifact_failed`. `error` channel reserved for real failures, matching existing convention.
+- `attempt` numbering mirrors `retry_scheduled.attempt` and `tool_execution_*` block/finish pairing.
+- `ArtifactValidation.errors.message` may echo model text — run through `redactAgentEvent`/`activeRedactor` like other payloads.
+- Structured-output boundary: the only way to get typed output from a loop is `ArtifactParser<T>`. Prism never instantiates `T`; it threads host-supplied `T` through parser→validator→repairer. No `WorkflowStep`/`NodeSchema` types leak.
+
+Acceptance:
+- An artifact-loop run emits `validation_started` → `validation_finished` → (`revision_started`)* → `artifact_finished` or `artifact_failed`, correlated by `runId`/`turn`/`attempt`.
+- Single-shot runs emit zero artifact events.
+- `redactAgentEvent` handles `ArtifactValidation` payloads without crashing on nested/cyclic metadata.
+- `src/` imports no `synapta*`; artifact contract field names contain no domain vocabulary (boundary test).
+- Docs: `/docs/agent-events.md` updated with artifact events; `/docs/structured-output.md` (new) documents parser/validator/repairer contracts with a Synapta-style usage example that maps its own schema to `ArtifactValidation`.
+
+### Phase 29 — Workspace and global package discovery (skills, tools, context, instruction injectors)
+
+**Goal:** standard filesystem discovery for skills (and, where applicable,
+tools, context providers, and instruction injectors) so that anything available
+at `<workspace>/.agent/skills/<name>/` and `~/.prism/agent/skills/<name>/` is
+loadable as a contribution, with first-party and third-party packages equally
+discoverable. Provider discovery stays config/package-driven (needs
+credentials); Phase 24's resolver handles provider wiring.
+
+Deliver:
+- Host/CLI filesystem contribution loader (Node, optional) scanning:
+  - `<workspace>/.agent/skills/<name>/`
+  - `~/.prism/agent/skills/<name>/`
+  - and the analogous `.agent/tools/`, `.agent/context/`, `.agent/instructions/`, `.agent/agents/` (workspace) and `~/.prism/agent/{skills,tools,context,instructions,agents}/` (global) when those kinds are requested. Credentials-bearing providers are loaded as packages, not file-scanned.
+- Each discovered skill loads its `SKILL.md` (name, description, instructions, optional `context`, `toolNames`) into the `skills` contribution registry; tools/context/instructions/agents analogously register into their registries. Agent bundles load `AGENT.md` (see Phase 33) including any colocated `skills/<name>/SKILL.md` and `tools/<name>` into an agent-scoped registry so a file-declared agent carries its own deps as a unit.
+- Merge order: global first, workspace overrides same-name (or vice versa, documented and tested), explicit `AgentConfig` / `RunOptions` selections override discovered contributions (progressive disclosure preserved).
+- Discovery is opt-in and loader-driven: SDK apps can skip it entirely and pass explicit registries; the CLI uses it. No hidden global state in core.
+- First-party skills ship as installable packages (`@arnilo/prism-skill-*`), not bundled in core; discovered like any third-party skill. First-party tools (future) ship as `@arnilo/prism-tool-*` packages the same way. Hosts choose which discovered contributions to activate.
+
+Acceptance:
+- A workspace skill at `.agent/skills/my-skill/SKILL.md` is loadable, selectable via `activeSkills: ["my-skill"]`, and its `toolNames`/`context` honored.
+- A global skill at `~/.prism/agent/skills/global-skill/SKILL.md` is loadable; workspace same-name overrides or merges per documented rule.
+- Discovered skills are inert until the host/selecting run activates them; discovery registers contributions, it does not auto-activate.
+- No filesystem access happens without the explicit host/CLI loader; in-memory SDK use is unaffected.
+- Docs: `/docs/contribution-discovery.md` (new) with workspace/global layout, merge order, trust model, and CLI flags.
+
+### Phase 30 — Package context and instruction injection
+
+**Goal:** a package can modify how context is formulated — inject its own
+instructions to modify agent behavior on the first turn, on every turn, or in
+response to user input — without forking the input/prompt pipeline and without
+hidden globals.
+
+Deliver:
+- Instruction injection contract (Prism-native): `InstructionInjector { name; apply(ctx: InstructionContext): InstructionContribution }` where `InstructionContribution { instructions?: string; contextBlocks?: readonly ContextBlock[]; when: "first_turn" | "every_turn" | "on_input"; predicate?: (ctx) => boolean }`.
+- Injectors register via `ExtensionAPI.registerInstructionInjector(...)` and are otherwise inert until the host selects them on `AgentConfig.instructions?: readonly InstructionInjector[] | SystemPromptConfig` (extend the existing `instructions` surface) or `RunOptions.instructions`.
+- The default input/prompt assembler runs selected injectors at the documented stage (after host `AgentConfig.context`, before skill contributions; `first_turn` runs only on turn 1, `every_turn` on all, `on_input` when the input predicate matches).
+- An injector may also produce `ContextBlock[]` (e.g. project schema, env state) — routed through the existing `resolveContextProviders` merge, not a parallel pipeline.
+- No injector can grant tool access, activate skills, or bypass permissions; it only adds text/context.
+
+Acceptance:
+- A package registers an injector that prepends "Always answer in JSON" on every turn, visible in the assembled provider request.
+- A `first_turn` injector adds project context only on turn 1.
+- Injectors cannot bypass `toolNames` enforcement or permission policies.
+- Docs: `/docs/instruction-injection.md` (new) plus `docs/extensions.md` cross-reference; `docs/index.md` entry.
+
+### Phase 31 — System and project prompts (AGENTS.md and SYSTEM.md)
+
+**Goal:** implement system/project prompt capabilities with a documented
+standard layout: `AGENTS.md` at the project root is the project prompt and
+`~/.prism/agent/SYSTEM.md` is the user/global system prompt, layered into the
+existing `SystemPromptContribution` system rather than a parallel mechanism.
+
+Deliver:
+- Project prompt: `<workspace>/AGENTS.md` → a `SystemPromptContribution` with `source: "app"` (project-scoped), loaded by the host/CLI filesystem loader. Loaded only with explicit trust (existing trust model from Phase 10/16).
+- System prompt: `~/.prism/agent/SYSTEM.md` → a `SystemPromptContribution` with `source: "user"` (global), same loader.
+- Layering order (matches the existing `SystemPromptSource` + merge/replace modes): user global (`SYSTEM.md`) → package contributions → app/project (`AGENTS.md`) → host `AgentConfig.systemPrompt` → `RunOptions.systemPrompt`. `AgentConfig.instructions` remains the simple direct base path; `RunOptions.systemPrompt: false` disables layers for that run as today.
+- Standalone SDK use with no filesystem loads nothing; `AgentConfig.instructions` / `systemPrompt` work unchanged.
+- Walk-up discoverability: the CLI loads `AGENTS.md` and `~/.prism/agent/SYSTEM.md` automatically when present and trusted; explicit flags override/disable each layer.
+- No prompt content is ever stored in events/store beyond what `AgentConfig.instructions`/`systemPrompt` already emits; secret redaction unchanged.
+
+Acceptance:
+- A workspace with `AGENTS.md` (project) and a user with `~/.prism/agent/SYSTEM.md` (system) both contribute to the composed prompt in the documented order; disabling a layer via flag removes only it.
+- Removing both files reverts to `AgentConfig.instructions` only — no hidden prompt.
+- Trust model: untrusted workspace `AGENTS.md` is not loaded unless the user opts in (reuse Phase 10/16 trust).
+- Docs: `/docs/system-prompts.md` updated with `AGENTS.md`/`SYSTEM.md` layout, layering order, trust, and CLI flags; `docs/index.md` entry.
+
+### Phase 32 — Synapta-facing integration example and boundary lock
+
+**Goal:** prove end-to-end that Synapta (or any third party) can use Prism with
+its own providers/tools/skills + optional first-party ones, opt a run into the
+generate-validate-revise loop with its own schema validator, observe
+artifact/refinement events, and that no Synapta workflow types appear anywhere
+in `src/`. This phase ships no new core surface; it exercises the seams.
+
+Deliver:
+- A compile-checked example (`examples/synapta-style-artifact-loop.ts`) that: builds a provider resolver mixing a first-party package and a third-party mock provider; registers a third-party tool + a first-party tool (mocked), selects a discovered skill; composes a system prompt from `AGENTS.md` + `SYSTEM.md`; runs `session.run(input, { loop: { strategy: "generate-validate-revise", validator, parser, repairer, maxRevisions: 3 } })` with a Synapta-style schema mapped to `ArtifactValidation`; asserts artifact events stream and no Synapta types are imported.
+- Boundary test hardened: grep/assert `src/**/*.ts` imports no `synapta*`; artifact contract field names contain no `workflow`/`node`/`step`; `ToolValidator`/`ArtifactValidator` are `(value, ctx)`-shaped, not domain-typed.
+- `/docs/structured-output.md` example showing a third-party schema mapped to `ArtifactValidation` end to end.
+
+Acceptance:
+- Example compiles and runs network-free with the mock provider.
+- All artifact events fire in order; `artifact_finished` carries `result.ok === true`.
+- Boundary tests fail if any Synapta-domain type or import is introduced into `src/`.
+- No new core exports required beyond what Phases 24–31 added.
+
+### Phase 33 — Agent definitions: declarative requirements and resolver
+
+**Goal:** let a third party ship an agent as a unit with declaratively referenced
+tools, skills, context providers, model, system prompt, and loop, mixing
+first-party and own dependencies by name — without hand-assembling `AgentConfig`
+inside an imperative `create()` that re-implements registry lookup. Mirrors the
+Prism pattern (declarative config + replaceable strategy; default + escape
+hatch).
+
+Deliver:
+- Extend `AgentDefinition` (`src/contracts.ts`) with declarative requirement fields, all name-referenced so dependencies resolve from in-scope registries:
+  - `model?: ModelConfig | string` — direct config or id resolved from `registries.models`.
+  - `tools?: readonly string[]` — tool names to activate from the active tool registry / `registries.tools`.
+  - `skills?: readonly string[]` — skill names, resolved through `resolveActiveSkills()` (Phase 26 gives free `toolNames` enforcement).
+  - `context?: readonly string[]` — context provider names from `registries.contextProviders`.
+  - `systemPrompt?: SystemPromptConfig`.
+  - `instructions?: string`.
+  - `loop?: AgentLoopStrategy | AgentLoopOptions` (Phase 27).
+  - `create?(config?: AgentConfig): Promise<Agent> | Agent` becomes **optional**. When present, it overrides declarative resolution (escape hatch for agents needing custom logic: dynamic model pick, settings-driven tools, credential-gated setup).
+- `resolveAgentDefinition(def, context)` generic helper (new, reuses existing seams):
+  ```ts
+  export interface AgentDefinitionResolutionContext {
+    readonly registries?: ContributionRegistries; // tools, skills, models, contextProviders
+    readonly providerSource?: ProviderResolver;   // Phase 24
+    readonly tools?: ToolRegistry | readonly ToolDefinition[]; // host active tool superset/filter
+    readonly skillsRegistry?: SkillRegistry;
+    readonly overrides?: Partial<AgentConfig>;    // host/run overrides win
+  }
+  export function resolveAgentDefinition(def, context): Promise<Agent> | Agent
+  ```
+  Algorithm:
+  1. If `def.create` exists → call it, merge `overrides`. Escape hatch.
+  2. Else build declaratively: model (direct or from `registries.models`), provider via `providerSource(model)` (Phase 24), tools resolved by name against active registry / `registries.tools` (**fail closed on missing name**, mirrors skill `toolNames`), skills via `resolveActiveSkills({registry, names, tools})` (Phase 26), context providers from `registries.contextProviders`. Compose `AgentConfig`, merge `overrides`, `createAgent(config)`.
+- Two equal delivery vehicles, same contract:
+  - **Code package (Extension):** third-party `setup()` calls `api.registerTool()`/`registerSkill()` for own deps, then `api.registerAgent({name, tools:[...], skills:[...]})`. Names reference own + first-party contributions in the same registries.
+  - **Filesystem bundle (`AGENT.md`):** discovered under `.agent/agents/<name>/` (Phase 29). `AGENT.md` frontmatter maps 1:1 to declarative `AgentDefinition` fields; colocated `skills/<name>/SKILL.md` and `tools/<name>` register into an agent-scoped registry, so a file-declared agent carries its own deps as a unit. Default `create()` for `AGENT.md` reads the file, registers colocated deps into a transient scoped registry, and delegates to `resolveAgentDefinition`. Resolution scope: (global + workspace discovered) ∪ (colocated) ∪ (first-party package registries).
+- Composition and scope rules:
+  - Names resolve against all in-scope registries: first-party packages + workspace discovery + global discovery + own extension.
+  - Host controls scope by which registries it passes to `context.registries` — the "inert until host selects" principle is preserved; declaring `tools: ["read-file"]` does not force activation, host `overrides`/active tool superset is final.
+  - Recommend package-qualified names (`@arnilo/read-file`, `synapta/validate`); resolver uses documented first-match order (global → workspace → extension → first-party), overridable. Mark merge order as `ponytail:` comment (per-namespace registry later if collisions bite).
+  - Host always has final say: `overrides` can drop a tool, swap model, disable a skill.
+  - No privilege grant: an agent declaration cannot grant permissions or bypass `toolNames`; Phase 26 enforcement still runs at activation, Phase 25 validator still runs at dispatch.
+  - Mixed sourcing is the point: `tools: ["read-file", "synapta/validate", "my-grep"]` mixes first-party + third-party + own in one declaration; the declarative name list is what makes it possible.
+
+Acceptance:
+- A code-package agent and an `AGENT.md` agent both resolve through the same `resolveAgentDefinition` and produce equal runtime behavior.
+- Declaring `tools: ["missing"]` with no in-scope tool of that name fails closed at resolution, before any provider turn.
+- Declared skills honor `toolNames` enforcement (Phase 26) — agent-skill demanding an inactive tool fails fast.
+- `overrides` drops a tool or swaps a model as final authority.
+- No new architecture: `AgentDefinition`, `createAgent`, the contribution registries, Phase 24 resolver, Phase 26 `resolveActiveSkills`, and Phase 29 discovery are all reused; the only additions are the declaration fields and the resolver helper.
+- Docs: `/docs/agent-definitions.md` (new) with both delivery vehicles, declarative fields, resolution scope/merge rules, and a mixed first-party + third-party example; `/docs/contribution-registries.md` agent section updated; `docs/index.md` entry.
+
+## Defer until after this track
 
 - Built-in app/tool packs. Ship them as separate packages only.
 - MCP bridge. Build as an external extension package after extension APIs settle.
 - Full TUI. Optional separate package if CLI/RPC is not enough.
-- Workflow graph engine. Start with bounded agent loops; add graph orchestration only when real host apps need it.
+- Additional loop strategies (plan-authoring, multi-agent, graph orchestration). Add as new `AgentLoopStrategy` implementations once a real consumer needs them; the generic loop contract is the only seam.
 - Additional first-party provider adapters beyond OpenAI, OpenCode Go, OpenRouter, ZAI, and Kimi unless users ask.
 - Encrypted/keychain credential storage. Keep persistent secret UX host-owned until a real app needs it.

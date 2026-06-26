@@ -5,6 +5,7 @@
 The provider layer contains the small runtime pieces Prism already ships for host-owned model access:
 
 - `createProviderRegistry()` / `ProviderRegistry`: register and resolve `AIProvider` instances by id.
+- `createProviderResolver()` / `ProviderResolver`: build a resolver that maps a `ModelConfig` to an `AIProvider` (or `undefined`), from a `ProviderRegistry` or a plain `AIProvider[]`.
 - `createModelRegistry()` / `ModelRegistry`: register and resolve `ModelConfig` values by provider/model key.
 - `ModelConfig` metadata fields for display names, capabilities, limits, cost/cache pricing, opaque provider compat data, and host metadata.
 - Provider event helpers: create normalized `ProviderEvent` values for text, thinking, tool calls, usage, done, and errors, including optional cache read/write usage fields.
@@ -83,6 +84,42 @@ createMockProvider(events?: readonly ProviderEvent[], options?: MockProviderOpti
 | --- | --- | --- |
 | `id` | `string` | Optional provider id. Defaults to `mock`. |
 | `onRequest` | `(request: ProviderRequest) => void` | Optional request observer for tests. |
+
+### Provider resolver
+
+```ts
+export type ProviderResolver = (model: ModelConfig) => AIProvider | undefined;
+
+createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver
+```
+
+A `ProviderResolver` maps a `ModelConfig` to an `AIProvider` for the current
+run. `createProviderResolver()` builds one from a `ProviderRegistry` (reuses
+`ProviderRegistry.get`) or a plain `AIProvider[]` (builds an id-keyed lookup
+once at construction; last duplicate id wins). A custom function is the
+zero-helper path for hosts with their own provider map (lazy construction,
+per-request routing).
+
+The resolver returns `undefined` on a miss; the agent runtime fails closed with
+`Unknown provider: ${model.provider}` before any provider turn (see
+[Agent/session runtime](agent-session-runtime.md)).
+
+Wire `providerSource` on `AgentConfig`, override per run with
+`RunOptions.providerSource` (RunOptions wins). When `AgentConfig.provider` is
+set it takes first precedence and the resolver is bypassed. The resolver is
+called once per run with `options.model ?? config.model`; per-turn
+re-resolution is unnecessary.
+
+```ts
+import { createAgent, createProviderResolver, createProviderRegistry } from "@arnilo/prism";
+
+const own = createMyProvider();
+const providerSource = createProviderResolver(createProviderRegistry([own]));
+// or mix first-party + own in one list:
+// const providerSource = createProviderResolver([firstPartyProvider, own]);
+
+const agent = createAgent({ model: { provider: own.id, model: "demo" }, providerSource });
+```
 
 ## Outputs / response / events
 

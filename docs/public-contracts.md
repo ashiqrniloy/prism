@@ -30,7 +30,15 @@ Public contracts are imported from the root package:
 import type {
   AgentConfig,
   AgentDefinition,
+  AgentLoopOptions,
+  AgentLoopStrategy,
   AIProvider,
+  ArtifactContext,
+  ArtifactParseResult,
+  ArtifactParser,
+  ArtifactRepairer,
+  ArtifactValidation,
+  ArtifactValidator,
   AuthMethod,
   CommandDefinition,
   CompactionStrategy,
@@ -53,6 +61,7 @@ import type {
   PromptTemplateOptions,
   ProviderPackage,
   ProviderRequestPolicy,
+  ProviderTurnResult,
   ResourceLoader,
   SettingsProvider,
   Skill,
@@ -83,7 +92,14 @@ Important request shapes:
 | `CredentialRequest` | Credential lookup request: credential `name`, optional provider id, and metadata. |
 | `OAuthProvider` | Host/package OAuth callbacks for login, optional refresh, and conversion to a `Credential`. |
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
-| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, and metadata. |
+| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
+| `AgentConfig.loop` / `RunOptions.loop` | Replaceable per-run control loop: `singleShotLoop` default, `generate-validate-revise` options, or a custom `AgentLoopStrategy`. `RunOptions.loop` wins. See [Agent loops](agent-loops.md). |
+| `AgentLoopStrategy` | `{ name; run(ctx: LoopContext): Promise<Usage \| undefined> }` — orchestrates shared runtime primitives via `LoopContext`. |
+| `LoopContext` | Loop-facing surface: run ids, signal, live `history`, `input`/`inputMessages`/`maxToolRounds`, and bound `assemble`/`generate`/`dispatchToolCall`/`appendMessage`/`emit` primitives. |
+| `ProviderTurnResult` | The result of `LoopContext.generate()`: `content`, `calls`, optional `messageId`, `started`, `usage`. |
+| `ArtifactValidation` | `{ ok; errors?: readonly { path?; message }[]; metadata? }` — host validator result. |
+| `ArtifactContext` | `{ sessionId, runId, turn, signal, metadata }` — passed to artifact callbacks. |
+| `ArtifactParser<T>` / `ArtifactValidator<T>` / `ArtifactRepairer<T>` | Host-supplied callbacks for `generate-validate-revise`; `T` is host-defined, Prism never instantiates it. |
 | `SystemPromptContribution` | Explicit caller-selected prompt layer with source, mode, text, and metadata. |
 | `ConfigLayer` | Named JSON config layer consumed by `mergeConfigLayers()`. |
 | `PrismManifest` | Data-only package manifest with config defaults, contribution declarations, and resource declarations. |
@@ -365,6 +381,9 @@ void credentials;
 - [Contribution registries](contribution-registries.md): explicit registries for contribution contracts.
 - [Tools](tools.md): active tool registry and exact allow/deny filtering built on `ToolDefinition`.
 - [Agent/session runtime](agent-session-runtime.md): `createAgent()` / `createAgentSession()` runtime, `AgentSession.compact()`, and auto-compaction config built on these contracts.
+- [Agent loops](agent-loops.md): `singleShotLoop` default, `generateValidateReviseLoop`, `resolveLoop`, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts.
+- [Agent events](agent-events.md): the `AgentEvent` union including `artifact_*` variants and event ordering.
+- [Structured output](structured-output.md): the `ArtifactParser<T>`/`ArtifactValidator<T>`/`ArtifactRepairer<T>` seam — the only typed-output path from a loop.
 - [Session stores and branching](session-stores-and-branching.md): branch-aware `SessionEntry` helpers and context rebuild.
 - [Compaction and retry policies](compaction-and-retry.md): default compaction strategy, default retry policy, runtime compaction/retry options, middleware payloads, and compaction entry data.
 - [Provider layer](provider-layer.md): runtime registries, provider event helpers, and mock provider built on these contracts.

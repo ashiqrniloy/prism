@@ -1,7 +1,9 @@
+import type { AgentInput } from "./input.js";
 import type { ContributionRegistries } from "./contributions.js";
 import type { Middleware, MiddlewareHookName, MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { PermissionPolicy } from "./security.js";
+import type { ToolValidator } from "./tools.js";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -145,9 +147,12 @@ export interface AIProvider {
   generate(request: ProviderRequest): AsyncIterable<ProviderEvent>;
 }
 
+export type ProviderResolver = (model: ModelConfig) => AIProvider | undefined;
+
 export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly model?: ModelConfig;
+  readonly providerSource?: ProviderResolver;
   readonly maxToolRounds?: number;
   readonly providerOptions?: ProviderRequestOptions;
   readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
@@ -156,6 +161,10 @@ export interface RunOptions {
   readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly redactor?: SecretRedactor;
+  readonly validate?: ToolValidator;
+  readonly activeSkills?: readonly string[];
+  readonly skills?: readonly Skill[];
+  readonly loop?: AgentLoopStrategy | AgentLoopOptions;
 }
 
 export interface AgentDefinition {
@@ -171,6 +180,7 @@ export interface AgentConfig {
   readonly instructions?: string;
   readonly model: ModelConfig;
   readonly provider?: AIProvider;
+  readonly providerSource?: ProviderResolver;
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
   readonly context?: readonly ContextProvider[];
   readonly skills?: SkillRegistry | readonly Skill[];
@@ -190,6 +200,8 @@ export interface AgentConfig {
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly validator?: ToolValidator;
+  readonly loop?: AgentLoopStrategy | AgentLoopOptions;
 }
 
 export interface Agent {
@@ -244,7 +256,12 @@ export type AgentEvent =
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
   | { readonly type: "compaction_finished"; readonly sessionId: string; readonly runId?: string; readonly summary: string }
   | { readonly type: "retry_scheduled"; readonly sessionId: string; readonly runId: string; readonly attempt: number; readonly delayMs: number; readonly error: ErrorInfo }
-  | { readonly type: "error"; readonly sessionId?: string; readonly runId?: string; readonly error: ErrorInfo };
+  | { readonly type: "error"; readonly sessionId?: string; readonly runId?: string; readonly error: ErrorInfo }
+  | { readonly type: "artifact_validation_started"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number }
+  | { readonly type: "artifact_validation_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly result: ArtifactValidation }
+  | { readonly type: "artifact_revision_started"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly failure: ArtifactValidation }
+  | { readonly type: "artifact_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly result: ArtifactValidation }
+  | { readonly type: "artifact_failed"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly result: ArtifactValidation };
 
 export interface ToolDefinition {
   readonly name: string;
@@ -671,3 +688,84 @@ export interface CredentialResolverSource {
 export interface OAuthCredentialStore {
   set(provider: string, credentials: OAuthCredentials): void | Promise<void>;
 }
+
+// ponytail: AgentLoopStrategy orchestrates shared runtime primitives via
+// LoopContext; it never re-implements provider calls, retry, abort, store, or
+// events. Single-shot is the default; loops are opt-in. T is host-defined,
+// Prism never instantiates it. No domain control-flow vocabulary (boundary
+// guard); artifact types are generic over host T.
+
+export interface ProviderTurnResult {
+  readonly content: readonly ContentBlock[];
+  readonly calls: readonly ToolCallContent[];
+  readonly messageId?: string;
+  readonly started: boolean;
+  readonly usage?: Usage;
+}
+
+export interface LoopContext {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly signal: AbortSignal;
+  readonly history: Message[];
+  readonly input: AgentInput;
+  readonly inputMessages: readonly Message[];
+  readonly maxToolRounds: number;
+  assemble(nextInput: AgentInput, toolResults?: readonly ToolResult[]): Promise<ProviderRequest>;
+  generate(request: ProviderRequest): Promise<ProviderTurnResult>;
+  dispatchToolCall(call: ToolCallContent): Promise<ToolResult>;
+  appendMessage(message: Message): Promise<void>;
+  emit(event: AgentEvent): void;
+}
+
+export interface AgentLoopStrategy {
+  readonly name: string;
+  run(ctx: LoopContext): Promise<Usage | undefined>;
+}
+
+export type AgentLoopOptions =
+  | { readonly strategy: "single-shot" }
+  | {
+      readonly strategy: "generate-validate-revise";
+      readonly validator: ArtifactValidator<unknown>;
+      readonly parser?: ArtifactParser<unknown>;
+      readonly repairer?: ArtifactRepairer<unknown>;
+      readonly maxRevisions?: number;
+    };
+
+export interface ArtifactValidation {
+  readonly ok: boolean;
+  readonly errors?: readonly { readonly path?: string; readonly message: string }[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ArtifactContext {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly turn: number;
+  readonly signal: AbortSignal;
+  readonly metadata: Readonly<Record<string, unknown>>;
+}
+
+export interface ArtifactParseResult<T> {
+  readonly ok: boolean;
+  readonly value?: T;
+  readonly error?: string;
+}
+
+export type ArtifactParser<T> = (
+  text: string,
+  ctx: ArtifactContext,
+) => ArtifactParseResult<T> | Promise<ArtifactParseResult<T>>;
+
+export type ArtifactValidator<T> = (
+  value: T,
+  ctx: ArtifactContext,
+) => ArtifactValidation | Promise<ArtifactValidation>;
+
+export type ArtifactRepairer<T> = (
+  value: T | undefined,
+  failure: ArtifactValidation,
+  ctx: ArtifactContext,
+) => AgentInput | Promise<AgentInput>;

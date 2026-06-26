@@ -4,26 +4,32 @@ import type {
   AgentEvent,
   AgentSession,
   AgentSessionConfig,
+  AIProvider,
   CompactionMiddlewarePayload,
   CompactionOptions,
   CompactionResult,
   ContentBlock,
   ErrorInfo,
+  LoopContext,
   Message,
   ProviderEvent,
   ProviderRequest,
   ProviderRequestPolicy,
+  ProviderResolver,
+  ProviderTurnResult,
   RetryMiddlewarePayload,
   RetryOptions,
   RunOptions,
   SessionEntry,
   SessionStore,
+  Skill,
   ToolCallContent,
   ToolDefinition,
   ToolRegistry,
   ToolResult,
   Usage,
 } from "./contracts.js";
+import { resolveLoop } from "./agent-loops.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
 import { createProviderRequestPolicyChain, mergeProviderRequestOptions, normalizeProviderRequestPolicyResult } from "./provider-request-policy.js";
@@ -32,6 +38,7 @@ import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.j
 import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "./session-stores.js";
 import { createToolRegistry, dispatchToolCall } from "./tools.js";
+import { resolveActiveSkills } from "./skills.js";
 
 export function createAgent(config: AgentConfig): Agent {
   return {
@@ -56,6 +63,7 @@ class RuntimeAgentSession implements AgentSession {
   private history: Message[] = [];
   private activeRun?: AbortController;
   private activeRedactor?: SecretRedactor;
+  private activeProvider?: AIProvider;
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -79,14 +87,13 @@ class RuntimeAgentSession implements AgentSession {
       throw error;
     }
 
-    let usage: Usage | undefined;
     const controller = new AbortController();
     const cleanupSignal = bridgeAbort(options.signal, controller);
     this.activeRun = controller;
     this.activeRedactor = options.redactor ?? this.agent.config.redactor;
 
     try {
-      this.requireProvider();
+      this.resolveRunProvider(options);
       throwIfAborted(controller.signal);
       this.emit({ type: "agent_started", sessionId: this.id, runId });
 
@@ -100,69 +107,69 @@ class RuntimeAgentSession implements AgentSession {
 
       const metadata = { ...this.agent.config.metadata, ...this.metadata, ...options.metadata };
       const { registry, tools } = activeTools(this.agent.config.tools);
+      const activeSkills = this.resolveRunSkills(options, tools);
       const maxToolRounds = options.maxToolRounds ?? 1;
-      const toolResults: ToolResult[] = [];
-      let toolRounds = 0;
-      let nextInput: AgentInput = input;
+      const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(this.agent.config.systemPrompt, options.systemPrompt), { base: this.agent.config.instructions });
+      const contextProviders = [
+        ...(this.agent.config.context ?? []),
+        // ponytail: skill context after host context; no per-skill token budget yet.
+        ...activeSkills.flatMap((skill) => skill.context ?? []),
+      ];
+      const providerOptions = mergeProviderRequestOptions(this.agent.config.providerOptions, options.providerOptions);
+      const validate = options.validate ?? this.agent.config.validator;
+      const loop = resolveLoop(options, this.agent.config);
 
-      for (let turn = 1; ; turn += 1) {
-        throwIfAborted(controller.signal);
-        this.emit({ type: "turn_started", sessionId: this.id, runId, turn });
-        const request = await assembleProviderInput({
+      // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
+      const ctx: LoopContext = {
+        sessionId: this.id,
+        runId,
+        metadata,
+        signal: controller.signal,
+        history: this.history,
+        input,
+        inputMessages,
+        maxToolRounds,
+        assemble: async (nextInput, toolResults) => assembleProviderInput({
           model: options.model ?? this.agent.config.model,
           input: nextInput,
           history: this.history,
           summaries: (await this.snapshot()).summaries,
-          toolResults,
-          systemInstructions: composeSystemPrompt(mergeSystemPromptConfig(this.agent.config.systemPrompt, options.systemPrompt), { base: this.agent.config.instructions }),
+          toolResults: toolResults ?? [],
+          systemInstructions,
           inputBuilder: this.agent.config.inputBuilder,
           promptBuilder: this.agent.config.promptBuilder,
-          contextProviders: this.agent.config.context,
-          skills: this.agent.config.skills ? ("list" in this.agent.config.skills ? this.agent.config.skills.list() : this.agent.config.skills) : undefined,
+          contextProviders,
+          skills: activeSkills,
           tools,
           resourceLoader: this.agent.config.resourceLoader,
-          providerOptions: mergeProviderRequestOptions(this.agent.config.providerOptions, options.providerOptions),
+          providerOptions,
           middleware: this.agent.config.middleware,
           sessionId: this.id,
           runId,
           metadata,
           signal: controller.signal,
-        });
+        }),
+        generate: async (request) => {
+          const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
+          const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
+          return this.generateWithRetry(this.redactProviderRequest(middlewareRequest), runId, options, controller.signal, policyResult.secrets);
+        },
+        dispatchToolCall: (call) => dispatchToolCall({
+          call,
+          registry,
+          context: { sessionId: this.id, runId, toolCallId: call.id, signal: controller.signal, metadata },
+          middleware: this.agent.config.middleware,
+          emit: (event) => this.emit(event),
+          permission: this.agent.config.permission,
+          redactor: this.activeRedactor,
+          // ponytail: RunOptions wins; array-compose deferred (roadmap: compose-later).
+          validate,
+        }),
+        appendMessage: (message) => this.appendMessage(message, runId),
+        emit: (event) => this.emit(event),
+      };
 
-        throwIfAborted(controller.signal);
-        const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
-        const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
-        const { content, calls, messageId, started, usage: turnUsage } = await this.generateWithRetry(this.redactProviderRequest(middlewareRequest), runId, options, controller.signal, policyResult.secrets);
-        usage = turnUsage ?? usage;
-
-        if (turn === 1) this.history.push(...inputMessages);
-        if (started) {
-          const message: Message = { id: messageId, role: "assistant", content };
-          this.history.push(message);
-          await this.appendMessage(message, runId);
-          this.emit({ type: "message_finished", sessionId: this.id, runId, message });
-        }
-        this.emit({ type: "turn_finished", sessionId: this.id, runId, turn });
-
-        if (calls.length === 0 || toolRounds >= maxToolRounds) break;
-        toolRounds += 1;
-        for (const call of calls) {
-          const result = await dispatchToolCall({
-            call,
-            registry,
-            context: { sessionId: this.id, runId, toolCallId: call.id, signal: controller.signal, metadata },
-            middleware: this.agent.config.middleware,
-            emit: (event) => this.emit(event),
-            permission: this.agent.config.permission,
-            redactor: this.activeRedactor,
-          });
-          toolResults.push(result);
-          await this.appendMessage(toolResultMessage(result), runId);
-          throwIfAborted(controller.signal);
-        }
-        nextInput = [];
-      }
-
+      const usage = await loop.run(ctx);
       this.emit({ type: "agent_finished", sessionId: this.id, runId, usage });
     } catch (error) {
       const info = errorToErrorInfo(error);
@@ -171,6 +178,7 @@ class RuntimeAgentSession implements AgentSession {
     } finally {
       if (this.activeRun === controller) this.activeRun = undefined;
       this.activeRedactor = undefined;
+      this.activeProvider = undefined;
       cleanupSignal();
       this.closeSubscribers();
     }
@@ -215,8 +223,24 @@ class RuntimeAgentSession implements AgentSession {
     return createAgentSession({ agent: this.agent, id, store: this.store, leafId: branch.length ? remap.get(branch[branch.length - 1]!.id) : undefined, metadata: this.metadata });
   }
 
-  private requireProvider(): void {
-    if (!this.agent.config.provider) throw new Error(`Unknown provider: ${this.agent.config.model.provider}`);
+  private resolveRunProvider(options: RunOptions): void {
+    const model = options.model ?? this.agent.config.model;
+    const provider =
+      options.providerSource?.(model) ??
+      this.agent.config.providerSource?.(model) ??
+      this.agent.config.provider;
+    if (!provider) throw new Error(`Unknown provider: ${model.provider}`);
+    this.activeProvider = provider;
+  }
+
+  private resolveRunSkills(options: RunOptions, tools: readonly ToolDefinition[]): readonly Skill[] {
+    const configured = this.agent.config.skills;
+    if (configured && typeof configured === "object" && "list" in configured) {
+      if (options.activeSkills) return resolveActiveSkills({ registry: configured, names: options.activeSkills, tools });
+      return configured.list();
+    }
+    const arr = options.skills ?? (Array.isArray(configured) ? configured : []);
+    return arr;
   }
 
   private emit(event: AgentEvent): void {
@@ -259,7 +283,7 @@ class RuntimeAgentSession implements AgentSession {
     let started = false;
     let usage: Usage | undefined;
     try {
-      for await (const event of this.agent.config.provider!.generate(request)) {
+      for await (const event of this.activeProvider!.generate(request)) {
         throwIfAborted(signal);
         if (event.type === "error") throw new ProviderTurnFailure(event.error, started);
         if (event.type === "usage") usage = event.usage;
@@ -402,14 +426,6 @@ function inputToMessages(input: AgentInput): Message[] {
   return [...input];
 }
 
-function toolResultMessage(result: ToolResult): Message {
-  return {
-    role: "tool",
-    content: [{ type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error }, ...(result.content ?? [])],
-    metadata: result.metadata,
-  };
-}
-
 function activeTools(tools: AgentConfig["tools"]): { registry: ToolRegistry; tools: readonly ToolDefinition[] } {
   if (!tools) return { registry: createToolRegistry(), tools: [] };
   if ("list" in tools) return { registry: tools, tools: tools.list() };
@@ -424,14 +440,6 @@ function policyList(policies: ProviderRequestPolicy | readonly ProviderRequestPo
 
 function errorFromInfo(error: ErrorInfo): Error {
   return Object.assign(new Error(error.message), { name: error.name ?? "Error", cause: error.cause });
-}
-
-interface ProviderTurnResult {
-  readonly content: ContentBlock[];
-  readonly calls: ToolCallContent[];
-  readonly messageId?: string;
-  readonly started: boolean;
-  readonly usage?: Usage;
 }
 
 class ProviderTurnFailure extends Error {

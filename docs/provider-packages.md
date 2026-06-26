@@ -61,6 +61,43 @@ Phase 12 adds explicit npm workspaces for [`@arnilo/prism-provider-openai`](prov
 
 These workspaces still follow the same rule as external packages: no provider SDK dependency, catalog fetch, env scan, keychain/file credential lookup, shell auth command, OAuth login, or live provider call runs by default. `@arnilo/prism-provider-openai` now registers OpenAI Responses and OpenAI Codex providers from caller-supplied credentials only. `@arnilo/prism-provider-opencode-go` now registers static OpenCode Go metadata and package-local OpenAI/Anthropic-compatible routes from caller-supplied credentials only. `@arnilo/prism-provider-openrouter` now registers an app-controlled OpenRouter catalog with routing/reasoning/cache passthrough and no setup catalog fetch. `@arnilo/prism-provider-zai` now registers static GLM metadata with Z.AI thinking/reasoning/tool-stream request mapping. `@arnilo/prism-provider-kimi` now registers Kimi Coding Anthropic-compatible behavior by default and optional Moonshot metadata only when requested.
 
+## Third-party provider packaging
+
+A third party ships their own providers the same way Prism ships first-party
+provider packages: an `Extension` whose `setup(api)` calls
+`api.registerProvider(provider)` for each provider it owns. First-party
+provider packages (`@arnilo/prism-provider-openai`, `@arnilo/prism-provider-openrouter`,
+`@arnilo/prism-provider-kimi`, `@arnilo/prism-provider-zai`,
+`@arnilo/prism-provider-opencode-go`) are **opt-in and individually installable**;
+`@arnilo/prism` core runs without any first-party provider package (mock-only).
+
+A host mixes first-party packages and third-party providers in one resolver.
+The host owns the resolver — declaring a provider does not activate it:
+
+```ts
+import { createExtensionKernel, createProviderResolver, createAgent } from "@arnilo/prism";
+import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+
+// First-party package, inert until loaded.
+const kernel = createExtensionKernel();
+await kernel.load([createOpenAIProviderPackage({ apiKey: () => process.env.OPENAI_API_KEY })]);
+
+// Third-party own provider (bring your own adapter). Combined with first-party
+// providers in one resolver passed to the agent as `providerSource`.
+const own = createMyProvider(/* credentials */);
+const providerSource = createProviderResolver([...kernel.registries.providers.list(), own]);
+
+const agent = createAgent({ model: { provider: own.id, model: "demo" }, providerSource });
+```
+
+The resolver is the selection mechanism: `model.provider` selects which
+provider runs per turn. Hosts can build the resolver from a `ProviderRegistry`,
+a plain `AIProvider[]`, or implement `ProviderResolver` directly as a one-line
+function over their own map (lazy construction, per-request routing). Declaring
+a provider grants no permissions and forces no activation; the host always has
+final say. See [Provider layer § Provider resolver](provider-layer.md#provider-resolver)
+for the resolver contract.
+
 ## Outputs / response / events
 
 `defineProviderPackage()` returns the same package object or throws when `name` is blank. A package contributes only when a host passes it to an extension/kernel/setup flow and calls `setup()` explicitly.

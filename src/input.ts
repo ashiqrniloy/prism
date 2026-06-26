@@ -185,7 +185,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   };
 }
 
-function inputMessages(input: AgentInput): Message[] {
+export function inputMessages(input: AgentInput): Message[] {
   if (typeof input === "string") return [textMessage("user", input)];
   if ("role" in input) return [input];
   return [...input];

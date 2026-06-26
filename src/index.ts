@@ -42,7 +42,8 @@ export {
   providerUsage,
   toolCallContent,
 } from "./provider-events.js";
-export { createProviderRegistry } from "./providers.js";
+export type { ProviderResolver } from "./contracts.js";
+export { createProviderRegistry, createProviderResolver } from "./providers.js";
 export type { ProviderRegistry } from "./providers.js";
 export { createSecretRedactor, errorToErrorInfo, redactAgentEvent, redactMessage, redactProviderRequest, redactSecrets, redactSessionEntry } from "./redaction.js";
 export type { SecretRedactor } from "./redaction.js";
@@ -52,6 +53,7 @@ export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
 export type { ResolveActiveSkillsOptions } from "./skills.js";
 export { createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
 export type { DispatchToolCallOptions, ToolFilter, ToolFilterInput, ToolValidator } from "./tools.js";
+export { generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
 export const version = "0.0.1";

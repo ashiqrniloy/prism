@@ -7,6 +7,9 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 
 ## Agent/session runtime
 - [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, and subscribe to normalized session events.
+- [Agent loops](agent-loops.md): replaceable per-run control loops — `singleShotLoop` default and `generate-validate-revise` with host-supplied `validator`/`parser`/`repairer` callbacks.
+- [Agent events](agent-events.md): the `AgentEvent` stream — agent/turn/message, tool execution, queue/compaction/retry, artifact validation/refinement, and error variants, redacted via `redactAgentEvent`.
+- [Structured output](structured-output.md): the `Artifact*` seam (parser/validator/repairer, host-defined `T`) — the only typed-output path from a loop, with a Synapta-style schema→`ArtifactValidation` mapping example.
 
 ## Compaction/session memory
 - [Compaction and retry policies](compaction-and-retry.md): summarize branch history and retry transient provider failures with host-replaceable policies.

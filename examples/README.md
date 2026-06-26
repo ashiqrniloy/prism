@@ -20,6 +20,7 @@ node examples/compaction.ts
 node examples/cli.ts
 node examples/rpc.ts
 node examples/provider-registration.ts
+node examples/provider-resolver.ts
 node examples/observational-memory-recall-status-view.ts
 ```
 
@@ -30,6 +31,8 @@ Each demo prints a single JSON line with its result.
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
 - `provider-registration.ts` — **demo**: register a provider package via the
   extension kernel; resolve providers/models from host-owned registries.
+- `provider-resolver.ts` — **demo**: resolve an agent's provider from a mix of
+  first-party package providers and a third-party own provider via `providerSource`.
 - `api-key-auth.ts` — env + memory credential resolvers in host-defined order.
 - `oauth-login.ts` — PKCE OAuth login against a token endpoint (fake host).
 - `openrouter-model-cache-override.ts` — per-model routing/cache overrides.

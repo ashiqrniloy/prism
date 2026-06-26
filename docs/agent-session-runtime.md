@@ -32,7 +32,7 @@ createAgent(config: AgentConfig): Agent
 createAgentSession(config: AgentSessionConfig & { agent: Agent }): AgentSession
 ```
 
-`AgentConfig.provider` must contain the host-selected provider. Prism does not resolve providers from hidden globals.
+`AgentConfig.provider` must contain the host-selected provider. Prism does not resolve providers from hidden globals. Alternatively, set `AgentConfig.providerSource: ProviderResolver` (or override per run with `RunOptions.providerSource`, which wins) to resolve the provider from `model.provider` each run; when `AgentConfig.provider` is set it takes first precedence and the resolver is bypassed. See [Provider layer § Provider resolver](provider-layer.md#provider-resolver).
 
 `session.run(input, options)` accepts the existing Prism input shape:
 
@@ -163,5 +163,7 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - [Tools](tools.md): host-owned tool harness used by the bounded runtime tool loop.
 - [Middleware hooks](middleware-hooks.md): hooks that configured assembly/runtime can run.
 - [CLI/RPC](cli-rpc.md): terminal and JSONL adapters over this runtime.
+
+`AgentConfig.loop` and `RunOptions.loop` select a replaceable per-run control loop (`singleShotLoop` default, or `generate-validate-revise` with host callbacks); see [Agent loops](agent-loops.md). `RunOptions.loop` wins over `AgentConfig.loop`.
 
 `AgentConfig.redactor` and `RunOptions.redactor` redact exact known secret strings from provider requests, emitted events, and stored session entries. Redaction is opt-in and exact-match only.
