@@ -33,6 +33,18 @@
     "./node/session-store-jsonl": {
       "types": "./dist/node/session-store-jsonl.d.ts",
       "default": "./dist/node/session-store-jsonl.js"
+    },
+    "./node/contribution-discovery": {
+      "types": "./dist/node/contribution-discovery.d.ts",
+      "default": "./dist/node/contribution-discovery.js"
+    },
+    "./node/instruction-injectors": {
+      "types": "./dist/node/instruction-injectors.d.ts",
+      "default": "./dist/node/instruction-injectors.js"
+    },
+    "./node/system-prompts": {
+      "types": "./dist/node/system-project-prompts.d.ts",
+      "default": "./dist/node/system-project-prompts.js"
     }
   },
   "bin": {

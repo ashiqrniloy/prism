@@ -117,6 +117,8 @@ class RuntimeAgentSession implements AgentSession {
       ];
       const providerOptions = mergeProviderRequestOptions(this.agent.config.providerOptions, options.providerOptions);
       const validate = options.validate ?? this.agent.config.validator;
+      // ponytail: RunOptions.instructionInjectors overrides AgentConfig.instructionInjectors (mirrors validate/loop).
+      const instructionInjectors = options.instructionInjectors ?? this.agent.config.instructionInjectors ?? [];
       const loop = resolveLoop(options, this.agent.config);
 
       // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
@@ -129,12 +131,14 @@ class RuntimeAgentSession implements AgentSession {
         input,
         inputMessages,
         maxToolRounds,
-        assemble: async (nextInput, toolResults) => assembleProviderInput({
+        assemble: async (nextInput, toolResults, turn) => assembleProviderInput({
           model: options.model ?? this.agent.config.model,
           input: nextInput,
           history: this.history,
           summaries: (await this.snapshot()).summaries,
           toolResults: toolResults ?? [],
+          turn,
+          instructionInjectors,
           systemInstructions,
           inputBuilder: this.agent.config.inputBuilder,
           promptBuilder: this.agent.config.promptBuilder,

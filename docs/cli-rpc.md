@@ -35,6 +35,12 @@ CLI flags:
 | `--context <text>` | Context text reserved for host adapters. |
 | `--compact <entries>` | Auto-compaction threshold for the run. |
 | `--max-tool-rounds <n>` | Maximum runtime tool rounds. |
+| `--discover` | Opt-in workspace contribution discovery (`SKILL.md`/`AGENT.md`/`manifest.json`). Never auto-activates or imports. |
+| `--discover-kinds <csv>` | Kinds to scan; defaults to `skill`. Accepts `skill,tool,context,instructions,agent`. |
+| `--discover-global` | Also scan `~/.prism/agent/` (global root). |
+| `--no-discovery` | Hard-disable discovery even if `--discover` is set. |
+| `--instruction <name>` | Select a registered/discovered instruction injector (repeatable). `--instruction false` disables injectors for the run. Names resolve fail-closed. |
+| `--injector-file <path>` | Load a markdown file as a static `every_turn` injector (repeatable). |
 | `--help` | Print usage. |
 
 RPC request envelope:
@@ -44,6 +50,8 @@ RPC request envelope:
 ```
 
 Supported command names: `prompt`, `steer`, `followUp`, `abort`, `state`, `messages`, `setModel`, `compact`, `switchSession`, `forkSession`, `cloneSession`, and `command`.
+
+The `prompt` and `followUp` params accept an optional `instructionInjectors?: readonly string[]` field (Phase 30). Names resolve against the `instructionInjectors` registry passed to `runRpcServer({ instructionInjectors })`; an unknown name fails closed (error response correlated to the request `id`, no provider call).
 
 ## Outputs / response / events
 
@@ -132,6 +140,7 @@ RPC `command` executes only explicitly registered `CommandDefinition` values. `s
 - [Agent/session runtime](agent-session-runtime.md): runtime API used by CLI/RPC.
 - [Contribution registries](contribution-registries.md): command contributions are inert until explicitly wired.
 - [Configuration and manifests](configuration-and-manifests.md): config data stays separate from CLI/RPC execution.
+- [Contribution discovery (workspace & global)](contribution-discovery.md): the `--discover` / `--discover-kinds` / `--discover-global` / `--no-discovery` flags fill host registries; no `import()`, no auto-activate.
 - [Node filesystem config loader](node-filesystem-config.md): optional explicit config file loading for Node hosts.
 - [Resource loading](resource-loading.md): explicit resource loading primitives.
 - [Credentials and redaction](credentials-and-redaction.md): secret redaction helpers and credential boundaries.

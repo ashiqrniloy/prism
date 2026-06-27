@@ -21,6 +21,8 @@ const apiPages = [
   "docs/context-and-skills.md",
   "docs/configuration-and-manifests.md",
   "docs/contribution-registries.md",
+  "docs/contribution-discovery.md",
+  "docs/instruction-injection.md",
   "docs/extensions.md",
   "docs/middleware-hooks.md",
   "docs/tools.md",
@@ -302,6 +304,55 @@ describe("docs", () => {
     assert.ok(index.includes("(cli-rpc.md)"));
   });
 
+  it("contribution_discovery_docs_cover_layout_trust_cli_flags_and_non_goals", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const cli = readFileSync("docs/cli-rpc.md", "utf8");
+    const page = readFileSync("docs/contribution-discovery.md", "utf8");
+    const registries = readFileSync("docs/contribution-registries.md", "utf8");
+    const context = readFileSync("docs/context-and-skills.md", "utf8");
+    const extensions = readFileSync("docs/extensions.md", "utf8");
+    const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
+    const trust = readFileSync("docs/settings-auth-trust-security.md", "utf8");
+
+    assert.ok(index.includes("(contribution-discovery.md)"), "docs/index.md does not link contribution-discovery.md");
+    // Required section headings are enforced by the apiPages loop below; assert
+    // the page is in the apiPages list so the headings are checked.
+    assert.ok(apiPages.includes("docs/contribution-discovery.md"), "apiPages missing contribution-discovery.md");
+
+    for (const phrase of [
+      ".agent/{skills,tools,context,instructions,agents}/<name>/",
+      "~/.prism/agent/{skills,tools,context,instructions,agents}/<name>/",
+      "SKILL.md",
+      "AGENT.md",
+      "manifest.json",
+      "global first",
+      "workspace overrides",
+      "createPathTrustPolicy",
+      "isPathInsideReal",
+      "opt-in",
+      "does not `import()`",
+      "No auto-activate",
+      "No provider scanning",
+      "Phase 33",
+      "examples/discover-skills.ts",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/contribution-discovery.md missing ${phrase}`);
+    }
+
+    // The four CLI flags appear in the CLI reference.
+    for (const flag of ["--discover", "--discover-kinds", "--discover-global", "--no-discovery"]) {
+      assert.ok(cli.includes(flag), `docs/cli-rpc.md missing ${flag}`);
+    }
+
+    // Cross-references reciprocate from the related pages.
+    assert.ok(registries.includes("contribution-discovery.md"), "contribution-registries.md does not cross-reference discovery");
+    assert.ok(context.includes("contribution-discovery.md"), "context-and-skills.md does not cross-reference discovery");
+    assert.ok(extensions.includes("contribution-discovery.md"), "extensions.md does not cross-reference discovery");
+    assert.ok(manifests.includes("contribution-discovery.md"), "configuration-and-manifests.md does not cross-reference discovery");
+    assert.ok(trust.includes("contribution-discovery.md"), "settings-auth-trust-security.md does not cross-reference discovery");
+    assert.ok(cli.includes("contribution-discovery.md"), "cli-rpc.md does not cross-reference discovery");
+  });
+
   it("release_and_install_page_is_linked_from_index", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const docs = readFileSync("docs/release-and-install.md", "utf8");
@@ -423,6 +474,7 @@ describe("docs", () => {
       "authMethod",
       "providerRequestPolicy",
       "systemPromptContribution",
+      "instructionInjector",
     ]) {
       assert.ok(manifests.includes(kind), `docs/configuration-and-manifests.md does not document ${kind}`);
     }
@@ -478,6 +530,8 @@ describe("docs", () => {
       "examples/observational-memory-recall-status-view.ts",
       "examples/cli.ts",
       "examples/rpc.ts",
+      "examples/discover-skills.ts",
+      "examples/instruction-injection.ts",
     ];
     for (const file of exampleFiles) {
       assert.equal(existsSync(file), true, `missing example file: ${file}`);
@@ -494,6 +548,8 @@ describe("docs", () => {
       "examples/observational-memory-recall-status-view.ts",
       "examples/cli.ts",
       "examples/rpc.ts",
+      "examples/discover-skills.ts",
+      "examples/instruction-injection.ts",
     ];
     const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
     for (const file of demos) {
@@ -656,5 +712,28 @@ describe("docs", () => {
     assert.ok(page.includes("never instantiates"), "docs/structured-output.md missing never-instantiates lock");
     assert.ok(/no .*domain (control-flow )?vocabulary/.test(page), "docs/structured-output.md missing domain-vocabulary lock");
     assert.ok(index.includes("structured-output.md"), "docs/index.md does not link structured-output.md");
+  });
+
+  it("instruction_injection_page_is_linked_from_index_and_follows_api_structure", () => {
+    // Phase 30 Task 9 enforcement: the docs page is present, linked from the index,
+    // and carries the required prism-wiki API page headings (enforced by the apiPages
+    // loop above — membership is the gate). This assertion pins index linkage + content.
+    const index = readFileSync("docs/index.md", "utf8");
+    const page = readFileSync("docs/instruction-injection.md", "utf8");
+    assert.ok(index.includes("(instruction-injection.md)"), "docs/index.md does not link instruction-injection.md");
+    for (const phrase of [
+      "InstructionInjector",
+      "InstructionContribution",
+      "InstructionContext",
+      "registerInstructionInjector",
+      "resolveInstructionInjectors",
+      "first_turn",
+      "every_turn",
+      "on_input",
+      "AgentConfig.instructionInjectors",
+      "RunOptions.instructionInjectors",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/instruction-injection.md missing ${phrase}`);
+    }
   });
 });

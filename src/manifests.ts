@@ -20,7 +20,8 @@ export type ManifestContributionKind =
   | "providerPackage"
   | "authMethod"
   | "providerRequestPolicy"
-  | "systemPromptContribution";
+  | "systemPromptContribution"
+  | "instructionInjector";
 
 export interface ManifestContributionDeclaration {
   readonly kind: ManifestContributionKind;
@@ -127,6 +128,7 @@ function readKind(value: unknown, index: number): ManifestContributionKind {
     "authMethod",
     "providerRequestPolicy",
     "systemPromptContribution",
+    "instructionInjector",
   ]);
   if (typeof value !== "string" || !kinds.has(value as ManifestContributionKind)) {
     throw new Error(`manifest.contributions[${index}].kind must be a known contribution kind`);

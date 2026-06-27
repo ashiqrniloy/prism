@@ -3,6 +3,7 @@ import type { ContributionRegistries } from "./contributions.js";
 import type { Middleware, MiddlewareHookName, MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { PermissionPolicy } from "./security.js";
+import type { ManifestContributionDeclaration } from "./manifests.js";
 import type { ToolValidator } from "./tools.js";
 
 export type JsonPrimitive = string | number | boolean | null;
@@ -164,6 +165,7 @@ export interface RunOptions {
   readonly validate?: ToolValidator;
   readonly activeSkills?: readonly string[];
   readonly skills?: readonly Skill[];
+  readonly instructionInjectors?: readonly InstructionInjector[];
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
 }
 
@@ -201,6 +203,7 @@ export interface AgentConfig {
   readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly validator?: ToolValidator;
+  readonly instructionInjectors?: readonly InstructionInjector[];
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
 }
 
@@ -339,6 +342,41 @@ export interface ContextResolutionContext {
   readonly signal?: AbortSignal;
 }
 
+/** When an {@link InstructionInjector} contributes to the assembled provider input. */
+export type InstructionTiming = "first_turn" | "every_turn" | "on_input";
+
+/** Runtime turn scope handed to an {@link InstructionInjector}. Mirrors {@link LoopContext}
+ *  scope using already-redacted input/history so predicates cannot recover secrets. */
+export interface InstructionContext {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly turn: number;
+  readonly input: readonly Message[];
+  readonly history: readonly Message[];
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly signal: AbortSignal;
+}
+
+/** Output of an {@link InstructionInjector}. Only `instructions` and `contextBlocks` are
+ *  honored; other fields grant nothing (no tools, skills, or permissions). */
+export interface InstructionContribution {
+  readonly instructions?: string;
+  readonly contextBlocks?: readonly ContextBlock[];
+  readonly when: InstructionTiming;
+  /** Used only when `when === "on_input"`; absent predicate means apply every turn. */
+  readonly predicate?: (ctx: InstructionContext) => boolean;
+}
+
+/** Additive instruction/context contribution that a package registers through
+ *  {@link ExtensionAPI.registerInstructionInjector} and the host selects on
+ *  {@link AgentConfig.instructionInjectors} / {@link RunOptions.instructionInjectors}.
+ *  Inert until selected; cannot grant privileges beyond text/context blocks. */
+export interface InstructionInjector {
+  readonly name: string;
+  readonly description?: string;
+  apply(ctx: InstructionContext): InstructionContribution;
+}
+
 export interface InputBuilder {
   readonly name: string;
   build(input: string | Message | readonly Message[], context?: InputBuildContext): Promise<readonly Message[]> | readonly Message[];
@@ -381,6 +419,27 @@ export interface SkillRegistry {
   get(name: string): Skill | undefined;
   resolve(name: string): Skill;
   list(): readonly Skill[];
+}
+
+/** Directory-name spelling for discovered contribution kinds. Maps to a
+ *  {@link ManifestContributionDeclaration} kind for non-skill kinds:
+ *  `context` → `contextProvider`, `instructions` → `systemPromptContribution`. */
+export type ContributionFileKind = "skill" | "tool" | "context" | "instructions" | "agent";
+
+/** Inert envelope emitted by the host/CLI discovery scanner. Carries the
+ *  realized {@link Skill} for skill kinds and a manifest-referenced
+ *  {@link ManifestContributionDeclaration} for other kinds; the host owns
+ *  any executable behavior. Contains no code, no credential. */
+export interface DiscoveredContribution {
+  readonly kind: ContributionFileKind;
+  readonly name: string;
+  readonly origin: "global" | "workspace";
+  readonly path: string;
+  /** Present when `kind === "skill"`. */
+  readonly skill?: Skill;
+  /** Present for non-skill kinds. */
+  readonly declaration?: ManifestContributionDeclaration;
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 export type ExtensionLifecycleEventName =
@@ -531,6 +590,7 @@ export interface ExtensionAPI {
   registerAuthMethod(method: AuthMethod): void;
   registerProviderRequestPolicy(policy: ProviderRequestPolicy): void;
   registerSystemPromptContribution(contribution: SystemPromptContribution): void;
+  registerInstructionInjector(injector: InstructionInjector): void;
 }
 
 export interface SessionEntry {
@@ -712,7 +772,7 @@ export interface LoopContext {
   readonly input: AgentInput;
   readonly inputMessages: readonly Message[];
   readonly maxToolRounds: number;
-  assemble(nextInput: AgentInput, toolResults?: readonly ToolResult[]): Promise<ProviderRequest>;
+  assemble(nextInput: AgentInput, toolResults?: readonly ToolResult[], turn?: number): Promise<ProviderRequest>;
   generate(request: ProviderRequest): Promise<ProviderTurnResult>;
   dispatchToolCall(call: ToolCallContent): Promise<ToolResult>;
   appendMessage(message: Message): Promise<void>;

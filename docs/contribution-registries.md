@@ -116,3 +116,4 @@ void skill;
 - [Compaction and retry policies](compaction-and-retry.md): selected compaction strategy and retry policy behavior.
 - [Public contracts](public-contracts.md): contribution contract types stored in these registries.
 - [Credentials and redaction](credentials-and-redaction.md): credential resolver and secret-redaction rules.
+- [Contribution discovery (workspace & global)](contribution-discovery.md): opt-in directory scanner that fills these registries from `SKILL.md`/`AGENT.md`/`manifest.json`.

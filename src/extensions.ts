@@ -10,6 +10,7 @@ import type {
   ExtensionEvent,
   ExtensionLifecycleEventName,
   InputBuilder,
+  InstructionInjector,
   ModelConfig,
   PromptBuilder,
   ProviderPackage,
@@ -155,6 +156,9 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
     },
     registerSystemPromptContribution(contribution: SystemPromptContribution) {
       registries.systemPromptContributions.register(systemPromptContributionKey(contribution), contribution);
+    },
+    registerInstructionInjector(injector: InstructionInjector) {
+      registries.instructionInjectors.register(injector.name, injector);
     },
   };
 

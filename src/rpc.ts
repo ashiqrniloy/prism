@@ -1,7 +1,9 @@
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
-import type { AgentEvent, AgentSession, CommandDefinition, CommandResult, JsonObject, ModelConfig, RunOptions } from "./contracts.js";
+import type { AgentEvent, AgentSession, CommandDefinition, CommandResult, InstructionInjector, JsonObject, ModelConfig, RunOptions } from "./contracts.js";
+import type { ContributionRegistry } from "./contributions.js";
 import { errorToErrorInfo } from "./redaction.js";
+import { resolveInstructionInjectors } from "./instruction-injection.js";
 
 export type RpcCommandName =
   | "prompt"
@@ -26,6 +28,9 @@ export interface RpcRequest {
 export interface RpcSessionFactory {
   createSession(id?: string): AgentSession;
   readonly commands?: readonly CommandDefinition[];
+  /** Optional registry for resolving `instructionInjectors` names in `prompt`/`followUp`
+   *  params (Phase 30). Names resolve fail-closed. */
+  readonly instructionInjectors?: ContributionRegistry<InstructionInjector>;
 }
 
 export interface RpcServerOptions extends RpcSessionFactory {
@@ -39,6 +44,7 @@ interface RpcState {
   readonly sessions: Map<string, AgentSession>;
   readonly commands: Map<string, CommandDefinition>;
   readonly createSession: (id?: string) => AgentSession;
+  readonly instructionInjectors?: ContributionRegistry<InstructionInjector>;
 }
 
 interface ActiveRun {
@@ -53,6 +59,7 @@ export async function runRpcServer(options: RpcServerOptions): Promise<void> {
     sessions: new Map([[first.id, first]]),
     commands: new Map((options.commands ?? []).map((command) => [command.name, command])),
     createSession: options.createSession,
+    ...(options.instructionInjectors ? { instructionInjectors: options.instructionInjectors } : {}),
   };
   const activeRuns = new Map<string, ActiveRun>();
   const lines = createInterface({ input: options.stdin, crlfDelay: Infinity });
@@ -98,10 +105,14 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
         write(stdout, { id: request.id, ok: false, error: errorToErrorInfo(new Error(`Session ${session.id} already has an active run for request ${existing.requestId}`)) });
         return;
       }
+      // ponytail: Phase 30 — resolve run options (incl. instructionInjectors names) BEFORE opening the
+      // event pump. A fail-closed name resolution throws here, surfaces as an error response via the
+      // outer try/catch, and never strands the event subscription's for-await.
+      const runOpts = runOptions(state, request.params);
       const events = pumpEvents(session, stdout, request.id);
       const promise = (async () => {
         try {
-          await session.run(input, runOptions(state, request.params));
+          await session.run(input, runOpts);
         } finally {
           await events;
         }
@@ -187,7 +198,14 @@ function makeSession(state: RpcState, id: string): AgentSession {
 }
 
 function runOptions(state: RpcState, params: Record<string, unknown> | undefined): RunOptions {
-  return { model: modelParam(params) ?? state.model, maxToolRounds: numberParam(params, "maxToolRounds") };
+  const names = stringArrayParam(params, "instructionInjectors");
+  // ponytail: fail-closed — unknown name throws (caller surfaces as RPC error), matching CLI.
+  const injectors = names.length ? resolveInstructionInjectors({ registry: state.instructionInjectors, names }) : undefined;
+  return {
+    model: modelParam(params) ?? state.model,
+    maxToolRounds: numberParam(params, "maxToolRounds"),
+    ...(injectors ? { instructionInjectors: injectors } : {}),
+  };
 }
 
 function modelParam(params: Record<string, unknown> | undefined): ModelConfig | undefined {
@@ -211,6 +229,12 @@ function numberParam(params: Record<string, unknown> | undefined, key: string): 
 function objectParam(params: Record<string, unknown> | undefined, key: string): Record<string, unknown> | undefined {
   const value = params?.[key];
   return isObject(value) ? value as Record<string, unknown> : undefined;
+}
+
+function stringArrayParam(params: Record<string, unknown> | undefined, key: string): readonly string[] {
+  const value = params?.[key];
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string");
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

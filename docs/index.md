@@ -27,12 +27,14 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 ## Input, prompt, and context assembly
 - [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
 - [System prompts](system-prompts.md): compose explicit package/app/user/run system prompt layers without filesystem discovery or hidden globals.
+- [Instruction injection](instruction-injection.md): register package injectors that layer instructions and context blocks for the first turn, every turn, or on input.
 - [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned.
 
 ## Tools
 - [Tools](tools.md): register host-owned active tools, apply exact allow/deny filtering, and dispatch tool calls.
 
 ## Extensions/plugins
+- [Contribution discovery (workspace & global)](contribution-discovery.md): opt-in directory scanner turning `SKILL.md`/`AGENT.md`/`manifest.json` into inert `DiscoveredContribution` envelopes the host registers — no `import()`, no auto-activate, no provider scanning.
 - [Contribution registries](contribution-registries.md): explicit host-owned registries for extension/package contributions without hidden globals.
 - [Extension kernel and event bus](extensions.md): load host-provided extensions in order, register contributions, emit lifecycle events, and isolate extension errors.
 - [Middleware hooks](middleware-hooks.md): ordered hook registry for provider, input, context, tool, retry, compaction, and session lifecycle boundaries.

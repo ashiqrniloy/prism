@@ -92,12 +92,13 @@ describe("configuration and manifests", () => {
         { kind: "authMethod", name: "demo.api-key" },
         { kind: "providerRequestPolicy", name: "demo.cache" },
         { kind: "systemPromptContribution", name: "demo.prompt" },
+        { kind: "instructionInjector", name: "demo.injector" },
       ],
     });
 
     assert.deepEqual(
       manifest.contributions?.map((c) => c.kind),
-      ["providerPackage", "authMethod", "providerRequestPolicy", "systemPromptContribution"],
+      ["providerPackage", "authMethod", "providerRequestPolicy", "systemPromptContribution", "instructionInjector"],
     );
   });
 
@@ -123,6 +124,7 @@ describe("configuration and manifests", () => {
       authMethods: "authMethod",
       providerRequestPolicies: "providerRequestPolicy",
       systemPromptContributions: "systemPromptContribution",
+      instructionInjectors: "instructionInjector",
     };
 
     const expectedKinds = new Set(Object.values(registryToKind));

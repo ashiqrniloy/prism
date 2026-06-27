@@ -42,7 +42,7 @@ export const singleShotLoop: AgentLoopStrategy = {
     for (let turn = 1; ; turn += 1) {
       throwIfAborted(ctx.signal);
       ctx.emit({ type: "turn_started", sessionId: ctx.sessionId, runId: ctx.runId, turn });
-      const request = await ctx.assemble(nextInput, toolResults);
+      const request = await ctx.assemble(nextInput, toolResults, turn);
       throwIfAborted(ctx.signal);
       const { content, calls, messageId, started, usage: turnUsage } = await ctx.generate(request);
       usage = turnUsage ?? usage;
@@ -102,7 +102,7 @@ export function generateValidateReviseLoop(opts: {
 
       for (let turn = 1; turn <= max + 1; turn += 1) {
         throwIfAborted(ctx.signal);
-        const request = await ctx.assemble(nextInput);
+        const request = await ctx.assemble(nextInput, undefined, turn);
         throwIfAborted(ctx.signal);
         const { content, messageId, started, usage: turnUsage } = await ctx.generate(request);
         usage = turnUsage ?? usage;

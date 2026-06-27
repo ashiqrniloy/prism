@@ -5,7 +5,9 @@ import type {
   CompactionStrategy,
   ContextProvider,
   CredentialResolver,
+  DiscoveredContribution,
   InputBuilder,
+  InstructionInjector,
   PromptBuilder,
   ProviderPackage,
   ProviderRequestPolicy,
@@ -73,6 +75,7 @@ export interface ContributionRegistries {
   readonly authMethods: ContributionRegistry<AuthMethod>;
   readonly providerRequestPolicies: ContributionRegistry<ProviderRequestPolicy>;
   readonly systemPromptContributions: ContributionRegistry<SystemPromptContribution>;
+  readonly instructionInjectors: ContributionRegistry<InstructionInjector>;
 }
 
 export function createContributionRegistries(): ContributionRegistries {
@@ -96,5 +99,104 @@ export function createContributionRegistries(): ContributionRegistries {
     authMethods: createContributionRegistry({ label: "auth method" }),
     providerRequestPolicies: createContributionRegistry({ label: "provider request policy" }),
     systemPromptContributions: createContributionRegistry({ label: "system prompt contribution" }),
+    instructionInjectors: createContributionRegistry({ label: "instruction injector" }),
+  };
+}
+
+const PHASE_33_AGENT_ERROR = "Agent file resolution requires Phase 33's resolveAgentDefinition";
+
+/** Register discovered contributions into the given registries. Inert: skill
+ *  kinds register a fully realized {@link Skill}; tool/context/instructions/
+ *  agent kinds register **descriptor-only** entries whose executable behavior is
+ *  host-owned. Performs NO `import()`. Last-write-wins per `(kind, name)`
+ *  (workspace discovery already won the merge; calling twice is idempotent). */
+export function registerDiscoveredContributions(
+  registries: ContributionRegistries,
+  contributions: readonly DiscoveredContribution[],
+): void {
+  for (const contribution of contributions) {
+    switch (contribution.kind) {
+      case "skill": {
+        if (contribution.skill) registries.skills.register(contribution.skill.name, contribution.skill);
+        break;
+      }
+      case "tool": {
+        registries.tools.register(contribution.name, descriptorTool(contribution));
+        break;
+      }
+      case "context": {
+        registries.contextProviders.register(contribution.name, descriptorContextProvider(contribution));
+        break;
+      }
+      case "instructions": {
+        registries.systemPromptContributions.register(contribution.name, descriptorInstructions(contribution));
+        break;
+      }
+      case "agent": {
+        registries.agents.register(contribution.name, stubAgent(contribution));
+        break;
+      }
+    }
+  }
+}
+
+function discoverMetadata(contribution: DiscoveredContribution): Record<string, unknown> {
+  const decl = contribution.declaration;
+  return {
+    discovered: true,
+    origin: contribution.origin,
+    path: contribution.path,
+    ...(decl?.module ? { module: decl.module } : {}),
+    ...(decl?.exportName ? { exportName: decl.exportName } : {}),
+    ...(decl?.resource ? { resource: decl.resource } : {}),
+  };
+}
+
+// ponytail: descriptor-only tool — no import(), no execution. Host owns resolving declaration.module.
+// ToolDefinition has no metadata slot; discovery provenance rides on the DiscoveredContribution envelope.
+function descriptorTool(contribution: DiscoveredContribution): ToolDefinition {
+  const name = contribution.name;
+  return {
+    name,
+    description: `Discovered tool ${name}; host-owned execution`,
+    execute: () => {
+      throw new Error(`Discovered tool ${name} requires host execution (declaration.module not loaded)`);
+    },
+  };
+}
+
+function descriptorContextProvider(contribution: DiscoveredContribution): ContextProvider {
+  const name = contribution.name;
+  return {
+    name,
+    resolve: () => {
+      throw new Error(`Discovered context provider ${name} requires host execution (declaration.module not loaded)`);
+    },
+    // ponytail: ContextProvider has no metadata field; discovery provenance rides on declaration.resource/module via the DiscoveredContribution envelope.
+  };
+}
+
+// ponytail: core is fs-free; cannot read declaration.resource here. text is empty until the host
+// lifts the resource into actual prompt text (Phase 30 instruction injection).
+function descriptorInstructions(contribution: DiscoveredContribution): SystemPromptContribution {
+  return {
+    id: contribution.name,
+    source: "package",
+    mode: "append",
+    text: "",
+    metadata: discoverMetadata(contribution),
+  };
+}
+
+function stubAgent(contribution: DiscoveredContribution): AgentDefinition {
+  const name = contribution.name;
+  return {
+    name,
+    description: `Discovered agent ${name}; ${PHASE_33_AGENT_ERROR}`,
+    // ponytail: fail-closed stub; Phase 33's resolveAgentDefinition replaces this.
+    create: () => {
+      throw new Error(PHASE_33_AGENT_ERROR);
+    },
+    metadata: discoverMetadata(contribution),
   };
 }

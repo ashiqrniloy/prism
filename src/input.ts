@@ -4,6 +4,7 @@ import type {
   ContextProvider,
   ContextResolutionContext,
   InputBuilder,
+  InstructionInjector,
   InputBuildContext,
   JsonObject,
   JsonValue,
@@ -20,6 +21,8 @@ import type {
 } from "./contracts.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { loadTextResource } from "./resources.js";
+import { composeSystemPrompt } from "./system-prompts.js";
+import { runInstructionInjectors } from "./instruction-injection.js";
 
 export type AgentInput = string | Message | readonly Message[];
 
@@ -49,6 +52,9 @@ export interface DefaultInputBuildContext extends InputBuildContext {
   readonly resourceLoader?: ResourceLoader;
   readonly toolResults?: readonly ToolResult[];
   readonly middleware?: MiddlewareRegistry;
+  // ponytail: exposed so a custom InputBuilder can opt to run injectors (runInstructionInjectors).
+  readonly instructionInjectors?: readonly InstructionInjector[];
+  readonly turn?: number;
 }
 
 export interface DefaultInputBuilder extends InputBuilder {
@@ -59,6 +65,8 @@ export interface ResolveContextOptions extends Omit<ContextResolutionContext, "m
   readonly messages: readonly Message[];
   readonly providers?: readonly ContextProvider[];
   readonly middleware?: MiddlewareRegistry;
+  // ponytail: injector-produced blocks appended after provider blocks, before middleware.
+  readonly injectedBlocks?: readonly ContextBlock[];
 }
 
 export interface DefaultPromptBuilder extends PromptBuilder {
@@ -112,6 +120,8 @@ export async function resolveContextProviders(options: ResolveContextOptions): P
       signal: options.signal,
     }));
   }
+  // ponytail: injector blocks after host+skill provider blocks (split by origin if per-block ordering matters).
+  if (options.injectedBlocks) blocks.push(...options.injectedBlocks);
   return options.middleware ? options.middleware.run("context", blocks) : blocks;
 }
 
@@ -147,10 +157,31 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     metadata: options.metadata,
     signal: options.signal,
   };
-  const messages = await inputBuilder.build(options.input, { ...options, ...baseContext });
+  // ponytail: Phase 30 — run injectors once per turn inside the assembler so when/predicate/turn
+  // filter against loop-local turn. Instructions layer via composeSystemPrompt (no parallel prompt
+  // code); contextBlocks merge via resolveContextProviders (middleware still runs).
+  const turn = options.turn ?? 1;
+  const injectorContribs = options.instructionInjectors?.length
+    ? runInstructionInjectors(options.instructionInjectors, {
+        sessionId: options.sessionId ?? "",
+        runId: options.runId ?? "",
+        turn,
+        // Runtime redacts input/history before assemble (inputMessages.map(redact)); history holds redacted messages.
+        input: inputMessages(options.input),
+        history: options.history ?? [],
+        metadata: options.metadata ?? {},
+        signal: options.signal ?? new AbortController().signal,
+      })
+    : { instructions: [], contextBlocks: [] } as const;
+  const systemInstructions = injectorContribs.instructions.length
+    ? composeSystemPrompt(injectorContribs.instructions, { base: options.systemInstructions })
+    : options.systemInstructions;
+  const buildContext: DefaultInputBuildContext = { ...options, ...baseContext, systemInstructions };
+  const messages = await inputBuilder.build(options.input, buildContext);
   const context = await resolveContextProviders({
     providers: options.contextProviders,
     messages,
+    injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
     middleware: options.middleware,
     ...baseContext,
   });

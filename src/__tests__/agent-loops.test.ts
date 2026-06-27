@@ -350,4 +350,55 @@ describe("agent loop strategies", () => {
     assert.equal(JSON.stringify(failedOut).includes("[Circular]"), true, "cyclic metadata not replaced");
   });
   });
+
+  describe("LoopContext.assemble turn plumbing (Phase 30 Task 4)", () => {
+    it("singleShotLoop passes turn=1 then turn=2 across a tool round", async () => {
+      const turns: number[] = [];
+      let generateCalls = 0;
+      const ctx = stubCtx({
+        input: "Hi",
+        maxToolRounds: 1,
+        assemble: async (_nextInput, _toolResults, turn) => {
+          turns.push(turn ?? 1);
+          return { model: { provider: "mock", model: "demo" }, messages: [] };
+        },
+        generate: async () => {
+          generateCalls += 1;
+          if (generateCalls === 1) return { content: [{ type: "text", text: "calling" }], calls: [toolCallContent("c1", "echo", { text: "hi" })], messageId: "m1", started: true };
+          return { content: [{ type: "text", text: "done" }], calls: [], messageId: "m2", started: true };
+        },
+        dispatchToolCall: async (call) => ({ toolCallId: call.id, name: call.name, value: call.arguments }),
+        emit: () => {},
+      });
+      await singleShotLoop.run(ctx);
+      assert.equal(generateCalls, 2);
+      assert.deepEqual(turns, [1, 2], "assemble should receive turn 1 then turn 2");
+    });
+
+    it("generateValidateReviseLoop passes turn=1,2,3 across revisions", async () => {
+      const turns: number[] = [];
+      let generateCalls = 0;
+      const ctx = stubCtx({
+        input: "build a thing",
+        assemble: async (_nextInput, _toolResults, turn) => {
+          turns.push(turn ?? 1);
+          return { model: { provider: "mock", model: "demo" }, messages: [] };
+        },
+        generate: async () => {
+          generateCalls += 1;
+          const text = ["draft1", "draft2", "draft3"][generateCalls - 1] ?? "fallback";
+          return { content: [{ type: "text", text }], calls: [], messageId: `m${generateCalls}`, started: true };
+        },
+        appendMessage: async () => {},
+        emit: () => {},
+      });
+      const loop = generateValidateReviseLoop({
+        validator: (value: unknown) => value === "draft3" ? { ok: true } : { ok: false, errors: [{ message: "not draft3" }] },
+        maxRevisions: 3,
+      });
+      await loop.run(ctx);
+      assert.equal(generateCalls, 3);
+      assert.deepEqual(turns, [1, 2, 3], "GVR assemble should receive turn 1, 2, 3");
+    });
+  });
 });

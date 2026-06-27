@@ -71,3 +71,4 @@ Prism does not sandbox host tools or extensions. Prism does not read environment
 - `createSecretRedactor`, `redactMessage`, `redactAgentEvent`, `redactSessionEntry`, `redactProviderRequest`
 - `@arnilo/prism/node/settings`: `defaultUserSettingsPath`, `readSettingsFile`, `loadSettingsFiles`
 - `@arnilo/prism/node/trust`: `createPathTrustPolicy`, `isPathInside`, `isPathInsideReal`
+- [Contribution discovery (workspace & global)](contribution-discovery.md): `createPathTrustPolicy` + `isPathInsideReal` gate workspace contribution roots fail-closed.

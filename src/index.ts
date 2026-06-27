@@ -1,12 +1,13 @@
 export type * from "./contracts.js";
 export { createAgent, createAgentSession } from "./agents.js";
+export { parseSkillFile, parseAgentFile } from "./contribution-parsing.js";
 export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
 export { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 export type { DefaultCompactionStrategyOptions } from "./compaction.js";
 export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./retry.js";
 export type { DefaultRetryPolicyOptions } from "./retry.js";
-export { createContributionRegistries, createContributionRegistry } from "./contributions.js";
+export { createContributionRegistries, createContributionRegistry, registerDiscoveredContributions } from "./contributions.js";
 export type { ContributionRegistries, ContributionRegistry, ContributionRegistryOptions } from "./contributions.js";
 export { createChainedCredentialResolver, createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore, refreshOAuthCredential, resolveCredentialValue } from "./credentials.js";
 export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
@@ -51,6 +52,8 @@ export { assertPermission, assertTrusted, checkPermission, createStaticPermissio
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
 export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
 export type { ResolveActiveSkillsOptions } from "./skills.js";
+export { resolveInstructionInjectors, runInstructionInjectors } from "./instruction-injection.js";
+export type { ResolveInstructionInjectorsOptions } from "./instruction-injection.js";
 export { createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
 export type { DispatchToolCallOptions, ToolFilter, ToolFilterInput, ToolValidator } from "./tools.js";
 export { generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, singleShotLoop } from "./agent-loops.js";

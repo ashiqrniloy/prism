@@ -69,6 +69,7 @@ parsePrismManifest(value: unknown): PrismManifest
 | `authMethod` | `authMethods` | Auth method descriptor; uses `credentialName`, never a resolved credential value. |
 | `providerRequestPolicy` | `providerRequestPolicies` | Provider request policy declaration. |
 | `systemPromptContribution` | `systemPromptContributions` | System prompt contribution declaration. |
+| `instructionInjector` | `instructionInjectors` | Instruction injector declaration; selected on `AgentConfig`/`RunOptions.instructionInjectors` (Phase 30). |
 
 ## Outputs / response / events
 
@@ -106,6 +107,7 @@ const manifest = definePrismManifest({
     { kind: "authMethod", name: "demo.api-key", metadata: { credentialName: "apiKey" } },
     { kind: "providerRequestPolicy", name: "demo.cache" },
     { kind: "systemPromptContribution", name: "demo.prompt" },
+    { kind: "instructionInjector", name: "demo.injector" },
   ],
   resources: [{ uri: "package://demo/prompt.md", purpose: "prompt" }],
 });
@@ -123,7 +125,7 @@ console.log(config.demo);
 
 - Hosts choose the layer order. Prism documents `built-in -> manifest defaults -> host app -> optional user/global -> runtime overrides` but does not load those layers automatically.
 - Manifest contribution declarations are data. Hosts may later choose to import the declared module/export and register it, but parsing the manifest never does that.
-- Contribution `kind` values match `createContributionRegistries()` categories, including the Phase 14 provider primitives `providerPackage`, `authMethod`, `providerRequestPolicy`, and `systemPromptContribution`.
+- Contribution `kind` values match `createContributionRegistries()` categories, including the Phase 14 provider primitives `providerPackage`, `authMethod`, `providerRequestPolicy`, `systemPromptContribution`, and the Phase 30 `instructionInjector`.
 - Filesystem config loading is intentionally outside the root API and belongs to the optional [`@arnilo/prism/node/config`](node-filesystem-config.md) subpath.
 - Manifest `resources` entries are URI declarations; use [resource loading](resource-loading.md) helpers with a host-provided loader to fetch them.
 
@@ -140,3 +142,4 @@ console.log(config.demo);
 - [Extension kernel and event bus](extensions.md): hosts can load extensions after they decide to execute package code.
 - [Resource loading](resource-loading.md): load manifest, prompt, skill, and package resources through host-provided loaders.
 - [Credentials and redaction](credentials-and-redaction.md): credential values stay out of manifests and config layers.
+- [Contribution discovery (workspace & global)](contribution-discovery.md): opt-in scanner that resolves non-skill on-disk entries into `ManifestContributionDeclaration` envelopes.

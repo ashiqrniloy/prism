@@ -4,7 +4,10 @@ export interface ComposeSystemPromptOptions {
   readonly base?: string | readonly string[];
 }
 
-const sourceRank = new Map<string, number>([["package", 0], ["app", 1], ["user", 2], ["run", 3]]);
+// ponytail: Phase 31 — user (SYSTEM.md global) is the base layer; app (AGENTS.md project) sits above package.
+// Behavioral change from Phase 14: `source: "user"` is now the global base (rank 0), not a high-priority caller override.
+// Documented layering arrow: SYSTEM.md (user) → package → AGENTS.md (app) → host config → run.
+const sourceRank = new Map<string, number>([["user", 0], ["package", 1], ["app", 2], ["run", 3]]);
 
 export function composeSystemPrompt(contributions: SystemPromptConfig = [], options: ComposeSystemPromptOptions = {}): string | undefined {
   const parts = baseParts(options.base);

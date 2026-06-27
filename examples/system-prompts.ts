@@ -1,6 +1,6 @@
 import { composeSystemPrompt, mergeSystemPromptConfig } from "@arnilo/prism";
 
-// Layered system prompt composition: package, app, user, then run order.
+// Layered system prompt composition: user, package, app, then run order (Phase 31: user is the global base).
 // RunOptions.systemPrompt: false disables configured layers while keeping
 // AgentConfig.instructions as the simple direct path.
 export function demo() {
