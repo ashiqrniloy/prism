@@ -63,11 +63,16 @@ const agent = createAgent({
 
 const session = createAgentSession({ agent });
 
+// Consume the event stream concurrently with the run. `subscribe()` only
+// emits while a run is in progress, so the loop and `run()` must run together;
+// awaiting the loop before calling `run()` would deadlock.
 (async () => {
-  for await (const event of session.subscribe()) {
-    // AgentEvent: agent_started, message_delta, turn_finished, ...
-  }
-  await session.run("Hi");
+  const consumer = (async () => {
+    for await (const event of session.subscribe()) {
+      // AgentEvent: agent_started, message_delta, turn_finished, ...
+    }
+  })();
+  await Promise.all([consumer, session.run("Hi")]);
 })();
 ```
 

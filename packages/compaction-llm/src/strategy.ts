@@ -90,7 +90,7 @@ async function runSummaryProvider(
   const text: string[] = [];
   const errors: string[] = [];
   let request: ProviderRequest = {
-    model: withMaxTokens(summaryModel(options), outputBudget(options, reserveRatio)),
+    model: summaryRequestModel(options, reserveRatio),
     messages: [
       { role: "system", content: [{ type: "text", text: systemPrompt }] },
       { role: "user", content: [{ type: "text", text: prompt }] },
@@ -120,6 +120,10 @@ async function runSummaryProvider(
 function collectSummaryEvent(event: ProviderEvent, text: string[], errors: string[]): void {
   if (event.type === "content_delta" && event.content.type === "text") text.push(event.content.text);
   if (event.type === "error") errors.push(event.error.message);
+}
+
+function summaryRequestModel(options: LlmCompactionStrategyOptions, reserveRatio: number): ModelConfig {
+  return withMaxTokens(summaryModel(options), outputBudget(options, reserveRatio));
 }
 
 function outputBudget(options: LlmCompactionStrategyOptions, reserveRatio: number): number {

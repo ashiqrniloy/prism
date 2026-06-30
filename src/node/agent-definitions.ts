@@ -38,6 +38,8 @@ export interface ResolveAgentBundleOptions {
   readonly tools?: AgentDefinitionResolutionContext["tools"];
   /** Skill registry override. */
   readonly skillsRegistry?: AgentDefinitionResolutionContext["skillsRegistry"];
+  /** Migration-only: omitted `tools`/`skills` activate every in-scope tool/skill. Defaults to fail-closed. */
+  readonly activateAllCapabilities?: AgentDefinitionResolutionContext["activateAllCapabilities"];
   /** Final config overrides applied after the bundle is resolved. */
   readonly overrides?: AgentDefinitionResolutionContext["overrides"];
   /** Trust policy gating the app-config root (`SYSTEM.md`) and workspace root (`AGENTS.md`) independently. */
@@ -245,6 +247,7 @@ export async function resolveAgentBundle(
     providerSource: options.providerSource,
     tools: tools.length > 0 ? tools : options.tools,
     skillsRegistry: skills.length > 0 ? createSkillRegistry(skills) : options.skillsRegistry,
+    activateAllCapabilities: options.activateAllCapabilities,
     overrides: options.overrides,
   });
 }

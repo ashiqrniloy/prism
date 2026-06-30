@@ -2,7 +2,7 @@
 
 ## What it does
 
-`AgentEvent` is the single observable stream every `AgentSession` run emits. Subscribers receive normalized, redacted, in-order events covering agent lifecycle, assistant message streaming, tool execution, queue updates, compaction, retry, artifact validation/refinement, and terminal errors. The stream is in-memory and live-only; there is no durable queue, no background work, and no extra dependency.
+`AgentEvent` is the single observable stream every `AgentSession` run emits. Subscribers receive normalized, redacted, in-order events covering agent lifecycle, assistant message streaming, tool execution, queue updates, subscriber overflow, compaction, retry, artifact validation/refinement, and terminal errors. The stream is in-memory, live-only, and bounded per subscriber by `SubscribeOptions`; there is no durable queue, no background work, and no extra dependency.
 
 Events are emitted by the runtime and by loops through `LoopContext.emit`, both of which route through `redactAgentEvent(event, activeRedactor)` so every payload is secret-redacted before subscribers observe it.
 
@@ -23,7 +23,7 @@ Event records preserve emission order within a run because the runtime drains pe
 ```ts
 import type { AgentEvent } from "@arnilo/prism";
 
-const subscription = session.subscribe();
+const subscription = session.subscribe({ maxQueuedEvents: 256, overflow: "close" });
 for await (const event of subscription) {
   switch (event.type) {
     case "message_delta": // append event.content
@@ -42,7 +42,7 @@ The `AgentEvent` union (grouped by concern):
 | Turns | `turn_started`, `turn_finished` |
 | Assistant messages | `message_started`, `message_delta`, `message_finished` |
 | Tool execution | `tool_execution_started`, `tool_execution_progress`, `tool_execution_finished`, `tool_execution_error`, `tool_execution_blocked` |
-| Queue | `queue_updated` |
+| Queue/subscribers | `queue_updated`, `event_subscriber_overflow` |
 | Compaction | `compaction_started`, `compaction_finished` |
 | Retry | `retry_scheduled` |
 | Artifacts | `artifact_validation_started`, `artifact_validation_finished`, `artifact_revision_started`, `artifact_finished`, `artifact_failed` |
@@ -60,7 +60,9 @@ Agent / turn / message events:
 | `agent_finished` | `sessionId`, `runId`, `usage?: Usage` |
 | `turn_started` / `turn_finished` | `sessionId`, `runId`, `turn: number` |
 | `message_started` / `message_finished` | `sessionId`, `runId`, `message: Message` |
-| `message_delta` | `sessionId`, `runId`, `content: ContentBlock` |
+| `message_delta` | `sessionId`, `runId`, `content: ContentBlock` (`tool_call_delta` fragments may appear here for live UI streaming; stored messages use final `tool_call` blocks) |
+
+`message_delta.content.type === "tool_call_delta"` carries `{ index, id?, name?, argumentsText? }`. Treat it as a streaming fragment. The runtime reconstructs and persists a final `tool_call` before executing tools.
 
 Tool execution events:
 
@@ -72,16 +74,17 @@ Tool execution events:
 | `tool_execution_error` | `sessionId`, `runId`, `call: ToolCallContent`, `error: ErrorInfo` |
 | `tool_execution_blocked` | `sessionId`, `runId`, `toolCallId`, `name`, `reason: string`, `error: ErrorInfo` |
 
-Queue / compaction / retry events:
+Queue / subscriber / compaction / retry events:
 
 | Variant | Fields |
 | --- | --- |
 | `queue_updated` | `sessionId`, `runId`, `size: number` |
+| `event_subscriber_overflow` | `sessionId`, `droppedEvents: number`, `maxQueuedEvents: number`, `overflow: "close" \| "drop_oldest" \| "drop_newest"` |
 | `compaction_started` | `sessionId`, `runId?` |
 | `compaction_finished` | `sessionId`, `runId?`, `summary: string` |
 | `retry_scheduled` | `sessionId`, `runId`, `attempt: number`, `delayMs: number`, `error: ErrorInfo` |
 
-Artifact validation/refinement events (emitted only by `generateValidateReviseLoop`; `singleShotLoop` emits zero):
+Artifact validation/refinement events (emitted only by `generateValidateReviseLoop`; `singleShotLoop` emits zero artifact events):
 
 | Variant | Fields |
 | --- | --- |
@@ -93,14 +96,19 @@ Artifact validation/refinement events (emitted only by `generateValidateReviseLo
 
 ### Artifact event ordering
 
-A `generateValidateReviseLoop` run emits a strictly ordered sequence, correlated by `runId` / `turn` / `attempt`:
+A `generateValidateReviseLoop` run emits normal turn/message events for every provider turn, then a strictly ordered artifact sequence, correlated by `runId` / `turn` / `attempt`:
 
 ```
-artifact_validation_started
-  → artifact_validation_finished
-    → (artifact_revision_started)*   # zero or more, one per revision turn
-      → artifact_finished            # loop ended successfully
-       | artifact_failed             # budget exhausted (maxRevisions+1 attempts)
+turn_started
+  → message_started
+    → message_delta*
+      → message_finished
+        → turn_finished
+          → artifact_validation_started
+            → artifact_validation_finished
+              → artifact_revision_started   # when a revision will run next
+               | artifact_finished          # loop ended successfully
+               | artifact_failed            # budget exhausted (maxRevisions+1 attempts)
 ```
 
 - `attempt` is 1-indexed per validation attempt and equals the provider `turn` within `generateValidateReviseLoop`; it mirrors `retry_scheduled.attempt` and the `tool_execution_*` block/finish pairing.
@@ -108,6 +116,16 @@ artifact_validation_started
 - **Validation failure triggering a revision is recoverable and never an `error`.** Only terminal budget exhaustion emits `artifact_failed`. The `error` channel is reserved for real failures (provider failures not caught by retry, aborts, etc.), matching the existing convention used by `tool_execution_blocked`.
 
 ## Request/response example
+
+```json
+{
+  "type": "event_subscriber_overflow",
+  "sessionId": "sess_01J...",
+  "droppedEvents": 257,
+  "maxQueuedEvents": 256,
+  "overflow": "close"
+}
+```
 
 ```json
 {
@@ -160,11 +178,13 @@ await session.run("draft", { loop: { strategy: "generate-validate-revise", valid
 - All events flow through `redactAgentEvent(event, activeRedactor)` before subscribers observe them. Configure `AgentConfig.redactor` / `RunOptions.redactor` via `createSecretRedactor([...knownSecretStrings])` so secret values are redacted in `message` content, `errors[].message`, `metadata`, and artifact `result`/`failure` payloads.
 - The artifact variants are emitted only by `generateValidateReviseLoop`. `singleShotLoop` (the default when no `AgentConfig.loop` / `RunOptions.loop` is set) emits zero artifact events. See [Agent loops](agent-loops.md).
 - Subscribers are in-process; the broadcaster is in-memory and live-only. Multiple `subscribe()` calls receive the same stream.
+- `session.subscribe(options)` accepts `maxQueuedEvents` (default `1024`, minimum `1`) and `overflow` (default `"close"`). The `close` policy clears queued payload events, queues one `event_subscriber_overflow` notice for that subscriber, then closes it. `drop_oldest` keeps the newest queued events; `drop_newest` ignores new events while full.
 - The union is additive: new variants are appended without renumbering; subscribers should handle unknown `event.type` gracefully.
 
 ## Security and performance notes
 
 - The broadcaster is in-memory and live-only. No dependency, no timer, no filesystem/network discovery, no worker, no durable queue.
+- Slow consumers are bounded by `SubscribeOptions`. Use `RunLedger` or host storage for durable replay; do not rely on a live subscriber as a queue.
 - Redaction is exact-string-match only and opt-in via `createSecretRedactor`; values not passed as known secrets are not redacted.
 - `ArtifactValidation.errors[].message` and `metadata` may echo model text; `redactAgentEvent` walks arbitrary nesting and replaces cyclic references with `"[Circular]"` (WeakSet cycle guard), so secret values in `result`/`failure` are redacted without crashing.
 - `artifact_*` events are bounded by `maxRevisions + 1` validation attempts; an always-failing validator cannot loop forever and emits exactly one terminal `artifact_failed`.

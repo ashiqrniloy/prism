@@ -311,6 +311,7 @@ function blockText(block: ContextBlock): string {
     if (part.type === "text" || part.type === "thinking") return part.text;
     if (part.type === "tool_result") return JSON.stringify(part.result ?? part.error ?? null);
     if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
+    if (part.type === "tool_call_delta") return `${part.name ?? "tool"}(${part.argumentsText ?? ""})`;
     return part.url ?? part.mimeType ?? "[image]";
   }).join("\n");
 }

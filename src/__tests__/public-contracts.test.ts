@@ -27,6 +27,9 @@ import type {
   ManifestResourceDeclaration,
   PrismManifest,
   PromptBuilder,
+  PromptCacheHints,
+  ModelCacheCapabilities,
+  PromptCacheKind,
   PromptTemplateOptions,
   ProviderPackage,
   ProviderRequestOptions,
@@ -45,7 +48,7 @@ import type {
   SystemPromptMode,
   ToolDefinition,
 } from "../index.js";
-import { assembleProviderInput, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveAgentDefinition, resolveContextProviders } from "../index.js";
+import { assembleProviderInput, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, mergeProviderRequestOptions, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveAgentDefinition, resolveContextProviders } from "../index.js";
 import type { DispatchToolCallOptions, SessionContextSnapshot, ToolFilter, ToolValidator } from "../index.js";
 
 const provider: AIProvider = {
@@ -144,6 +147,7 @@ describe("public contracts", () => {
           capabilities: { input: ["text"], reasoning: true, tools: true, streaming: true },
           limits: { contextWindow: 128_000, maxOutputTokens: 8_192 },
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, currency: "USD" },
+          cache: { kind: "cache_control", maxKeyLength: 128, maxBreakpoints: 4, minCacheableTokens: 1024, longRetention: true },
           compat: { vendorSpecific: true },
           metadata: { safe: true },
         });
@@ -158,8 +162,11 @@ describe("public contracts", () => {
       return providerPackage.setup(api);
     } }]);
 
+    const registeredModel = kernel.registries.models.resolve("mock", "demo-metadata");
     assert.equal(kernel.registries.providerPackages.resolve("demo-provider"), providerPackage);
-    assert.equal(kernel.registries.models.resolve("mock", "demo-metadata").capabilities?.reasoning, true);
+    assert.equal(registeredModel.capabilities?.reasoning, true);
+    assert.equal(registeredModel.cache?.kind, "cache_control");
+    assert.equal(registeredModel.cache?.maxBreakpoints, 4);
     assert.equal(kernel.registries.authMethods.resolve("mock\0api_key"), auth);
     assert.equal(kernel.registries.providerRequestPolicies.resolve("cache"), requestPolicy);
     assert.equal(kernel.registries.systemPromptContributions.resolve("package-prompt"), promptContribution);
@@ -193,8 +200,35 @@ describe("public contracts", () => {
     assert.equal(prompt, "Base\n\nApp rules.");
   });
 
+  it("host can type model cache capability metadata", async () => {
+    const kind: PromptCacheKind = "openai_key";
+    const cache: ModelCacheCapabilities = { kind, maxKeyLength: 64, maxBreakpoints: 0, minCacheableTokens: 1024, longRetention: true };
+    const model = { provider: "mock", model: "cached", cache };
+    const seen: typeof model[] = [];
+    const passiveProvider: AIProvider = {
+      id: "passive",
+      async *generate(request) {
+        seen.push(request.model as typeof model);
+        yield { type: "done" };
+      },
+    };
+
+    for await (const _ of passiveProvider.generate({ model, messages: [] }));
+    for await (const _ of passiveProvider.generate({ model: { provider: "mock", model: "plain" }, messages: [] }));
+
+    assert.equal(seen[0]?.cache?.kind, "openai_key");
+    assert.equal(seen[0]?.cache?.maxKeyLength, 64);
+    assert.equal(seen[1]?.cache, undefined);
+  });
+
   it("host can type provider request options and cache policy contracts", async () => {
-    const options: ProviderRequestOptions = { sessionId: "s1", cacheRetention: "short", headers: { "x-demo": "1" } };
+    const hints: PromptCacheHints = {
+      mode: "on",
+      key: "stable-s1",
+      retention: "long",
+      breakpoints: [{ location: "system_prompt" }, { location: "message_id", messageId: "m1", ttl: "short" }],
+    };
+    const options: ProviderRequestOptions = { sessionId: "s1", cacheRetention: "short", cache: hints, headers: { "x-demo": "1" } };
     const cache = createSessionCachePolicy({ retention: "long" });
     const chain = createProviderRequestPolicyChain([cache]);
     const result = await chain.apply({
@@ -203,6 +237,21 @@ describe("public contracts", () => {
     });
 
     assert.equal("request" in result ? result.request.options?.cacheRetention : result.options?.cacheRetention, "long");
+
+    const legacy = mergeProviderRequestOptions({ cacheKey: "base", cacheRetention: "short" }, { cacheRetention: "long" });
+    assert.equal(legacy?.cacheKey, "base");
+    assert.equal(legacy?.cacheRetention, "long");
+    assert.equal("cache" in (legacy ?? {}), false);
+
+    const merged = mergeProviderRequestOptions(
+      { cacheKey: "legacy", cache: { key: "base", retention: "short", breakpoints: [{ location: "system_prompt" }] } },
+      { cacheRetention: "long", cache: { key: "patch", retention: "long", breakpoints: [{ location: "last_user_message" }] } },
+    );
+    assert.equal(merged?.cacheKey, "legacy");
+    assert.equal(merged?.cacheRetention, "long");
+    assert.equal(merged?.cache?.key, "patch");
+    assert.equal(merged?.cache?.retention, "long");
+    assert.deepEqual(merged?.cache?.breakpoints?.map((item) => item.location), ["system_prompt", "last_user_message"]);
   });
 
   it("host can type phase 2 contribution contracts", async () => {

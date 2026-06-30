@@ -52,6 +52,9 @@ describe("production persistence contracts (compile only)", () => {
       },
       async queryEvents(query) {
         void query.type;
+        void query.cursor;
+        void query.limit;
+        void query.order;
         return { items: [] };
       },
       async queryToolCalls(query) {
@@ -126,6 +129,9 @@ describe("production persistence contracts (compile only)", () => {
       entryId: "e1",
       type: ["message_delta", "tool_execution_finished"],
       redacted: false,
+      cursor: "event_10",
+      limit: 100,
+      order: "asc",
     };
     const toolCallQuery: ToolCallQuery = {
       sessionId: "s1",

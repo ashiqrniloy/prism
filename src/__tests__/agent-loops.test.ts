@@ -274,6 +274,28 @@ describe("agent loop strategies", () => {
       assert.ok(appendedMessages.some((message) => message.role === "user"));
     });
 
+    it("emits turn events and pushes first input to history once", async () => {
+      const events: AgentEvent[] = [];
+      const { ctx } = reviseCtx({
+        generateTexts: ["bad", "good"],
+        validator: () => ({ ok: false, errors: [{ message: "nope" }] }),
+      });
+      (ctx as { inputMessages: readonly Message[] }).inputMessages = [{ role: "user", content: [{ type: "text", text: "build a thing" }] }];
+      ctx.emit = (event) => events.push(event);
+      const loop = generateValidateReviseLoop({
+        validator: (value) => value === "good" ? { ok: true } : { ok: false, errors: [{ message: "nope" }] },
+        maxRevisions: 1,
+      });
+      await loop.run(ctx);
+      assert.deepEqual(events.map((event) => event.type), [
+        "turn_started", "message_finished", "turn_finished",
+        "artifact_validation_started", "artifact_validation_finished", "artifact_revision_started",
+        "turn_started", "message_finished", "turn_finished",
+        "artifact_validation_started", "artifact_validation_finished", "artifact_finished",
+      ]);
+      assert.deepEqual(ctx.history.map((message) => message.role), ["user", "assistant", "user", "assistant"]);
+    });
+
     it("validation failure does not emit an error event", async () => {
       const events: AgentEvent[] = [];
       const { ctx } = reviseCtx({
@@ -299,10 +321,11 @@ describe("agent loop strategies", () => {
         yield providerTextDelta(text);
         yield providerDone();
       } };
+      const store = createMemorySessionStore();
       const agent = createAgent({
         model: { provider: "mock", model: "demo" },
         provider,
-        store: createMemorySessionStore(),
+        store,
       });
       const session = agent.createSession({ id: "s-revise" });
       const reader = collect(session.subscribe());
@@ -318,6 +341,12 @@ describe("agent loop strategies", () => {
       // assistant messages: 3; user repair messages between them: 2 → total assistant+user store messages emit message_finished for assistant only
       const finished = events.filter((event) => event.type === "message_finished");
       assert.equal(finished.length, 3, "expected 3 message_finished events (one per assistant draft)");
+      assert.deepEqual(events.filter((event) => event.type === "turn_started" || event.type === "turn_finished").map((event) => `${event.type}:${event.turn}`), [
+        "turn_started:1", "turn_finished:1",
+        "turn_started:2", "turn_finished:2",
+        "turn_started:3", "turn_finished:3",
+      ]);
+      assert.deepEqual((await store.list("s-revise")).map((entry) => entry.message?.role), ["user", "assistant", "user", "assistant", "user", "assistant"]);
       assert.equal(events.some((event) => event.type === "agent_finished"), true);
       assert.equal(events.some((event) => event.type === "error"), false);
     });

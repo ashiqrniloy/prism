@@ -94,6 +94,7 @@ function resolveTools(
 ): ToolRegistry | undefined {
   const source = context.tools ?? context.registries?.tools;
   if (!names) {
+    if (!context.activateAllCapabilities) return undefined;
     if (!source) return undefined;
     return asToolRegistry(source);
   }
@@ -130,13 +131,17 @@ function resolveSkills(
   tools: ToolRegistry | undefined,
   context: AgentDefinitionResolutionContext,
 ): readonly Skill[] | undefined {
-  if (!names) return undefined;
   const registry =
     context.skillsRegistry ??
     (context.registries?.skills ? createSkillRegistry(context.registries.skills.list()) : undefined);
-  if (!registry) throw new Error("No skill registry in scope");
+  if (!names && !context.activateAllCapabilities) return undefined;
+  if (!registry) {
+    if (!names) return undefined;
+    throw new Error("No skill registry in scope");
+  }
   const toolList = tools?.list() ?? [];
-  return resolveActiveSkills({ registry, names, tools: toolList });
+  const activeNames = names ?? registry.list().map((skill) => skill.name);
+  return resolveActiveSkills({ registry, names: activeNames, tools: toolList });
 }
 
 function resolveContextProviders(

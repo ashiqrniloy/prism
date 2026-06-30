@@ -102,17 +102,20 @@ export function generateValidateReviseLoop(opts: {
 
       for (let turn = 1; turn <= max + 1; turn += 1) {
         throwIfAborted(ctx.signal);
+        ctx.emit({ type: "turn_started", sessionId: ctx.sessionId, runId: ctx.runId, turn });
         const request = await ctx.assemble(nextInput, undefined, turn);
         throwIfAborted(ctx.signal);
         const { content, messageId, started, usage: turnUsage } = await ctx.generate(request);
         usage = turnUsage ?? usage;
 
+        if (turn === 1) ctx.history.push(...ctx.inputMessages);
         if (started) {
           const message: Message = { id: messageId, role: "assistant", content };
           ctx.history.push(message);
           await ctx.appendMessage(message);
           ctx.emit({ type: "message_finished", sessionId: ctx.sessionId, runId: ctx.runId, message });
         }
+        ctx.emit({ type: "turn_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn });
 
         const text = content
           .filter((b): b is TextContent => b.type === "text")

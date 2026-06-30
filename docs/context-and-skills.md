@@ -6,7 +6,7 @@
 
 ## When to use it
 
-Use context resolution when a host wants project/session/context blocks resolved before prompt composition. Use the skill registry when a host wants explicit progressive skill disclosure.
+Use context resolution when a host wants project/session/context blocks resolved before prompt composition. Use the skill registry when a host wants explicit progressive skill disclosure. Declarative `AgentDefinition.skills` are inactive unless listed; omitted skills means none unless the host uses the migration-only `activateAllCapabilities: true` option.
 
 Do not use these helpers as an agent loop, package discovery mechanism, context cache, token budgeter, retrier, credential resolver, semantic skill ranker, tool activator, or permission system.
 
@@ -32,7 +32,10 @@ Skill selection:
 ```ts
 import { createSkillRegistry, resolveActiveSkills } from "@arnilo/prism";
 
-const registry = createSkillRegistry([{ name: "brief", instructions: "Answer briefly.", toolNames: ["echo"] }]);
+const registry = createSkillRegistry(
+  [{ name: "brief", instructions: "Answer briefly.", toolNames: ["echo"] }],
+  { duplicate: "error" },
+);
 const active = resolveActiveSkills({
   registry,
   names: ["brief"],
@@ -40,13 +43,15 @@ const active = resolveActiveSkills({
 });
 ```
 
+`createSkillRegistry(skills?, options?)` stores skills by `skill.name`. Duplicate names replace deterministically by default for compatibility. Pass `{ duplicate: "error" }` to throw `Duplicate skill: <name>` and prevent silent shadowing.
+
 `ResolveActiveSkillsOptions` accepts a `SkillRegistry`, requested skill names, and host-active `ToolDefinition[]`.
 
 ## Outputs / response / events
 
 `resolveContextProviders()` returns `readonly ContextBlock[]` in provider order. If a middleware registry is supplied, the `context` hook can transform the final block array.
 
-`resolveActiveSkills()` returns requested skills in requested order. Unknown skills and skills that reference inactive tools throw before prompt composition.
+`resolveActiveSkills()` returns requested skills in requested order. Unknown skills, duplicate skill registrations in strict mode, and skills that reference inactive tools throw before prompt composition.
 
 ## Request/response example
 
@@ -85,7 +90,7 @@ const request = await assembleProviderInput({
 
 ## Extension and configuration notes
 
-Extensions can contribute context providers and skills with `registerContextProvider()` and `registerSkill()`, but those contributions stay inert until the host selects providers or registers/selects skills. The agent/session runtime uses the `context` and selected `skills` arrays passed on `AgentConfig`; it does not auto-select contributions.
+Extensions can contribute context providers and skills with `registerContextProvider()` and `registerSkill()`, but those contributions stay inert until the host selects providers or registers/selects skills. `resolveAgentDefinition()` only selects skills named in `AgentDefinition.skills` by default; omitted declarative skills activate none. The agent/session runtime uses the `context` and selected `skills` arrays passed on `AgentConfig`; it does not auto-select contributions.
 
 ```ts
 const providers = [kernel.registries.contextProviders.resolve("project")];
@@ -133,17 +138,29 @@ await agent.createSession().run(input, { activeSkills: ["translate"] });
 
 // Plain-array override (no registry on AgentConfig.skills):
 await session.run(input, { skills: [{ name: "verbose", instructions: "Be verbose." }] });
+await session.run(input, { skills: [] }); // explicit no skills for this run
 ```
 
-Skill selection grants no tool access and cannot bypass permissions — a skill's `toolNames` can only *require* host-active tools, never activate or grant them. Per-skill token budgeting is deferred; the merge order (host context, then skill context) is the only priority knob today.
+Skill selection grants no tool access and cannot bypass permissions — a skill's `toolNames` can only *require* host-active tools, never activate or grant them. Declarative skills also do not activate themselves by presence in a registry; list names on `AgentDefinition.skills` (or pass runtime `activeSkills`) when wanted. Per-skill token budgeting is deferred; the merge order (host context, then skill context) is the only priority knob today.
+
+### Migration note
+
+For declarative agents, old configs that omitted `skills` should now add explicit names:
+
+```ts
+// New safe default: no skill activates by omission.
+resolveAgentDefinition({ name: "doc", model, skills: ["brief"] }, context);
+```
+
+Use `activateAllCapabilities: true` only as a temporary all-skills/all-tools compatibility opt-in during migration. Runtime `RunOptions.activeSkills` remains the per-run narrowing tool after an agent has a skill registry configured.
 
 ## Security and performance notes
 
 - Context providers run sequentially and deterministically in caller order.
-- Skill registry lookup is `Map`-backed, and selection is linear in requested skills plus active tools.
+- Skill registry lookup is `Map`-backed, and selection is linear in requested skills plus active tools. Strict duplicate mode adds one O(1) `Map.has()` check during registration only.
 - These helpers perform no provider calls, tool execution, resource loading, package discovery, filesystem/network access, retries, timers, or watchers by themselves.
 - Context and skill output is host/extension data. Do not include secrets unless the host explicitly accepts that prompt exposure.
-- Active tools remain host-supplied; skills and middleware do not activate tools or grant permissions.
+- Active tools remain host-supplied; skills and middleware do not activate tools or grant permissions. Use `duplicate: "error"` when loading third-party skills to prevent silent name shadowing.
 
 ## Related APIs
 

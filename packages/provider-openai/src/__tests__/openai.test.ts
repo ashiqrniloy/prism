@@ -25,7 +25,7 @@ describe("@arnilo/prism-provider-openai responses", () => {
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "lookup", arguments: { q: "x" } }]);
   });
 
-  it("openai_responses_applies_prompt_cache_policy_and_session_headers", async () => {
+  it("openai_responses_applies_prompt_cache_policy_session_headers_and_max_tokens", async () => {
     let body: any;
     let headers: Headers;
     const provider = createOpenAIResponsesProvider({ apiKey: "fake-openai-key", fetch: async (_url, init) => {
@@ -34,9 +34,12 @@ describe("@arnilo/prism-provider-openai responses", () => {
       return ok(sse([]));
     } });
 
-    await assertProviderStreamConforms({ provider, request });
+    await assertProviderStreamConforms({ provider, request: { ...request, model: { ...request.model, parameters: { maxTokens: 321, temperature: 0.2 } } } });
     assert.equal(body.prompt_cache_key, "x".repeat(64));
     assert.equal(body.prompt_cache_retention, "short");
+    assert.equal(body.max_output_tokens, 321);
+    assert.equal(body.maxTokens, undefined);
+    assert.equal(body.temperature, 0.2);
     assert.equal(headers!.get("x-client-request-id"), "session-1");
     assert.equal(headers!.get("authorization"), "Bearer fake-openai-key");
   });

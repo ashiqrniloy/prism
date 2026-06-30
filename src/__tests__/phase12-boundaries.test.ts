@@ -84,7 +84,13 @@ describe("phase 12 provider package boundaries", () => {
   it("phase12_core_has_no_new_requested_provider_runtime_behavior", () => {
     const text = files("src", (path) => path.endsWith(".ts") && !path.includes("src/__tests__") && !path.includes("src/providers/openai-compatible"))
       .map((path) => readFileSync(path, "utf8").toLowerCase()).join("\n");
-    for (const forbidden of ["openrouter", "zai", "kimi", "opencode", "openai-codex", "chatgpt", "moonshot"])
+    for (const forbidden of ["openrouter", "anthropic", "zai", "kimi", "opencode", "openai-codex", "chatgpt", "moonshot"])
       assert.equal(text.includes(forbidden), false, `core runtime source contains provider-specific literal ${forbidden}`);
+  });
+
+  it("phase42_prompt_cache_kind_values_are_generic", () => {
+    const kinds = ["implicit", "openai_key", "cache_control", "provider_specific", "none"];
+    for (const providerName of ["openai", "openrouter", "anthropic", "opencode", "zai", "kimi"])
+      assert.equal(kinds.includes(providerName), false, `cache kind is provider literal ${providerName}`);
   });
 });

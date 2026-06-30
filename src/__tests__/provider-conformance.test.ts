@@ -30,6 +30,12 @@ void describe("provider conformance", () => {
     assert.deepEqual(calls[0]?.arguments, { a: 1 });
   });
 
+  it("conformance_rejects_malformed_tool_call_delta_arguments", () => {
+    assert.throws(() => assertToolCallDeltasReconstruct([
+      providerToolCallDelta({ index: 0, id: "call_1", name: "lookup", argumentsText: "not-json" }),
+    ], []), /Invalid tool call arguments at index 0/);
+  });
+
   it("conformance_checks_cache_usage_fields", async () => {
     const events = await assertProviderStreamConforms({
       provider: createMockProvider([providerTextDelta("Hi"), providerUsage({ inputTokens: 3, cacheReadTokens: 2, cacheWriteTokens: 1 }), providerDone()]),

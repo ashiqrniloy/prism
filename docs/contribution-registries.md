@@ -18,15 +18,15 @@ Do not use them as a dependency injection container, manifest loader, settings l
 ## Inputs / request
 
 ```ts
-createContributionRegistry<T>(options?: { label?: string }): ContributionRegistry<T>
-createContributionRegistries(): ContributionRegistries
+createContributionRegistry<T>(options?: { label?: string; duplicate?: "replace" | "error" }): ContributionRegistry<T>
+createContributionRegistries(options?: { duplicate?: "replace" | "error" }): ContributionRegistries
 ```
 
 `ContributionRegistry<T>` methods:
 
 | Method | Input | Result |
 | --- | --- | --- |
-| `register(key, contribution)` | string key and contribution | Stores or replaces the contribution for that key. |
+| `register(key, contribution)` | string key and contribution | Stores/replaces the contribution for that key; throws `Duplicate <label>: <key>` when `duplicate: "error"`. |
 | `get(key)` | string key | Returns the contribution or `undefined`. |
 | `resolve(key)` | string key | Returns the contribution or throws `Unknown <label>: <key>`. |
 | `list()` | none | Returns contributions in insertion order. |
@@ -37,7 +37,7 @@ createContributionRegistries(): ContributionRegistries
 
 Registry calls return plain contribution objects. Unknown `resolve()` calls throw before provider, model, tool, credential, prompt, resource, or session behavior can run. `systemPromptContributions` are inert until a host passes selected values to `AgentConfig.systemPrompt` or `RunOptions.systemPrompt`.
 
-Registering the same key replaces the contribution deterministically. Registries do not emit events by themselves; the extension kernel may emit events when it uses them.
+Registering the same key replaces the contribution deterministically by default. Passing `duplicate: "error"` adds one `Map.has()` check before `set()` and throws `Duplicate <label>: <key>` instead of silently shadowing. Registries do not emit events by themselves; the extension kernel may emit events when it uses them.
 
 ## Request/response example
 
@@ -60,7 +60,7 @@ const tool: ToolDefinition = {
   },
 };
 
-const registries = createContributionRegistries();
+const registries = createContributionRegistries({ duplicate: "error" });
 registries.tools.register(tool.name, tool);
 registries.agents.register("demo", {
   name: "demo",
@@ -87,6 +87,8 @@ void skill;
 - Hosts can use contribution registries directly and skip extension loading entirely.
 - Extension packages should register contributions through the host-provided extension API once the extension kernel is in use.
 - Registry keys are explicit strings. Prefer stable ids/names such as `provider.id`, `tool.name`, `skill.name`, or package-qualified names when collisions matter.
+- Default duplicate policy is `"replace"` for compatibility and deterministic last-write-wins behavior. External apps that load third-party contributions should prefer `duplicate: "error"` to prevent silent shadowing.
+- Migration safety: when moving from legacy all-in-scope capability activation to named `AgentDefinition.tools` / `skills`, enable strict registries first so duplicate third-party names fail during registration instead of changing which capability a name resolves to.
 - Manifest contribution `kind` values match these registry keys. For example, `authMethods` accepts `authMethod` manifest declarations, `providerPackages` accepts `providerPackage`, `providerRequestPolicies` accepts `providerRequestPolicy`, and `systemPromptContributions` accepts `systemPromptContribution`.
 - Manifest and configuration loading are separate APIs; this page only covers in-memory registration.
 - Tool contributions are inert. They are not executable until the host registers selected definitions in an active tool registry and passes that registry to `dispatchToolCall()`.
@@ -96,7 +98,7 @@ void skill;
 
 ## Security and performance notes
 
-- Generic registries are `Map`-backed with O(1) lookup.
+- Generic registries are `Map`-backed with O(1) lookup; strict duplicate checks add one O(1) `Map.has()` during registration only.
 - Registries are explicit objects returned by factories. Prism does not create hidden global contribution registries.
 - Registries must not store resolved credential values, tokens, headers, or secret-bearing settings.
 - `credentialResolvers` may store resolver objects, but resolved credentials must stay at the edge that needs them.

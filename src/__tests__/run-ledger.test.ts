@@ -13,6 +13,7 @@ import {
 import { createMockProvider } from "../index.js";
 import type {
   AgentConfig,
+  AgentEvent,
   AgentEventRecord,
   RunLedger,
   RunLedgerRecord,
@@ -287,6 +288,37 @@ describe("RunLedger runtime wiring", () => {
     const finished = toolCalls.find((t) => t.status === "finished");
     assert.equal(finished?.redacted, true);
     assert.ok(events.every((e) => e.redacted === true));
+  });
+
+  it("event ledger is run-scoped, timeline-ordered, and writes each message exactly once", async () => {
+    // Phase 41 ledger gate: events are appended in run timeline order
+    // (agent_started ... message_started ... message_finished ... agent_finished),
+    // scoped to the run id, and no message_started/message_finished is double-written.
+    const { ledger, events } = createMemoryLedger();
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("one message"), providerDone()]),
+      runLedger: ledger,
+    });
+    const session = agent.createSession({ id: "s-once" });
+
+    const live: AgentEvent[] = [];
+    const sub = session.subscribe();
+    const collecting = (async () => { for await (const e of sub) live.push(e); })();
+    await session.run("say one thing");
+    await collecting;
+    const runId = live.find((e) => e.type === "agent_started")!.runId;
+
+    const runEvents = events.filter((e) => e.runId === runId);
+    assert.ok(runEvents.length > 0, "ledger events scoped to the run id");
+    assert.equal(events.filter((e) => e.runId === runId).length, runEvents.length, "no run id leakage");
+    assert.equal(runEvents.filter((e) => e.type === "message_started").length, 1, "message_started written exactly once");
+    assert.equal(runEvents.filter((e) => e.type === "message_finished").length, 1, "message_finished written exactly once");
+    // Timeline order: agent_started precedes message_started precedes message_finished precedes agent_finished.
+    const idx = (type: string) => runEvents.findIndex((e) => e.type === type);
+    assert.ok(idx("agent_started") < idx("message_started"), "agent_started before message_started");
+    assert.ok(idx("message_started") < idx("message_finished"), "message_started before message_finished");
+    assert.ok(idx("message_finished") < idx("agent_finished"), "message_finished before agent_finished");
   });
 
   it("records aborted status and reason when run is aborted", async () => {

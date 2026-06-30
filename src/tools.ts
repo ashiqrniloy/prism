@@ -2,6 +2,7 @@ import type { AgentEvent, ErrorInfo, JsonObject, OwnershipScope, RunLedger, Tool
 import { isJsonObject } from "./config.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
+import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 import { assertPermission, type PermissionPolicy } from "./security.js";
 
 export interface ToolFilter {
@@ -27,11 +28,14 @@ export interface DispatchToolCallOptions {
   readonly ownership?: OwnershipScope;
 }
 
-export function createToolRegistry(tools: readonly ToolDefinition[] = []): ToolRegistry {
+export interface ToolRegistryOptions extends DuplicateRegistrationOptions {}
+
+export function createToolRegistry(tools: readonly ToolDefinition[] = [], options: ToolRegistryOptions = {}): ToolRegistry {
   const byName = new Map<string, ToolDefinition>();
 
   const registry: ToolRegistry = {
     register(tool) {
+      assertCanRegister(byName, tool.name, "tool", tool.name, options.duplicate);
       byName.set(tool.name, tool);
     },
     get(name) {

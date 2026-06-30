@@ -111,6 +111,7 @@ Use `createDefaultCompactionStrategy()` to create compaction entries that `rebui
 
 ## Related APIs
 
+- [Migration guide](migration.md): moving branch-handle reads from the dev `list(sessionId)` path to a database-backed `readBranchPath`.
 - [Session stores](session-stores.md): canonical overview for `SessionAppendOptions`, `SessionAppendConflictError`, branch handles, and dev-vs-production branch reads.
 - [Public contracts](public-contracts.md): `SessionEntry`, `SessionStore`, `StoreFactory`, and session contracts.
 - [Agent/session runtime](agent-session-runtime.md): runtime sessions use these branch helpers for store-backed history, checkout, fork, and clone.

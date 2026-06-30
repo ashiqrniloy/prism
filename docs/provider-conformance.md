@@ -16,7 +16,7 @@ Exported from `@arnilo/prism/testing/provider-conformance`:
 
 ## When to use it
 
-Use these helpers in provider package tests to check event order, terminal events, abort propagation, streamed tool-call deltas, usage/cache accounting, request body content preservation, and secret redaction.
+Use these helpers in provider package tests to check event order, terminal events, abort propagation via `ProviderRequest.signal`, streamed tool-call deltas, usage/cache accounting, request body content preservation, and secret redaction. Do not treat deprecated `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs` as conformance requirements; first-party providers use runtime abort signals and `AgentConfig.retry`/`RunOptions.retry` instead.
 
 Do not use them as a live integration runner, provider simulator, retry framework, credential loader, or test framework replacement.
 
@@ -41,10 +41,10 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`,
 
 - `collectProviderEvents()` returns provider events in stream order.
 - `assertProviderStreamConforms()` returns collected events after verifying the stream ends with `done` or `error`, terminal events are last, and optional text/usage expectations match.
-- `assertAbortIsObserved()` passes an already-aborted signal and expects provider generation to reject.
-- `assertToolCallDeltasReconstruct()` rebuilds streamed `tool_call_delta` fragments into tool calls and validates expected id/name/arguments.
+- `assertAbortIsObserved()` passes an already-aborted signal and expects provider generation to reject. This is the supported timeout primitive; use a host abort controller or `RunOptions.signal` rather than deprecated provider-level `timeoutMs`.
+- `assertToolCallDeltasReconstruct()` rebuilds streamed `tool_call_delta` fragments into tool calls and validates expected id/name/arguments. The runtime uses the same reconstruction behavior before tool execution when a provider streams deltas.
 - `assertUsageAccounting()` finds `usage` or `done.usage` and checks selected token fields including `cacheReadTokens` and `cacheWriteTokens`.
-- `assertSerializedRequestCoversContent()` scans a serialized provider request body for primitive canaries from each Prism content block and fails if any supported block type is silently dropped.
+- `assertSerializedRequestCoversContent()` scans a serialized provider request body for primitive canaries from each Prism content block and fails if any supported block type is silently dropped. Provider-valid transcripts place assistant `tool_call` messages before matching role `tool` `tool_result` messages; runtime and observational-memory worker loops preserve that order before serialization.
 - `assertNoSecretLeak()` stringifies all collected events and fails if any known secret string is present.
 
 ## Request/response example
@@ -54,6 +54,18 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`,
   "events": ["content_delta", "usage", "done"],
   "usage": { "inputTokens": 10, "cacheReadTokens": 4, "cacheWriteTokens": 2 }
 }
+```
+
+Tool-call delta reconstruction example:
+
+```ts
+import { assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+
+assertToolCallDeltasReconstruct([
+  { type: "tool_call_delta", index: 0, id: "call_1", name: "lookup", argumentsText: "{\"q\":" },
+  { type: "tool_call_delta", index: 0, argumentsText: "\"prism\"}" },
+  { type: "done" },
+], [{ index: 0, id: "call_1", name: "lookup", arguments: { q: "prism" } }]);
 ```
 
 Content-preservation example:

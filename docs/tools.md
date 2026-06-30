@@ -20,7 +20,7 @@ Do not use the harness as a sandbox, package loader, app-tool pack, permission p
 ## Inputs / request
 
 ```ts
-createToolRegistry(tools?: readonly ToolDefinition[]): ToolRegistry
+createToolRegistry(tools?: readonly ToolDefinition[], options?: { duplicate?: "replace" | "error" }): ToolRegistry
 filterTools(tools: readonly ToolDefinition[], filter?: ToolFilter | readonly ToolFilter[]): readonly ToolDefinition[]
 dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult>
 ```
@@ -29,7 +29,7 @@ dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult>
 
 | Method | Input | Result |
 | --- | --- | --- |
-| `register(tool)` | `ToolDefinition` | Stores or replaces by `tool.name`. |
+| `register(tool)` | `ToolDefinition` | Stores/replaces by `tool.name`; throws `Duplicate tool: <name>` when `duplicate: "error"`. |
 | `get(name)` | tool name | Returns the tool or `undefined`. |
 | `resolve(name)` | tool name | Returns the tool or throws `Unknown tool: <name>`. |
 | `list()` | none | Returns tools in insertion order. |
@@ -61,7 +61,7 @@ When multiple filters are provided, each non-empty allow list must include the t
 
 ## Outputs / response / events
 
-Registry calls return plain `ToolDefinition` objects. `resolve()` fails closed for unknown names before any tool can execute. Filtering returns only tools already present in the input list; it never creates or enables new tools.
+Registry calls return plain `ToolDefinition` objects. `resolve()` fails closed for unknown names before any tool can execute. Duplicate registrations replace deterministically by default for compatibility; `createToolRegistry([], { duplicate: "error" })` rejects silent shadowing with `Duplicate tool: <name>`. Filtering returns only tools already present in the input list; it never creates or enables new tools.
 
 `dispatchToolCall()` returns a `ToolResult`. Unknown tools, denied tools, invalid arguments, validator failures, and thrown tool errors return a result with `error` and do not throw by default.
 
@@ -141,7 +141,7 @@ const activeTools = createToolRegistry([contributions.tools.resolve("echo")]);
 
 Middleware can transform `tool_call` and `tool_result` payloads, but dispatch re-checks active registry lookup, filters, and object arguments after `tool_call` middleware. Middleware cannot grant permission by changing a tool name.
 
-Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set. Skills may reference `toolNames`, but `resolveActiveSkills()` only checks those names against the host-active tool list; it does not register, allow, or execute tools.
+Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set. Skills may reference `toolNames`, but `resolveActiveSkills()` only checks those names against the host-active tool list; it does not register, allow, permit, or execute tools. A missing `toolNames` dependency fails before the provider turn and writes no tool result.
 
 ### Runtime-supplied validators
 
@@ -173,9 +173,9 @@ await session.run(input, { validate: (_t, args) => args.dry ? "dry-run blocked" 
 
 ## Security and performance notes
 
-- Tool lookup uses a `Map` for O(1) name lookup.
+- Tool lookup uses a `Map` for O(1) name lookup. Strict duplicate mode adds one O(1) `Map.has()` check during registration only.
 - Filtering is exact-name matching over the provided tools and rules.
-- Unknown, denied, malformed, and validator-blocked calls fail closed.
+- Unknown, denied, malformed, duplicate-in-strict-mode, and validator-blocked calls fail closed.
 - Tool arguments must be JSON object-shaped before validation or execution.
 - `parameters` is pass-through metadata; hosts own schema interpretation and validation.
 - Prism does not sandbox host tools and does not include built-in app tools.

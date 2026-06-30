@@ -45,16 +45,21 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "tool_1", name: "lookup", arguments: { q: "y" } }]);
   });
 
-  it("opencode_go_applies_session_cache_headers", async () => {
+  it("opencode_go_applies_session_cache_headers_and_max_tokens", async () => {
     let url = "";
     let headers = new Headers();
+    let body: any;
     const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (input, init) => {
       url = String(input);
       headers = new Headers(init?.headers);
+      body = JSON.parse(String(init?.body));
       return ok(sse([]));
     }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request: baseRequest });
+    await assertProviderStreamConforms({ provider, request: { ...baseRequest, model: { ...baseRequest.model, parameters: { maxTokens: 111, temperature: 0.1 } } } });
     assert.equal(url.endsWith("/chat/completions"), true);
+    assert.equal(body.max_tokens, 111);
+    assert.equal(body.maxTokens, undefined);
+    assert.equal(body.temperature, 0.1);
     assert.equal(headers.get("x-opencode-session"), "session-with-spaces");
     assert.equal(headers.get("authorization"), "Bearer fake-opencode-key");
   });
@@ -87,8 +92,10 @@ describe("@arnilo/prism-provider-opencode-go", () => {
       bodyAnthropic = JSON.parse(String(init?.body));
       return ok(sse([]));
     }) as typeof fetch });
-    await assertProviderStreamConforms({ provider: anthropic, request: replayAnthropic });
+    await assertProviderStreamConforms({ provider: anthropic, request: { ...replayAnthropic, model: { ...replayAnthropic.model, parameters: { maxTokens: 222 } } } });
     assertSerializedRequestCoversContent(replayAnthropic, bodyAnthropic);
+    assert.equal((bodyAnthropic as any).max_tokens, 222);
+    assert.equal((bodyAnthropic as any).maxTokens, undefined);
   });
 
   it("opencode_go_redacts_api_key_from_errors", async () => {

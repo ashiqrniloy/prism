@@ -34,7 +34,7 @@ describe("@arnilo/prism-provider-openrouter", () => {
     assert(registered.some((item: any) => item.provider === "openrouter" && item.kind === "api_key"));
   });
 
-  it("openrouter_passes_provider_routing_and_reasoning_controls", async () => {
+  it("openrouter_passes_provider_routing_reasoning_and_max_tokens", async () => {
     let body: any;
     let headers = new Headers();
     const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", appUrl: "https://example.invalid", appTitle: "Prism Test", fetch: (async (_input, init) => {
@@ -42,9 +42,12 @@ describe("@arnilo/prism-provider-openrouter", () => {
       headers = new Headers(init?.headers);
       return ok(sse([]));
     }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request });
+    await assertProviderStreamConforms({ provider, request: { ...request, model: { ...request.model, parameters: { maxTokens: 222, temperature: 0.3 } } } });
     assert.deepEqual(body.provider, { order: ["anthropic"], data_collection: "deny" });
     assert.deepEqual(body.reasoning, { effort: "medium" });
+    assert.equal(body.max_tokens, 222);
+    assert.equal(body.maxTokens, undefined);
+    assert.equal(body.temperature, 0.3);
     assert.equal(headers.get("authorization"), "Bearer fake-openrouter-key");
     assert.equal(headers.get("http-referer"), "https://example.invalid");
     assert.equal(headers.get("x-title"), "Prism Test");

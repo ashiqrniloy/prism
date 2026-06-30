@@ -21,6 +21,7 @@ import type {
 } from "./contracts.js";
 import { createModelRegistry, type ModelRegistry } from "./models.js";
 import { createProviderRegistry, type ProviderRegistry } from "./providers.js";
+import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 
 export interface ContributionRegistry<T> {
   register(key: string, contribution: T): void;
@@ -29,7 +30,7 @@ export interface ContributionRegistry<T> {
   list(): readonly T[];
 }
 
-export interface ContributionRegistryOptions {
+export interface ContributionRegistryOptions extends DuplicateRegistrationOptions {
   readonly label?: string;
 }
 
@@ -39,6 +40,7 @@ export function createContributionRegistry<T>(options: ContributionRegistryOptio
 
   return {
     register(key, contribution) {
+      assertCanRegister(byKey, key, label, key, options.duplicate);
       byKey.set(key, contribution);
     },
     get(key) {
@@ -78,28 +80,31 @@ export interface ContributionRegistries {
   readonly instructionInjectors: ContributionRegistry<InstructionInjector>;
 }
 
-export function createContributionRegistries(): ContributionRegistries {
+export interface ContributionRegistriesOptions extends DuplicateRegistrationOptions {}
+
+export function createContributionRegistries(options: ContributionRegistriesOptions = {}): ContributionRegistries {
+  const registryOptions = (label: string): ContributionRegistryOptions => ({ label, duplicate: options.duplicate });
   return {
-    providers: createProviderRegistry(),
-    models: createModelRegistry(),
-    tools: createContributionRegistry({ label: "tool" }),
-    contextProviders: createContributionRegistry({ label: "context provider" }),
-    skills: createContributionRegistry({ label: "skill" }),
-    commands: createContributionRegistry({ label: "command" }),
-    agents: createContributionRegistry({ label: "agent" }),
-    inputBuilders: createContributionRegistry({ label: "input builder" }),
-    promptBuilders: createContributionRegistry({ label: "prompt builder" }),
-    compactionStrategies: createContributionRegistry({ label: "compaction strategy" }),
-    retryPolicies: createContributionRegistry({ label: "retry policy" }),
-    storeFactories: createContributionRegistry({ label: "store factory" }),
-    resourceLoaders: createContributionRegistry({ label: "resource loader" }),
-    settingsProviders: createContributionRegistry({ label: "settings provider" }),
-    credentialResolvers: createContributionRegistry({ label: "credential resolver" }),
-    providerPackages: createContributionRegistry({ label: "provider package" }),
-    authMethods: createContributionRegistry({ label: "auth method" }),
-    providerRequestPolicies: createContributionRegistry({ label: "provider request policy" }),
-    systemPromptContributions: createContributionRegistry({ label: "system prompt contribution" }),
-    instructionInjectors: createContributionRegistry({ label: "instruction injector" }),
+    providers: createProviderRegistry([], options),
+    models: createModelRegistry([], options),
+    tools: createContributionRegistry(registryOptions("tool")),
+    contextProviders: createContributionRegistry(registryOptions("context provider")),
+    skills: createContributionRegistry(registryOptions("skill")),
+    commands: createContributionRegistry(registryOptions("command")),
+    agents: createContributionRegistry(registryOptions("agent")),
+    inputBuilders: createContributionRegistry(registryOptions("input builder")),
+    promptBuilders: createContributionRegistry(registryOptions("prompt builder")),
+    compactionStrategies: createContributionRegistry(registryOptions("compaction strategy")),
+    retryPolicies: createContributionRegistry(registryOptions("retry policy")),
+    storeFactories: createContributionRegistry(registryOptions("store factory")),
+    resourceLoaders: createContributionRegistry(registryOptions("resource loader")),
+    settingsProviders: createContributionRegistry(registryOptions("settings provider")),
+    credentialResolvers: createContributionRegistry(registryOptions("credential resolver")),
+    providerPackages: createContributionRegistry(registryOptions("provider package")),
+    authMethods: createContributionRegistry(registryOptions("auth method")),
+    providerRequestPolicies: createContributionRegistry(registryOptions("provider request policy")),
+    systemPromptContributions: createContributionRegistry(registryOptions("system prompt contribution")),
+    instructionInjectors: createContributionRegistry(registryOptions("instruction injector")),
   };
 }
 

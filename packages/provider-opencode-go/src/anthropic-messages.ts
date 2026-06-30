@@ -6,14 +6,15 @@ interface PartialBlock { id?: string; name?: string; argumentsText: string }
 
 export function anthropicMessagesBody(request: ProviderRequest): JsonObject {
   const preserveThinking = request.model.compat?.preserveThinking === true;
+  const { maxTokens, ...parameters } = request.model.parameters ?? {};
   return clean({
     model: request.model.model,
     messages: request.messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model.capabilities ?? {}, preserveThinking)),
     system: request.messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
-    max_tokens: request.model.limits?.maxOutputTokens ?? 4096,
-    ...request.model.parameters,
+    ...parameters,
+    max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
     ...(request.options?.compat ?? {}),
     ...(request.options?.extra ?? {}),
   });

@@ -28,6 +28,7 @@ import type {
   SessionStore,
   SessionBranchRead,
   Skill,
+  SubscribeOptions,
   ToolCallContent,
   ToolDefinition,
   ToolRegistry,
@@ -38,6 +39,7 @@ import type {
 import { resolveLoop } from "./agent-loops.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
+import { providerToolCallDeltaContent, reconstructToolCallDeltas } from "./provider-events.js";
 import { createProviderRequestPolicyChain, mergeProviderRequestOptions, normalizeProviderRequestPolicyResult } from "./provider-request-policy.js";
 import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
@@ -87,8 +89,8 @@ class RuntimeAgentSession implements AgentSession {
     return this.currentLeafId;
   }
 
-  subscribe(): AsyncIterable<AgentEvent> {
-    const subscriber = new EventSubscriber(() => this.subscribers.delete(subscriber));
+  subscribe(options: SubscribeOptions = {}): AsyncIterable<AgentEvent> {
+    const subscriber = new EventSubscriber(this.id, options, () => this.subscribers.delete(subscriber));
     this.subscribers.add(subscriber);
     return subscriber;
   }
@@ -132,6 +134,8 @@ class RuntimeAgentSession implements AgentSession {
       await this.activeLedger?.appendRun(redactRunLedgerRecord(startRecord, this.activeRedactor));
 
       await this.rebuildHistory();
+      const { registry, tools } = activeTools(this.agent.config.tools);
+      const activeSkills = this.resolveRunSkills(options, tools);
       if (options.model && JSON.stringify(options.model) !== JSON.stringify(this.agent.config.model)) {
         await this.appendEntry(createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "model_change", previousModel: this.agent.config.model, model: options.model }));
       }
@@ -140,8 +144,6 @@ class RuntimeAgentSession implements AgentSession {
       await this.autoCompact(runId, options, controller.signal, inputMessages);
 
       const metadata = { ...this.agent.config.metadata, ...this.metadata, ...options.metadata };
-      const { registry, tools } = activeTools(this.agent.config.tools);
-      const activeSkills = this.resolveRunSkills(options, tools);
       const maxToolRounds = options.maxToolRounds ?? 1;
       const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(this.agent.config.systemPrompt, options.systemPrompt), { base: this.agent.config.instructions });
       const contextProviders = [
@@ -392,6 +394,7 @@ class RuntimeAgentSession implements AgentSession {
   private async generateProviderTurn(request: ProviderRequest, runId: string, signal: AbortSignal, secrets: readonly (string | undefined)[] = []): Promise<ProviderTurnResult> {
     const content: ContentBlock[] = [];
     const calls: ToolCallContent[] = [];
+    const toolDeltas: ProviderEvent[] = [];
     let messageId: string | undefined;
     let started = false;
     let usage: Usage | undefined;
@@ -423,16 +426,26 @@ class RuntimeAgentSession implements AgentSession {
           this.emit({ type: "message_started", sessionId: this.id, runId, message: { id: messageId, role: "assistant", content: [] } });
           continue;
         }
-        if (event.type === "content_delta" || event.type === "tool_call") {
+        if (event.type === "content_delta" || event.type === "tool_call" || event.type === "tool_call_delta") {
           if (!started) {
             started = true;
             this.emit({ type: "message_started", sessionId: this.id, runId, message: { role: "assistant", content: [] } });
+          }
+          if (event.type === "tool_call_delta") {
+            toolDeltas.push(event);
+            this.emit({ type: "message_delta", sessionId: this.id, runId, content: providerToolCallDeltaContent(event) });
+            continue;
           }
           const block = providerContent(event);
           content.push(block);
           if (block.type === "tool_call") calls.push(block);
           this.emit({ type: "message_delta", sessionId: this.id, runId, content: block });
         }
+      }
+      for (const call of reconstructMissingToolCalls(toolDeltas, calls)) {
+        content.push(call);
+        calls.push(call);
+        this.emit({ type: "message_delta", sessionId: this.id, runId, content: call });
       }
       return { content, calls, messageId, started, usage };
     } catch (error) {
@@ -515,9 +528,15 @@ class RuntimeAgentSession implements AgentSession {
 class EventSubscriber implements AsyncIterable<AgentEvent>, AsyncIterator<AgentEvent> {
   private readonly queue: AgentEvent[] = [];
   private readonly waiters: ((result: IteratorResult<AgentEvent>) => void)[] = [];
+  private readonly maxQueuedEvents: number;
+  private readonly overflow: NonNullable<SubscribeOptions["overflow"]>;
   private closed = false;
 
-  constructor(private readonly onClose: () => void) {}
+  constructor(private readonly sessionId: string, options: SubscribeOptions, private readonly onClose: () => void) {
+    const maxQueuedEvents = options.maxQueuedEvents ?? 1024;
+    this.maxQueuedEvents = Number.isFinite(maxQueuedEvents) ? Math.max(1, Math.floor(maxQueuedEvents)) : 1024;
+    this.overflow = options.overflow ?? "close";
+  }
 
   [Symbol.asyncIterator](): AsyncIterator<AgentEvent> {
     return this;
@@ -538,8 +557,31 @@ class EventSubscriber implements AsyncIterable<AgentEvent>, AsyncIterator<AgentE
 
   push(event: AgentEvent): void {
     const waiter = this.waiters.shift();
-    if (waiter) waiter({ value: event, done: false });
-    else if (!this.closed) this.queue.push(event);
+    if (waiter) {
+      waiter({ value: event, done: false });
+      return;
+    }
+    if (this.closed) return;
+    if (this.queue.length < this.maxQueuedEvents) {
+      this.queue.push(event);
+      return;
+    }
+    if (this.overflow === "drop_oldest") {
+      this.queue.shift();
+      this.queue.push(event);
+      return;
+    }
+    if (this.overflow === "drop_newest") return;
+    const droppedEvents = this.queue.length + 1;
+    this.queue.splice(0, this.queue.length, {
+      type: "event_subscriber_overflow",
+      sessionId: this.sessionId,
+      droppedEvents,
+      maxQueuedEvents: this.maxQueuedEvents,
+      overflow: this.overflow,
+    });
+    this.close();
+    this.onClose();
   }
 
   close(): void {
@@ -550,6 +592,12 @@ class EventSubscriber implements AsyncIterable<AgentEvent>, AsyncIterator<AgentE
 
 function providerContent(event: Extract<ProviderEvent, { type: "content_delta" | "tool_call" }>): ContentBlock {
   return event.type === "content_delta" ? event.content : event.call;
+}
+
+function reconstructMissingToolCalls(deltas: readonly ProviderEvent[], calls: readonly ToolCallContent[]): readonly ToolCallContent[] {
+  if (deltas.length === 0) return [];
+  const seen = new Set(calls.map((call) => call.id));
+  return reconstructToolCallDeltas(deltas).filter((call) => !seen.has(call.id));
 }
 
 function inputToMessages(input: AgentInput): Message[] {

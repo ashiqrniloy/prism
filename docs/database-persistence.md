@@ -15,7 +15,7 @@ Use these contracts when you write a database-backed `SessionStore` or a separat
 - durable tables for runs, events, tool calls, usage, and agent-definition versions
 - retention policies and migration records
 
-Do not use these contracts as a required runtime dependency. The agent/session runtime only requires `SessionStore`. `ProductionPersistenceStore` is an extension point for hosts that want richer querying.
+Do not use these contracts as a required runtime dependency. The agent/session runtime only requires `SessionStore`. `ProductionPersistenceStore` is an extension point for hosts that want richer querying. A network-free, runnable reference adapter that implements `SessionStore` + `RunLedger` + `ProductionPersistenceStore` reads against in-memory tables lives at [`examples/external-app-db-backed.ts`](../examples/external-app-db-backed.ts) — lift its contract shapes into your own SQL/NoSQL adapter.
 
 ## Inputs / request
 
@@ -184,6 +184,20 @@ The `usage` JSONB stores the `Usage` shape: input/output/total/cache tokens, cos
 
 Prism does not run migrations; hosts own migration tooling and use this table to record applied changes.
 
+## Adapter performance guidance
+
+Database adapters should keep Prism reads and writes cursor-shaped and indexed. Do not add an ORM or adapter dependency to Prism core; implement this in host code.
+
+Minimum production guidance:
+
+- **Branch context:** implement `SessionStore.readBranchPath(query)` with an ancestor query / recursive CTE. Treat `SessionStore.list(sessionId)` as an O(n) development fallback only.
+- **Cursor pagination:** every `query*` method should honor `cursor`, `limit`, and `order`. Encode cursors from indexed columns such as `(timestamp, id)`, `(started_at, id)`, `(recorded_at, id)`, or `(run_id, sequence)`; never use offset pagination for long sessions.
+- **Batch appends:** `SessionStore.append()` is single-entry because the runtime advances one branch leaf at a time. Hosts may batch inside their DB/ledger adapters for `RunLedger` rows, but the adapter must preserve per-run event order and must not acknowledge writes before durable enqueue/commit.
+- **Event sequence allocation:** allocate a monotonic `sequence` per `run_id` when inserting `prism_agent_events`. Use it with `run_id` for stable event timeline pagination when timestamps collide.
+- **Run/event/usage query shapes:** runs page by `(session_id, started_at, id)` or `(branch_id, started_at, id)`; events page by `(run_id, sequence)` or `(session_id, timestamp, id)`; usage pages by `(run_id, recorded_at, id)` or `(session_id, recorded_at, id)`.
+- **Host-owned sizing:** hosts own connection pools, transaction timeouts, page-size caps, queue/batch size, retention jobs, partitioning, and tenant/account/user isolation. Prism does not guess production limits.
+- **Security:** persist redacted `SessionEntry`, `AgentEventRecord`, `ToolCallRecord`, and `UsageRecord` data only. Never store provider objects, credential resolvers, API keys, or raw provider clients.
+
 ## Indexes
 
 Recommended indexes for the reference schema. Hosts should add DB-specific partial or expression indexes as needed.
@@ -206,6 +220,7 @@ Recommended indexes for the reference schema. Hosts should add DB-specific parti
 | `prism_runs` | `(status, finished_at)` | retention/completion scans |
 | `prism_agent_events` | `(session_id, timestamp, id)` | event stream pagination |
 | `prism_agent_events` | `(run_id, timestamp, id)` | run event stream |
+| `prism_agent_events` | `(run_id, sequence)` | stable per-run event timeline pagination |
 | `prism_agent_events` | `(session_id, type, timestamp)` | event-type filtering |
 | `prism_agent_events` | `(entry_id)` | entry-to-event lookup |
 | `prism_tool_calls` | `(session_id, name, started_at)` | tool usage by name |
@@ -229,6 +244,23 @@ Implement `SessionStore.append(entry, options)` in one DB transaction:
 4. Optionally update a `prism_branches.leaf_entry_id` row with a compare-and-swap if the host wants one-writer linear branches. Prism's built-in stores use existence-validation so checkout/fork can intentionally create two children of the same existing parent.
 
 This keeps append guards O(1) with indexes, prevents dangling parent links, and deduplicates exact retries without forcing every branch to be linear.
+
+## Run, event, and usage query shapes
+
+Use cursor columns that match query filters:
+
+```sql
+-- Run history for one session.
+CREATE INDEX prism_runs_session_started_idx ON prism_runs (session_id, started_at, id);
+
+-- Stable event pagination within one run.
+CREATE INDEX prism_agent_events_run_sequence_idx ON prism_agent_events (run_id, sequence);
+
+-- Usage totals / billing reads by run.
+CREATE INDEX prism_usage_run_recorded_idx ON prism_usage (run_id, recorded_at, id);
+```
+
+For NoSQL stores, use equivalent partition/sort keys: partition by `session_id` or `run_id`; sort by `started_at`, `recorded_at`, or event `sequence`. Keep page sizes capped by host policy. `total` is optional because counting large partitions can be expensive.
 
 ## Branch reads: no full-session scan
 
@@ -354,6 +386,8 @@ const dbStore: ProductionPersistenceStore = {
 
 ## Related APIs
 
+- [Migration guide](migration.md): before/after shapes for moving from in-memory/JSONL to this contract.
+- [Performance limits](performance.md): production sizing, subscriber queues, branch-read limits, and database adapter guidance.
 - [Session stores and branching](session-stores-and-branching.md): `SessionStore`, `SessionEntry`, branch helpers, and runtime branch semantics.
 - [Node JSONL session store](node-jsonl-session-store.md): development-only file adapter; not for production multi-writer storage.
 - [Agent/session runtime](agent-session-runtime.md): sessions, runs, and event emission.

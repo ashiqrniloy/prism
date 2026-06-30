@@ -63,6 +63,7 @@ function messageText(message: Message): string {
 function blockText(block: ContentBlock): string {
   if (block.type === "text" || block.type === "thinking") return block.text;
   if (block.type === "tool_call") return `[tool_call ${block.name}]`;
+  if (block.type === "tool_call_delta") return `[tool_call_delta ${block.name ?? block.index}]`;
   if (block.type === "tool_result") return `[tool_result ${block.name}]`;
   return "[image]";
 }

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import type { SessionEntry } from "../index.js";
+import type { BranchReader, SessionEntry } from "../index.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, listSessionBranches, rebuildSessionContext, SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError, isSessionAppendConflict } from "../index.js";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
@@ -156,16 +156,19 @@ describe("branch reader overloads (DB-friendly path)", () => {
     const a = entry("a");
     const b = entry("b", "a");
     const c = entry("c", "b");
+    const queries: Parameters<BranchReader>[0][] = [];
     // reader yields leaf-first, across two pages, to prove ordering + pagination tolerance
-    let calls = 0;
-    const reader = async (query: any) => {
-      calls++;
+    const reader: BranchReader = async (query) => {
+      queries.push(query);
       if (!query.cursor) return { items: [c, b], nextCursor: "p2" };
       return { items: [a] };
     };
-    const branch = await getSessionBranchEntries(reader, { sessionId: "s1", leafId: "c" });
+    const branch = await getSessionBranchEntries(reader, { sessionId: "s1", leafId: "c", limit: 2 });
     assert.deepEqual(branch.map((e) => e.id), ["a", "b", "c"]);
-    assert.equal(calls, 2);
+    assert.deepEqual(queries, [
+      { sessionId: "s1", leafId: "c", limit: 2 },
+      { sessionId: "s1", leafId: "c", limit: 2, cursor: "p2" },
+    ]);
   });
 
   it("getSessionBranchEntries(reader) still rejects a missing parent", async () => {

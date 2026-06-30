@@ -7,9 +7,9 @@ The root `@arnilo/prism` export provides TypeScript contracts for host-owned age
 Current contract groups:
 
 - JSON/data: `JsonPrimitive`, `JsonValue`, `JsonObject`, `ErrorInfo`
-- Content/messages: `ContentBlock`, `TextContent`, `ImageContent`, `ThinkingContent`, `ToolCallContent`, `ToolResultContent`, `Message`
+- Content/messages: `ContentBlock`, `TextContent`, `ImageContent`, `ThinkingContent`, `ToolCallDeltaContent`, `ToolCallContent`, `ToolResultContent`, `Message`
 - Providers/models/auth: `ModelConfig`, `ModelCapabilities`, `ModelLimits`, `ModelCost`, `Usage`, `CacheRetention`, `ProviderRequestOptions`, `ProviderRequest`, `ProviderEvent`, `AIProvider`, `ProviderPackage`, `ProviderPackageAPI`, `ProviderPackageDocs`, `AuthMethod`, `ApiKeyAuthMethod`, `OAuthAuthMethod`, `CustomAuthMethod`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, `CredentialResolverSource`, `OAuthCredentialStore`, `ProviderRequestPolicy`, `ProviderRequestPolicyContext`, `ProviderRequestPolicyResult`, `SystemPromptContribution`, `SystemPromptMode`, `SystemPromptSource`, `SystemPromptConfig`
-- Agents/sessions: `AgentConfig`, `AgentDefinition`, `Agent`, `AgentSessionConfig`, `AgentSessionForkOptions`, `AgentSessionCloneOptions`, `AgentSession`, `RunOptions`, `AgentEvent`
+- Agents/sessions: `AgentConfig`, `AgentDefinition`, `Agent`, `AgentSessionConfig`, `AgentSessionForkOptions`, `AgentSessionCloneOptions`, `AgentSession`, `SubscribeOptions`, `SubscriberOverflowPolicy`, `RunOptions`, `AgentEvent`
 - Tools/commands: `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, `CommandDefinition`, `CommandExecutionContext`, `CommandResult`
 - Input/prompt/context/skills: `InputBuilder`, `InputBuildContext`, `AgentInput`, `DefaultInputBuilder`, `DefaultInputBuildContext`, `InputAttachment`, `PromptInstruction`, `PromptBuilder`, `PromptBuildRequest`, `ContextBlock`, `ContextProvider`, `ContextResolutionContext`, `Skill`, `SkillRegistry`
 - Extensions/middleware: `ExtensionLifecycleEventName`, `ExtensionEvent`, `Extension`, `ExtensionAPI`, `MiddlewareHookName`, `Middleware`, `MiddlewareNext`, `MiddlewareRegistry`
@@ -83,6 +83,8 @@ import type {
   SessionEntryQuery,
   SessionQuery,
   SessionRecord,
+  SubscribeOptions,
+  SubscriberOverflowPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
@@ -103,7 +105,7 @@ Important request shapes:
 | `ModelConfig` | Provider/model id plus optional display name, capabilities, limits, cost/cache pricing, opaque compat JSON, parameters, and metadata. |
 | `ProviderPackage` | Inert provider package definition with docs metadata and explicit `setup(api)` registration. |
 | `ProviderRequest` | Normalized provider input: `model`, `messages`, optional `tools`, `context`, generic `options`, `metadata`, and `signal`. |
-| `ProviderRequestOptions` | Generic provider adapter hints: session/cache identifiers, cache retention, headers, timeout/retry hints, compat, and opaque `extra`. |
+| `ProviderRequestOptions` | Generic provider adapter hints: session/cache identifiers, cache retention, headers, compat, and opaque `extra`; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert hints in first-party providers. |
 | `ProviderRequestPolicy` | Ordered pre-provider hook that can patch the request and return exact secrets for provider-error redaction. |
 | `ToolRegistry` | Host active tool registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `ToolExecutionContext` | Host tool execution context: session/run ids, tool call id, optional abort signal, metadata, and progress callback. |
@@ -117,6 +119,7 @@ Important request shapes:
 | `OAuthProvider` | Host/package OAuth callbacks for login, optional refresh, and conversion to a `Credential`. |
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
 | `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
+| `SubscribeOptions` / `SubscriberOverflowPolicy` | Live `AgentEvent` subscriber queue limit and overflow policy: `maxQueuedEvents`, `overflow: "close" \| "drop_oldest" \| "drop_newest"`. |
 | `AgentConfig.loop` / `RunOptions.loop` | Replaceable per-run control loop: `singleShotLoop` default, `generate-validate-revise` options, or a custom `AgentLoopStrategy`. `RunOptions.loop` wins. See [Agent loops](agent-loops.md). |
 | `AgentLoopStrategy` | `{ name; run(ctx: LoopContext): Promise<Usage \| undefined> }` — orchestrates shared runtime primitives via `LoopContext`. |
 | `LoopContext` | Loop-facing surface: run ids, signal, live `history`, `input`/`inputMessages`/`maxToolRounds`, and bound `assemble`/`generate`/`dispatchToolCall`/`appendMessage`/`emit` primitives. |
@@ -149,7 +152,7 @@ Important output/event shapes:
 | Contract | Output |
 | --- | --- |
 | `ProviderEvent` | Provider stream events: message start, content delta, tool-call delta, final tool call, usage, done, or error. |
-| `AgentEvent` | Session/runtime events: agent/turn/message/tool/queue/compaction/retry/error events, including tool started/progress/finished/error/blocked. |
+| `AgentEvent` | Session/runtime events: agent/turn/message/tool/queue/subscriber-overflow/compaction/retry/error events, including tool started/progress/finished/error/blocked. |
 | `ToolResult` | Host tool output with optional content, value, error, and metadata. |
 | `ContextBlock` | Context text or content blocks with optional title, priority, and metadata. |
 | `SessionEntry` | Branch-aware store entry for messages, events, summaries, metadata, model changes, labels, custom data, or compaction markers. |
@@ -392,7 +395,8 @@ void credentials;
 - Contracts are host-owned and package-friendly. External packages can implement `AIProvider`, `ToolDefinition`, `CommandDefinition`, `AgentDefinition`, `InputBuilder`, `PromptBuilder`, `Middleware`, `ContextProvider`, `Skill`, `Extension`, config providers, data-only manifests, compaction strategies, store factories, resource loaders, settings providers, and credential resolvers.
 - `ExtensionAPI` is implemented by the extension kernel. It exposes explicit registries, ordered middleware registration, ordered event subscription/emission, and registration methods for Phase 2 contribution categories.
 - `AgentConfig.provider` can hold a direct provider instance for simple host wiring. Hosts that need config-driven selection should use `ModelConfig.provider` with explicit `createProviderRegistry()` / `createModelRegistry()` objects; Prism does not create a hidden global provider registry.
-- `SettingsProvider` and `CredentialResolver` are explicit dependencies. Prism must not hide global settings or credentials behind these contracts, and `CredentialResolver` should be passed only to the edge that needs a credential.
+- `SettingsProvider` and `CredentialResolver` are explicit dependencies. Prism must not hide global settings or credentials behind these contracts, and `CredentialResolver` should be passed only to the edge that needs a credential. `AgentConfig.settings` and `AgentConfig.credentials` are host-owned metadata; the session runtime does not call `settings.get()` or `credentials.resolve()`.
+- `AgentConfig.extensions` is host-owned metadata; the session runtime does not load extensions or call `Extension.setup()`. Use `createExtensionKernel().load(...)` before creating an agent, then pass selected contributions into `AgentConfig`.
 - `PrismManifest` is data-only. It can describe contribution modules/resources and config defaults, but parsing it does not import modules, execute package code, or mutate registries.
 - Resource helper functions decode resources from a caller-provided `ResourceLoader`; Prism does not include host file storage, network, package, or URI router loaders.
 - `createDefaultInputBuilder()` is a small default implementation of `InputBuilder`. It is replaceable and only loads explicit URI resources through a caller-provided `ResourceLoader`.

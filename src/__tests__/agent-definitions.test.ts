@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import type { Agent, AgentConfig, AgentDefinition, AgentDefinitionResolutionContext, AIProvider, ContextProvider, Skill, ToolDefinition, ToolRegistry } from "../index.js";
+import type { Agent, AgentConfig, AgentDefinition, AgentDefinitionResolutionContext, AIProvider, ContextProvider, Skill, SkillRegistry, ToolDefinition, ToolRegistry } from "../index.js";
 import {
   createAgent,
   createContributionRegistries,
@@ -55,6 +55,11 @@ const schemaSkill: Skill = {
 function toolNames(tools: ToolRegistry | readonly ToolDefinition[] | undefined): string[] {
   if (!tools) return [];
   return "list" in tools ? tools.list().map((t) => t.name) : tools.map((t) => t.name);
+}
+
+function skillNames(skills: { list(): readonly Skill[] } | readonly Skill[] | undefined): string[] {
+  if (!skills) return [];
+  return "list" in skills ? skills.list().map((s) => s.name) : skills.map((s) => s.name);
 }
 
 async function resolve(def: AgentDefinition, context: AgentDefinitionResolutionContext): Promise<Agent> {
@@ -264,10 +269,66 @@ describe("resolveAgentDefinition", () => {
     assert.deepEqual(toolNames(allowed.config.tools), ["reverse"]);
   });
 
-  it("passes host tool scope through when agent declares no tools", async () => {
+  it("omitted tools and skills activate nothing by default", async () => {
     const hostTools = createToolRegistry([echoTool, reverseTool]);
-    const def: AgentDefinition = { name: "passthrough", model: "mock/demo" };
-    const agent = await resolve(def, { tools: hostTools });
+    const skillsRegistry = createSkillRegistry([briefSkill]);
+    const def: AgentDefinition = { name: "explicit-default", model: "mock/demo" };
+
+    const agent = await resolve(def, { tools: hostTools, skillsRegistry });
+
+    assert.deepEqual(toolNames(agent.config.tools), []);
+    assert.deepEqual(skillNames(agent.config.skills), []);
+  });
+
+  it("legacy opt-in activates all scoped tools and skills", async () => {
+    const hostTools = createToolRegistry([echoTool, reverseTool]);
+    const skillsRegistry = createSkillRegistry([briefSkill]);
+    const def: AgentDefinition = { name: "legacy-passthrough", model: "mock/demo" };
+
+    const agent = await resolve(def, { tools: hostTools, skillsRegistry, activateAllCapabilities: true });
+
     assert.deepEqual(toolNames(agent.config.tools), ["echo", "reverse"]);
+    assert.deepEqual(skillNames(agent.config.skills), ["brief"]);
+  });
+
+  it("migration path prefers named tools and skills over legacy all-capabilities", async () => {
+    const hostTools = createToolRegistry([echoTool, reverseTool]);
+    const skillsRegistry = createSkillRegistry([briefSkill, schemaSkill]);
+
+    const named = await resolve(
+      { name: "doc", model: "mock/demo", tools: ["echo"], skills: ["brief"] },
+      { tools: hostTools, skillsRegistry },
+    );
+    const legacy = await resolve(
+      { name: "legacy", model: "mock/demo" },
+      { tools: hostTools, skillsRegistry, activateAllCapabilities: true },
+    );
+
+    assert.deepEqual(toolNames(named.config.tools), ["echo"]);
+    assert.deepEqual(skillNames(named.config.skills), ["brief"]);
+    assert.deepEqual(toolNames(legacy.config.tools), ["echo", "reverse"]);
+    assert.deepEqual(skillNames(legacy.config.skills), ["brief", "schema"]);
+  });
+
+  it("omitted capabilities do not list scoped registries unless legacy opt-in is set", async () => {
+    const baseTools = createToolRegistry([echoTool, reverseTool]);
+    const baseSkills = createSkillRegistry([briefSkill]);
+    let toolListCalls = 0;
+    let skillListCalls = 0;
+    const trackedTools: ToolRegistry = { ...baseTools, list: () => { toolListCalls += 1; return baseTools.list(); } };
+    const trackedSkills: SkillRegistry = { ...baseSkills, list: () => { skillListCalls += 1; return baseSkills.list(); } };
+
+    await resolve({ name: "safe", model: "mock/demo" }, { tools: trackedTools, skillsRegistry: trackedSkills });
+
+    assert.equal(toolListCalls, 0);
+    assert.equal(skillListCalls, 0);
+
+    await resolve(
+      { name: "legacy", model: "mock/demo" },
+      { tools: trackedTools, skillsRegistry: trackedSkills, activateAllCapabilities: true },
+    );
+
+    assert.ok(toolListCalls > 0);
+    assert.ok(skillListCalls > 0);
   });
 });

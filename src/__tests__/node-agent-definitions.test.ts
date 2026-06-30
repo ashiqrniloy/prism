@@ -434,6 +434,25 @@ describe("resolveAgentBundle", () => {
     assert.deepEqual(toolNames(agent.config.tools), ["read"]);
   });
 
+  it("omitted bundle tools and skills activate none unless legacy opt-in is set", async () => {
+    const configRoot = await makeConfigDir({
+      "agents/tools/read/manifest.json": JSON.stringify({ name: "read" }),
+      "agents/skills/shared/SKILL.md": ["---", "name: shared", "---", ""].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "---", ""].join("\n"),
+    });
+
+    const [bundle] = await discoverAgentBundles({ configRoot });
+    const scoped = { ...baseContext(), include: { repoPrompt: false } };
+
+    const safe = await resolveAgentBundle(bundle!, scoped);
+    assert.deepEqual(toolNames(safe.config.tools), []);
+    assert.deepEqual(skillNames(safe.config.skills), []);
+
+    const legacy = await resolveAgentBundle(bundle!, { ...scoped, activateAllCapabilities: true });
+    assert.deepEqual(toolNames(legacy.config.tools), ["read"]);
+    assert.deepEqual(skillNames(legacy.config.skills), ["shared"]);
+  });
+
   it("duplicate skill names across included scopes throw instead of overriding", async () => {
     const configRoot = await makeConfigDir({
       "agents/SYSTEM.md": "# System",

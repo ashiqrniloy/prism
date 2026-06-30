@@ -35,6 +35,7 @@ function serializeBlock(role: Message["role"], block: ContentBlock, maxToolResul
   if (block.type === "text") return block.text;
   if (block.type === "thinking") return `[Assistant thinking]\n${block.text}`;
   if (block.type === "tool_call") return `[Assistant tool call]\n${block.name} ${JSON.stringify(block.arguments)}`;
+  if (block.type === "tool_call_delta") return `[Assistant tool call delta]\n${block.name ?? "tool"} ${block.argumentsText ?? ""}`;
   if (block.type === "tool_result") return `[Tool result]\n${block.name}: ${truncate(JSON.stringify(block.error ?? block.result ?? null), maxToolResultChars)}`;
   return role === "user" ? "[User image]" : "[Image]";
 }

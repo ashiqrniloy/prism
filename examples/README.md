@@ -22,6 +22,7 @@ node examples/rpc.ts
 node examples/provider-registration.ts
 node examples/provider-resolver.ts
 node examples/observational-memory-recall-status-view.ts
+node examples/external-app-db-backed.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -52,6 +53,10 @@ Each demo prints a single JSON line with its result.
 - `synapta-style-artifact-loop.ts` — **demo**: third-party host mixing first-party
   and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the
   `generate-validate-revise` artifact loop with host-owned schema validation.
+- `external-app-db-backed.ts` — **demo**: end-to-end external app with a DB-backed
+  adapter reference mock (`SessionStore` + `RunLedger` + `ProductionPersistenceStore`
+  reads), explicit tools/skills, branch-handle checkout + fork, and prior-run
+  timeline resume from the ledger — no real DB, no network.
 - `cli.ts` — **demo**: spawn the `prism` bin in print and json modes.
 - `rpc.ts` — **demo**: drive the `prism` bin in rpc mode with a JSONL request.
 - `tsconfig.json` — typecheck-only config.

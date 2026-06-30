@@ -8,7 +8,7 @@ The provider layer contains the small runtime pieces Prism already ships for hos
 - `createProviderResolver()` / `ProviderResolver`: build a resolver that maps a `ModelConfig` to an `AIProvider` (or `undefined`), from a `ProviderRegistry` or a plain `AIProvider[]`.
 - `createModelRegistry()` / `ModelRegistry`: register and resolve `ModelConfig` values by provider/model key.
 - `ModelConfig` metadata fields for display names, capabilities, limits, cost/cache pricing, opaque provider compat data, and host metadata.
-- Provider event helpers: create normalized `ProviderEvent` values for text, thinking, tool calls, usage, done, and errors, including optional cache read/write usage fields.
+- Provider event helpers: create normalized `ProviderEvent` values for text, thinking, streamed tool-call deltas, final tool calls, usage, done, and errors, including optional cache read/write usage fields.
 - `toolCallContent()`: create a `ToolCallContent` block.
 - `createMockProvider()` / `MockProviderOptions`: create a deterministic scripted `AIProvider` for tests and examples.
 - `@arnilo/prism/testing/provider-conformance`: optional network-free assertion helpers for provider adapter tests.
@@ -31,14 +31,14 @@ Do not use this layer for credential storage, settings loading, tool dispatch, a
 ### Provider registry
 
 ```ts
-createProviderRegistry(providers?: readonly AIProvider[]): ProviderRegistry
+createProviderRegistry(providers?: readonly AIProvider[], options?: { duplicate?: "replace" | "error" }): ProviderRegistry
 ```
 
 `ProviderRegistry` methods:
 
 | Method | Input | Result |
 | --- | --- | --- |
-| `register(provider)` | `AIProvider` | Stores provider by `provider.id`. |
+| `register(provider)` | `AIProvider` | Stores/replaces provider by `provider.id`; throws `Duplicate provider: <id>` when `duplicate: "error"`. |
 | `get(id)` | provider id string | Returns provider or `undefined`. |
 | `resolve(model)` | provider id string or `{ provider: string }` | Returns provider or throws `Unknown provider: <id>`. |
 | `list()` | none | Returns registered providers in insertion order. |
@@ -46,14 +46,14 @@ createProviderRegistry(providers?: readonly AIProvider[]): ProviderRegistry
 ### Model registry
 
 ```ts
-createModelRegistry(models?: readonly ModelConfig[]): ModelRegistry
+createModelRegistry(models?: readonly ModelConfig[], options?: { duplicate?: "replace" | "error" }): ModelRegistry
 ```
 
 `ModelRegistry` methods:
 
 | Method | Input | Result |
 | --- | --- | --- |
-| `register(model)` | `ModelConfig` | Stores model by provider/model key, preserving inert metadata. |
+| `register(model)` | `ModelConfig` | Stores/replaces model by provider/model key, preserving inert metadata; throws `Duplicate model: <provider>/<model>` when `duplicate: "error"`. |
 | `get(provider, model)` | provider id and model id | Returns model config or `undefined`. |
 | `resolve(provider, model)` | provider id and model id | Returns model config or throws `Unknown model: <provider>/<model>`. |
 | `list()` | none | Returns registered model configs in insertion order. |
@@ -71,6 +71,8 @@ providerDone(usage?: Usage): ProviderEvent
 providerError(error: unknown, secrets?: readonly (string | undefined)[]): ProviderEvent
 toolCallContent(id: string, name: string, args?: JsonObject): ToolCallContent
 ```
+
+`tool_call_delta` fragments use the same `{ index, id?, name?, argumentsText? }` shape as live `message_delta` content. Runtime reconstructs final `ToolCallContent` before tool execution; conformance tests use the same reconstruction rules.
 
 ### Mock provider
 
@@ -127,7 +129,7 @@ const agent = createAgent({ model: { provider: own.id, model: "demo" }, provider
 - Provider event helpers return plain `ProviderEvent` objects.
 - `providerError()` converts unknown errors to redacted `ErrorInfo` through `errorToErrorInfo()` and preserves safe string/number `code` fields for retry classification.
 - `createMockProvider()` returns an `AIProvider` whose `generate()` yields the scripted events in order and checks `request.signal?.aborted` before each event.
-- The agent/session runtime passes its per-run abort signal as `ProviderRequest.signal`.
+- The agent/session runtime passes its per-run abort signal as `ProviderRequest.signal`. `ProviderRequestOptions.timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert hints in first-party providers; use `RunOptions.signal`/host abort controllers for timeouts and `AgentConfig.retry`/`RunOptions.retry` for retry.
 
 ## Request/response example
 
@@ -184,6 +186,7 @@ for await (const event of resolvedProvider.generate({
 ## Extension and configuration notes
 
 - Registries are explicit objects returned by factories. Prism does not create a hidden global provider/model registry.
+- Default duplicate policy is `"replace"` for compatibility. Hosts that load third-party provider/model contributions can pass `duplicate: "error"` to reject silent shadowing.
 - Extension packages can contribute `AIProvider` and `ModelConfig` values by registering them with host-owned registries.
 - Model resolution and provider resolution are separate on purpose: hosts can validate a model exists before selecting a provider.
 - Credential resolvers stay outside these registries; pass credentials directly to the provider adapter or runtime edge that needs them.
@@ -191,7 +194,7 @@ for await (const event of resolvedProvider.generate({
 
 ## Security and performance notes
 
-- Provider/model registries are `Map`-backed and perform O(1) lookup.
+- Provider/model registries are `Map`-backed and perform O(1) lookup. Strict duplicate mode adds one O(1) `Map.has()` check during registration only.
 - Registries store providers and model metadata only. Do not store API keys, credential resolvers, headers, tokens, or secret-bearing settings in them.
 - Unknown provider/model resolution fails before provider execution or network I/O.
 - `createMockProvider()` uses scripted events only: no timers, credentials, SDKs, or network.
@@ -201,7 +204,7 @@ for await (const event of resolvedProvider.generate({
 
 ## Related APIs
 
-- [Agent/session runtime](agent-session-runtime.md): passes abort signals to providers, maps provider errors to session `error` events, and can retry configured transient provider-turn failures before output.
+- [Agent/session runtime](agent-session-runtime.md): passes abort signals to providers, maps provider errors to session `error` events, and can retry configured transient provider-turn failures before output; this is the supported replacement for deprecated provider-level retry options.
 - [Provider packages](provider-packages.md): explicit package primitive for registering providers, models, auth descriptors, request/cache policies, and prompt contributions.
 - [Public contracts](public-contracts.md): `AIProvider`, `ProviderRequest`, `ProviderEvent`, `ModelConfig`, `Usage`, and content/tool-call contracts.
 - [Credentials and redaction](credentials-and-redaction.md): credential and redaction helpers used by provider adapters.

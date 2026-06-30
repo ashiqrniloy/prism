@@ -106,9 +106,9 @@ Host callback contracts (all generic over host `T`):
 
 `AgentLoopStrategy.run(ctx)` returns `Promise<Usage | undefined>` — the last provider usage, handed back to the runtime which emits `agent_finished` with it.
 
-Events during a loop run are the existing `AgentEvent`s (`turn_started`, `message_started`, `message_delta`, `message_finished`, `turn_finished`, tool-execution events when the loop dispatches tools, `error` on real failures). Both loops emit `message_finished` for every assistant draft so the observable assistant-message contract is identical.
+Events during a loop run are the existing `AgentEvent`s (`turn_started`, `message_started`, `message_delta`, `message_finished`, `turn_finished`, tool-execution events when the loop dispatches tools, `error` on real failures). Both built-in loops emit `turn_started` before each provider turn, `message_finished` for every assistant draft, and `turn_finished` after the assistant draft is appended. First-turn input is appended to live history once, matching the already-persisted user message.
 
-Validation-failure-triggering-a-revision is **not** an `error` event — it is recoverable, like `tool_execution_blocked`. `generateValidateReviseLoop` emits the artifact event sequence `artifact_validation_started` → `artifact_validation_finished` → (`artifact_revision_started`)* → `artifact_finished` (success) | `artifact_failed` (budget exhausted), correlated by `runId`/`turn`/`attempt`; see [Agent events § Artifact event ordering](agent-events.md#artifact-event-ordering). `singleShotLoop` emits zero artifact events. Real failures stay on the `error` channel.
+Validation-failure-triggering-a-revision is **not** an `error` event — it is recoverable, like `tool_execution_blocked`. `generateValidateReviseLoop` emits normal turn/message events around each provider turn, then the artifact event sequence `artifact_validation_started` → `artifact_validation_finished` → (`artifact_revision_started`)* → `artifact_finished` (success) | `artifact_failed` (budget exhausted), correlated by `runId`/`turn`/`attempt`; see [Agent events § Artifact event ordering](agent-events.md#artifact-event-ordering). `singleShotLoop` emits zero artifact events. Real failures stay on the `error` channel.
 
 A loop has no path to credentials, provider objects, or unredacted secrets. `LoopContext.generate` receives the already-policy-applied, middleware-run, redacted request; `LoopContext.emit` runs through `redactAgentEvent` with the active `SecretRedactor`.
 
@@ -196,7 +196,7 @@ await session.run(input, { loop: twoShotLoop });
 - The loop is resolved once per run inside `RuntimeAgentSession.run()`, after the usual setup (provider/skills/tools resolution, history rebuild, model-change entry, input append, auto-compaction). The runtime's outer try/catch/finally, run-exclusivity, abort bridging, and subscriber close remain in place around `loop.run(ctx)`.
 - `LoopContext.assemble(nextInput, toolResults?)` accepts an optional tool-result accumulator so `singleShotLoop` can pass its loop-local `toolResults`; `generateValidateReviseLoop` omits it (no tools in revision turns).
 - `maxToolRounds` bounds `singleShotLoop` tool rounds; `maxRevisions` (default 3) bounds `generateValidateReviseLoop` revision turns. Budget exhaustion ends the loop and returns the last usage; it does not throw.
-- A revision cycle appends one assistant draft and one repair user message per revision to the session store, so store entries reflect every attempted draft.
+- A revision cycle appends one assistant draft and one repair user message per revision to the session store, so store entries reflect every attempted draft. The original user input is stored once by the runtime and pushed into loop history once on the first turn.
 
 ## Security and performance notes
 

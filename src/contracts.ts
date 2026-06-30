@@ -23,6 +23,7 @@ export type ContentBlock =
   | TextContent
   | ImageContent
   | ThinkingContent
+  | ToolCallDeltaContent
   | ToolCallContent
   | ToolResultContent;
 
@@ -42,6 +43,14 @@ export interface ThinkingContent {
   readonly type: "thinking";
   readonly text: string;
   readonly signature?: string;
+}
+
+export interface ToolCallDeltaContent {
+  readonly type: "tool_call_delta";
+  readonly index: number;
+  readonly id?: string;
+  readonly name?: string;
+  readonly argumentsText?: string;
 }
 
 export interface ToolCallContent {
@@ -73,6 +82,7 @@ export interface ModelConfig {
   readonly capabilities?: ModelCapabilities;
   readonly limits?: ModelLimits;
   readonly cost?: ModelCost;
+  readonly cache?: ModelCacheCapabilities;
   readonly compat?: JsonObject;
   readonly parameters?: Readonly<Record<string, unknown>>;
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -111,14 +121,44 @@ export interface Usage {
 }
 
 export type CacheRetention = "none" | "short" | "long";
+export type PromptCacheKind = "implicit" | "openai_key" | "cache_control" | "provider_specific" | "none";
+
+export interface ModelCacheCapabilities {
+  readonly kind?: PromptCacheKind;
+  readonly maxKeyLength?: number;
+  readonly maxBreakpoints?: number;
+  readonly minCacheableTokens?: number;
+  readonly longRetention?: boolean;
+}
+
+export type PromptCacheMode = "auto" | "on" | "off";
+export type PromptCacheBreakpointLocation = "system_prompt" | "tools" | "stable_context" | "last_stable_message" | "last_user_message" | "message_id";
+export type PromptCacheBreakpointTtl = "short" | "long";
+
+export interface PromptCacheBreakpoint {
+  readonly location: PromptCacheBreakpointLocation;
+  readonly messageId?: string;
+  readonly ttl?: PromptCacheBreakpointTtl;
+}
+
+export interface PromptCacheHints {
+  readonly mode?: PromptCacheMode;
+  readonly key?: string;
+  readonly retention?: CacheRetention;
+  readonly breakpoints?: readonly PromptCacheBreakpoint[];
+}
 
 export interface ProviderRequestOptions {
   readonly sessionId?: string;
   readonly cacheRetention?: CacheRetention;
   readonly cacheKey?: string;
+  readonly cache?: PromptCacheHints;
   readonly headers?: Readonly<Record<string, string>>;
+  /** @deprecated Provider-level timeout is inert in first-party providers; pass an AbortSignal/RunOptions.signal instead. */
   readonly timeoutMs?: number;
+  /** @deprecated Provider-level retry is inert in first-party providers; use AgentConfig.retry/RunOptions.retry instead. */
   readonly maxRetries?: number;
+  /** @deprecated Provider-level retry is inert in first-party providers; use AgentConfig.retry/RunOptions.retry instead. */
   readonly maxRetryDelayMs?: number;
   readonly compat?: JsonObject;
   readonly extra?: JsonObject;
@@ -198,6 +238,8 @@ export interface AgentDefinitionResolutionContext {
   readonly providerSource?: ProviderResolver;
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
   readonly skillsRegistry?: SkillRegistry;
+  /** Migration-only: omitted `tools`/`skills` activate every in-scope tool/skill. Defaults to fail-closed. */
+  readonly activateAllCapabilities?: true;
   readonly overrides?: Partial<AgentConfig>;
 }
 
@@ -215,9 +257,12 @@ export interface AgentConfig {
   readonly promptBuilder?: PromptBuilder;
   readonly middleware?: MiddlewareRegistry;
   readonly resourceLoader?: ResourceLoader;
+  /** Host-owned metadata only: createAgent/session.run do not load or run these extensions. */
   readonly extensions?: readonly Extension[];
   readonly store?: SessionStore;
+  /** Host-owned metadata only: createAgent/session.run do not read settings. */
   readonly settings?: SettingsProvider;
+  /** Host-owned metadata only: createAgent/session.run do not resolve credentials. Pass resolvers to provider edges explicitly. */
   readonly credentials?: CredentialResolver;
   readonly permission?: PermissionPolicy;
   readonly providerOptions?: ProviderRequestOptions;
@@ -257,6 +302,15 @@ export interface AgentSessionCloneOptions {
   readonly leafId?: string;
 }
 
+export type SubscriberOverflowPolicy = "close" | "drop_oldest" | "drop_newest";
+
+export interface SubscribeOptions {
+  /** Maximum queued events for a subscriber that is not actively awaiting `next()`. Defaults to 1024. */
+  readonly maxQueuedEvents?: number;
+  /** What to do when `maxQueuedEvents` is reached. Defaults to `close`. */
+  readonly overflow?: SubscriberOverflowPolicy;
+}
+
 export interface AgentSession {
   readonly id: string;
   /** Current branch leaf entry id; advances on every append/run and is re-pointed by `checkout`.
@@ -265,7 +319,7 @@ export interface AgentSession {
   run(input: string | Message | readonly Message[], options?: RunOptions): Promise<void>;
   prompt(input: string, options?: RunOptions): Promise<void>;
   compact(options?: CompactionOptions): Promise<CompactionResult>;
-  subscribe(): AsyncIterable<AgentEvent>;
+  subscribe(options?: SubscribeOptions): AsyncIterable<AgentEvent>;
   abort(reason?: unknown): void;
   entries(): Promise<readonly SessionEntry[]>;
   checkout(leafId?: string): Promise<void>;
@@ -287,6 +341,7 @@ export type AgentEvent =
   | { readonly type: "tool_execution_error"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent; readonly error: ErrorInfo }
   | { readonly type: "tool_execution_blocked"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly reason: string; readonly error: ErrorInfo }
   | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
+  | { readonly type: "event_subscriber_overflow"; readonly sessionId: string; readonly runId?: string; readonly droppedEvents: number; readonly maxQueuedEvents: number; readonly overflow: SubscriberOverflowPolicy }
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
   | { readonly type: "compaction_finished"; readonly sessionId: string; readonly runId?: string; readonly summary: string }
   | { readonly type: "retry_scheduled"; readonly sessionId: string; readonly runId: string; readonly attempt: number; readonly delayMs: number; readonly error: ErrorInfo }

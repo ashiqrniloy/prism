@@ -1,4 +1,5 @@
 import type { AIProvider, ModelConfig, ProviderResolver } from "./contracts.js";
+import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 
 export interface ProviderRegistry {
   register(provider: AIProvider): void;
@@ -7,11 +8,14 @@ export interface ProviderRegistry {
   list(): readonly AIProvider[];
 }
 
-export function createProviderRegistry(providers: readonly AIProvider[] = []): ProviderRegistry {
+export interface ProviderRegistryOptions extends DuplicateRegistrationOptions {}
+
+export function createProviderRegistry(providers: readonly AIProvider[] = [], options: ProviderRegistryOptions = {}): ProviderRegistry {
   const byId = new Map<string, AIProvider>();
 
   const registry: ProviderRegistry = {
     register(provider) {
+      assertCanRegister(byId, provider.id, "provider", provider.id, options.duplicate);
       byId.set(provider.id, provider);
     },
     get(id) {

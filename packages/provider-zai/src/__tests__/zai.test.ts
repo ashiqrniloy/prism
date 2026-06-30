@@ -37,15 +37,18 @@ describe("@arnilo/prism-provider-zai", () => {
     assert.equal(body.messages[0].content, "developer instructions");
   });
 
-  it("zai_maps_thinking_and_reasoning_effort", async () => {
+  it("zai_maps_thinking_reasoning_effort_and_max_tokens", async () => {
     let body: any;
     const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
       body = JSON.parse(String(init?.body));
       return ok(sse([]));
     }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request: { ...request, options: { compat: { reasoning_effort: "high", thinking: { type: "enabled" } } } } });
+    await assertProviderStreamConforms({ provider, request: { ...request, model: { ...request.model, parameters: { maxTokens: 333, temperature: 0.4 } }, options: { compat: { reasoning_effort: "high", thinking: { type: "enabled" } } } } });
     assert.deepEqual(body.thinking, { type: "enabled" });
     assert.equal(body.reasoning_effort, "high");
+    assert.equal(body.max_tokens, 333);
+    assert.equal(body.maxTokens, undefined);
+    assert.equal(body.temperature, 0.4);
   });
 
   it("zai_enables_tool_stream_for_supported_models", async () => {

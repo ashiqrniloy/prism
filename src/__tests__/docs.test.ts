@@ -36,6 +36,8 @@ const apiPages = [
   "docs/settings-auth-trust-security.md",
   "docs/cli-rpc.md",
   "docs/release-and-install.md",
+  "docs/performance.md",
+  "docs/migration.md",
 ];
 
 const providerPackagePages: ReadonlyArray<[string, string]> = [
@@ -77,6 +79,14 @@ function markdownFiles(dir: string): string[] {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) return markdownFiles(path);
     return entry.isFile() && entry.name.endsWith(".md") ? [path] : [];
+  });
+}
+
+function tsFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return tsFiles(path);
+    return entry.isFile() && entry.name.endsWith(".ts") ? [path] : [];
   });
 }
 
@@ -377,6 +387,32 @@ describe("docs", () => {
     assert.ok(docs.includes("placeholder"), "docs/release-and-install.md must mark live tests as placeholder");
   });
 
+  it("release_checklist_maps_each_gate_to_its_enforcement_test", () => {
+    const docs = readFileSync("docs/release-and-install.md", "utf8");
+    // The release checklist must be an executable gate table covering the new
+    // persistence/runtime/migration surfaces, package exports/subpaths,
+    // examples compile+listing, tarball exclusions, and public-API drift.
+    assert.ok(docs.includes("## Release checklist"), "docs/release-and-install.md missing Release checklist section");
+    for (const phrase of [
+      "Docs coverage for persistence/runtime/migration surfaces",
+      "Package exports/subpaths resolve to built output",
+      "Public-API drift",
+      "Examples compile and are listed",
+      "Tarball excludes built tests, source maps, and source",
+      "public-export-contract.test.ts",
+      "docs.test.ts",
+      "packaging.test.ts",
+      "network-free-guard.test.ts",
+      "migration.md",
+      "no built-in app tools",
+      "no hidden provider/credential globals",
+      "no auto package discovery",
+      "no secret persistence in core",
+    ]) {
+      assert.ok(docs.includes(phrase), `docs/release-and-install.md checklist missing ${phrase}`);
+    }
+  });
+
   it("cli_rpc_docs_cover_modes_flags_and_rpc_commands", () => {
     const docs = readFileSync("docs/cli-rpc.md", "utf8");
     for (const phrase of ["--mode print", "--provider", "--model", "prompt", "abort", "compact", "cloneSession", "No built-in app tools", "No full TUI"]) {
@@ -388,6 +424,27 @@ describe("docs", () => {
     const docs = readFileSync("docs/credentials-and-redaction.md", "utf8");
     for (const phrase of ["createExplicitCredentialResolver", "createEnvCredentialResolver", "refreshOAuthCredential", "runtime override", "Prism does not read `process.env`"]){
       assert.ok(docs.includes(phrase), `credential docs missing ${phrase}`);
+    }
+  });
+
+  it("agent config inert fields are documented as host-owned", () => {
+    const combined = [
+      "docs/agent-session-runtime.md",
+      "docs/extensions.md",
+      "docs/credentials-and-redaction.md",
+      "docs/settings-auth-trust-security.md",
+      "docs/public-contracts.md",
+    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    for (const phrase of [
+      "AgentConfig.extensions",
+      "AgentConfig.settings",
+      "AgentConfig.credentials",
+      "host-owned metadata",
+      "do not call `settings.get()`",
+      "do not call `credentials.resolve()`",
+      "does not load extensions or call `Extension.setup()`",
+    ]) {
+      assert.ok(combined.includes(phrase), `inert AgentConfig docs missing ${phrase}`);
     }
   });
 
@@ -534,6 +591,79 @@ describe("docs", () => {
     }
   });
 
+  it("llm_compaction_max_output_docs_match_provider_wire_fields", () => {
+    const docs = ["docs/compaction-llm.md", "docs/compaction-and-retry.md", "docs/provider-packages.md"].map((file) => readFileSync(file, "utf8")).join("\n");
+    for (const phrase of ["maxOutputTokens", "maxSummaryTokens", "model.parameters.maxTokens", "max_output_tokens", "max_tokens"]) {
+      assert.ok(docs.includes(phrase), `LLM compaction max-output docs missing ${phrase}`);
+    }
+  });
+
+  it("provider_timeout_retry_knobs_are_deprecated_with_runtime_migration", () => {
+    const docs = [
+      "docs/provider-packages.md",
+      "docs/provider-layer.md",
+      "docs/provider-conformance.md",
+      "docs/agent-session-runtime.md",
+      "docs/public-contracts.md",
+      "docs/index.md",
+    ].map((file) => readFileSync(file, "utf8")).join("\n");
+
+    for (const phrase of ["timeoutMs", "maxRetries", "maxRetryDelayMs", "deprecated", "RunOptions.signal", "RunOptions.retry", "AgentConfig.retry"]) {
+      assert.ok(docs.includes(phrase), `provider timeout/retry migration docs missing ${phrase}`);
+    }
+    assert.equal(docs.includes("retry/timeouts"), false, "docs still advertise provider-level retry/timeouts as supported");
+  });
+
+  it("first_party_providers_do_not_implement_deprecated_provider_timeout_retry_knobs", () => {
+    for (const dir of ["provider-openai", "provider-openrouter", "provider-opencode-go", "provider-zai", "provider-kimi"]) {
+      const combined = tsFiles(`packages/${dir}/src`).map((file) => readFileSync(file, "utf8")).join("\n");
+      for (const knob of ["timeoutMs", "maxRetries", "maxRetryDelayMs"]) {
+        assert.equal(combined.includes(knob), false, `${dir} unexpectedly implements deprecated ${knob}`);
+      }
+    }
+  });
+
+  it("phase39_protocol_docs_and_regressions_cover_end_to_end_paths", () => {
+    const docs = [
+      "docs/provider-conformance.md",
+      "docs/agent-session-runtime.md",
+      "docs/agent-loops.md",
+      "docs/agent-events.md",
+      "docs/compaction-llm.md",
+      "docs/compaction-observational-memory.md",
+      "docs/provider-packages.md",
+      "docs/index.md",
+    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    for (const phrase of [
+      "tool_call_delta",
+      "turn_started",
+      "turn_finished",
+      "timeoutMs",
+      "deprecated",
+      "model.parameters.maxTokens",
+      "appendEntry",
+      "tool_call",
+      "tool_result",
+    ]) assert.ok(docs.includes(phrase), `phase 39 docs missing ${phrase}`);
+
+    const tests = [
+      "src/__tests__/agents.test.ts",
+      "src/__tests__/agent-loops.test.ts",
+      "src/__tests__/docs.test.ts",
+      "packages/compaction-llm/src/__tests__/strategy.test.ts",
+      "packages/compaction-observational-memory/src/__tests__/runtime.test.ts",
+      "packages/compaction-observational-memory/src/__tests__/workers.test.ts",
+    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    for (const name of [
+      "runtime_reconstructs_tool_call_delta_executes_persists_and_replays",
+      "emits turn events and pushes first input to history once",
+      "provider_timeout_retry_knobs_are_deprecated_with_runtime_migration",
+      "llm_compaction_strategy_maps_max_output_tokens_to_request_model",
+      "runtime_rejects_legacy_store_option_and_wrong_append_owner",
+      "worker_transcript_replays_assistant_tool_call_before_tool_result",
+    ]) assert.ok(tests.includes(name), `phase 39 regression missing ${name}`);
+  });
+
   it("phase37_security_boundary_docs_cover_hardening_summary", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const security = readFileSync("docs/settings-auth-trust-security.md", "utf8");
@@ -574,6 +704,22 @@ describe("docs", () => {
     assert.ok(openrouter.includes("OpenRouter-owned headers are applied last"));
   });
 
+  it("phase38_docs_index_summarizes_api_cleanup", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const phrase of [
+      "fail-closed omitted capabilities",
+      "migration-only `activateAllCapabilities`",
+      "host-owned metadata",
+      "replace-or-error duplicate policy",
+      "`toolNames` fail closed before provider turns",
+      "`duplicate: \"error\"` strict mode",
+      "host-owned `AgentConfig.settings`/`credentials`",
+      "avoid eager `AgentConfig.credentials` resolution",
+    ]) {
+      assert.ok(index.includes(phrase), `docs/index.md missing ${phrase}`);
+    }
+  });
+
   it("readme_describes_current_runtime_provider_packages_cli_and_examples", () => {
     const readme = readFileSync("README.md", "utf8");
     for (const name of ["createAgent", "createAgentSession"]) {
@@ -592,6 +738,27 @@ describe("docs", () => {
       assert.ok(readme.includes(mode), `README.md does not document CLI ${mode}`);
     }
     assert.ok(readme.includes("examples/"), "README.md does not reference examples/");
+  });
+
+  // ponytail: plan 042 Task 2 guard — the README quickstart must run the event
+  // consumer concurrently with session.run(). The old form awaited the unbounded
+  // `for await (const event of session.subscribe())` loop before calling
+  // `session.run(...)`, which deadlocks because subscribe() only emits during a
+  // live run. The quickstart must use a concurrent pattern (Promise.all with a
+  // separate consumer, or launching run without awaiting before the loop) and
+  // must NOT await the subscribe loop before starting the run.
+  it("readme_quickstart_runs_subscribe_and_run_concurrently", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const start = readme.indexOf("## Quick start");
+    const end = readme.indexOf("## ", start + 1); // next top-level section
+    const quickstart = readme.slice(start, end === -1 ? undefined : end);
+    assert.ok(start !== -1, "README.md missing ## Quick start");
+    assert.ok(quickstart.includes("session.subscribe()"), "README quickstart does not subscribe");
+    assert.ok(quickstart.includes("session.run("), "README quickstart does not call session.run");
+    assert.ok(
+      quickstart.includes("Promise.all([consumer, session.run"),
+      "README quickstart must run the subscribe consumer and session.run concurrently via Promise.all (the old form awaited the subscribe loop before session.run and deadlocked)",
+    );
   });
 
   it("examples_files_exist_and_index_links_examples", () => {
@@ -620,6 +787,7 @@ describe("docs", () => {
       "examples/rpc.ts",
       "examples/discover-skills.ts",
       "examples/instruction-injection.ts",
+      "examples/external-app-db-backed.ts",
     ];
     for (const file of exampleFiles) {
       assert.equal(existsSync(file), true, `missing example file: ${file}`);
@@ -639,6 +807,7 @@ describe("docs", () => {
       "examples/discover-skills.ts",
       "examples/instruction-injection.ts",
       "examples/system-project-prompts.ts",
+      "examples/external-app-db-backed.ts",
     ];
     const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
     for (const file of demos) {
@@ -648,6 +817,54 @@ describe("docs", () => {
       assert.ok(out.trim().length > 0, `${file} produced no output`);
       assert.ok(!secret.test(out), `${file} emitted a real-looking secret`);
     }
+  });
+
+  it("external_app_example_exercises_run_ledger_branch_handle_checkout_and_resume", () => {
+    const file = readFileSync("examples/external-app-db-backed.ts", "utf8");
+    for (const phrase of [
+      "ProductionPersistenceStore",
+      "RunLedger",
+      "readBranchPath",
+      "SessionAppendConflictError",
+      "createDbBackedReferenceStore",
+      "branchHandleLeaf",
+      "checkout(branchHandleLeaf)",
+      "session.fork",
+      "queryRuns",
+      "queryEvents",
+      "queryToolCalls",
+      "queryUsage",
+      "secretRedactedFromLedger",
+      "credentialNeverLogged",
+    ]) {
+      assert.ok(file.includes(phrase), `examples/external-app-db-backed.ts missing ${phrase}`);
+    }
+  });
+
+  it("phase41_external_app_surfaces_are_gated_network_free", () => {
+    // Consolidated Phase 41 release gate: migration guide + reference example +
+    // index navigation all resolve, and each surface asserts its core behavior.
+    assert.ok(existsSync("docs/migration.md"), "missing docs/migration.md");
+    assert.ok(existsSync("examples/external-app-db-backed.ts"), "missing examples/external-app-db-backed.ts");
+
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(index.includes("migration.md"), "docs/index.md does not link migration.md");
+    assert.ok(index.includes("examples/"), "docs/index.md does not mention examples/");
+
+    const migration = readFileSync("docs/migration.md", "utf8");
+    for (const phrase of [
+      "JSONL → database-backed persistence",
+      "ProductionPersistenceStore",
+      "RunLedger",
+      "explicit capability activation",
+      "activateAllCapabilities",
+      "readBranchPath",
+    ]) {
+      assert.ok(migration.includes(phrase), `docs/migration.md missing ${phrase}`);
+    }
+
+    const examplesReadme = readFileSync("examples/README.md", "utf8");
+    assert.ok(examplesReadme.includes("external-app-db-backed.ts"), "examples/README.md does not list external-app-db-backed.ts");
   });
 
   it("readme_has_no_real_looking_secrets", () => {
@@ -714,6 +931,47 @@ describe("docs", () => {
       "before the first provider turn",
     ]) {
       assert.ok(page.includes(phrase), `docs/context-and-skills.md missing ${phrase}`);
+    }
+  });
+
+  it("explicit capability migration docs cover old new and compatibility paths", () => {
+    const agentDefinitions = readFileSync("docs/agent-definitions.md", "utf8");
+    const contextSkills = readFileSync("docs/context-and-skills.md", "utf8");
+    const registries = readFileSync("docs/contribution-registries.md", "utf8");
+    const combined = `${agentDefinitions}\n${contextSkills}\n${registries}`;
+
+    for (const phrase of [
+      "Migration: explicit capability activation",
+      "Old Phase 37 behavior",
+      "omitted `tools` and omitted `skills` mean no active capabilities",
+      "tools: [\"read\"]",
+      "skills: [\"brief\"]",
+      "activateAllCapabilities: true",
+      "temporary all-skills/all-tools compatibility opt-in",
+      "createContributionRegistries({ duplicate: \"error\" })",
+      "silently shadow a capability name",
+    ]) {
+      assert.ok(combined.includes(phrase), `explicit capability migration docs missing ${phrase}`);
+    }
+  });
+
+  it("registry docs cover strict duplicate policy", () => {
+    const combined = [
+      "docs/contribution-registries.md",
+      "docs/provider-layer.md",
+      "docs/tools.md",
+      "docs/context-and-skills.md",
+    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    for (const phrase of [
+      "duplicate?: \"replace\" | \"error\"",
+      "Duplicate provider",
+      "Duplicate model",
+      "Duplicate tool",
+      "Duplicate skill",
+      "Map.has()",
+      "silent shadowing",
+    ]) {
+      assert.ok(combined.includes(phrase), `registry duplicate docs missing ${phrase}`);
     }
   });
 
@@ -872,11 +1130,42 @@ describe("docs", () => {
       assert.ok(page.includes(phrase), `docs/database-persistence.md missing section ${phrase}`);
     }
 
+    // Performance adapter guidance.
+    for (const phrase of [
+      "Adapter performance guidance",
+      "Cursor pagination",
+      "Batch appends",
+      "Event sequence allocation",
+      "Run/event/usage query shapes",
+      "Host-owned sizing",
+      "(run_id, sequence)",
+      "(run_id, recorded_at, id)",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/database-persistence.md missing performance guidance ${phrase}`);
+    }
+
     // Security locks.
     assert.ok(page.includes("never stores provider credentials"), "docs/database-persistence.md missing credentials lock");
     assert.ok(page.includes("redacted"), "docs/database-persistence.md missing redaction mention");
 
     // session-stores.md cross-links the schema.
     assert.ok(sessionStores.includes("database-persistence.md"), "docs/session-stores.md does not link database-persistence.md");
+  });
+
+  it("performance docs keep long-session and JSONL boundaries explicit", () => {
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const jsonl = readFileSync("docs/node-jsonl-session-store.md", "utf8");
+    const database = readFileSync("docs/database-persistence.md", "utf8");
+    const runs = readFileSync("docs/runs-and-usage.md", "utf8");
+
+    for (const phrase of ["SessionStore.readBranchPath", "`SessionStore.list(sessionId)` is a full-session read", "cursor", "event `sequence`", "JSONL store rereads/parses the file", "page-size caps", "(run_id, sequence)", "(run_id, recorded_at, id)"]) {
+      assert.ok(performance.includes(phrase), `docs/performance.md missing ${phrase}`);
+    }
+    for (const phrase of ["production multi-writer storage", "Reads are linear in file size", "no cross-process lock"]) {
+      assert.ok(jsonl.includes(phrase), `docs/node-jsonl-session-store.md missing ${phrase}`);
+    }
+    assert.ok(database.includes("readBranchPath"), "docs/database-persistence.md missing readBranchPath guidance");
+    assert.ok(database.includes("cursor"), "docs/database-persistence.md missing cursor guidance");
+    assert.ok(runs.includes("preserve per-run order before acknowledging a batch"), "docs/runs-and-usage.md missing batch ordering guidance");
   });
 });

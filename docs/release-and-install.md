@@ -134,6 +134,23 @@ npm run release:dry-run
 - **Install smoke is offline.** The install-smoke test packs core + every package into a temp dir and installs the tarballs with `--offline --no-audit --no-fund` into a fresh temp project; zero registry fetches happen because Prism has no runtime dependencies.
 - **Offline test budget.** The default `npm test` (no `PRISM_LIVE_PROVIDER_TESTS`) is pinned at **< 30s on Node 20** with a measured baseline of ~22s (build ~12.5s + tests ~9.5s, tests parallelized). The `npm test` CI step has `timeout-minutes: 3` as a hang backstop. If a future change pushes the CI median over 30s, raise it here and in `roadmap.md` Phase 17 with rationale rather than silently regressing.
 
+## Release checklist
+
+Every release gate maps to an exact enforcement test or command, so the checklist is executable rather than manual. Run `npm run release:dry-run` to exercise the offline subset (build + network-free `npm test` + `npm run pack:dry-run`); run `npm run typecheck` to add the examples typecheck (`tsc -p examples --noEmit`). The GitHub Actions `verify` job runs `npm ci`, `npm test`, and `npm run pack:dry-run` on every push and pull request.
+
+| Gate | Enforcement |
+| --- | --- |
+| Docs coverage for persistence/runtime/migration surfaces | `docs.test.ts` enrolls every API page in `apiPages` (heading + index-link + bare-specifier + secret-scan checks); dedicated section assertions pin `database-persistence.md`, `runs-and-usage.md`, `session-stores-and-branching.md`, `migration.md`, `agent-definitions.md`, `performance.md`, and the Phase 41 `external_app_example_*` / `phase41_external_app_surfaces_*` gates. |
+| Package exports/subpaths resolve to built output | `public-export-contract.test.ts` asserts every `exports`/`main`/`types`/`bin` target resolves to a built file under `dist/` with a sibling `.d.ts`, and no target escapes `dist/` (no `src/` or `examples/` leak). |
+| Public-API drift | `public-export-contract.test.ts` `phase39_public_protocol_exports_and_types_do_not_drift` pins the runtime protocol (`providerToolCallDelta`, `ToolCallDeltaContent`), the `/testing/provider-conformance` subpath shape, and the observational-memory runtime `.d.ts` surface. |
+| Examples compile and are listed | `npm run typecheck` runs `tsc -p examples --noEmit`; `docs.test.ts` `examples_files_exist_and_index_links_examples` checks every example file exists and is listed in `examples/README.md`. |
+| Examples run to completion with no secret leakage | `docs.test.ts` `examples_demos_run_to_completion_and_emit_no_secret` runs each demo (Node strips TypeScript types natively) with exit-0 and real-secret scans; `external_app_example_*` pins the DB-backed adapter reference exercising the `RunLedger`, branch-handle checkout, fork, and prior-run resume. |
+| Tarball excludes built tests, source maps, and source | `packaging.test.ts` deny list rejects `dist/__tests__/`, `*.map`, `src/`, `plans/`, and internal files per package; confirms `README.md`/`LICENSE`/`CHANGELOG.md` ship, the core tarball ships `docs/` + `dist/cli.js`, and every `exports` target is present as compiled output. |
+| Network-free + offline test budget | `network-free-guard.test.ts` keeps the default suite network-free; budget pinned `< 30s` (measured baseline above). Install-smoke is offline (`--offline --no-audit --no-fund`, zero registry fetches). |
+| Core security invariants reaffirmed | Runtime/docs tests hold the trust boundary: **no built-in app tools** (hosts register tools; the core ships only the mock provider and contract helpers), **no hidden provider/credential globals** (providers/credentials are host-owned `AgentConfig` fields, resolved via explicit `providerSource`/`CredentialResolver`), **no auto package discovery** (provider/tool/skill packages are opt-in and individually installed; contribution discovery is realpath-contained and emits inert envelopes the host registers), and **no secret persistence in core** (redaction applies before any `RunLedger`/`SessionStore` append; the ledger gate asserts each message event is written exactly once and redacted). |
+
+A change that adds a public persistence/runtime surface, a new package, or a new example must extend the matching row's enforcement (add the page to `apiPages`, the package to the `packages` array, or the example to the demos list) so the checklist stays self-maintaining.
+
 ## Related APIs
 
 - [`docs/provider-packages.md`](provider-packages.md): first-party provider package layout and setup.

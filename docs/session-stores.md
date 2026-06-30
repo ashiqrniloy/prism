@@ -117,6 +117,7 @@ Recognize it with `isSessionAppendConflict(error)`, not message text. Built-in s
 
 ## Related APIs
 
+- [Migration guide](migration.md): moving from this memory/JSONL store to a database-backed adapter.
 - [Session stores and branching](session-stores-and-branching.md): detailed branch helpers, compaction boundaries, and runtime branch semantics.
 - [Database persistence](database-persistence.md): reference relational schema, indexes, retention, migrations, and NoSQL mapping notes.
 - [Node JSONL session store](node-jsonl-session-store.md): development-only file adapter.

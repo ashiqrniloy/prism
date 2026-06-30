@@ -64,6 +64,21 @@ function norm(p: string): string {
 }
 
 describe("public-export contract (build-time, pre-pack)", () => {
+  it("phase39_public_protocol_exports_and_types_do_not_drift", async () => {
+    const prism = await import("../index.js") as Record<string, unknown>;
+    assert.equal(typeof prism.providerToolCallDelta, "function");
+    assert.ok(readFileSync(join(repoRoot, "src/contracts.ts"), "utf8").includes("export interface ToolCallDeltaContent"));
+    assert.ok(readFileSync(join(repoRoot, "src/index.ts"), "utf8").includes("export type * from \"./contracts.js\""));
+    assert.deepEqual(readPkg(".").exports?.["./testing/provider-conformance"], {
+      types: "./dist/testing/provider-conformance.d.ts",
+      default: "./dist/testing/provider-conformance.js",
+    });
+
+    const memoryRuntimeDts = readFileSync(join(repoRoot, "packages/compaction-observational-memory/dist/runtime.d.ts"), "utf8");
+    assert.ok(memoryRuntimeDts.includes("appendEntry"), "observational-memory runtime d.ts missing appendEntry");
+    assert.equal(memoryRuntimeDts.includes("readonly store"), false, "observational-memory runtime d.ts still exposes store option");
+  });
+
   for (const pkg of packages) {
     describe(pkg.name, () => {
       const targets = collectTargets(pkg);

@@ -14,6 +14,7 @@ import {
   getSessionBranchEntries,
   providerDone,
   providerTextDelta,
+  providerToolCallDelta,
   providerUsage,
   toolCallContent,
   type AgentDefinition,
@@ -21,12 +22,16 @@ import {
   type AIProvider,
   type ContentBlock,
   type ContextProvider,
+  type CredentialResolver,
+  type Extension,
   type InputBuilder,
   type InstructionInjector,
   type Message,
   type PromptBuilder,
   type ProviderRequest,
+  type SessionEntry,
   type SessionStore,
+  type SettingsProvider,
   type ToolDefinition,
 } from "../index.js";
 
@@ -83,6 +88,48 @@ describe("agent session runtime", () => {
     const delta = events.find((event) => event.type === "message_delta");
     assert.equal(delta?.content.type, "text");
     assert.equal(delta?.content.type === "text" ? delta.content.text : undefined, "Hello");
+  });
+
+  it("closes slow subscriber on bounded queue overflow", async () => {
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([
+        providerTextDelta("a"),
+        providerTextDelta("b"),
+        providerTextDelta("c"),
+        providerDone(),
+      ]),
+    });
+    const session = agent.createSession({ id: "overflow-session" });
+    const iterator = session.subscribe({ maxQueuedEvents: 2 })[Symbol.asyncIterator]();
+
+    await session.run("Hi");
+
+    const overflow = await iterator.next();
+    assert.equal(overflow.done, false);
+    assert.equal(overflow.value.type, "event_subscriber_overflow");
+    assert.equal(overflow.value.type === "event_subscriber_overflow" ? overflow.value.maxQueuedEvents : undefined, 2);
+    assert.equal(overflow.value.type === "event_subscriber_overflow" ? overflow.value.overflow : undefined, "close");
+    assert.equal((await iterator.next()).done, true);
+  });
+
+  it("drop_oldest subscriber overflow keeps the newest bounded events", async () => {
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+    });
+    const session = agent.createSession({ id: "drop-oldest-session" });
+    const iterator = session.subscribe({ maxQueuedEvents: 2, overflow: "drop_oldest" })[Symbol.asyncIterator]();
+
+    await session.run("Hi");
+    const events: AgentEvent[] = [];
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      events.push(next.value);
+    }
+
+    assert.deepEqual(events.map((event) => event.type), ["turn_finished", "agent_finished"]);
   });
 
   it("resolves provider from AgentConfig.providerSource with no direct provider", async () => {
@@ -226,6 +273,44 @@ describe("agent session runtime", () => {
     const deltas = events.filter((event) => event.type === "message_delta");
     const lastDelta = deltas[deltas.length - 1];
     assert.equal(lastDelta?.type === "message_delta" && lastDelta.content.type === "text" ? lastDelta.content.text : undefined, "done");
+  });
+
+  it("runtime_reconstructs_tool_call_delta_executes_persists_and_replays", async () => {
+    const requests: ProviderRequest[] = [];
+    const entriesStore = createMemorySessionStore();
+    const provider: AIProvider = { id: "mock", async *generate(request) {
+      requests.push(request);
+      if (requests.length === 1) {
+        yield providerToolCallDelta({ index: 0, id: "call_1", name: "echo", argumentsText: "{\"text\":" });
+        yield providerToolCallDelta({ index: 0, argumentsText: "\"hi\"}" });
+      } else {
+        yield providerTextDelta("done");
+      }
+      yield providerDone();
+    } };
+    const echo: ToolDefinition = { name: "echo", execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }) };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo], store: entriesStore });
+    const session = agent.createSession({ id: "delta-session" });
+    const reader = collect(session.subscribe());
+
+    await session.run("Hi", { maxToolRounds: 1 });
+    const events = await reader;
+
+    assert.equal(requests.length, 2);
+    assert.ok(events.some((event) => event.type === "message_delta" && event.content.type === "tool_call_delta" && event.content.argumentsText === "{\"text\":"), "expected streamed tool_call_delta event");
+    assert.equal(events.filter((event) => event.type === "tool_execution_finished").length, 1);
+    const replay = requests[1]!;
+    const assistant = replay.messages.find((message) => message.role === "assistant");
+    assert.ok(assistant, "expected assistant message in replay");
+    assert.ok(assistant.content.some((block) => block.type === "tool_call" && block.id === "call_1" && block.name === "echo" && block.arguments.text === "hi"), "expected reconstructed tool_call in assistant message");
+    const tool = replay.messages.find((message) => message.role === "tool");
+    assert.ok(tool, "expected tool message in replay");
+    assert.ok(tool.content.some((block) => block.type === "tool_result" && block.toolCallId === "call_1" && block.name === "echo"), "expected tool_result in tool message");
+    assert.ok(replay.messages.indexOf(assistant) < replay.messages.indexOf(tool), "assistant tool_call must precede tool_result");
+    const persisted = await session.entries();
+    assert.ok(persisted.some((entry) => entry.message?.role === "assistant" && entry.message.content.some((block) => block.type === "tool_call" && block.id === "call_1")), "expected persisted assistant tool_call");
+    assert.ok(persisted.some((entry) => entry.message?.role === "tool" && entry.message.content.some((block) => block.type === "tool_result" && block.toolCallId === "call_1")), "expected persisted tool_result");
+    assert.equal(persisted.some((entry) => entry.message?.content.some((block) => block.type === "tool_call_delta")), false, "tool deltas are UI events, not persisted transcript blocks");
   });
 
   it("runtime_replays_provider_tool_call_and_tool_result_before_final_response", async () => {
@@ -595,14 +680,16 @@ describe("agent session runtime", () => {
 
   it("skill with toolNames referencing an inactive tool fails fast before the first provider turn", async () => {
     let turns = 0;
+    const store = createMemorySessionStore();
     const provider: AIProvider = { id: "mock", async *generate() { turns += 1; yield providerDone(); } };
     const registry = createSkillRegistry([
       { name: "needs-missing", instructions: "Use missing.", toolNames: ["missing"] },
     ]);
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry, store }).createSession({ id: "skill-fail" });
 
-    await assert.rejects(agent.createSession().run("Hi", { activeSkills: ["needs-missing"] }), /requires inactive tool: missing/);
+    await assert.rejects(session.run("Hi", { activeSkills: ["needs-missing"] }), /requires inactive tool: missing/);
     assert.equal(turns, 0);
+    assert.deepEqual(await store.list("skill-fail"), []);
   });
 
   it("RunOptions.skills overrides a plain-array AgentConfig.skills for the run", async () => {
@@ -616,8 +703,14 @@ describe("agent session runtime", () => {
 
     await agent.createSession().run("Hi", { skills: [{ name: "verbose", instructions: "Be verbose." }] });
 
-    const text = request.messages.flatMap((m) => m.content).map((b) => b.type === "text" ? b.text : "").join("\n");
+    let text = request.messages.flatMap((m) => m.content).map((b) => b.type === "text" ? b.text : "").join("\n");
     assert.equal(text.includes("Skill verbose"), true);
+    assert.equal(text.includes("Skill brief"), false);
+
+    await agent.createSession().run("Hi", { skills: [] });
+
+    text = request.messages.flatMap((m) => m.content).map((b) => b.type === "text" ? b.text : "").join("\n");
+    assert.equal(text.includes("Skill verbose"), false);
     assert.equal(text.includes("Skill brief"), false);
   });
 
@@ -690,29 +783,33 @@ describe("agent session runtime", () => {
     assert.equal(seen[2]?.includes("branch"), true);
   });
 
-  it("uses store.readBranchPath instead of list() for branch reads when present", async () => {
-    const base = createMemorySessionStore();
-    let listCalls = 0;
+  it("uses store.readBranchPath instead of list() for entries and run history", async () => {
+    const stored: SessionEntry[] = [];
     let readCalls = 0;
-    const store = {
-      append: (entry: any, options?: any) => base.append(entry, options),
-      async list(sessionId: string) { listCalls++; return base.list(sessionId); },
-      async readBranchPath(query: any) {
+    const store: SessionStore = {
+      async append(entry) { stored.push(structuredClone(entry)); },
+      async list() { throw new Error("full scan"); },
+      async readBranchPath(query) {
         readCalls++;
-        // ponytail: test reader returns the ancestor chain via the same core helper a real
-        // DB adapter would replace with a recursive CTE.
-        return { items: getSessionBranchEntries(await base.list(query.sessionId), { leafId: query.leafId }) };
+        return { items: getSessionBranchEntries(stored.filter((entry) => entry.sessionId === query.sessionId), { leafId: query.leafId }) };
       },
     };
-    const provider: AIProvider = { id: "mock", async *generate() { yield providerTextDelta("ok"); yield providerDone(); } };
+    const seen: string[] = [];
+    const provider: AIProvider = { id: "mock", async *generate(request) {
+      seen.push(request.messages.map(textOf).join("|"));
+      yield providerTextDelta(`reply ${seen.length}`);
+      yield providerDone();
+    } };
     const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
 
-    await session.run("hi");
+    await session.run("first");
+    await session.run("second");
     const entries = await session.entries();
 
     assert.ok(entries.length > 0, "reader returned the branch");
-    assert.ok(readCalls >= 1, "readBranchPath was used for branch reads");
-    assert.equal(listCalls, 0, "store.list() was not called by the runtime (no full-session load)");
+    assert.ok(readCalls >= 3, "readBranchPath was used for rebuilds and entries()");
+    assert.equal(seen[1]?.includes("first"), true);
+    assert.equal(seen[1]?.includes("reply 1"), true);
   });
 
   it("fork uses same session store and selected leaf", async () => {
@@ -749,6 +846,32 @@ describe("agent session runtime", () => {
 
     const model = (await store.list("s1")).find((entry) => entry.kind === "model_change");
     assert.equal(model?.model?.model, "override");
+  });
+
+  it("AgentConfig extensions settings and credentials stay host-owned during runs", async () => {
+    let setupCalls = 0;
+    let settingsCalls = 0;
+    let credentialCalls = 0;
+    const extension: Extension = { name: "inert", setup: () => { setupCalls += 1; } };
+    const settings: SettingsProvider = { get: () => { settingsCalls += 1; return undefined; } };
+    const credentials: CredentialResolver = { resolve: () => { credentialCalls += 1; return { type: "api_key", value: "secret-unused" }; } };
+    const store = createMemorySessionStore();
+    const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      extensions: [extension],
+      settings,
+      credentials,
+      store,
+    }).createSession({ id: "inert-fields" });
+
+    await session.run("Hi");
+
+    assert.equal(setupCalls, 0);
+    assert.equal(settingsCalls, 0);
+    assert.equal(credentialCalls, 0);
+    assert.equal(JSON.stringify(await store.list("inert-fields")).includes("secret-unused"), false);
   });
 
   it("store entries do not include provider credentials", async () => {
@@ -1043,6 +1166,26 @@ describe("agent session runtime", () => {
 
     const error = (await reader).find((event) => event.type === "error");
     assert.equal(error?.type === "error" ? error.error.message.includes(secret) : true, false);
+  });
+
+  it("provider request policy auth header overrides caller-supplied providerOptions headers", async () => {
+    // Security: a caller (RunOptions.providerOptions.headers or AgentConfig headers) cannot
+    // override provider auth. Provider-request policies run AFTER the providerOptions merge,
+    // so a policy injecting Authorization from credentials wins over any caller header.
+    let request!: ProviderRequest;
+    const provider: AIProvider = { id: "mock", async *generate(input) { request = input; yield providerDone(); } };
+    const providerKey = "provider-real-key";
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      // Caller tries to inject its own auth header via AgentConfig + per-run override.
+      providerOptions: { headers: { authorization: "caller-evil" } },
+      providerRequestPolicies: { name: "provider-auth", apply: ({ request: req }) => ({ request: { ...req, options: { ...req.options, headers: { ...req.options?.headers, authorization: providerKey } } }, secrets: [providerKey] }) },
+    }).createSession();
+
+    await session.run("Hi", { providerOptions: { headers: { authorization: "caller-evil-run" } } });
+
+    assert.equal(request.options?.headers?.authorization, providerKey, "provider-policy auth must override caller-supplied headers");
   });
 
   it("run model override changes provider request model", async () => {

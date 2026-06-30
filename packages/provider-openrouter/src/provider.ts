@@ -52,6 +52,7 @@ export function openRouterBody(request: ProviderRequest, sessionId = openRouterS
   const routing = request.model.compat?.openRouterRouting;
   const reasoning = request.options?.compat?.reasoning ?? request.model.compat?.reasoning;
   const cache = request.options?.cacheRetention !== "none" && request.model.compat?.openRouterCache === true;
+  const { maxTokens, ...parameters } = request.model.parameters ?? {};
   return clean({
     model: request.model.model,
     messages: request.messages.map((message) => withOpenRouterCache(toOpenRouterMessage(message, request.model.capabilities ?? {}), cache)),
@@ -61,7 +62,8 @@ export function openRouterBody(request: ProviderRequest, sessionId = openRouterS
     provider: routing,
     reasoning,
     session_id: sessionId,
-    ...request.model.parameters,
+    ...parameters,
+    max_tokens: maxTokens,
     ...request.options?.compat,
     ...request.options?.extra,
   });

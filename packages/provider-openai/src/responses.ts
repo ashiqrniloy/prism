@@ -65,6 +65,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
 }
 
 function toResponsesRequest(request: ProviderRequest): JsonObject {
+  const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const payload: Record<string, unknown> = {
     model: request.model.model,
     input: request.messages.map((message) => toInputMessage(message, request.model.capabilities ?? {})),
@@ -73,7 +74,8 @@ function toResponsesRequest(request: ProviderRequest): JsonObject {
     store: false,
     prompt_cache_key: promptCacheKey(request.options),
     prompt_cache_retention: promptCacheRetention(request.options),
-    ...request.model.parameters,
+    ...parameters,
+    max_output_tokens: maxTokens,
     ...(request.options?.compat ?? {}),
     ...(request.options?.extra ?? {}),
   };

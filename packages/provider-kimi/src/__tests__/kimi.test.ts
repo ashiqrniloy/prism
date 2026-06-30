@@ -39,15 +39,18 @@ describe("@arnilo/prism-provider-kimi", () => {
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "tool_1", name: "lookup", arguments: { q: "x" } }]);
   });
 
-  it("kimi_preserves_reasoning_for_tool_replay", async () => {
+  it("kimi_preserves_reasoning_for_tool_replay_and_maps_max_tokens", async () => {
     let body: any;
     const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
       body = JSON.parse(String(init?.body));
       return ok(sse([]));
     }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request });
+    await assertProviderStreamConforms({ provider, request: { ...request, model: { ...request.model, parameters: { maxTokens: 444, temperature: 0.5 } } } });
     assert.equal(body.system, "instructions");
     assert.deepEqual(body.messages[0].content, [{ type: "thinking", thinking: "prior reasoning" }]);
+    assert.equal(body.max_tokens, 444);
+    assert.equal(body.maxTokens, undefined);
+    assert.equal(body.temperature, 0.5);
   });
 
   it("kimi_optional_moonshot_metadata_is_app_selected", async () => {

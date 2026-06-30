@@ -38,6 +38,15 @@ describe("tool registry", () => {
     assert.deepEqual(registry.list(), [second, other]);
   });
 
+  it("strict mode rejects duplicate tool names", () => {
+    const echo = tool("echo");
+
+    assert.throws(() => createToolRegistry([echo, echo], { duplicate: "error" }), /Duplicate tool: echo/);
+    const registry = createToolRegistry([echo], { duplicate: "error" });
+
+    assert.throws(() => registry.register(echo), /Duplicate tool: echo/);
+  });
+
   it("passes parameters through unchanged", () => {
     const parameters = { type: "object", properties: { text: { type: "string" } } } as const;
     const echo = tool("echo", parameters);

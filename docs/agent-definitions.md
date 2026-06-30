@@ -17,7 +17,7 @@ Use `resolveAgentDefinition` when an app already holds a `AgentDefinition` (from
 
 Use `discoverAgentBundles` + `resolveAgentBundle` when a host app keeps per-agent bundles on disk under an app-controlled config root (for example `.clay/extensions/prism/agents/<agentName>/AGENT.md`) and wants to honor them as first-class agents. The bundle layout is host-owned: Prism never picks the config root, never touches the user's home directory, and never auto-runs resolution — the host calls `discoverAgentBundles` and then `resolveAgentBundle` explicitly.
 
-Do not use the bundle loader to discover providers — provider/model packages stay config/package-driven (Phase 24; see [Provider packages](provider-packages.md)). Do not use it to auto-activate tools or skills: the bundle declares names, activation is run-owned (`RunOptions.activeSkills`, `toolNames` enforcement).
+Do not use the bundle loader to discover providers — provider/model packages stay config/package-driven (Phase 24; see [Provider packages](provider-packages.md)). Do not use it to auto-activate undeclared tools or skills: omitted `tools` / `skills` means no active capabilities by default; named bundle entries are explicit activation, and runtime skill selection can narrow further with `RunOptions.activeSkills`.
 
 ## Inputs / request
 
@@ -28,8 +28,8 @@ Do not use the bundle loader to discover providers — provider/model packages s
 | `name` | Required agent name. |
 | `description?` | Optional description. |
 | `model?` | `ModelConfig` object, or a `"<provider>/<model>"` string resolved through `registries.models`. |
-| `tools?` | Tool names to activate from the active tool registry / `registries.tools`. |
-| `skills?` | Skill names resolved via `resolveActiveSkills()`; `toolNames` enforcement applies at activation. |
+| `tools?` | Tool names to activate from the active tool registry / `registries.tools`. Omitted means no active tools unless `activateAllCapabilities: true` is passed for migration. |
+| `skills?` | Skill names resolved via `resolveActiveSkills()`; omitted means no active skills unless `activateAllCapabilities: true` is passed for migration. `toolNames` enforcement applies at activation. |
 | `context?` | Context provider names from `registries.contextProviders`. |
 | `systemPrompt?` | `SystemPromptConfig` layer (see [System prompts](system-prompts.md)). |
 | `instructions?` | Base prompt text. |
@@ -47,6 +47,7 @@ All fields optional — the host controls scope by which registries it passes.
 | `providerSource?` | `ProviderResolver` override. |
 | `tools?` | `ToolRegistry` or `readonly ToolDefinition[]` scope override. |
 | `skillsRegistry?` | `SkillRegistry` override. |
+| `activateAllCapabilities?` | Migration-only `true`: omitted `tools`/`skills` activate every in-scope tool/skill. Default is fail-closed: omitted means none. |
 | `overrides?` | `Partial<AgentConfig>` applied last, after declarative resolution. |
 
 ### App-config bundle layout
@@ -79,7 +80,7 @@ All fields optional — the host controls scope by which registries it passes.
 | `workspaceRoot?` | Workspace root for the repo prompt and repo contributions. |
 | `repoContributions?` | Repo-level contributions from `discoverContributions` (see [Contribution discovery](contribution-discovery.md)). |
 | `registries?` | Host registries (`models`, `providers`, `contextProviders`, ...). |
-| `providerSource?` / `tools?` / `skillsRegistry?` | Forwarded to `AgentDefinitionResolutionContext`. |
+| `providerSource?` / `tools?` / `skillsRegistry?` / `activateAllCapabilities?` | Forwarded to `AgentDefinitionResolutionContext`. `activateAllCapabilities` is migration-only; default omitted `tools`/`skills` activate none. |
 | `overrides?` | `Partial<AgentConfig>` applied after resolution. |
 | `trust?` | `TrustPolicy` gating the app-config root and workspace root **independently**. |
 | `permission?` | `PermissionPolicy` asserting each prompt-file read. |
@@ -173,21 +174,56 @@ const agent = await resolveAgentBundle(bundle as AgentBundle, {
 await agent.createSession().run("Hi", { activeSkills: ["format"] });
 ```
 
-For a hand-held `AgentDefinition` without a bundle, `resolveAgentDefinition` is the lighter path:
+For a hand-held `AgentDefinition` without a bundle, `resolveAgentDefinition` is the lighter path. Capability lists are explicit: omit `tools`/`skills` to activate none.
 
 ```ts
 import { resolveAgentDefinition } from "@arnilo/prism";
 
 const agent = resolveAgentDefinition(
-  { name: "doc", model: "openai/gpt-4o", tools: ["echo"], instructions: "Be concise." },
+  { name: "doc", model: "openai/gpt-4o", tools: ["echo"], skills: ["brief"], instructions: "Be concise." },
   { registries, providerSource, tools: myToolRegistry, skillsRegistry },
 );
+
+// Migration-only old behavior: omitted tools/skills means all in-scope tools/skills.
+const legacy = resolveAgentDefinition(
+  { name: "legacy", model: "openai/gpt-4o" },
+  { registries, tools: myToolRegistry, skillsRegistry, activateAllCapabilities: true },
+);
 ```
+
+## Migration: explicit capability activation
+
+Old Phase 37 behavior could treat an omitted `tools` list as “every scoped tool”; some hosts also expected all scoped skills to be available. Phase 38 changes the safe default: omitted `tools` and omitted `skills` mean no active capabilities.
+
+Preferred migration:
+
+```ts
+// Before: omitted tools could receive every scoped tool.
+resolveAgentDefinition({ name: "doc", model: "openai/gpt-4o" }, context);
+
+// After: list the capabilities this agent may use.
+resolveAgentDefinition(
+  { name: "doc", model: "openai/gpt-4o", tools: ["read"], skills: ["brief"] },
+  context,
+);
+```
+
+Temporary compatibility shim:
+
+```ts
+resolveAgentDefinition(
+  { name: "legacy", model: "openai/gpt-4o" },
+  { ...context, activateAllCapabilities: true },
+);
+```
+
+Use `activateAllCapabilities: true` only while migrating old configs. It intentionally scans/list-activates every in-scope tool/skill. New configs should list names and use strict contribution registries (`createContributionRegistries({ duplicate: "error" })`) so a third-party package cannot silently shadow a capability name.
 
 ## Extension and configuration notes
 
 - `ExtensionAPI.registerAgent(agent)` contributes an inert `AgentDefinition` programmatically; its `create()` (if present) is only invoked when the host runs it through `resolveAgentDefinition`. See [Extensions](extensions.md).
 - Bundle resolution is config over code: every seam lives on `AgentDefinition`, `AgentDefinitionResolutionContext`, or `ResolveAgentBundleOptions`. `systemPrompt` and `loop` are passed via `context.overrides` / `create()` rather than frontmatter.
+- Migration note: before Phase 38, a definition that omitted `tools` but had a tool scope could receive every scoped tool. Now omitted `tools`/`skills` activates none. Add explicit names to `tools` / `skills`; use `activateAllCapabilities: true` only while migrating old configs.
 - `parseAgentFile(text, path)` (re-exported from `@arnilo/prism`) is the stdlib-only frontmatter parser for `AGENT.md`. `parseContextFile` and `parseToolFile` parse colocated `CONTEXT.md` / tool descriptors inside the Node subpath.
 - Repo contributions (`<workspaceRoot>/.agents/{skills,tools}/`) are scanned by `discoverContributions` and passed via `repoContributions`. Repo `.agents/` is preserved as a shared contribution surface across every agent that operates on the same repository; multiple agents from different apps can work the same repo, and all share its repo-level skills.
 
@@ -195,6 +231,7 @@ const agent = resolveAgentDefinition(
 
 - **App owns `configRoot`**: Prism never picks the config root, never defaults to the user's home directory, and never auto-runs discovery or resolution. The host calls `discoverAgentBundles` / `resolveAgentBundle` explicitly. `--agents-config <path>` on the `prism` CLI is the explicit opt-in.
 - **All layers optional**: every prompt and contribution scope is independently togglable via `AgentBundleScopeFlags` (all default `true`); region can be enabled per agent or globally by the host.
+- **Explicit capability activation**: omitted `AgentDefinition.tools` / `skills` activates no tools or skills by default, even when registries are in scope. Named dependencies resolve fail-closed; `activateAllCapabilities: true` is the only legacy all-capabilities opt-in.
 - **Duplicate names error, not override**: skills/tools union across scopes throw on collision so a name shadow can never silently change behavior.
 - **Independent trust gating**: `resolveAgentBundle` trust-gates the app-config root (`SYSTEM.md`) and the workspace root (`AGENTS.md`) independently via `createPathTrustPolicy` + `isPathInsideReal`; symlink escapes are excluded, untrusted roots contribute nothing (fail-closed). See [Security/auth/trust](settings-auth-trust-security.md).
 - **No execution on discovery**: `discoverAgentBundles` returns paths only; `resolveAgentBundle` reads text only — it never `import()`s, `require()`s, or `eval()`s any contribution file. Tool descriptors parsed from `manifest.json` are descriptor-only `ToolDefinition` objects whose `execute()` throws `Discovered tool <name> requires host execution` if invoked. The host lifts them into live tools itself.

@@ -10,7 +10,7 @@ The agent/session runtime adds the minimal shared SDK surface for running provid
 - `session.run(input, options)`
 - `session.prompt(input, options)`
 - `session.compact(options?)`
-- `session.subscribe()`
+- `session.subscribe(options?)`
 - `session.abort()`
 - `session.entries()`
 - `session.checkout(leafId?)`
@@ -42,11 +42,11 @@ string | Message | readonly Message[]
 
 `AgentSessionConfig.store` overrides `AgentConfig.store`; otherwise the session gets a private memory store. `AgentSessionConfig.leafId` selects the branch leaf to resume from.
 
-`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `AgentConfig.providerOptions`/`RunOptions.providerOptions` supply generic provider request options. `AgentConfig.providerRequestPolicies`/`RunOptions.providerRequestPolicies` run before `AIProvider.generate()` and before `provider_request` middleware. `AgentConfig.systemPrompt` and `RunOptions.systemPrompt` add explicit layered system prompt contributions; `RunOptions.systemPrompt: false` disables configured prompt layers for that run while keeping `AgentConfig.instructions` as the base path. `RunOptions.compaction` can enable auto-compaction for that run or use `false` to disable configured auto-compaction. `RunOptions.retry` can enable provider-turn retry for that run or use `false` to disable configured retry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. `RunOptions.maxToolRounds` bounds repeated tool turns and defaults to `1`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, tools, auto-compaction, and retry backoff.
+`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `AgentConfig.providerOptions`/`RunOptions.providerOptions` supply generic provider request options; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert provider-level hints in first-party providers. Use `RunOptions.signal`/host abort controllers for timeouts and `AgentConfig.retry`/`RunOptions.retry` for retry. `AgentConfig.providerRequestPolicies`/`RunOptions.providerRequestPolicies` run before `AIProvider.generate()` and before `provider_request` middleware. `AgentConfig.systemPrompt` and `RunOptions.systemPrompt` add explicit layered system prompt contributions; `RunOptions.systemPrompt: false` disables configured prompt layers for that run while keeping `AgentConfig.instructions` as the base path. `RunOptions.compaction` can enable auto-compaction for that run or use `false` to disable configured auto-compaction. `RunOptions.retry` can enable provider-turn retry for that run or use `false` to disable configured retry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. `RunOptions.maxToolRounds` bounds repeated tool turns and defaults to `1`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, tools, auto-compaction, and retry backoff.
 
 ## Outputs / response / events
 
-`session.subscribe()` returns a live `AsyncIterable<AgentEvent>`. Subscribe before `run()` to observe that run's events.
+`session.subscribe(options?)` returns a live `AsyncIterable<AgentEvent>`. Subscribe before `run()` to observe that run's events. The consumer loop and `session.run()` must run concurrently (e.g. start the `for await` consumer, then `await Promise.all([consumer, session.run("Hi")])`): events are only emitted during a live run, so awaiting the subscribe loop before calling `run()` deadlocks. `SubscribeOptions.maxQueuedEvents` defaults to `1024` (minimum `1`) and caps events queued while the consumer is not awaiting `next()`. `SubscribeOptions.overflow` defaults to `"close"`; it clears queued payload events, delivers one `event_subscriber_overflow` notice to that subscriber, then closes it. `"drop_oldest"` keeps newest events; `"drop_newest"` ignores new events while full.
 
 For a text-only provider turn, the runtime emits:
 
@@ -58,7 +58,7 @@ For a text-only provider turn, the runtime emits:
 6. `turn_finished`
 7. `agent_finished`
 
-For complete tool calls, the runtime emits the assistant `tool_call` as `message_delta`, dispatches sequentially through `dispatchToolCall()`, emits tool execution events, appends a tool-result session entry, adds returned `ToolResult` values to the next provider turn, and stops when the provider returns no tool calls or `maxToolRounds` is reached. The next provider turn therefore receives the assistant `tool_call` followed by the matching role `tool` `tool_result` before any final assistant content.
+For tool calls, the runtime streams provider `tool_call_delta` fragments as `message_delta` events for UI consumers, reconstructs the final `tool_call` with the same rules as provider conformance helpers, dispatches each complete call sequentially through `dispatchToolCall()`, emits tool execution events, appends an assistant tool-call session entry and a tool-result session entry, adds returned `ToolResult` values to the next provider turn, and stops when the provider returns no tool calls or `maxToolRounds` is reached. Deltas are live events only; persisted transcripts contain final `tool_call` blocks. The next provider turn therefore receives the assistant `tool_call` followed by the matching role `tool` `tool_result` before any final assistant content.
 
 `session.compact(options?)` runs the selected compaction strategy, appends one `kind: "compaction"` entry under the current leaf, updates the leaf, emits `compaction_started` and `compaction_finished`, and returns the appended `CompactionResult`. If `AgentConfig.compaction` or `RunOptions.compaction` includes `thresholdEntries`, auto-compaction checks once after input/model-change entries are appended and before provider input assembly; `RunOptions.compaction: false` skips that run's auto-compaction.
 
@@ -113,7 +113,15 @@ await reader;
 
 ## Extension and configuration notes
 
-The runtime calls `assembleProviderInput()` on every turn and uses only values supplied on `AgentConfig`: `instructions`, `systemPrompt`, `inputBuilder`, `promptBuilder`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, `compaction`, `retry`, and `RunOptions.model`/`systemPrompt`/`compaction`/`retry`. Contributions remain inert until a host passes selected values into the agent config.
+The runtime calls `assembleProviderInput()` on every turn and uses only runtime-consumed values supplied on `AgentConfig`: `instructions`, `systemPrompt`, `inputBuilder`, `promptBuilder`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, `compaction`, `retry`, and `RunOptions.model`/`systemPrompt`/`compaction`/`retry`. Contributions remain inert until a host passes selected values into the agent config.
+
+`AgentConfig` fields that are host-owned metadata, not runtime work:
+
+| Field | Runtime behavior |
+| --- | --- |
+| `extensions` | Preserved on `agent.config` only. `createAgent()` / `session.run()` do not call `setup()`, load packages, or auto-register contributions. Load extensions with `createExtensionKernel()` before building config. |
+| `settings` | Preserved on `agent.config` only. The runtime does not call `settings.get()`; hosts or provider packages read settings before passing concrete runtime options. |
+| `credentials` | Preserved on `agent.config` only. The runtime does not call `credentials.resolve()`; provider adapters/request policies resolve credentials at the provider edge and pass exact secret values to redaction when needed. |
 
 The runtime calls `middleware.run("compaction", { context, result })` after a compaction strategy returns and before appending the standard compaction entry. Middleware can adjust the result summary/data, but the runtime still owns store append ordering and branch parent ids.
 
@@ -121,7 +129,7 @@ Provider request policy application is one ordered in-memory pass per provider t
 
 The runtime calls `middleware.run("retry", { context, decision })` after the retry policy decision and before emitting `retry_scheduled`. Middleware can stop retrying or adjust the delay. Retry wraps only the current provider turn, reuses the same assembled request, and never retries after assistant output has been emitted.
 
-`createAgent()` is a thin wrapper over explicit config. It does not load `AgentConfig.extensions`, scan packages, resolve credentials, read settings, or consult hidden registries. External `AgentDefinition` implementations can call it from their own `create()` method:
+`createAgent()` is a thin wrapper over explicit config. It does not load `AgentConfig.extensions`, scan packages, resolve credentials, read settings, call `Extension.setup()`, or consult hidden registries. External `AgentDefinition` implementations can call it from their own `create()` method:
 
 ```ts
 import { createAgent, createContributionRegistries } from "@arnilo/prism";
@@ -150,7 +158,7 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - Compaction context contains branch entries and explicit compaction options only; it does not include provider objects, provider requests, credential resolvers, resolved credentials, settings, or hidden metadata.
 - Store entries contain explicit session data only; Prism does not store provider objects, credential resolvers, resolved credentials, full provider requests, settings, or hidden metadata.
 - Runtime events contain messages/content only; do not put secrets in prompts, metadata, provider events, session entries, or docs examples.
-- The event broadcaster is in-memory and live-only. It adds no dependency, timer, filesystem/network discovery, worker, or durable queue.
+- The event broadcaster is in-memory, live-only, and bounded per subscriber by `SubscribeOptions`. It adds no dependency, timer, filesystem/network discovery, worker, or durable queue.
 
 ## Related APIs
 
@@ -164,6 +172,6 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - [Middleware hooks](middleware-hooks.md): hooks that configured assembly/runtime can run.
 - [CLI/RPC](cli-rpc.md): terminal and JSONL adapters over this runtime.
 
-`AgentConfig.loop` and `RunOptions.loop` select a replaceable per-run control loop (`singleShotLoop` default, or `generate-validate-revise` with host callbacks); see [Agent loops](agent-loops.md). `RunOptions.loop` wins over `AgentConfig.loop`.
+`AgentConfig.loop` and `RunOptions.loop` select a replaceable per-run control loop (`singleShotLoop` default, or `generate-validate-revise` with host callbacks); see [Agent loops](agent-loops.md). `RunOptions.loop` wins over `AgentConfig.loop`. Built-in loops emit the same normal turn/message envelope around provider turns, and both add the first run input to live history once after the first provider turn so later turns see the same transcript shape.
 
 `AgentConfig.redactor` and `RunOptions.redactor` redact exact known secret strings from provider requests, emitted events, and stored session entries. Redaction is opt-in and exact-match only.

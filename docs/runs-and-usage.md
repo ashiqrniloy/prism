@@ -204,12 +204,13 @@ console.log(runs.at(-1)?.status); // succeeded
 - **No credentials.** `RunLedger` records never contain `AIProvider`, `CredentialResolver`, `ProviderResolver`, provider API keys, or credential values. They store only ids, status, timestamps, and the public event/result/usage shapes.
 - **Redaction.** The runtime calls `redactRunLedgerRecord()` and `redactAgentEvent()` with the active `SecretRedactor` before handing records to the adapter. `AgentEventRecord.redacted` and `ToolCallRecord.redacted` are set to `true` when a redactor is configured. Hosts should still redact before writing to durable storage if they perform additional transformations.
 - **Message content stays in `SessionStore`.** `AgentEventRecord.event` may contain `message_delta` / `message_finished` payloads; these are redacted but still belong conceptually to the session store. Do not use the ledger as the source of truth for messages.
-- **Synchronous adapters block the run.** An adapter that performs network or heavy DB writes inline will slow down the agent loop. For high-throughput hosts, buffer or batch inside the adapter and return quickly; the runtime awaits the returned promise.
+- **Synchronous adapters block the run.** An adapter that performs network or heavy DB writes inline will slow down the agent loop. For high-throughput hosts, buffer or batch inside the adapter and return quickly; the runtime awaits the returned promise. If batching, preserve per-run order before acknowledging a batch: `appendEvent` rows should be pageable by `(runId, sequence)`, run rows by `(sessionId, startedAt, id)`, and usage rows by `(runId, recordedAt, id)`.
 - **Idempotency is host-owned.** The runtime writes the key into `RunRecord.idempotencyKey`; enforcing unique keys and deduplicating retries is the host adapter's responsibility.
 - **Tenant isolation.** `OwnershipScope` fields are copied from the active ownership scope, but the runtime does not enforce tenant isolation. Host adapters must apply their own access controls when querying persisted ledger rows.
 
 ## Related APIs
 
+- [Performance limits](performance.md): batching, cursor keys, and production sizing assumptions.
 - [Agent/session runtime](agent-session-runtime.md): `session.run()` and runtime event emission.
 - [Agent events](agent-events.md): `AgentEvent` union and `session.subscribe()`.
 - [Tools](tools.md): `ToolResult`, `ToolCallContent`, and `dispatchToolCall()`.

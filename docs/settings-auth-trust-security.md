@@ -18,7 +18,7 @@ Use these APIs when a host wants one explicit place to compose settings, resolve
 - Node-only subpaths: `@arnilo/prism/node/settings` for caller-named JSON settings files and `@arnilo/prism/node/trust` for explicit trusted path roots with symlink-aware realpath checks.
 
 ## Outputs / response / events
-Settings and credential helpers return existing `SettingsProvider` and `CredentialResolver` contracts. Permission denial blocks tool execution, extension setup, and resource loader calls before side effects. A configured `AgentConfig.redactor` or `RunOptions.redactor` redacts provider requests, emitted `AgentEvent` payloads, stored `SessionEntry` values, and runtime `InstructionContext` input/history seen by instruction injectors.
+Settings and credential helpers return existing `SettingsProvider` and `CredentialResolver` contracts. `AgentConfig.settings` and `AgentConfig.credentials` are host-owned metadata for compatibility; `createAgent()` / `session.run()` do not call `settings.get()` or `credentials.resolve()`. Permission denial blocks tool execution, extension setup, and resource loader calls before side effects. A configured `AgentConfig.redactor` or `RunOptions.redactor` redacts provider requests, emitted `AgentEvent` payloads, stored `SessionEntry` values, and runtime `InstructionContext` input/history seen by instruction injectors.
 
 ## Request/response example
 ```ts
@@ -47,6 +47,7 @@ const apiKey = await resolveCredentialValue(credentials, { name: "api", provider
 
 const agent = createAgent({
   model: { provider: "demo", model: "model" },
+  // host-owned metadata; runtime does not read/resolve these fields
   settings,
   credentials,
   redactor: apiKey ? createSecretRedactor([apiKey]) : undefined,
@@ -56,10 +57,10 @@ void agent;
 ```
 
 ## Extension and configuration notes
-Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, OAuth token storage, environment-variable selection, and persistent credentials belong in the host or an extension package.
+Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, OAuth token storage, environment-variable selection, and persistent credentials belong in the host or an extension package. Passing `settings` / `credentials` on `AgentConfig` does not wire hidden runtime reads; hosts pass concrete values or resolvers to the provider/request edge that needs them.
 
 ## Security and performance notes
-Prism does not sandbox host tools or extensions. Prism does not read environment variables, keychains, user config files, package manifests, resources, or project-local extensions unless the host explicitly wires those operations. Redaction is exact known-secret replacement only; it is not secret detection. Permission and trust checks are one operation per guarded call and add no workers, watchers, retries, network, or filesystem scans.
+Prism does not sandbox host tools or extensions. Prism does not read environment variables, keychains, user config files, package manifests, resources, settings providers, credential resolvers, or project-local extensions unless the host explicitly wires those operations. Redaction is exact known-secret replacement only; it is not secret detection. Permission and trust checks are one operation per guarded call and add no workers, watchers, retries, network, or filesystem scans.
 
 Boundary hardening summary:
 

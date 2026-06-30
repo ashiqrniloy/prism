@@ -22,6 +22,7 @@ export function createProviderRequestPolicyChain(policies: readonly ProviderRequ
   };
 }
 
+// Legacy cacheKey/cacheRetention policy; structured cache hints are merged separately.
 export function createSessionCachePolicy(options: SessionCachePolicyOptions = {}): ProviderRequestPolicy {
   return {
     name: "session-cache",
@@ -45,12 +46,24 @@ export function mergeProviderRequestOptions(
 ): ProviderRequestOptions | undefined {
   if (!base) return patch;
   if (!patch) return base;
-  return {
+  const merged = {
     ...base,
     ...patch,
     headers: patch.headers || base.headers ? { ...base.headers, ...patch.headers } : undefined,
     compat: patch.compat || base.compat ? { ...base.compat, ...patch.compat } : undefined,
     extra: patch.extra || base.extra ? { ...base.extra, ...patch.extra } : undefined,
+  };
+  if (!patch.cache && !base.cache) return merged;
+  return {
+    ...merged,
+    cache: {
+      ...base.cache,
+      ...patch.cache,
+      breakpoints: base.cache?.breakpoints || patch.cache?.breakpoints ? [
+        ...(base.cache?.breakpoints ?? []),
+        ...(patch.cache?.breakpoints ?? []),
+      ] : undefined,
+    },
   };
 }
 

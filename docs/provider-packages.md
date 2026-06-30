@@ -53,7 +53,11 @@ api.registerProviderRequestPolicy(createSessionCachePolicy({ retention: "short" 
 api.registerSystemPromptContribution({ id: "demo-prompt", source: "package", mode: "append", text: "Use demo provider rules." });
 ```
 
-Hosts decide which credential resolvers, env objects, OAuth stores, request policies, and prompt contributions become active. Request policies can set generic `ProviderRequest.options` such as `sessionId`, `cacheRetention`, `headers`, retry/timeouts, and opaque `extra`; provider adapters decide how to map those options to provider payloads. Caller headers are extension headers only: provider adapters must apply provider-owned headers (auth, content type, session/cache/security, attribution) after caller headers so requests cannot override credentials or provider policy.
+Hosts decide which credential resolvers, env objects, OAuth stores, request policies, and prompt contributions become active. Request policies can set generic `ProviderRequest.options` such as `sessionId`, `cacheRetention`, `headers`, `compat`, and opaque `extra`; provider adapters decide how to map those options to provider payloads. Caller headers are extension headers only: provider adapters must apply provider-owned headers (auth, content type, session/cache/security, attribution) after caller headers so requests cannot override credentials or provider policy.
+
+Deprecated provider request options: `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are inert in first-party providers. Use `RunOptions.signal`/host abort controllers for timeouts and `AgentConfig.retry`/`RunOptions.retry` for retry. Provider packages should not add provider-specific retry loops unless the vendor protocol requires it and runtime retry cannot cover the failure mode.
+
+First-party providers map generic `ModelConfig.parameters.maxTokens` to real output-token request fields instead of sending `maxTokens` on the wire: OpenAI Responses uses `max_output_tokens`; OpenRouter, OpenCode Go OpenAI-compatible, OpenCode Go Anthropic-style, Z.AI, and Kimi use `max_tokens`. Other `model.parameters` values pass through unchanged unless the provider docs say otherwise.
 
 ## First-party provider package skeletons
 
@@ -120,7 +124,8 @@ Provider package manifest contribution and the generic request options a provide
     "cacheKey": "demo",
     "cacheRetention": "short",
     "headers": { "x-demo": "1" }
-  }
+  },
+  "runOptions.retry": { "maxAttempts": 3, "maxDelayMs": 1000 }
 }
 ```
 

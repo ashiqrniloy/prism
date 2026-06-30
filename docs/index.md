@@ -6,24 +6,26 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Public contracts](public-contracts.md): type shapes for messages, content, agents, sessions, providers, tools, context, skills, extensions, stores, resources, settings, credentials, and events.
 
 ## Agent/session runtime
-- [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, and subscribe to normalized session events.
-- [Agent definitions](agent-definitions.md): resolve declarative `AgentDefinition` values via `resolveAgentDefinition`, and turn app-config `<configRoot>/agents/<name>/AGENT.md` bundles into runnable agents via `discoverAgentBundles` / `resolveAgentBundle` (three-scope skill/tool union, configurable prompt layers, no auto-discovery).
+- [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, subscribe to normalized events, and see which `AgentConfig` fields are runtime-consumed vs host-owned metadata.
+- [Agent definitions](agent-definitions.md): resolve declarative `AgentDefinition` values via `resolveAgentDefinition`, and turn app-config `<configRoot>/agents/<name>/AGENT.md` bundles into runnable agents via `discoverAgentBundles` / `resolveAgentBundle` (explicit tool/skill activation by name, fail-closed omitted capabilities, migration-only `activateAllCapabilities`, strict duplicate scope checks, configurable prompt layers, no auto-discovery).
 - [Agent loops](agent-loops.md): replaceable per-run control loops — `singleShotLoop` default and `generate-validate-revise` with host-supplied `validator`/`parser`/`repairer` callbacks.
-- [Agent events](agent-events.md): the `AgentEvent` stream — agent/turn/message, tool execution, queue/compaction/retry, artifact validation/refinement, and error variants, redacted via `redactAgentEvent`.
+- [Agent events](agent-events.md): the `AgentEvent` stream — agent/turn/message (including live `tool_call_delta` fragments), tool execution, queue/subscriber overflow, compaction/retry, artifact validation/refinement, and error variants, redacted via `redactAgentEvent`.
 - [Runs and usage ledger](runs-and-usage.md): `RunLedger` adapter for durable run, event, tool-call, and usage persistence, plus ownership/idempotency/redaction guidance.
+- [Performance limits](performance.md): bounded live subscriber queues, branch-read pagination expectations, JSONL/dev-store limits, and production sizing assumptions.
 - [Structured output](structured-output.md): the `Artifact*` seam (parser/validator/repairer, host-defined `T`) — the only typed-output path from a loop, with a Synapta-style schema→`ArtifactValidation` mapping example and an end-to-end third-party integration walkthrough.
 
 ## Compaction/session memory
 - [Compaction and retry policies](compaction-and-retry.md): summarize branch history and retry transient provider failures with host-replaceable policies.
-- [LLM compaction package](compaction-llm.md): optional provider-backed compaction strategy package.
-- [Observational memory compaction package](compaction-observational-memory.md): optional source-backed memory, fast compaction, recall tool, and status/view command package.
+- [LLM compaction package](compaction-llm.md): optional provider-backed compaction strategy package with max-output budgets mapped through `model.parameters.maxTokens` to provider wire fields.
+- [Observational memory compaction package](compaction-observational-memory.md): optional source-backed memory, owned runtime append callback, provider-valid worker transcripts, fast compaction, recall tool, and status/view command package.
 - [Session stores](session-stores.md): `SessionStore` contract, `SessionAppendOptions`, `SessionAppendConflictError`, branch handles, `readBranchPath`, and dev-vs-production branch reads — start here for session persistence.
 - [Session stores and branching](session-stores-and-branching.md): detailed branch semantics and helper reference (kept for compatibility; links back to the canonical atomic append / branch-handle sections).
 - [Database persistence](database-persistence.md): production persistence contracts, conditional append transaction pattern, idempotency indexes, `readBranchPath`, reference relational schema, retention, migrations, and NoSQL mapping.
+- [Migration guide](migration.md): the two cross-cutting app migrations in one place — in-memory/JSONL → database-backed `ProductionPersistenceStore` persistence (+ `RunLedger`) and permissive capability defaults → Phase 38 explicit `tools`/`skills` activation, with before/after shapes and links to the detailed pages.
 - [Node JSONL session store](node-jsonl-session-store.md): development-only JSONL file adapter for single-process Node hosts; no cross-process safety.
 
 ## Provider and model connection
-- [Provider layer](provider-layer.md): register and resolve host-owned providers/models, create provider events, use generic provider request options, and test with the mock provider.
+- [Provider layer](provider-layer.md): register and resolve host-owned providers/models, choose replace-or-error duplicate policy, create provider events, stream/reconstruct tool-call deltas, use generic provider request options, and test with the mock provider; deprecated provider-level timeout/retry hints point to runtime abort/retry.
 - [Provider packages](provider-packages.md): define explicit provider packages, model metadata, auth descriptors, request/cache policies, and provider-owned header precedence without package discovery or provider-specific core behavior.
   - Phase 12 package workspaces: [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), and [`@arnilo/prism-provider-kimi`](providers/kimi.md).
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider subpath using native or injected `fetch` for Chat Completions streaming.
@@ -32,14 +34,14 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
 - [System prompts](system-prompts.md): compose explicit user/package/app/run system prompt layers, auto-load the standard `AGENTS.md` (workspace) / `SYSTEM.md` prompt files via the Node `loadSystemPromptFiles` loader (trust-gated for `AGENTS.md`), and append `SYSTEM.md` → per-agent `AGENT.md` body → repo `AGENTS.md` layers from a discovered agent bundle via `resolveAgentBundle`.
 - [Instruction injection](instruction-injection.md): register package injectors that layer redacted instructions/context blocks without granting tools, permissions, or resource escapes.
-- [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned.
+- [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned; omitted declarative skills stay inactive by default, `toolNames` fail closed before provider turns, and strict skill registries prevent silent shadowing.
 
 ## Tools
-- [Tools](tools.md): register host-owned active tools, apply exact allow/deny filtering, and dispatch tool calls.
+- [Tools](tools.md): register host-owned active tools with replace-or-error duplicate policy, apply exact allow/deny filtering, and dispatch tool calls.
 
 ## Extensions/plugins
 - [Contribution discovery (workspace)](contribution-discovery.md): opt-in, realpath-contained directory scanner turning `SKILL.md`/`manifest.json` into inert `DiscoveredContribution` envelopes the host registers — no `import()`, no auto-activate, no provider scanning. (Per-agent `AGENT.md` bundles live under an app-controlled `configRoot`; see [Agent definitions](agent-definitions.md).)
-- [Contribution registries](contribution-registries.md): explicit host-owned registries for extension/package contributions without hidden globals.
+- [Contribution registries](contribution-registries.md): explicit host-owned registries for extension/package contributions without hidden globals, with `duplicate: "error"` strict mode for provider/model/tool/skill shadowing prevention.
 - [Extension kernel and event bus](extensions.md): load host-provided extensions in order, register contributions, emit lifecycle events, and isolate extension errors.
 - [Middleware hooks](middleware-hooks.md): ordered hook registry for provider, input, context, tool, retry, compaction, and session lifecycle boundaries.
 
@@ -52,8 +54,8 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [CLI/RPC](cli-rpc.md): Run print/json modes and LF-delimited RPC over the public AgentSession runtime, including branch-handle results, fixed `forkSession`, and `checkout`.
 
 ## Security and credentials
-- [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, redaction controls, and security-boundary hardening summary.
-- [Credentials and redaction](credentials-and-redaction.md): compose explicit credential resolver order, use caller-supplied env objects/OAuth refresh helpers, and redact known secret values.
+- [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, redaction controls, host-owned `AgentConfig.settings`/`credentials`, and security-boundary hardening summary.
+- [Credentials and redaction](credentials-and-redaction.md): compose explicit credential resolver order, use caller-supplied env objects/OAuth refresh helpers, avoid eager `AgentConfig.credentials` resolution, and redact known secret values.
 
 ## Testing and examples
 - [Provider layer](provider-layer.md): use `createMockProvider()` and provider event helpers for deterministic tests without timers, credentials, or network.
