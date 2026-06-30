@@ -103,11 +103,9 @@ export function createContributionRegistries(): ContributionRegistries {
   };
 }
 
-const PHASE_33_AGENT_ERROR = "Agent file resolution requires Phase 33's resolveAgentDefinition";
-
 /** Register discovered contributions into the given registries. Inert: skill
- *  kinds register a fully realized {@link Skill}; tool/context/instructions/
- *  agent kinds register **descriptor-only** entries whose executable behavior is
+ *  kinds register a fully realized {@link Skill}; tool/context/instructions
+ *  kinds register **descriptor-only** entries whose executable behavior is
  *  host-owned. Performs NO `import()`. Last-write-wins per `(kind, name)`
  *  (workspace discovery already won the merge; calling twice is idempotent). */
 export function registerDiscoveredContributions(
@@ -130,10 +128,6 @@ export function registerDiscoveredContributions(
       }
       case "instructions": {
         registries.systemPromptContributions.register(contribution.name, descriptorInstructions(contribution));
-        break;
-      }
-      case "agent": {
-        registries.agents.register(contribution.name, stubAgent(contribution));
         break;
       }
     }
@@ -184,19 +178,6 @@ function descriptorInstructions(contribution: DiscoveredContribution): SystemPro
     source: "package",
     mode: "append",
     text: "",
-    metadata: discoverMetadata(contribution),
-  };
-}
-
-function stubAgent(contribution: DiscoveredContribution): AgentDefinition {
-  const name = contribution.name;
-  return {
-    name,
-    description: `Discovered agent ${name}; ${PHASE_33_AGENT_ERROR}`,
-    // ponytail: fail-closed stub; Phase 33's resolveAgentDefinition replaces this.
-    create: () => {
-      throw new Error(PHASE_33_AGENT_ERROR);
-    },
     metadata: discoverMetadata(contribution),
   };
 }

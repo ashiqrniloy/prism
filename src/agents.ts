@@ -2,6 +2,7 @@ import type {
   Agent,
   AgentConfig,
   AgentEvent,
+  AgentEventRecord,
   AgentSession,
   AgentSessionConfig,
   AIProvider,
@@ -12,6 +13,7 @@ import type {
   ErrorInfo,
   LoopContext,
   Message,
+  OwnershipScope,
   ProviderEvent,
   ProviderRequest,
   ProviderRequestPolicy,
@@ -19,21 +21,25 @@ import type {
   ProviderTurnResult,
   RetryMiddlewarePayload,
   RetryOptions,
+  RunLedger,
   RunOptions,
+  RunRecord,
   SessionEntry,
   SessionStore,
+  SessionBranchRead,
   Skill,
   ToolCallContent,
   ToolDefinition,
   ToolRegistry,
   ToolResult,
   Usage,
+  UsageRecord,
 } from "./contracts.js";
 import { resolveLoop } from "./agent-loops.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
 import { createProviderRequestPolicyChain, mergeProviderRequestOptions, normalizeProviderRequestPolicyResult } from "./provider-request-policy.js";
-import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
+import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
 import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "./session-stores.js";
@@ -64,6 +70,10 @@ class RuntimeAgentSession implements AgentSession {
   private activeRun?: AbortController;
   private activeRedactor?: SecretRedactor;
   private activeProvider?: AIProvider;
+  private activeLedger?: RunLedger;
+  private activeOwnership?: OwnershipScope;
+  private activeIdempotencyKey?: string;
+  private ledgerPromises: (Promise<void> | void)[] = [];
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -71,6 +81,10 @@ class RuntimeAgentSession implements AgentSession {
     this.metadata = config.metadata;
     this.store = config.store ?? config.agent.config.store ?? createMemorySessionStore();
     this.currentLeafId = config.leafId;
+  }
+
+  get leafId(): string | undefined {
+    return this.currentLeafId;
   }
 
   subscribe(): AsyncIterable<AgentEvent> {
@@ -91,11 +105,31 @@ class RuntimeAgentSession implements AgentSession {
     const cleanupSignal = bridgeAbort(options.signal, controller);
     this.activeRun = controller;
     this.activeRedactor = options.redactor ?? this.agent.config.redactor;
+    this.activeLedger = options.runLedger ?? this.agent.config.runLedger;
+    this.activeOwnership = options.ownership ?? this.agent.config.ownership;
+    this.activeIdempotencyKey = options.idempotencyKey ?? this.agent.config.idempotencyKey;
+
+    const model = options.model ?? this.agent.config.model;
+    const startedAt = new Date().toISOString();
+    let runError: ErrorInfo | undefined;
 
     try {
       this.resolveRunProvider(options);
       throwIfAborted(controller.signal);
       this.emit({ type: "agent_started", sessionId: this.id, runId });
+
+      const startRecord: RunRecord = {
+        id: runId,
+        sessionId: this.id,
+        branchId: this.currentLeafId,
+        model,
+        provider: model.provider,
+        idempotencyKey: this.activeIdempotencyKey,
+        status: "running",
+        startedAt,
+        ...this.activeOwnership,
+      };
+      await this.activeLedger?.appendRun(redactRunLedgerRecord(startRecord, this.activeRedactor));
 
       await this.rebuildHistory();
       if (options.model && JSON.stringify(options.model) !== JSON.stringify(this.agent.config.model)) {
@@ -147,6 +181,7 @@ class RuntimeAgentSession implements AgentSession {
           tools,
           resourceLoader: this.agent.config.resourceLoader,
           providerOptions,
+          redactor: this.activeRedactor,
           middleware: this.agent.config.middleware,
           sessionId: this.id,
           runId,
@@ -166,6 +201,8 @@ class RuntimeAgentSession implements AgentSession {
           emit: (event) => this.emit(event),
           permission: this.agent.config.permission,
           redactor: this.activeRedactor,
+          ledger: this.activeLedger,
+          ownership: this.activeOwnership,
           // ponytail: RunOptions wins; array-compose deferred (roadmap: compose-later).
           validate,
         }),
@@ -174,17 +211,54 @@ class RuntimeAgentSession implements AgentSession {
       };
 
       const usage = await loop.run(ctx);
+      if (usage && this.activeLedger) {
+        const usageRecord: UsageRecord = {
+          id: randomId("usage"),
+          sessionId: this.id,
+          runId,
+          usage,
+          recordedAt: new Date().toISOString(),
+          ...this.activeOwnership,
+        };
+        await this.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, this.activeRedactor));
+      }
+      await this.drainLedger();
       this.emit({ type: "agent_finished", sessionId: this.id, runId, usage });
     } catch (error) {
-      const info = errorToErrorInfo(error);
-      this.emit({ type: "error", sessionId: this.id, runId, error: info });
+      runError = errorToErrorInfo(error);
+      this.emit({ type: "error", sessionId: this.id, runId, error: runError });
       throw error;
     } finally {
       if (this.activeRun === controller) this.activeRun = undefined;
-      this.activeRedactor = undefined;
-      this.activeProvider = undefined;
-      cleanupSignal();
-      this.closeSubscribers();
+      try {
+        await this.drainLedger();
+        if (this.activeLedger) {
+          const status = controller.signal.aborted ? "aborted" : runError ? "failed" : "succeeded";
+          const finishRecord: RunRecord = {
+            id: runId,
+            sessionId: this.id,
+            branchId: this.currentLeafId,
+            model,
+            provider: model.provider,
+            idempotencyKey: this.activeIdempotencyKey,
+            status,
+            startedAt,
+            finishedAt: new Date().toISOString(),
+            abortReason: controller.signal.aborted ? String(controller.signal.reason) : undefined,
+            error: runError,
+            ...this.activeOwnership,
+          };
+          await this.activeLedger.appendRun(redactRunLedgerRecord(finishRecord, this.activeRedactor));
+        }
+      } finally {
+        this.activeLedger = undefined;
+        this.activeOwnership = undefined;
+        this.activeIdempotencyKey = undefined;
+        this.activeRedactor = undefined;
+        this.activeProvider = undefined;
+        cleanupSignal();
+        this.closeSubscribers();
+      }
     }
   }
 
@@ -202,7 +276,10 @@ class RuntimeAgentSession implements AgentSession {
   }
 
   async entries(): Promise<readonly SessionEntry[]> {
-    return getSessionBranchEntries(await this.store.list(this.id), { leafId: this.currentLeafId });
+    const reader = this.branchReader();
+    return reader
+      ? getSessionBranchEntries(reader, { sessionId: this.id, leafId: this.currentLeafId })
+      : getSessionBranchEntries(await this.store.list(this.id), { leafId: this.currentLeafId });
   }
 
   async checkout(leafId?: string): Promise<void> {
@@ -216,7 +293,11 @@ class RuntimeAgentSession implements AgentSession {
 
   async clone(options: { readonly id?: string; readonly leafId?: string } = {}): Promise<AgentSession> {
     const id = options.id ?? randomId("session");
-    const branch = getSessionBranchEntries(await this.store.list(this.id), { leafId: options.leafId ?? this.currentLeafId });
+    const leafId = options.leafId ?? this.currentLeafId;
+    const reader = this.branchReader();
+    const branch = reader
+      ? await getSessionBranchEntries(reader, { sessionId: this.id, leafId })
+      : getSessionBranchEntries(await this.store.list(this.id), { leafId });
     const remap = new Map<string, string>();
     for (const entry of branch) {
       const nextId = randomId("entry");
@@ -225,6 +306,13 @@ class RuntimeAgentSession implements AgentSession {
       await this.store.append({ ...rest, id: nextId, parentId: entry.parentId ? remap.get(entry.parentId) : undefined, sessionId: id });
     }
     return createAgentSession({ agent: this.agent, id, store: this.store, leafId: branch.length ? remap.get(branch[branch.length - 1]!.id) : undefined, metadata: this.metadata });
+  }
+
+  private branchReader() {
+    // ponytail: prefer the store's readBranchPath (one ancestor-chain query) when present so a
+    // DB-backed store never loads the full session; else fall back to list() + in-memory walk.
+    const read = this.store.readBranchPath;
+    return read ? (query: SessionBranchRead) => read.call(this.store, query) : undefined;
   }
 
   private resolveRunProvider(options: RunOptions): void {
@@ -250,11 +338,32 @@ class RuntimeAgentSession implements AgentSession {
   private emit(event: AgentEvent): void {
     const redacted = redactAgentEvent(event, this.activeRedactor);
     for (const subscriber of this.subscribers) subscriber.push(redacted);
+
+    if (this.activeLedger) {
+      const record: AgentEventRecord = {
+        id: randomId("event"),
+        sessionId: event.sessionId ?? this.id,
+        runId: event.runId,
+        type: event.type,
+        timestamp: new Date().toISOString(),
+        event: redacted,
+        redacted: Boolean(this.activeRedactor),
+        ...this.activeOwnership,
+      };
+      this.ledgerPromises.push(this.activeLedger.appendEvent(redactRunLedgerRecord(record, this.activeRedactor)));
+    }
   }
 
   private closeSubscribers(): void {
     for (const subscriber of this.subscribers) subscriber.close();
     this.subscribers.clear();
+  }
+
+  private async drainLedger(): Promise<void> {
+    if (this.ledgerPromises.length === 0) return;
+    const pending = this.ledgerPromises;
+    this.ledgerPromises = [];
+    await Promise.all(pending);
   }
 
   private async generateWithRetry(request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets: readonly (string | undefined)[] = []): Promise<ProviderTurnResult> {
@@ -290,7 +399,20 @@ class RuntimeAgentSession implements AgentSession {
       for await (const event of this.activeProvider!.generate(request)) {
         throwIfAborted(signal);
         if (event.type === "error") throw new ProviderTurnFailure(event.error, started);
-        if (event.type === "usage") usage = event.usage;
+        if (event.type === "usage") {
+          usage = event.usage;
+          if (this.activeLedger) {
+            const usageRecord: UsageRecord = {
+              id: randomId("usage"),
+              sessionId: this.id,
+              runId,
+              usage: event.usage,
+              recordedAt: new Date().toISOString(),
+              ...this.activeOwnership,
+            };
+            await this.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, this.activeRedactor));
+          }
+        }
         if (event.type === "done") {
           usage = event.usage ?? usage;
           break;
@@ -363,7 +485,10 @@ class RuntimeAgentSession implements AgentSession {
 
   private async appendEntry(entry: SessionEntry): Promise<void> {
     const redacted = redactSessionEntry(entry, this.activeRedactor);
-    await this.store.append(redacted);
+    await this.store.append(redacted, {
+      expectedParentId: this.currentLeafId,
+      idempotencyKey: this.activeIdempotencyKey,
+    });
     this.currentLeafId = redacted.id;
   }
 
@@ -380,7 +505,10 @@ class RuntimeAgentSession implements AgentSession {
   }
 
   private async snapshot() {
-    return rebuildSessionContext(await this.store.list(this.id), { leafId: this.currentLeafId });
+    const reader = this.branchReader();
+    return reader
+      ? rebuildSessionContext(reader, { sessionId: this.id, leafId: this.currentLeafId })
+      : rebuildSessionContext(await this.store.list(this.id), { leafId: this.currentLeafId });
   }
 }
 

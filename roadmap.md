@@ -1,6 +1,6 @@
 # prism Roadmap
 
-Updated: 2026-06-25
+Updated: 2026-06-29
 
 `prism` is a TypeScript/Node.js agent harness package. Host apps and extension
 packages bring providers, models, tools, resources, credentials, UI, storage,
@@ -539,6 +539,16 @@ Synapta third-party-ergonomics track (post-v0.0.1):
 32. `032-synapta-facing-integration-example-and-boundary-lock.md`
 33. `033-agent-definitions-declarative-requirements-and-resolver.md`
 
+External-app production-hardening track:
+34. `034-production-persistence-contract-and-schema.md`
+35. `035-durable-run-event-tool-usage-ledger.md`
+36. `036-atomic-append-branch-handles-and-scalable-session-queries.md`
+37. `037-security-boundary-hardening.md`
+38. `038-explicit-capability-activation-and-api-cleanup.md`
+39. `039-provider-runtime-protocol-correctness.md`
+40. `040-backpressure-and-performance-limits.md`
+41. `041-external-app-docs-examples-and-release-validation.md`
+
 ## Synapta integration feedback — third-party-ergonomics phase track
 
 After v0.0.1 publishing (plan 023), Prism enters a second design track driven by
@@ -559,7 +569,7 @@ Design principles enforced across this track:
   individually installable and individually selectable; a third party picks
   none, some, or all.
 - **Standard workspace/global discovery for contributions.** Skills discovered
-  from `<workspace>/.agent/skills/<name>/` and `~/.prism/agent/skills/<name>/`;
+  from `<workspace>/.agents/skills/<name>/` and `~/.prism/agent/skills/<name>/`;
   the same discovery applies to providers, tools, context providers, and
   instruction injectors contributed as packages. Discovery is host/CLI-driven
   (explicit filesystem loader), never a hidden global in core; apps using the
@@ -698,23 +708,23 @@ Acceptance:
 
 **Goal:** standard filesystem discovery for skills (and, where applicable,
 tools, context providers, and instruction injectors) so that anything available
-at `<workspace>/.agent/skills/<name>/` and `~/.prism/agent/skills/<name>/` is
+at `<workspace>/.agents/skills/<name>/` and `~/.prism/agent/skills/<name>/` is
 loadable as a contribution, with first-party and third-party packages equally
 discoverable. Provider discovery stays config/package-driven (needs
 credentials); Phase 24's resolver handles provider wiring.
 
 Deliver:
 - Host/CLI filesystem contribution loader (Node, optional) scanning:
-  - `<workspace>/.agent/skills/<name>/`
+  - `<workspace>/.agents/skills/<name>/`
   - `~/.prism/agent/skills/<name>/`
-  - and the analogous `.agent/tools/`, `.agent/context/`, `.agent/instructions/`, `.agent/agents/` (workspace) and `~/.prism/agent/{skills,tools,context,instructions,agents}/` (global) when those kinds are requested. Credentials-bearing providers are loaded as packages, not file-scanned.
-- Each discovered skill loads its `SKILL.md` (name, description, instructions, optional `context`, `toolNames`) into the `skills` contribution registry; tools/context/instructions/agents analogously register into their registries. Agent bundles load `AGENT.md` (see Phase 33) including any colocated `skills/<name>/SKILL.md` and `tools/<name>` into an agent-scoped registry so a file-declared agent carries its own deps as a unit.
+  - and the analogous `.agents/tools/`, `.agents/context/`, `.agents/instructions/`, `.agents/agents/` (workspace) and `~/.prism/agent/{skills,tools,context,instructions,agents}/` (global) when those kinds are requested. Credentials-bearing providers are loaded as packages, not file-scanned.
+- Each discovered skill loads its `SKILL.md` (name, description, instructions, optional `context`, `toolNames`) into the `skills` contribution registry; tools/context/instructions/agents analogously register into their registries. Agent bundles load `AGENTS.md` (see Phase 33) including any colocated `skills/<name>/SKILL.md` and `tools/<name>` into an agent-scoped registry so a file-declared agent carries its own deps as a unit.
 - Merge order: global first, workspace overrides same-name (or vice versa, documented and tested), explicit `AgentConfig` / `RunOptions` selections override discovered contributions (progressive disclosure preserved).
 - Discovery is opt-in and loader-driven: SDK apps can skip it entirely and pass explicit registries; the CLI uses it. No hidden global state in core.
 - First-party skills ship as installable packages (`@arnilo/prism-skill-*`), not bundled in core; discovered like any third-party skill. First-party tools (future) ship as `@arnilo/prism-tool-*` packages the same way. Hosts choose which discovered contributions to activate.
 
 Acceptance:
-- A workspace skill at `.agent/skills/my-skill/SKILL.md` is loadable, selectable via `activeSkills: ["my-skill"]`, and its `toolNames`/`context` honored.
+- A workspace skill at `.agents/skills/my-skill/SKILL.md` is loadable, selectable via `activeSkills: ["my-skill"]`, and its `toolNames`/`context` honored.
 - A global skill at `~/.prism/agent/skills/global-skill/SKILL.md` is loadable; workspace same-name overrides or merges per documented rule.
 - Discovered skills are inert until the host/selecting run activates them; discovery registers contributions, it does not auto-activate.
 - No filesystem access happens without the explicit host/CLI loader; in-memory SDK use is unaffected.
@@ -815,7 +825,7 @@ Deliver:
   2. Else build declaratively: model (direct or from `registries.models`), provider via `providerSource(model)` (Phase 24), tools resolved by name against active registry / `registries.tools` (**fail closed on missing name**, mirrors skill `toolNames`), skills via `resolveActiveSkills({registry, names, tools})` (Phase 26), context providers from `registries.contextProviders`. Compose `AgentConfig`, merge `overrides`, `createAgent(config)`.
 - Two equal delivery vehicles, same contract:
   - **Code package (Extension):** third-party `setup()` calls `api.registerTool()`/`registerSkill()` for own deps, then `api.registerAgent({name, tools:[...], skills:[...]})`. Names reference own + first-party contributions in the same registries.
-  - **Filesystem bundle (`AGENT.md`):** discovered under `.agent/agents/<name>/` (Phase 29). `AGENT.md` frontmatter maps 1:1 to declarative `AgentDefinition` fields; colocated `skills/<name>/SKILL.md` and `tools/<name>` register into an agent-scoped registry, so a file-declared agent carries its own deps as a unit. Default `create()` for `AGENT.md` reads the file, registers colocated deps into a transient scoped registry, and delegates to `resolveAgentDefinition`. Resolution scope: (global + workspace discovered) ∪ (colocated) ∪ (first-party package registries).
+  - **Filesystem bundle (`AGENTS.md`):** discovered under `.agents/agents/<name>/` (Phase 29). `AGENTS.md` frontmatter maps 1:1 to declarative `AgentDefinition` fields; colocated `skills/<name>/SKILL.md` and `tools/<name>` register into an agent-scoped registry, so a file-declared agent carries its own deps as a unit. Default `create()` for `AGENTS.md` reads the file, registers colocated deps into a transient scoped registry, and delegates to `resolveAgentDefinition`. Resolution scope: (global + workspace discovered) ∪ (colocated) ∪ (first-party package registries).
 - Composition and scope rules:
   - Names resolve against all in-scope registries: first-party packages + workspace discovery + global discovery + own extension.
   - Host controls scope by which registries it passes to `context.registries` — the "inert until host selects" principle is preserved; declaring `tools: ["read-file"]` does not force activation, host `overrides`/active tool superset is final.
@@ -825,12 +835,306 @@ Deliver:
   - Mixed sourcing is the point: `tools: ["read-file", "synapta/validate", "my-grep"]` mixes first-party + third-party + own in one declaration; the declarative name list is what makes it possible.
 
 Acceptance:
-- A code-package agent and an `AGENT.md` agent both resolve through the same `resolveAgentDefinition` and produce equal runtime behavior.
+- A code-package agent and an `AGENTS.md` agent both resolve through the same `resolveAgentDefinition` and produce equal runtime behavior.
 - Declaring `tools: ["missing"]` with no in-scope tool of that name fails closed at resolution, before any provider turn.
 - Declared skills honor `toolNames` enforcement (Phase 26) — agent-skill demanding an inactive tool fails fast.
 - `overrides` drops a tool or swaps a model as final authority.
 - No new architecture: `AgentDefinition`, `createAgent`, the contribution registries, Phase 24 resolver, Phase 26 `resolveActiveSkills`, and Phase 29 discovery are all reused; the only additions are the declaration fields and the resolver helper.
 - Docs: `/docs/agent-definitions.md` (new) with both delivery vehicles, declarative fields, resolution scope/merge rules, and a mixed first-party + third-party example; `/docs/contribution-registries.md` agent section updated; `docs/index.md` entry.
+
+## External-app production hardening track
+
+This track turns Prism from a correct SDK/package surface into something an
+external multi-user app can depend on without inventing its own missing runtime
+ledger. Order is intentional: schema first, then durable facts, then
+concurrency, then safety/defaults/runtime polish.
+
+### Phase 34 — Production persistence contract and schema
+
+**Goal:** define the database-backed persistence surface external apps need,
+without forcing a specific database into core.
+
+Deliver:
+- Production persistence contract(s) for sessions, entries, branches, runs, events, tool calls, usage, agent definitions/versions, tenants/accounts/users, retention, and migrations.
+- Reference relational schema and migration notes; optional NoSQL mapping notes only where the contract differs.
+- Session-entry schema versioning and strict `SessionEntry.kind` validation, including JSONL rejection/quarantine for unknown kinds.
+- Index/query requirements for `sessionId`, `runId`, `parentId`, branch leaf, timestamps, tenant/account, event type, and entry kind.
+- Pagination/cursor shape for branch/session/event reads so DB adapters do not have to load every entry.
+- Document JSONL as a development/local adapter, not a production multi-writer store.
+- Docs: `/docs/session-stores.md`, `/docs/database-persistence.md` (new), `/docs/index.md`.
+
+Acceptance:
+- A host can implement a DB adapter from the documented contract without reading runtime internals.
+- Invalid JSONL entry kinds fail closed.
+- Schema covers multi-tenant app storage, retention, migrations, and indexed branch reads.
+- No provider credentials or secrets are required by the persistence contract.
+
+### Phase 35 — Durable run, event, tool-call, and usage ledger
+
+**Goal:** persist the facts external apps need for resume, audit, billing, UI, and crash recovery.
+
+Deliver:
+- Durable `runs` lifecycle: queued/running/succeeded/failed/aborted, timestamps, active model/provider, metadata, idempotency key, error, and abort reason.
+- Persisted `AgentEvent` ledger or normalized equivalent for agent/tool/provider/artifact/retry/compaction events.
+- Durable tool-call rows: requested, validated/blocked, started, progress, result/error, redacted args/result, permission/validation reason.
+- Usage/cost/cache accounting rows from provider events and final run summaries.
+- Runtime hooks/adapters that append events/usage without double-writing message entries.
+- Docs: `/docs/agent-events.md`, `/docs/runs-and-usage.md` (new), `/docs/tools.md`, `/docs/index.md`.
+
+Acceptance:
+- Process exit after a run leaves enough data to show status, timeline, errors, tool outcomes, and usage.
+- Event persistence is redacted and ordered by `runId`/sequence/timestamp.
+- Billing/usage can be computed without replaying provider streams.
+
+### Phase 36 — Atomic append, branch handles, and scalable session queries
+
+**Goal:** make append-only sessions safe under multi-process apps and usable by branch-aware UIs.
+
+Deliver:
+- Atomic append API with expected parent/leaf, duplicate/idempotency key handling, and optimistic concurrency failure shape.
+- Durable branch handle/current-leaf model: `(sessionId, leafId)` is explicit and storable by hosts.
+- RPC/API checkout command for existing leaf ids; fix same-id `forkSession` overwriting the in-memory RPC session map.
+- DB-friendly branch query primitives that fetch one branch path/page instead of `store.list(sessionId)` + in-memory rebuild for every read.
+- JSONL docs/tests showing no cross-process safety; optional advisory lock remains host concern unless cheap.
+- Docs: `/docs/session-branching.md`, `/docs/rpc.md`, `/docs/database-persistence.md`, `/docs/index.md`.
+
+Acceptance:
+- Two workers appending to the same branch cannot silently corrupt parent order.
+- External UI can keep multiple branch handles for one `sessionId`.
+- RPC can switch to an existing branch leaf.
+- Large sessions do not require full-session load for common branch reads in DB adapters.
+
+### Phase 37 — Security boundary hardening
+
+**Goal:** close prompt/file/config/header escape hatches before production persistence makes mistakes durable.
+
+Deliver:
+- Instruction-injector `resource` paths resolved inside the contribution directory unless an explicit trusted absolute resource policy allows otherwise; permission/trust checked before read.
+- Discovery loaders check symlink/realpath containment before reading `AGENT.md`, `SKILL.md`, manifests, or instruction files.
+- Instruction injectors receive the same redacted input/history the runtime persists, or docs explicitly mark them privileged and host-selected.
+- Unknown `SystemPromptContribution.source` ranks no higher than run/host overrides; custom sources cannot accidentally override run-level prompt.
+- Config merge blocks `__proto__`, `prototype`, and `constructor` pollution or uses null-prototype objects.
+- Provider header merge policy prevents caller headers from overriding provider-owned auth/session/security headers; fix OpenRouter ordering.
+- Docs: `/docs/security-auth-trust.md`, `/docs/instruction-injection.md`, `/docs/system-prompts.md`, `/docs/provider-packages.md`, `/docs/index.md`.
+
+Acceptance:
+- Malicious discovered contributions cannot read outside trusted roots before checks run.
+- Config JSON cannot mutate object prototypes.
+- Caller-provided headers cannot replace provider authorization.
+- Prompt source ordering is deterministic and documented.
+
+### Phase 38 — Explicit capability activation and API cleanup
+
+**Goal:** remove surprising public-contract behavior that can over-grant tools/skills or imply inert features work.
+
+Deliver:
+- Safer default for declarative agents: omitted `tools`/`skills` means none unless host explicitly opts into current all-in-scope behavior.
+- Runtime skill activation remains explicit for app-facing docs; `toolNames` enforcement stays fail-closed.
+- Decide each inert `AgentConfig` field (`extensions`, `settings`, `credentials`): wire it through runtime or remove/deprecate/document as host-owned.
+- Registry duplicate policy: strict registration option or deterministic conflict errors for providers/models/tools/contributions where overwrite is unsafe.
+- Migration notes for apps relying on all-tools/all-skills defaults.
+- Docs: `/docs/agent-definitions.md`, `/docs/context-and-skills.md`, `/docs/contribution-registries.md`, `/docs/agent-session-runtime.md`, `/docs/index.md`.
+
+Acceptance:
+- An agent cannot accidentally receive every host tool/skill by omitting a list.
+- Public config fields either work or are clearly documented as not runtime-consumed.
+- Duplicate contribution names cannot silently shadow in strict mode.
+
+### Phase 39 — Provider/runtime protocol correctness
+
+**Goal:** make provider streams, loops, compaction, and memory workers obey one protocol end to end.
+
+Deliver:
+- Runtime handles `tool_call_delta` for streaming UI and reconstructs final tool calls consistently with provider conformance helpers.
+- `generate-validate-revise` emits normal turn events and records initial input history consistently with `single-shot`.
+- Provider request options `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` either work in first-party providers or are removed/deprecated from public docs.
+- LLM compaction max-output settings map to provider/model request fields that providers actually serialize.
+- Observational-memory runtime appends through the owning session/store seam instead of accepting mismatched `session` + `store` pairs.
+- Observational-memory worker replays assistant tool-call messages before tool-result messages for providers that require valid tool-call transcripts.
+- Docs: `/docs/provider-conformance.md`, `/docs/agent-loops.md`, `/docs/compaction.md`, `/docs/observational-memory.md`, `/docs/index.md`.
+
+Acceptance:
+- Tool-call deltas stream, reconstruct, execute, persist, and replay in one tested path.
+- Artifact loop event/history behavior matches single-shot where semantics overlap.
+- Timeout/retry knobs are either verified behavior or no longer advertised.
+- Memory worker transcripts pass provider conformance tests.
+
+### Phase 40 — Backpressure and performance limits
+
+**Goal:** keep slow consumers and long sessions from turning into unbounded memory or latency problems.
+
+Deliver:
+- Bounded subscriber queue policy: configurable max queued events, close/drop/backpressure behavior, and event for overflow when useful.
+- Performance tests or fixtures for long sessions, branch reads, event ledger reads, and JSONL dev-store degradation boundaries.
+- DB adapter guidance for indexes, cursor pagination, batch appends, and event sequence allocation.
+- Document production sizing assumptions and what remains host-owned.
+- Docs: `/docs/agent-events.md`, `/docs/database-persistence.md`, `/docs/performance.md` (new), `/docs/index.md`.
+
+Acceptance:
+- Slow event consumers cannot grow memory without bound by default.
+- Long-session tests catch accidental full-scan regressions in code paths that claim pagination.
+- Production performance limits are explicit, not implied by JSONL behavior.
+
+### Phase 41 — External-app docs, examples, and release validation
+
+**Goal:** prove an external app can use the hardened surface from docs alone.
+
+Deliver:
+- Fix README quickstart event subscription so `session.run()` and event consumption run concurrently.
+- End-to-end example app using a DB-backed adapter mock/reference, explicit tools/skills, durable run ledger, event timeline, usage, branching, and checkout.
+- Migration guide from in-memory/JSONL to DB-backed persistence and from permissive capability defaults to explicit activation.
+- Network-free tests for persistence contract, event ledger, security escapes, branch handles, runtime protocol, and docs examples.
+- Final release checklist updates for docs, package exports, examples, tarball contents, and public API drift.
+- Docs: `README.md`, `/docs/database-persistence.md`, `/docs/runs-and-usage.md`, `/docs/session-branching.md`, `/docs/migration.md` (new), `/docs/index.md`.
+
+Acceptance:
+- README quickstart runs as written.
+- Example external app can resume/display a prior run and branch timeline without reading source.
+- Release checks fail on missing docs for new public persistence/runtime surfaces.
+
+## Provider cache optimization and NeuralWatt first-party provider track
+
+This track standardizes provider-agnostic cache intent, hardens existing first-party
+providers, then adds NeuralWatt as a first-party package without leaking
+provider-specific behavior into core.
+
+NeuralWatt docs reviewed for this roadmap update:
+- `https://portal.neuralwatt.com/docs/api/overview`: OpenAI-compatible base URL `https://api.neuralwatt.com/v1`, endpoints, energy metrics, and rate-limit overview.
+- `https://portal.neuralwatt.com/docs/authentication`: Bearer API keys, `NEURALWATT_API_KEY`, and auth error shape.
+- `https://portal.neuralwatt.com/docs/api/chat-completions`: Chat Completions request fields, streaming, tool calling, reasoning fields, prefix-cache usage, and energy fields.
+- `https://portal.neuralwatt.com/docs/api/models`: `/v1/models` metadata for capabilities, limits, pricing, cached-input pricing, and aliases.
+- `https://portal.neuralwatt.com/docs/guides/streaming`: SSE chunks, `data: [DONE]`, usage chunks, and `: energy` / `: cost` SSE comments.
+- `https://portal.neuralwatt.com/docs/guides/tool-calling`: OpenAI-style tool schema and `tool_choice` behavior.
+- `https://portal.neuralwatt.com/docs/guides/rate-limits`: cache-aware concurrency/uncached-TPM limits, retryable `429`/`503`, `Retry-After`, and `retry_strategy`.
+- `https://portal.neuralwatt.com/docs/guides/error-handling`: retry vs non-retry status codes and error body format.
+- `https://portal.neuralwatt.com/docs/api/quota`: authenticated quota/usage endpoint and 1 rps limit.
+- `https://portal.neuralwatt.com/docs/integrations/opencode`: OpenCode/OpenAI-compatible config notes and coding-model defaults.
+
+### Phase 42 — Prompt-cache primitives and provider capability metadata
+
+**Goal:** let apps express cache intent once while providers map it to their own APIs.
+
+Deliver:
+- Backwards-compatible `ProviderRequestOptions` cache surface that keeps `cacheKey`/`cacheRetention` and adds optional structured cache hints only if needed: cache mode, stable key, retention, and explicit breakpoints.
+- `PromptCacheBreakpoint` shape for common reusable locations: system prompt, tools, stable context/resources, last stable message, last user message, or message id.
+- Model/provider compat metadata for cache support: implicit vs OpenAI key vs Anthropic/OpenRouter `cache_control` vs provider-specific cache, key length, max breakpoints, minimum cacheable tokens, and long-retention support.
+- Shared helpers for cache-key sanitizing/truncation, retention mapping, cache hit-rate calculation, and Anthropic-style `cache_control` application.
+- Migration note that old `cacheKey`/`cacheRetention` remain valid aliases.
+- Docs: `/docs/provider-caching.md` (new), `/docs/provider-request-policies.md`, `/docs/model-registry.md`, `/docs/index.md`.
+
+Acceptance:
+- Existing providers compile without adopting the new structured hints immediately.
+- Providers can map the same request to OpenAI `prompt_cache_key`, Anthropic/OpenRouter `cache_control`, implicit cache-only providers, or no cache.
+- Cache-key sanitizing is centralized and tested per provider max length.
+- Docs explain provider support without promising cache hits.
+
+### Phase 43 — Cache-aware input ordering and diagnostics
+
+**Goal:** improve cache hit rates by making stable prompt prefixes deterministic.
+
+Deliver:
+- Opt-in cache-aware default input/prompt layout that places stable instructions, tools, context/resources/attachments, summaries, and history before the current user turn.
+- Preserve existing default ordering unless host/package opts into cache-aware ordering or a future major version flips the default with migration notes.
+- Conformance fixture: same static prefix + different user suffix produces byte-stable provider payload prefix.
+- Usage helpers/reporting for `cacheReadTokens`, `cacheWriteTokens`, cache hit rate, and provider-specific cache savings metadata where available.
+- Tests covering attachments/resources before current input for cache-aware mode and no behavior change for legacy mode.
+- Docs: `/docs/input-and-prompt-assembly.md`, `/docs/provider-caching.md`, `/docs/runs-and-usage.md`, `/docs/index.md`.
+
+Acceptance:
+- Apps can opt into cache-friendly ordering without replacing the whole input builder.
+- Cache diagnostics work from normalized `Usage` fields even when a provider only reports reads.
+- Cache-aware mode does not move tool result transcripts into invalid provider order.
+
+### Phase 44 — First-party provider cache behavior hardening
+
+**Goal:** make existing provider packages use provider cache APIs correctly and consistently.
+
+Deliver:
+- OpenAI package: map Prism `short`/`long` to OpenAI-supported retention (`long` -> `24h` only where supported; `short` uses provider default), clamp keys, and keep `cached_tokens` accounting correct.
+- OpenAI-compatible core adapter: pass supported provider options (`cacheKey`, `cacheRetention`, headers/extra where appropriate) or document it as minimal Chat Completions only.
+- OpenRouter package: use `session_id`/`x-session-id` within provider limits, apply Anthropic-style `cache_control` only to chosen breakpoints instead of every content block, preserve `cached_tokens`/`cache_write_tokens`, and ensure provider auth headers cannot be overridden.
+- OpenCode Go package: use `cacheKey ?? sessionId` for `x-opencode-session`; add route-specific `cache_control` only where compatible; preserve OpenAI/Anthropic usage extraction.
+- Z.AI package: document implicit context caching and keep `cached_tokens`/`cache_write_tokens` extraction tested.
+- Kimi package: add Anthropic-style cache control where the coding endpoint accepts it or document unsupported behavior; keep `cache_read_input_tokens`/`cache_creation_input_tokens` extraction tested.
+- Provider conformance tests for cache payload shape, usage normalization, and header ownership.
+- Docs: `/docs/provider-packages.md`, `/docs/provider-caching.md`, provider package READMEs, `/docs/index.md`.
+
+Acceptance:
+- First-party providers no longer emit invalid cache retention values or over-broad cache-control markers.
+- Provider-owned `Authorization`/session/security headers win over user-provided headers.
+- Cache read/write token extraction is tested for every first-party provider.
+
+### Phase 45 — NeuralWatt first-party provider package
+
+**Goal:** add `@arnilo/prism-provider-neuralwatt` as a first-party OpenAI-compatible provider package.
+
+Deliver:
+- Workspace package `packages/provider-neuralwatt` with ESM build, exports, tests, README, and inclusion in `packages/prism-providers` / `packages/prism-all` aggregators if those packages are still the first-party bundle mechanism.
+- `createNeuralWattProvider()` using base URL `https://api.neuralwatt.com/v1` by default, injectable `fetch`, host credential resolver, and `NEURALWATT_API_KEY` docs.
+- Chat Completions serializer for NeuralWatt/OpenAI-compatible fields: `model`, `messages`, `tools`, `tool_choice`, `stream`, `stream_options.include_usage`, `temperature`, `top_p`, `max_tokens`, `stop`, `reasoning_effort`, `thinking_token_budget`, `chat_template_kwargs`, plus `compat`/`extra` escape hatches.
+- Message mapping for text/images/tool calls/tool results and prior assistant reasoning using `reasoning`/`reasoning_content` where Prism thinking blocks are preserved.
+- SSE parser that handles OpenAI-style data chunks, `[DONE]`, tool-call deltas, reasoning deltas/content, final usage chunks, and NeuralWatt SSE comments.
+- Usage mapping from `prompt_tokens`, `completion_tokens`, `total_tokens`, and `prompt_tokens_details.cached_tokens`; no cache-write tokens unless NeuralWatt starts reporting one.
+- Docs: `/docs/provider-neuralwatt.md` (new), `/docs/provider-packages.md`, `/docs/provider-caching.md`, `/docs/index.md`.
+
+Acceptance:
+- Package passes provider conformance tests network-free.
+- Streaming content, thinking, tool-call deltas/finals, usage, abort, and secret redaction behave like other first-party providers.
+- Auth header is set after caller headers so caller config cannot replace the provider token.
+- `cacheRetention: "none"` does not pretend to disable NeuralWatt's backend implicit prefix cache; docs state it only disables Prism/provider cache hints.
+
+### Phase 46 — NeuralWatt model discovery, pricing, energy, and retry semantics
+
+**Goal:** expose NeuralWatt-specific value without bloating core provider contracts.
+
+Deliver:
+- Curated model configs for featured NeuralWatt aliases (`glm-5.2`, `kimi-k2.6`, `kimi-k2.7-code`, `qwen3.5-397b`, `qwen3.6-35b`, and fast/short variants where useful) with capabilities, limits, reasoning/tool/vision flags, and cache pricing.
+- Optional `listNeuralWattModels()` helper that calls `/v1/models` and maps metadata into `ModelConfig`/`ModelCost` without requiring runtime model discovery.
+- NeuralWatt pricing mapping: input/output per million, cached input per million, no separate cache-write price for hosted models; preserve BYOK caveat in docs.
+- Energy/cost telemetry handling: parse non-streaming `energy`/`cost` fields and streaming `: energy` / `: cost` comments; expose through the smallest Prism-compatible seam available (provider telemetry event if added by Phase 35/42, otherwise package helper/metadata documented as provider-specific).
+- Optional `getNeuralWattQuota()` helper for `/v1/quota`, documented as 1 rps and not part of every generation call.
+- Retry classification/tests for NeuralWatt errors: do not retry `400/401/402/403/404`; honor `Retry-After` and `retry_strategy` for `429`; retry `500/502/503` with backoff; preserve redacted error body.
+- Docs: `/docs/provider-neuralwatt.md`, `/docs/runs-and-usage.md`, `/docs/provider-caching.md`, `/docs/index.md`.
+
+Acceptance:
+- Model metadata maps NeuralWatt capabilities/limits/pricing into Prism without guessing unknown fields.
+- Energy/cost data is not dropped silently when using the NeuralWatt package.
+- Retry behavior matches NeuralWatt's documented retryable status codes and headers.
+- Quota helper is opt-in and never called during normal provider generation.
+
+### Phase 47 — NeuralWatt cache, reasoning, and agentic workload validation
+
+**Goal:** verify NeuralWatt works well for long-running agent sessions, not just one-shot chat.
+
+Deliver:
+- Cache tests/fixtures for NeuralWatt implicit vLLM prefix caching: stable prefix ordering, `usage.prompt_tokens_details.cached_tokens`, 25% cached-input pricing metadata, and no explicit cache-control payload.
+- Docs explaining NeuralWatt's cache-aware limiter: uncached TPM counts cold prefill only, warm-prefix requests can avoid some 503 fleet-capacity blocks, and full prior history is required for multi-turn cache reuse.
+- Reasoning tests for `reasoning_effort`, `thinking_token_budget`, `chat_template_kwargs.enable_thinking`, `preserve_thinking`, and `clear_thinking` pass-through via `compat`/`extra`.
+- Transcript tests preserving prior assistant reasoning in `reasoning`/`reasoning_content` for Kimi/GLM/Qwen-style models while avoiding leakage into providers that do not support it.
+- Tool-call loop test using NeuralWatt OpenAI-style tools and tool results.
+- Docs: `/docs/provider-neuralwatt.md`, `/docs/provider-caching.md`, `/docs/agent-session-runtime.md`, `/docs/index.md`.
+
+Acceptance:
+- NeuralWatt agent sessions keep cache-friendly prompt prefixes across follow-up turns.
+- Reasoning controls are passed through without forcing NeuralWatt-specific fields into core contracts.
+- Tool-call transcripts round-trip through Prism runtime and NeuralWatt payload format.
+
+### Phase 48 — Cache/provider docs, examples, and release validation
+
+**Goal:** make cache behavior and NeuralWatt integration usable from docs alone.
+
+Deliver:
+- README/provider table update listing OpenAI, OpenRouter, OpenCode Go, Z.AI, Kimi, and NeuralWatt with cache support summary.
+- Example showing cache-aware prompt assembly and cache hit-rate reporting across at least two providers, one explicit-cache provider and NeuralWatt implicit prefix caching.
+- Example NeuralWatt agent run with tools, reasoning controls, streamed usage, cache tokens, and energy/cost telemetry using mocked responses.
+- Package export/tarball checks for `@arnilo/prism-provider-neuralwatt`, aggregator packages, docs links, and type declarations.
+- Network-free tests for all docs examples.
+- Docs: `README.md`, `/docs/provider-caching.md`, `/docs/provider-neuralwatt.md`, `/docs/provider-packages.md`, `/docs/examples.md` if present, `/docs/index.md`.
+
+Acceptance:
+- Users can configure NeuralWatt from docs without reading package source.
+- Cache behavior is documented per provider with explicit caveats for implicit caches.
+- Release checks fail if the NeuralWatt package or cache docs are missing from exports/navigation.
 
 ## Defer until after this track
 
@@ -838,5 +1142,5 @@ Acceptance:
 - MCP bridge. Build as an external extension package after extension APIs settle.
 - Full TUI. Optional separate package if CLI/RPC is not enough.
 - Additional loop strategies (plan-authoring, multi-agent, graph orchestration). Add as new `AgentLoopStrategy` implementations once a real consumer needs them; the generic loop contract is the only seam.
-- Additional first-party provider adapters beyond OpenAI, OpenCode Go, OpenRouter, ZAI, and Kimi unless users ask.
+- Additional first-party provider adapters beyond OpenAI, OpenCode Go, OpenRouter, ZAI, Kimi, and NeuralWatt unless users ask.
 - Encrypted/keychain credential storage. Keep persistent secret UX host-owned until a real app needs it.

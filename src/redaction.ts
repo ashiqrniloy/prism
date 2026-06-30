@@ -1,4 +1,4 @@
-import type { AgentEvent, ErrorInfo, Message, ProviderRequest, SessionEntry } from "./contracts.js";
+import type { AgentEvent, ErrorInfo, Message, ProviderRequest, RunLedgerRecord, SessionEntry } from "./contracts.js";
 
 const REDACTED = "[REDACTED]";
 
@@ -24,6 +24,10 @@ export function redactSessionEntry(entry: SessionEntry, redactor?: SecretRedacto
 
 export function redactProviderRequest(request: ProviderRequest, redactor?: SecretRedactor): ProviderRequest {
   return redactor?.redact(request) ?? request;
+}
+
+export function redactRunLedgerRecord<T extends RunLedgerRecord>(record: T, redactor?: SecretRedactor): T {
+  return redactor?.redact(record) ?? record;
 }
 
 export function redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T {

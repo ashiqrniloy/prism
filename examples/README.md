@@ -43,10 +43,15 @@ Each demo prints a single JSON line with its result.
 - `manifests.ts` — data-only Prism manifest: define + parse.
 - `config-settings.ts` — layered config merge + settings providers.
 - `system-prompts.ts` — layered system-prompt composition; disabling layers.
+- `system-project-prompts.ts` — **demo**: auto-load `AGENTS.md`/`SYSTEM.md` via
+  `loadSystemPromptFiles` (trust-gated) and prove the composed prompt reaches the provider.
 - `jsonl-stores-branching.ts` — in-memory store + branching; JSONL persistence.
 - `compaction.ts` — **demo**: LLM compaction with a mock summarizer provider.
 - `observational-memory-recall-status-view.ts` — **demo**: recall tool +
   status/view commands; recall fails closed on invalid ids.
+- `synapta-style-artifact-loop.ts` — **demo**: third-party host mixing first-party
+  and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the
+  `generate-validate-revise` artifact loop with host-owned schema validation.
 - `cli.ts` — **demo**: spawn the `prism` bin in print and json modes.
 - `rpc.ts` — **demo**: drive the `prism` bin in rpc mode with a JSONL request.
 - `tsconfig.json` — typecheck-only config.

@@ -11,7 +11,7 @@ Injectors are the package-side complement to the host-owned `systemInstructions`
 - A package wants to bias the model toward a response format (e.g. "answer in JSON") every turn.
 - A package wants to inject project context (e.g. a repo summary) on the first turn only.
 - A package wants to react to user input (via a `predicate`) without re-authoring the assembler.
-- A package wants to ship a discoverable `.agent/instructions/<name>/` bundle that hosts opt into by name.
+- A package wants to ship a discoverable `.agents/instructions/<name>/` bundle that hosts opt into by name.
 
 Injectors are **not** a way to grant tool access, change credentials, or mutate provider request options.
 
@@ -46,7 +46,7 @@ interface InstructionInjector {
 }
 ```
 
-`InstructionContext` fields are already redacted by the runtime before `apply` runs: input is run through the host redactor during assembly, and history holds previously-redacted messages.
+`InstructionContext` fields are already redacted by the runtime before `apply` runs: current input is run through the active `AgentConfig.redactor` / `RunOptions.redactor` during assembly, and history holds previously-redacted messages. Direct `assembleProviderInput()` callers that use injectors should pass the same `redactor` option to keep this boundary.
 
 ### Lifecycle
 
@@ -124,14 +124,15 @@ const injectors = resolveInstructionInjectors({ registry, names: ["json-always",
 
 ### Phase 29 discovery loading
 
-A discovered `.agent/instructions/<name>/manifest.json` (see [Contribution discovery](contribution-discovery.md)) becomes a live injector via the host-owned Node adapter — core performs no `import()`:
+A discovered `.agents/instructions/<name>/manifest.json` (see [Contribution discovery](contribution-discovery.md)) becomes a live injector via the host-owned Node adapter — core performs no `import()`:
 
 ```ts
 import { registerDiscoveredInstructionInjectors } from "@arnilo/prism/node/instruction-injectors";
 
 // markdown-only (no `module` field) → static every_turn injector reading resource text;
 // module-referenced → host-supplied moduleLoader (skipped when absent).
-await registerDiscoveredInstructionInjectors(registries, discovered, { moduleLoader });
+// resourceTrust is only needed for absolute/outside resource files.
+await registerDiscoveredInstructionInjectors(registries, discovered, { moduleLoader, resourceTrust });
 ```
 
 The CLI wires this under `--discover` (see below). Hosts embedding the SDK keep the registry empty and supply injectors directly on `AgentConfig`/`RunOptions`.
@@ -167,6 +168,7 @@ RPC: `prompt`/`followUp` params accept an optional `instructionInjectors: readon
 - **No privilege grant:** `InstructionContribution` exposes only `instructions`/`contextBlocks`/`when`/`predicate`. There is no `tools`, `skills`, `permissions`, or `execute` field; a malformed contribution smuggling those fields contributes only `instructions`. Registering an injector adds entries only to `instructionInjectors`; `tools`/`skills`/`contextProviders`/`systemPromptContributions` stay empty.
 - **Cannot bypass validator or permissions:** injectors are layered into prompt assembly; tool dispatch still re-checks the active registry (`unknown_tool`), filters, arguments, the permission assertion, and `validate` (Phase 4/25/26).
 - **Secrets never enter history/events:** secrets in injector-produced `instructions`/`contextBlocks` are redacted in the outgoing `ProviderRequest` (via `redactProviderRequest`) and in emitted events (via `redactAgentEvent`). Do not put secrets in injector text at authoring time; the redactor is a backstop, not an invitation.
+- **Resource containment:** markdown-only discovered injectors resolve `resource` relative to their contribution directory and realpath-check it before read. Relative `..`, absolute paths, or symlinks that escape the contribution directory are rejected unless the host passes an explicit `resourceTrust` policy; `permission` is still checked before reading.
 - No hidden globals: injectors are resolved explicitly per run; nothing is auto-activated or auto-imported by core.
 
 ## Related APIs
@@ -175,7 +177,7 @@ RPC: `prompt`/`followUp` params accept an optional `instructionInjectors: readon
 - [System prompts](system-prompts.md): `composeSystemPrompt` and the `package`/`app`/`user`/`run` layering injectors layer into.
 - [Context and skills](context-and-skills.md): `resolveContextProviders` merge order and skill `context`.
 - [Contribution registries](contribution-registries.md): `instructionInjectors` registry.
-- [Contribution discovery](contribution-discovery.md): `.agent/instructions/<name>/` discovery and the host-owned `loadInstructionInjector` adapter.
+- [Contribution discovery](contribution-discovery.md): `.agents/instructions/<name>/` discovery and the host-owned `loadInstructionInjector` adapter.
 - [Extensions](extensions.md): `registerInstructionInjector` in the contribution-kinds list.
 - [CLI and RPC](cli-rpc.md): `--instruction`/`--injector-file` flags and the RPC `instructionInjectors` field.
 - [Credentials and redaction](credentials-and-redaction.md): `createSecretRedactor`, `redactProviderRequest`, `redactAgentEvent`.

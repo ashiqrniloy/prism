@@ -8,7 +8,7 @@ describe("DiscoveredContribution types (compile only)", () => {
       kind: "skill",
       name: "greeter",
       origin: "workspace",
-      path: "/.agent/skills/greeter/SKILL.md",
+      path: "/.agents/skills/greeter/SKILL.md",
       skill: { name: "greeter", description: "greets", instructions: "say hi", toolNames: ["greet-tool"] },
     };
     const kind: ContributionFileKind = contribution.kind;
@@ -19,8 +19,8 @@ describe("DiscoveredContribution types (compile only)", () => {
     const contribution: DiscoveredContribution = {
       kind: "tool",
       name: "my-tool",
-      origin: "global",
-      path: "/.prism/agent/tools/my-tool/manifest.json",
+      origin: "workspace",
+      path: "/repo/.agents/tools/my-tool/manifest.json",
       declaration: {
         kind: "tool",
         name: "my-tool",

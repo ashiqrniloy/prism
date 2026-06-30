@@ -1,4 +1,4 @@
-import { assertJsonObject, isJsonObject } from "./config.js";
+import { assertJsonObject } from "./config.js";
 import type { JsonObject } from "./contracts.js";
 
 export type ManifestContributionKind =
@@ -152,6 +152,6 @@ function readOptionalString(record: Record<string, unknown>, key: string, label 
 function readOptionalJsonObject(record: Record<string, unknown>, key: string, label = `manifest.${key}`): Record<string, JsonObject> {
   const value = record[key];
   if (value === undefined) return {};
-  if (!isJsonObject(value)) throw new Error(`${label} must be a JSON object`);
+  assertJsonObject(value, label);
   return { [key]: value };
 }

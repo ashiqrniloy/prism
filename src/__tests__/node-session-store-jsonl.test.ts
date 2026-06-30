@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createSessionEntry } from "../session-stores.js";
 import { createJsonlSessionStore, readJsonlSessionEntries } from "../node/session-store-jsonl.js";
+import { isSessionAppendConflict, isSessionEntryKind, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION } from "../index.js";
 
 async function tempPath(name = "sessions.jsonl"): Promise<string> {
   return join(await mkdtemp(join(tmpdir(), "prism-jsonl-")), name);
@@ -129,6 +130,28 @@ describe("node jsonl session store", () => {
     await assert.rejects(() => store.append({ ...entry, sessionId: "s2" }), /Duplicate session entry id: e1/);
   });
 
+  it("throws SessionAppendConflictError when expectedParentId does not exist", async () => {
+    const path = await tempPath();
+    const store = createJsonlSessionStore(path);
+    const orphan = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "orphan" });
+    await assert.rejects(
+      () => store.append(orphan, { expectedParentId: "missing" }),
+      (error: unknown) => isSessionAppendConflict(error) && error.conflict.expectedParentId === "missing",
+    );
+    assert.equal((await readJsonlSessionEntries(path)).entries.length, 0);
+  });
+
+  it("deduplicates an exact retry at the same position by idempotencyKey", async () => {
+    const path = await tempPath();
+    const store = createJsonlSessionStore(path);
+    await store.append(createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "root" }), { idempotencyKey: "k1" });
+    await assert.rejects(
+      () => store.append(createSessionEntry({ id: "dup", sessionId: "s1", kind: "label", label: "dup" }), { idempotencyKey: "k1" }),
+      (error: unknown) => isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate === true,
+    );
+    assert.equal((await readJsonlSessionEntries(path)).entries.length, 1);
+  });
+
   it("package subpath is declared", async () => {
     const packageJson = JSON.parse(await readFile("package.json", "utf8")) as { exports: Record<string, unknown> };
 
@@ -136,5 +159,78 @@ describe("node jsonl session store", () => {
       types: "./dist/node/session-store-jsonl.d.ts",
       default: "./dist/node/session-store-jsonl.js",
     });
+  });
+
+  it("exports session entry kind constants and validator", () => {
+    assert.equal(SESSION_ENTRY_SCHEMA_VERSION, 1);
+    assert.deepEqual(SESSION_ENTRY_KINDS, ["message", "event", "summary", "metadata", "model_change", "label", "custom", "compaction"]);
+    for (const kind of SESSION_ENTRY_KINDS) assert.equal(isSessionEntryKind(kind), true);
+    assert.equal(isSessionEntryKind("future_kind"), false);
+    assert.equal(isSessionEntryKind(123), false);
+  });
+
+  it("quarantines unknown entry kinds", async () => {
+    const path = await tempPath();
+    const valid = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "ok" });
+    const unknownKind = JSON.stringify({ id: "e2", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "future_kind", label: "x" });
+    await writeFile(path, [JSON.stringify(valid), unknownKind].join("\n"), "utf8");
+
+    const store = createJsonlSessionStore(path);
+    assert.deepEqual((await store.list("s1")).map((entry) => entry.id), ["e1"]);
+
+    const result = await readJsonlSessionEntries(path);
+    assert.equal(result.entries.length, 1);
+    assert.equal(result.errors.length, 1);
+    assert.ok(result.errors[0]!.message.includes("Unknown session entry kind"));
+    assert.ok(result.errors[0]!.message.includes("future_kind"));
+  });
+
+  it("accepts omitted schemaVersion as v1", async () => {
+    const path = await tempPath();
+    const entry = { id: "e1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "ok" };
+    await writeFile(path, JSON.stringify(entry), "utf8");
+
+    const result = await readJsonlSessionEntries(path);
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.entries.length, 1);
+    assert.equal(result.entries[0]!.schemaVersion, undefined);
+  });
+
+  it("rejects unsupported schemaVersion", async () => {
+    const path = await tempPath();
+    const valid = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "ok" });
+    const futureVersion = JSON.stringify({ id: "e2", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "x", schemaVersion: 2 });
+    const badVersion = JSON.stringify({ id: "e3", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "x", schemaVersion: "v1" });
+    await writeFile(path, [JSON.stringify(valid), futureVersion, badVersion].join("\n"), "utf8");
+
+    const result = await readJsonlSessionEntries(path);
+    assert.equal(result.entries.length, 1);
+    assert.equal(result.errors.length, 2);
+    assert.ok(result.errors.some((error) => error.message.includes("Unsupported session entry schema version: 2")));
+    assert.ok(result.errors.some((error) => error.message.includes("Unsupported session entry schema version: v1")));
+  });
+
+  it("round trips event and metadata entries with valid payloads", async () => {
+    const path = await tempPath();
+    const eventEntry = createSessionEntry({ id: "ev1", sessionId: "s1", kind: "event", event: { type: "agent_started", sessionId: "s1", runId: "r1" } });
+    const metadataEntry = createSessionEntry({ id: "md1", sessionId: "s1", kind: "metadata", data: { source: "test" } });
+    const store = createJsonlSessionStore(path);
+    await store.append(eventEntry);
+    await store.append(metadataEntry);
+
+    assert.deepEqual(await store.list("s1"), [eventEntry, metadataEntry]);
+  });
+
+  it("quarantines event and metadata entries with invalid payloads", async () => {
+    const path = await tempPath();
+    const badEvent = JSON.stringify({ id: "ev1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "event", event: "not-an-object" });
+    const badMetadata = JSON.stringify({ id: "md1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "metadata", data: ["array"] });
+    await writeFile(path, [badEvent, badMetadata].join("\n"), "utf8");
+
+    const result = await readJsonlSessionEntries(path);
+    assert.equal(result.entries.length, 0);
+    assert.equal(result.errors.length, 2);
+    assert.ok(result.errors.some((error) => error.message.includes("event entry")));
+    assert.ok(result.errors.some((error) => error.message.includes("metadata entry")));
   });
 });

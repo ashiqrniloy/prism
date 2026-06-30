@@ -51,8 +51,8 @@ describe("cli instruction-injector flags (Phase 30 Task 8)", () => {
 
   it("--instruction <name> with a discovered injector reaches the provider input", async () => {
     const root = await makeRoot("named");
-    await writeFileDeep(`${root}/.agent/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
-    await writeFileDeep(`${root}/.agent/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
+    await writeFileDeep(`${root}/.agents/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
+    await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
     const captured: ProviderRequest[] = [];
     const io = streams();
 
@@ -69,8 +69,8 @@ describe("cli instruction-injector flags (Phase 30 Task 8)", () => {
 
   it("without --instruction the discovered injector is not applied", async () => {
     const root = await makeRoot("noinj");
-    await writeFileDeep(`${root}/.agent/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
-    await writeFileDeep(`${root}/.agent/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
+    await writeFileDeep(`${root}/.agents/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
+    await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
     const captured: ProviderRequest[] = [];
     const io = streams();
 
@@ -104,8 +104,8 @@ describe("cli instruction-injector flags (Phase 30 Task 8)", () => {
 
   it("--instruction false yields zero injectors (disables)", async () => {
     const root = await makeRoot("false");
-    await writeFileDeep(`${root}/.agent/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
-    await writeFileDeep(`${root}/.agent/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
+    await writeFileDeep(`${root}/.agents/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
+    await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
     const captured: ProviderRequest[] = [];
     const io = streams();
 

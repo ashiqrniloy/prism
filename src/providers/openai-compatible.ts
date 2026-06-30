@@ -53,8 +53,8 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
         const response = await fetchImpl(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
           method: "POST",
           headers: {
-            "content-type": "application/json",
             ...request.options?.headers,
+            "content-type": "application/json",
             ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
           },
           body: JSON.stringify(toOpenAIRequest(request)),

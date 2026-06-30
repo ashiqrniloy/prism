@@ -126,7 +126,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - [Middleware hooks](middleware-hooks.md): ordered hook registry populated by `ExtensionAPI.use()`.
 - [Provider packages](provider-packages.md): provider package and model metadata registration through `ExtensionAPI`.
 - [Contribution registries](contribution-registries.md): registry bundle populated by `ExtensionAPI`.
-- [Contribution discovery (workspace & global)](contribution-discovery.md): filesystem-driven complement to extension registration — opt-in scan without `import()` or activation.
+- [Contribution discovery (workspace)](contribution-discovery.md): filesystem-driven complement to extension registration — opt-in scan without `import()` or activation.
 - [Tools](tools.md): host activation, filtering, and dispatch for contributed tool definitions.
 - [Instruction injection](instruction-injection.md): package injectors that layer instructions and context blocks for `first_turn`/`every_turn`/`on_input` without granting tools.
 - [Input and prompt assembly](input-and-prompt-assembly.md): host selection for contributed input/prompt builders.

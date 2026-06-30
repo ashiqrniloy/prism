@@ -55,6 +55,9 @@ When multiple filters are provided, each non-empty allow list must include the t
 | `validate` | Optional host validator returning `void`, a message string, or `ErrorInfo`. A non-`void` return blocks dispatch with reason `validation_failed` (redacted). Runs after the permission assertion and before `tool.execute()`. |
 | `emit` | Optional `AgentEvent` callback for lifecycle events. |
 | `secrets` | Known secret values to redact from thrown tool errors. |
+| `redactor` | Optional `SecretRedactor` used to redact tool-call ledger records. |
+| `ledger` | Optional `RunLedger` adapter; when set, `dispatchToolCall` appends `ToolCallRecord` rows. |
+| `ownership` | Optional `OwnershipScope` copied into each `ToolCallRecord`. |
 
 ## Outputs / response / events
 
@@ -71,6 +74,20 @@ Dispatch can emit these `AgentEvent` types:
 | `tool_execution_progress` | When the tool calls `context.progress()`. |
 | `tool_execution_finished` | After successful execution and `tool_result` middleware. |
 | `tool_execution_error` | When `tool.execute()` throws. |
+
+### Tool-call ledger rows
+
+When `options.ledger` is set, `dispatchToolCall()` also appends a `ToolCallRecord` for each lifecycle transition. The runtime passes each record through `redactRunLedgerRecord(record, options.redactor)` before handing it to the adapter. Rows are written for:
+
+| Status | When | Extra fields |
+| --- | --- | --- |
+| `started` | After `tool_execution_started` | `startedAt`, `arguments` |
+| `started` (progress snapshot) | On each `context.progress()` call | `progress`, `progressMetadata`, `progressAt` |
+| `finished` | After `tool_execution_finished` | `finishedAt`, `result` |
+| `error` | After `tool_execution_error` | `finishedAt`, `result` with `error` |
+| `blocked` | On any blocked path | `finishedAt`, `reason`, `result` with `error` |
+
+Blocked reasons are `unknown_tool`, `tool_denied`, `invalid_arguments`, `permission_denied`, and `validation_failed`. Progress snapshots reuse status `started` because the tool call is still in flight.
 
 ## Request/response example
 

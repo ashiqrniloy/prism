@@ -8,10 +8,13 @@ const docsDir = "docs";
 const apiPages = [
   "docs/public-contracts.md",
   "docs/agent-session-runtime.md",
+  "docs/agent-definitions.md",
   "docs/agent-loops.md",
   "docs/agent-events.md",
   "docs/structured-output.md",
   "docs/session-stores-and-branching.md",
+  "docs/session-stores.md",
+  "docs/database-persistence.md",
   "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
   "docs/provider-conformance.md",
@@ -320,27 +323,23 @@ describe("docs", () => {
     assert.ok(apiPages.includes("docs/contribution-discovery.md"), "apiPages missing contribution-discovery.md");
 
     for (const phrase of [
-      ".agent/{skills,tools,context,instructions,agents}/<name>/",
-      "~/.prism/agent/{skills,tools,context,instructions,agents}/<name>/",
+      ".agents/{skills,tools,context,instructions}/<name>/",
       "SKILL.md",
-      "AGENT.md",
+      "AGENTS.md",
       "manifest.json",
-      "global first",
-      "workspace overrides",
       "createPathTrustPolicy",
       "isPathInsideReal",
       "opt-in",
       "does not `import()`",
       "No auto-activate",
       "No provider scanning",
-      "Phase 33",
       "examples/discover-skills.ts",
     ]) {
       assert.ok(page.includes(phrase), `docs/contribution-discovery.md missing ${phrase}`);
     }
 
-    // The four CLI flags appear in the CLI reference.
-    for (const flag of ["--discover", "--discover-kinds", "--discover-global", "--no-discovery"]) {
+    // The CLI flags appear in the CLI reference.
+    for (const flag of ["--discover", "--discover-kinds", "--no-discovery"]) {
       assert.ok(cli.includes(flag), `docs/cli-rpc.md missing ${flag}`);
     }
 
@@ -394,9 +393,57 @@ describe("docs", () => {
 
   it("system prompt docs cover layers and secret warning", () => {
     const docs = readFileSync("docs/system-prompts.md", "utf8");
-    for (const phrase of ["composeSystemPrompt", "package`, `app`, `user`, then `run`", "RunOptions.systemPrompt: false", "Do not put secrets in prompts"]){
+    for (const phrase of ["composeSystemPrompt", "`user`, `package`, `app`, then `run`", "RunOptions.systemPrompt: false", "Do not put secrets in prompts"]){
       assert.ok(docs.includes(phrase), `system prompt docs missing ${phrase}`);
     }
+  });
+
+  it("system_prompt_docs_cover_agents_md_and_system_md_files_phase_31", () => {
+    // Phase 31 Task 7 enforcement: the AGENTS.md / SYSTEM.md file-loader section,
+    // CLI flags, trust model, SDK escape hatch, and behavior-change callout.
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown> };
+    const page = readFileSync("docs/system-prompts.md", "utf8");
+    const cli = readFileSync("docs/cli-rpc.md", "utf8");
+    const discovery = readFileSync("docs/contribution-discovery.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+
+    // The Node subpath ships.
+    assert.deepEqual(packageJson.exports["./node/system-prompts"], {
+      types: "./dist/node/system-project-prompts.d.ts",
+      default: "./dist/node/system-project-prompts.js",
+    });
+
+    // Layering order + behavior-change callout.
+    for (const phrase of [
+      "AGENTS.md and SYSTEM.md files",
+      "loadSystemPromptFiles",
+      "source: \"user\"",
+      "source: \"app\"",
+      "`SYSTEM.md` (user) → package → `AGENTS.md` (app) → host `AgentConfig.systemPrompt` → `RunOptions.systemPrompt`",
+      "Behavior change (Phase 31)",
+      "SDK escape hatch",
+      "trust-gated",
+      "redactProviderRequest",
+      "examples/system-project-prompts.ts",
+      "@arnilo/prism/node/system-prompts",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/system-prompts.md missing ${phrase}`);
+    }
+
+    // The four CLI flags are documented in the CLI reference.
+    for (const flag of ["--no-agents-md", "--no-system-md", "--agents-md-file", "--system-md-file"]) {
+      assert.ok(cli.includes(flag), `docs/cli-rpc.md missing ${flag}`);
+    }
+    // The CLI documents the print/json auto-load + RPC host-owned exception.
+    assert.ok(cli.includes("auto-loads"), "docs/cli-rpc.md does not document AGENTS.md/SYSTEM.md auto-load");
+
+    // Discovery page cross-references the sibling loader (AGENTS.md/SYSTEM.md are not a scanner kind).
+    assert.ok(discovery.includes("loadSystemPromptFiles"), "docs/contribution-discovery.md does not cross-reference loadSystemPromptFiles");
+    assert.ok(discovery.includes("sibling"), "docs/contribution-discovery.md does not describe the loader as a sibling");
+
+    // Index entry mentions walk-up loading.
+    assert.ok(index.includes("AGENTS.md"), "docs/index.md System prompts entry does not mention AGENTS.md");
+    assert.ok(index.includes("SYSTEM.md"), "docs/index.md System prompts entry does not mention SYSTEM.md");
   });
 
   it("provider conformance docs cover testing subpath and no network", () => {
@@ -487,6 +534,46 @@ describe("docs", () => {
     }
   });
 
+  it("phase37_security_boundary_docs_cover_hardening_summary", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const security = readFileSync("docs/settings-auth-trust-security.md", "utf8");
+    const discovery = readFileSync("docs/contribution-discovery.md", "utf8");
+    const injection = readFileSync("docs/instruction-injection.md", "utf8");
+    const prompts = readFileSync("docs/system-prompts.md", "utf8");
+    const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
+    const providers = readFileSync("docs/provider-packages.md", "utf8");
+    const openrouter = readFileSync("docs/providers/openrouter.md", "utf8");
+
+    for (const phrase of [
+      "security-boundary hardening summary",
+      "realpath-contained",
+      "prototype-pollution key rejection",
+      "provider-owned header precedence",
+    ]) {
+      assert.ok(index.includes(phrase), `docs/index.md missing ${phrase}`);
+    }
+    for (const phrase of [
+      "Boundary hardening summary",
+      "Contribution files",
+      "Instruction resources",
+      "Injector context",
+      "System prompt sources",
+      "Config/manifest JSON",
+      "Provider headers",
+      "add no workers, watchers, retries, network, or filesystem scans",
+    ]) {
+      assert.ok(security.includes(phrase), `settings-auth-trust-security.md missing ${phrase}`);
+    }
+    assert.ok(discovery.includes("entry-file symlink cannot escape"));
+    assert.ok(injection.includes("already redacted by the runtime"));
+    assert.ok(injection.includes("resourceTrust"));
+    assert.ok(injection.includes("No privilege grant"));
+    assert.ok(prompts.includes("Unknown custom sources sort between `package` and `app`"));
+    assert.ok(manifests.includes("`__proto__`, `prototype`, and `constructor` keys at every depth"));
+    assert.ok(providers.includes("provider-owned headers last"));
+    assert.ok(openrouter.includes("OpenRouter-owned headers are applied last"));
+  });
+
   it("readme_describes_current_runtime_provider_packages_cli_and_examples", () => {
     const readme = readFileSync("README.md", "utf8");
     for (const name of ["createAgent", "createAgentSession"]) {
@@ -525,6 +612,7 @@ describe("docs", () => {
       "examples/manifests.ts",
       "examples/config-settings.ts",
       "examples/system-prompts.ts",
+      "examples/system-project-prompts.ts",
       "examples/jsonl-stores-branching.ts",
       "examples/compaction.ts",
       "examples/observational-memory-recall-status-view.ts",
@@ -550,6 +638,7 @@ describe("docs", () => {
       "examples/rpc.ts",
       "examples/discover-skills.ts",
       "examples/instruction-injection.ts",
+      "examples/system-project-prompts.ts",
     ];
     const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
     for (const file of demos) {
@@ -735,5 +824,59 @@ describe("docs", () => {
     ]) {
       assert.ok(page.includes(phrase), `docs/instruction-injection.md missing ${phrase}`);
     }
+  });
+
+  it("database_persistence_docs_cover_phase_34_schema_indexes_retention_migrations_and_nosql", () => {
+    const page = readFileSync("docs/database-persistence.md", "utf8");
+    const sessionStores = readFileSync("docs/session-stores.md", "utf8");
+
+    // Required entities from roadmap Phase 34.
+    for (const entity of [
+      "prism_tenants",
+      "prism_accounts",
+      "prism_users",
+      "prism_agent_definitions",
+      "prism_sessions",
+      "prism_branches",
+      "prism_session_entries",
+      "prism_runs",
+      "prism_agent_events",
+      "prism_tool_calls",
+      "prism_usage",
+      "prism_retention_policies",
+      "prism_migrations",
+    ]) {
+      assert.ok(page.includes(entity), `docs/database-persistence.md missing entity ${entity}`);
+    }
+
+    // Required index/query keys.
+    for (const key of [
+      "session_id",
+      "run_id",
+      "parent_id",
+      "leaf_entry_id",
+      "timestamp",
+      "tenant_id",
+      "account_id",
+      "user_id",
+      "type",
+      "kind",
+      "expires_at",
+      "idempotency_key",
+    ]) {
+      assert.ok(page.includes(key), `docs/database-persistence.md missing index/key ${key}`);
+    }
+
+    // Retention and migration sections.
+    for (const phrase of ["Retention policies", "Migrations", "NoSQL mapping notes", "JSONL"]) {
+      assert.ok(page.includes(phrase), `docs/database-persistence.md missing section ${phrase}`);
+    }
+
+    // Security locks.
+    assert.ok(page.includes("never stores provider credentials"), "docs/database-persistence.md missing credentials lock");
+    assert.ok(page.includes("redacted"), "docs/database-persistence.md missing redaction mention");
+
+    // session-stores.md cross-links the schema.
+    assert.ok(sessionStores.includes("database-persistence.md"), "docs/session-stores.md does not link database-persistence.md");
   });
 });

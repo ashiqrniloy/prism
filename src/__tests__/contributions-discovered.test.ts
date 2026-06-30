@@ -19,26 +19,6 @@ describe("registerDiscoveredContributions", () => {
     assert.deepEqual([...(skill.toolNames ?? [])], ["t"]);
   });
 
-  it("registers an agent stub whose create() throws the documented Phase-33 error", () => {
-    const registries = createContributionRegistries();
-    registerDiscoveredContributions(registries, [
-      {
-        kind: "agent",
-        name: "agent-x",
-        origin: "workspace",
-        path: "/a/agent-x/AGENT.md",
-        declaration: { kind: "agent", name: "agent-x", resource: "/a/agent-x/AGENT.md" },
-      },
-    ]);
-
-    const agent = registries.agents.resolve("agent-x");
-    assert.equal(agent.name, "agent-x");
-    assert.throws(
-      () => agent.create(),
-      /Agent file resolution requires Phase 33's resolveAgentDefinition/,
-    );
-  });
-
   it("registers a tool descriptor whose execute() throws; no execution", () => {
     const registries = createContributionRegistries();
     registerDiscoveredContributions(registries, [

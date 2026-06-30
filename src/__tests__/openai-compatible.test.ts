@@ -30,6 +30,30 @@ function okFetch(lines: readonly string[]): typeof fetch {
 }
 
 describe("openai-compatible provider", () => {
+  it("keeps provider-owned headers after caller headers", async () => {
+    let headers = new Headers();
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      apiKey: "real-key",
+      fetch: (async (_input, init) => {
+        headers = new Headers(init?.headers);
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+
+    await collect({
+      ...provider,
+      generate: (request) => provider.generate({
+        ...request,
+        options: { headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" } },
+      }),
+    });
+
+    assert.equal(headers.get("authorization"), "Bearer real-key");
+    assert.equal(headers.get("content-type"), "application/json");
+    assert.equal(headers.get("x-caller"), "kept");
+  });
+
   it("maps streaming text to provider events", async () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1/",

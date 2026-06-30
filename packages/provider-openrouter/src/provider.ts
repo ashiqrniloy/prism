@@ -28,12 +28,12 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
         const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
           method: "POST",
           headers: cleanHeaders({
+            ...request.options?.headers,
             "content-type": "application/json",
             ...(token ? { authorization: `Bearer ${token}` } : {}),
             ...(sessionId ? { "x-session-id": sessionId } : {}),
             ...(options.appUrl ? { "http-referer": options.appUrl } : {}),
             ...(options.appTitle ? { "x-title": options.appTitle } : {}),
-            ...request.options?.headers,
           }),
           body: JSON.stringify(openRouterBody(request, sessionId)),
           signal: request.signal,

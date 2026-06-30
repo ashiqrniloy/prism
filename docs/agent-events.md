@@ -12,6 +12,12 @@ Subscribe via `session.subscribe()` whenever a host needs to observe run progres
 
 Do not use `AgentEvent` for durable replay (use a `SessionStore`) or for cross-session coordination (the broadcaster is per-session and live-only).
 
+## Durable event ledger
+
+When `AgentConfig.runLedger` or `RunOptions.runLedger` is configured, every emitted `AgentEvent` is also persisted as an `AgentEventRecord` through the host adapter. The runtime calls `redactAgentEvent(event, activeRedactor)` before creating the record, sets `AgentEventRecord.redacted` to `true` when a redactor is active, and writes the record with the same `sessionId`, `runId`, and `timestamp`.
+
+Event records preserve emission order within a run because the runtime drains pending event appends before writing the final `RunRecord`. Subscribers still see the live, in-memory stream; the ledger is the durable copy.
+
 ## Inputs / request
 
 ```ts

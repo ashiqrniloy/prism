@@ -53,7 +53,7 @@ api.registerProviderRequestPolicy(createSessionCachePolicy({ retention: "short" 
 api.registerSystemPromptContribution({ id: "demo-prompt", source: "package", mode: "append", text: "Use demo provider rules." });
 ```
 
-Hosts decide which credential resolvers, env objects, OAuth stores, request policies, and prompt contributions become active. Request policies can set generic `ProviderRequest.options` such as `sessionId`, `cacheRetention`, `headers`, retry/timeouts, and opaque `extra`; provider adapters decide how to map those options to provider payloads.
+Hosts decide which credential resolvers, env objects, OAuth stores, request policies, and prompt contributions become active. Request policies can set generic `ProviderRequest.options` such as `sessionId`, `cacheRetention`, `headers`, retry/timeouts, and opaque `extra`; provider adapters decide how to map those options to provider payloads. Caller headers are extension headers only: provider adapters must apply provider-owned headers (auth, content type, session/cache/security, attribution) after caller headers so requests cannot override credentials or provider policy.
 
 ## First-party provider package skeletons
 
@@ -176,6 +176,7 @@ await kernel.load([pkg]);
 - Registration is in-memory only and does no filesystem, network, env, OAuth refresh, or command access.
 - Provider-specific behavior belongs in provider packages, not Prism core.
 - Adapter serializers should preserve Prism content blocks (text, thinking, tool_call, tool_result, and image when the model declares image input) in provider-native request shape, or fail explicitly when a block is unsupported.
+- Adapter header merging must put caller-supplied `ProviderRequest.options.headers` first and provider-owned headers last. Caller headers may add non-owned headers, but cannot replace resolved credentials, content type, session/cache/security headers, or provider attribution headers.
 
 ## Manifest declarations
 

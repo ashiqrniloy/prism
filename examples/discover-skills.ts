@@ -24,7 +24,7 @@ export async function demo(): Promise<{
   discoveredSkill: string | undefined;
   skillInstructionInInput: boolean;
 }> {
-  // 1. Discover: scan <workspace>/.agent/skills/<name>/SKILL.md.
+  // 1. Discover: scan <workspace>/.agents/skills/<name>/SKILL.md.
   //    Trust gate fails closed — workspace contributions are never auto-trusted.
   const trust = createPathTrustPolicy({ trustedRoots: [workspaceRoot] });
   const discovered = await discoverContributions({

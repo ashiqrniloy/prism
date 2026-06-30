@@ -17,13 +17,29 @@ void describe("system prompts", () => {
   });
 
   it("disable clears earlier layers before higher-ranked appends", () => {
-    // disable must outrank the layers it clears. Under Phase 31 rank (user<package<app<run),
-    // a run-source disable clears app+base; an unknown-source append (rank 10) re-adds after.
+    // disable must outrank the layers it clears. Unknown custom sources rank before app/run,
+    // so a run-source disable clears them too.
     assert.equal(composeSystemPrompt([
       { id: "app", source: "app", text: "App" },
       { id: "off", source: "run", mode: "disable", text: "" },
       { id: "after", source: "post", text: "After" },
-    ], { base: "Base" }), "After");
+    ], { base: "Base" }), undefined);
+  });
+
+  it("unknown source replace cannot override run replace", () => {
+    assert.equal(composeSystemPrompt([
+      { id: "run", source: "run", mode: "replace", text: "Run wins" },
+      { id: "custom", source: "custom", mode: "replace", text: "Custom loses" },
+    ]), "Run wins");
+  });
+
+  it("unknown sources keep stable input order before app and run", () => {
+    assert.equal(composeSystemPrompt([
+      { id: "run", source: "run", text: "Run" },
+      { id: "second", source: "custom-b", text: "Second" },
+      { id: "app", source: "app", text: "App" },
+      { id: "first", source: "custom-a", text: "First" },
+    ], { base: "Base" }), "Base\n\nSecond\n\nFirst\n\nApp\n\nRun");
   });
 
   it("run override can disable configured layers while keeping base instructions", () => {

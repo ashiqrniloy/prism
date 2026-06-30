@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import type {
   AgentConfig,
   AgentDefinition,
+  AgentDefinitionResolutionContext,
   AgentEvent,
   AgentSessionCloneOptions,
   AgentSessionForkOptions,
@@ -44,7 +45,7 @@ import type {
   SystemPromptMode,
   ToolDefinition,
 } from "../index.js";
-import { assembleProviderInput, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveContextProviders } from "../index.js";
+import { assembleProviderInput, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveAgentDefinition, resolveContextProviders } from "../index.js";
 import type { DispatchToolCallOptions, SessionContextSnapshot, ToolFilter, ToolValidator } from "../index.js";
 
 const provider: AIProvider = {
@@ -357,7 +358,7 @@ describe("public contracts", () => {
       name: "runtime-agent",
       create: () => createAgent({ model: { provider: "mock", model: "demo" }, provider }),
     };
-    const agent = await definition.create();
+    const agent = await definition.create!();
     const session = createAgentSession({ agent, id: "s1", leafId: undefined });
     const forkOptions: AgentSessionForkOptions = { leafId: undefined };
     const cloneOptions: AgentSessionCloneOptions = { id: "s2" };
@@ -366,6 +367,32 @@ describe("public contracts", () => {
     assert.equal(session.id, "s1");
     assert.equal(session.fork(forkOptions).id, "s1");
     assert.equal((await session.clone(cloneOptions)).id, "s2");
+  });
+
+  it("AgentDefinition supports declarative requirements and create is optional", () => {
+    // Declarative-only definition: no create() escape hatch.
+    const declarative: AgentDefinition = {
+      name: "declarative-agent",
+      description: "agent by declaration",
+      model: "mock/demo",
+      tools: ["echo"],
+      skills: ["brief"],
+      context: ["demo-context"],
+      instructions: "Be helpful.",
+    };
+    assert.equal(declarative.name, "declarative-agent");
+    assert.equal(declarative.create, undefined);
+
+    // Resolution context type is exported.
+    const ctx: AgentDefinitionResolutionContext = {
+      registries: createContributionRegistries(),
+      providerSource: () => provider,
+      overrides: { model: { provider: "mock", model: "override" } },
+    };
+    assert.equal(ctx.providerSource?.({ provider: "mock", model: "demo" })?.id, "mock");
+
+    // Resolver is exported.
+    assert.equal(typeof resolveAgentDefinition, "function");
   });
 
   it("public contracts accept branch aware session entries", () => {

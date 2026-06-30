@@ -2,13 +2,16 @@ import type { Skill } from "./contracts.js";
 import type { JsonValue } from "./contracts.js";
 import type { ManifestContributionDeclaration } from "./manifests.js";
 
-/** Frontmatter split + scalar/simple-list parser for `SKILL.md` / `AGENT.md`.
- *  Stdlib `String` parsing only — no YAML dependency, no Markdown AST, no `node:*`
- *  import. Unknown frontmatter keys are tolerated (collected into metadata, not
- *  fatal). Core is fs-free: callers pass file text already read. */
+/** Frontmatter split + scalar/simple-list parser for `SKILL.md` and agent bundle
+ *  markdown files. Stdlib `String` parsing only — no YAML dependency, no Markdown
+ *  AST, no `node:*` import. Unknown frontmatter keys are tolerated (collected into
+ *  metadata, not fatal). Core is fs-free: callers pass file text already read. */
 
 const FENCE = "---";
 
+/** Split a markdown file with `---` frontmatter into a parsed map and body.
+ *  Exported so Node-side loaders (e.g. agent bundle resolution) can reuse the
+ *  same frontmatter parser without duplicating it. */
 export function splitFrontmatter(text: string, path: string): { front: Map<string, unknown>; body: string } {
   const lines = text.split(/\r?\n/);
   if (lines.length === 0 || lines[0].trim() !== FENCE) {
@@ -101,7 +104,7 @@ export function parseSkillFile(text: string, path: string): Skill {
   return skill;
 }
 
-/** Parse an `AGENT.md` frontmatter into a manifest-referenced declaration.
+/** Parse a per-agent `AGENT.md` bundle frontmatter file into a manifest-referenced declaration.
  *  Only `name`/`metadata` surface here; full agent resolution is Phase 33's
  *  `resolveAgentDefinition`. The file path is recorded as `resource`. */
 export function parseAgentFile(text: string, path: string): ManifestContributionDeclaration {

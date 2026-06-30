@@ -32,9 +32,9 @@ describe("phase 29 contribution discovery boundaries", () => {
     // walks) must not be imported outside src/node/. The core runtime path
     // that SDK apps use stays fs-free; discovery is opt-in via the
     // `./node/contribution-discovery` subpath.
-    // ponytail: node:os is intentionally excluded here — cli-runner.ts uses
-    // homedir() only as the CLI --discover-global default, not for discovery,
-    // and cli-runner is not reachable from the consumer SDK barrel.
+    // ponytail: node:os is intentionally excluded here — cli-runner.ts no longer imports
+    // homedir() (Phase 34 removed the hardcoded ~/.prism/agent/ CLI default), and
+    // cli-runner is not reachable from the consumer SDK barrel anyway.
     const offenders = srcFiles
       .filter((path) => !path.startsWith("src/node/"))
       .filter((path) => readFileSync(path, "utf8"))

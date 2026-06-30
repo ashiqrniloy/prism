@@ -1,5 +1,7 @@
 export type * from "./contracts.js";
+export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict } from "./contracts.js";
 export { createAgent, createAgentSession } from "./agents.js";
+export { resolveAgentDefinition } from "./agent-definitions.js";
 export { parseSkillFile, parseAgentFile } from "./contribution-parsing.js";
 export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
@@ -46,7 +48,7 @@ export {
 export type { ProviderResolver } from "./contracts.js";
 export { createProviderRegistry, createProviderResolver } from "./providers.js";
 export type { ProviderRegistry } from "./providers.js";
-export { createSecretRedactor, errorToErrorInfo, redactAgentEvent, redactMessage, redactProviderRequest, redactSecrets, redactSessionEntry } from "./redaction.js";
+export { createSecretRedactor, errorToErrorInfo, redactAgentEvent, redactMessage, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry } from "./redaction.js";
 export type { SecretRedactor } from "./redaction.js";
 export { assertPermission, assertTrusted, checkPermission, createStaticPermissionPolicy, createStaticTrustPolicy, denialToErrorInfo, isTrusted, PermissionDeniedError, TrustDeniedError } from "./security.js";
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";

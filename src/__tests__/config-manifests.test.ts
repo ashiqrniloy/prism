@@ -46,6 +46,29 @@ describe("configuration and manifests", () => {
     });
   });
 
+  it("config layers reject prototype pollution keys at every depth", () => {
+    for (const key of ["__proto__", "prototype", "constructor"]) {
+      assert.throws(
+        () => mergeConfigLayers([{ name: "bad", config: JSON.parse(`{"${key}":{"polluted":true}}`) }]),
+        new RegExp(`config layer bad\\.${key} uses forbidden JSON key: ${key}`),
+      );
+      assert.equal(({} as { polluted?: unknown }).polluted, undefined);
+    }
+
+    assert.throws(
+      () => mergeConfigLayers([{ name: "bad", config: JSON.parse('{"safe":{"__proto__":{"polluted":true}}}') }]),
+      /config layer bad\.safe\.__proto__ uses forbidden JSON key: __proto__/,
+    );
+    assert.equal(({} as { polluted?: unknown }).polluted, undefined);
+  });
+
+  it("valid null-prototype config objects merge normally", () => {
+    const nested = Object.assign(Object.create(null), { enabled: true });
+    const config = Object.assign(Object.create(null), { demo: nested });
+
+    assert.deepEqual(mergeConfigLayers([{ name: "null-proto", config }]), { demo: { enabled: true } });
+  });
+
   it("loads config layers from providers in order", async () => {
     const providers: ConfigProvider[] = [
       { name: "empty", load: () => undefined },
@@ -82,6 +105,18 @@ describe("configuration and manifests", () => {
       () => parsePrismManifest({ name: "demo", contributions: [{ kind: "missing", name: "x" }] }),
       /known contribution kind/,
     );
+  });
+
+  it("manifest json objects reject prototype pollution keys", () => {
+    assert.throws(
+      () => parsePrismManifest({ name: "demo", configDefaults: JSON.parse('{"safe":{"constructor":{}}}') }),
+      /manifest.configDefaults\.safe\.constructor uses forbidden JSON key: constructor/,
+    );
+    assert.throws(
+      () => parsePrismManifest({ name: "demo", metadata: JSON.parse('{"__proto__":{"polluted":true}}') }),
+      /manifest.metadata\.__proto__ uses forbidden JSON key: __proto__/,
+    );
+    assert.equal(({} as { polluted?: unknown }).polluted, undefined);
   });
 
   it("manifest_accepts_current_provider_package_auth_policy_and_prompt_kinds", () => {

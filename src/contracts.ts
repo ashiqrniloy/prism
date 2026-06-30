@@ -162,6 +162,9 @@ export interface RunOptions {
   readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly redactor?: SecretRedactor;
+  readonly runLedger?: RunLedger;
+  readonly ownership?: OwnershipScope;
+  readonly idempotencyKey?: string;
   readonly validate?: ToolValidator;
   readonly activeSkills?: readonly string[];
   readonly skills?: readonly Skill[];
@@ -172,8 +175,30 @@ export interface RunOptions {
 export interface AgentDefinition {
   readonly name: string;
   readonly description?: string;
-  create(config?: AgentConfig): Promise<Agent> | Agent;
+  /** Direct model config, or a model id resolved from `registries.models`. */
+  readonly model?: ModelConfig | string;
+  /** Tool names to activate from the active tool registry / `registries.tools`. */
+  readonly tools?: readonly string[];
+  /** Skill names resolved through `resolveActiveSkills()`; `toolNames` enforcement applies. */
+  readonly skills?: readonly string[];
+  /** Context provider names from `registries.contextProviders`. */
+  readonly context?: readonly string[];
+  readonly systemPrompt?: SystemPromptConfig;
+  readonly instructions?: string;
+  readonly loop?: AgentLoopStrategy | AgentLoopOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /** Optional escape hatch. When present, overrides declarative resolution. */
+  create?(config?: AgentConfig): Promise<Agent> | Agent;
+}
+
+/** Input to {@link resolveAgentDefinition}. All fields are optional; the host
+ *  controls scope by which registries it passes. */
+export interface AgentDefinitionResolutionContext {
+  readonly registries?: ContributionRegistries;
+  readonly providerSource?: ProviderResolver;
+  readonly tools?: ToolRegistry | readonly ToolDefinition[];
+  readonly skillsRegistry?: SkillRegistry;
+  readonly overrides?: Partial<AgentConfig>;
 }
 
 export interface AgentConfig {
@@ -199,6 +224,9 @@ export interface AgentConfig {
   readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
   readonly systemPrompt?: SystemPromptConfig;
   readonly redactor?: SecretRedactor;
+  readonly runLedger?: RunLedger;
+  readonly ownership?: OwnershipScope;
+  readonly idempotencyKey?: string;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -231,6 +259,9 @@ export interface AgentSessionCloneOptions {
 
 export interface AgentSession {
   readonly id: string;
+  /** Current branch leaf entry id; advances on every append/run and is re-pointed by `checkout`.
+   *  Undefined until the first entry lands (a fresh session with no history). */
+  readonly leafId: string | undefined;
   run(input: string | Message | readonly Message[], options?: RunOptions): Promise<void>;
   prompt(input: string, options?: RunOptions): Promise<void>;
   compact(options?: CompactionOptions): Promise<CompactionResult>;
@@ -424,7 +455,7 @@ export interface SkillRegistry {
 /** Directory-name spelling for discovered contribution kinds. Maps to a
  *  {@link ManifestContributionDeclaration} kind for non-skill kinds:
  *  `context` → `contextProvider`, `instructions` → `systemPromptContribution`. */
-export type ContributionFileKind = "skill" | "tool" | "context" | "instructions" | "agent";
+export type ContributionFileKind = "skill" | "tool" | "context" | "instructions";
 
 /** Inert envelope emitted by the host/CLI discovery scanner. Carries the
  *  realized {@link Skill} for skill kinds and a manifest-referenced
@@ -593,12 +624,42 @@ export interface ExtensionAPI {
   registerInstructionInjector(injector: InstructionInjector): void;
 }
 
+export type SessionEntryKind =
+  | "message"
+  | "event"
+  | "summary"
+  | "metadata"
+  | "model_change"
+  | "label"
+  | "custom"
+  | "compaction";
+
+export const SESSION_ENTRY_KINDS: readonly SessionEntryKind[] = [
+  "message",
+  "event",
+  "summary",
+  "metadata",
+  "model_change",
+  "label",
+  "custom",
+  "compaction",
+];
+
+const SESSION_ENTRY_KIND_SET: ReadonlySet<SessionEntryKind> = new Set(SESSION_ENTRY_KINDS);
+
+export const SESSION_ENTRY_SCHEMA_VERSION = 1;
+
+export function isSessionEntryKind(value: unknown): value is SessionEntryKind {
+  return typeof value === "string" && SESSION_ENTRY_KIND_SET.has(value as SessionEntryKind);
+}
+
 export interface SessionEntry {
   readonly id: string;
   readonly parentId?: string;
   readonly sessionId: string;
   readonly timestamp: string;
-  readonly kind: "message" | "event" | "summary" | "metadata" | "model_change" | "label" | "custom" | "compaction";
+  readonly kind: SessionEntryKind;
+  readonly schemaVersion?: 1;
   readonly runId?: string;
   readonly message?: Message;
   readonly event?: AgentEvent;
@@ -611,14 +672,385 @@ export interface SessionEntry {
 }
 
 export interface SessionStore {
-  append(entry: SessionEntry): Promise<void>;
+  append(entry: SessionEntry, options?: SessionAppendOptions): Promise<void>;
   list(sessionId: string): Promise<readonly SessionEntry[]>;
   get?(id: string): Promise<SessionEntry | undefined>;
+  /** DB-friendly branch read: return one branch's ancestor chain as a page so adapters
+   *  avoid `list(sessionId)` (full-session scan) + in-memory rebuild. Optional — the
+   *  built-in memory/JSONL stores omit it and the runtime falls back to `list()`. */
+  readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
+}
+
+/** Query for a single branch's ancestor chain (DB-friendly: one recursive/ancestor query
+ *  instead of a full-session scan). Honored by `SessionStore.readBranchPath` and the pure
+ *  branch helpers' reader overload. `leafId` is optional (omit for the latest leaf). */
+export interface SessionBranchRead {
+  readonly sessionId: string;
+  readonly leafId?: string;
+  readonly cursor?: string;
+  readonly limit?: number;
+}
+
+/** Database-neutral callable returning one branch's ancestor chain as a page. Implementations
+ *  issue a single recursive CTE / ancestor walk; the pure helpers follow `nextCursor` to
+ *  completion. Returns redacted `SessionEntry` values only (stores already persist redacted
+ *  entries; the runtime redacts before append). */
+export type BranchReader = (query: SessionBranchRead) => Promise<PersistencePage<SessionEntry>>;
+
+/**
+ * Options for `SessionStore.append`. Stores that honor them reject dangling
+ * `expectedParentId` values and deduplicate exact retries by `idempotencyKey` +
+ * parent. Production stores may add stricter branch-tip CAS and report
+ * `currentLeafId` in `SessionAppendConflictError`. `idempotencyKey` is an opaque
+ * host string; stores redact it like metadata when persisted. Carries no
+ * credentials, credential resolvers, provider instances, or unredacted secrets.
+ */
+export interface SessionAppendOptions {
+  /** Parent entry the new entry should attach to. Must exist when provided. */
+  readonly expectedParentId?: string;
+  /** Opaque host idempotency key; exact retries for one parent deduplicate. */
+  readonly idempotencyKey?: string;
+}
+
+/**
+ * Durable pointer to a branch tip. One session may own many handles (one per
+ * leaf). `BranchRecord.leafEntryId` is the persistence-side equivalent.
+ */
+export interface SessionBranchHandle {
+  readonly sessionId: string;
+  readonly leafId: string;
+}
+
+/** Stable error code carried by `SessionAppendConflictError`. */
+export const SESSION_APPEND_CONFLICT_CODE = "session_append_conflict" as const;
+
+/** Conflict details carried by `SessionAppendConflictError`. Carries no secrets. */
+export interface SessionAppendConflict {
+  readonly code: typeof SESSION_APPEND_CONFLICT_CODE;
+  readonly expectedParentId?: string;
+  readonly currentLeafId?: string;
+  readonly idempotencyDuplicate?: boolean;
+}
+
+/**
+ * Thrown when `SessionStore.append` rejects an entry under `SessionAppendOptions`
+ * (dangling/stale `expectedParentId`, stricter adapter CAS failure, or duplicate
+ * idempotency key for the same parent). Recognize via the stable `code` and
+ * `isSessionAppendConflict`, not message text.
+ */
+export class SessionAppendConflictError extends Error {
+  readonly code = SESSION_APPEND_CONFLICT_CODE;
+  constructor(readonly conflict: SessionAppendConflict) {
+    const detail = conflict.idempotencyDuplicate
+      ? `idempotency key already used`
+      : conflict.currentLeafId !== undefined
+        ? `expected parent ${conflict.expectedParentId ?? "<none>"} does not match current leaf ${conflict.currentLeafId}`
+        : `expected parent ${conflict.expectedParentId ?? "<none>"} is unavailable`;
+    super(`session append conflict: ${detail}`);
+    this.name = "SessionAppendConflictError";
+  }
+}
+
+/** Type guard keyed off the stable `code` (works across bundles; not message text). */
+export function isSessionAppendConflict(error: unknown): error is SessionAppendConflictError {
+  return error instanceof Error && (error as { code?: unknown }).code === SESSION_APPEND_CONFLICT_CODE;
 }
 
 export interface StoreFactory {
   readonly name: string;
   create(config?: JsonObject): Promise<SessionStore> | SessionStore;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Ownership scope identifiers. Hosts may use these for multi-tenant isolation. */
+export interface OwnershipScope {
+  readonly tenantId?: string;
+  readonly accountId?: string;
+  readonly userId?: string;
+}
+
+/** Cursor-paginated result page. */
+export interface PersistencePage<T> {
+  readonly items: readonly T[];
+  readonly nextCursor?: string;
+  readonly total?: number;
+}
+
+/** Common query controls for cursor-based pagination. */
+export interface PersistenceQuery {
+  readonly cursor?: string;
+  readonly limit?: number;
+  readonly order?: "asc" | "desc";
+}
+
+/** Stored session record. Does not include provider objects or credentials. */
+export interface SessionRecord extends OwnershipScope {
+  readonly id: string;
+  readonly parentSessionId?: string;
+  readonly agentDefinitionId?: string;
+  readonly agentDefinitionVersion?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly expiresAt?: string;
+  readonly retentionPolicyId?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Stored branch handle / leaf pointer. The leaf is the current entry id for the branch. */
+export interface BranchRecord {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly name?: string;
+  readonly rootEntryId?: string;
+  readonly parentBranchId?: string;
+  /** Durable leaf entry id for this branch (the persistence-side branch tip). */
+  readonly leafEntryId?: string;
+  readonly createdAt: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "aborted";
+
+/** Stored run record. */
+export interface RunRecord extends OwnershipScope {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly branchId?: string;
+  readonly agentDefinitionId?: string;
+  readonly agentDefinitionVersion?: string;
+  readonly model?: ModelConfig;
+  readonly provider?: string;
+  readonly idempotencyKey?: string;
+  readonly status?: RunStatus;
+  readonly startedAt: string;
+  readonly finishedAt?: string;
+  readonly abortReason?: string;
+  readonly error?: ErrorInfo;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export type AgentEventType = AgentEvent["type"];
+
+/** Stored agent event ledger row. The `event` payload should be redacted before storage when secrets are present. */
+export interface AgentEventRecord extends OwnershipScope {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly runId?: string;
+  readonly entryId?: string;
+  readonly type: AgentEventType;
+  readonly timestamp: string;
+  readonly event: AgentEvent;
+  readonly redacted: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export type ToolCallStatus = "started" | "finished" | "error" | "blocked";
+
+/** Stored tool-call row. The `result` payload should be redacted before storage when secrets are present. */
+export interface ToolCallRecord extends OwnershipScope {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly runId?: string;
+  readonly entryId?: string;
+  readonly toolCallId: string;
+  readonly name: string;
+  readonly arguments: JsonObject;
+  readonly result?: ToolResult;
+  readonly status?: ToolCallStatus;
+  readonly reason?: string;
+  readonly progress?: unknown;
+  readonly progressMetadata?: Readonly<Record<string, unknown>>;
+  readonly progressAt?: string;
+  readonly startedAt: string;
+  readonly finishedAt?: string;
+  readonly redacted: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Stored usage row. */
+export interface UsageRecord extends OwnershipScope {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly runId?: string;
+  readonly entryId?: string;
+  readonly usage: Usage;
+  readonly recordedAt: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Host-implemented write-side ledger for runs, events, tool calls, and usage. */
+export interface RunLedger {
+  appendRun(record: RunRecord): Promise<void> | void;
+  appendEvent(record: AgentEventRecord): Promise<void> | void;
+  appendToolCall(record: ToolCallRecord): Promise<void> | void;
+  appendUsage(record: UsageRecord): Promise<void> | void;
+}
+
+/** Union of records that may be handed to a {@link RunLedger}. */
+export type RunLedgerRecord = RunRecord | AgentEventRecord | ToolCallRecord | UsageRecord;
+
+/** Stored agent definition version. Does not include provider credentials/resolvers/provider instances. */
+export interface AgentDefinitionRecord extends OwnershipScope {
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
+  readonly source?: string;
+  readonly agentDefinition: AgentDefinition;
+  readonly createdAt: string;
+  readonly createdBy?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Stored retention policy. */
+export interface RetentionPolicy extends OwnershipScope {
+  readonly id: string;
+  readonly name?: string;
+  readonly maxAgeDays?: number;
+  readonly maxEntriesPerSession?: number;
+  readonly maxTotalBytes?: number;
+  readonly archiveStore?: string;
+  readonly appliedKinds?: readonly SessionEntryKind[];
+  readonly createdAt: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Stored migration record. */
+export interface MigrationRecord {
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
+  readonly appliedAt: string;
+  readonly appliedBy?: string;
+  readonly checksum?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Query for sessions. */
+export interface SessionQuery extends PersistenceQuery, OwnershipScope {
+  readonly parentSessionId?: string;
+  readonly agentDefinitionId?: string;
+  readonly agentDefinitionVersion?: string;
+  readonly retentionPolicyId?: string;
+  readonly fromCreatedAt?: string;
+  readonly toCreatedAt?: string;
+  readonly fromUpdatedAt?: string;
+  readonly toUpdatedAt?: string;
+  readonly hasExpired?: boolean;
+}
+
+/** Query for session entries. */
+export interface SessionEntryQuery extends PersistenceQuery, OwnershipScope {
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly parentId?: string;
+  /** Filter to entries on the branch ending at this leaf id. */
+  readonly leafId?: string;
+  readonly kind?: SessionEntryKind | readonly SessionEntryKind[];
+  readonly fromTimestamp?: string;
+  readonly toTimestamp?: string;
+}
+
+/** Query for branch handles/leaves. */
+export interface BranchQuery extends PersistenceQuery {
+  readonly sessionId?: string;
+  readonly name?: string;
+  readonly parentBranchId?: string;
+  readonly hasLeaf?: boolean;
+}
+
+/** Query for runs. */
+export interface RunQuery extends PersistenceQuery, OwnershipScope {
+  readonly sessionId?: string;
+  readonly branchId?: string;
+  readonly agentDefinitionId?: string;
+  readonly agentDefinitionVersion?: string;
+  readonly status?: RunStatus | readonly RunStatus[];
+  readonly fromStartedAt?: string;
+  readonly toStartedAt?: string;
+  readonly fromFinishedAt?: string;
+  readonly toFinishedAt?: string;
+  readonly isFinished?: boolean;
+}
+
+/** Query for agent event ledger rows. */
+export interface AgentEventQuery extends PersistenceQuery, OwnershipScope {
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly entryId?: string;
+  readonly type?: AgentEventType | readonly AgentEventType[];
+  readonly fromTimestamp?: string;
+  readonly toTimestamp?: string;
+  readonly redacted?: boolean;
+}
+
+/** Query for tool-call rows. */
+export interface ToolCallQuery extends PersistenceQuery, OwnershipScope {
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly entryId?: string;
+  readonly name?: string;
+  readonly status?: ToolCallStatus | readonly ToolCallStatus[];
+  readonly fromStartedAt?: string;
+  readonly toStartedAt?: string;
+  readonly fromFinishedAt?: string;
+  readonly toFinishedAt?: string;
+  readonly redacted?: boolean;
+}
+
+/** Query for usage rows. */
+export interface UsageQuery extends PersistenceQuery, OwnershipScope {
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly entryId?: string;
+  readonly fromRecordedAt?: string;
+  readonly toRecordedAt?: string;
+}
+
+/** Query for agent definition versions. */
+export interface AgentDefinitionQuery extends PersistenceQuery, OwnershipScope {
+  readonly name?: string;
+  readonly version?: string;
+  readonly source?: string;
+  readonly fromCreatedAt?: string;
+  readonly toCreatedAt?: string;
+}
+
+/** Query for retention policies. */
+export interface RetentionPolicyQuery extends PersistenceQuery, OwnershipScope {
+  readonly name?: string;
+  readonly archiveStore?: string;
+}
+
+/** Query for migration records. */
+export interface MigrationQuery extends PersistenceQuery {
+  readonly name?: string;
+  readonly version?: string;
+  readonly fromAppliedAt?: string;
+  readonly toAppliedAt?: string;
+}
+
+/**
+ * Production database-neutral persistence store contract.
+ * Hosts implement this interface to provide durable, paginated storage
+ * for sessions, entries, runs, events, tool calls, usage, agent definitions,
+ * and migrations. No SQL client, ORM, host file storage, or network dependency is
+ * required by the contract.
+ */
+export interface ProductionPersistenceStore {
+  readonly name?: string;
+  querySessions(query: SessionQuery): Promise<PersistencePage<SessionRecord>>;
+  queryBranches(query: BranchQuery): Promise<PersistencePage<BranchRecord>>;
+  queryEntries(query: SessionEntryQuery): Promise<PersistencePage<SessionEntry>>;
+  queryRuns(query: RunQuery): Promise<PersistencePage<RunRecord>>;
+  queryEvents(query: AgentEventQuery): Promise<PersistencePage<AgentEventRecord>>;
+  queryToolCalls(query: ToolCallQuery): Promise<PersistencePage<ToolCallRecord>>;
+  queryUsage(query: UsageQuery): Promise<PersistencePage<UsageRecord>>;
+  queryAgentDefinitions(query: AgentDefinitionQuery): Promise<PersistencePage<AgentDefinitionRecord>>;
+  queryRetentionPolicies(query: RetentionPolicyQuery): Promise<PersistencePage<RetentionPolicy>>;
+  queryMigrations(query: MigrationQuery): Promise<PersistencePage<MigrationRecord>>;
+  /** DB-friendly branch read (mirrors `SessionStore.readBranchPath`): one ancestor-chain
+   *  query instead of `queryEntries({ sessionId })` + in-memory walk. Optional. */
+  readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 

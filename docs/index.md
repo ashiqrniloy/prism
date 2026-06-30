@@ -7,54 +7,58 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 
 ## Agent/session runtime
 - [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, and subscribe to normalized session events.
+- [Agent definitions](agent-definitions.md): resolve declarative `AgentDefinition` values via `resolveAgentDefinition`, and turn app-config `<configRoot>/agents/<name>/AGENT.md` bundles into runnable agents via `discoverAgentBundles` / `resolveAgentBundle` (three-scope skill/tool union, configurable prompt layers, no auto-discovery).
 - [Agent loops](agent-loops.md): replaceable per-run control loops — `singleShotLoop` default and `generate-validate-revise` with host-supplied `validator`/`parser`/`repairer` callbacks.
 - [Agent events](agent-events.md): the `AgentEvent` stream — agent/turn/message, tool execution, queue/compaction/retry, artifact validation/refinement, and error variants, redacted via `redactAgentEvent`.
-- [Structured output](structured-output.md): the `Artifact*` seam (parser/validator/repairer, host-defined `T`) — the only typed-output path from a loop, with a Synapta-style schema→`ArtifactValidation` mapping example.
+- [Runs and usage ledger](runs-and-usage.md): `RunLedger` adapter for durable run, event, tool-call, and usage persistence, plus ownership/idempotency/redaction guidance.
+- [Structured output](structured-output.md): the `Artifact*` seam (parser/validator/repairer, host-defined `T`) — the only typed-output path from a loop, with a Synapta-style schema→`ArtifactValidation` mapping example and an end-to-end third-party integration walkthrough.
 
 ## Compaction/session memory
 - [Compaction and retry policies](compaction-and-retry.md): summarize branch history and retry transient provider failures with host-replaceable policies.
 - [LLM compaction package](compaction-llm.md): optional provider-backed compaction strategy package.
 - [Observational memory compaction package](compaction-observational-memory.md): optional source-backed memory, fast compaction, recall tool, and status/view command package.
-- [Session stores and branching](session-stores-and-branching.md): store session entries, rebuild branch context, and navigate branch leaves.
-- [Node JSONL session store](node-jsonl-session-store.md): persist session entries to caller-named JSONL files in Node hosts.
+- [Session stores](session-stores.md): `SessionStore` contract, `SessionAppendOptions`, `SessionAppendConflictError`, branch handles, `readBranchPath`, and dev-vs-production branch reads — start here for session persistence.
+- [Session stores and branching](session-stores-and-branching.md): detailed branch semantics and helper reference (kept for compatibility; links back to the canonical atomic append / branch-handle sections).
+- [Database persistence](database-persistence.md): production persistence contracts, conditional append transaction pattern, idempotency indexes, `readBranchPath`, reference relational schema, retention, migrations, and NoSQL mapping.
+- [Node JSONL session store](node-jsonl-session-store.md): development-only JSONL file adapter for single-process Node hosts; no cross-process safety.
 
 ## Provider and model connection
 - [Provider layer](provider-layer.md): register and resolve host-owned providers/models, create provider events, use generic provider request options, and test with the mock provider.
-- [Provider packages](provider-packages.md): define explicit provider packages, model metadata, auth descriptors, and request/cache policies without package discovery or provider-specific core behavior.
+- [Provider packages](provider-packages.md): define explicit provider packages, model metadata, auth descriptors, request/cache policies, and provider-owned header precedence without package discovery or provider-specific core behavior.
   - Phase 12 package workspaces: [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), and [`@arnilo/prism-provider-kimi`](providers/kimi.md).
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider subpath using native or injected `fetch` for Chat Completions streaming.
 
 ## Input, prompt, and context assembly
 - [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
-- [System prompts](system-prompts.md): compose explicit package/app/user/run system prompt layers without filesystem discovery or hidden globals.
-- [Instruction injection](instruction-injection.md): register package injectors that layer instructions and context blocks for the first turn, every turn, or on input.
+- [System prompts](system-prompts.md): compose explicit user/package/app/run system prompt layers, auto-load the standard `AGENTS.md` (workspace) / `SYSTEM.md` prompt files via the Node `loadSystemPromptFiles` loader (trust-gated for `AGENTS.md`), and append `SYSTEM.md` → per-agent `AGENT.md` body → repo `AGENTS.md` layers from a discovered agent bundle via `resolveAgentBundle`.
+- [Instruction injection](instruction-injection.md): register package injectors that layer redacted instructions/context blocks without granting tools, permissions, or resource escapes.
 - [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned.
 
 ## Tools
 - [Tools](tools.md): register host-owned active tools, apply exact allow/deny filtering, and dispatch tool calls.
 
 ## Extensions/plugins
-- [Contribution discovery (workspace & global)](contribution-discovery.md): opt-in directory scanner turning `SKILL.md`/`AGENT.md`/`manifest.json` into inert `DiscoveredContribution` envelopes the host registers — no `import()`, no auto-activate, no provider scanning.
+- [Contribution discovery (workspace)](contribution-discovery.md): opt-in, realpath-contained directory scanner turning `SKILL.md`/`manifest.json` into inert `DiscoveredContribution` envelopes the host registers — no `import()`, no auto-activate, no provider scanning. (Per-agent `AGENT.md` bundles live under an app-controlled `configRoot`; see [Agent definitions](agent-definitions.md).)
 - [Contribution registries](contribution-registries.md): explicit host-owned registries for extension/package contributions without hidden globals.
 - [Extension kernel and event bus](extensions.md): load host-provided extensions in order, register contributions, emit lifecycle events, and isolate extension errors.
 - [Middleware hooks](middleware-hooks.md): ordered hook registry for provider, input, context, tool, retry, compaction, and session lifecycle boundaries.
 
 ## Configuration/manifests
-- [Configuration and manifests](configuration-and-manifests.md): merge in-memory JSON config layers and validate data-only package manifests.
+- [Configuration and manifests](configuration-and-manifests.md): merge in-memory JSON config layers and validate data-only package manifests with prototype-pollution key rejection.
 - [Node filesystem config loader](node-filesystem-config.md): explicitly read caller-named JSON config files in Node hosts.
 - [Resource loading](resource-loading.md): decode text, JSON, and manifest resources through caller-provided loaders.
 
 ## CLI/RPC
-- [CLI/RPC](cli-rpc.md): Run print/json modes and LF-delimited RPC over the public AgentSession runtime.
+- [CLI/RPC](cli-rpc.md): Run print/json modes and LF-delimited RPC over the public AgentSession runtime, including branch-handle results, fixed `forkSession`, and `checkout`.
 
 ## Security and credentials
-- [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, and redaction controls.
+- [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, redaction controls, and security-boundary hardening summary.
 - [Credentials and redaction](credentials-and-redaction.md): compose explicit credential resolver order, use caller-supplied env objects/OAuth refresh helpers, and redact known secret values.
 
 ## Testing and examples
 - [Provider layer](provider-layer.md): use `createMockProvider()` and provider event helpers for deterministic tests without timers, credentials, or network.
 - [Provider conformance](provider-conformance.md): run network-free provider adapter assertions from `@arnilo/prism/testing/provider-conformance`.
-- `examples/`: compile-checked typed examples and runnable mock demos (SDK basics, provider registration, auth, tools, stores/branching, compaction, observational-memory recall, CLI, RPC).
+- `examples/`: compile-checked typed examples and runnable mock demos (SDK basics, provider registration, auth, tools, stores/branching, compaction, observational-memory recall, structured-output/artifact-loop, CLI, RPC).
 
 ## Release and install
 - [Release and install](release-and-install.md): package layout, install specifiers, required `@arnilo/prism` peer, tarball contents and exclusions, the map-retention knob, the release workflow, and the offline test budget.

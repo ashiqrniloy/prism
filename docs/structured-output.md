@@ -129,6 +129,96 @@ await agent.createSession().run("Produce the JSON release note.", {
 });
 ```
 
+## End-to-end third-party integration
+
+A third-party host (for example, Synapta) can mix first-party and own providers, register tools, select skills, load `AGENTS.md`/`SYSTEM.md`, and opt a run into the artifact loop — all without importing any `synapta*` types into Prism and without any `workflow`/`node`/`step` vocabulary in the core contracts.
+
+```ts
+import {
+  createAgent,
+  createProviderResolver,
+  createToolRegistry,
+  createSkillRegistry,
+  createSecretRedactor,
+  type ArtifactParser,
+  type ArtifactValidator,
+  type ArtifactRepairer,
+  type ToolDefinition,
+  type Skill,
+} from "@arnilo/prism";
+import { loadSystemPromptFiles } from "@arnilo/prism/node/system-prompts";
+
+// Host-owned schema (Synapta's own type). Prism never imports it.
+interface ReleaseNote { readonly title: string; readonly body: string }
+
+// Map the host schema to ArtifactValidation. The callbacks are generic at the
+// loop boundary; cast to the host schema inside the callback body.
+const validator: ArtifactValidator<unknown> = (value) => {
+  const note = value as ReleaseNote;
+  const errors: { readonly path?: string; readonly message: string }[] = [];
+  if (!note.title) errors.push({ path: "title", message: "missing title" });
+  if (!note.body) errors.push({ path: "body", message: "missing body" });
+  return errors.length === 0 ? { ok: true } : { ok: false, errors };
+};
+
+const parser: ArtifactParser<unknown> = (text) => {
+  try { return { ok: true, value: JSON.parse(text) as ReleaseNote }; }
+  catch (error) { return { ok: false, error: error instanceof Error ? error.message : "parse failed" }; }
+};
+
+const repairer: ArtifactRepairer<unknown> = (_value, failure) => ({
+  role: "user",
+  content: [{
+    type: "text",
+    text: `Fix these issues: ${failure.errors?.map((e) => e.path ? `${e.path}: ${e.message}` : e.message).join("; ")}`,
+  }],
+});
+
+// Mix a first-party provider with a host-owned one.
+const resolver = createProviderResolver([
+  firstPartyMockProvider, // e.g. from a Prism provider package
+  createOwnMockProvider(), // host-implemented AIProvider
+]);
+
+const tools = createToolRegistry([
+  firstPartyEchoTool,
+  { name: "acme/fetch-schema", /* ...host tool definition... */ } as ToolDefinition,
+]);
+
+const skills = createSkillRegistry([
+  {
+    name: "schema-skill",
+    instructions: "Use the release-note schema and the acme/fetch-schema tool when needed.",
+    toolNames: ["acme/fetch-schema"],
+    // context: [schemaContextProvider],
+  } as Skill,
+]);
+
+const agent = createAgent({
+  model: { provider: "acme", model: "artifact-v1" },
+  providerSource: resolver,
+  tools,
+  skills,
+  instructions: "You are a release-note writer.",
+  systemPrompt: await loadSystemPromptFiles({ workspaceRoot, globalRoot }),
+  redactor: createSecretRedactor([process.env.ACME_API_KEY ?? ""]),
+});
+
+await agent.createSession().run("Write the release note.", {
+  activeSkills: ["schema-skill"],
+  loop: { strategy: "generate-validate-revise", validator, parser, repairer, maxRevisions: 3 },
+});
+```
+
+Key cross-seam points:
+
+- `providerSource` is a resolver, so the host can supply its own `AIProvider` alongside first-party ones. See [Provider packages](provider-packages.md) and [Provider layer](provider-layer.md).
+- `tools` and `skills` are host-owned registries; a skill's `toolNames` and `context` are selected only when the skill is active. See [Tools](tools.md) and [Context and skills](context-and-skills.md).
+- `systemPrompt` is loaded from `AGENTS.md`/`SYSTEM.md` via the Node loader; the runtime itself is file-name agnostic. See [System prompts](system-prompts.md).
+- The `validator`/`parser`/`repairer` callbacks are typed as `Artifact*<unknown>` at the loop boundary; the host's `ReleaseNote` type is cast inside the callback body. Prism threads an opaque value and never instantiates it.
+- Every `artifact_*` event payload is redacted through the active `SecretRedactor`, so secrets echoed in `errors[].message` or `metadata` are scrubbed before subscribers see them. See [Credentials and redaction](credentials-and-redaction.md).
+- For a runnable, network-free version that also demonstrates tool dispatch and redaction, see [`examples/synapta-style-artifact-loop.ts`](../examples/synapta-style-artifact-loop.ts).
+
 ## Extension and configuration notes
 
 - `generate-validate-revise` is selected via `AgentConfig.loop` / `RunOptions.loop` (`RunOptions.loop` wins). See [Agent loops](agent-loops.md). `resolveLoop()` maps the options form to the factory; an unknown `strategy` throws before the first turn; a custom `AgentLoopStrategy` instance bypasses the options form.
@@ -151,3 +241,7 @@ await agent.createSession().run("Produce the JSON release note.", {
 - [Public contracts](public-contracts.md): `ArtifactValidation`, `ArtifactContext`, `ArtifactParseResult<T>`, `ArtifactParser<T>`, `ArtifactValidator<T>`, `ArtifactRepairer<T>`.
 - [Credentials and redaction](credentials-and-redaction.md): `createSecretRedactor` and `redactAgentEvent`.
 - [Agent/session runtime](agent-session-runtime.md): `session.run(input, options)` and `RunOptions.loop`.
+- [Tools](tools.md): host-owned tool registries and dispatch.
+- [Context and skills](context-and-skills.md): skill selection, `toolNames`, and context providers.
+- [System prompts](system-prompts.md): composing layers and loading `AGENTS.md`/`SYSTEM.md`.
+- [Provider packages](provider-packages.md) and [Provider layer](provider-layer.md): mixing first-party and host-owned providers.

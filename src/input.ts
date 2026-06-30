@@ -20,6 +20,8 @@ import type {
   ToolResult,
 } from "./contracts.js";
 import type { MiddlewareRegistry } from "./middleware.js";
+import type { SecretRedactor } from "./redaction.js";
+import { redactMessage } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
 import { composeSystemPrompt } from "./system-prompts.js";
 import { runInstructionInjectors } from "./instruction-injection.js";
@@ -79,6 +81,7 @@ export interface PromptTemplateOptions {
 
 export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly model: ModelConfig;
+  readonly redactor?: SecretRedactor;
   readonly input: AgentInput;
   readonly inputBuilder?: InputBuilder;
   readonly contextProviders?: readonly ContextProvider[];
@@ -166,8 +169,8 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         sessionId: options.sessionId ?? "",
         runId: options.runId ?? "",
         turn,
-        // Runtime redacts input/history before assemble (inputMessages.map(redact)); history holds redacted messages.
-        input: inputMessages(options.input),
+        // Runtime history is already redacted; input is redacted here before injector code sees it.
+        input: inputMessages(options.input).map((message) => redactMessage(message, options.redactor)),
         history: options.history ?? [],
         metadata: options.metadata ?? {},
         signal: options.signal ?? new AbortController().signal,

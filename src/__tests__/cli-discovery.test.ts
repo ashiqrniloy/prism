@@ -56,11 +56,10 @@ function textOf(request: ProviderRequest): string {
 }
 
 describe("cli discovery flags", () => {
-  it("parses --discover / --discover-kinds / --discover-global / --no-discovery", () => {
-    const parsed = parseCliArgs(["--discover", "--discover-kinds", "skill,tool", "--discover-global", "-p", "Hi"]);
+  it("parses --discover / --discover-kinds / --no-discovery", () => {
+    const parsed = parseCliArgs(["--discover", "--discover-kinds", "skill,tool", "-p", "Hi"]);
     assert.equal(parsed.discover, true);
     assert.deepEqual([...parsed.discoverKinds], ["skill", "tool"]);
-    assert.equal(parsed.discoverGlobal, true);
     assert.equal(parsed.noDiscovery, false);
 
     const off = parseCliArgs(["--no-discovery", "-p", "Hi"]);
@@ -73,10 +72,41 @@ describe("cli discovery flags", () => {
     assert.throws(() => parseCliArgs(["--discover-kinds", "skill,bogus", "-p", "Hi"]), /Invalid kinds/);
   });
 
+  it("rejects the removed --discover-global flag as unknown", () => {
+    assert.throws(() => parseCliArgs(["--discover-global", "-p", "Hi"]), /Unknown flag: --discover-global/);
+  });
+
+  it("parses --agents-config <path>", () => {
+    const parsed = parseCliArgs(["--agents-config", "/app/cfg", "-p", "Hi"]);
+    assert.equal(parsed.agentsConfig, "/app/cfg");
+    assert.deepEqual([...parsed.discoveredAgents], []);
+  });
+
+  it("--agents-config <path> loads agents from the given app config root", async () => {
+    const configRoot = await makeRoot("agents-cfg");
+    await writeFileDeep(`${configRoot}/agents/coding/AGENT.md`, "---\nname: coding\n---\nbody\n");
+    await writeFileDeep(`${configRoot}/agents/office/AGENT.md`, "---\nname: office\n---\nbody\n");
+    const seen: CliOptions[] = [];
+    const io = streams();
+
+    const code = await runCli(["--agents-config", configRoot, "-p", "Hi", "--provider", "mock"], {
+      ...io,
+      createSession: (options) => {
+        seen.push(options);
+        return createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) }).createSession();
+      },
+    });
+
+    assert.equal(code, 0);
+    assert.equal(seen[0].agentsConfig, configRoot);
+    assert.equal(seen[0].discoveredAgents.length, 2);
+    assert.deepEqual(seen[0].discoveredAgents.map((b) => b.name).sort(), ["coding", "office"]);
+  });
+
   it("--discover activates a workspace skill and its instructions reach the provider input", async () => {
     const root = await makeRoot("ws");
     await writeFileDeep(
-      `${root}/.agent/skills/greeter/SKILL.md`,
+      `${root}/.agents/skills/greeter/SKILL.md`,
       "---\nname: greeter\ndescription: g\n---\nsay hi to the user warmly\n",
     );
     const captured: ProviderRequest[] = [];
@@ -97,7 +127,7 @@ describe("cli discovery flags", () => {
 
   it("default run (no --discover) performs no discovery; discoveredSkills stays empty", async () => {
     const root = await makeRoot("default");
-    await writeFileDeep(`${root}/.agent/skills/greeter/SKILL.md`, "---\nname: greeter\n---\nb\n");
+    await writeFileDeep(`${root}/.agents/skills/greeter/SKILL.md`, "---\nname: greeter\n---\nb\n");
     const seen: CliOptions[] = [];
     const io = streams();
 
@@ -117,7 +147,7 @@ describe("cli discovery flags", () => {
 
   it("--no-discovery hard-disables discovery even with --discover set", async () => {
     const root = await makeRoot("nodisc");
-    await writeFileDeep(`${root}/.agent/skills/greeter/SKILL.md`, "---\nname: greeter\n---\nb\n");
+    await writeFileDeep(`${root}/.agents/skills/greeter/SKILL.md`, "---\nname: greeter\n---\nb\n");
     const seen: CliOptions[] = [];
     const io = streams();
 
@@ -136,8 +166,8 @@ describe("cli discovery flags", () => {
 
   it("--discover-kinds skill ignores stray tool dirs (only skills discovered)", async () => {
     const root = await makeRoot("kindskill");
-    await writeFileDeep(`${root}/.agent/skills/greeter/SKILL.md`, "---\nname: greeter\n---\ninstr\n");
-    await writeFileDeep(`${root}/.agent/tools/stray/manifest.json`, JSON.stringify({ name: "stray", module: "@x/stray" }));
+    await writeFileDeep(`${root}/.agents/skills/greeter/SKILL.md`, "---\nname: greeter\n---\ninstr\n");
+    await writeFileDeep(`${root}/.agents/tools/stray/manifest.json`, JSON.stringify({ name: "stray", module: "@x/stray" }));
     const seen: CliOptions[] = [];
     const io = streams();
 
@@ -159,27 +189,4 @@ describe("cli discovery flags", () => {
     assert.equal(seen[0].discoveredSkills[0].name, "greeter");
   });
 
-  it("--discover-global scans the global root", async () => {
-    const workspaceRoot = await makeRoot("g-ws");
-    const globalRoot = await makeRoot("g-global");
-    await writeFileDeep(
-      `${globalRoot}/.prism/agent/skills/global-skill/SKILL.md`,
-      "---\nname: global-skill\ndescription: g\n---\nglobal instructions here\n",
-    );
-    const captured: ProviderRequest[] = [];
-    const io = streams();
-
-    const code = await runCli(["--discover", "--discover-global", "-p", "Hi", "--provider", "mock"], {
-      ...io,
-      workspaceRoot,
-      globalRoot,
-      createSession: capturingSession(captured),
-    });
-
-    assert.equal(code, 0);
-    assert.ok(captured.length >= 1);
-    const input = textOf(captured[0]);
-    assert.match(input, /Skill global-skill:/);
-    assert.match(input, /global instructions here/);
-  });
 });

@@ -15,6 +15,7 @@ Current contract groups:
 - Extensions/middleware: `ExtensionLifecycleEventName`, `ExtensionEvent`, `Extension`, `ExtensionAPI`, `MiddlewareHookName`, `Middleware`, `MiddlewareNext`, `MiddlewareRegistry`
 - Configuration/manifests: `ConfigProvider`, `ConfigLayer`, `ConfigLoadContext`, `PrismManifest`, `ManifestContributionDeclaration`, `ManifestResourceDeclaration`, `ManifestContributionKind`
 - Stores/resources/settings/credentials/compaction/retry: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`, `CompactionOptions`, `CompactionMiddlewarePayload`, `CompactionEntryData`, `DefaultCompactionStrategyOptions`, `RetryPolicy`, `RetryContext`, `RetryDecision`, `RetryOptions`, `RetryMiddlewarePayload`, `DefaultRetryPolicyOptions`
+- Production persistence (adapter-facing): `ProductionPersistenceStore`, `PersistencePage`, `PersistenceQuery`, `OwnershipScope`, `SessionRecord`, `SessionQuery`, `BranchRecord`, `BranchQuery`, `SessionEntryQuery`, `RunRecord`, `RunQuery`, `AgentEventRecord`, `AgentEventQuery`, `ToolCallRecord`, `ToolCallQuery`, `UsageRecord`, `UsageQuery`, `AgentDefinitionRecord`, `AgentDefinitionQuery`, `RetentionPolicy`, `RetentionPolicyQuery`, `MigrationRecord`, `MigrationQuery`
 
 ## When to use it
 
@@ -30,6 +31,10 @@ Public contracts are imported from the root package:
 import type {
   AgentConfig,
   AgentDefinition,
+  AgentDefinitionRecord,
+  AgentDefinitionQuery,
+  AgentEventQuery,
+  AgentEventRecord,
   AgentLoopOptions,
   AgentLoopStrategy,
   AIProvider,
@@ -40,13 +45,21 @@ import type {
   ArtifactValidation,
   ArtifactValidator,
   AuthMethod,
+  BranchQuery,
+  BranchRecord,
   CommandDefinition,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,
   ContextProvider,
   CredentialResolver,
+  MigrationQuery,
+  MigrationRecord,
   OAuthProvider,
+  OwnershipScope,
+  PersistencePage,
+  PersistenceQuery,
+  ProductionPersistenceStore,
   ProviderRequestOptions,
   DefaultInputBuildContext,
   Extension,
@@ -63,12 +76,23 @@ import type {
   ProviderRequestPolicy,
   ProviderTurnResult,
   ResourceLoader,
+  RetentionPolicy,
+  RetentionPolicyQuery,
+  RunQuery,
+  RunRecord,
+  SessionEntryQuery,
+  SessionQuery,
+  SessionRecord,
   SettingsProvider,
   Skill,
   StoreFactory,
   SystemPromptContribution,
   SystemPromptConfig,
+  ToolCallQuery,
+  ToolCallRecord,
   ToolDefinition,
+  UsageQuery,
+  UsageRecord,
 } from "@arnilo/prism";
 ```
 
@@ -103,6 +127,20 @@ Important request shapes:
 | `SystemPromptContribution` | Explicit caller-selected prompt layer with source, mode, text, and metadata. |
 | `ConfigLayer` | Named JSON config layer consumed by `mergeConfigLayers()`. |
 | `PrismManifest` | Data-only package manifest with config defaults, contribution declarations, and resource declarations. |
+| `ProductionPersistenceStore` | Adapter-facing interface for durable, paginated, multi-tenant storage of sessions, branches, entries, runs, events, tool calls, usage, agent definitions, retention policies, and migrations. No SQL/ORM/host file storage/network dependency. |
+| `PersistencePage<T>` | Cursor-paginated result page: `items`, optional `nextCursor`, optional `total`. |
+| `PersistenceQuery` | Common pagination controls: `cursor?`, `limit?`, `order?: "asc" \| "desc"`. |
+| `OwnershipScope` | Multi-tenant scope: `tenantId?`, `accountId?`, `userId?`. Included in records and queries. |
+| `SessionRecord` / `SessionQuery` | Stored session and query filters (parent, agent definition, retention policy, timestamps, ownership). |
+| `BranchRecord` / `BranchQuery` | Branch handle/leaf pointer and query filters (session, name, parent branch, leaf presence). |
+| `SessionEntryQuery` | Paginated entry filters: `sessionId`, `runId`, `parentId`, `leafId`, `kind`, timestamp range, ownership. |
+| `RunRecord` / `RunQuery` | Stored run and filters: session, branch, status, timestamps, ownership. |
+| `AgentEventRecord` / `AgentEventQuery` | Event ledger row with `redacted` flag and filters by type, session, run, entry, timestamp, ownership. |
+| `ToolCallRecord` / `ToolCallQuery` | Tool-call row with `redacted` flag and filters by name, status, session, run, entry, timestamps, ownership. |
+| `UsageRecord` / `UsageQuery` | Usage row and filters: session, run, entry, recorded-at range, ownership. |
+| `AgentDefinitionRecord` / `AgentDefinitionQuery` | Versioned agent-definition snapshot and filters. Does not store credentials or provider instances. |
+| `RetentionPolicy` / `RetentionPolicyQuery` | Retention policy and filters: age, entry count, byte limits, archive store, applied kinds. |
+| `MigrationRecord` / `MigrationQuery` | Applied migration record and filters. |
 
 ## Outputs / response / events
 
@@ -356,7 +394,7 @@ void credentials;
 - `AgentConfig.provider` can hold a direct provider instance for simple host wiring. Hosts that need config-driven selection should use `ModelConfig.provider` with explicit `createProviderRegistry()` / `createModelRegistry()` objects; Prism does not create a hidden global provider registry.
 - `SettingsProvider` and `CredentialResolver` are explicit dependencies. Prism must not hide global settings or credentials behind these contracts, and `CredentialResolver` should be passed only to the edge that needs a credential.
 - `PrismManifest` is data-only. It can describe contribution modules/resources and config defaults, but parsing it does not import modules, execute package code, or mutate registries.
-- Resource helper functions decode resources from a caller-provided `ResourceLoader`; Prism does not include filesystem, network, package, or URI router loaders.
+- Resource helper functions decode resources from a caller-provided `ResourceLoader`; Prism does not include host file storage, network, package, or URI router loaders.
 - `createDefaultInputBuilder()` is a small default implementation of `InputBuilder`. It is replaceable and only loads explicit URI resources through a caller-provided `ResourceLoader`.
 - `resolveContextProviders()`, `createDefaultPromptBuilder()`, `assembleProviderInput()`, `createSkillRegistry()`, `resolveActiveSkills()`, and `renderPromptTemplate()` are replaceable Phase 5 helpers. They do not execute tools, evaluate template code, or grant tool permissions.
 - `createAgent()` and `createAgentSession()` implement the session runtime. They use explicit providers only; no hidden provider registry is created. Store-backed sessions use explicit `SessionStore` values and branch methods on `AgentSession`. `AgentSession.compact()` and `AgentConfig`/`RunOptions.compaction` provide manual and opt-in auto-compaction. `AgentConfig`/`RunOptions.retry` provide bounded provider-turn retry before observable output.
@@ -384,7 +422,9 @@ void credentials;
 - [Agent loops](agent-loops.md): `singleShotLoop` default, `generateValidateReviseLoop`, `resolveLoop`, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts.
 - [Agent events](agent-events.md): the `AgentEvent` union including `artifact_*` variants and event ordering.
 - [Structured output](structured-output.md): the `ArtifactParser<T>`/`ArtifactValidator<T>`/`ArtifactRepairer<T>` seam — the only typed-output path from a loop.
-- [Session stores and branching](session-stores-and-branching.md): branch-aware `SessionEntry` helpers and context rebuild.
+- [Session stores](session-stores.md): `SessionStore` contract, branch-aware `SessionEntry` helpers, context rebuild, and store responsibilities.
+- [Database persistence](database-persistence.md): production persistence contracts, paginated query shapes, reference schema, indexes, retention, migrations, and NoSQL mapping.
+- [Session stores and branching](session-stores-and-branching.md): detailed branch semantics and helper reference (compatibility page).
 - [Compaction and retry policies](compaction-and-retry.md): default compaction strategy, default retry policy, runtime compaction/retry options, middleware payloads, and compaction entry data.
 - [Provider layer](provider-layer.md): runtime registries, provider event helpers, and mock provider built on these contracts.
 - [Provider conformance](provider-conformance.md): testing subpath for network-free provider adapter checks.

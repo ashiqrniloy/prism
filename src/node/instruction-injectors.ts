@@ -5,12 +5,18 @@ import type {
   InstructionInjector,
 } from "../contracts.js";
 import type { ContributionRegistries, ContributionRegistry } from "../contributions.js";
+import type { PermissionPolicy, TrustPolicy } from "../security.js";
+import { assertPermission, assertTrusted } from "../security.js";
+import { isPathInsideReal } from "./trust.js";
 
 export interface LoadInstructionInjectorOptions {
   /** Host-owned module loader for declarations with a `module` field. Core never
    *  auto-`import()`s (matches Phase 29's tools/context stance); when a module
    *  injector is discovered but no loader is supplied, it is skipped. */
   readonly moduleLoader?: (module: string, exportName?: string) => Promise<InstructionInjector>;
+  /** Optional escape hatch for instruction resources outside the contribution dir. */
+  readonly resourceTrust?: TrustPolicy;
+  readonly permission?: PermissionPolicy;
 }
 
 /**
@@ -39,7 +45,7 @@ export async function loadInstructionInjector(
   }
 
   // markdown-only instructions: read resource text → static every_turn injector.
-  const text = await readInstructionsText(contribution);
+  const text = await readInstructionsText(contribution, options);
   return {
     name,
     description: `Discovered instruction injector ${name}`,
@@ -77,10 +83,15 @@ export async function registerDiscoveredInstructionInjectors(
   for (const injector of injectors) registry.register(injector.name, injector);
 }
 
-async function readInstructionsText(contribution: DiscoveredContribution): Promise<string> {
+async function readInstructionsText(contribution: DiscoveredContribution, options: LoadInstructionInjectorOptions): Promise<string> {
   const dir = dirname(contribution.path);
   const resource = contribution.declaration?.resource;
-  // ponytail: resource resolved against the manifest dir; falls back to INSTRUCTIONS.md.
+  // ponytail: resource resolved against the manifest dir; outside reads need explicit host trust.
   const target = resource ? (isAbsolute(resource) ? resource : join(dir, resource)) : join(dir, "INSTRUCTIONS.md");
+  if (!(await isPathInsideReal(dir, target))) {
+    if (!options.resourceTrust) throw new Error(`Instruction resource escapes contribution directory: ${target}`);
+    await assertTrusted(options.resourceTrust, { kind: "resource", target, capability: "instruction-resource" });
+  }
+  await assertPermission(options.permission, { kind: "resource", action: "load", target });
   return await readFile(target, "utf8");
 }

@@ -1,4 +1,5 @@
-import type { CompactionEntryData, Message, SessionEntry, SessionStore } from "./contracts.js";
+import { SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError } from "./contracts.js";
+import type { CompactionEntryData, Message, SessionAppendOptions, SessionBranchRead, BranchReader, SessionEntry, SessionStore } from "./contracts.js";
 
 export interface CreateSessionEntryOptions extends Omit<SessionEntry, "id" | "timestamp"> {
   readonly id?: string;
@@ -32,7 +33,35 @@ export function createSessionEntry(options: CreateSessionEntryOptions): SessionE
   };
 }
 
-export function getSessionBranchEntries(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): readonly SessionEntry[] {
+// ponytail: max pages the reader path will follow before stopping. Guards against a buggy/
+// malicious reader that never ends `nextCursor`. Ancestor chains are short in practice; bump
+// this if a legitimate branch exceeds it.
+const MAX_BRANCH_PAGES = 64;
+
+export function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>;
+export function getSessionBranchEntries(entries: readonly SessionEntry[], options?: SessionBranchOptions): readonly SessionEntry[];
+export function getSessionBranchEntries(
+  input: readonly SessionEntry[] | BranchReader,
+  options: SessionBranchOptions | SessionBranchRead = {},
+): readonly SessionEntry[] | Promise<readonly SessionEntry[]> {
+  return typeof input === "function" ? readBranchFromReader(input, options as SessionBranchRead) : getSessionBranchEntriesCore(input, options as SessionBranchOptions);
+}
+
+async function readBranchFromReader(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]> {
+  const items: SessionEntry[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < MAX_BRANCH_PAGES; page++) {
+    const result = await reader(cursor ? { ...query, cursor } : query);
+    items.push(...result.items);
+    cursor = result.nextCursor;
+    if (!cursor) break;
+  }
+  // Reuse the validated in-memory walk: the reader returns the ancestor SET (any order);
+  // indexEntries + the parentId walk order it and still reject missing parents / dupes.
+  return getSessionBranchEntriesCore(items, { leafId: query.leafId });
+}
+
+function getSessionBranchEntriesCore(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): readonly SessionEntry[] {
   const index = indexEntries(entries);
   const leafId = options.leafId ?? entries.at(-1)?.id;
   if (!leafId) return [];
@@ -55,8 +84,27 @@ export function listSessionBranches(entries: readonly SessionEntry[]): readonly 
     .map((entry) => ({ leafId: entry.id, entries: getSessionBranchEntries(entries, { leafId: entry.id }) }));
 }
 
-export function rebuildSessionContext(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): SessionContextSnapshot {
-  const branch = getSessionBranchEntries(entries, options);
+export function rebuildSessionContext(reader: BranchReader, query: SessionBranchRead): Promise<SessionContextSnapshot>;
+export function rebuildSessionContext(entries: readonly SessionEntry[], options?: SessionBranchOptions): SessionContextSnapshot;
+export function rebuildSessionContext(
+  input: readonly SessionEntry[] | BranchReader,
+  options: SessionBranchOptions | SessionBranchRead = {},
+): SessionContextSnapshot | Promise<SessionContextSnapshot> {
+  if (typeof input === "function") {
+    return rebuildSessionContextFromReader(input, options as SessionBranchRead);
+  }
+  return rebuildSessionContextCore(input, options as SessionBranchOptions);
+}
+
+async function rebuildSessionContextFromReader(reader: BranchReader, query: SessionBranchRead): Promise<SessionContextSnapshot> {
+  // ponytail: pass the drained branch back through the sync core so compaction logic has ONE
+  // code path; the redundant re-walk is O(branch length) and branch chains are short.
+  const branch = await readBranchFromReader(reader, query);
+  return rebuildSessionContextCore(branch, { leafId: query.leafId });
+}
+
+function rebuildSessionContextCore(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): SessionContextSnapshot {
+  const branch = getSessionBranchEntriesCore(entries, options);
   const compaction = [...branch].reverse().find((entry) => entry.kind === "compaction" && entry.summary && isCompactionEntryData(entry.data));
   if (!compaction || !isCompactionEntryData(compaction.data)) {
     return {
@@ -87,12 +135,14 @@ export function rebuildSessionContext(entries: readonly SessionEntry[], options:
 export function createMemorySessionStore(initialEntries: readonly SessionEntry[] = []): SessionStore {
   const byId = new Map<string, SessionEntry>();
   const bySession = new Map<string, SessionEntry[]>();
+  const leafBySession = new Map<string, string>();
+  const idempotencySeen = new Set<string>();
 
   for (const entry of initialEntries) add(entry);
 
   return {
-    async append(entry) {
-      add(entry);
+    async append(entry, options) {
+      add(entry, options);
     },
     async list(sessionId) {
       return (bySession.get(sessionId) ?? []).map(cloneEntry);
@@ -103,12 +153,36 @@ export function createMemorySessionStore(initialEntries: readonly SessionEntry[]
     },
   };
 
-  function add(entry: SessionEntry): void {
+  function add(entry: SessionEntry, options?: SessionAppendOptions): void {
+    // ponytail: idempotency dedup keyed on (session, key, expectedParentId) so a
+    // run-level key shared across distinct linear appends (each at a different
+    // parentId) does not collapse them; only an exact retry at the same position
+    // deduplicates. DB adapters may enforce stricter per-key uniqueness.
+    const dedupKey = options?.idempotencyKey
+      ? `${entry.sessionId}\u0000${options.idempotencyKey}\u0000${options.expectedParentId ?? ""}`
+      : undefined;
+    if (dedupKey !== undefined && idempotencySeen.has(dedupKey)) {
+      throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, idempotencyDuplicate: true });
+    }
+    // expectedParentId is existence validation (the parent must already be in the
+    // store or be undefined for a root). Tip-CAS is intentionally NOT used: prism
+    // allows branching from any existing leaf (checkout + append), so a stale-but-
+    // existing parent is a valid branch, not a conflict. DB adapters may layer
+    // stricter tip-CAS via unique constraints for linear-only sessions.
+    if (options?.expectedParentId !== undefined && !byId.has(options.expectedParentId)) {
+      throw new SessionAppendConflictError({
+        code: SESSION_APPEND_CONFLICT_CODE,
+        expectedParentId: options.expectedParentId,
+        currentLeafId: leafBySession.get(entry.sessionId),
+      });
+    }
     if (byId.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+    if (dedupKey !== undefined) idempotencySeen.add(dedupKey);
     byId.set(entry.id, entry);
     const entries = bySession.get(entry.sessionId) ?? [];
     entries.push(entry);
     bySession.set(entry.sessionId, entries);
+    leafBySession.set(entry.sessionId, entry.id);
   }
 }
 

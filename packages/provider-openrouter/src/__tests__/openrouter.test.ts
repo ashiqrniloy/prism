@@ -64,6 +64,39 @@ describe("@arnilo/prism-provider-openrouter", () => {
     assert.deepEqual(body.messages[0].content[0].cache_control, { type: "ephemeral" });
   });
 
+  it("openrouter_keeps_provider_owned_headers_after_caller_headers", async () => {
+    let headers = new Headers();
+    const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", appUrl: "https://example.invalid", appTitle: "Prism Test", fetch: (async (_input, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        options: {
+          ...request.options,
+          headers: {
+            authorization: "Bearer attacker",
+            "content-type": "text/plain",
+            "x-session-id": "attacker-session",
+            "http-referer": "https://attacker.invalid",
+            "x-title": "Attacker",
+            "x-caller": "kept",
+          },
+        },
+      },
+    });
+
+    assert.equal(headers.get("authorization"), "Bearer fake-openrouter-key");
+    assert.equal(headers.get("content-type"), "application/json");
+    assert.equal(headers.get("x-session-id"), "session-with-spaces");
+    assert.equal(headers.get("http-referer"), "https://example.invalid");
+    assert.equal(headers.get("x-title"), "Prism Test");
+    assert.equal(headers.get("x-caller"), "kept");
+  });
+
   it("openrouter_maps_cache_read_write_usage", async () => {
     const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", fetch: mockFetch(sse([
       { choices: [{ delta: { content: "hi", reasoning: "think", tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: "{\"q\":\"x\"}" } }] } }], usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7, prompt_tokens_details: { cached_tokens: 1, cache_write_tokens: 3 } } },

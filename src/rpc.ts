@@ -17,6 +17,7 @@ export type RpcCommandName =
   | "switchSession"
   | "forkSession"
   | "cloneSession"
+  | "checkout"
   | "command";
 
 export interface RpcRequest {
@@ -40,6 +41,7 @@ export interface RpcServerOptions extends RpcSessionFactory {
 
 interface RpcState {
   current: AgentSession;
+  currentHandleId: string;
   model?: ModelConfig;
   readonly sessions: Map<string, AgentSession>;
   readonly commands: Map<string, CommandDefinition>;
@@ -56,6 +58,7 @@ export async function runRpcServer(options: RpcServerOptions): Promise<void> {
   const first = options.createSession();
   const state: RpcState = {
     current: first,
+    currentHandleId: first.id,
     sessions: new Map([[first.id, first]]),
     commands: new Map((options.commands ?? []).map((command) => [command.name, command])),
     createSession: options.createSession,
@@ -132,7 +135,16 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id } });
       break;
     case "state":
-      write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id, sessions: [...state.sessions.keys()], model: state.model } });
+      write(stdout, { id: request.id, ok: true, result: {
+        sessionId: state.current.id,
+        leafId: state.current.leafId,
+        handleId: state.currentHandleId,
+        // ponytail: `sessions` kept as a backward-compatible handle-id string list (== sessionId
+        // for the initial session and clones); `handles` is the branch-handle detail view.
+        sessions: [...state.sessions.keys()],
+        handles: [...state.sessions.entries()].map(([handleId, session]) => ({ handleId, sessionId: session.id, leafId: session.leafId })),
+        model: state.model,
+      } });
       break;
     case "messages":
       write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id, entries: await state.current.entries() } });
@@ -145,25 +157,35 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       write(stdout, { id: request.id, ok: true, result: await state.current.compact() });
       break;
     case "switchSession": {
-      const id = stringParam(request.params, "sessionId") ?? stringParam(request.params, "id");
-      if (!id) throw new Error("switchSession requires params.sessionId");
-      const session = state.sessions.get(id) ?? makeSession(state, id);
+      const handleId = stringParam(request.params, "handleId") ?? stringParam(request.params, "sessionId") ?? stringParam(request.params, "id");
+      if (!handleId) throw new Error("switchSession requires params.handleId (or sessionId)");
+      const session = state.sessions.get(handleId) ?? makeSession(state, handleId);
       state.current = session;
-      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id } });
+      state.currentHandleId = handleId;
+      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id, leafId: session.leafId, handleId } });
       break;
     }
     case "forkSession": {
       const session = state.current.fork({ leafId: stringParam(request.params, "leafId") });
-      state.sessions.set(session.id, session);
+      const handleId = registerSession(state, session);
       state.current = session;
-      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id } });
+      state.currentHandleId = handleId;
+      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id, leafId: session.leafId, handleId } });
       break;
     }
     case "cloneSession": {
       const session = await state.current.clone({ id: stringParam(request.params, "id"), leafId: stringParam(request.params, "leafId") });
-      state.sessions.set(session.id, session);
+      const handleId = registerSession(state, session);
       state.current = session;
-      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id } });
+      state.currentHandleId = handleId;
+      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id, leafId: session.leafId, handleId } });
+      break;
+    }
+    case "checkout": {
+      const leafId = stringParam(request.params, "leafId");
+      if (!leafId) throw new Error("checkout requires params.leafId");
+      await state.current.checkout(leafId);
+      write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id, leafId: state.current.leafId, handleId: state.currentHandleId } });
       break;
     }
     case "command": {
@@ -189,6 +211,24 @@ function eventEnvelope(event: AgentEvent, requestId: string | number): Record<st
   const sessionId = "sessionId" in event ? event.sessionId : undefined;
   const runId = "runId" in event ? event.runId : undefined;
   return { type: "event", id: requestId, sessionId, runId, event };
+}
+
+function registerSession(state: RpcState, session: AgentSession, preferredHandleId?: string): string {
+  const base = preferredHandleId ?? session.id;
+  // ponytail: branch handles coexist for one sessionId. fork() reuses the sessionId (it is a
+  // branch of the same session, not a copy; clone() is the copy), so on collision we mint a
+  // stable, self-describing handle id (`{sessionId}#2`, `#3`, ...). Clients switch among handles
+  // via the handleId returned by fork/clone/switch; the (sessionId, leafId) pair is read live
+  // from the session so it stays accurate as the leaf advances on append/run.
+  if (!state.sessions.has(base)) {
+    state.sessions.set(base, session);
+    return base;
+  }
+  let n = 2;
+  while (state.sessions.has(`${base}#${n}`)) n++;
+  const handleId = `${base}#${n}`;
+  state.sessions.set(handleId, session);
+  return handleId;
 }
 
 function makeSession(state: RpcState, id: string): AgentSession {
@@ -242,7 +282,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function isCommand(value: unknown): value is RpcCommandName {
-  return typeof value === "string" && ["prompt", "steer", "followUp", "abort", "state", "messages", "setModel", "compact", "switchSession", "forkSession", "cloneSession", "command"].includes(value);
+  return typeof value === "string" && ["prompt", "steer", "followUp", "abort", "state", "messages", "setModel", "compact", "switchSession", "forkSession", "cloneSession", "checkout", "command"].includes(value);
 }
 
 function readRequestId(value: unknown): string | number | null {

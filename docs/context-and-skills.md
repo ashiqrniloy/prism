@@ -153,5 +153,5 @@ Skill selection grants no tool access and cannot bypass permissions — a skill'
 - [Public contracts](public-contracts.md): `ContextProvider`, `ContextResolutionContext`, `ContextBlock`, `Skill`, `SkillRegistry`, `PromptBuilder`, and `PromptBuildRequest`.
 - [Middleware hooks](middleware-hooks.md): `context` and `prompt_build` hooks.
 - [Contribution registries](contribution-registries.md): inert context provider and skill contributions.
-- [Contribution discovery (workspace & global)](contribution-discovery.md): opt-in filesystem scanner that turns `SKILL.md`/`AGENT.md`/`manifest.json` into registered skills and descriptor stubs.
+- [Contribution discovery (workspace)](contribution-discovery.md): opt-in filesystem scanner that turns `SKILL.md`/`manifest.json` into registered skills and descriptor stubs. (Per-agent `AGENT.md` bundles live under an app-controlled `configRoot`; see [Agent definitions](agent-definitions.md).)
 - [Tools](tools.md): host-owned active tools and permissions.

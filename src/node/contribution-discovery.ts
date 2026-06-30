@@ -11,44 +11,31 @@ import type { PermissionPolicy } from "../security.js";
 import { assertPermission } from "../security.js";
 import type { TrustPolicy } from "../security.js";
 import { isPathInsideReal } from "./trust.js";
-import { parseAgentFile, parseSkillFile } from "../contribution-parsing.js";
+import { parseSkillFile } from "../contribution-parsing.js";
 
 export interface DiscoveryOptions {
   readonly kinds: readonly ContributionFileKind[];
-  /** Workspace root. Scans `<root>/.agent/<kind>s/<name>/`. Gated by `trust`. */
+  /** Workspace root. Scans `<root>/.agents/<kind>s/<name>/`. Gated by `trust`. */
   readonly workspaceRoot?: string;
-  /** Global root. Scans `<root>/.prism/agent/<kind>s/<name>/`. Opt-in: scanned
-   *  only when explicitly passed (the host/CLI passes homedir() when
-   *  `--discover-global` is set). Core never auto-touches `~/.prism`. */
-  readonly globalRoot?: string;
   readonly permission?: PermissionPolicy;
   readonly trust?: TrustPolicy;
 }
 
 /**
- * Discover contributions on disk. One `readdir` per kind-root per origin; no
- * `import()`. Merge order: global first, workspace overrides same `(kind, name)`.
- * Inert output — executable behavior is host-owned (Task 5 registers; Phase 33
- * resolves agents). */
+ * Discover contributions on disk. Scans the workspace `.agents/` tree only;
+ * no global root. One `readdir` per kind-root; no `import()`. Inert output —
+ * executable behavior is host-owned.
+ */
 export async function discoverContributions(
   options: DiscoveryOptions,
 ): Promise<readonly DiscoveredContribution[]> {
   const kinds = options.kinds;
   const merged = new Map<string, DiscoveredContribution>();
 
-  // ponytail: merge = global then workspace, workspace wins on (kind,name) collision. Per-namespace overrides are YAGNI until collisions bite.
-  // Global is opt-in: only scanned when `globalRoot` is explicitly passed. The CLI passes homedir()
-  // only when --discover-global is set — core never auto-touches ~/.prism (no hidden auto-load).
-  if (options.globalRoot) {
-    for (const kind of kinds) {
-      const globalEntries = await scanKindRoot(options.globalRoot, kind, "global", options, false);
-      for (const c of globalEntries) merged.set(`${c.kind}/${c.name}`, c);
-    }
-  }
   if (options.workspaceRoot) {
     for (const kind of kinds) {
-      const workspaceEntries = await scanKindRoot(options.workspaceRoot, kind, "workspace", options, true);
-      for (const c of workspaceEntries) merged.set(`${c.kind}/${c.name}`, c);
+      const entries = await scanKindRoot(options.workspaceRoot, kind, options);
+      for (const c of entries) merged.set(`${c.kind}/${c.name}`, c);
     }
   }
 
@@ -59,13 +46,11 @@ export async function discoverContributions(
 async function scanKindRoot(
   root: string,
   kind: ContributionFileKind,
-  origin: "global" | "workspace",
   options: DiscoveryOptions,
-  isWorkspace: boolean,
 ): Promise<readonly DiscoveredContribution[]> {
-  const kindDir = origin === "workspace" ? join(root, ".agent", kindDirName(kind)) : join(root, ".prism", "agent", kindDirName(kind));
+  const kindDir = join(root, ".agents", kindDirName(kind));
 
-  if (isWorkspace && options.trust) {
+  if (options.trust) {
     const decision = await options.trust.check({ kind: "project", target: kindDir });
     if (!decision.trusted) return []; // untrusted workspace root: skip, no throw
   }
@@ -90,10 +75,10 @@ async function scanKindRoot(
     }
     if (!isDir) continue;
     // Symlinks escaping the kind root are excluded via realpath containment.
-    if (isWorkspace && !(await isPathInsideReal(kindDir, dir))) continue;
+    if (!(await isPathInsideReal(kindDir, dir))) continue;
 
     await assertPermission(options.permission, { kind: "resource", action: "load", target: dir });
-    const entry = await readEntry(dir, name, kind, origin);
+    const entry = await readEntry(dir, name, kind, "workspace");
     if (entry) out.push(entry);
   }
   return out;
@@ -108,8 +93,6 @@ async function readEntry(
   switch (kind) {
     case "skill":
       return readSkillEntry(dir, fallbackName, origin);
-    case "agent":
-      return readAgentEntry(dir, fallbackName, origin);
     default:
       // tool / context / instructions → manifest.json declaration
       return readManifestEntry(dir, fallbackName, kind, origin);
@@ -122,22 +105,11 @@ async function readSkillEntry(
   origin: "global" | "workspace",
 ): Promise<DiscoveredContribution | undefined> {
   const path = join(dir, "SKILL.md");
+  if (!(await isPathInsideReal(dir, path))) return undefined;
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
   const skill = parseSkillFile(text, path);
   return { kind: "skill", name: skill.name, origin, path, skill };
-}
-
-async function readAgentEntry(
-  dir: string,
-  fallbackName: string,
-  origin: "global" | "workspace",
-): Promise<DiscoveredContribution | undefined> {
-  const path = join(dir, "AGENT.md");
-  const text = await readOptionalFile(path);
-  if (text === undefined) return undefined;
-  const declaration = parseAgentFile(text, path);
-  return { kind: "agent", name: declaration.name, origin, path, declaration };
 }
 
 async function readManifestEntry(
@@ -147,6 +119,7 @@ async function readManifestEntry(
   origin: "global" | "workspace",
 ): Promise<DiscoveredContribution | undefined> {
   const path = join(dir, "manifest.json");
+  if (!(await isPathInsideReal(dir, path))) return undefined;
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
   const declaration = parseManifestDeclaration(text, path, kind, fallbackName);
@@ -210,15 +183,13 @@ function kindToManifestKind(kind: ContributionFileKind): ManifestContributionKin
       return "contextProvider";
     case "instructions":
       return "systemPromptContribution";
-    case "agent":
-      return "agent";
     case "skill":
       return "skill";
   }
 }
 
 // ponytail: Phase 29 fix — `${kind}s` produced `instructionss`/`contexts`; the documented layout is
-// `.agent/{skills,tools,context,instructions,agents}/` (instructions and context are already the right form).
+// `.agents/{skills,tools,context,instructions}/` (instructions and context are already the right form).
 function kindDirName(kind: ContributionFileKind): string {
   switch (kind) {
     case "skill":
@@ -229,8 +200,6 @@ function kindDirName(kind: ContributionFileKind): string {
       return "context";
     case "instructions":
       return "instructions";
-    case "agent":
-      return "agents";
   }
 }
 

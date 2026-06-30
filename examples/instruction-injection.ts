@@ -17,7 +17,7 @@ import type { InstructionInjector, ProviderRequest } from "@arnilo/prism";
 // Instruction injection, end-to-end with the mock provider.
 //
 // Demonstrates the three lifecycle modes (every_turn / first_turn / on_input
-// + predicate), Phase 29 discovery loading of a `.agent/instructions/<name>/`
+// + predicate), Phase 29 discovery loading of a `.agents/instructions/<name>/`
 // bundle, name-based selection via resolveInstructionInjectors, and that an
 // injected secret token is redacted by the runtime before the provider sees it.
 // Network-free; no real credentials.
@@ -60,7 +60,7 @@ export async function demo(): Promise<{
   onInputInjectorApplied: boolean;
   injectedSecretRedacted: boolean;
 }> {
-  // 1. Discover: scan <workspace>/.agent/instructions/<name>/manifest.json.
+  // 1. Discover: scan <workspace>/.agents/instructions/<name>/manifest.json.
   const trust = createPathTrustPolicy({ trustedRoots: [workspaceRoot] });
   const discovered = await discoverContributions({
     kinds: ["instructions"],

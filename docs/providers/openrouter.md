@@ -89,6 +89,10 @@ await kernel.load([
   credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers and
   redacted from errors.
+- Caller-supplied `ProviderRequest.options.headers` can add non-owned headers,
+  but OpenRouter-owned headers are applied last: `Authorization`,
+  `Content-Type`, `X-Session-Id`, `HTTP-Referer`, and `X-Title` cannot be
+  overridden by caller headers.
 - Attribution headers are sent only when `appUrl`/`appTitle` are supplied — no
   hidden app identity.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe

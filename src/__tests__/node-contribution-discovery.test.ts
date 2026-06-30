@@ -20,7 +20,7 @@ describe("discoverContributions", () => {
   it("discovers a workspace skill with parsed Skill fields and origin workspace", async () => {
     const root = await makeRoot("ws-skill");
     await writeFileDeep(
-      `${root}/.agent/skills/my-skill/SKILL.md`,
+      `${root}/.agents/skills/my-skill/SKILL.md`,
       "---\nname: my-skill\ndescription: greets\ntoolNames: [greet-tool]\n---\n\nsay hi\n",
     );
 
@@ -36,39 +36,6 @@ describe("discoverContributions", () => {
     assert.match(entry.skill?.instructions ?? "", /^say hi/);
   });
 
-  it("discovers a global skill with origin global", async () => {
-    const globalRoot = await mkdtemp(join(tmpdir(), "prism-disc-global-"));
-    await writeFileDeep(
-      `${globalRoot}/.prism/agent/skills/global-skill/SKILL.md`,
-      "---\nname: global-skill\ndescription: g\n---\nbody\n",
-    );
-
-    const found = await discoverContributions({ kinds: ["skill"], globalRoot, workspaceRoot: undefined });
-
-    assert.equal(found.length, 1);
-    assert.equal(found[0].origin, "global");
-    assert.equal(found[0].name, "global-skill");
-  });
-
-  it("same-name global + workspace yields one entry, workspace wins", async () => {
-    const globalRoot = await mkdtemp(join(tmpdir(), "prism-merge-g-"));
-    const workspaceRoot = await makeRoot("merge-ws");
-    await writeFileDeep(
-      `${globalRoot}/.prism/agent/skills/dup/SKILL.md`,
-      "---\nname: dup\ndescription: global-text\n---\ngbody\n",
-    );
-    await writeFileDeep(
-      `${workspaceRoot}/.agent/skills/dup/SKILL.md`,
-      "---\nname: dup\ndescription: workspace-text\n---\nwbody\n",
-    );
-
-    const found = await discoverContributions({ kinds: ["skill"], globalRoot, workspaceRoot });
-
-    assert.equal(found.length, 1);
-    assert.equal(found[0].origin, "workspace");
-    assert.equal(found[0].skill?.description, "workspace-text");
-  });
-
   it("missing kind directory returns no entries and does not throw", async () => {
     const root = await makeRoot("missing");
     const found = await discoverContributions({ kinds: ["skill", "tool"], workspaceRoot: root });
@@ -78,7 +45,7 @@ describe("discoverContributions", () => {
   it("discovers a tool dir via manifest.json as a declaration", async () => {
     const root = await makeRoot("tool");
     await writeFileDeep(
-      `${root}/.agent/tools/my-tool/manifest.json`,
+      `${root}/.agents/tools/my-tool/manifest.json`,
       JSON.stringify({ name: "my-tool", module: "@scope/my-tool", exportName: "default", metadata: { x: 1 } }),
     );
 
@@ -92,27 +59,11 @@ describe("discoverContributions", () => {
     assert.deepEqual(found[0].declaration?.metadata, { x: 1 });
   });
 
-  it("discovers an agent dir via AGENT.md as a declaration with resource", async () => {
-    const root = await makeRoot("agent");
-    await writeFileDeep(
-      `${root}/.agent/agents/agent-x/AGENT.md`,
-      "---\nname: agent-x\ndescription: an agent\n---\nbody\n",
-    );
-
-    const found = await discoverContributions({ kinds: ["agent"], workspaceRoot: root });
-
-    assert.equal(found.length, 1);
-    assert.equal(found[0].kind, "agent");
-    assert.equal(found[0].declaration?.kind, "agent");
-    assert.equal(found[0].declaration?.resource, join(root, ".agent", "agents", "agent-x", "AGENT.md"));
-    assert.equal(found[0].declaration?.metadata?.description, "an agent");
-  });
-
   it("performs no import(); file content is read, not module-loaded", async () => {
     // A skill file containing JS-like text is never evaluated as code.
     const root = await makeRoot("noeval");
     await writeFileDeep(
-      `${root}/.agent/skills/j-skill/SKILL.md`,
+      `${root}/.agents/skills/j-skill/SKILL.md`,
       "---\nname: j-skill\n---\nrequire('fs')\nprocess.exit(1)\n",
     );
     const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root });
@@ -123,7 +74,7 @@ describe("discoverContributions", () => {
   it("untrusted workspace root yields no entries and does not throw; kind-root not read", async () => {
     const root = await makeRoot("untrusted");
     await writeFileDeep(
-      `${root}/.agent/skills/s/SKILL.md`,
+      `${root}/.agents/skills/s/SKILL.md`,
       "---\nname: s\n---\nb\n",
     );
     const checked: string[] = [];
@@ -137,13 +88,13 @@ describe("discoverContributions", () => {
     const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root, trust });
 
     assert.equal(found.length, 0);
-    assert.ok(checked.some((t) => t.endsWith(".agent/skills")), "kind-root was trust-checked");
+    assert.ok(checked.some((t) => t.endsWith(".agents/skills")), "kind-root was trust-checked");
   });
 
   it("trusted workspace root invokes permission per directory read inside the root", async () => {
     const root = await makeRoot("perm");
-    await writeFileDeep(`${root}/.agent/skills/a/SKILL.md`, "---\nname: a\n---\nb\n");
-    await writeFileDeep(`${root}/.agent/skills/b/SKILL.md`, "---\nname: b\n---\nb\n");
+    await writeFileDeep(`${root}/.agents/skills/a/SKILL.md`, "---\nname: a\n---\nb\n");
+    await writeFileDeep(`${root}/.agents/skills/b/SKILL.md`, "---\nname: b\n---\nb\n");
     const checked: string[] = [];
     const permission = {
       check: (req: { kind: string; action: string; target: string }) => {
@@ -162,18 +113,41 @@ describe("discoverContributions", () => {
     const root = await makeRoot("symlink");
     const outside = await mkdtemp(join(tmpdir(), "prism-outside-"));
     await writeFileDeep(`${outside}/SKILL.md`, "---\nname: escaped\n---\nb\n");
-    await mkdir(`${root}/.agent/skills`, { recursive: true });
-    await symlink(outside, `${root}/.agent/skills/escaped`, "dir");
+    await mkdir(`${root}/.agents/skills`, { recursive: true });
+    await symlink(outside, `${root}/.agents/skills/escaped`, "dir");
 
     const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root });
 
     assert.equal(found.length, 0);
   });
 
-  it("global root not scanned when not passed; no FS access to real homedir", async () => {
-    // workspace only; no globalRoot → global dir (real homedir/~/.prism) must NOT be touched.
+  it("skips a skill entry file symlink escaping its contribution directory", async () => {
+    const root = await makeRoot("skill-file-link");
+    const outside = await mkdtemp(join(tmpdir(), "prism-outside-skill-"));
+    await writeFileDeep(`${outside}/SKILL.md`, "---\nname: escaped\n---\nb\n");
+    await mkdir(`${root}/.agents/skills/escaped`, { recursive: true });
+    await symlink(`${outside}/SKILL.md`, `${root}/.agents/skills/escaped/SKILL.md`);
+
+    const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root });
+
+    assert.equal(found.length, 0);
+  });
+
+  it("skips a manifest entry file symlink escaping its contribution directory", async () => {
+    const root = await makeRoot("manifest-file-link");
+    const outside = await mkdtemp(join(tmpdir(), "prism-outside-manifest-"));
+    await writeFileDeep(`${outside}/manifest.json`, JSON.stringify({ name: "escaped", module: "x" }));
+    await mkdir(`${root}/.agents/tools/escaped`, { recursive: true });
+    await symlink(`${outside}/manifest.json`, `${root}/.agents/tools/escaped/manifest.json`);
+
+    const found = await discoverContributions({ kinds: ["tool"], workspaceRoot: root });
+
+    assert.equal(found.length, 0);
+  });
+
+  it("no global root is scanned; only the workspace root is touched", async () => {
     const root = await makeRoot("noglobal");
-    await writeFileDeep(`${root}/.agent/skills/only-ws/SKILL.md`, "---\nname: only-ws\n---\nb\n");
+    await writeFileDeep(`${root}/.agents/skills/only-ws/SKILL.md`, "---\nname: only-ws\n---\nb\n");
     const checked: string[] = [];
     const trust = {
       check: (req: { target: string }) => {
@@ -186,8 +160,8 @@ describe("discoverContributions", () => {
 
     assert.equal(found.length, 1);
     assert.equal(found[0].name, "only-ws");
-    assert.ok(checked.every((t) => !t.includes(".prism")),
-      "global root never scanned when globalRoot omitted");
+    assert.ok(checked.every((t) => t.startsWith(root)),
+      "only workspace paths were checked");
   });
 
   it("contribution-discovery subpath is declared in package exports", async () => {

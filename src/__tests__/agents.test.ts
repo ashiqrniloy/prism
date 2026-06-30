@@ -11,6 +11,7 @@ import {
   createSecretRedactor,
   createSessionCachePolicy,
   createSkillRegistry,
+  getSessionBranchEntries,
   providerDone,
   providerTextDelta,
   providerUsage,
@@ -21,8 +22,11 @@ import {
   type ContentBlock,
   type ContextProvider,
   type InputBuilder,
+  type InstructionInjector,
+  type Message,
   type PromptBuilder,
   type ProviderRequest,
+  type SessionStore,
   type ToolDefinition,
 } from "../index.js";
 
@@ -34,6 +38,10 @@ async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[
 
 function textOf(message: ProviderRequest["messages"][number] | undefined): string {
   return message?.content.map((block) => block.type === "text" ? block.text : "").join("") ?? "";
+}
+
+function messageText(messages: readonly Message[]): string {
+  return JSON.stringify(messages);
 }
 
 async function take(iterable: AsyncIterable<AgentEvent>, count: number): Promise<AgentEvent[]> {
@@ -637,7 +645,7 @@ describe("agent session runtime", () => {
     };
     contributions.agents.register("demo", definition);
 
-    const agent = await contributions.agents.resolve("demo").create();
+    const agent = await contributions.agents.resolve("demo").create!();
     const session = agent.createSession({ id: "s1" });
 
     await session.run("Hi");
@@ -680,6 +688,31 @@ describe("agent session runtime", () => {
     assert.equal(seen[1]?.includes("second"), true);
     assert.equal(seen[2]?.includes("second"), false);
     assert.equal(seen[2]?.includes("branch"), true);
+  });
+
+  it("uses store.readBranchPath instead of list() for branch reads when present", async () => {
+    const base = createMemorySessionStore();
+    let listCalls = 0;
+    let readCalls = 0;
+    const store = {
+      append: (entry: any, options?: any) => base.append(entry, options),
+      async list(sessionId: string) { listCalls++; return base.list(sessionId); },
+      async readBranchPath(query: any) {
+        readCalls++;
+        // ponytail: test reader returns the ancestor chain via the same core helper a real
+        // DB adapter would replace with a recursive CTE.
+        return { items: getSessionBranchEntries(await base.list(query.sessionId), { leafId: query.leafId }) };
+      },
+    };
+    const provider: AIProvider = { id: "mock", async *generate() { yield providerTextDelta("ok"); yield providerDone(); } };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
+
+    await session.run("hi");
+    const entries = await session.entries();
+
+    assert.ok(entries.length > 0, "reader returned the branch");
+    assert.ok(readCalls >= 1, "readBranchPath was used for branch reads");
+    assert.equal(listCalls, 0, "store.list() was not called by the runtime (no full-session load)");
   });
 
   it("fork uses same session store and selected leaf", async () => {
@@ -725,6 +758,59 @@ describe("agent session runtime", () => {
     await createAgent({ model: { provider: "mock", model: "demo" }, provider, store, credentials: { resolve: () => ({ type: "bearer", value: "secret" }) } }).createSession({ id: "s1" }).run("Hi");
 
     assert.equal(JSON.stringify(await store.list("s1")).includes("secret"), false);
+  });
+
+  it("redacts a known secret in an appended user message before it reaches the store", async () => {
+    // Task 6 security criterion: redaction is preserved through the new SessionAppendOptions
+    // path. appendEntry runs redactSessionEntry BEFORE store.append(entry, options), so the
+    // store never sees the raw secret even though the append now carries concurrency options.
+    const secret = "sk-super-secret-12345";
+    const memory = createMemorySessionStore();
+    const seen: string[] = [];
+    const store: SessionStore = {
+      append: async (entry, options) => { seen.push(JSON.stringify(entry)); return memory.append(entry, options); },
+      list: (id) => memory.list(id),
+    };
+    const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
+    await createAgent({ model: { provider: "mock", model: "demo" }, provider, store, redactor: createSecretRedactor([secret]) }).createSession({ id: "s1" }).run(`My token is ${secret}`);
+
+    assert.equal(seen.some((s) => s.includes(secret)), false, "raw secret never reached store.append");
+    assert.equal(seen.some((s) => s.includes("[REDACTED]")), true, "secret was redacted before append");
+    assert.equal(JSON.stringify(await memory.list("s1")).includes(secret), false, "persisted store has no raw secret");
+  });
+
+  it("passes redacted current input and prior history to instruction injectors", async () => {
+    const firstSecret = "input-secret-12345";
+    const secondSecret = "next-secret-12345";
+    const captures: { input: readonly Message[]; history: readonly Message[] }[] = [];
+    const capture: InstructionInjector = {
+      name: "capture",
+      apply: (ctx) => {
+        captures.push({ input: ctx.input, history: ctx.history });
+        return { when: "every_turn" };
+      },
+    };
+    const provider: AIProvider = { id: "mock", async *generate() { yield providerDone(); } };
+    const redactor = createSecretRedactor([firstSecret, secondSecret]);
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      redactor,
+      instructionInjectors: [capture],
+    }).createSession({ id: "s1" });
+
+    await session.run(`first ${firstSecret}`);
+    await session.run(`second ${secondSecret}`);
+    const stored = JSON.stringify(await session.entries());
+
+    assert.equal(stored.includes(firstSecret), false, "persisted entries kept raw first secret");
+    assert.equal(stored.includes(secondSecret), false, "persisted entries kept raw second secret");
+    assert.equal(stored.includes("[REDACTED]"), true, "persisted entries were not redacted");
+    assert.equal(messageText(captures[0]!.input).includes(firstSecret), false, "current input leaked to injector");
+    assert.equal(messageText(captures[0]!.input).includes("[REDACTED]"), true, "current input was not redacted");
+    assert.equal(messageText(captures[1]!.input).includes(secondSecret), false, "second input leaked to injector");
+    assert.equal(messageText(captures[1]!.history).includes(firstSecret), false, "prior history leaked to injector");
+    assert.equal(messageText(captures[1]!.history).includes("[REDACTED]"), true, "prior history was not redacted");
   });
 
   it("manual compact appends compaction entry and updates leaf", async () => {

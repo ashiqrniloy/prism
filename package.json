@@ -45,6 +45,10 @@
     "./node/system-prompts": {
       "types": "./dist/node/system-project-prompts.d.ts",
       "default": "./dist/node/system-project-prompts.js"
+    },
+    "./node/agent-definitions": {
+      "types": "./dist/node/agent-definitions.d.ts",
+      "default": "./dist/node/agent-definitions.js"
     }
   },
   "bin": {

@@ -77,6 +77,7 @@ parsePrismManifest(value: unknown): PrismManifest
 - Later config layers override earlier layers.
 - Nested plain objects merge recursively.
 - Arrays and primitives replace previous values.
+- Config and manifest JSON object keys named `__proto__`, `prototype`, or `constructor` are rejected at any depth before merge/clone output is built.
 - `parsePrismManifest()` returns a validated manifest or throws a field-specific validation error.
 - No events are emitted and no registries are modified by these helpers.
 
@@ -132,6 +133,7 @@ console.log(config.demo);
 ## Security and performance notes
 
 - Config and manifest values must be JSON-compatible data.
+- Config/manifest JSON rejects `__proto__`, `prototype`, and `constructor` keys at every depth to block prototype pollution rather than silently dropping unsafe input.
 - Do not put resolved credential values, tokens, headers, or executable code in config defaults, manifests, or metadata.
 - Manifest parsing does not execute package code, dynamically import modules, resolve credentials, call providers/tools, or read resources.
 - Config merging is dependency-free and proportional to the total number of JSON fields.
@@ -142,4 +144,4 @@ console.log(config.demo);
 - [Extension kernel and event bus](extensions.md): hosts can load extensions after they decide to execute package code.
 - [Resource loading](resource-loading.md): load manifest, prompt, skill, and package resources through host-provided loaders.
 - [Credentials and redaction](credentials-and-redaction.md): credential values stay out of manifests and config layers.
-- [Contribution discovery (workspace & global)](contribution-discovery.md): opt-in scanner that resolves non-skill on-disk entries into `ManifestContributionDeclaration` envelopes.
+- [Contribution discovery (workspace)](contribution-discovery.md): opt-in scanner that resolves non-skill on-disk entries into `ManifestContributionDeclaration` envelopes.

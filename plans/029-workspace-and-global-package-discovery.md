@@ -1,7 +1,7 @@
 # Phase 29 — Workspace and global package discovery (skills, tools, context, instruction injectors)
 
 ## Objectives
-- Provide a standard, host/CLI-driven filesystem contribution loader (Node, optional) that scans `<workspace>/.agent/{skills,tools,context,instructions,agents}/<name>/` and `~/.prism/agent/{skills,tools,context,instructions,agents}/<name>/` and registers each discovered contribution into the matching contribution registry.
+- Provide a standard, host/CLI-driven filesystem contribution loader (Node, optional) that scans `<workspace>/.agents/{skills,tools,context,instructions,agents}/<name>/` and `~/.prism/agent/{skills,tools,context,instructions,agents}/<name>/` and registers each discovered contribution into the matching contribution registry.
 - Make skills the first-class, fully working kind (they are text-only: `SKILL.md` → `Skill`), with `name`, `description`, `instructions`, `context`, and `toolNames` honored exactly as in Phase 26.
 - Treat tools/context/instructions/agents uniformly through the *same* discovery scanner, but register them as manifest-referenced contributions whose executable behavior is supplied by a host-loaded module (the manifest `module`/`exportName` field already on `ManifestContributionDeclaration`); Phase 33 supersedes the agent stub with `resolveAgentDefinition`.
 - Keep merge order documented and tested: global first, workspace overrides same-name; explicit `AgentConfig`/`RunOptions` selections override discovered contributions (progressive disclosure preserved; discovery registers, it does not auto-activate).
@@ -10,7 +10,7 @@
 - First-party skills ship as installable packages (`@arnilo/prism-skill-*`), discovered like any third-party skill — not bundled in core; not added in this phase.
 
 ## Expected Outcome
-- A workspace skill at `.agent/skills/my-skill/SKILL.md` is discovered by the CLI loader, loaded into the `skills` registry, selectable via `activeSkills: ["my-skill"]`, with `toolNames`/`context` honored (fail-fast at activation per Phase 26).
+- A workspace skill at `.agents/skills/my-skill/SKILL.md` is discovered by the CLI loader, loaded into the `skills` registry, selectable via `activeSkills: ["my-skill"]`, with `toolNames`/`context` honored (fail-fast at activation per Phase 26).
 - A global skill at `~/.prism/agent/skills/global-skill/SKILL.md` is discovered; a same-named workspace skill overrides the global one (documented and tested).
 - Discovered skills are inert until activated by an explicit `activeSkills` selection or `AgentConfig.skills` registry; discovery alone never activates, never grants tool access, never bypasses `toolNames` enforcement or permission hooks.
 - No filesystem access happens without the explicit host/CLI loader; in-memory SDK use (mock provider, no `node/` imports from the agent path) is unaffected. `npm test` stays network-free and under the documented `<30s` budget.
@@ -97,7 +97,7 @@
 
 - [x] Task 3 — Implement `discoverContributions()` Node scanner in `src/node/contribution-discovery.ts`
   - Acceptance Criteria:
-    - Functional: `discoverContributions(options: DiscoveryOptions): Promise<readonly DiscoveredContribution[]>` scans, for each requested `kind`, both `workspaceRoot/.agent/<kind>s/<name>/` dirs (origin `"workspace"`) and `globalRoot/.prism/agent/<kind>s/<name>/` dirs (origin `"global"`, default `os.homedir()`), reading each `<name>/` subdirectory. Missing directories are skipped silently (reuse `isMissingFile`/ENOENT-tolerant pattern). Per `kind`: skill directories read `SKILL.md` (Task 4) and produce a `skill`; agent directories read `AGENT.md` frontmatter and produce a declaration referencing the file (`kind: "agent"`, `resource: <AGENT.md path>`); tool/context/instructions dirs read `manifest.json` (parsed via `parsePrismManifest`-shaped single-contribution JSON or a kind-specific `package.json`-style file) and produce a `declaration`. Returns a flat list with **merge order: global first, workspace overrides same `(kind, name)`** (workspace wins on collision; documented + tested).
+    - Functional: `discoverContributions(options: DiscoveryOptions): Promise<readonly DiscoveredContribution[]>` scans, for each requested `kind`, both `workspaceRoot/.agents/<kind>s/<name>/` dirs (origin `"workspace"`) and `globalRoot/.prism/agent/<kind>s/<name>/` dirs (origin `"global"`, default `os.homedir()`), reading each `<name>/` subdirectory. Missing directories are skipped silently (reuse `isMissingFile`/ENOENT-tolerant pattern). Per `kind`: skill directories read `SKILL.md` (Task 4) and produce a `skill`; agent directories read `AGENTS.md` frontmatter and produce a declaration referencing the file (`kind: "agent"`, `resource: <AGENTS.md path>`); tool/context/instructions dirs read `manifest.json` (parsed via `parsePrismManifest`-shaped single-contribution JSON or a kind-specific `package.json`-style file) and produce a `declaration`. Returns a flat list with **merge order: global first, workspace overrides same `(kind, name)`** (workspace wins on collision; documented + tested).
     - Performance: One `readdir` per kind-root per origin; no recursive walk beyond one level of named subdirs. O(N) in number of contributions.
     - Code Quality: Uses `node:fs/promises`, `node:path`, `node:os` only; reuses `readConfigFile`'s missing-file helper pattern. No `import()` of contribution modules. Pure async function, no class state. Namespaced `ponytail:` comments for the merge order and the single-level scan ceiling.
     - Security: Respects `PermissionPolicy` via `assertPermission({ kind: "resource", action: "load", target })` for each directory read (reuse Phase 10/16 permission seam). Workspace roots must pass the host's path-trust check before scanning (Task 6 wires `TrustPolicy`); the scanner itself trusts the caller to have gated trust and only reads paths under the configured roots (fail-closed via `isPathInsideReal` against the configured root).
@@ -108,7 +108,7 @@
       - `src/manifests.ts` `parsePrismManifest` and `ManifestContributionDeclaration` — declaration parsing for non-skill kinds.
       - `src/contracts.ts` `DiscoveredContribution` (Task 2).
       - `src/security.ts` `assertPermission` — gated read pattern.
-      - Roadmap Phase 29 layout (`<workspace>/.agent/skills/<name>/`, `~/.prism/agent/skills/<name>/`).
+      - Roadmap Phase 29 layout (`<workspace>/.agents/skills/<name>/`, `~/.prism/agent/skills/<name>/`).
     - Options Considered:
       - Per-kind loader modules (`discoverSkills`, `discoverTools`, ...): rejected — duplicates directory walk; one scanner + per-kind adapter is shorter.
       - Walking nested directory trees: rejected — single-level named-subdir scan is the documented layout; nested discovery is YAGNI. Marked ceiling in a `ponytail:` comment.
@@ -119,7 +119,7 @@
       // src/node/contribution-discovery.ts
       export interface DiscoveryOptions {
         readonly kinds: readonly ContributionFileKind[];
-        readonly workspaceRoot?: string;       // scan .agent/<kind>s/
+        readonly workspaceRoot?: string;       // scan .agents/<kind>s/
         readonly globalRoot?: string;          // scan .prism/agent/<kind>s/, default homedir()
         readonly permission?: PermissionContext;
         readonly trust?: TrustPolicy;          // optional; gate workspace root
@@ -137,7 +137,7 @@
       - `src/node/config.ts`, `src/node/trust.ts`, `src/manifests.ts`, `src/security.ts`.
       - Roadmap Phase 29 layout table.
   - Test Cases to Write:
-    - `src/__tests__/node-contribution-discovery.test.ts` (`node:test` + `tmp` dir in `os.tmpdir()`): workspace skill at `.agent/skills/my-skill/SKILL.md` discovered with origin `"workspace"` and parsed `Skill` fields. Global skill at `~/.prism/agent/...` (use a temp global root) discovered with origin `"global"`. Same-name global + workspace → exactly one entry, origin `"workspace"` wins, workspace value retained. Missing kind directory → no throw, returns `[]` for that kind. Tool dir with `manifest.json` → declaration with `kind:"tool"`. Agent dir with `AGENT.md` → declaration with `kind:"agent"`, `resource` = AGENT.md path. No `import()` performed (assert file contents, not module load). All paths under `os.tmpdir()`, no real home dir touched.
+    - `src/__tests__/node-contribution-discovery.test.ts` (`node:test` + `tmp` dir in `os.tmpdir()`): workspace skill at `.agents/skills/my-skill/SKILL.md` discovered with origin `"workspace"` and parsed `Skill` fields. Global skill at `~/.prism/agent/...` (use a temp global root) discovered with origin `"global"`. Same-name global + workspace → exactly one entry, origin `"workspace"` wins, workspace value retained. Missing kind directory → no throw, returns `[]` for that kind. Tool dir with `manifest.json` → declaration with `kind:"tool"`. Agent dir with `AGENTS.md` → declaration with `kind:"agent"`, `resource` = AGENTS.md path. No `import()` performed (assert file contents, not module load). All paths under `os.tmpdir()`, no real home dir touched.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — new public `discoverContributions` helper + `DiscoveryOptions` (Node subpath).
     - Docs pages to create/edit:
@@ -145,9 +145,9 @@
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [x] Task 4 — `SKILL.md` / `AGENT.md` frontmatter parser (`loadSkillFile`)
+- [x] Task 4 — `SKILL.md` / `AGENTS.md` frontmatter parser (`loadSkillFile`)
   - Acceptance Criteria:
-    - Functional: `parseSkillFile(text, path): Skill` parses a `SKILL.md` consisting of an optional YAML-ish fence-delimited frontmatter block (`---\n...\n---`) plus a body. Frontmatter keys map to `Skill`: `name` (required), `description?`, `toolNames?` (comma- or YAML-list), `context?` left to host wiring (file-declared context providers require a `module`, surfaced via declaration metadata — Phase 30 owns instruction injection; here `context` is left empty and a `ponytail:` comment notes the gap), and `metadata?`. The markdown body becomes `instructions`. Missing frontmatter → `name` falls back to the directory base name and the entire file is `instructions`. `parseAgentFrontmatter(text, path): ManifestContributionDeclaration` extracts `name`/`metadata` from an `AGENT.md` frontmatter; full agent resolution is Phase 33 (`ponytail:` comment).
+    - Functional: `parseSkillFile(text, path): Skill` parses a `SKILL.md` consisting of an optional YAML-ish fence-delimited frontmatter block (`---\n...\n---`) plus a body. Frontmatter keys map to `Skill`: `name` (required), `description?`, `toolNames?` (comma- or YAML-list), `context?` left to host wiring (file-declared context providers require a `module`, surfaced via declaration metadata — Phase 30 owns instruction injection; here `context` is left empty and a `ponytail:` comment notes the gap), and `metadata?`. The markdown body becomes `instructions`. Missing frontmatter → `name` falls back to the directory base name and the entire file is `instructions`. `parseAgentFrontmatter(text, path): ManifestContributionDeclaration` extracts `name`/`metadata` from an `AGENTS.md` frontmatter; full agent resolution is Phase 33 (`ponytail:` comment).
     - Performance: O(file size); no regex backtracking hazards; runs only on discovered files.
     - Code Quality: One small parser, no frontend markdown dependency. Frontmatter parsing is tolerant: unknown keys ignored, not fatal. Two-line `splitFrontmatter` helper, then a tiny key/value reduce. Avoids a YAML dependency (subset covers scalar + simple list).
     - Security: No `eval`, no script execution. Validation: `name` must be non-empty identifier-shaped string; malformed frontmatter → throw a clear error naming the file.
@@ -165,20 +165,20 @@
       ```ts
       // src/contribution-parsing.ts (core, fs-free)
       export function parseSkillFile(text: string, path: string): Skill { /* ... */ }
-      export function parseAgentFile(text: string, path: string): ManifestContributionDeclaration { /* ponytail: full resolution is Phase 33's resolveAgentDefinition */ }
+      export function parseAgentsFile(text: string, path: string): ManifestContributionDeclaration { /* ponytail: full resolution is Phase 33's resolveAgentDefinition */ }
       ```
     - Files to Create/Edit:
-      - `src/contribution-parsing.ts`: `parseSkillFile`, `parseAgentFile`, private `splitFrontmatter`.
-      - `src/index.ts`: export `parseSkillFile`, `parseAgentFile`.
+      - `src/contribution-parsing.ts`: `parseSkillFile`, `parseAgentsFile`, private `splitFrontmatter`.
+      - `src/index.ts`: export `parseSkillFile`, `parseAgentsFile`.
     - References:
       - Existing `SKILL.md` files in `.agents/skills/`.
       - `src/contracts.ts` `Skill`, `src/manifests.ts` `ManifestContributionDeclaration`.
   - Test Cases to Write:
     - `src/__tests__/contribution-parsing.test.ts`: frontmatter + body → `instructions === body`, `toolNames` parsed as list. No frontmatter → name from basename, body is the file. Malformed frontmatter (unterminated fence) → throws naming the file. Empty file → `name` from basename, `instructions === ""`.
   - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes — public `parseSkillFile`/`parseAgentFile`.
+    - Public API or behavior impacted: yes — public `parseSkillFile`/`parseAgentsFile`.
     - Docs pages to create/edit:
-      - `docs/contribution-discovery.md` (Task 9): document the `SKILL.md`/`AGENT.md` format and accepted frontmatter keys.
+      - `docs/contribution-discovery.md` (Task 9): document the `SKILL.md`/`AGENTS.md` format and accepted frontmatter keys.
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
@@ -225,7 +225,7 @@
     - Functional: The CLI/host loader checks the workspace kind-roots against the host `TrustPolicy` (reuse `createPathTrustPolicy` from `src/node/trust.ts`) before scanning workspace dirs; untrusted workspace roots are skipped with a clear logged reason and never raise. The global root under `~/.prism/` is loaded only when the host explicitly enables global discovery (CLI flag default off in core runtime, on in the CLI whitelist when `--discover-global` or trust preset is given). Reuses Phase 10/16 `assertPermission` for each file read inside a trusted root.
     - Performance: One `realpath` per root via `isPathInsideReal`; negligible.
     - Code Quality: No new trust concept; reuses `TrustPolicy`/`isPathInsideReal`. No silent eager loading.
-    - Security: Untrusted workspace `.agent/` is not read. No symlink escape (Phase 16's realpath check already covers it). No credential/provider scanning.
+    - Security: Untrusted workspace `.agents/` is not read. No symlink escape (Phase 16's realpath check already covers it). No credential/provider scanning.
   - Approach:
     - Documentation Reviewed:
       - `src/node/trust.ts` `createPathTrustPolicy`/`isPathInsideReal`.
@@ -233,7 +233,7 @@
       - Roadmap non-negotiable: "Host controlled. No hidden globals"; Phase 10/16 trust model.
     - Options Considered:
       - Per-file trust prompt on every read: rejected — root-level trust is the existing Phase-16 granularity.
-      - Auto-trust workspace `.agent/`: rejected — opposite of the boundary. Trust is explicit.
+      - Auto-trust workspace `.agents/`: rejected — opposite of the boundary. Trust is explicit.
     - Chosen Approach:
       - Wrap `discoverContributions` for CLI use with a trust precheck; the core `discoverContributions` only bounds reads to configured roots, the CLI/host layer (Task 7) supplies trust roots and skips on denial.
     - Files to Create/Edit:
@@ -280,7 +280,7 @@
 
 - [x] Task 8 — Compile-checked example + boundary tests (no core auto-discovery, no `synapta*`, in-memory unaffected)
   - Acceptance Criteria:
-    - Functional: An `examples/discover-skills.ts` typed example compiles (`tsc --noEmit` over examples) without network or real credentials. It builds a `SkillRegistry`/`ContributionRegistries`, calls `discoverContributions({ kinds: ["skill"], workspaceRoot: "./example-workspace", trust })` against a committed `examples/example-workspace/.agent/skills/greeter/SKILL.md`, registers, then runs a mock agent with `activeSkills: ["greeter"]` and prints the assembled provider input. Boundary tests: `src/__tests__/phase29-boundaries.test.ts` asserts (a) `src/` files outside `src/node/` do not import any `node:fs`/`node:os`/`node:path` module from the discovery path (i.e. discovery is Node-only and not reachable from the core runtime path that SDK apps use); (b) `src/` imports no `synapta*`; (c) `DiscoveredContribution` field names contain no `workflow`/`node`/`step` (generic only).
+    - Functional: An `examples/discover-skills.ts` typed example compiles (`tsc --noEmit` over examples) without network or real credentials. It builds a `SkillRegistry`/`ContributionRegistries`, calls `discoverContributions({ kinds: ["skill"], workspaceRoot: "./example-workspace", trust })` against a committed `examples/example-workspace/.agents/skills/greeter/SKILL.md`, registers, then runs a mock agent with `activeSkills: ["greeter"]` and prints the assembled provider input. Boundary tests: `src/__tests__/phase29-boundaries.test.ts` asserts (a) `src/` files outside `src/node/` do not import any `node:fs`/`node:os`/`node:path` module from the discovery path (i.e. discovery is Node-only and not reachable from the core runtime path that SDK apps use); (b) `src/` imports no `synapta*`; (c) `DiscoveredContribution` field names contain no `workflow`/`node`/`step` (generic only).
     - Performance: Example + tests run network-free, under existing test budget.
     - Code Quality: Example mirrors Plan 024 example style; boundary tests parity with other `phase*-boundaries.test.ts` files.
     - Security: Example uses mock provider only; no real credentials; example workspace `SKILL.md` contains no secret-looking text.
@@ -293,7 +293,7 @@
     - Chosen Approach:
       - Commit a tiny example workspace + example script + boundary test.
     - Files to Create/Edit:
-      - `examples/discover-skills.ts`, `examples/example-workspace/.agent/skills/greeter/SKILL.md`.
+      - `examples/discover-skills.ts`, `examples/example-workspace/.agents/skills/greeter/SKILL.md`.
       - `src/__tests__/phase29-boundaries.test.ts`.
     - References:
       - `examples/` (Plan 024), existing boundary tests.
@@ -308,7 +308,7 @@
 
 - [x] Task 9 — Docs: `/docs/contribution-discovery.md`, `docs/index.md` entry, cross-references
   - Acceptance Criteria:
-    - Functional: `docs/contribution-discovery.md` follows the Prism wiki API page structure (What it does / When to use it / Inputs-request / Outputs-response-events / Request-response example / Implementation example / Extension and configuration notes / Security and performance notes / Related APIs). Covers: workspace/global layout table (`<workspace>/.agent/{skills,tools,context,instructions,agents}/<name>/` and `~/.prism/agent/<kind>s/<name>/`); `SKILL.md`/`AGENT.md`/`manifest.json` formats and accepted frontmatter keys; merge order (global → workspace; explicit `AgentConfig`/`RunOptions` selections override discovered); trust model (workspace gate via `createPathTrustPolicy`, global opt-in, symlink handling); the CLI flags (`--discover`, `--discover-kinds`, `--discover-global`, `--no-discovery`); the rule that discovery registers but never activates and never grants tools/permissions; provider discovery exclusion (Phase 24); agent deferral to Phase 33. `docs/index.md` gains an entry in the "Extensions/plugins" group. `docs/extensions.md`, `docs/context-and-skills.md`, `docs/contribution-registries.md`, and `docs/cli.md` gain cross-references.
+    - Functional: `docs/contribution-discovery.md` follows the Prism wiki API page structure (What it does / When to use it / Inputs-request / Outputs-response-events / Request-response example / Implementation example / Extension and configuration notes / Security and performance notes / Related APIs). Covers: workspace/global layout table (`<workspace>/.agents/{skills,tools,context,instructions,agents}/<name>/` and `~/.prism/agent/<kind>s/<name>/`); `SKILL.md`/`AGENTS.md`/`manifest.json` formats and accepted frontmatter keys; merge order (global → workspace; explicit `AgentConfig`/`RunOptions` selections override discovered); trust model (workspace gate via `createPathTrustPolicy`, global opt-in, symlink handling); the CLI flags (`--discover`, `--discover-kinds`, `--discover-global`, `--no-discovery`); the rule that discovery registers but never activates and never grants tools/permissions; provider discovery exclusion (Phase 24); agent deferral to Phase 33. `docs/index.md` gains an entry in the "Extensions/plugins" group. `docs/extensions.md`, `docs/context-and-skills.md`, `docs/contribution-registries.md`, and `docs/cli.md` gain cross-references.
     - Performance: Docs change only.
     - Code Quality: Matches prism-wiki page structure exactly; includes a runnable TypeScript snippet mirroring the example.
     - Security: Trust model + "no auto-execute / no auto-activate / no provider scanning" called out under Security notes.
@@ -338,7 +338,7 @@
   - Acceptance Criteria:
     - Functional: `npm test` (network-free), `tsc --noEmit`, examples typecheck, docs tests, and `npm pack --dry-run --json` all pass. No new first-party skill package is published in this phase (Phase 29 is discovery infra only). No `dist/__tests__` shipped. No provider auto-discovery introduced. No Synapta import.
     - Performance: `npm test` within the documented `<30s` budget (Node 20 baseline ~22s).
-    - Code Quality: Public exports (`ContributionFileKind`, `DiscoveredContribution`, `discoverContributions`, `DiscoveryOptions`, `parseSkillFile`, `parseAgentFile`, `registerDiscoveredContributions`) all present in `src/index.ts` and the `node` subpath.
+    - Code Quality: Public exports (`ContributionFileKind`, `DiscoveredContribution`, `discoverContributions`, `DiscoveryOptions`, `parseSkillFile`, `parseAgentsFile`, `registerDiscoveredContributions`) all present in `src/index.ts` and the `node` subpath.
     - Security: No credential/provider scanning; no auto-execute; secrets-redaction path unaffected; example workspace contains no secret-like text.
   - Approach:
     - Documentation Reviewed:
@@ -390,7 +390,7 @@ Single generic registration container reused as-is for every kind — no new reg
 
 ### Frontmatter parsing — gap
 
-- **No `SKILL.md`/`AGENT.md` parser exists** in `src/`. Real `SKILL.md` examples live under `.agents/skills/*/SKILL.md` and `/home/arn/.pi/agent/.../SKILL.md` but nothing in core reads them. **Gap:** Task 4 proposes a stdlib-only `parseSkillFile` / `parseAgentFile` (split-on-fence frontmatter, scalar + simple list) — no YAML dependency, no Markdown AST. This is new code but minimal and unavoidable; the alternative (pull `yaml`) is a rejected rung per Ponytail rule 5.
+- **No `SKILL.md`/`AGENTS.md` parser exists** in `src/`. Real `SKILL.md` examples live under `.agents/skills/*/SKILL.md` and `/home/arn/.pi/agent/.../SKILL.md` but nothing in core reads them. **Gap:** Task 4 proposes a stdlib-only `parseSkillFile` / `parseAgentsFile` (split-on-fence frontmatter, scalar + simple list) — no YAML dependency, no Markdown AST. This is new code but minimal and unavoidable; the alternative (pull `yaml`) is a rejected rung per Ponytail rule 5.
 
 ### Per-kind findings (covers / gap)
 
@@ -400,13 +400,13 @@ Single generic registration container reused as-is for every kind — no new reg
 | tool | `ContributionRegistries.tools`; on-disk shape = `ManifestContributionDeclaration` (`kind: "tool"`) | Declaration-only registration (no `import()`); host owns execution |
 | context | `ContributionRegistries.contextProviders`; on-disk shape = `ManifestContributionDeclaration` (`kind: "contextProvider"`) | Declaration-only registration; `Skill.context` from a file `SKILL.md` surfaced as metadata only (no `ContextProvider` wiring — Phase 30) |
 | instructions | `ContributionRegistries.systemPromptContributions`; `SystemPromptContribution { id, source?, mode?, text, metadata? }` | Static-text descriptor registration reading `declaration.resource`; full instruction injection is Phase 30 |
-| agent | `ContributionRegistries.agents`; `AgentDefinition { name, description?, create(config?) }`; on-disk shape = `ManifestContributionDeclaration` (`kind: "agent"`), `resource` = `AGENT.md` path | Stub `AgentDefinition` whose `create()` throws — fail-closed; full `resolveAgentDefinition` is Phase 33 |
+| agent | `ContributionRegistries.agents`; `AgentDefinition { name, description?, create(config?) }`; on-disk shape = `ManifestContributionDeclaration` (`kind: "agent"`), `resource` = `AGENTS.md` path | Stub `AgentDefinition` whose `create()` throws — fail-closed; full `resolveAgentDefinition` is Phase 33 |
 
 ### Justification of each proposed new file/function
 
 - **`DiscoveredContribution` + `ContributionFileKind` (`src/contracts.ts`, Task 2):** type-only envelope so the scanner emits one list and the registrar dispatches by `kind`. References `Skill` and `ManifestContributionDeclaration`, does not re-declare their fields. No runtime cost.
 - **`discoverContributions()` (`src/node/contribution-discovery.ts`, Task 3):** first directory-walking read primitive (gap above). One `readdir` per kind-root + per-kind adapters; reuses `isMissingFile`, `isPathInsideReal`, `assertPermission`. No `import()`.
-- **`parseSkillFile` / `parseAgentFile` (`src/contribution-parsing.ts`, Task 4):** first frontmatter parser (gap above). Stdlib `String` parsing only.
+- **`parseSkillFile` / `parseAgentsFile` (`src/contribution-parsing.ts`, Task 4):** first frontmatter parser (gap above). Stdlib `String` parsing only.
 - **`registerDiscoveredContributions()` (`src/contributions.ts`, Task 5):** a dispatcher over `kind` into the existing `ContributionRegistries` members. No new container; reuses each `ContributionRegistry.register`.
 
 ### Out of scope (security)

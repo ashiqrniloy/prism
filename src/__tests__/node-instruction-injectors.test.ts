@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -26,10 +26,10 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
   it("loads a markdown-only discovered instructions contribution as a static every_turn injector", async () => {
     const root = await makeRoot("md");
     await writeFileDeep(
-      `${root}/.agent/instructions/json-always/manifest.json`,
+      `${root}/.agents/instructions/json-always/manifest.json`,
       JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }),
     );
-    await writeFileDeep(`${root}/.agent/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
+    await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
 
     const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
     assert.equal(contribution?.kind, "instructions");
@@ -43,10 +43,10 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
   it("loads a markdown injector selectable by name from the registry", async () => {
     const root = await makeRoot("reg");
     await writeFileDeep(
-      `${root}/.agent/instructions/json-always/manifest.json`,
+      `${root}/.agents/instructions/json-always/manifest.json`,
       JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }),
     );
-    await writeFileDeep(`${root}/.agent/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
+    await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
 
     const contributions = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
     const registries = createContributionRegistries();
@@ -57,26 +57,10 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
     assert.equal(resolved[0]?.apply(applyCtx).instructions, "Always answer in JSON");
   });
 
-  it("workspace same-name injector overrides global (Phase 29 merge order)", async () => {
-    const ws = await makeRoot("ws-override");
-    const global = await mkdtemp(join(tmpdir(), "prism-inj-global-"));
-    await writeFileDeep(`${global}/.prism/agent/instructions/dup/manifest.json`, JSON.stringify({ name: "dup", resource: "./INSTRUCTIONS.md" }));
-    await writeFileDeep(`${global}/.prism/agent/instructions/dup/INSTRUCTIONS.md`, "global text");
-    await writeFileDeep(`${ws}/.agent/instructions/dup/manifest.json`, JSON.stringify({ name: "dup", resource: "./INSTRUCTIONS.md" }));
-    await writeFileDeep(`${ws}/.agent/instructions/dup/INSTRUCTIONS.md`, "workspace text");
-
-    const contributions = await discoverContributions({ kinds: ["instructions"], workspaceRoot: ws, globalRoot: global });
-    // scanner dedupes: one entry, workspace wins
-    assert.equal(contributions.length, 1);
-    assert.equal(contributions[0]?.origin, "workspace");
-    const injector = await loadInstructionInjector(contributions[0]);
-    assert.equal(injector?.apply(applyCtx).instructions, "workspace text");
-  });
-
   it("module-referenced declaration is not auto-imported by core (skipped without a host loader)", async () => {
     const root = await makeRoot("mod-noimport");
     await writeFileDeep(
-      `${root}/.agent/instructions/code-inj/manifest.json`,
+      `${root}/.agents/instructions/code-inj/manifest.json`,
       JSON.stringify({ name: "code-inj", module: "./inj.js", exportName: "default" }),
     );
     const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
@@ -87,7 +71,7 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
   it("module-referenced injector runs when the host supplies a moduleLoader", async () => {
     const root = await makeRoot("mod-load");
     await writeFileDeep(
-      `${root}/.agent/instructions/code-inj/manifest.json`,
+      `${root}/.agents/instructions/code-inj/manifest.json`,
       JSON.stringify({ name: "code-inj", module: "./inj.js", exportName: "schemaInjector" }),
     );
     const live: InstructionInjector = {
@@ -113,11 +97,73 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
     );
   });
 
+  it("rejects a markdown resource escaping its contribution directory", async () => {
+    const root = await makeRoot("escape");
+    await writeFileDeep(
+      `${root}/.agents/instructions/escape/manifest.json`,
+      JSON.stringify({ name: "escape", resource: "../outside.md" }),
+    );
+    await writeFileDeep(`${root}/.agents/instructions/outside.md`, "outside");
+
+    const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
+
+    await assert.rejects(() => loadInstructionInjector(contribution), /escapes contribution directory/);
+  });
+
+  it("rejects a markdown resource symlink escaping its contribution directory", async () => {
+    const root = await makeRoot("resource-link");
+    const outside = await mkdtemp(join(tmpdir(), "prism-outside-inj-"));
+    await writeFileDeep(`${outside}/outside.md`, "outside");
+    await writeFileDeep(
+      `${root}/.agents/instructions/link/manifest.json`,
+      JSON.stringify({ name: "link", resource: "./INSTRUCTIONS.md" }),
+    );
+    await symlink(`${outside}/outside.md`, `${root}/.agents/instructions/link/INSTRUCTIONS.md`);
+
+    const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
+
+    await assert.rejects(() => loadInstructionInjector(contribution), /escapes contribution directory/);
+  });
+
+  it("checks resource permission before reading markdown text", async () => {
+    const root = await makeRoot("resource-permission");
+    await writeFileDeep(
+      `${root}/.agents/instructions/blocked/manifest.json`,
+      JSON.stringify({ name: "blocked", resource: "./missing.md" }),
+    );
+    const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
+
+    await assert.rejects(
+      () => loadInstructionInjector(contribution, { permission: { check: () => ({ allowed: false, reason: "blocked" }) } }),
+      /blocked/,
+    );
+  });
+
+  it("loads an escaping markdown resource only when host trust allows it and permission passes", async () => {
+    const root = await makeRoot("resource-trusted");
+    const outside = await mkdtemp(join(tmpdir(), "prism-trusted-inj-"));
+    await writeFileDeep(`${outside}/shared.md`, "trusted outside");
+    await writeFileDeep(
+      `${root}/.agents/instructions/trusted/manifest.json`,
+      JSON.stringify({ name: "trusted", resource: `${outside}/shared.md` }),
+    );
+    const checked: string[] = [];
+    const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
+
+    const injector = await loadInstructionInjector(contribution, {
+      resourceTrust: { check: (req) => ({ trusted: req.target === `${outside}/shared.md` }) },
+      permission: { check: (req) => { checked.push(`${req.kind}:${req.action}:${req.target}`); return { allowed: true }; } },
+    });
+
+    assert.equal(injector?.apply(applyCtx).instructions, "trusted outside");
+    assert.deepEqual(checked, [`resource:load:${outside}/shared.md`]);
+  });
+
   it("loadInstructionInjectors ignores non-instructions contributions", async () => {
     const root = await makeRoot("mixed");
-    await writeFileDeep(`${root}/.agent/skills/a-skill/SKILL.md`, "---\nname: a-skill\n---\nbody\n");
-    await writeFileDeep(`${root}/.agent/instructions/md/manifest.json`, JSON.stringify({ name: "md", resource: "./INSTRUCTIONS.md" }));
-    await writeFileDeep(`${root}/.agent/instructions/md/INSTRUCTIONS.md`, "rule");
+    await writeFileDeep(`${root}/.agents/skills/a-skill/SKILL.md`, "---\nname: a-skill\n---\nbody\n");
+    await writeFileDeep(`${root}/.agents/instructions/md/manifest.json`, JSON.stringify({ name: "md", resource: "./INSTRUCTIONS.md" }));
+    await writeFileDeep(`${root}/.agents/instructions/md/INSTRUCTIONS.md`, "rule");
 
     const contributions = await discoverContributions({ kinds: ["skill", "instructions"], workspaceRoot: root });
     const injectors = await loadInstructionInjectors(contributions);
