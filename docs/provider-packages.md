@@ -67,7 +67,7 @@ These workspaces still follow the same rule as external packages: no provider SD
 
 ### First-party cache behavior
 
-Every first-party provider package hardens prompt-cache behavior so it cannot emit invalid cache retention values or over-broad cache-control markers, and so provider-owned `authorization`/session/security headers cannot be overridden by caller `ProviderRequest.options.headers`:
+Every first-party provider package hardens prompt-cache behavior so it cannot emit invalid cache retention values or over-broad cache-control markers, and so provider-owned `authorization`/session/security headers cannot be overridden by caller `ProviderRequest.options.headers`. Cache behavior is provider-specific and best-effort: OpenAI/OpenRouter use explicit hints, NeuralWatt/Z.AI use implicit caching, and OpenCode Go/Kimi are route/model-dependent. See [Provider caching](provider-caching.md#per-provider-cache-behavior) for the canonical explicit/implicit matrix.
 
 - **OpenAI** (`kind: openai_key`): `prompt_cache_key` is sanitized and clamped to 64 chars; `prompt_cache_retention` is emitted as `24h` only when the model declares `cache.longRetention`, and omitted for `short`/`none` (the API only accepts absent or `24h`). `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
 - **OpenAI-compatible core adapter**: Chat Completions sends no `prompt_cache_key`/`prompt_cache_retention`/`cache_control` fields; endpoints cache implicitly. `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.

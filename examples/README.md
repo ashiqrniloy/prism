@@ -21,6 +21,8 @@ node examples/cli.ts
 node examples/rpc.ts
 node examples/provider-registration.ts
 node examples/provider-resolver.ts
+node examples/cache-aware-prompt-assembly.ts
+node examples/neuralwatt-agent-run.ts
 node examples/observational-memory-recall-status-view.ts
 node examples/external-app-db-backed.ts
 ```
@@ -37,6 +39,8 @@ Each demo prints a single JSON line with its result.
 - `api-key-auth.ts` — env + memory credential resolvers in host-defined order.
 - `oauth-login.ts` — PKCE OAuth login against a token endpoint (fake host).
 - `openrouter-model-cache-override.ts` — per-model routing/cache overrides.
+- `cache-aware-prompt-assembly.ts` — **demo**: cache-aware stable-prefix assembly and hit-rate reporting across OpenRouter explicit cache hints and NeuralWatt implicit prefix caching, using mocked SSE responses.
+- `neuralwatt-agent-run.ts` — **demo**: NeuralWatt agent run with tools, reasoning controls, streamed usage cache tokens, and mocked energy/cost telemetry.
 - `tools.ts` — host-owned tool registry: allow/deny filter + dispatch.
 - `context.ts` — ordered context-provider pipeline.
 - `skills.ts` — skill registry + progressive disclosure activation.

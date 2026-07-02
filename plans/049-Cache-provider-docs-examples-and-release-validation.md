@@ -14,7 +14,7 @@
 
 ## Tasks
 
-- [ ] Primitive review: inventory cache diagnostics, NeuralWatt package exports, example harness patterns, and release test gates before any docs/examples are written
+- [x] Primitive review: inventory cache diagnostics, NeuralWatt package exports, example harness patterns, and release test gates before any docs/examples are written
   - Acceptance Criteria:
     - Functional: Record whether `cacheHitRate`/`cacheSavings`/`cacheUsageReport`, `ModelCacheCapabilities` (`kind: "explicit" | "implicit"`), `InputAssemblyLayout: "cache_aware"`, the NeuralWatt package's public exports (`createNeuralWattProviderPackage`, model metadata, telemetry/retry/quota helpers), the existing example harness pattern (mocked `fetch`/SSE or `createMockProvider`), and the existing release gates (`packaging.test.ts` package list, `docs.test.ts` `providerPackagePages`/`examples_files_exist_and_index_links_examples`/`examples_demos_run_to_completion_and_emit_no_secret`) already cover Phase 48; identify the exact edits each later task needs.
     - Performance: Confirm planned changes add no runtime code, no new network calls, no tokenization/hashing; examples reuse existing mocked-`fetch` fixtures and `createMockProvider`.
@@ -50,6 +50,16 @@
       - `src/__tests__/packaging.test.ts`, `src/__tests__/docs.test.ts`.
   - Test Cases to Write:
     - Inventory assertion: every Phase 48 deliverable maps to an existing public seam or a documented docs/example/test edit; no core contract edit is required.
+  - Inventory Findings:
+    - **Cache diagnostics seam (covered, no core edit):** `src/cache-helpers.ts` exports `cacheHitRate(usage)`, `cacheSavings(usage, model)`, `cacheUsageReport(usage, model)` plus `applyCacheControl`, `sanitizeCacheKey`, `mapCacheRetention`, and `CacheUsageReport`/`CacheControlledMessage` types. All re-exported via `src/index.ts` line 4–5. `src/contracts.ts` defines `ModelCacheCapabilities` (line 126) with `kind?: PromptCacheKind` where `PromptCacheKind = "implicit" | "openai_key" | "cache_control" | "provider_specific" | "none"`, `Usage.cacheReadTokens`/`cacheWriteTokens` (lines 117–118), `ModelCost.cacheRead`/`cacheWrite` (lines 107–108), and `InputAssemblyLayout = "legacy" | "cache_aware"` (line 193). No runtime/helpers to add.
+    - **NeuralWatt package public exports (covered, no edit):** `packages/provider-neuralwatt/src/index.ts` exports `createNeuralWattProviderPackage` + `NeuralWattProviderPackageOptions`; from `provider.ts`: `createNeuralWattProvider`, `neuralWattBody`, `neuralWattEvents`, `neuralWattEventsWithTelemetry`, `toUsage`, `NeuralWattProviderOptions`, `NeuralWattUsage`; from `models.ts`: `neuralWattModels`, `defineNeuralWattModel`, `mapNeuralWattModel`, `listNeuralWattModels` + types; from `quota.ts`: `getNeuralWattQuota` + types; from `retry.ts`: `classifyNeuralWattError`, `neuralWattHttpError` + types; from `telemetry.ts`: `mapNeuralWattTelemetry`, `parseNeuralWattComment`, `parseNeuralWattCost`, `parseNeuralWattEnergy` + `NeuralWattEnergyTelemetry`/`NeuralWattCostTelemetry`/`NeuralWattTelemetryEvent`/`NeuralWattEvent`; `thinking.ts` has readers `neuralWattReasoningEffort`, `neuralWattThinkingTokenBudget`, `neuralWattChatTemplateKwargs`, `neuralWattToolChoice`, `neuralWattPreserveThinking`, `neuralWattClearThinking` (NOT re-exported from index but usable via the package's internal path; examples should drive reasoning controls through `request.options.compat`/`extra` per docs, matching the provider's `neuralWattBody()` spread). The package `docs.links` already points to `docs/providers/neuralwatt.md`.
+    - **Token/telemetry mapping (covered):** `provider.ts` `toUsage()` maps `prompt_tokens_details.cached_tokens` → `Usage.cacheReadTokens` (asserted by `neuralwatt_usage_maps_cached_tokens` and `neuralwatt_cached_tokens_map_to_usage_across_turns`), and `neuralWattEventsWithTelemetry` yields `: energy`/`: cost` comment telemetry via `parseNeuralWattComment`. Telemetry is opt-in (standard `neuralWattEvents` tolerates comment lines without emitting telemetry — `neuralwatt_ignores_energy_cost_comments`).
+    - **Example harness pattern (covered):** Demos live under `examples/*.ts`, typechecked by `examples/tsconfig.json` (strict, `noEmit`, `include: ["**/*.ts"]`). Runnable demos export `async function demo()` or `main()`; the docs test runs them via `node <file>` (Node 24 strips TS types) expecting exit 0, non-empty output, and no real-looking secret (`examples_demos_run_to_completion_and_emit_no_secret`). Existing mock-SSE fixture pattern: construct a `ReadableStream` with a `TextEncoder`, `controller.enqueue(encoder.encode("data: {...}\n\n"))` chunks + `"data: [DONE]\n\n"`, feed to `neuralWattEvents(stream)` / `neuralWattEventsWithTelemetry(stream)`. The mock-provider path (`createMockProvider`/`providerDone`) is for tests/demos only and does NOT emit `cached_tokens`, so cache hit-rate examples must use the provider packages with mocked `fetch`/SSE fixtures (matches roadmap) — **GAP for examples task:** install a global `fetch` stub returning `new Response(<SSE ReadableStream>)` and register NeuralWatt/OpenRouter packages with stubbed credential resolvers.
+    - **examples/tsconfig.json path-mapping GAP (must fix in examples task):** `examples/tsconfig.json` `paths` maps `@arnilo/prism-provider-openai/opencode-go/openrouter/zai/kimi` and the two compaction packages, but is **missing `@arnilo/prism-provider-neuralwatt`**. Any example importing `@arnilo/prism-provider-neuralwatt` would fail `npm run typecheck`. Add `"@arnilo/prism-provider-neuralwatt": ["./packages/provider-neuralwatt/src/index.ts"]` before writing the NeuralWatt example.
+    - **README provider table GAP:** `README.md` Packages table (lines 117–127) lists OpenAI, OpenCode Go, OpenRouter, ZAI, Kimi but NOT NeuralWatt; the First-party packages paragraph (lines 17–19) lists five providers; the `@arnilo/prism-providers` row says "umbrella: all 5 provider adapters"; `docs/release-and-install.md` says "seven first-party workspace packages" and "all 5 `@arnilo/prism-provider-*` packages". The `readme_describes_current_runtime_provider_packages_cli_and_examples` test asserts OpenAI/OpenCode Go/OpenRouter/ZAI/Kimi but not NeuralWatt — add NeuralWatt to README and extend the test.
+    - **Release test gates (mostly covered, minor extension needed):** `src/__tests__/packaging.test.ts` `packages` list already includes `packages/provider-neuralwatt` (line with name `@arnilo/prism-provider-neuralwatt`), so the "ships no tests/maps/source" + "includes README/LICENSE/CHANGELOG" + "ships every exports target" + "non-optional @arnilo/prism peer" checks already apply; the umbrella `expected` map already lists `@arnilo/prism-provider-neuralwatt` under `@arnilo/prism-providers` and via `@arnilo/prism-all`. `docs.test.ts` `providerPackagePages` already includes `["docs/providers/neuralwatt.md", "packages/provider-neuralwatt/src/index.ts"]`, `examples_files_exist_and_index_links_examples` lists existing example files (no neuralwatt/cache entries), `examples_demos_run_to_completion_and_emit_no_secret` runs a fixed demo list (no neuralwatt/cache demo), and `phase47_neuralwatt_cache_reasoning_tool_docs_...` already asserts cache/reasoning/tool doc content + no-cache-hit phrases. **Extensions needed:** add the two new example files to both example lists in `docs.test.ts`; add a `phase48` assertion for the per-provider cache matrix in `provider-caching.md` and README NeuralWatt mention; optionally add an explicit NeuralWatt `dist/index.d.ts`-in-pack assertion (the existing "ships every exports target as compiled output" loop already covers `.d.ts` via the `types` field — confirmed `target[field]` reads both `types` and `default`, so type-declaration presence is already gated; a dedicated NeuralWatt presence test is redundant but harmless — keep the existing data-driven gate as-is).
+    - **Docs pages state (covered, refresh only):** `docs/provider-caching.md` already covers implicit + explicit caches, `cacheHitRate`/`cacheSavings`/`cacheUsageReport`, `inputLayout: "cache_aware"`, and "Cache keys must never be credentials". `docs/providers/neuralwatt.md` (20KB) already covers implicit prefix caching, cache-aware limiter, reasoning controls, reasoning preservation, tool-call loop, and `reasoning_content`. `docs/provider-packages.md` already has a first-party cache behavior summary. Phase 48 edits are a per-provider cache matrix table + cross-links + example links, not new content.
+    - **Conclusion:** No core contract (`src/contracts.ts`, `cache-helpers.ts`, `src/index.ts`) change is required for Phase 48. All work is docs (README/provider-caching/neuralwatt/provider-packages/release-and-install/index), two new example files + `examples/tsconfig.json` path fix + `examples/README.md`, and additive test/gate extensions in `packaging.test.ts`/`docs.test.ts`. The one real blocker for the examples task is the missing `@arnilo/prism-provider-neuralwatt` tsconfig path mapping, which must be added first.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no — inventory only.
     - Docs pages to create/edit:
@@ -57,7 +67,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Update README provider table and umbrella counts with NeuralWatt and a cache support summary
+- [x] Update README provider table and umbrella counts with NeuralWatt and a cache support summary
   - Acceptance Criteria:
     - Functional: `README.md` package table lists `@arnilo/prism-provider-neuralwatt` alongside OpenAI, OpenCode Go, OpenRouter, ZAI, and Kimi, and the First-party packages paragraph lists all six provider names; a cache support summary distinguishes explicit-cache providers (OpenAI, OpenRouter) from NeuralWatt implicit prefix caching and states cache hints are best-effort with no guaranteed hits.
     - Performance: Doc-only; no runtime impact.
@@ -84,6 +94,7 @@
   - Test Cases to Write:
     - Extend `src/__tests__/docs.test.ts` `readme_describes_current_runtime_provider_packages_cli_and_examples` to assert `@arnilo/prism-provider-neuralwatt` is mentioned in README.
     - New assertion: README contains a cache support summary link to `provider-caching.md` and the phrase "best-effort" (or equivalent) with no "guaranteed cache hit" wording.
+    - Verification run: `npm run build:core && node --test dist/__tests__/docs.test.js --test-name-pattern='readme_describes_current_runtime_provider_packages_cli_and_examples|readme_has_no_real_looking_secrets'` (Node ran the full docs suite): 57/57 passed.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — README documents the public provider package set and cache behavior summary.
     - Docs pages to create/edit:
@@ -92,7 +103,7 @@
     - `docs/index.md` update: no (README is not in the docs index).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Document per-provider cache behavior with explicit/implicit caveats across caching, NeuralWatt, and provider-packages pages
+- [x] Document per-provider cache behavior with explicit/implicit caveats across caching, NeuralWatt, and provider-packages pages
   - Acceptance Criteria:
     - Functional: `/docs/provider-caching.md` carries a per-provider cache behavior table or section covering OpenAI, OpenRouter, OpenCode Go, Z.AI, Kimi, and NeuralWatt, with explicit caveats: explicit-cache providers accept `cache_control`/breakpoints, NeuralWatt uses implicit vLLM prefix caching with no cache-control payload and requires full prior history for multi-turn reuse, and no provider guarantees cache hits.
     - Performance: Doc-only; no runtime impact.
@@ -125,6 +136,7 @@
   - Test Cases to Write:
     - Extend `src/__tests__/docs.test.ts` `phase47` test (or add a `phase48` test) asserting `provider-caching.md` contains a per-provider cache table covering all six provider names plus the words "explicit", "implicit", "no cache-control payload" (for NeuralWatt), and "best-effort"/no guaranteed hits.
     - Assert `provider-packages.md` first-party cache summary mentions all six providers.
+    - Verification run: `npm run build:core && node --test dist/__tests__/docs.test.js`: 58/58 passed.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — documents public provider cache behavior and caveats.
     - Docs pages to create/edit:
@@ -134,7 +146,7 @@
     - `docs/index.md` update: yes — ensure the Provider caching and Provider packages index entries mention the per-provider cache matrix and NeuralWatt (refresh descriptions if needed).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Add cache-aware prompt assembly + cache hit-rate reporting example across an explicit-cache provider and NeuralWatt
+- [x] Add cache-aware prompt assembly + cache hit-rate reporting example across an explicit-cache provider and NeuralWatt
   - Acceptance Criteria:
     - Functional: New `examples/cache-aware-prompt-assembly.ts` demo assembles prompts with `inputLayout: "cache_aware"` and reports cache hit-rate across at least two providers: one explicit-cache provider (OpenRouter or OpenAI) and NeuralWatt implicit prefix caching, using mocked `fetch`/SSE responses; prints a single JSON line with per-provider `cacheReadTokens`/`cacheHitRate`/`cacheSavings` derived via the public `cacheUsageReport`/`cacheHitRate`/`cacheSavings` helpers.
     - Performance: Network-free; runs in <1s with mocked transport; no tokenization.
@@ -167,6 +179,7 @@
     - Extend `src/__tests__/docs.test.ts` `examples_files_exist_and_index_links_examples` to include `examples/cache-aware-prompt-assembly.ts`.
     - Add the file to `examples_demos_run_to_completion_and_emit_no_secret` demos list.
     - New assertion: the example source references `cacheHitRate`/`cacheSavings`/`cacheUsageReport`, `inputLayout: "cache_aware"`, both an explicit-cache provider and NeuralWatt, and prints a JSON line containing `cacheHitRate`.
+    - Verification run: `npm run build:core && npx tsc -p examples/tsconfig.json && node examples/cache-aware-prompt-assembly.ts && node --test dist/__tests__/docs.test.js`: examples typecheck, demo prints one JSON line, docs tests 59/59 passed.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — new public example exercising public cache diagnostics and provider cache behavior.
     - Docs pages to create/edit:
@@ -175,7 +188,7 @@
     - `docs/index.md` update: yes — ensure the examples entry references cache-aware prompt assembly (refresh the examples mention if needed).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Add NeuralWatt agent run example with tools, reasoning controls, streamed usage, cache tokens, and energy/cost telemetry (mocked)
+- [x] Add NeuralWatt agent run example with tools, reasoning controls, streamed usage, cache tokens, and energy/cost telemetry (mocked)
   - Acceptance Criteria:
     - Functional: New `examples/neuralwatt-agent-run.ts` demo runs a NeuralWatt agent turn that includes at least one tool call and tool result, passes reasoning controls (`reasoning_effort`, `thinking_token_budget`, `enable_thinking`, `preserve_thinking`, `clear_thinking`) via `compat`/`extra`, consumes the streamed `AgentEvent` stream, and reports `usage.prompt_tokens_details.cached_tokens` mapped to `Usage.cacheReadTokens` plus energy/cost telemetry from `ModelCost`/NeuralWatt telemetry helpers — all via mocked `fetch`/SSE with no network.
     - Performance: Network-free; runs in <1s; no real provider calls.
@@ -206,6 +219,7 @@
     - Extend `src/__tests__/docs.test.ts` `examples_files_exist_and_index_links_examples` to include `examples/neuralwatt-agent-run.ts`.
     - Add the file to `examples_demos_run_to_completion_and_emit_no_secret` demos list.
     - New assertion: the example source references `createNeuralWattProviderPackage`, at least three reasoning controls, a tool call + tool result, `cacheReadTokens`/`cached_tokens`, and an energy/cost telemetry field.
+    - Verification run: `npm run build:core && npx tsc -p examples/tsconfig.json && node examples/neuralwatt-agent-run.ts && node --test dist/__tests__/docs.test.js`: examples typecheck, demo prints one JSON line with tool/usage/telemetry fields, docs tests 60/60 passed.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — new public example exercising public NeuralWatt provider behavior.
     - Docs pages to create/edit:
@@ -214,7 +228,7 @@
     - `docs/index.md` update: yes — ensure the NeuralWatt provider index entry / examples entry references the runnable demo.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Extend release validation gates: NeuralWatt package exports/type declarations, aggregator membership, docs links, and example presence
+- [x] Extend release validation gates: NeuralWatt package exports/type declarations, aggregator membership, docs links, and example presence
   - Acceptance Criteria:
     - Functional: `npm test` (and therefore `npm run release:dry-run`) fails if `@arnilo/prism-provider-neuralwatt` is missing from `packaging.test.ts` package list, if its `exports` targets (`.d.ts` + `.js`) are missing from the pack, if `@arnilo/prism-providers`/`@arnilo/prism-all` umbrella hard-dependencies drop NeuralWatt, if `docs/providers/neuralwatt.md` or `docs/provider-caching.md` is unlinked from `docs/index.md`, or if the two new example files are missing/unlisted.
     - Performance: Gates run as part of the existing network-free suite; `npm pack --dry-run` caching in `packaging.test.ts` is preserved (no extra packs per assertion).
@@ -248,6 +262,7 @@
   - Test Cases to Write:
     - `packaging.test.ts`: NeuralWatt pack includes `dist/index.d.ts`; umbrella deps include NeuralWatt (already asserted — keep green).
     - `docs.test.ts`: `docs/index.md` links `providers/neuralwatt.md` and `provider-caching.md`; both new example files exist and are listed in `examples/README.md`; `docs/release-and-install.md` Release checklist names the NeuralWatt + cache-docs gate.
+    - Verification run: `npm run build:core && node --test dist/__tests__/packaging.test.js && node --test dist/__tests__/docs.test.js --test-name-pattern='release|examples_files_exist|phase48 release validation|readme_describes_current_runtime_provider_packages_cli_and_examples'` passed; `npm test` exited 0; `npm run release:dry-run` exited 0.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — release gates and the release-checklist doc are public release surfaces.
     - Docs pages to create/edit:
@@ -255,7 +270,7 @@
     - `docs/index.md` update: yes — ensure release-and-install entry description still fits; ensure Provider caching + NeuralWatt entries are linked (asserted by the new gate).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Final verification: full network-free suite, release dry-run, typecheck, and docs/index navigation sweep
+- [x] Final verification: full network-free suite, release dry-run, typecheck, and docs/index navigation sweep
   - Acceptance Criteria:
     - Functional: `npm run typecheck`, `npm test`, and `npm run release:dry-run` all pass; `docs/index.md` links resolve; both new examples run to completion emitting no secret; README and docs contain no cache-hit guarantees.
     - Performance: Default suite stays network-free; no regression in offline test budget documented in `docs/release-and-install.md`.
@@ -281,6 +296,7 @@
       - `docs/release-and-install.md`, `package.json` scripts.
   - Test Cases to Write:
     - Verification: the three commands above exit 0; `docs/index.md` link-resolution test passes; `examples_demos_run_to_completion_and_emit_no_secret` passes for both new demos.
+    - Verification results: `npm run typecheck` exited 0; `npm test` exited 0; `npm run release:dry-run` exited 0; focused docs/navigation sweep (`index links point`, example demos, secret checks, Phase 48 docs gates) passed 61/61; `npm ls --all --depth=0` exited 0; absolute cache-guarantee phrase scan found no `guaranteed cache hit(s)`, `will always cache`, or `cache will hit` wording.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no — verification only.
     - Docs pages to create/edit:
@@ -289,7 +305,7 @@
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- None. Phase 48 stayed within docs, examples, and release-validation gates; no core contract changes were needed.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- None required for Phase 48. Future provider additions should follow the same checklist pattern: update provider docs/navigation, examples, `packaging.test.ts`, `docs.test.ts`, and release-count wording in one pass.

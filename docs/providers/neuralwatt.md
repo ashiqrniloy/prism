@@ -212,7 +212,8 @@ alias values in these docs.
 
 - NeuralWatt models use **implicit prefix caching**: the server caches prompt prefixes
   automatically based on request content, with no explicit request-side cache payload.
-  Catalog models declare `cache: { kind: "implicit" }`.
+  Catalog models declare `cache: { kind: "implicit" }`. For the cross-provider
+  explicit/implicit cache matrix, see [Provider caching](../provider-caching.md).
 - The provider sends no `cache_control`, `cacheKey`, `prompt_cache`, or `cacheRetention`
   fields regardless of `ProviderRequestOptions.cache` / `cacheKey` / `cacheRetention`
   settings — those options have no effect on the NeuralWatt request body.
@@ -383,3 +384,5 @@ const decision = classifyNeuralWattError({ status: 429, headers: { "retry-after"
 - [Provider conformance](../provider-conformance.md): network-free adapter tests.
 - [Provider caching](../provider-caching.md): implicit cache behavior and
   `cacheUsageReport`.
+- [NeuralWatt agent example](../../examples/neuralwatt-agent-run.ts): runnable mocked
+  agent turn with tools, reasoning controls, streamed cache tokens, and energy/cost telemetry.

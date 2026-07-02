@@ -195,6 +195,26 @@ describe("packaging guard", () => {
     });
   }
 
+  it("phase48 neuralwatt package exports types and umbrella membership are release-gated", () => {
+    const neuralWatt = packages.find((pkg) => pkg.name === "@arnilo/prism-provider-neuralwatt");
+    assert.ok(neuralWatt, "@arnilo/prism-provider-neuralwatt missing from packaging package list");
+    const files = getPackList(neuralWatt.dir, neuralWatt.name);
+    assert.ok(files.includes("dist/index.js"), "NeuralWatt pack missing dist/index.js");
+    assert.ok(files.includes("dist/index.d.ts"), "NeuralWatt pack missing dist/index.d.ts");
+
+    const neuralWattManifest = readPkg(neuralWatt.dir);
+    assert.deepEqual(
+      neuralWattManifest.exports,
+      { ".": { types: "./dist/index.d.ts", default: "./dist/index.js" } },
+      "NeuralWatt manifest exports must keep JS + type declaration targets",
+    );
+
+    const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.1", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.1", "@arnilo/prism-all must hard-depend on provider umbrella");
+  });
+
   it("workspace dependency tree is clean (npm ls --all --depth=0 exits 0)", () => {
     const result = spawnSync("npm", ["ls", "--all", "--depth=0"], {
       cwd: repoRoot,

@@ -479,6 +479,10 @@ describe("docs", () => {
       "no hidden provider/credential globals",
       "no auto package discovery",
       "no secret persistence in core",
+      "NeuralWatt package/docs/examples release gate",
+      "@arnilo/prism-provider-neuralwatt",
+      "dist/index.d.ts",
+      "examples/neuralwatt-agent-run.ts",
     ]) {
       assert.ok(docs.includes(phrase), `docs/release-and-install.md checklist missing ${phrase}`);
     }
@@ -802,9 +806,14 @@ describe("docs", () => {
       "@arnilo/prism-provider-openrouter",
       "@arnilo/prism-provider-zai",
       "@arnilo/prism-provider-kimi",
+      "@arnilo/prism-provider-neuralwatt",
     ]) {
       assert.ok(readme.includes(pkg), `README.md does not mention ${pkg}`);
     }
+    for (const phrase of ["docs/provider-caching.md", "best-effort explicit cache hints", "best-effort implicit prefix caching", "all 6 provider adapters"]) {
+      assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
+    }
+    assert.equal(/guaranteed cache hit|will always cache|cache will hit/i.test(readme), false, "README.md promises cache hits");
     for (const mode of ["--mode print", "--mode json", "--mode rpc"]) {
       assert.ok(readme.includes(mode), `README.md does not document CLI ${mode}`);
     }
@@ -843,6 +852,8 @@ describe("docs", () => {
       "examples/api-key-auth.ts",
       "examples/oauth-login.ts",
       "examples/openrouter-model-cache-override.ts",
+      "examples/cache-aware-prompt-assembly.ts",
+      "examples/neuralwatt-agent-run.ts",
       "examples/tools.ts",
       "examples/context.ts",
       "examples/skills.ts",
@@ -865,12 +876,99 @@ describe("docs", () => {
     }
   });
 
+  it("phase48 cache-aware prompt assembly example covers explicit and implicit cache reporting", () => {
+    const readme = readFileSync("examples/README.md", "utf8");
+    const example = readFileSync("examples/cache-aware-prompt-assembly.ts", "utf8");
+
+    assert.ok(readme.includes("cache-aware-prompt-assembly.ts"), "examples/README.md does not list cache-aware example");
+    for (const phrase of [
+      "inputLayout: \"cache_aware\"",
+      "defineOpenRouterModel",
+      "defineNeuralWattModel",
+      "cache: { kind: \"cache_control\"",
+      "cache: { kind: \"implicit\"",
+      "cacheUsageReport",
+      "cacheHitRate",
+      "cacheWriteTokens",
+      "sends no explicit cache payload",
+      "JSON.stringify(await demo())",
+    ]) {
+      assert.ok(example.includes(phrase), `cache-aware example missing ${phrase}`);
+    }
+  });
+
+  it("phase48 neuralwatt agent example covers tools reasoning usage cache and telemetry", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const providerDoc = readFileSync("docs/providers/neuralwatt.md", "utf8");
+    const readme = readFileSync("examples/README.md", "utf8");
+    const example = readFileSync("examples/neuralwatt-agent-run.ts", "utf8");
+
+    assert.ok(index.includes("NeuralWatt agent run"), "docs/index.md does not mention NeuralWatt agent example");
+    assert.ok(providerDoc.includes("examples/neuralwatt-agent-run.ts"), "NeuralWatt docs do not link the example");
+    assert.ok(readme.includes("neuralwatt-agent-run.ts"), "examples/README.md does not list NeuralWatt agent example");
+    for (const phrase of [
+      "createNeuralWattProviderPackage",
+      "neuralWattEventsWithTelemetry",
+      "reasoning_effort",
+      "thinking_token_budget",
+      "enable_thinking",
+      "preserve_thinking",
+      "clear_thinking",
+      "tool_execution_started",
+      "tool_execution_finished",
+      "cached_tokens",
+      "cacheReadTokens",
+      "energyKwh",
+      "costUsd",
+      "JSON.stringify(await demo())",
+    ]) {
+      assert.ok(example.includes(phrase), `NeuralWatt agent example missing ${phrase}`);
+    }
+  });
+
+  it("phase48 release validation gates neuralwatt docs links and example presence", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const readme = readFileSync("examples/README.md", "utf8");
+    const packaging = readFileSync("src/__tests__/packaging.test.ts", "utf8");
+
+    for (const link of ["providers/neuralwatt.md", "provider-caching.md"]) {
+      assert.ok(index.includes(link), `docs/index.md missing ${link}`);
+    }
+    for (const file of ["examples/cache-aware-prompt-assembly.ts", "examples/neuralwatt-agent-run.ts"]) {
+      assert.equal(existsSync(file), true, `missing ${file}`);
+      assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
+    }
+    for (const phrase of [
+      "one core package plus eight first-party workspace packages",
+      "all 6 `@arnilo/prism-provider-*` packages",
+      "All 12 manifests (9 code packages + 3 umbrellas)",
+      "six provider packages' `src/__tests__/live.test.ts`",
+      "NeuralWatt package/docs/examples release gate",
+      "dist/index.js` + `dist/index.d.ts`",
+    ]) {
+      assert.ok(release.includes(phrase), `docs/release-and-install.md missing ${phrase}`);
+    }
+    for (const phrase of [
+      "phase48 neuralwatt package exports types and umbrella membership are release-gated",
+      "@arnilo/prism-provider-neuralwatt",
+      "dist/index.js",
+      "dist/index.d.ts",
+      "@arnilo/prism-providers must hard-depend on NeuralWatt",
+      "@arnilo/prism-all must hard-depend on provider umbrella",
+    ]) {
+      assert.ok(packaging.includes(phrase), `packaging.test.ts missing ${phrase}`);
+    }
+  });
+
   it("examples_demos_run_to_completion_and_emit_no_secret", () => {
     // Node 24 strips TypeScript types natively; building core (the test suite
     // already built dist/) is enough for the `prism` and @arnilo/prism-* resolvers.
     const demos = [
       "examples/provider-registration.ts",
       "examples/provider-resolver.ts",
+      "examples/cache-aware-prompt-assembly.ts",
+      "examples/neuralwatt-agent-run.ts",
       "examples/compaction.ts",
       "examples/observational-memory-recall-status-view.ts",
       "examples/cli.ts",
@@ -1238,6 +1336,31 @@ describe("docs", () => {
     assert.ok(database.includes("readBranchPath"), "docs/database-persistence.md missing readBranchPath guidance");
     assert.ok(database.includes("cursor"), "docs/database-persistence.md missing cursor guidance");
     assert.ok(runs.includes("preserve per-run order before acknowledging a batch"), "docs/runs-and-usage.md missing batch ordering guidance");
+  });
+
+  it("phase48 provider cache matrix covers every first-party provider and caveat", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    const packages = readFileSync("docs/provider-packages.md", "utf8");
+    const neuralwatt = readFileSync("docs/providers/neuralwatt.md", "utf8");
+
+    assert.ok(caching.includes("### Per-provider cache behavior"), "provider-caching.md missing per-provider matrix");
+    for (const pkg of [
+      "@arnilo/prism-provider-openai",
+      "@arnilo/prism-provider-openrouter",
+      "@arnilo/prism-provider-opencode-go",
+      "@arnilo/prism-provider-zai",
+      "@arnilo/prism-provider-kimi",
+      "@arnilo/prism-provider-neuralwatt",
+    ]) {
+      assert.ok(caching.includes(pkg), `provider-caching.md matrix missing ${pkg}`);
+    }
+    for (const phrase of ["explicit", "implicit", "No `cache_control`, `cacheKey`, `prompt_cache`, or `cacheRetention` payload", "Full prior history must be resent unchanged", "Best-effort only; does not promise cache hits"]) {
+      assert.ok(caching.includes(phrase), `provider-caching.md matrix missing ${phrase}`);
+    }
+    assert.ok(neuralwatt.includes("cross-provider"), "neuralwatt.md does not link the cross-provider cache matrix");
+    assert.ok(packages.includes("canonical explicit/implicit matrix"), "provider-packages.md does not link the canonical cache matrix");
+    assert.ok(index.includes("per-provider explicit/implicit cache matrix"), "docs/index.md does not advertise the provider cache matrix");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

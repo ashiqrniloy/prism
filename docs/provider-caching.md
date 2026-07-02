@@ -140,7 +140,18 @@ Provider request policies can set `ProviderRequestOptions.cache` or the legacy `
 | `provider_specific` | Provider package uses `compat`/native options intentionally. |
 | `none` | Do not send cache fields. |
 
-First-party provider notes:
+### Per-provider cache behavior
+
+| Provider package | Cache kind | Explicit cache hints | Multi-turn reuse notes | Caveats |
+| --- | --- | --- | --- | --- |
+| `@arnilo/prism-provider-openai` | `openai_key` | Sends sanitized `prompt_cache_key`; `prompt_cache_retention: "24h"` only when the model declares `longRetention`. | Stable cache key + stable prefix can improve reuse. | Best-effort only; `"short"`/`"none"` omit retention. |
+| `@arnilo/prism-provider-openrouter` | `cache_control` | Applies `cache_control` markers only to caller-selected `cache.breakpoints`; `"long"` may add `ttl: "1h"`. | Breakpoint-stable prefixes can be reused by upstream providers. | Best-effort only; no marker is added to every block. |
+| `@arnilo/prism-provider-opencode-go` | route-specific | Sends sanitized `x-opencode-session`; Anthropic route applies selected `cache_control` breakpoints; OpenAI route sends none. | Session id + unchanged selected anchors can help route-native caches. | Best-effort and route-dependent. |
+| `@arnilo/prism-provider-zai` | `implicit` | No explicit cache payload; GLM context caching is automatic. | Resend unchanged prior history for implicit context-cache reuse. | Best-effort only; cache options do not force hits. |
+| `@arnilo/prism-provider-kimi` | implicit by default, optional `cache_control` | Default catalog models send no `cache_control`; hosts may opt in on Anthropic `/messages` models with `ModelConfig.cache.kind: "cache_control"`. | Keep selected Anthropic anchors and prior history stable. | Best-effort and model/route-dependent. |
+| `@arnilo/prism-provider-neuralwatt` | `implicit` | No `cache_control`, `cacheKey`, `prompt_cache`, or `cacheRetention` payload; NeuralWatt vLLM prefix caching is automatic. | Full prior history must be resent unchanged with only the new turn appended; `inputLayout: "cache_aware"` keeps stable prefixes first. | Best-effort only; does not promise cache hits; `cacheRetention: "none"` disables Prism hints only, not the implicit backend prefix cache. |
+
+Detailed first-party provider notes:
 
 - OpenAI Responses (`@arnilo/prism-provider-openai`): `kind: "openai_key"`. Sanitizes/clamps `prompt_cache_key` to 64 chars; `"long"` retention maps to `prompt_cache_retention: "24h"` only when the model declares `cache.longRetention`; `"short"`/`"none"` omit the field. `input_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
 - OpenAI-compatible Chat Completions adapter: minimal scope, sends no cache payload; see [OpenAI-compatible provider](providers/openai-compatible.md).

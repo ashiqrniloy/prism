@@ -2,7 +2,7 @@
 
 ## What it does
 
-Prism is published as one core package plus seven first-party workspace packages and three umbrella convenience packages. This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget.
+Prism is published as one core package plus eight first-party workspace packages and three umbrella convenience packages. This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget.
 
 Core package:
 
@@ -10,13 +10,13 @@ Core package:
 
 First-party workspace packages (each `peerDependencies: { "@arnilo/prism": "0.0.1" }`, non-optional; `sideEffects: false`):
 
-- `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-kimi`, `@arnilo/prism-provider-zai`, `@arnilo/prism-provider-opencode-go` — provider adapters.
+- `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-kimi`, `@arnilo/prism-provider-zai`, `@arnilo/prism-provider-opencode-go`, `@arnilo/prism-provider-neuralwatt` — provider adapters.
 - `@arnilo/prism-compaction-llm` — optional LLM-backed compaction strategy.
 - `@arnilo/prism-compaction-observational-memory` — optional source-backed observational memory.
 
 Umbrella packages (pure manifests, no code, no `dist`; ship only `README.md`; use hard `dependencies` to transitively install their family):
 
-- `@arnilo/prism-providers` — depends on all 5 `@arnilo/prism-provider-*` packages.
+- `@arnilo/prism-providers` — depends on all 6 `@arnilo/prism-provider-*` packages.
 - `@arnilo/prism-compaction` — depends on both `@arnilo/prism-compaction-*` packages.
 - `@arnilo/prism-all` — depends on `@arnilo/prism` + `@arnilo/prism-providers` + `@arnilo/prism-compaction` (the full kit in one install).
 
@@ -117,7 +117,7 @@ npm run release:dry-run
 ## Extension and configuration notes
 
 - **Required `@arnilo/prism` peer.** Every first-party package declares `peerDependencies: { "@arnilo/prism": "0.0.1" }` with no `peerDependenciesMeta` (non-optional). The range stays pinned to `0.0.1` for the 0.x series and will widen to `^1.0.0` at the 1.x stable release. Inside the workspace each package also declares `"@arnilo/prism": "file:../.."` in `devDependencies` so `npm install` resolves the peer locally; that devDependency is stripped from consumer installs and is not a runtime dependency.
-- **Public access.** All 11 manifests (8 code packages + 3 umbrellas) declare `"publishConfig": { "access": "public" }` so a manual `npm publish` of a scoped `@arnilo/prism-*` package defaults to public rather than `restricted` (paid). The `release.yml` flags (`npm publish --access public` + `npm publish --workspaces --access public`) are belt-and-suspenders backups.
+- **Public access.** All 12 manifests (9 code packages + 3 umbrellas) declare `"publishConfig": { "access": "public" }` so a manual `npm publish` of a scoped `@arnilo/prism-*` package defaults to public rather than `restricted` (paid). The `release.yml` flags (`npm publish --access public` + `npm publish --workspaces --access public`) are belt-and-suspenders backups.
 - **Map retention knob.** Source maps are emitted locally but stripped from tarballs by `!dist/**/*.map`. Removing that `files` negation ships maps in releases (larger tarballs, better consumer stack traces).
 - **Release workflow.** `.github/workflows/release.yml` has two jobs. `verify` runs on push (main/master, `v*` tags) and pull requests: `npm ci`, `npm test` (builds core + workspaces first, then runs the packaging and install-smoke guards), and `npm run pack:dry-run`. `publish` runs only on `refs/tags/v*` after `verify` succeeds: `npm run build`, then `npm publish --access public` for core (first, because packages require the `@arnilo/prism` peer on the registry) and `npm publish --workspaces --access public`. With no `NPM_TOKEN` secret it runs `--dry-run` instead of a real publish. `permissions.id-token: write` is set so `--provenance` can be added later without re-architecting permissions.
 - **Adding a package.** New workspace packages are picked up automatically by `npm run build --workspaces`, `npm test --workspaces`, `npm run pack:dry-run`, the packaging guard (`src/__tests__/packaging.test.ts`), and the install-smoke test (`src/__tests__/install-smoke.test.ts`) via the workspace glob; add the package to both tests' config arrays for explicit per-package assertions.
@@ -126,7 +126,7 @@ npm run release:dry-run
 
 - **No secrets or fixtures in tarballs.** Tests, fixtures, `src/`, `plans/`, `.agents/`, `roadmap.md`, and `tsconfig` files are excluded. The `docs avoid real-looking secret examples` docs check and the packaging guard's deny list prevent secret-bearing fixtures from shipping.
 - **Live tests stay opt-in.** The default `npm test` is network-free by construction and never sets these vars. Three opt-in gate vars exist, each gating a different set of placeholder live smoke tests; none is set by default, in CI, or during release verification. Every gated live test is currently an empty placeholder awaiting provider-specific/worker checks in a later phase.
-  - `PRISM_LIVE_PROVIDER_TESTS=1` — gates the five provider packages' `src/__tests__/live.test.ts` (`@arnilo/prism-provider-openai`, `provider-opencode-go`, `provider-openrouter`, `provider-zai`, `provider-kimi`).
+  - `PRISM_LIVE_PROVIDER_TESTS=1` — gates the six provider packages' `src/__tests__/live.test.ts` (`@arnilo/prism-provider-openai`, `provider-opencode-go`, `provider-openrouter`, `provider-zai`, `provider-kimi`, `provider-neuralwatt`).
   - `PRISM_LIVE_COMPACTION_TESTS=1` — gates `@arnilo/prism-compaction-llm`'s live summary-provider smoke test.
   - `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1` — gates `@arnilo/prism-compaction-observational-memory`'s live worker/provider checks.
   - These guards use fake-safe names and carry no real credentials; the gated bodies intentionally do not read `OPENAI_API_KEY` or any provider key — they are placeholders. Itemize any provider-specific key env here only when a future phase adds a real live check that reads it.
@@ -143,9 +143,10 @@ Every release gate maps to an exact enforcement test or command, so the checklis
 | Docs coverage for persistence/runtime/migration surfaces | `docs.test.ts` enrolls every API page in `apiPages` (heading + index-link + bare-specifier + secret-scan checks); dedicated section assertions pin `database-persistence.md`, `runs-and-usage.md`, `session-stores-and-branching.md`, `migration.md`, `agent-definitions.md`, `performance.md`, and the Phase 41 `external_app_example_*` / `phase41_external_app_surfaces_*` gates. |
 | Package exports/subpaths resolve to built output | `public-export-contract.test.ts` asserts every `exports`/`main`/`types`/`bin` target resolves to a built file under `dist/` with a sibling `.d.ts`, and no target escapes `dist/` (no `src/` or `examples/` leak). |
 | Public-API drift | `public-export-contract.test.ts` `phase39_public_protocol_exports_and_types_do_not_drift` pins the runtime protocol (`providerToolCallDelta`, `ToolCallDeltaContent`), the `/testing/provider-conformance` subpath shape, and the observational-memory runtime `.d.ts` surface. |
-| Examples compile and are listed | `npm run typecheck` runs `tsc -p examples --noEmit`; `docs.test.ts` `examples_files_exist_and_index_links_examples` checks every example file exists and is listed in `examples/README.md`. |
+| Examples compile and are listed | `npm run typecheck` runs `tsc -p examples --noEmit`; `docs.test.ts` `examples_files_exist_and_index_links_examples` and Phase 48 release gates check every example file exists and the cache-aware + NeuralWatt examples are listed in `examples/README.md`. |
 | Examples run to completion with no secret leakage | `docs.test.ts` `examples_demos_run_to_completion_and_emit_no_secret` runs each demo (Node strips TypeScript types natively) with exit-0 and real-secret scans; `external_app_example_*` pins the DB-backed adapter reference exercising the `RunLedger`, branch-handle checkout, fork, and prior-run resume. |
-| Tarball excludes built tests, source maps, and source | `packaging.test.ts` deny list rejects `dist/__tests__/`, `*.map`, `src/`, `plans/`, and internal files per package; confirms `README.md`/`LICENSE`/`CHANGELOG.md` ship, the core tarball ships `docs/` + `dist/cli.js`, and every `exports` target is present as compiled output. |
+| Tarball excludes built tests, source maps, and source | `packaging.test.ts` deny list rejects `dist/__tests__/`, `*.map`, `src/`, `plans/`, and internal files per package; confirms `README.md`/`LICENSE`/`CHANGELOG.md` ship, the core tarball ships `docs/` + `dist/cli.js`, every `exports` target is present as compiled output, and the Phase 48 NeuralWatt release gate pins `@arnilo/prism-provider-neuralwatt` `dist/index.js` + `dist/index.d.ts` plus umbrella membership. |
+| NeuralWatt package/docs/examples release gate | `packaging.test.ts` pins `@arnilo/prism-provider-neuralwatt` package exports/type declarations and `@arnilo/prism-providers`/`@arnilo/prism-all` membership; `docs.test.ts` asserts `docs/index.md` links `providers/neuralwatt.md` and `provider-caching.md`, and that `examples/cache-aware-prompt-assembly.ts` plus `examples/neuralwatt-agent-run.ts` exist and are listed. |
 | Network-free + offline test budget | `network-free-guard.test.ts` keeps the default suite network-free; budget pinned `< 60s` (measured baseline above). Install-smoke is offline (`--offline --no-audit --no-fund`, zero registry fetches). |
 | Core security invariants reaffirmed | Runtime/docs tests hold the trust boundary: **no built-in app tools** (hosts register tools; the core ships only the mock provider and contract helpers), **no hidden provider/credential globals** (providers/credentials are host-owned `AgentConfig` fields, resolved via explicit `providerSource`/`CredentialResolver`), **no auto package discovery** (provider/tool/skill packages are opt-in and individually installed; contribution discovery is realpath-contained and emits inert envelopes the host registers), and **no secret persistence in core** (redaction applies before any `RunLedger`/`SessionStore` append; the ledger gate asserts each message event is written exactly once and redacted). |
 
