@@ -8,13 +8,13 @@ Current contract groups:
 
 - JSON/data: `JsonPrimitive`, `JsonValue`, `JsonObject`, `ErrorInfo`
 - Content/messages: `ContentBlock`, `TextContent`, `ImageContent`, `ThinkingContent`, `ToolCallDeltaContent`, `ToolCallContent`, `ToolResultContent`, `Message`
-- Providers/models/auth: `ModelConfig`, `ModelCapabilities`, `ModelLimits`, `ModelCost`, `Usage`, `CacheRetention`, `ProviderRequestOptions`, `ProviderRequest`, `ProviderEvent`, `AIProvider`, `ProviderPackage`, `ProviderPackageAPI`, `ProviderPackageDocs`, `AuthMethod`, `ApiKeyAuthMethod`, `OAuthAuthMethod`, `CustomAuthMethod`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, `CredentialResolverSource`, `OAuthCredentialStore`, `ProviderRequestPolicy`, `ProviderRequestPolicyContext`, `ProviderRequestPolicyResult`, `SystemPromptContribution`, `SystemPromptMode`, `SystemPromptSource`, `SystemPromptConfig`
+- Providers/models/auth: `ModelConfig`, `ModelCapabilities`, `ModelLimits`, `ModelCost`, `ModelCacheCapabilities`, `PromptCacheKind`, `Usage`, `CacheRetention`, `PromptCacheMode`, `PromptCacheBreakpoint`, `PromptCacheHints`, `ProviderRequestOptions`, `ProviderRequest`, `ProviderEvent`, `AIProvider`, `ProviderPackage`, `ProviderPackageAPI`, `ProviderPackageDocs`, `AuthMethod`, `ApiKeyAuthMethod`, `OAuthAuthMethod`, `CustomAuthMethod`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, `CredentialResolverSource`, `OAuthCredentialStore`, `ProviderRequestPolicy`, `ProviderRequestPolicyContext`, `ProviderRequestPolicyResult`, `SystemPromptContribution`, `SystemPromptMode`, `SystemPromptSource`, `SystemPromptConfig`
 - Agents/sessions: `AgentConfig`, `AgentDefinition`, `Agent`, `AgentSessionConfig`, `AgentSessionForkOptions`, `AgentSessionCloneOptions`, `AgentSession`, `SubscribeOptions`, `SubscriberOverflowPolicy`, `RunOptions`, `AgentEvent`
 - Tools/commands: `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, `CommandDefinition`, `CommandExecutionContext`, `CommandResult`
 - Input/prompt/context/skills: `InputBuilder`, `InputBuildContext`, `AgentInput`, `DefaultInputBuilder`, `DefaultInputBuildContext`, `InputAttachment`, `PromptInstruction`, `PromptBuilder`, `PromptBuildRequest`, `ContextBlock`, `ContextProvider`, `ContextResolutionContext`, `Skill`, `SkillRegistry`
 - Extensions/middleware: `ExtensionLifecycleEventName`, `ExtensionEvent`, `Extension`, `ExtensionAPI`, `MiddlewareHookName`, `Middleware`, `MiddlewareNext`, `MiddlewareRegistry`
 - Configuration/manifests: `ConfigProvider`, `ConfigLayer`, `ConfigLoadContext`, `PrismManifest`, `ManifestContributionDeclaration`, `ManifestResourceDeclaration`, `ManifestContributionKind`
-- Stores/resources/settings/credentials/compaction/retry: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`, `CompactionOptions`, `CompactionMiddlewarePayload`, `CompactionEntryData`, `DefaultCompactionStrategyOptions`, `RetryPolicy`, `RetryContext`, `RetryDecision`, `RetryOptions`, `RetryMiddlewarePayload`, `DefaultRetryPolicyOptions`
+- Stores/resources/settings/credentials/compaction/retry/cache helpers: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`, `CompactionOptions`, `CompactionMiddlewarePayload`, `CompactionEntryData`, `DefaultCompactionStrategyOptions`, `RetryPolicy`, `RetryContext`, `RetryDecision`, `RetryOptions`, `RetryMiddlewarePayload`, `DefaultRetryPolicyOptions`, `CacheUsageReport`, `sanitizeCacheKey`, `mapCacheRetention`, `applyCacheControl`, `cacheHitRate`, `cacheSavings`, `cacheUsageReport`
 - Production persistence (adapter-facing): `ProductionPersistenceStore`, `PersistencePage`, `PersistenceQuery`, `OwnershipScope`, `SessionRecord`, `SessionQuery`, `BranchRecord`, `BranchQuery`, `SessionEntryQuery`, `RunRecord`, `RunQuery`, `AgentEventRecord`, `AgentEventQuery`, `ToolCallRecord`, `ToolCallQuery`, `UsageRecord`, `UsageQuery`, `AgentDefinitionRecord`, `AgentDefinitionQuery`, `RetentionPolicy`, `RetentionPolicyQuery`, `MigrationRecord`, `MigrationQuery`
 
 ## When to use it
@@ -48,6 +48,7 @@ import type {
   BranchQuery,
   BranchRecord,
   CommandDefinition,
+  CacheUsageReport,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,
@@ -61,6 +62,10 @@ import type {
   PersistenceQuery,
   ProductionPersistenceStore,
   ProviderRequestOptions,
+  ModelCacheCapabilities,
+  PromptCacheBreakpoint,
+  PromptCacheHints,
+  PromptCacheKind,
   DefaultInputBuildContext,
   Extension,
   InputBuilder,
@@ -96,21 +101,26 @@ import type {
   UsageQuery,
   UsageRecord,
 } from "@arnilo/prism";
+
+import { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "@arnilo/prism";
 ```
 
 Important request shapes:
 
 | Contract | Purpose |
 | --- | --- |
-| `ModelConfig` | Provider/model id plus optional display name, capabilities, limits, cost/cache pricing, opaque compat JSON, parameters, and metadata. |
+| `ModelConfig` | Provider/model id plus optional display name, capabilities, limits, cost/cache pricing, `cache` capability metadata, opaque compat JSON, parameters, and metadata. |
+| `ModelCacheCapabilities` / `PromptCacheKind` | Generic model cache support metadata (`implicit`, `openai_key`, `cache_control`, `provider_specific`, `none`). See [Model registry](model-registry.md). |
+| `PromptCacheHints` / `PromptCacheBreakpoint` | Structured provider cache intent and reusable prompt anchors. See [Provider caching](provider-caching.md). |
 | `ProviderPackage` | Inert provider package definition with docs metadata and explicit `setup(api)` registration. |
 | `ProviderRequest` | Normalized provider input: `model`, `messages`, optional `tools`, `context`, generic `options`, `metadata`, and `signal`. |
-| `ProviderRequestOptions` | Generic provider adapter hints: session/cache identifiers, cache retention, headers, compat, and opaque `extra`; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert hints in first-party providers. |
+| `ProviderRequestOptions` | Generic provider adapter hints: session id, legacy `cacheKey`/`cacheRetention`, structured `cache?: PromptCacheHints`, headers, compat, and opaque `extra`; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert hints in first-party providers. |
 | `ProviderRequestPolicy` | Ordered pre-provider hook that can patch the request and return exact secrets for provider-error redaction. |
 | `ToolRegistry` | Host active tool registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `ToolExecutionContext` | Host tool execution context: session/run ids, tool call id, optional abort signal, metadata, and progress callback. |
 | `ContextResolutionContext` | Context provider input: messages plus optional session/run ids, metadata, and signal. |
-| `DefaultInputBuildContext` | Optional default input assembly context: instructions, history, summaries, attachments, explicit resources, tool results, middleware, ids, metadata, and signal. |
+| `InputAssemblyLayout` | Default input layout selector: `"legacy"` (default) or opt-in `"cache_aware"`. |
+| `DefaultInputBuildContext` | Optional default input assembly context: input layout, instructions, history, summaries, attachments, explicit resources, tool results, middleware, ids, metadata, and signal. |
 | `ResolveContextOptions` | Ordered context resolution input: selected providers, messages, ids, metadata, signal, and optional middleware. |
 | `AssembleProviderInputOptions` | Provider input assembly input: model, input, optional builders, selected context providers/skills, active tools, metadata, and signal. |
 | `PromptTemplateOptions` | Missing-variable behavior for tiny `renderPromptTemplate()` substitutions. |
@@ -118,7 +128,7 @@ Important request shapes:
 | `CredentialRequest` | Credential lookup request: credential `name`, optional provider id, and metadata. |
 | `OAuthProvider` | Host/package OAuth callbacks for login, optional refresh, and conversion to a `Credential`. |
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
-| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
+| `RunOptions` | Per-run overrides: optional abort signal, model, input layout, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
 | `SubscribeOptions` / `SubscriberOverflowPolicy` | Live `AgentEvent` subscriber queue limit and overflow policy: `maxQueuedEvents`, `overflow: "close" \| "drop_oldest" \| "drop_newest"`. |
 | `AgentConfig.loop` / `RunOptions.loop` | Replaceable per-run control loop: `singleShotLoop` default, `generate-validate-revise` options, or a custom `AgentLoopStrategy`. `RunOptions.loop` wins. See [Agent loops](agent-loops.md). |
 | `AgentLoopStrategy` | `{ name; run(ctx: LoopContext): Promise<Usage \| undefined> }` — orchestrates shared runtime primitives via `LoopContext`. |
@@ -141,6 +151,7 @@ Important request shapes:
 | `AgentEventRecord` / `AgentEventQuery` | Event ledger row with `redacted` flag and filters by type, session, run, entry, timestamp, ownership. |
 | `ToolCallRecord` / `ToolCallQuery` | Tool-call row with `redacted` flag and filters by name, status, session, run, entry, timestamps, ownership. |
 | `UsageRecord` / `UsageQuery` | Usage row and filters: session, run, entry, recorded-at range, ownership. |
+| `CacheUsageReport` | Numeric cache diagnostics from normalized `Usage`: read/write tokens, hit rate, estimated savings, and optional currency. |
 | `AgentDefinitionRecord` / `AgentDefinitionQuery` | Versioned agent-definition snapshot and filters. Does not store credentials or provider instances. |
 | `RetentionPolicy` / `RetentionPolicyQuery` | Retention policy and filters: age, entry count, byte limits, archive store, applied kinds. |
 | `MigrationRecord` / `MigrationQuery` | Applied migration record and filters. |
@@ -191,6 +202,7 @@ import type {
   AIProvider,
   AssembleProviderInputOptions,
   CommandDefinition,
+  CacheUsageReport,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,

@@ -321,7 +321,7 @@
     - `docs/index.md` update: yes; add `Model registry` navigation entry (in the docs task).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Add shared cache helpers (key sanitize, retention map, cache_control, hit-rate)
+- [x] Add shared cache helpers (key sanitize, retention map, cache_control, hit-rate)
   - Acceptance Criteria:
     - Functional: Prism core exports reusable helpers:
       `sanitizeCacheKey(value, maxLength)`, `mapCacheRetention(retention,
@@ -382,22 +382,24 @@
       const stamped = applyCacheControl(messages, [{ location: "last_user_message" }]);
       cacheHitRate({ inputTokens: 1000, cacheReadTokens: 800 }); // 0.8
       ```
-    - Files to Create/Edit:
-      - `src/cache-helpers.ts`: new file with the four helpers.
-      - `src/index.ts`: export the helpers and their option types.
-      - `src/__tests__/cache-helpers.test.ts`: new test file covering each helper and breakpoint resolution.
-      - `src/__tests__/phase12-boundaries.test.ts`: extend forbidden-literal scan over `src/cache-helpers.ts`.
+    - Files Created/Edited:
+      - `src/cache-helpers.ts`: added pure helpers `sanitizeCacheKey`, `mapCacheRetention`, `applyCacheControl`, `cacheHitRate`, and `cacheSavings`, plus small exported option/result types.
+      - `src/index.ts`: exported helper functions and helper option/result types from the public entrypoint.
+      - `src/__tests__/cache-helpers.test.ts`: added tests for key sanitizing/truncation, retention mapping, targeted breakpoint stamping, hit-rate, and savings.
+      - `src/__tests__/phase12-boundaries.test.ts`: existing Phase 12 core source scan covers the new `src/cache-helpers.ts` file; no extra edit needed beyond the provider-literal guard already extended in task 2.
     - References:
       - `packages/provider-openrouter/src/cache.ts` `openRouterSessionId`/`withOpenRouterCache`/`openRouterUsage` are the duplication this centralizes.
       - `packages/provider-openai/src/cache.ts` `promptCacheKey`/`promptCacheRetention`.
       - Anthropic `cache_control` supports `{ type: "ephemeral" }` and `{ type: "ephemeral", ttl: "1h" }` (long retention) — drives the `ttl` option.
       - `src/contracts.ts` `Usage` is the normalized source for hit-rate/savings.
-  - Test Cases to Write:
-    - `sanitizeCacheKey strips unsafe chars and truncates`: `"a b#c!" -> "a-b-c"` at length 8; returns `undefined` for empty/undefined input.
-    - `applyCacheControl stamps only breakpoint anchors, capped at maxBreakpoints`: assert only the chosen messages carry `cache_control`.
-    - `cacheHitRate computes read/(read+input)`: 800/1000 -> 0.8; returns `undefined` when usage missing.
-    - `cacheSavings uses ModelCost.cacheRead delta`: positive savings when cache read price < input price.
-    - `boundary: cache-helpers contain no provider literals`.
+  - Test Cases Written:
+    - `sanitizeCacheKey`: invalid chars are normalized to safe key text, max length is honored, empty/undefined input returns `undefined`.
+    - `mapCacheRetention`: `long` stays long only when model declares long-retention support, downgrades to `short` when unsupported, and `none`/cache-kind `none` omit provider cache retention.
+    - `applyCacheControl`: stamps only selected breakpoint messages, respects `maxBreakpoints`, supports `ttl: "1h"`, and does not mutate original messages.
+    - `cacheHitRate`: handles normal cached-token ratios and zero input tokens.
+    - `cacheSavings`: estimates read-token savings from `ModelCost.input/cacheRead` and returns `undefined` without pricing data.
+    - Boundary test: Phase 12 source scan passed over `src/cache-helpers.ts`, confirming no forbidden provider-specific literals in core helper source.
+    - Verification run: `npm run build:core && node --test dist/__tests__/cache-helpers.test.js dist/__tests__/public-contracts.test.js dist/__tests__/phase12-boundaries.test.js` passed (35 tests).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; new exported helper functions.
     - Docs pages to create/edit:
@@ -406,7 +408,7 @@
     - `docs/index.md` update: yes; ensure `Provider caching` links the helpers (in the docs task).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Author cache/provider/model docs and wire docs tests
+- [x] Author cache/provider/model docs and wire docs tests
   - Acceptance Criteria:
     - Functional: Create `/docs/provider-caching.md`, `/docs/provider-request-policies.md`,
       and `/docs/model-registry.md` following the Prism wiki API-page structure
@@ -454,20 +456,21 @@
       // provider-caching.md example
       const hints: PromptCacheHints = { mode: "on", key: "stable", breakpoints: [{ location: "system_prompt" }] };
       ```
-    - Files to Create/Edit:
-      - `docs/provider-caching.md`: new page.
-      - `docs/provider-request-policies.md`: new page.
-      - `docs/model-registry.md`: new page.
-      - `docs/index.md`: add the three entries under the provider/model group.
-      - `docs/provider-layer.md`, `docs/provider-packages.md`, `docs/public-contracts.md`: cross-link the new pages and the new types.
-      - `src/__tests__/docs.test.ts`: add the three pages to `apiPages` and add wording regressions.
+    - Files Created/Edited:
+      - `docs/provider-caching.md`: new API page documenting `PromptCacheHints`, breakpoints, `ModelCacheCapabilities`, cache helpers, legacy aliases, best-effort/no-guaranteed-hits caveat, and cache-key/header safety.
+      - `docs/provider-request-policies.md`: new API page documenting `createSessionCachePolicy`, `createProviderRequestPolicyChain`, `mergeProviderRequestOptions`, structured cache merge behavior, and header ownership.
+      - `docs/model-registry.md`: new API page documenting `createModelRegistry`, `ModelConfig` metadata, `ModelCacheCapabilities`, duplicate policy, and package registration.
+      - `docs/index.md`: added the three entries under the provider/model group.
+      - `docs/provider-layer.md`, `docs/provider-packages.md`, `docs/public-contracts.md`: cross-linked the new pages and listed the new cache/model contracts and helper exports.
+      - `src/__tests__/docs.test.ts`: added the three pages to `apiPages` and added wording regressions for alias note, no-guaranteed-hits/best-effort caveat, cache-key safety, header ownership, helper names, policy APIs, and model metadata.
     - References:
       - `src/__tests__/docs.test.ts` line 8 `apiPages` and the heading-check test are the enforcement points.
       - `docs/api-page-template.md` for the required section layout.
-  - Test Cases to Write:
-    - `docs apiPages include the three new pages`: heading check enforces them.
-    - `provider-caching docs contain alias + no-guaranteed-hits + header-ownership wording`: regression.
-    - `docs index links all three new pages`: index-link test.
+  - Test Cases Written:
+    - `docs apiPages include the three new pages`: implemented through `apiPages` plus explicit assertions in `phase42 cache provider model docs are linked and cover safety wording`; heading check enforces API-page structure.
+    - `provider-caching docs contain alias + no-guaranteed-hits + header-ownership wording`: implemented with explicit phrase regressions.
+    - `docs index links all three new pages`: implemented with explicit index-link assertions and existing local-link checker.
+    - Verification run: `npm run build:core && node --test dist/__tests__/docs.test.js` passed (55 tests).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; this task is the docs delivery for the new public surface.
     - Docs pages to create/edit:
@@ -476,7 +479,7 @@
     - `docs/index.md` update: yes; add `Provider caching`, `Provider request policies`, `Model registry`.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Final verification and release-safety checks
+- [x] Final verification and release-safety checks
   - Acceptance Criteria:
     - Functional: All new public types and helpers are exported from
       `src/index.ts`, examples compile, legacy `cacheKey`/`cacheRetention`
@@ -504,15 +507,15 @@
       npm run typecheck
       npm test
       ```
-    - Files to Create/Edit:
-      - `plans/043-prompt-cache-primitives-and-provider-capability-metadata.md`: mark tasks complete and fill final sections after execution.
+    - Files Created/Edited:
+      - `plans/043-prompt-cache-primitives-and-provider-capability-metadata.md`: marked all six tasks complete and filled final verification, compromises, and further-actions sections after execution.
     - References:
       - `docs/release-and-install.md` pins default `npm test` as network-free and under budget.
       - `src/__tests__/phase12-boundaries.test.ts` is the provider-literal gate for core.
-  - Test Cases to Write:
-    - Run `npm run typecheck` and `npm test`.
-    - Run targeted tests (`public-contracts`, `cache-helpers`, `docs`,
-      `phase11`/`phase12` boundaries) if `npm test` is too broad during development.
+  - Test Cases Run:
+    - `npm run typecheck` passed: core build, workspace typechecks, and examples `tsc -p examples --noEmit` all completed successfully.
+    - `npm test` passed: full build, core test suite, workspace tests, package guards, and network-free live-test skip gates completed successfully.
+    - Release-safety audit script passed: confirmed root exports for cache helpers and contracts, structured/cache metadata contracts, docs safety wording, no provider-specific literals in `src/cache-helpers.ts`, and no `package.json`/`package-lock.json` dependency diff.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no new behavior in this task; verifies earlier tasks.
     - Docs pages to create/edit:
@@ -521,7 +524,11 @@
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- First-party provider packages were not migrated to consume the new structured cache hints/helpers in this phase. Rationale: Phase 42 only adds generic primitives, docs, and tests; Phase 44 is the planned provider behavior hardening/migration.
+- `applyCacheControl()` stamps Prism `Message` anchors, not every provider-native message shape. Rationale: keeps core provider-agnostic and pure; providers map their native wire format explicitly.
+- `cacheSavings()` is an estimate from normalized usage and `ModelCost`; it returns `undefined` without pricing data and does not infer provider billing units beyond the documented `unit` string.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- Phase 44: migrate first-party providers to read `ProviderRequestOptions.cache`/`ModelConfig.cache` and call shared helpers where applicable.
+- Phase 43: add cache-aware input ordering and diagnostics around stable context/resources if needed by host apps.
+- Future docs/examples: add provider-specific cache examples once provider migrations land.

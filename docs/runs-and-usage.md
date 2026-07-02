@@ -147,6 +147,7 @@ queued ──> running ──> succeeded
 
 ```ts
 import {
+  cacheUsageReport,
   createAgent,
   createMockProvider,
   createSecretRedactor,
@@ -188,6 +189,8 @@ await session.run("Hello", {
 });
 
 console.log(runs.at(-1)?.status); // succeeded
+console.log(cacheUsageReport(usageRows.at(-1)?.usage));
+// { cacheReadTokens: 0, cacheWriteTokens: 0, ... } when provider usage is present
 ```
 
 ## Extension and configuration notes
@@ -198,12 +201,15 @@ console.log(runs.at(-1)?.status); // succeeded
 - The runtime resolves `model` and `provider` from `AgentConfig`/`RunOptions`/`AgentDefinition` before writing the start `RunRecord`.
 - Adapters should treat appends as ordered within a `runId`: event and tool-call rows preserve emission order because the runtime drains pending appends before writing the final `RunRecord`.
 - Adapters that need upsert semantics can use `RunRecord.id` (== `runId`) as the stable key.
+- Use `cacheUsageReport(record.usage, model)` for cache diagnostics from normalized usage. It works when a provider reports `cacheReadTokens` without `cacheWriteTokens`; missing write tokens are reported as `0`, and unavailable hit rate/savings stay `undefined`.
+- **Provider-specific telemetry is package-owned.** Core `Usage` carries token counts and `cost`/`currency`; it has no energy or detailed cost-breakdown fields. Providers that surface extra telemetry (e.g. `@arnilo/prism-provider-neuralwatt` exposes `neuralWattEventsWithTelemetry()`, `parseNeuralWattComment()`, and `mapNeuralWattTelemetry()` for `: energy`/`: cost` SSE comments and non-streaming top-level fields) keep that data in package-specific helpers/types. Telemetry never enters `RunLedger` usage rows unless the host explicitly copies it in; it carries usage/cost numbers only — never prompts, API keys, or headers. Account-level quota is likewise package-owned: `@arnilo/prism-provider-neuralwatt` exports an explicit `getNeuralWattQuota()` helper that the host calls on demand (never during generation); NeuralWatt rate-limits that endpoint to 1 request per second per customer, so the caller owns throttling.
 
 ## Security and performance notes
 
 - **No credentials.** `RunLedger` records never contain `AIProvider`, `CredentialResolver`, `ProviderResolver`, provider API keys, or credential values. They store only ids, status, timestamps, and the public event/result/usage shapes.
 - **Redaction.** The runtime calls `redactRunLedgerRecord()` and `redactAgentEvent()` with the active `SecretRedactor` before handing records to the adapter. `AgentEventRecord.redacted` and `ToolCallRecord.redacted` are set to `true` when a redactor is configured. Hosts should still redact before writing to durable storage if they perform additional transformations.
 - **Message content stays in `SessionStore`.** `AgentEventRecord.event` may contain `message_delta` / `message_finished` payloads; these are redacted but still belong conceptually to the session store. Do not use the ledger as the source of truth for messages.
+- **Cache diagnostics stay numeric.** `cacheUsageReport()` derives reports from `Usage` numbers and optional `ModelConfig.cost`; do not add prompt text, cache keys, headers, credentials, or provider payloads to usage rows.
 - **Synchronous adapters block the run.** An adapter that performs network or heavy DB writes inline will slow down the agent loop. For high-throughput hosts, buffer or batch inside the adapter and return quickly; the runtime awaits the returned promise. If batching, preserve per-run order before acknowledging a batch: `appendEvent` rows should be pageable by `(runId, sequence)`, run rows by `(sessionId, startedAt, id)`, and usage rows by `(runId, recordedAt, id)`.
 - **Idempotency is host-owned.** The runtime writes the key into `RunRecord.idempotencyKey`; enforcing unique keys and deduplicating retries is the host adapter's responsibility.
 - **Tenant isolation.** `OwnershipScope` fields are copied from the active ownership scope, but the runtime does not enforce tenant isolation. Host adapters must apply their own access controls when querying persisted ledger rows.
@@ -217,4 +223,5 @@ console.log(runs.at(-1)?.status); // succeeded
 - [Database persistence](database-persistence.md): reference relational schema for runs, events, tool calls, and usage.
 - [Session stores](session-stores.md): `SessionStore` contract for session entries and branches.
 - [Credentials and redaction](credentials-and-redaction.md): `createSecretRedactor()` and redaction helpers.
+- [Provider caching](provider-caching.md): cache hints and `cacheUsageReport()` diagnostics.
 - [Public contracts](public-contracts.md): full contract inventory.

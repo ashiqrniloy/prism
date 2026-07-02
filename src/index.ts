@@ -1,6 +1,8 @@
 export type * from "./contracts.js";
 export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict } from "./contracts.js";
 export { createAgent, createAgentSession } from "./agents.js";
+export { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "./cache-helpers.js";
+export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport } from "./cache-helpers.js";
 export { resolveAgentDefinition } from "./agent-definitions.js";
 export { parseSkillFile, parseAgentFile } from "./contribution-parsing.js";
 export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";

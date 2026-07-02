@@ -6,8 +6,8 @@ The provider layer contains the small runtime pieces Prism already ships for hos
 
 - `createProviderRegistry()` / `ProviderRegistry`: register and resolve `AIProvider` instances by id.
 - `createProviderResolver()` / `ProviderResolver`: build a resolver that maps a `ModelConfig` to an `AIProvider` (or `undefined`), from a `ProviderRegistry` or a plain `AIProvider[]`.
-- `createModelRegistry()` / `ModelRegistry`: register and resolve `ModelConfig` values by provider/model key.
-- `ModelConfig` metadata fields for display names, capabilities, limits, cost/cache pricing, opaque provider compat data, and host metadata.
+- `createModelRegistry()` / `ModelRegistry`: register and resolve `ModelConfig` values by provider/model key. See [Model registry](model-registry.md).
+- `ModelConfig` metadata fields for display names, capabilities, limits, cost/cache pricing, cache support metadata, opaque provider compat data, and host metadata. See [Provider caching](provider-caching.md).
 - Provider event helpers: create normalized `ProviderEvent` values for text, thinking, streamed tool-call deltas, final tool calls, usage, done, and errors, including optional cache read/write usage fields.
 - `toolCallContent()`: create a `ToolCallContent` block.
 - `createMockProvider()` / `MockProviderOptions`: create a deterministic scripted `AIProvider` for tests and examples.
@@ -24,7 +24,7 @@ Use this layer when a host app, extension package, or test needs to:
 - Emit provider events without hand-writing event objects.
 - Test agent/provider flows without timers, credentials, SDKs, or network calls.
 
-Do not use this layer for credential storage, settings loading, tool dispatch, agent loops, package discovery, cache stores, or provider SDK configuration. Those stay host-owned or belong to provider packages.
+Do not use this layer for credential storage, settings loading, tool dispatch, agent loops, package discovery, cache stores, or provider SDK configuration. Those stay host-owned or belong to provider packages. Request option hooks are covered in [Provider request policies](provider-request-policies.md).
 
 ## Inputs / request
 

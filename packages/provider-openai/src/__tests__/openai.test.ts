@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenAIProviderPackage, createOpenAIResponsesProvider } from "../index.js";
 
 const request: ProviderRequest = {
@@ -36,12 +36,66 @@ describe("@arnilo/prism-provider-openai responses", () => {
 
     await assertProviderStreamConforms({ provider, request: { ...request, model: { ...request.model, parameters: { maxTokens: 321, temperature: 0.2 } } } });
     assert.equal(body.prompt_cache_key, "x".repeat(64));
-    assert.equal(body.prompt_cache_retention, "short");
+    // short retention is OpenAI's automatic/implicit caching; do not emit an
+    // invalid literal retention value.
+    assert.equal(body.prompt_cache_retention, undefined);
     assert.equal(body.max_output_tokens, 321);
     assert.equal(body.maxTokens, undefined);
     assert.equal(body.temperature, 0.2);
     assert.equal(headers!.get("x-client-request-id"), "session-1");
     assert.equal(headers!.get("authorization"), "Bearer fake-openai-key");
+  });
+
+  it("openai_responses_long_retention_emits_24h_only_when_supported", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({ apiKey: "fake-openai-key", fetch: async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    } });
+    const longSupported = { ...request, options: { ...request.options, cacheRetention: "long" as const }, model: { ...request.model, cache: { kind: "openai_key" as const, longRetention: true } } };
+    await assertProviderStreamConforms({ provider, request: longSupported });
+    assert.equal(body.prompt_cache_retention, "24h");
+
+    let body2: any;
+    const provider2 = createOpenAIResponsesProvider({ apiKey: "fake-openai-key", fetch: async (_url, init) => {
+      body2 = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    } });
+    // Unknown model with no cache metadata must not emit an unsupported value.
+    const longUnsupported = { ...request, options: { ...request.options, cacheRetention: "long" as const } };
+    await assertProviderStreamConforms({ provider: provider2, request: longUnsupported });
+    assert.equal(body2.prompt_cache_retention, undefined);
+  });
+
+  it("openai_responses_sanitizes_and_clamps_prompt_cache_key", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({ apiKey: "fake-openai-key", fetch: async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    } });
+    await assertProviderStreamConforms({ provider, request: {
+      ...request,
+      options: { cacheKey: "team/agent#1@" + "x".repeat(80), cacheRetention: "short" },
+    } });
+    // Disallowed chars stripped to "-", leading/trailing dashes trimmed, clamped to 64.
+    assert.equal(body.prompt_cache_key.length, 64);
+    assert.match(body.prompt_cache_key, /^team-agent-1-x+$/);
+  });
+
+  it("openai_responses_keeps_provider_owned_headers_after_caller_headers", async () => {
+    let headers: Headers;
+    const provider = createOpenAIResponsesProvider({ apiKey: "fake-openai-key", fetch: async (_url, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    } });
+    await assertProviderStreamConforms({ provider, request: {
+      ...request,
+      options: { ...request.options, headers: { authorization: "Bearer attacker", "x-client-request-id": "attacker-req", "content-type": "text/plain", "x-caller": "kept" } },
+    } });
+    assertProviderOwnedHeadersWin(headers!, {
+      owned: { authorization: "Bearer fake-openai-key", "content-type": "application/json", "x-client-request-id": "session-1" },
+      caller: { authorization: "Bearer attacker", "x-client-request-id": "attacker-req", "content-type": "text/plain", "x-caller": "kept" },
+    });
   });
 
   it("openai_responses_aborts_fetch", async () => {

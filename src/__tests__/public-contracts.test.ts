@@ -10,6 +10,7 @@ import type {
   AgentSessionForkOptions,
   AIProvider,
   AuthMethod,
+  CacheUsageReport,
   CommandDefinition,
   CompactionOptions,
   CompactionStrategy,
@@ -22,6 +23,7 @@ import type {
   AssembleProviderInputOptions,
   DefaultInputBuildContext,
   Extension,
+  InputAssemblyLayout,
   InputBuilder,
   ManifestContributionDeclaration,
   ManifestResourceDeclaration,
@@ -36,6 +38,7 @@ import type {
   ProviderRequestPolicy,
   ResourceLoader,
   RetryOptions,
+  RunOptions,
   RetryPolicy,
   SettingsProvider,
   Skill,
@@ -48,7 +51,7 @@ import type {
   SystemPromptMode,
   ToolDefinition,
 } from "../index.js";
-import { assembleProviderInput, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, mergeProviderRequestOptions, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveAgentDefinition, resolveContextProviders } from "../index.js";
+import { assembleProviderInput, cacheUsageReport, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, mergeProviderRequestOptions, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveAgentDefinition, resolveContextProviders } from "../index.js";
 import type { DispatchToolCallOptions, SessionContextSnapshot, ToolFilter, ToolValidator } from "../index.js";
 
 const provider: AIProvider = {
@@ -194,7 +197,8 @@ describe("public contracts", () => {
   it("host can type layered system prompt contracts", () => {
     const mode: SystemPromptMode = "append";
     const config: SystemPromptConfig = [{ id: "app", source: "app", mode, text: "App rules." }];
-    const agentConfig: AgentConfig = { model: { provider: "mock", model: "demo" }, provider, instructions: "Base", systemPrompt: config };
+    const runOptions: RunOptions = { inputLayout: "legacy" };
+    const agentConfig: AgentConfig = { model: { provider: "mock", model: "demo" }, provider, instructions: "Base", systemPrompt: config, inputLayout: runOptions.inputLayout };
     const prompt = composeSystemPrompt(agentConfig.systemPrompt, { base: agentConfig.instructions });
 
     assert.equal(prompt, "Base\n\nApp rules.");
@@ -219,6 +223,17 @@ describe("public contracts", () => {
     assert.equal(seen[0]?.cache?.kind, "openai_key");
     assert.equal(seen[0]?.cache?.maxKeyLength, 64);
     assert.equal(seen[1]?.cache, undefined);
+  });
+
+  it("host can type cache usage diagnostics helper", () => {
+    const report: CacheUsageReport | undefined = cacheUsageReport(
+      { inputTokens: 1000, cacheReadTokens: 500 },
+      { provider: "mock", model: "priced", cost: { input: 10, cacheRead: 2, unit: "1M tokens", currency: "USD" } },
+    );
+
+    assert.equal(report?.cacheWriteTokens, 0);
+    assert.equal(report?.hitRate, 0.5);
+    assert.equal(report?.currency, "USD");
   });
 
   it("host can type provider request options and cache policy contracts", async () => {
@@ -333,7 +348,9 @@ describe("public contracts", () => {
   });
 
   it("host can type phase 5 default input assembly", async () => {
+    const layout: InputAssemblyLayout = "cache_aware";
     const context: DefaultInputBuildContext = {
+      inputLayout: layout,
       systemInstructions: "Follow host policy.",
       attachments: [{ name: "notes.md", text: "notes" }],
       toolResults: [{ toolCallId: "call_1", name: "echo", value: "ok" }],
@@ -343,7 +360,8 @@ describe("public contracts", () => {
     const messages = await createDefaultInputBuilder().build("Hello", context);
 
     assert.equal(messages[0]?.role, "system");
-    assert.equal(messages.at(-1)?.role, "tool");
+    assert.equal(messages.at(-2)?.role, "tool");
+    assert.equal(messages.at(-1)?.role, "user");
   });
 
   it("host can type phase 5 skill registry", () => {
@@ -366,6 +384,7 @@ describe("public contracts", () => {
   it("host can type phase 5 context prompt assembly", async () => {
     const options: AssembleProviderInputOptions = {
       model: { provider: "mock", model: "demo" },
+      inputLayout: "cache_aware",
       input: "Hello",
       contextProviders: [context],
       promptBuilder: createDefaultPromptBuilder(),

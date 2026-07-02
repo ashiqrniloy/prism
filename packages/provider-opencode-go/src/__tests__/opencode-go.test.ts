@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AuthMethod, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import type { AuthMethod, AIProvider, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenCodeGoProvider, createOpenCodeGoProviderPackage } from "../index.js";
 
 const baseRequest: ProviderRequest = {
@@ -45,7 +45,118 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "tool_1", name: "lookup", arguments: { q: "y" } }]);
   });
 
-  it("opencode_go_applies_session_cache_headers_and_max_tokens", async () => {
+  it("opencode_go_session_id_prefers_cacheKey_over_sessionId_and_sanitizes", async () => {
+    let headers = new Headers();
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (input, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: { ...baseRequest, options: { ...baseRequest.options, cacheKey: "repo#prefix/run-1", sessionId: "should-not-win" } } });
+    assert.equal(headers.get("x-opencode-session"), "repo-prefix-run-1");
+    // Falls back to sessionId when no cacheKey.
+    let headers2 = new Headers();
+    const provider2 = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_input, init) => {
+      headers2 = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider: provider2, request: baseRequest });
+    assert.equal(headers2.get("x-opencode-session"), "session-with-spaces");
+  });
+
+  it("opencode_go_anthropic_route_applies_cache_control_only_to_selected_breakpoints", async () => {
+    let body: any;
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    const messages: Message[] = [
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    const request = {
+      ...baseRequest,
+      model: { provider: "opencode-go" as const, model: "claude-sonnet-4.5-go", compat: { route: "anthropic" as const }, cache: { kind: "cache_control" as const, longRetention: true } },
+      messages,
+      options: { cacheKey: "sess", cache: { breakpoints: [{ location: "last_stable_message" as const }] } },
+    };
+    await assertProviderStreamConforms({ provider, request });
+    // last_stable_message is index 1 (the assistant turn); only its last block carries cache_control.
+    assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral" });
+    const others = body.messages.filter((m: any) => m.role !== "assistant");
+    for (const m of others) for (const block of m.content) assert.equal(block.cache_control, undefined);
+  });
+
+  it("opencode_go_anthropic_route_long_retention_emits_1h_ttl", async () => {
+    let body: any;
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    const messages: Message[] = [
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({ provider, request: {
+      ...baseRequest,
+      model: { provider: "opencode-go" as const, model: "claude-sonnet-4.5-go", compat: { route: "anthropic" as const }, cache: { kind: "cache_control" as const, longRetention: true } },
+      messages,
+      options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } },
+    } });
+    assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
+  });
+
+  it("opencode_go_anthropic_route_no_breakpoints_emits_no_cache_control", async () => {
+    let body: any;
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: {
+      ...baseRequest,
+      model: { provider: "opencode-go" as const, model: "claude-sonnet-4.5-go", compat: { route: "anthropic" as const }, cache: { kind: "cache_control" as const } },
+      options: { cacheKey: "sess" },
+    } });
+    for (const m of body.messages) for (const block of m.content) assert.equal(block.cache_control, undefined);
+  });
+
+  it("opencode_go_openai_route_never_receives_anthropic_cache_control", async () => {
+    let body: any;
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: {
+      ...baseRequest,
+      // OpenAI route; even if cache metadata is set, no Anthropic cache_control leaks in.
+      model: { ...baseRequest.model, cache: { kind: "cache_control" as const } },
+      options: { cacheKey: "sess", cache: { breakpoints: [{ location: "last_stable_message" }] } },
+    } });
+    const serialized = JSON.stringify(body);
+    assert.ok(!serialized.includes("cache_control"), "OpenAI route body must not contain cache_control");
+  });
+
+  it("opencode_go_keeps_provider_owned_headers_after_caller_headers", async () => {
+    let headers = new Headers();
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: {
+      ...baseRequest,
+      options: {
+        ...baseRequest.options,
+        headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-opencode-session": "attacker-session", "x-caller": "kept" },
+      },
+    } });
+    assertProviderOwnedHeadersWin(headers, {
+      owned: { authorization: "Bearer fake-opencode-key", "content-type": "application/json", "x-opencode-session": "session-with-spaces" },
+      caller: { authorization: "Bearer attacker", "content-type": "text/plain", "x-opencode-session": "attacker-session", "x-caller": "kept" },
+    });
+  });
+
+  it("opencode_go_openai_route_serializes_max_tokens_and_temperature", async () => {
     let url = "";
     let headers = new Headers();
     let body: any;

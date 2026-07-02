@@ -456,13 +456,13 @@ Deliver:
 - Add tarball install/import smoke tests for `prism`, every exported subpath, and every first-party workspace package by package specifier, including `@arnilo/prism-compaction-observational-memory`.
 - Make `npm ls --all --depth=0`, `npm pack --dry-run --json`, and package import smoke checks clean in a fresh install/workspace.
 - Add a minimal release workflow/dry-run for core plus first-party packages.
-- Reduce default no-network test time to the release target or explicitly adjust that target in this roadmap with rationale. Baseline measured on Node 20: `npm test` medians ~22s wall (build ~12.5s + tests ~9.5s, tests parallelized); budget pinned at < 30s — see `docs/release-and-install.md`.
+- Reduce default no-network test time to the release target or explicitly adjust that target in this roadmap with rationale. Current measured local baseline on Node 20: `npm test` ~45s wall (build ~18s + network-free tests/workspace tests/packaging smoke ~27s); budget pinned at < 60s after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests — see `docs/release-and-install.md`.
 
 Acceptance:
 - Packed core and package tarballs contain README/LICENSE/CHANGELOG/docs plus public compiled output only.
 - No published tarball includes built test artifacts.
 - Fresh install smoke tests import every documented package/subpath without workspace-relative paths.
-- Default tests remain network-free and meet the chosen time budget (< 30s for `npm test` on Node 20; baseline ~22s).
+- Default tests remain network-free and meet the chosen time budget (< 60s for `npm test` on Node 20; baseline ~45s).
 
 ### Phase 18 — Documentation, examples, and fixtures catch-up
 

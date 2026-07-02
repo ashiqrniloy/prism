@@ -76,6 +76,54 @@ describe("default input builder", () => {
     });
   });
 
+  it("keeps legacy layout as the default", async () => {
+    const messages = await createDefaultInputBuilder().build("Now", {
+      summaries: ["Earlier"],
+      history: [{ role: "assistant", content: [{ type: "text", text: "old" }] }],
+      attachments: [{ name: "notes.md", text: "notes" }],
+    });
+
+    assert.deepEqual(messages.map((message) => message.role), ["system", "assistant", "user", "user"]);
+    assert.match(text(messages[0]!)!, /Summary:\nEarlier/);
+    assert.equal(text(messages[2]!), "Now");
+    assert.match(text(messages[3]!)!, /Attachment notes\.md:\nnotes/);
+  });
+
+  it("cache-aware layout puts stable attachments resources summaries and history before current input", async () => {
+    const calls: string[] = [];
+    const resourceLoader: ResourceLoader = { async load(uri) { calls.push(uri); return { uri, text: "resource" }; } };
+    const messages = await createDefaultInputBuilder().build("Now", {
+      inputLayout: "cache_aware",
+      summaries: ["Earlier"],
+      history: [{ role: "assistant", content: [{ type: "text", text: "old" }] }],
+      attachments: [{ name: "notes.md", text: "notes" }],
+      resourceUris: ["package://demo/context.md"],
+      resourceLoader,
+    });
+
+    assert.deepEqual(calls, ["package://demo/context.md"]);
+    assert.deepEqual(messages.map((message) => message.role), ["user", "user", "system", "assistant", "user"]);
+    assert.match(text(messages[0]!)!, /Attachment notes\.md:\nnotes/);
+    assert.match(text(messages[1]!)!, /Resource package:\/\/demo\/context\.md:\nresource/);
+    assert.match(text(messages[2]!)!, /Summary:\nEarlier/);
+    assert.equal(text(messages[3]!), "old");
+    assert.equal(text(messages[4]!), "Now");
+  });
+
+  it("cache-aware layout keeps tool results adjacent to prior tool calls before current input", async () => {
+    const history: Message[] = [{ role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: {} }] }];
+    const messages = await createDefaultInputBuilder().build("Follow up", {
+      inputLayout: "cache_aware",
+      history,
+      toolResults: [{ toolCallId: "call_1", name: "lookup", value: { ok: true } }],
+    });
+
+    assert.deepEqual(messages.map((message) => message.role), ["assistant", "tool", "user"]);
+    assert.equal(messages[0]?.content[0]?.type, "tool_call");
+    assert.equal(messages[1]?.content[0]?.type, "tool_result");
+    assert.equal(text(messages[2]!), "Follow up");
+  });
+
   it("runs input assembly middleware only when supplied", async () => {
     const middleware = createMiddlewareRegistry();
     middleware.use<readonly Message[]>("input_assembly", (messages) => [
@@ -266,6 +314,27 @@ describe("context resolution and prompt composition", () => {
     assert.match(text(messages[0]!)!, /Project:\nContext/);
     assert.match(text(messages[1]!)!, /Skill brief:\nBe brief\./);
     assert.match(text(messages[2]!)!, /Available tools:\n- echo: Echo input/);
+  });
+
+  it("cache-aware provider input has byte-stable prefix for different current user turns", async () => {
+    const tool: ToolDefinition = { name: "echo", description: "Echo input", execute: () => ({ toolCallId: "c", name: "echo" }) };
+    const common = {
+      model: { provider: "mock", model: "demo" },
+      inputLayout: "cache_aware" as const,
+      systemInstructions: "Rules",
+      summaries: ["Summary"],
+      history: [{ role: "assistant" as const, content: [{ type: "text" as const, text: "old" }] }],
+      attachments: [{ name: "schema.md", text: "stable schema" }],
+      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Context" }] }],
+      tools: [tool],
+    };
+    const first = await assembleProviderInput({ ...common, input: "Ask A" });
+    const second = await assembleProviderInput({ ...common, input: "Ask B" });
+    const prefix = (messages: readonly Message[], current: string) => messages.slice(0, messages.findIndex((message) => text(message) === current));
+
+    assert.deepEqual(JSON.parse(JSON.stringify(prefix(first.messages, "Ask A"))), JSON.parse(JSON.stringify(prefix(second.messages, "Ask B"))));
+    assert.equal(first.messages.at(-1) ? text(first.messages.at(-1)!) : undefined, "Ask A");
+    assert.equal(second.messages.at(-1) ? text(second.messages.at(-1)!) : undefined, "Ask B");
   });
 
   it("assembles provider input without calling provider or executing tools", async () => {

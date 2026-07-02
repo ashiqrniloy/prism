@@ -1,5 +1,6 @@
-import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
+import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
 import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
+import { applyKimiAnthropicCacheControl } from "./cache.js";
 import { readSseData } from "./sse.js";
 
 export interface KimiCodingProviderOptions {
@@ -25,9 +26,9 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
         const response = await (options.fetch ?? fetch)(`${baseUrl}/messages`, {
           method: "POST",
           headers: {
+            ...request.options?.headers,
             "content-type": "application/json",
             "user-agent": options.userAgent ?? "KimiCLI/1.5",
-            ...request.options?.headers,
             ...(token ? { authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(kimiAnthropicBody(request)),
@@ -46,10 +47,11 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
 export function kimiAnthropicBody(request: ProviderRequest): JsonObject {
   const preserveThinking = request.model.compat?.preserveThinking === true;
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
+  const messages = applyKimiAnthropicCacheControl(request);
   return clean({
     model: request.model.model,
-    messages: request.messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model.capabilities ?? {}, preserveThinking)),
-    system: request.messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
+    messages: messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model.capabilities ?? {}, preserveThinking)),
+    system: messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
     ...parameters,
@@ -85,28 +87,31 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>): As
   yield providerDone(usage);
 }
 
-function toMessage(message: Message, capabilities: ModelCapabilities = {}, preserveThinking = false): JsonObject {
+function toMessage(message: CacheControlledMessage, capabilities: ModelCapabilities = {}, preserveThinking = false): JsonObject {
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
+    const last = message.content[message.content.length - 1];
     return {
       role: "user",
       content: [{
         type: "tool_result",
         tool_use_id: result?.toolCallId ?? "",
         content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+        ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {}),
       }],
     };
   }
 
   const content: JsonObject[] = [];
   for (const part of message.content) {
+    const marker = (part.cache_control ?? undefined) as unknown as JsonObject | undefined;
     if (part.type === "text") {
-      content.push({ type: "text", text: part.text });
+      content.push(withMarker({ type: "text", text: part.text }, marker));
     } else if (part.type === "thinking") {
       if (preserveThinking) {
-        content.push(part.signature ? { type: "thinking", thinking: part.text, signature: part.signature } : { type: "thinking", thinking: part.text });
+        content.push(withMarker(part.signature ? { type: "thinking", thinking: part.text, signature: part.signature } : { type: "thinking", thinking: part.text }, marker));
       } else {
-        content.push({ type: "text", text: part.text });
+        content.push(withMarker({ type: "text", text: part.text }, marker));
       }
     } else if (part.type === "image") {
       if (!capabilities.input?.includes("image")) {
@@ -115,15 +120,19 @@ function toMessage(message: Message, capabilities: ModelCapabilities = {}, prese
       const source: JsonObject = part.url
         ? { type: "url", url: part.url }
         : { type: "base64", media_type: part.mimeType ?? "image/png", data: part.data ?? "" };
-      content.push({ type: "image", source });
+      content.push(withMarker({ type: "image", source }, marker));
     } else if (part.type === "tool_call") {
-      content.push({ type: "tool_use", id: part.id, name: part.name, input: part.arguments });
+      content.push(withMarker({ type: "tool_use", id: part.id, name: part.name, input: part.arguments }, marker));
     } else if (part.type === "tool_result") {
       throw new Error("Kimi tool_result blocks must appear in role=tool messages");
     }
   }
 
   return { role: message.role === "assistant" ? "assistant" : "user", content: content.length > 0 ? content : [{ type: "text", text: "" }] };
+}
+
+function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObject {
+  return marker ? { ...item, cache_control: marker } : item;
 }
 
 function toTool(tool: ToolDefinition): JsonObject {

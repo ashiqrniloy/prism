@@ -27,6 +27,13 @@ export interface SerializedContentCoverageOptions {
   readonly unsupported?: readonly ContentBlock["type"][];
 }
 
+export interface ProviderHeaderOwnershipConformanceOptions {
+  /** Provider-owned header names mapped to the authoritative values the provider must set. */
+  readonly owned: Readonly<Record<string, string>>;
+  /** Caller-supplied headers, including attempts to override owned names and non-owned additions. */
+  readonly caller: Readonly<Record<string, string>>;
+}
+
 export interface ProviderSecretLeakConformanceOptions {
   readonly events: readonly ProviderEvent[];
   readonly secrets: readonly string[];
@@ -86,6 +93,20 @@ export function assertSerializedRequestCoversContent(request: ProviderRequest, b
         throw new Error(`Serialized request dropped ${block.type} content; missing canaries: ${JSON.stringify(missing)}`);
       }
     }
+  }
+}
+
+export function assertProviderOwnedHeadersWin(captured: Headers, options: ProviderHeaderOwnershipConformanceOptions): void {
+  const ownedLower: Record<string, string> = {};
+  for (const [name, expected] of Object.entries(options.owned)) ownedLower[name.toLowerCase()] = expected;
+  for (const [name, expected] of Object.entries(ownedLower)) {
+    const actual = captured.get(name);
+    if (actual !== expected) throw new Error(`Caller header overrode provider-owned "${name}": expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
+  for (const [name, callerValue] of Object.entries(options.caller)) {
+    if (Object.prototype.hasOwnProperty.call(ownedLower, name.toLowerCase())) continue;
+    const actual = captured.get(name);
+    if (actual !== callerValue) throw new Error(`Provider dropped non-owned caller header "${name}": expected ${JSON.stringify(callerValue)}, got ${JSON.stringify(actual)}`);
   }
 }
 

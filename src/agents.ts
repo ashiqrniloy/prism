@@ -155,6 +155,7 @@ class RuntimeAgentSession implements AgentSession {
       const validate = options.validate ?? this.agent.config.validator;
       // ponytail: RunOptions.instructionInjectors overrides AgentConfig.instructionInjectors (mirrors validate/loop).
       const instructionInjectors = options.instructionInjectors ?? this.agent.config.instructionInjectors ?? [];
+      const inputLayout = options.inputLayout ?? this.agent.config.inputLayout;
       const loop = resolveLoop(options, this.agent.config);
 
       // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
@@ -175,6 +176,7 @@ class RuntimeAgentSession implements AgentSession {
           toolResults: toolResults ?? [],
           turn,
           instructionInjectors,
+          inputLayout,
           systemInstructions,
           inputBuilder: this.agent.config.inputBuilder,
           promptBuilder: this.agent.config.promptBuilder,

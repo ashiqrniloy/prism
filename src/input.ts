@@ -3,6 +3,7 @@ import type {
   ContextBlock,
   ContextProvider,
   ContextResolutionContext,
+  InputAssemblyLayout,
   InputBuilder,
   InstructionInjector,
   InputBuildContext,
@@ -95,16 +96,19 @@ export function createDefaultInputBuilder(): DefaultInputBuilder {
   return {
     name: "default-input",
     async build(input, context = {}) {
-      const messages: Message[] = [];
-
-      messages.push(...instructionMessages(context.systemInstructions, "System instruction"));
-      messages.push(...instructionMessages(context.developerInstructions, "Developer instruction"));
-      messages.push(...customInstructionMessages(context.instructions));
-      messages.push(...summaryMessages(context.summaries));
-      messages.push(...(context.history ?? []));
-      messages.push(...inputMessages(input));
-      messages.push(...await attachmentMessages(context));
-      messages.push(...toolResultMessages(context.toolResults));
+      const groups = {
+        instructions: [
+          ...instructionMessages(context.systemInstructions, "System instruction"),
+          ...instructionMessages(context.developerInstructions, "Developer instruction"),
+          ...customInstructionMessages(context.instructions),
+        ],
+        summaries: summaryMessages(context.summaries),
+        history: [...(context.history ?? [])],
+        input: inputMessages(input),
+        attachments: await attachmentMessages(context),
+        toolResults: toolResultMessages(context.toolResults),
+      };
+      const messages = flattenInputGroups(groups, context.inputLayout ?? "legacy");
 
       return context.middleware ? context.middleware.run("input_assembly", messages) : messages;
     },
@@ -217,6 +221,24 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     metadata: options.metadata,
     signal: options.signal,
   };
+}
+
+interface DefaultInputMessageGroups {
+  readonly instructions: readonly Message[];
+  readonly summaries: readonly Message[];
+  readonly history: readonly Message[];
+  readonly input: readonly Message[];
+  readonly attachments: readonly Message[];
+  readonly toolResults: readonly Message[];
+}
+
+function flattenInputGroups(groups: DefaultInputMessageGroups, layout: InputAssemblyLayout): Message[] {
+  switch (layout) {
+    case "cache_aware":
+      return [...groups.instructions, ...groups.attachments, ...groups.summaries, ...groups.history, ...groups.toolResults, ...groups.input];
+    case "legacy":
+      return [...groups.instructions, ...groups.summaries, ...groups.history, ...groups.input, ...groups.attachments, ...groups.toolResults];
+  }
 }
 
 export function inputMessages(input: AgentInput): Message[] {

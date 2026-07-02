@@ -6,11 +6,11 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Public contracts](public-contracts.md): type shapes for messages, content, agents, sessions, providers, tools, context, skills, extensions, stores, resources, settings, credentials, and events.
 
 ## Agent/session runtime
-- [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, subscribe to normalized events, and see which `AgentConfig` fields are runtime-consumed vs host-owned metadata.
+- [Agent/session runtime](agent-session-runtime.md): create agents and sessions, run prompts, subscribe to normalized events, and see which `AgentConfig` fields are runtime-consumed vs host-owned metadata. Covers tool-call loop transcript shape and prior-reasoning preservation across turns.
 - [Agent definitions](agent-definitions.md): resolve declarative `AgentDefinition` values via `resolveAgentDefinition`, and turn app-config `<configRoot>/agents/<name>/AGENT.md` bundles into runnable agents via `discoverAgentBundles` / `resolveAgentBundle` (explicit tool/skill activation by name, fail-closed omitted capabilities, migration-only `activateAllCapabilities`, strict duplicate scope checks, configurable prompt layers, no auto-discovery).
 - [Agent loops](agent-loops.md): replaceable per-run control loops — `singleShotLoop` default and `generate-validate-revise` with host-supplied `validator`/`parser`/`repairer` callbacks.
 - [Agent events](agent-events.md): the `AgentEvent` stream — agent/turn/message (including live `tool_call_delta` fragments), tool execution, queue/subscriber overflow, compaction/retry, artifact validation/refinement, and error variants, redacted via `redactAgentEvent`.
-- [Runs and usage ledger](runs-and-usage.md): `RunLedger` adapter for durable run, event, tool-call, and usage persistence, plus ownership/idempotency/redaction guidance.
+- [Runs and usage ledger](runs-and-usage.md): `RunLedger` adapter for durable run, event, tool-call, usage persistence, cache diagnostics, ownership/idempotency, and redaction guidance.
 - [Performance limits](performance.md): bounded live subscriber queues, branch-read pagination expectations, JSONL/dev-store limits, and production sizing assumptions.
 - [Structured output](structured-output.md): the `Artifact*` seam (parser/validator/repairer, host-defined `T`) — the only typed-output path from a loop, with a Synapta-style schema→`ArtifactValidation` mapping example and an end-to-end third-party integration walkthrough.
 
@@ -26,12 +26,15 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 
 ## Provider and model connection
 - [Provider layer](provider-layer.md): register and resolve host-owned providers/models, choose replace-or-error duplicate policy, create provider events, stream/reconstruct tool-call deltas, use generic provider request options, and test with the mock provider; deprecated provider-level timeout/retry hints point to runtime abort/retry.
-- [Provider packages](provider-packages.md): define explicit provider packages, model metadata, auth descriptors, request/cache policies, and provider-owned header precedence without package discovery or provider-specific core behavior.
-  - Phase 12 package workspaces: [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), and [`@arnilo/prism-provider-kimi`](providers/kimi.md).
+- [Model registry](model-registry.md): register and resolve `ModelConfig` records with capabilities, limits, cost, cache support metadata, compat data, and duplicate policy.
+- [Provider caching](provider-caching.md): use `PromptCacheHints`, `PromptCacheBreakpoint`, `ModelCacheCapabilities`, cache-aware stable-prefix guidance, and shared cache diagnostics helpers; covers explicit and implicit (NeuralWatt) prefix caching, cached-token usage mapping, and cache-aware limiter behavior; cache hints are best-effort and cache keys are never secrets.
+- [Provider request policies](provider-request-policies.md): chain `ProviderRequestPolicy` hooks, use `createSessionCachePolicy`, and merge legacy/structured cache options safely.
+- [Provider packages](provider-packages.md): define explicit provider packages, model metadata, auth descriptors, request/cache policies, and provider-owned header precedence without package discovery or provider-specific core behavior; includes a first-party cache behavior summary.
+  - Phase 12 package workspaces: [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), [`@arnilo/prism-provider-kimi`](providers/kimi.md), and [`@arnilo/prism-provider-neuralwatt`](providers/neuralwatt.md) with implicit vLLM prefix caching, reasoning controls (`reasoning_effort`/`thinking_token_budget`/`enable_thinking`/`preserve_thinking`/`clear_thinking`), reasoning preservation, OpenAI-style tool-call loop, quota, telemetry, and retry classification helpers.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider subpath using native or injected `fetch` for Chat Completions streaming.
 
 ## Input, prompt, and context assembly
-- [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders and provider-input assembly.
+- [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders, provider-input assembly, legacy default order, and opt-in cache-aware ordering.
 - [System prompts](system-prompts.md): compose explicit user/package/app/run system prompt layers, auto-load the standard `AGENTS.md` (workspace) / `SYSTEM.md` prompt files via the Node `loadSystemPromptFiles` loader (trust-gated for `AGENTS.md`), and append `SYSTEM.md` → per-agent `AGENT.md` body → repo `AGENTS.md` layers from a discovered agent bundle via `resolveAgentBundle`.
 - [Instruction injection](instruction-injection.md): register package injectors that layer redacted instructions/context blocks without granting tools, permissions, or resource escapes.
 - [Context and skills](context-and-skills.md): resolve ordered context providers and keep context/skill selection host-owned; omitted declarative skills stay inactive by default, `toolNames` fail closed before provider turns, and strict skill registries prevent silent shadowing.
@@ -59,7 +62,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 
 ## Testing and examples
 - [Provider layer](provider-layer.md): use `createMockProvider()` and provider event helpers for deterministic tests without timers, credentials, or network.
-- [Provider conformance](provider-conformance.md): run network-free provider adapter assertions from `@arnilo/prism/testing/provider-conformance`.
+- [Provider conformance](provider-conformance.md): run network-free provider adapter assertions (stream order, abort, tool-call reconstruction, cache usage, content coverage, protected header ownership, secret leak) from `@arnilo/prism/testing/provider-conformance`.
 - `examples/`: compile-checked typed examples and runnable mock demos (SDK basics, provider registration, auth, tools, stores/branching, compaction, observational-memory recall, structured-output/artifact-loop, CLI, RPC).
 
 ## Release and install

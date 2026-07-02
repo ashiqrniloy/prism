@@ -190,6 +190,8 @@ export interface AIProvider {
 
 export type ProviderResolver = (model: ModelConfig) => AIProvider | undefined;
 
+export type InputAssemblyLayout = "legacy" | "cache_aware";
+
 export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly model?: ModelConfig;
@@ -209,6 +211,7 @@ export interface RunOptions {
   readonly activeSkills?: readonly string[];
   readonly skills?: readonly Skill[];
   readonly instructionInjectors?: readonly InstructionInjector[];
+  readonly inputLayout?: InputAssemblyLayout;
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
 }
 
@@ -277,6 +280,7 @@ export interface AgentConfig {
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly validator?: ToolValidator;
   readonly instructionInjectors?: readonly InstructionInjector[];
+  readonly inputLayout?: InputAssemblyLayout;
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
 }
 
@@ -470,6 +474,7 @@ export interface InputBuilder {
 }
 
 export interface InputBuildContext {
+  readonly inputLayout?: InputAssemblyLayout;
   readonly sessionId?: string;
   readonly runId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;

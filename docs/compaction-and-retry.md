@@ -145,7 +145,7 @@ await session.compact({ keepRecentEntries: 4 });
 
 ## Extension and configuration notes
 
-Retry policies are ordinary `RetryPolicy` implementations and can be registered as `retryPolicy` contributions. Hosts must still pass the selected policy/config to `createAgent()` or `session.run()`. Retry middleware receives `{ context, decision }` before a retry is scheduled and can reduce delay or stop retrying.
+Retry policies are ordinary `RetryPolicy` implementations and can be registered as `retryPolicy` contributions. Hosts must still pass the selected policy/config to `createAgent()` or `session.run()`. Retry middleware receives `{ context, decision }` before a retry is scheduled and can reduce delay or stop retrying. First-party providers emit `ErrorInfo.code` as the numeric HTTP status so the default policy's transient-code set (`429`/`500`/`502`/`503`) classifies retryability without provider-specific core branches; `@arnilo/prism-provider-neuralwatt` additionally exports `classifyNeuralWattError()` for hosts that want structured `Retry-After`/`retry_strategy` metadata.
 
 Compaction strategies are ordinary `CompactionStrategy` implementations. Extensions can register strategies through the existing compaction strategy contribution registry, but registration is inert until a host explicitly selects and passes a strategy to runtime code. Extensions can also register `compaction` middleware; the runtime calls it only when the agent/session has that middleware registry configured.
 

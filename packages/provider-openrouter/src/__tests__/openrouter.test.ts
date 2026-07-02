@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenRouterProvider, createOpenRouterProviderPackage, defineOpenRouterModel } from "../index.js";
 
 const model = defineOpenRouterModel({
@@ -53,7 +53,7 @@ describe("@arnilo/prism-provider-openrouter", () => {
     assert.equal(headers.get("x-title"), "Prism Test");
   });
 
-  it("openrouter_applies_model_level_cache_policy_override", async () => {
+  it("openrouter_applies_cache_control_only_to_selected_breakpoints", async () => {
     let body: any;
     let headers = new Headers();
     const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", fetch: (async (_input, init) => {
@@ -61,10 +61,67 @@ describe("@arnilo/prism-provider-openrouter", () => {
       headers = new Headers(init?.headers);
       return ok(sse([]));
     }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request });
+    const messages: Message[] = [
+      { role: "user", content: [{ type: "text", text: "system preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({ provider, request: { ...request, messages, options: {
+      ...request.options,
+      cache: { breakpoints: [{ location: "last_stable_message" }] },
+    } } });
     assert.equal(body.session_id, "session-with-spaces");
     assert.equal(headers.get("x-session-id"), "session-with-spaces");
-    assert.deepEqual(body.messages[0].content[0].cache_control, { type: "ephemeral" });
+    // Only the last_stable_message (index 1) gets a cache_control marker on its
+    // last block; the other messages carry no marker.
+    assert.deepEqual(body.messages[1].content.at(-1).cache_control, { type: "ephemeral" });
+    assert.equal(body.messages[0].content.at(-1).cache_control, undefined);
+    assert.equal(body.messages[2].content.at(-1).cache_control, undefined);
+  });
+
+  it("openrouter_no_breakpoints_emits_no_cache_control_markers", async () => {
+    let body: any;
+    const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request });
+    for (const message of body.messages) {
+      const content = typeof message.content === "string" ? [{ text: message.content }] : message.content;
+      for (const block of content) assert.equal(block.cache_control, undefined);
+    }
+    assert.equal(body.session_id, "session-with-spaces");
+  });
+
+  it("openrouter_long_retention_emits_1h_ttl_marker", async () => {
+    let body: any;
+    const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: {
+      ...request,
+      options: { ...request.options, cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" }] } },
+      model: { ...request.model, cache: { kind: "cache_control" as const, longRetention: true } },
+    } });
+    assert.deepEqual(body.messages[0].content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
+  });
+
+  it("openrouter_session_id_sanitized_and_clamped_to_256", async () => {
+    let body: any;
+    let headers = new Headers();
+    const provider = createOpenRouterProvider({ apiKey: "fake-openrouter-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    const longId = "agent#1/" + "x".repeat(300);
+    await assertProviderStreamConforms({ provider, request: { ...request, options: { ...request.options, cacheKey: longId } } });
+    assert.ok(body.session_id.length <= 256);
+    assert.equal(body.session_id, headers.get("x-session-id"));
+    assert.ok(!body.session_id.includes("#"));
+    assert.ok(!body.session_id.includes("/"));
+    assert.ok(body.session_id.startsWith("agent-1"));
   });
 
   it("openrouter_keeps_provider_owned_headers_after_caller_headers", async () => {
@@ -92,12 +149,10 @@ describe("@arnilo/prism-provider-openrouter", () => {
       },
     });
 
-    assert.equal(headers.get("authorization"), "Bearer fake-openrouter-key");
-    assert.equal(headers.get("content-type"), "application/json");
-    assert.equal(headers.get("x-session-id"), "session-with-spaces");
-    assert.equal(headers.get("http-referer"), "https://example.invalid");
-    assert.equal(headers.get("x-title"), "Prism Test");
-    assert.equal(headers.get("x-caller"), "kept");
+    assertProviderOwnedHeadersWin(headers, {
+      owned: { authorization: "Bearer fake-openrouter-key", "content-type": "application/json", "x-session-id": "session-with-spaces", "http-referer": "https://example.invalid", "x-title": "Prism Test" },
+      caller: { authorization: "Bearer attacker", "content-type": "text/plain", "x-session-id": "attacker-session", "http-referer": "https://attacker.invalid", "x-title": "Attacker", "x-caller": "kept" },
+    });
   });
 
   it("openrouter_maps_cache_read_write_usage", async () => {

@@ -9,6 +9,7 @@ Umbrella package that installs all first-party **Prism provider adapters** in on
 - [`@arnilo/prism-provider-openrouter`](https://www.npmjs.com/package/@arnilo/prism-provider-openrouter) — OpenRouter provider with per-model cache control
 - [`@arnilo/prism-provider-zai`](https://www.npmjs.com/package/@arnilo/prism-provider-zai) — Zhipu AI (Z.ai) provider
 - [`@arnilo/prism-provider-kimi`](https://www.npmjs.com/package/@arnilo/prism-provider-kimi) — Moonshot Kimi provider
+- [`@arnilo/prism-provider-neuralwatt`](https://www.npmjs.com/package/@arnilo/prism-provider-neuralwatt) — NeuralWatt OpenAI-compatible provider
 
 ## Usage
 

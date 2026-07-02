@@ -1093,6 +1093,32 @@ describe("agent session runtime", () => {
     assert.equal(calls, 1);
   });
 
+  it("run inputLayout overrides agent inputLayout and reaches custom input builders", async () => {
+    const layouts: unknown[] = [];
+    const requests: ProviderRequest[] = [];
+    const inputBuilder: InputBuilder = {
+      name: "capture-layout",
+      build(_input, context) {
+        layouts.push(context?.inputLayout);
+        return [{ role: "user", content: [{ type: "text", text: String(context?.inputLayout) }] }];
+      },
+    };
+    const provider: AIProvider = { id: "mock", async *generate(input) { requests.push(input); yield providerDone(); } };
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      inputBuilder,
+      inputLayout: "cache_aware",
+    }).createSession();
+
+    await session.run("Hi");
+    await session.run("Hi", { inputLayout: "legacy" });
+
+    assert.deepEqual(layouts, ["cache_aware", "legacy"]);
+    assert.equal(textOf(requests[0]?.messages[0]), "cache_aware");
+    assert.equal(textOf(requests[1]?.messages[0]), "legacy");
+  });
+
   it("provider request policy adds session cache options before provider generate", async () => {
     let request!: ProviderRequest;
     const provider: AIProvider = { id: "mock", async *generate(input) {

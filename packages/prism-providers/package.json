@@ -14,7 +14,8 @@
     "@arnilo/prism-provider-opencode-go": "0.0.1",
     "@arnilo/prism-provider-openrouter": "0.0.1",
     "@arnilo/prism-provider-zai": "0.0.1",
-    "@arnilo/prism-provider-kimi": "0.0.1"
+    "@arnilo/prism-provider-kimi": "0.0.1",
+    "@arnilo/prism-provider-neuralwatt": "0.0.1"
   },
   "engines": {
     "node": ">=20"

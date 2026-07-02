@@ -18,6 +18,7 @@ Do not use it for tool execution, provider calls, file discovery, credential loo
 import { createDefaultInputBuilder } from "@arnilo/prism";
 
 const messages = await createDefaultInputBuilder().build("Summarize", {
+  inputLayout: "legacy", // default; "cache_aware" passes the cache-aware layout preference
   systemInstructions: "Be accurate.",
   developerInstructions: "Cite supplied context only.",
   history,
@@ -46,6 +47,7 @@ import { assembleProviderInput, createDefaultPromptBuilder } from "@arnilo/prism
 const request = await assembleProviderInput({
   model: { provider: "mock", model: "demo" },
   input: "Explain this file",
+  inputLayout: "cache_aware",
   contextProviders: [projectContext],
   promptBuilder: createDefaultPromptBuilder(),
   tools: activeTools,
@@ -56,7 +58,8 @@ Useful exported types:
 
 - `AgentInput`: `string | Message | readonly Message[]`.
 - `DefaultInputBuilder`: the default `InputBuilder` with typed default context.
-- `DefaultInputBuildContext`: optional instructions, history, summaries, attachments, resource loader/URIs, tool results, middleware, ids, metadata, and abort signal.
+- `InputAssemblyLayout`: `"legacy" | "cache_aware"`; legacy is default.
+- `DefaultInputBuildContext`: optional input layout, instructions, history, summaries, attachments, resource loader/URIs, tool results, middleware, ids, metadata, and abort signal.
 - `InputAttachment`: already-loaded text/content or an explicit URI loaded through a caller-provided `ResourceLoader`.
 - `PromptInstruction`: labeled system instruction text.
 - `DefaultPromptBuilder`: the default `PromptBuilder`.
@@ -69,10 +72,18 @@ The builder returns `readonly Message[]`.
 
 - String input becomes one user text message.
 - `Message` and `Message[]` input are preserved.
+- Legacy layout is the default. Set `inputLayout: "cache_aware"` on the default builder, `assembleProviderInput()`, `AgentConfig`, or `RunOptions` to pass the cache-aware layout preference without replacing the builder.
+
+| Layout | Input message order |
+| --- | --- |
+| `legacy` | instructions → summaries → history → current input → attachments/resources → tool results |
+| `cache_aware` | instructions → attachments/resources → summaries → history → tool results → current input |
+
+The default prompt builder still prepends context, selected skills, and tool declarations before those input messages. Cache-aware ordering gives cache-capable providers a stable prefix only while those stable inputs stay byte-stable; changing tools, context, resources, summaries, history, or attachments changes the prefix too.
 - History is prepended before current input.
 - Instructions and summaries are system messages; compacted branch summaries from `rebuildSessionContext()` use the same path.
 - Text attachments and explicit text resources are user messages.
-- Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn, placing the assistant `tool_call` and the matching role `tool` `tool_result` before any final assistant content.
+- Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn, placing the assistant `tool_call` and the matching role `tool` `tool_result` before any final assistant content. Cache-aware layout keeps tool results before the current user suffix so it does not split tool transcripts.
 - Middleware runs only when `middleware` is supplied in the context.
 - `assembleProviderInput()` returns a `ProviderRequest` with the caller's model/tools/provider options/metadata/signal and composed messages/context.
 - `renderPromptTemplate()` replaces top-level `{{name}}` variables with caller-supplied JSON-compatible values. Strings are inserted directly; numbers, booleans, `null`, arrays, and objects are stringified deterministically with sorted object keys. Missing variables throw by default or stay unchanged with `{ missing: "preserve" }`.
@@ -123,7 +134,11 @@ const messages = await createDefaultInputBuilder().build(prompt, {
   },
   middleware,
 });
+
+await session.run("Explain this", { inputLayout: "cache_aware" });
 ```
+
+Cache-aware mode is opt-in; hosts that do nothing keep legacy order.
 
 ## Extension and configuration notes
 
@@ -147,7 +162,7 @@ const request = await assembleProviderInput({
 
 ## Security and performance notes
 
-- The builder is linear in supplied messages, attachments, resources, and tool results.
+- The builder is linear in supplied messages, attachments, resources, and tool results. Layout selection is one flattening branch over already-built groups.
 - Template expansion is dependency-free string replacement over `{{name}}` variables. It does not evaluate expressions, filters, loops, partials, JavaScript, globals, or prototype properties.
 - It performs no provider calls, tool execution, credential resolution, package discovery, filesystem scan, network access, timers, or watchers.
 - URI attachments/resources load only through the caller-provided `ResourceLoader`.

@@ -17,6 +17,9 @@ const apiPages = [
   "docs/database-persistence.md",
   "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
+  "docs/model-registry.md",
+  "docs/provider-caching.md",
+  "docs/provider-request-policies.md",
   "docs/provider-conformance.md",
   "docs/provider-packages.md",
   "docs/input-and-prompt-assembly.md",
@@ -46,6 +49,7 @@ const providerPackagePages: ReadonlyArray<[string, string]> = [
   ["docs/providers/openrouter.md", "packages/provider-openrouter/src/index.ts"],
   ["docs/providers/zai.md", "packages/provider-zai/src/index.ts"],
   ["docs/providers/kimi.md", "packages/provider-kimi/src/index.ts"],
+  ["docs/providers/neuralwatt.md", "packages/provider-neuralwatt/src/index.ts"],
 ];
 
 function exportedIdentifiers(packageIndex: string): string[] {
@@ -150,6 +154,73 @@ describe("docs", () => {
       const text = readFileSync(page, "utf8");
       for (const heading of requiredHeadings) assert.ok(text.includes(heading), `${page} missing ${heading}`);
     }
+  });
+
+  it("phase42 cache provider model docs are linked and cover safety wording", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const page of ["model-registry.md", "provider-caching.md", "provider-request-policies.md"]) {
+      assert.ok(index.includes(`(${page})`), `docs/index.md does not link ${page}`);
+      assert.ok(apiPages.includes(`docs/${page}`), `apiPages missing docs/${page}`);
+    }
+
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    for (const phrase of [
+      "cacheKey` maps to `cache.key`",
+      "Cache hints are best-effort",
+      "does not guarantee cache hits",
+      "Cache keys must never be credentials",
+      "Provider-owned auth/session/security headers always win over caller headers",
+      "sanitizeCacheKey",
+      "applyCacheControl",
+      "cacheHitRate",
+      "cacheSavings",
+      "cacheUsageReport",
+    ]) assert.ok(caching.includes(phrase), `provider-caching.md missing ${phrase}`);
+
+    const policies = readFileSync("docs/provider-request-policies.md", "utf8");
+    for (const phrase of ["createSessionCachePolicy", "mergeProviderRequestOptions", "cache.breakpoints", "provider-owned auth/session/security headers"])
+      assert.ok(policies.includes(phrase), `provider-request-policies.md missing ${phrase}`);
+
+    const models = readFileSync("docs/model-registry.md", "utf8");
+    for (const phrase of ["createModelRegistry", "ModelConfig.cache", "ModelCacheCapabilities", "maxBreakpoints", "longRetention"])
+      assert.ok(models.includes(phrase), `model-registry.md missing ${phrase}`);
+  });
+
+  it("phase43 cache-aware ordering docs cover opt-in safety and diagnostics", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const page of ["input-and-prompt-assembly.md", "provider-caching.md", "runs-and-usage.md"]) {
+      assert.ok(index.includes(`(${page})`), `docs/index.md does not link ${page}`);
+    }
+
+    const input = readFileSync("docs/input-and-prompt-assembly.md", "utf8");
+    for (const phrase of [
+      'InputAssemblyLayout`: `"legacy" | "cache_aware"`',
+      "Legacy layout is the default",
+      'Set `inputLayout: "cache_aware"',
+      "current input → attachments/resources → tool results",
+      "attachments/resources → summaries → history → tool results → current input",
+      "stable prefix only while those stable inputs stay byte-stable",
+      "does not split tool transcripts",
+      "URI attachments/resources load only through the caller-provided `ResourceLoader`",
+    ]) assert.ok(input.includes(phrase), `input-and-prompt-assembly.md missing ${phrase}`);
+
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    for (const phrase of [
+      'inputLayout: "cache_aware"',
+      "prefix is byte-stable only when those stable inputs are unchanged",
+      "Prism still does not guarantee provider cache hits",
+      "Cache keys must never be credentials or secrets",
+      "cacheUsageReport",
+      "do not include prompt text, cache keys, headers, credentials, or provider payloads",
+    ]) assert.ok(caching.includes(phrase), `provider-caching.md missing ${phrase}`);
+
+    const usage = readFileSync("docs/runs-and-usage.md", "utf8");
+    for (const phrase of [
+      "cacheUsageReport(record.usage, model)",
+      "reports `cacheReadTokens` without `cacheWriteTokens`",
+      "Cache diagnostics stay numeric",
+      "do not add prompt text, cache keys, headers, credentials, or provider payloads",
+    ]) assert.ok(usage.includes(phrase), `runs-and-usage.md missing ${phrase}`);
   });
 
   it("provider docs document a real export from their package", () => {
@@ -1167,5 +1238,43 @@ describe("docs", () => {
     assert.ok(database.includes("readBranchPath"), "docs/database-persistence.md missing readBranchPath guidance");
     assert.ok(database.includes("cursor"), "docs/database-persistence.md missing cursor guidance");
     assert.ok(runs.includes("preserve per-run order before acknowledging a batch"), "docs/runs-and-usage.md missing batch ordering guidance");
+  });
+
+  it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const page of ["providers/neuralwatt.md", "provider-caching.md", "agent-session-runtime.md"]) {
+      assert.ok(index.includes(`(${page})`), `docs/index.md does not link ${page}`);
+    }
+
+    const neuralwatt = readFileSync("docs/providers/neuralwatt.md", "utf8");
+    // Cache + cache-aware limiter.
+    for (const phrase of ["implicit prefix caching", "Cache-aware limiter behavior", "cached_tokens", "cacheRetention: \"none\""]) {
+      assert.ok(neuralwatt.includes(phrase), `docs/providers/neuralwatt.md missing ${phrase}`);
+    }
+    // Reasoning controls (all five).
+    for (const phrase of ["reasoning_effort", "thinking_token_budget", "enable_thinking", "preserve_thinking", "clear_thinking"]) {
+      assert.ok(neuralwatt.includes(phrase), `docs/providers/neuralwatt.md missing reasoning control ${phrase}`);
+    }
+    // Reasoning preservation + tool-call loop.
+    assert.ok(neuralwatt.includes("Reasoning preservation across turns"), "neuralwatt.md missing reasoning preservation section");
+    assert.ok(neuralwatt.includes("Tool calls and the tool-call loop"), "neuralwatt.md missing tool-call loop section");
+    assert.ok(neuralwatt.includes("reasoning_content"), "neuralwatt.md missing reasoning_content field");
+
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    // NeuralWatt implicit caching covered in the shared caching page.
+    for (const phrase of ["NeuralWatt", "implicit", "cached_input_per_million", "does not guarantee cache hits"]) {
+      assert.ok(caching.includes(phrase), `docs/provider-caching.md missing ${phrase}`);
+    }
+
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    // Runtime carries prior reasoning and tool transcripts forward.
+    for (const phrase of ["thinking", "tool_call", "tool_result", "reasoning_content"]) {
+      assert.ok(runtime.includes(phrase), `docs/agent-session-runtime.md missing ${phrase}`);
+    }
+    // No cache-hit guarantees anywhere in the four pages.
+    for (const page of ["docs/providers/neuralwatt.md", "docs/provider-caching.md", "docs/agent-session-runtime.md", "docs/index.md"]) {
+      const text = readFileSync(page, "utf8").toLowerCase();
+      assert.ok(!/guaranteed cache hit|will always cache|cache will hit/.test(text), `${page} promises cache hits`);
+    }
   });
 });

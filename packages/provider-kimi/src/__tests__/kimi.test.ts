@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createKimiCodingProvider, createKimiProviderPackage, kimiCodingModels, moonshotKimiModels } from "../index.js";
 
 const request: ProviderRequest = {
@@ -78,6 +78,53 @@ describe("@arnilo/prism-provider-kimi", () => {
     }) as typeof fetch });
     await assertProviderStreamConforms({ provider, request: replay });
     assertSerializedRequestCoversContent(replay, body);
+  });
+
+  it("kimi_default_model_emits_no_cache_control_for_implicit_caching", async () => {
+    let body: any;
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: { ...request, options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } } } });
+    // Default catalog model has no cache metadata; no cache_control emitted.
+    assert.ok(!JSON.stringify(body).includes("cache_control"), "default Kimi body must not contain cache_control");
+  });
+
+  it("kimi_opted_in_cache_control_applies_only_to_selected_breakpoints", async () => {
+    let body: any;
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    const messages: Message[] = [
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "current" }] },
+    ];
+    await assertProviderStreamConforms({ provider, request: {
+      ...request,
+      model: { ...request.model, cache: { kind: "cache_control" as const, longRetention: true } },
+      messages,
+      options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } },
+    } });
+    // last_stable_message is index 1 (the assistant turn); only its last block carries cache_control with 1h ttl.
+    assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
+    const others = body.messages.filter((m: any) => m.role !== "assistant");
+    for (const m of others) for (const block of m.content) assert.equal(block.cache_control, undefined);
+  });
+
+  it("kimi_keeps_provider_owned_headers_after_caller_headers", async () => {
+    let headers = new Headers();
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", userAgent: "MyApp/2.0", fetch: (async (_url, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: { ...request, options: { ...request.options, headers: { authorization: "Bearer attacker", "content-type": "text/plain", "user-agent": "attacker-ua", "x-caller": "kept" } } } });
+    assertProviderOwnedHeadersWin(headers, {
+      owned: { authorization: "Bearer fake-kimi-key", "content-type": "application/json", "user-agent": "MyApp/2.0" },
+      caller: { authorization: "Bearer attacker", "content-type": "text/plain", "user-agent": "attacker-ua", "x-caller": "kept" },
+    });
   });
 
   it("kimi_redacts_subscription_or_api_key_errors", async () => {

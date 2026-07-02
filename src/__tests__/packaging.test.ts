@@ -15,6 +15,7 @@ const packages = [
   { dir: "packages/provider-openrouter", name: "@arnilo/prism-provider-openrouter" },
   { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
   { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
+  { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
   // Pure-manifest umbrellas (no dist/exports/peer): ship only README + manifest.
@@ -164,6 +165,7 @@ describe("packaging guard", () => {
               "@arnilo/prism-provider-openrouter",
               "@arnilo/prism-provider-zai",
               "@arnilo/prism-provider-kimi",
+              "@arnilo/prism-provider-neuralwatt",
             ],
             "@arnilo/prism-compaction": [
               "@arnilo/prism-compaction-llm",

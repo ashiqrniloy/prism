@@ -24,7 +24,7 @@ export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider 
       try {
         const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
           method: "POST",
-          headers: { "content-type": "application/json", ...request.options?.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+          headers: { ...request.options?.headers, "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify(zaiBody(request)),
           signal: request.signal,
         });

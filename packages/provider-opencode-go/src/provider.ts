@@ -1,7 +1,7 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
 import { providerError, resolveCredentialValue } from "@arnilo/prism";
 import { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
-import { opencodeHeaders } from "./cache.js";
+import { opencodeOwnedHeaders } from "./cache.js";
 import { openAIChatBody, openAIChatEvents } from "./openai-chat.js";
 
 export interface OpenCodeGoProviderOptions {
@@ -25,8 +25,8 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
         const response = await (options.fetch ?? fetch)(`${baseUrl}${route === "anthropic" ? "/messages" : "/chat/completions"}`, {
           method: "POST",
           headers: {
-            "content-type": "application/json",
-            ...opencodeHeaders(request.options),
+            ...request.options?.headers,
+            ...opencodeOwnedHeaders(request.options),
             ...(token ? { authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(route === "anthropic" ? anthropicMessagesBody(request) : openAIChatBody(request)),

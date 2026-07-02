@@ -57,13 +57,27 @@ Hosts decide which credential resolvers, env objects, OAuth stores, request poli
 
 Deprecated provider request options: `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are inert in first-party providers. Use `RunOptions.signal`/host abort controllers for timeouts and `AgentConfig.retry`/`RunOptions.retry` for retry. Provider packages should not add provider-specific retry loops unless the vendor protocol requires it and runtime retry cannot cover the failure mode.
 
-First-party providers map generic `ModelConfig.parameters.maxTokens` to real output-token request fields instead of sending `maxTokens` on the wire: OpenAI Responses uses `max_output_tokens`; OpenRouter, OpenCode Go OpenAI-compatible, OpenCode Go Anthropic-style, Z.AI, and Kimi use `max_tokens`. Other `model.parameters` values pass through unchanged unless the provider docs say otherwise.
+First-party providers map generic `ModelConfig.parameters.maxTokens` to real output-token request fields instead of sending `maxTokens` on the wire: OpenAI Responses uses `max_output_tokens`; OpenRouter, OpenCode Go OpenAI-compatible, OpenCode Go Anthropic-style, Z.AI, Kimi, and NeuralWatt use `max_tokens`. Other `model.parameters` values pass through unchanged unless the provider docs say otherwise.
 
 ## First-party provider package skeletons
 
-Phase 12 adds explicit npm workspaces for [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), and [`@arnilo/prism-provider-kimi`](providers/kimi.md). Each package starts with a side-effect-free `create*ProviderPackage()` export, README, TypeScript build, network-free default tests, and an env-gated live-test placeholder.
+Phase 12 adds explicit npm workspaces for [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), [`@arnilo/prism-provider-kimi`](providers/kimi.md), and [`@arnilo/prism-provider-neuralwatt`](providers/neuralwatt.md). Each package starts with a side-effect-free `create*ProviderPackage()` export, README, TypeScript build, network-free default tests, and an env-gated live-test placeholder.
 
-These workspaces still follow the same rule as external packages: no provider SDK dependency, catalog fetch, env scan, keychain/file credential lookup, shell auth command, OAuth login, or live provider call runs by default. `@arnilo/prism-provider-openai` now registers OpenAI Responses and OpenAI Codex providers from caller-supplied credentials only. `@arnilo/prism-provider-opencode-go` now registers static OpenCode Go metadata and package-local OpenAI/Anthropic-compatible routes from caller-supplied credentials only. `@arnilo/prism-provider-openrouter` now registers an app-controlled OpenRouter catalog with routing/reasoning/cache passthrough and no setup catalog fetch. `@arnilo/prism-provider-zai` now registers static GLM metadata with Z.AI thinking/reasoning/tool-stream request mapping. `@arnilo/prism-provider-kimi` now registers Kimi Coding Anthropic-compatible behavior by default and optional Moonshot metadata only when requested.
+These workspaces still follow the same rule as external packages: no provider SDK dependency, catalog fetch, env scan, keychain/file credential lookup, shell auth command, OAuth login, or live provider call runs by default. `@arnilo/prism-provider-openai` now registers OpenAI Responses and OpenAI Codex providers from caller-supplied credentials only. `@arnilo/prism-provider-opencode-go` now registers static OpenCode Go metadata and package-local OpenAI/Anthropic-compatible routes from caller-supplied credentials only. `@arnilo/prism-provider-openrouter` now registers an app-controlled OpenRouter catalog with routing/reasoning/cache passthrough and no setup catalog fetch. `@arnilo/prism-provider-zai` now registers static GLM metadata with Z.AI thinking/reasoning/tool-stream request mapping. `@arnilo/prism-provider-kimi` now registers Kimi Coding Anthropic-compatible behavior by default and optional Moonshot metadata only when requested. `@arnilo/prism-provider-neuralwatt` now registers static featured model metadata with NeuralWatt reasoning_effort/thinking_token_budget/chat_template_kwargs request mapping, SSE comment tolerance, an opt-in `listNeuralWattModels()` helper for explicit `/v1/models` discovery, `getNeuralWattQuota()` for on-demand account balance/usage/energy, `neuralWattEventsWithTelemetry()`/`mapNeuralWattTelemetry()` for `: energy`/`: cost` telemetry, and `classifyNeuralWattError()` for retry classification. None of these helpers run during package setup or generation.
+
+### First-party cache behavior
+
+Every first-party provider package hardens prompt-cache behavior so it cannot emit invalid cache retention values or over-broad cache-control markers, and so provider-owned `authorization`/session/security headers cannot be overridden by caller `ProviderRequest.options.headers`:
+
+- **OpenAI** (`kind: openai_key`): `prompt_cache_key` is sanitized and clamped to 64 chars; `prompt_cache_retention` is emitted as `24h` only when the model declares `cache.longRetention`, and omitted for `short`/`none` (the API only accepts absent or `24h`). `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
+- **OpenAI-compatible core adapter**: Chat Completions sends no `prompt_cache_key`/`prompt_cache_retention`/`cache_control` fields; endpoints cache implicitly. `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
+- **OpenRouter** (`kind: cache_control`): `session_id`/`x-session-id` sanitized and clamped to 256 chars; `cache_control` markers applied only to caller-selected `cache.breakpoints` (not every block); `cacheRetention: long` adds `ttl: 1h` when allowed. Preserves `cached_tokens`/`cache_write_tokens`.
+- **OpenCode Go**: `x-opencode-session` from `cacheKey ?? sessionId` sanitized to 128 chars; the Anthropic route applies `cache_control` only to selected breakpoints (`long` → `ttl: 1h`), the OpenAI route sends none. Per-route usage mapping.
+- **Z.AI** (`kind: implicit`): GLM context caching is automatic; no explicit cache payload sent regardless of cache options. `prompt_tokens_details.cached_tokens`/`cache_write_tokens` map to cache usage.
+- **NeuralWatt** (`kind: implicit`): NeuralWatt prefix caching is automatic; sends no explicit cache payload regardless of cache options. `cacheRetention: "none"` disables Prism cache-control hints only (not the implicit backend prefix cache). `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`; NeuralWatt does not report a cache-write token so `Usage.cacheWriteTokens` is never fabricated.
+- **Kimi**: default catalog models use implicit caching (no `cache_control`); hosts opt in via `ModelConfig.cache.kind: cache_control` on the Anthropic `/messages` route, then markers apply only to selected breakpoints (`long` → `ttl: 1h`); the Moonshot OpenAI route sends none. `cache_read_input_tokens`/`cache_creation_input_tokens` map to cache usage.
+
+See [Provider caching](provider-caching.md) for the `PromptCacheHints` surface and shared helpers, and [Provider conformance](provider-conformance.md) for the `assertUsageAccounting` and `assertProviderOwnedHeadersWin` checks every first-party package exercises.
 
 ## Third-party provider packaging
 
@@ -108,7 +122,7 @@ for the resolver contract.
 
 ## Request/response example
 
-Provider package manifest contribution and the generic request options a provider request policy can set:
+Provider package manifest contribution and the generic request options a provider request policy can set (see [Provider request policies](provider-request-policies.md) and [Provider caching](provider-caching.md)):
 
 ```json
 {
@@ -166,6 +180,7 @@ await kernel.load([pkg]);
   (`provider_request`) that sets generic `ProviderRequest.options`
   (`sessionId`, `cacheKey`, `cacheRetention`, `headers`, opaque `extra`) before
   `AIProvider.generate()`; provider adapters map those options to provider payloads.
+- `ModelConfig.cache` is the generic cache capability metadata documented in [Model registry](model-registry.md); `ModelConfig.compat` remains provider-owned inert JSON for behavior that has no generic field yet.
 - `ModelConfig.compat` is provider-owned inert JSON: cache policy overrides,
   reasoning/thinking formats, and provider-specific usage mapping live there
   rather than in core, so Prism never branches on provider names.

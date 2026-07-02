@@ -26,8 +26,8 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
         const response = await (options.fetch ?? fetch)(`${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/responses`, {
           method: "POST",
           headers: {
-            "content-type": "application/json",
             ...request.options?.headers,
+            "content-type": "application/json",
             ...(token ? { authorization: `Bearer ${token}` } : {}),
             ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {}),
           },
@@ -73,7 +73,7 @@ function toResponsesRequest(request: ProviderRequest): JsonObject {
     stream: true,
     store: false,
     prompt_cache_key: promptCacheKey(request.options),
-    prompt_cache_retention: promptCacheRetention(request.options),
+    prompt_cache_retention: promptCacheRetention(request.options, request.model),
     ...parameters,
     max_output_tokens: maxTokens,
     ...(request.options?.compat ?? {}),
