@@ -63,6 +63,10 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 ## Testing and examples
 - [Provider layer](provider-layer.md): use `createMockProvider()` and provider event helpers for deterministic tests without timers, credentials, or network.
 - [Provider conformance](provider-conformance.md): run network-free provider adapter assertions (stream order, abort, tool-call reconstruction, cache usage, content coverage, protected header ownership, secret leak) from `@arnilo/prism/testing/provider-conformance`.
+- [Session store conformance](session-store-conformance.md): assert any `SessionStore` adapter satisfies append/idempotency/conflict/branch invariants from `@arnilo/prism/testing/session-store-conformance`.
+- [Compaction conformance](compaction-conformance.md): assert any `CompactionStrategy` returns a non-empty redacted summary and observes abort from `@arnilo/prism/testing/compaction-conformance`.
+- [Tool conformance](tool-conformance.md): assert the tool-dispatch blocked-reason matrix (unknown/denied/invalid/permission/validator) and success path from `@arnilo/prism/testing/tool-conformance`.
+- [Extension conformance](extension-conformance.md): assert an `Extension` setup runs, contributions stay inert, and setup errors are redacted or rethrown from `@arnilo/prism/testing/extension-conformance`.
 - `examples/`: compile-checked typed examples and runnable mock demos (SDK basics, provider registration, auth, tools, cache-aware prompt assembly, NeuralWatt agent run, stores/branching, compaction, observational-memory recall, structured-output/artifact-loop, CLI, RPC).
 
 ## Release and install

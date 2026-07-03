@@ -25,6 +25,11 @@ node examples/cache-aware-prompt-assembly.ts
 node examples/neuralwatt-agent-run.ts
 node examples/observational-memory-recall-status-view.ts
 node examples/external-app-db-backed.ts
+node examples/minimal-host-app.ts
+node examples/custom-builders.ts
+node examples/custom-session-store.ts
+node examples/custom-tools-skills-context.ts
+node examples/extension-package.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -32,6 +37,11 @@ Each demo prints a single JSON line with its result.
 ## Files
 
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
+- `minimal-host-app.ts` — **demo**: canonical minimal host embed; stream events while a prompt runs via concurrent `Promise.all([drain, session.run])`.
+- `custom-builders.ts` — **demo**: replace the default InputBuilder and PromptBuilder to control input wrapping and final message ordering.
+- `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and pass it to `createAgentSession`; observe the entry kinds the runtime appends.
+- `custom-tools-skills-context.ts` — **demo**: host-owned tool + skill + context provider in one agent, with a tool-call loop (no filesystem/shell/browser coding tools).
+- `extension-package.ts` — **demo**: bundle a tool, skill, and context provider into one `Extension`, load it through the kernel, and build an agent from the inert registries.
 - `provider-registration.ts` — **demo**: register a provider package via the
   extension kernel; resolve providers/models from host-owned registries.
 - `provider-resolver.ts` — **demo**: resolve an agent's provider from a mix of

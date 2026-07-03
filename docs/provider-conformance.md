@@ -21,6 +21,8 @@ Use these helpers in provider package tests to check event order, terminal event
 
 Do not use them as a live integration runner, provider simulator, retry framework, credential loader, or test framework replacement.
 
+For real network smoke tests, each first-party provider package ships an env-gated `src/__tests__/live.test.ts` that exercises the live API when `PRISM_LIVE_PROVIDER_TESTS=1` and a provider-specific API key are set. These live tests reuse the same conformance helpers (`assertProviderStreamConforms`, `assertAbortIsObserved`, `assertNoSecretLeak`) against the real provider, so offline and live assertions stay consistent. The default `npm test` never sets these gates and stays network-free; see [Release and install](release-and-install.md) for the full env-var list.
+
 ## Inputs / request
 
 ```ts

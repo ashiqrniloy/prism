@@ -178,9 +178,11 @@ describe("agent session runtime", () => {
     assert.equal(delta?.content.type === "text" ? delta.content.text : undefined, "from-run");
   });
 
-  it("direct provider takes precedence when both provider and providerSource are set", async () => {
+  it("direct provider takes precedence and bypasses the resolver when both provider and providerSource are set", async () => {
     const direct = createMockProvider([providerTextDelta("from-direct"), providerDone()], { id: "direct" });
-    const resolverProvider = createMockProvider([providerTextDelta("from-resolver"), providerDone()], { id: "resolver" });
+    // The resolver ALSO contains a provider for the model's `provider` id, so the
+    // only way `direct` wins is if the resolver is bypassed entirely.
+    const resolverProvider = createMockProvider([providerTextDelta("from-resolver"), providerDone()], { id: "direct" });
     const agent = createAgent({
       model: { provider: "direct", model: "demo" },
       provider: direct,

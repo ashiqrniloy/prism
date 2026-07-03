@@ -18,6 +18,22 @@
       "types": "./dist/testing/provider-conformance.d.ts",
       "default": "./dist/testing/provider-conformance.js"
     },
+    "./testing/session-store-conformance": {
+      "types": "./dist/testing/session-store-conformance.d.ts",
+      "default": "./dist/testing/session-store-conformance.js"
+    },
+    "./testing/compaction-conformance": {
+      "types": "./dist/testing/compaction-conformance.d.ts",
+      "default": "./dist/testing/compaction-conformance.js"
+    },
+    "./testing/tool-conformance": {
+      "types": "./dist/testing/tool-conformance.d.ts",
+      "default": "./dist/testing/tool-conformance.js"
+    },
+    "./testing/extension-conformance": {
+      "types": "./dist/testing/extension-conformance.d.ts",
+      "default": "./dist/testing/extension-conformance.js"
+    },
     "./node/config": {
       "types": "./dist/node/config.d.ts",
       "default": "./dist/node/config.js"

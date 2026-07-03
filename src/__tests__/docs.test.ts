@@ -21,6 +21,10 @@ const apiPages = [
   "docs/provider-caching.md",
   "docs/provider-request-policies.md",
   "docs/provider-conformance.md",
+  "docs/session-store-conformance.md",
+  "docs/compaction-conformance.md",
+  "docs/tool-conformance.md",
+  "docs/extension-conformance.md",
   "docs/provider-packages.md",
   "docs/input-and-prompt-assembly.md",
   "docs/system-prompts.md",
@@ -454,8 +458,12 @@ describe("docs", () => {
     }
     // The default suite must be stated as network-free so the opt-in status is unambiguous.
     assert.ok(/network-free/.test(docs), "docs/release-and-install.md must state default suite is network-free");
-    // The guarded bodies are fake-safe placeholders and never read real provider keys.
-    assert.ok(docs.includes("placeholder"), "docs/release-and-install.md must mark live tests as placeholder");
+    // Provider live tests are real smoke tests gated by provider-specific keys.
+    for (const key of ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "KIMI_API_KEY", "ZAI_API_KEY", "NEURALWATT_API_KEY", "OPENCODE_API_KEY"]) {
+      assert.ok(docs.includes(key), `docs/release-and-install.md does not document provider key ${key}`);
+    }
+    // Compaction live tests are still placeholders.
+    assert.ok(docs.includes("placeholder"), "docs/release-and-install.md must mark compaction live tests as placeholder");
   });
 
   it("release_checklist_maps_each_gate_to_its_enforcement_test", () => {
@@ -582,6 +590,22 @@ describe("docs", () => {
     const docs = readFileSync("docs/provider-conformance.md", "utf8");
     for (const phrase of ["@arnilo/prism/testing/provider-conformance", "assertAbortIsObserved", "assertToolCallDeltasReconstruct", "No credentials", "network calls"]){
       assert.ok(docs.includes(phrase), `provider conformance docs missing ${phrase}`);
+    }
+  });
+
+  it("adapter conformance docs cover testing subpaths and helpers", () => {
+    const pages: ReadonlyArray<[string, string, readonly string[]]> = [
+      ["docs/session-store-conformance.md", "@arnilo/prism/testing/session-store-conformance", ["assertSessionStoreConforms", "SessionAppendConflictError", "idempotencyKey"]],
+      ["docs/compaction-conformance.md", "@arnilo/prism/testing/compaction-conformance", ["assertCompactionStrategyConforms", "secrets", "summary"]],
+      ["docs/tool-conformance.md", "@arnilo/prism/testing/tool-conformance", ["assertToolDispatchConforms", "assertToolBlocked", "unknown_tool", "permission_denied", "validation_failed"]],
+      ["docs/extension-conformance.md", "@arnilo/prism/testing/extension-conformance", ["assertExtensionConforms", "extension_error", "inert"]],
+    ];
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const [page, subpath, phrases] of pages) {
+      const text = readFileSync(page, "utf8");
+      assert.ok(text.includes(subpath), `${page} does not document its testing subpath`);
+      for (const phrase of phrases) assert.ok(text.includes(phrase), `${page} missing ${phrase}`);
+      assert.ok(index.includes(`(${page.replace("docs/", "")})`), `docs/index.md does not link ${page}`);
     }
   });
 
@@ -870,9 +894,68 @@ describe("docs", () => {
       "examples/discover-skills.ts",
       "examples/instruction-injection.ts",
       "examples/external-app-db-backed.ts",
+      "examples/minimal-host-app.ts",
+      "examples/custom-builders.ts",
+      "examples/custom-session-store.ts",
+      "examples/custom-tools-skills-context.ts",
+      "examples/extension-package.ts",
     ];
     for (const file of exampleFiles) {
       assert.equal(existsSync(file), true, `missing example file: ${file}`);
+    }
+  });
+
+  it("host_app_sdk_examples_cover_adoption_seams_without_coding_tools", () => {
+    const readme = readFileSync("examples/README.md", "utf8");
+    const minimal = readFileSync("examples/minimal-host-app.ts", "utf8");
+    const builders = readFileSync("examples/custom-builders.ts", "utf8");
+    const store = readFileSync("examples/custom-session-store.ts", "utf8");
+    const tsc = readFileSync("examples/custom-tools-skills-context.ts", "utf8");
+    const ext = readFileSync("examples/extension-package.ts", "utf8");
+
+    // README lists each new example.
+    for (const file of [
+      "minimal-host-app.ts", "custom-builders.ts", "custom-session-store.ts",
+      "custom-tools-skills-context.ts", "extension-package.ts",
+    ]) {
+      assert.ok(readme.includes(file), `examples/README.md missing ${file}`);
+    }
+
+    // Minimal embed + event streaming via concurrent subscribe/run.
+    assert.ok(minimal.includes("createAgent("), "minimal-host-app missing createAgent");
+    assert.ok(minimal.includes("createAgentSession("), "minimal-host-app missing createAgentSession");
+    assert.ok(minimal.includes("Promise.all"), "minimal-host-app missing concurrent Promise.all drain+run");
+    assert.ok(minimal.includes("session.subscribe()"), "minimal-host-app missing event streaming");
+
+    // Custom input + prompt builders.
+    assert.ok(builders.includes("inputBuilder:"), "custom-builders missing inputBuilder");
+    assert.ok(builders.includes("promptBuilder:"), "custom-builders missing promptBuilder");
+    assert.ok(builders.includes("InputBuilder"), "custom-builders missing InputBuilder type");
+    assert.ok(builders.includes("PromptBuilder"), "custom-builders missing PromptBuilder type");
+
+    // Custom session store seam.
+    assert.ok(store.includes("SessionStore"), "custom-session-store missing SessionStore");
+    assert.ok(store.includes("async append"), "custom-session-store missing append");
+    assert.ok(store.includes("async list"), "custom-session-store missing list");
+    assert.ok(store.includes("createSessionEntry"), "custom-session-store missing createSessionEntry");
+
+    // Custom tools + skills + context in one agent, with a tool-call loop.
+    assert.ok(tsc.includes("createToolRegistry"), "custom-tools-skills-context missing createToolRegistry");
+    assert.ok(tsc.includes("skills:"), "custom-tools-skills-context missing skills");
+    assert.ok(tsc.includes("context:"), "custom-tools-skills-context missing context");
+    assert.ok(tsc.includes("providerToolCall"), "custom-tools-skills-context missing tool-call loop");
+
+    // Extension package registers tool + skill + context via the kernel.
+    assert.ok(ext.includes("createExtensionKernel"), "extension-package missing createExtensionKernel");
+    assert.ok(ext.includes("registerTool"), "extension-package missing registerTool");
+    assert.ok(ext.includes("registerSkill"), "extension-package missing registerSkill");
+    assert.ok(ext.includes("registerContextProvider"), "extension-package missing registerContextProvider");
+    assert.ok(ext.includes("kernel.registries.tools.list()"), "extension-package missing registry-driven agent build");
+
+    // No filesystem/shell/browser coding-tool usage in any new example.
+    const combined = `${minimal}\n${builders}\n${store}\n${tsc}\n${ext}`;
+    for (const forbidden of ["from \"fs\"", "from \"node:fs\"", "from \"node:child_process\"", "readFileSync", "writeFileSync", "execSync", "spawnSync", "child_process", "glob("]) {
+      assert.ok(!combined.includes(forbidden), `host-app example references coding tool: ${forbidden}`);
     }
   });
 
@@ -977,6 +1060,11 @@ describe("docs", () => {
       "examples/instruction-injection.ts",
       "examples/system-project-prompts.ts",
       "examples/external-app-db-backed.ts",
+      "examples/minimal-host-app.ts",
+      "examples/custom-builders.ts",
+      "examples/custom-session-store.ts",
+      "examples/custom-tools-skills-context.ts",
+      "examples/extension-package.ts",
     ];
     const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
     for (const file of demos) {
@@ -1055,6 +1143,26 @@ describe("docs", () => {
 
     const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
     assert.ok(runtime.includes("providerSource"), "agent-session-runtime.md does not mention providerSource");
+  });
+
+  it("provider_resolution_precedence_docs_match_implementation", () => {
+    // Canonical precedence (pinned by agents.test.ts): an explicit
+    // AgentConfig.provider wins and bypasses the resolver; otherwise
+    // RunOptions.providerSource overrides AgentConfig.providerSource per run.
+    // Both docs pages must state this so docs/code/tests cannot drift again.
+    const providerLayer = readFileSync("docs/provider-layer.md", "utf8");
+    assert.ok(
+      /AgentConfig\.provider.*first precedence.*bypassed|bypassed.*AgentConfig\.provider.*first precedence/.test(providerLayer) ||
+        (providerLayer.includes("first precedence") && providerLayer.includes("bypassed")),
+      "provider-layer.md must state AgentConfig.provider takes first precedence and the resolver is bypassed",
+    );
+    assert.ok(providerLayer.includes("RunOptions.providerSource"), "provider-layer.md must document RunOptions.providerSource override");
+
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    assert.ok(
+      runtime.includes("first precedence") && runtime.includes("bypassed"),
+      "agent-session-runtime.md must state AgentConfig.provider takes first precedence and the resolver is bypassed",
+    );
   });
 
   it("tools_docs_cover_runtime_validator_seam", () => {

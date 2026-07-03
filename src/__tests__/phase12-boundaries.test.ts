@@ -46,8 +46,26 @@ describe("phase 12 provider package boundaries", () => {
   it("phase12_live_tests_are_skipped_by_default", () => {
     for (const name of packages) {
       const text = readFileSync(`packages/provider-${name}/src/__tests__/live.test.ts`, "utf8");
-      assert.ok(text.includes("PRISM_LIVE_PROVIDER_TESTS"));
-      assert.ok(text.includes("skip:"));
+      assert.ok(text.includes("PRISM_LIVE_PROVIDER_TESTS"), `${name} live test must reference PRISM_LIVE_PROVIDER_TESTS`);
+      assert.ok(text.includes("skip:"), `${name} live test must use skip:`);
+    }
+  });
+
+  it("phase12_live_tests_reference_provider_specific_api_key_env", () => {
+    const keyEnv: Record<string, string> = {
+      openai: "OPENAI_API_KEY",
+      "opencode-go": "OPENCODE_API_KEY",
+      openrouter: "OPENROUTER_API_KEY",
+      zai: "ZAI_API_KEY",
+      kimi: "KIMI_API_KEY",
+    };
+    for (const name of packages) {
+      const text = readFileSync(`packages/provider-${name}/src/__tests__/live.test.ts`, "utf8");
+      assert.ok(text.includes(keyEnv[name]!), `${name} live test must reference ${keyEnv[name]}`);
+      // Live tests must exercise the real conformance helpers, not just skip.
+      assert.ok(text.includes("assertProviderStreamConforms"), `${name} live test must use assertProviderStreamConforms`);
+      assert.ok(text.includes("assertNoSecretLeak"), `${name} live test must use assertNoSecretLeak`);
+      assert.ok(text.includes("assertAbortIsObserved"), `${name} live test must use assertAbortIsObserved`);
     }
   });
 

@@ -321,10 +321,14 @@ class RuntimeAgentSession implements AgentSession {
 
   private resolveRunProvider(options: RunOptions): void {
     const model = options.model ?? this.agent.config.model;
+    // Provider precedence: an explicit `AgentConfig.provider` wins and bypasses
+    // the resolver entirely; otherwise `RunOptions.providerSource` overrides
+    // `AgentConfig.providerSource` for this run. A miss on every source fails
+    // closed with `Unknown provider: ${model.provider}` before any provider turn.
     const provider =
+      this.agent.config.provider ??
       options.providerSource?.(model) ??
-      this.agent.config.providerSource?.(model) ??
-      this.agent.config.provider;
+      this.agent.config.providerSource?.(model);
     if (!provider) throw new Error(`Unknown provider: ${model.provider}`);
     this.activeProvider = provider;
   }
