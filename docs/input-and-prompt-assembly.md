@@ -172,6 +172,7 @@ const request = await assembleProviderInput({
 
 ## Related APIs
 
+- [SDK customization guide](customization.md): high-level map of replaceable provider resolution, middleware, context, builder, injector, loop, compaction, retry, store, and skill seams.
 - [Public contracts](public-contracts.md): `Message`, `ContentBlock`, `InputBuilder`, `InputBuildContext`, `ToolResult`, and `ResourceLoader` shapes.
 - [Context and skills](context-and-skills.md): ordered context resolution feeding prompt composition.
 - [Resource loading](resource-loading.md): `loadTextResource()` behavior used for explicit URI resources.

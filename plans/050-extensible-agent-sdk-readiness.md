@@ -310,7 +310,7 @@
     - `docs/index.md` update: no; existing pages linked.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Strengthen production persistence SDK story without shipping a DB adapter
+- [x] Strengthen production persistence SDK story without shipping a DB adapter
   - Acceptance Criteria:
     - Functional: Hosts have adapter contracts, schema reference, conformance guidance/helpers, and a working external-app mock/reference example.
     - Performance: Guidance requires `readBranchPath`/pagination for production and avoids full-session loads for large branches.
@@ -351,7 +351,7 @@
     - `docs/index.md` update: yes only if adding a new conformance docs page.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Write extension author guide
+- [x] Write extension author guide
   - Acceptance Criteria:
     - Functional: Third-party authors can publish an extension package that registers inert providers/models/auth/tools/context/skills/builders/strategies/commands and documents how hosts activate them.
     - Performance: Guide makes clear extension loading has no provider/tool/resource side effects unless host code invokes them.
@@ -398,7 +398,7 @@
     - `docs/index.md` update: yes, Extensions/plugins entry for extension authoring.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Write host security guide
+- [x] Write host security guide
   - Acceptance Criteria:
     - Functional: Host developers know how to handle credentials, settings, redaction, trust roots, permission policies, session/ledger persistence, extension loading, and tool validation.
     - Performance: Guide calls out security checks as bounded explicit calls, not watchers/background scans.
@@ -438,7 +438,7 @@
     - `docs/index.md` update: yes, Security and credentials entry for host security.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Write SDK customization guide
+- [x] Write SDK customization guide
   - Acceptance Criteria:
     - Functional: Host developers can see where to customize provider resolution, middleware, context, prompt/input builders, instruction injectors, agent loops, compaction, retry, stores, and skills.
     - Performance: Guide explains replaceable hooks are explicit and run only when wired, with no hidden global middleware.
@@ -486,7 +486,7 @@
     - `docs/index.md` update: yes, SDK customization entry.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Add single SDK readiness release gate
+- [x] Add single SDK readiness release gate
   - Acceptance Criteria:
     - Functional: One command runs build, typecheck, offline tests, workspace tests, pack dry-run, docs/export/package smoke checks, and reports optional live-test instructions separately.
     - Performance: Gate stays within documented offline budget or updates budget with measured baseline and rationale.
@@ -542,6 +542,45 @@
 - **Added 17 conformance tests** (`conformance-helpers.test.ts`) including negatives (lenient store, no-conflict store, leaking/empty compaction strategy, non-executing tool, missing blocked event) and subpath-exported assertions; all 828 core tests pass.
 - **Docs:** created `docs/session-store-conformance.md`, `docs/compaction-conformance.md`, `docs/tool-conformance.md`, `docs/extension-conformance.md` (full API-page structure), linked from `docs/index.md`, added to `docs.test.ts` apiPages + a new `adapter conformance docs cover testing subpaths and helpers` test (62 docs tests pass).
 - **Added a docs drift guard test** (`provider_resolution_precedence_docs_match_implementation`) pinning the precedence wording in both pages so docs/code/tests cannot drift again; verified it fails when the wording is corrupted.
+
+### Task 7 — Strengthen production persistence SDK story without shipping a DB adapter
+- **No adapter shipped.** Kept Prism core and packages database/ORM-free; this task changed docs/tests and the external-app reference only. The production story remains: hosts implement `SessionStore`/optional `ProductionPersistenceStore`/`RunLedger`; Prism supplies contracts, schema guidance, conformance helper, and a network-free reference mock.
+- **Reference example now self-checks the adapter contract.** `examples/external-app-db-backed.ts` imports `assertSessionStoreConforms` from `@arnilo/prism/testing/session-store-conformance` and runs `assertSessionStoreConforms(createDbBackedReferenceStore(), { exerciseReadBranchPath: true })` before the demo. Fixed the reference store to reject duplicate ids with the same shape expected by the helper and to return `readBranchPath` entries root→leaf. The runnable example now emits `conformancePassed: true` and still proves branch checkout/fork, ledger resume, secret redaction, and credential non-persistence.
+- **Production docs strengthened.** `docs/session-stores.md` now links adapter authors to `session-store-conformance.md` and the external-app reference; `docs/database-persistence.md` now has an "Adapter readiness checklist" covering conditional append/idempotency, `readBranchPath`, `assertSessionStoreConforms`, `RunLedger`, no secrets in durable rows, and no ORM/driver dependency in core; `docs/runs-and-usage.md` now has a "Production ledger adapter checklist" for write-only ledger adapters, event `sequence`, run idempotency, redaction, and external-app replay tests. `examples/README.md` lists the conformance self-check.
+- **Tests pinned the story.** Extended `external_app_example_exercises_run_ledger_branch_handle_checkout_and_resume`, `phase41_external_app_surfaces_are_gated_network_free`, `database_persistence_docs_cover_phase_34_schema_indexes_retention_migrations_and_nosql`, and `performance docs keep long-session and JSONL boundaries explicit` to require the conformance helper, provider/credential security locks, no-core-ORM language, ledger checklist, and README mention.
+- **Verification:** focused docs+conformance tests pass (81/81); external-app example exits 0 and reports `{ conformancePassed: true, secretRedactedFromLedger: true, credentialNeverLogged: true, branchHandleCheckout: true, forkDiverged: true }`; full core suite from `npm test` reports 830 pass/0 fail; `npm run typecheck` exit 0; `npm test` exit 0; `npm run pack:dry-run` exit 0.
+
+### Task 8 — Write extension author guide
+- **Added `docs/extension-authoring.md`.** The guide uses the standard API-page structure and targets third-party package authors: export a public `Extension`, register contributions in `setup(api)`, keep top-level imports side-effect-light, prefix contribution names, and let hosts explicitly activate contributions.
+- **Covered all required contribution surfaces.** The guide names provider packages, providers/models, auth descriptors, provider request policies, system prompt contributions, tools, context providers, skills, commands, input/prompt builders, compaction/retry strategies, instruction injectors, middleware, store factories, resource loaders, settings providers, and credential resolvers.
+- **Host activation boundary is explicit.** Contributions stay inert until hosts select/wire them: tools must be copied into an active `ToolRegistry`, skills selected via `RunOptions.activeSkills`/config and checked against active tools, builders/strategies/middleware passed into runtime config, provider/auth entries resolved by host code.
+- **Security/performance boundaries are explicit.** The guide states Prism does not sandbox extension code, does not auto-discover extension packages, does not grant tools/permissions/credentials, and adds no background workers/watchers/network/provider/filesystem/tool execution. It covers `extension:<name>:setup` permission gating, `createExtensionKernel({ secrets })` exact known-secret redaction, no raw secrets/credentials/provider clients in manifests/registries/events/prompts/session/ledger/idempotency, and host-owned trust/sandboxing.
+- **Docs wiring/tests:** linked from `docs/index.md` under Extensions/plugins, cross-linked from `docs/extensions.md`, enrolled in `apiPages`, and added `extension_authoring_guide_covers_package_authoring_activation_and_security_boundaries` to pin authoring, activation, and security phrases.
+- **Verification:** focused docs test passes (65/65); full core suite from `npm test` reports 831 pass/0 fail; `npm run typecheck` exit 0; `npm test` exit 0; `npm run pack:dry-run` exit 0.
+
+### Task 9 — Write host security guide
+- **Added `docs/host-security.md`.** The guide is a fail-closed embedding checklist for host developers. It covers credentials, settings, exact known-secret redaction, trust roots, permission policies, active tool allow-lists, tool validation, session/ledger persistence, extension loading, and provider/cache/header boundaries.
+- **No new security abstraction.** The guide maps each concern to existing APIs/pages: `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `resolveCredentialValue`, `createSecretRedactor`, `createPathTrustPolicy`, `createStaticPermissionPolicy`, `createToolRegistry`, `filterTools`, `AgentConfig.validator`, `RunOptions.validate`, `ToolValidator`, `SessionStore`, `assertSessionStoreConforms`, `RunLedger`, `redactRunLedgerRecord`, and `createExtensionKernel`.
+- **Security/performance boundaries are explicit.** The page states Prism does not sandbox tools/extensions, does not detect arbitrary secrets, does not read `process.env` for credentials, does not auto-discover extensions, and adds no hidden global middleware/background workers/watchers/network/filesystem scans. Checks are documented as bounded explicit calls on the active path.
+- **Fail-closed guidance pinned.** The guide calls out unknown/denied tools, invalid tool args, trust/permission failures, append conflicts, missing skill tool dependencies, and validator failures as stop conditions. It documents that permission checks happen before tool validation and before `tool.execute()`, and that tool `parameters` metadata is not validation.
+- **Docs wiring/tests:** linked from `docs/index.md` under Security and credentials, cross-linked from `docs/settings-auth-trust-security.md`, enrolled in `apiPages`, and added `host_security_guide_covers_fail_closed_embedding_checklist` to pin the checklist, no-sandbox/no-secret-detection, bounded checks, and existing API references. The existing global docs secret scan also covers the new page.
+- **Verification:** focused docs test passes (66/66, including required headings and no real-looking secrets); full core suite from `npm test` reports 832 pass/0 fail; `npm run typecheck` exit 0; `npm test` exit 0; `npm run pack:dry-run` exit 0.
+
+### Task 10 — Write SDK customization guide
+- **Added `docs/customization.md`.** The guide is a high-level map for embedding apps that need to customize provider resolution, middleware, context, input/prompt builders, instruction injectors, agent loops, compaction, retry, session stores, and skill selection without forking the runtime.
+- **No new abstraction layer.** The page maps each seam to existing public APIs/docs: `providerSource`, `createProviderResolver`, `createMiddlewareRegistry`, `resolveContextProviders`, `createSkillRegistry`, `resolveActiveSkills`, `createDefaultInputBuilder`, `createDefaultPromptBuilder`, `resolveInstructionInjectors`, `singleShotLoop`, `generateValidateReviseLoop`, `createDefaultCompactionStrategy`, `createDefaultRetryPolicy`, `SessionStore`, and `createMemorySessionStore`.
+- **Explicit wiring/performance boundaries are documented.** The guide states provider resolution happens once per run, middleware runs only at documented hook call sites when a registry is supplied, builders/context/skills/injectors/loops/compaction/retry/stores run only when wired, and Prism adds no hidden global middleware/background workers/watchers/package scans/provider calls/resource loads/tool execution/credential resolution.
+- **Security boundaries are documented.** The guide states customization cannot grant tools or permissions unless the host explicitly activates tools and permission policies, middleware/skills/context/builders/injectors cannot bypass tool lookup/filtering/permission/validator checks, instruction injectors can add only instructions/context blocks and grant no capabilities, and Prism does not sandbox custom host code.
+- **Docs wiring/tests:** linked from `docs/index.md` under Input, prompt, and context assembly; cross-linked from `docs/input-and-prompt-assembly.md`; enrolled in `apiPages`; added `sdk_customization_guide_maps_replaceable_seams_without_new_abstractions` to pin all required seams and boundaries. Existing stale-specifier and real-looking-secret docs tests cover the new page.
+- **Verification:** focused docs test passes (67/67); full core suite from `npm test` reports 833 pass/0 fail; `npm run typecheck` exit 0; `npm test` exit 0; `npm run pack:dry-run` exit 0.
+
+### Task 11 — Add single SDK readiness release gate
+- **Added one command:** `package.json` now has `"sdk:ready": "npm run typecheck && npm test && npm run pack:dry-run"`. This deliberately composes existing scripts only: no custom runner, no new dependency, no shell helper.
+- **Coverage of required gates:** `npm run typecheck` covers core build, workspace typechecks, and examples typecheck; `npm test` covers build, core tests, docs/export/package/install smoke checks, and workspace tests; `npm run pack:dry-run` packs core and all workspaces. `release:dry-run` remains the CI-style verify subset for release parity.
+- **Network/security boundary:** `sdk:ready` does not set `PRISM_LIVE_*` or provider API-key env vars. Provider live tests remain skipped by default and optional live smoke instructions are documented separately (`PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present`).
+- **Docs:** `docs/release-and-install.md` now lists `npm run sdk:ready` in the command table, describes it as the full local SDK readiness gate, documents optional live tests separately, explains that it stays network-free but may exceed the `<60s npm test` budget because it adds typecheck and pack dry-run, and clarifies when to use `release:dry-run` instead.
+- **Tests:** added `sdk_readiness_gate_is_one_network_free_command_and_docs_separate_live_tests` to `docs.test.ts`, asserting the exact script value and docs coverage for typecheck, network-free tests, workspace tests, docs/export/package/install smoke, pack dry-run, optional live-test separation, and budget wording.
+- **Verification:** focused docs test passes (68/68); `npm run sdk:ready` exit 0 and ran `typecheck`, `npm test` (834 core tests pass/0 fail; provider live tests skipped with PRISM_LIVE_* instructions), and `pack:dry-run` for core + all workspaces; measured wall time was 1:03.52.
 
 ### Task 5 — Add host-app SDK examples without coding tools
 - **Created five focused host-app examples** (all runnable demos with the `main()` + `import.meta.url` guard, mock provider, no network, no real secrets): `minimal-host-app.ts` (canonical minimal embed + event streaming via concurrent `Promise.all([drain, session.run])`), `custom-builders.ts` (replace `InputBuilder` + `PromptBuilder`), `custom-session-store.ts` (implement the `SessionStore` contract + `createSessionEntry`), `custom-tools-skills-context.ts` (host-owned tool + skill + context in one agent with a `providerToolCall` loop), `extension-package.ts` (bundle tool+skill+context in one `Extension`, load via kernel, build agent from `kernel.registries.*.list()`).

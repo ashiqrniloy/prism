@@ -41,6 +41,7 @@ Consumers install the core package for the runtime and add first-party packages 
 | Run the default (network-free) test suite | `npm test` |
 | Dry-run pack core + every package | `npm run pack:dry-run` |
 | Local mirror of the release verify gate | `npm run release:dry-run` |
+| Full SDK readiness gate (typecheck + offline tests + pack) | `npm run sdk:ready` |
 
 Public core import specifiers (from the root `exports` map):
 
@@ -114,12 +115,24 @@ Local release dry-run mirrors the GitHub Actions `verify` job (build + tests + p
 npm run release:dry-run
 ```
 
+For SDK readiness, run the stricter one-command local gate. It composes existing scripts only: examples/workspace typecheck, build, network-free core tests (docs/export/package/install smoke included), workspace tests, and pack dry-run.
+
+```bash
+npm run sdk:ready
+```
+
+Optional live smoke tests stay separate from SDK readiness because they require credentials and network access:
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present
+```
+
 ## Extension and configuration notes
 
 - **Required `@arnilo/prism` peer.** Every first-party package declares `peerDependencies: { "@arnilo/prism": "0.0.1" }` with no `peerDependenciesMeta` (non-optional). The range stays pinned to `0.0.1` for the 0.x series and will widen to `^1.0.0` at the 1.x stable release. Inside the workspace each package also declares `"@arnilo/prism": "file:../.."` in `devDependencies` so `npm install` resolves the peer locally; that devDependency is stripped from consumer installs and is not a runtime dependency.
 - **Public access.** All 12 manifests (9 code packages + 3 umbrellas) declare `"publishConfig": { "access": "public" }` so a manual `npm publish` of a scoped `@arnilo/prism-*` package defaults to public rather than `restricted` (paid). The `release.yml` flags (`npm publish --access public` + `npm publish --workspaces --access public`) are belt-and-suspenders backups.
 - **Map retention knob.** Source maps are emitted locally but stripped from tarballs by `!dist/**/*.map`. Removing that `files` negation ships maps in releases (larger tarballs, better consumer stack traces).
-- **Release workflow.** `.github/workflows/release.yml` has two jobs. `verify` runs on push (main/master, `v*` tags) and pull requests: `npm ci`, `npm test` (builds core + workspaces first, then runs the packaging and install-smoke guards), and `npm run pack:dry-run`. `publish` runs only on `refs/tags/v*` after `verify` succeeds: `npm run build`, then `npm publish --access public` for core (first, because packages require the `@arnilo/prism` peer on the registry) and `npm publish --workspaces --access public`. With no `NPM_TOKEN` secret it runs `--dry-run` instead of a real publish. `permissions.id-token: write` is set so `--provenance` can be added later without re-architecting permissions.
+- **Release workflow.** `.github/workflows/release.yml` has two jobs. `verify` runs on push (main/master, `v*` tags) and pull requests: `npm ci`, `npm test` (builds core + workspaces first, then runs the packaging and install-smoke guards), and `npm run pack:dry-run`. `publish` runs only on `refs/tags/v*` after `verify` succeeds: `npm run build`, then `npm publish --access public` for core (first, because packages require the `@arnilo/prism` peer on the registry) and `npm publish --workspaces --access public`. With no `NPM_TOKEN` secret it runs `--dry-run` instead of a real publish. `permissions.id-token: write` is set so `--provenance` can be added later without re-architecting permissions. Local SDK readiness uses `npm run sdk:ready`, which intentionally adds `npm run typecheck` before the same offline test and pack gates.
 - **Adding a package.** New workspace packages are picked up automatically by `npm run build --workspaces`, `npm test --workspaces`, `npm run pack:dry-run`, the packaging guard (`src/__tests__/packaging.test.ts`), and the install-smoke test (`src/__tests__/install-smoke.test.ts`) via the workspace glob; add the package to both tests' config arrays for explicit per-package assertions.
 
 ## Security and performance notes
@@ -138,11 +151,11 @@ npm run release:dry-run
   - Provider live tests read the API key from the env only when both gates are set; the key is used as a bearer token and never logged. `assertNoSecretLeak` verifies the key value does not appear in any streamed event. The compaction placeholders still carry no real credentials.
   - Enforced by `network-free-guard.test.ts` (default suite stays network-free) and by source-scanning meta-tests that assert each `live.test.ts` keeps its `skip:` guard.
 - **Install smoke is offline.** The install-smoke test packs core + every package into a temp dir and installs the tarballs with `--offline --no-audit --no-fund` into a fresh temp project; zero registry fetches happen because Prism has no runtime dependencies.
-- **Offline test budget.** The default `npm test` (no `PRISM_LIVE_PROVIDER_TESTS`) is pinned at **< 60s on Node 20** with a measured local baseline of ~45s (build ~18s + network-free tests/workspace tests/packaging smoke ~27s). The `npm test` CI step has `timeout-minutes: 3` as a hang backstop. The budget was raised from 30s after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests; optimize before raising it again.
+- **Offline test budget.** The default `npm test` (no `PRISM_LIVE_PROVIDER_TESTS`) is pinned at **< 60s on Node 20** with a measured local baseline of ~45s (build ~18s + network-free tests/workspace tests/packaging smoke ~27s). `npm run sdk:ready` is a stricter local gate that also runs typecheck and pack dry-run, so it is allowed to exceed the `npm test` budget while remaining network-free. The `npm test` CI step has `timeout-minutes: 3` as a hang backstop. The budget was raised from 30s after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests; optimize before raising it again.
 
 ## Release checklist
 
-Every release gate maps to an exact enforcement test or command, so the checklist is executable rather than manual. Run `npm run release:dry-run` to exercise the offline subset (build + network-free `npm test` + `npm run pack:dry-run`); run `npm run typecheck` to add the examples typecheck (`tsc -p examples --noEmit`). The GitHub Actions `verify` job runs `npm ci`, `npm test`, and `npm run pack:dry-run` on every push and pull request.
+Every release gate maps to an exact enforcement test or command, so the checklist is executable rather than manual. Run `npm run sdk:ready` for the full local SDK readiness gate: `npm run typecheck`, network-free `npm test`, and `npm run pack:dry-run`. Run `npm run release:dry-run` only when you want the CI-style release verify subset without the extra typecheck. The GitHub Actions `verify` job runs `npm ci`, `npm test`, and `npm run pack:dry-run` on every push and pull request.
 
 | Gate | Enforcement |
 | --- | --- |

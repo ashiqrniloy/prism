@@ -30,6 +30,7 @@ import {
   type ToolResult,
   type UsageRecord,
 } from "@arnilo/prism";
+import { assertSessionStoreConforms } from "@arnilo/prism/testing/session-store-conformance";
 
 // Phase 41 — End-to-end external-app example with a DB-backed adapter
 // reference mock.
@@ -110,7 +111,7 @@ function createDbBackedReferenceStore(): SessionStore & RunLedger & ProductionPe
     const chain: SessionEntry[] = [];
     let cursor = scoped.find((e) => e.id === leafId);
     while (cursor) {
-      chain.push(cursor);
+      chain.unshift(cursor);
       cursor = cursor.parentId ? scoped.find((e) => e.id === cursor!.parentId) : undefined;
     }
     return { items: chain };
@@ -137,7 +138,7 @@ function createDbBackedReferenceStore(): SessionStore & RunLedger & ProductionPe
       }
       // 3. duplicate entry id fails closed.
       if (entries.has(entry.id)) {
-        throw new SessionAppendConflictError({ code: "session_append_conflict" });
+        throw new Error(`Duplicate session entry id: ${entry.id}`);
       }
       entries.set(entry.id, entry);
     },
@@ -240,7 +241,10 @@ export async function demo(): Promise<{
   resumedUsageRuns: string[];
   secretRedactedFromLedger: boolean;
   credentialNeverLogged: boolean;
+  conformancePassed: boolean;
 }> {
+  await assertSessionStoreConforms(createDbBackedReferenceStore(), { exerciseReadBranchPath: true });
+  const conformancePassed = true;
   const store = createDbBackedReferenceStore();
 
   const model: ModelConfig = { provider: "mock", model: "demo" };
@@ -321,6 +325,7 @@ export async function demo(): Promise<{
     resumedUsageRuns: resumedUsage.items.map((u) => u.runId).filter((r): r is string => Boolean(r)),
     secretRedactedFromLedger,
     credentialNeverLogged,
+    conformancePassed,
   };
 }
 
@@ -337,6 +342,7 @@ export async function main(): Promise<void> {
   if (result.resumedUsageRuns.length === 0) throw new Error("expected run-1 usage resumable from the ledger");
   if (!result.secretRedactedFromLedger) throw new Error("expected raw secrets redacted from the persisted ledger/entries");
   if (!result.credentialNeverLogged) throw new Error("expected caller credential value to never enter the event stream");
+  if (!result.conformancePassed) throw new Error("expected DB-backed reference store to pass SessionStore conformance");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -69,8 +69,9 @@ Each demo prints a single JSON line with its result.
   `generate-validate-revise` artifact loop with host-owned schema validation.
 - `external-app-db-backed.ts` — **demo**: end-to-end external app with a DB-backed
   adapter reference mock (`SessionStore` + `RunLedger` + `ProductionPersistenceStore`
-  reads), explicit tools/skills, branch-handle checkout + fork, and prior-run
-  timeline resume from the ledger — no real DB, no network.
+  reads), `assertSessionStoreConforms(..., { exerciseReadBranchPath: true })`,
+  explicit tools/skills, branch-handle checkout + fork, and prior-run timeline
+  resume from the ledger — no real DB, no network.
 - `cli.ts` — **demo**: spawn the `prism` bin in print and json modes.
 - `rpc.ts` — **demo**: drive the `prism` bin in rpc mode with a JSONL request.
 - `tsconfig.json` — typecheck-only config.

@@ -76,6 +76,7 @@ Boundary hardening summary:
 `@arnilo/prism/node/trust` resolves symlinks on both the trusted root and the target path. A path that is lexically inside a trusted root but escapes it through a symlink is rejected, and realpath failures (missing root, permission error) fail closed. Contribution discovery and discovered instruction resources reuse this check before reading entry/resource files.
 
 ## Related APIs
+- [Host security guide](host-security.md): fail-closed checklist for wiring credentials, redaction, trust, permissions, persistence, extension loading, and tool validation in an embedding app.
 - `createStaticSettingsProvider`, `createChainedSettingsProvider`
 - `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `resolveCredentialValue`
 - `createStaticTrustPolicy`, `assertTrusted`, `isTrusted`, `TrustDeniedError`

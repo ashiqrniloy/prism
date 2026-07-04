@@ -8,7 +8,7 @@ This page describes the store contract, built-in helpers, and where to find the 
 
 ## When to use it
 
-Use `SessionStore` when you write a host adapter that keeps session entries durable across restarts. Use the built-in `createMemorySessionStore()` for tests and throwaway sessions. Use `createJsonlSessionStore()` from `@arnilo/prism/node/session-store-jsonl` only for single-process development. For production multi-tenant or multi-writer storage, implement a database-backed `SessionStore` or `ProductionPersistenceStore` using the reference schema in [Database persistence](database-persistence.md).
+Use `SessionStore` when you write a host adapter that keeps session entries durable across restarts. Use the built-in `createMemorySessionStore()` for tests and throwaway sessions. Use `createJsonlSessionStore()` from `@arnilo/prism/node/session-store-jsonl` only for single-process development. For production multi-tenant or multi-writer storage, implement a database-backed `SessionStore` or `ProductionPersistenceStore` using the reference schema in [Database persistence](database-persistence.md), then run [Session store conformance](session-store-conformance.md) against the adapter.
 
 ## Inputs / request
 
@@ -71,7 +71,7 @@ await store.append(entry);
 const entries = await store.list("s1");
 ```
 
-For a database-backed store, see the reference schema and query shapes in [Database persistence](database-persistence.md).
+For a database-backed store, see the reference schema and query shapes in [Database persistence](database-persistence.md). A runnable external-app reference that implements `SessionStore` + `RunLedger` + `ProductionPersistenceStore` and self-checks with `assertSessionStoreConforms(..., { exerciseReadBranchPath: true })` lives in [`examples/external-app-db-backed.ts`](../examples/external-app-db-backed.ts).
 
 ### Atomic append and branch handles
 
@@ -117,6 +117,7 @@ Recognize it with `isSessionAppendConflict(error)`, not message text. Built-in s
 
 ## Related APIs
 
+- [Session store conformance](session-store-conformance.md): dependency-free adapter assertions for append/idempotency/conflict/branch invariants.
 - [Migration guide](migration.md): moving from this memory/JSONL store to a database-backed adapter.
 - [Session stores and branching](session-stores-and-branching.md): detailed branch helpers, compaction boundaries, and runtime branch semantics.
 - [Database persistence](database-persistence.md): reference relational schema, indexes, retention, migrations, and NoSQL mapping notes.

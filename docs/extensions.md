@@ -125,6 +125,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 
 ## Related APIs
 
+- [Extension authoring guide](extension-authoring.md): package-author checklist for inert contributions, host activation, trust, permissions, no sandbox, and redaction.
 - [Middleware hooks](middleware-hooks.md): ordered hook registry populated by `ExtensionAPI.use()`.
 - [Provider packages](provider-packages.md): provider package and model metadata registration through `ExtensionAPI`.
 - [Contribution registries](contribution-registries.md): registry bundle populated by `ExtensionAPI`.

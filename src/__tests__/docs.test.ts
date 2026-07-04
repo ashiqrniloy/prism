@@ -26,6 +26,7 @@ const apiPages = [
   "docs/tool-conformance.md",
   "docs/extension-conformance.md",
   "docs/provider-packages.md",
+  "docs/customization.md",
   "docs/input-and-prompt-assembly.md",
   "docs/system-prompts.md",
   "docs/context-and-skills.md",
@@ -34,6 +35,7 @@ const apiPages = [
   "docs/contribution-discovery.md",
   "docs/instruction-injection.md",
   "docs/extensions.md",
+  "docs/extension-authoring.md",
   "docs/middleware-hooks.md",
   "docs/tools.md",
   "docs/node-filesystem-config.md",
@@ -41,6 +43,7 @@ const apiPages = [
   "docs/resource-loading.md",
   "docs/credentials-and-redaction.md",
   "docs/settings-auth-trust-security.md",
+  "docs/host-security.md",
   "docs/cli-rpc.md",
   "docs/release-and-install.md",
   "docs/performance.md",
@@ -387,9 +390,129 @@ describe("docs", () => {
     assert.deepEqual(packageJson.exports["./node/trust"], { types: "./dist/node/trust.d.ts", default: "./dist/node/trust.js" });
   });
 
+  it("sdk_customization_guide_maps_replaceable_seams_without_new_abstractions", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const page = readFileSync("docs/customization.md", "utf8");
+    const input = readFileSync("docs/input-and-prompt-assembly.md", "utf8");
+
+    assert.ok(index.includes("(customization.md)"), "docs/index.md does not link customization.md");
+    assert.ok(input.includes("customization.md"), "input-and-prompt-assembly.md does not link customization.md");
+    assert.ok(apiPages.includes("docs/customization.md"), "apiPages missing customization.md");
+
+    for (const phrase of [
+      "provider resolution, middleware, context, input/prompt builders, instruction injectors, agent loops, compaction, retry, session stores, or skill selection",
+      "explicit wiring",
+      "There is no hidden global middleware",
+      "providerSource",
+      "createProviderResolver()",
+      "createMiddlewareRegistry()",
+      "resolveContextProviders()",
+      "createSkillRegistry()",
+      "resolveActiveSkills()",
+      "createDefaultInputBuilder()",
+      "createDefaultPromptBuilder()",
+      "resolveInstructionInjectors()",
+      "singleShotLoop",
+      "generateValidateReviseLoop()",
+      "createDefaultCompactionStrategy()",
+      "createDefaultRetryPolicy()",
+      "SessionStore",
+      "createMemorySessionStore()",
+      "provider resolution happens once per run",
+      "middleware runs only for documented hook call sites when a registry is supplied",
+      "Instruction injectors can add instructions and context blocks only",
+      "They grant no tools, skills, permissions, validators, credentials, resource access, or provider options",
+      "Customization cannot grant tools or permissions unless the host explicitly activates tools and permission policies",
+      "Prism adds no hidden global middleware, background workers, watchers, package scans, provider calls, resource loads, tool execution, or credential resolution unless the host wires that operation",
+      "Prism does not sandbox them",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/customization.md missing ${phrase}`);
+    }
+  });
+
+  it("host_security_guide_covers_fail_closed_embedding_checklist", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const page = readFileSync("docs/host-security.md", "utf8");
+    const security = readFileSync("docs/settings-auth-trust-security.md", "utf8");
+
+    assert.ok(index.includes("(host-security.md)"), "docs/index.md does not link host-security.md");
+    assert.ok(security.includes("host-security.md"), "settings-auth-trust-security.md does not link host-security.md");
+    assert.ok(apiPages.includes("docs/host-security.md"), "apiPages missing host-security.md");
+
+    for (const phrase of [
+      "fail-closed checklist",
+      "credentials, settings, redaction, trust roots, permission policies, session and ledger persistence, extension loading, and tool validation",
+      "Prism does not sandbox tools/extensions",
+      "does not detect arbitrary secrets",
+      "createExplicitCredentialResolver",
+      "createEnvCredentialResolver",
+      "resolveCredentialValue()",
+      "createSecretRedactor",
+      "createPathTrustPolicy",
+      "createStaticPermissionPolicy",
+      "createToolRegistry",
+      "filterTools()",
+      "AgentConfig.validator",
+      "RunOptions.validate",
+      "ToolValidator",
+      "SessionStore",
+      "assertSessionStoreConforms()",
+      "RunLedger",
+      "redactRunLedgerRecord()",
+      "createExtensionKernel",
+      "unknown or denied tools emit `tool_execution_blocked`",
+      "validator failures emit `tool_execution_blocked` with `validation_failed`",
+      "no background watchers, filesystem scanners, network probes, credential polling, or automatic extension discovery",
+      "`createAgent()` and `session.run()` do not automatically call `settings.get()` or `credentials.resolve()`",
+      "Prism does not read `process.env` for credentials",
+      "Redaction is exact known-secret replacement only",
+      "Tool `parameters` metadata is not validation",
+      "Permission checks happen before tool validation and before `tool.execute()`",
+      "Provider-owned auth/content/session/cache/security headers win over caller headers",
+      "no hidden global middleware, background workers, watchers, network calls, or filesystem scans",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/host-security.md missing ${phrase}`);
+    }
+  });
+
   it("docs_index_links_cli_rpc_page", () => {
     const index = readFileSync("docs/index.md", "utf8");
     assert.ok(index.includes("(cli-rpc.md)"));
+  });
+
+  it("extension_authoring_guide_covers_package_authoring_activation_and_security_boundaries", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const page = readFileSync("docs/extension-authoring.md", "utf8");
+    assert.ok(index.includes("(extension-authoring.md)"), "docs/index.md does not link extension-authoring.md");
+    assert.ok(apiPages.includes("docs/extension-authoring.md"), "apiPages missing extension-authoring.md");
+
+    for (const phrase of [
+      "type { Extension }",
+      "setup(api)",
+      "registerProviderPackage",
+      "registerModel",
+      "registerAuthMethod",
+      "registerTool",
+      "registerContextProvider",
+      "registerSkill",
+      "registerInputBuilder",
+      "registerPromptBuilder",
+      "registerCompactionStrategy",
+      "registerRetryPolicy",
+      "registerCommand",
+      "createExtensionKernel",
+      "createContributionRegistries({ duplicate: \"error\" })",
+      "Contributions stay inert",
+      "Host activation",
+      "Prism does not sandbox extension code",
+      "Prism does not auto-discover extensions",
+      "extension:<name>:setup",
+      "known-secret replacement, not general secret detection",
+      "Never put API keys",
+      "no background workers, watchers, network calls, provider calls, filesystem scans, or tool execution",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/extension-authoring.md missing ${phrase}`);
+    }
   });
 
   it("contribution_discovery_docs_cover_layout_trust_cli_flags_and_non_goals", () => {
@@ -435,6 +558,34 @@ describe("docs", () => {
     assert.ok(manifests.includes("contribution-discovery.md"), "configuration-and-manifests.md does not cross-reference discovery");
     assert.ok(trust.includes("contribution-discovery.md"), "settings-auth-trust-security.md does not cross-reference discovery");
     assert.ok(cli.includes("contribution-discovery.md"), "cli-rpc.md does not cross-reference discovery");
+  });
+
+  it("sdk_readiness_gate_is_one_network_free_command_and_docs_separate_live_tests", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    const docs = readFileSync("docs/release-and-install.md", "utf8");
+
+    assert.equal(
+      packageJson.scripts["sdk:ready"],
+      "npm run typecheck && npm test && npm run pack:dry-run",
+      "sdk:ready should compose existing typecheck/test/pack scripts only",
+    );
+
+    for (const phrase of [
+      "Full SDK readiness gate (typecheck + offline tests + pack)",
+      "`npm run sdk:ready`",
+      "It composes existing scripts only",
+      "examples/workspace typecheck",
+      "network-free core tests (docs/export/package/install smoke included)",
+      "workspace tests",
+      "pack dry-run",
+      "Optional live smoke tests stay separate from SDK readiness",
+      "PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present",
+      "remaining network-free",
+      "allowed to exceed the `npm test` budget",
+      "Run `npm run release:dry-run` only when you want the CI-style release verify subset without the extra typecheck",
+    ]) {
+      assert.ok(docs.includes(phrase), `release-and-install.md missing ${phrase}`);
+    }
   });
 
   it("release_and_install_page_is_linked_from_index", () => {
@@ -1093,6 +1244,9 @@ describe("docs", () => {
       "queryUsage",
       "secretRedactedFromLedger",
       "credentialNeverLogged",
+      "assertSessionStoreConforms",
+      "exerciseReadBranchPath: true",
+      "conformancePassed",
     ]) {
       assert.ok(file.includes(phrase), `examples/external-app-db-backed.ts missing ${phrase}`);
     }
@@ -1122,6 +1276,7 @@ describe("docs", () => {
 
     const examplesReadme = readFileSync("examples/README.md", "utf8");
     assert.ok(examplesReadme.includes("external-app-db-backed.ts"), "examples/README.md does not list external-app-db-backed.ts");
+    assert.ok(examplesReadme.includes("assertSessionStoreConforms"), "examples/README.md does not mention external-app conformance self-check");
   });
 
   it("readme_has_no_real_looking_secrets", () => {
@@ -1407,8 +1562,11 @@ describe("docs", () => {
       assert.ok(page.includes(phrase), `docs/database-persistence.md missing section ${phrase}`);
     }
 
-    // Performance adapter guidance.
+    // Production adapter readiness + performance guidance.
     for (const phrase of [
+      "Adapter readiness checklist",
+      "assertSessionStoreConforms(adapter, { exerciseReadBranchPath: true })",
+      "no ORM, migrations, connection pool, or database driver belongs in `@arnilo/prism`",
       "Adapter performance guidance",
       "Cursor pagination",
       "Batch appends",
@@ -1423,10 +1581,14 @@ describe("docs", () => {
 
     // Security locks.
     assert.ok(page.includes("never stores provider credentials"), "docs/database-persistence.md missing credentials lock");
+    assert.ok(page.includes("provider instances"), "docs/database-persistence.md missing provider-instance lock");
+    assert.ok(page.includes("credential resolvers"), "docs/database-persistence.md missing credential-resolver lock");
     assert.ok(page.includes("redacted"), "docs/database-persistence.md missing redaction mention");
 
-    // session-stores.md cross-links the schema.
+    // session-stores.md cross-links the schema and conformance baseline.
     assert.ok(sessionStores.includes("database-persistence.md"), "docs/session-stores.md does not link database-persistence.md");
+    assert.ok(sessionStores.includes("session-store-conformance.md"), "docs/session-stores.md does not link session-store-conformance.md");
+    assert.ok(sessionStores.includes("assertSessionStoreConforms"), "docs/session-stores.md does not mention assertSessionStoreConforms");
   });
 
   it("performance docs keep long-session and JSONL boundaries explicit", () => {
@@ -1443,6 +1605,9 @@ describe("docs", () => {
     }
     assert.ok(database.includes("readBranchPath"), "docs/database-persistence.md missing readBranchPath guidance");
     assert.ok(database.includes("cursor"), "docs/database-persistence.md missing cursor guidance");
+    for (const phrase of ["Production ledger adapter checklist", "monotonic event `sequence`", "RunRecord.idempotencyKey", "examples/external-app-db-backed.ts"]) {
+      assert.ok(runs.includes(phrase), `docs/runs-and-usage.md missing ${phrase}`);
+    }
     assert.ok(runs.includes("preserve per-run order before acknowledging a batch"), "docs/runs-and-usage.md missing batch ordering guidance");
   });
 

@@ -195,6 +195,14 @@ console.log(cacheUsageReport(usageRows.at(-1)?.usage));
 
 ## Extension and configuration notes
 
+### Production ledger adapter checklist
+
+- Treat `RunLedger` as write-only from Prism's point of view; expose replay/query APIs through `ProductionPersistenceStore` or host-owned reads.
+- Preserve ordering within each `runId`; allocate a monotonic event `sequence` before acknowledging durable writes.
+- Store `RunRecord.idempotencyKey` for host-level run deduplication, but never put credentials or provider clients in idempotency rows.
+- Redact before durable writes if the adapter transforms records after Prism redaction. Persist `redacted: true` when a redactor was active.
+- Test the full persistence path with the network-free [`examples/external-app-db-backed.ts`](../examples/external-app-db-backed.ts) pattern: run, event, tool-call, usage, branch checkout/fork, and resume queries.
+
 - `AgentConfig.runLedger` applies to every run of the agent. `RunOptions.runLedger` overrides it for a single run.
 - `AgentConfig.ownership` is the default ownership scope; `RunOptions.ownership` overrides it per run.
 - `AgentConfig.idempotencyKey` is the default idempotency key; `RunOptions.idempotencyKey` overrides it per run.
@@ -221,6 +229,7 @@ console.log(cacheUsageReport(usageRows.at(-1)?.usage));
 - [Agent events](agent-events.md): `AgentEvent` union and `session.subscribe()`.
 - [Tools](tools.md): `ToolResult`, `ToolCallContent`, and `dispatchToolCall()`.
 - [Database persistence](database-persistence.md): reference relational schema for runs, events, tool calls, and usage.
+- [Session store conformance](session-store-conformance.md): pair ledger tests with the session-store adapter baseline.
 - [Session stores](session-stores.md): `SessionStore` contract for session entries and branches.
 - [Credentials and redaction](credentials-and-redaction.md): `createSecretRedactor()` and redaction helpers.
 - [Provider caching](provider-caching.md): cache hints and `cacheUsageReport()` diagnostics.

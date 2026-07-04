@@ -15,7 +15,7 @@ Use these contracts when you write a database-backed `SessionStore` or a separat
 - durable tables for runs, events, tool calls, usage, and agent-definition versions
 - retention policies and migration records
 
-Do not use these contracts as a required runtime dependency. The agent/session runtime only requires `SessionStore`. `ProductionPersistenceStore` is an extension point for hosts that want richer querying. A network-free, runnable reference adapter that implements `SessionStore` + `RunLedger` + `ProductionPersistenceStore` reads against in-memory tables lives at [`examples/external-app-db-backed.ts`](../examples/external-app-db-backed.ts) — lift its contract shapes into your own SQL/NoSQL adapter.
+Do not use these contracts as a required runtime dependency. The agent/session runtime only requires `SessionStore`. `ProductionPersistenceStore` is an extension point for hosts that want richer querying. A network-free, runnable reference adapter that implements `SessionStore` + `RunLedger` + `ProductionPersistenceStore` reads against in-memory tables lives at [`examples/external-app-db-backed.ts`](../examples/external-app-db-backed.ts) — lift its contract shapes into your own SQL/NoSQL adapter. The example also calls `assertSessionStoreConforms(..., { exerciseReadBranchPath: true })`, so adapter authors have an executable baseline before adding database-specific tests.
 
 ## Inputs / request
 
@@ -183,6 +183,16 @@ The `usage` JSONB stores the `Usage` shape: input/output/total/cache tokens, cos
 | `prism_migrations` | `id` PK, `name`, `version`, `applied_at`, `applied_by`, `checksum`, `metadata` JSONB |
 
 Prism does not run migrations; hosts own migration tooling and use this table to record applied changes.
+
+## Adapter readiness checklist
+
+Before using a host database adapter in production:
+
+- Implement `SessionStore.append()` transactionally with duplicate-id rejection, `expectedParentId` existence validation, and `(session_id, expected_parent_id, idempotency_key)` retry deduplication.
+- Implement `readBranchPath(query)` for large sessions and run `assertSessionStoreConforms(adapter, { exerciseReadBranchPath: true })` from `@arnilo/prism/testing/session-store-conformance` in adapter tests.
+- Implement `RunLedger` writes for runs, events, tool calls, and usage if the host needs audit replay, billing, or observability; query those rows through `ProductionPersistenceStore` or host-specific read APIs.
+- Prove secrets stay out of durable rows: no provider credentials, provider instances, credential resolvers, API keys, raw provider clients, or unredacted payloads in session, branch, ledger, usage, idempotency, migration, or definition records.
+- Keep Prism core dependency-free: no ORM, migrations, connection pool, or database driver belongs in `@arnilo/prism`.
 
 ## Adapter performance guidance
 
@@ -386,6 +396,7 @@ const dbStore: ProductionPersistenceStore = {
 
 ## Related APIs
 
+- [Session store conformance](session-store-conformance.md): executable adapter baseline for append/idempotency/conflict/branch invariants.
 - [Migration guide](migration.md): before/after shapes for moving from in-memory/JSONL to this contract.
 - [Performance limits](performance.md): production sizing, subscriber queues, branch-read limits, and database adapter guidance.
 - [Session stores and branching](session-stores-and-branching.md): `SessionStore`, `SessionEntry`, branch helpers, and runtime branch semantics.

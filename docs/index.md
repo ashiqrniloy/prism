@@ -34,6 +34,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider subpath using native or injected `fetch` for Chat Completions streaming.
 
 ## Input, prompt, and context assembly
+- [SDK customization guide](customization.md): map provider resolution, middleware, context, builders, injectors, loops, compaction, retry, stores, and skills to explicit host-wired APIs.
 - [Input and prompt assembly](input-and-prompt-assembly.md): render tiny prompt templates and turn common host input, history, attachments, explicit resources, summaries, and tool results into messages with replaceable builders, provider-input assembly, legacy default order, and opt-in cache-aware ordering.
 - [System prompts](system-prompts.md): compose explicit user/package/app/run system prompt layers, auto-load the standard `AGENTS.md` (workspace) / `SYSTEM.md` prompt files via the Node `loadSystemPromptFiles` loader (trust-gated for `AGENTS.md`), and append `SYSTEM.md` → per-agent `AGENT.md` body → repo `AGENTS.md` layers from a discovered agent bundle via `resolveAgentBundle`.
 - [Instruction injection](instruction-injection.md): register package injectors that layer redacted instructions/context blocks without granting tools, permissions, or resource escapes.
@@ -46,6 +47,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Contribution discovery (workspace)](contribution-discovery.md): opt-in, realpath-contained directory scanner turning `SKILL.md`/`manifest.json` into inert `DiscoveredContribution` envelopes the host registers — no `import()`, no auto-activate, no provider scanning. (Per-agent `AGENT.md` bundles live under an app-controlled `configRoot`; see [Agent definitions](agent-definitions.md).)
 - [Contribution registries](contribution-registries.md): explicit host-owned registries for extension/package contributions without hidden globals, with `duplicate: "error"` strict mode for provider/model/tool/skill shadowing prevention.
 - [Extension kernel and event bus](extensions.md): load host-provided extensions in order, register contributions, emit lifecycle events, and isolate extension errors.
+- [Extension authoring guide](extension-authoring.md): publish third-party extension packages that register inert contributions and show host-owned activation, trust, permissions, redaction, and no-sandbox boundaries.
 - [Middleware hooks](middleware-hooks.md): ordered hook registry for provider, input, context, tool, retry, compaction, and session lifecycle boundaries.
 
 ## Configuration/manifests
@@ -57,6 +59,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [CLI/RPC](cli-rpc.md): Run print/json modes and LF-delimited RPC over the public AgentSession runtime, including branch-handle results, fixed `forkSession`, and `checkout`.
 
 ## Security and credentials
+- [Host security guide](host-security.md): fail-closed checklist for credentials, settings, redaction, trust roots, permission policies, persistence, extension loading, and tool validation.
 - [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, redaction controls, host-owned `AgentConfig.settings`/`credentials`, and security-boundary hardening summary.
 - [Credentials and redaction](credentials-and-redaction.md): compose explicit credential resolver order, use caller-supplied env objects/OAuth refresh helpers, avoid eager `AgentConfig.credentials` resolution, and redact known secret values.
 
