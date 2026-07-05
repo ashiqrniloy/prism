@@ -143,6 +143,17 @@ Middleware can transform `tool_call` and `tool_result` payloads, but dispatch re
 
 Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set. Skills may reference `toolNames`, but `resolveActiveSkills()` only checks those names against the host-active tool list; it does not register, allow, permit, or execute tools. A missing `toolNames` dependency fails before the provider turn and writes no tool result.
 
+### Per-run tool scoping
+
+`session.run()` intentionally has no `RunOptions.tools` or `RunOptions.toolFilter`. Scope tools by building the active `ToolRegistry` for the agent/session, by resolving declarative `AgentDefinition.tools`, or by using `PermissionPolicy` / `ToolValidator` to fail closed at dispatch time. Skills do not grant tool access; `toolNames` only validates that host-active tools exist.
+
+```ts
+const activeTools = createToolRegistry([searchTool]);
+const agent = createAgent({ model, provider, tools: activeTools, permission, validator });
+```
+
+Need different tools for one request? Build a short-lived agent/session with a narrower registry, or block extra calls with `PermissionPolicy` / `RunOptions.validate`. No extra per-run tool API exists yet; add one only when host apps need it.
+
 ### Runtime-supplied validators
 
 `AgentConfig.validator?` and `RunOptions.validate?` expose the same `ToolValidator` seam that `DispatchToolCallOptions.validate` already uses. The runtime threads `validate: RunOptions.validate ?? AgentConfig.validator` into every `dispatchToolCall` it issues during the tool loop, so an app can supply argument validation without taking ownership of dispatch itself. `RunOptions.validate` overrides `AgentConfig.validator` on a per-run basis (RunOptions wins). When neither is set, dispatch runs unmodified.

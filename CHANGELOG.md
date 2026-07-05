@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-07-05
+
 ### Added
 
 - Added `LICENSE` (MIT) and `CHANGELOG.md` to the published `prism` package.
@@ -19,8 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `dist/**/*.map` from published tarballs; source maps remain emitted locally
   for debugging but are no longer shipped.
 - Core tarball now ships the `/docs` hub.
-- Made `prism` a required peer dependency for all first-party workspace packages; it is no longer optional. The peer range remains `0.0.1` and will widen to `^1.0.0` at the 1.x stable release.
-- Pinned the no-network `npm test` budget at < 30s on Node 20 (measured baseline ~22s); recorded in `roadmap.md` Phase 17.
+- Made `prism` a required peer dependency for all first-party workspace packages; it is no longer optional. The peer range remains `0.0.2` and will widen to `^1.0.0` at the 1.x stable release.
+- Pinned the no-network `npm test` budget at < 60s on Node 20 (measured baseline ~45s) after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests.
 
 ## [0.0.1] - 2026-06-22
 

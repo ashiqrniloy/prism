@@ -47,6 +47,16 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "systemPromptContributionKey", "toolCallContent", "version", "waitForRetry",
 ];
 
+const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
+  "AIProvider", "ProviderRequest", "ProviderEvent", "Message", "ContentBlock", "Usage",
+  "ModelConfig", "Agent", "AgentConfig", "AgentSession", "RunOptions",
+  "ToolDefinition", "ToolRegistry", "ToolResult", "ContextProvider", "Skill", "SkillRegistry",
+  "Extension", "ExtensionAPI", "ProviderPackage",
+  "SessionEntry", "SessionStore", "RunLedger", "ProductionPersistenceStore",
+  "CompactionStrategy", "RetryPolicy", "InputBuilder", "PromptBuilder", "InstructionInjector",
+  "CredentialResolver",
+];
+
 const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "AgentInput", "ApplyCacheControlOptions", "AssembleProviderInputOptions",
   "CacheControlValue", "CacheControlledContentBlock", "CacheControlledMessage",
@@ -180,6 +190,16 @@ describe("public-export contract (build-time, pre-pack)", () => {
     const dts = readFileSync(join(repoRoot, "dist/index.d.ts"), "utf8");
     const missing = FROZEN_TYPE_EXPORTS.filter((name) => !new RegExp(`\\b${name}\\b`).test(dts));
     assert.deepEqual(missing, [], `built dist/index.d.ts is missing type exports: ${missing.join(", ")}`);
+  });
+
+  it("root SDK contract type surface keeps important implementer contracts", () => {
+    const indexDts = readFileSync(join(repoRoot, "dist/index.d.ts"), "utf8");
+    const contractsDts = readFileSync(join(repoRoot, "dist/contracts.d.ts"), "utf8");
+    assert.ok(indexDts.includes('export type * from "./contracts.js"'), "root index.d.ts must re-export contract types");
+    const missing = REQUIRED_SDK_CONTRACT_TYPES.filter(
+      (name) => !new RegExp(`export\\s+(?:interface|type|class)\\s+${name}\\b`).test(contractsDts),
+    );
+    assert.deepEqual(missing, [], `dist/contracts.d.ts is missing SDK contract types: ${missing.join(", ")}`);
   });
 
   it("phase39_public_protocol_exports_and_types_do_not_drift", async () => {

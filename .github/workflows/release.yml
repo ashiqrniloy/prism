@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: verify (build, test, packaging + install-smoke guards, pack dry-run)
+    name: verify (SDK readiness: typecheck, test, pack dry-run)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,16 +17,38 @@ jobs:
           node-version: "24"
           cache: "npm"
       - run: npm ci
-      # npm test builds core + all workspaces first, so no separate build step.
-      # Budget: < 30s (baseline ~22s on Node 20); timeout guards hangs without flapping.
+      # sdk:ready runs typecheck, network-free tests, and pack dry-run.
+      # npm test budget is < 60s; sdk:ready can exceed it because it adds typecheck + pack.
+      # Timeout is a hang backstop, not the performance budget.
       # Node 24: docs.test.ts runs examples/*.ts via native type stripping (Node < 22.6 can't).
-      - run: npm test
+      - run: npm run sdk:ready
+        timeout-minutes: 5
+
+  node20-compat:
+    name: node20 compat (build + public import smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      # Node 20 engine support: avoid docs examples, which need Node >=22.6 native TS stripping.
+      - run: |
+          npm run build
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+          for (const target of Object.values(pkg.exports).map((entry) => entry.default)) {
+            await import(new URL(target, import.meta.url));
+          }
+          NODE
         timeout-minutes: 3
-      - run: npm run pack:dry-run
 
   publish:
     name: publish (dry-run unless NPM_TOKEN is set)
-    needs: verify
+    needs: [verify, node20-compat]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

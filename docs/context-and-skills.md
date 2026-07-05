@@ -102,13 +102,25 @@ const skills = resolveActiveSkills({ registry: skillRegistry, names: ["brief"], 
 
 ## Runtime skill selection and activation
 
-The agent/session runtime resolves skills per run and wires each active skill's `context` into the assembled provider input. Selection precedence mirrors the other `RunOptions` overrides (`redactor`, `validate`):
+The agent/session runtime resolves skills per run and wires each active skill's `context` into the assembled provider input. Runtime `AgentConfig.skills` and declarative `AgentDefinition.skills` have different defaults:
+
+| Surface | Config shape | Run override | Active skills |
+| --- | --- | --- | --- |
+| Runtime agent | `AgentConfig.skills: SkillRegistry` | `RunOptions.activeSkills: ["brief"]` | Named skills only, resolved with `resolveActiveSkills({ registry, names, tools })`. |
+| Runtime agent | `AgentConfig.skills: SkillRegistry` | no `activeSkills` / no `skills` | All registry skills (`SkillRegistry.list()`). |
+| Runtime agent | `AgentConfig.skills: Skill[]` | `RunOptions.skills: [...]` | Override array only. |
+| Runtime agent | `AgentConfig.skills: Skill[]` | no `RunOptions.skills` | All configured array skills. |
+| Declarative definition | `AgentDefinition.skills: ["brief"]` | later runtime `activeSkills` optional | Listed names only. |
+| Declarative definition | omitted `AgentDefinition.skills` | `activateAllCapabilities` false/default | No skills active. |
+| Declarative definition | omitted `AgentDefinition.skills` | `activateAllCapabilities: true` | All registry skills, migration-only. |
+
+Runtime selection precedence mirrors the other `RunOptions` overrides (`redactor`, `validate`):
 
 1. `AgentConfig.skills` is a `SkillRegistry` and `RunOptions.activeSkills: readonly string[]` (names) is set → the runtime calls `resolveActiveSkills({ registry, names, tools })`.
 2. `RunOptions.skills: readonly Skill[]` is set → that array replaces `AgentConfig.skills` for the run. This override exists for the case where `AgentConfig.skills` is a plain `Skill[]` (no registry), so name resolution is impossible.
-3. Neither set → all configured skills are active (current behavior; `SkillRegistry.list()` or the plain array as-is).
+3. Neither set → all configured runtime skills are active (current behavior; `SkillRegistry.list()` or the plain array as-is). This is not the declarative default.
 
-names win when a registry exists. `RunOptions.activeSkills` cannot be used against a plain-array `AgentConfig.skills` — use `RunOptions.skills` instead.
+names win when a registry exists. `RunOptions.activeSkills` cannot be used against a plain-array `AgentConfig.skills` — use `RunOptions.skills` instead. Use `RunOptions.skills: []` for an explicit no-skills runtime run.
 
 Each active skill contributes two things the runtime now wires together:
 

@@ -144,7 +144,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.1", `${pkg.name} @arnilo/prism peer must be 0.0.1`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.2", `${pkg.name} @arnilo/prism peer must be 0.0.2`);
           assert.ok(
             !manifest.peerDependenciesMeta,
             `${pkg.name} must not mark the @arnilo/prism peer optional (peerDependenciesMeta should be absent)`,
@@ -181,7 +181,7 @@ describe("packaging guard", () => {
           assert.ok(want, `${pkg.name} not in expected umbrella map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.1", `${pkg.name} dependency must be pinned to 0.0.1`);
+            assert.equal(v, "0.0.2", `${pkg.name} dependency must be pinned to 0.0.2`);
           }
         });
       }
@@ -210,9 +210,9 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.1", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.2", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.1", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.2", "@arnilo/prism-all must hard-depend on provider umbrella");
   });
 
   it("workspace dependency tree is clean (npm ls --all --depth=0 exits 0)", () => {

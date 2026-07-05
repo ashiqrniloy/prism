@@ -563,12 +563,20 @@ describe("docs", () => {
   it("sdk_readiness_gate_is_one_network_free_command_and_docs_separate_live_tests", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
     const docs = readFileSync("docs/release-and-install.md", "utf8");
+    const workflow = readFileSync(".github/workflows/release.yml", "utf8");
 
     assert.equal(
       packageJson.scripts["sdk:ready"],
       "npm run typecheck && npm test && npm run pack:dry-run",
       "sdk:ready should compose existing typecheck/test/pack scripts only",
     );
+    assert.equal(packageJson.scripts["release:dry-run"], "npm run sdk:ready", "release:dry-run should mirror CI verify");
+    assert.ok(workflow.includes("npm run sdk:ready"), "release workflow verify must run sdk:ready");
+    assert.ok(!workflow.includes("run: npm test\n"), "release workflow verify must not skip typecheck by running npm test directly");
+    assert.ok(workflow.includes('node-version: "20"'), "release workflow must include Node 20 compatibility coverage");
+    assert.ok(workflow.includes("node20-compat"), "release workflow must name the Node 20 compatibility job");
+    assert.ok(workflow.includes("Object.values(pkg.exports)"), "Node 20 compatibility job must import public exports");
+    assert.ok(workflow.includes("needs: [verify, node20-compat]"), "publish must wait for Node 20 compatibility");
 
     for (const phrase of [
       "Full SDK readiness gate (typecheck + offline tests + pack)",
@@ -582,7 +590,14 @@ describe("docs", () => {
       "PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present",
       "remaining network-free",
       "allowed to exceed the `npm test` budget",
-      "Run `npm run release:dry-run` only when you want the CI-style release verify subset without the extra typecheck",
+      "Local release dry-run mirrors the GitHub Actions `verify` job and delegates to the SDK readiness gate",
+      "`npm run release:dry-run` is an alias for the same gate",
+      "The GitHub Actions `verify` job runs `npm ci` and `npm run sdk:ready`",
+      "node20-compat",
+      "imports every public root `exports` default target",
+      "declared `engines.node >=20`",
+      "Node >=22.6 native TypeScript stripping",
+      "public export imports on Node 20",
     ]) {
       assert.ok(docs.includes(phrase), `release-and-install.md missing ${phrase}`);
     }
@@ -595,6 +610,18 @@ describe("docs", () => {
     for (const phrase of ["required `@arnilo/prism` peer", "map-retention knob", "offline test budget", "sideEffects", "peerDependencies"]) {
       assert.ok(docs.includes(phrase), `docs/release-and-install.md missing ${phrase}`);
     }
+  });
+
+  it("release_and_install_docs_list_every_core_export_subpath_and_current_session_api", () => {
+    const docs = readFileSync("docs/release-and-install.md", "utf8");
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown> };
+    for (const key of Object.keys(pkg.exports)) {
+      const spec = key === "." ? "@arnilo/prism" : `@arnilo/prism${key.slice(1)}`;
+      assert.ok(docs.includes(`\`${spec}\``), `docs/release-and-install.md missing export specifier ${spec}`);
+    }
+    assert.ok(docs.includes("createAgent({ model, provider })"), "release docs must use object-shaped createAgent config");
+    assert.ok(docs.includes("createAgentSession({ agent })"), "release docs must use object-shaped createAgentSession config");
+    assert.ok(!docs.includes("createAgentSession(agent,"), "release docs still show obsolete positional createAgentSession API");
   });
 
   it("release_and_install_docs_list_every_live_test_gate_env_var", () => {
@@ -834,11 +861,23 @@ describe("docs", () => {
     }
   });
 
-  it("provider_packages_docs_cover_cache_policy_and_request_options", () => {
+  it("provider_packages_docs_cover_cache_policy_request_options_and_live_smokes", () => {
     const docs = readFileSync("docs/provider-packages.md", "utf8");
-    for (const phrase of ["cache policy", "createSessionCachePolicy", "ProviderRequest.options", "cacheRetention"]) {
+    for (const phrase of [
+      "cache policy",
+      "createSessionCachePolicy",
+      "ProviderRequest.options",
+      "cacheRetention",
+      "real opt-in live smoke tests",
+      "PRISM_LIVE_PROVIDER_TESTS=1",
+      "provider-specific API key",
+      "no-secret-leak assertions",
+      "skip by default",
+      "never run in release verification",
+    ]) {
       assert.ok(docs.includes(phrase), `docs/provider-packages.md missing ${phrase}`);
     }
+    assert.ok(!docs.includes("live-test placeholder"), "docs/provider-packages.md still calls provider live tests placeholders");
   });
 
   it("llm_compaction_max_output_docs_match_provider_wire_fields", () => {
@@ -1320,14 +1359,17 @@ describe("docs", () => {
     );
   });
 
-  it("tools_docs_cover_runtime_validator_seam", () => {
+  it("tools_docs_cover_runtime_validator_seam_and_per_run_tool_scoping", () => {
     const tools = readFileSync("docs/tools.md", "utf8");
     const rootExports = readFileSync("src/index.ts", "utf8");
     const contracts = readFileSync("src/contracts.ts", "utf8");
+    const runOptions = contracts.match(/export interface RunOptions \{[\s\S]*?^\}/m)?.[0] ?? "";
 
     assert.match(rootExports, /\bToolValidator\b/, "src/index.ts does not export ToolValidator");
     assert.ok(contracts.includes("validator?: ToolValidator"), "AgentConfig does not declare validator");
     assert.ok(contracts.includes("validate?: ToolValidator"), "RunOptions does not declare validate");
+    assert.ok(!runOptions.includes("tools?:"), "RunOptions unexpectedly declares per-run tools");
+    assert.ok(!runOptions.includes("toolFilter?:"), "RunOptions unexpectedly declares per-run toolFilter");
 
     for (const phrase of [
       "Runtime-supplied validators",
@@ -1337,6 +1379,12 @@ describe("docs", () => {
       "validation_failed",
       "SecretRedactor",
       "runs after the permission assertion",
+      "Per-run tool scoping",
+      "no `RunOptions.tools` or `RunOptions.toolFilter`",
+      "active `ToolRegistry`",
+      "declarative `AgentDefinition.tools`",
+      "PermissionPolicy",
+      "Skills do not grant tool access",
     ]) {
       assert.ok(tools.includes(phrase), `docs/tools.md missing ${phrase}`);
     }
@@ -1355,6 +1403,14 @@ describe("docs", () => {
       "Runtime skill selection and activation",
       "RunOptions.activeSkills",
       "RunOptions.skills",
+      "Runtime `AgentConfig.skills` and declarative `AgentDefinition.skills` have different defaults",
+      "All registry skills (`SkillRegistry.list()`)",
+      "omitted `AgentDefinition.skills`",
+      "No skills active",
+      "activateAllCapabilities: true",
+      "migration-only",
+      "This is not the declarative default",
+      "Use `RunOptions.skills: []` for an explicit no-skills runtime run",
       "names win when a registry exists",
       "Skill.context",
       "after",
