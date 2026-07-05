@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: verify (SDK readiness: typecheck, test, pack dry-run)
+    name: "verify (SDK readiness: typecheck, test, pack dry-run)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
