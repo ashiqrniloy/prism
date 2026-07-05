@@ -5,7 +5,7 @@ Umbrella package that installs the **Prism core runtime** plus all first-party *
 ## What it installs
 
 - [`@arnilo/prism`](https://www.npmjs.com/package/@arnilo/prism) — core runtime, contracts, registries, CLI
-- [`@arnilo/prism-providers`](https://www.npmjs.com/package/@arnilo/prism-providers) — all 5 provider adapters (openai, opencode-go, openrouter, zai, kimi)
+- [`@arnilo/prism-providers`](https://www.npmjs.com/package/@arnilo/prism-providers) — all 6 provider adapters (openai, opencode-go, openrouter, zai, kimi, neuralwatt)
 - [`@arnilo/prism-compaction`](https://www.npmjs.com/package/@arnilo/prism-compaction) — both compaction strategies (llm, observational-memory)
 
 ## Usage

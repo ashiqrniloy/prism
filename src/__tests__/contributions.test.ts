@@ -117,6 +117,14 @@ describe("contribution registry", () => {
     assert.throws(() => registry.resolve("missing"), /Unknown tool: missing/);
   });
 
+  it("strict mode rejects duplicate contribution keys", () => {
+    const registry = createContributionRegistry<ToolDefinition>({ label: "tool", duplicate: "error" });
+
+    registry.register("echo", tool);
+
+    assert.throws(() => registry.register("echo", tool), /Duplicate tool: echo/);
+  });
+
   it("registry bundles cover phase 2 categories", () => {
     const registries = createContributionRegistries();
 
@@ -159,6 +167,16 @@ describe("contribution registry", () => {
     assert.equal(registries.authMethods.resolve("mock\0api_key"), authMethod);
     assert.equal(registries.providerRequestPolicies.resolve("cache"), requestPolicy);
     assert.equal(registries.systemPromptContributions.resolve("demo-prompt"), promptContribution);
+  });
+
+  it("strict registry bundle rejects duplicate keys", () => {
+    const registries = createContributionRegistries({ duplicate: "error" });
+
+    registries.tools.register(tool.name, tool);
+    registries.providers.register(provider);
+
+    assert.throws(() => registries.tools.register(tool.name, tool), /Duplicate tool: echo/);
+    assert.throws(() => registries.providers.register(provider), /Duplicate provider: mock/);
   });
 
   it("separate registry bundles do not share state", () => {

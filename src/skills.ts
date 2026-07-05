@@ -1,4 +1,5 @@
 import type { Skill, SkillRegistry, ToolDefinition } from "./contracts.js";
+import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 
 export interface ResolveActiveSkillsOptions {
   readonly registry: SkillRegistry;
@@ -6,11 +7,14 @@ export interface ResolveActiveSkillsOptions {
   readonly tools?: readonly ToolDefinition[];
 }
 
-export function createSkillRegistry(skills: readonly Skill[] = []): SkillRegistry {
+export interface SkillRegistryOptions extends DuplicateRegistrationOptions {}
+
+export function createSkillRegistry(skills: readonly Skill[] = [], options: SkillRegistryOptions = {}): SkillRegistry {
   const byName = new Map<string, Skill>();
 
   const registry: SkillRegistry = {
     register(skill) {
+      assertCanRegister(byName, skill.name, "skill", skill.name, options.duplicate);
       byName.set(skill.name, skill);
     },
     get(name) {

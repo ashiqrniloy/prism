@@ -33,7 +33,7 @@ Key exports:
 | `thinkingLevel` | Passed as `ProviderRequest.options.extra.thinkingLevel`. |
 | `reserveTokens` | Output budget basis; defaults to `16384`. |
 | `keepRecentTokens` | Approximate recent-token budget; defaults to `20000`. |
-| `maxSummaryTokens` / `maxOutputTokens` | Sets generic `model.parameters.maxTokens` and truncates oversized collected summaries. |
+| `maxSummaryTokens` / `maxOutputTokens` | Computes the summary output budget, writes it to `summaryModel/model.parameters.maxTokens`, and truncates oversized collected summaries. First-party providers serialize that generic field to their real request field (`max_output_tokens` for OpenAI Responses, `max_tokens` for OpenAI-compatible/Anthropic-style providers). |
 | `maxToolResultChars` | Tool-result JSON truncation limit; defaults to `2000`. |
 | `trackFileOperations`, `includeFileOperations` | Control file path extraction and final summary blocks. |
 | `secrets` | Exact strings to redact from serialized prompts and final summaries. |
@@ -61,12 +61,15 @@ import { createLlmCompactionStrategy } from "@arnilo/prism-compaction-llm";
 
 const strategy = createLlmCompactionStrategy({
   provider: summaryProvider,
-  model: { provider: "mock", model: "cheap-summary" },
+  model: { provider: "openai", model: "gpt-4.1-mini" },
   keepRecentTokens: 20_000,
   reserveTokens: 16_384,
+  maxOutputTokens: 800,
   providerOptions: { cacheRetention: "short" },
   customInstructions: "Focus on current files and failing tests.",
 });
+// Provider request model includes: { parameters: { maxTokens: 800 } }.
+// First-party serializers map it to max_output_tokens/max_tokens on the wire.
 
 await session.compact({ strategy, secrets: [apiKey] });
 ```
@@ -99,7 +102,7 @@ const agent = createAgent({ model, provider, compaction: { strategy, thresholdEn
 Registration only contributes an inert strategy. The host must resolve and pass it to runtime config.
 
 ## Security and performance notes
-Preparation is O(n) over branch entries and uses only arrays, strings, and JSON serialization. The strategy makes only the needed provider call(s): one history summary plus one split-turn prefix summary when needed. It does not discover credentials, read files, start background jobs, or add provider SDK dependencies. Redaction is exact-string only; pass every known secret that may appear in history or provider output.
+Preparation is O(n) over branch entries and uses only arrays, strings, and JSON serialization. Output-budget calculation is O(1) and does not add an extra summarization call. The strategy makes only the needed provider call(s): one history summary plus one split-turn prefix summary when needed. It does not discover credentials, read files, start background jobs, or add provider SDK dependencies. Redaction is exact-string only; pass every known secret that may appear in history or provider output.
 
 ## Related APIs
 - [Compaction and retry policies](compaction-and-retry.md): core compaction strategy surface.

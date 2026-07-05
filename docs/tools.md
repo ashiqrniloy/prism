@@ -20,7 +20,7 @@ Do not use the harness as a sandbox, package loader, app-tool pack, permission p
 ## Inputs / request
 
 ```ts
-createToolRegistry(tools?: readonly ToolDefinition[]): ToolRegistry
+createToolRegistry(tools?: readonly ToolDefinition[], options?: { duplicate?: "replace" | "error" }): ToolRegistry
 filterTools(tools: readonly ToolDefinition[], filter?: ToolFilter | readonly ToolFilter[]): readonly ToolDefinition[]
 dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult>
 ```
@@ -29,7 +29,7 @@ dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult>
 
 | Method | Input | Result |
 | --- | --- | --- |
-| `register(tool)` | `ToolDefinition` | Stores or replaces by `tool.name`. |
+| `register(tool)` | `ToolDefinition` | Stores/replaces by `tool.name`; throws `Duplicate tool: <name>` when `duplicate: "error"`. |
 | `get(name)` | tool name | Returns the tool or `undefined`. |
 | `resolve(name)` | tool name | Returns the tool or throws `Unknown tool: <name>`. |
 | `list()` | none | Returns tools in insertion order. |
@@ -52,13 +52,16 @@ When multiple filters are provided, each non-empty allow list must include the t
 | `context` | `ToolExecutionContext` with session/run/tool call ids, signal, metadata, and optional progress callback. |
 | `filter` | Optional exact allow/deny filter or ordered filters. |
 | `middleware` | Optional `MiddlewareRegistry`; `tool_call` runs before validation/execution and `tool_result` runs after execution. |
-| `validate` | Optional host validator returning `void`, a message string, or `ErrorInfo`. |
+| `validate` | Optional host validator returning `void`, a message string, or `ErrorInfo`. A non-`void` return blocks dispatch with reason `validation_failed` (redacted). Runs after the permission assertion and before `tool.execute()`. |
 | `emit` | Optional `AgentEvent` callback for lifecycle events. |
 | `secrets` | Known secret values to redact from thrown tool errors. |
+| `redactor` | Optional `SecretRedactor` used to redact tool-call ledger records. |
+| `ledger` | Optional `RunLedger` adapter; when set, `dispatchToolCall` appends `ToolCallRecord` rows. |
+| `ownership` | Optional `OwnershipScope` copied into each `ToolCallRecord`. |
 
 ## Outputs / response / events
 
-Registry calls return plain `ToolDefinition` objects. `resolve()` fails closed for unknown names before any tool can execute. Filtering returns only tools already present in the input list; it never creates or enables new tools.
+Registry calls return plain `ToolDefinition` objects. `resolve()` fails closed for unknown names before any tool can execute. Duplicate registrations replace deterministically by default for compatibility; `createToolRegistry([], { duplicate: "error" })` rejects silent shadowing with `Duplicate tool: <name>`. Filtering returns only tools already present in the input list; it never creates or enables new tools.
 
 `dispatchToolCall()` returns a `ToolResult`. Unknown tools, denied tools, invalid arguments, validator failures, and thrown tool errors return a result with `error` and do not throw by default.
 
@@ -71,6 +74,20 @@ Dispatch can emit these `AgentEvent` types:
 | `tool_execution_progress` | When the tool calls `context.progress()`. |
 | `tool_execution_finished` | After successful execution and `tool_result` middleware. |
 | `tool_execution_error` | When `tool.execute()` throws. |
+
+### Tool-call ledger rows
+
+When `options.ledger` is set, `dispatchToolCall()` also appends a `ToolCallRecord` for each lifecycle transition. The runtime passes each record through `redactRunLedgerRecord(record, options.redactor)` before handing it to the adapter. Rows are written for:
+
+| Status | When | Extra fields |
+| --- | --- | --- |
+| `started` | After `tool_execution_started` | `startedAt`, `arguments` |
+| `started` (progress snapshot) | On each `context.progress()` call | `progress`, `progressMetadata`, `progressAt` |
+| `finished` | After `tool_execution_finished` | `finishedAt`, `result` |
+| `error` | After `tool_execution_error` | `finishedAt`, `result` with `error` |
+| `blocked` | On any blocked path | `finishedAt`, `reason`, `result` with `error` |
+
+Blocked reasons are `unknown_tool`, `tool_denied`, `invalid_arguments`, `permission_denied`, and `validation_failed`. Progress snapshots reuse status `started` because the tool call is still in flight.
 
 ## Request/response example
 
@@ -124,13 +141,52 @@ const activeTools = createToolRegistry([contributions.tools.resolve("echo")]);
 
 Middleware can transform `tool_call` and `tool_result` payloads, but dispatch re-checks active registry lookup, filters, and object arguments after `tool_call` middleware. Middleware cannot grant permission by changing a tool name.
 
-Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set. Skills may reference `toolNames`, but `resolveActiveSkills()` only checks those names against the host-active tool list; it does not register, allow, or execute tools.
+Configuration can carry allow/deny names, but Prism does not define a policy class or hidden global active tool set. Skills may reference `toolNames`, but `resolveActiveSkills()` only checks those names against the host-active tool list; it does not register, allow, permit, or execute tools. A missing `toolNames` dependency fails before the provider turn and writes no tool result.
+
+### Per-run tool scoping
+
+`session.run()` intentionally has no `RunOptions.tools` or `RunOptions.toolFilter`. Scope tools by building the active `ToolRegistry` for the agent/session, by resolving declarative `AgentDefinition.tools`, or by using `PermissionPolicy` / `ToolValidator` to fail closed at dispatch time. Skills do not grant tool access; `toolNames` only validates that host-active tools exist.
+
+```ts
+const activeTools = createToolRegistry([searchTool]);
+const agent = createAgent({ model, provider, tools: activeTools, permission, validator });
+```
+
+Need different tools for one request? Build a short-lived agent/session with a narrower registry, or block extra calls with `PermissionPolicy` / `RunOptions.validate`. No extra per-run tool API exists yet; add one only when host apps need it.
+
+### Runtime-supplied validators
+
+`AgentConfig.validator?` and `RunOptions.validate?` expose the same `ToolValidator` seam that `DispatchToolCallOptions.validate` already uses. The runtime threads `validate: RunOptions.validate ?? AgentConfig.validator` into every `dispatchToolCall` it issues during the tool loop, so an app can supply argument validation without taking ownership of dispatch itself. `RunOptions.validate` overrides `AgentConfig.validator` on a per-run basis (RunOptions wins). When neither is set, dispatch runs unmodified.
+
+The validator runs after the permission assertion and before `tool.execute()`. A `void` return lets the tool run. A non-`void` return (a string message or `ErrorInfo`) blocks the call: `dispatchToolCall` emits `tool_execution_blocked` with reason `validation_failed` and a redacted error, and the tool is not executed. This is the same redaction path as thrown tool errors, so a validator that echoes a secret is scrubbed through the active `SecretRedactor`. Composition of multiple validators is deferred (YAGNI); wrap or call both in a host-supplied function if needed.
+
+```ts
+import { createAgent, createSecretRedactor, type ToolValidator } from "@arnilo/prism";
+
+const validator: ToolValidator = (_tool, args) =>
+  typeof args.query === "string" && args.query.length <= 1000
+    ? undefined
+    : "query too long";
+
+const agent = createAgent({
+  model,
+  provider,
+  tools,
+  // applied to every run of this agent
+  validator,
+  // redacts validator output (and tool errors) the same way as secrets
+  redactor: createSecretRedactor([process.env.APP_KEY!]),
+});
+
+// override per run only
+await session.run(input, { validate: (_t, args) => args.dry ? "dry-run blocked" : undefined });
+```
 
 ## Security and performance notes
 
-- Tool lookup uses a `Map` for O(1) name lookup.
+- Tool lookup uses a `Map` for O(1) name lookup. Strict duplicate mode adds one O(1) `Map.has()` check during registration only.
 - Filtering is exact-name matching over the provided tools and rules.
-- Unknown, denied, malformed, and validator-blocked calls fail closed.
+- Unknown, denied, malformed, duplicate-in-strict-mode, and validator-blocked calls fail closed.
 - Tool arguments must be JSON object-shaped before validation or execution.
 - `parameters` is pass-through metadata; hosts own schema interpretation and validation.
 - Prism does not sandbox host tools and does not include built-in app tools.
@@ -148,4 +204,4 @@ Configuration can carry allow/deny names, but Prism does not define a policy cla
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.
 - [Observational memory compaction package](compaction-observational-memory.md): optional exact-id recall tool factory.
 
-`DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).
+`DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. `AgentConfig.validator`/`RunOptions.validate` run after this guard; their output is redacted through the active `SecretRedactor`. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

@@ -23,6 +23,7 @@ const packages = [
   { dir: "packages/provider-openrouter", name: "@arnilo/prism-provider-openrouter" },
   { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
   { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
+  { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
   // Pure-manifest umbrellas (no dist/exports): pack + install, but skip dynamic-import.
@@ -147,16 +148,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.1.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.2.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.0.1.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.0.2.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.0.1.tgz"),
-      `expected 'arnilo-prism-0.0.1.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.0.2.tgz"),
+      `expected 'arnilo-prism-0.0.2.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.0.1.tgz", "arnilo-prism-compaction-0.0.1.tgz", "arnilo-prism-all-0.0.1.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.0.2.tgz", "arnilo-prism-compaction-0.0.2.tgz", "arnilo-prism-all-0.0.2.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

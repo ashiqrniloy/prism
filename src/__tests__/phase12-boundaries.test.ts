@@ -46,8 +46,26 @@ describe("phase 12 provider package boundaries", () => {
   it("phase12_live_tests_are_skipped_by_default", () => {
     for (const name of packages) {
       const text = readFileSync(`packages/provider-${name}/src/__tests__/live.test.ts`, "utf8");
-      assert.ok(text.includes("PRISM_LIVE_PROVIDER_TESTS"));
-      assert.ok(text.includes("skip:"));
+      assert.ok(text.includes("PRISM_LIVE_PROVIDER_TESTS"), `${name} live test must reference PRISM_LIVE_PROVIDER_TESTS`);
+      assert.ok(text.includes("skip:"), `${name} live test must use skip:`);
+    }
+  });
+
+  it("phase12_live_tests_reference_provider_specific_api_key_env", () => {
+    const keyEnv: Record<string, string> = {
+      openai: "OPENAI_API_KEY",
+      "opencode-go": "OPENCODE_API_KEY",
+      openrouter: "OPENROUTER_API_KEY",
+      zai: "ZAI_API_KEY",
+      kimi: "KIMI_API_KEY",
+    };
+    for (const name of packages) {
+      const text = readFileSync(`packages/provider-${name}/src/__tests__/live.test.ts`, "utf8");
+      assert.ok(text.includes(keyEnv[name]!), `${name} live test must reference ${keyEnv[name]}`);
+      // Live tests must exercise the real conformance helpers, not just skip.
+      assert.ok(text.includes("assertProviderStreamConforms"), `${name} live test must use assertProviderStreamConforms`);
+      assert.ok(text.includes("assertNoSecretLeak"), `${name} live test must use assertNoSecretLeak`);
+      assert.ok(text.includes("assertAbortIsObserved"), `${name} live test must use assertAbortIsObserved`);
     }
   });
 
@@ -84,7 +102,13 @@ describe("phase 12 provider package boundaries", () => {
   it("phase12_core_has_no_new_requested_provider_runtime_behavior", () => {
     const text = files("src", (path) => path.endsWith(".ts") && !path.includes("src/__tests__") && !path.includes("src/providers/openai-compatible"))
       .map((path) => readFileSync(path, "utf8").toLowerCase()).join("\n");
-    for (const forbidden of ["openrouter", "zai", "kimi", "opencode", "openai-codex", "chatgpt", "moonshot"])
+    for (const forbidden of ["openrouter", "anthropic", "zai", "kimi", "opencode", "openai-codex", "chatgpt", "moonshot"])
       assert.equal(text.includes(forbidden), false, `core runtime source contains provider-specific literal ${forbidden}`);
+  });
+
+  it("phase42_prompt_cache_kind_values_are_generic", () => {
+    const kinds = ["implicit", "openai_key", "cache_control", "provider_specific", "none"];
+    for (const providerName of ["openai", "openrouter", "anthropic", "opencode", "zai", "kimi"])
+      assert.equal(kinds.includes(providerName), false, `cache kind is provider literal ${providerName}`);
   });
 });

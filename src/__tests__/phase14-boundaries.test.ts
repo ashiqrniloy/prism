@@ -40,8 +40,7 @@ describe("phase 14 observational memory boundaries", () => {
     let providerCalls = 0;
     const workerProvider = { generate: () => { providerCalls++; throw new Error("provider should not run during construction/setup"); } };
     const session = { id: "s1", entries: async () => [], checkout: async () => undefined };
-    const store = { append: async () => { throw new Error("store should not append during construction"); }, list: async () => [], get: async () => undefined };
-    const runtime = createObservationalMemoryRuntime({ session, store, workerProvider, workerModel: { provider: "mock", model: "memory" } });
+    const runtime = createObservationalMemoryRuntime({ session, appendEntry: async () => { throw new Error("append should not run during construction"); }, workerProvider, workerModel: { provider: "mock", model: "memory" } });
     assert.equal(runtime.status().inFlight, false);
     createObservationalMemoryExtension({ recallTool: { getEntries: () => [] }, commands: { getEntries: () => [] } }).setup({
       registerCompactionStrategy: () => undefined,
@@ -56,9 +55,10 @@ describe("phase 14 observational memory boundaries", () => {
     const page = readFileSync("docs/compaction-observational-memory.md", "utf8");
     assert.ok(existsSync("docs/compaction-observational-memory.md"));
     assert.ok(index.includes("(compaction-observational-memory.md)"));
-    for (const text of ["createRecallMemoryTool", "createMemoryStatusCommand", "createMemoryViewCommand", "createObservationalMemoryCompactionStrategy"]) {
+    for (const text of ["createRecallMemoryTool", "createMemoryStatusCommand", "createMemoryViewCommand", "createObservationalMemoryCompactionStrategy", "appendEntry", "tool_call", "tool_result"]) {
       assert.ok(page.includes(text), `docs missing ${text}`);
     }
+    assert.equal(page.includes("session, matching `store`"), false, "docs still describe mismatched session/store runtime API");
   });
 
   it("phase14_package_exports_files_are_minimal", () => {
@@ -67,7 +67,7 @@ describe("phase 14 observational memory boundaries", () => {
     assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
     assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.1");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.2");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 

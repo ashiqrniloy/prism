@@ -5,13 +5,15 @@ import { readSseData } from "./sse.js";
 interface ToolAccumulator { id?: string; name?: string; argumentsText: string }
 
 export function openAIChatBody(request: ProviderRequest): JsonObject {
+  const { maxTokens, ...parameters } = request.model.parameters ?? {};
   return clean({
     model: request.model.model,
     messages: request.messages.map((message) => toMessage(message, request.model.capabilities ?? {})),
     tools: request.tools?.map(toTool),
     stream: true,
     stream_options: { include_usage: true },
-    ...request.model.parameters,
+    ...parameters,
+    max_tokens: maxTokens,
     ...(request.options?.compat ?? {}),
     ...(request.options?.extra ?? {}),
   });

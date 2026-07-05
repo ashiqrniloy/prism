@@ -24,7 +24,7 @@ export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider 
       try {
         const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
           method: "POST",
-          headers: { "content-type": "application/json", ...request.options?.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+          headers: { ...request.options?.headers, "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify(zaiBody(request)),
           signal: request.signal,
         });
@@ -39,6 +39,7 @@ export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider 
 }
 
 export function zaiBody(request: ProviderRequest): JsonObject {
+  const { maxTokens, ...parameters } = request.model.parameters ?? {};
   return clean({
     model: request.model.model,
     messages: request.messages.map((message) => toMessage(message, request.model.capabilities ?? {})),
@@ -47,8 +48,8 @@ export function zaiBody(request: ProviderRequest): JsonObject {
     tool_stream: zaiToolStream(request),
     thinking: zaiThinking(request),
     reasoning_effort: zaiReasoningEffort(request),
-    max_tokens: request.model.limits?.maxOutputTokens,
-    ...request.model.parameters,
+    ...parameters,
+    max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
     ...request.options?.compat,
     ...request.options?.extra,
   });

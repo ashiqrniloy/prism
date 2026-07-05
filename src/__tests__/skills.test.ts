@@ -36,6 +36,13 @@ describe("skill registry and selection", () => {
     assert.throws(() => registry.resolve("missing"), /Unknown skill: missing/);
   });
 
+  it("strict mode rejects duplicate skill names", () => {
+    assert.throws(() => createSkillRegistry([skill, skill], { duplicate: "error" }), /Duplicate skill: brief/);
+    const registry = createSkillRegistry([skill], { duplicate: "error" });
+
+    assert.throws(() => registry.register(skill), /Duplicate skill: brief/);
+  });
+
   it("active skill selection includes only requested skills", () => {
     const other: Skill = { name: "verbose", instructions: "Explain fully." };
     const registry = createSkillRegistry([skill, other]);

@@ -108,6 +108,7 @@ const provider = createOpenAICompatibleProvider({
 - The adapter resolves `apiKey` per request through `resolveCredentialValue()`.
 - This adapter currently targets Chat Completions streaming only.
 - The serializer preserves text, thinking (downgraded to text), assistant `tool_call` blocks as `tool_calls`, `tool_result` blocks as role `tool` messages, and image blocks when the model declares `capabilities.input` includes `"image"`. Unsupported block placements or unclaimed images fail before fetch.
+- Cache behavior is intentionally minimal: this Chat Completions adapter sends no `prompt_cache_key`, `prompt_cache_retention`, or `cache_control` fields. Endpoints that cache implicitly do so automatically; hosts needing OpenAI `prompt_cache_key`/`prompt_cache_retention` should use the [`@arnilo/prism-provider-openai`](openai.md) Responses package. The adapter still normalizes cache usage from `prompt_tokens_details.cached_tokens` (and `prompt_cache_hit_tokens`) into `Usage.cacheReadTokens`.
 
 ## Security and performance notes
 

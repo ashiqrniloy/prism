@@ -1,4 +1,4 @@
-import type { AgentSession, AIProvider, CredentialRequest, CredentialValueSource, ModelConfig, ProviderRequestOptions, SessionEntry, SessionStore, SettingsProvider } from "@arnilo/prism";
+import type { AgentSession, AIProvider, CredentialRequest, CredentialValueSource, ModelConfig, ProviderRequestOptions, SessionEntry, SettingsProvider } from "@arnilo/prism";
 import { createSessionEntry, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { resolveObservationalMemorySettings, type ObservationalMemorySettingsInput } from "./settings.js";
@@ -10,7 +10,7 @@ import { runReflector } from "./workers/reflector.js";
 
 export interface ObservationalMemoryRuntimeOptions {
   readonly session: AgentSession;
-  readonly store: SessionStore;
+  readonly appendEntry: (entry: SessionEntry) => Promise<void>;
   readonly workerProvider: AIProvider;
   readonly workerModel?: ModelConfig;
   readonly providerOptions?: ProviderRequestOptions;
@@ -41,6 +41,7 @@ export interface ObservationalMemoryFlushResult {
 }
 
 export function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime {
+  if ("store" in (options as object)) throw new Error("Observational memory runtime requires appendEntry bound to the owning session store, not a separate store option");
   let inFlight = false;
   let lastError: string | undefined;
 
@@ -113,8 +114,16 @@ async function flush(options: ObservationalMemoryRuntimeOptions): Promise<Observ
 }
 
 async function appendCustom(options: ObservationalMemoryRuntimeOptions, data: unknown): Promise<void> {
+  const previousLeafId = options.session.leafId;
   const parentId = (await options.session.entries()).at(-1)?.id;
   const entry = createSessionEntry({ sessionId: options.session.id, parentId, kind: "custom", data });
-  await options.store.append(entry);
-  await options.session.checkout(entry.id);
+  await options.appendEntry(entry);
+  try {
+    await options.session.checkout(entry.id);
+    if ((await options.session.entries()).at(-1)?.id === entry.id) return;
+  } catch {
+    // Fall through to the ownership error below.
+  }
+  await options.session.checkout(previousLeafId);
+  throw new Error("Observational memory appendEntry did not append to the owning session branch");
 }

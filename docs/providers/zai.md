@@ -88,12 +88,29 @@ await kernel.load([
   fallback).
 - Package contributes models via the extension `api` and an `api_key` auth method.
 
+### Cache behavior
+
+- Z.AI GLM models use **implicit context caching**: the server caches prompt
+  prefixes automatically based on request content, with no explicit request-side
+  cache payload. Catalog models declare `cache: { kind: "implicit" }`.
+- The provider sends no `cache_control`, `prompt_cache_key`, `prompt_cache_retention`,
+  or other explicit cache-control fields regardless of `ProviderRequestOptions.cache`
+  / `cacheKey` / `cacheRetention` settings — those options have no effect on the
+  Z.AI request body. Hosts relying on cache hits should keep their stable prompt
+  prefix byte-stable and stable inputs unchanged.
+- Usage accounting is preserved: `prompt_tokens_details.cached_tokens` maps to
+  `Usage.cacheReadTokens` and `prompt_tokens_details.cache_write_tokens` maps to
+  `Usage.cacheWriteTokens` when the server reports them.
+
 ## Security and performance notes
 
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers and
   redacted from errors.
+- Caller-supplied `ProviderRequest.options.headers` can add non-owned headers,
+  but provider-owned headers (`content-type`, `authorization`) are applied last
+  and cannot be overridden by caller headers.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe
   provider-specific env names; default tests are network-free.
 

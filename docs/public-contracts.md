@@ -7,14 +7,15 @@ The root `@arnilo/prism` export provides TypeScript contracts for host-owned age
 Current contract groups:
 
 - JSON/data: `JsonPrimitive`, `JsonValue`, `JsonObject`, `ErrorInfo`
-- Content/messages: `ContentBlock`, `TextContent`, `ImageContent`, `ThinkingContent`, `ToolCallContent`, `ToolResultContent`, `Message`
-- Providers/models/auth: `ModelConfig`, `ModelCapabilities`, `ModelLimits`, `ModelCost`, `Usage`, `CacheRetention`, `ProviderRequestOptions`, `ProviderRequest`, `ProviderEvent`, `AIProvider`, `ProviderPackage`, `ProviderPackageAPI`, `ProviderPackageDocs`, `AuthMethod`, `ApiKeyAuthMethod`, `OAuthAuthMethod`, `CustomAuthMethod`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, `CredentialResolverSource`, `OAuthCredentialStore`, `ProviderRequestPolicy`, `ProviderRequestPolicyContext`, `ProviderRequestPolicyResult`, `SystemPromptContribution`, `SystemPromptMode`, `SystemPromptSource`, `SystemPromptConfig`
-- Agents/sessions: `AgentConfig`, `AgentDefinition`, `Agent`, `AgentSessionConfig`, `AgentSessionForkOptions`, `AgentSessionCloneOptions`, `AgentSession`, `RunOptions`, `AgentEvent`
+- Content/messages: `ContentBlock`, `TextContent`, `ImageContent`, `ThinkingContent`, `ToolCallDeltaContent`, `ToolCallContent`, `ToolResultContent`, `Message`
+- Providers/models/auth: `ModelConfig`, `ModelCapabilities`, `ModelLimits`, `ModelCost`, `ModelCacheCapabilities`, `PromptCacheKind`, `Usage`, `CacheRetention`, `PromptCacheMode`, `PromptCacheBreakpoint`, `PromptCacheHints`, `ProviderRequestOptions`, `ProviderRequest`, `ProviderEvent`, `AIProvider`, `ProviderPackage`, `ProviderPackageAPI`, `ProviderPackageDocs`, `AuthMethod`, `ApiKeyAuthMethod`, `OAuthAuthMethod`, `CustomAuthMethod`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, `CredentialResolverSource`, `OAuthCredentialStore`, `ProviderRequestPolicy`, `ProviderRequestPolicyContext`, `ProviderRequestPolicyResult`, `SystemPromptContribution`, `SystemPromptMode`, `SystemPromptSource`, `SystemPromptConfig`
+- Agents/sessions: `AgentConfig`, `AgentDefinition`, `Agent`, `AgentSessionConfig`, `AgentSessionForkOptions`, `AgentSessionCloneOptions`, `AgentSession`, `SubscribeOptions`, `SubscriberOverflowPolicy`, `RunOptions`, `AgentEvent`
 - Tools/commands: `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, `CommandDefinition`, `CommandExecutionContext`, `CommandResult`
 - Input/prompt/context/skills: `InputBuilder`, `InputBuildContext`, `AgentInput`, `DefaultInputBuilder`, `DefaultInputBuildContext`, `InputAttachment`, `PromptInstruction`, `PromptBuilder`, `PromptBuildRequest`, `ContextBlock`, `ContextProvider`, `ContextResolutionContext`, `Skill`, `SkillRegistry`
 - Extensions/middleware: `ExtensionLifecycleEventName`, `ExtensionEvent`, `Extension`, `ExtensionAPI`, `MiddlewareHookName`, `Middleware`, `MiddlewareNext`, `MiddlewareRegistry`
 - Configuration/manifests: `ConfigProvider`, `ConfigLayer`, `ConfigLoadContext`, `PrismManifest`, `ManifestContributionDeclaration`, `ManifestResourceDeclaration`, `ManifestContributionKind`
-- Stores/resources/settings/credentials/compaction/retry: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`, `CompactionOptions`, `CompactionMiddlewarePayload`, `CompactionEntryData`, `DefaultCompactionStrategyOptions`, `RetryPolicy`, `RetryContext`, `RetryDecision`, `RetryOptions`, `RetryMiddlewarePayload`, `DefaultRetryPolicyOptions`
+- Stores/resources/settings/credentials/compaction/retry/cache helpers: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`, `CompactionOptions`, `CompactionMiddlewarePayload`, `CompactionEntryData`, `DefaultCompactionStrategyOptions`, `RetryPolicy`, `RetryContext`, `RetryDecision`, `RetryOptions`, `RetryMiddlewarePayload`, `DefaultRetryPolicyOptions`, `CacheUsageReport`, `sanitizeCacheKey`, `mapCacheRetention`, `applyCacheControl`, `cacheHitRate`, `cacheSavings`, `cacheUsageReport`
+- Production persistence (adapter-facing): `ProductionPersistenceStore`, `PersistencePage`, `PersistenceQuery`, `OwnershipScope`, `SessionRecord`, `SessionQuery`, `BranchRecord`, `BranchQuery`, `SessionEntryQuery`, `RunRecord`, `RunQuery`, `AgentEventRecord`, `AgentEventQuery`, `ToolCallRecord`, `ToolCallQuery`, `UsageRecord`, `UsageQuery`, `AgentDefinitionRecord`, `AgentDefinitionQuery`, `RetentionPolicy`, `RetentionPolicyQuery`, `MigrationRecord`, `MigrationQuery`
 
 ## When to use it
 
@@ -30,16 +31,41 @@ Public contracts are imported from the root package:
 import type {
   AgentConfig,
   AgentDefinition,
+  AgentDefinitionRecord,
+  AgentDefinitionQuery,
+  AgentEventQuery,
+  AgentEventRecord,
+  AgentLoopOptions,
+  AgentLoopStrategy,
   AIProvider,
+  ArtifactContext,
+  ArtifactParseResult,
+  ArtifactParser,
+  ArtifactRepairer,
+  ArtifactValidation,
+  ArtifactValidator,
   AuthMethod,
+  BranchQuery,
+  BranchRecord,
   CommandDefinition,
+  CacheUsageReport,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,
   ContextProvider,
   CredentialResolver,
+  MigrationQuery,
+  MigrationRecord,
   OAuthProvider,
+  OwnershipScope,
+  PersistencePage,
+  PersistenceQuery,
+  ProductionPersistenceStore,
   ProviderRequestOptions,
+  ModelCacheCapabilities,
+  PromptCacheBreakpoint,
+  PromptCacheHints,
+  PromptCacheKind,
   DefaultInputBuildContext,
   Extension,
   InputBuilder,
@@ -53,29 +79,48 @@ import type {
   PromptTemplateOptions,
   ProviderPackage,
   ProviderRequestPolicy,
+  ProviderTurnResult,
   ResourceLoader,
+  RetentionPolicy,
+  RetentionPolicyQuery,
+  RunQuery,
+  RunRecord,
+  SessionEntryQuery,
+  SessionQuery,
+  SessionRecord,
+  SubscribeOptions,
+  SubscriberOverflowPolicy,
   SettingsProvider,
   Skill,
   StoreFactory,
   SystemPromptContribution,
   SystemPromptConfig,
+  ToolCallQuery,
+  ToolCallRecord,
   ToolDefinition,
+  UsageQuery,
+  UsageRecord,
 } from "@arnilo/prism";
+
+import { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "@arnilo/prism";
 ```
 
 Important request shapes:
 
 | Contract | Purpose |
 | --- | --- |
-| `ModelConfig` | Provider/model id plus optional display name, capabilities, limits, cost/cache pricing, opaque compat JSON, parameters, and metadata. |
+| `ModelConfig` | Provider/model id plus optional display name, capabilities, limits, cost/cache pricing, `cache` capability metadata, opaque compat JSON, parameters, and metadata. |
+| `ModelCacheCapabilities` / `PromptCacheKind` | Generic model cache support metadata (`implicit`, `openai_key`, `cache_control`, `provider_specific`, `none`). See [Model registry](model-registry.md). |
+| `PromptCacheHints` / `PromptCacheBreakpoint` | Structured provider cache intent and reusable prompt anchors. See [Provider caching](provider-caching.md). |
 | `ProviderPackage` | Inert provider package definition with docs metadata and explicit `setup(api)` registration. |
 | `ProviderRequest` | Normalized provider input: `model`, `messages`, optional `tools`, `context`, generic `options`, `metadata`, and `signal`. |
-| `ProviderRequestOptions` | Generic provider adapter hints: session/cache identifiers, cache retention, headers, timeout/retry hints, compat, and opaque `extra`. |
+| `ProviderRequestOptions` | Generic provider adapter hints: session id, legacy `cacheKey`/`cacheRetention`, structured `cache?: PromptCacheHints`, headers, compat, and opaque `extra`; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert hints in first-party providers. |
 | `ProviderRequestPolicy` | Ordered pre-provider hook that can patch the request and return exact secrets for provider-error redaction. |
 | `ToolRegistry` | Host active tool registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `ToolExecutionContext` | Host tool execution context: session/run ids, tool call id, optional abort signal, metadata, and progress callback. |
 | `ContextResolutionContext` | Context provider input: messages plus optional session/run ids, metadata, and signal. |
-| `DefaultInputBuildContext` | Optional default input assembly context: instructions, history, summaries, attachments, explicit resources, tool results, middleware, ids, metadata, and signal. |
+| `InputAssemblyLayout` | Default input layout selector: `"legacy"` (default) or opt-in `"cache_aware"`. |
+| `DefaultInputBuildContext` | Optional default input assembly context: input layout, instructions, history, summaries, attachments, explicit resources, tool results, middleware, ids, metadata, and signal. |
 | `ResolveContextOptions` | Ordered context resolution input: selected providers, messages, ids, metadata, signal, and optional middleware. |
 | `AssembleProviderInputOptions` | Provider input assembly input: model, input, optional builders, selected context providers/skills, active tools, metadata, and signal. |
 | `PromptTemplateOptions` | Missing-variable behavior for tiny `renderPromptTemplate()` substitutions. |
@@ -83,10 +128,33 @@ Important request shapes:
 | `CredentialRequest` | Credential lookup request: credential `name`, optional provider id, and metadata. |
 | `OAuthProvider` | Host/package OAuth callbacks for login, optional refresh, and conversion to a `Credential`. |
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
-| `RunOptions` | Per-run overrides: optional abort signal, model, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, and metadata. |
+| `RunOptions` | Per-run overrides: optional abort signal, model, input layout, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
+| `SubscribeOptions` / `SubscriberOverflowPolicy` | Live `AgentEvent` subscriber queue limit and overflow policy: `maxQueuedEvents`, `overflow: "close" \| "drop_oldest" \| "drop_newest"`. |
+| `AgentConfig.loop` / `RunOptions.loop` | Replaceable per-run control loop: `singleShotLoop` default, `generate-validate-revise` options, or a custom `AgentLoopStrategy`. `RunOptions.loop` wins. See [Agent loops](agent-loops.md). |
+| `AgentLoopStrategy` | `{ name; run(ctx: LoopContext): Promise<Usage \| undefined> }` — orchestrates shared runtime primitives via `LoopContext`. |
+| `LoopContext` | Loop-facing surface: run ids, signal, live `history`, `input`/`inputMessages`/`maxToolRounds`, and bound `assemble`/`generate`/`dispatchToolCall`/`appendMessage`/`emit` primitives. |
+| `ProviderTurnResult` | The result of `LoopContext.generate()`: `content`, `calls`, optional `messageId`, `started`, `usage`. |
+| `ArtifactValidation` | `{ ok; errors?: readonly { path?; message }[]; metadata? }` — host validator result. |
+| `ArtifactContext` | `{ sessionId, runId, turn, signal, metadata }` — passed to artifact callbacks. |
+| `ArtifactParser<T>` / `ArtifactValidator<T>` / `ArtifactRepairer<T>` | Host-supplied callbacks for `generate-validate-revise`; `T` is host-defined, Prism never instantiates it. |
 | `SystemPromptContribution` | Explicit caller-selected prompt layer with source, mode, text, and metadata. |
 | `ConfigLayer` | Named JSON config layer consumed by `mergeConfigLayers()`. |
 | `PrismManifest` | Data-only package manifest with config defaults, contribution declarations, and resource declarations. |
+| `ProductionPersistenceStore` | Adapter-facing interface for durable, paginated, multi-tenant storage of sessions, branches, entries, runs, events, tool calls, usage, agent definitions, retention policies, and migrations. No SQL/ORM/host file storage/network dependency. |
+| `PersistencePage<T>` | Cursor-paginated result page: `items`, optional `nextCursor`, optional `total`. |
+| `PersistenceQuery` | Common pagination controls: `cursor?`, `limit?`, `order?: "asc" \| "desc"`. |
+| `OwnershipScope` | Multi-tenant scope: `tenantId?`, `accountId?`, `userId?`. Included in records and queries. |
+| `SessionRecord` / `SessionQuery` | Stored session and query filters (parent, agent definition, retention policy, timestamps, ownership). |
+| `BranchRecord` / `BranchQuery` | Branch handle/leaf pointer and query filters (session, name, parent branch, leaf presence). |
+| `SessionEntryQuery` | Paginated entry filters: `sessionId`, `runId`, `parentId`, `leafId`, `kind`, timestamp range, ownership. |
+| `RunRecord` / `RunQuery` | Stored run and filters: session, branch, status, timestamps, ownership. |
+| `AgentEventRecord` / `AgentEventQuery` | Event ledger row with `redacted` flag and filters by type, session, run, entry, timestamp, ownership. |
+| `ToolCallRecord` / `ToolCallQuery` | Tool-call row with `redacted` flag and filters by name, status, session, run, entry, timestamps, ownership. |
+| `UsageRecord` / `UsageQuery` | Usage row and filters: session, run, entry, recorded-at range, ownership. |
+| `CacheUsageReport` | Numeric cache diagnostics from normalized `Usage`: read/write tokens, hit rate, estimated savings, and optional currency. |
+| `AgentDefinitionRecord` / `AgentDefinitionQuery` | Versioned agent-definition snapshot and filters. Does not store credentials or provider instances. |
+| `RetentionPolicy` / `RetentionPolicyQuery` | Retention policy and filters: age, entry count, byte limits, archive store, applied kinds. |
+| `MigrationRecord` / `MigrationQuery` | Applied migration record and filters. |
 
 ## Outputs / response / events
 
@@ -95,7 +163,7 @@ Important output/event shapes:
 | Contract | Output |
 | --- | --- |
 | `ProviderEvent` | Provider stream events: message start, content delta, tool-call delta, final tool call, usage, done, or error. |
-| `AgentEvent` | Session/runtime events: agent/turn/message/tool/queue/compaction/retry/error events, including tool started/progress/finished/error/blocked. |
+| `AgentEvent` | Session/runtime events: agent/turn/message/tool/queue/subscriber-overflow/compaction/retry/error events, including tool started/progress/finished/error/blocked. |
 | `ToolResult` | Host tool output with optional content, value, error, and metadata. |
 | `ContextBlock` | Context text or content blocks with optional title, priority, and metadata. |
 | `SessionEntry` | Branch-aware store entry for messages, events, summaries, metadata, model changes, labels, custom data, or compaction markers. |
@@ -134,6 +202,7 @@ import type {
   AIProvider,
   AssembleProviderInputOptions,
   CommandDefinition,
+  CacheUsageReport,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,
@@ -338,9 +407,10 @@ void credentials;
 - Contracts are host-owned and package-friendly. External packages can implement `AIProvider`, `ToolDefinition`, `CommandDefinition`, `AgentDefinition`, `InputBuilder`, `PromptBuilder`, `Middleware`, `ContextProvider`, `Skill`, `Extension`, config providers, data-only manifests, compaction strategies, store factories, resource loaders, settings providers, and credential resolvers.
 - `ExtensionAPI` is implemented by the extension kernel. It exposes explicit registries, ordered middleware registration, ordered event subscription/emission, and registration methods for Phase 2 contribution categories.
 - `AgentConfig.provider` can hold a direct provider instance for simple host wiring. Hosts that need config-driven selection should use `ModelConfig.provider` with explicit `createProviderRegistry()` / `createModelRegistry()` objects; Prism does not create a hidden global provider registry.
-- `SettingsProvider` and `CredentialResolver` are explicit dependencies. Prism must not hide global settings or credentials behind these contracts, and `CredentialResolver` should be passed only to the edge that needs a credential.
+- `SettingsProvider` and `CredentialResolver` are explicit dependencies. Prism must not hide global settings or credentials behind these contracts, and `CredentialResolver` should be passed only to the edge that needs a credential. `AgentConfig.settings` and `AgentConfig.credentials` are host-owned metadata; the session runtime does not call `settings.get()` or `credentials.resolve()`.
+- `AgentConfig.extensions` is host-owned metadata; the session runtime does not load extensions or call `Extension.setup()`. Use `createExtensionKernel().load(...)` before creating an agent, then pass selected contributions into `AgentConfig`.
 - `PrismManifest` is data-only. It can describe contribution modules/resources and config defaults, but parsing it does not import modules, execute package code, or mutate registries.
-- Resource helper functions decode resources from a caller-provided `ResourceLoader`; Prism does not include filesystem, network, package, or URI router loaders.
+- Resource helper functions decode resources from a caller-provided `ResourceLoader`; Prism does not include host file storage, network, package, or URI router loaders.
 - `createDefaultInputBuilder()` is a small default implementation of `InputBuilder`. It is replaceable and only loads explicit URI resources through a caller-provided `ResourceLoader`.
 - `resolveContextProviders()`, `createDefaultPromptBuilder()`, `assembleProviderInput()`, `createSkillRegistry()`, `resolveActiveSkills()`, and `renderPromptTemplate()` are replaceable Phase 5 helpers. They do not execute tools, evaluate template code, or grant tool permissions.
 - `createAgent()` and `createAgentSession()` implement the session runtime. They use explicit providers only; no hidden provider registry is created. Store-backed sessions use explicit `SessionStore` values and branch methods on `AgentSession`. `AgentSession.compact()` and `AgentConfig`/`RunOptions.compaction` provide manual and opt-in auto-compaction. `AgentConfig`/`RunOptions.retry` provide bounded provider-turn retry before observable output.
@@ -365,7 +435,12 @@ void credentials;
 - [Contribution registries](contribution-registries.md): explicit registries for contribution contracts.
 - [Tools](tools.md): active tool registry and exact allow/deny filtering built on `ToolDefinition`.
 - [Agent/session runtime](agent-session-runtime.md): `createAgent()` / `createAgentSession()` runtime, `AgentSession.compact()`, and auto-compaction config built on these contracts.
-- [Session stores and branching](session-stores-and-branching.md): branch-aware `SessionEntry` helpers and context rebuild.
+- [Agent loops](agent-loops.md): `singleShotLoop` default, `generateValidateReviseLoop`, `resolveLoop`, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts.
+- [Agent events](agent-events.md): the `AgentEvent` union including `artifact_*` variants and event ordering.
+- [Structured output](structured-output.md): the `ArtifactParser<T>`/`ArtifactValidator<T>`/`ArtifactRepairer<T>` seam — the only typed-output path from a loop.
+- [Session stores](session-stores.md): `SessionStore` contract, branch-aware `SessionEntry` helpers, context rebuild, and store responsibilities.
+- [Database persistence](database-persistence.md): production persistence contracts, paginated query shapes, reference schema, indexes, retention, migrations, and NoSQL mapping.
+- [Session stores and branching](session-stores-and-branching.md): detailed branch semantics and helper reference (compatibility page).
 - [Compaction and retry policies](compaction-and-retry.md): default compaction strategy, default retry policy, runtime compaction/retry options, middleware payloads, and compaction entry data.
 - [Provider layer](provider-layer.md): runtime registries, provider event helpers, and mock provider built on these contracts.
 - [Provider conformance](provider-conformance.md): testing subpath for network-free provider adapter checks.

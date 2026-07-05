@@ -1,6 +1,6 @@
 import { mkdir, readFile, appendFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { Message, ModelConfig, SessionEntry, SessionStore } from "../contracts.js";
+import { SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError, isSessionEntryKind, SESSION_ENTRY_SCHEMA_VERSION, type Message, type ModelConfig, type SessionAppendOptions, type SessionEntry, type SessionStore } from "../contracts.js";
 
 export interface JsonlSessionStoreOptions {
   readonly path: string;
@@ -22,12 +22,29 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
   const options = typeof pathOrOptions === "string" ? { path: pathOrOptions, createDirectory: true } : pathOrOptions;
   const path = options.path;
   let appendChain = Promise.resolve();
+  // ponytail: single-process only. The appendChain serializes appends within one
+  // process; there is no cross-process lock, so two processes writing the same
+  // file can still race. Multi-writer safety is host-owned (DB adapter or external
+  // lock). The expectedParentId/idempotency guards below mirror the memory store;
+  // a DB adapter enforces them via a conditional transaction + unique index.
+  const idempotencySeen = new Set<string>();
 
   return {
-    append(entry) {
+    append(entry, appendOptions) {
       appendChain = appendChain.then(async () => {
         if (options.createDirectory !== false) await mkdir(dirname(path), { recursive: true });
-        if (await findEntry(path, entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+        const entries = await readEntries(path);
+        const dedupKey = appendOptions?.idempotencyKey
+          ? `${entry.sessionId}\u0000${appendOptions.idempotencyKey}\u0000${appendOptions.expectedParentId ?? ""}`
+          : undefined;
+        if (dedupKey !== undefined && idempotencySeen.has(dedupKey)) {
+          throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, idempotencyDuplicate: true });
+        }
+        if (appendOptions?.expectedParentId !== undefined && !entries.some((existing) => existing.id === appendOptions.expectedParentId)) {
+          throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, expectedParentId: appendOptions.expectedParentId });
+        }
+        if (entries.some((existing) => existing.id === entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+        if (dedupKey !== undefined) idempotencySeen.add(dedupKey);
         await appendFile(path, `${JSON.stringify(entry)}\n`, "utf8");
       });
       return appendChain;
@@ -90,11 +107,19 @@ function validateSessionEntry(
   if (!isBasicSessionEntry(value)) {
     return { ok: false, error: { line: lineNumber, message: "Invalid session entry: expected object with id, sessionId, timestamp, and kind", raw } };
   }
-  const entry = value as unknown as SessionEntry;
+  const entry = value as Record<string, unknown>;
   if (entry.parentId !== undefined && typeof entry.parentId !== "string") {
     return { ok: false, error: { line: lineNumber, message: "Invalid parentId: expected string", raw } };
   }
-  switch (entry.kind) {
+  const schemaVersion = entry.schemaVersion ?? SESSION_ENTRY_SCHEMA_VERSION;
+  if (typeof schemaVersion !== "number" || schemaVersion !== SESSION_ENTRY_SCHEMA_VERSION) {
+    return { ok: false, error: { line: lineNumber, message: `Unsupported session entry schema version: ${schemaVersion}`, raw } };
+  }
+  const kind = entry.kind;
+  if (!isSessionEntryKind(kind)) {
+    return { ok: false, error: { line: lineNumber, message: `Unknown session entry kind: ${kind}`, raw } };
+  }
+  switch (kind) {
     case "message":
       if (!isMessage(entry.message)) return { ok: false, error: { line: lineNumber, message: "Invalid message entry: expected Message object", raw } };
       break;
@@ -114,8 +139,14 @@ function validateSessionEntry(
     case "label":
       if (typeof entry.label !== "string") return { ok: false, error: { line: lineNumber, message: "Invalid label entry: expected string label", raw } };
       break;
+    case "event":
+      if (!isAgentEvent(entry.event)) return { ok: false, error: { line: lineNumber, message: "Invalid event entry: expected AgentEvent object", raw } };
+      break;
+    case "metadata":
+      if (!isPlainObject(entry.data)) return { ok: false, error: { line: lineNumber, message: "Invalid metadata entry: expected object data", raw } };
+      break;
   }
-  return { ok: true, entry };
+  return { ok: true, entry: entry as unknown as SessionEntry };
 }
 
 function isBasicSessionEntry(value: unknown): value is Record<string, unknown> {
@@ -137,6 +168,10 @@ function isModelConfig(value: unknown): value is ModelConfig {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const model = value as Record<string, unknown>;
   return typeof model.provider === "string" && typeof model.model === "string";
+}
+
+function isAgentEvent(value: unknown): value is Record<string, unknown> {
+  return isPlainObject(value) && typeof value.type === "string";
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

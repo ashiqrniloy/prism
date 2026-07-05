@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,6 +18,22 @@
       "types": "./dist/testing/provider-conformance.d.ts",
       "default": "./dist/testing/provider-conformance.js"
     },
+    "./testing/session-store-conformance": {
+      "types": "./dist/testing/session-store-conformance.d.ts",
+      "default": "./dist/testing/session-store-conformance.js"
+    },
+    "./testing/compaction-conformance": {
+      "types": "./dist/testing/compaction-conformance.d.ts",
+      "default": "./dist/testing/compaction-conformance.js"
+    },
+    "./testing/tool-conformance": {
+      "types": "./dist/testing/tool-conformance.d.ts",
+      "default": "./dist/testing/tool-conformance.js"
+    },
+    "./testing/extension-conformance": {
+      "types": "./dist/testing/extension-conformance.d.ts",
+      "default": "./dist/testing/extension-conformance.js"
+    },
     "./node/config": {
       "types": "./dist/node/config.d.ts",
       "default": "./dist/node/config.js"
@@ -33,6 +49,22 @@
     "./node/session-store-jsonl": {
       "types": "./dist/node/session-store-jsonl.d.ts",
       "default": "./dist/node/session-store-jsonl.js"
+    },
+    "./node/contribution-discovery": {
+      "types": "./dist/node/contribution-discovery.d.ts",
+      "default": "./dist/node/contribution-discovery.js"
+    },
+    "./node/instruction-injectors": {
+      "types": "./dist/node/instruction-injectors.d.ts",
+      "default": "./dist/node/instruction-injectors.js"
+    },
+    "./node/system-prompts": {
+      "types": "./dist/node/system-project-prompts.d.ts",
+      "default": "./dist/node/system-project-prompts.js"
+    },
+    "./node/agent-definitions": {
+      "types": "./dist/node/agent-definitions.d.ts",
+      "default": "./dist/node/agent-definitions.js"
     }
   },
   "bin": {
@@ -58,7 +90,8 @@
     "typecheck": "npm run build:core && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
     "test": "npm run build && node --test dist/__tests__/*.test.js && npm run test --workspaces --if-present",
     "pack:dry-run": "npm pack --dry-run && npm run pack:dry-run --workspaces --if-present",
-    "release:dry-run": "npm test && npm run pack:dry-run"
+    "release:dry-run": "npm run sdk:ready",
+    "sdk:ready": "npm run typecheck && npm test && npm run pack:dry-run"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

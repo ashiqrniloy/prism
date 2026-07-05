@@ -83,12 +83,41 @@ await kernel.load([
 - Hosts choose base URL, attribution, credential source, and `fetch` impl.
 - Package contributes models and an `api_key` auth method.
 
+### Cache and session behavior
+
+- `session_id` (request body) and the `X-Session-Id` header are derived from
+  `ProviderRequestOptions.cacheKey` (falling back to `sessionId`) and sanitized
+  + clamped to 256 characters via the shared `sanitizeCacheKey()` helper.
+  Session ids route requests and identify conversations; never credentials or
+  raw prompts.
+- Anthropic-style `cache_control: { type: "ephemeral" }` markers are applied only
+  to the Prism `PromptCacheBreakpoint` locations the caller selects via
+  `ProviderRequestOptions.cache.breakpoints` (resolved with the shared
+  `applyCacheControl()` helper), and only on the last content block of each
+  selected message — not to every content block of every message. With no
+  breakpoints, no markers are emitted and the provider relies on implicit prefix
+  caching where available.
+- Caching is enabled unless disabled (`cacheRetention: "none"` /
+  `cache.mode: "off"`) and the model opts in via `ModelConfig.cache.kind`
+  (`"cache_control"`) or the legacy `compat.openRouterCache: true` flag.
+- `cacheRetention: "long"` (or `cache.retention: "long"`) emits
+  `cache_control: { type: "ephemeral", ttl: "1h" }` markers when the model allows
+  long retention (`ModelConfig.cache.longRetention !== false`); otherwise the
+  default 5-minute ephemeral window applies.
+- Usage accounting is preserved: OpenRouter `prompt_tokens_details.cached_tokens`
+  maps to `Usage.cacheReadTokens` and `prompt_tokens_details.cache_write_tokens`
+  maps to `Usage.cacheWriteTokens`.
+
 ## Security and performance notes
 
 - No catalog fetch during setup; no automatic environment, file, keychain, or shell
   credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers and
   redacted from errors.
+- Caller-supplied `ProviderRequest.options.headers` can add non-owned headers,
+  but OpenRouter-owned headers are applied last: `Authorization`,
+  `Content-Type`, `X-Session-Id`, `HTTP-Referer`, and `X-Title` cannot be
+  overridden by caller headers.
 - Attribution headers are sent only when `appUrl`/`appTitle` are supplied — no
   hidden app identity.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe

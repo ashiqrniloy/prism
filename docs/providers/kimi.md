@@ -90,12 +90,34 @@ await kernel.load([
   `includeMoonshotModels: true`; it is not core behavior.
 - Package contributes models via the extension `api` and an `api_key` auth method.
 
+### Cache behavior
+
+- Default catalog models (e.g. `kimi-k2.7-code` on the Anthropic-compatible
+  `/messages` route) use **implicit caching** and send no explicit `cache_control`
+  fields. `ProviderRequestOptions.cache` / `cacheKey` / `cacheRetention` have no
+  effect on the request body unless the model opts in.
+- Hosts may opt a model into Anthropic-style `cache_control` by declaring
+  `ModelConfig.cache.kind: "cache_control"` on the Anthropic route. When opted in,
+  `cache_control: { type: "ephemeral" }` markers are applied only to the
+  caller-selected `ProviderRequestOptions.cache.breakpoints` (resolved with the
+  shared `applyCacheControl()` helper) on the last content block of each selected
+  message — not to every block. `cacheRetention: "long"` adds `ttl: "1h"` when the
+  model allows long retention (`ModelConfig.cache.longRetention !== false`).
+- The Moonshot Open Platform route (`compat.route: "openai"`) never receives
+  Anthropic `cache_control` fields.
+- Usage accounting is preserved: Anthropic-route `cache_read_input_tokens` maps to
+  `Usage.cacheReadTokens` and `cache_creation_input_tokens` maps to
+  `Usage.cacheWriteTokens`.
+
 ## Security and performance notes
 
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
 - Kimi credentials are resolved per request from caller-supplied values or resolvers
   and redacted from errors.
+- Caller-supplied `ProviderRequest.options.headers` can add non-owned headers,
+  but provider-owned headers (`content-type`, `user-agent`, `authorization`)
+  are applied last and cannot be overridden by caller headers.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe
   provider-specific env names; default tests are network-free.
 

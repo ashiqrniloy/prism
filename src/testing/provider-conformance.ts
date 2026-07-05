@@ -1,4 +1,5 @@
 import type { AIProvider, ContentBlock, JsonObject, ProviderEvent, ProviderRequest, ToolCallContent, Usage } from "../contracts.js";
+import { reconstructToolCallDeltas } from "../provider-events.js";
 
 export interface ProviderStreamConformanceOptions {
   readonly provider: AIProvider;
@@ -24,6 +25,13 @@ export interface ToolCallDeltaExpectation {
 
 export interface SerializedContentCoverageOptions {
   readonly unsupported?: readonly ContentBlock["type"][];
+}
+
+export interface ProviderHeaderOwnershipConformanceOptions {
+  /** Provider-owned header names mapped to the authoritative values the provider must set. */
+  readonly owned: Readonly<Record<string, string>>;
+  /** Caller-supplied headers, including attempts to override owned names and non-owned additions. */
+  readonly caller: Readonly<Record<string, string>>;
 }
 
 export interface ProviderSecretLeakConformanceOptions {
@@ -88,6 +96,20 @@ export function assertSerializedRequestCoversContent(request: ProviderRequest, b
   }
 }
 
+export function assertProviderOwnedHeadersWin(captured: Headers, options: ProviderHeaderOwnershipConformanceOptions): void {
+  const ownedLower: Record<string, string> = {};
+  for (const [name, expected] of Object.entries(options.owned)) ownedLower[name.toLowerCase()] = expected;
+  for (const [name, expected] of Object.entries(ownedLower)) {
+    const actual = captured.get(name);
+    if (actual !== expected) throw new Error(`Caller header overrode provider-owned "${name}": expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
+  for (const [name, callerValue] of Object.entries(options.caller)) {
+    if (Object.prototype.hasOwnProperty.call(ownedLower, name.toLowerCase())) continue;
+    const actual = captured.get(name);
+    if (actual !== callerValue) throw new Error(`Provider dropped non-owned caller header "${name}": expected ${JSON.stringify(callerValue)}, got ${JSON.stringify(actual)}`);
+  }
+}
+
 export function assertNoSecretLeak(events: readonly ProviderEvent[], secrets: readonly string[]): void {
   const eventText = JSON.stringify(events);
   for (const secret of secrets) {
@@ -104,32 +126,6 @@ export function assertUsageAccounting(events: readonly ProviderEvent[], expected
     if (expected[key] !== undefined && actual[key] !== expected[key]) throw new Error(`Usage ${key} mismatch: expected ${expected[key]}, got ${actual[key]}`);
   }
   return actual;
-}
-
-function reconstructToolCallDeltas(events: readonly ProviderEvent[]): ToolCallContent[] {
-  const partials = new Map<number, { id?: string; name?: string; argumentsText: string }>();
-  for (const event of events) {
-    if (event.type !== "tool_call_delta") continue;
-    const partial = partials.get(event.index) ?? { argumentsText: "" };
-    if (event.id !== undefined) partial.id = event.id;
-    if (event.name !== undefined) partial.name = event.name;
-    if (event.argumentsText !== undefined) partial.argumentsText += event.argumentsText;
-    partials.set(event.index, partial);
-  }
-  return [...partials.entries()].sort(([a], [b]) => a - b).map(([index, partial]) => {
-    if (!partial.id || !partial.name) throw new Error(`Incomplete tool call delta at index ${index}`);
-    return { type: "tool_call", id: partial.id, name: partial.name, arguments: parseArguments(partial.argumentsText, index) };
-  });
-}
-
-function parseArguments(text: string, index: number): JsonObject {
-  try {
-    const value = text ? JSON.parse(text) : {};
-    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("not object");
-    return value as JsonObject;
-  } catch (error) {
-    throw new Error(`Invalid tool call arguments at index ${index}: ${error instanceof Error ? error.message : String(error)}`);
-  }
 }
 
 function contentBlockCanaries(block: ContentBlock): string[] {

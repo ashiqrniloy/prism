@@ -1,6 +1,6 @@
-import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
-import { openRouterSessionId, openRouterUsage, withOpenRouterCache, type OpenRouterUsage } from "./cache.js";
+import { applyOpenRouterCacheControl, openRouterSessionId, openRouterUsage, type OpenRouterUsage } from "./cache.js";
 import { readSseData } from "./sse.js";
 
 export interface OpenRouterProviderOptions {
@@ -24,16 +24,16 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
       const token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
       const secrets = [token];
       try {
-        const sessionId = openRouterSessionId(request);
+        const sessionId = openRouterSessionId(request.options);
         const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
           method: "POST",
           headers: cleanHeaders({
+            ...request.options?.headers,
             "content-type": "application/json",
             ...(token ? { authorization: `Bearer ${token}` } : {}),
             ...(sessionId ? { "x-session-id": sessionId } : {}),
             ...(options.appUrl ? { "http-referer": options.appUrl } : {}),
             ...(options.appTitle ? { "x-title": options.appTitle } : {}),
-            ...request.options?.headers,
           }),
           body: JSON.stringify(openRouterBody(request, sessionId)),
           signal: request.signal,
@@ -48,26 +48,28 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
   };
 }
 
-export function openRouterBody(request: ProviderRequest, sessionId = openRouterSessionId(request)): JsonObject {
+export function openRouterBody(request: ProviderRequest, sessionId = openRouterSessionId(request.options)): JsonObject {
   const routing = request.model.compat?.openRouterRouting;
   const reasoning = request.options?.compat?.reasoning ?? request.model.compat?.reasoning;
-  const cache = request.options?.cacheRetention !== "none" && request.model.compat?.openRouterCache === true;
+  const { maxTokens, ...parameters } = request.model.parameters ?? {};
+  const messages = applyOpenRouterCacheControl(request);
   return clean({
     model: request.model.model,
-    messages: request.messages.map((message) => withOpenRouterCache(toOpenRouterMessage(message, request.model.capabilities ?? {}), cache)),
+    messages: messages.map((message) => toOpenRouterMessage(message, request.model.capabilities ?? {})),
     tools: request.tools?.map(toTool),
     stream: true,
     stream_options: { include_usage: true },
     provider: routing,
     reasoning,
     session_id: sessionId,
-    ...request.model.parameters,
+    ...parameters,
+    max_tokens: maxTokens,
     ...request.options?.compat,
     ...request.options?.extra,
   });
 }
 
-function toOpenRouterMessage(message: Message, capabilities: ModelCapabilities = {}): JsonObject {
+function toOpenRouterMessage(message: CacheControlledMessage, capabilities: ModelCapabilities = {}): JsonObject {
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return {
@@ -95,14 +97,14 @@ function toOpenRouterMessage(message: Message, capabilities: ModelCapabilities =
   const content: JsonObject[] = [];
   for (const part of message.content) {
     if (part.type === "text" || part.type === "thinking") {
-      content.push({ type: "text", text: part.text });
+      content.push(withMarker({ type: "text", text: part.text }, part.cache_control as JsonObject | undefined));
     } else if (part.type === "image") {
       if (!capabilities.input?.includes("image")) {
         throw new Error(`OpenRouter request includes image but model does not declare image input capability`);
       }
       const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
       if (!url) throw new Error("OpenRouter image block missing url or data");
-      content.push({ type: "image_url", image_url: { url } });
+      content.push(withMarker({ type: "image_url", image_url: { url } }, part.cache_control as JsonObject | undefined));
     } else if (part.type === "tool_call") {
       throw new Error("OpenRouter assistant tool_call blocks must be the only content on the message");
     } else if (part.type === "tool_result") {
@@ -110,10 +112,14 @@ function toOpenRouterMessage(message: Message, capabilities: ModelCapabilities =
     }
   }
 
-  if (content.length === 1 && content[0]!.type === "text") {
+  if (content.length === 1 && content[0]!.type === "text" && !(content[0]! as { cache_control?: unknown }).cache_control) {
     return { role: message.role, content: content[0]!.text };
   }
   return { role: message.role, content };
+}
+
+function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObject {
+  return marker ? { ...item, cache_control: marker } : item;
 }
 
 export async function* openRouterEvents(body: ReadableStream<Uint8Array>): AsyncIterable<ProviderEvent> {

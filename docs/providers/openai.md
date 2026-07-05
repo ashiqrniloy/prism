@@ -109,6 +109,27 @@ const challenge = computeS256Challenge(verifier);
 - OAuth browser/device-code flows run only when the caller explicitly invokes the
   OAuth provider.
 
+### Cache behavior
+
+- `prompt_cache_key` is derived from `ProviderRequestOptions.cacheKey` (falling
+  back to `sessionId`) and sanitized + clamped to 64 characters via the shared
+  `sanitizeCacheKey()` helper. Cache keys are session/customer identifiers only;
+  never credentials or raw prompts.
+- `prompt_cache_retention` accepts only `"24h"` on the OpenAI Responses API
+  (extended caching). Prism `cacheRetention: "short"` and `"none"` omit the field
+  so default automatic/implicit caching applies and no invalid literal is sent.
+  `cacheRetention: "long"` maps to `prompt_cache_retention: "24h"` only when the
+  model declares `ModelConfig.cache.longRetention === true`; models without that
+  metadata omit the field. The catalog `gpt-5.1` model declares
+  `cache: { kind: "openai_key", longRetention: true, maxKeyLength: 64 }`.
+- Cache accounting is preserved in normalized `Usage`: OpenAI
+  `input_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`. OpenAI
+  Responses does not report a cache-write token field.
+- Provider-owned headers (`content-type`, `authorization`, `x-client-request-id`)
+  are applied after caller `ProviderRequestOptions.headers` so caller config
+  cannot replace credentials, content type, or the session request id; non-owned
+  caller headers are kept.
+
 ## Security and performance notes
 
 - No network calls during import, setup, build, or default tests.

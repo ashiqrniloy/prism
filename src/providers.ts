@@ -1,4 +1,5 @@
-import type { AIProvider, ModelConfig } from "./contracts.js";
+import type { AIProvider, ModelConfig, ProviderResolver } from "./contracts.js";
+import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 
 export interface ProviderRegistry {
   register(provider: AIProvider): void;
@@ -7,11 +8,14 @@ export interface ProviderRegistry {
   list(): readonly AIProvider[];
 }
 
-export function createProviderRegistry(providers: readonly AIProvider[] = []): ProviderRegistry {
+export interface ProviderRegistryOptions extends DuplicateRegistrationOptions {}
+
+export function createProviderRegistry(providers: readonly AIProvider[] = [], options: ProviderRegistryOptions = {}): ProviderRegistry {
   const byId = new Map<string, AIProvider>();
 
   const registry: ProviderRegistry = {
     register(provider) {
+      assertCanRegister(byId, provider.id, "provider", provider.id, options.duplicate);
       byId.set(provider.id, provider);
     },
     get(id) {
@@ -30,4 +34,18 @@ export function createProviderRegistry(providers: readonly AIProvider[] = []): P
 
   for (const provider of providers) registry.register(provider);
   return registry;
+}
+
+function isProviderRegistry(source: ProviderRegistry | readonly AIProvider[]): source is ProviderRegistry {
+  return !Array.isArray(source);
+}
+
+export function createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver {
+  // ponytail: array source builds the lookup map once at construction; registry
+  // source reuses ProviderRegistry.get so there is one lookup implementation.
+  if (isProviderRegistry(source)) {
+    return (model) => source.get(model.provider) ?? undefined;
+  }
+  const lookup = new Map(source.map((p) => [p.id, p]));
+  return (model) => lookup.get(model.provider) ?? undefined;
 }

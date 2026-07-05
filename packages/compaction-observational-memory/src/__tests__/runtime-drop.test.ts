@@ -23,7 +23,7 @@ describe("observational memory runtime dropper", () => {
       [providerToolCall(toolCallContent("r", "record_reflection", { content: "Reflect", supportingObservationIds: [] })), providerDone()],
       [providerToolCall(toolCallContent("d", "drop_observations", { observationIds: [] })), providerDone()],
     ]);
-    const runtime = createObservationalMemoryRuntime({ session, store, workerProvider, workerModel, overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 1, agentMaxTurns: 1 } });
+    const runtime = createObservationalMemoryRuntime({ session, appendEntry: (entry) => store.append(entry), workerProvider, workerModel, overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 1, agentMaxTurns: 1 } });
     await runtime.flush();
     assert.equal((await session.entries()).some((entry) => entry.kind === "custom" && (entry.data as any).type === OBSERVATIONS_DROPPED), false);
   });

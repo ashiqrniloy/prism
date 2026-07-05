@@ -33,10 +33,11 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
       if (event.type === "error") throw new Error(event.error.message);
       if (event.type === "tool_call") calls.push(event.call);
     }
-    if (!calls.length) return;
-    for (const call of calls) {
-      const tool = tools.get(call.name);
-      if (!tool) continue;
+    const executableCalls = calls.filter((call) => tools.has(call.name));
+    if (!executableCalls.length) return;
+    messages.push({ role: "assistant", content: executableCalls });
+    for (const call of executableCalls) {
+      const tool = tools.get(call.name)!;
       const result = await tool.execute(call.arguments as JsonObject, { sessionId: "observational-memory", runId: "observational-memory", toolCallId: call.id, signal: options.signal });
       messages.push(toolResultMessage(result));
     }

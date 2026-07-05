@@ -1,6 +1,17 @@
 import type { Readable, Writable } from "node:stream";
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "./index.js";
-import type { AgentSession, AgentEvent, ModelConfig, RunOptions } from "./contracts.js";
+import process from "node:process";
+import { createAgent, createMockProvider, providerDone, providerTextDelta, resolveInstructionInjectors, createContributionRegistry } from "./index.js";
+import type { AgentSession, AgentEvent, ContributionFileKind, InstructionInjector, ModelConfig, RunOptions, Skill, SystemPromptContribution } from "./contracts.js";
+import { readFile } from "node:fs/promises";
+import { basename, dirname } from "node:path";
+import { createContributionRegistries, registerDiscoveredContributions } from "./contributions.js";
+import { createSkillRegistry } from "./skills.js";
+import { discoverContributions } from "./node/contribution-discovery.js";
+import { discoverAgentBundles } from "./node/agent-definitions.js";
+import type { AgentBundle } from "./node/agent-definitions.js";
+import { registerDiscoveredInstructionInjectors } from "./node/instruction-injectors.js";
+import { loadSystemPromptFiles } from "./node/system-project-prompts.js";
+import { createPathTrustPolicy } from "./node/trust.js";
 import { runRpcServer, type RpcSessionFactory } from "./rpc.js";
 
 export type CliMode = "print" | "json" | "rpc";
@@ -20,6 +31,36 @@ export interface CliOptions {
   readonly compact?: number;
   readonly maxToolRounds?: number;
   readonly help: boolean;
+  readonly discover: boolean;
+  readonly discoverKinds: readonly ContributionFileKind[];
+  readonly noDiscovery: boolean;
+  /** Parsed flag: `--agents-config <path>` points at the app config root holding
+   *  `agents/<name>/AGENT.md` bundles. Opt-in; default runs never scan it. */
+  readonly agentsConfig?: string;
+  /** Runtime-populated (not a parsed flag): agent bundles discovered by `--agents-config`
+   *  via {@link discoverAgentBundles}. Host-owned resolution. */
+  readonly discoveredAgents: readonly AgentBundle[];
+  /** Runtime-populated (not a parsed flag): skills discovered by `--discover`,
+   *  threaded into `createSession` so the bootstrap can build a SkillRegistry. */
+  readonly discoveredSkills: readonly Skill[];
+  /** Runtime-populated (not a parsed flag): instruction injectors discovered by
+   *  `--discover`, selectable by name via `--instruction` (Task 8). */
+  readonly discoveredInjectors: readonly InstructionInjector[];
+  /** Parsed flag: `--instruction <name>` (repeatable). `false` disables injectors. */
+  readonly instructions: readonly string[];
+  /** Parsed flag: `--injector-file <path>` (repeatable); markdown → static injector. */
+  readonly injectorFiles: readonly string[];
+  /** Runtime-populated: `--instruction`/`--injector-file` resolved to live injectors. */
+  readonly resolvedInstructionInjectors: readonly InstructionInjector[];
+  /** Parsed flag: `--no-agents-md` / `--no-system-md` skip the corresponding auto-load. */
+  readonly noAgentsMd: boolean;
+  readonly noSystemMd: boolean;
+  /** Parsed flag: `--agents-md-file <path>` / `--system-md-file <path>` override read paths. */
+  readonly agentsMdFile?: string;
+  readonly systemMdFile?: string;
+  /** Runtime-populated: AGENTS.md/SYSTEM.md layers loaded from disk (print/json modes only;
+  *  RPC is host-owned). Threaded into `AgentConfig.systemPrompt` by `defaultCreateSession`. */
+  readonly systemPromptLayers: readonly SystemPromptContribution[];
 }
 
 export interface CliRuntime {
@@ -28,6 +69,11 @@ export interface CliRuntime {
   readonly stderr: Writable;
   readonly createSession?: (options: CliOptions) => AgentSession;
   readonly commands?: RpcSessionFactory["commands"];
+  /** Workspace root for `--discover`. Defaults to `process.cwd()`. */
+  readonly workspaceRoot?: string;
+  /** Optional global root for SYSTEM.md auto-load (host-controlled). No default;
+   *  the CLI does not auto-touch the user's home directory. */
+  readonly globalRoot?: string;
 }
 
 export const usage = `Usage: prism [--mode print|json|rpc] [-p prompt] [options]
@@ -45,10 +91,20 @@ Options:
   --context <text>           Context text
   --compact <entries>        Auto-compaction threshold
   --max-tool-rounds <n>      Maximum tool rounds
+  --discover                 Enable workspace contribution discovery (opt-in)
+  --discover-kinds <csv>     Kinds to discover (default: skill; skill,tool,context,instructions)
+  --no-discovery             Disable discovery even if --discover is set
+  --agents-config <path>     App config root holding agents/<name>/AGENT.md bundles (opt-in)
+  --no-agents-md             Skip auto-loading <workspaceRoot>/AGENTS.md
+  --no-system-md             Skip auto-loading the global SYSTEM.md layer
+  --agents-md-file <path>    Read AGENTS.md from <path> instead (trust-gated, source: app)
+  --system-md-file <path>    Read SYSTEM.md from <path> instead (source: user)
   -h, --help                 Show this help
 `;
 
-const valueFlags = new Set(["--prompt", "--mode", "--provider", "--model", "--session", "--config", "--resource", "--extension", "--tool", "--system", "--context", "--compact", "--max-tool-rounds"]);
+const valueFlags = new Set(["--prompt", "--mode", "--provider", "--model", "--session", "--config", "--resource", "--extension", "--tool", "--system", "--context", "--compact", "--max-tool-rounds", "--discover-kinds", "--instruction", "--injector-file", "--agents-md-file", "--system-md-file", "--agents-config"]);
+const boolFlags = new Set(["--discover", "--no-discovery", "--no-agents-md", "--no-system-md"]);
+const ALL_KINDS: readonly ContributionFileKind[] = ["skill", "tool", "context", "instructions"];
 
 export function parseCliArgs(argv: readonly string[]): CliOptions {
   let mode: CliMode = "print";
@@ -60,11 +116,21 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
   let compact: number | undefined;
   let maxToolRounds: number | undefined;
   let help = false;
+  let discover = false;
+  let discoverKinds: readonly ContributionFileKind[] = ["skill"];
+  let noDiscovery = false;
+  let noAgentsMd = false;
+  let noSystemMd = false;
+  let agentsMdFile: string | undefined;
+  let systemMdFile: string | undefined;
+  let agentsConfig: string | undefined;
   const config: string[] = [];
   const resources: string[] = [];
   const extensions: string[] = [];
   const tools: string[] = [];
   const context: string[] = [];
+  const instructions: string[] = [];
+  const injectorFiles: string[] = [];
 
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
@@ -73,6 +139,15 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
       continue;
     }
     const name = flag === "-p" ? "--prompt" : flag;
+    if (boolFlags.has(name)) {
+      switch (name) {
+        case "--discover": discover = true; break;
+        case "--no-discovery": noDiscovery = true; break;
+        case "--no-agents-md": noAgentsMd = true; break;
+        case "--no-system-md": noSystemMd = true; break;
+      }
+      continue;
+    }
     if (!valueFlags.has(name)) throw new CliUsageError(`Unknown flag: ${flag}`);
     const value = argv[i + 1];
     if (value === undefined || value.startsWith("--")) throw new CliUsageError(`Missing value for ${flag}`);
@@ -94,10 +169,24 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
       case "--context": context.push(value); break;
       case "--compact": compact = positiveInt(value, flag); break;
       case "--max-tool-rounds": maxToolRounds = positiveInt(value, flag); break;
+      case "--discover-kinds": discoverKinds = parseKinds(value, flag); break;
+      case "--instruction": instructions.push(value); break;
+      case "--injector-file": injectorFiles.push(value); break;
+      case "--agents-md-file": agentsMdFile = value; break;
+      case "--system-md-file": systemMdFile = value; break;
+      case "--agents-config": agentsConfig = value; break;
     }
   }
 
-  return { mode, prompt, provider, model, session, config, resources, extensions, tools, system, context, compact, maxToolRounds, help };
+  return { mode, prompt, provider, model, session, config, resources, extensions, tools, system, context, compact, maxToolRounds, help, discover, discoverKinds, noDiscovery, agentsConfig, discoveredSkills: [], discoveredInjectors: [], discoveredAgents: [], instructions, injectorFiles, resolvedInstructionInjectors: [], noAgentsMd, noSystemMd, agentsMdFile, systemMdFile, systemPromptLayers: [] };
+}
+
+function parseKinds(csv: string, flag: string): readonly ContributionFileKind[] {
+  const kinds = csv.split(",").map((k) => k.trim()).filter(Boolean);
+  if (kinds.length === 0) throw new CliUsageError(`Invalid value for ${flag}: ${csv}`);
+  const invalid = kinds.filter((k) => !ALL_KINDS.includes(k as ContributionFileKind));
+  if (invalid.length > 0) throw new CliUsageError(`Invalid kinds for ${flag}: ${invalid.join(", ")}`);
+  return kinds as readonly ContributionFileKind[];
 }
 
 export async function runCli(argv: readonly string[], runtime: CliRuntime): Promise<number> {
@@ -120,8 +209,60 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       return 0;
     }
     if (!options.prompt) throw new CliUsageError("Missing prompt: use -p or --prompt");
+    const mode = options.mode;
+    // ponytail: discovery is opt-in. --no-discovery hard-disables; default runs never touch the FS.
+    // Registering all kinds honors the plan (tool/context/agent descriptors registered),
+    // but only skills are wired into the mock agent here — other kinds are host-owned execution.
+    let discoveredSkills = options.discoveredSkills;
+    let discoveredInjectors = options.discoveredInjectors;
+    let discoveredAgents = options.discoveredAgents;
+    const workspaceRoot = runtime.workspaceRoot ?? process.cwd();
+    // ponytail: trust policy shared by the repo AGENTS.md loader and the app-config bundle scanner.
+    // --agents-config is an explicit opt-in → its configRoot is a trusted root by that act.
+    const trustedRoots = [workspaceRoot];
+    if (options.agentsConfig) trustedRoots.push(options.agentsConfig);
+    if (options.agentsMdFile) trustedRoots.push(dirname(options.agentsMdFile));
+    const trust = createPathTrustPolicy({ trustedRoots });
+    if (options.discover && !options.noDiscovery) {
+      const discovered = await discoverContributions({
+        kinds: options.discoverKinds,
+        workspaceRoot,
+      });
+      const registries = createContributionRegistries();
+      registerDiscoveredContributions(registries, discovered);
+      discoveredSkills = registries.skills.list();
+      // ponytail: Phase 30 — discovered instruction injectors register host-owned (no core auto-import).
+      await registerDiscoveredInstructionInjectors(registries, discovered);
+      discoveredInjectors = registries.instructionInjectors.list();
+      options = { ...options, discoveredSkills, discoveredInjectors };
+    }
+    // ponytail: Phase 34 — --agents-config discovers app-config agent bundles (envelopes only,
+    // no import()/resolve). Host owns turning a bundle into a live agent via resolveAgentBundle.
+    if (options.agentsConfig) {
+      discoveredAgents = await discoverAgentBundles({ configRoot: options.agentsConfig, trust });
+      options = { ...options, discoveredAgents };
+    }
+    // ponytail: Phase 30 — resolve --instruction names against discovered injectors (fail-closed)
+    // and load --injector-file markdown as static injectors. `--instruction false` disables all.
+    const resolvedInstructionInjectors = options.instructions.includes("false")
+      ? []
+      : await resolveCliInjectors(options.instructions, options.injectorFiles, discoveredInjectors);
+    options = { ...options, resolvedInstructionInjectors };
+    // ponytail: Phase 31/34 — auto-load AGENTS.md (trust-gated, source: app) and the global
+    // SYSTEM.md layer (source: user) as systemPrompt layers composed on top of `--system`.
+    // The CLI no longer defaults globalRoot to the user's home directory; hosts pass globalRoot
+    // explicitly or use --agents-config / --system-md-file. RPC mode skips auto-load (host-owned).
+    if (options.mode !== "rpc") {
+      // ponytail: explicit --agents-md-file opt-in → trust its parent dir too so the named file passes
+      // the containment check (the user named it, so it's trusted by that act).
+      const layers = await loadSystemPromptFiles({
+        ...(options.noAgentsMd ? {} : { workspaceRoot, trust, ...(options.agentsMdFile ? { agentsMdPath: options.agentsMdFile } : {}) }),
+        ...(options.noSystemMd ? {} : { ...(runtime.globalRoot !== undefined ? { globalRoot: runtime.globalRoot } : {}), ...(options.systemMdFile ? { systemMdPath: options.systemMdFile } : {}) }),
+      });
+      options = { ...options, systemPromptLayers: layers };
+    }
     const session = (runtime.createSession ?? defaultCreateSession)(options);
-    await runPromptMode(session, options, runtime.stdout, options.mode);
+    await runPromptMode(session, options, runtime.stdout, mode);
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -151,14 +292,52 @@ export class CliUsageError extends Error {}
 function defaultCreateSession(options: CliOptions): AgentSession {
   if (options.provider !== "mock") throw new CliUsageError("No provider configured. Pass --provider mock for a smoke test or embed Prism with an explicit provider.");
   const model: ModelConfig = { provider: "mock", model: options.model ?? "mock" };
-  return createAgent({ model, provider: createMockProvider([providerTextDelta("Hello"), providerDone()]), instructions: options.system }).createSession({ id: options.session });
+  return createAgent({
+    model,
+    provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+    instructions: options.system,
+    // ponytail: Phase 31 — file layers compose with `instructions` (base) via the existing
+    // composeSystemPrompt pipeline; rank order (user<package<app<run) is enforced inside.
+    ...(options.systemPromptLayers.length > 0 ? { systemPrompt: options.systemPromptLayers } : {}),
+    // ponytail: discovered skills become selectable via RunOptions.activeSkills (set by runOptions below).
+    ...(options.discoveredSkills.length > 0 ? { skills: createSkillRegistry(options.discoveredSkills) } : {}),
+  }).createSession({ id: options.session });
 }
 
 function runOptions(options: CliOptions): RunOptions {
   return {
     maxToolRounds: options.maxToolRounds,
     compaction: options.compact ? { thresholdEntries: options.compact } : undefined,
+    // ponytail: --discover is the explicit opt-in that activates discovered skills.
+    ...(options.discover && !options.noDiscovery && options.discoveredSkills.length > 0
+      ? { activeSkills: options.discoveredSkills.map((s) => s.name) }
+      : {}),
+    ...(options.resolvedInstructionInjectors.length > 0
+      ? { instructionInjectors: options.resolvedInstructionInjectors }
+      : {}),
   };
+}
+
+// ponytail: resolve --instruction names against discovered injectors (fail-closed) and load
+// --injector-file markdown files as static every_turn injectors. Names route through
+// resolveInstructionInjectors so an unknown name throws (caught by runCli's error handler).
+async function resolveCliInjectors(
+  names: readonly string[],
+  files: readonly string[],
+  discovered: readonly InstructionInjector[],
+): Promise<readonly InstructionInjector[]> {
+  const registry = createContributionRegistry<InstructionInjector>({ label: "instruction injector" });
+  for (const inj of discovered) registry.register(inj.name, inj);
+  const byName = names.length ? resolveInstructionInjectors({ registry, names }) : [];
+  const fromFiles: InstructionInjector[] = [];
+  for (const path of files) {
+    const text = await readFile(path, "utf8");
+    fromFiles.push({
+      name: basename(path).replace(/\.[^.]+$/, ""),
+      apply: () => ({ instructions: text, when: "every_turn" }),
+    });
+  }
+  return [...byName, ...fromFiles];
 }
 
 function positiveInt(value: string, flag: string): number {

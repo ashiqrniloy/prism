@@ -74,6 +74,21 @@ test("llm_compaction_strategy_updates_previous_summary_and_split_turn_prefix", a
   assert.equal((result.entries?.[0]?.data as { isSplitTurn?: boolean }).isSplitTurn, true);
 });
 
+test("llm_compaction_strategy_maps_max_output_tokens_to_request_model", async () => {
+  let request: ProviderRequest | undefined;
+  const strategy = createLlmCompactionStrategy({
+    provider: createMockProvider([providerTextDelta("summary"), { type: "done" }], { onRequest: (value) => { request = value; } }),
+    model: { ...model, parameters: { temperature: 0.1 } },
+    keepRecentTokens: 1,
+    maxOutputTokens: 123,
+  });
+
+  await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")] });
+
+  assert.equal(request?.model.parameters?.maxTokens, 123);
+  assert.equal(request?.model.parameters?.temperature, 0.1);
+});
+
 test("llm_compaction_strategy_applies_policy_thinking_and_max_summary_tokens", async () => {
   let request: ProviderRequest | undefined;
   const strategy = createLlmCompactionStrategy({

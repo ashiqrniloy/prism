@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { createMockProvider, providerDone, providerTextDelta, providerToolCallDelta, providerUsage } from "../index.js";
-import { assertAbortIsObserved, assertNoSecretLeak, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct, assertUsageAccounting, collectProviderEvents } from "../testing/provider-conformance.js";
+import { assertAbortIsObserved, assertNoSecretLeak, assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct, assertUsageAccounting, collectProviderEvents } from "../testing/provider-conformance.js";
 
 const request = { model: { provider: "mock", model: "demo" }, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] } as const;
 
@@ -28,6 +28,12 @@ void describe("provider conformance", () => {
     ], [{ index: 0, id: "call_1", name: "lookup", arguments: { a: 1 } }]);
 
     assert.deepEqual(calls[0]?.arguments, { a: 1 });
+  });
+
+  it("conformance_rejects_malformed_tool_call_delta_arguments", () => {
+    assert.throws(() => assertToolCallDeltasReconstruct([
+      providerToolCallDelta({ index: 0, id: "call_1", name: "lookup", argumentsText: "not-json" }),
+    ], []), /Invalid tool call arguments at index 0/);
   });
 
   it("conformance_checks_cache_usage_fields", async () => {
@@ -108,6 +114,40 @@ void describe("provider conformance", () => {
     assert.throws(
       () => assertNoSecretLeak([providerTextDelta("error: sk-fake-123")], ["sk-fake-123"]),
       /Secret leaked/,
+    );
+  });
+
+  it("conformance_owned_headers_win_passes_when_provider_keeps_owned_and_preserves_caller", () => {
+    const captured = new Headers({
+      authorization: "Bearer provider-key",
+      "content-type": "application/json",
+      "x-caller": "kept",
+    });
+    assertProviderOwnedHeadersWin(captured, {
+      owned: { authorization: "Bearer provider-key", "content-type": "application/json" },
+      caller: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" },
+    });
+  });
+
+  it("conformance_owned_headers_win_fails_when_caller_overrides_owned", () => {
+    const captured = new Headers({ authorization: "Bearer attacker" });
+    assert.throws(
+      () => assertProviderOwnedHeadersWin(captured, {
+        owned: { authorization: "Bearer provider-key" },
+        caller: { authorization: "Bearer attacker" },
+      }),
+      /overrode provider-owned/,
+    );
+  });
+
+  it("conformance_owned_headers_win_fails_when_non_owned_caller_header_is_dropped", () => {
+    const captured = new Headers({ authorization: "Bearer provider-key" });
+    assert.throws(
+      () => assertProviderOwnedHeadersWin(captured, {
+        owned: { authorization: "Bearer provider-key" },
+        caller: { "x-caller": "kept" },
+      }),
+      /dropped non-owned caller header/,
     );
   });
 });

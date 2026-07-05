@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, ProviderEvent, SessionEntry } from "@arnilo/prism";
+import type { AIProvider, Message, ProviderEvent, ProviderRequest, SessionEntry } from "@arnilo/prism";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { runDropper, runObserver, runReflector, type MemoryObservation } from "../index.js";
 
@@ -29,5 +29,28 @@ describe("observational memory workers", () => {
     const observation: MemoryObservation = { id: "aaaaaaaaaaaa", content: "Drop me", timestamp: source.timestamp, relevance: "low", sourceEntryIds: ["m1"], tokenCount: 10 };
     const dropped = await runDropper({ observations: [observation], targetTokens: 1, provider: provider([providerToolCall(toolCallContent("c1", "drop_observations", { observationIds: [observation.id, "bad"] })), providerDone()]), model, maxTurns: 1 });
     assert.deepEqual(dropped, [observation.id]);
+  });
+
+  it("worker_transcript_replays_assistant_tool_call_before_tool_result", async () => {
+    const requests: ProviderRequest[] = [];
+    let turn = 0;
+    const memoryProvider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        requests.push(request);
+        if (turn++ === 0) yield providerToolCall(toolCallContent("c1", "record_observation", { content: "Package-only memory.", relevance: "high", sourceEntryIds: ["m1"] }));
+        yield providerDone();
+      },
+    };
+
+    const observations = await runObserver({ entries: [source], provider: memoryProvider, model, maxTurns: 2 });
+
+    assert.equal(observations.length, 1);
+    const replay = requests[1]?.messages.slice(-2) as Message[] | undefined;
+    assert.equal(replay?.[0]?.role, "assistant");
+    assert.equal(replay?.[0]?.content[0]?.type, "tool_call");
+    assert.equal(replay?.[1]?.role, "tool");
+    assert.equal(replay?.[1]?.content[0]?.type, "tool_result");
+    assert.equal((replay?.[1]?.content[0] as any).toolCallId, "c1");
   });
 });

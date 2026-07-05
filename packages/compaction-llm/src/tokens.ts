@@ -19,6 +19,7 @@ export function estimateEntryTokens(entry: SessionEntry): number {
 function estimateContentBlockTokens(block: ContentBlock): number {
   if (block.type === "text" || block.type === "thinking") return estimateTextTokens(block.text);
   if (block.type === "tool_call") return estimateTextTokens(`${block.name} ${JSON.stringify(block.arguments)}`);
+  if (block.type === "tool_call_delta") return estimateTextTokens(`${block.name ?? "tool"} ${block.argumentsText ?? ""}`);
   if (block.type === "tool_result") return estimateTextTokens(`${block.name} ${JSON.stringify(block.result ?? block.error ?? "")}`);
   return estimateTextTokens(block.url ?? block.mimeType ?? "[image]");
 }

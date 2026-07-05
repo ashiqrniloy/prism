@@ -4,7 +4,11 @@ export interface ComposeSystemPromptOptions {
   readonly base?: string | readonly string[];
 }
 
-const sourceRank = new Map<string, number>([["package", 0], ["app", 1], ["user", 2], ["run", 3]]);
+// ponytail: Phase 31 — `source: "user"` is the global base layer; `source: "app"` sits above package.
+// Behavioral change from Phase 14: `source: "user"` is now the global base (rank 0), not a high-priority caller override.
+// Unknown custom sources sort after package but before app/run so they cannot override host/run layers.
+const sourceRank = new Map<string, number>([["user", 0], ["package", 1], ["app", 2], ["run", 3]]);
+const unknownSourceRank = 1.5;
 
 export function composeSystemPrompt(contributions: SystemPromptConfig = [], options: ComposeSystemPromptOptions = {}): string | undefined {
   const parts = baseParts(options.base);
@@ -47,7 +51,7 @@ function baseParts(base: ComposeSystemPromptOptions["base"]): string[] {
 }
 
 function rank(layer: SystemPromptContribution): number {
-  return sourceRank.get(layer.source ?? "") ?? 10;
+  return sourceRank.get(layer.source ?? "") ?? unknownSourceRank;
 }
 
 function joinPrompt(parts: readonly string[]): string | undefined {

@@ -1,16 +1,18 @@
 # Session stores and branching
 
+> Compatibility page: the canonical session-store overview now lives at [Session stores](session-stores.md). This page retains the detailed branch-helper reference and is kept to avoid breaking existing links.
+
 ## What it does
 
-Session store helpers define branch-aware session entries and pure utilities for creating entries, listing branch leaves, reading a leaf path, and rebuilding provider context from a selected leaf.
+Session store helpers define branch-aware session entries and pure utilities for creating entries, listing branch leaves, reading a leaf path, and rebuilding provider context from a selected leaf. For atomic append options, `SessionAppendConflictError`, branch handles, and production `readBranchPath` guidance, start with [Session stores](session-stores.md#atomic-append-and-branch-handles).
 
 Public helpers:
 
 - `createSessionEntry(options)`
 - `createMemorySessionStore(initialEntries?)`
-- `getSessionBranchEntries(entries, options)`
+- `getSessionBranchEntries(entries, options)` and `getSessionBranchEntries(reader, query)`
 - `listSessionBranches(entries)`
-- `rebuildSessionContext(entries, options)`
+- `rebuildSessionContext(entries, options)` and `rebuildSessionContext(reader, query)`
 
 ## When to use it
 
@@ -32,7 +34,7 @@ Do not use them as a database layer, migration system, lock service, compaction 
 | `runId` | Optional run id. |
 | `message`, `event`, `model`, `previousModel`, `label`, `summary`, `data`, `metadata` | Optional payload fields for the entry kind. |
 
-`rebuildSessionContext()` and `getSessionBranchEntries()` accept an optional `leafId`. If omitted, the last entry is used as the leaf. `createMemorySessionStore()` accepts optional initial entries.
+`rebuildSessionContext()` and `getSessionBranchEntries()` accept an optional `leafId`. If omitted, the last entry is used as the leaf. The async reader overloads accept `SessionBranchRead { sessionId, leafId?, cursor?, limit? }` and call a `BranchReader` / `readBranchPath` implementation so database adapters can return one ancestor chain without `list(sessionId)`. `createMemorySessionStore()` accepts optional initial entries.
 
 ## Outputs / response / events
 
@@ -84,7 +86,7 @@ const context = rebuildSessionContext(await store.list("s1"), { leafId: label.id
 
 ## Extension and configuration notes
 
-Stores and extensions can use these data helpers directly. Store adapters only need append/list/get behavior; branch queries are derived in memory from listed entries.
+Stores and extensions can use these data helpers directly. Store adapters only need append/list/get behavior; branch queries are derived in memory from listed entries unless the store implements `readBranchPath`. See [Session stores](session-stores.md) for `SessionAppendOptions`, `SessionAppendConflictError`, and `(sessionId, leafId)` branch-handle guidance.
 
 `createMemorySessionStore()` is the built-in in-memory implementation. It preserves append order per session, isolates session ids, returns entries by id in O(1), rejects duplicate entry ids, and returns deep copies from `list()` and `get()`. It is process memory only; hosts that need durability should pass another `SessionStore`.
 
@@ -102,13 +104,15 @@ Use `createDefaultCompactionStrategy()` to create compaction entries that `rebui
 
 - Helpers are pure data functions: no provider calls, tool calls, settings reads, credential resolution, filesystem access, network access, timers, or dependencies.
 - Store only host-approved session entries. Do not put provider credentials, credential resolvers, provider objects, full provider requests, or secrets in entries.
-- Branch rebuild is linear over listed entries and uses `Map`, `Set`, and arrays only.
+- Branch rebuild is linear over listed entries for development stores. Production stores should implement `readBranchPath` and return one branch ancestor chain so large sessions are not fully loaded.
 - Compaction-aware rebuild keeps raw branch entries in `entries`; only provider-context `messages`/`summaries` are reduced.
 - Memory store lookup by id is O(1); list is O(n) for that session.
 - Duplicate ids and missing parents fail clearly instead of guessing a branch.
 
 ## Related APIs
 
+- [Migration guide](migration.md): moving branch-handle reads from the dev `list(sessionId)` path to a database-backed `readBranchPath`.
+- [Session stores](session-stores.md): canonical overview for `SessionAppendOptions`, `SessionAppendConflictError`, branch handles, and dev-vs-production branch reads.
 - [Public contracts](public-contracts.md): `SessionEntry`, `SessionStore`, `StoreFactory`, and session contracts.
 - [Agent/session runtime](agent-session-runtime.md): runtime sessions use these branch helpers for store-backed history, checkout, fork, and clone.
 - [Node JSONL session store](node-jsonl-session-store.md): optional Node filesystem store for caller-named JSONL files.

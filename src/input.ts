@@ -3,7 +3,9 @@ import type {
   ContextBlock,
   ContextProvider,
   ContextResolutionContext,
+  InputAssemblyLayout,
   InputBuilder,
+  InstructionInjector,
   InputBuildContext,
   JsonObject,
   JsonValue,
@@ -19,7 +21,11 @@ import type {
   ToolResult,
 } from "./contracts.js";
 import type { MiddlewareRegistry } from "./middleware.js";
+import type { SecretRedactor } from "./redaction.js";
+import { redactMessage } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
+import { composeSystemPrompt } from "./system-prompts.js";
+import { runInstructionInjectors } from "./instruction-injection.js";
 
 export type AgentInput = string | Message | readonly Message[];
 
@@ -49,6 +55,9 @@ export interface DefaultInputBuildContext extends InputBuildContext {
   readonly resourceLoader?: ResourceLoader;
   readonly toolResults?: readonly ToolResult[];
   readonly middleware?: MiddlewareRegistry;
+  // ponytail: exposed so a custom InputBuilder can opt to run injectors (runInstructionInjectors).
+  readonly instructionInjectors?: readonly InstructionInjector[];
+  readonly turn?: number;
 }
 
 export interface DefaultInputBuilder extends InputBuilder {
@@ -59,6 +68,8 @@ export interface ResolveContextOptions extends Omit<ContextResolutionContext, "m
   readonly messages: readonly Message[];
   readonly providers?: readonly ContextProvider[];
   readonly middleware?: MiddlewareRegistry;
+  // ponytail: injector-produced blocks appended after provider blocks, before middleware.
+  readonly injectedBlocks?: readonly ContextBlock[];
 }
 
 export interface DefaultPromptBuilder extends PromptBuilder {
@@ -71,6 +82,7 @@ export interface PromptTemplateOptions {
 
 export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly model: ModelConfig;
+  readonly redactor?: SecretRedactor;
   readonly input: AgentInput;
   readonly inputBuilder?: InputBuilder;
   readonly contextProviders?: readonly ContextProvider[];
@@ -84,16 +96,19 @@ export function createDefaultInputBuilder(): DefaultInputBuilder {
   return {
     name: "default-input",
     async build(input, context = {}) {
-      const messages: Message[] = [];
-
-      messages.push(...instructionMessages(context.systemInstructions, "System instruction"));
-      messages.push(...instructionMessages(context.developerInstructions, "Developer instruction"));
-      messages.push(...customInstructionMessages(context.instructions));
-      messages.push(...summaryMessages(context.summaries));
-      messages.push(...(context.history ?? []));
-      messages.push(...inputMessages(input));
-      messages.push(...await attachmentMessages(context));
-      messages.push(...toolResultMessages(context.toolResults));
+      const groups = {
+        instructions: [
+          ...instructionMessages(context.systemInstructions, "System instruction"),
+          ...instructionMessages(context.developerInstructions, "Developer instruction"),
+          ...customInstructionMessages(context.instructions),
+        ],
+        summaries: summaryMessages(context.summaries),
+        history: [...(context.history ?? [])],
+        input: inputMessages(input),
+        attachments: await attachmentMessages(context),
+        toolResults: toolResultMessages(context.toolResults),
+      };
+      const messages = flattenInputGroups(groups, context.inputLayout ?? "legacy");
 
       return context.middleware ? context.middleware.run("input_assembly", messages) : messages;
     },
@@ -112,6 +127,8 @@ export async function resolveContextProviders(options: ResolveContextOptions): P
       signal: options.signal,
     }));
   }
+  // ponytail: injector blocks after host+skill provider blocks (split by origin if per-block ordering matters).
+  if (options.injectedBlocks) blocks.push(...options.injectedBlocks);
   return options.middleware ? options.middleware.run("context", blocks) : blocks;
 }
 
@@ -147,10 +164,31 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     metadata: options.metadata,
     signal: options.signal,
   };
-  const messages = await inputBuilder.build(options.input, { ...options, ...baseContext });
+  // ponytail: Phase 30 — run injectors once per turn inside the assembler so when/predicate/turn
+  // filter against loop-local turn. Instructions layer via composeSystemPrompt (no parallel prompt
+  // code); contextBlocks merge via resolveContextProviders (middleware still runs).
+  const turn = options.turn ?? 1;
+  const injectorContribs = options.instructionInjectors?.length
+    ? runInstructionInjectors(options.instructionInjectors, {
+        sessionId: options.sessionId ?? "",
+        runId: options.runId ?? "",
+        turn,
+        // Runtime history is already redacted; input is redacted here before injector code sees it.
+        input: inputMessages(options.input).map((message) => redactMessage(message, options.redactor)),
+        history: options.history ?? [],
+        metadata: options.metadata ?? {},
+        signal: options.signal ?? new AbortController().signal,
+      })
+    : { instructions: [], contextBlocks: [] } as const;
+  const systemInstructions = injectorContribs.instructions.length
+    ? composeSystemPrompt(injectorContribs.instructions, { base: options.systemInstructions })
+    : options.systemInstructions;
+  const buildContext: DefaultInputBuildContext = { ...options, ...baseContext, systemInstructions };
+  const messages = await inputBuilder.build(options.input, buildContext);
   const context = await resolveContextProviders({
     providers: options.contextProviders,
     messages,
+    injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
     middleware: options.middleware,
     ...baseContext,
   });
@@ -185,7 +223,25 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   };
 }
 
-function inputMessages(input: AgentInput): Message[] {
+interface DefaultInputMessageGroups {
+  readonly instructions: readonly Message[];
+  readonly summaries: readonly Message[];
+  readonly history: readonly Message[];
+  readonly input: readonly Message[];
+  readonly attachments: readonly Message[];
+  readonly toolResults: readonly Message[];
+}
+
+function flattenInputGroups(groups: DefaultInputMessageGroups, layout: InputAssemblyLayout): Message[] {
+  switch (layout) {
+    case "cache_aware":
+      return [...groups.instructions, ...groups.attachments, ...groups.summaries, ...groups.history, ...groups.toolResults, ...groups.input];
+    case "legacy":
+      return [...groups.instructions, ...groups.summaries, ...groups.history, ...groups.input, ...groups.attachments, ...groups.toolResults];
+  }
+}
+
+export function inputMessages(input: AgentInput): Message[] {
   if (typeof input === "string") return [textMessage("user", input)];
   if ("role" in input) return [input];
   return [...input];
@@ -277,6 +333,7 @@ function blockText(block: ContextBlock): string {
     if (part.type === "text" || part.type === "thinking") return part.text;
     if (part.type === "tool_result") return JSON.stringify(part.result ?? part.error ?? null);
     if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
+    if (part.type === "tool_call_delta") return `${part.name ?? "tool"}(${part.argumentsText ?? ""})`;
     return part.url ?? part.mimeType ?? "[image]";
   }).join("\n");
 }

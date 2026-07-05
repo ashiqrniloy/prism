@@ -40,6 +40,7 @@ function allContributionsExtension(): Extension {
       api.registerAuthMethod({ provider: "mock", kind: "api_key", credentialName: "apiKey" });
       api.registerProviderRequestPolicy({ name: "cache", apply: ({ request }) => request });
       api.registerSystemPromptContribution({ id: "demo-prompt", source: "package", mode: "append", text: "Be brief." });
+      api.registerInstructionInjector({ name: "json", description: "force JSON", apply: () => ({ instructions: "Always answer in JSON", when: "every_turn" }) });
     },
   };
 }
@@ -111,6 +112,24 @@ describe("extension kernel", () => {
     assert.equal(kernel.registries.authMethods.resolve("mock\0api_key").provider, "mock");
     assert.equal(kernel.registries.providerRequestPolicies.resolve("cache").name, "cache");
     assert.equal(kernel.registries.systemPromptContributions.resolve("demo-prompt").text, "Be brief.");
+    assert.equal(kernel.registries.instructionInjectors.resolve("json").apply({ sessionId: "", runId: "", turn: 1, input: [], history: [], metadata: {}, signal: new AbortController().signal }).instructions, "Always answer in JSON");
+  });
+
+  it("keeps instruction injector registration isolated from other registries", async () => {
+    const kernel = createExtensionKernel();
+    await kernel.load([allContributionsExtension()]);
+    // Registering an injector must not touch tools/skills/contextProviders/systemPromptContributions.
+    assert.equal(kernel.registries.tools.list().length, 1);
+    assert.equal(kernel.registries.skills.list().length, 1);
+    assert.equal(kernel.registries.contextProviders.list().length, 1);
+    assert.equal(kernel.registries.systemPromptContributions.list().length, 1);
+    // Duplicate name overwrites (last-write-wins, matching other registries).
+    const kernel2 = createExtensionKernel();
+    await kernel2.load([
+      allContributionsExtension(),
+      { name: "override", setup: (api) => { api.registerInstructionInjector({ name: "json", apply: () => ({ instructions: "v2", when: "every_turn" }) }); } },
+    ]);
+    assert.equal(kernel2.registries.instructionInjectors.resolve("json").apply({ sessionId: "", runId: "", turn: 1, input: [], history: [], metadata: {}, signal: new AbortController().signal }).instructions, "v2");
   });
 
   it("lets extensions register middleware", async () => {

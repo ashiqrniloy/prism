@@ -13,10 +13,14 @@ packages. Prism defines contracts, not apps.
   compact, and navigate branches.
 - **Providers and models**: provider/model registries, provider event helpers,
   credential redaction helpers, mock provider, and an optional
-  OpenAI-compatible provider subpath.
+  OpenAI-compatible provider subpath. Cache support is provider-specific:
+  OpenAI/OpenRouter use best-effort explicit cache hints, NeuralWatt uses
+  best-effort implicit prefix caching, and other providers have route/model-specific
+  or no cache-control support; see [docs/provider-caching.md](docs/provider-caching.md).
 - **First-party packages**: `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-opencode-go`,
   `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-zai`, `@arnilo/prism-provider-kimi`,
-  `@arnilo/prism-compaction-llm`, and `@arnilo/prism-compaction-observational-memory`.
+  `@arnilo/prism-provider-neuralwatt`, `@arnilo/prism-compaction-llm`, and
+  `@arnilo/prism-compaction-observational-memory`.
 - **Tools, context, skills**: host-owned tool registry with allow/deny filtering
   and dispatch, context providers, and a skill registry with progressive
   disclosure.
@@ -63,11 +67,16 @@ const agent = createAgent({
 
 const session = createAgentSession({ agent });
 
+// Consume the event stream concurrently with the run. `subscribe()` only
+// emits while a run is in progress, so the loop and `run()` must run together;
+// awaiting the loop before calling `run()` would deadlock.
 (async () => {
-  for await (const event of session.subscribe()) {
-    // AgentEvent: agent_started, message_delta, turn_finished, ...
-  }
-  await session.run("Hi");
+  const consumer = (async () => {
+    for await (const event of session.subscribe()) {
+      // AgentEvent: agent_started, message_delta, turn_finished, ...
+    }
+  })();
+  await Promise.all([consumer, session.run("Hi")]);
 })();
 ```
 
@@ -115,9 +124,10 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-provider-openrouter` | OpenRouter provider with per-model cache control |
 | `@arnilo/prism-provider-zai` | ZAI GLM provider |
 | `@arnilo/prism-provider-kimi` | Kimi For Coding provider |
+| `@arnilo/prism-provider-neuralwatt` | NeuralWatt provider with implicit vLLM prefix caching |
 | `@arnilo/prism-compaction-llm` | provider-backed compaction strategy |
 | `@arnilo/prism-compaction-observational-memory` | source-backed memory + recall tool |
-| `@arnilo/prism-providers` | umbrella: all 5 provider adapters |
+| `@arnilo/prism-providers` | umbrella: all 6 provider adapters |
 | `@arnilo/prism-compaction` | umbrella: both compaction strategies |
 | `@arnilo/prism-all` | umbrella: core + providers + compaction |
 

@@ -38,7 +38,7 @@ Key exports:
 | `recallObservationalMemory()` | Recover source evidence for a known observation/reflection id from supplied current-branch entries. |
 | `createMemoryId()` / `isMemoryId()` | Create/check 12-character ids. |
 | `resolveObservationalMemorySettings()` | Merge `observational-memory` settings with defaults and overrides. |
-| `createObservationalMemoryRuntime()` | Explicitly run observer/reflector/dropper workers for a supplied session/store/provider. |
+| `createObservationalMemoryRuntime()` | Explicitly run observer/reflector/dropper workers for a supplied session, owned append callback, and provider. |
 | `createObservationalMemoryCompactionStrategy()` | Render existing folded memory as a standard Prism compaction summary with `data.memory`. |
 | `createObservationalMemoryExtension()` | Inert extension helper that registers the strategy contribution unless disabled. |
 | `createRecallMemoryTool()` | Optional exact-id `recall` tool factory backed by host-supplied current-branch entries. |
@@ -74,7 +74,7 @@ const evidence = recallObservationalMemory(entries, "aaaaaaaaaaaa");
 
 const memory = createObservationalMemoryRuntime({
   session,
-  store,
+  appendEntry: (entry) => store.append(entry),
   workerProvider,
   workerModel: { provider: "mock", model: "memory" },
 });
@@ -92,7 +92,7 @@ await kernel.load([createObservationalMemoryExtension({ recallTool: { getEntries
 
 Settings are read from the `observational-memory` key only when a host calls `resolveObservationalMemorySettings()` or `runtime.flush()`. Defaults are `observeAfterTokens: 10000`, `reflectAfterTokens: 20000`, `compactAfterTokens: 81000`, `observationsPoolMaxTokens: 20000`, `observationsPoolTargetTokens: 10000`, `agentMaxTurns: 16`, `passive: false`, and `debugLog: false`.
 
-The runtime requires host-supplied `session`, matching `store`, `workerProvider`, and `workerModel`. Optional credential resolution is explicit; missing requested credentials skip worker execution.
+The runtime requires host-supplied `session`, an `appendEntry` callback bound to that session's owning store/branch, `workerProvider`, and `workerModel`. It no longer accepts a separate `store` option because mismatched session/store pairs can append memory entries outside the active branch. After each memory append, the runtime checks the appended entry is visible at the session leaf and fails closed/restores the previous checkout if the callback points elsewhere. Optional credential resolution is explicit; missing requested credentials skip worker execution.
 
 `createObservationalMemoryCompactionStrategy()` keeps recent message entries like the default compaction strategy, renders existing observations/reflections as the summary, and returns a standard Prism compaction entry. Its `data` includes `throughEntryId`, `keepEntryIds`, `strategy`, `trigger`, and `memory: { type: "om.folded", version: 1, fullFold, observations, reflections, droppedObservationIds }`. When active observations exceed `observationsPoolMaxTokens`, it performs a full fold into `data.memory`.
 
@@ -108,7 +108,7 @@ The runtime requires host-supplied `session`, matching `store`, `workerProvider`
 - Recall tool and commands only see current-branch entries supplied by the host callback.
 - Invalid or missing ids fail closed; invalid recall tool ids skip entry lookup.
 - Utilities and fast compaction are O(n) over supplied entries and use no provider, network, filesystem, timer, worker, credential, or settings access.
-- Workers serialize only supplied branch entries, enforce `agentMaxTurns`, and run one consolidation pipeline at a time per runtime.
+- Workers serialize only supplied branch entries, enforce `agentMaxTurns`, and run one consolidation pipeline at a time per runtime. Worker transcripts replay assistant `tool_call` messages before matching role `tool` `tool_result` messages so provider requests stay valid for call/result-pairing providers.
 - Compaction preserves raw history; Prism appends one standard compaction entry and rebuilds provider context from its summary plus kept recent messages.
 - Pass known secrets to render/recall/runtime/tool/command helpers to redact exact values from prompts, records, structured results, and text output.
 - Live tests are opt-in with `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1`.

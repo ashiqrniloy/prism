@@ -30,6 +30,21 @@ describe("provider registry", () => {
     assert.equal(providers.resolve(model), provider);
   });
 
+  it("replaces duplicate providers by default", () => {
+    const replacement: AIProvider = { ...provider, generate: async function* () { yield { type: "done" }; } };
+    const registry = createProviderRegistry([provider, replacement]);
+
+    assert.equal(registry.resolve("mock"), replacement);
+    assert.deepEqual(registry.list(), [replacement]);
+  });
+
+  it("strict mode rejects duplicate providers", () => {
+    assert.throws(() => createProviderRegistry([provider, provider], { duplicate: "error" }), /Duplicate provider: mock/);
+    const registry = createProviderRegistry([provider], { duplicate: "error" });
+
+    assert.throws(() => registry.register(provider), /Duplicate provider: mock/);
+  });
+
   it("unknown provider fails before generate", async () => {
     let called = false;
     const registry = createProviderRegistry([
@@ -57,6 +72,24 @@ describe("model registry", () => {
     assert.equal(registry.get("mock", "demo"), model);
     assert.deepEqual(registry.list(), [model]);
     assert.equal(registry.resolve("mock", "demo"), model);
+  });
+
+  it("replaces duplicate models by default", () => {
+    const first = { provider: "mock", model: "demo", parameters: { temperature: 0 } };
+    const second = { provider: "mock", model: "demo", parameters: { temperature: 1 } };
+    const registry = createModelRegistry([first, second]);
+
+    assert.equal(registry.resolve("mock", "demo"), second);
+    assert.deepEqual(registry.list(), [second]);
+  });
+
+  it("strict mode rejects duplicate models", () => {
+    const model = { provider: "mock", model: "demo" };
+
+    assert.throws(() => createModelRegistry([model, model], { duplicate: "error" }), /Duplicate model: mock\/demo/);
+    const registry = createModelRegistry([model], { duplicate: "error" });
+
+    assert.throws(() => registry.register(model), /Duplicate model: mock\/demo/);
   });
 
   it("unknown model fails before provider call", () => {

@@ -1,13 +1,18 @@
 export type * from "./contracts.js";
+export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict } from "./contracts.js";
 export { createAgent, createAgentSession } from "./agents.js";
+export { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "./cache-helpers.js";
+export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport } from "./cache-helpers.js";
+export { resolveAgentDefinition } from "./agent-definitions.js";
+export { parseSkillFile, parseAgentFile } from "./contribution-parsing.js";
 export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
 export { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 export type { DefaultCompactionStrategyOptions } from "./compaction.js";
 export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./retry.js";
 export type { DefaultRetryPolicyOptions } from "./retry.js";
-export { createContributionRegistries, createContributionRegistry } from "./contributions.js";
-export type { ContributionRegistries, ContributionRegistry, ContributionRegistryOptions } from "./contributions.js";
+export { createContributionRegistries, createContributionRegistry, registerDiscoveredContributions } from "./contributions.js";
+export type { ContributionRegistries, ContributionRegistriesOptions, ContributionRegistry, ContributionRegistryOptions } from "./contributions.js";
 export { createChainedCredentialResolver, createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore, refreshOAuthCredential, resolveCredentialValue } from "./credentials.js";
 export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
 export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions } from "./extensions.js";
@@ -18,7 +23,7 @@ export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProvid
 export type { SessionCachePolicyOptions } from "./provider-request-policy.js";
 export { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
 export type { ComposeSystemPromptOptions } from "./system-prompts.js";
-export type { ModelRegistry } from "./models.js";
+export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
 export { definePrismManifest, parsePrismManifest } from "./manifests.js";
 export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js";
 export { loadJsonResource, loadManifestResource, loadTextResource } from "./resources.js";
@@ -42,18 +47,23 @@ export {
   providerUsage,
   toolCallContent,
 } from "./provider-events.js";
-export { createProviderRegistry } from "./providers.js";
-export type { ProviderRegistry } from "./providers.js";
-export { createSecretRedactor, errorToErrorInfo, redactAgentEvent, redactMessage, redactProviderRequest, redactSecrets, redactSessionEntry } from "./redaction.js";
+export type { ProviderResolver } from "./contracts.js";
+export { createProviderRegistry, createProviderResolver } from "./providers.js";
+export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
+export { createSecretRedactor, errorToErrorInfo, redactAgentEvent, redactMessage, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry } from "./redaction.js";
 export type { SecretRedactor } from "./redaction.js";
 export { assertPermission, assertTrusted, checkPermission, createStaticPermissionPolicy, createStaticTrustPolicy, denialToErrorInfo, isTrusted, PermissionDeniedError, TrustDeniedError } from "./security.js";
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
 export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
-export type { ResolveActiveSkillsOptions } from "./skills.js";
+export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js";
+export { resolveInstructionInjectors, runInstructionInjectors } from "./instruction-injection.js";
+export type { ResolveInstructionInjectorsOptions } from "./instruction-injection.js";
 export { createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
-export type { DispatchToolCallOptions, ToolFilter, ToolFilterInput, ToolValidator } from "./tools.js";
+export type { DispatchToolCallOptions, ToolFilter, ToolFilterInput, ToolRegistryOptions, ToolValidator } from "./tools.js";
+export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js";
+export { generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.1";
+export const version = "0.0.2";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

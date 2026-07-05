@@ -101,11 +101,13 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 ## Extension and configuration notes
 
 - Extension loading is explicit. Prism does not discover packages, read manifests, or load filesystem config in the kernel.
+- `AgentConfig.extensions` is host-owned metadata for compatibility; `createAgent()` and `session.run()` do not load it or call `Extension.setup()`. Load extensions with `createExtensionKernel().load(...)`, then pass selected contributions (`tools`, `context`, `skills`, middleware, etc.) into `createAgent()`.
 - Setup order is the order provided by the host.
 - The kernel writes only to explicit registries returned by `createContributionRegistries()` or provided by the host.
 - `api.registerTool()` contributes an inert `ToolDefinition` to `registries.tools`; it does not add the tool to an active tool registry, allow list, or dispatch loop.
 - `api.registerInputBuilder()`, `api.registerPromptBuilder()`, and `api.registerContextProvider()` contribute inert builders/providers; they do not replace defaults or run until the host passes selected entries to Phase 5 helpers.
 - `api.registerSkill()` contributes an inert `Skill` to `registries.skills`; it does not disclose instructions, activate referenced tools, or grant permissions until the host selects it.
+- `api.registerInstructionInjector()` (Phase 30) contributes an inert `InstructionInjector` to `registries.instructionInjectors`; it grants no tools, skills, or permissions and is only applied when the host selects it via `AgentConfig.instructionInjectors`/`RunOptions.instructionInjectors`. See [Instruction injection](instruction-injection.md).
 - `api.registerProviderPackage()`, `api.registerAuthMethod()`, `api.registerProviderRequestPolicy()`, and `api.registerSystemPromptContribution()` contribute inert provider-package data; they do not load packages, resolve credentials, mutate provider payloads, or change prompts until selected by a host/runtime helper that documents that behavior.
 - `api.registerAgent()` contributes an inert `AgentDefinition`; its `create()` can call `createAgent()`, but the runtime is not started until host code resolves the definition and creates/runs a session.
 - The kernel registers middleware only into the explicit registry returned by `createMiddlewareRegistry()` or provided by the host.
@@ -115,6 +117,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 ## Security and performance notes
 
 - No hidden global extension kernel, provider registry, credential resolver, settings provider, store, or resource loader is created.
+- `AgentConfig.extensions` does not auto-execute, so constructing or running an agent cannot unexpectedly run extension code.
 - Error events use `ErrorInfo` and redact only known secret values passed in `secrets`.
 - Do not put resolved credential values in extension events, registry metadata, docs, logs, prompts, or session stores.
 - Event and middleware dispatch are ordered and dependency-free. They use no timers, background workers, filesystem discovery, network calls, provider calls, or tool execution.
@@ -122,10 +125,13 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 
 ## Related APIs
 
+- [Extension authoring guide](extension-authoring.md): package-author checklist for inert contributions, host activation, trust, permissions, no sandbox, and redaction.
 - [Middleware hooks](middleware-hooks.md): ordered hook registry populated by `ExtensionAPI.use()`.
 - [Provider packages](provider-packages.md): provider package and model metadata registration through `ExtensionAPI`.
 - [Contribution registries](contribution-registries.md): registry bundle populated by `ExtensionAPI`.
+- [Contribution discovery (workspace)](contribution-discovery.md): filesystem-driven complement to extension registration — opt-in scan without `import()` or activation.
 - [Tools](tools.md): host activation, filtering, and dispatch for contributed tool definitions.
+- [Instruction injection](instruction-injection.md): package injectors that layer instructions and context blocks for `first_turn`/`every_turn`/`on_input` without granting tools.
 - [Input and prompt assembly](input-and-prompt-assembly.md): host selection for contributed input/prompt builders.
 - [System prompts](system-prompts.md): host selection for contributed system prompt layers.
 - [Context and skills](context-and-skills.md): host selection and tool checks for contributed context providers and skills.

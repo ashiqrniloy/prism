@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-all",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Umbrella package: installs the Prism core runtime plus all first-party provider adapters and compaction strategies. Imports come from @arnilo/prism and the individual @arnilo/prism-* packages.",
   "license": "MIT",
   "scripts": {
@@ -10,9 +10,9 @@
     "README.md"
   ],
   "dependencies": {
-    "@arnilo/prism": "0.0.1",
-    "@arnilo/prism-providers": "0.0.1",
-    "@arnilo/prism-compaction": "0.0.1"
+    "@arnilo/prism": "0.0.2",
+    "@arnilo/prism-providers": "0.0.2",
+    "@arnilo/prism-compaction": "0.0.2"
   },
   "engines": {
     "node": ">=20"

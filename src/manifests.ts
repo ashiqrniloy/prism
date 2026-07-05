@@ -1,4 +1,4 @@
-import { assertJsonObject, isJsonObject } from "./config.js";
+import { assertJsonObject } from "./config.js";
 import type { JsonObject } from "./contracts.js";
 
 export type ManifestContributionKind =
@@ -20,7 +20,8 @@ export type ManifestContributionKind =
   | "providerPackage"
   | "authMethod"
   | "providerRequestPolicy"
-  | "systemPromptContribution";
+  | "systemPromptContribution"
+  | "instructionInjector";
 
 export interface ManifestContributionDeclaration {
   readonly kind: ManifestContributionKind;
@@ -127,6 +128,7 @@ function readKind(value: unknown, index: number): ManifestContributionKind {
     "authMethod",
     "providerRequestPolicy",
     "systemPromptContribution",
+    "instructionInjector",
   ]);
   if (typeof value !== "string" || !kinds.has(value as ManifestContributionKind)) {
     throw new Error(`manifest.contributions[${index}].kind must be a known contribution kind`);
@@ -150,6 +152,6 @@ function readOptionalString(record: Record<string, unknown>, key: string, label 
 function readOptionalJsonObject(record: Record<string, unknown>, key: string, label = `manifest.${key}`): Record<string, JsonObject> {
   const value = record[key];
   if (value === undefined) return {};
-  if (!isJsonObject(value)) throw new Error(`${label} must be a JSON object`);
+  assertJsonObject(value, label);
   return { [key]: value };
 }

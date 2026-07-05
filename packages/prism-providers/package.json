@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Umbrella package: installs all first-party Prism provider adapters. Imports come from the individual @arnilo/prism-provider-* packages.",
   "license": "MIT",
   "scripts": {
@@ -10,11 +10,12 @@
     "README.md"
   ],
   "dependencies": {
-    "@arnilo/prism-provider-openai": "0.0.1",
-    "@arnilo/prism-provider-opencode-go": "0.0.1",
-    "@arnilo/prism-provider-openrouter": "0.0.1",
-    "@arnilo/prism-provider-zai": "0.0.1",
-    "@arnilo/prism-provider-kimi": "0.0.1"
+    "@arnilo/prism-provider-openai": "0.0.2",
+    "@arnilo/prism-provider-opencode-go": "0.0.2",
+    "@arnilo/prism-provider-openrouter": "0.0.2",
+    "@arnilo/prism-provider-zai": "0.0.2",
+    "@arnilo/prism-provider-kimi": "0.0.2",
+    "@arnilo/prism-provider-neuralwatt": "0.0.2"
   },
   "engines": {
     "node": ">=20"

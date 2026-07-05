@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import { createZaiProvider, createZaiProviderPackage, zaiModels } from "../index.js";
 
 const request: ProviderRequest = {
@@ -37,15 +37,18 @@ describe("@arnilo/prism-provider-zai", () => {
     assert.equal(body.messages[0].content, "developer instructions");
   });
 
-  it("zai_maps_thinking_and_reasoning_effort", async () => {
+  it("zai_maps_thinking_reasoning_effort_and_max_tokens", async () => {
     let body: any;
     const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
       body = JSON.parse(String(init?.body));
       return ok(sse([]));
     }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request: { ...request, options: { compat: { reasoning_effort: "high", thinking: { type: "enabled" } } } } });
+    await assertProviderStreamConforms({ provider, request: { ...request, model: { ...request.model, parameters: { maxTokens: 333, temperature: 0.4 } }, options: { compat: { reasoning_effort: "high", thinking: { type: "enabled" } } } } });
     assert.deepEqual(body.thinking, { type: "enabled" });
     assert.equal(body.reasoning_effort, "high");
+    assert.equal(body.max_tokens, 333);
+    assert.equal(body.maxTokens, undefined);
+    assert.equal(body.temperature, 0.4);
   });
 
   it("zai_enables_tool_stream_for_supported_models", async () => {
@@ -88,6 +91,33 @@ describe("@arnilo/prism-provider-zai", () => {
     }) as typeof fetch });
     await assertProviderStreamConforms({ provider, request: replay });
     assertSerializedRequestCoversContent(replay, body);
+  });
+
+  it("zai_emits_no_explicit_cache_payload_for_implicit_caching", async () => {
+    let body: any;
+    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: { ...request, options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } } } });
+    // Z.AI uses implicit GLM context caching; no explicit cache_control/cacheKey field.
+    const serialized = JSON.stringify(body);
+    assert.ok(!serialized.includes("cache_control"), "Z.AI body must not contain cache_control");
+    assert.ok(!serialized.includes("cacheKey"), "Z.AI body must not contain cacheKey");
+    assert.ok(!serialized.includes("prompt_cache"), "Z.AI body must not contain prompt_cache fields");
+  });
+
+  it("zai_keeps_provider_owned_headers_after_caller_headers", async () => {
+    let headers = new Headers();
+    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: { ...request, options: { ...request.options, headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" } } } });
+    assertProviderOwnedHeadersWin(headers, {
+      owned: { authorization: "Bearer fake-zai-key", "content-type": "application/json" },
+      caller: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" },
+    });
   });
 
   it("zai_redacts_api_key_from_http_errors", async () => {
