@@ -203,5 +203,6 @@ await session.run(input, { validate: (_t, args) => args.dry ? "dry-run blocked" 
 - [Middleware hooks](middleware-hooks.md): `tool_call` and `tool_result` middleware used during dispatch.
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.
 - [Observational memory compaction package](compaction-observational-memory.md): optional exact-id recall tool factory.
+- [Coding agent tools](coding-agent-tools.md): optional first-party `@arnilo/prism-coding-agent` `shell`/`read`/`write`/`edit` tools a host registers into this harness.
 
 `DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. `AgentConfig.validator`/`RunOptions.validate` run after this guard; their output is redacted through the active `SecretRedactor`. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

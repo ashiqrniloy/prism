@@ -42,6 +42,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 
 ## Tools
 - [Tools](tools.md): register host-owned active tools with replace-or-error duplicate policy, apply exact allow/deny filtering, and dispatch tool calls.
+- [Coding agent tools](coding-agent-tools.md): optional first-party package `@arnilo/prism-coding-agent` providing `shell`, `read`, `write`, and `edit` tools (ported from pi) as `ToolDefinition`s a host registers; pluggable operation backends, per-path mutation serialization, and read-only/coding aggregators. Host shell/filesystem access — gate with permission/trust policies.
 
 ## Extensions/plugins
 - [Contribution discovery (workspace)](contribution-discovery.md): opt-in, realpath-contained directory scanner turning `SKILL.md`/`manifest.json` into inert `DiscoveredContribution` envelopes the host registers — no `import()`, no auto-activate, no provider scanning. (Per-agent `AGENT.md` bundles live under an app-controlled `configRoot`; see [Agent definitions](agent-definitions.md).)

@@ -80,6 +80,7 @@
   "workspaces": [
     "packages/provider-*",
     "packages/compaction-*",
+    "packages/coding-agent",
     "packages/prism-providers",
     "packages/prism-compaction",
     "packages/prism-all"

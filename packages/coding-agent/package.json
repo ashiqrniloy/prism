@@ -1,0 +1,61 @@
+{
+  "name": "@arnilo/prism-coding-agent",
+  "version": "0.0.2",
+  "description": "Optional coding-agent tools (shell, read, write, edit) package for Prism.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "diff": "^8.0.4"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "0.0.2"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../.."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/coding-agent"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/coding-agent#readme",
+  "keywords": [
+    "prism",
+    "coding",
+    "tools",
+    "shell",
+    "agent",
+    "llm"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}
