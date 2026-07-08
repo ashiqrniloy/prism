@@ -64,6 +64,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.2";
+export const version = "0.0.3";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

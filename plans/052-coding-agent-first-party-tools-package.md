@@ -453,7 +453,7 @@
         - `npm run build` — core + all workspaces green; `@arnilo/prism-coding-agent` builds `dist/*.js`/`dist/*.d.ts` for barrel + all 9 source modules.
         - `npm run typecheck` — core + all workspaces + `examples/` green.
         - `npm run test` — core tests + workspace tests green; new package's `dist/__tests__/*.test.js` suite runs and reports `116/116` pass.
-        - `npm run pack:dry-run` — root + all workspaces green; `@arnilo/prism-coding-agent` tarball contains 23 files (`LICENSE`, `README.md`, `dist/` JS + d.ts for every module). No `__tests__` directories, no `.map` files, no stray dev files.
+        - `npm run pack:dry-run` — root + all workspaces green; `@arnilo/prism-coding-agent` tarball contains 24 files (`LICENSE`, `README.md`, `CHANGELOG.md`, `dist/` JS + d.ts for every module). No `__tests__` directories, no `.map` files, no stray dev files.
         - `npm run sdk:ready` — exit code `0`.
       - No new CI scripts or build steps were added; the existing root `package.json` `--workspaces --if-present` chaining already covers the new package.
     - API Notes and Examples:
@@ -483,8 +483,17 @@
   - `diff` (jsdiff) added as the one runtime dependency for unified-patch/diff-string fidelity with pi.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority. Candidate items:
-  - Decide whether `prism-all` umbrella should depend on `@arnilo/prism-coding-agent` (deferred; coding tools are trust-bearing and opt-in).
+- **Resolved: keep `@arnilo/prism-coding-agent` out of `@arnilo/prism-all`.** Coding tools are trust-bearing host shell/filesystem tools and remain opt-in. Install with `npm install @arnilo/prism @arnilo/prism-coding-agent`.
+- **Release 0.0.3 changes completed alongside task 10:**
+  - Bumped all package versions and dependency/peer pins from `0.0.2` → `0.0.3`.
+  - Added `packages/coding-agent/CHANGELOG.md` and updated root `CHANGELOG.md`.
+  - Updated `docs/release-and-install.md` package counts (9 first-party, 13 manifests) and install command.
+  - Updated `src/index.ts` public `version` export to `0.0.3`.
+  - Updated packaging/install-smoke/docs/phase boundary tests for the new package and version.
+  - Adjusted install-smoke junk check to only flag leaked artifacts under `@arnilo/prism*` (third-party deps like `diff` may ship their own `.map` files).
+  - Regenerated `package-lock.json` via `npm install`.
+  - `npm run sdk:ready` exits `0`.
+- Remaining candidate items:
   - Add `grep`/`find`/`ls` tools (present in pi) if a host requests them — currently out of scope (only shell/read/write/edit requested).
   - Implement `autoResizeImages` (sharp) when a host needs display-size image downsizing.
   - Provide a manifest-based contribution (`manifest.json`) so `discoverContributions()` can register the package's tools without code — only if hosts want discovery over explicit import.

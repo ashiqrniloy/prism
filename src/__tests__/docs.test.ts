@@ -1213,9 +1213,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package plus eight first-party workspace packages",
+      "one core package plus nine first-party workspace packages",
       "all 6 `@arnilo/prism-provider-*` packages",
-      "All 12 manifests (9 code packages + 3 umbrellas)",
+      "All 13 manifests (10 code packages + 3 umbrellas)",
       "six provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",

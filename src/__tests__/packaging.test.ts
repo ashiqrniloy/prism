@@ -16,6 +16,7 @@ const packages = [
   { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
   { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
   { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
+  { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
   // Pure-manifest umbrellas (no dist/exports/peer): ship only README + manifest.
@@ -144,7 +145,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.2", `${pkg.name} @arnilo/prism peer must be 0.0.2`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.3", `${pkg.name} @arnilo/prism peer must be 0.0.3`);
           assert.ok(
             !manifest.peerDependenciesMeta,
             `${pkg.name} must not mark the @arnilo/prism peer optional (peerDependenciesMeta should be absent)`,
@@ -181,7 +182,7 @@ describe("packaging guard", () => {
           assert.ok(want, `${pkg.name} not in expected umbrella map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.2", `${pkg.name} dependency must be pinned to 0.0.2`);
+            assert.equal(v, "0.0.3", `${pkg.name} dependency must be pinned to 0.0.3`);
           }
         });
       }
@@ -210,9 +211,9 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.2", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.3", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.2", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.3", "@arnilo/prism-all must hard-depend on provider umbrella");
   });
 
   it("workspace dependency tree is clean (npm ls --all --depth=0 exits 0)", () => {

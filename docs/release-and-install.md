@@ -2,23 +2,24 @@
 
 ## What it does
 
-Prism is published as one core package plus eight first-party workspace packages and three umbrella convenience packages. This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget.
+Prism is published as one core package plus nine first-party workspace packages and three umbrella convenience packages. This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget.
 
 Core package:
 
 - `@arnilo/prism` — the runtime, contracts, registries, streaming events, CLI, and the `/docs` hub. `files`: `dist` (with `!dist/__tests__` and `!dist/**/*.map` negations), `docs`, `CHANGELOG.md`. `bin`: `prism` -> `./dist/cli.js`. `sideEffects`: `["dist/cli.js"]`.
 
-First-party workspace packages (each `peerDependencies: { "@arnilo/prism": "0.0.2" }`, non-optional; `sideEffects: false`):
+First-party workspace packages (each `peerDependencies: { "@arnilo/prism": "0.0.3" }`, non-optional; `sideEffects: false`):
 
 - `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-kimi`, `@arnilo/prism-provider-zai`, `@arnilo/prism-provider-opencode-go`, `@arnilo/prism-provider-neuralwatt` — provider adapters.
 - `@arnilo/prism-compaction-llm` — optional LLM-backed compaction strategy.
 - `@arnilo/prism-compaction-observational-memory` — optional source-backed observational memory.
+- `@arnilo/prism-coding-agent` — optional host shell/filesystem coding tools (`shell`, `read`, `write`, `edit`). **Not included in `@arnilo/prism-all`** because these tools perform real host operations and must be opted into explicitly.
 
 Umbrella packages (pure manifests, no code, no `dist`; ship only `README.md`; use hard `dependencies` to transitively install their family):
 
 - `@arnilo/prism-providers` — depends on all 6 `@arnilo/prism-provider-*` packages.
 - `@arnilo/prism-compaction` — depends on both `@arnilo/prism-compaction-*` packages.
-- `@arnilo/prism-all` — depends on `@arnilo/prism` + `@arnilo/prism-providers` + `@arnilo/prism-compaction` (the full kit in one install).
+- `@arnilo/prism-all` — depends on `@arnilo/prism` + `@arnilo/prism-providers` + `@arnilo/prism-compaction` (the full runtime/provider/compaction kit in one install). Does **not** include `@arnilo/prism-coding-agent`; install that separately.
 
 Each code package's `files` array is `["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]`; `README.md`, `LICENSE`, and `CHANGELOG.md` ship in every code-package tarball, the core tarball also ships the `docs/` directory, and umbrella tarballs ship only `README.md` + `package.json`.
 
@@ -35,6 +36,7 @@ Consumers install the core package for the runtime and add first-party packages 
 | Install core only | `npm install @arnilo/prism` |
 | Install core + all providers | `npm install @arnilo/prism @arnilo/prism-providers` |
 | Install core + compaction | `npm install @arnilo/prism @arnilo/prism-compaction` |
+| Install core + coding tools (opt-in) | `npm install @arnilo/prism @arnilo/prism-coding-agent` |
 | Install everything (core + providers + compaction) | `npm install @arnilo/prism-all` |
 | Install core + a single provider | `npm install @arnilo/prism @arnilo/prism-provider-openai` |
 | Build everything (core + workspaces) | `npm run build` |
@@ -71,7 +73,7 @@ A packed tarball contains only public compiled output and release files:
 - `README.md`, `LICENSE`, `CHANGELOG.md` in every package.
 - The core tarball additionally ships the full `docs/` directory (the docs hub).
 - `dist/cli.js` and the `bin` link in core.
-- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.0.2.tgz`; first-party packages produce `arnilo-prism-provider-<name>-0.0.2.tgz` / `arnilo-prism-compaction-<name>-0.0.2.tgz`; umbrella packages produce `arnilo-prism-providers-0.0.2.tgz` / `arnilo-prism-compaction-0.0.2.tgz` / `arnilo-prism-all-0.0.2.tgz`. The CLI bin name `prism` is unaffected by the package name (`npx prism` still works; npm allows the bin field to differ from the package name).
+- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.0.3.tgz`; first-party packages produce `arnilo-prism-provider-<name>-0.0.3.tgz` / `arnilo-prism-compaction-<name>-0.0.3.tgz` / `arnilo-prism-coding-agent-0.0.3.tgz`; umbrella packages produce `arnilo-prism-providers-0.0.3.tgz` / `arnilo-prism-compaction-0.0.3.tgz` / `arnilo-prism-all-0.0.3.tgz`. The CLI bin name `prism` is unaffected by the package name (`npx prism` still works; npm allows the bin field to differ from the package name).
 
 Excluded from every tarball by `files` negation:
 
@@ -88,9 +90,9 @@ Excluded from every tarball by `files` negation:
   "name": "host-app",
   "type": "module",
   "dependencies": {
-    "@arnilo/prism": "0.0.2",
-    "@arnilo/prism-provider-openai": "0.0.2",
-    "@arnilo/prism-compaction-observational-memory": "0.0.2"
+    "@arnilo/prism": "0.0.3",
+    "@arnilo/prism-provider-openai": "0.0.3",
+    "@arnilo/prism-compaction-observational-memory": "0.0.3"
   }
 }
 ```
@@ -100,7 +102,7 @@ Installing the provider/compaction packages without `@arnilo/prism` present prod
 ```text
 npm error code ERESOLVE
 npm error Could not resolve dependency:
-npm error peer @arnilo/prism@"0.0.2" from @arnilo/prism-provider-openai@0.0.2
+npm error peer @arnilo/prism@"0.0.3" from @arnilo/prism-provider-openai@0.0.3
 ```
 
 ## Implementation example
@@ -141,8 +143,8 @@ PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present
 
 ## Extension and configuration notes
 
-- **Required `@arnilo/prism` peer.** Every first-party package declares `peerDependencies: { "@arnilo/prism": "0.0.2" }` with no `peerDependenciesMeta` (non-optional). The range stays pinned to `0.0.2` for the 0.x series and will widen to `^1.0.0` at the 1.x stable release. Inside the workspace each package also declares `"@arnilo/prism": "file:../.."` in `devDependencies` so `npm install` resolves the peer locally; that devDependency is stripped from consumer installs and is not a runtime dependency.
-- **Public access.** All 12 manifests (9 code packages + 3 umbrellas) declare `"publishConfig": { "access": "public" }` so a manual `npm publish` of a scoped `@arnilo/prism-*` package defaults to public rather than `restricted` (paid). The `release.yml` flags (`npm publish --access public` + `npm publish --workspaces --access public`) are belt-and-suspenders backups.
+- **Required `@arnilo/prism` peer.** Every first-party package declares `peerDependencies: { "@arnilo/prism": "0.0.3" }` with no `peerDependenciesMeta` (non-optional). The range stays pinned to `0.0.3` for the 0.x series and will widen to `^1.0.0` at the 1.x stable release. Inside the workspace each package also declares `"@arnilo/prism": "file:../.."` in `devDependencies` so `npm install` resolves the peer locally; that devDependency is stripped from consumer installs and is not a runtime dependency.
+- **Public access.** All 13 manifests (10 code packages + 3 umbrellas) declare `"publishConfig": { "access": "public" }` so a manual `npm publish` of a scoped `@arnilo/prism-*` package defaults to public rather than `restricted` (paid). The `release.yml` flags (`npm publish --access public` + `npm publish --workspaces --access public`) are belt-and-suspenders backups.
 - **Map retention knob.** Source maps are emitted locally but stripped from tarballs by `!dist/**/*.map`. Removing that `files` negation ships maps in releases (larger tarballs, better consumer stack traces).
 - **Release workflow.** `.github/workflows/release.yml` has three jobs. `verify` runs the full SDK readiness gate on Node 24: `npm ci`, then `npm run sdk:ready` (`npm run typecheck`, network-free `npm test`, and `npm run pack:dry-run`). `node20-compat` runs on Node 20: `npm ci`, `npm run build`, then imports every public root `exports` default target from `dist/`. This proves the published package basics under the declared `engines.node >=20` without running docs examples, which require Node >=22.6 native TypeScript stripping. `publish` runs only on `refs/tags/v*` after both `verify` and `node20-compat` succeed: `npm run build`, then `npm publish --access public` for core (first, because packages require the `@arnilo/prism` peer on the registry) and `npm publish --workspaces --access public`. With no `NPM_TOKEN` secret it runs `--dry-run` instead of a real publish. `permissions.id-token: write` is set so `--provenance` can be added later without re-architecting permissions. Local `npm run release:dry-run` delegates to the same `npm run sdk:ready` gate.
 - **Adding a package.** New workspace packages are picked up automatically by `npm run build --workspaces`, `npm test --workspaces`, `npm run pack:dry-run`, the packaging guard (`src/__tests__/packaging.test.ts`), and the install-smoke test (`src/__tests__/install-smoke.test.ts`) via the workspace glob; add the package to both tests' config arrays for explicit per-package assertions.
