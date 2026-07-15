@@ -1,6 +1,11 @@
 import { parsePrismManifest, type PrismManifest } from "./manifests.js";
 import type { JsonObject, ResourceLoader, ResourceLoadContext } from "./contracts.js";
 import { assertJsonObject } from "./config.js";
+import {
+  DEFAULT_MAX_MEDIA_ITEM_BYTES,
+  loadBoundedBinaryResource,
+  type MediaContentBounds,
+} from "./content.js";
 import { assertPermission } from "./security.js";
 
 export async function loadTextResource(
@@ -36,6 +41,25 @@ export async function loadManifestResource(
   context?: ResourceLoadContext,
 ): Promise<PrismManifest> {
   return parsePrismManifest(await loadJsonResource(loader, uri, context));
+}
+
+export interface LoadBinaryResourceOptions extends MediaContentBounds {
+  readonly signal?: AbortSignal;
+}
+
+export async function loadBinaryResource(
+  loader: ResourceLoader,
+  uri: string,
+  context?: ResourceLoadContext,
+  options?: LoadBinaryResourceOptions,
+): Promise<Uint8Array> {
+  return loadBoundedBinaryResource(
+    loader,
+    uri,
+    context,
+    options?.maxItemBytes ?? DEFAULT_MAX_MEDIA_ITEM_BYTES,
+    options?.signal ?? context?.signal,
+  );
 }
 
 function errorMessage(error: unknown): string {

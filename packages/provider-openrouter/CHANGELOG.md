@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-07-14
+
+### Changed
+
+- Uses shared bounded transport/OpenAI helpers and documents per-model structured-output, multimodal, routing, reasoning, cache-control, usage, and protected-header behavior.
+
 ## [0.0.2] - 2026-07-05
 
 ### Added

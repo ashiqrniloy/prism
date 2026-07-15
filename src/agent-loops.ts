@@ -11,6 +11,7 @@ import type {
   LoopContext,
   Message,
   TextContent,
+  ToolCallContent,
   ToolResult,
   Usage,
 } from "./contracts.js";
@@ -35,14 +36,13 @@ export const singleShotLoop: AgentLoopStrategy = {
   name: "single-shot",
   async run(ctx: LoopContext): Promise<Usage | undefined> {
     let usage: Usage | undefined;
-    const toolResults: ToolResult[] = [];
     let toolRounds = 0;
     let nextInput: AgentInput = ctx.input;
 
     for (let turn = 1; ; turn += 1) {
       throwIfAborted(ctx.signal);
       ctx.emit({ type: "turn_started", sessionId: ctx.sessionId, runId: ctx.runId, turn });
-      const request = await ctx.assemble(nextInput, toolResults, turn);
+      const request = await ctx.assemble(nextInput, undefined, turn);
       throwIfAborted(ctx.signal);
       const { content, calls, messageId, started, usage: turnUsage } = await ctx.generate(request);
       usage = turnUsage ?? usage;
@@ -58,12 +58,7 @@ export const singleShotLoop: AgentLoopStrategy = {
 
       if (calls.length === 0 || toolRounds >= ctx.maxToolRounds) break;
       toolRounds += 1;
-      for (const call of calls) {
-        const result = await ctx.dispatchToolCall(call);
-        toolResults.push(result);
-        await ctx.appendMessage(toolResultMessage(result));
-        throwIfAborted(ctx.signal);
-      }
+      await dispatchToolCallsInOrder(calls, ctx);
       nextInput = [];
     }
     return usage;
@@ -99,6 +94,7 @@ export function generateValidateReviseLoop(opts: {
     async run(ctx: LoopContext): Promise<Usage | undefined> {
       let usage: Usage | undefined;
       let nextInput: AgentInput = ctx.input;
+      let pendingHistory: Message[] = [];
 
       for (let turn = 1; turn <= max + 1; turn += 1) {
         throwIfAborted(ctx.signal);
@@ -108,6 +104,10 @@ export function generateValidateReviseLoop(opts: {
         const { content, messageId, started, usage: turnUsage } = await ctx.generate(request);
         usage = turnUsage ?? usage;
 
+        if (pendingHistory.length > 0) {
+          ctx.history.push(...pendingHistory);
+          pendingHistory = [];
+        }
         if (turn === 1) ctx.history.push(...ctx.inputMessages);
         if (started) {
           const message: Message = { id: messageId, role: "assistant", content };
@@ -151,10 +151,8 @@ export function generateValidateReviseLoop(opts: {
         ctx.emit({ type: "artifact_revision_started", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, failure: result });
         const repair = await repairer(parsed.value, result, artifactCtx);
         const repairMessages = inputMessages(repair).map((m: Message) => ({ ...m, id: randomId("msg") }));
-        for (const message of repairMessages) {
-          ctx.history.push(message);
-          await ctx.appendMessage(message);
-        }
+        for (const message of repairMessages) await ctx.appendMessage(message);
+        pendingHistory = repairMessages;
         nextInput = repairMessages;
         continue;
       }
@@ -167,6 +165,56 @@ export function generateValidateReviseLoop(opts: {
 // ponytail: resolveLoop returns the loop to run. RunOptions.loop wins over
 // AgentConfig.loop; default is singleShotLoop. generate-validate-revise maps
 // its options to the factory; unknown strategy throws.
+export function resolveToolConcurrency(
+  options: { loop?: AgentLoopStrategy | AgentLoopOptions },
+  config: { loop?: AgentLoopStrategy | AgentLoopOptions },
+): number {
+  const loop = options.loop ?? config.loop;
+  if (!loop || !isAgentLoopOptions(loop) || loop.strategy !== "single-shot") return 1;
+  const value = loop.toolConcurrency;
+  if (value === undefined) return 1;
+  if (!Number.isFinite(value) || value < 1) return 1;
+  return Math.floor(value);
+}
+
+/** Dispatch tool calls with bounded concurrency; append transcript rows in call order. */
+export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[], ctx: LoopContext): Promise<void> {
+  if (calls.length === 0) return;
+  const concurrency = calls.some((call) => ctx.isToolCallExclusive?.(call))
+    ? 1
+    : Math.max(1, Math.min(ctx.toolConcurrency, calls.length));
+  if (concurrency === 1) {
+    for (const call of calls) {
+      const result = await ctx.dispatchToolCall(call);
+      await appendToolResultMessage(result, ctx);
+    }
+    return;
+  }
+
+  const results: ToolResult[] = new Array(calls.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: concurrency }, async () => {
+    for (;;) {
+      throwIfAborted(ctx.signal);
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= calls.length) return;
+      results[index] = await ctx.dispatchToolCall(calls[index]!);
+    }
+  });
+  await Promise.all(workers);
+  for (const result of results) {
+    throwIfAborted(ctx.signal);
+    await appendToolResultMessage(result, ctx);
+  }
+}
+
+async function appendToolResultMessage(result: ToolResult, ctx: LoopContext): Promise<void> {
+  const message = toolResultMessage(result);
+  ctx.history.push(message);
+  await ctx.appendMessage(message);
+}
+
 export function resolveLoop(options: { loop?: AgentLoopStrategy | AgentLoopOptions }, config: { loop?: AgentLoopStrategy | AgentLoopOptions }): AgentLoopStrategy {
   const loop = options.loop ?? config.loop;
   if (!loop) return singleShotLoop;

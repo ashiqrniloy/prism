@@ -24,11 +24,13 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { constants, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import type {
+  ExecutionPolicy,
   JsonObject,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
 } from "@arnilo/prism";
+import { enforceExecutionPolicy } from "./execution-policy.js";
 import { OutputAccumulator, type OutputSnapshot } from "./output-accumulator.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult } from "./truncate.js";
 
@@ -64,6 +66,8 @@ export interface BashOperations {
 }
 
 export interface ShellToolOptions {
+  /** Structured pre-execution policy checked before spawn. */
+  executionPolicy?: ExecutionPolicy;
   /** Custom operations backend (default: local shell). Override to delegate to remote shells. */
   operations?: BashOperations;
   /** Command prefix prepended to every command (e.g. shell setup commands). */
@@ -290,6 +294,7 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
 
   return {
     name: "shell",
+    exclusive: true,
     description: `Execute a shell command in the current working directory. Returns combined stdout and stderr. Output is truncated to the last ${maxLines} lines or ${maxBytes / 1024}KB (whichever is hit first). If truncated, full output is saved to a temp file. Optionally provide a timeout in seconds.`,
     parameters: {
       type: "object",
@@ -315,9 +320,27 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
       }
 
       const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
-      const spawnContext = spawnHook
+      let spawnContext = spawnHook
         ? spawnHook({ command: resolvedCommand, cwd, env: { ...process.env } })
         : { command: resolvedCommand, cwd, env: { ...process.env } };
+
+      const policyCheck = await enforceExecutionPolicy(
+        options?.executionPolicy,
+        {
+          kind: "shell",
+          operation: "execute",
+          command: spawnContext.command,
+          paths: [spawnContext.cwd],
+          risk: "high",
+          metadata: { timeout, signal: context.signal },
+        },
+        toolCallId,
+        "shell",
+      );
+      if (!policyCheck.allowed) return policyCheck.result;
+      if (policyCheck.action.command) {
+        spawnContext = { ...spawnContext, command: policyCheck.action.command };
+      }
 
       const output = new OutputAccumulator({ maxLines, maxBytes, tempFilePrefix });
       let acceptingOutput = true;

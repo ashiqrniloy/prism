@@ -1,0 +1,41 @@
+{
+  "name": "@arnilo/prism-base",
+  "version": "0.0.4",
+  "description": "Base Prism profile: core runtime, compaction strategies, and JSON Schema tool validation.",
+  "license": "MIT",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "files": [
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@arnilo/prism": "0.0.4",
+    "@arnilo/prism-compaction": "0.0.4",
+    "@arnilo/prism-tool-validator-json-schema": "0.0.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-base"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-base#readme",
+  "keywords": [
+    "prism",
+    "base",
+    "umbrella",
+    "agent",
+    "llm"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,5 +1,6 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
 import { providerError, resolveCredentialValue } from "@arnilo/prism";
+import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
 import { opencodeOwnedHeaders } from "./cache.js";
 import { openAIChatBody, openAIChatEvents } from "./openai-chat.js";
@@ -29,12 +30,17 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
             ...opencodeOwnedHeaders(request.options),
             ...(token ? { authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify(route === "anthropic" ? anthropicMessagesBody(request) : openAIChatBody(request)),
+          body: JSON.stringify(route === "anthropic" ? await anthropicMessagesBody(request) : openAIChatBody(request)),
           signal: request.signal,
         });
-        if (!response.ok) return yield providerError(new Error(`OpenCode Go request failed: ${response.status} ${await safeText(response)}`), secrets);
+        if (!response.ok) {
+          return yield providerError(
+            new Error(`OpenCode Go request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
+            secrets,
+          );
+        }
         if (!response.body) return yield providerError(new Error("OpenCode Go response had no body"), secrets);
-        yield* route === "anthropic" ? anthropicMessagesEvents(response.body) : openAIChatEvents(response.body);
+        yield* route === "anthropic" ? anthropicMessagesEvents(response.body, request.signal) : openAIChatEvents(response.body, request.signal);
       } catch (error) {
         yield providerError(error, secrets);
       }
@@ -44,8 +50,4 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
 
 function routeFor(request: ProviderRequest): "openai" | "anthropic" {
   return request.model.compat?.route === "anthropic" ? "anthropic" : "openai";
-}
-
-async function safeText(response: Response): Promise<string> {
-  try { return await response.text(); } catch { return ""; }
 }

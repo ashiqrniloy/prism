@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createContributionRegistries, createExtensionKernel, createMiddlewareRegistry, createToolRegistry, dispatchToolCall, filterTools } from "../index.js";
-import type { AgentEvent, ToolCallContent, ToolDefinition, ToolRegistry, ToolResult } from "../index.js";
+import { createContributionRegistries, createExtensionKernel, createMiddlewareRegistry, createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "../index.js";
+import type { AgentEvent, ToolArgumentValidator, ToolCallContent, ToolDefinition, ToolRegistry, ToolResult } from "../index.js";
 
 function tool(name: string, parameters?: ToolDefinition["parameters"]): ToolDefinition {
   return {
@@ -171,6 +171,35 @@ describe("tool dispatch", () => {
 
     assert.equal(result.error?.message, "text is required");
     assert.equal(called, false);
+  });
+
+  it("createToolParameterValidator maps adapter failures to validation_failed", async () => {
+    let called = false;
+    const adapter: ToolArgumentValidator = {
+      validate: () => ({ ok: false, errors: [{ path: "/text", message: "required" }] }),
+    };
+    const registry = createToolRegistry([
+      {
+        ...tool("echo", { type: "object", properties: { text: { type: "string" } } }),
+        execute: () => {
+          called = true;
+          return { toolCallId: "call_1", name: "echo" };
+        },
+      },
+    ]);
+    const events: AgentEvent[] = [];
+    const result = await dispatchToolCall({
+      call,
+      registry,
+      context,
+      validate: createToolParameterValidator(adapter),
+      emit: (event) => { events.push(event); },
+    });
+
+    assert.match(result.error?.message ?? "", /\/text: required/);
+    assert.equal(called, false);
+    assert.equal(events[0]?.type, "tool_execution_blocked");
+    if (events[0]?.type === "tool_execution_blocked") assert.equal(events[0].reason, "validation_failed");
   });
 
   it("runs tool call and result middleware in order", async () => {

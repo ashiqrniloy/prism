@@ -108,6 +108,10 @@ const challenge = computeS256Challenge(verifier);
   run/model through `RunOptions` and `ModelConfig.compat`.
 - OAuth browser/device-code flows run only when the caller explicitly invokes the
   OAuth provider.
+- Device-code login polls the token endpoint with server-directed `interval` and
+  `expires_in`, honors RFC 8628 `authorization_pending` / `slow_down`, and stops
+  on terminal errors or expiry. Pass `signal` on `OAuthLoginCallbacks` to abort
+  polling promptly.
 
 ### Cache behavior
 
@@ -132,11 +136,14 @@ const challenge = computeS256Challenge(verifier);
 
 ## Security and performance notes
 
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup; Prism never
   reads `process.env` on its own.
 - API keys/access tokens are resolved per request from caller-supplied values or
-  resolvers; OAuth errors redact known token values (`[REDACTED]`).
+  resolvers; OAuth errors redact known token values (`[REDACTED]`) including
+  authorization codes, PKCE verifiers, device codes, user codes, and
+  access/refresh tokens echoed in token-endpoint failures.
 - The PKCE verifier is exchanged at the token endpoint, never sent on the authorize
   URL.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe

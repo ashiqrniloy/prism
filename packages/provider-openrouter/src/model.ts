@@ -13,6 +13,6 @@ export function defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfi
   return {
     ...config,
     provider: "openrouter",
-    capabilities: { streaming: true, tools: true, ...config.capabilities },
+    capabilities: { streaming: true, tools: true, structuredOutput: "json_schema", ...config.capabilities },
   };
 }

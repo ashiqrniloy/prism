@@ -1,16 +1,6 @@
-import type {
-  AIProvider,
-  ContentBlock,
-  CredentialValueSource,
-  JsonObject,
-  Message,
-  ModelCapabilities,
-  ProviderEvent,
-  ProviderRequest,
-  ToolDefinition,
-  Usage,
-} from "@arnilo/prism";
+import type { AIProvider, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
 import {
+  assertStructuredOutputRequestSupported,
   providerDone,
   providerError,
   providerTextDelta,
@@ -19,10 +9,11 @@ import {
   providerToolCallDelta,
   providerUsage,
   resolveCredentialValue,
-  redactSecrets,
   toolCallContent,
 } from "@arnilo/prism";
-import { readNeuralWattSseFrames, type NeuralWattSseFrame } from "./sse.js";
+import { serializeOpenAITool, applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
+import { parseJsonObjectArguments, readBoundedResponseText, readSseEvents } from "@arnilo/prism/providers/transport";
 import { parseNeuralWattComment, type NeuralWattEvent } from "./telemetry.js";
 import { classifyNeuralWattError, neuralWattHttpError } from "./retry.js";
 import { neuralWattChatTemplateKwargs, neuralWattClearThinking, neuralWattPreserveThinking, neuralWattReasoningEffort, neuralWattThinkingTokenBudget, neuralWattToolChoice } from "./thinking.js";
@@ -39,6 +30,10 @@ interface ToolAccumulator {
   name?: string;
   argumentsText: string;
 }
+
+type NeuralWattSseFrame =
+  | { readonly kind: "data"; readonly data: string }
+  | { readonly kind: "comment"; readonly text: string };
 
 export function createNeuralWattProvider(options: NeuralWattProviderOptions = {}): AIProvider {
   const id = options.id ?? "neuralwatt";
@@ -62,7 +57,7 @@ export function createNeuralWattProvider(options: NeuralWattProviderOptions = {}
           signal: request.signal,
         });
         if (!response.ok) {
-          const bodyText = await safeText(response);
+          const bodyText = await readBoundedResponseText(response, { secrets });
           const decision = classifyNeuralWattError({ status: response.status, headers: response.headers, body: safeJson(bodyText) });
           yield providerError(neuralWattHttpError(decision, bodyText, secrets), secrets);
           return;
@@ -71,7 +66,7 @@ export function createNeuralWattProvider(options: NeuralWattProviderOptions = {}
           yield providerError(new Error("NeuralWatt response had no body"), secrets);
           return;
         }
-        yield* neuralWattEvents(response.body);
+        yield* neuralWattEvents(response.body, request.signal);
       } catch (error) {
         yield providerError(error, secrets);
       }
@@ -90,11 +85,12 @@ function shouldClearReasoning(request: ProviderRequest): boolean {
 }
 
 export function neuralWattBody(request: ProviderRequest): JsonObject {
+  assertStructuredOutputRequestSupported(request.model, request.options);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
-  return clean({
+  const body: Record<string, unknown> = {
     model: request.model.model,
-    messages: request.messages.map((message) => toMessage(message, request.model.capabilities ?? {}, shouldPreserveReasoning(request), shouldClearReasoning(request))),
-    tools: request.tools?.map(toTool),
+    messages: request.messages.map((message) => toMessage(message, request.model, shouldPreserveReasoning(request), shouldClearReasoning(request))),
+    tools: request.tools?.map((tool) => clean(serializeOpenAITool(tool) as Record<string, unknown>)),
     tool_choice: neuralWattToolChoice(request),
     stream: true,
     stream_options: { include_usage: true },
@@ -107,11 +103,13 @@ export function neuralWattBody(request: ProviderRequest): JsonObject {
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
     ...request.options?.compat,
     ...request.options?.extra,
-  });
+  };
+  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
+  return clean(body);
 }
 
-export async function* neuralWattEvents(body: ReadableStream<Uint8Array>): AsyncIterable<ProviderEvent> {
-  for await (const event of neuralWattFramesToEvents(readNeuralWattSseFrames(body), false)) {
+export async function* neuralWattEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
+  for await (const event of neuralWattFramesToEvents(readNeuralWattSseFrames(body, signal), false)) {
     // With emitTelemetry=false the shared generator yields only ProviderEvent.
     yield event as ProviderEvent;
   }
@@ -124,8 +122,8 @@ export async function* neuralWattEvents(body: ReadableStream<Uint8Array>): Async
  * standard provider event stream. `generate()` stays streaming-only and uses
  * {@link neuralWattEvents}, so telemetry is opt-in via this helper.
  */
-export async function* neuralWattEventsWithTelemetry(body: ReadableStream<Uint8Array>): AsyncIterable<NeuralWattEvent> {
-  yield* neuralWattFramesToEvents(readNeuralWattSseFrames(body), true);
+export async function* neuralWattEventsWithTelemetry(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<NeuralWattEvent> {
+  yield* neuralWattFramesToEvents(readNeuralWattSseFrames(body, signal), true);
 }
 
 async function* neuralWattFramesToEvents(frames: AsyncIterable<NeuralWattSseFrame>, emitTelemetry: boolean): AsyncIterable<NeuralWattEvent> {
@@ -168,12 +166,19 @@ async function* neuralWattFramesToEvents(frames: AsyncIterable<NeuralWattSseFram
     }
   }
   for (const call of tools.values()) {
-    if (call.id && call.name) yield providerToolCall(toolCallContent(call.id, call.name, parseArgs(call.argumentsText)));
+    if (call.id && call.name) {
+      yield providerToolCall(toolCallContent(
+        call.id,
+        call.name,
+        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
+      ));
+    }
   }
   yield providerDone(usage);
 }
 
-function toMessage(message: Message, capabilities: ModelCapabilities = {}, preserveReasoning = false, clearReasoning = false): JsonObject {
+function toMessage(message: Message, model: ModelConfig, preserveReasoning = false, clearReasoning = false): JsonObject {
+  const capabilities = model.capabilities ?? {};
   // Prior assistant reasoning (`thinking` content blocks) is preserved as a
   // NeuralWatt `reasoning_content` field only when the model is reasoning-capable
   // (or `compat.preserve_thinking` forces it) and `compat.clear_thinking` has not
@@ -223,6 +228,8 @@ function toMessage(message: Message, capabilities: ModelCapabilities = {}, prese
       const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
       if (!url) throw new Error("NeuralWatt image block missing url or data");
       content.push({ type: "image_url", image_url: { url } });
+    } else if (part.type === "audio" || part.type === "file" || part.type === "document") {
+      rejectProviderMediaBlock(part, capabilities, model);
     } else if (part.type === "tool_call") {
       throw new Error("NeuralWatt assistant tool_call blocks must be the only content on the message");
     } else if (part.type === "tool_result") {
@@ -234,10 +241,6 @@ function toMessage(message: Message, capabilities: ModelCapabilities = {}, prese
     return clean({ role: message.role, content: content[0]!.text, reasoning_content: reasoningContent });
   }
   return clean({ role: message.role, content, reasoning_content: reasoningContent });
-}
-
-function toTool(tool: ToolDefinition): JsonObject {
-  return clean({ type: "function", function: { name: tool.name, description: tool.description, parameters: tool.parameters ?? { type: "object" } } });
 }
 
 export function toUsage(usage: NeuralWattUsage | undefined): Usage | undefined {
@@ -253,22 +256,17 @@ export function toUsage(usage: NeuralWattUsage | undefined): Usage | undefined {
     : undefined;
 }
 
-function parseArgs(text: string): JsonObject {
-  if (!text) return {};
-  const parsed = JSON.parse(text) as unknown;
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as JsonObject) : {};
+async function* readNeuralWattSseFrames(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncGenerator<NeuralWattSseFrame> {
+  for await (const event of readSseEvents(body, { signal })) {
+    if (event.comments?.length) {
+      for (const text of event.comments) yield { kind: "comment", text };
+    }
+    if (event.data.length > 0) yield { kind: "data", data: event.data };
+  }
 }
 
 function clean(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as JsonObject;
-}
-
-async function safeText(response: Response): Promise<string> {
-  try {
-    return redactSecrets(await response.text(), []);
-  } catch {
-    return "";
-  }
 }
 
 function safeJson(text: string): unknown {

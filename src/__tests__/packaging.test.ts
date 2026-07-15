@@ -19,9 +19,20 @@ const packages = [
   { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
-  // Pure-manifest umbrellas (no dist/exports/peer): ship only README + manifest.
+  { dir: "packages/observability-opentelemetry", name: "@arnilo/prism-observability-opentelemetry" },
+  { dir: "packages/tool-validator-json-schema", name: "@arnilo/prism-tool-validator-json-schema" },
+  { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
+  { dir: "packages/session-store-sqlite", name: "@arnilo/prism-session-store-sqlite" },
+  { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
+  { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
+  { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
+  { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
+  // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
   { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
+  { dir: "packages/prism-base", name: "@arnilo/prism-base", isMeta: true },
+  { dir: "packages/prism-code", name: "@arnilo/prism-code", isMeta: true },
+  { dir: "packages/prism-sdk", name: "@arnilo/prism-sdk", isMeta: true },
   { dir: "packages/prism-all", name: "@arnilo/prism-all", isMeta: true },
 ];
 
@@ -80,11 +91,10 @@ describe("packaging guard", () => {
         assert.deepEqual(junk, [], `${pkg.name} packs denied files: ${labels.join(", ")}`);
       });
 
-      it("includes README, LICENSE, and CHANGELOG.md", () => {
+      it("includes required release documentation", () => {
         const files = getPackList(pkg.dir, pkg.name);
         assert.ok(files.includes("README.md"), `${pkg.name} missing README.md in pack`);
-        if (pkg.isMeta) return; // umbrellas ship only README + manifest
-        for (const required of ["LICENSE", "CHANGELOG.md"]) {
+        for (const required of pkg.isMeta ? ["CHANGELOG.md"] : ["LICENSE", "CHANGELOG.md"]) {
           assert.ok(
             files.includes(required),
             `${pkg.name} missing ${required} in pack`,
@@ -93,7 +103,7 @@ describe("packaging guard", () => {
       });
 
       it("ships every exports target as compiled output", () => {
-        if (pkg.isMeta) return; // umbrellas have no exports
+        if (pkg.isMeta) return; // family/profile packages have no exports
         const files = getPackList(pkg.dir, pkg.name);
         const manifest = readPkg(pkg.dir);
         const exports = manifest.exports as Record<string, Record<string, string>>;
@@ -145,7 +155,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.3", `${pkg.name} @arnilo/prism peer must be 0.0.3`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.4", `${pkg.name} @arnilo/prism peer must be 0.0.4`);
           assert.ok(
             !manifest.peerDependenciesMeta,
             `${pkg.name} must not mark the @arnilo/prism peer optional (peerDependenciesMeta should be absent)`,
@@ -154,7 +164,7 @@ describe("packaging guard", () => {
       }
 
       if (pkg.isMeta) {
-        it("umbrella declares hard dependencies on every family member and nothing else", () => {
+        it("meta package declares its exact hard dependency set", () => {
           const manifest = readPkg(pkg.dir);
           const deps = manifest.dependencies as Record<string, string> | undefined;
           assert.ok(deps, `${pkg.name} missing dependencies`);
@@ -172,17 +182,37 @@ describe("packaging guard", () => {
               "@arnilo/prism-compaction-llm",
               "@arnilo/prism-compaction-observational-memory",
             ],
-            "@arnilo/prism-all": [
+            "@arnilo/prism-base": [
               "@arnilo/prism",
-              "@arnilo/prism-providers",
               "@arnilo/prism-compaction",
+              "@arnilo/prism-tool-validator-json-schema",
+            ],
+            "@arnilo/prism-code": [
+              "@arnilo/prism-base",
+              "@arnilo/prism-coding-agent",
+              "@arnilo/prism-coding-security",
+              "@arnilo/prism-mcp",
+            ],
+            "@arnilo/prism-sdk": [
+              "@arnilo/prism-base",
+              "@arnilo/prism-credentials-node",
+              "@arnilo/prism-mcp",
+              "@arnilo/prism-observability-opentelemetry",
+              "@arnilo/prism-workflows",
+            ],
+            "@arnilo/prism-all": [
+              "@arnilo/prism-code",
+              "@arnilo/prism-sdk",
+              "@arnilo/prism-providers",
+              "@arnilo/prism-session-store-sqlite",
+              "@arnilo/prism-session-store-postgres",
             ],
           };
           const want = expected[pkg.name];
-          assert.ok(want, `${pkg.name} not in expected umbrella map`);
+          assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.3", `${pkg.name} dependency must be pinned to 0.0.3`);
+            assert.equal(v, "0.0.4", `${pkg.name} dependency must be pinned to 0.0.4`);
           }
         });
       }
@@ -211,9 +241,26 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.3", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.4", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.3", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.4", "@arnilo/prism-all must hard-depend on provider umbrella");
+  });
+
+  it("prism-all transitively includes every published first-party package", () => {
+    const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
+    const included = new Set<string>();
+    const visit = (name: string) => {
+      if (included.has(name)) return;
+      included.add(name);
+      const pkg = byName.get(name);
+      if (!pkg) return;
+      const dependencies = readPkg(pkg.dir).dependencies as Record<string, string> | undefined;
+      for (const dependency of Object.keys(dependencies ?? {})) {
+        if (byName.has(dependency)) visit(dependency);
+      }
+    };
+    visit("@arnilo/prism-all");
+    assert.deepEqual([...included].sort(), packages.map((pkg) => pkg.name).sort());
   });
 
   it("workspace dependency tree is clean (npm ls --all --depth=0 exits 0)", () => {

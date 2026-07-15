@@ -8,11 +8,11 @@
  * the model-aware non-vision note (Prism's `ToolExecutionContext` has no model field).
  *
  * Deviations from pi (documented):
- *  - **`autoResizeImages` is a documented no-op** (deferred). pi resizes images to ≤2000×2000 via a
- *    photon/WASM + `worker_threads` helper (`utils/image-process.js`); pulling that in adds native
- *    build weight for a display-size concern hosts can own. The tool returns the raw image bytes as
- *    base64 `ImageContent`. `ponytail:` ceiling noted inline; upgrade path = port image processing
- *    when a host needs context-size capping.
+ *  - **Image resize is host-owned.** pi resizes images to ≤2000×2000 via a photon/WASM +
+ *    `worker_threads` helper (`utils/image-process.js`); this package rejects oversize images by
+ *    `stat`/`buffer.length` against `maxImageBytes` and accepts an optional `transformImage`
+ *    callback for host-provided resizing. `autoResizeImages` is deprecated — it only takes effect
+ *    when paired with `transformImage`.
  *  - Abort + all read failures return a Prism `error` result (pi throws/rejects). Prism's
  *    `dispatchToolCall` would catch a throw anyway, but returning a clean error result is predictable
  *    for direct-`execute` callers and matches the package's `shell` tool.
@@ -21,13 +21,15 @@
  */
 import { Buffer } from "node:buffer";
 import { constants } from "node:fs";
-import { access as fsAccess, open, readFile as fsReadFile } from "node:fs/promises";
+import { access as fsAccess, open, readFile as fsReadFile, stat as fsStat } from "node:fs/promises";
 import type {
+  ExecutionPolicy,
   JsonObject,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
 } from "@arnilo/prism";
+import { enforceExecutionPolicy } from "./execution-policy.js";
 import { resolveReadPathAsync } from "./path-utils.js";
 import {
   DEFAULT_MAX_BYTES,
@@ -155,6 +157,18 @@ function startsWithAscii(buffer: Buffer, offset: number, text: string): boolean 
 
 // --- read tool ---
 
+/** Default maximum image file size before read/transform (10 MB). */
+export const DEFAULT_MAX_IMAGE_BYTES = 10_000_000;
+
+/** Input passed to an optional host-owned image transformer. */
+export interface TransformImageInput {
+  readonly buffer: Buffer;
+  readonly mimeType: string;
+}
+
+/** Host callback to resize or re-encode an image before base64 encoding. */
+export type TransformImage = (input: TransformImageInput) => Promise<Buffer>;
+
 /**
  * Pluggable operations for the read tool. Override to delegate file reading to remote systems
  * (e.g. SSH) while keeping the tool's truncation/offset/limit behavior.
@@ -164,16 +178,24 @@ export interface ReadOperations {
   readFile: (absolutePath: string) => Promise<Buffer>;
   /** Check the file is readable (throw if not). */
   access: (absolutePath: string) => Promise<void>;
+  /** Return file size in bytes for image bound checks (default: local `fs.stat`). */
+  statFile?: (absolutePath: string) => Promise<{ size: number }>;
   /** Detect image MIME type from the file; return null/undefined for non-images. */
   detectImageMimeType?: (absolutePath: string) => Promise<string | null | undefined>;
 }
 
 export interface ReadToolOptions {
+  /** Structured pre-execution policy checked before filesystem access. */
+  executionPolicy?: ExecutionPolicy;
   /**
-   * Whether to auto-resize images (pi resizes to ≤2000×2000). **Not yet implemented** — the tool
-   * returns raw image bytes. Kept as a placeholder so hosts can opt in once resizing is ported.
+   * @deprecated Use `transformImage` instead. When `transformImage` is absent this flag is ignored.
+   * When both are set, `transformImage` runs and `image.resized` is `true` on success.
    */
   autoResizeImages?: boolean;
+  /** Reject image reads larger than this many bytes (default {@link DEFAULT_MAX_IMAGE_BYTES}). */
+  maxImageBytes?: number;
+  /** Optional host callback to resize or re-encode images before base64 encoding. */
+  transformImage?: TransformImage;
   /** Custom operations backend (default: local filesystem). */
   operations?: ReadOperations;
   /** Max lines kept from the head (default 2000). */
@@ -185,8 +207,62 @@ export interface ReadToolOptions {
 const defaultReadOperations: ReadOperations = {
   readFile: (path) => fsReadFile(path),
   access: (path) => fsAccess(path, constants.R_OK),
+  statFile: async (path) => {
+    const info = await fsStat(path);
+    return { size: info.size };
+  },
   detectImageMimeType: detectSupportedImageMimeTypeFromFile,
 };
+
+function imageSizeError(actualBytes: number, maxImageBytes: number): string {
+  return `Image file is ${formatSize(actualBytes)}, exceeds ${formatSize(maxImageBytes)} limit.`;
+}
+
+async function loadImageBuffer(
+  absolutePath: string,
+  mimeType: string,
+  ops: ReadOperations,
+  options: {
+    maxImageBytes: number;
+    transformImage?: TransformImage;
+    autoResizeImages?: boolean;
+    signal?: AbortSignal;
+  },
+): Promise<{ buffer: Buffer; resized: boolean }> {
+  if (options.signal?.aborted) {
+    throw new Error("Operation aborted");
+  }
+
+  if (ops.statFile) {
+    const { size } = await ops.statFile(absolutePath);
+    if (size > options.maxImageBytes) {
+      throw new Error(imageSizeError(size, options.maxImageBytes));
+    }
+  }
+
+  let buffer = await ops.readFile(absolutePath);
+  if (buffer.length > options.maxImageBytes) {
+    throw new Error(imageSizeError(buffer.length, options.maxImageBytes));
+  }
+
+  let resized = false;
+  if (options.transformImage) {
+    if (options.signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+    buffer = await options.transformImage({ buffer, mimeType });
+    resized = true;
+    if (buffer.length > options.maxImageBytes) {
+      throw new Error(
+        `Transformed image is ${formatSize(buffer.length)}, exceeds ${formatSize(options.maxImageBytes)} limit.`,
+      );
+    }
+  } else if (options.autoResizeImages) {
+    // Deprecated flag without a transformer — intentionally ignored for backward compatibility.
+  }
+
+  return { buffer, resized };
+}
 
 function errorResult(toolCallId: string, message: string): ToolResult {
   return {
@@ -198,9 +274,10 @@ function errorResult(toolCallId: string, message: string): ToolResult {
 }
 
 export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition {
-  const ops = options?.operations ?? defaultReadOperations;
+  const ops: ReadOperations = { ...defaultReadOperations, ...options?.operations };
   const maxLines = options?.maxLines ?? DEFAULT_MAX_LINES;
   const maxBytes = options?.maxBytes ?? DEFAULT_MAX_BYTES;
+  const maxImageBytes = options?.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES;
 
   return {
     name: "read",
@@ -232,14 +309,33 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
       try {
         const absolutePath = await resolveReadPathAsync(path, cwd);
-        await ops.access(absolutePath);
 
-        const mimeType = ops.detectImageMimeType ? await ops.detectImageMimeType(absolutePath) : undefined;
+        const policyCheck = await enforceExecutionPolicy(
+          options?.executionPolicy,
+          {
+            kind: "read",
+            operation: "read",
+            paths: [absolutePath],
+            risk: "low",
+            metadata: { offset, limit, signal: context.signal },
+          },
+          toolCallId,
+          "read",
+        );
+        if (!policyCheck.allowed) return policyCheck.result;
+        const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
+
+        await ops.access(allowedPath);
+
+        const mimeType = ops.detectImageMimeType ? await ops.detectImageMimeType(allowedPath) : undefined;
 
         if (mimeType) {
-          const buffer = await ops.readFile(absolutePath);
-          // ponytail: auto-resize deferred — raw bytes returned; port image processing (resize to
-          // ≤2000×2000) when a host needs context-size capping. Until then large images bloat context.
+          const { buffer, resized } = await loadImageBuffer(allowedPath, mimeType, ops, {
+            maxImageBytes,
+            transformImage: options?.transformImage,
+            autoResizeImages: options?.autoResizeImages,
+            signal: context.signal,
+          });
           return {
             toolCallId,
             name: "read",
@@ -247,12 +343,12 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
               { type: "text", text: `Read image file [${mimeType}]` },
               { type: "image", data: buffer.toString("base64"), mimeType },
             ],
-            metadata: { image: { mimeType, resized: false } },
+            metadata: { image: { mimeType, resized, bytes: buffer.length } },
           };
         }
 
         // Text path: faithful port of pi's offset/limit → truncateHead → continuation logic.
-        const buffer = await ops.readFile(absolutePath);
+        const buffer = await ops.readFile(allowedPath);
         const textContent = buffer.toString("utf-8");
         const allLines = textContent.split("\n");
         const totalFileLines = allLines.length;

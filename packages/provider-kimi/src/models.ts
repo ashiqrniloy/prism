@@ -14,6 +14,7 @@ export const kimiCodingModels = [
     provider: "kimi-coding",
     model: "kimi-k2.7-code",
     displayName: "Kimi K2.7 Code",
+    capabilities: { input: ["text", "document", "file"] },
     limits: { contextWindow: 256_000, maxOutputTokens: 64_000 },
     compat: { route: "anthropic", preserveThinking: true },
   }),

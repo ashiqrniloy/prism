@@ -19,6 +19,7 @@ Security defaults:
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
 - API keys/access tokens are resolved per request from caller-supplied values or resolvers.
+- Codex OAuth device-code login polls with server `interval`/`expires_in`, honors `slow_down`, and accepts `OAuthLoginCallbacks.signal` for abort.
 - Live tests must stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe provider-specific env names.
 
 Cache behavior:

@@ -79,8 +79,10 @@ describe("agent session runtime", () => {
     assert.deepEqual(events.map((event) => event.type), [
       "agent_started",
       "turn_started",
+      "provider_turn_started",
       "message_started",
       "message_delta",
+      "provider_turn_finished",
       "message_finished",
       "turn_finished",
       "agent_finished",

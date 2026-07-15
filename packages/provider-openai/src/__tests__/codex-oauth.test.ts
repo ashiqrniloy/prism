@@ -57,14 +57,165 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
     const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).includes("device")) deviceBody = JSON.parse(String(init?.body)) as Record<string, string>;
       return String(url).includes("device")
-        ? Response.json({ device_code: "device", user_code: "FAKE-CODE", verification_uri: "https://example.test/device" })
+        ? Response.json({ device_code: "device", user_code: "FAKE-CODE", verification_uri: "https://example.test/device", interval: 0, expires_in: 600 })
         : Response.json({ access_token: "device-access" });
     }) as typeof fetch;
-    const provider = createOpenAICodexOAuthProvider({ fetch: fetchImpl, scope: "openid offline_access" });
+    const provider = createOpenAICodexOAuthProvider({ fetch: fetchImpl, scope: "openid offline_access", sleep: async () => {} });
     const credentials = await provider.login({ onDeviceCode: () => {} });
     assert.equal(deviceBody!.scope, "openid offline_access");
     assert.equal(deviceBody!.client_id, "prism-codex");
     assert.equal(credentials.access, "device-access");
+  });
+
+  it("codex_oauth_device_code_polls_pending_then_succeeds", async () => {
+    let tokenPolls = 0;
+    const fetchImpl = (async (url: string | URL | Request) => {
+      if (String(url).includes("device")) {
+        return Response.json({
+          device_code: "secret-device-code",
+          user_code: "FAKE-CODE",
+          verification_uri: "https://example.test/device",
+          interval: 1,
+          expires_in: 60,
+        });
+      }
+      tokenPolls += 1;
+      if (tokenPolls < 3) {
+        return Response.json({ error: "authorization_pending" }, { status: 400 });
+      }
+      return Response.json({ access_token: "polled-access", refresh_token: "polled-refresh", expires_in: 120, account_id: "acct" });
+    }) as typeof fetch;
+    const sleeps: number[] = [];
+    const provider = createOpenAICodexOAuthProvider({
+      fetch: fetchImpl,
+      sleep: async (ms) => { sleeps.push(ms); },
+    });
+    const credentials = await provider.login({ onDeviceCode: () => {} });
+    assert.equal(tokenPolls, 3);
+    assert.deepEqual(sleeps, [1_000, 1_000, 1_000]);
+    assert.equal(credentials.access, "polled-access");
+    assert.equal(credentials.refresh, "polled-refresh");
+    assert.equal(credentials.accountId, "acct");
+  });
+
+  it("codex_oauth_device_code_honors_slow_down", async () => {
+    let tokenPolls = 0;
+    const fetchImpl = (async (url: string | URL | Request) => {
+      if (String(url).includes("device")) {
+        return Response.json({
+          device_code: "device",
+          user_code: "FAKE-CODE",
+          verification_uri: "https://example.test/device",
+          interval: 2,
+          expires_in: 60,
+        });
+      }
+      tokenPolls += 1;
+      if (tokenPolls === 1) return Response.json({ error: "slow_down" }, { status: 400 });
+      return Response.json({ access_token: "after-slow-down" });
+    }) as typeof fetch;
+    const sleeps: number[] = [];
+    const provider = createOpenAICodexOAuthProvider({
+      fetch: fetchImpl,
+      sleep: async (ms) => { sleeps.push(ms); },
+    });
+    const credentials = await provider.login({ onDeviceCode: () => {} });
+    assert.equal(credentials.access, "after-slow-down");
+    assert.deepEqual(sleeps, [2_000, 7_000]);
+  });
+
+  it("codex_oauth_device_code_expires_when_pending_persists", async () => {
+    let now = 1_000;
+    const fetchImpl = (async (url: string | URL | Request) => {
+      if (String(url).includes("device")) {
+        return Response.json({
+          device_code: "secret-device-code",
+          user_code: "FAKE-CODE",
+          verification_uri: "https://example.test/device",
+          interval: 1,
+          expires_in: 3,
+        });
+      }
+      return Response.json({ error: "authorization_pending" }, { status: 400 });
+    }) as typeof fetch;
+    const provider = createOpenAICodexOAuthProvider({
+      fetch: fetchImpl,
+      now: () => now,
+      sleep: async (ms) => { now += ms; },
+    });
+    await assert.rejects(async () => provider.login({ onDeviceCode: () => {} }), (error: Error) => {
+      assert.match(error.message, /expired before authorization completed/);
+      return true;
+    });
+  });
+
+  it("codex_oauth_device_code_aborts_during_poll", async () => {
+    const controller = new AbortController();
+    const fetchImpl = (async (url: string | URL | Request) => {
+      if (String(url).includes("device")) {
+        return Response.json({
+          device_code: "device",
+          user_code: "FAKE-CODE",
+          verification_uri: "https://example.test/device",
+          interval: 1,
+          expires_in: 60,
+        });
+      }
+      return Response.json({ error: "authorization_pending" }, { status: 400 });
+    }) as typeof fetch;
+    const provider = createOpenAICodexOAuthProvider({
+      fetch: fetchImpl,
+      sleep: async () => { controller.abort(new Error("login cancelled")); },
+    });
+    await assert.rejects(
+      async () => provider.login({ onDeviceCode: () => {}, signal: controller.signal }),
+      (error: Error) => {
+        assert.match(error.message, /login cancelled|aborted/i);
+        return true;
+      },
+    );
+  });
+
+  it("codex_oauth_device_code_terminal_error_redacts_secrets", async () => {
+    const fetchImpl = (async (url: string | URL | Request) => {
+      if (String(url).includes("device")) {
+        return Response.json({
+          device_code: "secret-device-code",
+          user_code: "secret-user-code",
+          verification_uri: "https://example.test/device",
+          interval: 0,
+          expires_in: 60,
+        });
+      }
+      return Response.json({ error: "access_denied", error_description: "denied secret-device-code secret-user-code" }, { status: 400 });
+    }) as typeof fetch;
+    const provider = createOpenAICodexOAuthProvider({ fetch: fetchImpl, sleep: async () => {} });
+    await assert.rejects(async () => provider.login({ onDeviceCode: () => {} }), (error: Error) => {
+      assert.match(error.message, /access_denied|invalid_token_response/);
+      assert(!error.message.includes("secret-device-code"));
+      assert(!error.message.includes("secret-user-code"));
+      assert.ok(error.message.includes("[REDACTED]"));
+      return true;
+    });
+  });
+
+  it("codex_oauth_authorization_code_errors_redact_code_and_verifier", async () => {
+    let tokenBody: Record<string, string> | undefined;
+    const provider = createOpenAICodexOAuthProvider({
+      fetch: (async (_url, init) => {
+        tokenBody = JSON.parse(String(init?.body)) as Record<string, string>;
+        return Response.json({ error: "invalid_grant", error_description: "bad secret-auth-code" }, { status: 400 });
+      }) as typeof fetch,
+    });
+    await assert.rejects(async () => provider.login({
+      onAuth: () => {},
+      onPrompt: () => "secret-auth-code",
+    }), (error: Error) => {
+      assert(!error.message.includes("secret-auth-code"));
+      assert(!error.message.includes(tokenBody!.code_verifier!));
+      assert.ok(error.message.includes("[REDACTED]"));
+      return true;
+    });
   });
 
   it("codex_oauth_verifier_is_cryptographically_random", () => {

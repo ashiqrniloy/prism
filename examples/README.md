@@ -30,6 +30,10 @@ node examples/custom-builders.ts
 node examples/custom-session-store.ts
 node examples/custom-tools-skills-context.ts
 node examples/extension-package.ts
+node examples/workflow-research-and-review.ts
+node examples/workflow-multimodal-document.ts
+node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL is set
+node examples/workflow-distributed-coordinator.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -60,6 +64,8 @@ Each demo prints a single JSON line with its result.
 - `system-prompts.ts` — layered system-prompt composition; disabling layers.
 - `system-project-prompts.ts` — **demo**: auto-load `AGENTS.md`/`SYSTEM.md` via
   `loadSystemPromptFiles` (trust-gated) and prove the composed prompt reaches the provider.
+- `discover-skills.ts` — compile-checked opt-in contribution discovery and registration.
+- `instruction-injection.ts` — compile-checked host-selected instruction injector wiring.
 - `jsonl-stores-branching.ts` — in-memory store + branching; JSONL persistence.
 - `compaction.ts` — **demo**: LLM compaction with a mock summarizer provider.
 - `observational-memory-recall-status-view.ts` — **demo**: recall tool +
@@ -74,6 +80,15 @@ Each demo prints a single JSON line with its result.
   resume from the ledger — no real DB, no network.
 - `cli.ts` — **demo**: spawn the `prism` bin in print and json modes.
 - `rpc.ts` — **demo**: drive the `prism` bin in rpc mode with a JSONL request.
+- `workflow-research-and-review.ts` — **demo**: three sequential agent nodes (research → draft → review) with in-memory checkpoints and redaction.
+- `workflow-parallel-research.ts` — **demo**: bounded fan-out/join plus three concurrently scheduled research branches and downstream agent synthesis.
+- `workflow-tool-approval.ts` — **demo**: offline MCP-mapped tool node with `ExecutionPolicy` approval carrying `workflowId`/`nodeId` metadata.
+- `workflow-sqlite-resume.ts` — **demo**: durable SQLite checkpoint via `persistence.checkpoints`, fresh run, and resume on a temp database.
+- `workflow-postgres-resume.ts` — **demo**: opt-in PostgreSQL failed-run resume through a new pool; safely skips unless `PRISM_TEST_POSTGRES_URL` is set.
+- `workflow-multimodal-document.ts` — **demo**: bounded inline PDF workflow with caller-supplied credential resolver and secret redaction.
+- `workflow-event-sink.ts` — **demo**: `onEvent` callback + `WorkflowEventBus` subscriber collecting events through a conditional-skip path.
+- `workflow-rpc-cancel.ts` — **demo**: `cancelWorkflowRun` mid-flight then `resumeWorkflow` — the programmatic surface behind `createWorkflowCommands()`.
+- `workflow-distributed-coordinator.ts` — **demo**: two coordinator instances over independent SQLite handles atomically claim one queued run using durable leases and fencing.
 - `tsconfig.json` — typecheck-only config.
 
 **demo** = the file has a runnable `main()`; the others are compile-checked

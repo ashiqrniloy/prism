@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
   "main": "./dist/index.js",
@@ -13,6 +13,18 @@
     "./providers/openai-compatible": {
       "types": "./dist/providers/openai-compatible.d.ts",
       "default": "./dist/providers/openai-compatible.js"
+    },
+    "./providers/transport": {
+      "types": "./dist/providers/transport.d.ts",
+      "default": "./dist/providers/transport.js"
+    },
+    "./providers/openai": {
+      "types": "./dist/providers/openai-primitives.d.ts",
+      "default": "./dist/providers/openai-primitives.js"
+    },
+    "./providers/media": {
+      "types": "./dist/providers/media.d.ts",
+      "default": "./dist/providers/media.js"
     },
     "./testing/provider-conformance": {
       "types": "./dist/testing/provider-conformance.d.ts",
@@ -33,6 +45,14 @@
     "./testing/extension-conformance": {
       "types": "./dist/testing/extension-conformance.d.ts",
       "default": "./dist/testing/extension-conformance.js"
+    },
+    "./testing/persistence-schema": {
+      "types": "./dist/testing/persistence-schema.d.ts",
+      "default": "./dist/testing/persistence-schema.js"
+    },
+    "./testing/run-ledger-conformance": {
+      "types": "./dist/testing/run-ledger-conformance.d.ts",
+      "default": "./dist/testing/run-ledger-conformance.js"
     },
     "./node/config": {
       "types": "./dist/node/config.d.ts",
@@ -80,10 +100,15 @@
   "workspaces": [
     "packages/provider-*",
     "packages/compaction-*",
+    "packages/observability-*",
+    "packages/tool-validator-*",
+    "packages/session-store-*",
+    "packages/credentials-node",
+    "packages/mcp",
     "packages/coding-agent",
-    "packages/prism-providers",
-    "packages/prism-compaction",
-    "packages/prism-all"
+    "packages/coding-security",
+    "packages/workflows",
+    "packages/prism-*"
   ],
   "scripts": {
     "build:core": "tsc",
@@ -91,7 +116,10 @@
     "typecheck": "npm run build:core && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
     "test": "npm run build && node --test dist/__tests__/*.test.js && npm run test --workspaces --if-present",
     "pack:dry-run": "npm pack --dry-run && npm run pack:dry-run --workspaces --if-present",
+    "test:postgres": "npm run test:postgres --workspace @arnilo/prism-session-store-postgres",
     "release:dry-run": "npm run sdk:ready",
+    "release:check": "node scripts/release.mjs check",
+    "release:publish": "node scripts/release.mjs publish",
     "sdk:ready": "npm run typecheck && npm test && npm run pack:dry-run"
   },
   "devDependencies": {

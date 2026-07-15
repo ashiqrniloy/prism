@@ -97,6 +97,18 @@ describe("node jsonl session store", () => {
     assert.ok(result.errors.some((error) => error.message.includes("compaction entry")));
   });
 
+  it("blocks append when the file contains invalid json lines", async () => {
+    const path = await tempPath();
+    const valid = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "ok" });
+    await writeFile(path, [JSON.stringify(valid), "{"].join("\n"), "utf8");
+    const store = createJsonlSessionStore(path);
+
+    await assert.rejects(
+      () => store.append(createSessionEntry({ id: "e2", sessionId: "s1", kind: "label", label: "new" })),
+      /Invalid JSONL at line 2/,
+    );
+  });
+
   it("does not poison a branch when one entry is invalid", async () => {
     const path = await tempPath();
     const good = createSessionEntry({ id: "good", sessionId: "s1", kind: "message", message: { role: "user", content: [{ type: "text", text: "hi" }] } });

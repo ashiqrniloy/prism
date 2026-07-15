@@ -116,8 +116,9 @@ const provider = createOpenAICompatibleProvider({
 - Resolved API keys are used for the HTTP `Authorization` header and passed to error redaction; they are not stored in registries or events.
 - Redaction only removes known values supplied to the helper. Avoid logging raw provider requests/responses.
 - `fetch` receives the request `AbortSignal`.
+- SSE and HTTP error bodies are read through bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`) with configurable byte ceilings.
 - Tests should use injected `fetch` and never make real network calls.
-- Tool-call arguments are accumulated as streamed text, parsed as JSON only when the final tool call is emitted, and default to `{}` for empty argument text.
+- Tool-call arguments are accumulated as streamed text, parsed with `parseJsonObjectArguments` when the final tool call is emitted; empty argument text yields `{}`, malformed JSON yields an `error` event.
 
 ## Related APIs
 

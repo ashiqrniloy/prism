@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-07-14
+
+### Added
+
+- Complete provider package with featured model metadata, reasoning controls, tool-call reconstruction, implicit prefix-cache usage/cost mapping, quota/model discovery, energy/cost telemetry, and retry classification.
+
+### Changed
+
+- Uses shared bounded transport/OpenAI primitives; setup and generation never invoke quota or model discovery implicitly.
+
 ## [0.0.2] - 2026-07-05
 
 ### Added

@@ -60,7 +60,7 @@ Useful exported types:
 - `DefaultInputBuilder`: the default `InputBuilder` with typed default context.
 - `InputAssemblyLayout`: `"legacy" | "cache_aware"`; legacy is default.
 - `DefaultInputBuildContext`: optional input layout, instructions, history, summaries, attachments, resource loader/URIs, tool results, middleware, ids, metadata, and abort signal.
-- `InputAttachment`: already-loaded text/content or an explicit URI loaded through a caller-provided `ResourceLoader`.
+- `InputAttachment`: already-loaded text/content blocks (including `audio`, `file`, and `document`) or an explicit URI loaded through a caller-provided `ResourceLoader`.
 - `PromptInstruction`: labeled system instruction text.
 - `DefaultPromptBuilder`: the default `PromptBuilder`.
 - `AssembleProviderInputOptions`: model, input, optional builders, context providers, selected skills, active tools, generic provider options, metadata, and signal.
@@ -82,10 +82,10 @@ The builder returns `readonly Message[]`.
 The default prompt builder still prepends context, selected skills, and tool declarations before those input messages. Cache-aware ordering gives cache-capable providers a stable prefix only while those stable inputs stay byte-stable; changing tools, context, resources, summaries, history, or attachments changes the prefix too.
 - History is prepended before current input.
 - Instructions and summaries are system messages; compacted branch summaries from `rebuildSessionContext()` use the same path.
-- Text attachments and explicit text resources are user messages.
+- Text attachments and explicit text resources are user messages; inline `audio`/`file`/`document` blocks pass through unchanged on attachments with `content`.
 - Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn, placing the assistant `tool_call` and the matching role `tool` `tool_result` before any final assistant content. Cache-aware layout keeps tool results before the current user suffix so it does not split tool transcripts.
 - Middleware runs only when `middleware` is supplied in the context.
-- `assembleProviderInput()` returns a `ProviderRequest` with the caller's model/tools/provider options/metadata/signal and composed messages/context.
+- `assembleProviderInput()` returns a `ProviderRequest` with the caller's model/tools/provider options/metadata/signal and composed messages/context. It also calls `assertMessagesSupportModelCapabilities()` so unsupported `audio`/`file`/`document`/`image` blocks fail with `UnsupportedModalityError` when the model declares `capabilities.input`.
 - `renderPromptTemplate()` replaces top-level `{{name}}` variables with caller-supplied JSON-compatible values. Strings are inserted directly; numbers, booleans, `null`, arrays, and objects are stringified deterministically with sorted object keys. Missing variables throw by default or stay unchanged with `{ missing: "preserve" }`.
 
 ## Request/response example
@@ -165,7 +165,7 @@ const request = await assembleProviderInput({
 - The builder is linear in supplied messages, attachments, resources, and tool results. Layout selection is one flattening branch over already-built groups.
 - Template expansion is dependency-free string replacement over `{{name}}` variables. It does not evaluate expressions, filters, loops, partials, JavaScript, globals, or prototype properties.
 - It performs no provider calls, tool execution, credential resolution, package discovery, filesystem scan, network access, timers, or watchers.
-- URI attachments/resources load only through the caller-provided `ResourceLoader`.
+- URI attachments/resources load only through the caller-provided `ResourceLoader`. Binary media uses `resolveMediaContentBlock()` / `loadBinaryResource()` with bounded bytes, SSRF checks for URLs, and MIME magic validation — see [Multimodal content](multimodal-content.md).
 - Do not place secrets in templates, variables, instructions, messages, attachments, tool results, metadata, middleware payloads, or docs examples.
 - Active tools are passed through from the host; prompt middleware cannot grant additional provider tools.
 - Skill selection is handled by the host/skill registry path; this builder only includes selected skills passed by the caller.
@@ -175,7 +175,8 @@ const request = await assembleProviderInput({
 - [SDK customization guide](customization.md): high-level map of replaceable provider resolution, middleware, context, builder, injector, loop, compaction, retry, store, and skill seams.
 - [Public contracts](public-contracts.md): `Message`, `ContentBlock`, `InputBuilder`, `InputBuildContext`, `ToolResult`, and `ResourceLoader` shapes.
 - [Context and skills](context-and-skills.md): ordered context resolution feeding prompt composition.
-- [Resource loading](resource-loading.md): `loadTextResource()` behavior used for explicit URI resources.
+- [Multimodal content](multimodal-content.md): `audio`/`file`/`document` blocks, bounded media resolution, and capability checks.
+- [Resource loading](resource-loading.md): `loadTextResource()` and `loadBinaryResource()` behavior used for explicit URI resources.
 - [Middleware hooks](middleware-hooks.md): ordered middleware registry and `input_assembly`, `context`, and `prompt_build` hooks.
 - [System prompts](system-prompts.md): compose layered package/app/user/run prompts before input assembly.
 - [Contribution registries](contribution-registries.md): inert input, prompt, context, and skill contributions.

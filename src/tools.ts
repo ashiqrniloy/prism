@@ -1,4 +1,4 @@
-import type { AgentEvent, ErrorInfo, JsonObject, OwnershipScope, RunLedger, ToolCallContent, ToolCallRecord, ToolDefinition, ToolExecutionContext, ToolRegistry, ToolResult } from "./contracts.js";
+import type { AgentEvent, ErrorInfo, JsonObject, OwnershipScope, RunLedger, ToolCallContent, ToolCallRecord, ToolCallStatus, ToolDefinition, ToolExecutionContext, ToolExecutionMetadata, ToolRegistry, ToolResult } from "./contracts.js";
 import { isJsonObject } from "./config.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
@@ -12,6 +12,47 @@ export interface ToolFilter {
 
 export type ToolFilterInput = ToolFilter | readonly ToolFilter[];
 export type ToolValidator = (tool: ToolDefinition, args: JsonObject, context: ToolExecutionContext) => void | string | ErrorInfo | Promise<void | string | ErrorInfo>;
+
+export interface ToolArgumentValidationError {
+  readonly path?: string;
+  readonly message: string;
+}
+
+export interface ToolArgumentValidationResult {
+  readonly ok: boolean;
+  readonly errors?: readonly ToolArgumentValidationError[];
+}
+
+export interface ToolArgumentValidator {
+  validate(schema: JsonObject, value: unknown): ToolArgumentValidationResult;
+}
+
+export interface ToolParameterValidatorOptions {
+  /** When a tool omits `parameters`. Default `"allow"` preserves pre-validation behavior. */
+  readonly missingSchema?: "allow" | "reject";
+}
+
+/** Wrap a schema adapter as the existing `ToolValidator` seam used by dispatch and the agent runtime. */
+export function createToolParameterValidator(
+  validator: ToolArgumentValidator,
+  options: ToolParameterValidatorOptions = {},
+): ToolValidator {
+  const missingSchema = options.missingSchema ?? "allow";
+  return (tool, args) => {
+    if (!tool.parameters) {
+      if (missingSchema === "reject") return `Tool ${tool.name} has no parameters schema`;
+      return undefined;
+    }
+    const result = validator.validate(tool.parameters, args);
+    if (result.ok) return undefined;
+    return formatToolArgumentValidationErrors(tool.name, result.errors);
+  };
+}
+
+function formatToolArgumentValidationErrors(toolName: string, errors?: readonly ToolArgumentValidationError[]): string {
+  if (!errors?.length) return `Tool arguments failed validation: ${toolName}`;
+  return errors.map((error) => (error.path ? `${error.path}: ${error.message}` : error.message)).join("; ");
+}
 
 export interface DispatchToolCallOptions {
   readonly call: ToolCallContent;
@@ -61,6 +102,10 @@ export function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilte
   const allows = filters.map((item) => item.allow?.length ? new Set(item.allow) : undefined).filter((item): item is Set<string> => Boolean(item));
 
   return tools.filter((tool) => !denied.has(tool.name) && allows.every((allow) => allow.has(tool.name)));
+}
+
+function toolExecutionMetadata(startedAt: string, status: ToolCallStatus): ToolExecutionMetadata {
+  return { durationMs: Math.max(0, Date.now() - Date.parse(startedAt)), status };
 }
 
 export async function dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult> {
@@ -113,14 +158,16 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     const mediatedResult = await (options.middleware?.run<ToolResult>("tool_result", raw) ?? raw);
     const result = options.redactor?.redact(mediatedResult) ?? mediatedResult;
     const finishedAt = new Date().toISOString();
-    await options.emit?.({ type: "tool_execution_finished", sessionId: context.sessionId, runId: context.runId, result });
+    const metadata = toolExecutionMetadata(startedAt, "finished");
+    await options.emit?.({ type: "tool_execution_finished", sessionId: context.sessionId, runId: context.runId, result, metadata });
     await appendToolCallRecord(options, "finished", mediatedCall, startedAt, { finishedAt, result });
     return result;
   } catch (error) {
     const info = errorToErrorInfo(error, secrets);
     const result = { toolCallId: mediatedCall.id, name: mediatedCall.name, error: info };
     const finishedAt = new Date().toISOString();
-    await options.emit?.({ type: "tool_execution_error", sessionId: context.sessionId, runId: context.runId, call: mediatedCall, error: info });
+    const metadata = toolExecutionMetadata(startedAt, "error");
+    await options.emit?.({ type: "tool_execution_error", sessionId: context.sessionId, runId: context.runId, call: mediatedCall, error: info, metadata });
     await appendToolCallRecord(options, "error", mediatedCall, startedAt, { finishedAt, result });
     return result;
   }
@@ -136,6 +183,7 @@ async function checkCall(call: ToolCallContent, options: DispatchToolCallOptions
 }
 
 async function blocked(call: ToolCallContent, context: ToolExecutionContext, reason: string, error: ErrorInfo, options: DispatchToolCallOptions, startedAt: string): Promise<ToolResult> {
+  const metadata = toolExecutionMetadata(startedAt, "blocked");
   await options.emit?.({
     type: "tool_execution_blocked",
     sessionId: context.sessionId,
@@ -144,6 +192,7 @@ async function blocked(call: ToolCallContent, context: ToolExecutionContext, rea
     name: call.name,
     reason,
     error,
+    metadata,
   });
   const finishedAt = new Date().toISOString();
   const result = { toolCallId: call.id, name: call.name, error };

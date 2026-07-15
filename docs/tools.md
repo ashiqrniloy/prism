@@ -182,13 +182,49 @@ const agent = createAgent({
 await session.run(input, { validate: (_t, args) => args.dry ? "dry-run blocked" : undefined });
 ```
 
+### JSON Schema validation (optional package)
+
+Core exposes schema-agnostic adapters that wrap into the same `ToolValidator` seam:
+
+- `ToolArgumentValidator` — `validate(schema, value)` with structured errors
+- `createToolParameterValidator(adapter, { missingSchema?: "allow" | "reject" })` — maps `tool.parameters` through the adapter
+
+For standards-based validation install `@arnilo/prism-tool-validator-json-schema`:
+
+```ts
+import { createAgent } from "@arnilo/prism";
+import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+
+const agent = createAgent({
+  model,
+  provider,
+  tools,
+  validator: createJsonSchemaToolArgumentValidator(),
+});
+```
+
+By default tools without `parameters` skip schema validation (`missingSchema: "allow"`). Use `missingSchema: "reject"` when every active tool must declare a schema. The adapter compiles each schema once (in-memory cache), rejects remote `$ref`, prototype-pollution keys, and oversized/deep argument values before `tool.execute()`. See [Tool execution primitives](tool-execution-primitives.md).
+
+### Parallel tool execution (single-shot loop)
+
+Opt in through `loop.toolConcurrency` on `AgentConfig` / `RunOptions` (single-shot strategy only). Default is `1` (sequential). Independent calls from one provider turn run concurrently up to the limit; transcript rows and `appendMessage` stay in original call order. Each call still uses `dispatchToolCall` (permission, validation, abort signal). See [Agent loops](agent-loops.md).
+
+```ts
+await session.run(input, {
+  maxToolRounds: 3,
+  loop: { strategy: "single-shot", toolConcurrency: 4 },
+});
+```
+
 ## Security and performance notes
 
 - Tool lookup uses a `Map` for O(1) name lookup. Strict duplicate mode adds one O(1) `Map.has()` check during registration only.
 - Filtering is exact-name matching over the provided tools and rules.
 - Unknown, denied, malformed, duplicate-in-strict-mode, and validator-blocked calls fail closed.
 - Tool arguments must be JSON object-shaped before validation or execution.
-- `parameters` is pass-through metadata; hosts own schema interpretation and validation.
+- `parameters` is pass-through metadata; hosts own schema interpretation unless they wire a `ToolValidator` or the optional JSON Schema package.
+- `exclusive: true` on a `ToolDefinition` makes a single-shot provider turn containing that tool sequential even when `toolConcurrency > 1`. Use it when an execution policy can classify the tool as exclusive before side effects.
+- Optional JSON Schema validation compiles each distinct `tool.parameters` once in the adapter package; dispatch itself adds no schema dependency.
 - Prism does not sandbox host tools and does not include built-in app tools.
 - Contribution registration and registry/filter calls do not perform provider calls, credential resolution, resource loading, network, filesystem discovery, or tool execution.
 - Dispatch performs explicit in-memory checks and executes only the selected host-active tool; it adds no retries, queues, timers, or new dependencies.
@@ -203,6 +239,8 @@ await session.run(input, { validate: (_t, args) => args.dry ? "dry-run blocked" 
 - [Middleware hooks](middleware-hooks.md): `tool_call` and `tool_result` middleware used during dispatch.
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.
 - [Observational memory compaction package](compaction-observational-memory.md): optional exact-id recall tool factory.
+- [Tool execution primitives](tool-execution-primitives.md): JSON Schema adapter, parallelism, MCP bridge, and execution-policy designs.
+- [MCP client bridge](mcp-tools.md): optional `@arnilo/prism-mcp` remote tool mapping.
 - [Coding agent tools](coding-agent-tools.md): optional first-party `@arnilo/prism-coding-agent` `shell`/`read`/`write`/`edit` tools a host registers into this harness.
 
 `DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. `AgentConfig.validator`/`RunOptions.validate` run after this guard; their output is redacted through the active `SecretRedactor`. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

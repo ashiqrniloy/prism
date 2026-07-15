@@ -121,6 +121,35 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     for (const m of body.messages) for (const block of m.content) assert.equal(block.cache_control, undefined);
   });
 
+  it("opencode_go_anthropic_route_serializes_pdf_document_blocks", async () => {
+    const tinyPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]).toString("base64");
+    const replay: ProviderRequest = {
+      model: {
+        provider: "opencode-go",
+        model: "claude-sonnet-4.5-go",
+        compat: { route: "anthropic" },
+        capabilities: { input: ["text", "document", "file"] },
+      },
+      messages: [{
+        role: "user",
+        content: [
+          { type: "document", mediaType: "application/pdf", name: "brief.pdf", data: tinyPdf },
+          { type: "file", mediaType: "application/pdf", name: "report.pdf", data: tinyPdf },
+        ],
+      }],
+    };
+    let body: unknown;
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: replay });
+    assertSerializedRequestCoversContent(replay, body);
+    const serialized = JSON.stringify(body);
+    assert.match(serialized, /"type":"document"/);
+    assert.match(serialized, /brief\.pdf/);
+  });
+
   it("opencode_go_openai_route_never_receives_anthropic_cache_control", async () => {
     let body: any;
     const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
@@ -135,6 +164,18 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     } });
     const serialized = JSON.stringify(body);
     assert.ok(!serialized.includes("cache_control"), "OpenAI route body must not contain cache_control");
+  });
+
+  it("opencode_go_openai_route_rejects_document_blocks", async () => {
+    const tinyPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]).toString("base64");
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sse([]))) as typeof fetch });
+    const events: ProviderEvent[] = [];
+    for await (const event of provider.generate({
+      ...baseRequest,
+      messages: [{ role: "user", content: [{ type: "document", mediaType: "application/pdf", data: tinyPdf }] }],
+    })) events.push(event);
+    assert.equal(events.at(-1)?.type, "error");
+    assert.match(String((events.at(-1) as { error?: { message?: string } })?.error?.message ?? events.at(-1)), /document content blocks/);
   });
 
   it("opencode_go_keeps_provider_owned_headers_after_caller_headers", async () => {

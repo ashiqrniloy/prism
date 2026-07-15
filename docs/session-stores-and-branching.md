@@ -119,5 +119,6 @@ Use `createDefaultCompactionStrategy()` to create compaction entries that `rebui
 - [Compaction and retry policies](compaction-and-retry.md): default strategy for creating compaction entries.
 - [Input and prompt assembly](input-and-prompt-assembly.md): provider input assembly consumes rebuilt `messages` and `summaries`.
 - [Credentials and redaction](credentials-and-redaction.md): security boundary for secrets that must not enter session entries.
+- [Workflows](workflows.md): optional orchestration that reuses session `leafId` on resume rather than reloading full transcripts into the scheduler.
 
 Session stores persist the entries they receive. Configure `AgentConfig.redactor` or `RunOptions.redactor` before a run when known secrets must be removed before entries reach durable stores.

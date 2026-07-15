@@ -113,6 +113,7 @@ console.log(error.message);
 - `AgentConfig.credentials` is not eagerly resolved, serialized into provider requests/events/stores, or passed to loops/compaction by the core runtime.
 - `resolveCredentialValue()` and `createExplicitCredentialResolver()` do not cache values. Add host-side caching only if a real credential source needs it.
 - `refreshOAuthCredential()` only calls the supplied OAuth provider and optional store; it has no built-in persistence or retry loop.
+- OpenAI Codex device-code OAuth polls inside `createOpenAICodexOAuthProvider().login()` with bounded delays and abort support via `OAuthLoginCallbacks.signal`. Token-endpoint failures redact authorization codes, PKCE verifiers, device/user codes, and access/refresh tokens when those values are known.
 
 ## Related APIs
 
@@ -121,4 +122,4 @@ console.log(error.message);
 - [LLM compaction package](compaction-llm.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
 - [OpenAI-compatible provider](providers/openai-compatible.md): resolves API keys per request and redacts known values from adapter errors.
 
-Phase 10 added `createMemoryCredentialStore()`, `createChainedCredentialResolver()`, and `createSecretRedactor()` for opt-in in-memory auth and runtime redaction. Phase 11 adds OAuth/API-key contracts plus explicit resolver order helpers. Core still has no persistent secret store and does not read environment variables or files for credentials. See [Security/auth/trust](settings-auth-trust-security.md).
+Phase 10 added `createMemoryCredentialStore()`, `createChainedCredentialResolver()`, and `createSecretRedactor()` for opt-in in-memory auth and runtime redaction. Phase 11 adds OAuth/API-key contracts plus explicit resolver order helpers. Core still has no persistent secret store and does not read environment variables or files for credentials. For durable storage, use [`@arnilo/prism-credentials-node`](credential-storage.md) encrypted-file or keychain backends. See [Security/auth/trust](settings-auth-trust-security.md).

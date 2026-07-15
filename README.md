@@ -17,10 +17,9 @@ packages. Prism defines contracts, not apps.
   OpenAI/OpenRouter use best-effort explicit cache hints, NeuralWatt uses
   best-effort implicit prefix caching, and other providers have route/model-specific
   or no cache-control support; see [docs/provider-caching.md](docs/provider-caching.md).
-- **First-party packages**: `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-opencode-go`,
-  `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-zai`, `@arnilo/prism-provider-kimi`,
-  `@arnilo/prism-provider-neuralwatt`, `@arnilo/prism-compaction-llm`, and
-  `@arnilo/prism-compaction-observational-memory`.
+- **First-party packages**: six provider adapters, two compaction strategies,
+  coding tools/security, JSON Schema validation, MCP, workflows, OpenTelemetry,
+  encrypted credentials, SQLite/PostgreSQL persistence, and manifest-only install profiles.
 - **Tools, context, skills**: host-owned tool registry with allow/deny filtering
   and dispatch, context providers, and a skill registry with progressive
   disclosure.
@@ -41,14 +40,16 @@ packages. Prism defines contracts, not apps.
 npm install @arnilo/prism
 ```
 
-First-party provider/compaction packages are separate installs and require
-`@arnilo/prism` as a non-optional peer. Install a single package, or use an
-umbrella to grab a whole family in one line:
+First-party code packages are separate imports and require `@arnilo/prism` as
+a non-optional peer. Install atomic packages directly or choose a manifest-only
+family/profile; profiles install packages but expose no alias exports and activate nothing:
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-provider-openai   # core + one provider
-npm install @arnilo/prism @arnilo/prism-providers          # core + all providers
-npm install @arnilo/prism-all                               # everything
+npm install @arnilo/prism @arnilo/prism-provider-openai    # core + one provider
+npm install @arnilo/prism-base                              # core + compaction + validation
+npm install @arnilo/prism-code @arnilo/prism-provider-openai # coding-agent profile
+npm install @arnilo/prism-sdk @arnilo/prism-provider-openai  # application profile
+npm install @arnilo/prism-all                               # every first-party package
 ```
 
 See [docs/release-and-install.md](docs/release-and-install.md) for install
@@ -111,8 +112,8 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 
 - [docs/index.md](docs/index.md) — navigational map of every public surface.
 - The `examples/` directory holds compile-checked typed examples and runnable
-  mock demos (provider registration, auth, tools, stores/branching, compaction,
-  observational-memory recall, CLI, RPC).
+  offline demos covering providers, auth, tools, stores, compaction, structured
+  output, multimodality, workflows, CLI, and RPC.
 
 ## Packages
 
@@ -127,9 +128,21 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-provider-neuralwatt` | NeuralWatt provider with implicit vLLM prefix caching |
 | `@arnilo/prism-compaction-llm` | provider-backed compaction strategy |
 | `@arnilo/prism-compaction-observational-memory` | source-backed memory + recall tool |
-| `@arnilo/prism-providers` | umbrella: all 6 provider adapters |
-| `@arnilo/prism-compaction` | umbrella: both compaction strategies |
-| `@arnilo/prism-all` | umbrella: core + providers + compaction |
+| `@arnilo/prism-coding-agent` | bounded shell/read/write/edit tools |
+| `@arnilo/prism-coding-security` | coding approval, containment, and sandbox adapters |
+| `@arnilo/prism-tool-validator-json-schema` | bounded JSON Schema tool validation |
+| `@arnilo/prism-mcp` | MCP client/tool bridge |
+| `@arnilo/prism-workflows` | bounded DAG workflows and durable coordination |
+| `@arnilo/prism-observability-opentelemetry` | optional OpenTelemetry adapter |
+| `@arnilo/prism-credentials-node` | encrypted-file and keychain credentials |
+| `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases |
+| `@arnilo/prism-session-store-postgres` | PostgreSQL persistence/checkpoints/leases |
+| `@arnilo/prism-providers` | family: all 6 provider adapters |
+| `@arnilo/prism-compaction` | family: both compaction strategies |
+| `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
+| `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
+| `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
+| `@arnilo/prism-all` | every first-party package, including both persistence adapters |
 
 ## Scripts
 
@@ -142,8 +155,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 
 ## Non-goals (v1)
 
-- Built-in shell/filesystem/browser tools — ship as separate packages only.
-- MCP bridge — external extension package after extension APIs settle.
-- TUI or interactive terminal — CLI/RPC only in core.
-- Workflow/graph orchestration — bounded agent loops first.
-- Encrypted/keychain credential storage — host-owned until a real app needs it.
+- Privileged tools, MCP servers, telemetry, credentials, or databases activated by install — hosts explicitly configure and register every capability.
+- Browser automation or interactive terminal UI — CLI/RPC and workflow control APIs only.
+- Provider, credential, extension, or package auto-discovery.
+- Core-owned database drivers, secret persistence, sandbox, or application policy — optional packages implement adapters over host-owned boundaries.

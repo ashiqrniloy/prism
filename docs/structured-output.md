@@ -10,6 +10,8 @@ An artifact loop generates provider text, parses it to `T`, validates `T` agains
 
 Use `generateValidateReviseLoop` (with host `parser`/`validator`/`repairer`) when a run should produce an artifact that must satisfy a host-owned schema before it is considered complete: structured JSON output, a generated file passing lint, a typed response conforming to a Synapta-defined model. Wrap your existing schema/validation library behind the `Artifact*` callbacks.
 
+When the model declares `capabilities.structuredOutput` and the host opts into native mode, pass `structuredOutput` on `RunOptions.providerOptions` or on the `generate-validate-revise` loop options so capable providers map the schema to their wire format (`response_format` / Responses `text.format`) and valid output can finish in one turn without repair revisions.
+
 Do not use it to re-implement provider calls, retry, abort, store, or event emission — those stay runtime-owned and are exposed to the loop only through `LoopContext`. Do not use it for runs that need tool calls during revision turns — use `singleShotLoop` or a custom `AgentLoopStrategy` instead. Do not put Synapta domain types into Prism; map them to `ArtifactValidation` in your callbacks.
 
 ## Inputs / request
@@ -47,6 +49,11 @@ await session.run(input, {
     parser,            // optional; default treats assistant text as the value
     repairer,          // optional; default stringifies validation.errors[].message
     maxRevisions: 3,   // optional; default 3
+    structuredOutput: { name: "answer", schema, strict: true }, // optional native mode
+    structuredOutputMode: "native", // or "artifact-loop" to skip provider-native schema
+  },
+  providerOptions: {
+    structuredOutput: { name: "answer", schema, strict: true }, // direct native request
   },
 });
 ```
@@ -222,6 +229,8 @@ Key cross-seam points:
 ## Extension and configuration notes
 
 - `generate-validate-revise` is selected via `AgentConfig.loop` / `RunOptions.loop` (`RunOptions.loop` wins). See [Agent loops](agent-loops.md). `resolveLoop()` maps the options form to the factory; an unknown `strategy` throws before the first turn; a custom `AgentLoopStrategy` instance bypasses the options form.
+- Native structured output uses provider-neutral `StructuredOutputOptions` on `ProviderRequestOptions` / loop options. Capable OpenAI-family providers map to JSON-schema wire fields; unsupported models fail before fetch unless the host sets `structuredOutputMode: "artifact-loop"` and relies on parser/validator/repairer only.
+- `validateStructuredOutputOptions()` enforces JSON-safe schemas, forbidden prototype-pollution keys, and a 64 KiB schema size cap.
 - The default parser treats assistant text as the value (`{ ok: true, value: text }`); supply a host parser whenever `T` is not `string`.
 - The default repairer builds a user message from `validation.errors[].message`; supply a host repairer for schema-specific guidance.
 - `maxRevisions` (default 3) bounds revision turns; budget exhaustion ends the loop and emits `artifact_failed` (it does not throw).

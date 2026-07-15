@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { mergeConfigLayers, type ConfigLayer } from "../config.js";
-import { readConfigFile, type NodeConfigFile } from "./config.js";
+import { readConfigFile, type NodeConfigFile, isNodeErrorCode } from "./config.js";
 import { createStaticSettingsProvider } from "../settings.js";
 import type { SettingsProvider } from "../contracts.js";
 
@@ -21,7 +21,7 @@ export async function loadSettingsFiles(files: readonly NodeSettingsFile[]): Pro
     try {
       layers.push({ name: file.name, config: await readSettingsFile(file.path) });
     } catch (error) {
-      if (file.optional && error instanceof Error && error.message.includes("ENOENT")) continue;
+      if (file.optional && isNodeErrorCode(error, "ENOENT")) continue;
       throw error;
     }
   }

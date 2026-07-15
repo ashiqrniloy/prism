@@ -4,7 +4,9 @@
 
 The production persistence contracts describe database-neutral types for durable, multi-tenant storage of Prism sessions, branch handles, session entries, runs, agent-event ledger rows, tool-call rows, usage rows, agent-definition versions, retention policies, and migration records. They also define cursor-paginated query shapes so hosts can implement SQL, NoSQL, or object-store adapters without changing Prism runtime internals.
 
-Prism itself does not ship a production database adapter. The built-in `SessionStore` contract (`append` / `list` / optional `get`) remains the runtime seam; `ProductionPersistenceStore` is the optional adapter-facing contract for hosts that need paginated reads, tenant isolation, audit tables, and retention.
+Prism itself does not ship a production database adapter. The built-in `SessionStore` contract (`append` / `list` / optional `get`) remains the runtime seam; `ProductionPersistenceStore` is the optional adapter-facing contract for hosts that need paginated reads, tenant isolation, audit tables, retention, and optional generic `CheckpointStore` / `LeaseStore` capabilities.
+
+Plan 056 Task 1 adds dialect-neutral shared primitives under `@arnilo/prism/testing/persistence-schema`, `@arnilo/prism/testing/session-store-conformance`, and `@arnilo/prism/testing/run-ledger-conformance`. Task 2 ships `@arnilo/prism-session-store-sqlite` (see [SQLite persistence](sqlite-persistence.md)); Task 3 ships `@arnilo/prism-session-store-postgres` (see [PostgreSQL persistence](postgres-persistence.md)). Both implement dialect-local SQL against the shared model; Prism core still ships no ORM, driver, or migration runner.
 
 ## When to use it
 
@@ -183,6 +185,42 @@ The `usage` JSONB stores the `Usage` shape: input/output/total/cache tokens, cos
 | `prism_migrations` | `id` PK, `name`, `version`, `applied_at`, `applied_by`, `checksum`, `metadata` JSONB |
 
 Prism does not run migrations; hosts own migration tooling and use this table to record applied changes.
+
+## Shared schema model and migration contract
+
+Adapter packages import the shared model instead of copying table names piecemeal:
+
+```ts
+import {
+  createPersistenceSchemaModel,
+  createPersistenceMigrationContract,
+  assertPersistenceSchemaModel,
+  assertAdapterSchemaMatchesModel,
+  assertPersistenceQueryPaginationConforms,
+  assertTenantScopedQueryIsolation,
+  getPersistencePaginationCursors,
+  PARAMETERIZED_QUERY_GUIDANCE,
+} from "@arnilo/prism/testing/persistence-schema";
+import { assertSessionStoreConforms, runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
+import { assertRunLedgerConforms, runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
+
+const model = createPersistenceSchemaModel();
+assertPersistenceSchemaModel(model);
+
+await runSessionStoreConformance(() => createStore(testDatabase), { exerciseReopen: true });
+await runRunLedgerConformance(() => createLedger(testDatabase), { exerciseReopen: true });
+```
+
+| Primitive | Purpose |
+| --- | --- |
+| `PersistenceSchemaModel` | Versioned table/column/index model covering sessions, entries, parent chain, idempotency side table, runs, events, tool calls, usage, tenant columns, and `prism_migrations` |
+| `createPersistenceMigrationContract()` | Strictly increasing migration steps, `prism_migrations` recording, advisory-lock guidance, and least-privilege migration/runtime role guidance |
+| `getPersistencePaginationCursors()` | Indexed `(session_id, timestamp, id)`, `(run_id, sequence)`, `(run_id, recorded_at, id)` cursor shapes that avoid offset scans |
+| `assertPersistenceQueryPaginationConforms()` | Generic cursor pagination fixture for `queryEntries` |
+| `assertTenantScopedQueryIsolation()` | Tenant-filtered reads must not leak rows or primary-id collisions across tenants |
+| `PARAMETERIZED_QUERY_GUIDANCE` | Values are always bound parameters; only validated identifiers may be quoted |
+
+Dialect-local SQL remains in optional adapter packages. The shared model is the contract both adapters must satisfy before release.
 
 ## Adapter readiness checklist
 
@@ -382,9 +420,12 @@ const dbStore: ProductionPersistenceStore = {
 ## Extension and configuration notes
 
 - `ProductionPersistenceStore` is an optional extension point. The runtime does not require it.
-- Hosts choose the database, schema, transaction, and indexing strategy. The contract only specifies query shapes.
+- `ProductionPersistenceStore.checkpoints?: CheckpointStore` exposes generic versioned save/load/bounded-list/delete with compare-and-swap and fencing tokens, without workflow vocabulary.
+- `ProductionPersistenceStore.leases?: LeaseStore` exposes atomic acquire/renew/release/get with opaque claim tokens, expiries, ownership scope, and monotonic fencing tokens.
+- Hosts choose the database, schema, transaction, and indexing strategy. The contracts specify query and checkpoint capability shapes.
 - `SessionStore` (`append`/`list`/`get`/optional `readBranchPath`) can be implemented on top of `ProductionPersistenceStore` or kept separate.
 - Cursor values and idempotency keys are host-defined and opaque to Prism.
+- First-party SQLite/PostgreSQL adapters expose `persistence.checkpoints` and `persistence.leases`, backed by package-owned `prism_checkpoints` / `prism_leases` tables. `@arnilo/prism-workflows` consumes them for durable resume and multi-process coordination; workflow code owns no SQL table.
 
 ## Security and performance notes
 
@@ -405,3 +446,4 @@ const dbStore: ProductionPersistenceStore = {
 - [Agent events](agent-events.md): `AgentEvent` variants and redaction.
 - [Tools](tools.md): `ToolResult`, `ToolCallContent`, and tool execution events.
 - [Public contracts](public-contracts.md): full public contract inventory.
+- [Workflows](workflows.md): package-local durable checkpoint adapters on shared SQLite/Postgres handles.

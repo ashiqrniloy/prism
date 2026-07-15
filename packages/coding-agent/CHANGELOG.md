@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-07-14
+
+### Added
+
+- `read` tool image bounds: `maxImageBytes` (default 10 MB), optional `transformImage` callback, `DEFAULT_MAX_IMAGE_BYTES`, and `ReadOperations.statFile` for stat-first rejection.
+
+### Changed
+
+- Shell tools expose `exclusive: true`; all coding tools can apply host `ExecutionPolicy` checks before side effects.
+- `autoResizeImages` on `read` is deprecated; it is ignored unless `transformImage` is also provided.
+- Image read metadata now includes `image.bytes` and `image.resized` reflects whether `transformImage` ran.
+
 ## [0.0.3] - 2026-07-08
 
 ### Added

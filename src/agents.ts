@@ -18,6 +18,7 @@ import type {
   ProviderRequest,
   ProviderRequestPolicy,
   ProviderResolver,
+  ProviderTurnMetadata,
   ProviderTurnResult,
   RetryMiddlewarePayload,
   RetryOptions,
@@ -36,11 +37,13 @@ import type {
   Usage,
   UsageRecord,
 } from "./contracts.js";
-import { resolveLoop } from "./agent-loops.js";
+import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
+import { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
 import { providerToolCallDeltaContent, reconstructToolCallDeltas } from "./provider-events.js";
 import { createProviderRequestPolicyChain, mergeProviderRequestOptions, normalizeProviderRequestPolicyResult } from "./provider-request-policy.js";
+import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "./structured-output.js";
 import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
 import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
@@ -75,7 +78,9 @@ class RuntimeAgentSession implements AgentSession {
   private activeLedger?: RunLedger;
   private activeOwnership?: OwnershipScope;
   private activeIdempotencyKey?: string;
-  private ledgerPromises: (Promise<void> | void)[] = [];
+  private activeLoopTurn = 1;
+  private ledgerChain: Promise<void> = Promise.resolve();
+  private ledgerFailure: unknown;
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -151,13 +156,16 @@ class RuntimeAgentSession implements AgentSession {
         // ponytail: skill context after host context; no per-skill token budget yet.
         ...activeSkills.flatMap((skill) => skill.context ?? []),
       ];
-      const providerOptions = mergeProviderRequestOptions(this.agent.config.providerOptions, options.providerOptions);
+      const providerOptions = resolveRunProviderOptions(options, this.agent.config);
+      assertStructuredOutputRequestSupported(options.model ?? this.agent.config.model, providerOptions);
       const validate = options.validate ?? this.agent.config.validator;
       // ponytail: RunOptions.instructionInjectors overrides AgentConfig.instructionInjectors (mirrors validate/loop).
       const instructionInjectors = options.instructionInjectors ?? this.agent.config.instructionInjectors ?? [];
       const inputLayout = options.inputLayout ?? this.agent.config.inputLayout;
       const loop = resolveLoop(options, this.agent.config);
+      const toolConcurrency = resolveToolConcurrency(options, this.agent.config);
 
+      this.activeLoopTurn = 1;
       // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
       const ctx: LoopContext = {
         sessionId: this.id,
@@ -168,6 +176,7 @@ class RuntimeAgentSession implements AgentSession {
         input,
         inputMessages,
         maxToolRounds,
+        toolConcurrency,
         assemble: async (nextInput, toolResults, turn) => assembleProviderInput({
           model: options.model ?? this.agent.config.model,
           input: nextInput,
@@ -195,8 +204,9 @@ class RuntimeAgentSession implements AgentSession {
         generate: async (request) => {
           const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
           const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
-          return this.generateWithRetry(this.redactProviderRequest(middlewareRequest), runId, options, controller.signal, policyResult.secrets);
+          return this.generateWithRetry(this.redactProviderRequest(middlewareRequest), runId, options, controller.signal, policyResult.secrets, this.activeLoopTurn);
         },
+        isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
         dispatchToolCall: (call) => dispatchToolCall({
           call,
           registry,
@@ -211,7 +221,10 @@ class RuntimeAgentSession implements AgentSession {
           validate,
         }),
         appendMessage: (message) => this.appendMessage(message, runId),
-        emit: (event) => this.emit(event),
+        emit: (event) => {
+          if (event.type === "turn_started") this.activeLoopTurn = event.turn;
+          this.emit(event);
+        },
       };
 
       const usage = await loop.run(ctx);
@@ -358,7 +371,15 @@ class RuntimeAgentSession implements AgentSession {
         redacted: Boolean(this.activeRedactor),
         ...this.activeOwnership,
       };
-      this.ledgerPromises.push(this.activeLedger.appendEvent(redactRunLedgerRecord(record, this.activeRedactor)));
+      const ledger = this.activeLedger;
+      this.ledgerChain = this.ledgerChain.then(async () => {
+        if (this.ledgerFailure) return;
+        try {
+          await ledger.appendEvent(redactRunLedgerRecord(record, this.activeRedactor));
+        } catch (error) {
+          this.ledgerFailure = error;
+        }
+      });
     }
   }
 
@@ -368,19 +389,27 @@ class RuntimeAgentSession implements AgentSession {
   }
 
   private async drainLedger(): Promise<void> {
-    if (this.ledgerPromises.length === 0) return;
-    const pending = this.ledgerPromises;
-    this.ledgerPromises = [];
-    await Promise.all(pending);
+    await this.ledgerChain;
+    const failure = this.ledgerFailure;
+    this.ledgerChain = Promise.resolve();
+    this.ledgerFailure = undefined;
+    if (failure) throw failure;
   }
 
-  private async generateWithRetry(request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets: readonly (string | undefined)[] = []): Promise<ProviderTurnResult> {
+  private async generateWithRetry(
+    request: ProviderRequest,
+    runId: string,
+    options: RunOptions,
+    signal: AbortSignal,
+    requestSecrets: readonly (string | undefined)[] = [],
+    turn = 1,
+  ): Promise<ProviderTurnResult> {
     const retry = mergeRetry(this.agent.config.retry, options.retry);
     const secrets = [...requestSecrets, ...(retry?.secrets ?? [])];
     const policy = retry?.policy ?? (retry ? createDefaultRetryPolicy(retry) : undefined);
     for (let attempt = 1; ; attempt += 1) {
       try {
-        return await this.generateProviderTurn(request, runId, signal, secrets);
+        return await this.generateProviderTurn(request, runId, signal, secrets, turn, attempt);
       } catch (error) {
         const failure = error instanceof ProviderTurnFailure ? error : undefined;
         const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
@@ -397,7 +426,25 @@ class RuntimeAgentSession implements AgentSession {
     }
   }
 
-  private async generateProviderTurn(request: ProviderRequest, runId: string, signal: AbortSignal, secrets: readonly (string | undefined)[] = []): Promise<ProviderTurnResult> {
+  private async generateProviderTurn(
+    request: ProviderRequest,
+    runId: string,
+    signal: AbortSignal,
+    secrets: readonly (string | undefined)[] = [],
+    turn = 1,
+    attempt = 1,
+  ): Promise<ProviderTurnResult> {
+    const startedAt = performance.now();
+    const providerId = this.activeProvider?.id ?? request.model.provider;
+    const buildMetadata = (extra: Omit<ProviderTurnMetadata, "providerId" | "model"> = {}) =>
+      createProviderTurnMetadata(request, providerId, { attempt, ...extra });
+    this.emit({
+      type: "provider_turn_started",
+      sessionId: this.id,
+      runId,
+      turn,
+      metadata: buildMetadata(),
+    });
     const content: ContentBlock[] = [];
     const calls: ToolCallContent[] = [];
     const toolDeltas: ProviderEvent[] = [];
@@ -453,10 +500,29 @@ class RuntimeAgentSession implements AgentSession {
         calls.push(call);
         this.emit({ type: "message_delta", sessionId: this.id, runId, content: call });
       }
+      const latencyMs = Math.round(performance.now() - startedAt);
+      this.emit({
+        type: "provider_turn_finished",
+        sessionId: this.id,
+        runId,
+        turn,
+        metadata: buildMetadata({ latencyMs }),
+        usage,
+      });
       return { content, calls, messageId, started, usage };
     } catch (error) {
+      const latencyMs = Math.round(performance.now() - startedAt);
+      const info = error instanceof ProviderTurnFailure ? redactSecrets(error.info, secrets) : errorToErrorInfo(error, secrets);
+      this.emit({
+        type: "provider_turn_finished",
+        sessionId: this.id,
+        runId,
+        turn,
+        metadata: buildMetadata({ latencyMs, httpStatus: readProviderHttpStatus(info) }),
+        error: info,
+      });
       if (error instanceof ProviderTurnFailure) throw error;
-      throw new ProviderTurnFailure(errorToErrorInfo(error, secrets), started);
+      throw new ProviderTurnFailure(info, started);
     }
   }
 

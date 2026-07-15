@@ -6,6 +6,9 @@ on:
     tags: ["v*"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: "verify (SDK readiness: typecheck, test, pack dry-run)"
@@ -46,15 +49,51 @@ jobs:
           NODE
         timeout-minutes: 3
 
+  # Plan 056 Task 7: live PostgreSQL adapter matrix stays out of the default
+  # network-free suite and runs only against an explicit CI Postgres service.
+  postgres-integration:
+    name: postgres integration (session-store adapter)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: prism
+          POSTGRES_PASSWORD: prism
+          POSTGRES_DB: prism
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prism -d prism"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+      - name: run postgres live adapter suite
+        env:
+          PRISM_TEST_POSTGRES_URL: postgres://prism:prism@localhost:5432/prism
+        run: npm run test:postgres
+        timeout-minutes: 5
+
   publish:
-    name: publish (dry-run unless NPM_TOKEN is set)
-    needs: [verify, node20-compat]
+    name: publish (deterministic, resumable, provenance)
+    needs: [verify, node20-compat, postgres-integration]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -62,18 +101,27 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
       - run: npm run build
-      - name: publish
+      - name: pack release artifacts and checksums
+        run: |
+          mkdir -p release-artifacts
+          npm pack --json --pack-destination release-artifacts > release-artifacts/core-pack.json
+          npm pack --workspaces --json --pack-destination release-artifacts > release-artifacts/workspace-pack.json
+          sha256sum release-artifacts/*.tgz > release-artifacts/SHA256SUMS
+      - name: retain release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ github.ref_name }}
+          path: release-artifacts
+          retention-days: 30
+      - name: publish in dependency order
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
-            # Core first: first-party packages declare @arnilo/prism as a required peer,
-            # so it must exist on the registry for consumers.
-            npm publish --access public
-            npm publish --workspaces --access public
-          else
-            echo "NPM_TOKEN not set; running publish dry-run"
-            npm publish --dry-run --access public
-            npm publish --workspaces --dry-run --access public
-          fi
+        run: npm run release:publish -- --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
+      - name: retain publish report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-report-${{ github.ref_name }}
+          path: release-artifacts/publish-report.json
+          if-no-files-found: warn
+          retention-days: 30

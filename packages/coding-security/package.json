@@ -1,0 +1,60 @@
+{
+  "name": "@arnilo/prism-coding-security",
+  "version": "0.0.4",
+  "description": "Optional execution approval, path containment, and sandbox adapters for Prism coding tools.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "0.0.4",
+    "@arnilo/prism-coding-agent": "0.0.4"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-coding-agent": "file:../coding-agent"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/coding-security"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/coding-security#readme",
+  "keywords": [
+    "prism",
+    "coding",
+    "security",
+    "approval",
+    "sandbox",
+    "agent"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

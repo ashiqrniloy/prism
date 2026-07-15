@@ -1,0 +1,42 @@
+{
+  "name": "@arnilo/prism-code",
+  "version": "0.0.4",
+  "description": "Prism coding-agent profile with base runtime, coding tools, execution security, and MCP.",
+  "license": "MIT",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "files": [
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@arnilo/prism-base": "0.0.4",
+    "@arnilo/prism-coding-agent": "0.0.4",
+    "@arnilo/prism-coding-security": "0.0.4",
+    "@arnilo/prism-mcp": "0.0.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-code"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-code#readme",
+  "keywords": [
+    "prism",
+    "coding-agent",
+    "umbrella",
+    "mcp",
+    "security"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

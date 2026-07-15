@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { defaultUserConfigPath, loadConfigFiles, readConfigFile } from "../node/config.js";
+import { defaultUserConfigPath, isNodeErrorCode, loadConfigFiles, readConfigFile } from "../node/config.js";
 
 async function tempFile(name: string, text: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "prism-config-"));
@@ -29,6 +29,18 @@ describe("node config loader", () => {
     const missing = join(tmpdir(), `missing-prism-${Date.now()}.json`);
 
     assert.deepEqual(await loadConfigFiles([{ name: "user", path: missing, optional: true }]), []);
+  });
+
+  it("does not treat deceptive ENOENT text as a missing optional file", async () => {
+    const deceptive = new Error("custom failure mentioning ENOENT") as NodeJS.ErrnoException;
+    deceptive.code = "EACCES";
+    assert.equal(isNodeErrorCode(deceptive, "ENOENT"), false);
+
+    assert.equal(isNodeErrorCode({ code: "ENOENT" }, "ENOENT"), false);
+
+    const missing = new Error("missing file") as NodeJS.ErrnoException;
+    missing.code = "ENOENT";
+    assert.equal(isNodeErrorCode(missing, "ENOENT"), true);
   });
 
   it("rejects invalid json or non object config", async () => {

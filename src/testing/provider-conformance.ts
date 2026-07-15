@@ -135,7 +135,16 @@ function contentBlockCanaries(block: ContentBlock): string[] {
     case "thinking":
       return block.text ? [block.text] : [];
     case "image":
-      return [block.url, block.data, block.mimeType].filter((value): value is string => typeof value === "string" && value.length > 0);
+      return [block.url, block.resourceUri, block.data, block.mimeType, block.name].filter((value): value is string => typeof value === "string" && value.length > 0);
+    case "audio":
+      // Providers map mediaType to wire format tokens (e.g. audio/wav → "wav") and
+      // typically omit display names from input_audio payloads; identity canaries are
+      // source bytes/refs plus optional transcript text.
+      return [block.url, block.resourceUri, block.data, block.transcript].filter((value): value is string => typeof value === "string" && value.length > 0);
+    case "file":
+      return [block.url, block.resourceUri, block.data, block.mediaType, block.name].filter((value): value is string => typeof value === "string" && value.length > 0);
+    case "document":
+      return [block.url, block.resourceUri, block.data, block.mediaType, block.name, block.transcript].filter((value): value is string => typeof value === "string" && value.length > 0);
     case "tool_call":
       return [block.id, block.name, ...jsonPrimitives(block.arguments)];
     case "tool_result": {

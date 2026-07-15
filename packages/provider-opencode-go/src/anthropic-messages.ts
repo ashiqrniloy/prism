@@ -1,17 +1,26 @@
-import type { CacheControlledMessage, ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
-import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
+import type { CacheControlledMessage, ContentBlock, DocumentContent, FileContent, JsonObject, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
+import { assertStructuredOutputRequestSupported, providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
+import {
+  assertProviderMediaCapability,
+  bytesToBase64,
+  isPdfMediaType,
+  rejectProviderMediaBlock,
+  resolveProviderMediaBlock,
+  serializePdfDocumentWireBlock,
+} from "@arnilo/prism/providers/media";
 import { applyOpencodeAnthropicCacheControl } from "./cache.js";
-import { readSseData } from "./sse.js";
+import { parseJsonObjectArguments, readSseData } from "@arnilo/prism/providers/transport";
 
 interface PartialBlock { id?: string; name?: string; argumentsText: string }
 
-export function anthropicMessagesBody(request: ProviderRequest): JsonObject {
+export async function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject> {
+  assertStructuredOutputRequestSupported(request.model, request.options);
   const preserveThinking = request.model.compat?.preserveThinking === true;
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const messages = applyOpencodeAnthropicCacheControl(request);
   return clean({
     model: request.model.model,
-    messages: messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model.capabilities ?? {}, preserveThinking)),
+    messages: await Promise.all(messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, request.signal))),
     system: messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
@@ -22,10 +31,10 @@ export function anthropicMessagesBody(request: ProviderRequest): JsonObject {
   });
 }
 
-export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>): AsyncIterable<ProviderEvent> {
+export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const blocks = new Map<number, PartialBlock>();
   let usage: Usage | undefined;
-  for await (const data of readSseData(body)) {
+  for await (const data of readSseData(body, { signal })) {
     if (data === "[DONE]") break;
     const event = JSON.parse(data) as AnthropicEvent;
     if (event.type === "content_block_start" && event.content_block?.type === "tool_use") {
@@ -46,11 +55,25 @@ export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>)
     usage = toUsage(event.message?.usage ?? event.usage) ?? usage;
     if (event.type === "message_delta" && usage) yield providerUsage(usage);
   }
-  for (const call of blocks.values()) if (call.id && call.name) yield providerToolCall(toolCallContent(call.id, call.name, parseArgs(call.argumentsText)));
+  for (const call of blocks.values()) {
+    if (call.id && call.name) {
+      yield providerToolCall(toolCallContent(
+        call.id,
+        call.name,
+        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
+      ));
+    }
+  }
   yield providerDone(usage);
 }
 
-function toMessage(message: CacheControlledMessage, capabilities: ModelCapabilities = {}, preserveThinking = false): JsonObject {
+async function toMessage(
+  message: CacheControlledMessage,
+  model: ModelConfig,
+  preserveThinking = false,
+  signal?: AbortSignal,
+): Promise<JsonObject> {
+  const capabilities = model.capabilities ?? {};
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     const last = message.content[message.content.length - 1];
@@ -77,13 +100,17 @@ function toMessage(message: CacheControlledMessage, capabilities: ModelCapabilit
         content.push(withMarker({ type: "text", text: part.text }, marker));
       }
     } else if (part.type === "image") {
-      if (!capabilities.input?.includes("image")) {
-        throw new Error(`OpenCode Go Anthropic route request includes image but model does not declare image input capability`);
-      }
+      assertProviderMediaCapability("image", capabilities, model);
       const source: JsonObject = part.url
         ? { type: "url", url: part.url }
         : { type: "base64", media_type: part.mimeType ?? "image/png", data: part.data ?? "" };
       content.push(withMarker({ type: "image", source }, marker));
+    } else if (part.type === "document") {
+      content.push(withMarker(await toAnthropicDocument(part, model, signal), marker));
+    } else if (part.type === "file") {
+      content.push(withMarker(await toAnthropicFile(part, model, signal), marker));
+    } else if (part.type === "audio") {
+      rejectProviderMediaBlock(part, capabilities, model);
     } else if (part.type === "tool_call") {
       content.push(withMarker({ type: "tool_use", id: part.id, name: part.name, input: part.arguments }, marker));
     } else if (part.type === "tool_result") {
@@ -92,6 +119,29 @@ function toMessage(message: CacheControlledMessage, capabilities: ModelCapabilit
   }
 
   return { role: message.role === "assistant" ? "assistant" : "user", content: content.length > 0 ? content : [{ type: "text", text: "" }] };
+}
+
+async function toAnthropicDocument(part: DocumentContent, model: ModelConfig, signal?: AbortSignal): Promise<JsonObject> {
+  assertProviderMediaCapability("document", model.capabilities ?? {}, model);
+  const resolved = await resolveProviderMediaBlock(part, { signal });
+  return serializePdfDocumentWireBlock({
+    mediaType: resolved.mediaType,
+    data: bytesToBase64(resolved.bytes),
+    title: resolved.name,
+  });
+}
+
+async function toAnthropicFile(part: FileContent, model: ModelConfig, signal?: AbortSignal): Promise<JsonObject> {
+  assertProviderMediaCapability("file", model.capabilities ?? {}, model);
+  const resolved = await resolveProviderMediaBlock(part, { signal });
+  if (!isPdfMediaType(resolved.mediaType)) {
+    throw new Error(`Anthropic route only maps PDF file blocks; got ${resolved.mediaType}`);
+  }
+  return serializePdfDocumentWireBlock({
+    mediaType: resolved.mediaType,
+    data: bytesToBase64(resolved.bytes),
+    title: resolved.name,
+  });
 }
 
 function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObject {
@@ -112,12 +162,6 @@ function text(message: Message, preserveThinking = false): string {
 
 function toUsage(usage: AnthropicUsage | undefined): Usage | undefined {
   return usage ? { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens, cacheReadTokens: usage.cache_read_input_tokens, cacheWriteTokens: usage.cache_creation_input_tokens } : undefined;
-}
-
-function parseArgs(text: string): JsonObject {
-  if (!text) return {};
-  const parsed = JSON.parse(text) as unknown;
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as JsonObject : {};
 }
 
 function clean(value: Record<string, unknown>): JsonObject {

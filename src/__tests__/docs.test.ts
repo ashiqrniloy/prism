@@ -11,10 +11,13 @@ const apiPages = [
   "docs/agent-definitions.md",
   "docs/agent-loops.md",
   "docs/agent-events.md",
+  "docs/observability.md",
   "docs/structured-output.md",
   "docs/session-stores-and-branching.md",
   "docs/session-stores.md",
   "docs/database-persistence.md",
+  "docs/sqlite-persistence.md",
+  "docs/postgres-persistence.md",
   "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
   "docs/model-registry.md",
@@ -22,12 +25,14 @@ const apiPages = [
   "docs/provider-request-policies.md",
   "docs/provider-conformance.md",
   "docs/session-store-conformance.md",
+  "docs/run-ledger-conformance.md",
   "docs/compaction-conformance.md",
   "docs/tool-conformance.md",
   "docs/extension-conformance.md",
   "docs/provider-packages.md",
   "docs/customization.md",
   "docs/input-and-prompt-assembly.md",
+  "docs/multimodal-content.md",
   "docs/system-prompts.md",
   "docs/context-and-skills.md",
   "docs/configuration-and-manifests.md",
@@ -38,13 +43,19 @@ const apiPages = [
   "docs/extension-authoring.md",
   "docs/middleware-hooks.md",
   "docs/tools.md",
+  "docs/tool-execution-primitives.md",
+  "docs/coding-agent-tools.md",
+  "docs/coding-security.md",
+  "docs/mcp-tools.md",
   "docs/node-filesystem-config.md",
   "docs/node-jsonl-session-store.md",
   "docs/resource-loading.md",
   "docs/credentials-and-redaction.md",
+  "docs/credential-storage.md",
   "docs/settings-auth-trust-security.md",
   "docs/host-security.md",
   "docs/cli-rpc.md",
+  "docs/workflows.md",
   "docs/release-and-install.md",
   "docs/performance.md",
   "docs/migration.md",
@@ -116,6 +127,18 @@ describe("docs", () => {
   // `const { api } = createExtensionKernel(); api.registerProviderPackage(...)`
   // throws on copy-paste because createExtensionKernel() returns
   // { registries, middleware, events, load } with no `api` property.
+  it("all shipped markdown links resolve locally", () => {
+    const files = ["README.md", "examples/README.md", ...markdownFiles("docs"), ...markdownFiles("packages")];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+        const href = match[1]!.split("#")[0]!;
+        if (!href || /^(?:https?:|mailto:)/.test(href)) continue;
+        assert.ok(existsSync(normalize(join(dirname(file), href))), `${file} has broken local link ${href}`);
+      }
+    }
+  });
+
   it("no broken createExtensionKernel() destructure with api.registerProviderPackage", () => {
     const files = ["README.md", ...markdownFiles("docs")];
     for (const file of files) {
@@ -160,6 +183,33 @@ describe("docs", () => {
     for (const page of pages) {
       const text = readFileSync(page, "utf8");
       for (const heading of requiredHeadings) assert.ok(text.includes(heading), `${page} missing ${heading}`);
+    }
+  });
+
+  it("docs index contains exactly one navigation link per documentation page", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const page of markdownFiles("docs")) {
+      const relative = page.replace(/^docs\//, "");
+      if (["index.md", "api-page-template.md"].includes(relative)) continue;
+      const escaped = relative.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const links = index.match(new RegExp(`\\(${escaped}(?:#[^)]+)?\\)`, "g")) ?? [];
+      assert.equal(links.length, 1, `${page} must have exactly one docs/index.md navigation link`);
+    }
+  });
+
+  it("every publishable package ships current README and 0.0.4 changelog documentation", () => {
+    const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
+      .filter((dir) => existsSync(join(dir, "package.json")));
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    assert.equal(dirs.length, 24, "publishable package documentation count drifted");
+    for (const dir of dirs) {
+      const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
+      const readme = readFileSync(join(dir, "README.md"), "utf8");
+      const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
+      assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
+      assert.ok(changelog.includes("## [0.0.4] - 2026-07-14"), `${dir}/CHANGELOG.md missing finalized 0.0.4 section`);
+      assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
+      assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
   });
 
@@ -256,6 +306,7 @@ describe("docs", () => {
       ["docs/configuration-and-manifests.md", "mergeConfigLayers"],
       ["docs/configuration-and-manifests.md", "definePrismManifest"],
       ["docs/configuration-and-manifests.md", "parsePrismManifest"],
+      ["docs/resource-loading.md", "loadBinaryResource"],
       ["docs/resource-loading.md", "loadTextResource"],
       ["docs/resource-loading.md", "loadJsonResource"],
       ["docs/resource-loading.md", "loadManifestResource"],
@@ -267,6 +318,9 @@ describe("docs", () => {
       ["docs/tools.md", "createToolRegistry"],
       ["docs/tools.md", "filterTools"],
       ["docs/tools.md", "dispatchToolCall"],
+      ["docs/multimodal-content.md", "resolveMediaContentBlock"],
+      ["docs/multimodal-content.md", "UnsupportedModalityError"],
+      ["docs/multimodal-content.md", "MODEL_INPUT_CAPABILITIES"],
       ["docs/input-and-prompt-assembly.md", "createDefaultInputBuilder"],
       ["docs/input-and-prompt-assembly.md", "assembleProviderInput"],
       ["docs/input-and-prompt-assembly.md", "renderPromptTemplate"],
@@ -466,7 +520,7 @@ describe("docs", () => {
       "`createAgent()` and `session.run()` do not automatically call `settings.get()` or `credentials.resolve()`",
       "Prism does not read `process.env` for credentials",
       "Redaction is exact known-secret replacement only",
-      "Tool `parameters` metadata is not validation",
+      "Tool `parameters` metadata is not validated by default",
       "Permission checks happen before tool validation and before `tool.execute()`",
       "Provider-owned auth/content/session/cache/security headers win over caller headers",
       "no hidden global middleware, background workers, watchers, network calls, or filesystem scans",
@@ -576,7 +630,18 @@ describe("docs", () => {
     assert.ok(workflow.includes('node-version: "20"'), "release workflow must include Node 20 compatibility coverage");
     assert.ok(workflow.includes("node20-compat"), "release workflow must name the Node 20 compatibility job");
     assert.ok(workflow.includes("Object.values(pkg.exports)"), "Node 20 compatibility job must import public exports");
-    assert.ok(workflow.includes("needs: [verify, node20-compat]"), "publish must wait for Node 20 compatibility");
+    assert.ok(workflow.includes("postgres-integration"), "release workflow must include PostgreSQL live adapter job");
+    assert.ok(workflow.includes("PRISM_TEST_POSTGRES_URL"), "postgres-integration must set PRISM_TEST_POSTGRES_URL");
+    assert.ok(workflow.includes("npm run test:postgres"), "postgres-integration must run test:postgres");
+    assert.ok(
+      workflow.includes("needs: [verify, node20-compat, postgres-integration]"),
+      "publish must wait for Node 20 compatibility and PostgreSQL live coverage",
+    );
+    assert.equal(
+      packageJson.scripts["test:postgres"],
+      "npm run test:postgres --workspace @arnilo/prism-session-store-postgres",
+      "root test:postgres should cover persistence and generic checkpoint PostgreSQL adapters",
+    );
 
     for (const phrase of [
       "Full SDK readiness gate (typecheck + offline tests + pack)",
@@ -594,12 +659,48 @@ describe("docs", () => {
       "`npm run release:dry-run` is an alias for the same gate",
       "The GitHub Actions `verify` job runs `npm ci` and `npm run sdk:ready`",
       "node20-compat",
+      "postgres-integration",
+      "PRISM_TEST_POSTGRES_URL",
       "imports every public root `exports` default target",
       "declared `engines.node >=20`",
       "Node >=22.6 native TypeScript stripping",
       "public export imports on Node 20",
     ]) {
       assert.ok(docs.includes(phrase), `release-and-install.md missing ${phrase}`);
+    }
+  });
+
+  it("release publication is deterministic resumable and provenance-enabled", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    const workflow = readFileSync(".github/workflows/release.yml", "utf8");
+    const release = readFileSync("scripts/release.mjs", "utf8");
+    assert.equal(pkg.scripts["release:check"], "node scripts/release.mjs check");
+    assert.equal(pkg.scripts["release:publish"], "node scripts/release.mjs publish");
+    for (const phrase of ["topologicalOrder", "package-lock.json", "--provenance", "--access", "public", "--tag", "latest"]) {
+      assert.ok(release.includes(phrase), `release script missing ${phrase}`);
+    }
+    for (const phrase of ["release:publish", "--resume", "id-token: write", "contents: read", "upload-artifact@v4", "SHA256SUMS", "publish-report.json"]) {
+      assert.ok(workflow.includes(phrase), `release workflow missing ${phrase}`);
+    }
+    assert.ok(workflow.includes("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"), "release workflow missing npm authentication");
+    assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
+
+    const docs = readFileSync("docs/release-and-install.md", "utf8");
+    const handoff = docs.slice(docs.indexOf("### 0.0.4 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    for (const phrase of [
+      "Decision: GO",
+      "available` for all 24",
+      "git tag -s v0.0.4",
+      "git push origin v0.0.4",
+      "Re-run failed jobs",
+      "npm audit signatures --json --include-attestations",
+      "Rollback limitations",
+    ]) assert.ok(handoff.includes(phrase), `publish handoff missing ${phrase}`);
+    const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
+      .filter((dir) => existsSync(join(dir, "package.json")));
+    for (const dir of dirs) {
+      const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string };
+      assert.ok(handoff.includes(manifest.name), `publish handoff missing ${manifest.name}`);
     }
   });
 
@@ -679,6 +780,23 @@ describe("docs", () => {
     for (const phrase of ["--mode print", "--provider", "--model", "prompt", "abort", "compact", "cloneSession", "No built-in app tools", "No full TUI"]) {
       assert.ok(docs.includes(phrase), `cli/rpc docs missing ${phrase}`);
     }
+  });
+
+  it("credential storage docs cover encrypted file and keychain backends", () => {
+    const docs = readFileSync("docs/credential-storage.md", "utf8");
+    for (const phrase of [
+      "@arnilo/prism-credentials-node",
+      "openEncryptedCredentialStore",
+      "createKeychainCredentialStore",
+      "createStoredCredentialResolver",
+      "CredentialDecryptError",
+      "no silent fallback",
+      "PRISM_TEST_KEYCHAIN=1",
+    ]) {
+      assert.ok(docs.includes(phrase), `credential storage docs missing ${phrase}`);
+    }
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(index.includes("credential-storage.md"), "docs/index.md missing credential-storage link");
   });
 
   it("auth docs cover explicit resolver order and no hidden env", () => {
@@ -773,7 +891,8 @@ describe("docs", () => {
 
   it("adapter conformance docs cover testing subpaths and helpers", () => {
     const pages: ReadonlyArray<[string, string, readonly string[]]> = [
-      ["docs/session-store-conformance.md", "@arnilo/prism/testing/session-store-conformance", ["assertSessionStoreConforms", "SessionAppendConflictError", "idempotencyKey"]],
+      ["docs/session-store-conformance.md", "@arnilo/prism/testing/session-store-conformance", ["assertSessionStoreConforms", "runSessionStoreConformance", "SessionAppendConflictError", "idempotencyKey"]],
+      ["docs/run-ledger-conformance.md", "@arnilo/prism/testing/run-ledger-conformance", ["assertRunLedgerConforms", "runRunLedgerConformance", "appendRun", "tenant_id"]],
       ["docs/compaction-conformance.md", "@arnilo/prism/testing/compaction-conformance", ["assertCompactionStrategyConforms", "secrets", "summary"]],
       ["docs/tool-conformance.md", "@arnilo/prism/testing/tool-conformance", ["assertToolDispatchConforms", "assertToolBlocked", "unknown_tool", "permission_denied", "validation_failed"]],
       ["docs/extension-conformance.md", "@arnilo/prism/testing/extension-conformance", ["assertExtensionConforms", "extension_error", "inert"]],
@@ -1055,43 +1174,12 @@ describe("docs", () => {
     );
   });
 
-  it("examples_files_exist_and_index_links_examples", () => {
+  it("docs index links examples and examples README lists every TypeScript example", () => {
     const index = readFileSync("docs/index.md", "utf8");
+    const readme = readFileSync("examples/README.md", "utf8");
     assert.ok(index.includes("examples/"), "docs/index.md does not mention examples/");
-    assert.ok(existsSync("examples/README.md"), "missing examples/README.md");
-    const exampleFiles = [
-      "examples/sdk-basics.ts",
-      "examples/provider-registration.ts",
-      "examples/provider-resolver.ts",
-      "examples/api-key-auth.ts",
-      "examples/oauth-login.ts",
-      "examples/openrouter-model-cache-override.ts",
-      "examples/cache-aware-prompt-assembly.ts",
-      "examples/neuralwatt-agent-run.ts",
-      "examples/tools.ts",
-      "examples/context.ts",
-      "examples/skills.ts",
-      "examples/extensions.ts",
-      "examples/manifests.ts",
-      "examples/config-settings.ts",
-      "examples/system-prompts.ts",
-      "examples/system-project-prompts.ts",
-      "examples/jsonl-stores-branching.ts",
-      "examples/compaction.ts",
-      "examples/observational-memory-recall-status-view.ts",
-      "examples/cli.ts",
-      "examples/rpc.ts",
-      "examples/discover-skills.ts",
-      "examples/instruction-injection.ts",
-      "examples/external-app-db-backed.ts",
-      "examples/minimal-host-app.ts",
-      "examples/custom-builders.ts",
-      "examples/custom-session-store.ts",
-      "examples/custom-tools-skills-context.ts",
-      "examples/extension-package.ts",
-    ];
-    for (const file of exampleFiles) {
-      assert.equal(existsSync(file), true, `missing example file: ${file}`);
+    for (const file of readdirSync("examples").filter((name) => name.endsWith(".ts"))) {
+      assert.ok(readme.includes(`\`${file}\``), `examples/README.md missing ${file}`);
     }
   });
 
@@ -1213,9 +1301,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package plus nine first-party workspace packages",
+      "one core package, seventeen first-party capability packages, and six pure-manifest family/profile packages",
       "all 6 `@arnilo/prism-provider-*` packages",
-      "All 13 manifests (10 code packages + 3 umbrellas)",
+      "All 24 manifests (18 code packages + 6 family/profile packages)",
       "six provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -1231,6 +1319,64 @@ describe("docs", () => {
       "@arnilo/prism-all must hard-depend on provider umbrella",
     ]) {
       assert.ok(packaging.includes(phrase), `packaging.test.ts missing ${phrase}`);
+    }
+  });
+
+  it("workflow_examples_cover_required_workflow_surfaces", () => {
+    const rr = readFileSync("examples/workflow-research-and-review.ts", "utf8");
+    const pr = readFileSync("examples/workflow-parallel-research.ts", "utf8");
+    const ta = readFileSync("examples/workflow-tool-approval.ts", "utf8");
+    const mm = readFileSync("examples/workflow-multimodal-document.ts", "utf8");
+    const sr = readFileSync("examples/workflow-sqlite-resume.ts", "utf8");
+    const pg = readFileSync("examples/workflow-postgres-resume.ts", "utf8");
+    const es = readFileSync("examples/workflow-event-sink.ts", "utf8");
+    const rc = readFileSync("examples/workflow-rpc-cancel.ts", "utf8");
+    const dc = readFileSync("examples/workflow-distributed-coordinator.ts", "utf8");
+
+    for (const phrase of [
+      "defineWorkflow", "agentNode", "runWorkflow", "createMemoryWorkflowCheckpoints", "createSecretRedactor",
+    ]) {
+      assert.ok(rr.includes(phrase), `workflow-research-and-review missing ${phrase}`);
+    }
+    for (const phrase of [
+      "fanOutNode", "joinNode", "functionNode", "maxConcurrency: 3", "findings",
+    ]) {
+      assert.ok(pr.includes(phrase), `workflow-parallel-research missing ${phrase}`);
+    }
+    for (const phrase of [
+      "toolNode", "ExecutionPolicy", "workflowId", "nodeId", "mapMcpToolsToDefinitions",
+    ]) {
+      assert.ok(ta.includes(phrase), `workflow-tool-approval missing ${phrase}`);
+    }
+    for (const phrase of [
+      "type: \"document\"", "createEnvCredentialResolver", "createSecretRedactor", "maxNodeOutputBytes",
+    ]) {
+      assert.ok(mm.includes(phrase), `workflow-multimodal-document missing ${phrase}`);
+    }
+    for (const phrase of [
+      "createSqlitePersistence", "createWorkflowCheckpoints", "persistence.checkpoints", "resumeWorkflow",
+    ]) {
+      assert.ok(sr.includes(phrase), `workflow-sqlite-resume missing ${phrase}`);
+    }
+    for (const phrase of [
+      "createPostgresPersistence", "createWorkflowCheckpoints", ".checkpoints", "PRISM_TEST_POSTGRES_URL", "resumeWorkflow", "new Pool",
+    ]) {
+      assert.ok(pg.includes(phrase), `workflow-postgres-resume missing ${phrase}`);
+    }
+    for (const phrase of [
+      "createWorkflowEventBus", "onEvent", "conditionalNode", "node_skipped",
+    ]) {
+      assert.ok(es.includes(phrase), `workflow-event-sink missing ${phrase}`);
+    }
+    for (const phrase of [
+      "cancelWorkflowRun", "resumeWorkflow", "AbortController",
+    ]) {
+      assert.ok(rc.includes(phrase), `workflow-rpc-cancel missing ${phrase}`);
+    }
+    for (const phrase of [
+      "enqueueWorkflow", "createWorkflowCoordinator", ".leases", "pollOnce", "fencingToken",
+    ]) {
+      assert.ok(dc.includes(phrase), `workflow-distributed-coordinator missing ${phrase}`);
     }
   });
 
@@ -1255,6 +1401,15 @@ describe("docs", () => {
       "examples/custom-session-store.ts",
       "examples/custom-tools-skills-context.ts",
       "examples/extension-package.ts",
+      "examples/workflow-research-and-review.ts",
+      "examples/workflow-parallel-research.ts",
+      "examples/workflow-tool-approval.ts",
+      "examples/workflow-multimodal-document.ts",
+      "examples/workflow-sqlite-resume.ts",
+      "examples/workflow-postgres-resume.ts",
+      "examples/workflow-event-sink.ts",
+      "examples/workflow-rpc-cancel.ts",
+      "examples/workflow-distributed-coordinator.ts",
     ];
     const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
     for (const file of demos) {
@@ -1621,6 +1776,11 @@ describe("docs", () => {
     // Production adapter readiness + performance guidance.
     for (const phrase of [
       "Adapter readiness checklist",
+      "Shared schema model and migration contract",
+      "createPersistenceSchemaModel",
+      "assertRunLedgerConforms",
+      "runSessionStoreConformance",
+      "PARAMETERIZED_QUERY_GUIDANCE",
       "assertSessionStoreConforms(adapter, { exerciseReadBranchPath: true })",
       "no ORM, migrations, connection pool, or database driver belongs in `@arnilo/prism`",
       "Adapter performance guidance",
@@ -1690,6 +1850,31 @@ describe("docs", () => {
     assert.ok(neuralwatt.includes("cross-provider"), "neuralwatt.md does not link the cross-provider cache matrix");
     assert.ok(packages.includes("canonical explicit/implicit matrix"), "provider-packages.md does not link the canonical cache matrix");
     assert.ok(index.includes("per-provider explicit/implicit cache matrix"), "docs/index.md does not advertise the provider cache matrix");
+  });
+
+  it("0.0.4 release scope matrix has owners/evidence and completed predecessors", () => {
+    for (const phase of [53, 54, 55, 56, 57]) {
+      const plan = readdirSync("plans").find((name) => name.startsWith(`${String(phase).padStart(3, "0")}-`));
+      assert.ok(plan, `missing predecessor plan ${phase}`);
+      const text = readFileSync(join("plans", plan), "utf8");
+      assert.equal(/^\s*- \[ \]/m.test(text), false, `${plan} has unchecked tasks`);
+    }
+
+    const coverage = readFileSync("docs/review-coverage-2026-07-14.md", "utf8");
+    const section = coverage.split("## Frozen 0.0.4 release scope\n")[1]?.split("\n### Performance")[0];
+    assert.ok(section, "review coverage missing frozen release scope matrix");
+    const rows = section.split("\n").filter((line) => line.startsWith("| ") && !line.startsWith("| ---"));
+    assert.ok(rows.length > 1, "frozen release scope matrix has no data rows");
+    for (const row of rows.slice(1)) {
+      const cells = row.split("|").slice(1, -1).map((cell) => cell.trim());
+      assert.equal(cells.length, 8, `invalid frozen scope row: ${row}`);
+      for (const index of [1, 3, 4, 7]) assert.ok(cells[index], `empty owner/test/docs/status cell: ${row}`);
+    }
+
+    const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
+      .filter(existsSync)
+      .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 24, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

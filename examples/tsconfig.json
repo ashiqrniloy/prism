@@ -17,7 +17,9 @@
       "@arnilo/prism-provider-kimi": ["./packages/provider-kimi/src/index.ts"],
       "@arnilo/prism-provider-neuralwatt": ["./packages/provider-neuralwatt/src/index.ts"],
       "@arnilo/prism-compaction-llm": ["./packages/compaction-llm/src/index.ts"],
-      "@arnilo/prism-compaction-observational-memory": ["./packages/compaction-observational-memory/src/index.ts"]
+      "@arnilo/prism-compaction-observational-memory": ["./packages/compaction-observational-memory/src/index.ts"],
+      "@arnilo/prism-workflows": ["./packages/workflows/src/index.ts"],
+      "@arnilo/prism-mcp": ["./packages/mcp/src/index.ts"]
     }
   },
   "include": ["**/*.ts"]

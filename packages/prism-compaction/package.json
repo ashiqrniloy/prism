@@ -1,17 +1,18 @@
 {
   "name": "@arnilo/prism-compaction",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Umbrella package: installs all first-party Prism compaction strategies. Imports come from the individual @arnilo/prism-compaction-* packages.",
   "license": "MIT",
   "scripts": {
     "pack:dry-run": "npm pack --dry-run"
   },
   "files": [
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-compaction-llm": "0.0.3",
-    "@arnilo/prism-compaction-observational-memory": "0.0.3"
+    "@arnilo/prism-compaction-llm": "0.0.4",
+    "@arnilo/prism-compaction-observational-memory": "0.0.4"
   },
   "engines": {
     "node": ">=20"

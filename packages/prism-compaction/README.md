@@ -19,7 +19,7 @@ This is a pure manifest package (no code, no exports). Import compaction strateg
 import { createLLMCompactionStrategy } from "@arnilo/prism-compaction-llm";
 ```
 
-Each compaction package declares `@arnilo/prism` as a non-optional peer, so installing `@arnilo/prism-compaction` also requires core. Prefer [`@arnilo/prism-all`](https://www.npmjs.com/package/@arnilo/prism-all) if you want core + providers + compaction in one install.
+Each compaction package declares `@arnilo/prism` as a non-optional peer. `@arnilo/prism-base` includes core, this family, and JSON Schema validation; `@arnilo/prism-all` installs every first-party package. See [Release and install](../../docs/release-and-install.md).
 
 ## License
 

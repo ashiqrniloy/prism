@@ -1,6 +1,7 @@
 import { mkdir, readFile, appendFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError, isSessionEntryKind, SESSION_ENTRY_SCHEMA_VERSION, type Message, type ModelConfig, type SessionAppendOptions, type SessionEntry, type SessionStore } from "../contracts.js";
+import { isNodeErrorCode } from "./config.js";
 
 export interface JsonlSessionStoreOptions {
   readonly path: string;
@@ -33,7 +34,12 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
     append(entry, appendOptions) {
       appendChain = appendChain.then(async () => {
         if (options.createDirectory !== false) await mkdir(dirname(path), { recursive: true });
-        const entries = await readEntries(path);
+        const readResult = await readJsonlSessionEntries(path);
+        if (readResult.errors.length > 0) {
+          const first = readResult.errors[0]!;
+          throw new Error(`Invalid JSONL at line ${first.line}: ${first.message}`);
+        }
+        const entries = readResult.entries;
         const dedupKey = appendOptions?.idempotencyKey
           ? `${entry.sessionId}\u0000${appendOptions.idempotencyKey}\u0000${appendOptions.expectedParentId ?? ""}`
           : undefined;
@@ -64,7 +70,7 @@ export async function readJsonlSessionEntries(path: string): Promise<SessionEntr
   try {
     text = await readFile(path, "utf8");
   } catch (error) {
-    if (isMissingFile(error)) return { entries: [], errors: [] };
+    if (isNodeErrorCode(error, "ENOENT")) return { entries: [], errors: [] };
     throw new Error(`Failed to read session store ${path}: ${errorMessage(error)}`);
   }
 
@@ -176,10 +182,6 @@ function isAgentEvent(value: unknown): value is Record<string, unknown> {
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-function isMissingFile(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
 function errorMessage(error: unknown): string {

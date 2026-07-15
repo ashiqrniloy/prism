@@ -211,6 +211,7 @@ console.log(cacheUsageReport(usageRows.at(-1)?.usage));
 - Adapters that need upsert semantics can use `RunRecord.id` (== `runId`) as the stable key.
 - Use `cacheUsageReport(record.usage, model)` for cache diagnostics from normalized usage. It works when a provider reports `cacheReadTokens` without `cacheWriteTokens`; missing write tokens are reported as `0`, and unavailable hit rate/savings stay `undefined`.
 - **Provider-specific telemetry is package-owned.** Core `Usage` carries token counts and `cost`/`currency`; it has no energy or detailed cost-breakdown fields. Providers that surface extra telemetry (e.g. `@arnilo/prism-provider-neuralwatt` exposes `neuralWattEventsWithTelemetry()`, `parseNeuralWattComment()`, and `mapNeuralWattTelemetry()` for `: energy`/`: cost` SSE comments and non-streaming top-level fields) keep that data in package-specific helpers/types. Telemetry never enters `RunLedger` usage rows unless the host explicitly copies it in; it carries usage/cost numbers only — never prompts, API keys, or headers. Account-level quota is likewise package-owned: `@arnilo/prism-provider-neuralwatt` exports an explicit `getNeuralWattQuota()` helper that the host calls on demand (never during generation); NeuralWatt rate-limits that endpoint to 1 request per second per customer, so the caller owns throttling.
+- **Live timing metadata.** `provider_turn_*` events and `ToolExecutionMetadata` on terminal `tool_execution_*` events expose latency, retry `attempt`, and tool `durationMs` for subscribers and ledger replay — see [Observability](observability.md).
 
 ## Security and performance notes
 
@@ -233,4 +234,5 @@ console.log(cacheUsageReport(usageRows.at(-1)?.usage));
 - [Session stores](session-stores.md): `SessionStore` contract for session entries and branches.
 - [Credentials and redaction](credentials-and-redaction.md): `createSecretRedactor()` and redaction helpers.
 - [Provider caching](provider-caching.md): cache hints and `cacheUsageReport()` diagnostics.
+- [Observability](observability.md): `provider_turn_*` events, tool duration metadata, OpenTelemetry adapter.
 - [Public contracts](public-contracts.md): full contract inventory.

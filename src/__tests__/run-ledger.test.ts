@@ -366,4 +366,31 @@ describe("RunLedger runtime wiring", () => {
     assert.equal(finish?.status, "failed");
     assert.ok(finish?.error?.message.includes("provider blew up"));
   });
+
+  it("serializes ledger appends with concurrency of one", async () => {
+    let active = 0;
+    let maxActive = 0;
+    const memory = createMemoryLedger();
+    const ledger: RunLedger = {
+      ...memory.ledger,
+      appendEvent: async (record) => {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        active -= 1;
+        return memory.ledger.appendEvent(record);
+      },
+    };
+    const deltas = Array.from({ length: 50 }, (_, index) => providerTextDelta(`chunk-${index}`));
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([...deltas, providerDone()]),
+      runLedger: ledger,
+    });
+
+    await agent.createSession({ id: "s-ledger-serial" }).run("stream many chunks");
+
+    assert.equal(maxActive, 1);
+    assert.ok(memory.events.length >= 50, "expected streamed events in ledger");
+  });
 });

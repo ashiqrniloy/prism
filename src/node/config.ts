@@ -18,6 +18,7 @@ export async function readConfigFile(path: string): Promise<ConfigLayer["config"
   try {
     text = await readFile(path, "utf8");
   } catch (error) {
+    if (isNodeErrorCode(error, "ENOENT")) throw error;
     throw new Error(`Failed to read config ${path}: ${errorMessage(error)}`);
   }
 
@@ -42,15 +43,15 @@ export async function loadConfigFiles(files: readonly NodeConfigFile[]): Promise
     try {
       layers.push({ name: file.name, config: await readConfigFile(file.path) });
     } catch (error) {
-      if (file.optional && isMissingFile(error)) continue;
+      if (file.optional && isNodeErrorCode(error, "ENOENT")) continue;
       throw error;
     }
   }
   return layers;
 }
 
-function isMissingFile(error: unknown): boolean {
-  return error instanceof Error && error.message.includes("ENOENT");
+export function isNodeErrorCode(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && (error as { code?: unknown }).code === code;
 }
 
 function errorMessage(error: unknown): string {

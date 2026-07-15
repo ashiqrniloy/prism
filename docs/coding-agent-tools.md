@@ -14,6 +14,8 @@
 | `createReadOnlyTools(cwd, options?)` | Read-only subset: `read` only. |
 | `createAllTools(cwd, options?)` | Every tool the package provides (currently identical to `createCodingTools`). |
 | `detectSupportedImageMimeType(buf)` / `detectSupportedImageMimeTypeFromFile(path)` | Magic-byte image MIME detection (PNG/JPEG/GIF/WebP/BMP) used by `read`. |
+| `DEFAULT_MAX_IMAGE_BYTES` | Default `read` image size ceiling (10 MB). |
+| `TransformImage` / `TransformImageInput` | Types for the optional `read` `transformImage` callback. |
 | `withFileMutationQueue(path, fn)` | Per-path serialization primitive re-exported for hosts. |
 
 Each factory returns a plain `ToolDefinition` (no auto-registration). Register what you need:
@@ -29,7 +31,19 @@ const tools = createToolRegistry(createCodingTools(process.cwd()));
 
 Use this package when a host wants ready-made coding tools for an agent, session, or run, registered explicitly into a `ToolRegistry` and dispatched through the normal Prism tool harness. The tools perform **real** shell and filesystem operations on the host — they are not mocked or sandboxed. Use the individual factories when you need per-tool options or custom operation backends; use the aggregators when you want the default set.
 
-Do not use this package as a sandbox, permission policy, secret store, or provider loop. Prism gates tool dispatch with `PermissionPolicy` / `ToolValidator` / trust policies; the package performs no gating of its own. Do not register these tools for an untrusted provider.
+Do not use this package as a sandbox, permission policy, secret store, or provider loop. Prism gates tool dispatch with `PermissionPolicy` / `ToolValidator` / trust policies; pass an optional `ExecutionPolicy` (for example from `@arnilo/prism-coding-security`) for path/command approval before side effects. Do not register these tools for an untrusted provider.
+
+```ts
+import { createCodingTools } from "@arnilo/prism-coding-agent";
+import { createCodingApprovalPolicy } from "@arnilo/prism-coding-security";
+
+const tools = createCodingTools(workspaceRoot, {
+  executionPolicy: createCodingApprovalPolicy({
+    roots: [workspaceRoot],
+    approve: async ({ action }) => host.confirm(action),
+  }),
+});
+```
 
 ### pi name mapping
 
@@ -40,7 +54,7 @@ Do not use this package as a sandbox, permission policy, secret store, or provid
 | `write` | `write` |
 | `edit` | `edit` |
 
-## Tools
+## Inputs / request
 
 ### `shell`
 
@@ -77,16 +91,36 @@ Read a text or image file.
 | `offset` | `number` | Line to start reading from (1-indexed). |
 | `limit` | `number` | Maximum number of lines to read. |
 
-**Outputs:** text files become a single `TextContent`, truncated to `maxLines`/`maxBytes` (defaults 2000 lines / 50 KB) with a `Use offset=N to continue` footer when more remains. Image files (PNG/JPEG/GIF/WebP/BMP by magic bytes) become `[TextContent note, ImageContent]` with base64 `data` and `mimeType`. Read failures (missing file, offset beyond end, abort) are error results.
+**Outputs:** text files become a single `TextContent`, truncated to `maxLines`/`maxBytes` (defaults 2000 lines / 50 KB) with a `Use offset=N to continue` footer when more remains. Image files (PNG/JPEG/GIF/WebP/BMP by **magic bytes**, not extension) become `[TextContent note, ImageContent]` with base64 `data` and `mimeType`. Oversize images are rejected by `stat` (when available) or `buffer.length` against `maxImageBytes` (default 10 MB) before base64 encoding. An optional `transformImage` callback lets hosts resize or re-encode images without adding image-processing dependencies to the base package. Read failures (missing file, offset beyond end, oversize image, abort) are error results.
+
+`read` tool options (via `createReadTool(cwd, options)` or `ToolsOptions.read`):
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `maxImageBytes` | `DEFAULT_MAX_IMAGE_BYTES` (10 MB) | Reject image reads larger than this many bytes. |
+| `transformImage` | — | Host callback `( { buffer, mimeType } ) => Promise<Buffer>` run after read, before base64. |
+| `autoResizeImages` | — | **Deprecated.** Ignored unless `transformImage` is also set (use `transformImage` instead). |
+| `maxLines` / `maxBytes` | 2000 / 50 KB | Text head truncation limits. |
+| `operations` | local fs | Pluggable `ReadOperations` backend. |
+| `executionPolicy` | — | Structured pre-execution policy (see [Coding security](coding-security.md)). |
+
+```ts
+import { createReadTool, DEFAULT_MAX_IMAGE_BYTES } from "@arnilo/prism-coding-agent";
+
+const read = createReadTool(cwd, {
+  maxImageBytes: DEFAULT_MAX_IMAGE_BYTES,
+  transformImage: async ({ buffer, mimeType }) => host.resizeImage(buffer, mimeType),
+});
+```
 
 `read` result `metadata`:
 
 | Field | Present when | Purpose |
 | --- | --- | --- |
 | `truncation` | text reads | `TruncationResult`. |
-| `image` | image reads | `{ mimeType, resized: false }`. |
+| `image` | image reads | `{ mimeType, resized, bytes }`. `resized` is `true` when `transformImage` ran. |
 
-> `autoResizeImages` is accepted but is currently a documented no-op (deferred); images are returned at their original size with `image.resized = false`.
+> `autoResizeImages` is deprecated. It has no effect without `transformImage`; use `transformImage` for host-owned resizing.
 
 ### `write`
 
@@ -187,7 +221,7 @@ const remoteWrite = createWriteTool("/repo", {
 ## Extension and configuration notes
 
 - **Pluggable operation backends.** Every tool accepts an `operations` seam so a host can delegate to a remote system (e.g. SSH) while keeping the tool's matching/serialization behavior: `BashOperations` (`shell`), `ReadOperations` (`read`), `WriteOperations` (`write`), `EditOperations` (`edit`).
-- **Per-tool options.** `ShellToolOptions` (`shellPath`, `commandPrefix`, `maxLines`, `maxBytes`, `tempFilePrefix`, `operations`, `spawnHook`); `ReadToolOptions` (`operations`, `autoResizeImages`, `maxLines`, `maxBytes`); `WriteToolOptions` (`operations`); `EditToolOptions` (`operations`).
+- **Per-tool options.** `ShellToolOptions` (`shellPath`, `commandPrefix`, `maxLines`, `maxBytes`, `tempFilePrefix`, `operations`, `spawnHook`, `executionPolicy`); `ReadToolOptions` (`operations`, `maxImageBytes`, `transformImage`, `maxLines`, `maxBytes`, `executionPolicy`; `autoResizeImages` deprecated); `WriteToolOptions` (`operations`, `executionPolicy`); `EditToolOptions` (`operations`, `executionPolicy`).
 - **Aggregator options.** `ToolsOptions` (`{ shell?, read?, write?, edit? }`) threads each sub-object to the matching tool.
 - **`ToolsOptions`** and the per-tool option types are exported from the package barrel for host configuration.
 - No auto-discovery or manifest registration: import and register explicitly. This package registers no extensions and owns no globals (the mutation queue is a process-wide per-path map — see `ponytail:` note in the source).
@@ -198,7 +232,7 @@ const remoteWrite = createWriteTool("/repo", {
 - **Non-zero exit is not an error.** A failing command is a normal `shell` result (exit code in metadata); only timeout/abort/spawn failures are error results. Do not assume `error == undefined` means the command succeeded.
 - **Bounded output.** `shell`/`read` accumulate output into a rolling tail bounded by `maxLines`/`maxBytes`; oversized output spills to a temp file (`fullOutputPath`), so memory use is bounded regardless of command output size.
 - **Per-path serialization.** Concurrent mutations to the same file serialize; concurrent mutations to different files do not block each other. The queue is a process-wide map — across sessions in one process, same-path writes still serialize (upgrade path: scope per registry if throughput matters).
-- **Single runtime dependency.** `diff` (for `edit` unified patch/diff generation) plus the Node standard library. No native modules; no image-processing native dependency (image auto-resize is deferred, so no `sharp`/WASM dependency).
+- **Bounded image reads.** `read` rejects images over `maxImageBytes` (default 10 MB) by `stat` before read when possible; MIME is detected from magic bytes only. Optional `transformImage` is host-owned — the base package has no image-processing dependency.
 
 ## Related APIs
 

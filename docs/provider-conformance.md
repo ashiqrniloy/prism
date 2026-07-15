@@ -93,6 +93,22 @@ const body = JSON.parse(String(fetchInit.body));
 assertSerializedRequestCoversContent(request, body, { unsupported: ["image"] });
 ```
 
+Multimodal coverage example:
+
+```ts
+const request = {
+  model: { provider: "openai", model: "gpt-5.1", capabilities: { input: ["text", "file", "document", "audio"] } },
+  messages: [{ role: "user", content: [
+    { type: "file", mediaType: "application/pdf", name: "report.pdf", data: "..." },
+    { type: "audio", mediaType: "audio/wav", data: "..." },
+  ] }],
+};
+
+assertSerializedRequestCoversContent(request, body);
+```
+
+Pass `unsupported` only for modalities the provider deliberately omits from the wire format while still accepting the turn via another block type.
+
 Protected header-ownership example:
 
 ```ts
@@ -127,6 +143,7 @@ The helpers are a testing subpath only. Provider packages can use them with thei
 - Use fake credentials only in fixtures.
 - The helpers collect one stream into memory; keep conformance fixtures small.
 - Redaction remains the provider/runtime boundary's job. Use `assertNoSecretLeak()` with known fake secrets to catch regressions, not as a general secret scanner.
+- First-party providers read SSE streams and HTTP error bodies through bounded helpers from `@arnilo/prism/providers/transport` (`readSseEvents` / `readSseData`, `readBoundedResponseText`). Oversized remote input terminates with `ProviderTransportError` instead of unbounded buffering.
 
 ## Related APIs
 

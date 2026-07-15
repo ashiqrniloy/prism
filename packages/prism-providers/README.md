@@ -24,7 +24,7 @@ import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
 import { createOpenRouterProviderPackage } from "@arnilo/prism-provider-openrouter";
 ```
 
-Each provider package declares `@arnilo/prism` as a non-optional peer, so installing `@arnilo/prism-providers` also requires core. Prefer [`@arnilo/prism-all`](https://www.npmjs.com/package/@arnilo/prism-all) if you want core + providers + compaction in one install.
+Each provider package declares `@arnilo/prism` as a non-optional peer, so installing `@arnilo/prism-providers` also requires core. Add this family to `@arnilo/prism-code` or `@arnilo/prism-sdk`, or use `@arnilo/prism-all` for every first-party package. See [Release and install](../../docs/release-and-install.md).
 
 ## License
 

@@ -26,8 +26,14 @@ export {
   createReadTool,
   detectSupportedImageMimeType,
   detectSupportedImageMimeTypeFromFile,
+  DEFAULT_MAX_IMAGE_BYTES,
 } from "./read.js";
-export type { ReadToolOptions, ReadOperations } from "./read.js";
+export type {
+  ReadToolOptions,
+  ReadOperations,
+  TransformImage,
+  TransformImageInput,
+} from "./read.js";
 
 export { createWriteTool } from "./write.js";
 export type { WriteToolOptions, WriteOperations } from "./write.js";
@@ -38,10 +44,11 @@ export type { EditToolOptions, EditOperations, EditToolDetails, Edit } from "./e
 // --- generic primitives (re-exported for hosts that want them) ---
 
 export { withFileMutationQueue } from "./file-mutation-queue.js";
+export { enforceExecutionPolicy } from "./execution-policy.js";
 
 // --- aggregators ---
 
-import type { ToolDefinition } from "@arnilo/prism";
+import type { ExecutionPolicy, ToolDefinition } from "@arnilo/prism";
 import { createShellTool } from "./shell.js";
 import { createReadTool } from "./read.js";
 import { createWriteTool } from "./write.js";
@@ -53,21 +60,32 @@ import type { EditToolOptions } from "./edit.js";
 
 /** Per-tool options combined for the aggregator factories. */
 export interface ToolsOptions {
+  /** Shared execution policy applied to every coding tool unless overridden per tool. */
+  executionPolicy?: ExecutionPolicy;
   shell?: ShellToolOptions;
   read?: ReadToolOptions;
   write?: WriteToolOptions;
   edit?: EditToolOptions;
 }
 
+function withSharedExecutionPolicy<T extends { executionPolicy?: ExecutionPolicy }>(
+  toolOptions: T | undefined,
+  shared?: ExecutionPolicy,
+): T {
+  if (!shared) return (toolOptions ?? {}) as T;
+  return { ...(toolOptions ?? {}), executionPolicy: toolOptions?.executionPolicy ?? shared } as T;
+}
+
 /**
  * The four coding tools: `shell`, `read`, `write`, `edit`. Register all of them for a coding agent.
  */
 export function createCodingTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[] {
+  const policy = options?.executionPolicy;
   return [
-    createShellTool(cwd, options?.shell),
-    createReadTool(cwd, options?.read),
-    createWriteTool(cwd, options?.write),
-    createEditTool(cwd, options?.edit),
+    createShellTool(cwd, withSharedExecutionPolicy(options?.shell, policy)),
+    createReadTool(cwd, withSharedExecutionPolicy(options?.read, policy)),
+    createWriteTool(cwd, withSharedExecutionPolicy(options?.write, policy)),
+    createEditTool(cwd, withSharedExecutionPolicy(options?.edit, policy)),
   ];
 }
 

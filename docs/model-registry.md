@@ -36,7 +36,7 @@ import { createModelRegistry, type ModelConfig } from "@arnilo/prism";
 | --- | --- |
 | `provider` / `model` | Required registry key. |
 | `displayName` | Human-readable label. |
-| `capabilities` | Input/output modes plus reasoning/tools/streaming booleans. |
+| `capabilities` | Input/output modes (`text`, `image`, `audio`, `file`, `document`) plus reasoning/tools/streaming booleans and optional `structuredOutput` (`true` or `"json_schema"`) for native JSON-schema requests. |
 | `limits` | Context and output-token limits. |
 | `cost` | Input/output/cache read/cache write pricing. |
 | `cache` | Generic `ModelCacheCapabilities`. |
@@ -74,7 +74,7 @@ The registry emits no events and performs no I/O.
   "model": {
     "provider": "demo",
     "model": "demo-large",
-    "capabilities": { "input": ["text"], "tools": true, "streaming": true },
+    "capabilities": { "input": ["text", "image", "audio", "file", "document"], "tools": true, "streaming": true },
     "limits": { "contextWindow": 128000, "maxOutputTokens": 8192 },
     "cost": { "input": 10, "output": 30, "cacheRead": 2, "currency": "USD", "unit": "1M tokens" },
     "cache": { "kind": "cache_control", "maxBreakpoints": 4, "longRetention": true }
@@ -91,7 +91,7 @@ const model: ModelConfig = {
   provider: "demo",
   model: "demo-large",
   displayName: "Demo Large",
-  capabilities: { input: ["text"], output: ["text"], tools: true, streaming: true },
+  capabilities: { input: ["text", "document"], output: ["text"], tools: true, streaming: true },
   limits: { contextWindow: 128_000, maxOutputTokens: 8_192 },
   cost: { input: 10, output: 30, cacheRead: 2, cacheWrite: 12, currency: "USD", unit: "1M tokens" },
   cache: { kind: "cache_control", maxBreakpoints: 4, minCacheableTokens: 1024, longRetention: true },
@@ -110,12 +110,14 @@ Provider packages register models through `ProviderPackageAPI.registerModel(mode
 ## Security and performance notes
 
 - Model metadata must not contain credentials or secrets.
+- Declare truthful `capabilities.input` tags. Prism core rejects undeclared modalities in `assembleProviderInput()` when the list is present.
 - Registration is in-memory and O(1) by provider/model key.
 - `ModelConfig.cache` is declarative capability info only; it does not grant permissions, select tools, or bypass auth.
 - Provider-specific behavior belongs in provider packages, not Prism core.
 
 ## Related APIs
 
+- [Multimodal content](multimodal-content.md): `audio`/`file`/`document` blocks and `MODEL_INPUT_CAPABILITIES`.
 - [Provider layer](provider-layer.md): provider/model registry overview.
 - [Provider caching](provider-caching.md): `ModelCacheCapabilities` and cache helpers.
 - [Provider packages](provider-packages.md): package registration of model metadata.

@@ -356,6 +356,7 @@ const decision = classifyNeuralWattError({ status: 429, headers: { "retry-after"
 
 ## Security and performance notes
 
+- SSE streams, HTTP error bodies, and quota/model-discovery failures use bounded `@arnilo/prism/providers/transport` helpers (`readSseEvents`, `readBoundedResponseText`). NeuralWatt `: energy` / `: cost` comment frames are surfaced via `readSseEvents` `comments` and mapped locally.
 - No network calls during import, setup, build, default tests, or generation beyond
   the explicit Chat Completions request. `listNeuralWattModels()` is opt-in and
   makes one `GET /v1/models` call per invocation; `getNeuralWattQuota()` is opt-in

@@ -1,18 +1,21 @@
 {
   "name": "@arnilo/prism-all",
-  "version": "0.0.3",
-  "description": "Umbrella package: installs the Prism core runtime plus all first-party provider adapters and compaction strategies. Imports come from @arnilo/prism and the individual @arnilo/prism-* packages.",
+  "version": "0.0.4",
+  "description": "Complete Prism umbrella: coding, application SDK, providers, and both persistence adapters.",
   "license": "MIT",
   "scripts": {
     "pack:dry-run": "npm pack --dry-run"
   },
   "files": [
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism": "0.0.3",
-    "@arnilo/prism-providers": "0.0.3",
-    "@arnilo/prism-compaction": "0.0.3"
+    "@arnilo/prism-code": "0.0.4",
+    "@arnilo/prism-sdk": "0.0.4",
+    "@arnilo/prism-providers": "0.0.4",
+    "@arnilo/prism-session-store-sqlite": "0.0.4",
+    "@arnilo/prism-session-store-postgres": "0.0.4"
   },
   "engines": {
     "node": ">=20"
@@ -31,7 +34,7 @@
     "umbrella",
     "agent",
     "llm",
-    "harness"
+    "sdk"
   ],
   "sideEffects": false,
   "publishConfig": {

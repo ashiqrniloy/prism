@@ -147,6 +147,8 @@ CLI/RPC are adapters over `AgentSession`. They do not scan packages, import exte
 
 RPC `command` executes only explicitly registered `CommandDefinition` values. `setModel` stores a model override for later prompt/follow-up calls. `compact`, `switchSession`, `forkSession`, `cloneSession`, and `checkout` call the existing session APIs.
 
+Optional workflow control (from `@arnilo/prism-workflows`) registers `workflow.start`, `workflow.status`, `workflow.list`, `workflow.cancel`, and `workflow.resume` via `createWorkflowCommands({ workflows, checkpoints, runOptions? })`. Pass the returned `CommandDefinition[]` into `runRpcServer({ commands })` the same way as observational-memory commands. Cancel aborts in-process runs through the package active-run registry; orphaned durable checkpoints still marked `running` are fail-closed to `aborted`.
+
 `forkSession` creates another handle for the same `sessionId` and selected `leafId`; it no longer overwrites the parent handle in the RPC map. Keep the returned `handleId` when a UI needs to switch among sibling branches. `switchSession` accepts `handleId` (preferred), `sessionId`, or `id`; with multiple branch handles, use `handleId` to avoid ambiguity. `checkout` requires `params.leafId`, calls `AgentSession.checkout(leafId)`, and keeps the active handle id unchanged while moving that handle to the existing leaf. `messages` returns entries for the active branch path.
 
 ## Security and performance notes
@@ -169,6 +171,7 @@ RPC `command` executes only explicitly registered `CommandDefinition` values. `s
 - [Resource loading](resource-loading.md): explicit resource loading primitives.
 - [Credentials and redaction](credentials-and-redaction.md): secret redaction helpers and credential boundaries.
 - [Observational memory compaction package](compaction-observational-memory.md): optional `om:status` and `om:view` command factories for explicitly wired hosts.
+- [Workflows](workflows.md): optional `createWorkflowCommands()` for start/status/list/cancel/resume over the same RPC `command` seam.
 
 The CLI records flags but does not auto-load project-local resources, extensions, tools, or config. The two system/project prompt files are the exception: in print/json modes the CLI auto-loads `<workspaceRoot>/AGENTS.md` (trust-gated) and an app-supplied `SYSTEM.md` layer as `AgentConfig.systemPrompt` layers composed with `--system` (base); `--no-agents-md` / `--no-system-md` skip them and `--agents-md-file` / `--system-md-file` override the paths. The CLI does not default `globalRoot` to the user's home directory — pass it from a host adapter or use `--agents-config <path>` for the app-config bundle layout. RPC mode does not auto-read these files (the host owns the session factory). Hosts must make explicit trust and permission decisions before wiring any other local loading.
 

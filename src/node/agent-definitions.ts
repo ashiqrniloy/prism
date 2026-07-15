@@ -21,6 +21,7 @@ import { isPathInsideReal } from "./trust.js";
 import { readOptionalFile } from "./contribution-discovery.js";
 import { createSkillRegistry } from "../skills.js";
 import { isJsonObject } from "../config.js";
+import { isNodeErrorCode } from "./config.js";
 
 /** Options for {@link resolveAgentBundle}. */
 export interface ResolveAgentBundleOptions {
@@ -458,7 +459,7 @@ async function listSubdirs(dir: string): Promise<readonly string[]> {
     }
     return out;
   } catch (error) {
-    if (isMissingFile(error)) return [];
+    if (isNodeErrorCode(error, "ENOENT")) return [];
     throw error;
   }
 }
@@ -467,13 +468,9 @@ async function readOptional(read: (path: string) => Promise<string>, path: strin
   try {
     return await read(path);
   } catch (error) {
-    if (isMissingFile(error)) return undefined;
+    if (isNodeErrorCode(error, "ENOENT")) return undefined;
     throw error;
   }
-}
-
-function isMissingFile(error: unknown): boolean {
-  return error instanceof Error && "code" in error && (error as { code?: string }).code === "ENOENT";
 }
 
 const NAME_RE = /^[A-Za-z0-9 _-]+$/;

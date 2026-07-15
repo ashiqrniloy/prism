@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { loadJsonResource, loadManifestResource, loadTextResource, type ResourceLoadContext, type ResourceLoader } from "../index.js";
+import { loadBinaryResource, loadJsonResource, loadManifestResource, loadTextResource, type ResourceLoadContext, type ResourceLoader } from "../index.js";
 
 describe("resource helpers", () => {
   it("loads text resources from text or data", async () => {
@@ -49,6 +49,19 @@ describe("resource helpers", () => {
       contributions: undefined,
       resources: [{ uri: "package://demo/prompt.md", purpose: "prompt" }],
     });
+  });
+
+  it("loads binary resources with byte bounds", async () => {
+    const loader: ResourceLoader = {
+      async load(uri) {
+        return { uri, data: new Uint8Array([1, 2, 3]) };
+      },
+    };
+    assert.deepEqual(await loadBinaryResource(loader, "package://demo/file.bin"), new Uint8Array([1, 2, 3]));
+    await assert.rejects(
+      () => loadBinaryResource(loader, "package://demo/huge.bin", undefined, { maxItemBytes: 1 }),
+      /exceeded 1 bytes/,
+    );
   });
 
   it("forwards context and calls the loader once", async () => {

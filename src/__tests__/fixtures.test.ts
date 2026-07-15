@@ -94,9 +94,9 @@ test("corrupt_fixture_is_quarantined_fail_closed", async () => {
     assert.ok(typeof err.line === "number" && err.line > 0);
     assert.ok(typeof err.message === "string" && err.message.length > 0);
   }
-  // Duplicate-id rejection is also a fail-closed path the store enforces.
+  // Append is fail-closed when the backing file still has parse errors.
   const dup: SessionEntry = { ...entries[0] };
-  await assert.rejects(() => store.append(dup), /Duplicate session entry id/);
+  await assert.rejects(() => store.append(dup), /Invalid JSONL at line/);
 });
 
 test("no_fixture_file_contains_a_real_looking_secret", async () => {

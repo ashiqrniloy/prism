@@ -12,6 +12,7 @@ import { assertPermission } from "../security.js";
 import type { TrustPolicy } from "../security.js";
 import { isPathInsideReal } from "./trust.js";
 import { parseSkillFile } from "../contribution-parsing.js";
+import { isNodeErrorCode } from "./config.js";
 
 export interface DiscoveryOptions {
   readonly kinds: readonly ContributionFileKind[];
@@ -59,7 +60,7 @@ async function scanKindRoot(
   try {
     names = await readdir(kindDir);
   } catch (error) {
-    if (isMissingFile(error)) return []; // missing kind root is normal
+    if (isNodeErrorCode(error, "ENOENT")) return []; // missing kind root is normal
     throw error;
   }
 
@@ -70,7 +71,7 @@ async function scanKindRoot(
     try {
       isDir = (await stat(dir)).isDirectory();
     } catch (error) {
-      if (isMissingFile(error)) continue;
+      if (isNodeErrorCode(error, "ENOENT")) continue;
       throw error;
     }
     if (!isDir) continue;
@@ -126,13 +127,12 @@ async function readManifestEntry(
   return { kind, name: declaration.name, origin, path, declaration };
 }
 
-// ponytail: Phase 31 — exported so the system/project prompt file loader reuses the scanner's
-// ENOENT-tolerant read instead of duplicating it. isMissingFile stays private (only readOptionalFile needs it).
+// ponytail: Phase 31 — exported so the system/project prompt file loader reuses this ENOENT-tolerant read.
 export async function readOptionalFile(path: string): Promise<string | undefined> {
   try {
     return await readFile(path, "utf8");
   } catch (error) {
-    if (isMissingFile(error)) return undefined;
+    if (isNodeErrorCode(error, "ENOENT")) return undefined;
     throw error;
   }
 }
@@ -140,10 +140,6 @@ export async function readOptionalFile(path: string): Promise<string | undefined
 // --- Internal helpers. ---
 // ponytail: parseSkillFile/parseAgentFile live in ../contribution-parsing.ts (core, fs-free); this
 // Node module owns directory walking + manifest.json parsing only.
-
-function isMissingFile(error: unknown): boolean {
-  return error instanceof Error && "code" in error && (error as { code?: string }).code === "ENOENT";
-}
 
 function parseManifestDeclaration(
   text: string,

@@ -25,6 +25,7 @@ Start from explicit host inputs. Do not let runtime code discover security state
 | Permission decisions | allow/deny rules or approval UI result | `createStaticPermissionPolicy`, `assertPermission()` |
 | Tool allow-list | active tools for this agent/session/run | `createToolRegistry`, `filterTools()`, `dispatchToolCall()` |
 | Tool argument rules | host validator | `AgentConfig.validator`, `RunOptions.validate`, `ToolValidator` |
+| Coding execution policy | path/command approval adapter | `ExecutionPolicy`, `@arnilo/prism-coding-security` |
 | Durable history | host database adapter | `SessionStore`, `assertSessionStoreConforms()` |
 | Durable audit | host ledger adapter | `RunLedger`, `redactRunLedgerRecord()` |
 | Extensions | explicit package imports only | `createExtensionKernel`, `ExtensionAPI` |
@@ -120,11 +121,24 @@ Wire those values where they matter: provider adapters receive the resolved cred
 - Prism does not sandbox host tools, extensions, provider adapters, credential resolvers, or custom middleware. Use OS/container/process isolation when code is untrusted.
 - Redaction is exact known-secret replacement only. It is not arbitrary secret detection, entropy scanning, or DLP.
 - Known secrets must be passed into redactors before data is emitted or persisted. Redact again in host adapters if they transform records after Prism redaction.
-- Tool `parameters` metadata is not validation. Add a `ToolValidator` or validate inside the tool before side effects.
+- Tool `parameters` metadata is not validated by default. Add a `ToolValidator`, use `createToolParameterValidator()` with a schema adapter, or install `@arnilo/prism-tool-validator-json-schema` before side effects.
+- MCP tools from `@arnilo/prism-mcp` are untrusted remote servers. Configure stdio commands and HTTP URLs explicitly; bound output with `maxResultBytes`; register prefixed tools only after trust review. See [MCP client bridge](mcp-tools.md).
+- Coding tools from `@arnilo/prism-coding-agent` accept an optional `ExecutionPolicy` checked inside each tool before side effects. Use `@arnilo/prism-coding-security` for path roots, command rules, and approval caching. Prism does not provide OS sandboxing unless the host supplies a sandbox adapter.
 - Permission checks happen before tool validation and before `tool.execute()`. Middleware cannot grant permission by renaming a tool.
 - Session stores and ledgers receive redacted values when a redactor is active, but durable storage remains host-owned. Enforce tenant/account/user ownership and retention in the database layer.
 - Provider-owned auth/content/session/cache/security headers win over caller headers in adapters that merge headers.
 - Security checks are bounded explicit calls on the active path. Prism adds no hidden global middleware, background workers, watchers, network calls, or filesystem scans.
+
+### 0.0.4 release security audit (2026-07-14)
+
+- `npm audit --audit-level=high`: 0 vulnerabilities at every severity.
+- Lockfile: 162 registry dependency records, all with `resolved` provenance URL and integrity hash; `npm ls --all` reports a clean graph.
+- License inventory: 160 locked third-party packages; all declare permissive MIT, ISC, BSD, Apache-2.0, or compatible dual licenses. No GPL, AGPL, SSPL, or missing lockfile license metadata.
+- Install scripts: only `better-sqlite3@12.11.1` runs an install script (`prebuild-install || node-gyp rebuild --release`), required by the explicitly installed SQLite adapter. Core and other optional packages add no install hook.
+- Secret scan: source, tests, docs, workflow files, package metadata, built tests, packed-install canary, and tarball deny-list checks found no private-key block or common live-token prefix. Runtime redaction fixtures cover requests, events, ledgers, stores, checkpoints, provider/OAuth errors, and credential ciphertext.
+- Threat suites pass for parameterized SQL/tenant isolation, HTTP URL/SSRF rejection, realpath/symlink containment, shell-metacharacter approval, schema prototype-pollution/remote-reference bounds, OAuth polling/abort/redaction, credential tamper/wrong-key/KDF floors, MCP result bounds/timeouts, and coding approval/path policy.
+
+PostgreSQL TLS/network policy, MCP endpoint allow-listing, provider base URLs, OS keychain availability, process sandboxing, workflow tenant identity, and ANSI/control-sequence sanitization in any host terminal renderer remain host boundaries. Prism 0.0.4 ships JSON-line RPC, not an interactive TUI; hosts must render untrusted model/tool text safely. Credential-gated PostgreSQL/provider/keychain tests are separate operator/CI gates, not silently replaced by mocks.
 
 ## Related APIs
 

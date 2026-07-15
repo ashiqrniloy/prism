@@ -23,6 +23,7 @@ import type {
 import type { MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import { redactMessage } from "./redaction.js";
+import { assertMessagesSupportModelCapabilities } from "./content.js";
 import { loadTextResource } from "./resources.js";
 import { composeSystemPrompt } from "./system-prompts.js";
 import { runInstructionInjectors } from "./instruction-injection.js";
@@ -211,6 +212,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       signal: options.signal,
     };
   const providerMessages = await promptBuilder.build({ ...promptRequest, tools: options.tools });
+  assertMessagesSupportModelCapabilities(options.model, providerMessages);
 
   return {
     model: options.model,
@@ -334,7 +336,11 @@ function blockText(block: ContextBlock): string {
     if (part.type === "tool_result") return JSON.stringify(part.result ?? part.error ?? null);
     if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
     if (part.type === "tool_call_delta") return `${part.name ?? "tool"}(${part.argumentsText ?? ""})`;
-    return part.url ?? part.mimeType ?? "[image]";
+    if (part.type === "image") return part.url ?? part.resourceUri ?? part.mimeType ?? "[image]";
+    if (part.type === "audio") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[audio]";
+    if (part.type === "file") return part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[file]";
+    if (part.type === "document") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[document]";
+    return "[content]";
   }).join("\n");
 }
 

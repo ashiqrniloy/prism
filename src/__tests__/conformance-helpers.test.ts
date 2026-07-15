@@ -9,10 +9,20 @@ import {
   SESSION_APPEND_CONFLICT_CODE,
   SessionAppendConflictError,
 } from "../index.js";
-import type { Extension, SessionEntry, SessionStore, ToolDefinition } from "../index.js";
+import type {
+  AgentEventRecord,
+  Extension,
+  RunRecord,
+  SessionEntry,
+  SessionStore,
+  ToolCallRecord,
+  ToolDefinition,
+  UsageRecord,
+} from "../index.js";
 import { assertCompactionStrategyConforms } from "../testing/compaction-conformance.js";
 import { assertExtensionConforms } from "../testing/extension-conformance.js";
-import { assertSessionStoreConforms } from "../testing/session-store-conformance.js";
+import { assertSessionStoreConforms, runSessionStoreConformance } from "../testing/session-store-conformance.js";
+import { assertRunLedgerConforms, runRunLedgerConformance } from "../testing/run-ledger-conformance.js";
 import { assertToolDispatchConforms, assertToolBlocked } from "../testing/tool-conformance.js";
 
 void describe("session-store conformance helper", () => {
@@ -42,7 +52,71 @@ void describe("session-store conformance helper", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(pkg.exports["./testing/session-store-conformance"]);
   });
+
+  it("supports concurrent parent append when enabled", async () => {
+    await assertSessionStoreConforms(createMemorySessionStore(), { exerciseConcurrentParentAppend: true });
+  });
+
+  it("runSessionStoreConformance reopens a durable shared backing store", async () => {
+    const backing = createMemorySessionStore();
+    await runSessionStoreConformance(() => backing, {
+      sessionId: "reopen-shared",
+      otherSessionId: "reopen-shared-other",
+      exerciseReopen: true,
+    });
+  });
 });
+
+void describe("run-ledger conformance helper", () => {
+  it("conforms against an in-memory ledger with read callbacks", async () => {
+    const state = createMemoryLedger();
+    await assertRunLedgerConforms({
+      ledger: state.ledger,
+      readRuns: () => state.runs,
+      readEvents: () => state.events,
+      readToolCalls: () => state.toolCalls,
+      readUsage: () => state.usage,
+    });
+  });
+
+  it("runRunLedgerConformance survives factory reopen against shared state", async () => {
+    const state = createMemoryLedger();
+    await runRunLedgerConformance(() => ({
+      ledger: state.ledger,
+      readRuns: () => state.runs,
+      readEvents: () => state.events,
+    }), { exerciseReopen: true, sessionId: "ledger-reopen" });
+  });
+
+  it("testing/run-ledger-conformance subpath is exported", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    assert.ok(pkg.exports["./testing/run-ledger-conformance"]);
+  });
+
+  it("testing/persistence-schema subpath is exported", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    assert.ok(pkg.exports["./testing/persistence-schema"]);
+  });
+});
+
+function createMemoryLedger() {
+  const runs: RunRecord[] = [];
+  const events: AgentEventRecord[] = [];
+  const toolCalls: ToolCallRecord[] = [];
+  const usage: UsageRecord[] = [];
+  return {
+    runs,
+    events,
+    toolCalls,
+    usage,
+    ledger: {
+      appendRun: async (record: RunRecord) => { runs.push(record); },
+      appendEvent: async (record: AgentEventRecord) => { events.push(record); },
+      appendToolCall: async (record: ToolCallRecord) => { toolCalls.push(record); },
+      appendUsage: async (record: UsageRecord) => { usage.push(record); },
+    },
+  };
+}
 
 void describe("compaction conformance helper", () => {
   it("conforms against the default strategy with secret redaction", async () => {

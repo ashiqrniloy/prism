@@ -101,6 +101,7 @@ export const extension: Extension = {
 - `retry` middleware may stop retrying or adjust delay, but runtime still owns retry event emission, abort-aware waiting, and provider-turn boundaries.
 - The registry does not discover packages, read manifests, load config, call providers, execute tools, read resources, or start sessions.
 - Hosts may pass a middleware registry into `createExtensionKernel({ middleware })` to share it with direct host code.
+- For OpenTelemetry export, prefer `session.subscribe()` + `@arnilo/prism-observability-opentelemetry` (see [Observability](observability.md)) rather than adding a parallel event bus. Middleware hooks remain for transforming payloads at named boundaries.
 
 ## Security and performance notes
 
@@ -118,6 +119,7 @@ export const extension: Extension = {
 - [Input and prompt assembly](input-and-prompt-assembly.md): `input_assembly` and `prompt_build` helper call sites.
 - [Compaction and retry policies](compaction-and-retry.md): compaction/retry middleware payloads and runtime timing.
 - [Context and skills](context-and-skills.md): `context` helper call site.
+- [Observability](observability.md): optional OpenTelemetry adapter over `AgentEvent` streams.
 - [Public contracts](public-contracts.md): provider, tool, context, session, and extension contracts that runtimes can pass through hooks.
 
 Permission checks for tools, extensions, and resources are hard guards; middleware can transform payloads but cannot bypass a denied `PermissionPolicy`.

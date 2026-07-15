@@ -15,7 +15,7 @@ Current contract groups:
 - Extensions/middleware: `ExtensionLifecycleEventName`, `ExtensionEvent`, `Extension`, `ExtensionAPI`, `MiddlewareHookName`, `Middleware`, `MiddlewareNext`, `MiddlewareRegistry`
 - Configuration/manifests: `ConfigProvider`, `ConfigLayer`, `ConfigLoadContext`, `PrismManifest`, `ManifestContributionDeclaration`, `ManifestResourceDeclaration`, `ManifestContributionKind`
 - Stores/resources/settings/credentials/compaction/retry/cache helpers: `SessionEntry`, `SessionStore`, `StoreFactory`, `Resource`, `ResourceLoader`, `ResourceLoadContext`, `SettingsProvider`, `CredentialRequest`, `Credential`, `CredentialResolver`, `CompactionStrategy`, `CompactionContext`, `CompactionResult`, `CompactionOptions`, `CompactionMiddlewarePayload`, `CompactionEntryData`, `DefaultCompactionStrategyOptions`, `RetryPolicy`, `RetryContext`, `RetryDecision`, `RetryOptions`, `RetryMiddlewarePayload`, `DefaultRetryPolicyOptions`, `CacheUsageReport`, `sanitizeCacheKey`, `mapCacheRetention`, `applyCacheControl`, `cacheHitRate`, `cacheSavings`, `cacheUsageReport`
-- Production persistence (adapter-facing): `ProductionPersistenceStore`, `PersistencePage`, `PersistenceQuery`, `OwnershipScope`, `SessionRecord`, `SessionQuery`, `BranchRecord`, `BranchQuery`, `SessionEntryQuery`, `RunRecord`, `RunQuery`, `AgentEventRecord`, `AgentEventQuery`, `ToolCallRecord`, `ToolCallQuery`, `UsageRecord`, `UsageQuery`, `AgentDefinitionRecord`, `AgentDefinitionQuery`, `RetentionPolicy`, `RetentionPolicyQuery`, `MigrationRecord`, `MigrationQuery`
+- Production persistence (adapter-facing): `ProductionPersistenceStore`, `CheckpointStore`, `CheckpointKey`, `CheckpointSaveInput`, `CheckpointRecord`, `CheckpointQuery`, `LeaseStore`, `LeaseKey`, `LeaseAcquireInput`, `LeaseClaimInput`, `LeaseRecord`, `PersistencePage`, `PersistenceQuery`, `OwnershipScope`, `SessionRecord`, `SessionQuery`, `BranchRecord`, `BranchQuery`, `SessionEntryQuery`, `RunRecord`, `RunQuery`, `AgentEventRecord`, `AgentEventQuery`, `ToolCallRecord`, `ToolCallQuery`, `UsageRecord`, `UsageQuery`, `AgentDefinitionRecord`, `AgentDefinitionQuery`, `RetentionPolicy`, `RetentionPolicyQuery`, `MigrationRecord`, `MigrationQuery`
 
 ## When to use it
 
@@ -49,6 +49,8 @@ import type {
   BranchRecord,
   CommandDefinition,
   CacheUsageReport,
+  CheckpointStore,
+  LeaseStore,
   CompactionStrategy,
   ConfigLayer,
   ConfigProvider,
@@ -140,7 +142,10 @@ Important request shapes:
 | `SystemPromptContribution` | Explicit caller-selected prompt layer with source, mode, text, and metadata. |
 | `ConfigLayer` | Named JSON config layer consumed by `mergeConfigLayers()`. |
 | `PrismManifest` | Data-only package manifest with config defaults, contribution declarations, and resource declarations. |
-| `ProductionPersistenceStore` | Adapter-facing interface for durable, paginated, multi-tenant storage of sessions, branches, entries, runs, events, tool calls, usage, agent definitions, retention policies, and migrations. No SQL/ORM/host file storage/network dependency. |
+| `ProductionPersistenceStore` | Adapter-facing interface for durable, paginated, multi-tenant storage plus optional `checkpoints?: CheckpointStore` and `leases?: LeaseStore`. No SQL/ORM/host file storage/network dependency. |
+| `CheckpointStore` | Generic versioned checkpoint capability: save/load/bounded-list/delete by namespace and key, with ownership, exact-version CAS, and lease fencing. `createMemoryCheckpointStore()` is the reference implementation. |
+| `LeaseStore` | Atomic acquire/renew/release/get by namespace and key, with opaque claim tokens, expiry, ownership scope, and monotonically increasing takeover fences. `createMemoryLeaseStore()` is the reference implementation. |
+| `EventMultiplexer<T>` | Generic bounded fan-in from async sources. `createEventMultiplexer()` owns queue limits, overflow policy, abort, source teardown, and close behavior. |
 | `PersistencePage<T>` | Cursor-paginated result page: `items`, optional `nextCursor`, optional `total`. |
 | `PersistenceQuery` | Common pagination controls: `cursor?`, `limit?`, `order?: "asc" \| "desc"`. |
 | `OwnershipScope` | Multi-tenant scope: `tenantId?`, `accountId?`, `userId?`. Included in records and queries. |
@@ -446,5 +451,7 @@ void credentials;
 - [Provider conformance](provider-conformance.md): testing subpath for network-free provider adapter checks.
 - [Credentials and redaction](credentials-and-redaction.md): helpers for resolving host-owned credentials, explicit resolver order, OAuth refresh, env-object lookup, and redacting known secret values.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter implementing `AIProvider`.
+- `@arnilo/prism/providers/transport`: bounded SSE/event parsing, bounded HTTP error-body reads, and JSON-object tool-argument parsing for provider packages.
+- `@arnilo/prism/providers/openai`: OpenAI Chat Completions message/tool serialization, usage mapping, and indexed message validation helpers.
 
 Phase 10 public helpers include `createStaticSettingsProvider`, `createChainedSettingsProvider`, `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createStaticTrustPolicy`, `assertTrusted`, `createStaticPermissionPolicy`, `assertPermission`, and `createSecretRedactor`. Phase 11 auth/request/prompt helpers include `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `createProviderRequestPolicyChain`, `createSessionCachePolicy`, `mergeProviderRequestOptions`, `composeSystemPrompt`, and `mergeSystemPromptConfig`; they do not read env vars, persist OAuth tokens, create cache stores, discover prompt files, or load packages unless the host supplies that behavior. `@arnilo/prism/testing/provider-conformance` exports network-free provider assertion helpers. Node subpaths `@arnilo/prism/node/settings` and `@arnilo/prism/node/trust` are explicit filesystem/path helpers.

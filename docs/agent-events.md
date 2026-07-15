@@ -40,6 +40,7 @@ The `AgentEvent` union (grouped by concern):
 | --- | --- |
 | Agent lifecycle | `agent_started`, `agent_finished` |
 | Turns | `turn_started`, `turn_finished` |
+| Provider turns | `provider_turn_started`, `provider_turn_finished` |
 | Assistant messages | `message_started`, `message_delta`, `message_finished` |
 | Tool execution | `tool_execution_started`, `tool_execution_progress`, `tool_execution_finished`, `tool_execution_error`, `tool_execution_blocked` |
 | Queue/subscribers | `queue_updated`, `event_subscriber_overflow` |
@@ -70,11 +71,11 @@ Tool execution events:
 | --- | --- |
 | `tool_execution_started` | `sessionId`, `runId`, `call: ToolCallContent` |
 | `tool_execution_progress` | `sessionId`, `runId`, `toolCallId`, `name`, `progress?`, `metadata?` |
-| `tool_execution_finished` | `sessionId`, `runId`, `result: ToolResult` |
-| `tool_execution_error` | `sessionId`, `runId`, `call: ToolCallContent`, `error: ErrorInfo` |
-| `tool_execution_blocked` | `sessionId`, `runId`, `toolCallId`, `name`, `reason: string`, `error: ErrorInfo` |
+| `tool_execution_finished` | `sessionId`, `runId`, `result: ToolResult`, `metadata: ToolExecutionMetadata` |
+| `tool_execution_error` | `sessionId`, `runId`, `call: ToolCallContent`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
+| `tool_execution_blocked` | `sessionId`, `runId`, `toolCallId`, `name`, `reason: string`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
 
-Queue / subscriber / compaction / retry events:
+Queue / subscriber / compaction / retry / provider events:
 
 | Variant | Fields |
 | --- | --- |
@@ -83,6 +84,13 @@ Queue / subscriber / compaction / retry events:
 | `compaction_started` | `sessionId`, `runId?` |
 | `compaction_finished` | `sessionId`, `runId?`, `summary: string` |
 | `retry_scheduled` | `sessionId`, `runId`, `attempt: number`, `delayMs: number`, `error: ErrorInfo` |
+
+Provider turn events (metadata only — see [Observability](observability.md)):
+
+| Variant | Fields |
+| --- | --- |
+| `provider_turn_started` | `sessionId`, `runId`, `turn`, `metadata: ProviderTurnMetadata` |
+| `provider_turn_finished` | `sessionId`, `runId`, `turn`, `metadata` (includes `latencyMs` on finish), `usage?`, `error?` |
 
 Artifact validation/refinement events (emitted only by `generateValidateReviseLoop`; `singleShotLoop` emits zero artifact events):
 
@@ -195,5 +203,6 @@ await session.run("draft", { loop: { strategy: "generate-validate-revise", valid
 - [Agent loops](agent-loops.md): `singleShotLoop` and `generateValidateReviseLoop` emit the artifact events.
 - [Structured output](structured-output.md): `ArtifactValidation` shape threaded through parser/validator/repairer.
 - [Public contracts](public-contracts.md): full `AgentEvent` union and `ArtifactValidation` contract.
+- [Observability](observability.md): `ProviderTurnMetadata`, OpenTelemetry adapter package.
 - [Tools](tools.md): `tool_execution_*` variants.
 - [Compaction and retry policies](compaction-and-retry.md): `compaction_*` and `retry_scheduled` variants.

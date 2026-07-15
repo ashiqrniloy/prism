@@ -57,7 +57,7 @@ void agent;
 ```
 
 ## Extension and configuration notes
-Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, OAuth token storage, environment-variable selection, and persistent credentials belong in the host or an extension package. Passing `settings` / `credentials` on `AgentConfig` does not wire hidden runtime reads; hosts pass concrete values or resolvers to the provider/request edge that needs them.
+Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, OAuth token storage, environment-variable selection, and persistent credentials belong in the host or an extension package. For Node.js hosts, [`@arnilo/prism-credentials-node`](credential-storage.md) provides encrypted-file and system-keychain backends. Passing `settings` / `credentials` on `AgentConfig` does not wire hidden runtime reads; hosts pass concrete values or resolvers to the provider/request edge that needs them.
 
 ## Security and performance notes
 Prism does not sandbox host tools or extensions. Prism does not read environment variables, keychains, user config files, package manifests, resources, settings providers, credential resolvers, or project-local extensions unless the host explicitly wires those operations. Redaction is exact known-secret replacement only; it is not secret detection. Permission and trust checks are one operation per guarded call and add no workers, watchers, retries, network, or filesystem scans.
@@ -81,6 +81,7 @@ Boundary hardening summary:
 - `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `resolveCredentialValue`
 - `createStaticTrustPolicy`, `assertTrusted`, `isTrusted`, `TrustDeniedError`
 - `createStaticPermissionPolicy`, `assertPermission`, `checkPermission`, `PermissionDeniedError`
+- `ExecutionPolicy`, `assertExecutionAllowed`, `checkExecution`, `ExecutionDeniedError` (core); `@arnilo/prism-coding-security` for coding-tool approval adapters — see [Coding execution approval and sandboxing](coding-security.md)
 - `createSecretRedactor`, `redactMessage`, `redactAgentEvent`, `redactSessionEntry`, `redactProviderRequest`
 - `@arnilo/prism/node/settings`: `defaultUserSettingsPath`, `readSettingsFile`, `loadSettingsFiles`
 - `@arnilo/prism/node/trust`: `createPathTrustPolicy`, `isPathInside`, `isPathInsideReal`

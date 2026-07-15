@@ -1,0 +1,43 @@
+{
+  "name": "@arnilo/prism-sdk",
+  "version": "0.0.4",
+  "description": "Prism application SDK profile with workflows, MCP, Node credentials, and OpenTelemetry.",
+  "license": "MIT",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "files": [
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@arnilo/prism-base": "0.0.4",
+    "@arnilo/prism-credentials-node": "0.0.4",
+    "@arnilo/prism-mcp": "0.0.4",
+    "@arnilo/prism-observability-opentelemetry": "0.0.4",
+    "@arnilo/prism-workflows": "0.0.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-sdk#readme",
+  "keywords": [
+    "prism",
+    "sdk",
+    "umbrella",
+    "workflow",
+    "application"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

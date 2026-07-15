@@ -110,6 +110,7 @@ await kernel.load([
 
 ## Security and performance notes
 
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).
 - No catalog fetch during setup; no automatic environment, file, keychain, or shell
   credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers and

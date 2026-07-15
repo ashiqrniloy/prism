@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createOpenAICompatibleProvider } from "../providers/openai-compatible.js";
 import { assertSerializedRequestCoversContent } from "../testing/provider-conformance.js";
-import type { ProviderEvent, ProviderRequest } from "../index.js";
+import type { ProviderEvent, ProviderRequest, Message } from "../index.js";
 
 function sse(lines: readonly string[]) {
   const encoder = new TextEncoder();
@@ -215,5 +215,46 @@ describe("openai-compatible provider", () => {
     for await (const event of provider.generate(request)) events.push(event);
     assert.equal(events.at(-1)?.type, "done");
     assertSerializedRequestCoversContent(request, body);
+  });
+
+  it("rejects malformed messages with indexed diagnostics and no payload dump", async () => {
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      fetch: okFetch(["[DONE]"]),
+    });
+    const request = {
+      model: { provider: provider.id, model: "demo" },
+      messages: [
+        { role: "user", content: [{ type: "text", text: "ok" }] },
+        "[Circular]" as unknown as Message,
+      ],
+    } satisfies ProviderRequest;
+
+    const events: ProviderEvent[] = [];
+    for await (const event of provider.generate(request)) events.push(event);
+    const errorEvent = events.find((event) => event.type === "error");
+    assert.ok(errorEvent, "expected provider error event");
+    assert.match(String(errorEvent.error?.message ?? errorEvent.error), /Invalid provider message at messages\[1\]: expected object/);
+  });
+
+  it("maps structuredOutput to OpenAI response_format when supported", async () => {
+    let body: Record<string, unknown> | undefined;
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+    const schema = { type: "object", properties: { title: { type: "string" } } };
+    for await (const _ of provider.generate({
+      model: { provider: provider.id, model: "demo", capabilities: { structuredOutput: "json_schema" } },
+      messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+      options: { structuredOutput: { name: "answer", schema, strict: true } },
+    })) { void _; }
+    assert.deepEqual(body?.response_format, {
+      type: "json_schema",
+      json_schema: { name: "answer", schema, strict: true },
+    });
   });
 });

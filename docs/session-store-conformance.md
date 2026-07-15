@@ -7,7 +7,9 @@ Session store conformance helpers are dependency-free assertions for `SessionSto
 Exported from `@arnilo/prism/testing/session-store-conformance`:
 
 - `assertSessionStoreConforms(store, options?)`
+- `runSessionStoreConformance(factory, options?)`
 - `SessionStoreConformanceOptions`
+- `SessionStoreConformanceFactory`
 
 ## When to use it
 
@@ -20,6 +22,9 @@ Use this helper when implementing a DB-backed `SessionStore` (for example, the r
 - branching from any existing entry (existence validation, not tip-CAS)
 - distinct linear appends sharing a run-level `idempotencyKey` are not collapsed
 - optional `readBranchPath` returns the ancestor chain in root-to-leaf order (when `exerciseReadBranchPath: true`)
+- session ids remain isolated (`assertSessionStoreConforms` always probes a secondary session)
+- optional concurrent fork children of the same parent succeed when `exerciseConcurrentParentAppend: true`
+- optional durable reopen/idempotency survival when `runSessionStoreConformance(..., { exerciseReopen: true })`
 
 ## Inputs / request
 
@@ -28,11 +33,21 @@ import { assertSessionStoreConforms } from "@arnilo/prism/testing/session-store-
 import type { SessionStore } from "@arnilo/prism";
 
 await assertSessionStoreConforms(myDbBackedStore, { exerciseReadBranchPath: true });
+
+// Durable adapters: factory reopens the same backing store
+await runSessionStoreConformance(() => createStore(testDatabase), {
+  exerciseReadBranchPath: true,
+  exerciseReopen: true,
+  exerciseConcurrentParentAppend: true,
+});
 ```
 
 `SessionStoreConformanceOptions`:
 - `sessionId?: string` — stable session id for the run (default `"conformance"`)
+- `otherSessionId?: string` — secondary session for isolation probes
 - `exerciseReadBranchPath?: boolean` — also probe `readBranchPath` when implemented
+- `exerciseConcurrentParentAppend?: boolean` — also probe concurrent fork appends
+- `exerciseReopen?: boolean` — only on `runSessionStoreConformance`; reopen via the same factory
 
 ## Outputs / response / events
 
@@ -75,4 +90,5 @@ await assertSessionStoreConforms(createMemorySessionStore());
 - [Session stores and branching](session-stores-and-branching.md)
 - [Session stores](session-stores.md)
 - [Database persistence](database-persistence.md)
+- [Run ledger conformance](run-ledger-conformance.md)
 - [Provider conformance](provider-conformance.md)

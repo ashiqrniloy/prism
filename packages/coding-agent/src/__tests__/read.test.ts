@@ -9,6 +9,7 @@ import {
   createReadTool,
   detectSupportedImageMimeType,
   detectSupportedImageMimeTypeFromFile,
+  DEFAULT_MAX_IMAGE_BYTES,
 } from "../read.js";
 import type { ReadOperations } from "../read.js";
 
@@ -29,9 +30,13 @@ type TruncationMeta = {
 function trunc(r: ToolResult): TruncationMeta | undefined {
   return r.metadata?.truncation as TruncationMeta | undefined;
 }
-type ImageMeta = { mimeType?: string; resized?: boolean };
+type ImageMeta = { mimeType?: string; resized?: boolean; bytes?: number };
 function image(r: ToolResult): ImageMeta | undefined {
   return r.metadata?.image as ImageMeta | undefined;
+}
+function imageData(r: ToolResult): string | undefined {
+  const block = r.content?.find((b) => b.type === "image");
+  return block && block.type === "image" ? block.data : undefined;
 }
 
 async function tmp(): Promise<string> {
@@ -345,4 +350,147 @@ test("aborted signal before read → error result", async () => {
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
+});
+
+test("image within maxImageBytes → ImageContent with byte metadata", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "px.png"), ONE_PX_PNG);
+    const tool = createReadTool(cwd, { maxImageBytes: ONE_PX_PNG.length });
+    const r = await tool.execute({ path: "px.png" }, ctx());
+    assert.equal(r.error, undefined);
+    assert.ok(imageData(r));
+    assert.equal(image(r)?.bytes, ONE_PX_PNG.length);
+    assert.equal(image(r)?.resized, false);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("image over maxImageBytes → error result without image content", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "big.png"), ONE_PX_PNG);
+    const tool = createReadTool(cwd, { maxImageBytes: ONE_PX_PNG.length - 1 });
+    const r = await tool.execute({ path: "big.png" }, ctx());
+    assert.ok(r.error);
+    assert.match(r.error!.message, /exceeds/i);
+    assert.equal(imageData(r), undefined);
+    assert.equal(r.content?.find((b) => b.type === "image"), undefined);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("stat rejects oversize image before readFile is called", async () => {
+  const cwd = await tmp();
+  let readFileCalled = false;
+  const fakeOps: ReadOperations = {
+    readFile: async () => {
+      readFileCalled = true;
+      return ONE_PX_PNG;
+    },
+    access: async () => {},
+    statFile: async () => ({ size: 99_999_999 }),
+    detectImageMimeType: async () => "image/png",
+  };
+  try {
+    const tool = createReadTool(cwd, { operations: fakeOps, maxImageBytes: 100 });
+    const r = await tool.execute({ path: "remote.png" }, ctx());
+    assert.ok(r.error);
+    assert.equal(readFileCalled, false);
+    assert.equal(imageData(r), undefined);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("spoofed extension with PNG magic bytes still uses image path", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "not-really.txt"), ONE_PX_PNG);
+    const tool = createReadTool(cwd);
+    const r = await tool.execute({ path: "not-really.txt" }, ctx());
+    assert.equal(r.error, undefined);
+    assert.equal(r.content?.[1]?.type, "image");
+    assert.equal(image(r)?.mimeType, "image/png");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("transformImage callback runs and marks resized metadata", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "px.png"), ONE_PX_PNG);
+    const transformed = Buffer.from("smaller");
+    const tool = createReadTool(cwd, {
+      transformImage: async ({ buffer, mimeType }) => {
+        assert.equal(mimeType, "image/png");
+        assert.equal(buffer.equals(ONE_PX_PNG), true);
+        return transformed;
+      },
+    });
+    const r = await tool.execute({ path: "px.png" }, ctx());
+    assert.equal(r.error, undefined);
+    assert.equal(imageData(r), transformed.toString("base64"));
+    assert.equal(image(r)?.resized, true);
+    assert.equal(image(r)?.bytes, transformed.length);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("transformImage failure → error result without image content", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "px.png"), ONE_PX_PNG);
+    const tool = createReadTool(cwd, {
+      transformImage: async () => {
+        throw new Error("resize failed");
+      },
+    });
+    const r = await tool.execute({ path: "px.png" }, ctx());
+    assert.ok(r.error);
+    assert.match(r.error!.message, /resize failed/);
+    assert.equal(imageData(r), undefined);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("transformed image over maxImageBytes → error result", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "px.png"), ONE_PX_PNG);
+    const inflated = Buffer.alloc(ONE_PX_PNG.length + 100);
+    const tool = createReadTool(cwd, {
+      maxImageBytes: ONE_PX_PNG.length,
+      transformImage: async () => inflated,
+    });
+    const r = await tool.execute({ path: "px.png" }, ctx());
+    assert.ok(r.error);
+    assert.match(r.error!.message, /Transformed image/i);
+    assert.equal(imageData(r), undefined);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("autoResizeImages without transformImage is ignored (deprecated no-op)", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "px.png"), ONE_PX_PNG);
+    const tool = createReadTool(cwd, { autoResizeImages: true });
+    const r = await tool.execute({ path: "px.png" }, ctx());
+    assert.equal(r.error, undefined);
+    assert.equal(imageData(r), ONE_PX_PNG.toString("base64"));
+    assert.equal(image(r)?.resized, false);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("DEFAULT_MAX_IMAGE_BYTES is 10 MB", () => {
+  assert.equal(DEFAULT_MAX_IMAGE_BYTES, 10_000_000);
 });

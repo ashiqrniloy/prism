@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-compaction-observational-memory",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Observational memory compaction package for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.3"
+    "@arnilo/prism": "0.0.4"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

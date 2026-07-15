@@ -37,20 +37,45 @@ export function redactSecrets<T>(value: T, secrets: readonly (string | undefined
   const redactString = (text: string) =>
     needles.reduce((current, secret) => current.split(secret).join(REDACTED), text);
 
-  // ponytail: WeakSet cycle guard + leaf passthrough for Date/RegExp/ArrayBuffer/typed
-  // arrays. Map/Set are normalized to plain object/array so output stays JSON-shaped.
-  // Upgrade path: if callers need original Map/Set preserved, thread a mode flag.
-  const redact = (input: unknown, seen: WeakSet<object> = new WeakSet()): unknown => {
+  const redactKey = (key: unknown): string => {
+    if (typeof key === "string") return redactString(key);
+    return String(key);
+  };
+
+  const assignKey = (target: Record<string, unknown>, key: string, value: unknown): void => {
+    if (!Object.prototype.hasOwnProperty.call(target, key)) {
+      target[key] = value;
+      return;
+    }
+    let suffix = 2;
+    while (Object.prototype.hasOwnProperty.call(target, `${key}__${suffix}`)) suffix += 1;
+    target[`${key}__${suffix}`] = value;
+  };
+
+  // ponytail: active-path WeakSet marks only ancestor cycles as [Circular]; shared
+  // references (diamonds) are visited again on separate branches. Map/Set normalize
+  // to JSON-shaped output; string keys are redacted like values.
+  const redact = (input: unknown, active: WeakSet<object> = new WeakSet()): unknown => {
     if (typeof input === "string") return redactString(input);
     if (input === null || typeof input !== "object") return input;
     if (input instanceof Date || input instanceof RegExp) return input;
     if (ArrayBuffer.isView(input) || input instanceof ArrayBuffer) return input;
-    if (seen.has(input)) return "[Circular]";
-    seen.add(input);
-    if (Array.isArray(input)) return input.map((item) => redact(item, seen));
-    if (input instanceof Map) return Object.fromEntries([...input].map(([key, item]) => [key, redact(item, seen)]));
-    if (input instanceof Set) return [...input].map((item) => redact(item, seen));
-    return Object.fromEntries(Object.entries(input).map(([key, item]) => [key, redact(item, seen)]));
+    if (active.has(input)) return "[Circular]";
+    active.add(input);
+    try {
+      if (Array.isArray(input)) return input.map((item) => redact(item, active));
+      if (input instanceof Map) {
+        const out: Record<string, unknown> = {};
+        for (const [key, item] of input) assignKey(out, redactKey(key), redact(item, active));
+        return out;
+      }
+      if (input instanceof Set) return [...input].map((item) => redact(item, active));
+      const out: Record<string, unknown> = {};
+      for (const [key, item] of Object.entries(input)) assignKey(out, redactKey(key), redact(item, active));
+      return out;
+    } finally {
+      active.delete(input);
+    }
   };
 
   return redact(value) as T;

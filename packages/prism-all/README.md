@@ -1,37 +1,32 @@
 # @arnilo/prism-all
 
-Umbrella package that installs the **Prism core runtime** plus all first-party **provider adapters** and **compaction strategies** in one dependency.
+Complete Prism umbrella. It installs every first-party package through the coding, application SDK, provider, and persistence profiles.
 
-## What it installs
-
-- [`@arnilo/prism`](https://www.npmjs.com/package/@arnilo/prism) — core runtime, contracts, registries, CLI
-- [`@arnilo/prism-providers`](https://www.npmjs.com/package/@arnilo/prism-providers) — all 6 provider adapters (openai, opencode-go, openrouter, zai, kimi, neuralwatt)
-- [`@arnilo/prism-compaction`](https://www.npmjs.com/package/@arnilo/prism-compaction) — both compaction strategies (llm, observational-memory)
-
-## Usage
+## Install
 
 ```bash
 npm install @arnilo/prism-all
 ```
 
-This is a pure manifest package (no code, no exports). Imports come from the individual packages:
+## Included profiles
 
-```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
-```
+- `@arnilo/prism-code` — base runtime, compaction, JSON Schema validation, coding tools/security, and MCP
+- `@arnilo/prism-sdk` — base runtime, workflows, MCP, Node credentials, and OpenTelemetry
+- `@arnilo/prism-providers` — all six first-party provider adapters: OpenAI, OpenCode Go, OpenRouter, Z.AI, Kimi, and `@arnilo/prism-provider-neuralwatt`
+- `@arnilo/prism-session-store-sqlite` and `@arnilo/prism-session-store-postgres`
 
-## Graduated installs
+Shared packages are deduplicated by npm. This is a pure manifest package with no exports; import APIs from their owning packages.
 
-If you do not need the full kit, install only what you use:
+Installing this package does not activate providers, network transports, telemetry, database connections, or shell/filesystem tools. Hosts must explicitly configure and register those capabilities, including credentials, trusted roots, permissions, approval policies, and MCP transports.
 
-| Want | Install |
-|------|---------|
-| Core runtime only | `@arnilo/prism` |
-| Core + all providers | `@arnilo/prism` + `@arnilo/prism-providers` |
-| Core + compaction | `@arnilo/prism` + `@arnilo/prism-compaction` |
+## Smaller installs
+
+| Need | Install |
+| --- | --- |
+| Minimal safe runtime | `@arnilo/prism-base` |
+| Coding agent | `@arnilo/prism-code` + chosen provider |
+| Application SDK | `@arnilo/prism-sdk` + chosen provider and persistence adapter |
+| Every first-party provider | `@arnilo/prism-providers` |
 | Everything | `@arnilo/prism-all` |
 
-## License
-
-MIT
+See [Release and install](../../docs/release-and-install.md) for atomic imports, package contents, limits, and release gates.

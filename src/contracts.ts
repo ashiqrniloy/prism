@@ -5,6 +5,7 @@ import type { SecretRedactor } from "./redaction.js";
 import type { PermissionPolicy } from "./security.js";
 import type { ManifestContributionDeclaration } from "./manifests.js";
 import type { ToolValidator } from "./tools.js";
+import type { AudioContent, DocumentContent, FileContent } from "./content.js";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -19,9 +20,14 @@ export interface ErrorInfo {
   readonly cause?: unknown;
 }
 
+export type { AudioContent, DocumentContent, FileContent } from "./content.js";
+
 export type ContentBlock =
   | TextContent
   | ImageContent
+  | AudioContent
+  | FileContent
+  | DocumentContent
   | ThinkingContent
   | ToolCallDeltaContent
   | ToolCallContent
@@ -37,6 +43,9 @@ export interface ImageContent {
   readonly mimeType?: string;
   readonly data?: string;
   readonly url?: string;
+  readonly resourceUri?: string;
+  readonly name?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 export interface ThinkingContent {
@@ -89,11 +98,14 @@ export interface ModelConfig {
 }
 
 export interface ModelCapabilities {
+  /** Known values include `text`, `image`, `audio`, `file`, and `document`. */
   readonly input?: readonly string[];
   readonly output?: readonly string[];
   readonly reasoning?: boolean;
   readonly tools?: boolean;
   readonly streaming?: boolean;
+  /** Native JSON-schema structured output support for this model. */
+  readonly structuredOutput?: boolean | "json_schema";
 }
 
 export interface ModelLimits {
@@ -148,6 +160,12 @@ export interface PromptCacheHints {
   readonly breakpoints?: readonly PromptCacheBreakpoint[];
 }
 
+export interface StructuredOutputOptions {
+  readonly name: string;
+  readonly schema: JsonObject;
+  readonly strict?: boolean;
+}
+
 export interface ProviderRequestOptions {
   readonly sessionId?: string;
   readonly cacheRetention?: CacheRetention;
@@ -162,6 +180,8 @@ export interface ProviderRequestOptions {
   readonly maxRetryDelayMs?: number;
   readonly compat?: JsonObject;
   readonly extra?: JsonObject;
+  /** Provider-neutral JSON-schema structured output request. Requires model `capabilities.structuredOutput`. */
+  readonly structuredOutput?: StructuredOutputOptions;
 }
 
 export interface ProviderRequest {
@@ -331,19 +351,37 @@ export interface AgentSession {
   clone(options?: AgentSessionCloneOptions): Promise<AgentSession>;
 }
 
+export interface ProviderTurnMetadata {
+  readonly providerId: string;
+  readonly model: ModelConfig;
+  readonly requestId?: string;
+  readonly latencyMs?: number;
+  readonly attempt?: number;
+  readonly httpStatus?: number;
+  readonly rateLimitRemaining?: number;
+  readonly rateLimitResetMs?: number;
+}
+
+export interface ToolExecutionMetadata {
+  readonly durationMs: number;
+  readonly status: ToolCallStatus;
+}
+
 export type AgentEvent =
   | { readonly type: "agent_started"; readonly sessionId: string; readonly runId: string }
   | { readonly type: "agent_finished"; readonly sessionId: string; readonly runId: string; readonly usage?: Usage }
   | { readonly type: "turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number }
   | { readonly type: "turn_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number }
+  | { readonly type: "provider_turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly metadata: ProviderTurnMetadata }
+  | { readonly type: "provider_turn_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly metadata: ProviderTurnMetadata; readonly usage?: Usage; readonly error?: ErrorInfo }
   | { readonly type: "message_started"; readonly sessionId: string; readonly runId: string; readonly message: Message }
   | { readonly type: "message_delta"; readonly sessionId: string; readonly runId: string; readonly content: ContentBlock }
   | { readonly type: "message_finished"; readonly sessionId: string; readonly runId: string; readonly message: Message }
   | { readonly type: "tool_execution_started"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent }
   | { readonly type: "tool_execution_progress"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly progress?: unknown; readonly metadata?: Readonly<Record<string, unknown>> }
-  | { readonly type: "tool_execution_finished"; readonly sessionId: string; readonly runId: string; readonly result: ToolResult }
-  | { readonly type: "tool_execution_error"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent; readonly error: ErrorInfo }
-  | { readonly type: "tool_execution_blocked"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly reason: string; readonly error: ErrorInfo }
+  | { readonly type: "tool_execution_finished"; readonly sessionId: string; readonly runId: string; readonly result: ToolResult; readonly metadata: ToolExecutionMetadata }
+  | { readonly type: "tool_execution_error"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent; readonly error: ErrorInfo; readonly metadata: ToolExecutionMetadata }
+  | { readonly type: "tool_execution_blocked"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly reason: string; readonly error: ErrorInfo; readonly metadata: ToolExecutionMetadata }
   | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
   | { readonly type: "event_subscriber_overflow"; readonly sessionId: string; readonly runId?: string; readonly droppedEvents: number; readonly maxQueuedEvents: number; readonly overflow: SubscriberOverflowPolicy }
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
@@ -360,6 +398,8 @@ export interface ToolDefinition {
   readonly name: string;
   readonly description?: string;
   readonly parameters?: JsonObject;
+  /** Force any provider turn containing this tool to dispatch sequentially. */
+  readonly exclusive?: boolean;
   execute(args: JsonObject, context: ToolExecutionContext): Promise<ToolResult> | ToolResult;
 }
 
@@ -599,6 +639,8 @@ export interface OAuthLoginCallbacks {
   onDeviceCode?(code: { readonly userCode: string; readonly verificationUri: string; readonly expiresAt?: string }): void | Promise<void>;
   onPrompt?(message: string): string | undefined | Promise<string | undefined>;
   onSelect?(prompt: { readonly message: string; readonly choices: readonly string[] }): string | undefined | Promise<string | undefined>;
+  /** Aborts OAuth login flows and device-code polling when signaled. */
+  readonly signal?: AbortSignal;
 }
 
 export interface OAuthCredentials {
@@ -841,6 +883,91 @@ export interface PersistenceQuery {
   readonly cursor?: string;
   readonly limit?: number;
   readonly order?: "asc" | "desc";
+}
+
+/** Generic versioned checkpoint key. Namespaces prevent consumer collisions. */
+export interface CheckpointKey extends OwnershipScope {
+  readonly namespace: string;
+  readonly key: string;
+  readonly signal?: AbortSignal;
+}
+
+/** Input for an optimistic checkpoint write. Versions must strictly increase. */
+export interface CheckpointSaveInput extends CheckpointKey {
+  readonly version: number;
+  /** Exact current version required before update; use 0 for create-only. */
+  readonly expectedVersion?: number;
+  /** Monotonic lease fence. Lower or absent worker fences cannot replace a fenced record. */
+  readonly fencingToken?: number;
+  readonly value: unknown;
+  readonly category?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Durable generic checkpoint record. */
+export interface CheckpointRecord extends OwnershipScope {
+  readonly namespace: string;
+  readonly key: string;
+  readonly version: number;
+  readonly fencingToken?: number;
+  readonly value: unknown;
+  readonly category?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Bounded checkpoint query. */
+export interface CheckpointQuery extends PersistenceQuery, OwnershipScope {
+  readonly namespace?: string;
+  readonly keyPrefix?: string;
+  readonly category?: string | readonly string[];
+  readonly signal?: AbortSignal;
+}
+
+/** Generic versioned checkpoint capability for persistence adapters. */
+export interface CheckpointStore {
+  saveCheckpoint(input: CheckpointSaveInput): Promise<CheckpointRecord>;
+  loadCheckpoint(input: CheckpointKey): Promise<CheckpointRecord | null>;
+  listCheckpoints(query?: CheckpointQuery): Promise<PersistencePage<CheckpointRecord>>;
+  deleteCheckpoint(input: CheckpointKey): Promise<boolean>;
+}
+
+/** Generic lease key. Ownership fields are part of the trust boundary. */
+export interface LeaseKey extends OwnershipScope {
+  readonly namespace: string;
+  readonly key: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface LeaseAcquireInput extends LeaseKey {
+  readonly ownerId: string;
+  readonly ttlMs: number;
+}
+
+export interface LeaseClaimInput extends LeaseKey {
+  readonly ownerId: string;
+  readonly token: string;
+  readonly ttlMs?: number;
+}
+
+export interface LeaseRecord extends OwnershipScope {
+  readonly namespace: string;
+  readonly key: string;
+  readonly ownerId: string;
+  readonly token: string;
+  readonly fencingToken: number;
+  readonly acquiredAt: string;
+  readonly expiresAt: string;
+  readonly updatedAt: string;
+}
+
+/** Atomic distributed lease capability. Expired rows retain fencing counters. */
+export interface LeaseStore {
+  tryAcquireLease(input: LeaseAcquireInput): Promise<LeaseRecord | null>;
+  renewLease(input: LeaseClaimInput & { readonly ttlMs: number }): Promise<LeaseRecord | null>;
+  releaseLease(input: LeaseClaimInput): Promise<boolean>;
+  getLease(input: LeaseKey): Promise<LeaseRecord | null>;
 }
 
 /** Stored session record. Does not include provider objects or credentials. */
@@ -1093,11 +1220,15 @@ export interface MigrationQuery extends PersistenceQuery {
  * Production database-neutral persistence store contract.
  * Hosts implement this interface to provide durable, paginated storage
  * for sessions, entries, runs, events, tool calls, usage, agent definitions,
- * and migrations. No SQL client, ORM, host file storage, or network dependency is
+ * and migrations, with optional generic checkpoint and atomic lease capabilities. No SQL client, ORM, host file storage, or network dependency is
  * required by the contract.
  */
 export interface ProductionPersistenceStore {
   readonly name?: string;
+  /** Optional generic write capability for resumable consumers such as workflows. */
+  readonly checkpoints?: CheckpointStore;
+  /** Optional atomic distributed lease capability for coordinators and workers. */
+  readonly leases?: LeaseStore;
   querySessions(query: SessionQuery): Promise<PersistencePage<SessionRecord>>;
   queryBranches(query: BranchQuery): Promise<PersistencePage<BranchRecord>>;
   queryEntries(query: SessionEntryQuery): Promise<PersistencePage<SessionEntry>>;
@@ -1264,9 +1395,12 @@ export interface LoopContext {
   readonly input: AgentInput;
   readonly inputMessages: readonly Message[];
   readonly maxToolRounds: number;
+  /** Maximum independent tool calls dispatched concurrently per provider turn. Default `1`. */
+  readonly toolConcurrency: number;
   assemble(nextInput: AgentInput, toolResults?: readonly ToolResult[], turn?: number): Promise<ProviderRequest>;
   generate(request: ProviderRequest): Promise<ProviderTurnResult>;
   dispatchToolCall(call: ToolCallContent): Promise<ToolResult>;
+  isToolCallExclusive?(call: ToolCallContent): boolean;
   appendMessage(message: Message): Promise<void>;
   emit(event: AgentEvent): void;
 }
@@ -1277,13 +1411,21 @@ export interface AgentLoopStrategy {
 }
 
 export type AgentLoopOptions =
-  | { readonly strategy: "single-shot" }
+  | {
+      readonly strategy: "single-shot";
+      /** Independent tool calls per turn run concurrently up to this limit. Default `1` (sequential). */
+      readonly toolConcurrency?: number;
+    }
   | {
       readonly strategy: "generate-validate-revise";
       readonly validator: ArtifactValidator<unknown>;
       readonly parser?: ArtifactParser<unknown>;
       readonly repairer?: ArtifactRepairer<unknown>;
       readonly maxRevisions?: number;
+      /** Native provider JSON-schema output. Ignored when `structuredOutputMode` is `artifact-loop`. */
+      readonly structuredOutput?: StructuredOutputOptions;
+      /** `native` maps schema to capable providers; `artifact-loop` keeps repair turns only. */
+      readonly structuredOutputMode?: "native" | "artifact-loop";
     };
 
 export interface ArtifactValidation {

@@ -18,11 +18,13 @@ import { Buffer } from "node:buffer";
 import { mkdir as fsMkdir, writeFile as fsWriteFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
+  ExecutionPolicy,
   JsonObject,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
 } from "@arnilo/prism";
+import { enforceExecutionPolicy } from "./execution-policy.js";
 import { resolveToCwd } from "./path-utils.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 
@@ -38,6 +40,8 @@ export interface WriteOperations {
 }
 
 export interface WriteToolOptions {
+  /** Structured pre-execution policy checked before filesystem writes. */
+  executionPolicy?: ExecutionPolicy;
   /** Custom operations backend (default: local filesystem). */
   operations?: WriteOperations;
 }
@@ -92,15 +96,30 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
 
       try {
         const absolutePath = resolveToCwd(path, cwd);
-        const dir = dirname(absolutePath);
 
-        return await withFileMutationQueue(absolutePath, async () => {
+        const policyCheck = await enforceExecutionPolicy(
+          options?.executionPolicy,
+          {
+            kind: "write",
+            operation: "write",
+            paths: [absolutePath],
+            risk: "medium",
+            metadata: { bytes: Buffer.byteLength(content, "utf-8"), signal: context.signal },
+          },
+          toolCallId,
+          "write",
+        );
+        if (!policyCheck.allowed) return policyCheck.result;
+        const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
+        const dir = dirname(allowedPath);
+
+        return await withFileMutationQueue(allowedPath, async () => {
           // Check abort before each fs op — do not start a new operation once aborted. We intentionally
           // do NOT throw from an abort listener: that could release the mutation queue mid-operation.
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
           await ops.mkdir(dir);
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
-          await ops.writeFile(absolutePath, content);
+          await ops.writeFile(allowedPath, content);
 
           const bytes = Buffer.byteLength(content, "utf-8");
           const lines = countLines(content);
@@ -110,10 +129,10 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
             content: [
               {
                 type: "text",
-                text: `Successfully wrote ${bytes} bytes (${lines} lines) to ${absolutePath}`,
+                text: `Successfully wrote ${bytes} bytes (${lines} lines) to ${allowedPath}`,
               },
             ],
-            metadata: { bytes, lines, path: absolutePath },
+            metadata: { bytes, lines, path: allowedPath },
           };
         });
       } catch (error) {

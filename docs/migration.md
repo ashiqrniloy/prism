@@ -2,12 +2,12 @@
 
 ## What it does
 
-This page is the single navigation entry for the two cross-cutting migrations external apps hit when moving from Prism's development defaults to its production persistence and explicit-capability surfaces:
+Prism 0.0.4 is source-compatible with documented 0.0.3 agent construction; no mandatory code migration is required. New capabilities are additive and inactive until configured. This page covers two optional adoption paths:
 
-1. **In-memory / JSONL → database-backed persistence** — swap the single-process development `SessionStore` for a host-implemented `ProductionPersistenceStore` / `SessionStore` adapter, and optionally attach a durable `RunLedger`.
-2. **Permissive capability defaults → explicit capability activation** — move from "omitted tool/skill lists activate everything in scope" (pre-Phase 38 behavior) to named, fail-closed tool/skill activation.
+1. **In-memory / JSONL → database-backed persistence** — replace the single-process development `SessionStore` with `@arnilo/prism-session-store-sqlite`, `@arnilo/prism-session-store-postgres`, or a host implementation, and optionally attach its durable `RunLedger`.
+2. **Legacy permissive capability configuration → explicit activation** — name tools/skills and keep omitted capabilities fail-closed.
 
-It is a thin, link-first guide: it states before/after shapes and points at the detailed pages for schema, indexes, redaction, branch handles, capability semantics, and security.
+It states before/after shapes and links detailed schema, redaction, branch, capability, and security guidance.
 
 ## When to use it
 
@@ -15,7 +15,7 @@ Read this page when:
 
 - you are taking an app from the `createMemorySessionStore()` / `createJsonlSessionStore()` path to a multi-process, multi-tenant, or durable database backend;
 - you are hardening an agent that previously relied on "every scoped tool/skill is active" and need to name capabilities explicitly;
-- you are adopting the Phase 34–40 production surfaces (atomic append, branch handles, run/event/tool/usage ledger, security boundary hardening) for the first time.
+- you are adopting 0.0.4 persistence, checkpoints/leases, workflows, structured output, multimodality, or explicit tool safety for the first time.
 
 If you are new to Prism, start at [Session stores](session-stores.md) and [Agent/session runtime](agent-session-runtime.md) instead.
 
@@ -26,6 +26,8 @@ There is no runtime import for this page. The migrations below use these surface
 | Surface | Where | Migration role |
 | --- | --- | --- |
 | `SessionStore` | `@arnilo/prism` | Runtime seam swapped from memory/JSONL to DB. |
+| `createSqlitePersistence` | `@arnilo/prism-session-store-sqlite` | Local durable session, ledger, query, checkpoint, and lease adapter. |
+| `createPostgresPersistence` | `@arnilo/prism-session-store-postgres` | Multi-process pooled persistence with advisory-lock migrations. |
 | `ProductionPersistenceStore` | `@arnilo/prism` | Adapter-facing contract for paginated, multi-tenant reads (`query*`, optional `readBranchPath`). |
 | `RunLedger` / `RunLedgerRecord` | `@arnilo/prism` | Durable run/event/tool-call/usage ledger attached via `AgentConfig.runLedger` / `RunOptions.runLedger`. |
 | `SessionAppendOptions` / `SessionAppendConflictError` / `SessionBranchHandle` | `@arnilo/prism` | Atomic append, retry dedup, durable branch handles. |
@@ -77,33 +79,22 @@ Capability migration (before/after):
 
 ### Migration 1 — in-memory / JSONL → database-backed persistence
 
-A complete, network-free reference adapter that implements these contracts against in-memory tables (and wires a `RunLedger`, branch-handle checkout, fork, and prior-run timeline resume) lives at [`examples/external-app-db-backed.ts`](../examples/external-app-db-backed.ts). The steps below mirror its structure.
+Runnable references: [`examples/workflow-sqlite-resume.ts`](../examples/workflow-sqlite-resume.ts), credential-gated [`examples/workflow-postgres-resume.ts`](../examples/workflow-postgres-resume.ts), and the network-free custom-adapter example [`examples/external-app-db-backed.ts`](../examples/external-app-db-backed.ts).
 
-Step 1: implement a `SessionStore` (or the richer `ProductionPersistenceStore`) against your database. The runtime only requires `append(entry, options?)`, `list(sessionId)`, and optional `get(id)` / `readBranchPath(query)`.
+Step 1: replace the development store with a first-party adapter. Use PostgreSQL instead when multiple processes or sustained concurrent writers matter.
 
 ```ts
 // Before: development store, single process.
 import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl";
-const store = createJsonlSessionStore("./sessions.jsonl");
+const oldStore = createJsonlSessionStore("./sessions.jsonl");
 
-// After: host-implemented database adapter implementing the documented contract, no real DB needed to satisfy the contract.
-import type { SessionStore, SessionEntry, SessionAppendOptions, PersistencePage, SessionBranchRead } from "@arnilo/prism";
-
-const store: SessionStore = {
-  async append(entry: SessionEntry, options?: SessionAppendOptions) {
-    // 1. idempotency dedup: insert (session_id, expected_parent_id, idempotency_key, entry_id)
-    //    into prism_session_append_idempotency; unique hit => SessionAppendConflictError { idempotencyDuplicate: true }
-    // 2. expectedParentId existence check => SessionAppendConflictError { expectedParentId } if missing
-    // 3. insert prism_session_entries row; duplicate id fails the transaction
-    // 4. optionally compare-and-swap prism_branches.leaf_entry_id
-  },
-  async list(sessionId: string) { /* O(n) development fallback only */ return []; },
-  async readBranchPath(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>> {
-    // one recursive CTE / ancestor query — do NOT list(sessionId)+in-memory walk for long sessions
-    return { items: [] };
-  },
-};
+// After: local durable adapter. The same object implements SessionStore,
+// RunLedger, ProductionPersistenceStore, checkpoints, and leases.
+import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+const store = createSqlitePersistence({ filename: "./prism.db" });
 ```
+
+Custom adapters remain supported through `SessionStore` / `ProductionPersistenceStore`; implement indexed `readBranchPath()` rather than full-session scans.
 
 Step 2: optionally attach a durable run/event/tool/usage ledger and ownership scope so a process exit leaves enough to resume and bill:
 
@@ -174,7 +165,7 @@ Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per
 
 ## Extension and configuration notes
 
-- **Persistence is host-owned.** Prism ships no database adapter, no DDL, no migration runner. Hosts own connection pools, transactions, cursor encoding, retention jobs, and tenant isolation. The runtime only talks to `SessionStore` (+ optional `readBranchPath`) and `RunLedger`.
+- **Persistence remains host-configured.** Optional SQLite/PostgreSQL packages ship adapters and versioned setup, but hosts choose connection paths/pools, TLS, credentials, retention, tenant policy, and lifecycle. Core only consumes `SessionStore`, `RunLedger`, checkpoint, and lease contracts.
 - **`RunLedger` is not a `SessionStore` replacement.** Messages, branches, and session entries still flow through `SessionStore.append()`; the ledger records run/event/tool/usage facts. See [Runs and usage ledger](runs-and-usage.md).
 - **Capability activation is config over code.** Every seam lives on `AgentDefinition` / `AgentDefinitionResolutionContext` / `RunOptions`; no auto-activation, no privilege grant. A declaration cannot grant permissions or bypass `toolNames`.
 - **Migration order is decoupled.** You can adopt database persistence without changing capability activation, and vice versa. Both migrations are independent config swaps.
@@ -190,7 +181,9 @@ Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per
 
 ## Related APIs
 
-- [Database persistence](database-persistence.md): production persistence contracts, reference schema, indexes, conditional append, retention, migrations, NoSQL mapping.
+- [Database persistence](database-persistence.md): production contracts, reference schema, indexes, conditional append, retention, migrations, and custom adapters.
+- [SQLite persistence](sqlite-persistence.md): local durable first-party adapter and writer ceiling.
+- [PostgreSQL persistence](postgres-persistence.md): pooled multi-process adapter, TLS/pool ownership, and live gate.
 - [Session stores](session-stores.md): `SessionStore` contract, `SessionAppendOptions`, `SessionAppendConflictError`, branch handles, `readBranchPath`.
 - [Session stores and branching](session-stores-and-branching.md): detailed branch semantics and helper reference.
 - [Runs and usage ledger](runs-and-usage.md): `RunLedger` record shapes, redaction, and event/usage ordering.

@@ -10,7 +10,7 @@ export interface ZaiModelConfig extends Omit<ModelConfig, "provider" | "compat">
 }
 
 export function defineZaiModel(config: ZaiModelConfig): ModelConfig {
-  return { ...config, provider: "zai", capabilities: { input: ["text"], output: ["text"], reasoning: true, tools: true, streaming: true, ...config.capabilities } };
+  return { ...config, provider: "zai", capabilities: { input: ["text"], output: ["text"], reasoning: true, tools: true, streaming: true, structuredOutput: "json_schema", ...config.capabilities } };
 }
 
 export const zaiModels = [

@@ -65,7 +65,11 @@ function blockText(block: ContentBlock): string {
   if (block.type === "tool_call") return `[tool_call ${block.name}]`;
   if (block.type === "tool_call_delta") return `[tool_call_delta ${block.name ?? block.index}]`;
   if (block.type === "tool_result") return `[tool_result ${block.name}]`;
-  return "[image]";
+  if (block.type === "image") return "[image]";
+  if (block.type === "audio") return "[audio]";
+  if (block.type === "file") return "[file]";
+  if (block.type === "document") return "[document]";
+  return "[content]";
 }
 
 function truncate(text: string, max: number): string {

@@ -1,7 +1,9 @@
-import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
-import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
+import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
+import { applyOpenAIChatStructuredOutput, serializeOpenAITool } from "@arnilo/prism/providers/openai";
+import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
+import { parseJsonObjectArguments, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { applyOpenRouterCacheControl, openRouterSessionId, openRouterUsage, type OpenRouterUsage } from "./cache.js";
-import { readSseData } from "./sse.js";
 
 export interface OpenRouterProviderOptions {
   readonly id?: string;
@@ -38,9 +40,14 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
           body: JSON.stringify(openRouterBody(request, sessionId)),
           signal: request.signal,
         });
-        if (!response.ok) return yield providerError(new Error(`OpenRouter request failed: ${response.status} ${await safeText(response)}`), secrets);
+        if (!response.ok) {
+          return yield providerError(
+            new Error(`OpenRouter request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
+            secrets,
+          );
+        }
         if (!response.body) return yield providerError(new Error("OpenRouter response had no body"), secrets);
-        yield* openRouterEvents(response.body);
+        yield* openRouterEvents(response.body, request.signal);
       } catch (error) {
         yield providerError(error, secrets);
       }
@@ -49,14 +56,15 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
 }
 
 export function openRouterBody(request: ProviderRequest, sessionId = openRouterSessionId(request.options)): JsonObject {
+  assertStructuredOutputRequestSupported(request.model, request.options);
   const routing = request.model.compat?.openRouterRouting;
   const reasoning = request.options?.compat?.reasoning ?? request.model.compat?.reasoning;
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const messages = applyOpenRouterCacheControl(request);
-  return clean({
+  const body: Record<string, unknown> = {
     model: request.model.model,
-    messages: messages.map((message) => toOpenRouterMessage(message, request.model.capabilities ?? {})),
-    tools: request.tools?.map(toTool),
+    messages: messages.map((message) => toOpenRouterMessage(message, request.model)),
+    tools: request.tools?.map(serializeOpenAITool),
     stream: true,
     stream_options: { include_usage: true },
     provider: routing,
@@ -66,10 +74,13 @@ export function openRouterBody(request: ProviderRequest, sessionId = openRouterS
     max_tokens: maxTokens,
     ...request.options?.compat,
     ...request.options?.extra,
-  });
+  };
+  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
+  return clean(body);
 }
 
-function toOpenRouterMessage(message: CacheControlledMessage, capabilities: ModelCapabilities = {}): JsonObject {
+function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig): JsonObject {
+  const capabilities = model.capabilities ?? {};
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return {
@@ -105,6 +116,8 @@ function toOpenRouterMessage(message: CacheControlledMessage, capabilities: Mode
       const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
       if (!url) throw new Error("OpenRouter image block missing url or data");
       content.push(withMarker({ type: "image_url", image_url: { url } }, part.cache_control as JsonObject | undefined));
+    } else if (part.type === "audio" || part.type === "file" || part.type === "document") {
+      rejectProviderMediaBlock(part, capabilities, model);
     } else if (part.type === "tool_call") {
       throw new Error("OpenRouter assistant tool_call blocks must be the only content on the message");
     } else if (part.type === "tool_result") {
@@ -122,10 +135,10 @@ function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObjec
   return marker ? { ...item, cache_control: marker } : item;
 }
 
-export async function* openRouterEvents(body: ReadableStream<Uint8Array>): AsyncIterable<ProviderEvent> {
+export async function* openRouterEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const tools = new Map<number, ToolAccumulator>();
   let usage;
-  for await (const data of readSseData(body)) {
+  for await (const data of readSseData(body, { signal })) {
     if (data === "[DONE]") break;
     const chunk = JSON.parse(data) as OpenRouterChunk;
     const mapped = openRouterUsage(chunk.usage);
@@ -149,18 +162,16 @@ export async function* openRouterEvents(body: ReadableStream<Uint8Array>): Async
       }
     }
   }
-  for (const call of tools.values()) if (call.id && call.name) yield providerToolCall(toolCallContent(call.id, call.name, parseArgs(call.argumentsText)));
+  for (const call of tools.values()) {
+    if (call.id && call.name) {
+      yield providerToolCall(toolCallContent(
+        call.id,
+        call.name,
+        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
+      ));
+    }
+  }
   yield providerDone(usage);
-}
-
-function toTool(tool: ToolDefinition): JsonObject {
-  return clean({ type: "function", function: { name: tool.name, description: tool.description, parameters: tool.parameters ?? { type: "object" } } });
-}
-
-function parseArgs(text: string): JsonObject {
-  if (!text) return {};
-  const parsed = JSON.parse(text) as unknown;
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as JsonObject : {};
 }
 
 function clean(value: Record<string, unknown>): JsonObject {
@@ -169,10 +180,6 @@ function clean(value: Record<string, unknown>): JsonObject {
 
 function cleanHeaders(value: Record<string, string | undefined>): Record<string, string> {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Record<string, string>;
-}
-
-async function safeText(response: Response): Promise<string> {
-  try { return await response.text(); } catch { return ""; }
 }
 
 interface OpenRouterChunk {

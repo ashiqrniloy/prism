@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-07-14
+
+### Changed
+
+- Uses shared bounded transport/OpenAI helpers with GLM thinking/reasoning, structured-output, multimodal, tool-stream, telemetry, and protected-header behavior documented per model.
+
 ## [0.0.2] - 2026-07-05
 
 ### Added

@@ -23,11 +23,13 @@ import { Buffer } from "node:buffer";
 import { access as fsAccess, readFile as fsReadFile, writeFile as fsWriteFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import type {
+  ExecutionPolicy,
   JsonObject,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
 } from "@arnilo/prism";
+import { enforceExecutionPolicy } from "./execution-policy.js";
 import { resolveToCwd } from "./path-utils.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import {
@@ -69,6 +71,8 @@ export interface EditOperations {
 }
 
 export interface EditToolOptions {
+  /** Structured pre-execution policy checked before filesystem writes. */
+  executionPolicy?: ExecutionPolicy;
   /** Custom operations backend (default: local filesystem). */
   operations?: EditOperations;
 }
@@ -174,12 +178,27 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
       try {
         const absolutePath = resolveToCwd(prepared.path, cwd);
 
-        return await withFileMutationQueue(absolutePath, async () => {
+        const policyCheck = await enforceExecutionPolicy(
+          options?.executionPolicy,
+          {
+            kind: "edit",
+            operation: "edit",
+            paths: [absolutePath],
+            risk: "medium",
+            metadata: { editCount: edits.length, signal: context.signal },
+          },
+          toolCallId,
+          "edit",
+        );
+        if (!policyCheck.allowed) return policyCheck.result;
+        const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
+
+        return await withFileMutationQueue(allowedPath, async () => {
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
 
           // Check the file is readable + writable.
           try {
-            await ops.access(absolutePath);
+            await ops.access(allowedPath);
           } catch (error) {
             if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
             const err = error as NodeJS.ErrnoException;
@@ -190,7 +209,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
 
-          const buffer = await ops.readFile(absolutePath);
+          const buffer = await ops.readFile(allowedPath);
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
 
           const rawContent = buffer.toString("utf-8");
@@ -216,7 +235,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
 
           const finalContent = bom + restoreLineEndings(newContent, originalEnding);
-          await ops.writeFile(absolutePath, finalContent);
+          await ops.writeFile(allowedPath, finalContent);
 
           const diffResult = generateDiffString(baseContent, newContent);
           const patch = generateUnifiedPatch(prepared.path, baseContent, newContent);

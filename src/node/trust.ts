@@ -1,6 +1,7 @@
 import { isAbsolute, relative, resolve, dirname, basename, join } from "node:path";
 import { realpath } from "node:fs/promises";
 import type { TrustPolicy } from "../security.js";
+import { isNodeErrorCode } from "./config.js";
 
 export interface PathTrustPolicyOptions {
   readonly trustedRoots: readonly string[];
@@ -31,7 +32,7 @@ export async function isPathInsideReal(root: string, target: string): Promise<bo
   try {
     to = await realpath(target);
   } catch (error) {
-    if (!isMissingFile(error)) return false;
+    if (!isNodeErrorCode(error, "ENOENT")) return false;
     const parent = dirname(target);
     try {
       const resolvedParent = await realpath(parent);
@@ -55,8 +56,4 @@ export function createPathTrustPolicy(options: PathTrustPolicyOptions): TrustPol
       return { trusted: false, reason: `Path is outside trusted roots: ${request.target}` };
     },
   };
-}
-
-function isMissingFile(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
