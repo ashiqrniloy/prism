@@ -114,7 +114,7 @@ jobs:
           npm pack --workspaces --json --pack-destination release-artifacts > release-artifacts/workspace-pack.json
           sha256sum release-artifacts/*.tgz > release-artifacts/SHA256SUMS
       - name: retain release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-artifacts-${{ github.ref_name }}
           path: release-artifacts
@@ -125,7 +125,7 @@ jobs:
         run: npm run release:publish -- --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
       - name: retain publish report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: publish-report-${{ github.ref_name }}
           path: release-artifacts/publish-report.json

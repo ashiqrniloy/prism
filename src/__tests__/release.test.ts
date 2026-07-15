@@ -25,6 +25,7 @@ function fixture() {
     packages[path] = complete;
   }
   writeFileSync(join(root, "package-lock.json"), `${JSON.stringify({ lockfileVersion: 3, packages }, null, 2)}\n`);
+  writeFileSync(join(root, ".gitignore"), "release-artifacts/\n");
   return root;
 }
 
@@ -115,6 +116,9 @@ test("release requires clean tagged git state", () => {
   git("commit", "-m", "fixture");
   assert.throws(() => assertGitState(root, VERSION), /tag v0\.0\.4/);
   git("tag", `v${VERSION}`);
+  assert.doesNotThrow(() => assertGitState(root, VERSION));
+  mkdirSync(join(root, "release-artifacts"));
+  writeFileSync(join(root, "release-artifacts/report.json"), "{}\n");
   assert.doesNotThrow(() => assertGitState(root, VERSION));
   writeFileSync(join(root, "dirty"), "x");
   assert.throws(() => assertGitState(root, VERSION), /clean git tree/);

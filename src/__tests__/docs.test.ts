@@ -681,7 +681,7 @@ describe("docs", () => {
     for (const phrase of ["topologicalOrder", "package-lock.json", "--provenance", "--access", "public", "--tag", "latest"]) {
       assert.ok(release.includes(phrase), `release script missing ${phrase}`);
     }
-    for (const phrase of ["release:publish", "--resume", "id-token: write", "contents: read", "upload-artifact@v4", "SHA256SUMS", "publish-report.json"]) {
+    for (const phrase of ["release:publish", "--resume", "id-token: write", "contents: read", "upload-artifact@v6", "SHA256SUMS", "publish-report.json"]) {
       assert.ok(workflow.includes(phrase), `release workflow missing ${phrase}`);
     }
     assert.ok(workflow.includes("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"), "release workflow missing npm authentication");
