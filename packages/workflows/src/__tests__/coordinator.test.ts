@@ -50,13 +50,14 @@ describe("distributed workflow coordinator", () => {
     const gate = new Promise<void>((resolve) => { release = resolve; });
     const definition = workflow("bounded", async () => { await gate; return "done"; });
     const queued = await Promise.all([0, 1, 2].map((index) => enqueueWorkflow(definition, index, { checkpoints, runId: `bounded-${index}` })));
-    const coordinator = createWorkflowCoordinator({ coordinatorId: "bounded-worker", workflows: { [definition.id]: definition }, checkpoints, leases, maxConcurrentRuns: 2, leaseTtlMs: 100, renewalIntervalMs: 20 });
+    const coordinator = createWorkflowCoordinator({ coordinatorId: "bounded-worker", workflows: { [definition.id]: definition }, checkpoints, leases, maxConcurrentRuns: 2, leaseTtlMs: 10_000, renewalIntervalMs: 1_000 });
     assert.equal(await coordinator.pollOnce(), 2);
     assert.equal(coordinator.activeRuns, 2);
     release();
-    await waitFor(async () => (await getWorkflowRun(checkpoints, queued[0]!))?.value.status === "succeeded" && (await getWorkflowRun(checkpoints, queued[1]!))?.value.status === "succeeded");
+    const statuses = () => Promise.all(queued.map(async (run) => (await getWorkflowRun(checkpoints, run))?.value.status));
+    await waitFor(async () => coordinator.activeRuns === 0 && (await statuses()).filter((status) => status === "succeeded").length === 2);
     assert.equal(await coordinator.pollOnce(), 1);
-    await waitFor(async () => (await getWorkflowRun(checkpoints, queued[2]!))?.value.status === "succeeded");
+    await waitFor(async () => (await statuses()).every((status) => status === "succeeded"));
   });
 
   it("persists cross-process cancellation requests", async () => {

@@ -1,1146 +1,791 @@
-# prism Roadmap
-
-Updated: 2026-06-29
-
-`prism` is a TypeScript/Node.js agent harness package. Host apps and extension
-packages bring providers, models, tools, resources, credentials, UI, storage,
-permissions, and business integrations. Prism supplies the common contracts,
-registries, event flow, agent/session orchestration, configuration hooks, and
-replaceable default implementations.
-
-## Non-negotiable boundaries
-
-- **No built-in app tools.** Core must not ship shell, filesystem, browser, Synapta, desktop, or web-app tools.
-- **Extensible before clever.** Any behavior that packages may reasonably need to change must be a contract, registry, middleware, strategy, or extension hook.
-- **Defaults are replaceable.** Prism may include default prompt assembly, context ordering, compaction, config loading, stores, and adapters, but hosts/packages can replace them without editing Prism internals.
-- **API first, CLI second.** CLI/RPC are adapters over the public API.
-- **Host controlled.** No hidden globals for providers, credentials, stores, resources, permissions, or extension loading.
-- **Secrets never enter history/events.** Credentials are resolved at the edge that needs them and redacted from errors/events/session entries.
-- **Docs ship with APIs.** Every public API, extension point, event, config surface, package manifest field, or default strategy must be documented under `/docs` as it is implemented.
-
-## Current implementation checkpoint
-
-### Completed: repository baseline
-
-Delivered:
-- ESM TypeScript package with strict `tsconfig.json`.
-- Placeholder CLI bin.
-- Public root barrel.
-- `node:test` test flow with no test framework dependency.
-
-### Completed: public contracts
-
-Delivered:
-- `src/contracts.ts` contracts for messages/content, agents/sessions, provider events, tools, context, skills, extensions, session store, resource loader, settings, and credentials.
-- Root type exports and compile-only host examples.
-- Boundary tests against app/tool/domain leaks.
-
-Compromises/follow-ups from `plans/001-public-contracts.md`:
-- Contracts currently live in one file. Split by domain only when implementation phases make that useful.
-- README has only concise API inventory; full `/docs` pages are still required.
-- Provider/model registries were the first high-priority follow-up and are now implemented.
-- Revisit contract organization after runtime modules exist.
-
-### Completed: provider and model layer
-
-Delivered:
-- `createProviderRegistry()` and `createModelRegistry()` with explicit `Map`-backed O(1) lookup.
-- Provider event helpers and `tool_call_delta` support.
-- Credential resolution helper and redaction helper.
-- `createMockProvider()` for tests/examples.
-- `prism/providers/openai-compatible` subpath using native/injected `fetch`, SSE parsing, mocked tests, abort propagation, usage mapping, and secret redaction.
-
-Compromises/follow-ups from `plans/002-provider-streaming-and-mock-provider.md`:
-- OpenAI-compatible adapter targets Chat Completions streaming only; Responses API support waits for a real consumer.
-- Tool-call fragments are emitted as `tool_call_delta` and reconstructed into final `tool_call`; provider edge cases need conformance tests if more adapters are added.
-- Credential handling resolves per request and redacts known values, but credential storage/env/settings integration belongs to the security/settings phase.
-- Phase 3 must build agent/session runtime on top of `AIProvider`, `ProviderEvent`, registries, and `createMockProvider`.
-- Revisit OpenAI-compatible multimodal request mapping after image-capable runtime examples exist.
-
-### Deferred work review from `plans/001-013.md`
-
-The completed plans intentionally deferred these items; the new post-Phase-10 work pulls only the pieces that now have real demand:
-
-- Real provider wiring stayed out of core: CLI uses only mock bootstrap, the built-in OpenAI-compatible adapter is Chat Completions-only, and adapter conformance was deferred until a second real adapter exists.
-- Credential storage stayed in memory/explicit files; persistent encrypted keychains and automatic env/project discovery remain host/package concerns.
-- Provider-specific retry and request quirks were deferred to adapter packages instead of expanding the generic retry classifier.
-- Provider-backed compaction was explicitly left for optional packages; the current default compaction is local, conservative, and entry-count based.
-- Observational/vector/semantic memory was not added to core; session stores already preserve raw entries and custom/compaction data that memory packages can build on.
-- Package discovery, URI routing, schema generation, and trust prompts stayed out of core unless a host/runtime proves they are needed.
-- System prompt support exists as `AgentConfig.instructions` and input-builder instructions, but package/app layered prompt contributions are not yet a documented configurable surface.
-- Docs/export drift checks, compiled examples, network-free provider conformance, and release packaging remain hardening work.
-
-Conclusion: add generic provider/auth/cache/system-prompt primitives only where current contracts are insufficient, then implement the requested providers and compaction strategies as separate packages.
-
-## Target architecture
-
-### 1. Kernel and extension bus
-
-Prism's kernel owns only invariant mechanics:
-- Session/run lifecycle.
-- Ordered event emission.
-- Registry lookup and fail-closed behavior.
-- Middleware/strategy invocation order.
-- Abort propagation and bounded loops.
-- Secret redaction boundaries.
-
-Everything else is contributed through explicit contracts:
-- Providers and models.
-- Agent definitions/factories.
-- Input sources and prompt assemblers.
-- Context providers and skills.
-- Tools and tool middleware.
-- Compaction strategies.
-- Session stores and resource loaders.
-- Commands, CLI/RPC handlers, and extension-defined capabilities.
-
-### 2. Extension/package model
-
-External packages must be able to add or replace behavior without touching Prism internals.
-
-Expected extension capabilities:
-- Register providers/models/tools/context providers/skills/commands/agents.
-- Register or replace default strategies: input assembly, prompt composition, tool-call policy, compaction, retry, store selection, model selection.
-- Subscribe to lifecycle events and optionally transform/stop behavior through middleware.
-- Provide package manifests with contributions and package-local configuration schema/defaults.
-- Bring their own agents while using only Prism fundamentals such as events, registries, stores, settings, resources, credentials, and provider streams.
-
-### 3. Configuration and manifests
-
-Configuration is layered and host-controlled:
-1. Built-in Prism defaults.
-2. Extension/package manifest defaults.
-3. Host app config.
-4. Optional user/global config, e.g. `~/.config/prism`, only through an explicit filesystem config loader.
-5. Runtime/session/run overrides.
-
-Core should define config contracts and merge/validation behavior. Filesystem discovery/loading is optional utility code for CLI/Node hosts, not hidden core behavior.
-
-### 4. Input and prompt assembly pipeline
-
-Agent input is not just a string. It is assembled from:
-- Direct user input.
-- Attachments such as text files/images/resources.
-- System/developer instructions.
-- Model/provider constraints.
-- Enabled skills.
-- Context provider output.
-- Active tool definitions and tool results.
-- Session history and summaries.
-- Host metadata.
-
-Prism should provide a default input/prompt pipeline, but every stage must be replaceable or interceptable by an extension/package.
-
-### 5. Compaction and memory
-
-Compaction is a strategy, not hard-coded behavior.
-- Default strategy: simple threshold-driven summarization policy.
-- Optional strategies: branch summaries, provider-backed summarization, host-specific memory stores.
-- Hosts/extensions can replace strategy, summary format, thresholds, and persistence.
-- Raw history should not be deleted by default; compaction adds entries/summaries.
-
-### 6. Documentation/wiki
-
-`/docs/index.md` is the navigational map for users and AI agents. It must group APIs by functionality and link every public surface to a detailed page.
-
-Every API page must include:
-- API name.
-- What it does.
-- When to use it.
-- Inputs/request.
-- Outputs/response/events.
-- Request/response example.
-- TypeScript implementation example.
-- Extension/configuration notes.
-- Security/performance notes.
-- Related APIs.
-
-The create-plan skill now requires a per-task `Documentation/Wiki Assessment` and references `.agents/skills/create-plan/references/prism-wiki.md`.
-
-## Updated phases
-
-### Phase 0 — Documentation governance and implemented API wiki catch-up
-
-**Goal:** make docs mandatory before more runtime is built.
-
-Deliver:
-- Enforce create-plan wiki assessment and Prism wiki reference for future plans.
-- Create `/docs/index.md` with functional API groups.
-- Document already implemented APIs: public contracts, provider/model registries, provider events, mock provider, credential/redaction helpers, and OpenAI-compatible provider subpath.
-- Add a lightweight docs consistency check if cheap.
-
-Acceptance:
-- Every future plan task includes a `Documentation/Wiki Assessment`.
-- `/docs/index.md` links to implemented API docs.
-- Implemented API docs follow the Prism wiki page structure.
-
-### Phase 1 — Current implementation alignment
-
-**Goal:** align the completed Phase 1/2 code with the extensible target before adding session runtime.
-
-Deliver:
-- Review whether `AgentConfig.provider`, `AgentConfig.credentials`, and registry usage should be adjusted for extension/config-driven provider selection.
-- Decide whether registry interfaces belong in `contracts.ts` or runtime modules only.
-- Review `ProviderEvent` final shape for `tool_call_delta`, usage, thinking, images, and provider errors.
-- Add provider adapter conformance tests if useful now.
-- Record whether `src/contracts.ts` remains one file or splits by domain.
-
-Acceptance:
-- No hidden provider/credential globals are introduced.
-- Existing tests still pass.
-- Any public contract changes are documented in `/docs`.
-
-### Phase 2 — Extension kernel and contribution registries
-
-**Goal:** establish the plugin surface before agent runtime hardens behavior.
-
-Deliver:
-- `Extension` setup lifecycle and explicit `ExtensionAPI` runtime implementation.
-- Event bus with ordered lifecycle events and error isolation.
-- Contribution registries for providers, models, tools, context providers, skills, commands, agents, prompt/input builders, compaction strategies, stores, resource loaders, settings providers, and credential resolvers.
-- Middleware hooks for provider requests/responses, input assembly, context, tool calls/results, retry, compaction, and session lifecycle.
-
-Acceptance:
-- An extension can register provider/model/tool/context/skill/command/agent contributions.
-- Extension errors become events and do not crash unless host policy says so.
-- API users can skip extension loading entirely and use registries directly.
-
-### Phase 3 — Configuration, manifests, and resource loading
-
-**Goal:** let packages and hosts describe contributions/config without hard-coded Prism internals.
-
-Deliver:
-- Manifest schema/types for package contributions and config defaults.
-- Config provider/loader contracts and deterministic merge order.
-- Optional Node filesystem config loader for CLI/hosts, including user config location such as `~/.config/prism`.
-- Resource loader contract integration for extension manifests, skills, prompts, and package resources.
-
-Acceptance:
-- Core can run fully in-memory with no filesystem access.
-- Filesystem loading is explicit and host/CLI-controlled.
-- Manifests can describe contributions without executing code until the host loads the package.
-
-### Phase 4 — Host-owned tool harness
-
-**Goal:** robust tool declaration/filtering/dispatch with zero built-in app tools.
-
-Deliver:
-- `createToolRegistry()` with O(1) lookup.
-- Active allow/deny filtering per agent/session/run.
-- JSON Schema-compatible `parameters` pass-through.
-- Optional host validator and middleware before execution.
-- Tool events for blocked calls, progress, result, and error.
-
-Acceptance:
-- Unregistered tool calls fail closed and are never executed.
-- Tool args must be object-shaped.
-- Extensions can add middleware but cannot bypass host permissions.
-
-### Phase 5 — Input, prompt, context, and skills pipeline
-
-**Goal:** make everything that becomes provider input visible and replaceable.
-
-Deliver:
-- Default input assembler for user text, attachments/resources, system prompt, active tools, context blocks, skills, tool results, history, summaries, and host metadata.
-- Replaceable prompt composer strategy.
-- Ordered `ContextProvider.resolve(ctx)` pipeline.
-- `SkillRegistry` implementation with explicit host/extension registration and progressive disclosure support.
-- Prompt template expansion for CLI/RPC use.
-
-Acceptance:
-- Default behavior works for common host input.
-- Extensions can replace or intercept assembly/composition stages.
-- Skills cannot register missing tools or grant permissions by themselves.
-
-### Phase 6 — Minimal agent/session runtime
-
-**Goal:** one shared extension-aware runtime used by SDK, CLI print/json, and RPC later.
-
-Deliver:
-- `createAgent(config)` and external-agent registration support.
-- `agent.createSession(config)` and `createAgentSession(config)`.
-- `session.run(input, options)` / `session.prompt(...)`.
-- `session.subscribe()` as `AsyncIterable<AgentEvent>`.
-- Bounded loop: assemble input → provider stream → optional tool calls → tool results → next provider turn.
-- `abort()` and `maxToolRounds`.
-
-Acceptance:
-- Mock provider streams `Hello` to a subscriber.
-- Mock provider can request one registered host tool, receive result, and continue.
-- Abort stops current provider/tool path before next turn.
-- Runtime uses extension/configured strategies rather than hard-coded prompt/context/compaction behavior.
-
-### Phase 7 — Sessions, branching, and stores
-
-**Goal:** durable memory with replaceable persistence.
-
-Deliver:
-- `MemorySessionStore` and async `SessionStore` implementation.
-- JSONL session store adapter.
-- Session entries with `id`, `parentId`, timestamps, messages, model changes, labels, custom entries, summaries, and compaction entries.
-- Resume, fork, clone, branch navigation.
-
-Acceptance:
-- Session context can be rebuilt from the current leaf.
-- Branching preserves old paths.
-- Stores receive no provider credentials.
-
-### Phase 8 — Compaction strategies and retry policy
-
-**Goal:** memory reduction and transient-failure handling as replaceable policies.
-
-Deliver:
-- Compaction strategy contract and default implementation.
-- Manual and auto-compaction APIs.
-- Branch-summary entries without deleting raw history.
-- Retry/backoff policy for transient provider errors.
-- Extension hooks around compaction/retry.
-
-Acceptance:
-- Hosts/extensions can replace compaction and retry policies.
-- Compaction records summaries and keeps recent context.
-- Secrets are not serialized into summaries/events/stores.
-
-### Phase 9 — CLI and RPC surfaces
-
-**Goal:** terminals, desktop apps, and non-Node clients use the same public runtime.
-
-Deliver:
-- `prism -p "prompt"` print mode.
-- `prism --mode json` event stream mode.
-- `prism --mode rpc` strict LF-delimited JSONL protocol.
-- CLI flags for provider/model/session/extensions/resources/tools/system prompt/context/compaction/config.
-- RPC commands for prompt, steer, follow-up, abort, state/messages, set model, compact, session switch/fork/clone, commands.
-
-Acceptance:
-- CLI modes use the same `AgentSession` API.
-- RPC clients correlate responses by id and receive async events.
-- No full TUI in core v1.
-
-### Phase 10 — Settings, auth, trust, and security controls
-
-**Goal:** safe embedding defaults without pretending to sandbox host tools.
-
-Deliver:
-- Settings provider interface implementations and optional filesystem settings loader.
-- Auth storage/resolution utilities as opt-in modules.
-- Project/resource trust model for CLI filesystem loading.
-- Host permission hooks for tools/extensions/resources.
-- Secret redaction utilities for errors/events/prompts/sessions.
-
-Acceptance:
-- Host can run Prism fully in-memory.
-- CLI does not load project-local executable resources without trust.
-- Secrets are not serialized into events, prompts, compaction, or sessions.
-
-### Phase 11 — Provider, auth, cache, and system-prompt primitives
-
-**Goal:** add only generic surfaces needed by real provider packages and package/app prompts.
-
-Deliver:
-- Provider-package contract for registering models, providers, auth methods, request policies, and docs without hidden globals.
-- OAuth/API-key credential contracts modeled after Pi's `OAuthLoginCallbacks`, refreshable credentials, and explicit API-key resolution order.
-- Generic provider request/cache policy hook that can add headers, payload fields, session ids, cache retention, and model-specific compatibility data before `AIProvider.generate()`.
-- Model metadata/compat extension for prompt caching, reasoning/thinking formats, OpenRouter routing passthrough, and provider-specific usage mapping without hard-coded provider names in core.
-- Layered system prompt contributions for apps/packages/users/runs with explicit merge/replace order; keep `AgentConfig.instructions` as the simple direct path.
-- Network-free provider conformance harness covering stream order, abort, tool-call reconstruction, usage/cache accounting, redaction, and request-policy payload checks.
-- `/docs` updates for provider packages, OAuth/API keys, cache policy, model compat metadata, and system prompt layering.
-
-Acceptance:
-- Core can still run fully in memory with mock providers and no package loading.
-- No OpenAI/OpenRouter/ZAI/Kimi/OpenCode literals are added to core behavior.
-- A package can provide OAuth or API-key auth, cache policy, and model metadata through public contracts only.
-- Apps can choose, replace, or disable system prompt layers and cache policy per run/model.
-
-### Phase 12 — Real provider packages
-
-**Goal:** ship the requested provider connections as separate packages that follow Pi's proven provider implementations.
-
-Deliver:
-- `@arnilo/prism-provider-openai`: OpenAI API-key Responses support plus ChatGPT Plus/Pro/Codex subscription OAuth using Pi's PKCE browser/device-code flow and Codex Responses request shape.
-- `@arnilo/prism-provider-opencode-go`: OpenCode Go API-key provider using Pi's model metadata, OpenAI-compatible/Anthropic-compatible routes, and `x-opencode-session` cache/session headers.
-- `@arnilo/prism-provider-openrouter`: OpenRouter API-key provider with app-controlled model catalog, routing passthrough, reasoning controls, and model-level cache policy overrides.
-- `@arnilo/prism-provider-zai`: ZAI GLM API-key provider using Pi's OpenAI-compatible `thinkingFormat: "zai"`, developer-role fallback, and GLM tool-stream quirks.
-- `@arnilo/prism-provider-kimi`: Kimi For Coding subscription/API-key provider using Pi's Anthropic-compatible Kimi endpoint and headers; keep Moonshot API-key models as optional model metadata, not core behavior.
-- Provider cache policies copied/adapted from Pi where applicable: OpenAI `prompt_cache_key`/`prompt_cache_retention`, Codex session/request ids, Anthropic-style `cache_control`, OpenCode session headers, OpenRouter per-model cache control, and provider usage cache-read/write mapping.
-- Unit tests use mocked `fetch`/streams/OAuth callbacks only; live integration tests are opt-in behind explicit env vars and skipped by default.
-- Docs/examples for each package: OAuth login, API key, model selection, cache control, OpenRouter model override, and secret redaction.
-
-Acceptance:
-- Requested providers can be registered without modifying Prism core.
-- Secrets never appear in events, summaries, docs fixtures, or stored session entries.
-- Provider conformance tests pass for all packages without network.
-- OpenRouter users/apps can control cache behavior per model instead of accepting a single hard-coded policy.
-
-### Phase 13 — LLM compaction strategy package
-
-**Goal:** provide provider-backed compaction as a replaceable strategy, based on Pi's compaction implementation.
-
-Deliver:
-- `@arnilo/prism-compaction-llm` with token-estimated cut points, `reserveTokens`, `keepRecentTokens`, previous-summary update prompts, split-turn prefix summaries, custom instructions, and structured markdown summary format.
-- Conversation serialization that prevents continuation, truncates oversized tool results, preserves exact file paths/errors/decisions, and redacts known secrets.
-- Optional file-operation tracking in compaction details, following Pi's read/modified file summary pattern but using Prism tool-result/message contracts.
-- Strategy options for summary provider/model, thinking level, cache policy, max summary tokens, and host-supplied credential resolver.
-- Manual and auto-compaction integration through existing `CompactionStrategy`, middleware, session store, and branch APIs; raw history remains append-only.
-- Docs/examples showing how an app picks a cheap summarization model or reuses the active model.
-
-Acceptance:
-- LLM compaction is not the core default unless a host explicitly selects the package strategy.
-- Failed/aborted summarization does not delete raw history or corrupt the session branch.
-- Tests cover normal, repeated, split-turn, branch-summary, redaction, and provider-error paths with mock providers only.
-
-### Phase 14 — Observational memory compaction package
-
-**Goal:** provide observational memory as a replaceable package, based on `pi-observational-memory` V3.
-
-Deliver:
-- `@arnilo/prism-compaction-observational-memory` with observer, reflector, and dropper workers that run from session events and store append-only custom memory ledger entries.
-- Observation/reflection/drop data model with 12-character source-backed ids, relevance levels, coverage tiers, active/full projections, and folded compaction details.
-- Compaction strategy that renders prepared memory immediately instead of calling a model during compaction.
-- Optional recall tool/command contributions that recover exact source entries for a known observation/reflection id; no semantic search.
-- Settings namespace for thresholds, passive mode, worker model, thinking level, pool targets, and debug logging through explicit `SettingsProvider`/host config.
-- Primitive review before implementation: use existing `SessionEntry.kind: "custom"` and `data` first; add only generic custom-entry typing if package evidence shows the current contract is insufficient.
-- Docs/examples for passive mode, worker model selection, memory status/view, recall, and compaction handoff.
-
-Acceptance:
-- Observational memory can be installed/registered without changing Prism core or provider packages.
-- Background workers never run without explicit host/package activation and credentials.
-- Compaction remains fast because it renders existing memory; model work happens before compaction.
-- Recall returns source evidence from the current branch and fails closed for invalid/missing ids.
-
-### Phase 15 — Provider and runtime correctness hardening
-
-**Goal:** fix behavior that can make an installed agent fail despite passing unit tests.
-
-Deliver:
-- Preserve provider round trips for text, thinking, `tool_call`, `tool_result`, and supported image blocks across core OpenAI-compatible support and all first-party provider packages; if a provider cannot support a block, fail or downgrade explicitly instead of silently dropping it.
-- Add provider conformance coverage for request serialization, full tool-call/tool-result replay, malformed SSE/JSON/tool-argument recovery, usage/cache accounting, abort, and redaction.
-- Fix RPC so `abort`, state, and follow-up/control requests can be processed while a prompt is running, with responses and streamed events still correlated by request id.
-- Resolve the `provider_response` middleware mismatch by either invoking it in runtime or removing it from public hook docs/types.
-- Bring manifest contribution kinds back in sync with current registries, including provider packages, auth methods, provider request policies, and system prompt contributions.
-- Align advertised model capabilities with serializers: image-capable models must serialize images or not claim image input.
-
-Acceptance:
-- Mock end-to-end tests prove a provider tool call is executed, appended to history, replayed as a provider-native tool result, and followed by a final assistant response.
-- RPC abort works during an active provider stream/tool wait.
-- Provider conformance catches text-only serializers that drop required non-text blocks.
-- Docs and exported types agree on every middleware hook and manifest contribution kind.
-
-### Phase 16 — Auth, redaction, and session-data hardening
-
-**Goal:** make security-sensitive and persistence boundaries boring before packaging.
-
-Deliver:
-- Fix OpenAI Codex OAuth using cryptographically secure PKCE/device-code behavior, redirect/scopes where required, and clear API-vs-Codex base URL options; otherwise remove/downgrade the OAuth surface from stable docs.
-- Make redaction cycle-safe and JSON-shape preserving enough for events, errors, prompts, tool results, and session metadata.
-- Harden JSONL session parsing so invalid `message`, `summary`, `parentId`, `model`, and custom `data` shapes are rejected or quarantined before runtime use.
-- Return defensive copies from in-memory session-store reads so callers cannot mutate stored history accidentally.
-- Review Node path trust against symlink/realpath escapes for filesystem resource loading; keep any deeper sandboxing out of core.
-- Keep live provider/worker tests opt-in behind explicit environment variables and network-free by default.
-
-Acceptance:
-- Cyclic metadata/tool results do not crash redaction.
-- Corrupt JSONL fixtures fail closed with useful errors and do not poison a session branch.
-- Memory-store callers cannot mutate persisted entries by editing `list()` results.
-- OAuth tests use mocked callbacks/fetch only and no credentials enter events, docs fixtures, or stored sessions.
-
-### Phase 17 — Package boundaries, installability, and release mechanics
-
-**Goal:** prove the published tarballs contain only what users need and install cleanly.
-
-Deliver:
-- Split build/test or packaging so `dist/__tests__` and accidental maps are not published unless intentionally retained.
-- Include required release files and package metadata: `LICENSE`, `CHANGELOG.md`, repository, bugs, homepage, license, keywords, and `sideEffects` where appropriate.
-- Include shipped API docs where packages claim docs ship with APIs; avoid publishing unrelated plans, tests, fixtures, or internal generated output.
-- Make first-party packages' `prism` peer dependency non-optional unless a tested install story proves otherwise.
-- Add tarball install/import smoke tests for `prism`, every exported subpath, and every first-party workspace package by package specifier, including `@arnilo/prism-compaction-observational-memory`.
-- Make `npm ls --all --depth=0`, `npm pack --dry-run --json`, and package import smoke checks clean in a fresh install/workspace.
-- Add a minimal release workflow/dry-run for core plus first-party packages.
-- Reduce default no-network test time to the release target or explicitly adjust that target in this roadmap with rationale. Current measured local baseline on Node 20: `npm test` ~45s wall (build ~18s + network-free tests/workspace tests/packaging smoke ~27s); budget pinned at < 60s after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests — see `docs/release-and-install.md`.
-
-Acceptance:
-- Packed core and package tarballs contain README/LICENSE/CHANGELOG/docs plus public compiled output only.
-- No published tarball includes built test artifacts.
-- Fresh install smoke tests import every documented package/subpath without workspace-relative paths.
-- Default tests remain network-free and meet the chosen time budget (< 60s for `npm test` on Node 20; baseline ~45s).
-
-### Phase 18 — Documentation, examples, and fixtures catch-up
-
-**Goal:** make the implemented package usable without reading source.
-
-Deliver:
-- Update `README.md` to describe the current Phase 14+ runtime instead of earlier placeholder scope.
-- Complete provider-specific docs for OpenAI, OpenCode Go, OpenRouter, ZAI, and Kimi using the required API-page headings; extend docs tests so provider-specific pages are enforced, not only the generic OpenAI-compatible page.
-- Complete `/docs` coverage and `/docs/index.md` links for provider package authoring, OAuth/API-key auth, cache policy, model compat metadata, system prompt layering, LLM compaction, observational memory, CLI/RPC, manifests, and release/install behavior.
-- Add compile-checked typed examples for SDK basics, provider registration, API-key auth, OAuth login, OpenRouter model/cache override, tools, context, skills, extensions, manifests, config/settings, system prompts, JSONL stores/branching, compaction, observational-memory recall/status/view, CLI, and RPC.
-- Add end-to-end mock demos for provider packages, LLM compaction, observational memory recall, CLI, and RPC.
-- Add golden session JSONL fixtures covering branching, compaction, LLM summaries, observational-memory ledger entries, corrupt entries, and tool-result replay.
-- Document optional live provider/worker smoke-test environment variables without making them part of default verification.
-
-Acceptance:
-- Every public API, extension point, event, config surface, package manifest field, default strategy, and first-party package has a linked docs page.
-- Examples compile without network or real credentials.
-- Golden fixtures are used by tests and avoid real-looking secrets.
-- Docs tests fail when a provider-specific page lacks the standard API headings.
-
-### Phase 19 — Final release validation
-
-**Goal:** final publish gate after Phases 15–18 finish; this replaces the old broad Phase 15 implementation bucket.
-
-Deliver:
-- Run final network-free tests, typecheck, examples compile, audit, tarball dry-runs, fresh-install import smoke tests, docs checks, and public export contract tests for core plus first-party packages.
-- Review package contents, release notes, changelog, versioning, and release workflow output before publishing.
-- Confirm no built-in app tools, hidden provider/credential globals, automatic package discovery, or secret persistence slipped into core.
-
-Acceptance:
-- Tests run under the chosen release time budget without network by default.
-- Examples compile.
-- `npm pack --dry-run` includes only needed files for core and first-party packages.
-- Fresh install users can follow README/docs examples without workspace paths.
-
-## Suggested implementation-plan order
-
-Completed:
-1. `001-public-contracts.md`
-2. `002-provider-streaming-and-mock-provider.md`
-3. `003-documentation-governance-and-implemented-api-wiki.md`
-4. `004-current-implementation-alignment.md`
-5. `005-extension-kernel-and-contribution-registries.md`
-6. `006-configuration-manifests-and-resource-loading.md`
-7. `007-host-tool-harness.md`
-8. `008-input-prompt-context-skills-pipeline.md`
-9. `009-agent-session-runtime.md`
-10. `010-session-store-jsonl-branching.md`
-11. `011-compaction-strategies-and-retry.md`
-12. `012-cli-json-rpc.md`
-13. `013-settings-auth-trust-security.md`
-14. `014-provider-auth-cache-and-system-prompt-primitives.md`
-15. `015-real-provider-packages.md`
-16. `016-llm-compaction-strategy.md`
-17. `017-observational-memory-strategy.md`
-
-Next:
-18. `018-provider-runtime-correctness-hardening.md`
-19. `019-auth-redaction-session-data-hardening.md`
-20. `020-package-boundaries-installability-release-mechanics.md`
-21. `021-documentation-examples-fixtures-catch-up.md`
-22. `022-final-release-validation.md`
-23. `023-publish-to-npm-0.0.1.md` (done — v0.0.1 published)
-
-Synapta third-party-ergonomics track (post-v0.0.1):
-24. `024-provider-resolver-seam-and-third-party-provider-packaging.md` (done)
-25. `025-runtime-tool-validation-hook.md`
-26. `026-skill-semantics-active-selection-context-toolnames.md`
-27. `027-generic-agent-loop-strategy-single-shot-and-generate-validate-revise.md`
-28. `028-validation-refinement-events-and-structured-output-contracts.md`
-29. `029-workspace-and-global-package-discovery.md`
-30. `030-package-context-and-instruction-injection.md`
-31. `031-system-and-project-prompts-agents-and-system-md.md`
-32. `032-synapta-facing-integration-example-and-boundary-lock.md`
-33. `033-agent-definitions-declarative-requirements-and-resolver.md`
-
-External-app production-hardening track:
-34. `034-production-persistence-contract-and-schema.md`
-35. `035-durable-run-event-tool-usage-ledger.md`
-36. `036-atomic-append-branch-handles-and-scalable-session-queries.md`
-37. `037-security-boundary-hardening.md`
-38. `038-explicit-capability-activation-and-api-cleanup.md`
-39. `039-provider-runtime-protocol-correctness.md`
-40. `040-backpressure-and-performance-limits.md`
-41. `041-external-app-docs-examples-and-release-validation.md`
-
-## Synapta integration feedback — third-party-ergonomics phase track
-
-After v0.0.1 publishing (plan 023), Prism enters a second design track driven by
-real third-party consumption (Synapta). The recurring theme across the gaps
-below: Prism has the registries, hooks, and policy seams, but the agent runtime
-and `AgentConfig`/`RunOptions` do not expose them, one declared field
-(`Skill.context`) is inert, and the single-shot turn loop is the only loop
-shape). Every gap is "plumb the existing seam through to config," not new
-architecture — except the generic loop concept and the workspace/global
-package-discovery + system-prompt surfaces, which are net-new but each a
-single minimal seam.
-
-Design principles enforced across this track:
-
-- **First-party is opt-in, never mandatory.** A third party may ship its own
-  providers, tools, and skills and use Prism with zero first-party packages.
-  Prism's first-party provider packages, tool packs, and skills are
-  individually installable and individually selectable; a third party picks
-  none, some, or all.
-- **Standard workspace/global discovery for contributions.** Skills discovered
-  from `<workspace>/.agents/skills/<name>/` and `~/.prism/agent/skills/<name>/`;
-  the same discovery applies to providers, tools, context providers, and
-  instruction injectors contributed as packages. Discovery is host/CLI-driven
-  (explicit filesystem loader), never a hidden global in core; apps using the
-  SDK directly can skip discovery entirely.
-- **Generic seams only; no Synapta types in core.** Loops, validators,
-  parsers, repairers, events, and context injectors carry only Prism-native
-  contracts. Domain vocabulary (workflow/node/step) stays in the third-party
-  package that owns it. Boundary tests enforce this.
-- **Single-shot stays the default loop.** The current single-turn strategy
-  remains the default agent loop. Loop strategies are a generic
-  `AgentLoopStrategy` concept; the generate-validate-revise loop is the first
-  implementation, selectable per request/session/config. Additional loops can
-  be added later without runtime forking.
-- **Config over code.** Every new seam lives on `AgentConfig` and/or
-  `RunOptions` (RunOptions overrides AgentConfig per run), mirroring how
-  compaction, retry, `providerRequestPolicies`, `systemPrompt`, and
-  `redactor` already work.
-
-### Phase 24 — Provider resolver seam and third-party provider packaging
-
-**Goal:** let a host hand Prism a provider resolver (or a registry/list) and
-have the agent resolve its provider from `model.provider` per run, instead of
-requiring every app to resolve and stuff a direct `AIProvider` into
-`AgentConfig.provider`.
-
-Deliver:
-- `ProviderResolver` contract: `(model: ModelConfig) => AIProvider | undefined`.
-- `createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver` generic helper (one-liner over `model.provider`; registries are one way to build one, not the only way).
-- `AgentConfig.providerSource?: ProviderResolver` and `RunOptions.providerSource?: ProviderResolver` (RunOptions wins, mirroring `model`). The direct `AgentConfig.provider: AIProvider` path stays fully supported and takes precedence when set.
-- `requireProvider()` becomes `provider = config.provider ?? providerSource?.(model)` then fail closed with the existing `Unknown provider: ${model.provider}` error.
-- Third-party provider package authoring doc: a package can register provider contributions via `ExtensionAPI.registerProvider()` (already exists) and the host builds a resolver from either the kernel registries or its own list; first-party provider packages (`@arnilo/prism-provider-*`) are opt-in, individually installable, individually selectable.
-- Workspace/global provider discovery is **not** added here (providers need credentials and are config/package-driven, not file-scanned); Phase 28 covers file-based discovery for skills/tools/context only.
-
-Acceptance:
-- An app passes a registry or a list of providers (mix of first-party and its own) and `createAgent({ model, providerSource })` resolves per run.
-- Direct `provider: AIProvider` still works unchanged.
-- No registry/contribution object is coupled into `AgentConfig`; only a resolver function is.
-- No first-party provider package is required for core to run (mock provider only).
-- Docs updated for `providerSource`, `createProviderResolver`, and third-party provider package authoring.
-
-### Phase 25 — Runtime tool validation hook
-
-**Goal:** expose the existing `dispatchToolCall({validate})` seam through the
-agent runtime and `AgentConfig`/`RunOptions`, so an app can supply
-app-level argument validation that emits the existing `tool_execution_blocked`
-reason `validation_failed` event with redaction.
-
-Deliver:
-- `AgentConfig.validator?: ToolValidator` and `RunOptions.validate?: ToolValidator` (named to match `DispatchToolCallOptions.validate`; RunOptions wins).
-- `RuntimeAgentSession.run()` passes `validate: options.validate ?? this.agent.config.validator` into `dispatchToolCall`.
-- Compose-later: if both needed, accept arrays; for now, RunOptions override only (YAGNI).
-- No new validator concept — `ToolValidator = (tool, args, context) => void | string | ErrorInfo` is already generic and Synapta-free.
-
-Acceptance:
-- A validator returning a string/`ErrorInfo` results in a `tool_execution_blocked` event with reason `validation_failed` and a redacted error, without executing the tool.
-- `void` validator return executes normally.
-- Existing tool dispatch tests still pass; new test covers runtime-supplied validator.
-- Docs `tools.md` updated to show validator on `AgentConfig`/`RunOptions` (the `validate` field is already documented on `DispatchToolCallOptions`).
-
-### Phase 26 — Skill semantics: active selection, Skill.context activation, toolNames enforcement
-
-**Goal:** close the three Skill gaps where the runtime bypasses the skill
-machinery: active-skill selection is not per-run, `Skill.context` is a dead
-field, and `toolNames` is unenforced in the live loop.
-
-Deliver:
-- `RunOptions.activeSkills?: readonly string[]` (names). When set against a `SkillRegistry`, the runtime calls `resolveActiveSkills({registry, names, tools})` instead of `registry.list()`. When `AgentConfig.skills` is a plain `Skill[]` array (no registry), names are not resolvable — in that case an explicit `RunOptions.skills?: readonly Skill[]` override is accepted; names win when a registry exists.
-- No `activeSkills` set → all configured skills active (current behavior preserved).
-- Activate `Skill.context`: when building provider input, collect `activeSkills.flatMap(s => s.context ?? [])`, resolve via the existing `resolveContextProviders(...)`, and merge resulting `ContextBlock[]` into the request `context` after host `AgentConfig.context` blocks. `skillMessages()` still renders `skill.instructions`. Mark merge priority as a `ponytail:` comment (no per-skill token budgeting yet).
-- `toolNames` enforcement becomes free once selection routes through `resolveActiveSkills()` (it already throws on missing tools). Add test: skill with `toolNames: ["missing"]` against a config missing that tool throws before the first provider turn. This also satisfies the docs' existing "skills cannot register missing tools" claim that the runtime currently contradicts.
-
-Acceptance:
-- Run A uses skill "summarize", run B uses "translate" via `activeSkills`, same agent config.
-- A skill with `context: [schemaProvider]` injects schema context only when active.
-- A skill demanding an inactive tool fails fast at activation, not at dispatch.
-- `docs/context-and-skills.md` updated: describe `activeSkills`, `Skill.context` activation, and the now-enforced `toolNames`.
-
-### Phase 27 — Generic agent loop strategy (single-shot default + generate-validate-revise)
-
-**Goal:** make the agent's per-run control loop a replaceable strategy. The
-current single-shot turn loop (assemble → provider → optional tool calls →
-tool results → next turn) stays the **default**. A third party may opt a
-particular request or session into a different loop, starting with
-generate-validate-revise. Loops are a generic concept designed so more loops
-can be added later without forking the runtime.
-
-Deliver:
-- `AgentLoopStrategy` contract: owns the per-run turn-control flow, receiving a loop context that exposes the shared primitives — `assembleProviderInput`, provider streaming, `dispatchToolCall`, abort signal, store append, event emit, and `RunOptions`. The loop does not re-implement provider calls, retry, abort, store, or events; it orchestrates them.
-- `SingleShotLoop` (extracted from current `RuntimeAgentSession.run` behavior) registered as the default. Existing behavior bit-for-bit preserved when no loop is configured.
-- `GenerateValidateReviseLoop` as the first alternative loop, parameterized by Prism-native callbacks only:
-  - `parser?: ArtifactParser<T>` — parse model output to a typed value (`T` host-defined, Prism never instantiates it).
-  - `validator: ArtifactValidator<T>` — returns `ArtifactValidation`.
-  - `repairer?: ArtifactRepairer<T>` — builds the "fix this" follow-up input (default = stringify validation errors as a user message; host supplies richer one).
-  - `maxRevisions?: number` (budget, mirrors `maxToolRounds`).
-- Generic callback + result types in `contracts.ts`, all Synapta-free: `ArtifactValidation { ok: boolean; errors?: readonly { path?: string; message: string }[]; metadata?: ... }`, `ArtifactContext { sessionId, runId, turn, signal, metadata }`, `ArtifactParseResult<T>`, `ArtifactParser<T>`, `ArtifactValidator<T>`, `ArtifactRepairer<T>`. No `workflow`/`node`/`step` field names; `T` is host-defined.
-- `AgentConfig.loop?: AgentLoopStrategy | AgentLoopOptions` and `RunOptions.loop?: AgentLoopStrategy | AgentLoopOptions` (RunOptions wins). Default: `SingleShotLoop`. A loop can be selected per request (Synapta opts a generation request into generate-validate-revise) or pinned per session/agent config.
-- Naming: do **not** register generate-validate-revise as the only way to interact with agents. Single-shot remains default; the loop is opt-in.
-- Boundary tests mirroring `phase*-boundaries.test.ts`: `src/` imports no `synapta*` package; `ArtifactValidation`/`ArtifactContext`/`ArtifactParseResult` carry no workflow vocabulary.
-
-Acceptance:
-- Default behavior unchanged when no `loop` is configured.
-- A run with `RunOptions.loop = { strategy: "generate-validate-revise", validator, parser, maxRevisions: 3 }` loops generate→validate→revise until `ok` or budget exhausted, emitting the Phase-29 events, and appends revision turns as store entries.
-- A third party (Synapta) supplies only `validator`/`parser`/`repairer` callbacks implementing its own schema; no Synapta type is imported by `src/`.
-- `SingleShotLoop` and `GenerateValidateReviseLoop` are independently testable with the mock provider.
-- The loop contract is generic enough that a future loop (e.g. plan-authoring, multi-agent) can be added without runtime changes.
-- Docs: new `/docs/agent-loops.md` page, `docs/index.md` entry, `docs/agent-session-runtime.md` cross-reference.
-
-### Phase 28 — Validation/refinement events and structured-output contracts
-
-**Goal:** make artifact loops and structured output observable through the
-existing `AgentEvent` stream, and lock the generic parse/validate/repair
-callback contracts as the only structured-output seam (no Synapta workflow
-types).
-
-Deliver:
-- `Artifact*` contract types pinned in `contracts.ts` (from Phase 27) and exported from `src/index.ts` with boundary tests passing.
-- Add `AgentEvent` variants emitted by artifact loops (zero emitted when single-shot loop runs):
-  - `artifact_validation_started` `{sessionId, runId, turn, attempt}`
-  - `artifact_validation_finished` `{sessionId, runId, turn, attempt, result: ArtifactValidation}`
-  - `artifact_revision_started` `{sessionId, runId, turn, attempt, failure: ArtifactValidation}`
-  - `artifact_finished` `{sessionId, runId, turn, attempt, result: ArtifactValidation}` (loop ended successfully)
-  - `artifact_failed` `{sessionId, runId, turn, attempt, result: ArtifactValidation}` (budget exhausted)
-- Validation-failure-triggering-a-revision is **not** an `error` event (recoverable, like `tool_execution_blocked`); only terminal exhaustion emits `artifact_failed`. `error` channel reserved for real failures, matching existing convention.
-- `attempt` numbering mirrors `retry_scheduled.attempt` and `tool_execution_*` block/finish pairing.
-- `ArtifactValidation.errors.message` may echo model text — run through `redactAgentEvent`/`activeRedactor` like other payloads.
-- Structured-output boundary: the only way to get typed output from a loop is `ArtifactParser<T>`. Prism never instantiates `T`; it threads host-supplied `T` through parser→validator→repairer. No `WorkflowStep`/`NodeSchema` types leak.
-
-Acceptance:
-- An artifact-loop run emits `validation_started` → `validation_finished` → (`revision_started`)* → `artifact_finished` or `artifact_failed`, correlated by `runId`/`turn`/`attempt`.
-- Single-shot runs emit zero artifact events.
-- `redactAgentEvent` handles `ArtifactValidation` payloads without crashing on nested/cyclic metadata.
-- `src/` imports no `synapta*`; artifact contract field names contain no domain vocabulary (boundary test).
-- Docs: `/docs/agent-events.md` updated with artifact events; `/docs/structured-output.md` (new) documents parser/validator/repairer contracts with a Synapta-style usage example that maps its own schema to `ArtifactValidation`.
-
-### Phase 29 — Workspace and global package discovery (skills, tools, context, instruction injectors)
-
-**Goal:** standard filesystem discovery for skills (and, where applicable,
-tools, context providers, and instruction injectors) so that anything available
-at `<workspace>/.agents/skills/<name>/` and `~/.prism/agent/skills/<name>/` is
-loadable as a contribution, with first-party and third-party packages equally
-discoverable. Provider discovery stays config/package-driven (needs
-credentials); Phase 24's resolver handles provider wiring.
-
-Deliver:
-- Host/CLI filesystem contribution loader (Node, optional) scanning:
-  - `<workspace>/.agents/skills/<name>/`
-  - `~/.prism/agent/skills/<name>/`
-  - and the analogous `.agents/tools/`, `.agents/context/`, `.agents/instructions/`, `.agents/agents/` (workspace) and `~/.prism/agent/{skills,tools,context,instructions,agents}/` (global) when those kinds are requested. Credentials-bearing providers are loaded as packages, not file-scanned.
-- Each discovered skill loads its `SKILL.md` (name, description, instructions, optional `context`, `toolNames`) into the `skills` contribution registry; tools/context/instructions/agents analogously register into their registries. Agent bundles load `AGENTS.md` (see Phase 33) including any colocated `skills/<name>/SKILL.md` and `tools/<name>` into an agent-scoped registry so a file-declared agent carries its own deps as a unit.
-- Merge order: global first, workspace overrides same-name (or vice versa, documented and tested), explicit `AgentConfig` / `RunOptions` selections override discovered contributions (progressive disclosure preserved).
-- Discovery is opt-in and loader-driven: SDK apps can skip it entirely and pass explicit registries; the CLI uses it. No hidden global state in core.
-- First-party skills ship as installable packages (`@arnilo/prism-skill-*`), not bundled in core; discovered like any third-party skill. First-party tools (future) ship as `@arnilo/prism-tool-*` packages the same way. Hosts choose which discovered contributions to activate.
-
-Acceptance:
-- A workspace skill at `.agents/skills/my-skill/SKILL.md` is loadable, selectable via `activeSkills: ["my-skill"]`, and its `toolNames`/`context` honored.
-- A global skill at `~/.prism/agent/skills/global-skill/SKILL.md` is loadable; workspace same-name overrides or merges per documented rule.
-- Discovered skills are inert until the host/selecting run activates them; discovery registers contributions, it does not auto-activate.
-- No filesystem access happens without the explicit host/CLI loader; in-memory SDK use is unaffected.
-- Docs: `/docs/contribution-discovery.md` (new) with workspace/global layout, merge order, trust model, and CLI flags.
-
-### Phase 30 — Package context and instruction injection
-
-**Goal:** a package can modify how context is formulated — inject its own
-instructions to modify agent behavior on the first turn, on every turn, or in
-response to user input — without forking the input/prompt pipeline and without
-hidden globals.
-
-Deliver:
-- Instruction injection contract (Prism-native): `InstructionInjector { name; apply(ctx: InstructionContext): InstructionContribution }` where `InstructionContribution { instructions?: string; contextBlocks?: readonly ContextBlock[]; when: "first_turn" | "every_turn" | "on_input"; predicate?: (ctx) => boolean }`.
-- Injectors register via `ExtensionAPI.registerInstructionInjector(...)` and are otherwise inert until the host selects them on `AgentConfig.instructions?: readonly InstructionInjector[] | SystemPromptConfig` (extend the existing `instructions` surface) or `RunOptions.instructions`.
-- The default input/prompt assembler runs selected injectors at the documented stage (after host `AgentConfig.context`, before skill contributions; `first_turn` runs only on turn 1, `every_turn` on all, `on_input` when the input predicate matches).
-- An injector may also produce `ContextBlock[]` (e.g. project schema, env state) — routed through the existing `resolveContextProviders` merge, not a parallel pipeline.
-- No injector can grant tool access, activate skills, or bypass permissions; it only adds text/context.
-
-Acceptance:
-- A package registers an injector that prepends "Always answer in JSON" on every turn, visible in the assembled provider request.
-- A `first_turn` injector adds project context only on turn 1.
-- Injectors cannot bypass `toolNames` enforcement or permission policies.
-- Docs: `/docs/instruction-injection.md` (new) plus `docs/extensions.md` cross-reference; `docs/index.md` entry.
-
-### Phase 31 — System and project prompts (AGENTS.md and SYSTEM.md)
-
-**Goal:** implement system/project prompt capabilities with a documented
-standard layout: `AGENTS.md` at the project root is the project prompt and
-`~/.prism/agent/SYSTEM.md` is the user/global system prompt, layered into the
-existing `SystemPromptContribution` system rather than a parallel mechanism.
-
-Deliver:
-- Project prompt: `<workspace>/AGENTS.md` → a `SystemPromptContribution` with `source: "app"` (project-scoped), loaded by the host/CLI filesystem loader. Loaded only with explicit trust (existing trust model from Phase 10/16).
-- System prompt: `~/.prism/agent/SYSTEM.md` → a `SystemPromptContribution` with `source: "user"` (global), same loader.
-- Layering order (matches the existing `SystemPromptSource` + merge/replace modes): user global (`SYSTEM.md`) → package contributions → app/project (`AGENTS.md`) → host `AgentConfig.systemPrompt` → `RunOptions.systemPrompt`. `AgentConfig.instructions` remains the simple direct base path; `RunOptions.systemPrompt: false` disables layers for that run as today.
-- Standalone SDK use with no filesystem loads nothing; `AgentConfig.instructions` / `systemPrompt` work unchanged.
-- Walk-up discoverability: the CLI loads `AGENTS.md` and `~/.prism/agent/SYSTEM.md` automatically when present and trusted; explicit flags override/disable each layer.
-- No prompt content is ever stored in events/store beyond what `AgentConfig.instructions`/`systemPrompt` already emits; secret redaction unchanged.
-
-Acceptance:
-- A workspace with `AGENTS.md` (project) and a user with `~/.prism/agent/SYSTEM.md` (system) both contribute to the composed prompt in the documented order; disabling a layer via flag removes only it.
-- Removing both files reverts to `AgentConfig.instructions` only — no hidden prompt.
-- Trust model: untrusted workspace `AGENTS.md` is not loaded unless the user opts in (reuse Phase 10/16 trust).
-- Docs: `/docs/system-prompts.md` updated with `AGENTS.md`/`SYSTEM.md` layout, layering order, trust, and CLI flags; `docs/index.md` entry.
-
-### Phase 32 — Synapta-facing integration example and boundary lock
-
-**Goal:** prove end-to-end that Synapta (or any third party) can use Prism with
-its own providers/tools/skills + optional first-party ones, opt a run into the
-generate-validate-revise loop with its own schema validator, observe
-artifact/refinement events, and that no Synapta workflow types appear anywhere
-in `src/`. This phase ships no new core surface; it exercises the seams.
-
-Deliver:
-- A compile-checked example (`examples/synapta-style-artifact-loop.ts`) that: builds a provider resolver mixing a first-party package and a third-party mock provider; registers a third-party tool + a first-party tool (mocked), selects a discovered skill; composes a system prompt from `AGENTS.md` + `SYSTEM.md`; runs `session.run(input, { loop: { strategy: "generate-validate-revise", validator, parser, repairer, maxRevisions: 3 } })` with a Synapta-style schema mapped to `ArtifactValidation`; asserts artifact events stream and no Synapta types are imported.
-- Boundary test hardened: grep/assert `src/**/*.ts` imports no `synapta*`; artifact contract field names contain no `workflow`/`node`/`step`; `ToolValidator`/`ArtifactValidator` are `(value, ctx)`-shaped, not domain-typed.
-- `/docs/structured-output.md` example showing a third-party schema mapped to `ArtifactValidation` end to end.
-
-Acceptance:
-- Example compiles and runs network-free with the mock provider.
-- All artifact events fire in order; `artifact_finished` carries `result.ok === true`.
-- Boundary tests fail if any Synapta-domain type or import is introduced into `src/`.
-- No new core exports required beyond what Phases 24–31 added.
-
-### Phase 33 — Agent definitions: declarative requirements and resolver
-
-**Goal:** let a third party ship an agent as a unit with declaratively referenced
-tools, skills, context providers, model, system prompt, and loop, mixing
-first-party and own dependencies by name — without hand-assembling `AgentConfig`
-inside an imperative `create()` that re-implements registry lookup. Mirrors the
-Prism pattern (declarative config + replaceable strategy; default + escape
-hatch).
-
-Deliver:
-- Extend `AgentDefinition` (`src/contracts.ts`) with declarative requirement fields, all name-referenced so dependencies resolve from in-scope registries:
-  - `model?: ModelConfig | string` — direct config or id resolved from `registries.models`.
-  - `tools?: readonly string[]` — tool names to activate from the active tool registry / `registries.tools`.
-  - `skills?: readonly string[]` — skill names, resolved through `resolveActiveSkills()` (Phase 26 gives free `toolNames` enforcement).
-  - `context?: readonly string[]` — context provider names from `registries.contextProviders`.
-  - `systemPrompt?: SystemPromptConfig`.
-  - `instructions?: string`.
-  - `loop?: AgentLoopStrategy | AgentLoopOptions` (Phase 27).
-  - `create?(config?: AgentConfig): Promise<Agent> | Agent` becomes **optional**. When present, it overrides declarative resolution (escape hatch for agents needing custom logic: dynamic model pick, settings-driven tools, credential-gated setup).
-- `resolveAgentDefinition(def, context)` generic helper (new, reuses existing seams):
-  ```ts
-  export interface AgentDefinitionResolutionContext {
-    readonly registries?: ContributionRegistries; // tools, skills, models, contextProviders
-    readonly providerSource?: ProviderResolver;   // Phase 24
-    readonly tools?: ToolRegistry | readonly ToolDefinition[]; // host active tool superset/filter
-    readonly skillsRegistry?: SkillRegistry;
-    readonly overrides?: Partial<AgentConfig>;    // host/run overrides win
-  }
-  export function resolveAgentDefinition(def, context): Promise<Agent> | Agent
-  ```
-  Algorithm:
-  1. If `def.create` exists → call it, merge `overrides`. Escape hatch.
-  2. Else build declaratively: model (direct or from `registries.models`), provider via `providerSource(model)` (Phase 24), tools resolved by name against active registry / `registries.tools` (**fail closed on missing name**, mirrors skill `toolNames`), skills via `resolveActiveSkills({registry, names, tools})` (Phase 26), context providers from `registries.contextProviders`. Compose `AgentConfig`, merge `overrides`, `createAgent(config)`.
-- Two equal delivery vehicles, same contract:
-  - **Code package (Extension):** third-party `setup()` calls `api.registerTool()`/`registerSkill()` for own deps, then `api.registerAgent({name, tools:[...], skills:[...]})`. Names reference own + first-party contributions in the same registries.
-  - **Filesystem bundle (`AGENTS.md`):** discovered under `.agents/agents/<name>/` (Phase 29). `AGENTS.md` frontmatter maps 1:1 to declarative `AgentDefinition` fields; colocated `skills/<name>/SKILL.md` and `tools/<name>` register into an agent-scoped registry, so a file-declared agent carries its own deps as a unit. Default `create()` for `AGENTS.md` reads the file, registers colocated deps into a transient scoped registry, and delegates to `resolveAgentDefinition`. Resolution scope: (global + workspace discovered) ∪ (colocated) ∪ (first-party package registries).
-- Composition and scope rules:
-  - Names resolve against all in-scope registries: first-party packages + workspace discovery + global discovery + own extension.
-  - Host controls scope by which registries it passes to `context.registries` — the "inert until host selects" principle is preserved; declaring `tools: ["read-file"]` does not force activation, host `overrides`/active tool superset is final.
-  - Recommend package-qualified names (`@arnilo/read-file`, `synapta/validate`); resolver uses documented first-match order (global → workspace → extension → first-party), overridable. Mark merge order as `ponytail:` comment (per-namespace registry later if collisions bite).
-  - Host always has final say: `overrides` can drop a tool, swap model, disable a skill.
-  - No privilege grant: an agent declaration cannot grant permissions or bypass `toolNames`; Phase 26 enforcement still runs at activation, Phase 25 validator still runs at dispatch.
-  - Mixed sourcing is the point: `tools: ["read-file", "synapta/validate", "my-grep"]` mixes first-party + third-party + own in one declaration; the declarative name list is what makes it possible.
-
-Acceptance:
-- A code-package agent and an `AGENTS.md` agent both resolve through the same `resolveAgentDefinition` and produce equal runtime behavior.
-- Declaring `tools: ["missing"]` with no in-scope tool of that name fails closed at resolution, before any provider turn.
-- Declared skills honor `toolNames` enforcement (Phase 26) — agent-skill demanding an inactive tool fails fast.
-- `overrides` drops a tool or swaps a model as final authority.
-- No new architecture: `AgentDefinition`, `createAgent`, the contribution registries, Phase 24 resolver, Phase 26 `resolveActiveSkills`, and Phase 29 discovery are all reused; the only additions are the declaration fields and the resolver helper.
-- Docs: `/docs/agent-definitions.md` (new) with both delivery vehicles, declarative fields, resolution scope/merge rules, and a mixed first-party + third-party example; `/docs/contribution-registries.md` agent section updated; `docs/index.md` entry.
-
-## External-app production hardening track
-
-This track turns Prism from a correct SDK/package surface into something an
-external multi-user app can depend on without inventing its own missing runtime
-ledger. Order is intentional: schema first, then durable facts, then
-concurrency, then safety/defaults/runtime polish.
-
-### Phase 34 — Production persistence contract and schema
-
-**Goal:** define the database-backed persistence surface external apps need,
-without forcing a specific database into core.
-
-Deliver:
-- Production persistence contract(s) for sessions, entries, branches, runs, events, tool calls, usage, agent definitions/versions, tenants/accounts/users, retention, and migrations.
-- Reference relational schema and migration notes; optional NoSQL mapping notes only where the contract differs.
-- Session-entry schema versioning and strict `SessionEntry.kind` validation, including JSONL rejection/quarantine for unknown kinds.
-- Index/query requirements for `sessionId`, `runId`, `parentId`, branch leaf, timestamps, tenant/account, event type, and entry kind.
-- Pagination/cursor shape for branch/session/event reads so DB adapters do not have to load every entry.
-- Document JSONL as a development/local adapter, not a production multi-writer store.
-- Docs: `/docs/session-stores.md`, `/docs/database-persistence.md` (new), `/docs/index.md`.
-
-Acceptance:
-- A host can implement a DB adapter from the documented contract without reading runtime internals.
-- Invalid JSONL entry kinds fail closed.
-- Schema covers multi-tenant app storage, retention, migrations, and indexed branch reads.
-- No provider credentials or secrets are required by the persistence contract.
-
-### Phase 35 — Durable run, event, tool-call, and usage ledger
-
-**Goal:** persist the facts external apps need for resume, audit, billing, UI, and crash recovery.
-
-Deliver:
-- Durable `runs` lifecycle: queued/running/succeeded/failed/aborted, timestamps, active model/provider, metadata, idempotency key, error, and abort reason.
-- Persisted `AgentEvent` ledger or normalized equivalent for agent/tool/provider/artifact/retry/compaction events.
-- Durable tool-call rows: requested, validated/blocked, started, progress, result/error, redacted args/result, permission/validation reason.
-- Usage/cost/cache accounting rows from provider events and final run summaries.
-- Runtime hooks/adapters that append events/usage without double-writing message entries.
-- Docs: `/docs/agent-events.md`, `/docs/runs-and-usage.md` (new), `/docs/tools.md`, `/docs/index.md`.
-
-Acceptance:
-- Process exit after a run leaves enough data to show status, timeline, errors, tool outcomes, and usage.
-- Event persistence is redacted and ordered by `runId`/sequence/timestamp.
-- Billing/usage can be computed without replaying provider streams.
-
-### Phase 36 — Atomic append, branch handles, and scalable session queries
-
-**Goal:** make append-only sessions safe under multi-process apps and usable by branch-aware UIs.
-
-Deliver:
-- Atomic append API with expected parent/leaf, duplicate/idempotency key handling, and optimistic concurrency failure shape.
-- Durable branch handle/current-leaf model: `(sessionId, leafId)` is explicit and storable by hosts.
-- RPC/API checkout command for existing leaf ids; fix same-id `forkSession` overwriting the in-memory RPC session map.
-- DB-friendly branch query primitives that fetch one branch path/page instead of `store.list(sessionId)` + in-memory rebuild for every read.
-- JSONL docs/tests showing no cross-process safety; optional advisory lock remains host concern unless cheap.
-- Docs: `/docs/session-branching.md`, `/docs/rpc.md`, `/docs/database-persistence.md`, `/docs/index.md`.
-
-Acceptance:
-- Two workers appending to the same branch cannot silently corrupt parent order.
-- External UI can keep multiple branch handles for one `sessionId`.
-- RPC can switch to an existing branch leaf.
-- Large sessions do not require full-session load for common branch reads in DB adapters.
-
-### Phase 37 — Security boundary hardening
-
-**Goal:** close prompt/file/config/header escape hatches before production persistence makes mistakes durable.
-
-Deliver:
-- Instruction-injector `resource` paths resolved inside the contribution directory unless an explicit trusted absolute resource policy allows otherwise; permission/trust checked before read.
-- Discovery loaders check symlink/realpath containment before reading `AGENT.md`, `SKILL.md`, manifests, or instruction files.
-- Instruction injectors receive the same redacted input/history the runtime persists, or docs explicitly mark them privileged and host-selected.
-- Unknown `SystemPromptContribution.source` ranks no higher than run/host overrides; custom sources cannot accidentally override run-level prompt.
-- Config merge blocks `__proto__`, `prototype`, and `constructor` pollution or uses null-prototype objects.
-- Provider header merge policy prevents caller headers from overriding provider-owned auth/session/security headers; fix OpenRouter ordering.
-- Docs: `/docs/security-auth-trust.md`, `/docs/instruction-injection.md`, `/docs/system-prompts.md`, `/docs/provider-packages.md`, `/docs/index.md`.
-
-Acceptance:
-- Malicious discovered contributions cannot read outside trusted roots before checks run.
-- Config JSON cannot mutate object prototypes.
-- Caller-provided headers cannot replace provider authorization.
-- Prompt source ordering is deterministic and documented.
-
-### Phase 38 — Explicit capability activation and API cleanup
-
-**Goal:** remove surprising public-contract behavior that can over-grant tools/skills or imply inert features work.
-
-Deliver:
-- Safer default for declarative agents: omitted `tools`/`skills` means none unless host explicitly opts into current all-in-scope behavior.
-- Runtime skill activation remains explicit for app-facing docs; `toolNames` enforcement stays fail-closed.
-- Decide each inert `AgentConfig` field (`extensions`, `settings`, `credentials`): wire it through runtime or remove/deprecate/document as host-owned.
-- Registry duplicate policy: strict registration option or deterministic conflict errors for providers/models/tools/contributions where overwrite is unsafe.
-- Migration notes for apps relying on all-tools/all-skills defaults.
-- Docs: `/docs/agent-definitions.md`, `/docs/context-and-skills.md`, `/docs/contribution-registries.md`, `/docs/agent-session-runtime.md`, `/docs/index.md`.
-
-Acceptance:
-- An agent cannot accidentally receive every host tool/skill by omitting a list.
-- Public config fields either work or are clearly documented as not runtime-consumed.
-- Duplicate contribution names cannot silently shadow in strict mode.
-
-### Phase 39 — Provider/runtime protocol correctness
-
-**Goal:** make provider streams, loops, compaction, and memory workers obey one protocol end to end.
-
-Deliver:
-- Runtime handles `tool_call_delta` for streaming UI and reconstructs final tool calls consistently with provider conformance helpers.
-- `generate-validate-revise` emits normal turn events and records initial input history consistently with `single-shot`.
-- Provider request options `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` either work in first-party providers or are removed/deprecated from public docs.
-- LLM compaction max-output settings map to provider/model request fields that providers actually serialize.
-- Observational-memory runtime appends through the owning session/store seam instead of accepting mismatched `session` + `store` pairs.
-- Observational-memory worker replays assistant tool-call messages before tool-result messages for providers that require valid tool-call transcripts.
-- Docs: `/docs/provider-conformance.md`, `/docs/agent-loops.md`, `/docs/compaction.md`, `/docs/observational-memory.md`, `/docs/index.md`.
-
-Acceptance:
-- Tool-call deltas stream, reconstruct, execute, persist, and replay in one tested path.
-- Artifact loop event/history behavior matches single-shot where semantics overlap.
-- Timeout/retry knobs are either verified behavior or no longer advertised.
-- Memory worker transcripts pass provider conformance tests.
-
-### Phase 40 — Backpressure and performance limits
-
-**Goal:** keep slow consumers and long sessions from turning into unbounded memory or latency problems.
-
-Deliver:
-- Bounded subscriber queue policy: configurable max queued events, close/drop/backpressure behavior, and event for overflow when useful.
-- Performance tests or fixtures for long sessions, branch reads, event ledger reads, and JSONL dev-store degradation boundaries.
-- DB adapter guidance for indexes, cursor pagination, batch appends, and event sequence allocation.
-- Document production sizing assumptions and what remains host-owned.
-- Docs: `/docs/agent-events.md`, `/docs/database-persistence.md`, `/docs/performance.md` (new), `/docs/index.md`.
-
-Acceptance:
-- Slow event consumers cannot grow memory without bound by default.
-- Long-session tests catch accidental full-scan regressions in code paths that claim pagination.
-- Production performance limits are explicit, not implied by JSONL behavior.
-
-### Phase 41 — External-app docs, examples, and release validation
-
-**Goal:** prove an external app can use the hardened surface from docs alone.
-
-Deliver:
-- Fix README quickstart event subscription so `session.run()` and event consumption run concurrently.
-- End-to-end example app using a DB-backed adapter mock/reference, explicit tools/skills, durable run ledger, event timeline, usage, branching, and checkout.
-- Migration guide from in-memory/JSONL to DB-backed persistence and from permissive capability defaults to explicit activation.
-- Network-free tests for persistence contract, event ledger, security escapes, branch handles, runtime protocol, and docs examples.
-- Final release checklist updates for docs, package exports, examples, tarball contents, and public API drift.
-- Docs: `README.md`, `/docs/database-persistence.md`, `/docs/runs-and-usage.md`, `/docs/session-branching.md`, `/docs/migration.md` (new), `/docs/index.md`.
-
-Acceptance:
-- README quickstart runs as written.
-- Example external app can resume/display a prior run and branch timeline without reading source.
-- Release checks fail on missing docs for new public persistence/runtime surfaces.
-
-## Provider cache optimization and NeuralWatt first-party provider track
-
-This track standardizes provider-agnostic cache intent, hardens existing first-party
-providers, then adds NeuralWatt as a first-party package without leaking
-provider-specific behavior into core.
-
-NeuralWatt docs reviewed for this roadmap update:
-- `https://portal.neuralwatt.com/docs/api/overview`: OpenAI-compatible base URL `https://api.neuralwatt.com/v1`, endpoints, energy metrics, and rate-limit overview.
-- `https://portal.neuralwatt.com/docs/authentication`: Bearer API keys, `NEURALWATT_API_KEY`, and auth error shape.
-- `https://portal.neuralwatt.com/docs/api/chat-completions`: Chat Completions request fields, streaming, tool calling, reasoning fields, prefix-cache usage, and energy fields.
-- `https://portal.neuralwatt.com/docs/api/models`: `/v1/models` metadata for capabilities, limits, pricing, cached-input pricing, and aliases.
-- `https://portal.neuralwatt.com/docs/guides/streaming`: SSE chunks, `data: [DONE]`, usage chunks, and `: energy` / `: cost` SSE comments.
-- `https://portal.neuralwatt.com/docs/guides/tool-calling`: OpenAI-style tool schema and `tool_choice` behavior.
-- `https://portal.neuralwatt.com/docs/guides/rate-limits`: cache-aware concurrency/uncached-TPM limits, retryable `429`/`503`, `Retry-After`, and `retry_strategy`.
-- `https://portal.neuralwatt.com/docs/guides/error-handling`: retry vs non-retry status codes and error body format.
-- `https://portal.neuralwatt.com/docs/api/quota`: authenticated quota/usage endpoint and 1 rps limit.
-- `https://portal.neuralwatt.com/docs/integrations/opencode`: OpenCode/OpenAI-compatible config notes and coding-model defaults.
-
-### Phase 42 — Prompt-cache primitives and provider capability metadata
-
-**Goal:** let apps express cache intent once while providers map it to their own APIs.
-
-Deliver:
-- Backwards-compatible `ProviderRequestOptions` cache surface that keeps `cacheKey`/`cacheRetention` and adds optional structured cache hints only if needed: cache mode, stable key, retention, and explicit breakpoints.
-- `PromptCacheBreakpoint` shape for common reusable locations: system prompt, tools, stable context/resources, last stable message, last user message, or message id.
-- Model/provider compat metadata for cache support: implicit vs OpenAI key vs Anthropic/OpenRouter `cache_control` vs provider-specific cache, key length, max breakpoints, minimum cacheable tokens, and long-retention support.
-- Shared helpers for cache-key sanitizing/truncation, retention mapping, cache hit-rate calculation, and Anthropic-style `cache_control` application.
-- Migration note that old `cacheKey`/`cacheRetention` remain valid aliases.
-- Docs: `/docs/provider-caching.md` (new), `/docs/provider-request-policies.md`, `/docs/model-registry.md`, `/docs/index.md`.
-
-Acceptance:
-- Existing providers compile without adopting the new structured hints immediately.
-- Providers can map the same request to OpenAI `prompt_cache_key`, Anthropic/OpenRouter `cache_control`, implicit cache-only providers, or no cache.
-- Cache-key sanitizing is centralized and tested per provider max length.
-- Docs explain provider support without promising cache hits.
-
-### Phase 43 — Cache-aware input ordering and diagnostics
-
-**Goal:** improve cache hit rates by making stable prompt prefixes deterministic.
-
-Deliver:
-- Opt-in cache-aware default input/prompt layout that places stable instructions, tools, context/resources/attachments, summaries, and history before the current user turn.
-- Preserve existing default ordering unless host/package opts into cache-aware ordering or a future major version flips the default with migration notes.
-- Conformance fixture: same static prefix + different user suffix produces byte-stable provider payload prefix.
-- Usage helpers/reporting for `cacheReadTokens`, `cacheWriteTokens`, cache hit rate, and provider-specific cache savings metadata where available.
-- Tests covering attachments/resources before current input for cache-aware mode and no behavior change for legacy mode.
-- Docs: `/docs/input-and-prompt-assembly.md`, `/docs/provider-caching.md`, `/docs/runs-and-usage.md`, `/docs/index.md`.
-
-Acceptance:
-- Apps can opt into cache-friendly ordering without replacing the whole input builder.
-- Cache diagnostics work from normalized `Usage` fields even when a provider only reports reads.
-- Cache-aware mode does not move tool result transcripts into invalid provider order.
-
-### Phase 44 — First-party provider cache behavior hardening
-
-**Goal:** make existing provider packages use provider cache APIs correctly and consistently.
-
-Deliver:
-- OpenAI package: map Prism `short`/`long` to OpenAI-supported retention (`long` -> `24h` only where supported; `short` uses provider default), clamp keys, and keep `cached_tokens` accounting correct.
-- OpenAI-compatible core adapter: pass supported provider options (`cacheKey`, `cacheRetention`, headers/extra where appropriate) or document it as minimal Chat Completions only.
-- OpenRouter package: use `session_id`/`x-session-id` within provider limits, apply Anthropic-style `cache_control` only to chosen breakpoints instead of every content block, preserve `cached_tokens`/`cache_write_tokens`, and ensure provider auth headers cannot be overridden.
-- OpenCode Go package: use `cacheKey ?? sessionId` for `x-opencode-session`; add route-specific `cache_control` only where compatible; preserve OpenAI/Anthropic usage extraction.
-- Z.AI package: document implicit context caching and keep `cached_tokens`/`cache_write_tokens` extraction tested.
-- Kimi package: add Anthropic-style cache control where the coding endpoint accepts it or document unsupported behavior; keep `cache_read_input_tokens`/`cache_creation_input_tokens` extraction tested.
-- Provider conformance tests for cache payload shape, usage normalization, and header ownership.
-- Docs: `/docs/provider-packages.md`, `/docs/provider-caching.md`, provider package READMEs, `/docs/index.md`.
-
-Acceptance:
-- First-party providers no longer emit invalid cache retention values or over-broad cache-control markers.
-- Provider-owned `Authorization`/session/security headers win over user-provided headers.
-- Cache read/write token extraction is tested for every first-party provider.
-
-### Phase 45 — NeuralWatt first-party provider package
-
-**Goal:** add `@arnilo/prism-provider-neuralwatt` as a first-party OpenAI-compatible provider package.
-
-Deliver:
-- Workspace package `packages/provider-neuralwatt` with ESM build, exports, tests, README, and inclusion in `packages/prism-providers` / `packages/prism-all` aggregators if those packages are still the first-party bundle mechanism.
-- `createNeuralWattProvider()` using base URL `https://api.neuralwatt.com/v1` by default, injectable `fetch`, host credential resolver, and `NEURALWATT_API_KEY` docs.
-- Chat Completions serializer for NeuralWatt/OpenAI-compatible fields: `model`, `messages`, `tools`, `tool_choice`, `stream`, `stream_options.include_usage`, `temperature`, `top_p`, `max_tokens`, `stop`, `reasoning_effort`, `thinking_token_budget`, `chat_template_kwargs`, plus `compat`/`extra` escape hatches.
-- Message mapping for text/images/tool calls/tool results and prior assistant reasoning using `reasoning`/`reasoning_content` where Prism thinking blocks are preserved.
-- SSE parser that handles OpenAI-style data chunks, `[DONE]`, tool-call deltas, reasoning deltas/content, final usage chunks, and NeuralWatt SSE comments.
-- Usage mapping from `prompt_tokens`, `completion_tokens`, `total_tokens`, and `prompt_tokens_details.cached_tokens`; no cache-write tokens unless NeuralWatt starts reporting one.
-- Docs: `/docs/provider-neuralwatt.md` (new), `/docs/provider-packages.md`, `/docs/provider-caching.md`, `/docs/index.md`.
-
-Acceptance:
-- Package passes provider conformance tests network-free.
-- Streaming content, thinking, tool-call deltas/finals, usage, abort, and secret redaction behave like other first-party providers.
-- Auth header is set after caller headers so caller config cannot replace the provider token.
-- `cacheRetention: "none"` does not pretend to disable NeuralWatt's backend implicit prefix cache; docs state it only disables Prism/provider cache hints.
-
-### Phase 46 — NeuralWatt model discovery, pricing, energy, and retry semantics
-
-**Goal:** expose NeuralWatt-specific value without bloating core provider contracts.
-
-Deliver:
-- Curated model configs for featured NeuralWatt aliases (`glm-5.2`, `kimi-k2.6`, `kimi-k2.7-code`, `qwen3.5-397b`, `qwen3.6-35b`, and fast/short variants where useful) with capabilities, limits, reasoning/tool/vision flags, and cache pricing.
-- Optional `listNeuralWattModels()` helper that calls `/v1/models` and maps metadata into `ModelConfig`/`ModelCost` without requiring runtime model discovery.
-- NeuralWatt pricing mapping: input/output per million, cached input per million, no separate cache-write price for hosted models; preserve BYOK caveat in docs.
-- Energy/cost telemetry handling: parse non-streaming `energy`/`cost` fields and streaming `: energy` / `: cost` comments; expose through the smallest Prism-compatible seam available (provider telemetry event if added by Phase 35/42, otherwise package helper/metadata documented as provider-specific).
-- Optional `getNeuralWattQuota()` helper for `/v1/quota`, documented as 1 rps and not part of every generation call.
-- Retry classification/tests for NeuralWatt errors: do not retry `400/401/402/403/404`; honor `Retry-After` and `retry_strategy` for `429`; retry `500/502/503` with backoff; preserve redacted error body.
-- Docs: `/docs/provider-neuralwatt.md`, `/docs/runs-and-usage.md`, `/docs/provider-caching.md`, `/docs/index.md`.
-
-Acceptance:
-- Model metadata maps NeuralWatt capabilities/limits/pricing into Prism without guessing unknown fields.
-- Energy/cost data is not dropped silently when using the NeuralWatt package.
-- Retry behavior matches NeuralWatt's documented retryable status codes and headers.
-- Quota helper is opt-in and never called during normal provider generation.
-
-### Phase 47 — NeuralWatt cache, reasoning, and agentic workload validation
-
-**Goal:** verify NeuralWatt works well for long-running agent sessions, not just one-shot chat.
-
-Deliver:
-- Cache tests/fixtures for NeuralWatt implicit vLLM prefix caching: stable prefix ordering, `usage.prompt_tokens_details.cached_tokens`, 25% cached-input pricing metadata, and no explicit cache-control payload.
-- Docs explaining NeuralWatt's cache-aware limiter: uncached TPM counts cold prefill only, warm-prefix requests can avoid some 503 fleet-capacity blocks, and full prior history is required for multi-turn cache reuse.
-- Reasoning tests for `reasoning_effort`, `thinking_token_budget`, `chat_template_kwargs.enable_thinking`, `preserve_thinking`, and `clear_thinking` pass-through via `compat`/`extra`.
-- Transcript tests preserving prior assistant reasoning in `reasoning`/`reasoning_content` for Kimi/GLM/Qwen-style models while avoiding leakage into providers that do not support it.
-- Tool-call loop test using NeuralWatt OpenAI-style tools and tool results.
-- Docs: `/docs/provider-neuralwatt.md`, `/docs/provider-caching.md`, `/docs/agent-session-runtime.md`, `/docs/index.md`.
-
-Acceptance:
-- NeuralWatt agent sessions keep cache-friendly prompt prefixes across follow-up turns.
-- Reasoning controls are passed through without forcing NeuralWatt-specific fields into core contracts.
-- Tool-call transcripts round-trip through Prism runtime and NeuralWatt payload format.
-
-### Phase 48 — Cache/provider docs, examples, and release validation
-
-**Goal:** make cache behavior and NeuralWatt integration usable from docs alone.
-
-Deliver:
-- README/provider table update listing OpenAI, OpenRouter, OpenCode Go, Z.AI, Kimi, and NeuralWatt with cache support summary.
-- Example showing cache-aware prompt assembly and cache hit-rate reporting across at least two providers, one explicit-cache provider and NeuralWatt implicit prefix caching.
-- Example NeuralWatt agent run with tools, reasoning controls, streamed usage, cache tokens, and energy/cost telemetry using mocked responses.
-- Package export/tarball checks for `@arnilo/prism-provider-neuralwatt`, aggregator packages, docs links, and type declarations.
-- Network-free tests for all docs examples.
-- Docs: `README.md`, `/docs/provider-caching.md`, `/docs/provider-neuralwatt.md`, `/docs/provider-packages.md`, `/docs/examples.md` if present, `/docs/index.md`.
-
-Acceptance:
-- Users can configure NeuralWatt from docs without reading package source.
-- Cache behavior is documented per provider with explicit caveats for implicit caches.
-- Release checks fail if the NeuralWatt package or cache docs are missing from exports/navigation.
-
-## Defer until after this track
-
-- Built-in app/tool packs. Ship them as separate packages only.
-- MCP bridge. Build as an external extension package after extension APIs settle.
-- Full TUI. Optional separate package if CLI/RPC is not enough.
-- Additional loop strategies (plan-authoring, multi-agent, graph orchestration). Add as new `AgentLoopStrategy` implementations once a real consumer needs them; the generic loop contract is the only seam.
-- Additional first-party provider adapters beyond OpenAI, OpenCode Go, OpenRouter, ZAI, Kimi, and NeuralWatt unless users ask.
-- Encrypted/keychain credential storage. Keep persistent secret UX host-owned until a real app needs it.
+# Prism 0.0.5 Roadmap
+
+Updated: 2026-07-15
+
+## Objectives
+
+- Release Prism 0.0.5 only after closing every confirmed security, correctness, observability, accounting, API, and release-readiness issue from the 2026-07-15 Prism/Mastra review.
+- Add the smallest useful versions of the recommended agent-platform capabilities while keeping Prism a lightweight, pluggable package rather than an application framework.
+- Preserve explicit host ownership of providers, credentials, storage, tools, permissions, servers, memory, and deployment.
+- Keep core dependency-free at runtime on Node.js 20; library-specific integrations belong in optional packages.
+- Prefer existing Prism contracts, middleware, ledgers, checkpoints, leases, provider transport, and conformance suites over new parallel abstractions.
+
+## Expected Outcome
+
+- Known SSRF, execution-policy, approval-scope, sandbox-output, telemetry-span, usage-accounting, media-budget, and workflow-test defects have regression tests and are fixed at their shared boundaries.
+- Agent runs have a direct result API and race-free integrated event streaming without duplicating execution logic.
+- Optional, independently installable capabilities cover evaluations, AI SDK models, working/semantic memory, RAG, durable human approval, web serving, MCP serving, scheduling, workflow replay, feedback, supervisor delegation, and A2A.
+- `prism init` creates a small project with one explicit provider and one passing offline test; it activates no database, telemetry, credential store, or network integration by default.
+- Core still has zero runtime dependencies, hidden globals, automatic package discovery, built-in privileged tools, built-in secret persistence, or framework-specific server coupling.
+- All 24 existing packages and any approved new optional packages build, test, pack, and install as version 0.0.5 with consistent internal ranges.
+- 0.0.5 is published only after the final release gate passes; tagged but unpublished 0.0.4 is not published.
+
+## Product Boundaries
+
+- **Harness, not framework:** Prism supplies contracts and orchestration primitives. Hosts assemble applications.
+- **Core stays small:** no runtime dependency is added to `@arnilo/prism` unless a native Node/Web API cannot provide a correct implementation and the release review explicitly approves the dependency.
+- **Optional packages stay optional:** AI SDK, MCP, PostgreSQL/vector, server, memory, eval, RAG, supervisor, and A2A code must not load or activate when absent.
+- **No hidden activation:** project discovery, credentials, persistence, telemetry, memory workers, schedules, servers, and remote agents require explicit host calls.
+- **No platform clone:** 0.0.5 does not add Studio/editor/cloud services, browser automation, voice providers, chat-channel adapters, deployment-provider packages, an authentication-provider matrix, vendor-specific observability exporters, or a TUI.
+- **No adapter zoo:** ship one reusable seam and at most one reference production adapter per new capability. Add more only from measured demand.
+- **No central god object:** new capabilities compose through existing agent/session/workflow/package APIs, not a mandatory global `Prism` application container.
+- **Security is not optional:** trust-boundary validation, ownership checks, abort propagation, resource bounds, redaction, and fail-closed behavior cannot be simplified away.
+
+## Release Order and Gates
+
+1. Phases 0-3 are mandatory foundations and run in order.
+2. Phase 4 and later run consumers depend on the Phase 3 run-result contract.
+3. Phase 7 precedes Phase 9 so RAG reuses memory embedding/vector primitives.
+4. Phase 8 precedes Phase 10 resume endpoints and Phase 11 scheduled/replayed workflow behavior.
+5. Phase 10 depends on Phases 1-3 and must not expose unfixed security/accounting behavior over HTTP or MCP.
+6. Phase 12 depends on Phase 4 evaluation linkage; Phase 13 depends on result, memory, server, permission, cancellation, and budget primitives from earlier phases.
+7. Phase 14 starts only when every earlier task is checked and its focused/full checks pass.
+8. Any incompatible finding discovered during implementation reopens the owning phase; it is not deferred merely to preserve the target date.
+
+## Tasks
+
+- [ ] Phase 0 — Freeze the 0.0.5 scope and review existing primitives before implementation
+  - Acceptance Criteria:
+    - Functional: Every confirmed review finding and recommended feature maps to exactly one phase, package owner, public surface, test owner, and documentation owner; already-shipped Prism functionality is not planned again.
+    - Performance: Baselines record current test duration, package/tarball sizes, generated-project install size, and representative stream/tool/workflow measurements before code changes.
+    - Code Quality: Existing contracts, middleware, events, persistence records, checkpoints, leases, package exports, and testing helpers are inventoried; new primitives are proposed only where no reusable seam exists.
+    - Security: Threat boundaries for media fetch, tools, approvals, remote serving, memory tenancy, workflow resume, supervisor delegation, and A2A are documented before implementation.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/index.md`, `docs/public-contracts.md`, `docs/agent-session-runtime.md`, `docs/agent-loops.md`, `docs/runs-and-usage.md`, `docs/workflows.md`, `docs/host-security.md`, `docs/release-and-install.md`.
+      - `docs/review-coverage-2026-07-14.md`, Plans 053-058, and the 2026-07-15 Prism/Mastra review evidence.
+      - Mastra repository commit `2745031d1d4a4978f037092da371428c32e2842a` and current Mastra docs for agents, memory, RAG, workflows, evals, observability, supervisors, A2A, server, and scheduling.
+    - Options Considered:
+      - Copy Mastra's integrated application architecture: broad but conflicts with Prism's host-owned package model; rejected.
+      - Add only confirmed defects and defer all capabilities: safest release, but does not satisfy the agreed 0.0.5 target; rejected.
+      - Reuse Prism primitives and add narrow optional packages: chosen.
+    - Chosen Approach:
+      - Produce a traceability matrix before changing contracts. Each new package must state which core primitives it consumes, why those primitives are insufficient, and the minimum generic addition required.
+      - Keep package names below tentative until the primitive review confirms a package is necessary; adding behavior to an existing optional package is preferred.
+    - API Notes and Examples:
+      ```text
+      review item → existing primitive → minimal gap → owning phase/package → focused test → docs → release gate
+      ```
+    - Files to Create/Edit:
+      - `docs/review-coverage-2026-07-15.md`: 0.0.5 traceability and threat matrix.
+      - `docs/performance.md`: dated pre-change baselines.
+      - `roadmap.md`: execution evidence and checkbox updates only as phases complete.
+      - `plans/`: no duplicate implementation plan is required unless a phase is split during execution.
+    - References:
+      - `.agents/skills/create-plan/references/prism-wiki.md`.
+      - Current source hotspots: `src/contracts.ts`, `src/agents.ts`, `packages/workflows/src/run.ts`.
+  - Test Cases to Write:
+    - Roadmap/review matrix consistency check: every in-scope item has one owner and no unresolved release-blocking row.
+    - Baseline script/check: records reproducible commands and environment without introducing timing assertions into normal CI.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no; this phase freezes scope and evidence.
+    - Docs pages to create/edit:
+      - `docs/review-coverage-2026-07-15.md`: scope, primitive inventory, threat model, and ownership.
+      - `docs/performance.md`: baseline measurements.
+    - `docs/index.md` update: yes; add the 0.0.5 review-coverage entry under Release and install.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 1 — Close release-blocking security defects
+  - Acceptance Criteria:
+    - Functional: Media URL validation rejects IPv4 and IPv6 loopback, private, link-local, unique-local, unspecified, multicast, and IPv4-mapped private literals; configured public/allowed hosts still work.
+    - Functional: `createReadOnlyTools()` applies the shared `executionPolicy` exactly as `createCodingTools()` does.
+    - Functional: approval caching defaults to `none`; explicit `run` and `session` scopes include real run/session identity and never reuse a decision outside that scope.
+    - Performance: SSRF checks and approval keying remain bounded; DNS/network validation does not add unbounded lookups, redirects, retries, or response buffering.
+    - Code Quality: URL classification is centralized, uses Node standard-library parsing where possible, and all tool aggregators share one option-merging helper.
+    - Security: DNS resolution/rebinding behavior is explicit and tested; no approval, denial, path, command, hostname, or credential value leaks across tenants, sessions, or runs.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/multimodal-content.md`, `docs/host-security.md`, `docs/coding-agent-tools.md`, `docs/coding-security.md`.
+      - `src/content.ts`, `packages/coding-agent/src/index.ts`, `packages/coding-security/src/approval.ts` and all callers.
+      - Node.js `node:net`, `node:dns`, `node:http`, `node:https`, URL, AbortSignal, and Web Fetch APIs for the supported Node 20 runtime.
+    - Options Considered:
+      - Strip IPv6 brackets only: fixes demonstrated literals but leaves DNS/private-resolution bypasses; insufficient.
+      - DNS preflight followed by ordinary `fetch`: small but vulnerable to time-of-check/time-of-use rebinding; insufficient for a deny-by-default claim.
+      - Resolve, classify, and pin the selected public address in a bounded Node requester while retaining injected `fetch`/loader seams for hosts: chosen, subject to primitive review.
+      - Keep approval cache global and document it: unsafe; rejected.
+    - Chosen Approach:
+      - Normalize URL hostnames before IP classification, use `net.isIP()`, cover IPv4-mapped IPv6, preserve redirect rejection, and make default remote-media fetching connect only to a classified public address. Host allow-lists remain the simplest trusted path.
+      - Route both coding-tool aggregators through `withSharedExecutionPolicy`.
+      - Resolve cache scope as `options.approvalCacheScope ?? "none"`; add run/session IDs to execution metadata and the selected scope key. Remove a scope mode rather than pretending it is isolated if identity cannot be passed safely.
+    - API Notes and Examples:
+      ```ts
+      createReadOnlyTools(cwd, { executionPolicy });
+
+      createCodingApprovalPolicy({
+        approve,
+        approvalCacheScope: "run",
+      }); // key includes executionContext.runId
+      ```
+    - Files to Create/Edit:
+      - `src/content.ts`: normalized IP classification and secure bounded fetch path.
+      - `src/contracts.ts` or existing execution context types: run/session identity only if not already available at policy boundary.
+      - `packages/coding-agent/src/index.ts`: shared policy propagation.
+      - `packages/coding-agent/src/read.ts`, `shell.ts`, `write.ts`, `edit.ts`: pass existing execution identity if required.
+      - `packages/coding-security/src/approval.ts`: correct default and scoped keys.
+      - Relevant existing test files under `src/__tests__`, `packages/coding-agent/src/__tests__`, and `packages/coding-security/src/__tests__`.
+    - References:
+      - Confirmed reproductions: bracketed `::1`, `fe80::1`, `fc00::1`, `::ffff:127.0.0.1`; read-only policy check count `0`; two default-scope approvals invoking the callback once.
+  - Test Cases to Write:
+    - Literal matrix: blocked IPv4/IPv6 ranges, mixed-case/encoded hosts, IPv4-mapped IPv6, explicit allowed hostname, and public IP.
+    - DNS matrix with injected resolver/requester: private-only, mixed public/private, rebinding attempt, timeout, abort, lookup failure, and public pinned connection.
+    - Read-only aggregator denial: denied read never reaches filesystem operations.
+    - Approval scope matrix: default prompts every time; run cache reuses only within run; session cache reuses only within session; parallel identical requests do not accidentally cross scope.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; SSRF behavior, tool option propagation, execution metadata, and approval defaults change.
+    - Docs pages to create/edit:
+      - `docs/multimodal-content.md`: exact literal/DNS/allow-list guarantees and host-injected fetch responsibility.
+      - `docs/coding-agent-tools.md`: aggregator policy propagation.
+      - `docs/coding-security.md`: default and run/session cache semantics.
+      - `docs/host-security.md`: network and approval threat model.
+    - `docs/index.md` update: no new page; update existing entry descriptions only if behavior summaries change materially.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 2 — Fix runtime output, telemetry, usage, media, and workflow-test correctness
+  - Acceptance Criteria:
+    - Functional: sandboxed shell stdout/stderr reaches the shell tool's normal output path in order and remains abort-aware.
+    - Functional: successful, failed, and aborted agent/provider/tool spans end exactly once; detaching instrumentation closes attributable outstanding spans.
+    - Functional: every provider turn has attributable usage and the run result contains the aggregate of all turns; persisted and metric records distinguish provider-turn values from run totals so summing cannot double bill.
+    - Functional: item count, total bytes, per-item bytes, MIME, audio-duration, and model-capability checks run once over the complete media request before upload/provider I/O.
+    - Functional: workflow coordinator concurrency test is deterministic under loaded CI and retains the production concurrency assertion.
+    - Performance: streaming remains streaming; output/media fixes do not materialize unbounded data, telemetry maps release terminal entries, and aggregate usage is O(number of turns).
+    - Code Quality: one usage accumulator and one media-request validation path replace per-caller patches; timing flakes use explicit gates rather than larger arbitrary sleeps.
+    - Security: sandbox output is redacted/sanitized at existing boundaries; media validation occurs before side effects; telemetry and usage metadata contain no prompt, tool result, or secret payloads.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/observability.md`, `docs/runs-and-usage.md`, `docs/multimodal-content.md`, `docs/workflows.md`.
+      - `packages/coding-security/src/sandbox.ts`, `packages/observability-opentelemetry/src/instrumentation.ts`, `src/agents.ts`, `src/content.ts`, provider media serializers, and workflow coordinator tests.
+      - OpenTelemetry API 1.9 semantics through the package's existing peer/dev dependency and local type declarations.
+    - Options Considered:
+      - Return buffered stdout/stderr from sandbox execution: easy but loses progressive output and increases memory; rejected.
+      - Add `onData` to `SandboxExecRequest` and forward the existing shell callback: chosen.
+      - Keep duplicate usage rows and document query filters: retains a billing trap; rejected.
+      - Validate media in every serializer: duplicates policy and still risks partial side effects; rejected.
+    - Chosen Approach:
+      - Extend the sandbox request with the existing output callback shape.
+      - Treat `error` and abort as terminal agent-span signals; retain provider/tool-specific terminal handling and close remaining session-owned spans on detach.
+      - Add an internal usage accumulator. Persist records with explicit scope/turn/attempt fields; keep `prism.provider.tokens` for provider-turn tokens and use a distinct run-total metric if needed.
+      - Resolve all media blocks first within bounded per-item reads, validate the complete collection, then serialize/upload.
+      - Replace coordinator timeout polling with promise gates/signals representing claimed and released jobs.
+    - API Notes and Examples:
+      ```ts
+      interface SandboxExecRequest {
+        command: string;
+        onData?: (chunk: string, stream: "stdout" | "stderr") => void;
+      }
+
+      interface UsageRecord {
+        scope: "provider_turn" | "run_total";
+        turn?: number;
+        attempt?: number;
+      }
+      ```
+    - Files to Create/Edit:
+      - `packages/coding-security/src/sandbox.ts` and tests.
+      - `packages/observability-opentelemetry/src/instrumentation.ts` and tests.
+      - `src/agents.ts`, `src/agent-loops.ts`, `src/contracts.ts`, run-ledger adapters/schema/migrations as required.
+      - `src/content.ts`, `src/providers/media.ts`, provider request serializers, and media tests.
+      - `packages/workflows/src/__tests__/coordinator.test.ts`.
+    - References:
+      - Runtime evidence: sandbox chunks remained empty; failed `prism.agent.run` span had `ended: false`; one-turn usage created duplicate rows; multi-turn final usage reported only the last turn.
+  - Test Cases to Write:
+    - Sandboxed shell emits interleaved stdout/stderr, aborts, and respects output bounds.
+    - Failed and aborted runs leave zero active spans and every in-memory span ends once.
+    - Two-turn tool run persists two provider-turn records and one aggregate record with total 33; billing query/metric path counts one scope only.
+    - Four individually valid media blocks exceeding the request total fail before any provider fetch/upload; 33 items fail before serialization.
+    - Coordinator cap remains two with deterministic gates and no wall-clock race.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; sandbox adapter, usage records/metrics, media request enforcement, and terminal telemetry change.
+    - Docs pages to create/edit:
+      - `docs/coding-security.md`, `docs/observability.md`, `docs/runs-and-usage.md`, `docs/multimodal-content.md`, `docs/performance.md`.
+      - Persistence docs/migration pages if usage schema changes.
+    - `docs/index.md` update: no new page; update usage/observability descriptions if new scope fields are public.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 3 — Simplify the public agent API and remove inert/fragile surfaces
+  - Acceptance Criteria:
+    - Functional: `session.run(input)` returns an `AgentRunResult` containing run/session IDs, status, final assistant content/text, aggregate usage, and terminal metadata; callers ignoring the return remain valid.
+    - Functional: `session.stream(input)` subscribes before execution, starts exactly one run, yields its correlated events, and terminates on success/failure/abort without a subscription race.
+    - Functional: runtime-inert `AgentConfig.extensions`, `settings`, and `credentials` are removed or moved to an explicit host composition type; no field remains documented as agent behavior when runtime ignores it.
+    - Performance: direct runs do not buffer the full event stream; streaming uses existing bounded subscriber queues and adds no second provider/tool execution.
+    - Code Quality: `run`, `prompt`, CLI, RPC, workflows, evals, and server paths share one execution implementation; touched source-text tests become behavior/type/export tests; hotspots split only along proven domains required by this change.
+    - Security: returned results and stream events pass existing redaction; stream cancellation aborts only the owned run and cleans subscriptions.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/agent-session-runtime.md`, `docs/agent-events.md`, `docs/cli-rpc.md`, `docs/workflows.md`, `docs/customization.md`.
+      - `src/contracts.ts`, `src/agents.ts`, `src/agent-loops.ts`, CLI/RPC callers, workflow agent nodes, and all `session.run` callers.
+      - Mastra `Agent.generate()`/`stream()` behavior for ergonomic comparison only; Prism retains its own event/result contracts.
+    - Options Considered:
+      - Add separate `generate`, `run`, `prompt`, and `stream` engines: duplicate behavior; rejected.
+      - Change `run()` to return a result and add one integrated `stream()` wrapper over the same engine: chosen.
+      - Keep inert fields for compatibility: misleading at 0.0.x; rejected unless a real runtime owner is identified during caller audit.
+    - Chosen Approach:
+      - Extract the minimum internal execution primitive returning `AgentRunResult`; existing `run` and `prompt` delegate to it. `stream` creates the bounded subscription first and filters by owned run ID.
+      - Keep extension/settings/credential composition outside `AgentConfig`; provide a tiny explicit host helper only if removing fields otherwise forces repeated wiring in real callers.
+      - Replace implementation-string assertions encountered in changed files. Do not perform a speculative whole-repo class/file split.
+    - API Notes and Examples:
+      ```ts
+      const result = await session.run("Summarize this");
+      console.log(result.text, result.usage.totalTokens);
+
+      for await (const event of session.stream("Summarize this")) {
+        render(event);
+      }
+      ```
+    - Files to Create/Edit:
+      - `src/contracts.ts`: `AgentRunResult` and stream signature.
+      - `src/agents.ts`, `src/agent-loops.ts`: shared execution/result assembly.
+      - `src/cli-runner.ts`, RPC, workflows, examples, and tests using current run semantics.
+      - `src/__tests__/*`: remove touched source-text assertions.
+      - `plans/README.md` or an archive index only if completed-plan discoverability needs improvement; do not rewrite historical plans.
+    - References:
+      - Current `AgentSession.run(): Promise<void>` and explicit tests proving `extensions/settings/credentials` are inert.
+  - Test Cases to Write:
+    - Single-turn, tool-turn, structured-output, failed, and aborted run result shapes.
+    - Stream starts without an external subscriber race, yields only owned-run events, and cleans up after early consumer return.
+    - CLI/RPC/workflow behavior remains unchanged except for consuming the returned result.
+    - Compile fixture documents migration from inert AgentConfig fields to explicit host wiring.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; core session return/stream APIs and AgentConfig change.
+    - Docs pages to create/edit:
+      - `docs/agent-session-runtime.md`, `docs/agent-events.md`, `docs/customization.md`, `docs/cli-rpc.md`, `docs/workflows.md`, `docs/migration.md`.
+      - Relevant examples and README quick start.
+    - `docs/index.md` update: yes; update the Agent/session runtime entry to advertise direct results and integrated streaming.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 4 — Add optional evaluations, scorers, datasets, and batch experiments
+  - Acceptance Criteria:
+    - Functional: an optional eval package runs deterministic scorers against `AgentRunResult`, stores scores from 0-1 with reason/metadata, supports explicit sampling, and links every evaluation to run/session/trace IDs.
+    - Functional: a minimal dataset is a typed, immutable collection of input/expected-value items; a batch runner executes a pinned dataset snapshot and returns per-item plus aggregate results.
+    - Functional: live post-run scoring can run asynchronously without changing the agent result; scoring failure is attributable and does not corrupt the run.
+    - Performance: concurrency and sample rate are bounded; scorer input can reference persisted traces/results without duplicating unbounded event payloads.
+    - Code Quality: function scorers are the base primitive; no mandatory LLM judge, dashboard, experiment service, or schema library is introduced.
+    - Security: scorer/dataset persistence is tenant-scoped and redacted; untrusted scorer code receives no credentials, tools, or workspace access unless the host explicitly supplies them.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/agent-session-runtime.md`, `docs/runs-and-usage.md`, `docs/observability.md`, persistence contracts and conformance docs.
+      - Mastra scorer, live evaluation, datasets, and experiments docs/source for capability comparison.
+    - Options Considered:
+      - Put scorers in core agent execution: couples quality policy to every run; rejected.
+      - Optional package subscribing to results/events and using a small persistence contract: chosen.
+      - Recreate Mastra's visual dataset/versioning platform: out of scope.
+    - Chosen Approach:
+      - Create a narrow optional package, tentatively `@arnilo/prism-evals`, with `Scorer`, `EvaluationRecord`, `DatasetItem`, and bounded `runExperiment` APIs.
+      - Add only the generic ledger/query extension required to persist evaluation records; in-memory operation must work without a database.
+    - API Notes and Examples:
+      ```ts
+      const scorer = defineScorer({
+        id: "contains-citation",
+        score: ({ result }) => ({ score: result.text.includes("[") ? 1 : 0 }),
+      });
+
+      const report = await runExperiment({ agent, dataset, scorers: [scorer], concurrency: 2 });
+      ```
+    - Files to Create/Edit:
+      - `packages/evals/` (tentative): contracts, runner, package metadata, README, tests.
+      - Core/persistence record contracts only where evaluation linkage cannot remain package-local.
+      - SQLite/PostgreSQL adapters and migrations only if durable score queries are approved.
+      - `examples/evals.ts`.
+    - References:
+      - Existing `RunLedger`, `ProductionPersistenceStore`, `AgentRunResult`, run IDs, trace IDs, and event metadata.
+  - Test Cases to Write:
+    - Deterministic function scorer success/failure; score bounds validation; sampled skip; scorer abort/timeout.
+    - Batch concurrency cap, stable item/result ordering, aggregate calculation, and immutable dataset snapshot.
+    - Tenant/run ownership rejection and canary-secret redaction.
+    - Packed install works without database or model credentials.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; new optional package and possible persistence records.
+    - Docs pages to create/edit:
+      - `docs/evaluations.md`: scorers, sampling, datasets, experiments, persistence, security, and examples.
+      - `docs/observability.md` and persistence docs for score linkage.
+    - `docs/index.md` update: yes; add an Evaluations and quality section or entry.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 5 — Add a minimal `prism init` project scaffold
+  - Acceptance Criteria:
+    - Functional: `prism init <dir>` creates a TypeScript project with one selected provider, one agent, environment example, one passing offline mock test, build/typecheck/test scripts, and concise README.
+    - Functional: flags select provider and optional workflows/evals; rerunning refuses to overwrite files unless an explicit force flag is supplied.
+    - Performance: default generated install/build remains small and is measured against the Mastra baseline; no storage, telemetry, eval, memory, server, or workflow dependency is installed unless selected.
+    - Code Quality: implementation uses Node standard-library filesystem/path APIs and checked-in tiny templates; no interactive-prompt or template-engine dependency is added.
+    - Security: generated `.gitignore` excludes credentials and local stores; `.env.example` contains placeholders only; no command executes downloaded code beyond the user's normal package install.
+  - Approach:
+    - Documentation Reviewed:
+      - `README.md`, `docs/release-and-install.md`, provider package docs, current compile-checked examples, root CLI implementation.
+      - Mastra `create-mastra` options and generated weather project for onboarding comparison.
+    - Options Considered:
+      - Publish a separate scaffold CLI immediately: another package/release surface; rejected unless root CLI cannot support the command cleanly.
+      - Add `prism init` to existing CLI with deterministic flags: chosen.
+      - Add interactive prompts: extra dependency and harder testing; defer.
+    - Chosen Approach:
+      - Copy the smallest existing real-provider and mock-test examples into a target directory with token replacement. Keep generated provider wiring explicit and package-specific.
+    - API Notes and Examples:
+      ```bash
+      npx prism init my-agent --provider openai
+      npx prism init my-agent --provider openrouter --with-workflows
+      cd my-agent && npm install && npm test
+      ```
+    - Files to Create/Edit:
+      - Existing CLI command parser/runner files.
+      - `templates/init/` or equivalent minimal checked-in templates.
+      - CLI tests and packed-install smoke tests.
+      - README quick-start instructions.
+    - References:
+      - Existing `examples/`, package exports, provider docs, and root bin.
+  - Test Cases to Write:
+    - Generate into empty temp dir, install from packed tarballs, typecheck, test, and import.
+    - Provider flag matrix; optional feature dependency matrix; unknown flag/provider errors.
+    - Existing/non-empty destination refusal, force behavior, path traversal, and placeholder secret scan.
+    - Size report for default generated project.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; CLI gains an init command and generated-project contract.
+    - Docs pages to create/edit:
+      - `docs/cli-rpc.md`: init command and flags.
+      - `docs/release-and-install.md`: generated-project install flow and size expectations.
+      - `README.md`: real-provider quick start with passing test.
+    - `docs/index.md` update: yes; update CLI and Release/install entry descriptions.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 6 — Add optional AI SDK model interoperability
+  - Acceptance Criteria:
+    - Functional: an optional adapter accepts a supported AI SDK `LanguageModel` and maps text, reasoning, tool-call input deltas/final calls, finish reason, usage, provider metadata, structured-output options, errors, and abort signals to Prism provider events.
+    - Functional: Prism message/tool definitions map to AI SDK call options without silently dropping supported content; unsupported content fails before model invocation.
+    - Performance: stream parts are translated incrementally using existing Prism bounds; no full-response buffering or duplicate model call occurs.
+    - Code Quality: support is isolated in one optional package with one documented AI SDK specification-major compatibility range; first-party provider packages remain independent.
+    - Security: provider metadata and errors pass redaction, host credentials remain owned by the supplied AI SDK model, and adapter options cannot override Prism abort/resource limits silently.
+  - Approach:
+    - Documentation Reviewed:
+      - Current AI SDK documentation from Context7 library `/websites/ai-sdk_dev`, especially custom `LanguageModelV4`, `doStream`, stream lifecycle/tool/usage parts, structured responses, and abort behavior.
+      - AI SDK v5 migration material showing stream-part lifecycle changes; implementation must follow the installed/supported specification, not stale V3 examples.
+      - Prism provider conformance, provider primitives, structured output, multimodal, and provider event docs.
+    - Options Considered:
+      - Add many first-party model providers: high maintenance; rejected.
+      - Depend on high-level `streamText`: simpler but may duplicate agent/tool-loop behavior; rejected.
+      - Adapt the lower-level AI SDK language-model interface to `AIProvider`: chosen.
+    - Chosen Approach:
+      - Create `@arnilo/prism-provider-ai-sdk` (tentative) with `createAiSdkProvider({ model })`. Use `@ai-sdk/provider` as an optional package peer/dev dependency pinned to supported specification major; core receives no dependency.
+      - Reuse Prism's provider conformance and fake AI SDK models; no live provider test is required by default.
+    - API Notes and Examples:
+      ```ts
+      import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
+
+      const provider = createAiSdkProvider({ model: hostCreatedAiSdkModel });
+      const agent = createAgent({ provider, model: { provider: provider.id, model: "host-model" } });
+      ```
+    - Files to Create/Edit:
+      - `packages/provider-ai-sdk/` (tentative): adapter, serializers, tests, README, manifest.
+      - Provider conformance tests only if a generic assertion is missing.
+      - Bundle packages only after explicit size/dependency review; do not add to lightweight profiles automatically.
+    - References:
+      - AI SDK current `LanguageModelV4` custom-provider docs retrieved 2026-07-15.
+      - `docs/provider-conformance.md`, `src/testing/provider-conformance.ts`.
+  - Test Cases to Write:
+    - Fake stream covering text/reasoning start-delta-end, fragmented tool input, finish, usage, metadata, warning, error, and abort.
+    - Structured-output request mapping and unsupported schema/content rejection.
+    - Multi-turn Prism tool replay through the adapter.
+    - Packed optional install with supported AI SDK peer; core install remains unchanged.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; new provider package and compatibility contract.
+    - Docs pages to create/edit:
+      - `docs/providers/ai-sdk.md`: supported specification, mapping, limitations, examples, security, and migration policy.
+      - `docs/provider-packages.md` and `docs/provider-conformance.md`.
+    - `docs/index.md` update: yes; add AI SDK adapter under Provider and model connection.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 7 — Add optional working memory and semantic recall primitives
+  - Acceptance Criteria:
+    - Functional: hosts can persist schema/template-backed working memory per tenant/resource/thread and update it explicitly or through an opt-in processor.
+    - Functional: semantic recall embeds a query, performs tenant-scoped top-K search, optionally includes adjacent session entries, and injects selected memories through existing context/input seams.
+    - Functional: in-memory reference adapters and one PostgreSQL/pgvector production path pass shared conformance; no vector backend is required for ordinary Prism sessions.
+    - Performance: top-K, candidate count, adjacent range, embedding batch size, payload bytes, and injected tokens are bounded; indexing may run asynchronously without blocking agent completion by default.
+    - Code Quality: `Embedder` and `VectorStore` are narrow package-owned contracts reused by RAG; no generic database framework or provider-specific core behavior is added.
+    - Security: tenant/resource scope is mandatory on every write/query/delete; memory text/metadata is redacted and cannot cross threads or delegated-agent resource IDs.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/session-stores.md`, database persistence docs, context/input docs, observational-memory docs, middleware docs.
+      - Mastra working memory, semantic recall, memory processors, and resource/thread isolation docs/source.
+    - Options Considered:
+      - Add semantic search to `SessionStore`: overloads a history contract and every adapter; rejected.
+      - Optional memory package with narrow embed/vector contracts and middleware/context contributions: chosen.
+      - Ship many vector adapters: rejected; one in-memory and one PostgreSQL reference are enough for 0.0.5.
+    - Chosen Approach:
+      - Create a tentative `@arnilo/prism-memory` package. Reuse Standard JSON Schema-compatible validation hooks for working-memory shape without requiring Zod.
+      - Keep existing observational memory unchanged: it compresses and recalls source-backed observations; semantic memory retrieves embeddings and working memory stores current structured profile/state.
+    - API Notes and Examples:
+      ```ts
+      const memory = createMemory({ store, embedder, tenantId, resourceId, threadId });
+      await memory.updateWorking({ name: "Ada", preferences: { format: "concise" } });
+      const recalled = await memory.recall("preferred response format", { topK: 5, messageRange: 1 });
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/` (tentative): contracts, in-memory adapters, processors/context provider, conformance, tests, README.
+      - PostgreSQL adapter/migration in the package or existing PostgreSQL package after dependency review.
+      - Examples for working and semantic memory.
+    - References:
+      - Existing `ContextProvider`, middleware, `SessionEntry`, resource/branch ownership, and optional PostgreSQL pool primitives.
+  - Test Cases to Write:
+    - Working-memory schema validation, merge/replace semantics, concurrent update conflict, and thread isolation.
+    - Semantic top-K ordering, adjacent range, empty result, embedding failure, abort, limits, and deterministic in-memory conformance.
+    - Cross-tenant query/write/delete denial and canary-secret redaction.
+    - PostgreSQL live suite behind explicit environment variable; default suite remains network-free.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; new optional memory package, contracts, and persistence behavior.
+    - Docs pages to create/edit:
+      - `docs/working-and-semantic-memory.md`: complete API page.
+      - `docs/compaction-observational-memory.md`: distinction and composition guidance.
+      - PostgreSQL and context/input docs for adapter/injection behavior.
+    - `docs/index.md` update: yes; add working/semantic memory under Compaction/session memory.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 8 — Add durable human-in-the-loop suspend and resume
+  - Acceptance Criteria:
+    - Functional: workflows and opted-in tool approvals can persist a `suspended` state with typed/validated suspend data, later resume with validated input, and continue exactly once from the durable checkpoint.
+    - Functional: restart/reconnect can list and resume suspended runs; denial/cancellation is a terminal attributable outcome.
+    - Performance: suspension consumes no worker slot or polling loop; resume uses existing checkpoint/lease/fencing primitives and remains bounded under contention.
+    - Code Quality: suspend/resume extends the current workflow state machine and checkpoint schema; it does not introduce a second durable-run engine.
+    - Security: resume requires run ownership/authorization, respects fencing tokens and idempotency, redacts payloads, and re-evaluates permissions instead of trusting stale in-memory approval state.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/workflows.md`, `docs/workflow-orchestration-primitives.md`, checkpoint/lease/public contract docs, coding approval docs.
+      - Mastra workflow/tool suspend, resume schema, durable storage, and approval behavior for comparison.
+    - Options Considered:
+      - Keep callback-only approvals: cannot survive process exit; rejected.
+      - Model suspension as an ordinary failure and restart the workflow: loses exact continuation; rejected.
+      - Add a first-class suspended checkpoint state and resume command: chosen.
+    - Chosen Approach:
+      - Extend workflow node/result status and versioned checkpoint data with suspend descriptor and resume cursor. Validate payloads through existing optional validator hooks/JSON Schema package.
+      - Bridge durable tool approval through workflow suspension; ordinary non-durable agent callbacks remain supported.
+    - API Notes and Examples:
+      ```ts
+      return suspend({ reason: "publish", data: { artifactId }, resumeSchema });
+
+      await workflow.resume(runId, { approved: true }, { ownerId, expectedVersion });
+      ```
+    - Files to Create/Edit:
+      - `packages/workflows/src/types.ts`, `run.ts`, checkpoint serialization, commands, coordinator, tests.
+      - SQLite/PostgreSQL checkpoint migrations only if schema storage needs additive columns.
+      - `packages/coding-security` bridge types/helpers if durable approval is exposed there.
+    - References:
+      - Existing `CheckpointStore`, `LeaseStore`, fencing tokens, `workflow.resume`, cancel records, and execution policies.
+  - Test Cases to Write:
+    - Suspend, process restart, authorized resume, exact-once continuation, second-resume conflict, denial, cancel, and abort.
+    - Invalid suspend/resume payload; stale fencing token; wrong owner/tenant; redaction.
+    - SQLite/PostgreSQL multi-process race; local in-memory parity.
+    - Tool approval suspends before side effect and rechecks policy on resume.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; workflow statuses, checkpoint payloads, commands, and approval behavior change.
+    - Docs pages to create/edit:
+      - `docs/workflows.md`, `docs/workflow-orchestration-primitives.md`, `docs/coding-security.md`, `docs/cli-rpc.md`, database persistence docs.
+    - `docs/index.md` update: yes; update workflow entry to mention durable human approval.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 9 — Add a small optional RAG package
+  - Acceptance Criteria:
+    - Functional: plain text and Markdown can be chunked with configured size/overlap, embedded in batches, upserted with source metadata, retrieved by bounded top-K/filter, and rendered with stable source/citation IDs.
+    - Functional: RAG uses the Phase 7 `Embedder`/`VectorStore` contracts and can contribute retrieved context to an agent without changing core input assembly.
+    - Performance: chunk count, chunk bytes/tokens, overlap, batch size, query candidates, result bytes, and context tokens are bounded; indexing and retrieval honor abort signals.
+    - Code Quality: text/Markdown use a small deterministic implementation and standard APIs; PDF/HTML/LaTeX/semantic chunking, GraphRAG, reranker pipelines, and extraction-agent frameworks are out of scope.
+    - Security: source IDs/metadata are tenant-scoped, remote content still uses Phase 1 media/resource policies, and retrieved text cannot grant tools or permissions.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/multimodal-content.md`, `docs/resource-loading.md`, context/input docs, Phase 7 memory/vector docs when completed.
+      - Mastra MDocument chunking, embedding, vector query, metadata extraction, and GraphRAG docs for feature selection only.
+    - Options Considered:
+      - Add chunking/retrieval to core: unrelated to invariant agent mechanics; rejected.
+      - Optional package reusing memory vector contracts: chosen.
+      - Depend on a large document framework: rejected for initial text/Markdown scope.
+    - Chosen Approach:
+      - Create tentative `@arnilo/prism-rag` with deterministic recursive/character chunking, an indexing helper, retrieval context provider, and citation renderer.
+    - API Notes and Examples:
+      ```ts
+      const chunks = chunkText(markdown, { size: 1_000, overlap: 100, sourceId: "guide" });
+      await indexChunks({ chunks, embedder, store, scope });
+      const context = await retrieveContext("How do approvals work?", { topK: 4, scope });
+      ```
+    - Files to Create/Edit:
+      - `packages/rag/` (tentative): chunking, indexing, retrieval, tests, README.
+      - Shared memory conformance only if RAG exposes a missing generic requirement.
+      - RAG example using mock embedder/vector store.
+    - References:
+      - Existing `ResourceLoader`, `ContextProvider`, content bounds, and Phase 7 primitives.
+  - Test Cases to Write:
+    - Deterministic text/Markdown boundaries, overlap, stable IDs, empty/oversized inputs, abort, and limits.
+    - Batch embedding/upsert, metadata filter, top-K citation rendering, duplicate source idempotency.
+    - Tenant isolation, prompt-injection text remains inert context, secret redaction, and remote-resource policy reuse.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; new optional RAG package.
+    - Docs pages to create/edit:
+      - `docs/rag.md`: chunking, indexing, retrieval, citations, limits, security, and examples.
+      - `docs/working-and-semantic-memory.md` and context docs for shared primitives.
+    - `docs/index.md` update: yes; add RAG under Input, prompt, and context assembly.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 10 — Add web-standard serving and MCP server exposure
+  - Acceptance Criteria:
+    - Functional: an optional server package exposes selected agents and workflows through a Web `Request -> Response` handler with direct result, bounded event streaming, abort, status, and resume endpoints.
+    - Functional: the existing MCP package can expose selected Prism tools and approved workflow/agent operations using the installed MCP SDK server APIs; existing client behavior remains unchanged.
+    - Functional: hosts supply authentication/authorization callbacks and route selection; Prism provides no user database or auth-provider integration.
+    - Performance: request bodies, response/error bodies, SSE events, concurrent runs, timeouts, and subscriber queues are bounded; disconnect aborts owned work when configured.
+    - Code Quality: one web-standard handler supports Node/serverless/framework wrappers; no Express/Fastify/Hono/Koa/Nest/Next dependency enters Prism server code.
+    - Security: all routes fail closed, validate ownership and content type, apply CORS/host/origin policy only when explicitly configured, redact errors, and expose no tool/agent/workflow by default.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/agent-session-runtime.md`, `docs/cli-rpc.md`, `docs/workflows.md`, `docs/host-security.md`, event and transport bounds.
+      - Installed `@modelcontextprotocol/sdk@1.29.0` declarations for `McpServer.registerTool`, server ownership, and web-standard/Streamable HTTP transports.
+      - Mastra server/client/MCP surfaces for endpoint selection only.
+    - Options Considered:
+      - Add framework-specific adapters: maintenance multiplication; rejected.
+      - Put HTTP server startup in core: hidden deployment policy; rejected.
+      - Optional pure handler plus host-owned listener/framework bridge: chosen.
+    - Chosen Approach:
+      - Create tentative `@arnilo/prism-server` using Web `Request`, `Response`, `ReadableStream`, and `AbortSignal` APIs. A tiny Node listener example may adapt requests but is not mandatory runtime.
+      - Extend `@arnilo/prism-mcp` using SDK `McpServer` registration methods. Default transport examples use SDK-provided stdio/web-standard transports; Prism maps only explicitly selected capabilities.
+    - API Notes and Examples:
+      ```ts
+      const handler = createPrismHandler({
+        agents: { support: agent },
+        workflows: { publish: workflow },
+        authorize: async ({ request, capability }) => hostPolicy(request, capability),
+      });
+
+      const mcp = createPrismMcpServer({ tools: approvedTools });
+      await mcp.connect(transport);
+      ```
+    - Files to Create/Edit:
+      - `packages/server/` (tentative): handler, routing, streaming, tests, README.
+      - `packages/mcp/src/server.ts`, exports, tests, README.
+      - Examples for native Node adaptation and MCP in-memory transport.
+    - References:
+      - Existing bounded SSE/event multiplexer, run result/stream APIs, workflow commands, MCP client bridge, and host security policy seams.
+  - Test Cases to Write:
+    - Result/stream/status/resume routes, disconnect abort, malformed/body overflow, unknown capability, auth deny, ownership mismatch, and redacted error.
+    - MCP list/call selected tool, unknown/denied tool, tool error, abort, list-changed notification, workflow operation allow-list.
+    - Web-standard handler runs without framework dependency; packed server and MCP package imports.
+    - Concurrency/body/event limit tests and secret scan.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; new server package and MCP server API.
+    - Docs pages to create/edit:
+      - `docs/server.md`: handler, routes, auth callbacks, streaming, deployment adaptation, limits.
+      - `docs/mcp-tools.md`: client/server distinction and exposure policy.
+      - `docs/host-security.md`: remote boundary checklist.
+    - `docs/index.md` update: yes; add Server/API section and update MCP entry.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 11 — Extend workflows with schedules, background execution, composition, state, and replay
+  - Acceptance Criteria:
+    - Functional: hosts can create, list, pause, resume, trigger, and delete durable one-time/interval schedules that enqueue workflow runs idempotently through the existing coordinator.
+    - Functional: a workflow can be used as a node, share typed/validated state, and replay from an eligible completed node while preserving original-run lineage and immutable prior evidence.
+    - Functional: active/background runs can be observed by run ID after reconnect; process restart does not duplicate scheduled fire or completed steps.
+    - Performance: scheduler polling, claimed schedules, run concurrency, nested depth, replay fan-out, state bytes, and history are bounded; idle schedules consume no busy loop.
+    - Code Quality: scheduler and replay reuse workflow checkpoints, leases, fencing, node runners, and event multiplexer; no second queue or durable-agent engine is added.
+    - Security: schedule/replay operations enforce owner/tenant authorization, nested workflows cannot broaden tools/credentials, and replay never reuses stale approval without Phase 8 resume checks.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/workflows.md`, workflow primitives, database persistence, CLI/RPC, and Phase 8 suspend/resume docs.
+      - Mastra schedules, workflow composition/state, background/durable runs, restart, and time-travel docs/source for capability comparison.
+    - Options Considered:
+      - Implement a full cron parser in core: unnecessary parser/security surface; rejected.
+      - Support one-time `nextRunAt`, fixed interval, and host-supplied schedule calculator; chosen. A cron adapter can be optional later.
+      - Copy entire checkpoints for replay and mutate lineage: storage-heavy/confusing; rejected.
+    - Chosen Approach:
+      - Add schedule records to the workflows package and production persistence adapters, claimed with existing leases/idempotency keys.
+      - Model nested workflows as a node adapter over the same runner. Store state in versioned bounded checkpoint data. Replay creates a new run referencing source run/node/checkpoint and reuses only validated immutable predecessor outputs.
+    - API Notes and Examples:
+      ```ts
+      await schedules.create({ workflowId: "cleanup", intervalMs: 86_400_000, input, ownerId });
+      const replay = await workflow.replay({ sourceRunId, fromNodeId: "review", ownerId });
+      ```
+    - Files to Create/Edit:
+      - `packages/workflows/src/schedules.ts` (tentative), types, runner/node composition, replay/state logic, commands, tests.
+      - SQLite/PostgreSQL persistence schema/migrations and conformance.
+      - Server/RPC bindings for approved operations.
+    - References:
+      - Existing workflow coordinator, `CheckpointStore`, `LeaseStore`, fencing tokens, cancel/resume, fan-out/join, and production persistence.
+  - Test Cases to Write:
+    - One-time/interval create, due fire, duplicate poll, pause/resume/manual trigger/delete, restart, and concurrent coordinators.
+    - Nested workflow success/failure/suspend/cancel, max depth, state validation/size bound.
+    - Replay lineage, eligible/ineligible node, unchanged prior evidence, new downstream side effects only, authorization, and approval recheck.
+    - SQLite/PostgreSQL live coordination plus deterministic network-free in-memory tests.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; workflow node/status/state/schedule/replay APIs, persistence, commands, and events change.
+    - Docs pages to create/edit:
+      - `docs/workflows.md`, `docs/workflow-orchestration-primitives.md`, database persistence pages, `docs/cli-rpc.md`, `docs/server.md`.
+    - `docs/index.md` update: yes; workflow entry must mention schedules, composition, state, and replay.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 12 — Add trace/run feedback and evaluation linkage
+  - Acceptance Criteria:
+    - Functional: hosts can attach rating, comment, tags, and optional scorer/evaluation IDs to a run/trace; records are queryable and immutable or versioned according to documented semantics.
+    - Functional: OpenTelemetry instrumentation emits metadata-only feedback/evaluation events or attributes without embedding unrestricted comments in metric labels.
+    - Performance: feedback payload/tag counts and query pages are bounded; high-cardinality values never become metric attributes by default.
+    - Code Quality: feedback uses existing persistence/query and OTel seams; no first-party Datadog, Langfuse, LangSmith, Arize, Braintrust, Sentry, or PostHog adapter is added.
+    - Security: ownership checks, redaction, retention, deletion, and tenant isolation apply to comments/tags; exporter failures never break agent runs.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/observability.md`, `docs/runs-and-usage.md`, production persistence/query docs, Phase 4 eval docs.
+      - Mastra observability feedback, trace scoring, storage exporter, and vendor integration docs for data-model comparison.
+    - Options Considered:
+      - Encode feedback only as OTel span events: difficult to update/query after span export; rejected.
+      - Persist a small Prism record and optionally mirror safe metadata to OTel: chosen.
+      - Build vendor exporters: use OTLP and host SDKs instead; rejected.
+    - Chosen Approach:
+      - Add a bounded `RunFeedbackRecord`/query contract, in-memory and database implementations, and optional OTel handling. Link evaluation records by ID rather than copying scorer payloads.
+    - API Notes and Examples:
+      ```ts
+      await feedback.append({
+        runId,
+        ownerId,
+        rating: 1,
+        comment: "Useful and cited",
+        tags: ["reviewed"],
+        evaluationIds: [evaluation.id],
+      });
+      ```
+    - Files to Create/Edit:
+      - Core/package persistence contracts and query types as approved.
+      - SQLite/PostgreSQL migrations/adapters/conformance.
+      - `packages/observability-opentelemetry` feedback handling and tests.
+      - Phase 4 eval package linkage.
+    - References:
+      - Existing run/trace IDs, metadata-only telemetry policy, cursor pagination, retention, and redaction.
+  - Test Cases to Write:
+    - Append/query/version/delete or tombstone behavior, pagination, bounds, and missing run.
+    - Cross-owner denial, canary redaction, retention, exporter failure isolation.
+    - OTel test verifies only safe low-cardinality fields become attributes/events.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; feedback persistence/query and telemetry behavior are new.
+    - Docs pages to create/edit:
+      - `docs/observability.md`, `docs/runs-and-usage.md`, `docs/evaluations.md`, database persistence pages.
+    - `docs/index.md` update: no new page; update Observability and Evaluations descriptions.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 13 — Add optional supervisor delegation and A2A interoperability
+  - Acceptance Criteria:
+    - Functional: an optional supervisor can delegate to an explicit allow-list of local child agents, return child results, isolate child resource/thread IDs, propagate cancellation, and enforce per-delegation step/token/time/tool budgets.
+    - Functional: hooks can approve, reject, narrow, or modify a delegation and inspect completion without granting broader permissions than the parent.
+    - Functional: selected agents can be exposed through the current A2A protocol with host-provided authentication/authorization and signed agent cards where required; remote agents can be invoked through an explicit client adapter.
+    - Performance: maximum delegation depth, active children, message bytes, budgets, remote timeouts, and stream buffers are bounded; cycles fail before execution.
+    - Code Quality: supervisor and A2A are optional packages built on `AgentRunResult`, memory scope, server handler, and event primitives; deterministic workflows remain the preferred orchestration tool for known graphs.
+    - Security: child permissions only narrow, credentials are resolved in the owning child/remote boundary, memory is isolated, cards/signatures are verified, remote content is untrusted, and abort/ownership propagate through the full chain.
+  - Approach:
+    - Documentation Reviewed:
+      - Prism agent definitions, loops, workflows, memory, server, execution policy, credentials, events, and host security docs produced in earlier phases.
+      - Mastra supervisor/delegation, task-completion, memory isolation, durable/background, and A2A docs/source for behavioral comparison.
+      - Current A2A protocol specification and security guidance must be rechecked at implementation time; do not copy Mastra wire types as Prism contracts.
+    - Options Considered:
+      - Put dynamic delegation into core `createAgent`: broadens invariant runtime and permission surface; rejected.
+      - Model every delegation as a static workflow: safe but cannot cover dynamic supervisor decisions; retain as preferred deterministic option.
+      - Optional supervisor package plus optional A2A adapter over server primitives: chosen.
+    - Chosen Approach:
+      - Create tentative `@arnilo/prism-supervisor` using explicit child descriptors and host hooks. Use unique derived resource IDs and run-result/event forwarding with bounded filters.
+      - Add A2A to the optional server/interoperability package or a separate package only if protocol dependencies justify it. Use WebCrypto/Node crypto for ES256 rather than a new signing abstraction when sufficient.
+    - API Notes and Examples:
+      ```ts
+      const supervisor = createSupervisor({
+        agent,
+        children: { researcher: { agent: researchAgent, permissions: readOnlyPolicy } },
+        limits: { maxDepth: 2, maxActiveChildren: 2, maxTokens: 20_000 },
+      });
+      ```
+    - Files to Create/Edit:
+      - `packages/supervisor/` (tentative): delegation, hooks, budgets, tests, README.
+      - Server/A2A package files, protocol mapping, signing/verification, tests.
+      - Memory/resource scoping helpers only if existing APIs cannot express child isolation.
+    - References:
+      - Existing agent definitions, provider/tool budgets, execution policies, abort signals, event streams, and Phase 7/10 primitives.
+  - Test Cases to Write:
+    - Local delegation success/reject/modify, child failure, abort, depth/cycle/concurrency/token/time/tool limits, and completion hook.
+    - Parent/child memory isolation, permission narrowing, credential ownership, and secret redaction.
+    - A2A card sign/verify/tamper/expiry, unauthorized invoke, malformed/oversized stream, timeout, abort, and remote error.
+    - Deterministic workflow path remains unaffected and no supervisor package is loaded by core.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; optional supervisor and A2A APIs/protocol mapping.
+    - Docs pages to create/edit:
+      - `docs/supervisors.md`: delegation, budgets, isolation, workflows comparison, examples.
+      - `docs/a2a.md`: protocol version, agent cards, auth, streaming, limits, security.
+      - `docs/host-security.md`, memory and server docs for cross-references.
+    - `docs/index.md` update: yes; add Multi-agent and interoperability entries.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Phase 14 — Complete maintainability, documentation, packaging, and 0.0.5 release validation
+  - Acceptance Criteria:
+    - Functional: all 0.0.5 features compose through public packed imports; examples and generated projects work without workspace-relative paths; optional packages remain independently installable.
+    - Functional: every package manifest, lockfile entry, internal dependency/peer range, changelog, migration note, bundle/profile decision, tarball, provenance report, and release artifact consistently targets 0.0.5.
+    - Performance: default network-free test budget remains under 60 seconds on the documented reference environment or a measured, justified new budget is approved; core/generated-project/package size regressions are reported and reduced where unnecessary.
+    - Code Quality: touched source-text tests are replaced; dead exports/dependencies and contradictory docs are removed; `contracts.ts`, `agents.ts`, and workflow runner are split only where completed feature work proves a cohesive boundary; completed plans are indexed/archived without rewriting history.
+    - Security: full SSRF/tool/approval/redaction/OAuth/persistence/media/server/MCP/memory/workflow/supervisor/A2A threat suites pass; audit has zero high/critical findings; secret scan covers source, fixtures, logs, databases, checkpoints, generated projects, and tarballs.
+  - Approach:
+    - Documentation Reviewed:
+      - Every page changed/created by Phases 1-13, `README.md`, `CHANGELOG.md`, `docs/migration.md`, `docs/release-and-install.md`, package READMEs/manifests, release workflow/script.
+      - Node 20/24 compatibility, npm provenance/publish behavior, dependency release notes for every selected optional integration.
+    - Options Considered:
+      - Publish 0.0.4 after fixes: conflicts with immutable tagged review state; rejected.
+      - Publish 0.0.5 from one deterministic dependency-ordered release after all gates: chosen.
+      - Add every new optional package to `prism-all`/profiles automatically: rejected; bundle inclusion requires explicit dependency/size/use-case review.
+    - Chosen Approach:
+      - Run focused phase checks continuously, then one packed-install integration matrix and release dry-run. Upgrade only dependencies required by implemented APIs/security; do not combine unrelated TypeScript/Node major upgrades with 0.0.5.
+      - Keep old numbered plans immutable. Add an index/archive marker rather than retaining another giant historical narrative in this roadmap after release.
+    - API Notes and Examples:
+      ```bash
+      npm run sdk:ready
+      npm audit --audit-level=high
+      npm ls --all
+      npm run test:postgres
+      npm run release:check -- --version 0.0.5
+      npm run release:publish -- --version 0.0.5 --dry-run --allow-untagged
+      ```
+    - Files to Create/Edit:
+      - Root/workspace `package.json` files and `package-lock.json`.
+      - `CHANGELOG.md`, package changelogs/READMEs, `README.md`, `docs/migration.md`, `docs/release-and-install.md`, `docs/review-coverage-2026-07-15.md`.
+      - `.github/workflows/release.yml`, `scripts/release.mjs`, release tests only if new package graph exposes a gap.
+      - `plans/README.md` or archive index for completed plans; historical plan bodies remain unchanged.
+    - References:
+      - Existing deterministic/resumable release script, Node 20/24 CI, PostgreSQL service job, pack/install smoke tests, public export contract, and 0.0.4 package graph.
+  - Test Cases to Write:
+    - Full typecheck/build/network-free suite; Node 20/24 public import matrix; all docs/examples; generated-project test.
+    - Packed cross-package journey combining result streaming, eval, AI SDK fake model, memory/RAG, durable approval/workflow, server/MCP, schedule/replay, feedback, and supervisor without live credentials.
+    - PostgreSQL live adapter suite and optional credential-gated provider/A2A smoke commands documented and operator-run where credentials exist.
+    - Tarball allow/deny lists, fresh install, dependency graph, version/range/tag checks, provenance dry-run, secret scan, audit/license/install-script review.
+    - Release assertion: npm has no `@arnilo/*@0.0.5` collision and all 0.0.4 packages remain unpublished unless already externally present.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes; this is the complete 0.0.5 documentation and release gate.
+    - Docs pages to create/edit:
+      - All Phase 1-13 pages, `README.md`, `CHANGELOG.md`, package READMEs/changelogs, `docs/migration.md`, `docs/release-and-install.md`, `docs/review-coverage-2026-07-15.md`.
+    - `docs/index.md` update: yes; verify every public API/package/config/event/protocol page is linked with an accurate functional description.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+## 0.0.5 Release Checklist
+
+- [ ] Every phase above is checked with dated evidence and no unresolved release blocker.
+- [ ] Core runtime dependencies remain zero and Node.js 20 compatibility passes.
+- [ ] `npm run sdk:ready` passes within the approved budget.
+- [ ] PostgreSQL live integration passes in CI.
+- [ ] Optional live provider/A2A checks are run when credentials/endpoints are available; offline conformance remains authoritative by default.
+- [ ] `npm audit --audit-level=high` reports zero high/critical vulnerabilities.
+- [ ] `npm ls --all` is clean.
+- [ ] All source/tests/docs/examples/generated projects and tarballs pass secret scanning.
+- [ ] All packages, lock entries, and internal dependency ranges are exactly 0.0.5.
+- [ ] Every tarball passes fresh-install public import and documented-example smoke tests.
+- [ ] `npm run release:check -- --version 0.0.5` confirms registry availability and tagged clean state at publication time.
+- [ ] Release artifacts/checksums/report are retained and publication uses dependency order, resume support, and provenance.
+- [ ] npm `latest` points to 0.0.5 only after every package publishes successfully.
+
+## Explicitly Deferred Beyond 0.0.5
+
+- Studio, visual editor, playground UI, hosted cloud, and managed observability service.
+- Browser automation and workspace/filesystem/LSP provider ecosystem beyond existing coding tools/sandbox seam.
+- Voice/STT/TTS provider packages and Slack/chat-channel adapters.
+- Framework-specific HTTP adapters and authentication-provider packages.
+- Additional vector databases beyond in-memory and the one approved PostgreSQL reference adapter.
+- Advanced document parsers, semantic chunking, metadata-extraction agents, rerankers, and GraphRAG.
+- Vendor-specific observability exporters; OTLP remains the interoperability path.
+- Cron-expression parser unless a concrete host cannot provide next-run calculation.
+- TUI and application UI.
+- Automatic provider/package/credential discovery or automatic activation.
+- A mandatory central application container.
+
+## Compromises Made
+
+- To be filled after tasks are completed and tests pass.
+
+## Further Actions
+
+- To be filled after task completion with measured improvements, rationale, and priority.
