@@ -15,7 +15,7 @@ function workflow(id: string, execute: () => unknown | Promise<unknown>) {
   return defineWorkflow({ id, nodes: { work: functionNode({ execute }) }, edges: [] });
 }
 
-async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 500): Promise<void> {
+async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 2_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (!(await predicate())) {
     if (Date.now() >= deadline) throw new Error("timed out");

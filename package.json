@@ -113,7 +113,7 @@
   "scripts": {
     "build:core": "tsc",
     "build": "npm run build:core && npm run build --workspaces --if-present",
-    "typecheck": "npm run build:core && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
+    "typecheck": "npm run build && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
     "test": "npm run build && node --test dist/__tests__/*.test.js && npm run test --workspaces --if-present",
     "pack:dry-run": "npm pack --dry-run && npm run pack:dry-run --workspaces --if-present",
     "test:postgres": "npm run test:postgres --workspace @arnilo/prism-session-store-postgres",
