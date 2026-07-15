@@ -627,6 +627,7 @@ describe("docs", () => {
     assert.equal(packageJson.scripts["release:dry-run"], "npm run sdk:ready", "release:dry-run should mirror CI verify");
     assert.ok(packageJson.scripts.typecheck.startsWith("npm run build &&"), "clean typecheck must build cross-workspace declarations first");
     assert.ok(workflow.includes("npm run sdk:ready"), "release workflow verify must run sdk:ready");
+    assert.ok(workflow.includes("actions/checkout@v5") && workflow.includes("actions/setup-node@v5"), "workflow actions must use Node 24 runtimes");
     assert.ok(!workflow.includes("run: npm test\n"), "release workflow verify must not skip typecheck by running npm test directly");
     assert.ok(workflow.includes('node-version: "20"'), "release workflow must include Node 20 compatibility coverage");
     assert.ok(workflow.includes("node20-compat"), "release workflow must name the Node 20 compatibility job");

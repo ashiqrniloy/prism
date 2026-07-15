@@ -14,8 +14,8 @@ jobs:
     name: "verify (SDK readiness: typecheck, test, pack dry-run)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: "npm"
@@ -24,15 +24,21 @@ jobs:
       # npm test budget is < 60s; sdk:ready can exceed it because it adds typecheck + pack.
       # Timeout is a hang backstop, not the performance budget.
       # Node 24: docs.test.ts runs examples/*.ts via native type stripping (Node < 22.6 can't).
-      - run: npm run sdk:ready
+      - name: verify SDK readiness
+        run: |
+          set -o pipefail
+          npm run sdk:ready 2>&1 | tee sdk-ready.log
         timeout-minutes: 5
+      - name: summarize SDK failure
+        if: failure()
+        run: tail -200 sdk-ready.log >> "$GITHUB_STEP_SUMMARY"
 
   node20-compat:
     name: node20 compat (build + public import smoke)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
@@ -69,8 +75,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: "npm"
@@ -91,10 +97,10 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: "npm"
