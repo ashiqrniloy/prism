@@ -15,6 +15,7 @@ import {
   defineWorkflow,
   toolNode,
   createMemoryWorkflowCheckpoints,
+  resumeWorkflow,
   runWorkflow,
   type WorkflowEvent,
 } from "@arnilo/prism-workflows";
@@ -84,6 +85,10 @@ const researchNode = agentNode({
 const scanNode = toolNode({
   tool: scanTool,
   args: (ctx) => ({ path: "src/index.ts" }),
+  approval: {
+    reason: "scan workspace file",
+    data: (_ctx, args) => ({ path: args.path }),
+  },
   action: (ctx, args) => ({
     kind: "file",
     operation: "read",
@@ -109,7 +114,7 @@ export async function demo() {
   const checkpoints = createMemoryWorkflowCheckpoints({ redactor });
 
   const events: WorkflowEvent[] = [];
-  const result = await runWorkflow(
+  const suspended = await runWorkflow(
     workflow,
     { repo: "my-project" },
     {
@@ -123,6 +128,17 @@ export async function demo() {
       onEvent: (e) => events.push(e),
     },
   );
+
+  const result = suspended.status === "suspended"
+    ? await resumeWorkflow(workflow, { runId: suspended.runId }, {
+        checkpoints,
+        redactor,
+        executionPolicy: policy,
+        ownership: { tenantId: "demo" },
+        resume: { decision: "approve", expectedVersion: suspended.version },
+        onEvent: (e) => events.push(e),
+      })
+    : suspended;
 
   const failEvents = events.filter((e) => e.type === "node_failed");
   const toolOutput = result.outputs.scan as { content?: string } | undefined;

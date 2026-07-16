@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-sdk",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Prism application SDK profile with workflows, MCP, Node credentials, and OpenTelemetry.",
   "license": "MIT",
   "scripts": {
@@ -11,11 +11,11 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-base": "0.0.4",
-    "@arnilo/prism-credentials-node": "0.0.4",
-    "@arnilo/prism-mcp": "0.0.4",
-    "@arnilo/prism-observability-opentelemetry": "0.0.4",
-    "@arnilo/prism-workflows": "0.0.4"
+    "@arnilo/prism-base": "0.0.5",
+    "@arnilo/prism-credentials-node": "0.0.5",
+    "@arnilo/prism-mcp": "0.0.5",
+    "@arnilo/prism-observability-opentelemetry": "0.0.5",
+    "@arnilo/prism-workflows": "0.0.5"
   },
   "engines": {
     "node": ">=20"

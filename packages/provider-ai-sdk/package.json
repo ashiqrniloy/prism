@@ -1,0 +1,59 @@
+{
+  "name": "@arnilo/prism-provider-ai-sdk",
+  "version": "0.0.5",
+  "description": "Optional AI SDK LanguageModelV4 adapter for Prism AIProvider streams.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@ai-sdk/provider": "^4.0.0",
+    "@arnilo/prism": "0.0.5"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "4.0.3",
+    "@arnilo/prism": "file:../.."
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/provider-ai-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-ai-sdk#readme",
+  "keywords": [
+    "prism",
+    "provider",
+    "ai-sdk",
+    "language-model",
+    "agent"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

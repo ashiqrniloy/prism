@@ -91,7 +91,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): readonly
 
 /** Read-only subset: `read` only (this package ships no grep/find/ls). */
 export function createReadOnlyTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[] {
-  return [createReadTool(cwd, options?.read)];
+  return [createReadTool(cwd, withSharedExecutionPolicy(options?.read, options?.executionPolicy))];
 }
 
 /** Every tool this package provides — identical to {@link createCodingTools} for now. */

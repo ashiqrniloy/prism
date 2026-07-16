@@ -5,6 +5,7 @@ export type PrismSpanStatus = "ok" | "error";
 export interface PrismSpan {
   setAttribute(key: string, value: string | number | boolean): void;
   setStatus(code: PrismSpanStatus, message?: string): void;
+  addEvent?(name: string, attributes?: Readonly<Record<string, string | number | boolean>>): void;
   end(): void;
 }
 
@@ -32,10 +33,28 @@ export interface OpenTelemetryInstrumentationOptions {
   readonly onExporterError?: (error: unknown) => void;
 }
 
+export interface RunFeedbackTelemetry {
+  readonly runId: string;
+  readonly rating?: number;
+  readonly hasComment: boolean;
+  readonly tagCount: number;
+  readonly scorerCount: number;
+  readonly evaluationCount: number;
+}
+
+export interface EvaluationTelemetry {
+  readonly runId: string;
+  readonly status: "scored" | "skipped" | "failed";
+  readonly score?: number;
+  readonly hasReason: boolean;
+}
+
 export interface OpenTelemetryInstrumentation {
   readonly enabled: boolean;
   handleAgentEvent(event: AgentEvent): void;
-  attachSession(session: Pick<AgentSession, "subscribe">): () => void;
+  handleRunFeedback(feedback: RunFeedbackTelemetry): void;
+  handleEvaluation(evaluation: EvaluationTelemetry): void;
+  attachSession(session: Pick<AgentSession, "id" | "subscribe">): () => void;
 }
 
 export interface RecordedSpan {
@@ -43,6 +62,7 @@ export interface RecordedSpan {
   readonly attributes: Record<string, string | number | boolean>;
   readonly status?: { readonly code: PrismSpanStatus; readonly message?: string };
   readonly ended: boolean;
+  readonly events: readonly { readonly name: string; readonly attributes: Record<string, string | number | boolean> }[];
 }
 
 interface MutableRecordedSpan {
@@ -50,6 +70,7 @@ interface MutableRecordedSpan {
   attributes: Record<string, string | number | boolean>;
   status?: { code: PrismSpanStatus; message?: string };
   ended: boolean;
+  events: { name: string; attributes: Record<string, string | number | boolean> }[];
 }
 
 export interface RecordedMetric {
@@ -83,7 +104,7 @@ export function createInMemoryTelemetry(): InMemoryTelemetry {
 
   const tracer: PrismTracer = {
     startSpan(name, options) {
-      const record: MutableRecordedSpan = { name, attributes: { ...(options?.attributes ?? {}) }, ended: false };
+      const record: MutableRecordedSpan = { name, attributes: { ...(options?.attributes ?? {}) }, ended: false, events: [] };
       spans.push(record);
       return {
         setAttribute(key, value) {
@@ -91,6 +112,9 @@ export function createInMemoryTelemetry(): InMemoryTelemetry {
         },
         setStatus(code, message) {
           record.status = { code, message };
+        },
+        addEvent(name, attributes) {
+          record.events.push({ name, attributes: { ...(attributes ?? {}) } });
         },
         end() {
           record.ended = true;
@@ -146,9 +170,12 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
     description: "Tool execution latency",
     unit: "ms",
   });
-  const tokenCounter = meter?.createCounter("prism.provider.tokens", { description: "Provider token usage" });
+  const providerTokenCounter = meter?.createCounter("prism.provider.tokens", { description: "Provider-turn token usage" });
+  const runTokenCounter = meter?.createCounter("prism.run.tokens", { description: "Aggregate agent-run token usage" });
+  const feedbackCounter = meter?.createCounter("prism.run.feedback", { description: "Run feedback count" });
+  const evaluationCounter = meter?.createCounter("prism.run.evaluation", { description: "Run evaluation count" });
 
-  const activeSpans = new Map<SpanKey, PrismSpan>();
+  const activeSpans = new Map<SpanKey, { span: PrismSpan; sessionId: string; runId: string }>();
 
   const safe = (fn: () => void) => {
     if (!enabled) return;
@@ -160,11 +187,23 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
   };
 
   const endSpan = (key: SpanKey, status: PrismSpanStatus, message?: string) => {
-    const span = activeSpans.get(key);
-    if (!span) return;
-    span.setStatus(status, message);
-    span.end();
+    const active = activeSpans.get(key);
+    if (!active) return;
     activeSpans.delete(key);
+    try {
+      active.span.setStatus(status, message);
+    } finally {
+      active.span.end();
+    }
+  };
+
+  const endMatchingSpans = (
+    predicate: (active: { sessionId: string; runId: string }) => boolean,
+    message: string,
+  ) => {
+    for (const [key, active] of activeSpans) {
+      if (predicate(active)) endSpan(key, "error", message);
+    }
   };
 
   const handleAgentEvent = (event: AgentEvent) => {
@@ -175,23 +214,25 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
         safe(() => {
           if (!tracer) return;
           const key = spanKey("agent", event.runId);
-          activeSpans.set(
-            key,
-            tracer.startSpan("prism.agent.run", {
+          endSpan(key, "error", "Duplicate agent start");
+          activeSpans.set(key, {
+            sessionId: event.sessionId,
+            runId: event.runId,
+            span: tracer.startSpan("prism.agent.run", {
               attributes: {
                 "prism.session_id": event.sessionId,
                 "prism.run_id": event.runId,
               },
             }),
-          );
+          });
         });
         break;
       case "agent_finished":
         safe(() => {
           endSpan(spanKey("agent", event.runId), "ok");
-          if (!event.usage || !tokenCounter) return;
-          tokenCounter.add(event.usage.inputTokens ?? 0, metricAttrs({ kind: "input", scope: "agent" }));
-          tokenCounter.add(event.usage.outputTokens ?? 0, metricAttrs({ kind: "output", scope: "agent" }));
+          if (!event.usage || !runTokenCounter) return;
+          if (event.usage.inputTokens !== undefined) runTokenCounter.add(event.usage.inputTokens, metricAttrs({ kind: "input" }));
+          if (event.usage.outputTokens !== undefined) runTokenCounter.add(event.usage.outputTokens, metricAttrs({ kind: "output" }));
         });
         break;
       case "provider_turn_started":
@@ -199,9 +240,11 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
           if (!tracer) return;
           const attempt = event.metadata.attempt ?? 1;
           const key = spanKey("provider", event.runId, event.turn, attempt);
-          activeSpans.set(
-            key,
-            tracer.startSpan("prism.provider.turn", {
+          endSpan(key, "error", "Duplicate provider turn start");
+          activeSpans.set(key, {
+            sessionId: event.sessionId,
+            runId: event.runId,
+            span: tracer.startSpan("prism.provider.turn", {
               attributes: {
                 "prism.session_id": event.sessionId,
                 "prism.run_id": event.runId,
@@ -212,44 +255,50 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
                 ...(event.metadata.attempt ? { "prism.attempt": event.metadata.attempt } : {}),
               },
             }),
-          );
+          });
         });
         break;
       case "provider_turn_finished":
         safe(() => {
           const attempt = event.metadata.attempt ?? 1;
           const key = spanKey("provider", event.runId, event.turn, attempt);
-          const span = activeSpans.get(key);
-          if (span) {
-            if (event.metadata.latencyMs !== undefined) span.setAttribute("prism.latency_ms", event.metadata.latencyMs);
-            if (event.metadata.httpStatus !== undefined) span.setAttribute("http.status_code", event.metadata.httpStatus);
-            if (event.error) span.setStatus("error", event.error.message);
-            else span.setStatus("ok");
-            span.end();
-            activeSpans.delete(key);
+          const active = activeSpans.get(key);
+          if (active) {
+            try {
+              if (event.metadata.latencyMs !== undefined) active.span.setAttribute("prism.latency_ms", event.metadata.latencyMs);
+              if (event.metadata.httpStatus !== undefined) active.span.setAttribute("http.status_code", event.metadata.httpStatus);
+            } finally {
+              endSpan(key, event.error ? "error" : "ok", event.error?.message);
+            }
           }
           providerDuration?.record(event.metadata.latencyMs ?? 0, metricAttrs({
             provider_id: event.metadata.providerId,
             outcome: event.error ? "error" : "success",
           }));
-          if (!event.usage || !tokenCounter) return;
-          tokenCounter.add(event.usage.inputTokens ?? 0, metricAttrs({ provider_id: event.metadata.providerId, kind: "input" }));
-          tokenCounter.add(event.usage.outputTokens ?? 0, metricAttrs({ provider_id: event.metadata.providerId, kind: "output" }));
+          if (!event.usage || !providerTokenCounter) return;
+          if (event.usage.inputTokens !== undefined) {
+            providerTokenCounter.add(event.usage.inputTokens, metricAttrs({ provider_id: event.metadata.providerId, kind: "input" }));
+          }
+          if (event.usage.outputTokens !== undefined) {
+            providerTokenCounter.add(event.usage.outputTokens, metricAttrs({ provider_id: event.metadata.providerId, kind: "output" }));
+          }
           if (event.usage.cacheReadTokens) {
-            tokenCounter.add(event.usage.cacheReadTokens, metricAttrs({ provider_id: event.metadata.providerId, kind: "cache_read" }));
+            providerTokenCounter.add(event.usage.cacheReadTokens, metricAttrs({ provider_id: event.metadata.providerId, kind: "cache_read" }));
           }
           if (event.usage.cacheWriteTokens) {
-            tokenCounter.add(event.usage.cacheWriteTokens, metricAttrs({ provider_id: event.metadata.providerId, kind: "cache_write" }));
+            providerTokenCounter.add(event.usage.cacheWriteTokens, metricAttrs({ provider_id: event.metadata.providerId, kind: "cache_write" }));
           }
         });
         break;
       case "tool_execution_started":
         safe(() => {
           if (!tracer) return;
-          const key = spanKey("tool", event.call.id);
-          activeSpans.set(
-            key,
-            tracer.startSpan("prism.tool.execute", {
+          const key = spanKey("tool", event.runId, event.call.id);
+          endSpan(key, "error", "Duplicate tool start");
+          activeSpans.set(key, {
+            sessionId: event.sessionId,
+            runId: event.runId,
+            span: tracer.startSpan("prism.tool.execute", {
               attributes: {
                 "prism.session_id": event.sessionId,
                 "prism.run_id": event.runId,
@@ -257,7 +306,7 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
                 "prism.tool_name": event.call.name,
               },
             }),
-          );
+          });
         });
         break;
       case "tool_execution_finished":
@@ -270,17 +319,27 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
               : event.type === "tool_execution_error"
                 ? event.call.id
                 : event.toolCallId;
-          const key = spanKey("tool", toolCallId);
-          const span = activeSpans.get(key);
-          if (span) {
-            span.setAttribute("prism.tool_status", event.metadata.status);
-            span.setAttribute("prism.duration_ms", event.metadata.durationMs);
-            if (event.type === "tool_execution_finished") span.setStatus("ok");
-            else span.setStatus("error", event.error.message);
-            span.end();
-            activeSpans.delete(key);
+          const key = spanKey("tool", event.runId, toolCallId);
+          const active = activeSpans.get(key);
+          if (active) {
+            try {
+              active.span.setAttribute("prism.tool_status", event.metadata.status);
+              active.span.setAttribute("prism.duration_ms", event.metadata.durationMs);
+            } finally {
+              endSpan(
+                key,
+                event.type === "tool_execution_finished" ? "ok" : "error",
+                event.type === "tool_execution_finished" ? undefined : event.error.message,
+              );
+            }
           }
           toolDuration?.record(event.metadata.durationMs, metricAttrs({ status: event.metadata.status }));
+        });
+        break;
+      case "error":
+        safe(() => {
+          if (event.runId) endMatchingSpans((active) => active.runId === event.runId, event.error.message);
+          else if (event.sessionId) endMatchingSpans((active) => active.sessionId === event.sessionId, event.error.message);
         });
         break;
       default:
@@ -288,9 +347,57 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
     }
   };
 
+  const recordRunMetadata = (
+    runId: string,
+    eventName: string,
+    spanName: string,
+    attributes: Readonly<Record<string, string | number | boolean>>,
+  ) => safe(() => {
+    const active = activeSpans.get(spanKey("agent", runId));
+    if (active?.span.addEvent) {
+      active.span.addEvent(eventName, attributes);
+      return;
+    }
+    if (!tracer) return;
+    const span = tracer.startSpan(spanName, { attributes: { "prism.run_id": runId, ...attributes } });
+    span.setStatus("ok");
+    span.end();
+  });
+
   return {
     enabled,
     handleAgentEvent,
+    handleRunFeedback(feedback) {
+      const rating = feedback.rating !== undefined && Number.isFinite(feedback.rating) && feedback.rating >= -1 && feedback.rating <= 1
+        ? feedback.rating
+        : undefined;
+      const tagCount = boundedCount(feedback.tagCount);
+      const scorerCount = boundedCount(feedback.scorerCount);
+      const evaluationCount = boundedCount(feedback.evaluationCount);
+      const attributes = {
+        "prism.feedback.rating": rating ?? 0,
+        "prism.feedback.has_rating": rating !== undefined,
+        "prism.feedback.has_comment": Boolean(feedback.hasComment),
+        "prism.feedback.tag_count": tagCount,
+        "prism.feedback.scorer_count": scorerCount,
+        "prism.feedback.evaluation_count": evaluationCount,
+      };
+      recordRunMetadata(feedback.runId, "prism.run.feedback", "prism.run.feedback", attributes);
+      safe(() => feedbackCounter?.add(1, metricAttrs({
+        rating: rating === undefined ? "none" : rating > 0 ? "positive" : rating < 0 ? "negative" : "neutral",
+        linked_evaluation: evaluationCount > 0 ? "true" : "false",
+      })));
+    },
+    handleEvaluation(evaluation) {
+      const attributes = {
+        "prism.evaluation.status": evaluation.status,
+        "prism.evaluation.has_score": evaluation.score !== undefined && Number.isFinite(evaluation.score),
+        "prism.evaluation.has_reason": Boolean(evaluation.hasReason),
+        ...(evaluation.score !== undefined && Number.isFinite(evaluation.score) ? { "prism.evaluation.score": evaluation.score } : {}),
+      };
+      recordRunMetadata(evaluation.runId, "prism.run.evaluation", "prism.run.evaluation", attributes);
+      safe(() => evaluationCounter?.add(1, metricAttrs({ status: evaluation.status })));
+    },
     attachSession(session) {
       if (!enabled) return () => {};
       const subscription = session.subscribe();
@@ -300,7 +407,7 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
         try {
           while (active) {
             const next = await iterator.next();
-            if (next.done) break;
+            if (!active || next.done) break;
             handleAgentEvent(next.value);
           }
         } catch {
@@ -310,14 +417,20 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
       return () => {
         active = false;
         void iterator.return?.();
+        safe(() => endMatchingSpans((span) => span.sessionId === session.id, "Instrumentation detached"));
       };
     },
   };
 }
 
+function boundedCount(value: number): number {
+  return Number.isSafeInteger(value) && value > 0 ? Math.min(value, 64) : 0;
+}
+
 interface OpenTelemetrySpan {
   setAttribute(key: string, value: string | number | boolean): void;
   setStatus(status: { code: number; message?: string }): void;
+  addEvent?(name: string, attributes?: Record<string, string | number | boolean>): void;
   end(): void;
 }
 
@@ -352,6 +465,9 @@ export function wrapOpenTelemetryApi(tracer: OpenTelemetryTracer, meter?: OpenTe
           },
           setStatus(code, message) {
             span.setStatus({ code: code === "ok" ? OTEL_STATUS_OK : OTEL_STATUS_ERROR, message });
+          },
+          addEvent(name, attributes) {
+            span.addEvent?.(name, attributes ? { ...attributes } : undefined);
           },
           end() {
             span.end();

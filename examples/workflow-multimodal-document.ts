@@ -39,7 +39,6 @@ const agent = createAgent({
     capabilities: { input: ["text", "document"] },
   },
   provider,
-  credentials,
   instructions: "Summarize the supplied document without reproducing secrets.",
 });
 

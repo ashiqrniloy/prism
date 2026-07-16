@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-all",
-  "version": "0.0.4",
-  "description": "Complete Prism umbrella: coding, application SDK, providers, and both persistence adapters.",
+  "version": "0.0.5",
+  "description": "Complete Prism umbrella: every first-party runtime, capability, provider, and persistence package.",
   "license": "MIT",
   "scripts": {
     "pack:dry-run": "npm pack --dry-run"
@@ -11,11 +11,16 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-code": "0.0.4",
-    "@arnilo/prism-sdk": "0.0.4",
-    "@arnilo/prism-providers": "0.0.4",
-    "@arnilo/prism-session-store-sqlite": "0.0.4",
-    "@arnilo/prism-session-store-postgres": "0.0.4"
+    "@arnilo/prism-code": "0.0.5",
+    "@arnilo/prism-sdk": "0.0.5",
+    "@arnilo/prism-providers": "0.0.5",
+    "@arnilo/prism-session-store-sqlite": "0.0.5",
+    "@arnilo/prism-session-store-postgres": "0.0.5",
+    "@arnilo/prism-evals": "0.0.5",
+    "@arnilo/prism-memory": "0.0.5",
+    "@arnilo/prism-rag": "0.0.5",
+    "@arnilo/prism-server": "0.0.5",
+    "@arnilo/prism-supervisor": "0.0.5"
   },
   "engines": {
     "node": ">=20"

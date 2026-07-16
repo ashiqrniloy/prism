@@ -8,6 +8,7 @@ export {
   conditionalNode,
   fanOutNode,
   joinNode,
+  workflowNode,
 } from "./nodes.js";
 
 export { createWorkflowEventBus } from "./events.js";
@@ -17,14 +18,33 @@ export {
   redactCheckpointOutputs,
   type GenericWorkflowCheckpointOptions,
 } from "./checkpoints.js";
-export { runWorkflow, resumeWorkflow, resolveMaxFanOut } from "./run.js";
+export { runWorkflow, resumeWorkflow, suspend, resolveMaxFanOut } from "./run.js";
+export {
+  replayWorkflow,
+  type ReplayWorkflowInput,
+  type ReplayWorkflowOptions,
+} from "./replay.js";
 export {
   enqueueWorkflow,
+  startWorkflowBackground,
   createWorkflowCoordinator,
   type EnqueueWorkflowOptions,
   type WorkflowCoordinatorOptions,
   type WorkflowCoordinator,
 } from "./coordinator.js";
+export {
+  createWorkflowSchedules,
+  type WorkflowScheduleStatus,
+  type WorkflowScheduleRecord,
+  type CreateWorkflowScheduleInput,
+  type WorkflowScheduleListInput,
+  type WorkflowScheduleListPage,
+  type WorkflowScheduleCalculatorInput,
+  type WorkflowScheduleCalculator,
+  type WorkflowScheduleEvent,
+  type CreateWorkflowSchedulesOptions,
+  type WorkflowSchedules,
+} from "./schedules.js";
 export {
   getWorkflowRun,
   listWorkflowRuns,
@@ -62,24 +82,54 @@ export {
   DEFAULT_EVENT_BUFFER,
   DEFAULT_LIST_PAGE_SIZE,
   HARD_LIST_PAGE_CAP,
+  DEFAULT_MAX_NESTED_DEPTH,
+  HARD_MAX_NESTED_DEPTH,
+  DEFAULT_MAX_STATE_BYTES,
+  HARD_MAX_STATE_BYTES,
+  DEFAULT_MAX_STATE_HISTORY,
+  HARD_MAX_STATE_HISTORY,
+  DEFAULT_MAX_REPLAY_DEPTH,
+  HARD_MAX_REPLAY_DEPTH,
+  DEFAULT_SCHEDULE_PAGE_SIZE,
+  HARD_SCHEDULE_PAGE_CAP,
+  DEFAULT_MAX_SCHEDULE_CLAIMS,
+  HARD_MAX_SCHEDULE_CLAIMS,
+  DEFAULT_SCHEDULE_POLL_INTERVAL_MS,
+  DEFAULT_SCHEDULE_LEASE_TTL_MS,
+  DEFAULT_MAX_SCHEDULE_INPUT_BYTES,
+  HARD_MAX_SCHEDULE_INPUT_BYTES,
 } from "./limits.js";
 
 export type {
   WorkflowRunStatus,
   WorkflowNodeStatus,
+  WorkflowSuspensionDescriptor,
+  WorkflowSuspension,
+  WorkflowResumeRequest,
+  WorkflowResumeRecord,
+  WorkflowResumeContext,
+  WorkflowResumeValidationInput,
+  WorkflowResumeValidator,
+  WorkflowStateUpdateOptions,
+  WorkflowStateValidationInput,
+  WorkflowStateValidator,
+  WorkflowStateConfig,
   WorkflowNodeKind,
   WorkflowNodeContext,
   WorkflowNodeBase,
   AgentNodeDefinition,
   FunctionNodeDefinition,
+  WorkflowToolApproval,
   ToolNodeDefinition,
   ConditionalNodeDefinition,
   FanOutNodeDefinition,
   JoinNodeDefinition,
+  NestedWorkflowNodeDefinition,
   WorkflowNodeDefinition,
   WorkflowLimits,
   WorkflowDefinition,
   WorkflowNodeCheckpoint,
+  WorkflowReplayLineage,
   WorkflowCheckpointValue,
   WorkflowCheckpointSaveInput,
   WorkflowCheckpointRecord,

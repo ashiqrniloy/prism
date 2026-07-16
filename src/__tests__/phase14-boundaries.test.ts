@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { createAgent, createExtensionKernel, providerDone, type AIProvider, type AgentSession, type Extension, type ModelConfig } from "../index.js";
 
 function files(dir: string, predicate: (path: string) => boolean): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -36,17 +37,17 @@ describe("phase 14 observational memory boundaries", () => {
   });
 
   it("phase14_observational_memory_setup_is_inert", async () => {
-    const { createObservationalMemoryExtension, createObservationalMemoryRuntime } = await import("../../packages/compaction-observational-memory/" + "dist/index.js") as any;
+    type ObservationalMemoryModule = {
+      createObservationalMemoryRuntime(options: { session: AgentSession; appendEntry(entry: unknown): Promise<void>; workerProvider: AIProvider; workerModel: ModelConfig }): { status(): { inFlight: boolean } };
+      createObservationalMemoryExtension(options: { recallTool: { getEntries(): readonly unknown[] }; commands: { getEntries(): readonly unknown[] } }): Extension;
+    };
+    const { createObservationalMemoryExtension, createObservationalMemoryRuntime } = await import("../../packages/compaction-observational-memory/" + "dist/index.js") as ObservationalMemoryModule;
     let providerCalls = 0;
-    const workerProvider = { generate: () => { providerCalls++; throw new Error("provider should not run during construction/setup"); } };
-    const session = { id: "s1", entries: async () => [], checkout: async () => undefined };
+    const workerProvider = { id: "mock", async *generate() { providerCalls++; yield providerDone(); } } satisfies AIProvider;
+    const session = createAgent({ model: { provider: "mock", model: "memory" }, provider: workerProvider }).createSession({ id: "s1" });
     const runtime = createObservationalMemoryRuntime({ session, appendEntry: async () => { throw new Error("append should not run during construction"); }, workerProvider, workerModel: { provider: "mock", model: "memory" } });
     assert.equal(runtime.status().inFlight, false);
-    createObservationalMemoryExtension({ recallTool: { getEntries: () => [] }, commands: { getEntries: () => [] } }).setup({
-      registerCompactionStrategy: () => undefined,
-      registerTool: () => undefined,
-      registerCommand: () => undefined,
-    });
+    await createExtensionKernel().load([createObservationalMemoryExtension({ recallTool: { getEntries: () => [] }, commands: { getEntries: () => [] } })]);
     assert.equal(providerCalls, 0);
   });
 
@@ -67,7 +68,7 @@ describe("phase 14 observational memory boundaries", () => {
     assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
     assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.4");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.5");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 

@@ -27,17 +27,30 @@ function sortValue(value: unknown): unknown {
 }
 
 export function hashWorkflowDefinition(workflow: WorkflowDefinition): string {
-  const nodes: Record<string, { kind: string; metadata?: unknown }> = {};
+  return hashWorkflow(workflow, new Set());
+}
+
+function hashWorkflow(workflow: WorkflowDefinition, active: Set<WorkflowDefinition>): string {
+  if (active.has(workflow)) throw new WorkflowCheckpointError("Nested workflow definitions contain a cycle");
+  active.add(workflow);
+  const nodes: Record<string, { kind: string; metadata?: unknown; workflowHash?: string }> = {};
   for (const [id, node] of Object.entries(workflow.nodes).sort(([a], [b]) => a.localeCompare(b))) {
-    nodes[id] = { kind: node.kind, metadata: node.metadata };
+    nodes[id] = {
+      kind: node.kind,
+      metadata: node.metadata,
+      ...(node.kind === "workflow" ? { workflowHash: hashWorkflow(node.workflow, active) } : {}),
+    };
   }
   const payload = {
     id: workflow.id,
     nodes,
     edges: workflow.edges.map(([from, to]) => [from, to]),
     limits: workflow.limits ?? {},
+    ...(workflow.state ? { state: workflow.state } : {}),
   };
-  return createHash("sha256").update(stableStringify(payload)).digest("hex");
+  const hash = createHash("sha256").update(stableStringify(payload)).digest("hex");
+  active.delete(workflow);
+  return hash;
 }
 
 export function measureJsonBytes(value: unknown): number {

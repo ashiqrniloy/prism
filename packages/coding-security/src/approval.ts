@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { ExecutionAction, ExecutionDecision, ExecutionPolicy } from "@arnilo/prism";
 import { assertPathInsideRoots } from "./path-containment.js";
 import { evaluateCommandRules, type CommandRule } from "./command-rules.js";
@@ -22,17 +23,30 @@ export interface CodingApprovalPolicyOptions {
   readonly denyMetacharacters?: boolean;
 }
 
+const MAX_APPROVAL_CACHE_ENTRIES = 1_000;
+
 function isMutatingKind(kind: string): boolean {
   return kind === "shell" || kind === "write" || kind === "edit";
 }
 
-function approvalCacheKey(action: ExecutionAction): string {
-  return [
+function approvalCacheKey(action: ExecutionAction, scope: Exclude<ApprovalCacheScope, "none">): string | undefined {
+  const identity = action.metadata?.[scope === "run" ? "runId" : "sessionId"];
+  if (typeof identity !== "string" || identity.length === 0) return undefined;
+  return createHash("sha256").update(JSON.stringify([
+    scope,
+    identity,
     action.kind,
     action.operation,
-    ...(action.paths ?? []),
+    action.paths ?? [],
     action.command ?? "",
-  ].join("\0");
+  ])).digest("hex");
+}
+
+function cacheApproval(cache: Map<string, boolean>, key: string, approved: boolean): void {
+  if (!cache.has(key) && cache.size >= MAX_APPROVAL_CACHE_ENTRIES) {
+    cache.delete(cache.keys().next().value!);
+  }
+  cache.set(key, approved);
 }
 
 function readAbortSignal(action: ExecutionAction): AbortSignal | undefined {
@@ -70,10 +84,8 @@ async function waitForApproval(
 }
 
 export function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions): ExecutionPolicy {
-  const cache =
-    options.approvalCacheScope === "none"
-      ? undefined
-      : new Map<string, boolean>();
+  const scope = options.approvalCacheScope ?? "none";
+  const cache = scope === "none" ? undefined : new Map<string, boolean>();
 
   return {
     async check(action: ExecutionAction): Promise<ExecutionDecision> {
@@ -113,8 +125,8 @@ export function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions)
           return { allowed: false, reason: "approval required" };
         }
 
-        const key = approvalCacheKey(action);
-        if (cache?.has(key)) {
+        const key = scope === "none" ? undefined : approvalCacheKey(action, scope);
+        if (key !== undefined && cache?.has(key)) {
           const cached = cache.get(key);
           if (!cached) {
             return { allowed: false, reason: "approval denied (cached)" };
@@ -123,9 +135,9 @@ export function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions)
           const approved = await waitForApproval(
             options.approve,
             { action, signal: readAbortSignal(action) },
-            options.approvalTimeoutMs,
+            options.approvalTimeoutMs ?? 30_000,
           );
-          cache?.set(key, approved);
+          if (key !== undefined && cache) cacheApproval(cache, key, approved);
           if (!approved) {
             return { allowed: false, reason: "approval denied" };
           }

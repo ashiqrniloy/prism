@@ -1,6 +1,10 @@
 import { Pool } from "pg";
 import {
   SessionAppendConflictError,
+  prepareRunFeedback,
+  requireRunFeedbackOwnership,
+  runFeedbackPageLimit,
+  RunFeedbackError,
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
@@ -11,6 +15,9 @@ import {
   type PersistencePage,
   type ProductionPersistenceStore,
   type RetentionPolicyQuery,
+  type RunFeedbackQuery,
+  type RunFeedbackRecord,
+  type RunFeedbackStore,
   type RunLedger,
   type RunQuery,
   type RunRecord,
@@ -60,6 +67,7 @@ export interface PostgresPersistence extends SessionStore, RunLedger, Production
   readonly name: "postgres";
   readonly checkpoints: CheckpointStore;
   readonly leases: LeaseStore;
+  readonly feedback: RunFeedbackStore;
   readonly metadata: Readonly<{
     readonly kind: "postgres";
     readonly multiProcess: true;
@@ -92,6 +100,7 @@ export async function createPostgresPersistence(
   const events = qualifyTable(schema, "prism_agent_events");
   const toolCalls = qualifyTable(schema, "prism_tool_calls");
   const usage = qualifyTable(schema, "prism_usage");
+  const feedbackTable = qualifyTable(schema, "prism_run_feedback");
 
   if (!options.skipMigrations) {
     await applyPostgresMigrations(pool, schema);
@@ -108,10 +117,73 @@ export async function createPostgresPersistence(
     );
   }
 
+  const feedback: RunFeedbackStore = {
+    async append(input) {
+      const duplicate = await pool.query(`SELECT 1 FROM ${feedbackTable} WHERE id = $1 LIMIT 1`, [input.id]);
+      if (duplicate.rowCount) throw new RunFeedbackError("Duplicate feedback id", "ERR_PRISM_RUN_FEEDBACK_DUPLICATE");
+      const record = await prepareRunFeedback(input, {
+        redactor: options.feedbackRedactor,
+        resolveRun: async ({ runId, ownership }) => {
+          const result = await pool.query(
+            `SELECT id, session_id, tenant_id, account_id, user_id FROM ${runs}
+             WHERE id = $1 AND tenant_id = $2 AND account_id IS NOT DISTINCT FROM $3 AND user_id IS NOT DISTINCT FROM $4 LIMIT 1`,
+            [runId, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null],
+          );
+          const row = result.rows[0] as Record<string, unknown> | undefined;
+          return row ? {
+            runId: String(row.id), sessionId: String(row.session_id), tenantId: String(row.tenant_id),
+            accountId: row.account_id === null ? undefined : String(row.account_id),
+            userId: row.user_id === null ? undefined : String(row.user_id),
+          } : false;
+        },
+      });
+      await pool.query(
+        `INSERT INTO ${feedbackTable} (
+          id, run_id, session_id, trace_id, rating, comment, tags, scorer_ids, evaluation_ids,
+          created_at, created_by, tenant_id, account_id, user_id, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [record.id, record.runId, record.sessionId, record.traceId ?? null, record.rating ?? null, record.comment ?? null,
+          JSON.stringify(record.tags), JSON.stringify(record.scorerIds), JSON.stringify(record.evaluationIds), record.createdAt,
+          record.createdBy ?? null, record.tenantId, record.accountId ?? null, record.userId ?? null,
+          record.metadata === undefined ? null : JSON.stringify(record.metadata)],
+      );
+      return record;
+    },
+    async query(query: RunFeedbackQuery) {
+      requireRunFeedbackOwnership(query);
+      query.signal?.throwIfAborted();
+      const filters: string[] = [];
+      const params: unknown[] = [];
+      if (query.accountId === undefined) filters.push("account_id IS NULL");
+      if (query.userId === undefined) filters.push("user_id IS NULL");
+      const add = (filter: (index: number) => string, value: unknown) => { params.push(value); filters.push(filter(params.length)); };
+      if (query.runId) add((i) => `run_id = $${i}`, query.runId);
+      if (query.sessionId) add((i) => `session_id = $${i}`, query.sessionId);
+      if (query.traceId) add((i) => `trace_id = $${i}`, query.traceId);
+      if (query.rating !== undefined) add((i) => `rating = $${i}`, query.rating);
+      if (query.scorerId) add((i) => `scorer_ids::jsonb @> $${i}::jsonb`, JSON.stringify([query.scorerId]));
+      if (query.evaluationId) add((i) => `evaluation_ids::jsonb @> $${i}::jsonb`, JSON.stringify([query.evaluationId]));
+      if (query.tag) add((i) => `tags::jsonb @> $${i}::jsonb`, JSON.stringify([query.tag]));
+      if (query.fromCreatedAt) add((i) => `created_at >= $${i}`, query.fromCreatedAt);
+      if (query.toCreatedAt) add((i) => `created_at <= $${i}`, query.toCreatedAt);
+      return queryTable(pool, feedbackTable, { ...query, limit: runFeedbackPageLimit(query.limit) }, filters, mapFeedbackRow, params, "created_at", "id");
+    },
+    async delete(input) {
+      input.signal?.throwIfAborted();
+      const ownership = requireRunFeedbackOwnership(input);
+      const result = await pool.query(
+        `DELETE FROM ${feedbackTable} WHERE id = $1 AND tenant_id = $2 AND account_id IS NOT DISTINCT FROM $3 AND user_id IS NOT DISTINCT FROM $4`,
+        [input.id, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null],
+      );
+      return Boolean(result.rowCount);
+    },
+  };
+
   const persistence: PostgresPersistence = {
     name: "postgres",
     checkpoints: createPostgresCheckpointStore(pool, schema),
     leases: createPostgresLeaseStore(pool, schema),
+    feedback,
     metadata: { kind: "postgres", multiProcess: true, driver: "pg", schema },
 
     async append(entry: SessionEntry, appendOptions?: SessionAppendOptions): Promise<void> {
@@ -360,14 +432,17 @@ export async function createPostgresPersistence(
       const row = usageRecordToRow(record);
       await pool.query(
         `INSERT INTO ${usage} (
-          id, session_id, run_id, entry_id, usage, recorded_at,
+          id, session_id, run_id, entry_id, scope, turn, attempt, usage, recorded_at,
           tenant_id, account_id, user_id, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           row.id,
           row.session_id,
           row.run_id,
           row.entry_id,
+          row.scope,
+          row.turn,
+          row.attempt,
           row.usage,
           row.recorded_at,
           row.tenant_id,
@@ -540,6 +615,18 @@ export async function createPostgresPersistence(
       if (query.runId) {
         filters.push(`run_id = $${params.length + 1}`);
         params.push(query.runId);
+      }
+      if (query.scope) {
+        filters.push(`scope = $${params.length + 1}`);
+        params.push(query.scope);
+      }
+      if (query.turn !== undefined) {
+        filters.push(`turn = $${params.length + 1}`);
+        params.push(query.turn);
+      }
+      if (query.attempt !== undefined) {
+        filters.push(`attempt = $${params.length + 1}`);
+        params.push(query.attempt);
       }
       return queryTable(pool, usage, query, filters, mapUsageRow, params, "recorded_at", "id");
     },
@@ -739,6 +826,35 @@ const mapRunRow = (row: Record<string, unknown>) => rowToRunRecord(row as never)
 const mapEventRow = (row: Record<string, unknown>) => rowToAgentEventRecord(row as never);
 const mapToolCallRow = (row: Record<string, unknown>) => rowToToolCallRecord(row as never);
 const mapUsageRow = (row: Record<string, unknown>) => rowToUsageRecord(row as never);
+const mapFeedbackRow = (row: Record<string, unknown>): RunFeedbackRecord => Object.freeze({
+  id: String(row.id), runId: String(row.run_id), sessionId: String(row.session_id),
+  traceId: row.trace_id === null ? undefined : String(row.trace_id),
+  rating: row.rating === null ? undefined : Number(row.rating),
+  comment: row.comment === null ? undefined : String(row.comment),
+  tags: Object.freeze(parseStringArray(row.tags)),
+  scorerIds: Object.freeze(parseStringArray(row.scorer_ids)),
+  evaluationIds: Object.freeze(parseStringArray(row.evaluation_ids)),
+  createdAt: String(row.created_at),
+  createdBy: row.created_by === null ? undefined : String(row.created_by),
+  tenantId: String(row.tenant_id),
+  accountId: row.account_id === null ? undefined : String(row.account_id),
+  userId: row.user_id === null ? undefined : String(row.user_id),
+  metadata: row.metadata === null ? undefined : deepFreeze(JSON.parse(String(row.metadata)) as Readonly<Record<string, unknown>>),
+});
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function parseStringArray(value: unknown): string[] {
+  const parsed: unknown = JSON.parse(String(value));
+  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) throw new RunFeedbackError("Invalid stored feedback array");
+  return parsed;
+}
 const mapAgentDefinitionRow = rowToAgentDefinitionRecord;
 const mapRetentionRow = rowToRetentionPolicy;
 const mapMigrationRow = rowToMigrationRecord;

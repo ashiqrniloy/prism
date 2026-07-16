@@ -4,6 +4,7 @@ import type {
   FanOutNodeDefinition,
   FunctionNodeDefinition,
   JoinNodeDefinition,
+  NestedWorkflowNodeDefinition,
   ToolNodeDefinition,
 } from "./types.js";
 
@@ -41,4 +42,10 @@ export function joinNode(
   config: Omit<JoinNodeDefinition, "kind"> = {},
 ): JoinNodeDefinition {
   return { ...config, kind: "join" };
+}
+
+export function workflowNode(
+  config: Omit<NestedWorkflowNodeDefinition, "kind">,
+): NestedWorkflowNodeDefinition {
+  return { ...config, kind: "workflow" };
 }

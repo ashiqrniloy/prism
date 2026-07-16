@@ -1,0 +1,17 @@
+import type { AgentRunResult } from "@arnilo/prism";
+import { defineScorer, scoreRun } from "@arnilo/prism-evals";
+
+/**
+ * Deterministic scorer example. Not wired into `npm start` — call after a run.
+ */
+export const greetsScorer = defineScorer({
+  id: "greets",
+  score: ({ result }) => ({
+    score: /\bhello\b/i.test(result.text) ? 1 : 0,
+    reason: "checks for a hello greeting",
+  }),
+});
+
+export async function scoreGreeting(result: AgentRunResult) {
+  return scoreRun({ result, scorers: [greetsScorer] });
+}

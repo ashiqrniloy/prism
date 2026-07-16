@@ -33,6 +33,8 @@ import { createReadOnlyTools } from "@arnilo/prism-coding-agent";
 const tools = createToolRegistry(createReadOnlyTools(process.cwd()));
 ```
 
+Shared `ToolsOptions.executionPolicy` applies to every tool returned by full, all, and read-only aggregators unless a per-tool policy overrides it.
+
 Individual tools with options:
 
 ```ts

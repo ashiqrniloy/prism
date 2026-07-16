@@ -19,10 +19,13 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
     id,
     async *generate(request) {
       if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-      const secrets = [token];
+      let token: string | undefined;
+      const secrets: (string | undefined)[] = [];
       try {
         const route = routeFor(request);
+        const body = route === "anthropic" ? await anthropicMessagesBody(request) : openAIChatBody(request);
+        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
+        secrets.push(token);
         const response = await (options.fetch ?? fetch)(`${baseUrl}${route === "anthropic" ? "/messages" : "/chat/completions"}`, {
           method: "POST",
           headers: {
@@ -30,7 +33,7 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
             ...opencodeOwnedHeaders(request.options),
             ...(token ? { authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify(route === "anthropic" ? await anthropicMessagesBody(request) : openAIChatBody(request)),
+          body: JSON.stringify(body),
           signal: request.signal,
         });
         if (!response.ok) {

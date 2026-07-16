@@ -1,4 +1,13 @@
-import type { ToolDefinition } from "@arnilo/prism";
+import type {
+  CommandDefinition,
+  JsonObject,
+  OwnershipScope,
+  PermissionPolicy,
+  SecretRedactor,
+  ToolDefinition,
+  ToolValidator,
+} from "@arnilo/prism";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 
 export interface McpStdioTransport {
   readonly type: "stdio";
@@ -17,6 +26,51 @@ export interface McpStreamableHttpTransport {
 }
 
 export type McpTransportConfig = McpStdioTransport | McpStreamableHttpTransport;
+
+export interface PrismMcpAuthorizationInput {
+  readonly kind: "tool" | "command";
+  readonly name: string;
+  readonly arguments: JsonObject;
+  readonly authInfo?: AuthInfo;
+  readonly sessionId?: string;
+  readonly signal: AbortSignal;
+}
+
+export interface PrismMcpAuthorization {
+  readonly allowed: true;
+  readonly ownership?: OwnershipScope;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export type PrismMcpAuthorizer = (
+  input: PrismMcpAuthorizationInput,
+) => false | PrismMcpAuthorization | Promise<false | PrismMcpAuthorization>;
+
+export interface CreatePrismMcpServerOptions {
+  readonly name?: string;
+  readonly version?: string;
+  readonly tools?: readonly ToolDefinition[];
+  readonly commands?: readonly CommandDefinition[];
+  readonly authorize: PrismMcpAuthorizer;
+  readonly permission?: PermissionPolicy;
+  readonly validate?: ToolValidator;
+  readonly redactor?: SecretRedactor;
+  readonly maxResultBytes?: number;
+  readonly maxConcurrentCalls?: number;
+  readonly callTimeoutMs?: number;
+}
+
+export interface CreatePrismMcpWebHandlerOptions {
+  readonly resolveAuthInfo?: (request: Request) => AuthInfo | undefined | Promise<AuthInfo | undefined>;
+  readonly allowedHosts?: readonly string[];
+  readonly allowedOrigins?: readonly string[];
+  readonly maxRequestBytes?: number;
+  readonly maxResponseBytes?: number;
+  readonly maxConcurrentRequests?: number;
+  readonly requestTimeoutMs?: number;
+}
+
+export type PrismMcpWebHandler = (request: Request) => Promise<Response>;
 
 export type AttachMcpToolBridgeOptions = Omit<ConnectMcpToolsOptions, "transport">;
 

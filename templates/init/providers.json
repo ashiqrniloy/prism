@@ -1,0 +1,76 @@
+{
+  "mock": {
+    "id": "mock",
+    "modelProvider": "mock",
+    "modelName": "demo",
+    "imports": "import {\n  createAgent,\n  createMockProvider,\n  providerDone,\n  providerTextDelta,\n} from \"@arnilo/prism\";",
+    "providerExpression": "createMockProvider([\n    providerTextDelta(\"Hello from Prism\"),\n    providerDone(),\n  ])",
+    "modelExpression": "{ provider: \"mock\", model: \"demo\" }"
+  },
+  "openai": {
+    "id": "openai",
+    "packageName": "@arnilo/prism-provider-openai",
+    "envKey": "OPENAI_API_KEY",
+    "envPlaceholder": "sk-...",
+    "modelProvider": "openai",
+    "modelName": "gpt-5.1",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createOpenAIResponsesProvider } from \"@arnilo/prism-provider-openai\";",
+    "providerExpression": "createOpenAIResponsesProvider({\n    apiKey: () => process.env.OPENAI_API_KEY,\n  })",
+    "modelExpression": "{ provider: \"openai\", model: \"gpt-5.1\" }"
+  },
+  "openrouter": {
+    "id": "openrouter",
+    "packageName": "@arnilo/prism-provider-openrouter",
+    "envKey": "OPENROUTER_API_KEY",
+    "envPlaceholder": "sk-or-...",
+    "modelProvider": "openrouter",
+    "modelName": "anthropic/claude-sonnet-4",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createOpenRouterProvider,\n  defineOpenRouterModel,\n} from \"@arnilo/prism-provider-openrouter\";",
+    "providerExpression": "createOpenRouterProvider({\n    apiKey: () => process.env.OPENROUTER_API_KEY,\n  })",
+    "modelExpression": "defineOpenRouterModel({ model: \"anthropic/claude-sonnet-4\" })"
+  },
+  "kimi": {
+    "id": "kimi",
+    "packageName": "@arnilo/prism-provider-kimi",
+    "envKey": "KIMI_API_KEY",
+    "envPlaceholder": "your-kimi-api-key",
+    "modelProvider": "kimi-coding",
+    "modelName": "kimi-k2.7-code",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createKimiCodingProvider } from \"@arnilo/prism-provider-kimi\";",
+    "providerExpression": "createKimiCodingProvider({\n    apiKey: () => process.env.KIMI_API_KEY,\n  })",
+    "modelExpression": "{ provider: \"kimi-coding\", model: \"kimi-k2.7-code\" }"
+  },
+  "zai": {
+    "id": "zai",
+    "packageName": "@arnilo/prism-provider-zai",
+    "envKey": "ZAI_API_KEY",
+    "envPlaceholder": "your-zai-api-key",
+    "modelProvider": "zai",
+    "modelName": "glm-4.7",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createZaiProvider } from \"@arnilo/prism-provider-zai\";",
+    "providerExpression": "createZaiProvider({\n    apiKey: () => process.env.ZAI_API_KEY,\n  })",
+    "modelExpression": "{ provider: \"zai\", model: \"glm-4.7\" }"
+  },
+  "opencode-go": {
+    "id": "opencode-go",
+    "packageName": "@arnilo/prism-provider-opencode-go",
+    "envKey": "OPENCODE_API_KEY",
+    "envPlaceholder": "your-opencode-api-key",
+    "modelProvider": "opencode-go",
+    "modelName": "gpt-5.1-go",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createOpenCodeGoProvider } from \"@arnilo/prism-provider-opencode-go\";",
+    "providerExpression": "createOpenCodeGoProvider({\n    apiKey: () => process.env.OPENCODE_API_KEY,\n  })",
+    "modelExpression": "{ provider: \"opencode-go\", model: \"gpt-5.1-go\", compat: { route: \"openai\" } }"
+  },
+  "neuralwatt": {
+    "id": "neuralwatt",
+    "packageName": "@arnilo/prism-provider-neuralwatt",
+    "envKey": "NEURALWATT_API_KEY",
+    "envPlaceholder": "your-neuralwatt-api-key",
+    "modelProvider": "neuralwatt",
+    "modelName": "glm-5.2",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createNeuralWattProvider,\n  defineNeuralWattModel,\n} from \"@arnilo/prism-provider-neuralwatt\";",
+    "providerExpression": "createNeuralWattProvider({\n    apiKey: () => process.env.NEURALWATT_API_KEY,\n  })",
+    "modelExpression": "defineNeuralWattModel({\n    model: \"glm-5.2\",\n    cache: { kind: \"implicit\" },\n  })"
+  }
+}

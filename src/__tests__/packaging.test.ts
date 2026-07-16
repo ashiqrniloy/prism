@@ -16,6 +16,7 @@ const packages = [
   { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
   { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
   { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
+  { dir: "packages/provider-ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
   { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
@@ -27,6 +28,11 @@ const packages = [
   { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
   { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
   { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
+  { dir: "packages/evals", name: "@arnilo/prism-evals" },
+  { dir: "packages/memory", name: "@arnilo/prism-memory" },
+  { dir: "packages/rag", name: "@arnilo/prism-rag" },
+  { dir: "packages/server", name: "@arnilo/prism-server" },
+  { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
   { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
@@ -79,9 +85,12 @@ describe("packaging guard", () => {
     describe(pkg.name, () => {
       it("ships no tests, maps, source, plans, or internal files", () => {
         const files = getPackList(pkg.dir, pkg.name);
-        const junk = files.filter(
-          (f) => deniedPatterns.some((d) => d.pattern.test(f)) || isSourceTs(f),
-        );
+        const junk = files.filter((f) => {
+          // Checked-in init templates intentionally include *.tmpl names that look like
+          // tsconfig/tests; they are scaffold inputs, not package internals.
+          if (f.startsWith("templates/")) return false;
+          return deniedPatterns.some((d) => d.pattern.test(f)) || isSourceTs(f);
+        });
         const labels = junk.map(
           (f) =>
             `${f} (${
@@ -121,10 +130,13 @@ describe("packaging guard", () => {
       });
 
       if (pkg.isCore) {
-        it("ships the docs hub and the CLI bin", () => {
+        it("ships the docs hub, CLI bin, and init templates", () => {
           const files = getPackList(pkg.dir, pkg.name);
           assert.ok(files.includes("docs/index.md"), `${pkg.name} missing docs/index.md`);
           assert.ok(files.includes("dist/cli.js"), `${pkg.name} missing dist/cli.js`);
+          assert.ok(files.includes("templates/init/package.json.tmpl"), `${pkg.name} missing init templates`);
+          assert.ok(files.includes("templates/init/src/agent.ts.tmpl"), `${pkg.name} missing agent template`);
+          assert.ok(files.includes("templates/init/providers.json"), `${pkg.name} missing init provider catalog`);
         });
       }
 
@@ -155,7 +167,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.4", `${pkg.name} @arnilo/prism peer must be 0.0.4`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.5", `${pkg.name} @arnilo/prism peer must be 0.0.5`);
           assert.ok(
             !manifest.peerDependenciesMeta,
             `${pkg.name} must not mark the @arnilo/prism peer optional (peerDependenciesMeta should be absent)`,
@@ -177,6 +189,7 @@ describe("packaging guard", () => {
               "@arnilo/prism-provider-zai",
               "@arnilo/prism-provider-kimi",
               "@arnilo/prism-provider-neuralwatt",
+              "@arnilo/prism-provider-ai-sdk",
             ],
             "@arnilo/prism-compaction": [
               "@arnilo/prism-compaction-llm",
@@ -206,13 +219,18 @@ describe("packaging guard", () => {
               "@arnilo/prism-providers",
               "@arnilo/prism-session-store-sqlite",
               "@arnilo/prism-session-store-postgres",
+              "@arnilo/prism-evals",
+              "@arnilo/prism-memory",
+              "@arnilo/prism-rag",
+              "@arnilo/prism-server",
+              "@arnilo/prism-supervisor",
             ],
           };
           const want = expected[pkg.name];
           assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.4", `${pkg.name} dependency must be pinned to 0.0.4`);
+            assert.equal(v, "0.0.5", `${pkg.name} dependency must be pinned to 0.0.5`);
           }
         });
       }
@@ -241,9 +259,9 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.4", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.5", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.4", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.5", "@arnilo/prism-all must hard-depend on provider umbrella");
   });
 
   it("prism-all transitively includes every published first-party package", () => {

@@ -245,6 +245,41 @@ CREATE INDEX IF NOT EXISTS prism_migrations_name_version_idx
   ON prism_migrations (name, version);
 `;
 
+export const MIGRATION_002_USAGE_SCOPE = `
+ALTER TABLE prism_usage ADD COLUMN scope TEXT NOT NULL DEFAULT 'run_total';
+ALTER TABLE prism_usage ADD COLUMN turn INTEGER;
+ALTER TABLE prism_usage ADD COLUMN attempt INTEGER;
+CREATE INDEX IF NOT EXISTS prism_usage_session_scope_recorded_idx
+  ON prism_usage (session_id, scope, recorded_at);
+`;
+
+export const MIGRATION_003_RUN_FEEDBACK = `
+CREATE TABLE IF NOT EXISTS prism_run_feedback (
+  id TEXT NOT NULL PRIMARY KEY,
+  run_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  trace_id TEXT,
+  rating REAL,
+  comment TEXT,
+  tags TEXT NOT NULL,
+  scorer_ids TEXT NOT NULL,
+  evaluation_ids TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  created_by TEXT,
+  tenant_id TEXT NOT NULL,
+  account_id TEXT,
+  user_id TEXT,
+  metadata TEXT,
+  FOREIGN KEY (run_id) REFERENCES prism_runs(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS prism_run_feedback_owner_created_idx
+  ON prism_run_feedback (tenant_id, account_id, user_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_run_feedback_run_created_idx
+  ON prism_run_feedback (run_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_run_feedback_trace_created_idx
+  ON prism_run_feedback (trace_id, created_at, id);
+`;
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",
@@ -258,6 +293,7 @@ export const ADAPTER_TABLE_NAMES = [
   "prism_agent_events",
   "prism_tool_calls",
   "prism_usage",
+  "prism_run_feedback",
   "prism_retention_policies",
   "prism_migrations",
 ] as const;
@@ -282,6 +318,10 @@ export const ADAPTER_INDEX_NAMES = [
   "prism_tool_calls_run_started_idx",
   "prism_usage_run_recorded_idx",
   "prism_usage_session_recorded_idx",
+  "prism_usage_session_scope_recorded_idx",
+  "prism_run_feedback_owner_created_idx",
+  "prism_run_feedback_run_created_idx",
+  "prism_run_feedback_trace_created_idx",
   "prism_agent_definitions_name_version_idx",
   "prism_migrations_name_version_idx",
 ] as const;

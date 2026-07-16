@@ -36,8 +36,8 @@ void describe("persistence schema model", () => {
     assertPersistenceMigrationContract(contract);
     assertMigrationUpAndReopen(
       contract,
-      [{ name: "001_init", version: "1" }],
-      [{ name: "001_init", version: "1" }],
+      [{ name: "001_init", version: "1" }, { name: "002_usage_scope", version: "2" }, { name: "003_run_feedback", version: "3" }],
+      [{ name: "001_init", version: "1" }, { name: "002_usage_scope", version: "2" }, { name: "003_run_feedback", version: "3" }],
     );
   });
 

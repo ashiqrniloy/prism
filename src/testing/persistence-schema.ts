@@ -6,7 +6,7 @@ import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../contra
 // adapter authors implement and test against before shipping dialect-specific DDL.
 
 /** Current shared persistence schema version for production database adapters. */
-export const PERSISTENCE_SCHEMA_VERSION = 1;
+export const PERSISTENCE_SCHEMA_VERSION = 3;
 
 export type PersistenceTableName =
   | "prism_tenants"
@@ -21,10 +21,11 @@ export type PersistenceTableName =
   | "prism_agent_events"
   | "prism_tool_calls"
   | "prism_usage"
+  | "prism_run_feedback"
   | "prism_retention_policies"
   | "prism_migrations";
 
-export type PersistenceColumnType = "text" | "integer" | "boolean" | "json" | "timestamp";
+export type PersistenceColumnType = "text" | "integer" | "number" | "boolean" | "json" | "timestamp";
 
 export interface PersistenceColumnDefinition {
   readonly name: string;
@@ -300,12 +301,35 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
           { name: "session_id", type: "text" },
           { name: "run_id", type: "text", nullable: true },
           { name: "entry_id", type: "text", nullable: true },
+          { name: "scope", type: "text" },
+          { name: "turn", type: "integer", nullable: true },
+          { name: "attempt", type: "integer", nullable: true },
           { name: "usage", type: "json" },
           { name: "recorded_at", type: "timestamp" },
           ...TENANT_COLUMNS,
           { name: "metadata", type: "json", nullable: true },
         ],
         foreignKeys: [{ columns: ["session_id"], referencesTable: "prism_sessions", referencesColumns: ["id"] }],
+      },
+      {
+        name: "prism_run_feedback",
+        primaryKey: ["id"],
+        columns: [
+          { name: "id", type: "text" },
+          { name: "run_id", type: "text" },
+          { name: "session_id", type: "text" },
+          { name: "trace_id", type: "text", nullable: true },
+          { name: "rating", type: "number", nullable: true },
+          { name: "comment", type: "text", nullable: true },
+          { name: "tags", type: "json" },
+          { name: "scorer_ids", type: "json" },
+          { name: "evaluation_ids", type: "json" },
+          { name: "created_at", type: "timestamp" },
+          { name: "created_by", type: "text", nullable: true },
+          ...TENANT_COLUMNS,
+          { name: "metadata", type: "json", nullable: true },
+        ],
+        foreignKeys: [{ columns: ["run_id"], referencesTable: "prism_runs", referencesColumns: ["id"] }],
       },
       {
         name: "prism_retention_policies",
@@ -358,6 +382,10 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
       { name: "prism_tool_calls_run_started_idx", table: "prism_tool_calls", columns: ["run_id", "started_at"], purpose: "run tool-call listing" },
       { name: "prism_usage_run_recorded_idx", table: "prism_usage", columns: ["run_id", "recorded_at", "id"], purpose: "run usage pagination" },
       { name: "prism_usage_session_recorded_idx", table: "prism_usage", columns: ["session_id", "recorded_at"], purpose: "usage aggregation" },
+      { name: "prism_usage_session_scope_recorded_idx", table: "prism_usage", columns: ["session_id", "scope", "recorded_at"], purpose: "scope-safe usage aggregation" },
+      { name: "prism_run_feedback_owner_created_idx", table: "prism_run_feedback", columns: ["tenant_id", "account_id", "user_id", "created_at", "id"], purpose: "ownership-scoped feedback pagination" },
+      { name: "prism_run_feedback_run_created_idx", table: "prism_run_feedback", columns: ["run_id", "created_at", "id"], purpose: "run feedback lookup" },
+      { name: "prism_run_feedback_trace_created_idx", table: "prism_run_feedback", columns: ["trace_id", "created_at", "id"], purpose: "trace feedback lookup" },
       { name: "prism_agent_definitions_name_version_idx", table: "prism_agent_definitions", columns: ["name", "version"], purpose: "definition lookup" },
       { name: "prism_migrations_name_version_idx", table: "prism_migrations", columns: ["name", "version"], unique: true, purpose: "applied-migration uniqueness" },
     ],
@@ -371,6 +399,8 @@ export function createPersistenceMigrationContract(): PersistenceMigrationContra
     appliedMigrationsTable: "prism_migrations",
     steps: [
       { version: 1, name: "001_init", description: "Create core session, branch, entry, idempotency, run, ledger, and migration tables." },
+      { version: 2, name: "002_usage_scope", description: "Distinguish provider-turn usage from aggregate run totals." },
+      { version: 3, name: "003_run_feedback", description: "Add immutable ownership-scoped run/trace feedback and evaluation links." },
     ],
     lockGuidance:
       "Acquire a dialect-specific migration lock before applying steps (PostgreSQL advisory lock; SQLite exclusive transaction). Only one process should migrate at a time.",
@@ -388,6 +418,7 @@ export function getPersistencePaginationCursors(): readonly PersistencePaginatio
     { table: "prism_agent_events", columns: ["session_id", "timestamp", "id"], supportsOrder: ["asc", "desc"], purpose: "session event stream" },
     { table: "prism_usage", columns: ["run_id", "recorded_at", "id"], supportsOrder: ["asc", "desc"], purpose: "run usage totals" },
     { table: "prism_tool_calls", columns: ["run_id", "started_at"], supportsOrder: ["asc", "desc"], purpose: "run tool-call listing" },
+    { table: "prism_run_feedback", columns: ["tenant_id", "account_id", "user_id", "created_at", "id"], supportsOrder: ["asc", "desc"], purpose: "owned feedback listing" },
   ];
 }
 
@@ -429,7 +460,7 @@ export function assertPersistenceSchemaModel(model: PersistenceSchemaModel): voi
   }
 
   const indexTables = new Set(model.indexes.map((index) => index.table));
-  for (const requiredIndex of ["prism_session_append_idempotency", "prism_session_entries", "prism_agent_events", "prism_runs"]) {
+  for (const requiredIndex of ["prism_session_append_idempotency", "prism_session_entries", "prism_agent_events", "prism_runs", "prism_run_feedback"]) {
     if (!indexTables.has(requiredIndex as PersistenceTableName)) {
       throw new Error(`Persistence schema missing indexes for ${requiredIndex}`);
     }

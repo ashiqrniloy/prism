@@ -16,9 +16,15 @@
       "@arnilo/prism-provider-zai": ["./packages/provider-zai/src/index.ts"],
       "@arnilo/prism-provider-kimi": ["./packages/provider-kimi/src/index.ts"],
       "@arnilo/prism-provider-neuralwatt": ["./packages/provider-neuralwatt/src/index.ts"],
+      "@arnilo/prism-provider-ai-sdk": ["./packages/provider-ai-sdk/src/index.ts"],
       "@arnilo/prism-compaction-llm": ["./packages/compaction-llm/src/index.ts"],
       "@arnilo/prism-compaction-observational-memory": ["./packages/compaction-observational-memory/src/index.ts"],
       "@arnilo/prism-workflows": ["./packages/workflows/src/index.ts"],
+      "@arnilo/prism-evals": ["./packages/evals/src/index.ts"],
+      "@arnilo/prism-memory": ["./packages/memory/src/index.ts"],
+      "@arnilo/prism-rag": ["./packages/rag/src/index.ts"],
+      "@arnilo/prism-server": ["./packages/server/src/index.ts"],
+      "@arnilo/prism-supervisor": ["./packages/supervisor/src/index.ts"],
       "@arnilo/prism-mcp": ["./packages/mcp/src/index.ts"]
     }
   },

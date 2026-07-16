@@ -35,6 +35,7 @@ export async function enqueueWorkflow(
     nodes[nodeId] = { nodeId, status: readyNodeIds.includes(nodeId) ? "ready" : "pending" };
   }
   const timestamp = nowIso();
+  const state = JSON.parse(JSON.stringify(workflow.state?.initial ?? {})) as import("@arnilo/prism").JsonObject;
   await options.checkpoints.save({
     workflowId: workflow.id,
     runId,
@@ -55,11 +56,17 @@ export async function enqueueWorkflow(
       createdAt: timestamp,
       updatedAt: timestamp,
       redacted: false,
+      state,
+      stateVersion: 0,
+      stateHistory: { "0": state },
       metadata: options.metadata,
     },
   });
   return { workflowId: workflow.id, runId, status: "queued" };
 }
+
+/** Explicit background start; durable coordinator execution remains opt-in. */
+export const startWorkflowBackground = enqueueWorkflow;
 
 export interface WorkflowCoordinatorOptions {
   readonly coordinatorId: string;

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -41,6 +41,39 @@ test("createReadOnlyTools returns exactly [read]", async () => {
       tools.map((t) => t.name),
       ["read"],
     );
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("createReadOnlyTools applies shared executionPolicy before filesystem access", async () => {
+  const cwd = await tmp();
+  const path = join(cwd, "secret.txt");
+  let accesses = 0;
+  try {
+    await writeFile(path, "secret");
+    const [read] = createReadOnlyTools(cwd, {
+      executionPolicy: {
+        check: (action) => {
+          assert.equal(action.metadata?.sessionId, "session-1");
+          assert.equal(action.metadata?.runId, "run-1");
+          return { allowed: false, reason: "denied" };
+        },
+      },
+      read: {
+        operations: {
+          access: async () => { accesses++; },
+          readFile: async () => Buffer.from("must not read"),
+        },
+      },
+    });
+    const result = await read!.execute({ path }, {
+      toolCallId: "call-1",
+      sessionId: "session-1",
+      runId: "run-1",
+    });
+    assert.equal(result.error?.message, "denied");
+    assert.equal(accesses, 0);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

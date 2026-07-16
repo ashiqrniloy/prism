@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  AgentRunError,
   createAgent,
   createAgentSession,
   createContributionRegistries,
@@ -22,8 +23,6 @@ import {
   type AIProvider,
   type ContentBlock,
   type ContextProvider,
-  type CredentialResolver,
-  type Extension,
   type InputBuilder,
   type InstructionInjector,
   type Message,
@@ -31,7 +30,6 @@ import {
   type ProviderRequest,
   type SessionEntry,
   type SessionStore,
-  type SettingsProvider,
   type ToolDefinition,
 } from "../index.js";
 
@@ -852,37 +850,122 @@ describe("agent session runtime", () => {
     assert.equal(model?.model?.model, "override");
   });
 
-  it("AgentConfig extensions settings and credentials stay host-owned during runs", async () => {
-    let setupCalls = 0;
-    let settingsCalls = 0;
-    let credentialCalls = 0;
-    const extension: Extension = { name: "inert", setup: () => { setupCalls += 1; } };
-    const settings: SettingsProvider = { get: () => { settingsCalls += 1; return undefined; } };
-    const credentials: CredentialResolver = { resolve: () => { credentialCalls += 1; return { type: "api_key", value: "secret-unused" }; } };
-    const store = createMemorySessionStore();
-    const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
-    const session = createAgent({
+  it("session.run returns AgentRunResult with final assistant text and usage", async () => {
+    const provider = createMockProvider([
+      providerTextDelta("Hello"),
+      providerTextDelta(" world"),
+      providerUsage({ inputTokens: 3, outputTokens: 2, totalTokens: 5 }),
+      providerDone(),
+    ]);
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "result-ok" });
+
+    const result = await session.run("Hi");
+
+    assert.equal(result.sessionId, "result-ok");
+    assert.equal(typeof result.runId, "string");
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.text, "Hello world");
+    assert.ok(result.content.every((block) => block.type === "text"));
+    assert.equal(result.content.map((block) => block.type === "text" ? block.text : "").join(""), "Hello world");
+    assert.equal(result.usage?.totalTokens, 5);
+    assert.equal(result.error, undefined);
+    assert.ok(result.leafId);
+  });
+
+  it("session.prompt shares the run result contract", async () => {
+    const provider = createMockProvider([providerTextDelta("ping"), providerDone()]);
+    const result = await createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession().prompt("Hi");
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.text, "ping");
+  });
+
+  it("failed and aborted runs throw AgentRunError with result shapes", async () => {
+    const failingProvider: AIProvider = {
+      id: "mock",
+      async *generate() {
+        yield { type: "error", error: { name: "ProviderError", message: "provider failed" } };
+      },
+    };
+    const failing = createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
-      extensions: [extension],
-      settings,
-      credentials,
-      store,
-    }).createSession({ id: "inert-fields" });
+      provider: failingProvider,
+    }).createSession({ id: "result-fail" });
+    await assert.rejects(async () => failing.run("Hi"), (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.status, "failed");
+      assert.equal(error.result.sessionId, "result-fail");
+      assert.equal(error.result.error?.message, "provider failed");
+      assert.match(error.message, /provider failed/);
+      return true;
+    });
 
-    await session.run("Hi");
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        await new Promise<void>((_resolve, reject) => {
+          request.signal?.addEventListener("abort", () => reject(request.signal?.reason), { once: true });
+        });
+      },
+    };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "result-abort" });
+    const controller = new AbortController();
+    const run = session.run("Hi", { signal: controller.signal });
+    controller.abort(new Error("cancelled"));
+    await assert.rejects(async () => run, (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.status, "aborted");
+      assert.equal(error.result.sessionId, "result-abort");
+      assert.match(String(error.result.abortReason), /cancelled/);
+      return true;
+    });
+  });
 
-    assert.equal(setupCalls, 0);
-    assert.equal(settingsCalls, 0);
-    assert.equal(credentialCalls, 0);
-    assert.equal(JSON.stringify(await store.list("inert-fields")).includes("secret-unused"), false);
+  it("session.stream subscribes before the run and yields only owned-run events", async () => {
+    const provider = createMockProvider([providerTextDelta("streamed"), providerDone()]);
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "stream-1" });
+
+    const events: AgentEvent[] = [];
+    for await (const event of session.stream("Hi")) events.push(event);
+
+    assert.equal(events[0]?.type, "agent_started");
+    assert.equal(events.at(-1)?.type, "agent_finished");
+    const runIds = new Set(events.flatMap((event) => ("runId" in event && event.runId ? [event.runId] : [])));
+    assert.equal(runIds.size, 1);
+    assert.ok(events.some((event) => event.type === "message_delta" && event.content.type === "text" && event.content.text === "streamed"));
+  });
+
+  it("early stream consumer return aborts the owned run and releases the session", async () => {
+    let calls = 0;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        calls += 1;
+        if (calls === 1) {
+          yield providerTextDelta("partial");
+          await new Promise<void>((_resolve, reject) => {
+            request.signal?.addEventListener("abort", () => reject(request.signal?.reason ?? new Error("aborted")), { once: true });
+          });
+        }
+        yield providerTextDelta("done");
+        yield providerDone();
+      },
+    };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "stream-early" });
+
+    for await (const event of session.stream("Hi")) {
+      if (event.type === "message_delta") break;
+    }
+
+    const result = await session.run("again");
+    assert.equal(calls, 2);
+    assert.equal(result.text, "done");
   });
 
   it("store entries do not include provider credentials", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
 
-    await createAgent({ model: { provider: "mock", model: "demo" }, provider, store, credentials: { resolve: () => ({ type: "bearer", value: "secret" }) } }).createSession({ id: "s1" }).run("Hi");
+    await createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" }).run("Hi");
 
     assert.equal(JSON.stringify(await store.list("s1")).includes("secret"), false);
   });
@@ -1022,7 +1105,7 @@ describe("agent session runtime", () => {
     let keys: string[] = [];
     const strategy = { name: "inspect", compact(context: object) { keys = Object.keys(context); return { summary: "ok" }; } };
     const provider = createMockProvider([providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, credentials: { resolve: () => ({ type: "bearer", value: "secret" }) } }).createSession({ id: "s1" });
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "s1" });
 
     await session.compact({ strategy });
 

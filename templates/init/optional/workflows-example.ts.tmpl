@@ -1,0 +1,27 @@
+import {
+  createMemoryWorkflowCheckpoints,
+  defineWorkflow,
+  functionNode,
+  runWorkflow,
+} from "@arnilo/prism-workflows";
+
+/**
+ * Tiny workflow example. Not wired into `npm start` — import and call from your host.
+ */
+export async function runHelloWorkflow(name: string) {
+  const workflow = defineWorkflow({
+    id: "hello",
+    nodes: {
+      greet: functionNode({
+        execute: async (ctx) => {
+          const input = ctx.workflowInput as { name?: string };
+          return { message: `Hello, ${input.name ?? name}` };
+        },
+      }),
+    },
+  });
+
+  return runWorkflow(workflow, { name }, {
+    checkpoints: createMemoryWorkflowCheckpoints(),
+  });
+}

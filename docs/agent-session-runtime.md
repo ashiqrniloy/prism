@@ -7,8 +7,9 @@ The agent/session runtime adds the minimal shared SDK surface for running provid
 - `createAgent(config)`
 - `createAgentSession(config)`
 - `agent.createSession(config)`
-- `session.run(input, options)`
-- `session.prompt(input, options)`
+- `session.run(input, options)` → `AgentRunResult`
+- `session.prompt(input, options)` → `AgentRunResult`
+- `session.stream(input, options)` → owned-run `AsyncIterable<AgentEvent>`
 - `session.compact(options?)`
 - `session.subscribe(options?)`
 - `session.abort()`
@@ -46,7 +47,11 @@ string | Message | readonly Message[]
 
 ## Outputs / response / events
 
-`session.subscribe(options?)` returns a live `AsyncIterable<AgentEvent>`. Subscribe before `run()` to observe that run's events. The consumer loop and `session.run()` must run concurrently (e.g. start the `for await` consumer, then `await Promise.all([consumer, session.run("Hi")])`): events are only emitted during a live run, so awaiting the subscribe loop before calling `run()` deadlocks. `SubscribeOptions.maxQueuedEvents` defaults to `1024` (minimum `1`) and caps events queued while the consumer is not awaiting `next()`. `SubscribeOptions.overflow` defaults to `"close"`; it clears queued payload events, delivers one `event_subscriber_overflow` notice to that subscriber, then closes it. `"drop_oldest"` keeps newest events; `"drop_newest"` ignores new events while full.
+`session.run()` / `session.prompt()` resolve to an `AgentRunResult` with `sessionId`, `runId`, `status`, `text`, `content`, optional `message`/`usage`/`leafId`, and terminal `error`/`abortReason` when applicable. Callers may ignore the return value. Failed and aborted runs still emit their terminal events, then reject with `AgentRunError` whose `.result` carries the same shape.
+
+`session.stream(input, options?)` subscribes first, starts exactly one run, yields only that run's events, and terminates when the run succeeds, fails, or aborts. Early consumer return aborts the owned run and releases the session. `SubscribeOptions.maxQueuedEvents` / `overflow` may be passed alongside `RunOptions`.
+
+`session.subscribe(options?)` remains available for hosts that want a long-lived subscriber across runs. Subscribe before `run()` to observe that run's events. The consumer loop and `session.run()` must run concurrently (e.g. start the `for await` consumer, then `await Promise.all([consumer, session.run("Hi")])`): events are only emitted during a live run, so awaiting the subscribe loop before calling `run()` deadlocks. Prefer `session.stream()` when you only need one run's events. `SubscribeOptions.maxQueuedEvents` defaults to `1024` (minimum `1`) and caps events queued while the consumer is not awaiting `next()`. `SubscribeOptions.overflow` defaults to `"close"`; it clears queued payload events, delivers one `event_subscriber_overflow` notice to that subscriber, then closes it. `"drop_oldest"` keeps newest events; `"drop_newest"` ignores new events while full.
 
 For a text-only provider turn, the runtime emits:
 
@@ -101,29 +106,22 @@ const agent = createAgent({
 });
 
 const session = agent.createSession({ id: "s1" });
-const reader = (async () => {
-  for await (const event of session.subscribe()) console.log(event.type);
-})();
+const result = await session.run("Hi", { maxToolRounds: 1, compaction: { thresholdEntries: 20, keepRecentEntries: 6 }, retry: { maxAttempts: 3, baseDelayMs: 50 } });
+console.log(result.text, result.usage?.totalTokens);
 
-await session.run("Hi", { maxToolRounds: 1, compaction: { thresholdEntries: 20, keepRecentEntries: 6 }, retry: { maxAttempts: 3, baseDelayMs: 50 } });
+for await (const event of session.stream("Follow up")) console.log(event.type);
+
 await session.compact({ keepRecentEntries: 4 });
 const branch = await session.entries();
 await session.checkout(branch.at(-1)?.id);
 const clone = await session.clone({ id: "s2" });
-await reader;
 ```
 
 ## Extension and configuration notes
 
 The runtime calls `assembleProviderInput()` on every turn and uses only runtime-consumed values supplied on `AgentConfig`: `instructions`, `systemPrompt`, `inputBuilder`, `promptBuilder`, `inputLayout`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, `compaction`, `retry`, and `RunOptions.model`/`systemPrompt`/`inputLayout`/`compaction`/`retry`. Contributions remain inert until a host passes selected values into the agent config.
 
-`AgentConfig` fields that are host-owned metadata, not runtime work:
-
-| Field | Runtime behavior |
-| --- | --- |
-| `extensions` | Preserved on `agent.config` only. `createAgent()` / `session.run()` do not call `setup()`, load packages, or auto-register contributions. Load extensions with `createExtensionKernel()` before building config. |
-| `settings` | Preserved on `agent.config` only. The runtime does not call `settings.get()`; hosts or provider packages read settings before passing concrete runtime options. |
-| `credentials` | Preserved on `agent.config` only. The runtime does not call `credentials.resolve()`; provider adapters/request policies resolve credentials at the provider edge and pass exact secret values to redaction when needed. |
+`AgentConfig` no longer accepts inert `extensions`, `settings`, or `credentials` fields. Load extensions with `createExtensionKernel()` before building config; read settings in the host before passing concrete runtime options; resolve credentials at the provider edge and pass exact secret values to redaction when needed.
 
 The runtime calls `middleware.run("compaction", { context, result })` after a compaction strategy returns and before appending the standard compaction entry. Middleware can adjust the result summary/data, but the runtime still owns store append ordering and branch parent ids.
 
@@ -131,7 +129,7 @@ Provider request policy application is one ordered in-memory pass per provider t
 
 The runtime calls `middleware.run("retry", { context, decision })` after the retry policy decision and before emitting `retry_scheduled`. Middleware can stop retrying or adjust the delay. Retry wraps only the current provider turn, reuses the same assembled request, and never retries after assistant output has been emitted.
 
-`createAgent()` is a thin wrapper over explicit config. It does not load `AgentConfig.extensions`, scan packages, resolve credentials, read settings, call `Extension.setup()`, or consult hidden registries. External `AgentDefinition` implementations can call it from their own `create()` method:
+`createAgent()` is a thin wrapper over explicit config. It does not scan packages, resolve credentials, read settings, call `Extension.setup()`, or consult hidden registries. External `AgentDefinition` implementations can call it from their own `create()` method:
 
 ```ts
 import { createAgent, createContributionRegistries } from "@arnilo/prism";

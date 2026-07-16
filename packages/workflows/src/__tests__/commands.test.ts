@@ -9,6 +9,7 @@ import {
   getWorkflowRun,
   listWorkflowRuns,
   runWorkflow,
+  suspend,
   WorkflowAbortError,
 } from "../index.js";
 
@@ -24,14 +25,14 @@ function buildWorkflow() {
 }
 
 describe("createWorkflowCommands", () => {
-  it("registers start/status/list/cancel/resume command names", () => {
+  it("registers start/enqueue/replay/status/list/cancel/resume command names", () => {
     const commands = createWorkflowCommands({
       workflows: { demo: buildWorkflow() },
       checkpoints: createMemoryWorkflowCheckpoints(),
     });
     assert.deepEqual(
       commands.map((command) => command.name),
-      ["workflow.start", "workflow.status", "workflow.list", "workflow.cancel", "workflow.resume"],
+      ["workflow.start", "workflow.enqueue", "workflow.replay", "workflow.status", "workflow.list", "workflow.cancel", "workflow.resume"],
     );
   });
 
@@ -64,6 +65,25 @@ describe("createWorkflowCommands", () => {
     const listed = await byName["workflow.list"]!.execute({ workflowId: "demo" }, {});
     assert.equal(listed.error, undefined);
     assert.equal((listed.value as { items: unknown[] }).items.length, 1);
+  });
+
+  it("enqueues background runs and replays completed runs", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const workflow = buildWorkflow();
+    const commands = createWorkflowCommands({ workflows: { demo: workflow }, checkpoints });
+    const byName = Object.fromEntries(commands.map((command) => [command.name, command]));
+    const queued = await byName["workflow.enqueue"]!.execute({ workflowId: "demo", input: "later", runId: "background-1" }, {});
+    assert.equal((queued.value as { status: string }).status, "queued");
+
+    const source = await runWorkflow(workflow, "source", { checkpoints, runId: "source-1" });
+    const replayed = await byName["workflow.replay"]!.execute({
+      workflowId: "demo",
+      sourceRunId: source.runId,
+      fromNodeId: "step",
+      runId: "replay-1",
+    }, {});
+    assert.equal(replayed.error, undefined);
+    assert.equal((replayed.value as { status: string }).status, "succeeded");
   });
 
   it("cancels an in-flight run started via runWorkflow", async () => {
@@ -209,6 +229,38 @@ describe("createWorkflowCommands", () => {
     const value = resumed.value as { status: string; outputs: Record<string, unknown> };
     assert.equal(value.status, "succeeded");
     assert.equal(value.outputs.second, "one-two");
+  });
+
+  it("passes durable approval payload and expected version through workflow.resume", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const workflow = defineWorkflow({
+      id: "command-suspend",
+      nodes: {
+        review: functionNode({
+          execute: async (ctx) => ctx.resume
+            ? { reviewer: (ctx.resume.input as { reviewer: string }).reviewer }
+            : suspend({ reason: "review" }),
+        }),
+      },
+    });
+    const commands = createWorkflowCommands({ workflows: { [workflow.id]: workflow }, checkpoints });
+    const byName = Object.fromEntries(commands.map((command) => [command.name, command]));
+    const started = await byName["workflow.start"]!.execute({ workflowId: workflow.id }, {});
+    const startValue = started.value as { runId: string; status: string; version: number };
+    assert.equal(startValue.status, "suspended");
+
+    const resumed = await byName["workflow.resume"]!.execute({
+      workflowId: workflow.id,
+      runId: startValue.runId,
+      decision: "approve",
+      input: { reviewer: "Ada" },
+      expectedVersion: startValue.version,
+    }, {});
+    assert.equal(resumed.error, undefined);
+    assert.deepEqual(
+      (resumed.value as { outputs: Record<string, unknown> }).outputs.review,
+      { reviewer: "Ada" },
+    );
   });
 
   it("listWorkflowRuns helper paginates", async () => {

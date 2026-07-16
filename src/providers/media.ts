@@ -5,13 +5,16 @@ import type {
   DocumentContent,
   FileContent,
   JsonObject,
+  Message,
   ModelCapabilities,
   ModelConfig,
 } from "../contracts.js";
 import {
+  assertMessagesSupportModelCapabilities,
   contentBlockInputModality,
   DEFAULT_MAX_MEDIA_ITEM_BYTES,
   resolveMediaContentBlock,
+  resolveMediaContentBlocks,
   type MediaContentBlock,
   type ModelInputCapability,
   type ResolveMediaContentOptions,
@@ -149,6 +152,22 @@ export async function resolveProviderMediaBlock(
   options: ResolveMediaContentOptions = {},
 ): Promise<ResolvedMediaContent> {
   return resolveMediaContentBlock(block, options);
+}
+
+/** Resolve every media block once and enforce aggregate request bounds before provider I/O. */
+export async function resolveProviderMediaMessages(
+  messages: readonly Message[],
+  model: ModelConfig,
+  options: ResolveMediaContentOptions = {},
+): Promise<ReadonlyMap<MediaContentBlock, ResolvedMediaContent>> {
+  assertMessagesSupportModelCapabilities(model, messages);
+  const blocks = messages.flatMap((message) => message.content.filter(isMediaContentBlock));
+  const resolved = await resolveMediaContentBlocks(blocks, options);
+  return new Map(blocks.map((block, index) => [block, resolved[index]!]));
+}
+
+function isMediaContentBlock(block: ContentBlock): block is MediaContentBlock {
+  return contentBlockInputModality(block) !== undefined;
 }
 
 export function defaultProviderFilename(block: MediaContentBlock, fallback: string): string {

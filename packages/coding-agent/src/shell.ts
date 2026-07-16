@@ -332,7 +332,7 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
           command: spawnContext.command,
           paths: [spawnContext.cwd],
           risk: "high",
-          metadata: { timeout, signal: context.signal },
+          metadata: { timeout, sessionId: context.sessionId, runId: context.runId, signal: context.signal },
         },
         toolCallId,
         "shell",

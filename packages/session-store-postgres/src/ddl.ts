@@ -254,6 +254,47 @@ CREATE INDEX IF NOT EXISTS prism_migrations_name_version_idx
 `;
 }
 
+export function buildMigration002Ddl(schema: string): string {
+  const usage = qualifyTable(schema, "prism_usage");
+  return `
+ALTER TABLE ${usage} ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT 'run_total';
+ALTER TABLE ${usage} ADD COLUMN IF NOT EXISTS turn INTEGER;
+ALTER TABLE ${usage} ADD COLUMN IF NOT EXISTS attempt INTEGER;
+CREATE INDEX IF NOT EXISTS prism_usage_session_scope_recorded_idx
+  ON ${usage} (session_id, scope, recorded_at);
+`;
+}
+
+export function buildMigration003Ddl(schema: string): string {
+  const feedback = qualifyTable(schema, "prism_run_feedback");
+  return `
+CREATE TABLE IF NOT EXISTS ${feedback} (
+  id TEXT NOT NULL PRIMARY KEY,
+  run_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  trace_id TEXT,
+  rating DOUBLE PRECISION,
+  comment TEXT,
+  tags TEXT NOT NULL,
+  scorer_ids TEXT NOT NULL,
+  evaluation_ids TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  created_by TEXT,
+  tenant_id TEXT NOT NULL,
+  account_id TEXT,
+  user_id TEXT,
+  metadata TEXT,
+  FOREIGN KEY (run_id) REFERENCES ${qualifyTable(schema, "prism_runs")}(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS prism_run_feedback_owner_created_idx
+  ON ${feedback} (tenant_id, account_id, user_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_run_feedback_run_created_idx
+  ON ${feedback} (run_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_run_feedback_trace_created_idx
+  ON ${feedback} (trace_id, created_at, id);
+`;
+}
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",
@@ -267,6 +308,7 @@ export const ADAPTER_TABLE_NAMES = [
   "prism_agent_events",
   "prism_tool_calls",
   "prism_usage",
+  "prism_run_feedback",
   "prism_retention_policies",
   "prism_migrations",
 ] as const;
@@ -291,6 +333,10 @@ export const ADAPTER_INDEX_NAMES = [
   "prism_tool_calls_run_started_idx",
   "prism_usage_run_recorded_idx",
   "prism_usage_session_recorded_idx",
+  "prism_usage_session_scope_recorded_idx",
+  "prism_run_feedback_owner_created_idx",
+  "prism_run_feedback_run_created_idx",
+  "prism_run_feedback_trace_created_idx",
   "prism_agent_definitions_name_version_idx",
   "prism_migrations_name_version_idx",
 ] as const;

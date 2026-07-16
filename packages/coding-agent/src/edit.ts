@@ -185,7 +185,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
             operation: "edit",
             paths: [absolutePath],
             risk: "medium",
-            metadata: { editCount: edits.length, signal: context.signal },
+            metadata: { editCount: edits.length, sessionId: context.sessionId, runId: context.runId, signal: context.signal },
           },
           toolCallId,
           "edit",

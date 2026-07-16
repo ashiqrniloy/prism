@@ -34,9 +34,11 @@ Prism does **not** claim OS-level isolation unless the host provides a sandbox a
 | `approvalCacheScope` | `"none"` | Optional `run` or `session` decision cache scope. |
 | `approvalTimeoutMs` | `30000` | Bound approval wait; caller abort also cancels it. |
 
+`run` caching keys decisions by the tool execution context's `runId`; `session` uses `sessionId`. Coding tools pass both identities to the policy. A missing/empty identity disables caching for that check rather than creating a global bucket. Identical actions in different runs/sessions never share approvals or denials.
+
 ## Outputs / response / events
 
-`createCodingApprovalPolicy()` returns an `ExecutionPolicy`. Allowed checks return `ExecutionDecision { allowed: true }`; denied checks include a stable reason; shell decisions set `exclusive: true`. Sandbox adapters return coding-agent-compatible `BashOperations` and never grant policy approval themselves.
+`createCodingApprovalPolicy()` returns an `ExecutionPolicy`. Allowed checks return `ExecutionDecision { allowed: true }`; denied checks include a stable reason; shell decisions set `exclusive: true`. Sandbox adapters return coding-agent-compatible `BashOperations`, receive `onData(Buffer)` for ordered stdout/stderr forwarding through the shell tool's existing bounded accumulator, and never grant policy approval themselves.
 
 ## Request/response example
 
@@ -70,11 +72,13 @@ const tools = createCodingTools(workspaceRoot, {
 
 ## Extension and configuration notes
 
-Policies are ordinary host values: attach one globally through `createCodingTools()` or per tool. `SandboxAdapter` is replaceable and host-owned; approval policy and sandboxing are separate layers. Use run-scoped approval caching unless a wider host identity/lifecycle is explicit.
+Policies are ordinary host values: attach one globally through `createCodingTools()`/`createReadOnlyTools()` or per tool. A per-tool policy overrides the shared policy. `SandboxAdapter` is replaceable and host-owned; approval policy and sandboxing are separate layers.
+
+Callback approval remains process-local. For approval that must survive restart, wrap the action in an opted-in workflow `toolNode({ approval: { reason, data?, resumeSchema? } })`. The workflow persists `suspended` state before any tool side effect. After explicit approve, it recomputes the action and invokes this package's current `ExecutionPolicy`; durable approval never populates or bypasses the process-local approval cache. Adapters should emit chunks through `request.onData` as they arrive and honor `request.signal`/`request.timeout`; buffering is unnecessary. Default caching is `none`; use run-scoped caching only when repeated approval within one run is desired, and session scope only when that wider lifecycle is intentional.
 
 ## Security and performance notes
 
-Containment resolves symlinks and rejects paths outside roots. Command rules are not a shell parser; shell metacharacters require approval. Approval waits and subprocess execution honor abort/timeouts. Path checks and cache lookup are local; sandbox latency belongs to the supplied adapter.
+Containment resolves symlinks and rejects paths outside roots. Command rules are not a shell parser; shell metacharacters require approval. Approval waits and subprocess execution honor abort/timeouts. Durable workflow denial/cancellation is terminal and attributable; approved resume still fails if roots, command rules, read-only mode, or other policy changed while suspended. Cache keys are fixed-size SHA-256 digests of selected identity plus action shape; caches remain process-local, retain at most 1,000 decisions with oldest-entry eviction, and have no default/global mode. Path checks and cache lookup are local; sandbox latency belongs to the supplied adapter.
 
 ## Related APIs
 

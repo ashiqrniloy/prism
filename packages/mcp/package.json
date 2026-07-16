@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-mcp",
-  "version": "0.0.4",
-  "description": "Optional MCP client bridge that maps remote MCP tools to Prism ToolDefinitions.",
+  "version": "0.0.5",
+  "description": "Optional MCP client bridge and explicit Prism tool/command server exposure.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,10 +25,11 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.4"
+    "@arnilo/prism": "0.0.5"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

@@ -13,6 +13,7 @@ import { registerDiscoveredInstructionInjectors } from "./node/instruction-injec
 import { loadSystemPromptFiles } from "./node/system-project-prompts.js";
 import { createPathTrustPolicy } from "./node/trust.js";
 import { runRpcServer, type RpcSessionFactory } from "./rpc.js";
+import { initUsage, runInitCommand, type InitRuntime } from "./cli-init.js";
 
 export type CliMode = "print" | "json" | "rpc";
 
@@ -74,9 +75,16 @@ export interface CliRuntime {
   /** Optional global root for SYSTEM.md auto-load (host-controlled). No default;
    *  the CLI does not auto-touch the user's home directory. */
   readonly globalRoot?: string;
+  /** Override init template root (tests). */
+  readonly initTemplatesRoot?: string;
+  /** Override version stamped by `prism init` (tests). */
+  readonly initPackageVersion?: string;
+  /** Working directory for relative `prism init` destinations (tests). */
+  readonly cwd?: string;
 }
 
 export const usage = `Usage: prism [--mode print|json|rpc] [-p prompt] [options]
+       prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]
 
 Options:
   -p, --prompt <text>        Prompt to run in print/json mode
@@ -190,6 +198,17 @@ function parseKinds(csv: string, flag: string): readonly ContributionFileKind[] 
 }
 
 export async function runCli(argv: readonly string[], runtime: CliRuntime): Promise<number> {
+  if (argv[0] === "init") {
+    const initRuntime: InitRuntime = {
+      stdout: runtime.stdout,
+      stderr: runtime.stderr,
+      ...(runtime.initTemplatesRoot !== undefined ? { templatesRoot: runtime.initTemplatesRoot } : {}),
+      ...(runtime.initPackageVersion !== undefined ? { packageVersion: runtime.initPackageVersion } : {}),
+      ...(runtime.cwd !== undefined ? { cwd: runtime.cwd } : {}),
+    };
+    return runInitCommand(argv.slice(1), initRuntime);
+  }
+
   let options: CliOptions;
   try {
     options = parseCliArgs(argv);
@@ -199,7 +218,7 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
   }
 
   if (options.help) {
-    write(runtime.stdout, usage);
+    write(runtime.stdout, `${usage}\n${initUsage}`);
     return 0;
   }
 

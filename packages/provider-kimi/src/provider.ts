@@ -1,11 +1,10 @@
-import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
+import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
 import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
 import {
-  assertProviderMediaCapability,
   bytesToBase64,
   isPdfMediaType,
   rejectProviderMediaBlock,
-  resolveProviderMediaBlock,
+  resolveProviderMediaMessages,
   serializePdfDocumentWireBlock,
 } from "@arnilo/prism/providers/media";
 import { parseJsonObjectArguments, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
@@ -28,9 +27,12 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
     id,
     async *generate(request) {
       if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-      const secrets = [token];
+      let token: string | undefined;
+      const secrets: (string | undefined)[] = [];
       try {
+        const body = await kimiAnthropicBody(request);
+        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
+        secrets.push(token);
         const response = await (options.fetch ?? fetch)(`${baseUrl}/messages`, {
           method: "POST",
           headers: {
@@ -39,7 +41,7 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
             "user-agent": options.userAgent ?? "KimiCLI/1.5",
             ...(token ? { authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify(await kimiAnthropicBody(request)),
+          body: JSON.stringify(body),
           signal: request.signal,
         });
         if (!response.ok) {
@@ -62,9 +64,10 @@ export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonO
   const preserveThinking = request.model.compat?.preserveThinking === true;
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const messages = applyKimiAnthropicCacheControl(request);
+  const resolvedMedia = await resolveProviderMediaMessages(messages, request.model, { signal: request.signal });
   return clean({
     model: request.model.model,
-    messages: await Promise.all(messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, request.signal))),
+    messages: await Promise.all(messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia))),
     system: messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
@@ -112,8 +115,8 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
 async function toMessage(
   message: CacheControlledMessage,
   model: ModelConfig,
-  preserveThinking = false,
-  signal?: AbortSignal,
+  preserveThinking: boolean,
+  resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>,
 ): Promise<JsonObject> {
   const capabilities = model.capabilities ?? {};
   if (message.role === "tool") {
@@ -142,15 +145,13 @@ async function toMessage(
         content.push(withMarker({ type: "text", text: part.text }, marker));
       }
     } else if (part.type === "image") {
-      assertProviderMediaCapability("image", capabilities, model);
-      const source: JsonObject = part.url
-        ? { type: "url", url: part.url }
-        : { type: "base64", media_type: part.mimeType ?? "image/png", data: part.data ?? "" };
+      const resolved = resolvedMedia.get(part)!;
+      const source: JsonObject = { type: "base64", media_type: resolved.mediaType, data: bytesToBase64(resolved.bytes) };
       content.push(withMarker({ type: "image", source }, marker));
     } else if (part.type === "document") {
-      content.push(withMarker(await toAnthropicDocument(part, model, signal), marker));
+      content.push(withMarker(toAnthropicDocument(part, resolvedMedia), marker));
     } else if (part.type === "file") {
-      content.push(withMarker(await toAnthropicFile(part, model, signal), marker));
+      content.push(withMarker(toAnthropicFile(part, resolvedMedia), marker));
     } else if (part.type === "audio") {
       rejectProviderMediaBlock(part, capabilities, model);
     } else if (part.type === "tool_call") {
@@ -163,9 +164,8 @@ async function toMessage(
   return { role: message.role === "assistant" ? "assistant" : "user", content: content.length > 0 ? content : [{ type: "text", text: "" }] };
 }
 
-async function toAnthropicDocument(part: DocumentContent, model: ModelConfig, signal?: AbortSignal): Promise<JsonObject> {
-  assertProviderMediaCapability("document", model.capabilities ?? {}, model);
-  const resolved = await resolveProviderMediaBlock(part, { signal });
+function toAnthropicDocument(part: DocumentContent, resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>): JsonObject {
+  const resolved = resolvedMedia.get(part)!;
   return serializePdfDocumentWireBlock({
     mediaType: resolved.mediaType,
     data: bytesToBase64(resolved.bytes),
@@ -173,9 +173,8 @@ async function toAnthropicDocument(part: DocumentContent, model: ModelConfig, si
   });
 }
 
-async function toAnthropicFile(part: FileContent, model: ModelConfig, signal?: AbortSignal): Promise<JsonObject> {
-  assertProviderMediaCapability("file", model.capabilities ?? {}, model);
-  const resolved = await resolveProviderMediaBlock(part, { signal });
+function toAnthropicFile(part: FileContent, resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>): JsonObject {
+  const resolved = resolvedMedia.get(part)!;
   if (!isPdfMediaType(resolved.mediaType)) {
     throw new Error(`Kimi Anthropic route only maps PDF file blocks; got ${resolved.mediaType}`);
   }

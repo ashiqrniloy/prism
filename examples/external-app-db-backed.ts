@@ -14,7 +14,6 @@ import {
   type AgentEvent,
   type AgentEventRecord,
   type ContextProvider,
-  type CredentialResolver,
   type ModelConfig,
   type PersistencePage,
   type ProductionPersistenceStore,
@@ -225,11 +224,8 @@ async function collectEvents(subscription: AsyncIterable<AgentEvent>): Promise<A
   return out;
 }
 
-// Caller-supplied credential resolver with a fake value. The mock provider
-// ignores it; it exists to prove secrets stay out of the ledger/timeline/log.
-const fakeCredentialResolver: CredentialResolver = {
-  resolve: () => ({ type: "api_key", value: FAKE_API_KEY, provider: "mock" }),
-};
+// Known fake secrets are registered with the redactor so ledger/timeline/log
+// paths cannot persist them even if a prompt or tool result echoes them.
 
 export async function demo(): Promise<{
   liveEventCount: number;
@@ -267,7 +263,6 @@ export async function demo(): Promise<{
     store,
     runLedger: store,
     ownership: { tenantId: "tenant-1", accountId: "acct-1", userId: "user-1" },
-    credentials: fakeCredentialResolver,
     redactor: createSecretRedactor([FAKE_SECRET, FAKE_API_KEY]),
   });
 

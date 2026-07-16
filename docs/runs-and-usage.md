@@ -2,7 +2,7 @@
 
 ## What it does
 
-`RunLedger` is the host-implemented, write-only seam Prism uses to durably persist run metadata, agent events, tool calls, and usage during a `session.run()`. The runtime calls the adapter as each record becomes available; the adapter decides how to write it (SQL insert, NoSQL put, JSONL append, time-series batch, etc.).
+`RunLedger` is the host-implemented, write-only seam Prism uses to durably persist run metadata, agent events, tool calls, and usage during a `session.run()`. `RunFeedbackStore` is the separate post-run seam for immutable ratings, comments, tags, and evaluation links. The runtime calls the adapter as each record becomes available; the adapter decides how to write it (SQL insert, NoSQL put, JSONL append, time-series batch, etc.).
 
 APIs:
 
@@ -13,6 +13,7 @@ APIs:
 - `ToolCallRecord` / `ToolCallStatus`
 - `UsageRecord`
 - `redactRunLedgerRecord()`
+- `RunFeedbackRecord` / `RunFeedbackStore` / `createMemoryRunFeedbackStore()`
 
 ## When to use it
 
@@ -37,7 +38,7 @@ Set the ledger and optional ownership scope/idempotency key on the agent or the 
 | `appendRun` | `RunRecord` | After run starts (`running`) and again at finish (`succeeded`/`failed`/`aborted`). |
 | `appendEvent` | `AgentEventRecord` | After every emitted `AgentEvent`, after redaction. |
 | `appendToolCall` | `ToolCallRecord` | For each tool-call `started`, `progress`, `finished`, `error`, and `blocked` transition. |
-| `appendUsage` | `UsageRecord` | For each provider `usage` event and for the final loop usage. |
+| `appendUsage` | `UsageRecord` | Once per terminal provider turn (`scope: "provider_turn"`) and once for the O(turns) aggregate (`scope: "run_total"`). |
 
 All methods may be sync or async (`void | Promise<void>`). The runtime awaits them at safe boundaries, so a slow adapter blocks the run.
 
@@ -92,8 +93,39 @@ The adapter receives these record shapes:
 | --- | --- |
 | `id` | Unique ledger row id. |
 | `runId` / `sessionId` / `entryId` | Correlation ids. |
+| `scope` | `provider_turn` for billable source rows; `run_total` for the aggregate. Never sum both scopes. |
+| `turn` / `attempt` | Provider-turn attribution; absent on `run_total`. |
 | `usage` | `Usage` shape: input/output/total/cache tokens, cost, currency. |
 | `recordedAt` | ISO timestamp. |
+
+## Run/trace feedback
+
+`RunFeedbackStore.append()` accepts an immutable record only when `resolveRun` finds the same `runId` under the exact `{ tenantId, accountId?, userId? }` scope. A tenant plus account or user is mandatory. Records contain `sessionId`, optional `traceId`, finite `rating` in `[-1, 1]`, comment, tags, scorer IDs, evaluation IDs, timestamp, creator, and metadata. Correction appends a new ID; records are never updated in place. `delete()` is the explicit privacy/retention operation.
+
+```ts
+import { createMemoryRunFeedbackStore } from "@arnilo/prism";
+
+const feedback = createMemoryRunFeedbackStore({
+  resolveRun: ({ runId }) => runId === result.runId
+    ? { runId, sessionId: result.sessionId, tenantId: "t1", userId: "u1" }
+    : false,
+  redactor,
+});
+await feedback.append({
+  id: "fb_1",
+  runId: result.runId,
+  rating: 1,
+  comment: "Useful and cited",
+  tags: ["reviewed"],
+  evaluationIds: ["eval_1"],
+  tenantId: "t1",
+  userId: "u1",
+});
+const page = await feedback.query({ runId: result.runId, tenantId: "t1", userId: "u1", limit: 50 });
+await feedback.delete({ id: "fb_1", tenantId: "t1", userId: "u1" });
+```
+
+Default/hard bounds: comment 4/16 KiB, tags 16/64, scorer/evaluation IDs 16/64 each, metadata 16/64 KiB, query page 100/500; tags are 64 characters and identifiers 128. The store redacts comment/tags/metadata after run ownership validation and before persistence. IDs are linked, not scorer payloads. `ProductionPersistenceStore.feedback?` exposes this capability; first-party SQLite/PostgreSQL adapters implement it in schema migration `003_run_feedback` and reject missing/cross-owned runs.
 
 ## Status transitions
 
@@ -189,7 +221,9 @@ await session.run("Hello", {
 });
 
 console.log(runs.at(-1)?.status); // succeeded
-console.log(cacheUsageReport(usageRows.at(-1)?.usage));
+const billable = usageRows.filter((row) => row.scope === "provider_turn");
+const aggregate = usageRows.find((row) => row.scope === "run_total");
+console.log(cacheUsageReport(aggregate?.usage));
 // { cacheReadTokens: 0, cacheWriteTokens: 0, ... } when provider usage is present
 ```
 
@@ -208,6 +242,7 @@ console.log(cacheUsageReport(usageRows.at(-1)?.usage));
 - `AgentConfig.idempotencyKey` is the default idempotency key; `RunOptions.idempotencyKey` overrides it per run.
 - The runtime resolves `model` and `provider` from `AgentConfig`/`RunOptions`/`AgentDefinition` before writing the start `RunRecord`.
 - Adapters should treat appends as ordered within a `runId`: event and tool-call rows preserve emission order because the runtime drains pending appends before writing the final `RunRecord`.
+- Billing queries must filter `scope = "provider_turn"`; presentation queries normally read the single `run_total`. `UsageQuery.scope`, `turn`, and `attempt` are explicit filters.
 - Adapters that need upsert semantics can use `RunRecord.id` (== `runId`) as the stable key.
 - Use `cacheUsageReport(record.usage, model)` for cache diagnostics from normalized usage. It works when a provider reports `cacheReadTokens` without `cacheWriteTokens`; missing write tokens are reported as `0`, and unavailable hit rate/savings stay `undefined`.
 - **Provider-specific telemetry is package-owned.** Core `Usage` carries token counts and `cost`/`currency`; it has no energy or detailed cost-breakdown fields. Providers that surface extra telemetry (e.g. `@arnilo/prism-provider-neuralwatt` exposes `neuralWattEventsWithTelemetry()`, `parseNeuralWattComment()`, and `mapNeuralWattTelemetry()` for `: energy`/`: cost` SSE comments and non-streaming top-level fields) keep that data in package-specific helpers/types. Telemetry never enters `RunLedger` usage rows unless the host explicitly copies it in; it carries usage/cost numbers only — never prompts, API keys, or headers. Account-level quota is likewise package-owned: `@arnilo/prism-provider-neuralwatt` exports an explicit `getNeuralWattQuota()` helper that the host calls on demand (never during generation); NeuralWatt rate-limits that endpoint to 1 request per second per customer, so the caller owns throttling.
@@ -219,9 +254,11 @@ console.log(cacheUsageReport(usageRows.at(-1)?.usage));
 - **Redaction.** The runtime calls `redactRunLedgerRecord()` and `redactAgentEvent()` with the active `SecretRedactor` before handing records to the adapter. `AgentEventRecord.redacted` and `ToolCallRecord.redacted` are set to `true` when a redactor is configured. Hosts should still redact before writing to durable storage if they perform additional transformations.
 - **Message content stays in `SessionStore`.** `AgentEventRecord.event` may contain `message_delta` / `message_finished` payloads; these are redacted but still belong conceptually to the session store. Do not use the ledger as the source of truth for messages.
 - **Cache diagnostics stay numeric.** `cacheUsageReport()` derives reports from `Usage` numbers and optional `ModelConfig.cost`; do not add prompt text, cache keys, headers, credentials, or provider payloads to usage rows.
+- **No double billing.** Sum `provider_turn` rows or read `run_total`; never sum both. Run totals add every turn/attempt in O(turns), derive missing per-turn totals from input/output tokens, and omit aggregate cost when reported currencies conflict.
 - **Synchronous adapters block the run.** An adapter that performs network or heavy DB writes inline will slow down the agent loop. For high-throughput hosts, buffer or batch inside the adapter and return quickly; the runtime awaits the returned promise. If batching, preserve per-run order before acknowledging a batch: `appendEvent` rows should be pageable by `(runId, sequence)`, run rows by `(sessionId, startedAt, id)`, and usage rows by `(runId, recordedAt, id)`.
 - **Idempotency is host-owned.** The runtime writes the key into `RunRecord.idempotencyKey`; enforcing unique keys and deduplicating retries is the host adapter's responsibility.
-- **Tenant isolation.** `OwnershipScope` fields are copied from the active ownership scope, but the runtime does not enforce tenant isolation. Host adapters must apply their own access controls when querying persisted ledger rows.
+- **Tenant isolation.** `OwnershipScope` fields are copied from the active ownership scope, but the runtime does not enforce tenant isolation for ledger rows. Feedback is stricter: append/query/delete require tenant plus account/user, and first-party stores compare the exact scope to the linked run.
+- **Feedback privacy.** Comments/tags/metadata can contain PII. Configure a feedback redactor, apply retention, and call owned `delete()` for erasure. Never copy comments or tag values into metric labels.
 
 ## Related APIs
 

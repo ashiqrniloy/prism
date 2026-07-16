@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-07-16
+
+- Pinned the unchanged base profile membership to 0.0.5.
+
+
 ## [0.0.4] - 2026-07-14
 
 ### Added

@@ -107,6 +107,9 @@ export async function assertRunLedgerConforms(
     id: "usage-1",
     sessionId,
     runId,
+    scope: "provider_turn",
+    turn: 1,
+    attempt: 2,
     usage: { inputTokens: 3, outputTokens: 5, totalTokens: 8 },
     recordedAt: "2026-01-01T00:00:01.000Z",
     ...scope,
@@ -153,8 +156,10 @@ export async function assertRunLedgerConforms(
 
   if (fixture.readUsage) {
     const usageRows = await fixture.readUsage();
-    if (!usageRows.some((row) => row.id === "usage-1")) {
-      throw new Error("RunLedger must persist UsageRecord rows");
+    const storedUsage = usageRows.find((row) => row.id === "usage-1");
+    if (!storedUsage) throw new Error("RunLedger must persist UsageRecord rows");
+    if (storedUsage.scope !== "provider_turn" || storedUsage.turn !== 1 || storedUsage.attempt !== 2) {
+      throw new Error("RunLedger must preserve UsageRecord scope, turn, and attempt");
     }
   }
 

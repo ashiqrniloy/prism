@@ -1,6 +1,6 @@
 # @arnilo/prism-workflows
 
-Optional typed bounded DAG workflow orchestration for Prism. Defines acyclic workflows, schedules dependency-ready nodes with a Kahn worker pool, and emits package-local `WorkflowEvent`s. Agent nodes call public `AgentSession.run()` only.
+Optional typed bounded DAG workflow orchestration for Prism. Defines acyclic and nested workflows, schedules dependency-ready nodes with a Kahn worker pool, supports bounded shared state and immutable-lineage replay, and emits package-local `WorkflowEvent`s. Agent nodes call public `AgentSession.run()` only.
 
 Included through `@arnilo/prism-sdk` and `@arnilo/prism-all`, or install explicitly when only workflow orchestration is needed.
 
@@ -19,6 +19,8 @@ import {
   functionNode,
   agentNode,
   createMemoryWorkflowCheckpoints,
+  resumeWorkflow,
+  suspend,
 } from "@arnilo/prism-workflows";
 
 const research = agentNode({
@@ -26,7 +28,9 @@ const research = agentNode({
   input: (ctx) => ctx.workflowInput,
 });
 const draft = functionNode({
-  execute: async (ctx) => `Draft from ${ctx.upstream.research}`,
+  execute: async (ctx) => ctx.resume
+    ? publish(ctx.resume.input)
+    : suspend({ reason: "publish", data: { draft: ctx.upstream.research } }),
 });
 
 const workflow = defineWorkflow({
@@ -73,8 +77,14 @@ const result = await runWorkflow(workflow, { topic: "hooks" }, {
 - `createMemoryWorkflowCheckpoints()` — in-process resume over core `createMemoryCheckpointStore()`
 - `createWorkflowCheckpoints({ store: persistence.checkpoints })` — durable resume through generic core `CheckpointStore`
 - SQLite/PostgreSQL checkpoint tables and queries are owned by their persistence packages, not this workflow package
-- `cancelWorkflowRun()` — abort in-flight runs; mark orphaned durable checkpoints `aborted`
-- `createWorkflowCommands()` — optional RPC `CommandDefinition[]` for `workflow.start` / `status` / `list` / `cancel` / `resume`
+- `suspend()` — persist human review data and release the worker; approved resume requires checkpoint `expectedVersion`
+- `toolNode({ approval })` — suspend before tool side effects, then recheck current `ExecutionPolicy` after approval
+- `cancelWorkflowRun()` — abort in-flight or suspended runs; mark orphaned durable checkpoints `aborted`
+- `createWorkflowCommands()` — optional RPC/MCP commands for direct/background/replay/status/list/cancel/resume plus selected schedules
+- `workflowNode()` — nested execution through the same runner with inherited ownership/tools/policy/abort/checkpoints
+- `ctx.updateState()` — merge/replace bounded shared JSON state with optional host validation
+- `replayWorkflow()` — new run from a succeeded node with immutable source lineage and fresh approval enforcement
+- `createWorkflowSchedules()` — ownership-scoped one-time/interval/host-calculated durable schedules; host explicitly starts polling
 - `enqueueWorkflow()` + `createWorkflowCoordinator()` — bounded multi-process polling, atomic lease claims, heartbeat renewal, expiry takeover, and durable remote cancellation through `persistence.leases`
 
 ## Security
@@ -82,7 +92,7 @@ const result = await runWorkflow(workflow, { topic: "hooks" }, {
 - Definitions are validated for cycles, unknown edges, and `maxNodes`.
 - Tool nodes attach `workflowId` / `nodeId` to `ExecutionAction.metadata`.
 - Checkpoints redact via `SecretRedactor` / `secrets` and enforce byte bounds.
-- Resume fails closed on tenant, schema, and definition-hash mismatch.
+- Suspended resume fails closed on tenant, schema, definition hash, validation, and stale/duplicate expected version; payloads are redacted before persistence.
 - Cancellation uses `AbortSignal` / active-run registry and aborts in-flight agent sessions.
 - Distributed workers use opaque lease tokens, ownership scopes, checkpoint CAS, and monotonic fencing tokens; stale workers cannot commit after takeover.
 

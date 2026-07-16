@@ -82,6 +82,7 @@ test("approval denial and cache reuse", async () => {
       kind: "write",
       operation: "write",
       paths: [join(root, "a.txt")],
+      metadata: { sessionId: "session-1", runId: "run-1" },
     };
     const first = await policy.check(action);
     const second = await policy.check(action);
@@ -89,6 +90,76 @@ test("approval denial and cache reuse", async () => {
     assert.equal(second.allowed, false);
     assert.equal(calls, 1, "approval should be cached after first denial");
     assert.match(second.reason ?? "", /cached/i);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("approval cache defaults to none and isolates explicit run/session identities", async () => {
+  const root = await mkdtemp(join(tmpdir(), "coding-sec-scopes-"));
+  const action = (sessionId?: string, runId?: string): ExecutionAction => ({
+    kind: "write",
+    operation: "write",
+    paths: [join(root, "a.txt")],
+    metadata: { sessionId, runId },
+  });
+  try {
+    let calls = 0;
+    const uncached = createCodingApprovalPolicy({ roots: [root], approve: () => { calls++; return false; } });
+    await uncached.check(action("session-1", "run-1"));
+    await uncached.check(action("session-1", "run-1"));
+    assert.equal(calls, 2);
+
+    calls = 0;
+    const perRun = createCodingApprovalPolicy({
+      roots: [root],
+      approvalCacheScope: "run",
+      approve: () => { calls++; return false; },
+    });
+    await perRun.check(action("session-1", "run-1"));
+    await perRun.check(action("session-1", "run-1"));
+    await Promise.all([
+      perRun.check(action("session-1", "run-2")),
+      perRun.check(action("session-1", "run-3")),
+    ]);
+    assert.equal(calls, 3, "run cache must not cross run identity");
+
+    calls = 0;
+    const perSession = createCodingApprovalPolicy({
+      roots: [root],
+      approvalCacheScope: "session",
+      approve: () => { calls++; return false; },
+    });
+    await perSession.check(action("session-1", "run-1"));
+    await perSession.check(action("session-1", "run-2"));
+    await perSession.check(action("session-2", "run-3"));
+    assert.equal(calls, 2, "session cache must not cross session identity");
+
+    calls = 0;
+    const missingIdentity = createCodingApprovalPolicy({
+      roots: [root],
+      approvalCacheScope: "run",
+      approve: () => { calls++; return false; },
+    });
+    await missingIdentity.check(action());
+    await missingIdentity.check(action());
+    assert.equal(calls, 2, "missing identity must disable caching");
+
+    calls = 0;
+    const bounded = createCodingApprovalPolicy({
+      roots: [root],
+      approvalCacheScope: "run",
+      approve: () => { calls++; return true; },
+    });
+    for (let index = 0; index <= 1_000; index++) {
+      await bounded.check({
+        kind: "write",
+        operation: String(index),
+        metadata: { sessionId: "session-1", runId: "run-1" },
+      });
+    }
+    await bounded.check({ kind: "write", operation: "0", metadata: { sessionId: "session-1", runId: "run-1" } });
+    assert.equal(calls, 1_002, "bounded cache must evict its oldest decision");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -165,14 +236,26 @@ test("metacharacters require approval", () => {
   assert.equal(evaluation.action, "requireApproval");
 });
 
-test("sandbox adapter errors are wrapped", async () => {
+test("sandbox adapter streams output and wraps errors", async () => {
+  const controller = new AbortController();
+  const chunks: string[] = [];
   const ops = createSandboxBashOperations({
-    exec: async () => {
-      throw new Error("sandbox down");
+    exec: async (request) => {
+      assert.equal(request.signal, controller.signal);
+      request.onData?.(Buffer.from("stdout\n"));
+      request.onData?.(Buffer.from("stderr\n"));
+      return { exitCode: 0 };
     },
   });
+  await ops.exec("echo hi", process.cwd(), {
+    onData: (chunk) => chunks.push(chunk.toString()),
+    signal: controller.signal,
+  });
+  assert.deepEqual(chunks, ["stdout\n", "stderr\n"]);
+
   await assert.rejects(
-    () => ops.exec("echo hi", process.cwd(), { onData: () => {} }),
+    () => createSandboxBashOperations({ exec: async () => { throw new Error("sandbox down"); } })
+      .exec("echo hi", process.cwd(), { onData: () => {} }),
     SandboxExecutionError,
   );
 });

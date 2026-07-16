@@ -156,6 +156,215 @@ Provider SSE remained at the frozen 380 MiB/s / +1.7 MiB heap snapshot. Media an
 
 The ledger percentage overhead is intentionally not a threshold: its no-ledger baseline is below 1 ms, making the percentage unstable while absolute added latency remains about 1 ms. JSONL's append path is intentionally O(n²) across repeated appends because it rereads for corruption/conflict checks; move production or high-volume workloads to SQLite/PostgreSQL rather than weakening validation.
 
+### 0.0.5 Phase 0 baseline (2026-07-15)
+
+Scope froze at commit `f5128a816ae204c52f3e2f089de71c99bd5de6d4`. Measurement host: Node v24.18.0, npm 11.16.0, Linux 7.1.3 x86_64, AMD Ryzen 9 PRO 7940HS (16 logical CPUs). Supported package runtime remains Node >=20. These are dated local comparison points, not portable CI wall-clock assertions.
+
+| Surface | Workload | Result |
+| --- | --- | --- |
+| Network-free tests | `npm test` | 25.750 s; 1,475 tests, 1,450 pass, 25 explicit live skips, 0 fail |
+| Release readiness | `npm run sdk:ready` | 54.341 s; typecheck, tests, examples, builds, and 24 dry-run packs pass |
+| Provider/agent stream | One mock run with 5,000 one-character text deltas and a concurrently drained 8,192-event subscriber | 3.78 ms median |
+| Tool dispatch | Six independent 20 ms tools, concurrency 1 | 121.05 ms median |
+| Tool dispatch | Same calls, concurrency 2 | 60.65 ms median (2.00x speedup) |
+| Workflow runner | Existing bounded 1,000-node chain, configured concurrency 8 | 9.66 ms median |
+| Package artifacts | All 24 dry-run tarballs | 542,993 packed bytes; 2,084,900 unpacked bytes aggregate |
+| Root artifact | `@arnilo/prism@0.0.4` dry-run tarball | 346.0 kB packed; 1.3 MB unpacked; 196 files |
+| Installed workspace | Current root `node_modules` | 72 MiB |
+
+Synthetic stream/tool/workflow values are medians of seven measured runs after one warm-up and contain no network, database, or exporter I/O. The temporary benchmark reused public `AgentSession`, `dispatchToolCallsInOrder`, and `@arnilo/prism-workflows` APIs; it was not added to CI because this phase records a baseline rather than creating hardware-sensitive tests.
+
+Repository size at the same commit, counted from `src/` and `packages/` while excluding `dist/`:
+
+| Area | Files | Lines |
+| --- | ---: | ---: |
+| Production TypeScript | 189 | 26,828 |
+| Test TypeScript | 144 | 23,535 |
+| Documentation Markdown | 70 | 12,662 |
+| Numbered plans | 58 | 24,270 |
+| TypeScript examples | 39 | 3,134 |
+
+Prism has no project generator before Phase 5, so a generated-Prism-project install/build size is **not applicable** at this baseline. The closest current install figure is the 72 MiB development workspace; it is not a scaffold target. The comparison Mastra default scaffold measured during the review used 439 MB `node_modules`, 300 MB build output, and 427 installed packages. Phase 5 must establish a real generated Prism project baseline and keep unselected storage, telemetry, eval, memory, server, and workflow dependencies absent.
+
+See [Review coverage — 2026-07-15](review-coverage-2026-07-15.md) for scope, primitive, package, and threat-boundary ownership.
+
+### 0.0.5 Phase 2 verification (2026-07-15)
+
+Same Phase 0 host and seven-run warm benchmark. Runtime correctness changes stayed inside frozen ceilings:
+
+| Surface | Result |
+| --- | --- |
+| Network-free tests | 27.992 s; 1,485 tests, 1,460 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | 55.598 s; typecheck, examples, tests, builds, and all 24 dry-run packs pass |
+| Provider/agent stream, 5,000 deltas | 3.54 ms median (Phase 0: 3.78 ms) |
+| Six 20 ms tools, concurrency 1 / 2 | 121.22 ms / 60.63 ms (2.00x speedup retained) |
+| Workflow 1,000-node chain | 10.31 ms median (well below 1 s ceiling) |
+| Root dry-run tarball | 361.2 kB packed, 1.3 MB unpacked, 197 files |
+
+Usage aggregation performs one constant-size accumulator update per terminal provider turn. Telemetry retains only active span metadata and removes every terminal/detached entry. Complete media resolution is sequential, rejects item count and inline estimates before I/O, and retains at most the request budget plus one per-item-bounded candidate before failing an aggregate overflow. Sandbox output still streams into the existing bounded `OutputAccumulator`; no adapter-side response buffer was added.
+
+### 0.0.5 Phase 4 verification (2026-07-15)
+
+Optional `@arnilo/prism-evals` adds package-local scoring without changing core run latency. Validation stayed within the frozen release gate:
+
+| Surface | Result |
+| --- | --- |
+| Network-free tests | 1,503 tests, 1,478 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | typecheck, examples, tests, builds, and all 25 dry-run packs pass |
+| Evals dry-run tarball | 35.4 kB unpacked package payload |
+| Profile bundles | unchanged; evals remains opt-in until size/use review |
+
+Experiment concurrency is capped at 32 workers and defaults to 1. Scorers operate on `AgentRunResult` references plus dataset item metadata rather than duplicating event ledgers.
+
+### 0.0.5 Phase 5 verification (2026-07-15)
+
+`prism init` lands as a stdlib-only CLI subcommand with checked-in templates under `templates/init/`.
+
+| Surface | Result |
+| --- | --- |
+| Default generated sources | 8 files / ~3.3 KB |
+| Default clean consumer install (`@arnilo/prism` + TypeScript tooling) | ~27.5 MB `node_modules` |
+| Mastra comparator | 439 MB install / 300 MB build / 427 packages |
+| Default dependencies | `@arnilo/prism` only; no storage, telemetry, eval, memory, server, or workflow packages unless `--with-*` / provider flags select them |
+| Offline proof | packed core tarball → `npm install` → `npm run typecheck` → `npm test` (mock provider) |
+
+### 0.0.5 Phase 6 verification (2026-07-15)
+
+Optional `@arnilo/prism-provider-ai-sdk` adapts AI SDK `LanguageModelV4` streams to Prism without adding an AI SDK dependency to core.
+
+| Surface | Result |
+| --- | --- |
+| Supported specification | `@ai-sdk/provider@^4` (`LanguageModelV4`) |
+| Adapter behavior | incremental stream translation; unsupported content fails before `doStream`; abort owned by Prism `request.signal` |
+| Network-free tests | 1,522 tests, 1,497 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | typecheck, examples, tests, builds, and all 26 dry-run packs pass |
+| AI SDK adapter dry-run tarball | 6.5 kB packed / 22.5 kB unpacked / 16 files |
+| Profile bundles | unchanged; AI SDK adapter remains opt-in until size/use review |
+| Publishable graph | 26 packages |
+
+### 0.0.5 Phase 7 verification (2026-07-15)
+
+Optional `@arnilo/prism-memory` adds working memory and semantic recall without changing core session stores.
+
+| Surface | Result |
+| --- | --- |
+| Contracts | package-owned `Embedder`, `VectorStore`, `WorkingMemoryStore`, `createMemory` |
+| Adapters | in-memory reference + PostgreSQL/pgvector production path |
+| Injection | existing `ContextProvider` seam; opt-in working-memory processor |
+| Profile bundles | unchanged; memory remains opt-in until size/use review |
+| Publishable graph | 27 packages |
+| Network-free tests | 1,538 tests, 1,513 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | pass |
+| Memory dry-run tarball | 17.9 kB packed / 76.6 kB unpacked / 32 files |
+
+### 0.0.5 Phase 8 verification (2026-07-15)
+
+Durable human suspension extends existing workflow checkpoint JSON/CAS; no worker polling loop, package, dependency, or database migration was added.
+
+| Surface | Result |
+| --- | --- |
+| Focused workflow suite | 43 tests pass, 0 fail |
+| Network-free tests | 1,547 tests, 1,522 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | typecheck, examples, tests, builds, and all 27 dry-run packs pass |
+| Workflow dry-run tarball | 25.7 kB packed / 121.6 kB unpacked / 34 files |
+| Coordinator behavior | `suspended` absent from queued/running poll; zero worker/lease retained |
+| Storage | existing bounded checkpoint JSON/category; no SQLite/PostgreSQL migration |
+
+### 0.0.5 Phase 9 verification (2026-07-16)
+
+Optional `@arnilo/prism-rag` reuses Phase 7 vector contracts and adds no core path, parser dependency, network loader, or profile activation.
+
+| Surface | Result |
+| --- | --- |
+| Focused RAG suite | 9 tests pass, 0 fail |
+| Network-free tests | 1,561 tests, 1,536 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | typecheck, examples, tests, builds, and all 28 dry-run packs pass |
+| RAG dry-run tarball | 9.0 kB packed / 34.6 kB unpacked / 22 files |
+| Index bounds | chunk/document/count/metadata caps; embed batches default 32, hard 128 |
+| Retrieval bounds | top-K default 5/hard 32; candidates default 20/hard 128; result 64/512 KiB; context 2,000/8,000 estimated tokens |
+| Profile bundles | unchanged; RAG and memory remain explicit opt-ins |
+
+### 0.0.5 Phase 10 verification (2026-07-16)
+
+Optional `@arnilo/prism-server` and MCP server-direction APIs compose existing agent/workflow/tool/SDK primitives; no core path, framework/listener, auth provider, database, or profile activation was added.
+
+| Surface | Result |
+| --- | --- |
+| Focused server suites | 6 Web handler tests + 4 MCP server tests pass; existing 12 MCP client tests remain green |
+| Network-free tests | 1,576 tests, 1,551 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | typecheck, examples, tests, builds, and all 29 dry-run packs pass |
+| Server dry-run tarball | 8.4 kB packed / 34.4 kB unpacked / 12 files |
+| MCP dry-run tarball | 11.6 kB packed / 45.0 kB unpacked / 20 files |
+| Web handler bounds | request 64 KiB, result 1 MiB, event 64 KiB, stream 10 MiB/10k events, queue 128, concurrency 16, timeout 120 s by default; all have hard caps |
+| MCP server bounds | call result 1 MiB, calls 16, timeout 60 s; HTTP request 1 MiB, response 2 MiB, requests 32 by default; all have hard caps |
+| Profile bundles | unchanged; server remains explicit opt-in |
+
+### 0.0.5 Phase 11 verification (2026-07-16)
+
+Workflow schedules, background runs, composition, state, and replay reuse the existing workflow package plus generic checkpoint/lease stores. No package, runtime dependency, SQL migration, listener, cron parser, or auto-started worker was added.
+
+| Surface | Result |
+| --- | --- |
+| Focused workflow/server suites | 54 workflow tests + 8 Web handler tests pass, 0 fail |
+| Network-free tests | 1,589 tests, 1,564 pass, 25 explicit live skips, 0 fail |
+| `npm run sdk:ready` | typecheck, examples, tests, builds, and all 29 dry-run packs pass |
+| Workflow dry-run tarball | 34.7 kB packed / 171.5 kB unpacked / 38 files |
+| Server dry-run tarball | 9.9 kB packed / 45.2 kB unpacked / 12 files |
+| Synthetic schedule bound | 100 in-memory creates: 1.28 ms; scan 100 / claim+enqueue 16 due fires: 6.64 ms |
+| Synthetic composition/replay | depth-8 nested run: 2.73 ms; 100-node source: 35.42 ms; replay 50 nodes: 21.17 ms |
+| State/replay ceilings | state 64/512 KiB; history 32/128; nested depth 8/32; replay depth 8/32 default/hard |
+| Schedule ceilings | page 100/500; claims 16/256; input 256 KiB/1 MiB; 1s idle timer; 30s fire lease defaults |
+
+Synthetic timings are one local Node v24.18.0 run over memory adapters with no network/database I/O; finite limits and behavior tests, not wall-clock numbers, are CI gates.
+
+### 0.0.5 Phase 12 verification (2026-07-16)
+
+Run feedback adds no package or runtime dependency. Memory/SQLite/PostgreSQL implementations share bounded append/query/delete semantics; OTel projection accepts only fixed scalar metadata.
+
+| Surface | Result |
+| --- | --- |
+| Focused feedback/eval/SQLite/OTel tests | 35 tests pass, 0 fail; PostgreSQL DDL suite passes and live feedback conformance is env-gated |
+| Synthetic memory feedback | 1,000 bounded appends: 3.82 ms; 100 filtered 100-row queries over 1,000 records: 11.53 ms |
+| Core dry-run tarball | 398.1 kB packed / 1.4 MB unpacked / 219 files |
+| Evals dry-run tarball | 9.8 kB packed / 38.4 kB unpacked / 26 files |
+| OTel dry-run tarball | 6.3 kB packed / 26.5 kB unpacked / 8 files |
+| SQLite/PostgreSQL tarballs | 17.7/18.1 kB packed; 89.8/89.8 kB unpacked |
+| Feedback limits | comment 4/16 KiB; tags 16/64; links 16/64; metadata 16/64 KiB; pages 100/500 default/hard |
+
+Metrics came from one local Node v24.18.0 memory-adapter run. SQL correctness/indexing/migration behavior and hard bounds are gates; local timings are not release thresholds.
+
+### 0.0.5 Phase 13 verification (2026-07-16)
+
+Supervisor/A2A stays in one optional zero-runtime-dependency package; core and profile bundles gained no import, listener, worker, protocol SDK, or network activation.
+
+| Surface | Result |
+| --- | --- |
+| Focused supervisor/A2A suite | 11 tests pass, 0 fail; local delegation, policy/budget/abort/redaction, card signatures, server/client/stream bounds |
+| Synthetic local delegation | 100 sequential mock child results: 11.83 ms |
+| Synthetic in-process A2A | 100 card discovery + JSON-RPC mock round trips: 34.17 ms |
+| Supervisor dry-run tarball | 15.3 kB packed / 69.4 kB unpacked / 22 files |
+| Local hard ceilings | depth 16; active 32; message 1 MiB; steps 64; tools 256; tokens 1m; timeout 30m; event queue 4096 |
+| A2A hard ceilings | request/card/event 1 MiB; response 8 MiB; stream 64 MiB/100k events; concurrency 256; timeout 30m |
+
+Timings are one local Node v24.18.0 run over mock agents and an in-process fetch adapter. Bounds, protocol validation, signature/auth/origin checks, and offline behavior tests are release gates; timings are not thresholds.
+
+### 0.0.5 Phase 14 release-candidate verification (2026-07-16)
+
+| Surface | Result |
+| --- | --- |
+| Default network-free test | 32.247 s, below 60 s budget |
+| Full SDK readiness | 70.560 s; build/typecheck/examples/tests/30 pack dry-runs |
+| Test matrix | 1,618 total; 1,593 pass; 25 explicit live skips; 0 fail |
+| Node compatibility | Node 20.20.2 imports 44 built root/package export targets; Node 24.18.0 runs full matrix |
+| PostgreSQL/pgvector | 29 live checks pass in fresh `pgvector/pgvector:pg16` container |
+| Packed artifact set | 30 tarballs / 699 files; post-bundle snapshot ~690.6 kB packed / 2.64 MB unpacked |
+| Core artifact | post-bundle snapshot ~403.7 kB packed / 1.46 MB unpacked / 221 files |
+| Generated default project | under 50 KiB source and under 50 MiB installed; packed-core typecheck/test pass |
+| Fresh packed journey | 30 packages install/import and Phase 1-13 optional composition pass in ~8.0 s |
+| Registry/publish preview | 30/30 versions available; 30/30 dependency-ordered provenance dry-runs pass |
+
+No performance ceiling was raised. Core grew from Phase 0's 346.0 kB packed baseline to ~403.7 kB after documented APIs/templates, while the full package set remains ~690.6 kB packed. Follow-up review includes all six Phase 4-13 capability packages through `prism-all` and AI SDK interoperability through `prism-providers`; focused base/code/SDK profiles remain unchanged and no capability auto-activates. Manifest tarballs remain tiny: providers 1.4 kB and all 1.6 kB packed.
+
 ## Related APIs
 
 - [Agent events](agent-events.md): `SubscribeOptions` and `event_subscriber_overflow` event details.

@@ -1,6 +1,20 @@
 export type * from "./contracts.js";
-export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict } from "./contracts.js";
+export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError } from "./contracts.js";
 export { createAgent, createAgentSession } from "./agents.js";
+export {
+  createMemoryRunFeedbackStore,
+  prepareRunFeedback,
+  requireRunFeedbackOwnership,
+  runFeedbackPageLimit,
+  RunFeedbackError,
+} from "./feedback.js";
+export type {
+  MemoryRunFeedbackStoreOptions,
+  PrepareRunFeedbackOptions,
+  RunFeedbackLimits,
+  RunFeedbackRun,
+  RunFeedbackRunResolver,
+} from "./feedback.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { LEASE_CONFLICT_CODE, LeaseConflictError, createMemoryLeaseStore } from "./leases.js";
@@ -58,6 +72,7 @@ export {
   MediaContentError,
   MODEL_INPUT_CAPABILITIES,
   resolveMediaContentBlock,
+  resolveMediaContentBlocks,
   sniffMediaMimeType,
   UnsupportedModalityError,
 } from "./content.js";
@@ -67,7 +82,11 @@ export type {
   FileContent,
   MediaContentBlock,
   MediaContentBounds,
+  MediaHostAddress,
+  MediaHostnameResolver,
   MediaMimePolicy,
+  MediaUrlRequest,
+  MediaUrlRequester,
   ModelInputCapability,
   ResolvedMediaContent,
   ResolveMediaContentOptions,
@@ -124,6 +143,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.4";
+export const version = "0.0.5";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

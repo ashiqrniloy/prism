@@ -58,11 +58,11 @@ jobs:
   # Plan 056 Task 7: live PostgreSQL adapter matrix stays out of the default
   # network-free suite and runs only against an explicit CI Postgres service.
   postgres-integration:
-    name: postgres integration (session-store adapter)
+    name: postgres integration (session-store + memory adapters)
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: prism
           POSTGRES_PASSWORD: prism

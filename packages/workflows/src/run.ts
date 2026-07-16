@@ -1,7 +1,7 @@
 import {
   assertExecutionAllowed,
   type AgentSession,
-  type ContentBlock,
+  type JsonObject,
   type Message,
   type ToolDefinition,
   type ToolExecutionContext,
@@ -17,11 +17,15 @@ import {
 import {
   DEFAULT_MAX_CONCURRENCY,
   DEFAULT_MAX_FAN_OUT,
+  DEFAULT_MAX_NESTED_DEPTH,
   DEFAULT_MAX_NODES,
+  DEFAULT_MAX_STATE_BYTES,
+  DEFAULT_MAX_STATE_HISTORY,
   WORKFLOW_CHECKPOINT_SCHEMA_VERSION,
 } from "./limits.js";
 import type {
   WorkflowCheckpointAdapter,
+  WorkflowCheckpointRecord,
   WorkflowCheckpointValue,
   WorkflowDefinition,
   WorkflowEvent,
@@ -31,11 +35,15 @@ import type {
   WorkflowNodeContext,
   WorkflowNodeDefinition,
   WorkflowNodeStatus,
+  WorkflowResumeRecord,
   WorkflowRunResult,
   WorkflowRunStatus,
+  WorkflowSuspension,
+  WorkflowSuspensionDescriptor,
   RunWorkflowOptions,
 } from "./types.js";
 import {
+  assertWithinBytes,
   boundNodeOutput,
   combineSignals,
   createRunId,
@@ -45,6 +53,7 @@ import {
   isAbortError,
   nowIso,
   ownershipMatches,
+  redactValue,
   sleep,
 } from "./util.js";
 
@@ -57,6 +66,7 @@ interface RuntimeNodeState {
   sessionId?: string;
   leafId?: string;
   runId?: string;
+  stateVersionBefore?: number;
 }
 
 interface SchedulerState {
@@ -77,7 +87,27 @@ interface SchedulerState {
   skipped: Set<string>;
   completed: Set<string>;
   conditionalSkip: Map<string, Set<string>>;
+  suspension?: WorkflowSuspensionDescriptor;
+  resume?: WorkflowResumeRecord;
+  resumeInput?: unknown;
+  state: JsonObject;
+  stateVersion: number;
+  stateHistory: Map<number, JsonObject>;
+  lineage?: import("./types.js").WorkflowReplayLineage;
   checkpointChain: Promise<void>;
+  stateChain: Promise<void>;
+}
+
+/** Return from a workflow node to pause durably before its side effect. */
+export function suspend<ResumeInput = unknown>(input: {
+  readonly reason: string;
+  readonly data?: unknown;
+  readonly resumeSchema?: import("@arnilo/prism").JsonObject;
+}): WorkflowSuspension<ResumeInput> {
+  if (!input.reason.trim()) {
+    throw new WorkflowRuntimeError("Suspension reason is required", "ERR_PRISM_WORKFLOW_SUSPEND");
+  }
+  return Object.freeze({ type: "workflow_suspend", ...input });
 }
 
 export async function runWorkflow(
@@ -89,6 +119,7 @@ export async function runWorkflow(
   const definitionHash = hashWorkflowDefinition(workflow);
   const graph = buildGraph(workflow);
   const createdAt = nowIso();
+  const initialState = redactValue(cloneState(options.initialState ?? workflow.state?.initial ?? {}), options.redactor);
 
   const nodes = new Map<string, RuntimeNodeState>();
   for (const nodeId of Object.keys(workflow.nodes)) {
@@ -123,7 +154,11 @@ export async function runWorkflow(
     skipped: new Set(),
     completed: new Set(),
     conditionalSkip: new Map(),
+    state: initialState,
+    stateVersion: 0,
+    stateHistory: new Map([[0, initialState]]),
     checkpointChain: Promise.resolve(),
+    stateChain: Promise.resolve(),
   };
 
   return executeScheduler(state, options);
@@ -156,18 +191,38 @@ export async function resumeWorkflow(
   if (record.value.definitionHash !== definitionHash) {
     throw new WorkflowCheckpointError("Workflow definition hash mismatch on resume");
   }
-  if (record.value.status === "succeeded") {
-    const outputs: Record<string, unknown> = {};
-    for (const [nodeId, node] of Object.entries(record.value.nodes)) {
-      if (node.status === "succeeded" && node.output !== undefined) outputs[nodeId] = node.output;
+  if (record.value.status === "succeeded" || record.value.status === "denied") {
+    if (options.resume) {
+      throw new WorkflowCheckpointError(`Workflow run is already ${record.value.status}`);
     }
-    return {
-      workflowId: workflow.id,
-      runId: record.runId,
-      status: "succeeded",
-      version: record.version,
-      outputs,
+    return resultFromRecord(workflow.id, record);
+  }
+
+  let resumeRecord: WorkflowResumeRecord | undefined;
+  if (record.value.status === "suspended") {
+    const suspension = record.value.suspension;
+    if (!suspension) throw new WorkflowCheckpointError("Suspended checkpoint has no suspension descriptor");
+    if (!options.resume) throw new WorkflowCheckpointError("Suspended workflow requires resume input");
+    if (options.resume.expectedVersion !== record.version) {
+      throw new WorkflowCheckpointError(
+        `Stale resume version ${options.resume.expectedVersion} (current ${record.version})`,
+      );
+    }
+    if (suspension.resumeSchema && !options.validateResume) {
+      throw new WorkflowCheckpointError("Suspension resumeSchema requires validateResume");
+    }
+    await options.validateResume?.({
+      value: options.resume.input,
+      schema: suspension.resumeSchema,
+      suspension,
+    });
+    resumeRecord = {
+      ...options.resume,
+      nodeId: suspension.nodeId,
+      resumedAt: nowIso(),
     };
+  } else if (options.resume) {
+    throw new WorkflowCheckpointError("Resume input is only valid for a suspended workflow");
   }
 
   const graph = buildGraph(workflow);
@@ -184,6 +239,8 @@ export async function resumeWorkflow(
     if (status === "running" || status === "failed" || status === "aborted") {
       status = "ready";
     }
+    if (status === "suspended" && resumeRecord?.decision === "approve") status = "ready";
+    if (status === "suspended" && resumeRecord?.decision === "deny") status = "denied";
     nodes.set(nodeId, {
       nodeId,
       status,
@@ -193,9 +250,10 @@ export async function resumeWorkflow(
       sessionId: saved?.sessionId,
       leafId: saved?.leafId,
       runId: saved?.runId,
+      stateVersionBefore: saved?.stateVersionBefore,
     });
     if (status === "succeeded" && saved?.output !== undefined) outputs.set(nodeId, saved.output);
-    if (status === "succeeded" || status === "skipped") {
+    if (status === "succeeded" || status === "skipped" || status === "denied") {
       completed.add(nodeId);
       if (status === "skipped") skipped.add(nodeId);
       for (const next of graph.successors.get(nodeId) ?? []) {
@@ -222,7 +280,7 @@ export async function resumeWorkflow(
     workflow,
     runId: record.runId,
     definitionHash,
-    status: "running",
+    status: resumeRecord?.decision === "deny" ? "denied" : "running",
     version: record.version,
     createdAt: record.value.createdAt,
     workflowInput: record.value.workflowInput,
@@ -236,10 +294,42 @@ export async function resumeWorkflow(
     skipped,
     completed,
     conditionalSkip: new Map(),
+    suspension: resumeRecord?.decision === "approve" ? undefined : record.value.suspension,
+    resume: redactValue(resumeRecord ?? record.value.resume, options.redactor),
+    resumeInput: resumeRecord?.input ?? record.value.resume?.input,
+    state: cloneState(record.value.state ?? {}),
+    stateVersion: record.value.stateVersion ?? 0,
+    stateHistory: parseStateHistory(record.value.stateHistory, record.value.state ?? {}),
+    lineage: record.value.lineage,
     checkpointChain: Promise.resolve(),
+    stateChain: Promise.resolve(),
   };
 
-  return executeScheduler(state, options);
+  const result = await executeScheduler(state, {
+    ...options,
+    fencingToken: options.fencingToken ?? record.fencingToken,
+  });
+  if (resumeRecord?.decision === "deny") {
+    const nested = workflow.nodes[resumeRecord.nodeId];
+    if (nested?.kind === "workflow") {
+      const childRunId = `${record.runId}~${encodeURIComponent(resumeRecord.nodeId)}`;
+      const child = await options.checkpoints.load({
+        workflowId: nested.workflow.id,
+        runId: childRunId,
+        ownership: options.ownership,
+        signal: options.signal,
+      });
+      if (child?.value.status === "suspended") {
+        await resumeWorkflow(nested.workflow, { workflowId: nested.workflow.id, runId: childRunId }, {
+          ...options,
+          checkpoints: options.checkpoints,
+          resume: { decision: "deny", expectedVersion: child.version },
+          nestedDepth: (options.nestedDepth ?? 0) + 1,
+        });
+      }
+    }
+  }
+  return result;
 }
 
 async function executeScheduler(
@@ -273,6 +363,15 @@ async function executeSchedulerBody(
       ?? DEFAULT_MAX_CONCURRENCY,
   );
   const maxNodes = state.workflow.limits?.maxNodes ?? DEFAULT_MAX_NODES;
+  const nestedDepth = options.nestedDepth ?? 0;
+  const maxNestedDepth = Math.min(
+    options.nestedDepthLimit ?? DEFAULT_MAX_NESTED_DEPTH,
+    state.workflow.limits?.maxNestedDepth ?? DEFAULT_MAX_NESTED_DEPTH,
+  );
+  if (nestedDepth > maxNestedDepth) {
+    throw new WorkflowRuntimeError(`Workflow exceeds maxNestedDepth (${nestedDepth} > ${maxNestedDepth})`, "ERR_PRISM_WORKFLOW_NESTED_DEPTH");
+  }
+  await validateState(state, options);
   if (Object.keys(state.workflow.nodes).length > maxNodes) {
     throw new WorkflowRuntimeError(`Workflow exceeds maxNodes (${Object.keys(state.workflow.nodes).length} > ${maxNodes})`);
   }
@@ -339,6 +438,15 @@ async function executeSchedulerBody(
     runId: state.runId,
     timestamp: nowIso(),
   });
+  if (state.resume) {
+    emit({
+      type: "workflow_resumed",
+      workflowId: state.workflow.id,
+      runId: state.runId,
+      resume: state.resume,
+      timestamp: nowIso(),
+    });
+  }
 
   await persistCheckpoint(state, options, emit);
 
@@ -384,6 +492,8 @@ async function executeSchedulerBody(
     } else if (fatalError) {
       state.status = "failed";
       markRemaining(state, "aborted");
+    } else if (state.status === "suspended" || state.status === "denied") {
+      // Suspension and denial are already fully represented in the checkpoint.
     } else if ([...state.nodes.values()].some((node) => node.status === "failed")) {
       state.status = "failed";
     } else if ([...state.nodes.values()].every((node) =>
@@ -404,13 +514,15 @@ async function executeSchedulerBody(
 
     await persistCheckpoint(state, options, emit);
 
-    emit({
-      type: "workflow_finished",
-      workflowId: state.workflow.id,
-      runId: state.runId,
-      status: state.status,
-      timestamp: nowIso(),
-    });
+    if (state.status !== "suspended") {
+      emit({
+        type: "workflow_finished",
+        workflowId: state.workflow.id,
+        runId: state.runId,
+        status: state.status,
+        timestamp: nowIso(),
+      });
+    }
 
     if (state.status === "aborted") {
       if (fatalError instanceof WorkflowAbortError) throw fatalError;
@@ -434,6 +546,10 @@ async function executeSchedulerBody(
       status: state.status,
       version: state.version,
       outputs,
+      suspension: state.suspension,
+      resume: state.resume,
+      state: cloneState(state.state),
+      lineage: state.lineage,
     };
   } finally {
     options.signal?.removeEventListener("abort", onAbort);
@@ -468,6 +584,7 @@ async function runNode(
   while (attempt <= retries) {
     attempt += 1;
     nodeState.attempt = attempt;
+    nodeState.stateVersionBefore ??= state.stateVersion;
     try {
       if (options.signal?.aborted) throw new WorkflowAbortError();
 
@@ -478,6 +595,50 @@ async function runNode(
       const ctx = createContext(state, nodeId, options, signal);
 
       const result = await executeNode(node, ctx, state, options, bus, activeSessions);
+      if (isWorkflowSuspension(result.output)) {
+        if (!options.checkpoints) {
+          throw new WorkflowRuntimeError(
+            "Durable workflow suspension requires checkpoints",
+            "ERR_PRISM_WORKFLOW_SUSPEND",
+          );
+        }
+        if (state.suspension && state.suspension.nodeId !== nodeId) {
+          // ponytail: one durable review cursor; queue concurrent suspension requests
+          // and rerun that node after the current review resolves.
+          nodeState.status = "ready";
+          if (!state.ready.includes(nodeId)) {
+            state.ready.push(nodeId);
+            state.ready.sort((a, b) => a.localeCompare(b));
+          }
+          await persistCheckpoint(state, options, emit);
+          return;
+        }
+        const descriptor: WorkflowSuspensionDescriptor = {
+          nodeId,
+          reason: result.output.reason,
+          data: result.output.data === undefined
+            ? undefined
+            : boundNodeOutput(result.output.data, {
+                maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes,
+                redactor: options.redactor,
+              }),
+          resumeSchema: result.output.resumeSchema,
+          requestedAt: nowIso(),
+        };
+        nodeState.status = "suspended";
+        nodeState.error = undefined;
+        state.status = "suspended";
+        state.suspension = descriptor;
+        emit({
+          type: "workflow_suspended",
+          workflowId: state.workflow.id,
+          runId: state.runId,
+          suspension: descriptor,
+          timestamp: descriptor.requestedAt,
+        });
+        await persistCheckpoint(state, options, emit);
+        return;
+      }
       const output = boundNodeOutput(result.output, {
         maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes,
         redactor: options.redactor,
@@ -564,9 +725,15 @@ function createContext(
     nodeId,
     workflowInput: state.workflowInput,
     upstream,
+    state: cloneState(state.state),
+    stateVersion: state.stateVersion,
+    updateState: (patch, updateOptions) => updateWorkflowState(state, patch, updateOptions, options),
     signal,
     ownership: options.ownership,
     metadata: options.metadata,
+    resume: state.resume?.nodeId === nodeId && state.resume.decision === "approve"
+      ? { input: state.resumeInput, resumedAt: state.resume.resumedAt }
+      : undefined,
   };
 }
 
@@ -621,6 +788,15 @@ async function executeNode(
     case "tool": {
       const tool = resolveTool(node.tool, options);
       const args = await node.args(ctx);
+      if (node.approval && !ctx.resume) {
+        return {
+          output: suspend({
+            reason: node.approval.reason,
+            data: await node.approval.data?.(ctx, args),
+            resumeSchema: node.approval.resumeSchema,
+          }),
+        };
+      }
       const action = node.action
         ? await node.action(ctx, args)
         : {
@@ -659,6 +835,62 @@ async function executeNode(
       }
       return { output: result.value ?? result.content ?? null };
     }
+    case "workflow": {
+      const childRunId = `${ctx.runId}~${encodeURIComponent(ctx.nodeId)}`;
+      const childInput = node.input ? await node.input(ctx) : ctx.workflowInput;
+      const childOptions: RunWorkflowOptions = {
+        ...options,
+        runId: childRunId,
+        nestedDepth: (options.nestedDepth ?? 0) + 1,
+        nestedDepthLimit: Math.min(
+          options.nestedDepthLimit ?? DEFAULT_MAX_NESTED_DEPTH,
+          state.workflow.limits?.maxNestedDepth ?? DEFAULT_MAX_NESTED_DEPTH,
+        ),
+        initialState: cloneState(state.state),
+        eventBus: bus,
+        metadata: {
+          ...options.metadata,
+          parentWorkflowId: ctx.workflowId,
+          parentRunId: ctx.runId,
+          parentNodeId: ctx.nodeId,
+        },
+      };
+      const existing = options.checkpoints
+        ? await options.checkpoints.load({
+            workflowId: node.workflow.id,
+            runId: childRunId,
+            ownership: options.ownership,
+            signal: ctx.signal,
+          })
+        : null;
+      if (existing?.value.status === "suspended" && !ctx.resume) {
+        const childSuspension = existing.value.suspension;
+        if (!childSuspension) throw new WorkflowCheckpointError("Nested suspended workflow has no descriptor");
+        return { output: suspend({
+          reason: childSuspension.reason,
+          data: childSuspension.data,
+          resumeSchema: childSuspension.resumeSchema,
+        }) };
+      }
+      const result = existing && options.checkpoints
+        ? await resumeWorkflow(node.workflow, { workflowId: node.workflow.id, runId: childRunId }, {
+            ...childOptions,
+            checkpoints: options.checkpoints,
+            resume: existing.value.status === "suspended" && ctx.resume
+              ? { decision: "approve", input: ctx.resume.input, expectedVersion: existing.version }
+              : undefined,
+          })
+        : await runWorkflow(node.workflow, childInput, childOptions);
+      if (result.status === "suspended") {
+        return { output: suspend({
+          reason: result.suspension?.reason ?? "Nested workflow suspended",
+          data: result.suspension?.data,
+          resumeSchema: result.suspension?.resumeSchema,
+        }) };
+      }
+      await ctx.updateState(result.state, { mode: "replace" });
+      return { output: node.output ? await node.output(result, ctx) : result.outputs, runId: result.runId };
+    }
     case "agent": {
       if (!options.agentFactory) {
         throw new WorkflowRuntimeError("agentFactory is required for agent nodes");
@@ -668,7 +900,7 @@ async function executeNode(
       const stopObserve = bus.observeAgentNode({ nodeId: ctx.nodeId, session });
       try {
         const input = node.input ? await node.input(ctx) : ctx.workflowInput;
-        await session.run(toAgentInput(input), {
+        const runResult = await session.run(toAgentInput(input), {
           signal: ctx.signal,
           ownership: options.ownership,
           redactor: options.redactor,
@@ -681,7 +913,7 @@ async function executeNode(
         });
         const output = node.output
           ? await node.output({ ...ctx, session })
-          : await defaultAgentOutput(session);
+          : runResult.text || (runResult.content.length > 0 ? runResult.content : null);
         return {
           output,
           sessionId: session.id,
@@ -729,20 +961,6 @@ function isMessage(value: unknown): value is Message {
     && "content" in value
     && Array.isArray((value as Message).content),
   );
-}
-
-async function defaultAgentOutput(session: AgentSession): Promise<unknown> {
-  const entries = await session.entries();
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    const message = entries[index]?.message;
-    if (message?.role !== "assistant") continue;
-    const text = message.content
-      .filter((block): block is Extract<ContentBlock, { type: "text" }> => block.type === "text")
-      .map((block) => block.text)
-      .join("");
-    return text || message.content;
-  }
-  return null;
 }
 
 function applyConditionalSkip(
@@ -868,6 +1086,7 @@ async function persistCheckpoint(
       sessionId: node.sessionId,
       leafId: node.leafId,
       runId: node.runId,
+      stateVersionBefore: node.stateVersionBefore,
     };
   }
   const value: WorkflowCheckpointValue = {
@@ -883,6 +1102,12 @@ async function persistCheckpoint(
     createdAt: state.createdAt,
     updatedAt: nowIso(),
     redacted: Boolean(options.redactor),
+    suspension: state.suspension,
+    resume: state.resume,
+    state: cloneState(state.state),
+    stateVersion: state.stateVersion,
+    stateHistory: Object.fromEntries([...state.stateHistory].map(([version, value]) => [String(version), cloneState(value)])),
+    lineage: state.lineage,
     metadata: options.metadata,
   };
   // Terminal writes must land even when the run signal is already aborted
@@ -914,7 +1139,109 @@ async function persistCheckpoint(
   await save;
 }
 
-/** Patch fan-out to honor workflow.limits.maxFanOut — used by executeNode path. */
+function isWorkflowSuspension(value: unknown): value is WorkflowSuspension {
+  return Boolean(
+    value
+    && typeof value === "object"
+    && "type" in value
+    && value.type === "workflow_suspend"
+    && "reason" in value
+    && typeof value.reason === "string",
+  );
+}
+
+function resultFromRecord(
+  workflowId: string,
+  record: WorkflowCheckpointRecord,
+): WorkflowRunResult {
+  const outputs: Record<string, unknown> = {};
+  for (const [nodeId, node] of Object.entries(record.value.nodes)) {
+    if (node.status === "succeeded" && node.output !== undefined) outputs[nodeId] = node.output;
+  }
+  return {
+    workflowId,
+    runId: record.runId,
+    status: record.value.status,
+    version: record.version,
+    outputs,
+    suspension: record.value.suspension,
+    resume: record.value.resume,
+    state: cloneState(record.value.state ?? {}),
+    lineage: record.value.lineage,
+  };
+}
+
+function cloneState(value: JsonObject): JsonObject {
+  return JSON.parse(JSON.stringify(value)) as JsonObject;
+}
+
+function parseStateHistory(
+  history: Readonly<Record<string, JsonObject>> | undefined,
+  current: JsonObject,
+): Map<number, JsonObject> {
+  const parsed = new Map<number, JsonObject>();
+  for (const [key, value] of Object.entries(history ?? {})) {
+    const version = Number(key);
+    if (Number.isSafeInteger(version) && version >= 0) parsed.set(version, cloneState(value));
+  }
+  if (parsed.size === 0) parsed.set(0, cloneState(current));
+  return parsed;
+}
+
+async function validateState(state: SchedulerState, options: RunWorkflowOptions): Promise<void> {
+  const maxBytes = state.workflow.limits?.maxStateBytes ?? DEFAULT_MAX_STATE_BYTES;
+  assertWithinBytes(state.state, maxBytes, "Workflow state");
+  if (state.workflow.state?.schema && !options.validateState) {
+    throw new WorkflowRuntimeError("Workflow state schema requires validateState", "ERR_PRISM_WORKFLOW_STATE_VALIDATOR");
+  }
+  if (options.validateState) {
+    await awaitSignal(Promise.resolve(options.validateState({
+      value: cloneState(state.state),
+      schema: state.workflow.state?.schema,
+      signal: options.signal,
+    })), options.signal);
+  }
+}
+
+async function awaitSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) throw signal.reason ?? new DOMException("Aborted", "AbortError");
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
+    signal.addEventListener("abort", abort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+  });
+}
+
+async function updateWorkflowState(
+  state: SchedulerState,
+  patch: JsonObject,
+  updateOptions: import("./types.js").WorkflowStateUpdateOptions | undefined,
+  options: RunWorkflowOptions,
+): Promise<Readonly<JsonObject>> {
+  let result: JsonObject = state.state;
+  const update = state.stateChain.then(async () => {
+    const next = updateOptions?.mode === "replace"
+      ? cloneState(patch)
+      : { ...cloneState(state.state), ...cloneState(patch) };
+    const redacted = redactValue(next, options.redactor);
+    const maxHistory = state.workflow.limits?.maxStateHistory ?? DEFAULT_MAX_STATE_HISTORY;
+    if (state.stateVersion + 1 >= maxHistory) {
+      throw new WorkflowRuntimeError(`Workflow state history exceeds maxStateHistory (${maxHistory})`, "ERR_PRISM_WORKFLOW_STATE_HISTORY");
+    }
+    const candidate: SchedulerState = { ...state, state: redacted };
+    await validateState(candidate, options);
+    state.state = redacted;
+    state.stateVersion += 1;
+    state.stateHistory.set(state.stateVersion, cloneState(redacted));
+    result = cloneState(redacted);
+  });
+  state.stateChain = update;
+  await update;
+  return result;
+}
+
+/** Resolve the effective fan-out limit for a node. */
 export function resolveMaxFanOut(workflow: WorkflowDefinition, node: WorkflowNodeDefinition): number {
   if (node.kind !== "fan_out") return DEFAULT_MAX_FAN_OUT;
   return node.maxFanOut ?? workflow.limits?.maxFanOut ?? DEFAULT_MAX_FAN_OUT;

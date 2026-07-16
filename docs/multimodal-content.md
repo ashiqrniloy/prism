@@ -19,6 +19,7 @@ Do not embed provider upload IDs, tenant-scoped remote file IDs, or API-specific
 ```ts
 import {
   resolveMediaContentBlock,
+  resolveMediaContentBlocks,
   assertSsrfAllowedUrl,
   type AudioContent,
   type FileContent,
@@ -42,6 +43,8 @@ const audio: AudioContent = {
 await resolveMediaContentBlock(file, { bounds: { maxItemBytes: 10_000_000 } });
 ```
 
+`ResolveMediaContentOptions` also exposes `ssrf`, `fetch`, `resolveHostname`, `requestUrl`, `loader`, `loadContext`, and `signal`. `MediaHostnameResolver`, `MediaHostAddress`, `MediaUrlRequester`, and `MediaUrlRequest` are exported for typed custom/test transports; ordinary callers need none of them.
+
 Known `ModelCapabilities.input` tags are exported as `MODEL_INPUT_CAPABILITIES`:
 
 | Tag | Block type | First-party mapping (declared capability required) |
@@ -54,10 +57,12 @@ Known `ModelCapabilities.input` tags are exported as `MODEL_INPUT_CAPABILITIES`:
 
 ## Outputs / response / events
 
-- `resolveMediaContentBlock()` returns `{ mediaType, bytes, name?, durationMs?, transcript?, metadata? }`.
+- `resolveMediaContentBlock()` resolves one item and returns `{ mediaType, bytes, name?, durationMs?, transcript?, metadata? }`.
+- `resolveMediaContentBlocks()` is the complete-request path: it rejects item count/inline estimates before I/O, resolves each item within its bound, then enforces exact aggregate decoded bytes.
 - `assertModelSupportsContentBlocks()` / `assertMessagesSupportModelCapabilities()` throw `UnsupportedModalityError` when a declared capability list omits the block modality.
 - `assertMediaBlocksWithinBounds()` enforces per-item bytes, total request bytes, item count, and audio duration ceilings.
-- `assertSsrfAllowedUrl()` rejects private/link-local/metadata hosts unless explicitly allow-listed.
+- `assertSsrfAllowedUrl()` rejects loopback, private, link-local, unspecified, multicast, IPv4-mapped private, and metadata literals/hosts unless explicitly allow-listed.
+- Default URL resolution performs one bounded `dns.lookup(..., { all: true })`, rejects the whole hostname if any answer is non-public, then pins the selected public address into `http.request()`/`https.request()` so a second DNS lookup cannot rebind the connection.
 - `sniffMediaMimeType()` / `assertDeclaredMediaTypeMatches()` compare declared MIME types to magic bytes.
 - No events are emitted and no provider calls occur in these helpers.
 
@@ -125,17 +130,20 @@ try {
 
 ## Extension and configuration notes
 
-- URL fetches use injectable `fetch` for tests and custom transports; production hosts should supply TLS, auth, and logging policy outside Prism core.
+- URL fetches use the DNS-classifying, address-pinned Node transport by default. `resolveHostname` and `requestUrl` are paired test/custom seams; `requestUrl` must connect to the supplied validated address while preserving the original URL hostname for HTTP Host/TLS verification.
+- Supplying `fetch` is a trusted compatibility/custom-transport escape hatch: Prism still checks URL literals and host allow-lists, but the host-provided fetch owns DNS resolution, rebinding protection, redirects, proxies, TLS, auth, and logging.
 - `resourceUri` resolution requires a caller-provided `ResourceLoader` and optional `ResourceLoadContext.permission` check.
 - Local filesystem paths should use trust policies such as `createPathTrustPolicy()` before exposing URIs to loaders.
 - Provider upload/create/delete lifecycles are provider-package-local. `@arnilo/prism-provider-openai` inlines files under 4 MiB as `data:<mediaType>;base64,...` `file_data`, otherwise uses a bounded per-run upload cache and best-effort `DELETE /v1/files` cleanup after each stream.
-- Shared wire helpers live in `@arnilo/prism/providers/media` (`serializeOpenAIResponsesInputFile`, `serializePdfDocumentWireBlock`, `createBoundedUploadCache`).
+- Shared wire helpers live in `@arnilo/prism/providers/media` (`resolveProviderMediaMessages`, `serializeOpenAIResponsesInputFile`, `serializePdfDocumentWireBlock`, `createBoundedUploadCache`). OpenAI Responses, Kimi, and OpenCode Go Anthropic routes resolve their complete media collection once before serialization or upload.
 
 ## Security and performance notes
 
-- SSRF deny-by-default blocks loopback, RFC1918, link-local, and cloud metadata hostnames unless `SsrfPolicy.allowedHostnames` is set.
+- SSRF deny-by-default blocks IPv4/IPv6 loopback, private/unique-local, link-local, unspecified, multicast, IPv4-mapped private, and cloud metadata targets. DNS answers are all classified before one public address is pinned; mixed public/private answers fail closed.
+- `allowedHostnames` is an explicit trust override and may permit a private destination. `denyPrivateHosts: false` is broader and should be reserved for hosts that intentionally own private-network access.
+- DNS lookup, connection, and body streaming share `fetchTimeoutMs` and caller abort; more than 32 resolved addresses, redirects, and oversized response bodies are rejected.
 - MIME validation rejects common magic-byte spoofing; extensions alone are never trusted.
-- Byte budgets use base64 size estimates before decode and re-check decoded `buffer.length` after read/fetch.
+- Byte budgets use base64 size estimates before decode and re-check decoded bytes after every read/fetch. Complete-request resolution keeps at most the configured request budget plus one bounded item in memory and performs no provider upload/request until validation succeeds.
 - Media errors omit raw bytes/base64 payloads from messages.
 - Fetch readers are cancelled promptly after bound violations or abort signals.
 

@@ -6,6 +6,7 @@ import {
   assertPersistenceQueryPaginationConforms,
   assertTenantScopedQueryIsolation,
 } from "@arnilo/prism/testing/persistence-schema";
+import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 import { createPostgresPersistence } from "../persistence.js";
@@ -63,6 +64,22 @@ describeIntegration("createPostgresPersistence integration", () => {
     );
   });
 
+  it("persists ownership-scoped run feedback across instances", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    await persistence.appendRun({
+      id: "feedback-run-a",
+      sessionId: "feedback-session",
+      startedAt: "2026-01-01T00:00:00Z",
+      tenantId: "feedback-tenant",
+      userId: "feedback-user",
+    });
+    await runFeedbackConformance(() => persistence.feedback);
+    const reopened = await createPostgresPersistence({ pool, schema });
+    assert.equal((await reopened.feedback.query({ tenantId: "feedback-tenant", userId: "feedback-user" })).items.length, 1);
+  });
+
   it("exposes durable generic checkpoints across persistence instances", async () => {
     const schema = uniqueSchema();
     const pool = createPool();
@@ -109,8 +126,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     const pool = createPool();
     const first = await createPostgresPersistence({ pool, schema });
     const firstMigrations = await first.queryMigrations({});
-    assert.equal(firstMigrations.items.length, 1);
-    assert.equal(firstMigrations.items[0]?.name, "001_init");
+    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback"]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
     const secondMigrations = await reopened.queryMigrations({});
@@ -203,7 +219,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     ]);
     const persistence = await createPostgresPersistence({ pool, schema });
     const migrations = await persistence.queryMigrations({});
-    assert.equal(migrations.items.length, 1);
+    assert.equal(migrations.items.length, 3);
     await persistence.close();
   });
 });

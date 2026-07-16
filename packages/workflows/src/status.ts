@@ -89,11 +89,19 @@ export async function cancelWorkflowRun(
   if (record.value.status === "aborted") {
     return { aborted: true, wasActive: false, status: "aborted" };
   }
-  if (record.value.status === "succeeded" || record.value.status === "failed") {
+  if (
+    record.value.status === "succeeded"
+    || record.value.status === "failed"
+    || record.value.status === "denied"
+  ) {
     return { aborted: false, wasActive: false, status: record.value.status };
   }
 
-  if (record.fencingToken !== undefined && input.checkpoints.requestCancel) {
+  if (
+    record.value.status !== "suspended"
+    && record.fencingToken !== undefined
+    && input.checkpoints.requestCancel
+  ) {
     await input.checkpoints.requestCancel({
       workflowId: input.workflowId,
       runId: input.runId,
@@ -109,6 +117,7 @@ export async function cancelWorkflowRun(
     runId: record.runId,
     version: record.version + 1,
     expectedVersion: record.version,
+    fencingToken: record.fencingToken,
     ownership: record.ownership,
     value: {
       ...record.value,

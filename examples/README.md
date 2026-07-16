@@ -30,10 +30,19 @@ node examples/custom-builders.ts
 node examples/custom-session-store.ts
 node examples/custom-tools-skills-context.ts
 node examples/extension-package.ts
+node examples/evals.ts
+node examples/run-feedback.ts
+node examples/supervisor-a2a.ts
+node examples/ai-sdk-provider.ts
+node examples/working-semantic-memory.ts
+node examples/rag.ts
+node examples/web-standard-server.ts
+node examples/mcp-server.ts
 node examples/workflow-research-and-review.ts
 node examples/workflow-multimodal-document.ts
 node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL is set
 node examples/workflow-distributed-coordinator.ts
+node examples/workflow-schedules-replay.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -41,6 +50,14 @@ Each demo prints a single JSON line with its result.
 ## Files
 
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
+- `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
+- `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, and safe low-cardinality OpenTelemetry projection.
+- `supervisor-a2a.ts` — bounded allow-listed local child delegation plus an offline A2A 1.0 handler/client round trip.
+- `ai-sdk-provider.ts` — optional AI SDK `LanguageModelV4` adapter demo with a fake in-memory model.
+- `working-semantic-memory.ts` — optional working memory + semantic recall with hash embedder, context injection, and processor update.
+- `rag.ts` — optional bounded Markdown chunk/index/retrieve/citation flow using Phase 7 in-memory vector primitives.
+- `web-standard-server.ts` — optional framework-free authorized `Request -> Response` agent run using the offline mock provider.
+- `mcp-server.ts` — explicit authorized Prism tool exposure through SDK `McpServer` and linked in-memory transport.
 - `minimal-host-app.ts` — **demo**: canonical minimal host embed; stream events while a prompt runs via concurrent `Promise.all([drain, session.run])`.
 - `custom-builders.ts` — **demo**: replace the default InputBuilder and PromptBuilder to control input wrapping and final message ordering.
 - `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and pass it to `createAgentSession`; observe the entry kinds the runtime appends.
@@ -89,6 +106,7 @@ Each demo prints a single JSON line with its result.
 - `workflow-event-sink.ts` — **demo**: `onEvent` callback + `WorkflowEventBus` subscriber collecting events through a conditional-skip path.
 - `workflow-rpc-cancel.ts` — **demo**: `cancelWorkflowRun` mid-flight then `resumeWorkflow` — the programmatic surface behind `createWorkflowCommands()`.
 - `workflow-distributed-coordinator.ts` — **demo**: two coordinator instances over independent SQLite handles atomically claim one queued run using durable leases and fencing.
+- `workflow-schedules-replay.ts` — **demo**: ownership-scoped one-time schedule → existing coordinator background run → nested shared-state workflow → immutable-lineage replay.
 - `tsconfig.json` — typecheck-only config.
 
 **demo** = the file has a runnable `main()`; the others are compile-checked

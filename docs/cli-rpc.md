@@ -2,23 +2,41 @@
 
 ## What it does
 
-The `prism` bin is a thin adapter over `AgentSession`:
+The `prism` bin is a thin adapter over `AgentSession` plus a tiny project scaffold:
 
 - `prism -p "prompt"`: print assistant text deltas.
 - `prism --mode json -p "prompt"`: write one normalized event envelope per line.
 - `prism --mode rpc`: read LF-delimited JSON requests from stdin and write correlated JSON responses/events to stdout.
+- `prism init <dir>`: create a minimal TypeScript project with one selected provider, `.env.example`, and one offline mock test.
 
-It does not add a TUI, app tools, provider globals, extension discovery, resource discovery, or credential storage.
+It does not add a TUI, app tools, provider globals, extension discovery, resource discovery, or credential storage. `init` uses Node standard-library filesystem APIs and checked-in templates only — no interactive prompts or template-engine dependency.
 
 ## When to use it
 
-Use the CLI for terminal smoke tests, scriptable JSON event streams, and simple non-Node clients that can speak newline-delimited JSON.
+Use the CLI for terminal smoke tests, scriptable JSON event streams, simple non-Node clients that can speak newline-delimited JSON, and bootstrapping a tiny host project with `prism init`.
 
 Use the SDK directly when an app needs custom providers, tools, resources, credentials, trust prompts, or UI behavior.
 
 ## Inputs / request
 
-CLI flags:
+### `prism init`
+
+```bash
+prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]
+```
+
+| Flag / arg | Purpose |
+| --- | --- |
+| `<dir>` | Destination directory (created if missing). |
+| `--provider <name>` | `mock` (default), `openai`, `openrouter`, `kimi`, `zai`, `opencode-go`, or `neuralwatt`. |
+| `--with-workflows` | Add `@arnilo/prism-workflows` and `src/workflows-example.ts`. |
+| `--with-evals` | Add `@arnilo/prism-evals` and `src/evals-example.ts`. |
+| `--force` | Overwrite generated files when the destination already exists. |
+| `-h`, `--help` | Print init usage. |
+
+Default generation installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one `@arnilo/prism-provider-*` package. Storage, telemetry, memory, and server packages are never added unless a later phase introduces an explicit flag for them. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
+
+### Run/RPC CLI flags
 
 | Flag | Purpose |
 | --- | --- |
@@ -127,6 +145,11 @@ Events streamed during a run keep the original prompt request id, even when an `
 prism --provider mock --model demo -p "Hi"
 prism --provider mock --mode json -p "Hi"
 printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' | prism --provider mock --mode rpc
+
+prism init my-agent
+prism init my-agent --provider openai
+prism init my-agent --provider openrouter --with-workflows --with-evals
+cd my-agent && npm install && npm test
 ```
 
 Programmatic hosts should use the public runtime directly:
@@ -147,7 +170,9 @@ CLI/RPC are adapters over `AgentSession`. They do not scan packages, import exte
 
 RPC `command` executes only explicitly registered `CommandDefinition` values. `setModel` stores a model override for later prompt/follow-up calls. `compact`, `switchSession`, `forkSession`, `cloneSession`, and `checkout` call the existing session APIs.
 
-Optional workflow control (from `@arnilo/prism-workflows`) registers `workflow.start`, `workflow.status`, `workflow.list`, `workflow.cancel`, and `workflow.resume` via `createWorkflowCommands({ workflows, checkpoints, runOptions? })`. Pass the returned `CommandDefinition[]` into `runRpcServer({ commands })` the same way as observational-memory commands. Cancel aborts in-process runs through the package active-run registry; orphaned durable checkpoints still marked `running` are fail-closed to `aborted`.
+Optional workflow control (from `@arnilo/prism-workflows`) registers `workflow.start`, `workflow.enqueue`, `workflow.replay`, `workflow.status`, `workflow.list`, `workflow.cancel`, and `workflow.resume` via `createWorkflowCommands({ workflows, checkpoints, runOptions? })`. Supplying an ownership-scoped `schedules` service additionally registers `schedule.create`, `schedule.list`, `schedule.pause`, `schedule.resume`, `schedule.trigger`, and `schedule.delete`. Pass the returned `CommandDefinition[]` into `runRpcServer({ commands })` the same way as observational-memory commands. Cancel aborts in-process runs through the package active-run registry; orphaned durable checkpoints still marked `running` are fail-closed to `aborted`.
+
+Suspended workflow resume parameters are `{ workflowId, runId, decision: "approve" | "deny", input?, expectedVersion, ownership? }`. Read `expectedVersion` from `workflow.status`/`workflow.list`; stale or duplicate decisions fail checkpoint CAS before node execution. Ordinary recovery resume for failed/aborted runs remains backward-compatible without decision fields.
 
 `forkSession` creates another handle for the same `sessionId` and selected `leafId`; it no longer overwrites the parent handle in the RPC map. Keep the returned `handleId` when a UI needs to switch among sibling branches. `switchSession` accepts `handleId` (preferred), `sessionId`, or `id`; with multiple branch handles, use `handleId` to avoid ambiguity. `checkout` requires `params.leafId`, calls `AgentSession.checkout(leafId)`, and keeps the active handle id unchanged while moving that handle to the existing leaf. `messages` returns entries for the active branch path.
 
@@ -157,7 +182,10 @@ Optional workflow control (from `@arnilo/prism-workflows`) registers `workflow.s
 - No hidden provider, credential, extension, resource, config, settings, or tool globals are created.
 - No full TUI or sandbox is provided or implied.
 - JSONL is processed line by line with Node stdlib; no parser dependency, worker, watcher, or queue is added.
-- Unknown or malformed CLI/RPC input fails closed.
+- Unknown or malformed CLI/RPC input fails closed. Workflow resume validates decision and positive `expectedVersion`; ownership remains host-selected and checkpoint-enforced.
+- `prism init` refuses non-empty destinations without `--force`, keeps writes inside the destination root, and never executes downloaded code beyond the user's later `npm install`.
+- Generated `.env.example` values are placeholders only; `.gitignore` excludes `.env` and local store files.
+- Default generated install stays small (~27 MB with TypeScript tooling in a clean consumer install versus Mastra's measured 439 MB scaffold); unselected storage/telemetry/eval/workflow packages are omitted.
 - Branch handles (`handleId`, `sessionId`, `leafId`) are identifiers only; do not encode credentials, tokens, provider objects, or secrets into them.
 - Do not put resolved credential values, tokens, headers, or secrets in prompts, CLI flags, config, events, or docs examples.
 
@@ -171,7 +199,7 @@ Optional workflow control (from `@arnilo/prism-workflows`) registers `workflow.s
 - [Resource loading](resource-loading.md): explicit resource loading primitives.
 - [Credentials and redaction](credentials-and-redaction.md): secret redaction helpers and credential boundaries.
 - [Observational memory compaction package](compaction-observational-memory.md): optional `om:status` and `om:view` command factories for explicitly wired hosts.
-- [Workflows](workflows.md): optional `createWorkflowCommands()` for start/status/list/cancel/resume over the same RPC `command` seam.
+- [Workflows](workflows.md): optional `createWorkflowCommands()` for direct/background/replay/status/cancel/resume and selected schedule control over the same RPC `command` seam.
 
 The CLI records flags but does not auto-load project-local resources, extensions, tools, or config. The two system/project prompt files are the exception: in print/json modes the CLI auto-loads `<workspaceRoot>/AGENTS.md` (trust-gated) and an app-supplied `SYSTEM.md` layer as `AgentConfig.systemPrompt` layers composed with `--system` (base); `--no-agents-md` / `--no-system-md` skip them and `--agents-md-file` / `--system-md-file` override the paths. The CLI does not default `globalRoot` to the user's home directory — pass it from a host adapter or use `--agents-config <path>` for the app-config bundle layout. RPC mode does not auto-read these files (the host owns the session factory). Hosts must make explicit trust and permission decisions before wiring any other local loading.
 

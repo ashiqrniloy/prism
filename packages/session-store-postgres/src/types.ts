@@ -1,4 +1,5 @@
 import type { Pool, PoolConfig } from "pg";
+import type { SecretRedactor } from "@arnilo/prism";
 
 /** Default PostgreSQL schema for Prism tables. */
 export const DEFAULT_SCHEMA = "prism";
@@ -17,6 +18,8 @@ export interface PostgresPersistenceOptions {
   readonly poolMax?: number;
   /** Additional pool options when creating a pool from `connectionString`. */
   readonly poolConfig?: Omit<PoolConfig, "connectionString" | "max">;
+  /** Redacts feedback comments/tags/metadata before durable storage. */
+  readonly feedbackRedactor?: SecretRedactor;
   /** Skip automatic migration on open (tests only). */
   readonly skipMigrations?: boolean;
 }

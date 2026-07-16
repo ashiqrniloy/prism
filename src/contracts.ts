@@ -280,13 +280,7 @@ export interface AgentConfig {
   readonly promptBuilder?: PromptBuilder;
   readonly middleware?: MiddlewareRegistry;
   readonly resourceLoader?: ResourceLoader;
-  /** Host-owned metadata only: createAgent/session.run do not load or run these extensions. */
-  readonly extensions?: readonly Extension[];
   readonly store?: SessionStore;
-  /** Host-owned metadata only: createAgent/session.run do not read settings. */
-  readonly settings?: SettingsProvider;
-  /** Host-owned metadata only: createAgent/session.run do not resolve credentials. Pass resolvers to provider edges explicitly. */
-  readonly credentials?: CredentialResolver;
   readonly permission?: PermissionPolicy;
   readonly providerOptions?: ProviderRequestOptions;
   readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
@@ -335,13 +329,48 @@ export interface SubscribeOptions {
   readonly overflow?: SubscriberOverflowPolicy;
 }
 
+export type AgentRunStatus = "succeeded" | "failed" | "aborted";
+
+/** Terminal result of `session.run()` / `session.prompt()`. Failed and aborted runs throw {@link AgentRunError} with this shape attached. */
+export interface AgentRunResult {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly status: AgentRunStatus;
+  /** Branch leaf after the run settles. */
+  readonly leafId?: string;
+  /** Concatenated text blocks from the final assistant message, or `""` when none. */
+  readonly text: string;
+  /** Content blocks from the final assistant message, or `[]` when none. */
+  readonly content: readonly ContentBlock[];
+  /** Final assistant message when the run produced one. */
+  readonly message?: Message;
+  /** Aggregate usage across provider turns (`run_total` scope). */
+  readonly usage?: Usage;
+  /** Present when `status` is `"failed"` or when a failed attempt still produced partial output. */
+  readonly error?: ErrorInfo;
+  /** String form of the abort reason when `status` is `"aborted"`. */
+  readonly abortReason?: string;
+}
+
+export class AgentRunError extends Error {
+  readonly result: AgentRunResult;
+
+  constructor(result: AgentRunResult, options?: { readonly cause?: unknown }) {
+    super(result.error?.message ?? (result.status === "aborted" ? "Agent run aborted" : "Agent run failed"), options);
+    this.name = "AgentRunError";
+    this.result = result;
+  }
+}
+
 export interface AgentSession {
   readonly id: string;
   /** Current branch leaf entry id; advances on every append/run and is re-pointed by `checkout`.
    *  Undefined until the first entry lands (a fresh session with no history). */
   readonly leafId: string | undefined;
-  run(input: string | Message | readonly Message[], options?: RunOptions): Promise<void>;
-  prompt(input: string, options?: RunOptions): Promise<void>;
+  run(input: string | Message | readonly Message[], options?: RunOptions): Promise<AgentRunResult>;
+  prompt(input: string, options?: RunOptions): Promise<AgentRunResult>;
+  /** Subscribe first, then start exactly one run and yield only that run's events until it terminates. */
+  stream(input: string | Message | readonly Message[], options?: RunOptions & SubscribeOptions): AsyncIterable<AgentEvent>;
   compact(options?: CompactionOptions): Promise<CompactionResult>;
   subscribe(options?: SubscribeOptions): AsyncIterable<AgentEvent>;
   abort(reason?: unknown): void;
@@ -1054,12 +1083,17 @@ export interface ToolCallRecord extends OwnershipScope {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-/** Stored usage row. */
+export type UsageScope = "provider_turn" | "run_total";
+
+/** Stored usage row. `scope` prevents provider-turn and aggregate totals from being summed together. */
 export interface UsageRecord extends OwnershipScope {
   readonly id: string;
   readonly sessionId: string;
   readonly runId?: string;
   readonly entryId?: string;
+  readonly scope: UsageScope;
+  readonly turn?: number;
+  readonly attempt?: number;
   readonly usage: Usage;
   readonly recordedAt: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -1075,6 +1109,64 @@ export interface RunLedger {
 
 /** Union of records that may be handed to a {@link RunLedger}. */
 export type RunLedgerRecord = RunRecord | AgentEventRecord | ToolCallRecord | UsageRecord;
+
+/** Immutable human feedback linked to an existing owned run/trace and optional evaluations. */
+export interface RunFeedbackRecord extends OwnershipScope {
+  readonly id: string;
+  readonly runId: string;
+  readonly sessionId: string;
+  readonly traceId?: string;
+  readonly rating?: number;
+  readonly comment?: string;
+  readonly tags: readonly string[];
+  readonly scorerIds: readonly string[];
+  readonly evaluationIds: readonly string[];
+  readonly createdAt: string;
+  readonly createdBy?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface AppendRunFeedbackInput extends OwnershipScope {
+  readonly id: string;
+  readonly runId: string;
+  readonly sessionId?: string;
+  readonly traceId?: string;
+  readonly rating?: number;
+  readonly comment?: string;
+  readonly tags?: readonly string[];
+  readonly scorerIds?: readonly string[];
+  readonly evaluationIds?: readonly string[];
+  readonly createdAt?: string;
+  readonly createdBy?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly signal?: AbortSignal;
+}
+
+/** Cursor-paginated, ownership-scoped feedback query. */
+export interface RunFeedbackQuery extends PersistenceQuery, OwnershipScope {
+  readonly runId?: string;
+  readonly sessionId?: string;
+  readonly traceId?: string;
+  readonly rating?: number;
+  readonly scorerId?: string;
+  readonly evaluationId?: string;
+  readonly tag?: string;
+  readonly fromCreatedAt?: string;
+  readonly toCreatedAt?: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface DeleteRunFeedbackInput extends OwnershipScope {
+  readonly id: string;
+  readonly signal?: AbortSignal;
+}
+
+/** Feedback storage seam. Records are append-only; correction uses a new record and deletion is explicit. */
+export interface RunFeedbackStore {
+  append(input: AppendRunFeedbackInput): Promise<RunFeedbackRecord>;
+  query(query: RunFeedbackQuery): Promise<PersistencePage<RunFeedbackRecord>>;
+  delete(input: DeleteRunFeedbackInput): Promise<boolean>;
+}
 
 /** Stored agent definition version. Does not include provider credentials/resolvers/provider instances. */
 export interface AgentDefinitionRecord extends OwnershipScope {
@@ -1189,6 +1281,9 @@ export interface UsageQuery extends PersistenceQuery, OwnershipScope {
   readonly sessionId?: string;
   readonly runId?: string;
   readonly entryId?: string;
+  readonly scope?: UsageScope;
+  readonly turn?: number;
+  readonly attempt?: number;
   readonly fromRecordedAt?: string;
   readonly toRecordedAt?: string;
 }
@@ -1229,6 +1324,8 @@ export interface ProductionPersistenceStore {
   readonly checkpoints?: CheckpointStore;
   /** Optional atomic distributed lease capability for coordinators and workers. */
   readonly leases?: LeaseStore;
+  /** Optional immutable run/trace feedback storage capability. */
+  readonly feedback?: RunFeedbackStore;
   querySessions(query: SessionQuery): Promise<PersistencePage<SessionRecord>>;
   queryBranches(query: BranchQuery): Promise<PersistencePage<BranchRecord>>;
   queryEntries(query: SessionEntryQuery): Promise<PersistencePage<SessionEntry>>;

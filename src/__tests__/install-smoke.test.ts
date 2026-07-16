@@ -24,6 +24,7 @@ const packages = [
   { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
   { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
   { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
+  { dir: "packages/provider-ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
   { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
@@ -35,6 +36,11 @@ const packages = [
   { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
   { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
   { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
+  { dir: "packages/evals", name: "@arnilo/prism-evals" },
+  { dir: "packages/memory", name: "@arnilo/prism-memory" },
+  { dir: "packages/rag", name: "@arnilo/prism-rag" },
+  { dir: "packages/server", name: "@arnilo/prism-server" },
+  { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
   { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
@@ -75,7 +81,7 @@ function run(cmd: string, args: string[], cwd: string) {
 const staging = mkdtempSync(join(tmpdir(), "prism-smoke-stage-"));
 const consumer = mkdtempSync(join(tmpdir(), "prism-smoke-consumer-"));
 
-const result = { installStatus: -1, smokeStatus: -1, integrationStatus: -1, smokeOut: "", integrationOut: "", junk: [] as string[], tarballNames: [] as string[] };
+const result = { installStatus: -1, smokeStatus: -1, integrationStatus: -1, compositionStatus: -1, smokeOut: "", integrationOut: "", compositionOut: "", junk: [] as string[], secretFindings: [] as string[], tarballNames: [] as string[] };
 
 before(() => {
   // 1. Pack core + every first-party package into the staging dir.
@@ -224,15 +230,134 @@ console.log("PACKED INTEGRATION OK");
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
+  // 5. Compose every 0.0.5 optional capability family from packed public imports.
+  writeFileSync(join(consumer, "composition.mjs"), `
+import assert from "node:assert/strict";
+import {
+  createAgent, createMemoryCheckpointStore, createMemoryLeaseStore, createMemoryRunFeedbackStore,
+  createMockProvider, providerDone, providerTextDelta,
+} from "@arnilo/prism";
+import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
+import { appendEvaluationFeedback, createMemoryEvaluationStore, defineScorer, scoreRun } from "@arnilo/prism-evals";
+import { createHashEmbedder, createMemory, createMemoryVectorStore } from "@arnilo/prism-memory";
+import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-rag";
+import {
+  createMemoryWorkflowCheckpoints, createWorkflowCheckpoints, createWorkflowCoordinator, createWorkflowSchedules,
+  defineWorkflow, functionNode, replayWorkflow, resumeWorkflow, runWorkflow, suspend,
+} from "@arnilo/prism-workflows";
+import { createPrismHandler } from "@arnilo/prism-server";
+import { createPrismMcpServer } from "@arnilo/prism-mcp";
+import { createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-supervisor";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+
+const ownership = { tenantId: "packed", userId: "operator" };
+const fakeModel = {
+  specificationVersion: "v4", provider: "fake", modelId: "packed", supportedUrls: {},
+  async doGenerate() { throw new Error("stream only"); },
+  async doStream() { return { stream: new ReadableStream({ start(controller) {
+    controller.enqueue({ type: "text-delta", id: "t1", delta: "packed-result" });
+    controller.enqueue({ type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: {
+      inputTokens: { total: 1, noCache: 1 }, outputTokens: { total: 1, text: 1 },
+    } });
+    controller.close();
+  } }) }; },
+};
+const aiProvider = createAiSdkProvider({ model: fakeModel });
+const aiAgent = createAgent({ provider: aiProvider, model: { provider: aiProvider.id, model: "packed" } });
+const streamed = [];
+for await (const event of aiAgent.createSession().stream("stream")) streamed.push(event.type);
+const runResult = await aiAgent.createSession().run("run");
+assert.equal(runResult.text, "packed-result");
+assert.ok(streamed.includes("message_delta"));
+
+const embedder = createHashEmbedder({ dimensions: 16 });
+const memory = createMemory({ tenantId: "packed", resourceId: "user", threadId: "thread", embedder });
+await memory.updateWorking({ preference: "short" });
+await memory.remember({ entries: [{ id: "memory-1", text: "prefers short answers", sequence: 1 }] }, { wait: true });
+assert.equal((await memory.getWorking()).value.preference, "short");
+assert.equal((await memory.recall("short", { topK: 1 })).hits.length, 1);
+const vectors = createMemoryVectorStore();
+const ragScope = { tenantId: "packed", resourceId: "docs", corpusId: "guide" };
+await indexChunks({ chunks: chunkMarkdown("# Approval\\n\\nResume rechecks policy.", { sourceId: "guide" }), embedder, store: vectors, scope: ragScope });
+const rag = await retrieveContext("approval policy", { embedder, store: vectors, scope: ragScope });
+assert.equal(rag.citations.length, 1);
+
+const evaluations = createMemoryEvaluationStore();
+const [evaluation] = await scoreRun({
+  result: runResult, ownership, store: evaluations,
+  scorers: [defineScorer({ id: "exact", score: ({ result }) => ({ score: result.text === "packed-result" ? 1 : 0 }) })],
+});
+assert.equal(evaluation.score, 1);
+const feedback = createMemoryRunFeedbackStore({ resolveRun: ({ runId }) => runId === runResult.runId ? { runId, sessionId: runResult.sessionId, ...ownership } : false });
+const linked = await appendEvaluationFeedback({ feedbackStore: feedback, evaluationStore: evaluations, evaluationIds: [evaluation.id], feedback: { id: "feedback-1", runId: runResult.runId, rating: 1, ...ownership } });
+assert.deepEqual(linked.evaluationIds, [evaluation.id]);
+
+const approvalFlow = defineWorkflow({ id: "approval", nodes: {
+  review: functionNode({ execute: (ctx) => ctx.resume === undefined ? suspend({ reason: "approve", data: { operation: "read" } }) : { approved: true } }),
+} });
+const approvalCheckpoints = createMemoryWorkflowCheckpoints();
+const waiting = await runWorkflow(approvalFlow, {}, { checkpoints: approvalCheckpoints, ownership });
+assert.equal(waiting.status, "suspended");
+const approved = await resumeWorkflow(approvalFlow, { runId: waiting.runId }, { checkpoints: approvalCheckpoints, ownership, resume: { decision: "approve", expectedVersion: waiting.version, input: { reviewer: "operator" } } });
+assert.equal(approved.status, "succeeded");
+
+const store = createMemoryCheckpointStore();
+const leases = createMemoryLeaseStore();
+const checkpoints = createWorkflowCheckpoints({ store });
+const scheduledFlow = defineWorkflow({ id: "scheduled", nodes: { done: functionNode({ execute: () => ({ done: true }) }) } });
+const schedules = createWorkflowSchedules({ store, leases, checkpoints, workflows: { scheduled: scheduledFlow }, ownership, ownerId: "packed-scheduler" });
+await schedules.create({ id: "once", workflowId: "scheduled", nextRunAt: "2026-01-01T00:00:00.000Z", input: {} });
+await schedules.pollOnce({ now: new Date("2026-01-02T00:00:00.000Z") });
+const coordinator = createWorkflowCoordinator({ coordinatorId: "packed-worker", workflows: { scheduled: scheduledFlow }, checkpoints, leases, ownership });
+await coordinator.pollOnce();
+while (coordinator.activeRuns) await new Promise((resolve) => setTimeout(resolve, 1));
+const schedule = await schedules.get("once");
+assert.ok(schedule.lastRunId);
+const replay = await replayWorkflow(scheduledFlow, { sourceRunId: schedule.lastRunId, fromNodeId: "done" }, { checkpoints, ownership });
+assert.equal(replay.lineage.sourceRunId, schedule.lastRunId);
+
+const servedAgent = () => createAgent({ model: { provider: "mock", model: "served" }, provider: createMockProvider([providerTextDelta("served"), providerDone()]) });
+const handler = createPrismHandler({ agents: { demo: servedAgent() }, authorize: () => ({ ownership }) });
+const served = await handler(new Request("https://packed.test/prism/agents/demo/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "hello" }) }));
+assert.equal(served.status, 200);
+assert.equal((await served.json()).text, "served");
+
+const mcpServer = createPrismMcpServer({ tools: [{ name: "echo", parameters: { type: "object" }, execute: (args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo", value: args }) }], authorize: () => ({ allowed: true, ownership }) });
+const mcpClient = new Client({ name: "packed", version: "1" }, { capabilities: {} });
+const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+await mcpServer.connect(serverTransport); await mcpClient.connect(clientTransport);
+assert.equal((await mcpClient.callTool({ name: "echo", arguments: { ok: true } })).isError, false);
+await mcpClient.close(); await mcpServer.close();
+
+const supervisor = createSupervisor({ ownership, children: { child: { createAgent: servedAgent } } });
+assert.equal((await supervisor.delegate({ childId: "child", input: "hello" })).text, "served");
+const endpoint = "https://packed-agent.test/a2a/v1";
+const card = { name: "Packed", description: "Packed test agent", supportedInterfaces: [{ url: endpoint, protocolBinding: "JSONRPC", protocolVersion: "1.0" }], version: "1", capabilities: { streaming: false }, defaultInputModes: ["text/plain"], defaultOutputModes: ["text/plain"], skills: [] };
+const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: () => servedAgent().createSession() }, authorize: () => ({ ownership }) });
+const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
+assert.equal((await a2a.send("hello")).text, "served");
+console.log("PACKED 0.0.5 COMPOSITION OK");
+`);
+  const composition = run("node", ["composition.mjs"], consumer);
+  result.compositionStatus = composition.status;
+  result.compositionOut = composition.stdout + composition.stderr;
+
+  // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
   // Third-party transitive deps (e.g. `diff`) may ship their own maps; we only gate Prism packages.
   const nodeModules = join(consumer, "node_modules");
   for (const file of walkFiles(nodeModules)) {
     const rel = file.slice(nodeModules.length + 1);
     if (!rel.startsWith("@arnilo/prism")) continue;
-    if (rel.includes("__tests__") || rel.endsWith(".map")) {
-      result.junk.push(rel);
-    }
+    if (rel.includes("__tests__") || rel.endsWith(".map")) result.junk.push(rel);
+    const text = readFileSync(file).toString("utf8");
+    const secretPatterns = [
+      new RegExp(["-----BEGIN", "PRIVATE KEY-----"].join(" ")),
+      /sk-[A-Za-z0-9]{32,}/,
+      /npm_[A-Za-z0-9]{32,}/,
+      /ghp_[A-Za-z0-9]{32,}/,
+    ];
+    if (secretPatterns.some((pattern) => pattern.test(text))) result.secretFindings.push(rel);
   }
 });
 
@@ -254,20 +379,26 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("installed packages contain no test artifacts or source maps", () => {
-    assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
+  it("packed 0.0.5 optional capabilities compose through public imports", () => {
+    assert.equal(result.compositionStatus, 0, result.compositionOut);
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.4.tgz.
+  it("installed packages contain no test artifacts, source maps, or real-looking secrets", () => {
+    assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
+    assert.deepEqual(result.secretFindings, [], `secret-like value leaked into installed packages: ${result.secretFindings.join(", ")}`);
+    assert.equal((result.integrationOut + result.compositionOut).includes("packed-integration-secret"), false, "canary leaked into packed journey output");
+  });
+
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.5.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.0.4.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.0.5.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.0.4.tgz"),
-      `expected 'arnilo-prism-0.0.4.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.0.5.tgz"),
+      `expected 'arnilo-prism-0.0.5.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.0.4.tgz", "arnilo-prism-compaction-0.0.4.tgz", "arnilo-prism-all-0.0.4.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.0.5.tgz", "arnilo-prism-compaction-0.0.5.tgz", "arnilo-prism-all-0.0.5.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

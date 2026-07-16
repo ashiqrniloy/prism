@@ -3,6 +3,10 @@ import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import {
   SessionAppendConflictError,
+  prepareRunFeedback,
+  requireRunFeedbackOwnership,
+  runFeedbackPageLimit,
+  RunFeedbackError,
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
@@ -13,6 +17,9 @@ import {
   type PersistencePage,
   type ProductionPersistenceStore,
   type RetentionPolicyQuery,
+  type RunFeedbackQuery,
+  type RunFeedbackRecord,
+  type RunFeedbackStore,
   type RunLedger,
   type RunQuery,
   type RunRecord,
@@ -64,6 +71,7 @@ export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPe
   readonly name: "sqlite";
   readonly checkpoints: CheckpointStore;
   readonly leases: LeaseStore;
+  readonly feedback: RunFeedbackStore;
   readonly metadata: Readonly<{
     readonly kind: "sqlite";
     readonly multiProcess: true;
@@ -109,6 +117,12 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
   const listEntries = db.prepare(
     `SELECT * FROM prism_session_entries WHERE session_id = ? ORDER BY rowid ASC`,
   );
+  const insertFeedback = db.prepare(
+    `INSERT INTO prism_run_feedback (
+      id, run_id, session_id, trace_id, rating, comment, tags, scorer_ids, evaluation_ids,
+      created_at, created_by, tenant_id, account_id, user_id, metadata
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
   const upsertRun = db.prepare(
     `INSERT INTO prism_runs (
       id, session_id, branch_id, agent_definition_id, agent_definition_version,
@@ -143,15 +157,70 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
   );
   const insertUsage = db.prepare(
     `INSERT INTO prism_usage (
-      id, session_id, run_id, entry_id, usage, recorded_at,
+      id, session_id, run_id, entry_id, scope, turn, attempt, usage, recorded_at,
       tenant_id, account_id, user_id, metadata
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
+
+  const feedback: RunFeedbackStore = {
+    async append(input) {
+      if (db.prepare("SELECT 1 FROM prism_run_feedback WHERE id = ?").get(input.id)) {
+        throw new RunFeedbackError("Duplicate feedback id", "ERR_PRISM_RUN_FEEDBACK_DUPLICATE");
+      }
+      const record = await prepareRunFeedback(input, {
+        redactor: options.feedbackRedactor,
+        resolveRun: ({ runId, ownership }) => {
+          const row = db.prepare(
+            "SELECT id, session_id, tenant_id, account_id, user_id FROM prism_runs WHERE id = ? AND tenant_id = ? AND account_id IS ? AND user_id IS ? LIMIT 1",
+          ).get(runId, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null) as Record<string, unknown> | undefined;
+          return row ? {
+            runId: String(row.id),
+            sessionId: String(row.session_id),
+            tenantId: String(row.tenant_id),
+            accountId: row.account_id === null ? undefined : String(row.account_id),
+            userId: row.user_id === null ? undefined : String(row.user_id),
+          } : false;
+        },
+      });
+      insertFeedback.run(
+        record.id, record.runId, record.sessionId, record.traceId ?? null, record.rating ?? null,
+        record.comment ?? null, JSON.stringify(record.tags), JSON.stringify(record.scorerIds), JSON.stringify(record.evaluationIds),
+        record.createdAt, record.createdBy ?? null, record.tenantId, record.accountId ?? null, record.userId ?? null,
+        record.metadata === undefined ? null : JSON.stringify(record.metadata),
+      );
+      return record;
+    },
+    async query(query: RunFeedbackQuery) {
+      requireRunFeedbackOwnership(query);
+      query.signal?.throwIfAborted();
+      const filters: string[] = [];
+      const params: unknown[] = [];
+      if (query.accountId === undefined) filters.push("account_id IS NULL");
+      if (query.userId === undefined) filters.push("user_id IS NULL");
+      if (query.runId) { filters.push("run_id = ?"); params.push(query.runId); }
+      if (query.sessionId) { filters.push("session_id = ?"); params.push(query.sessionId); }
+      if (query.traceId) { filters.push("trace_id = ?"); params.push(query.traceId); }
+      if (query.rating !== undefined) { filters.push("rating = ?"); params.push(query.rating); }
+      if (query.scorerId) { filters.push("EXISTS (SELECT 1 FROM json_each(scorer_ids) WHERE value = ?)"); params.push(query.scorerId); }
+      if (query.evaluationId) { filters.push("EXISTS (SELECT 1 FROM json_each(evaluation_ids) WHERE value = ?)"); params.push(query.evaluationId); }
+      if (query.tag) { filters.push("EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)"); params.push(query.tag); }
+      if (query.fromCreatedAt) { filters.push("created_at >= ?"); params.push(query.fromCreatedAt); }
+      if (query.toCreatedAt) { filters.push("created_at <= ?"); params.push(query.toCreatedAt); }
+      return queryTable(db, "prism_run_feedback", { ...query, limit: runFeedbackPageLimit(query.limit) }, filters, mapFeedbackRow, params, "created_at", "id");
+    },
+    async delete(input) {
+      input.signal?.throwIfAborted();
+      const ownership = requireRunFeedbackOwnership(input);
+      return db.prepare("DELETE FROM prism_run_feedback WHERE id = ? AND tenant_id = ? AND account_id IS ? AND user_id IS ?")
+        .run(input.id, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null).changes > 0;
+    },
+  };
 
   const persistence: SqlitePersistence = {
     name: "sqlite",
     checkpoints: createSqliteCheckpointStore(db),
     leases: createSqliteLeaseStore(db),
+    feedback,
     metadata: { kind: "sqlite", multiProcess: true, driver: "better-sqlite3" },
 
     async append(entry: SessionEntry, appendOptions?: SessionAppendOptions): Promise<void> {
@@ -341,6 +410,9 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         row.session_id,
         row.run_id,
         row.entry_id,
+        row.scope,
+        row.turn,
+        row.attempt,
         row.usage,
         row.recorded_at,
         row.tenant_id,
@@ -507,6 +579,18 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         filters.push("run_id = ?");
         params.push(query.runId);
       }
+      if (query.scope) {
+        filters.push("scope = ?");
+        params.push(query.scope);
+      }
+      if (query.turn !== undefined) {
+        filters.push("turn = ?");
+        params.push(query.turn);
+      }
+      if (query.attempt !== undefined) {
+        filters.push("attempt = ?");
+        params.push(query.attempt);
+      }
       return queryTable(db, "prism_usage", query, filters, mapUsageRow, params, "recorded_at", "id");
     },
 
@@ -665,6 +749,37 @@ const mapRunRow = (row: Record<string, unknown>) => rowToRunRecord(row as never)
 const mapEventRow = (row: Record<string, unknown>) => rowToAgentEventRecord(row as never);
 const mapToolCallRow = (row: Record<string, unknown>) => rowToToolCallRecord(row as never);
 const mapUsageRow = (row: Record<string, unknown>) => rowToUsageRecord(row as never);
+const mapFeedbackRow = (row: Record<string, unknown>): RunFeedbackRecord => Object.freeze({
+  id: String(row.id),
+  runId: String(row.run_id),
+  sessionId: String(row.session_id),
+  traceId: row.trace_id === null ? undefined : String(row.trace_id),
+  rating: row.rating === null ? undefined : Number(row.rating),
+  comment: row.comment === null ? undefined : String(row.comment),
+  tags: Object.freeze(parseStringArray(row.tags)),
+  scorerIds: Object.freeze(parseStringArray(row.scorer_ids)),
+  evaluationIds: Object.freeze(parseStringArray(row.evaluation_ids)),
+  createdAt: String(row.created_at),
+  createdBy: row.created_by === null ? undefined : String(row.created_by),
+  tenantId: String(row.tenant_id),
+  accountId: row.account_id === null ? undefined : String(row.account_id),
+  userId: row.user_id === null ? undefined : String(row.user_id),
+  metadata: row.metadata === null ? undefined : deepFreeze(JSON.parse(String(row.metadata)) as Readonly<Record<string, unknown>>),
+});
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function parseStringArray(value: unknown): string[] {
+  const parsed: unknown = JSON.parse(String(value));
+  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) throw new RunFeedbackError("Invalid stored feedback array");
+  return parsed;
+}
 const mapAgentDefinitionRow = rowToAgentDefinitionRecord;
 const mapRetentionRow = rowToRetentionPolicy;
 const mapMigrationRow = rowToMigrationRecord;

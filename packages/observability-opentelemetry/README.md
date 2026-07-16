@@ -36,7 +36,10 @@ Set `enabled: false` or omit both `tracer` and `meter` for a no-op adapter.
 
 - Metadata-only spans: no prompts, tool arguments, or credentials.
 - High-cardinality IDs (`sessionId`, `runId`, `requestId`, `toolCallId`) are span attributes, not metric labels.
-- Metric labels are limited to `provider_id`, `outcome`, `status`, and token `kind`.
+- Metric labels are limited to `provider_id`, `outcome`, `status`, token `kind`, and feedback rating bucket/link presence; comments, tags, and linked IDs never become labels.
+- `handleRunFeedback()` / `handleEvaluation()` add safe scalar metadata to the active run span or a short post-run span.
+- `prism.provider.tokens` records turns and `prism.run.tokens` records aggregates.
+- Run errors and detach close attributable outstanding spans exactly once.
 - Exporter failures are isolated: instrumentation catches errors and forwards them to `onExporterError` without affecting the run.
 
 ## Profile inclusion
