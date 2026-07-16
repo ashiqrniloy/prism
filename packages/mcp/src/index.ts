@@ -13,6 +13,7 @@ export {
 } from "./content.js";
 export { assertValidServerId, defaultMcpNamePrefix, formatMcpToolName } from "./names.js";
 export { createMcpTransport } from "./transport.js";
+export { createPrismMcpServer, createPrismMcpWebHandler } from "./server.js";
 export type {
   AttachMcpToolBridgeOptions,
   ConnectMcpToolsOptions,
@@ -20,6 +21,12 @@ export type {
   McpStreamableHttpTransport,
   McpToolBridge,
   McpTransportConfig,
+  PrismMcpAuthorizationInput,
+  PrismMcpAuthorization,
+  PrismMcpAuthorizer,
+  CreatePrismMcpServerOptions,
+  CreatePrismMcpWebHandlerOptions,
+  PrismMcpWebHandler,
 } from "./types.js";
 export {
   McpBridgeClosedError,

@@ -12,6 +12,11 @@ const apiPages = [
   "docs/agent-loops.md",
   "docs/agent-events.md",
   "docs/observability.md",
+  "docs/evaluations.md",
+  "docs/rag.md",
+  "docs/server.md",
+  "docs/supervisors.md",
+  "docs/a2a.md",
   "docs/structured-output.md",
   "docs/session-stores-and-branching.md",
   "docs/session-stores.md",
@@ -68,6 +73,7 @@ const providerPackagePages: ReadonlyArray<[string, string]> = [
   ["docs/providers/zai.md", "packages/provider-zai/src/index.ts"],
   ["docs/providers/kimi.md", "packages/provider-kimi/src/index.ts"],
   ["docs/providers/neuralwatt.md", "packages/provider-neuralwatt/src/index.ts"],
+  ["docs/providers/ai-sdk.md", "packages/provider-ai-sdk/src/index.ts"],
 ];
 
 function exportedIdentifiers(packageIndex: string): string[] {
@@ -197,17 +203,24 @@ describe("docs", () => {
     }
   });
 
-  it("every publishable package ships current README and 0.0.4 changelog documentation", () => {
+  it("plans index links every immutable numbered plan record", () => {
+    const index = readFileSync("plans/README.md", "utf8");
+    const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
+    assert.equal(plans.length, 67, "numbered plan count drifted");
+    for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
+  });
+
+  it("every publishable package ships current README and 0.0.5 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")));
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 24, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 30, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.4] - 2026-07-14"), `${dir}/CHANGELOG.md missing finalized 0.0.4 section`);
+      assert.ok(changelog.includes("## [0.0.5] - 2026-07-16"), `${dir}/CHANGELOG.md missing finalized 0.0.5 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -534,6 +547,27 @@ describe("docs", () => {
     assert.ok(index.includes("(cli-rpc.md)"));
   });
 
+  it("cli_rpc_docs_cover_prism_init_scaffold", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const cli = readFileSync("docs/cli-rpc.md", "utf8");
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const readme = readFileSync("README.md", "utf8");
+    assert.ok(index.includes("prism init"), "docs/index.md missing prism init");
+    for (const phrase of [
+      "prism init <dir>",
+      "--with-workflows",
+      "--with-evals",
+      "--force",
+      "placeholders only",
+      "templates",
+    ]) {
+      assert.ok(cli.includes(phrase), `docs/cli-rpc.md missing ${phrase}`);
+    }
+    assert.ok(release.includes("templates/init"), "release-and-install.md missing templates/init");
+    assert.ok(release.includes("prism init"), "release-and-install.md missing prism init");
+    assert.ok(readme.includes("prism init"), "README.md missing prism init");
+  });
+
   it("extension_authoring_guide_covers_package_authoring_activation_and_security_boundaries", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const page = readFileSync("docs/extension-authoring.md", "utf8");
@@ -641,8 +675,8 @@ describe("docs", () => {
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
-      "npm run test:postgres --workspace @arnilo/prism-session-store-postgres",
-      "root test:postgres should cover persistence and generic checkpoint PostgreSQL adapters",
+      "npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory",
+      "root test:postgres should cover persistence, checkpoint, and memory PostgreSQL adapters",
     );
 
     for (const phrase of [
@@ -688,12 +722,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.4 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.5 publish handoff"), docs.indexOf("## Extension and configuration notes"));
     for (const phrase of [
       "Decision: GO",
-      "available` for all 24",
-      "git tag -s v0.0.4",
-      "git push origin v0.0.4",
+      "available` for all 30",
+      "git tag -s v0.0.5",
+      "git push origin v0.0.5",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",
@@ -808,24 +842,24 @@ describe("docs", () => {
     }
   });
 
-  it("agent config inert fields are documented as host-owned", () => {
+  it("agent config host-wiring fields stay outside AgentConfig", () => {
     const combined = [
       "docs/agent-session-runtime.md",
       "docs/extensions.md",
       "docs/credentials-and-redaction.md",
       "docs/settings-auth-trust-security.md",
       "docs/public-contracts.md",
+      "docs/migration.md",
     ].map((file) => readFileSync(file, "utf8")).join("\n");
     for (const phrase of [
-      "AgentConfig.extensions",
-      "AgentConfig.settings",
-      "AgentConfig.credentials",
-      "host-owned metadata",
+      "AgentConfig` no longer accepts inert `extensions`",
+      "host-owned outside `AgentConfig`",
       "do not call `settings.get()`",
       "do not call `credentials.resolve()`",
       "does not load extensions or call `Extension.setup()`",
+      "AgentConfig.extensions` / `settings` / `credentials` are removed",
     ]) {
-      assert.ok(combined.includes(phrase), `inert AgentConfig docs missing ${phrase}`);
+      assert.ok(combined.includes(phrase), `host-wiring docs missing ${phrase}`);
     }
   });
 
@@ -1119,12 +1153,12 @@ describe("docs", () => {
     for (const phrase of [
       "fail-closed omitted capabilities",
       "migration-only `activateAllCapabilities`",
-      "host-owned metadata",
       "replace-or-error duplicate policy",
       "`toolNames` fail closed before provider turns",
       "`duplicate: \"error\"` strict mode",
-      "host-owned `AgentConfig.settings`/`credentials`",
-      "avoid eager `AgentConfig.credentials` resolution",
+      "host-owned settings/credentials wiring outside `AgentConfig`",
+      "resolve credentials only at the provider edge",
+      "direct `AgentRunResult`",
     ]) {
       assert.ok(index.includes(phrase), `docs/index.md missing ${phrase}`);
     }
@@ -1145,7 +1179,7 @@ describe("docs", () => {
     ]) {
       assert.ok(readme.includes(pkg), `README.md does not mention ${pkg}`);
     }
-    for (const phrase of ["docs/provider-caching.md", "best-effort explicit cache hints", "best-effort implicit prefix caching", "all 6 provider adapters"]) {
+    for (const phrase of ["docs/provider-caching.md", "best-effort explicit cache hints", "best-effort implicit prefix caching", "all 7 provider adapters"]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
     assert.equal(/guaranteed cache hit|will always cache|cache will hit/i.test(readme), false, "README.md promises cache hits");
@@ -1303,9 +1337,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, seventeen first-party capability packages, and six pure-manifest family/profile packages",
-      "all 6 `@arnilo/prism-provider-*` packages",
-      "All 24 manifests (18 code packages + 6 family/profile packages)",
+      "one core package, twenty-three first-party capability packages, and six pure-manifest family/profile packages",
+      "all seven `@arnilo/prism-provider-*` packages",
+      "All 30 manifests (24 code packages + 6 family/profile packages)",
       "six provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -1876,7 +1910,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 24, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 30, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

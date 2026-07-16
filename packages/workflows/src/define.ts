@@ -1,5 +1,11 @@
 import { WorkflowDefinitionError } from "./errors.js";
-import { DEFAULT_MAX_NODES } from "./limits.js";
+import {
+  DEFAULT_MAX_NODES,
+  HARD_MAX_NESTED_DEPTH,
+  HARD_MAX_REPLAY_DEPTH,
+  HARD_MAX_STATE_BYTES,
+  HARD_MAX_STATE_HISTORY,
+} from "./limits.js";
 import type { WorkflowDefinition, WorkflowLimits, WorkflowNodeDefinition } from "./types.js";
 
 export interface DefineWorkflowInput {
@@ -7,6 +13,7 @@ export interface DefineWorkflowInput {
   readonly nodes: Readonly<Record<string, WorkflowNodeDefinition>>;
   readonly edges?: readonly (readonly [string, string])[];
   readonly limits?: WorkflowLimits;
+  readonly state?: WorkflowDefinition["state"];
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -22,6 +29,7 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
     throw new WorkflowDefinitionError(`Workflow exceeds maxNodes (${nodeIds.length} > ${maxNodes})`);
   }
 
+  validateLimits(input.limits);
   const nodeSet = new Set(nodeIds);
   const edges = input.edges ?? [];
   for (const [from, to] of edges) {
@@ -56,8 +64,29 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
     nodes: Object.freeze({ ...input.nodes }),
     edges: Object.freeze(edges.map(([from, to]) => Object.freeze([from, to] as const))),
     limits: input.limits ? Object.freeze({ ...input.limits }) : undefined,
+    state: input.state ? Object.freeze({
+      ...input.state,
+      initial: input.state.initial ? Object.freeze({ ...input.state.initial }) : undefined,
+      schema: input.state.schema ? Object.freeze({ ...input.state.schema }) : undefined,
+    }) : undefined,
     metadata: input.metadata ? Object.freeze({ ...input.metadata }) : undefined,
   });
+}
+
+function validateLimits(limits?: WorkflowLimits): void {
+  if (!limits) return;
+  const capped: readonly [keyof WorkflowLimits, number][] = [
+    ["maxNestedDepth", HARD_MAX_NESTED_DEPTH],
+    ["maxStateBytes", HARD_MAX_STATE_BYTES],
+    ["maxStateHistory", HARD_MAX_STATE_HISTORY],
+    ["maxReplayDepth", HARD_MAX_REPLAY_DEPTH],
+  ];
+  for (const [name, hardCap] of capped) {
+    const value = limits[name];
+    if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > hardCap)) {
+      throw new WorkflowDefinitionError(`${name} must be a positive safe integer at most ${hardCap}`);
+    }
+  }
 }
 
 function assertAcyclic(

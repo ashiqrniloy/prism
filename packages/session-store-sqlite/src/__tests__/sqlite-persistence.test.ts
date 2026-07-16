@@ -3,10 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { createSecretRedactor } from "@arnilo/prism";
 import {
   assertPersistenceQueryPaginationConforms,
   assertTenantScopedQueryIsolation,
 } from "@arnilo/prism/testing/persistence-schema";
+import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 import { createSqlitePersistence } from "../persistence.js";
@@ -55,12 +57,50 @@ describe("createSqlitePersistence", () => {
     );
   });
 
+  it("persists ownership-scoped run feedback with shared conformance", async () => {
+    const filename = tempDbPath("feedback");
+    const persistence = createSqlitePersistence({ filename });
+    persistence.appendRun({
+      id: "feedback-run-a",
+      sessionId: "feedback-session",
+      startedAt: "2026-01-01T00:00:00Z",
+      tenantId: "feedback-tenant",
+      userId: "feedback-user",
+    });
+    await runFeedbackConformance(() => persistence.feedback);
+    persistence.appendRun({ id: "feedback-run-account", sessionId: "feedback-session", startedAt: "2026-01-01T00:00:00Z", tenantId: "feedback-tenant", accountId: "other-account", userId: "feedback-user" });
+    await persistence.feedback.append({ id: "account-feedback", runId: "feedback-run-account", rating: 1, tenantId: "feedback-tenant", accountId: "other-account", userId: "feedback-user" });
+    persistence.close();
+    const reopened = createSqlitePersistence({ filename, feedbackRedactor: createSecretRedactor(["feedback-canary"]) });
+    await reopened.feedback.append({ id: "redacted", runId: "feedback-run-a", comment: "feedback-canary", tags: ["feedback-canary"], tenantId: "feedback-tenant", userId: "feedback-user" });
+    const stored = await reopened.feedback.query({ tenantId: "feedback-tenant", userId: "feedback-user" });
+    assert.equal(stored.items.length, 2);
+    assert.doesNotMatch(JSON.stringify(stored), /feedback-canary/);
+    assert.equal((await reopened.feedback.query({ tenantId: "feedback-tenant", userId: "other" })).items.length, 0);
+    await assert.rejects(reopened.feedback.append({ id: "missing", runId: "missing", rating: 1, tenantId: "feedback-tenant", userId: "feedback-user" }), /Run not found/);
+    reopened.close();
+  });
+
+  it("filters usage scopes so billing queries cannot mix turn and run totals", async () => {
+    const persistence = createSqlitePersistence({ filename: tempDbPath("usage-scope") });
+    const base = {
+      sessionId: "usage-session",
+      runId: "usage-run",
+      recordedAt: "2026-01-01T00:00:00.000Z",
+      usage: { totalTokens: 8 },
+    } as const;
+    await persistence.appendUsage({ ...base, id: "turn", scope: "provider_turn", turn: 1, attempt: 1 });
+    await persistence.appendUsage({ ...base, id: "total", scope: "run_total" });
+    assert.deepEqual((await persistence.queryUsage({ scope: "provider_turn" })).items.map((row) => row.id), ["turn"]);
+    assert.deepEqual((await persistence.queryUsage({ scope: "run_total" })).items.map((row) => row.id), ["total"]);
+    persistence.close();
+  });
+
   it("applies migrations once and matches shared schema on reopen", async () => {
     const filename = tempDbPath("migrate");
     const first = createSqlitePersistence({ filename });
     const firstMigrations = await first.queryMigrations({});
-    assert.equal(firstMigrations.items.length, 1);
-    assert.equal(firstMigrations.items[0]?.name, "001_init");
+    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback"]);
     first.close();
 
     const reopened = createSqlitePersistence({ filename });

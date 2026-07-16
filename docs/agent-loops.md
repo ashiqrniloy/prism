@@ -108,7 +108,7 @@ Host callback contracts (all generic over host `T`):
 
 ## Outputs / response / events
 
-`AgentLoopStrategy.run(ctx)` returns `Promise<Usage | undefined>` — the last provider usage, handed back to the runtime which emits `agent_finished` with it.
+`AgentLoopStrategy.run(ctx)` returns `Promise<Usage | undefined>` as a fallback for custom loops. Core runtime independently accumulates every usage-bearing provider turn in O(turns), persists scoped turn/run rows, and emits `agent_finished` with the aggregate.
 
 Events during a loop run are the existing `AgentEvent`s (`turn_started`, `message_started`, `message_delta`, `message_finished`, `turn_finished`, tool-execution events when the loop dispatches tools, `error` on real failures). Both built-in loops emit `turn_started` before each provider turn, `message_finished` for every assistant draft, and `turn_finished` after the assistant draft is appended. First-turn input is appended to live history once, matching the already-persisted user message.
 

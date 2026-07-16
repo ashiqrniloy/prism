@@ -104,7 +104,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
             operation: "write",
             paths: [absolutePath],
             risk: "medium",
-            metadata: { bytes: Buffer.byteLength(content, "utf-8"), signal: context.signal },
+            metadata: { bytes: Buffer.byteLength(content, "utf-8"), sessionId: context.sessionId, runId: context.runId, signal: context.signal },
           },
           toolCallId,
           "write",

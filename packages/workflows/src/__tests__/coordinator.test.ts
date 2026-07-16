@@ -9,6 +9,8 @@ import {
   enqueueWorkflow,
   functionNode,
   getWorkflowRun,
+  runWorkflow,
+  suspend,
 } from "../index.js";
 
 function workflow(id: string, execute: () => unknown | Promise<unknown>) {
@@ -58,6 +60,22 @@ describe("distributed workflow coordinator", () => {
     await waitFor(async () => coordinator.activeRuns === 0 && (await statuses()).filter((status) => status === "succeeded").length === 2);
     assert.equal(await coordinator.pollOnce(), 1);
     await waitFor(async () => (await statuses()).every((status) => status === "succeeded"));
+  });
+
+  it("does not poll or claim suspended runs", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const leases = createMemoryLeaseStore();
+    const definition = workflow("await-human", () => suspend({ reason: "review" }));
+    const result = await runWorkflow(definition, null, { checkpoints, runId: "await-human-1" });
+    assert.equal(result.status, "suspended");
+    const coordinator = createWorkflowCoordinator({
+      coordinatorId: "idle-worker",
+      workflows: { [definition.id]: definition },
+      checkpoints,
+      leases,
+    });
+    assert.equal(await coordinator.pollOnce(), 0);
+    assert.equal(coordinator.activeRuns, 0);
   });
 
   it("persists cross-process cancellation requests", async () => {

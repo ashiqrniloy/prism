@@ -26,9 +26,12 @@ Start from explicit host inputs. Do not let runtime code discover security state
 | Tool allow-list | active tools for this agent/session/run | `createToolRegistry`, `filterTools()`, `dispatchToolCall()` |
 | Tool argument rules | host validator | `AgentConfig.validator`, `RunOptions.validate`, `ToolValidator` |
 | Coding execution policy | path/command approval adapter | `ExecutionPolicy`, `@arnilo/prism-coding-security` |
+| Remote media policy | public/default pinned DNS or explicit trusted transport | `SsrfPolicy`, `resolveMediaContentBlock()` |
 | Durable history | host database adapter | `SessionStore`, `assertSessionStoreConforms()` |
 | Durable audit | host ledger adapter | `RunLedger`, `redactRunLedgerRecord()` |
 | Extensions | explicit package imports only | `createExtensionKernel`, `ExtensionAPI` |
+| Remote agent/workflow API | host authentication + ownership mapping | `@arnilo/prism-server`, `createPrismHandler()` |
+| MCP server exposure | host MCP auth + selected capability list | `createPrismMcpServer()`, `createPrismMcpWebHandler()` |
 
 ## Outputs / response / events
 
@@ -105,7 +108,7 @@ Wire those values where they matter: provider adapters receive the resolved cred
 
 ## Extension and configuration notes
 
-- Keep security state explicit. `AgentConfig.settings` and `AgentConfig.credentials` are host-owned metadata; `createAgent()` and `session.run()` do not automatically call `settings.get()` or `credentials.resolve()`.
+- Keep security state explicit. Settings and credentials are host-owned outside `AgentConfig`; `createAgent()` and `session.run()` do not automatically call `settings.get()` or `credentials.resolve()`.
 - Resolve credentials at the provider/request edge, as late as possible. Do not put resolved credentials in configs, manifests, registries, prompts, messages, events, session entries, run ledgers, idempotency keys, cache keys, or logs.
 - Use `createExplicitCredentialResolver()` to document source order such as runtime override → stored credential → caller-supplied env object → fallback.
 - Use `createEnvCredentialResolver()` only with an object the host passes in. Prism does not read `process.env` for credentials.
@@ -122,8 +125,10 @@ Wire those values where they matter: provider adapters receive the resolved cred
 - Redaction is exact known-secret replacement only. It is not arbitrary secret detection, entropy scanning, or DLP.
 - Known secrets must be passed into redactors before data is emitted or persisted. Redact again in host adapters if they transform records after Prism redaction.
 - Tool `parameters` metadata is not validated by default. Add a `ToolValidator`, use `createToolParameterValidator()` with a schema adapter, or install `@arnilo/prism-tool-validator-json-schema` before side effects.
-- MCP tools from `@arnilo/prism-mcp` are untrusted remote servers. Configure stdio commands and HTTP URLs explicitly; bound output with `maxResultBytes`; register prefixed tools only after trust review. See [MCP client bridge](mcp-tools.md).
-- Coding tools from `@arnilo/prism-coding-agent` accept an optional `ExecutionPolicy` checked inside each tool before side effects. Use `@arnilo/prism-coding-security` for path roots, command rules, and approval caching. Prism does not provide OS sandboxing unless the host supplies a sandbox adapter.
+- MCP client tools from `@arnilo/prism-mcp` are untrusted remote servers. Configure stdio commands and HTTP URLs explicitly; bound output with `maxResultBytes`; register prefixed tools only after trust review. MCP server direction exposes only passed tools/commands, requires per-call `authorize`, and retains `PermissionPolicy`/`ToolValidator` gates for tools. Its web handler needs host `resolveAuthInfo`, TLS, rate limiting, and exact host/origin policy. See [MCP client/server exposure](mcp-tools.md).
+- `@arnilo/prism-server` exposes no agent/workflow by default and requires `authorize()` for every matched operation. Derive non-empty ownership from validated host identity, never request JSON. Configure exact host/origin allow-lists where needed, wire redaction before execution, retain tool/workflow policy checks, and adapt the Web handler behind host TLS/rate limits. Disconnect abort is default; persistent reconnect/status belongs to durable workflow checkpoints, not an invented in-memory agent result cache.
+- Coding tools from `@arnilo/prism-coding-agent` accept an optional `ExecutionPolicy` checked inside each tool before side effects; shared policy propagation includes `createReadOnlyTools()`. Use `@arnilo/prism-coding-security` for path roots, command rules, and identity-scoped approval caching. Caching defaults to none; missing run/session identity never falls back to a global cache. Prism does not provide OS sandboxing unless the host supplies a sandbox adapter.
+- Default remote-media loading resolves every DNS answer, rejects the hostname if any address is non-public, and pins one validated address through the request. Explicit `allowedHostnames` can trust private destinations. A host-supplied `fetch` owns DNS/rebinding/proxy/redirect safety; a custom `requestUrl` must connect to its supplied validated address.
 - Permission checks happen before tool validation and before `tool.execute()`. Middleware cannot grant permission by renaming a tool.
 - Session stores and ledgers receive redacted values when a redactor is active, but durable storage remains host-owned. Enforce tenant/account/user ownership and retention in the database layer.
 - Provider-owned auth/content/session/cache/security headers win over caller headers in adapters that merge headers.
@@ -140,8 +145,20 @@ Wire those values where they matter: provider adapters receive the resolved cred
 
 PostgreSQL TLS/network policy, MCP endpoint allow-listing, provider base URLs, OS keychain availability, process sandboxing, workflow tenant identity, and ANSI/control-sequence sanitization in any host terminal renderer remain host boundaries. Prism 0.0.4 ships JSON-line RPC, not an interactive TUI; hosts must render untrusted model/tool text safely. Credential-gated PostgreSQL/provider/keychain tests are separate operator/CI gates, not silently replaced by mocks.
 
+## Supervisor and A2A boundaries
+
+- Register children explicitly. AND-compose parent/child/hook permissions; never let a delegation hook replace broader parent policy.
+- Build each child's context/memory with supervisor-provided `resourceId`/`threadId`; resolve provider credentials inside that child factory.
+- Keep depth, active children, input, turn/tool/token, timeout, and queue ceilings finite; propagate abort through nested calls.
+- Expose A2A only behind per-request authentication/authorization, TLS, edge rate limits, and replay policy. Public card discovery grants no invoke access.
+- Remote A2A endpoints/card URLs require exact HTTPS origin allow-lists and redirect rejection. Pin ES256 card keys/expiry; never auto-fetch untrusted `jku`.
+- Treat cards, task status, errors, artifacts, and SSE frames as untrusted bounded input and redact before logs/hooks/events.
+
 ## Related APIs
 
+- [Web-standard server handler](server.md): remote agent/workflow route, ownership, limits, abort, and deployment boundary.
+- [Supervisor delegation](supervisors.md): local child permission/memory/budget boundary.
+- [A2A interoperability](a2a.md): remote card/auth/origin/signature boundary.
 - [Settings, auth, trust, and security controls](settings-auth-trust-security.md): low-level helpers and boundary hardening table.
 - [Credentials and redaction](credentials-and-redaction.md): credential resolver order, caller-supplied env objects, OAuth refresh, exact redaction, and no persistent secret store.
 - [Tools](tools.md): active tool registry, allow/deny filters, permission order, validator order, blocked events, and no sandbox.

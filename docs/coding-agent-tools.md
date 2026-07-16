@@ -222,13 +222,13 @@ const remoteWrite = createWriteTool("/repo", {
 
 - **Pluggable operation backends.** Every tool accepts an `operations` seam so a host can delegate to a remote system (e.g. SSH) while keeping the tool's matching/serialization behavior: `BashOperations` (`shell`), `ReadOperations` (`read`), `WriteOperations` (`write`), `EditOperations` (`edit`).
 - **Per-tool options.** `ShellToolOptions` (`shellPath`, `commandPrefix`, `maxLines`, `maxBytes`, `tempFilePrefix`, `operations`, `spawnHook`, `executionPolicy`); `ReadToolOptions` (`operations`, `maxImageBytes`, `transformImage`, `maxLines`, `maxBytes`, `executionPolicy`; `autoResizeImages` deprecated); `WriteToolOptions` (`operations`, `executionPolicy`); `EditToolOptions` (`operations`, `executionPolicy`).
-- **Aggregator options.** `ToolsOptions` (`{ shell?, read?, write?, edit? }`) threads each sub-object to the matching tool.
+- **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override.
 - **`ToolsOptions`** and the per-tool option types are exported from the package barrel for host configuration.
 - No auto-discovery or manifest registration: import and register explicitly. This package registers no extensions and owns no globals (the mutation queue is a process-wide per-path map — see `ponytail:` note in the source).
 
 ## Security and performance notes
 
-- **Host shell/filesystem access.** These tools run real commands and read/write real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).
+- **Host shell/filesystem access.** These tools run real commands and read/write real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. Shared `executionPolicy` applies to both full and read-only aggregators before filesystem/process side effects. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).
 - **Non-zero exit is not an error.** A failing command is a normal `shell` result (exit code in metadata); only timeout/abort/spawn failures are error results. Do not assume `error == undefined` means the command succeeded.
 - **Bounded output.** `shell`/`read` accumulate output into a rolling tail bounded by `maxLines`/`maxBytes`; oversized output spills to a temp file (`fullOutputPath`), so memory use is bounded regardless of command output size.
 - **Per-path serialization.** Concurrent mutations to the same file serialize; concurrent mutations to different files do not block each other. The queue is a process-wide map — across sessions in one process, same-path writes still serialize (upgrade path: scope per registry if throughput matters).

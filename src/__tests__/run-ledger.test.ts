@@ -7,7 +7,6 @@ import {
   providerDone,
   providerTextDelta,
   providerToolCall,
-  providerUsage,
   redactRunLedgerRecord,
 } from "../index.js";
 import { createMockProvider } from "../index.js";
@@ -119,6 +118,7 @@ describe("RunLedger contract and redaction", () => {
       id: "usage_1",
       sessionId: "s1",
       runId: "run_1",
+      scope: "run_total",
       usage: { inputTokens: 1, currency: "secret-token" },
       recordedAt: "2024-01-01T00:00:00Z",
       tenantId: "t1",
@@ -244,19 +244,34 @@ describe("RunLedger runtime wiring", () => {
     assert.equal(blocked?.result?.error?.message, "blocked by test validator");
   });
 
-  it("appends usage records from provider usage events and final loop usage", async () => {
+  it("persists one provider row per turn and one aggregate run total", async () => {
     const { ledger, usage } = createMemoryLedger();
+    let calls = 0;
     const agent = createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerUsage({ inputTokens: 3, outputTokens: 7 }), providerDone({ inputTokens: 3, outputTokens: 7, totalTokens: 10 })]),
+      provider: {
+        id: "mock",
+        async *generate() {
+          calls += 1;
+          if (calls === 1) yield providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: {} });
+          else yield providerTextDelta("done");
+          yield providerDone(calls === 1
+            ? { inputTokens: 10, outputTokens: 1, totalTokens: 11 }
+            : { inputTokens: 20, outputTokens: 2, totalTokens: 22 });
+        },
+      },
+      tools: createToolRegistry([{ name: "echo", execute: () => ({ toolCallId: "call_1", name: "echo" }) }]),
       runLedger: ledger,
     });
     const session = agent.createSession({ id: "s4" });
 
-    await session.run("count tokens");
+    await session.run("count tokens", { maxToolRounds: 1 });
 
-    assert.ok(usage.length >= 1, "expected at least one usage record");
-    assert.ok(usage.some((u) => u.usage.inputTokens === 3 && u.usage.outputTokens === 7));
+    assert.deepEqual(usage.map(({ scope, turn, attempt, usage }) => ({ scope, turn, attempt, total: usage.totalTokens })), [
+      { scope: "provider_turn", turn: 1, attempt: 1, total: 11 },
+      { scope: "provider_turn", turn: 2, attempt: 1, total: 22 },
+      { scope: "run_total", turn: undefined, attempt: undefined, total: 33 },
+    ]);
   });
 
   it("redacts secrets in ledger event and tool-call records", async () => {

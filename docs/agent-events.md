@@ -8,7 +8,7 @@ Events are emitted by the runtime and by loops through `LoopContext.emit`, both 
 
 ## When to use it
 
-Subscribe via `session.subscribe()` whenever a host needs to observe run progress: render streamed assistant text in a UI, react to tool execution, drive observability/telemetry, or audit artifact validation outcomes. Do not parse provider stream events directly for these — `AgentEvent` is the stable, normalized surface across providers and loops.
+Subscribe via `session.stream()` for a single owned run, or `session.subscribe()` when a host needs a long-lived observer across runs: render streamed assistant text in a UI, react to tool execution, drive observability/telemetry, or audit artifact validation outcomes. Do not parse provider stream events directly for these — `AgentEvent` is the stable, normalized surface across providers and loops.
 
 Do not use `AgentEvent` for durable replay (use a `SessionStore`) or for cross-session coordination (the broadcaster is per-session and live-only).
 
@@ -58,7 +58,7 @@ Agent / turn / message events:
 | Variant | Fields |
 | --- | --- |
 | `agent_started` | `sessionId`, `runId` |
-| `agent_finished` | `sessionId`, `runId`, `usage?: Usage` |
+| `agent_finished` | `sessionId`, `runId`, `usage?: Usage` (aggregate of all usage-bearing provider turns) |
 | `turn_started` / `turn_finished` | `sessionId`, `runId`, `turn: number` |
 | `message_started` / `message_finished` | `sessionId`, `runId`, `message: Message` |
 | `message_delta` | `sessionId`, `runId`, `content: ContentBlock` (`tool_call_delta` fragments may appear here for live UI streaming; stored messages use final `tool_call` blocks) |
@@ -173,12 +173,10 @@ const session = createAgent({
   provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
 }).createSession();
 
-for await (const event of session.subscribe()) {
+for await (const event of session.stream("draft", { loop: { strategy: "generate-validate-revise", validator, maxRevisions: 3 } })) {
   if (event.type === "artifact_finished") console.log("artifact ok", event.attempt);
   if (event.type === "artifact_failed") console.log("artifact exhausted", event.attempt, event.result.errors);
 }
-
-await session.run("draft", { loop: { strategy: "generate-validate-revise", validator, maxRevisions: 3 } });
 ```
 
 ## Extension and configuration notes
@@ -199,7 +197,7 @@ await session.run("draft", { loop: { strategy: "generate-validate-revise", valid
 - Runtime events contain messages/content only; do not put secrets in prompts, metadata, provider events, session entries, tool results, or artifact validation payloads.
 
 ## Related APIs
-- [Agent/session runtime](agent-session-runtime.md): `session.subscribe()` and the live event broadcaster.
+- [Agent/session runtime](agent-session-runtime.md): `session.stream()`, `session.subscribe()`, and the live event broadcaster.
 - [Agent loops](agent-loops.md): `singleShotLoop` and `generateValidateReviseLoop` emit the artifact events.
 - [Structured output](structured-output.md): `ArtifactValidation` shape threaded through parser/validator/repairer.
 - [Public contracts](public-contracts.md): full `AgentEvent` union and `ArtifactValidation` contract.

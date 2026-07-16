@@ -1,3 +1,7 @@
+import { lookup as dnsLookup } from "node:dns/promises";
+import { request as httpRequest, type IncomingMessage } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { isIP } from "node:net";
 import type {
   ContentBlock,
   ImageContent,
@@ -81,13 +85,37 @@ export interface MediaMimePolicy {
   readonly strictMagicValidation?: boolean;
 }
 
+export interface MediaHostAddress {
+  readonly address: string;
+  readonly family: 4 | 6;
+}
+
+export type MediaHostnameResolver = (
+  hostname: string,
+  signal: AbortSignal,
+) => Promise<readonly MediaHostAddress[]>;
+
+export interface MediaUrlRequest {
+  readonly url: URL;
+  readonly address: MediaHostAddress;
+  readonly maxBytes: number;
+  readonly signal: AbortSignal;
+}
+
+export type MediaUrlRequester = (request: MediaUrlRequest) => Promise<Uint8Array>;
+
 export interface ResolveMediaContentOptions {
   readonly bounds?: MediaContentBounds;
   readonly ssrf?: SsrfPolicy;
   readonly mime?: MediaMimePolicy;
   readonly loader?: ResourceLoader;
   readonly loadContext?: ResourceLoadContext;
+  /** Trusted custom transport; the host owns DNS resolution and rebinding protection. */
   readonly fetch?: typeof globalThis.fetch;
+  /** Test/custom resolver used only with the default or `requestUrl` pinned transport. */
+  readonly resolveHostname?: MediaHostnameResolver;
+  /** Trusted custom transport that must connect to `request.address`, not resolve `request.url` again. */
+  readonly requestUrl?: MediaUrlRequester;
   readonly signal?: AbortSignal;
 }
 
@@ -223,9 +251,9 @@ export function assertSsrfAllowedUrl(url: string, policy: SsrfPolicy = {}): void
     throw new MediaContentError("ssrf_denied", "Media URL must not embed credentials");
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  const hostname = normalizeHostname(parsed.hostname);
   if (policy.allowedHostnames?.length) {
-    if (!policy.allowedHostnames.some((allowed) => hostname === allowed.toLowerCase())) {
+    if (!policy.allowedHostnames.some((allowed) => hostname === normalizeHostname(allowed))) {
       throw new MediaContentError("ssrf_denied", `Media URL host ${hostname} is not allow-listed`);
     }
     return;
@@ -285,11 +313,36 @@ export async function resolveMediaContentBlock(
   block: MediaContentBlock,
   options: ResolveMediaContentOptions = {},
 ): Promise<ResolvedMediaContent> {
+  return (await resolveMediaContentBlocks([block], options))[0]!;
+}
+
+/** Resolve and validate one complete media request before provider serialization/upload. */
+export async function resolveMediaContentBlocks(
+  blocks: readonly MediaContentBlock[],
+  options: ResolveMediaContentOptions = {},
+): Promise<readonly ResolvedMediaContent[]> {
+  const bounds = options.bounds ?? {};
+  const maxRequestBytes = bounds.maxRequestBytes ?? DEFAULT_MAX_MEDIA_REQUEST_BYTES;
+  assertMediaBlocksWithinBounds(blocks, bounds);
+  const resolved: ResolvedMediaContent[] = [];
+  let requestBytes = 0;
+  for (const block of blocks) {
+    const item = await resolveMediaBlock(block, options);
+    requestBytes += item.bytes.byteLength;
+    if (requestBytes > maxRequestBytes) {
+      throw new MediaContentError("request_too_large", `Media request budget exceeded ${maxRequestBytes} bytes`);
+    }
+    resolved.push(item);
+  }
+  return resolved;
+}
+
+async function resolveMediaBlock(
+  block: MediaContentBlock,
+  options: ResolveMediaContentOptions,
+): Promise<ResolvedMediaContent> {
   const bounds = options.bounds ?? {};
   const maxItemBytes = bounds.maxItemBytes ?? DEFAULT_MAX_MEDIA_ITEM_BYTES;
-  const maxAudioDurationMs = bounds.maxAudioDurationMs ?? DEFAULT_MAX_AUDIO_DURATION_MS;
-  assertMediaBlocksWithinBounds([block], bounds);
-
   const source = mediaSourceKind(block);
   let bytes: Uint8Array;
   let mediaType = declaredMediaType(block);
@@ -315,6 +368,8 @@ export async function resolveMediaContentBlock(
         timeoutMs: bounds.fetchTimeoutMs ?? DEFAULT_MEDIA_FETCH_TIMEOUT_MS,
         ssrf: options.ssrf,
         fetch: options.fetch,
+        resolveHostname: options.resolveHostname,
+        requestUrl: options.requestUrl,
         signal: options.signal,
       },
     );
@@ -327,9 +382,6 @@ export async function resolveMediaContentBlock(
   }
 
   const durationMs = block.type === "audio" ? block.durationMs : undefined;
-  if (durationMs !== undefined && durationMs > maxAudioDurationMs) {
-    throw new MediaContentError("audio_too_long", `Audio duration ${durationMs}ms exceeded ${maxAudioDurationMs}ms`);
-  }
 
   return {
     mediaType,
@@ -438,16 +490,13 @@ interface FetchBoundedMediaOptions {
   readonly timeoutMs: number;
   readonly ssrf?: SsrfPolicy;
   readonly fetch?: typeof globalThis.fetch;
+  readonly resolveHostname?: MediaHostnameResolver;
+  readonly requestUrl?: MediaUrlRequester;
   readonly signal?: AbortSignal;
 }
 
 async function fetchBoundedMediaUrl(url: string, options: FetchBoundedMediaOptions): Promise<Uint8Array> {
   assertSsrfAllowedUrl(url, options.ssrf);
-  const fetchFn = options.fetch ?? globalThis.fetch;
-  if (!fetchFn) {
-    throw new MediaContentError("fetch_failed", "No fetch implementation available for media URL resolution");
-  }
-
   const timeoutController = new AbortController();
   const timeout = setTimeout(() => timeoutController.abort(), options.timeoutMs);
   const signal = options.signal
@@ -455,42 +504,22 @@ async function fetchBoundedMediaUrl(url: string, options: FetchBoundedMediaOptio
     : timeoutController.signal;
 
   try {
-    const response = await fetchFn(url, { signal, redirect: "error" });
-    if (!response.ok) {
-      throw new MediaContentError("fetch_failed", `Media fetch failed with status ${response.status}`);
-    }
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new MediaContentError("fetch_failed", "Media fetch returned no response body");
-    }
+    if (options.fetch) return await readFetchResponse(await options.fetch(url, { signal, redirect: "error" }), options.maxBytes);
 
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (!value) continue;
-        total += value.byteLength;
-        if (total > options.maxBytes) {
-          throw new MediaContentError("item_too_large", `Fetched media exceeded ${options.maxBytes} bytes`);
-        }
-        chunks.push(value);
-      }
-    } finally {
-      try {
-        await reader.cancel();
-      } catch {
-        // Reader may already be closed after abort/complete.
-      }
-      reader.releaseLock();
-    }
-
-    const bytes = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
+    const parsed = new URL(url);
+    const hostname = normalizeHostname(parsed.hostname);
+    const family = isIP(hostname);
+    const address = family
+      ? { address: hostname, family: family as 4 | 6 }
+      : await resolvePublicAddress(hostname, options.resolveHostname ?? defaultMediaHostnameResolver, signal, options.ssrf);
+    const bytes = await (options.requestUrl ?? requestPinnedMediaUrl)({
+      url: parsed,
+      address,
+      maxBytes: options.maxBytes,
+      signal,
+    });
+    if (bytes.byteLength > options.maxBytes) {
+      throw new MediaContentError("item_too_large", `Fetched media exceeded ${options.maxBytes} bytes`);
     }
     return bytes;
   } catch (error) {
@@ -499,13 +528,120 @@ async function fetchBoundedMediaUrl(url: string, options: FetchBoundedMediaOptio
       throw new MediaContentError("fetch_timeout", `Media fetch timed out after ${options.timeoutMs}ms`);
     }
     if (options.signal?.aborted) throw options.signal.reason ?? new Error("Media fetch aborted");
-    throw new MediaContentError(
-      "fetch_failed",
-      error instanceof Error ? error.message : "Media fetch failed",
-    );
+    throw new MediaContentError("fetch_failed", error instanceof Error ? error.message : "Media fetch failed");
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function defaultMediaHostnameResolver(hostname: string): Promise<readonly MediaHostAddress[]> {
+  return dnsLookup(hostname, { all: true, verbatim: true }) as Promise<readonly MediaHostAddress[]>;
+}
+
+async function resolvePublicAddress(
+  hostname: string,
+  resolver: MediaHostnameResolver,
+  signal: AbortSignal,
+  policy: SsrfPolicy | undefined,
+): Promise<MediaHostAddress> {
+  const addresses = await raceAbort(resolver(hostname, signal), signal);
+  if (addresses.length === 0) throw new MediaContentError("fetch_failed", "Media hostname resolved to no addresses");
+  if (addresses.length > 32) throw new MediaContentError("fetch_failed", "Media hostname resolved to too many addresses");
+  if (policy?.denyPrivateHosts !== false && !policy?.allowedHostnames?.length) {
+    if (addresses.some(({ address }) => isBlockedIp(normalizeHostname(address)))) {
+      throw new MediaContentError("ssrf_denied", `Media URL host ${hostname} resolved to a private address`);
+    }
+  }
+  const selected = addresses[0]!;
+  if (isIP(normalizeHostname(selected.address)) !== selected.family) {
+    throw new MediaContentError("fetch_failed", "Media hostname resolver returned an invalid address");
+  }
+  return { address: normalizeHostname(selected.address), family: selected.family };
+}
+
+async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted();
+  return new Promise<T>((resolve, reject) => {
+    const cleanup = () => signal.removeEventListener("abort", onAbort);
+    const onAbort = () => {
+      cleanup();
+      reject(signal.reason);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => { cleanup(); resolve(value); },
+      (error) => { cleanup(); reject(error); },
+    );
+  });
+}
+
+async function readFetchResponse(response: Response, maxBytes: number): Promise<Uint8Array> {
+  if (!response.ok) throw new MediaContentError("fetch_failed", `Media fetch failed with status ${response.status}`);
+  const reader = response.body?.getReader();
+  if (!reader) throw new MediaContentError("fetch_failed", "Media fetch returned no response body");
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > maxBytes) throw new MediaContentError("item_too_large", `Fetched media exceeded ${maxBytes} bytes`);
+      chunks.push(value);
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // Reader may already be closed after abort/complete.
+    }
+    reader.releaseLock();
+  }
+  return joinChunks(chunks, total);
+}
+
+function requestPinnedMediaUrl({ url, address, maxBytes, signal }: MediaUrlRequest): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(url, {
+      agent: false,
+      family: address.family,
+      signal,
+      lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
+    }, (response) => readIncomingMessage(response, maxBytes).then(resolve, reject));
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+async function readIncomingMessage(response: IncomingMessage, maxBytes: number): Promise<Uint8Array> {
+  const status = response.statusCode ?? 0;
+  if (status < 200 || status >= 300) {
+    response.resume();
+    throw new MediaContentError("fetch_failed", `Media fetch failed with status ${status}`);
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for await (const chunk of response) {
+    const bytes = typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk);
+    total += bytes.byteLength;
+    if (total > maxBytes) {
+      response.destroy();
+      throw new MediaContentError("item_too_large", `Fetched media exceeded ${maxBytes} bytes`);
+    }
+    chunks.push(bytes);
+  }
+  return joinChunks(chunks, total);
+}
+
+function joinChunks(chunks: readonly Uint8Array[], total: number): Uint8Array {
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
 
 function mediaTypesCompatible(declared: string, sniffed: string): boolean {
@@ -520,26 +656,56 @@ function mediaTypesCompatible(declared: string, sniffed: string): boolean {
   return false;
 }
 
+function normalizeHostname(hostname: string): string {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  return normalized.endsWith(".") ? normalized.slice(0, -1) : normalized;
+}
+
 function isBlockedIp(hostname: string): boolean {
-  if (hostname.includes(":")) return isBlockedIpv6(hostname);
-  const parts = hostname.split(".").map((part) => Number(part));
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
-    return false;
-  }
-  const [a, b] = parts;
-  if (a === 127 || a === 10 || a === 0) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 172 && b !== undefined && b >= 16 && b <= 31) return true;
+  const normalized = normalizeHostname(hostname);
+  const family = isIP(normalized);
+  if (family === 4) return isBlockedIpv4(normalized);
+  if (family === 6) return isBlockedIpv6(normalized);
   return false;
 }
 
-function isBlockedIpv6(hostname: string): boolean {
-  const normalized = hostname.toLowerCase();
-  if (normalized === "::1") return true;
-  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
-  if (normalized.startsWith("fe80:")) return true;
-  return false;
+function isBlockedIpv4(address: string): boolean {
+  const [a, b] = address.split(".").map(Number) as [number, number, number, number];
+  return a === 0
+    || a === 10
+    || a === 127
+    || (a === 100 && b >= 64 && b <= 127)
+    || (a === 169 && b === 254)
+    || (a === 172 && b >= 16 && b <= 31)
+    || (a === 192 && (b === 0 || b === 168))
+    || (a === 198 && (b === 18 || b === 19 || b === 51))
+    || (a === 203 && b === 0)
+    || a >= 224;
+}
+
+function isBlockedIpv6(address: string): boolean {
+  const words = parseIpv6Words(address);
+  if (!words) return true;
+  if (words.every((word) => word === 0) || words.slice(0, 7).every((word) => word === 0) && words[7] === 1) return true;
+  if ((words[0]! & 0xfe00) === 0xfc00) return true;
+  if ((words[0]! & 0xffc0) === 0xfe80 || (words[0]! & 0xffc0) === 0xfec0) return true;
+  if ((words[0]! & 0xff00) === 0xff00) return true;
+  if (words[0] === 0x2001 && words[1] === 0x0db8) return true;
+  const mapped = words.slice(0, 5).every((word) => word === 0) && (words[5] === 0 || words[5] === 0xffff);
+  return mapped && isBlockedIpv4(`${words[6]! >> 8}.${words[6]! & 0xff}.${words[7]! >> 8}.${words[7]! & 0xff}`);
+}
+
+function parseIpv6Words(address: string): number[] | undefined {
+  const parts = address.split("::");
+  if (parts.length > 2) return undefined;
+  const left = parts[0] ? parts[0].split(":") : [];
+  const right = parts[1] ? parts[1].split(":") : [];
+  const missing = 8 - left.length - right.length;
+  if (missing < 0 || (parts.length === 1 && missing !== 0)) return undefined;
+  const words = [...left, ...Array.from({ length: missing }, () => "0"), ...right].map((part) => Number.parseInt(part, 16));
+  return words.length === 8 && words.every((word) => Number.isInteger(word) && word >= 0 && word <= 0xffff)
+    ? words
+    : undefined;
 }
 
 function startsWith(bytes: Uint8Array, prefix: readonly number[]): boolean {

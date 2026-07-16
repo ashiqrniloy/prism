@@ -4,6 +4,7 @@ export interface SandboxExecRequest {
   readonly command: string;
   readonly cwd: string;
   readonly env?: NodeJS.ProcessEnv;
+  readonly onData?: (data: Buffer) => void;
   readonly signal?: AbortSignal;
   readonly timeout?: number;
 }
@@ -29,6 +30,7 @@ export function createSandboxBashOperations(adapter: SandboxAdapter): BashOperat
           command,
           cwd,
           env: options.env,
+          onData: options.onData,
           signal: options.signal,
           timeout: options.timeout,
         });

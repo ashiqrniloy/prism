@@ -8,6 +8,10 @@ Interactive TUI (**C-012**) is **out of scope** for Plan 057 and deferred. Workf
 
 **Final Task 7 architecture (2026-07-14):** DAG/coordinator semantics remain package-local. Reusable versioned checkpoints, atomic leases, and bounded async event fan-in live in core as `CheckpointStore`, `LeaseStore`, and `EventMultiplexer`. Workflow adapters are thin domain facades; lease fencing plus checkpoint CAS prevents stale-worker commits.
 
+**Phase 8 addendum (2026-07-15):** `@arnilo/prism-workflows` extends the same checkpoint JSON/state machine with `suspended` and terminal `denied` statuses, `suspend()`, persisted suspension/resume records, and `workflow_suspended` / `workflow_resumed` events. An approved resume requires the displayed checkpoint `expectedVersion`; the first checkpoint write CAS-claims it before node execution. Suspended runs are absent from coordinator `queued`/`running` polls, so no worker or polling loop remains active. No SQL migration or second approval store is required.
+
+**Phase 11 addendum (2026-07-16):** schedules use a separate generic checkpoint namespace plus per-fire `LeaseStore` claims and deterministic queued-run IDs; SQLite/PostgreSQL need no workflow-specific table or migration. Background execution remains `enqueueWorkflow` + the existing coordinator. Nested workflow nodes call the same runner with inherited policy/ownership/checkpoint/event seams. Shared JSON state is validated, redacted, byte/history bounded, and checkpointed by version. Replay creates a new checkpoint with immutable source lineage and copied terminal evidence; approval-bearing prior paths cannot be copied.
+
 ## When to use it
 
 - **Workflow package authors** should start here, then follow [Agent/session runtime](agent-session-runtime.md), [Agent loops](agent-loops.md), [Runs and usage ledger](runs-and-usage.md), [CLI/RPC](cli-rpc.md), and [Database persistence](database-persistence.md).
@@ -121,7 +125,7 @@ Static review of `src/agents.ts`, `src/agent-loops.ts`, `src/rpc.ts`, `src/cli-r
 | Event fan-in | Generic core multiplexer | Package queue duplication | **Core multiplexer + package facade** | One bounded/abort-aware implementation |
 | Distributed ownership | Process-local active map | Generic leases + package coordinator | **LeaseStore + fenced checkpoint CAS** | Atomic claims and monotonic fences prevent split brain across processes |
 | Host control (no TUI) | Interactive terminal package | Public APIs + optional RPC/`CommandDefinition` | **Public APIs + optional commands** | Replaces former TUI Tasks for feature completeness |
-| Approval prompts | Core `ApprovalHandler` | Host `ExecutionPolicy` / `CodingApprovalFn` | **Host callbacks** | Mirrors coding-security pattern |
+| Approval prompts | Core `ApprovalHandler` | Durable workflow suspension + host `ExecutionPolicy` | **Checkpoint suspension** | Survives restart; approved tool execution still rechecks current host policy |
 | Interactive TUI | Ship in Plan 057 | Defer C-012 | **Defer** | Explicit product decision after Task 0 |
 
 ## Locked package adapter contracts (Task 1)
@@ -435,6 +439,12 @@ runRpcServer({
 | Workflow `maxCheckpointBytes` | Full checkpoint blob | 1 MiB | Resume metadata only; not full transcripts |
 | Workflow event buffer | Per run merge queue | 2048 | Coalesce node status; drop with `workflow_event_overflow` |
 | Workflow list/status page size | Status helper default | 100 | Bounded run listing for hosts |
+| Nested depth | Default / hard | 8 / 32 | Prevent recursive composition exhaustion |
+| Shared state | Default / hard bytes | 64 KiB / 512 KiB | Keep node context/checkpoints bounded |
+| State history | Default / hard snapshots | 32 / 128 | Preserve replay state without unbounded history |
+| Replay lineage | Default / hard depth | 8 / 32 | Prevent replay-chain abuse |
+| Schedule input | Default / hard bytes | 256 KiB / 1 MiB | Bound persisted trigger payload |
+| Schedule due claims | Default / hard per poll | 16 / 256 | Bound one poll; idle waits 1s by default |
 
 ## Threat model and design matrix
 
@@ -444,7 +454,7 @@ runRpcServer({
 | 2 | Unbounded fan-out (dynamic list) | Workflow package | Cap `maxFanOut`; fail `node_failed` when exceeded |
 | 3 | Resumed checkpoint tampered (wrong tenant/version) | Workflow adapter | Fail closed; no partial node execution |
 | 4 | Checkpoint contains secrets | Workflow + redactor | Redact before persist; `redacted: true` metadata |
-| 5 | Shell/tool approval during workflow | Host + ExecutionPolicy | Show/include `kind`, `command`, `paths`, `risk`, `workflowId`, `nodeId` |
+| 5 | Shell/tool approval during workflow | Host + workflow | Opt-in tool approval suspends before side effects; resume uses ownership + expected-version CAS, then rechecks current `ExecutionPolicy` with workflow/node metadata |
 | 6 | Cancel during node execution | Workflow | `signal` abort → in-flight `session.abort()`; checkpoint marks `aborted` |
 | 7 | Untrusted workflow definition file | Host | Load from trusted path only; schema-validate before `runWorkflow` |
 | 8 | Node output passed to next node | Workflow | Size-bound; type validate; redact at boundary |
@@ -452,6 +462,12 @@ runRpcServer({
 | 10 | Cross-tenant list/status query | Workflow adapter | Scope by ownership; never return other tenants' runs |
 | 11 | RPC workflow cancel races session abort | Workflow commands | Cancel is idempotent; fails closed if run unknown/unauthorized |
 | 12 | 1000-node workflow checkpoint growth | Workflow | Store ready set + bounded outputs only; no full transcript duplication |
+| 13 | Two reviewers resume one suspension | Workflow adapter | Expected-version CAS claims checkpoint before execution; one succeeds, stale reviewer fails |
+| 14 | Forged/cross-tenant resume | Workflow + host | Ownership and definition hash checked; declared schema requires host validator; payload redacted before persistence |
+| 15 | Duplicate/crashed schedule fire | Workflow schedules | Per-fire lease, deterministic run ID, queued checkpoint idempotency, schedule CAS |
+| 16 | Nested workflow broadens capability | Workflow runner | Child inherits parent tool/agent/policy/ownership/signal seams; bounded inherited depth |
+| 17 | Replay mutates evidence or reuses approval | Workflow replay | New checkpoint + immutable lineage; source untouched; copied approval-bearing path rejected |
+| 18 | State/history resource exhaustion | Workflow runner/checkpoint | Host validation plus state byte/history and aggregate checkpoint ceilings |
 
 ## Final primitive decisions (Task 1, superseded where noted by Task 6)
 
@@ -547,7 +563,7 @@ await session.run("Hi", { signal: AbortSignal.timeout(60_000) });
 - Workflow agent nodes call public `AgentSession` APIs only; no imports from `src/agents.ts` internals.
 - Workflow checkpoints adapt `ProductionPersistenceStore.checkpoints` (or any `CheckpointStore`); no raw database handles enter the workflow package.
 - Multimodal and credential packages from Plan 056 compose unchanged in workflow examples (Task 4).
-- `prism-all` umbrella **excludes** `@arnilo/prism-workflows` (optional orchestration; install explicitly). Documented in package README and `docs/release-and-install.md`.
+- `@arnilo/prism-workflows` is available directly and through `prism-sdk`/`prism-all`; installation does not start a worker or workflow.
 - C-012 interactive TUI remains a future optional package if needed; it is not required for workflow feature completeness.
 
 ## Related APIs

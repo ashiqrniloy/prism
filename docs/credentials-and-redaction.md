@@ -95,7 +95,7 @@ console.log(error.message);
 ## Extension and configuration notes
 
 - Hosts and extension packages can implement `CredentialResolver` and pass it explicitly to code that needs credentials.
-- `AgentConfig.credentials` is host-owned metadata for compatibility; `createAgent()` / `session.run()` do not call `credentials.resolve()`. Provider adapters, compaction workers, or request policies should receive and resolve credentials at the provider edge.
+- Credentials stay host-owned outside `AgentConfig`. `createAgent()` / `session.run()` do not call `credentials.resolve()`. Provider adapters, compaction workers, or request policies should receive and resolve credentials at the provider edge.
 - Use `createExplicitCredentialResolver()` when documenting a fixed order such as runtime override, stored credential, caller-provided env object, then fallback resolver.
 - Use `createEnvCredentialResolver()` only with an object supplied by the host; Prism does not read `process.env` for you.
 - Provider adapters should resolve credentials as late as possible, per request.
@@ -110,7 +110,7 @@ console.log(error.message);
 - Cycle and non-JSON value handling: `redactSecrets()` is cycle-safe via a `WeakSet` visited-set. Self-referential or mutually referenced objects render `"[Circular]"` at the back-reference instead of throwing. `Date` and `RegExp` values are passed through unchanged; `ArrayBuffer` and typed arrays are passed through unchanged; `Map` is normalized to a plain object and `Set` to an array so the output stays JSON-compatible. `errorToErrorInfo()` tolerates a cyclic `error.cause` (rendered via `String()`).
 - Use placeholders in tests and docs. Never commit real tokens.
 - Live provider/worker tests are gated behind explicit environment variables and skipped by default: `PRISM_LIVE_PROVIDER_TESTS`, `PRISM_LIVE_COMPACTION_TESTS`, `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS`. Default `npm test` is network-free; do not add ungated network calls to default tests.
-- `AgentConfig.credentials` is not eagerly resolved, serialized into provider requests/events/stores, or passed to loops/compaction by the core runtime.
+- Credentials are not eagerly resolved by the core runtime, serialized into provider requests/events/stores, or passed to loops/compaction.
 - `resolveCredentialValue()` and `createExplicitCredentialResolver()` do not cache values. Add host-side caching only if a real credential source needs it.
 - `refreshOAuthCredential()` only calls the supplied OAuth provider and optional store; it has no built-in persistence or retry loop.
 - OpenAI Codex device-code OAuth polls inside `createOpenAICodexOAuthProvider().login()` with bounded delays and abort support via `OAuthLoginCallbacks.signal`. Token-endpoint failures redact authorization codes, PKCE verifiers, device/user codes, and access/refresh tokens when those values are known.

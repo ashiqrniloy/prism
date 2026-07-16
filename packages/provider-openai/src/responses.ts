@@ -1,11 +1,10 @@
-import type { AIProvider, AudioContent, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, Message, ModelCapabilities, ModelConfig, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
+import type { AIProvider, AudioContent, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelConfig, ProviderRequest, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
 import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
 import {
-  assertProviderMediaCapability,
   bytesToBase64,
   defaultProviderFilename,
   openAIAudioFormat,
-  resolveProviderMediaBlock,
+  resolveProviderMediaMessages,
   serializeOpenAIResponsesInputAudio,
   serializeOpenAIResponsesInputFile,
 } from "@arnilo/prism/providers/media";
@@ -29,6 +28,7 @@ interface ResponsesMediaContext {
   readonly fetch?: typeof fetch;
   readonly signal?: AbortSignal;
   readonly uploadManager: OpenAIFileUploadManager;
+  readonly resolvedMedia?: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>;
 }
 
 export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOptions = {}): AIProvider {
@@ -37,8 +37,8 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
     id,
     async *generate(request) {
       if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-      const secrets = [token];
+      let token: string | undefined;
+      const secrets: (string | undefined)[] = [];
       const tools = new Map<number, ToolAccumulator>();
       let usage: Usage | undefined;
       const uploadManager = options.uploadManager ?? createOpenAIFileUploadManager({
@@ -59,6 +59,9 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
         uploadManager,
       };
       try {
+        const body = await toResponsesRequest(request, mediaContext);
+        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
+        secrets.push(token);
         const response = await (options.fetch ?? fetch)(`${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/responses`, {
           method: "POST",
           headers: {
@@ -67,7 +70,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             ...(token ? { authorization: `Bearer ${token}` } : {}),
             ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {}),
           },
-          body: JSON.stringify(await toResponsesRequest(request, mediaContext)),
+          body: JSON.stringify(body),
           signal: request.signal,
         });
         if (!response.ok) {
@@ -118,9 +121,14 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
 async function toResponsesRequest(request: ProviderRequest, mediaContext: ResponsesMediaContext): Promise<JsonObject> {
   assertStructuredOutputRequestSupported(request.model, request.options);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
+  const resolvedMedia = await resolveProviderMediaMessages(request.messages, request.model, {
+    fetch: mediaContext.fetch,
+    signal: mediaContext.signal,
+  });
+  const resolvedContext = { ...mediaContext, resolvedMedia };
   const payload: Record<string, unknown> = {
     model: request.model.model,
-    input: await Promise.all(request.messages.map((message) => toInputMessage(message, request.model, mediaContext))),
+    input: await Promise.all(request.messages.map((message) => toInputMessage(message, request.model, resolvedContext))),
     tools: request.tools?.map(toTool),
     stream: true,
     store: false,
@@ -136,7 +144,6 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
 }
 
 async function toInputMessage(message: Message, model: ModelConfig, mediaContext: ResponsesMediaContext): Promise<JsonObject> {
-  const capabilities = model.capabilities ?? {};
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return clean({
@@ -151,12 +158,11 @@ async function toInputMessage(message: Message, model: ModelConfig, mediaContext
     if (part.type === "text" || part.type === "thinking") {
       items.push({ type: "input_text", text: part.text });
     } else if (part.type === "image") {
-      assertProviderMediaCapability("image", capabilities, model);
-      items.push(toResponsesImage(part));
+      items.push(toResponsesImage(mediaContext.resolvedMedia!.get(part)!));
     } else if (part.type === "audio") {
-      items.push(await toResponsesAudio(part, model, mediaContext));
+      items.push(await toResponsesAudio(part, mediaContext));
     } else if (part.type === "file" || part.type === "document") {
-      items.push(await toResponsesFile(part, model, mediaContext));
+      items.push(await toResponsesFile(part, mediaContext));
     } else if (part.type === "tool_call") {
       items.push({
         type: "function_call",
@@ -175,19 +181,15 @@ async function toInputMessage(message: Message, model: ModelConfig, mediaContext
   return clean({ role: message.role, content: items });
 }
 
-function toResponsesImage(part: Extract<ContentBlock, { type: "image" }>): JsonObject {
-  const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
-  if (!url) throw new Error("OpenAI Responses image block missing url or data");
-  return { type: "input_image", image_url: url };
+function toResponsesImage(resolved: ResolvedMediaContent): JsonObject {
+  return { type: "input_image", image_url: `data:${resolved.mediaType};base64,${bytesToBase64(resolved.bytes)}` };
 }
 
 async function toResponsesAudio(
   part: AudioContent,
-  model: ModelConfig,
   mediaContext: ResponsesMediaContext,
 ): Promise<JsonObject> {
-  assertProviderMediaCapability("audio", model.capabilities ?? {}, model);
-  const resolved = await resolveProviderMediaBlock(part, { fetch: mediaContext.fetch, signal: mediaContext.signal });
+  const resolved = mediaContext.resolvedMedia!.get(part)!;
   return serializeOpenAIResponsesInputAudio({
     data: bytesToBase64(resolved.bytes),
     format: openAIAudioFormat(resolved.mediaType),
@@ -196,12 +198,9 @@ async function toResponsesAudio(
 
 async function toResponsesFile(
   part: FileContent | DocumentContent,
-  model: ModelConfig,
   mediaContext: ResponsesMediaContext,
 ): Promise<JsonObject> {
-  const modality = part.type === "document" ? "document" : "file";
-  assertProviderMediaCapability(modality, model.capabilities ?? {}, model);
-  const resolved = await resolveProviderMediaBlock(part, { fetch: mediaContext.fetch, signal: mediaContext.signal });
+  const resolved = mediaContext.resolvedMedia!.get(part)!;
   const filename = defaultProviderFilename(part, part.type === "document" ? "document.pdf" : "file.bin");
   const wire = await mediaContext.uploadManager.resolveFileWire(
     resolved.mediaType,

@@ -116,7 +116,7 @@ describe("@arnilo/prism-provider-openai responses", () => {
       messages: [
         { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
         { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
-        { role: "user", content: [{ type: "text", text: "hi" }, { type: "image", url: "https://example.invalid/img.png" }] },
+        { role: "user", content: [{ type: "text", text: "hi" }, { type: "image", mimeType: "image/png", data: "iVBORw0KGgo=" }] },
       ],
     };
     let body: unknown;

@@ -149,5 +149,6 @@ The helpers are a testing subpath only. Provider packages can use them with thei
 
 - [Provider layer](provider-layer.md): `AIProvider`, provider events, and mock provider.
 - [Provider packages](provider-packages.md): package authors can use conformance helpers for adapters.
+- [AI SDK provider adapter](providers/ai-sdk.md): optional `LanguageModelV4` bridge tested with a fake AI SDK model.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter tested with mocked streams.
 - [Public contracts](public-contracts.md): provider request/event/usage contracts.

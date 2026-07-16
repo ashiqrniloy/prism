@@ -67,7 +67,7 @@ Important shapes:
 | `RunRecord` | Stored run with `sessionId`, `branchId`, status (`queued` \| `running` \| `succeeded` \| `failed` \| `aborted`), `model`, `provider`, `idempotencyKey`, `abortReason`, and `error`. |
 | `AgentEventRecord` | Event ledger row with `event: AgentEvent` and a `redacted` flag. Hosts redact before storage. |
 | `ToolCallRecord` | Tool-call row with `arguments`, optional `result: ToolResult`, `reason`, `progress` snapshots, status, and a `redacted` flag. |
-| `UsageRecord` | Usage row wrapping `Usage` with session/run/entry linkage. |
+| `UsageRecord` | Scoped provider-turn or aggregate run usage with session/run/entry and turn/attempt linkage. |
 | `AgentDefinitionRecord` | Versioned agent definition snapshot. Only stores `AgentDefinition` data; never provider credentials/resolvers/instances. |
 | `RetentionPolicy` | Policy with `maxAgeDays`, `maxEntriesPerSession`, `maxTotalBytes`, `archiveStore`, and `appliedKinds`. |
 | `MigrationRecord` | Applied migration with name, version, timestamp, checksum, and applied-by. |
@@ -166,7 +166,7 @@ The `event` JSONB stores a redacted `AgentEvent`. The `sequence` column is an im
 
 | Table | Key columns |
 | --- | --- |
-| `prism_usage` | `id` PK, `session_id` FK, `run_id`, `entry_id`, `usage` JSONB, `recorded_at`, `tenant_id`, `account_id`, `user_id`, `metadata` JSONB |
+| `prism_usage` | `id` PK, `session_id` FK, `run_id`, `entry_id`, `scope`, `turn`, `attempt`, `usage` JSONB, `recorded_at`, `tenant_id`, `account_id`, `user_id`, `metadata` JSONB |
 
 The `usage` JSONB stores the `Usage` shape: input/output/total/cache tokens, cost, and currency.
 
@@ -274,7 +274,8 @@ Recommended indexes for the reference schema. Hosts should add DB-specific parti
 | `prism_tool_calls` | `(session_id, name, started_at)` | tool usage by name |
 | `prism_tool_calls` | `(run_id, started_at)` | run tool-call listing |
 | `prism_tool_calls` | `(tool_call_id)` | deduplication / replay |
-| `prism_usage` | `(session_id, recorded_at)` | usage aggregation |
+| `prism_usage` | `(session_id, recorded_at)` | usage pagination |
+| `prism_usage` | `(session_id, scope, recorded_at)` | scope-safe billing/aggregate queries |
 | `prism_usage` | `(run_id, recorded_at)` | run usage |
 | `prism_agent_definitions` | `(name, version)` | definition lookup |
 | `prism_retention_policies` | `(tenant_id, account_id, user_id)` | policy listing |
@@ -422,18 +423,20 @@ const dbStore: ProductionPersistenceStore = {
 - `ProductionPersistenceStore` is an optional extension point. The runtime does not require it.
 - `ProductionPersistenceStore.checkpoints?: CheckpointStore` exposes generic versioned save/load/bounded-list/delete with compare-and-swap and fencing tokens, without workflow vocabulary.
 - `ProductionPersistenceStore.leases?: LeaseStore` exposes atomic acquire/renew/release/get with opaque claim tokens, expiries, ownership scope, and monotonic fencing tokens.
+- `ProductionPersistenceStore.feedback?: RunFeedbackStore` exposes immutable append, bounded owned query, and owned deletion. First-party adapters store migration-003 rows in `prism_run_feedback`, FK-link `run_id`, and index owner/run/trace creation cursors.
 - Hosts choose the database, schema, transaction, and indexing strategy. The contracts specify query and checkpoint capability shapes.
 - `SessionStore` (`append`/`list`/`get`/optional `readBranchPath`) can be implemented on top of `ProductionPersistenceStore` or kept separate.
 - Cursor values and idempotency keys are host-defined and opaque to Prism.
-- First-party SQLite/PostgreSQL adapters expose `persistence.checkpoints` and `persistence.leases`, backed by package-owned `prism_checkpoints` / `prism_leases` tables. `@arnilo/prism-workflows` consumes them for durable resume and multi-process coordination; workflow code owns no SQL table.
+- First-party SQLite/PostgreSQL adapters expose `persistence.checkpoints` and `persistence.leases`, backed by package-owned `prism_checkpoints` / `prism_leases` tables. `@arnilo/prism-workflows` consumes them for durable resume, human suspension, multi-process coordination, Phase 11 schedule records/fire leases, shared state, and replay lineage; workflow code owns no SQL table. `suspended`/`denied`, schedules, state history, and replay lineage remain namespaces/categories plus bounded checkpoint JSON values, so Phases 8 and 11 need no database migration.
 
 ## Security and performance notes
 
 - **No credentials in storage.** The contracts never include `CredentialResolver`, `AIProvider`, `ProviderResolver`, provider API keys, or credential values.
 - **Redact before storage.** Runtime session entries are redacted before `SessionStore.append`; `AgentEventRecord.event` and `ToolCallRecord.result` may contain secrets, so hosts must redact them (for example with `redactAgentEvent()` and a `SecretRedactor`) before writing to durable storage and set `redacted: true`.
-- **Tenant isolation.** `OwnershipScope` fields are available on records and queries, but enforcement is the host's responsibility.
+- **Tenant isolation.** `OwnershipScope` fields are available on records and queries, but enforcement is the host's responsibility. First-party feedback stores require tenant plus account/user and use exact run ownership on append, query, and delete.
+- **Feedback retention/deletion.** Comments, tags, and metadata are redacted and bounded before insert. `RunFeedbackStore.delete()` provides explicit erasure; deleting a run cascades its feedback in first-party SQL schemas. Apply host retention policy to `created_at`.
 - **Pagination and branch reads.** Every query supports `cursor`/`limit`/`order` so hosts can avoid full-table or full-session scans. Loading an entire large session into memory to serve a provider context is an anti-pattern; implement `readBranchPath` and use branch-relevant filters / recursive ancestor queries.
-- **Indexes.** Production schemas should index `sessionId`, `runId`, `parentId`, `leafId`, timestamps, tenant/account/user, event type, and entry kind. See the reference indexes above.
+- **Indexes.** Production schemas should index `sessionId`, `runId`, `parentId`, `leafId`, timestamps, tenant/account/user, event type, entry kind, and feedback owner/run/trace creation cursors. See the reference indexes above.
 
 ## Related APIs
 

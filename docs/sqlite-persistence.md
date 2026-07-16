@@ -37,6 +37,7 @@ import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 | `filename` | `string` | SQLite database path. Use `:memory:` for ephemeral tests. |
 | `wal` | `boolean` | Enable WAL journal mode. Defaults to `true`. |
 | `busyTimeoutMs` | `number` | SQLite `busy_timeout` in milliseconds. Defaults to `5000`. |
+| `feedbackRedactor` | `SecretRedactor` | Optional redaction for feedback comment/tags/metadata before insert. |
 | `fileMode` | `number` | Unix file mode for newly created database files. Defaults to `0o600`. |
 | `database` | `Database` | Advanced: supply an existing `better-sqlite3` handle (caller owns lifecycle). |
 
@@ -51,7 +52,7 @@ import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 | `SessionStore.readBranchPath` | Recursive ancestor query from `leafId` (or latest leaf) in root→leaf order. |
 | `RunLedger.append*` | Inserts run/event/tool/usage rows; events receive monotonic per-run `sequence` values. |
 | `ProductionPersistenceStore.query*` | Parameterized cursor pagination on indexed columns. |
-| `checkpoints` | Generic versioned `CheckpointStore` backed by `prism_checkpoints`; ownership, CAS/fencing checks, and bounded pagination. |
+| `checkpoints` | Generic versioned `CheckpointStore` backed by `prism_checkpoints`; ownership, CAS/fencing checks, bounded pagination, and workflow suspended/denied/schedule/state/replay values without a schema migration. |
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Closes the underlying database when the adapter opened it. |
 
@@ -98,7 +99,7 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - The package is optional and workspace-local; `@arnilo/prism` core has no SQLite dependency.
 - Hosts choose the database path and own backup, retention enforcement, and filesystem permissions.
 - `SessionAppendOptions` idempotency rows are durable in `prism_session_append_idempotency` and survive reopen.
-- Schema version **1** (`001_init`) matches `@arnilo/prism/testing/persistence-schema` — PostgreSQL adapters share the same model with dialect-local DDL.
+- Schema version **3** applies `001_init`, additive `002_usage_scope`, and `003_run_feedback`. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. PostgreSQL shares the same model with dialect-local DDL.
 - Pass an existing `better-sqlite3` `Database` via `database` when your host already manages connections.
 
 ## Security and performance notes
@@ -118,5 +119,5 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - [Run ledger conformance](run-ledger-conformance.md): `assertRunLedgerConforms` / `runRunLedgerConformance`.
 - [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): package matrix and threat model.
 - [Node JSONL session store](node-jsonl-session-store.md): dev-only single-process alternative.
-- [Workflows](workflows.md): adapt `persistence.checkpoints` and pass `persistence.leases` to `createWorkflowCoordinator()` for durable multi-process workflow execution.
+- [Workflows](workflows.md): adapt `persistence.checkpoints` and pass `persistence.leases` to `createWorkflowCoordinator()` and `createWorkflowSchedules()` for durable background execution and schedules.
 - [Migration guide](migration.md): moving from JSONL/in-memory to database-backed persistence.

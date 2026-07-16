@@ -97,6 +97,84 @@ test("provider error turn ends span with error status", () => {
   assert.ok(memory.metrics.some((metric) => metric.attributes.outcome === "error"));
 });
 
+test("run errors and detach close outstanding spans exactly once", async () => {
+  const ends = new Map<string, number>();
+  const telemetry = createOpenTelemetryInstrumentation({
+    tracer: {
+      startSpan(name) {
+        return {
+          setAttribute() {},
+          setStatus() {},
+          end() { ends.set(name, (ends.get(name) ?? 0) + 1); },
+        };
+      },
+    },
+  });
+  telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
+  telemetry.handleAgentEvent({
+    type: "provider_turn_started",
+    sessionId: "s1",
+    runId: "r1",
+    turn: 1,
+    metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+  });
+  telemetry.handleAgentEvent({ type: "error", sessionId: "s1", runId: "r1", error: { message: "aborted" } });
+  telemetry.handleAgentEvent({ type: "error", sessionId: "s1", runId: "r1", error: { message: "aborted again" } });
+  assert.equal(ends.get("prism.agent.run"), 1);
+  assert.equal(ends.get("prism.provider.turn"), 1);
+
+  async function* events(): AsyncIterableIterator<AgentEvent> {
+    yield { type: "agent_started", sessionId: "s2", runId: "r2" };
+    await new Promise(() => {});
+  }
+  const detach = telemetry.attachSession({ id: "s2", subscribe: events });
+  await new Promise((resolve) => setImmediate(resolve));
+  detach();
+  assert.equal(ends.get("prism.agent.run"), 2);
+});
+
+test("failed and aborted agent runs leave no active spans", async () => {
+  for (const mode of ["failed", "aborted"] as const) {
+    const memory = createInMemoryTelemetry();
+    const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
+    const controller = new AbortController();
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: {
+        id: "mock",
+        async *generate() {
+          if (mode === "aborted") controller.abort(new Error("cancelled"));
+          throw new Error(mode === "failed" ? "provider failed" : "cancelled");
+        },
+      },
+    }).createSession();
+    const detach = telemetry.attachSession(session);
+    await assert.rejects(session.run("test", mode === "aborted" ? { signal: controller.signal } : undefined));
+    detach();
+    assert.ok(memory.spans.length > 0);
+    assert.equal(memory.spans.every((span) => span.ended), true, `${mode} run leaked a span`);
+  }
+});
+
+test("provider and aggregate token metrics use distinct instruments", () => {
+  const memory = createInMemoryTelemetry();
+  const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
+  const usage = { inputTokens: 10, outputTokens: 2, totalTokens: 12 };
+  telemetry.handleAgentEvent({
+    type: "provider_turn_finished",
+    sessionId: "s1",
+    runId: "r1",
+    turn: 1,
+    metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+    usage,
+  });
+  telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "s1", runId: "r1", usage });
+  assert.deepEqual(
+    memory.metrics.filter((metric) => metric.kind === "counter").map((metric) => metric.name),
+    ["prism.provider.tokens", "prism.provider.tokens", "prism.run.tokens", "prism.run.tokens"],
+  );
+});
+
 test("exporter failures are isolated", () => {
   const telemetry = createOpenTelemetryInstrumentation({
     tracer: {
@@ -143,6 +221,40 @@ test("wrapOpenTelemetryApi bridges optional api types", () => {
   telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
   telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "s1", runId: "r1" });
   assert.ok(calls.includes("span:prism.agent.run"));
+});
+
+test("feedback and evaluations project safe metadata without high-cardinality metric labels", () => {
+  const memory = createInMemoryTelemetry();
+  const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
+  telemetry.handleAgentEvent({ type: "agent_started", sessionId: "session-secret", runId: "run-secret" });
+  telemetry.handleRunFeedback({ runId: "run-secret", rating: 1, hasComment: true, tagCount: 2, scorerCount: 1, evaluationCount: 1 });
+  telemetry.handleEvaluation({ runId: "run-secret", status: "scored", score: 0.75, hasReason: true });
+  const run = memory.spans.find((span) => span.name === "prism.agent.run");
+  assert.deepEqual(run?.events.map((event) => event.name), ["prism.run.feedback", "prism.run.evaluation"]);
+  assert.equal(run?.events[0]?.attributes["prism.feedback.tag_count"], 2);
+  assert.equal(run?.events[1]?.attributes["prism.evaluation.score"], 0.75);
+  const metricJson = JSON.stringify(memory.metrics.filter((metric) => metric.name.includes("feedback") || metric.name.includes("evaluation")));
+  assert.doesNotMatch(metricJson, /run-secret|session-secret|comment|scorer|evaluation_id|tag_count/);
+  assert.match(metricJson, /positive|scored/);
+
+  telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "session-secret", runId: "run-secret" });
+  telemetry.handleRunFeedback({ runId: "run-after", hasComment: false, tagCount: 0, scorerCount: 0, evaluationCount: 0 });
+  assert.ok(memory.spans.some((span) => span.name === "prism.run.feedback" && span.ended));
+});
+
+test("feedback exporter failures are isolated", () => {
+  let errors = 0;
+  const telemetry = createOpenTelemetryInstrumentation({
+    tracer: {
+      startSpan() {
+        return { setAttribute() {}, setStatus() {}, addEvent() { throw new Error("feedback exporter down"); }, end() {} };
+      },
+    },
+    onExporterError() { errors += 1; },
+  });
+  telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
+  assert.doesNotThrow(() => telemetry.handleRunFeedback({ runId: "r1", hasComment: true, tagCount: 1, scorerCount: 0, evaluationCount: 0 }));
+  assert.equal(errors, 1);
 });
 
 test("blocked tool records duration metric without started span", async () => {

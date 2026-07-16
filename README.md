@@ -26,13 +26,14 @@ packages. Prism defines contracts, not apps.
 - **Input/prompt/context**: default input and prompt builders, system-prompt
   layering, and provider-input assembly — every stage replaceable.
 - **Sessions and memory**: in-memory and JSONL session stores, branching/fork/
-  clone, default and LLM compaction strategies, retry policy, and
-  observational-memory recall/status/view.
+  clone, default and LLM compaction strategies, retry policy,
+  observational-memory recall/status/view, optional working/semantic memory
+  (`@arnilo/prism-memory`), and bounded text/Markdown RAG (`@arnilo/prism-rag`).
 - **Extensions and manifests**: extension kernel + event bus, contribution
   registries, middleware hooks, and data-only package manifests.
 - **Config, settings, security**: layered config merge, settings providers,
   credential resolvers, trust/permission policies, and secret redaction.
-- **CLI/RPC**: `prism --mode print|json|rpc` over the same `AgentSession` API.
+- **CLI/RPC/server**: `prism --mode print|json|rpc`, `prism init`, optional framework-free authorized Web agent/workflow routes, and explicit MCP server exposure.
 
 ## Install
 
@@ -50,12 +51,25 @@ npm install @arnilo/prism-base                              # core + compaction 
 npm install @arnilo/prism-code @arnilo/prism-provider-openai # coding-agent profile
 npm install @arnilo/prism-sdk @arnilo/prism-provider-openai  # application profile
 npm install @arnilo/prism-all                               # every first-party package
+npm install @arnilo/prism-server @arnilo/prism-workflows    # optional Web API boundary
+npm install @arnilo/prism-supervisor                         # optional local delegation + A2A 1.0
 ```
 
 See [docs/release-and-install.md](docs/release-and-install.md) for install
 specifiers, tarball contents, and the offline test budget.
 
 ## Quick start
+
+Scaffold a tiny project (offline mock test included):
+
+```bash
+npx --package @arnilo/prism prism init my-agent
+# or, with a real provider package selected:
+npx --package @arnilo/prism prism init my-agent --provider openai
+cd my-agent && npm install && npm test
+```
+
+Or embed Prism directly:
 
 ```ts
 import { createAgent, createAgentSession, createMockProvider } from "@arnilo/prism";
@@ -68,9 +82,18 @@ const agent = createAgent({
 
 const session = createAgentSession({ agent });
 
-// Consume the event stream concurrently with the run. `subscribe()` only
-// emits while a run is in progress, so the loop and `run()` must run together;
-// awaiting the loop before calling `run()` would deadlock.
+// Direct result: run/prompt return AgentRunResult (text, usage, status, ids).
+const result = await session.run("Hi");
+console.log(result.text, result.usage?.totalTokens);
+
+// Integrated streaming: subscribe-before-run for one owned run.
+for await (const event of session.stream("Hi again")) {
+  // AgentEvent: agent_started, message_delta, turn_finished, ...
+}
+
+// Long-lived subscribe() still works when you need a subscriber across runs.
+// `subscribe()` only emits while a run is in progress, so the loop and `run()`
+// must run together; awaiting the loop before calling `run()` would deadlock.
 (async () => {
   const consumer = (async () => {
     for await (const event of session.subscribe()) {
@@ -132,12 +155,13 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-coding-security` | coding approval, containment, and sandbox adapters |
 | `@arnilo/prism-tool-validator-json-schema` | bounded JSON Schema tool validation |
 | `@arnilo/prism-mcp` | MCP client/tool bridge |
-| `@arnilo/prism-workflows` | bounded DAG workflows and durable coordination |
+| `@arnilo/prism-workflows` | bounded DAG workflows, durable suspend/resume, schedules/background runs, composition/state/replay, and multi-process coordination |
+| `@arnilo/prism-supervisor` | bounded local child delegation and A2A 1.0 interoperability |
 | `@arnilo/prism-observability-opentelemetry` | optional OpenTelemetry adapter |
 | `@arnilo/prism-credentials-node` | encrypted-file and keychain credentials |
-| `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases |
-| `@arnilo/prism-session-store-postgres` | PostgreSQL persistence/checkpoints/leases |
-| `@arnilo/prism-providers` | family: all 6 provider adapters |
+| `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases/owned run feedback |
+| `@arnilo/prism-session-store-postgres` | PostgreSQL persistence/checkpoints/leases/owned run feedback |
+| `@arnilo/prism-providers` | family: all 7 provider adapters, including AI SDK interoperability |
 | `@arnilo/prism-compaction` | family: both compaction strategies |
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |

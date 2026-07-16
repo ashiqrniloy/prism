@@ -3,6 +3,7 @@ import type {
   AgentConfig,
   AgentEvent,
   AgentEventRecord,
+  AgentRunResult,
   AgentSession,
   AgentSessionConfig,
   AIProvider,
@@ -30,6 +31,7 @@ import type {
   SessionBranchRead,
   Skill,
   SubscribeOptions,
+  TextContent,
   ToolCallContent,
   ToolDefinition,
   ToolRegistry,
@@ -37,6 +39,7 @@ import type {
   Usage,
   UsageRecord,
 } from "./contracts.js";
+import { AgentRunError } from "./contracts.js";
 import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
@@ -100,7 +103,7 @@ class RuntimeAgentSession implements AgentSession {
     return subscriber;
   }
 
-  async run(input: AgentInput, options: RunOptions = {}): Promise<void> {
+  async run(input: AgentInput, options: RunOptions = {}): Promise<AgentRunResult> {
     const runId = randomId("run");
     if (this.activeRun) {
       const error = new Error("Agent session already has an active run");
@@ -119,6 +122,8 @@ class RuntimeAgentSession implements AgentSession {
     const model = options.model ?? this.agent.config.model;
     const startedAt = new Date().toISOString();
     let runError: ErrorInfo | undefined;
+    const runUsage = createUsageAccumulator();
+    let usage: Usage | undefined;
 
     try {
       this.resolveRunProvider(options);
@@ -166,6 +171,22 @@ class RuntimeAgentSession implements AgentSession {
       const toolConcurrency = resolveToolConcurrency(options, this.agent.config);
 
       this.activeLoopTurn = 1;
+      const recordProviderUsage = async (turnUsage: Usage, turn: number, attempt: number) => {
+        runUsage.add(turnUsage);
+        if (!this.activeLedger) return;
+        const usageRecord: UsageRecord = {
+          id: randomId("usage"),
+          sessionId: this.id,
+          runId,
+          scope: "provider_turn",
+          turn,
+          attempt,
+          usage: turnUsage,
+          recordedAt: new Date().toISOString(),
+          ...this.activeOwnership,
+        };
+        await this.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, this.activeRedactor));
+      };
       // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
       const ctx: LoopContext = {
         sessionId: this.id,
@@ -204,7 +225,15 @@ class RuntimeAgentSession implements AgentSession {
         generate: async (request) => {
           const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
           const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
-          return this.generateWithRetry(this.redactProviderRequest(middlewareRequest), runId, options, controller.signal, policyResult.secrets, this.activeLoopTurn);
+          return this.generateWithRetry(
+            this.redactProviderRequest(middlewareRequest),
+            runId,
+            options,
+            controller.signal,
+            policyResult.secrets,
+            this.activeLoopTurn,
+            recordProviderUsage,
+          );
         },
         isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
         dispatchToolCall: (call) => dispatchToolCall({
@@ -227,12 +256,14 @@ class RuntimeAgentSession implements AgentSession {
         },
       };
 
-      const usage = await loop.run(ctx);
+      const loopUsage = await loop.run(ctx);
+      usage = runUsage.value() ?? loopUsage;
       if (usage && this.activeLedger) {
         const usageRecord: UsageRecord = {
           id: randomId("usage"),
           sessionId: this.id,
           runId,
+          scope: "run_total",
           usage,
           recordedAt: new Date().toISOString(),
           ...this.activeOwnership,
@@ -241,10 +272,22 @@ class RuntimeAgentSession implements AgentSession {
       }
       await this.drainLedger();
       this.emit({ type: "agent_finished", sessionId: this.id, runId, usage });
+      return this.buildRunResult({
+        runId,
+        status: "succeeded",
+        usage,
+      });
     } catch (error) {
       runError = errorToErrorInfo(error);
       this.emit({ type: "error", sessionId: this.id, runId, error: runError });
-      throw error;
+      const result = this.buildRunResult({
+        runId,
+        status: controller.signal.aborted ? "aborted" : "failed",
+        usage: runUsage.value() ?? usage,
+        error: runError,
+        abortReason: controller.signal.aborted ? String(controller.signal.reason) : undefined,
+      });
+      throw new AgentRunError(result, { cause: error });
     } finally {
       if (this.activeRun === controller) this.activeRun = undefined;
       try {
@@ -279,8 +322,55 @@ class RuntimeAgentSession implements AgentSession {
     }
   }
 
-  prompt(input: string, options?: RunOptions): Promise<void> {
+  prompt(input: string, options?: RunOptions): Promise<AgentRunResult> {
     return this.run(input, options);
+  }
+
+  async *stream(input: AgentInput, options: RunOptions & SubscribeOptions = {}): AsyncGenerator<AgentEvent> {
+    const { maxQueuedEvents, overflow, ...runOptions } = options;
+    const subscription = this.subscribe({ maxQueuedEvents, overflow });
+    let runOwnedId: string | undefined;
+    let settled = false;
+    const runPromise = this.run(input, runOptions).finally(() => {
+      settled = true;
+    });
+    try {
+      for await (const event of subscription) {
+        if ("runId" in event && typeof event.runId === "string") {
+          if (runOwnedId === undefined && event.type === "agent_started") runOwnedId = event.runId;
+          if (runOwnedId !== undefined && event.runId !== runOwnedId) continue;
+        }
+        yield event;
+      }
+      await runPromise;
+    } finally {
+      if (!settled) {
+        this.abort(new Error("stream consumer closed"));
+        await runPromise.catch(() => undefined);
+      }
+    }
+  }
+
+  private buildRunResult(input: {
+    readonly runId: string;
+    readonly status: AgentRunResult["status"];
+    readonly usage?: Usage;
+    readonly error?: ErrorInfo;
+    readonly abortReason?: string;
+  }): AgentRunResult {
+    const final = finalAssistantMessage(this.history);
+    return {
+      sessionId: this.id,
+      runId: input.runId,
+      status: input.status,
+      leafId: this.currentLeafId,
+      text: final.text,
+      content: final.content,
+      message: final.message,
+      usage: input.usage,
+      error: input.error,
+      abortReason: input.abortReason,
+    };
   }
 
   async compact(options: CompactionOptions = {}): Promise<CompactionResult> {
@@ -403,13 +493,14 @@ class RuntimeAgentSession implements AgentSession {
     signal: AbortSignal,
     requestSecrets: readonly (string | undefined)[] = [],
     turn = 1,
+    recordUsage?: (usage: Usage, turn: number, attempt: number) => Promise<void>,
   ): Promise<ProviderTurnResult> {
     const retry = mergeRetry(this.agent.config.retry, options.retry);
     const secrets = [...requestSecrets, ...(retry?.secrets ?? [])];
     const policy = retry?.policy ?? (retry ? createDefaultRetryPolicy(retry) : undefined);
     for (let attempt = 1; ; attempt += 1) {
       try {
-        return await this.generateProviderTurn(request, runId, signal, secrets, turn, attempt);
+        return await this.generateProviderTurn(request, runId, signal, secrets, turn, attempt, recordUsage);
       } catch (error) {
         const failure = error instanceof ProviderTurnFailure ? error : undefined;
         const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
@@ -433,6 +524,7 @@ class RuntimeAgentSession implements AgentSession {
     secrets: readonly (string | undefined)[] = [],
     turn = 1,
     attempt = 1,
+    recordUsage?: (usage: Usage, turn: number, attempt: number) => Promise<void>,
   ): Promise<ProviderTurnResult> {
     const startedAt = performance.now();
     const providerId = this.activeProvider?.id ?? request.model.provider;
@@ -451,24 +543,17 @@ class RuntimeAgentSession implements AgentSession {
     let messageId: string | undefined;
     let started = false;
     let usage: Usage | undefined;
+    let usageRecorded = false;
+    const recordTurnUsage = async () => {
+      if (!usage || usageRecorded) return;
+      usageRecorded = true;
+      await recordUsage?.(usage, turn, attempt);
+    };
     try {
       for await (const event of this.activeProvider!.generate(request)) {
         throwIfAborted(signal);
         if (event.type === "error") throw new ProviderTurnFailure(event.error, started);
-        if (event.type === "usage") {
-          usage = event.usage;
-          if (this.activeLedger) {
-            const usageRecord: UsageRecord = {
-              id: randomId("usage"),
-              sessionId: this.id,
-              runId,
-              usage: event.usage,
-              recordedAt: new Date().toISOString(),
-              ...this.activeOwnership,
-            };
-            await this.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, this.activeRedactor));
-          }
-        }
+        if (event.type === "usage") usage = event.usage;
         if (event.type === "done") {
           usage = event.usage ?? usage;
           break;
@@ -500,6 +585,7 @@ class RuntimeAgentSession implements AgentSession {
         calls.push(call);
         this.emit({ type: "message_delta", sessionId: this.id, runId, content: call });
       }
+      await recordTurnUsage();
       const latencyMs = Math.round(performance.now() - startedAt);
       this.emit({
         type: "provider_turn_finished",
@@ -513,12 +599,14 @@ class RuntimeAgentSession implements AgentSession {
     } catch (error) {
       const latencyMs = Math.round(performance.now() - startedAt);
       const info = error instanceof ProviderTurnFailure ? redactSecrets(error.info, secrets) : errorToErrorInfo(error, secrets);
+      await recordTurnUsage();
       this.emit({
         type: "provider_turn_finished",
         sessionId: this.id,
         runId,
         turn,
         metadata: buildMetadata({ latencyMs, httpStatus: readProviderHttpStatus(info) }),
+        usage,
         error: info,
       });
       if (error instanceof ProviderTurnFailure) throw error;
@@ -678,6 +766,23 @@ function inputToMessages(input: AgentInput): Message[] {
   return [...input];
 }
 
+function finalAssistantMessage(history: readonly Message[]): {
+  readonly message?: Message;
+  readonly content: readonly ContentBlock[];
+  readonly text: string;
+} {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const message = history[index]!;
+    if (message.role !== "assistant") continue;
+    const text = message.content
+      .filter((block): block is TextContent => block.type === "text")
+      .map((block) => block.text)
+      .join("");
+    return { message, content: message.content, text };
+  }
+  return { content: [], text: "" };
+}
+
 function activeTools(tools: AgentConfig["tools"]): { registry: ToolRegistry; tools: readonly ToolDefinition[] } {
   if (!tools) return { registry: createToolRegistry(), tools: [] };
   if ("list" in tools) return { registry: tools, tools: tools.list() };
@@ -735,6 +840,40 @@ function throwIfAborted(signal: AbortSignal): void {
 
 function throwIfAbortedSignal(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
+}
+
+function createUsageAccumulator(): { add(usage: Usage): void; value(): Usage | undefined } {
+  const sums = new Map<keyof Usage, number>();
+  let costCurrency: string | undefined;
+  let costCompatible = true;
+
+  return {
+    add(usage) {
+      for (const key of ["inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens"] as const) {
+        const value = usage[key];
+        if (value !== undefined) sums.set(key, (sums.get(key) ?? 0) + value);
+      }
+      const total = usage.totalTokens
+        ?? (usage.inputTokens !== undefined || usage.outputTokens !== undefined
+          ? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0)
+          : undefined);
+      if (total !== undefined) sums.set("totalTokens", (sums.get("totalTokens") ?? 0) + total);
+      if (usage.cost !== undefined && costCompatible) {
+        if (!sums.has("cost")) costCurrency = usage.currency;
+        else if (usage.currency !== costCurrency) costCompatible = false;
+        if (costCompatible) sums.set("cost", (sums.get("cost") ?? 0) + usage.cost);
+      }
+    },
+    value() {
+      if (sums.size === 0) return undefined;
+      const usage: Record<string, number | string> = {};
+      for (const [key, value] of sums) {
+        if (key !== "cost" || costCompatible) usage[key] = value;
+      }
+      if (costCompatible && sums.has("cost") && costCurrency !== undefined) usage.currency = costCurrency;
+      return Object.keys(usage).length > 0 ? usage as Usage : undefined;
+    },
+  };
 }
 
 function randomId(prefix: string): string {

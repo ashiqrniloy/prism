@@ -6,6 +6,8 @@
 
 Current status: ledger/projection/render/recall utilities, explicit worker runtime, fast compaction strategy, inert extension helper, recall tool, and status/view command factories are available.
 
+This package is distinct from `@arnilo/prism-memory` working/semantic memory: observational memory compresses and recalls source-backed observations/reflections; semantic memory retrieves embeddings; working memory stores the current structured profile/state. Hosts may compose both.
+
 ## When to use it
 
 Use it when a host wants to opt in to long-session memory that records observations/reflections as session custom entries, renders prepared memory during compaction, and supports exact-id recall.

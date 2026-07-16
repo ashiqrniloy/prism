@@ -12,6 +12,7 @@ import {
 import {
   agentNode,
   conditionalNode,
+  cancelWorkflowRun,
   createMemoryWorkflowCheckpoints,
   defineWorkflow,
   fanOutNode,
@@ -21,8 +22,10 @@ import {
   listWorkflowRuns,
   resumeWorkflow,
   runWorkflow,
+  suspend,
   toolNode,
   WorkflowAbortError,
+  WorkflowCheckpointError,
   WorkflowRuntimeError,
   type WorkflowEvent,
 } from "../index.js";
@@ -224,6 +227,60 @@ describe("runWorkflow", () => {
     assert.equal(seen[0]?.metadata?.nodeId, "node");
   });
 
+  it("durably approves a tool before side effects and rechecks execution policy", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let executions = 0;
+    let policyChecks = 0;
+    const publish: ToolDefinition = {
+      name: "publish",
+      async execute() {
+        executions += 1;
+        return { toolCallId: "publish-1", name: "publish", value: "published" };
+      },
+    };
+    const workflow = defineWorkflow({
+      id: "approve-tool",
+      nodes: {
+        publish: toolNode({
+          tool: publish,
+          args: async () => ({ artifactId: "a1" }),
+          approval: { reason: "publish release", data: async (_ctx, args) => args },
+        }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "tool-approval-1",
+      executionPolicy: { check: () => { policyChecks += 1; return { allowed: true }; } },
+    });
+    assert.equal(suspended.status, "suspended");
+    assert.equal(executions, 0);
+    assert.equal(policyChecks, 0);
+
+    const resumed = await resumeWorkflow(workflow, { runId: suspended.runId }, {
+      checkpoints,
+      resume: { decision: "approve", expectedVersion: suspended.version },
+      executionPolicy: { check: () => { policyChecks += 1; return { allowed: true }; } },
+    });
+    assert.equal(resumed.status, "succeeded");
+    assert.equal(executions, 1);
+    assert.equal(policyChecks, 1);
+
+    const deniedPolicyStart = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "tool-policy-deny",
+    });
+    await assert.rejects(
+      () => resumeWorkflow(workflow, { runId: deniedPolicyStart.runId }, {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: deniedPolicyStart.version },
+        executionPolicy: { check: () => ({ allowed: false, reason: "policy changed" }) },
+      }),
+      /policy changed/,
+    );
+    assert.equal(executions, 1);
+  });
+
   it("checkpoints and resumes within process after failure", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     let shouldFail = true;
@@ -255,6 +312,220 @@ describe("runWorkflow", () => {
 
     const listed = await listWorkflowRuns(checkpoints, { workflowId: "resume" });
     assert.equal(listed.items.length, 1);
+  });
+
+  it("durably suspends and resumes exactly once after restart", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let sideEffects = 0;
+    const publish = functionNode({
+      execute: async (ctx) => {
+        if (!ctx.resume) {
+          return suspend<{ reviewer: string }>({
+            reason: "publish",
+            data: { artifactId: "a1" },
+            resumeSchema: {
+              type: "object",
+              properties: { reviewer: { type: "string" } },
+              required: ["reviewer"],
+            },
+          });
+        }
+        sideEffects += 1;
+        return { approvedBy: (ctx.resume.input as { reviewer: string }).reviewer };
+      },
+    });
+    const workflow = defineWorkflow({ id: "human-publish", nodes: { publish } });
+    const suspended = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "suspend-1",
+      ownership: { tenantId: "t1" },
+    });
+    assert.equal(suspended.status, "suspended");
+    assert.equal(suspended.suspension?.reason, "publish");
+    assert.equal(sideEffects, 0);
+
+    const options = {
+      checkpoints,
+      ownership: { tenantId: "t1" },
+      resume: {
+        decision: "approve" as const,
+        input: { reviewer: "Ada" },
+        expectedVersion: suspended.version,
+      },
+      validateResume: ({ value }: { value: unknown }) => {
+        assert.equal(typeof (value as { reviewer?: unknown }).reviewer, "string");
+      },
+    };
+    const [first, second] = await Promise.allSettled([
+      resumeWorkflow(workflow, { runId: suspended.runId }, options),
+      resumeWorkflow(workflow, { runId: suspended.runId }, options),
+    ]);
+    assert.equal([first, second].filter((result) => result.status === "fulfilled").length, 1);
+    assert.equal([first, second].filter((result) => result.status === "rejected").length, 1);
+    const fulfilled = [first, second].find(
+      (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof resumeWorkflow>>> => result.status === "fulfilled",
+    );
+    assert.equal(fulfilled?.value.status, "succeeded");
+    assert.deepEqual(fulfilled?.value.outputs.publish, { approvedBy: "Ada" });
+    assert.equal(sideEffects, 1);
+  });
+
+  it("serializes concurrent suspension requests without losing a node", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const reviewed = new Set<string>();
+    const reviewNode = (id: string) => functionNode({
+      execute: async (ctx) => {
+        if (!ctx.resume) return suspend({ reason: `review-${id}` });
+        reviewed.add(id);
+        return id;
+      },
+    });
+    const workflow = defineWorkflow({
+      id: "two-reviews",
+      nodes: { a: reviewNode("a"), b: reviewNode("b") },
+      edges: [],
+      limits: { maxConcurrency: 2 },
+    });
+    let result = await runWorkflow(workflow, null, { checkpoints, runId: "two-reviews-1" });
+    assert.equal(result.status, "suspended");
+    result = await resumeWorkflow(workflow, { runId: result.runId }, {
+      checkpoints,
+      resume: { decision: "approve", expectedVersion: result.version },
+    });
+    assert.equal(result.status, "suspended");
+    result = await resumeWorkflow(workflow, { runId: result.runId }, {
+      checkpoints,
+      resume: { decision: "approve", expectedVersion: result.version },
+    });
+    assert.equal(result.status, "succeeded");
+    assert.deepEqual([...reviewed].sort(), ["a", "b"]);
+  });
+
+  it("denies and cancels suspended runs as terminal attributable outcomes", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let invoked = 0;
+    const node = functionNode({
+      execute: async (ctx) => {
+        if (!ctx.resume) return suspend({ reason: "review" });
+        invoked += 1;
+        return "done";
+      },
+    });
+    const workflow = defineWorkflow({ id: "human-deny", nodes: { node } });
+    const deniedStart = await runWorkflow(workflow, null, { checkpoints, runId: "deny-1" });
+    const denied = await resumeWorkflow(workflow, { runId: deniedStart.runId }, {
+      checkpoints,
+      resume: { decision: "deny", input: { reason: "unsafe" }, expectedVersion: deniedStart.version },
+    });
+    assert.equal(denied.status, "denied");
+    assert.equal(denied.resume?.decision, "deny");
+    assert.equal(invoked, 0);
+    await assert.rejects(
+      () => resumeWorkflow(workflow, { runId: deniedStart.runId }, {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: denied.version },
+      }),
+      /already denied/i,
+    );
+
+    const cancelStart = await runWorkflow(workflow, null, { checkpoints, runId: "cancel-suspended" });
+    const cancelled = await cancelWorkflowRun({
+      workflowId: workflow.id,
+      runId: cancelStart.runId,
+      checkpoints,
+    });
+    assert.equal(cancelled.status, "aborted");
+  });
+
+  it("resumes and cancels suspended checkpoints left by a fenced coordinator", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const workflow = defineWorkflow({
+      id: "fenced-human",
+      nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review" }) }) },
+    });
+    const resumable = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "fenced-resume",
+      fencingToken: 3,
+    });
+    const resumed = await resumeWorkflow(workflow, { runId: resumable.runId }, {
+      checkpoints,
+      resume: { decision: "approve", expectedVersion: resumable.version },
+    });
+    assert.equal(resumed.status, "succeeded");
+
+    const cancellable = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "fenced-cancel",
+      fencingToken: 4,
+    });
+    const cancelled = await cancelWorkflowRun({
+      workflowId: workflow.id,
+      runId: cancellable.runId,
+      checkpoints,
+    });
+    assert.equal(cancelled.status, "aborted");
+  });
+
+  it("validates suspended resume input and rejects wrong ownership or stale versions", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const workflow = defineWorkflow({
+      id: "validate-resume",
+      nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review", resumeSchema: { type: "object" } }) }) },
+    });
+    const result = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "validate-1",
+      ownership: { tenantId: "t1" },
+    });
+    await assert.rejects(
+      () => resumeWorkflow(workflow, { runId: result.runId }, {
+        checkpoints,
+        ownership: { tenantId: "t1" },
+        resume: { decision: "approve", expectedVersion: result.version },
+      }),
+      /validateResume/,
+    );
+    await assert.rejects(
+      () => resumeWorkflow(workflow, { runId: result.runId }, {
+        checkpoints,
+        ownership: { tenantId: "t2" },
+        resume: { decision: "approve", expectedVersion: result.version },
+        validateResume: () => undefined,
+      }),
+      /ownership|tenant/i,
+    );
+    await assert.rejects(
+      () => resumeWorkflow(workflow, { runId: result.runId }, {
+        checkpoints,
+        ownership: { tenantId: "t1" },
+        resume: { decision: "approve", expectedVersion: result.version - 1 },
+        validateResume: () => undefined,
+      }),
+      (error: unknown) => error instanceof WorkflowCheckpointError && /Stale resume version/.test(error.message),
+    );
+  });
+
+  it("redacts suspension and resume payloads in durable checkpoints", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints({ secrets: ["sekrit"] });
+    const workflow = defineWorkflow({
+      id: "redact-suspend",
+      nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review", data: { token: "sekrit" } }) }) },
+    });
+    const suspended = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "redact-suspend-1",
+      redactor: createSecretRedactor(["sekrit"]),
+    });
+    const resumed = await resumeWorkflow(workflow, { runId: suspended.runId }, {
+      checkpoints,
+      redactor: createSecretRedactor(["sekrit"]),
+      resume: { decision: "approve", input: { token: "sekrit" }, expectedVersion: suspended.version },
+    });
+    const saved = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: resumed.runId });
+    assert.doesNotMatch(JSON.stringify(suspended), /sekrit/);
+    assert.doesNotMatch(JSON.stringify(resumed), /sekrit/);
+    assert.doesNotMatch(JSON.stringify(saved), /sekrit/);
   });
 
   it("redacts node outputs before checkpoint persistence", async () => {

@@ -11,6 +11,7 @@ import {
   DEFAULT_MAX_MEDIA_REQUEST_BYTES,
   MediaContentError,
   resolveMediaContentBlock,
+  resolveMediaContentBlocks,
   sniffMediaMimeType,
   UnsupportedModalityError,
   type AudioContent,
@@ -138,17 +139,137 @@ describe("multimodal content contracts", () => {
     );
   });
 
-  it("denies private-network SSRF targets by default", () => {
+  it("denies private, local, unspecified, multicast, and mapped SSRF literals", () => {
     for (const url of [
       "http://127.0.0.1/secret",
+      "http://%31%32%37.0.0.1/secret",
       "http://localhost/file",
       "http://10.0.0.5/file",
       "http://192.168.1.10/file",
       "http://169.254.169.254/latest/meta-data",
+      "http://0.0.0.0/file",
+      "http://224.0.0.1/file",
+      "http://[::]/file",
+      "http://[::1]/file",
+      "http://[fe80::1]/file",
+      "http://[fc00::1]/file",
+      "http://[fd00::1]/file",
+      "http://[ff02::1]/file",
+      "http://[::ffff:127.0.0.1]/file",
+      "http://[::ffff:10.0.0.1]/file",
     ]) {
-      assert.throws(() => assertSsrfAllowedUrl(url), (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied");
+      assert.throws(() => assertSsrfAllowedUrl(url), (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied", url);
     }
-    assert.doesNotThrow(() => assertSsrfAllowedUrl("https://cdn.example.test/file.pdf"));
+    assert.doesNotThrow(() => assertSsrfAllowedUrl("https://CDN.EXAMPLE.TEST./file.pdf"));
+    assert.doesNotThrow(() => assertSsrfAllowedUrl("https://93.184.216.34/file.pdf"));
+    assert.doesNotThrow(() => assertSsrfAllowedUrl("http://[::1]/file", { allowedHostnames: ["::1"] }));
+  });
+
+  it("rejects private DNS answers and pins one validated public address", async () => {
+    const block: FileContent = {
+      type: "file",
+      mediaType: "application/pdf",
+      url: "https://media.example.test/report.pdf",
+    };
+    let requests = 0;
+    const resolved = await resolveMediaContentBlock(block, {
+      resolveHostname: async (hostname) => {
+        assert.equal(hostname, "media.example.test");
+        return [{ address: "93.184.216.34", family: 4 }];
+      },
+      requestUrl: async ({ url, address }) => {
+        requests++;
+        assert.equal(url.hostname, "media.example.test");
+        assert.deepEqual(address, { address: "93.184.216.34", family: 4 });
+        return tinyPdf;
+      },
+    });
+    assert.deepEqual(resolved.bytes, tinyPdf);
+    assert.equal(requests, 1);
+
+    for (const answers of [
+      [{ address: "127.0.0.1", family: 4 as const }],
+      [
+        { address: "93.184.216.34", family: 4 as const },
+        { address: "10.0.0.1", family: 4 as const },
+      ],
+      [{ address: "::ffff:127.0.0.1", family: 6 as const }],
+    ]) {
+      await assert.rejects(
+        () => resolveMediaContentBlock(block, {
+          resolveHostname: async () => answers,
+          requestUrl: async () => {
+            assert.fail("request must not run for private DNS answers");
+          },
+        }),
+        (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+      );
+    }
+  });
+
+  it("bounds DNS lookup failure, timeout, and abort", async () => {
+    const block: FileContent = {
+      type: "file",
+      mediaType: "application/pdf",
+      url: "https://media.example.test/report.pdf",
+    };
+    await assert.rejects(
+      () => resolveMediaContentBlock(block, { resolveHostname: async () => { throw new Error("lookup failed"); } }),
+      (error: unknown) => error instanceof MediaContentError && error.code === "fetch_failed",
+    );
+    await assert.rejects(
+      () => resolveMediaContentBlock(block, {
+        resolveHostname: async () => Array.from({ length: 33 }, () => ({ address: "93.184.216.34", family: 4 as const })),
+      }),
+      (error: unknown) => error instanceof MediaContentError && error.code === "fetch_failed",
+    );
+    await assert.rejects(
+      () => resolveMediaContentBlock(block, {
+        bounds: { fetchTimeoutMs: 5 },
+        resolveHostname: () => new Promise(() => {}),
+      }),
+      (error: unknown) => error instanceof MediaContentError && error.code === "fetch_timeout",
+    );
+    const controller = new AbortController();
+    controller.abort(new Error("stop lookup"));
+    await assert.rejects(
+      () => resolveMediaContentBlock(block, {
+        signal: controller.signal,
+        resolveHostname: async () => [{ address: "93.184.216.34", family: 4 }],
+      }),
+      /stop lookup/,
+    );
+  });
+
+  it("enforces aggregate resolved bytes and item count before provider work", async () => {
+    const blocks = Array.from({ length: 4 }, () => ({
+      type: "file" as const,
+      mediaType: "application/octet-stream",
+      data: Buffer.from("abc").toString("base64"),
+    }));
+    let providerCalls = 0;
+    await assert.rejects(
+      async () => {
+        await resolveMediaContentBlocks(blocks, { bounds: { maxRequestBytes: 10 } });
+        providerCalls += 1;
+      },
+      (error: unknown) => error instanceof MediaContentError && error.code === "request_too_large",
+    );
+    assert.equal(providerCalls, 0);
+
+    let resolutions = 0;
+    await assert.rejects(
+      () => resolveMediaContentBlocks(Array.from({ length: 33 }, (_, index) => ({
+        type: "file" as const,
+        mediaType: "application/octet-stream",
+        url: `https://example.com/${index}`,
+      })), {
+        resolveHostname: async () => { resolutions += 1; return [{ address: "93.184.216.34", family: 4 }]; },
+        requestUrl: async () => new Uint8Array(),
+      }),
+      (error: unknown) => error instanceof MediaContentError && error.code === "too_many_items",
+    );
+    assert.equal(resolutions, 0);
   });
 
   it("rejects MIME spoofing when magic bytes disagree", () => {

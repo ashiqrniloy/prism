@@ -15,18 +15,66 @@ import type { WORKFLOW_CHECKPOINT_SCHEMA_VERSION } from "./limits.js";
 export type WorkflowRunStatus =
   | "queued"
   | "running"
+  | "suspended"
   | "succeeded"
   | "failed"
+  | "denied"
   | "aborted";
 
 export type WorkflowNodeStatus =
   | "pending"
   | "ready"
   | "running"
+  | "suspended"
   | "succeeded"
   | "failed"
+  | "denied"
   | "skipped"
   | "aborted";
+
+export interface WorkflowSuspensionDescriptor {
+  readonly nodeId: string;
+  readonly reason: string;
+  readonly data?: unknown;
+  readonly resumeSchema?: JsonObject;
+  readonly requestedAt: string;
+}
+
+export interface WorkflowSuspension<ResumeInput = unknown> {
+  readonly type: "workflow_suspend";
+  readonly reason: string;
+  readonly data?: unknown;
+  readonly resumeSchema?: JsonObject;
+  /** Compile-time marker for the expected resume input type. */
+  readonly __resumeInput?: ResumeInput;
+}
+
+export interface WorkflowResumeRequest {
+  readonly decision: "approve" | "deny";
+  readonly input?: unknown;
+  /** Version shown to the reviewer; required to claim a suspended checkpoint exactly once. */
+  readonly expectedVersion: number;
+}
+
+export interface WorkflowResumeRecord extends WorkflowResumeRequest {
+  readonly nodeId: string;
+  readonly resumedAt: string;
+}
+
+export interface WorkflowResumeContext {
+  readonly input?: unknown;
+  readonly resumedAt: string;
+}
+
+export interface WorkflowResumeValidationInput {
+  readonly value: unknown;
+  readonly schema?: JsonObject;
+  readonly suspension: WorkflowSuspensionDescriptor;
+}
+
+export type WorkflowResumeValidator = (
+  input: WorkflowResumeValidationInput,
+) => void | Promise<void>;
 
 export type WorkflowNodeKind =
   | "agent"
@@ -34,7 +82,27 @@ export type WorkflowNodeKind =
   | "tool"
   | "conditional"
   | "fan_out"
-  | "join";
+  | "join"
+  | "workflow";
+
+export interface WorkflowStateUpdateOptions {
+  readonly mode?: "merge" | "replace";
+}
+
+export interface WorkflowStateValidationInput {
+  readonly value: JsonObject;
+  readonly schema?: JsonObject;
+  readonly signal?: AbortSignal;
+}
+
+export type WorkflowStateValidator = (
+  input: WorkflowStateValidationInput,
+) => void | Promise<void>;
+
+export interface WorkflowStateConfig {
+  readonly initial?: JsonObject;
+  readonly schema?: JsonObject;
+}
 
 export interface WorkflowNodeContext {
   readonly workflowId: string;
@@ -42,9 +110,14 @@ export interface WorkflowNodeContext {
   readonly nodeId: string;
   readonly workflowInput: unknown;
   readonly upstream: Readonly<Record<string, unknown>>;
+  readonly state: Readonly<JsonObject>;
+  readonly stateVersion: number;
+  updateState(patch: JsonObject, options?: WorkflowStateUpdateOptions): Promise<Readonly<JsonObject>>;
   readonly signal?: AbortSignal;
   readonly ownership?: OwnershipScope;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /** Present only while re-entering the node selected by an approved durable resume. */
+  readonly resume?: WorkflowResumeContext;
 }
 
 export interface WorkflowNodeBase {
@@ -68,6 +141,15 @@ export interface FunctionNodeDefinition extends WorkflowNodeBase {
   readonly execute: (ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
 }
 
+export interface WorkflowToolApproval {
+  readonly reason: string;
+  readonly data?: (
+    ctx: WorkflowNodeContext,
+    args: JsonObject,
+  ) => unknown | Promise<unknown>;
+  readonly resumeSchema?: JsonObject;
+}
+
 export interface ToolNodeDefinition extends WorkflowNodeBase {
   readonly kind: "tool";
   readonly tool: ToolDefinition | string;
@@ -76,6 +158,8 @@ export interface ToolNodeDefinition extends WorkflowNodeBase {
     ctx: WorkflowNodeContext,
     args: JsonObject,
   ) => ExecutionAction | Promise<ExecutionAction>;
+  /** Opt-in durable approval gate evaluated before any tool side effect. */
+  readonly approval?: WorkflowToolApproval;
 }
 
 export interface ConditionalNodeDefinition extends WorkflowNodeBase {
@@ -108,13 +192,24 @@ export interface JoinNodeDefinition extends WorkflowNodeBase {
   ) => unknown | Promise<unknown>;
 }
 
+export interface NestedWorkflowNodeDefinition extends WorkflowNodeBase {
+  readonly kind: "workflow";
+  readonly workflow: WorkflowDefinition;
+  readonly input?: (ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
+  readonly output?: (
+    result: WorkflowRunResult,
+    ctx: WorkflowNodeContext,
+  ) => unknown | Promise<unknown>;
+}
+
 export type WorkflowNodeDefinition =
   | AgentNodeDefinition
   | FunctionNodeDefinition
   | ToolNodeDefinition
   | ConditionalNodeDefinition
   | FanOutNodeDefinition
-  | JoinNodeDefinition;
+  | JoinNodeDefinition
+  | NestedWorkflowNodeDefinition;
 
 export interface WorkflowLimits {
   readonly maxNodes?: number;
@@ -122,6 +217,10 @@ export interface WorkflowLimits {
   readonly maxConcurrency?: number;
   readonly maxNodeOutputBytes?: number;
   readonly maxCheckpointBytes?: number;
+  readonly maxNestedDepth?: number;
+  readonly maxStateBytes?: number;
+  readonly maxStateHistory?: number;
+  readonly maxReplayDepth?: number;
 }
 
 export interface WorkflowDefinition {
@@ -129,6 +228,7 @@ export interface WorkflowDefinition {
   readonly nodes: Readonly<Record<string, WorkflowNodeDefinition>>;
   readonly edges: readonly (readonly [string, string])[];
   readonly limits?: WorkflowLimits;
+  readonly state?: WorkflowStateConfig;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -141,6 +241,15 @@ export interface WorkflowNodeCheckpoint {
   readonly sessionId?: string;
   readonly leafId?: string;
   readonly runId?: string;
+  readonly stateVersionBefore?: number;
+}
+
+export interface WorkflowReplayLineage {
+  readonly sourceRunId: string;
+  readonly fromNodeId: string;
+  readonly rootRunId: string;
+  readonly depth: number;
+  readonly createdAt: string;
 }
 
 export interface WorkflowCheckpointValue {
@@ -156,6 +265,12 @@ export interface WorkflowCheckpointValue {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly redacted: boolean;
+  readonly suspension?: WorkflowSuspensionDescriptor;
+  readonly resume?: WorkflowResumeRecord;
+  readonly state?: JsonObject;
+  readonly stateVersion?: number;
+  readonly stateHistory?: Readonly<Record<string, JsonObject>>;
+  readonly lineage?: WorkflowReplayLineage;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -231,6 +346,22 @@ export type WorkflowEvent =
       readonly workflowId: string;
       readonly runId: string;
       readonly status: WorkflowRunStatus;
+      readonly timestamp: string;
+      readonly sequence: number;
+    }
+  | {
+      readonly type: "workflow_suspended";
+      readonly workflowId: string;
+      readonly runId: string;
+      readonly suspension: WorkflowSuspensionDescriptor;
+      readonly timestamp: string;
+      readonly sequence: number;
+    }
+  | {
+      readonly type: "workflow_resumed";
+      readonly workflowId: string;
+      readonly runId: string;
+      readonly resume: WorkflowResumeRecord;
       readonly timestamp: string;
       readonly sequence: number;
     }
@@ -331,6 +462,10 @@ export interface WorkflowRunHandle {
 
 export interface WorkflowRunResult extends WorkflowRunHandle {
   readonly outputs: Readonly<Record<string, unknown>>;
+  readonly state: Readonly<JsonObject>;
+  readonly suspension?: WorkflowSuspensionDescriptor;
+  readonly resume?: WorkflowResumeRecord;
+  readonly lineage?: WorkflowReplayLineage;
 }
 
 export interface RunWorkflowOptions {
@@ -350,6 +485,17 @@ export interface RunWorkflowOptions {
   readonly fencingToken?: number;
   /** Internal ownership guard used to stop writes immediately after lease loss. */
   readonly checkpointGuard?: () => boolean;
+  /** Required when resuming a suspended run. */
+  readonly resume?: WorkflowResumeRequest;
+  /** Host-selected validator; required when a suspension declares resumeSchema. */
+  readonly validateResume?: WorkflowResumeValidator;
+  /** Host-selected validator; required when the workflow declares a state schema. */
+  readonly validateState?: WorkflowStateValidator;
+  readonly initialState?: JsonObject;
+  /** Internal nesting cursor; hosts normally leave this unset. */
+  readonly nestedDepth?: number;
+  /** Internal inherited nesting ceiling; hosts normally leave this unset. */
+  readonly nestedDepthLimit?: number;
   readonly failurePolicy?: "fail-fast";
   readonly metadata?: Readonly<Record<string, unknown>>;
 }

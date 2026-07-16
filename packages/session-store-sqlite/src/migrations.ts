@@ -7,7 +7,7 @@ import {
   createPersistenceMigrationContract,
   createPersistenceSchemaModel,
 } from "@arnilo/prism/testing/persistence-schema";
-import { ADAPTER_INDEX_NAMES, ADAPTER_TABLE_NAMES, MIGRATION_001_INIT } from "./ddl.js";
+import { ADAPTER_INDEX_NAMES, ADAPTER_TABLE_NAMES, MIGRATION_001_INIT, MIGRATION_002_USAGE_SCOPE, MIGRATION_003_RUN_FEEDBACK } from "./ddl.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
 
@@ -33,11 +33,10 @@ export function applySqliteMigrations(db: Database.Database): readonly AppliedMi
 
   const migrate = db.transaction(() => {
     for (const step of pending) {
-      if (step.name === "001_init") {
-        db.exec(MIGRATION_001_INIT);
-      } else {
-        throw new Error(`Unknown migration step: ${step.name}`);
-      }
+      if (step.name === "001_init") db.exec(MIGRATION_001_INIT);
+      else if (step.name === "002_usage_scope") db.exec(MIGRATION_002_USAGE_SCOPE);
+      else if (step.name === "003_run_feedback") db.exec(MIGRATION_003_RUN_FEEDBACK);
+      else throw new Error(`Unknown migration step: ${step.name}`);
       db.prepare(
         `INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum)
          VALUES (?, ?, ?, ?, ?, ?)`,

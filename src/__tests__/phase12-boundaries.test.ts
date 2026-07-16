@@ -39,7 +39,7 @@ describe("phase 12 provider package boundaries", () => {
         registerAuthMethod: (item: unknown) => registered.push(item),
       });
       assert.equal(fetchCalls, 0, `${specifier} setup called fetch`);
-      assert(registered.some((item: any) => item.kind === "api_key" || item.kind === "oauth"), `${specifier} did not register auth`);
+      assert(registered.some((item) => typeof item === "object" && item !== null && "kind" in item && (item.kind === "api_key" || item.kind === "oauth")), `${specifier} did not register auth`);
     }
   });
 

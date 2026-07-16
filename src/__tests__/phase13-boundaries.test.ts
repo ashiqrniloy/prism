@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { createExtensionKernel, type CompactionStrategy, type Extension } from "../index.js";
 
 function files(dir: string, predicate: (path: string) => boolean): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -26,7 +27,11 @@ describe("phase 13 compaction llm boundaries", () => {
   });
 
   it("phase13_compaction_llm_setup_is_inert", async () => {
-    const { createLlmCompactionExtension, createLlmCompactionStrategy } = await import("../../packages/compaction-llm/" + "dist/index.js") as any;
+    type LlmCompactionModule = {
+      createLlmCompactionStrategy(options: unknown): CompactionStrategy;
+      createLlmCompactionExtension(options: unknown): Extension;
+    };
+    const { createLlmCompactionExtension, createLlmCompactionStrategy } = await import("../../packages/compaction-llm/" + "dist/index.js") as LlmCompactionModule;
     let calls = 0;
     const options = {
       summaryProvider: () => { calls++; throw new Error("provider factory should not run during setup"); },
@@ -35,7 +40,7 @@ describe("phase 13 compaction llm boundaries", () => {
     };
 
     createLlmCompactionStrategy(options);
-    createLlmCompactionExtension(options).setup({ registerCompactionStrategy: () => undefined });
+    await createExtensionKernel().load([createLlmCompactionExtension(options)]);
 
     assert.equal(calls, 0);
   });
@@ -52,7 +57,7 @@ describe("phase 13 compaction llm boundaries", () => {
     assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
     assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.4");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.5");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 

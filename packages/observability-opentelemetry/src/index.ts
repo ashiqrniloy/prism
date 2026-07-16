@@ -4,6 +4,7 @@ export {
   wrapOpenTelemetryApi,
 } from "./instrumentation.js";
 export type {
+  EvaluationTelemetry,
   InMemoryTelemetry,
   OpenTelemetryInstrumentation,
   OpenTelemetryInstrumentationOptions,
@@ -13,6 +14,7 @@ export type {
   PrismSpan,
   PrismSpanStatus,
   PrismTracer,
+  RunFeedbackTelemetry,
   RecordedMetric,
   RecordedSpan,
 } from "./instrumentation.js";

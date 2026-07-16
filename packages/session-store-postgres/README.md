@@ -1,6 +1,6 @@
 # @arnilo/prism-session-store-postgres
 
-Optional PostgreSQL adapter implementing Prism `SessionStore`, `RunLedger`, `ProductionPersistenceStore`, generic `CheckpointStore`, and atomic `LeaseStore` over [`pg`](https://node-postgres.com/).
+Optional PostgreSQL adapter implementing Prism `SessionStore`, `RunLedger`, `ProductionPersistenceStore`, owned `RunFeedbackStore`, generic `CheckpointStore`, and atomic `LeaseStore` over [`pg`](https://node-postgres.com/).
 
 ## Install
 

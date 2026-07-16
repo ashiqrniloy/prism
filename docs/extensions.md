@@ -101,7 +101,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 ## Extension and configuration notes
 
 - Extension loading is explicit. Prism does not discover packages, read manifests, or load filesystem config in the kernel.
-- `AgentConfig.extensions` is host-owned metadata for compatibility; `createAgent()` and `session.run()` do not load it or call `Extension.setup()`. Load extensions with `createExtensionKernel().load(...)`, then pass selected contributions (`tools`, `context`, `skills`, middleware, etc.) into `createAgent()`.
+- Extensions stay host-owned outside `AgentConfig`. `createAgent()` and `session.run()` do not load extension lists or call `Extension.setup()`. Load extensions with `createExtensionKernel().load(...)`, then pass selected contributions (`tools`, `context`, `skills`, middleware, etc.) into `createAgent()`.
 - Setup order is the order provided by the host.
 - The kernel writes only to explicit registries returned by `createContributionRegistries()` or provided by the host.
 - `api.registerTool()` contributes an inert `ToolDefinition` to `registries.tools`; it does not add the tool to an active tool registry, allow list, or dispatch loop.
@@ -117,7 +117,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 ## Security and performance notes
 
 - No hidden global extension kernel, provider registry, credential resolver, settings provider, store, or resource loader is created.
-- `AgentConfig.extensions` does not auto-execute, so constructing or running an agent cannot unexpectedly run extension code.
+- Extension packages do not auto-execute from `createAgent()`, so constructing or running an agent cannot unexpectedly run extension code.
 - Error events use `ErrorInfo` and redact only known secret values passed in `secrets`.
 - Do not put resolved credential values in extension events, registry metadata, docs, logs, prompts, or session stores.
 - Event and middleware dispatch are ordered and dependency-free. They use no timers, background workers, filesystem discovery, network calls, provider calls, or tool execution.

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-07-16
+
+### Added
+
+- Schema migration `003_run_feedback` and `persistence.feedback` with exact run ownership, bounded/redacted records, cursor queries, and owned deletion.
+
 ## [0.0.4] - 2026-07-14
 
 ### Added

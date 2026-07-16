@@ -1,6 +1,6 @@
 # @arnilo/prism-session-store-sqlite
 
-Optional SQLite adapter implementing Prism `SessionStore`, `RunLedger`, `ProductionPersistenceStore`, generic `CheckpointStore`, and atomic `LeaseStore` over [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3).
+Optional SQLite adapter implementing Prism `SessionStore`, `RunLedger`, `ProductionPersistenceStore`, owned `RunFeedbackStore`, generic `CheckpointStore`, and atomic `LeaseStore` over [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3).
 
 ## Install
 

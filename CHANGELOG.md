@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-07-16
+
+- `@arnilo/prism-providers` now installs all seven first-party adapters including AI SDK interoperability; `@arnilo/prism-all` now installs every first-party package while activating none automatically.
+
+- Added optional `@arnilo/prism-supervisor` with bounded explicit child delegation, derived memory scope IDs, narrowing-only permissions, A2A 1.0 cards/ES256 signatures, authorized JSON-RPC/SSE serving, and an exact-origin remote client.
+
+- Added bounded immutable run/trace feedback with exact ownership, evaluation linkage, memory/SQLite/PostgreSQL stores, schema migration 003, and safe OpenTelemetry projection.
+
+- Phase 11 extends workflows with explicit durable schedules/background execution, nested composition, bounded validated state, immutable-lineage replay, and optional command/Web bindings over existing checkpoint/lease primitives.
+
+- Optional `@arnilo/prism-server` package with authorized bounded Web-standard direct/SSE agent and durable workflow routes; `@arnilo/prism-mcp` now supports explicit authorized Prism tool/command server exposure and bounded Web-standard Streamable HTTP handling.
+- Optional `@arnilo/prism-rag` package: bounded deterministic text/Markdown chunking, Phase 7 vector indexing/retrieval, stable citations, metadata filters, redaction, and explicit ContextProvider injection.
+- Workflows now support durable human `suspend()`/approve/deny, expected-version exact-once resume, validated/redacted resume payloads, and opt-in tool approval with execution-policy recheck.
+
+### Added
+
+- Optional `@arnilo/prism-memory` package: schema/template-backed working memory, semantic recall, package-owned `Embedder`/`VectorStore` contracts, in-memory adapters, context provider, opt-in processor, shared conformance, and PostgreSQL/pgvector production path.
+
 ## [0.0.4] - 2026-07-14
 
 ### Added

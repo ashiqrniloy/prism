@@ -44,7 +44,7 @@ Updated: 2026-07-15
 
 ## Tasks
 
-- [ ] Phase 0 — Freeze the 0.0.5 scope and review existing primitives before implementation
+- [x] Phase 0 — Freeze the 0.0.5 scope and review existing primitives before implementation
   - Acceptance Criteria:
     - Functional: Every confirmed review finding and recommended feature maps to exactly one phase, package owner, public surface, test owner, and documentation owner; already-shipped Prism functionality is not planned again.
     - Performance: Baselines record current test duration, package/tarball sizes, generated-project install size, and representative stream/tool/workflow measurements before code changes.
@@ -75,8 +75,16 @@ Updated: 2026-07-15
       - `.agents/skills/create-plan/references/prism-wiki.md`.
       - Current source hotspots: `src/contracts.ts`, `src/agents.ts`, `packages/workflows/src/run.ts`.
   - Test Cases to Write:
-    - Roadmap/review matrix consistency check: every in-scope item has one owner and no unresolved release-blocking row.
+    - Roadmap/review matrix consistency check: every in-scope item has one owner and no unowned or ambiguously owned release-blocking row.
     - Baseline script/check: records reproducible commands and environment without introducing timing assertions into normal CI.
+  - Completion Evidence (2026-07-15):
+    - Frozen at `f5128a816ae204c52f3e2f089de71c99bd5de6d4`; `docs/review-coverage-2026-07-15.md` maps 14 unique findings and 12 accepted capabilities to one phase/package/surface/test/docs owner each.
+    - Primitive review confirms agent loops/events, context/middleware, provider transport, tool policy, redaction, persistence, checkpoints, leases, workflow DAG/coordinator, MCP client, CLI/RPC, and seven conformance helpers are reused; permitted gaps are listed per phase.
+    - Threat matrix covers media fetch, tools, approval/resume, remote HTTP/MCP, memory/RAG, workflows, eval/feedback, supervisors, and A2A.
+    - Pre-change baseline: `npm test` passed 1,475 tests (1,450 pass, 25 explicit live skips, 0 fail) in 25.750 s; `npm run sdk:ready` passed in 54.341 s. Post-documentation verification also passed all tests and 24 dry-run packs (`sdk:ready` 57.764 s).
+    - Seven-run warm medians: 5,000-delta run 3.78 ms; six 20 ms tools 121.05 ms at concurrency 1 and 60.65 ms at 2; 1,000-node workflow 9.66 ms.
+    - Package baseline: 542,993 packed / 2,084,900 unpacked aggregate bytes; root 346.0 kB / 1.3 MB; workspace `node_modules` 72 MiB. Prism has no generator before Phase 5, so generated-project size is recorded as not applicable; Mastra comparator remains 439 MB install / 300 MB build.
+    - Pre-freeze workflow coordinator test correction at `f5128a8` passed five consecutive focused runs and the full suite; removed from Phase 2 instead of planning duplicate work.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no; this phase freezes scope and evidence.
     - Docs pages to create/edit:
@@ -85,7 +93,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; add the 0.0.5 review-coverage entry under Release and install.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 1 — Close release-blocking security defects
+- [x] Phase 1 — Close release-blocking security defects
   - Acceptance Criteria:
     - Functional: Media URL validation rejects IPv4 and IPv6 loopback, private, link-local, unique-local, unspecified, multicast, and IPv4-mapped private literals; configured public/allowed hosts still work.
     - Functional: `createReadOnlyTools()` applies the shared `executionPolicy` exactly as `createCodingTools()` does.
@@ -117,12 +125,12 @@ Updated: 2026-07-15
       }); // key includes executionContext.runId
       ```
     - Files to Create/Edit:
-      - `src/content.ts`: normalized IP classification and secure bounded fetch path.
-      - `src/contracts.ts` or existing execution context types: run/session identity only if not already available at policy boundary.
+      - `src/content.ts`, `src/index.ts`: normalized IP classification, DNS resolver/pinned requester seams, secure bounded default transport, and public types.
       - `packages/coding-agent/src/index.ts`: shared policy propagation.
-      - `packages/coding-agent/src/read.ts`, `shell.ts`, `write.ts`, `edit.ts`: pass existing execution identity if required.
-      - `packages/coding-security/src/approval.ts`: correct default and scoped keys.
-      - Relevant existing test files under `src/__tests__`, `packages/coding-agent/src/__tests__`, and `packages/coding-security/src/__tests__`.
+      - `packages/coding-agent/src/read.ts`, `shell.ts`, `write.ts`, `edit.ts`: pass existing run/session identity in execution metadata.
+      - `packages/coding-security/src/approval.ts`: correct default, timeout, and scoped keys.
+      - `src/__tests__/content.test.ts`, `src/__tests__/public-export-contract.test.ts`, `packages/coding-agent/src/__tests__/aggregators.test.ts`, `packages/coding-security/src/__tests__/approval.test.ts`.
+      - `docs/multimodal-content.md`, `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/host-security.md`, `docs/index.md`, and both affected package READMEs.
     - References:
       - Confirmed reproductions: bracketed `::1`, `fe80::1`, `fc00::1`, `::ffff:127.0.0.1`; read-only policy check count `0`; two default-scope approvals invoking the callback once.
   - Test Cases to Write:
@@ -130,6 +138,13 @@ Updated: 2026-07-15
     - DNS matrix with injected resolver/requester: private-only, mixed public/private, rebinding attempt, timeout, abort, lookup failure, and public pinned connection.
     - Read-only aggregator denial: denied read never reaches filesystem operations.
     - Approval scope matrix: default prompts every time; run cache reuses only within run; session cache reuses only within session; parallel identical requests do not accidentally cross scope.
+  - Completion Evidence (2026-07-15):
+    - `assertSsrfAllowedUrl()` now normalizes bracketed/trailing-dot hosts through WHATWG `URL`, classifies IPv4/IPv6 with `node:net`, and blocks loopback, private/shared, link/site-local, unique-local, unspecified, multicast/reserved, documentation, and IPv4-mapped private literals by default.
+    - Default media loading uses bounded `dns.lookup(..., { all: true, verbatim: true })`, rejects private-only and mixed public/private answers, then disables socket pooling and pins one validated address through native `http.request()`/`https.request()` lookup while retaining original Host/TLS identity. Redirects, lookup/connection/body timeout, abort, and byte bounds remain enforced.
+    - Exported `MediaHostnameResolver`/`MediaUrlRequester` seams make DNS/private/mixed/pinned cases deterministic. Existing custom `fetch` remains a documented trusted compatibility seam whose host owns DNS/rebinding/proxy policy; explicit host allow-lists remain intentional trust overrides.
+    - `createReadOnlyTools()` now uses the same shared-policy merge as full/all aggregators; denial regression proves no filesystem operation occurs. All four coding tools pass `sessionId`/`runId` from `ToolExecutionContext` into execution metadata.
+    - Approval cache resolves `approvalCacheScope ?? "none"`; `run` and `session` keys require their matching identity, missing identity disables caching, different identities never share decisions, fixed-size SHA-256 keys retain no raw action text, caches evict oldest entries above 1,000 decisions, and approval waits honor the documented 30-second default timeout.
+    - Focused SSRF/coding-agent/coding-security suites passed. Final `npm test`: 1,479 tests, 1,454 pass, 25 explicit live skips, 0 fail in 26.544 s. Final `npm run sdk:ready`: pass in 56.691 s with all 24 dry-run packs. `npm audit --audit-level=high --omit=dev`: 0 vulnerabilities.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; SSRF behavior, tool option propagation, execution metadata, and approval defaults change.
     - Docs pages to create/edit:
@@ -140,21 +155,20 @@ Updated: 2026-07-15
     - `docs/index.md` update: no new page; update existing entry descriptions only if behavior summaries change materially.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 2 — Fix runtime output, telemetry, usage, media, and workflow-test correctness
+- [x] Phase 2 — Fix runtime output, telemetry, usage, and media correctness
   - Acceptance Criteria:
     - Functional: sandboxed shell stdout/stderr reaches the shell tool's normal output path in order and remains abort-aware.
     - Functional: successful, failed, and aborted agent/provider/tool spans end exactly once; detaching instrumentation closes attributable outstanding spans.
     - Functional: every provider turn has attributable usage and the run result contains the aggregate of all turns; persisted and metric records distinguish provider-turn values from run totals so summing cannot double bill.
     - Functional: item count, total bytes, per-item bytes, MIME, audio-duration, and model-capability checks run once over the complete media request before upload/provider I/O.
-    - Functional: workflow coordinator concurrency test is deterministic under loaded CI and retains the production concurrency assertion.
     - Performance: streaming remains streaming; output/media fixes do not materialize unbounded data, telemetry maps release terminal entries, and aggregate usage is O(number of turns).
-    - Code Quality: one usage accumulator and one media-request validation path replace per-caller patches; timing flakes use explicit gates rather than larger arbitrary sleeps.
+    - Code Quality: one usage accumulator and one media-request validation path replace per-caller patches.
     - Security: sandbox output is redacted/sanitized at existing boundaries; media validation occurs before side effects; telemetry and usage metadata contain no prompt, tool result, or secret payloads.
   - Approach:
     - Documentation Reviewed:
-      - `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/observability.md`, `docs/runs-and-usage.md`, `docs/multimodal-content.md`, `docs/workflows.md`.
-      - `packages/coding-security/src/sandbox.ts`, `packages/observability-opentelemetry/src/instrumentation.ts`, `src/agents.ts`, `src/content.ts`, provider media serializers, and workflow coordinator tests.
-      - OpenTelemetry API 1.9 semantics through the package's existing peer/dev dependency and local type declarations.
+      - `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/observability.md`, `docs/runs-and-usage.md`, `docs/multimodal-content.md`.
+      - `packages/coding-security/src/sandbox.ts`, `packages/observability-opentelemetry/src/instrumentation.ts`, `src/agents.ts`, `src/content.ts`, and provider media serializers.
+      - OpenTelemetry JS current tracing/metrics docs and source retrieved from Context7 `/open-telemetry/opentelemetry-js` on 2026-07-15: spans export on `end()`, `recordException()` does not set error status, and counters use `add(value, attributes)`.
     - Options Considered:
       - Return buffered stdout/stderr from sandbox execution: easy but loses progressive output and increases memory; rejected.
       - Add `onData` to `SandboxExecRequest` and forward the existing shell callback: chosen.
@@ -165,7 +179,6 @@ Updated: 2026-07-15
       - Treat `error` and abort as terminal agent-span signals; retain provider/tool-specific terminal handling and close remaining session-owned spans on detach.
       - Add an internal usage accumulator. Persist records with explicit scope/turn/attempt fields; keep `prism.provider.tokens` for provider-turn tokens and use a distinct run-total metric if needed.
       - Resolve all media blocks first within bounded per-item reads, validate the complete collection, then serialize/upload.
-      - Replace coordinator timeout polling with promise gates/signals representing claimed and released jobs.
     - API Notes and Examples:
       ```ts
       interface SandboxExecRequest {
@@ -180,11 +193,12 @@ Updated: 2026-07-15
       }
       ```
     - Files to Create/Edit:
-      - `packages/coding-security/src/sandbox.ts` and tests.
-      - `packages/observability-opentelemetry/src/instrumentation.ts` and tests.
-      - `src/agents.ts`, `src/agent-loops.ts`, `src/contracts.ts`, run-ledger adapters/schema/migrations as required.
-      - `src/content.ts`, `src/providers/media.ts`, provider request serializers, and media tests.
-      - `packages/workflows/src/__tests__/coordinator.test.ts`.
+      - `packages/coding-security/src/sandbox.ts`, its README, docs, and approval/sandbox tests.
+      - `packages/observability-opentelemetry/src/instrumentation.ts`, README, tests, and observability docs.
+      - `src/agents.ts`, `src/contracts.ts`, run-ledger tests/conformance, and usage/event/loop/public-contract docs.
+      - `src/testing/persistence-schema.ts`; SQLite/PostgreSQL DDL, migration, mapper, persistence, and adapter tests; database/migration docs.
+      - `src/content.ts`, `src/providers/media.ts`, `src/index.ts`, OpenAI/Kimi/OpenCode Go serializers, and core/provider media tests.
+      - `docs/performance.md`, `docs/index.md`, and `docs/review-coverage-2026-07-15.md`.
     - References:
       - Runtime evidence: sandbox chunks remained empty; failed `prism.agent.run` span had `ended: false`; one-turn usage created duplicate rows; multi-turn final usage reported only the last turn.
   - Test Cases to Write:
@@ -192,7 +206,15 @@ Updated: 2026-07-15
     - Failed and aborted runs leave zero active spans and every in-memory span ends once.
     - Two-turn tool run persists two provider-turn records and one aggregate record with total 33; billing query/metric path counts one scope only.
     - Four individually valid media blocks exceeding the request total fail before any provider fetch/upload; 33 items fail before serialization.
-    - Coordinator cap remains two with deterministic gates and no wall-clock race.
+  - Completion Evidence (2026-07-15):
+    - `SandboxExecRequest.onData` now forwards each adapter chunk directly into coding-agent's existing combined, bounded `OutputAccumulator`; signal/timeout forwarding and wrapped adapter errors remain intact. Regression covers ordered stdout/stderr and abort-signal identity.
+    - OpenTelemetry active entries carry session/run ownership, tool keys include run IDs, all terminal/error/detach paths delete before ending, duplicate terminal events are idempotent, and failed/aborted integration runs leave zero active spans. OpenTelemetry status handling follows current JS API semantics.
+    - `prism.provider.tokens` now records provider-turn values only; aggregate values use distinct `prism.run.tokens`. Both retain low-cardinality labels and omit unreported token kinds instead of recording synthetic zeroes.
+    - One O(turns) runtime accumulator records each usage-bearing provider attempt once, emits/persists the aggregate, and reports multi-turn total 33 for 11 + 22. `UsageRecord`/`UsageQuery` expose `scope`, `turn`, and `attempt`; billing filters `provider_turn`, summaries read `run_total`.
+    - Persistence schema version 2 adds additive `002_usage_scope` for SQLite/PostgreSQL plus `(session_id, scope, recorded_at)` indexing. Shared conformance preserves scope/turn/attempt; SQLite regression proves query scopes cannot mix source and aggregate rows; PostgreSQL DDL/schema tests pass offline.
+    - `resolveMediaContentBlocks()` and `resolveProviderMediaMessages()` provide one complete-request path: model/item/count/inline checks precede resolution, exact decoded totals follow bounded sequential reads, and OpenAI/Kimi/OpenCode Go resolve all media before serialization/upload. Tests reject 33 items before DNS/upload/provider fetch and reject four-item aggregate overflow before caller-side provider work.
+    - Final `npm test`: 1,485 tests, 1,460 pass, 25 explicit live skips, 0 fail in 27.992 s. Final `npm run sdk:ready`: pass in 55.598 s with all 24 dry-run packs. `npm audit --audit-level=high --omit=dev`: 0 vulnerabilities; `npm ls --all`: clean.
+    - Seven-run medians remain within baseline: 5,000 deltas 3.54 ms; six 20 ms tools 121.22 ms at concurrency 1 and 60.63 ms at 2; 1,000-node workflow 10.31 ms. Root pack is 361.2 kB / 1.3 MB, 197 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; sandbox adapter, usage records/metrics, media request enforcement, and terminal telemetry change.
     - Docs pages to create/edit:
@@ -201,7 +223,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: no new page; update usage/observability descriptions if new scope fields are public.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 3 — Simplify the public agent API and remove inert/fragile surfaces
+- [x] Phase 3 — Simplify the public agent API and remove inert/fragile surfaces
   - Acceptance Criteria:
     - Functional: `session.run(input)` returns an `AgentRunResult` containing run/session IDs, status, final assistant content/text, aggregate usage, and terminal metadata; callers ignoring the return remain valid.
     - Functional: `session.stream(input)` subscribes before execution, starts exactly one run, yields its correlated events, and terminates on success/failure/abort without a subscription race.
@@ -244,6 +266,14 @@ Updated: 2026-07-15
     - Stream starts without an external subscriber race, yields only owned-run events, and cleans up after early consumer return.
     - CLI/RPC/workflow behavior remains unchanged except for consuming the returned result.
     - Compile fixture documents migration from inert AgentConfig fields to explicit host wiring.
+  - Completion Evidence (2026-07-15):
+    - `session.run()` / `session.prompt()` now return `AgentRunResult` (`sessionId`, `runId`, `status`, `text`, `content`, optional `message`/`usage`/`leafId`/`error`/`abortReason`). Callers ignoring the return remain valid.
+    - Failed and aborted runs reject with `AgentRunError` whose `.result` carries the terminal shape; success still resolves normally.
+    - `session.stream()` subscribes first, starts exactly one run, filters by owned `runId`, terminates with the run, and aborts/releases the session on early consumer return.
+    - Removed inert `AgentConfig.extensions` / `settings` / `credentials`. Hosts wire extensions via `createExtensionKernel()`, settings in-process, and credentials at the provider edge. Compile fixture `agent-config.types.test.ts` documents the migration.
+    - Workflows consume `AgentRunResult` for default agent-node output; CLI/RPC keep event-pump behavior unchanged.
+    - Docs/README/index/migration/review-coverage updated for the new result/stream surface and field removal.
+    - Final `npm test`: 1,490 tests, 1,465 pass, 25 explicit live skips, 0 fail. Final `npm run sdk:ready`: pass with all 24 dry-run packs.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; core session return/stream APIs and AgentConfig change.
     - Docs pages to create/edit:
@@ -252,7 +282,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; update the Agent/session runtime entry to advertise direct results and integrated streaming.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 4 — Add optional evaluations, scorers, datasets, and batch experiments
+- [x] Phase 4 — Add optional evaluations, scorers, datasets, and batch experiments
   - Acceptance Criteria:
     - Functional: an optional eval package runs deterministic scorers against `AgentRunResult`, stores scores from 0-1 with reason/metadata, supports explicit sampling, and links every evaluation to run/session/trace IDs.
     - Functional: a minimal dataset is a typed, immutable collection of input/expected-value items; a batch runner executes a pinned dataset snapshot and returns per-item plus aggregate results.
@@ -292,6 +322,13 @@ Updated: 2026-07-15
     - Batch concurrency cap, stable item/result ordering, aggregate calculation, and immutable dataset snapshot.
     - Tenant/run ownership rejection and canary-secret redaction.
     - Packed install works without database or model credentials.
+  - Completion Evidence (2026-07-15):
+    - Added optional `@arnilo/prism-evals` with `defineScorer`, `defineDataset`, `scoreRun` / `scoreRunLive`, `runExperiment`, and `createMemoryEvaluationStore`.
+    - Scores are finite `[0, 1]` with reason/metadata; sampleRate is explicit; failed scorers become attributable `failed` records without mutating `AgentRunResult`.
+    - Experiments bound concurrency (default 1, cap 32), preserve dataset item order, and aggregate mean scores per scorer.
+    - Evaluation records are ownership-scoped and redacted before persistence; in-memory store works without a database. Package stays out of profile bundles pending size/use review.
+    - Docs: `docs/evaluations.md`, index/release/observability/migration updates, `examples/evals.ts`. Publishable graph is now 25 packages (evals stays out of profile bundles pending size/use review).
+    - Final `npm test` / `npm run sdk:ready`: 1,503 tests, 1,478 pass, 25 explicit live skips, 0 fail; all 25 dry-run packs successful.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; new optional package and possible persistence records.
     - Docs pages to create/edit:
@@ -300,7 +337,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; add an Evaluations and quality section or entry.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 5 — Add a minimal `prism init` project scaffold
+- [x] Phase 5 — Add a minimal `prism init` project scaffold
   - Acceptance Criteria:
     - Functional: `prism init <dir>` creates a TypeScript project with one selected provider, one agent, environment example, one passing offline mock test, build/typecheck/test scripts, and concise README.
     - Functional: flags select provider and optional workflows/evals; rerunning refuses to overwrite files unless an explicit force flag is supplied.
@@ -335,6 +372,13 @@ Updated: 2026-07-15
     - Provider flag matrix; optional feature dependency matrix; unknown flag/provider errors.
     - Existing/non-empty destination refusal, force behavior, path traversal, and placeholder secret scan.
     - Size report for default generated project.
+  - Completion Evidence (2026-07-15):
+    - Added `prism init <dir>` to the existing CLI (`src/cli-init.ts`) with `--provider`, `--with-workflows`, `--with-evals`, and `--force`.
+    - Checked-in templates under `templates/init/` (plus `providers.json` catalog) ship in the core tarball; generation uses Node stdlib path/fs APIs and token replacement only — no interactive prompts or template engine.
+    - Default project depends on `@arnilo/prism` only (mock provider + offline mock test). Real providers add exactly one `@arnilo/prism-provider-*` package; workflows/evals are opt-in; storage/telemetry stay absent unless selected later.
+    - Measured default sources ~3.3 KB / 8 files; clean consumer install ~27.5 MB vs Mastra 439 MB. `.env.example` placeholders only; `.gitignore` excludes credentials/local stores.
+    - Docs/README/index/release/performance/review-coverage/migration updated for the init contract.
+    - Final `npm test` / `npm run sdk:ready`: 1,512 tests, 1,487 pass, 25 explicit live skips, 0 fail; all 25 dry-run packs successful. Core tarball 372.8 kB packed / 1.4 MB unpacked / 211 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; CLI gains an init command and generated-project contract.
     - Docs pages to create/edit:
@@ -344,7 +388,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; update CLI and Release/install entry descriptions.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 6 — Add optional AI SDK model interoperability
+- [x] Phase 6 — Add optional AI SDK model interoperability
   - Acceptance Criteria:
     - Functional: an optional adapter accepts a supported AI SDK `LanguageModel` and maps text, reasoning, tool-call input deltas/final calls, finish reason, usage, provider metadata, structured-output options, errors, and abort signals to Prism provider events.
     - Functional: Prism message/tool definitions map to AI SDK call options without silently dropping supported content; unsupported content fails before model invocation.
@@ -382,6 +426,14 @@ Updated: 2026-07-15
     - Structured-output request mapping and unsupported schema/content rejection.
     - Multi-turn Prism tool replay through the adapter.
     - Packed optional install with supported AI SDK peer; core install remains unchanged.
+  - Completion Evidence (2026-07-15):
+    - Added optional `@arnilo/prism-provider-ai-sdk` with `createAiSdkProvider({ model })` adapting AI SDK `LanguageModelV4` (`@ai-sdk/provider@^4`) to Prism `AIProvider` streams.
+    - Maps Prism messages/tools/structured-output/parameters/headers/abort into `doStream` call options; unsupported content fails closed before model invocation.
+    - Translates text/reasoning/tool-input deltas, final tool calls, usage, finish, abort, and model errors incrementally with no full-response buffering and no duplicate model call.
+    - Host credentials remain inside the supplied AI SDK model; Prism `request.signal` always owns abort/resource limits; provider metadata/warnings are not emitted as content.
+    - Package stays out of `@arnilo/prism-providers` and profile bundles pending size/use review. Publishable graph is now 26 packages.
+    - Docs/example/migration/index/release/review-coverage/performance updated; focused adapter suite covers fake stream, structured-output mapping, unsupported content, multi-turn tool replay, abort/error, and non-v4 rejection.
+    - Final `npm run sdk:ready`: 1,522 tests, 1,497 pass, 25 explicit live skips, 0 fail; all 26 dry-run packs successful. `@arnilo/prism-provider-ai-sdk` dry-run tarball 6.5 kB packed / 22.5 kB unpacked / 16 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; new provider package and compatibility contract.
     - Docs pages to create/edit:
@@ -390,7 +442,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; add AI SDK adapter under Provider and model connection.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 7 — Add optional working memory and semantic recall primitives
+- [x] Phase 7 — Add optional working memory and semantic recall primitives
   - Acceptance Criteria:
     - Functional: hosts can persist schema/template-backed working memory per tenant/resource/thread and update it explicitly or through an opt-in processor.
     - Functional: semantic recall embeds a query, performs tenant-scoped top-K search, optionally includes adjacent session entries, and injects selected memories through existing context/input seams.
@@ -426,6 +478,15 @@ Updated: 2026-07-15
     - Semantic top-K ordering, adjacent range, empty result, embedding failure, abort, limits, and deterministic in-memory conformance.
     - Cross-tenant query/write/delete denial and canary-secret redaction.
     - PostgreSQL live suite behind explicit environment variable; default suite remains network-free.
+  - Completion Evidence (2026-07-15):
+    - Added optional `@arnilo/prism-memory` with `createMemory`, package-owned `Embedder`/`VectorStore`/`WorkingMemoryStore`, hash embedder, in-memory adapters, context provider, opt-in working-memory processor, and `runMemoryConformance`.
+    - Working memory supports schema/host validation, merge/replace, version conflicts, templates, and mandatory tenant/resource scope (thread optional for resource-level state).
+    - Semantic recall embeds queries, returns tenant/thread-scoped top-K hits with optional adjacent range, redacts secrets, and injects inert context through existing `ContextProvider` seams.
+    - Default `remember()` indexes asynchronously; limits bound top-K, messageRange, embed batch, payload bytes, injected tokens, and dimensions.
+    - PostgreSQL/pgvector adapter ships in-package (`createPostgresMemoryStores`); live suite is env-gated and included in root `test:postgres`; CI uses `pgvector/pgvector:pg16`.
+    - Observational memory remains unchanged; package stays out of profile bundles pending size/use review. Publishable graph is now 27 packages.
+    - Docs/example/migration/index/release/review-coverage/performance updated; focused suite covers schema, isolation, top-K/adjacent, redaction, abort, context injection, processor, and offline factory validation.
+    - Final `npm run sdk:ready`: 1,538 tests, 1,513 pass, 25 explicit live skips, 0 fail; all 27 dry-run packs successful. `@arnilo/prism-memory` dry-run tarball 17.9 kB packed / 76.6 kB unpacked / 32 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; new optional memory package, contracts, and persistence behavior.
     - Docs pages to create/edit:
@@ -435,7 +496,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; add working/semantic memory under Compaction/session memory.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 8 — Add durable human-in-the-loop suspend and resume
+- [x] Phase 8 — Add durable human-in-the-loop suspend and resume
   - Acceptance Criteria:
     - Functional: workflows and opted-in tool approvals can persist a `suspended` state with typed/validated suspend data, later resume with validated input, and continue exactly once from the durable checkpoint.
     - Functional: restart/reconnect can list and resume suspended runs; denial/cancellation is a terminal attributable outcome.
@@ -470,6 +531,15 @@ Updated: 2026-07-15
     - Invalid suspend/resume payload; stale fencing token; wrong owner/tenant; redaction.
     - SQLite/PostgreSQL multi-process race; local in-memory parity.
     - Tool approval suspends before side effect and rechecks policy on resume.
+  - Completion Evidence (2026-07-15):
+    - Extended existing workflow state/checkpoint JSON with `suspended` and terminal `denied`, persisted `WorkflowSuspensionDescriptor`/`WorkflowResumeRecord`, `workflow_suspended`/`workflow_resumed` events, and exported typed `suspend()`.
+    - `resumeWorkflow()` requires reviewer-visible `expectedVersion`, validates ownership/definition/schema and optional resume payload before the first checkpoint CAS claim, and rejects stale/duplicate resumes before node execution.
+    - Approved nodes receive `ctx.resume`; denied nodes never execute. Concurrent suspension requests serialize behind one durable review cursor instead of losing node state.
+    - `toolNode({ approval })` suspends before side effects. Approved resume recomputes args/action and rechecks current `ExecutionPolicy`; callback approval/cache behavior remains process-local and cannot grant stale permissions.
+    - Suspension/resume data is byte-bounded and redacted in events/results/checkpoints while node logic receives validated runtime input. Cancellation works for local, orphaned, and fenced coordinator-created suspended records.
+    - Coordinators poll only `queued`/`running`; suspension retains no worker, lease, timer, or polling loop. Existing in-memory/SQLite/PostgreSQL generic checkpoint category+JSON storage needed no migration or new package.
+    - Docs, package README/changelog, migration/index/review/performance pages, and `examples/workflow-tool-approval.ts` updated.
+    - Focused workflow suite: 43 pass, 0 fail. Final `npm run sdk:ready`: 1,547 tests, 1,522 pass, 25 explicit live skips, 0 fail; all 27 dry-run packs successful. Workflow tarball: 25.7 kB packed / 121.6 kB unpacked / 34 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; workflow statuses, checkpoint payloads, commands, and approval behavior change.
     - Docs pages to create/edit:
@@ -477,7 +547,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; update workflow entry to mention durable human approval.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 9 — Add a small optional RAG package
+- [x] Phase 9 — Add a small optional RAG package
   - Acceptance Criteria:
     - Functional: plain text and Markdown can be chunked with configured size/overlap, embedded in batches, upserted with source metadata, retrieved by bounded top-K/filter, and rendered with stable source/citation IDs.
     - Functional: RAG uses the Phase 7 `Embedder`/`VectorStore` contracts and can contribute retrieved context to an agent without changing core input assembly.
@@ -510,6 +580,14 @@ Updated: 2026-07-15
     - Deterministic text/Markdown boundaries, overlap, stable IDs, empty/oversized inputs, abort, and limits.
     - Batch embedding/upsert, metadata filter, top-K citation rendering, duplicate source idempotency.
     - Tenant isolation, prompt-injection text remains inert context, secret redaction, and remote-resource policy reuse.
+  - Completion Evidence (2026-07-16):
+    - Added optional `@arnilo/prism-rag`, reusing Phase 7 `Embedder`/`VectorStore` and core `ContextProvider`; no core runtime change, parser/document-framework dependency, new vector abstraction, remote loader, or profile activation.
+    - `chunkText()` and `chunkMarkdown()` provide deterministic boundary-aware character chunks, configured overlap, stable URL-safe source/citation IDs, source metadata, and hard document/chunk/count/metadata ceilings.
+    - `indexChunks()` validates scope/chunks/vectors, redacts before external embedding/persistence, batches at default 32 / hard 128, propagates abort, and upserts stable IDs idempotently into in-memory or pgvector-backed Phase 7 stores.
+    - `retrieveContext()` performs exact tenant/resource/corpus-scoped bounded candidate search, shallow JSON metadata filtering, top-K selection, UTF-8 result/context budgets, stable citation rendering, secret redaction, abort propagation, and malformed/cross-scope hit rejection.
+    - `createRagContextProvider()` uses latest user text or a host query callback and contributes retrieved text as explicit inert context; source loading remains host-owned under existing resource/media trust policies.
+    - Added 9 focused package tests, API README/page, offline `examples/rag.ts`, package/install/pack/docs/profile enrollment, migration/release/review/performance cross-links, and plan `061-small-optional-rag-package.md`.
+    - Final `npm run sdk:ready`: 1,561 tests, 1,536 pass, 25 explicit live skips, 0 fail; all 28 dry-run packs successful; npm audit reports 0 vulnerabilities. RAG tarball: 9.0 kB packed / 34.6 kB unpacked / 22 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; new optional RAG package.
     - Docs pages to create/edit:
@@ -518,7 +596,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; add RAG under Input, prompt, and context assembly.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 10 — Add web-standard serving and MCP server exposure
+- [x] Phase 10 — Add web-standard serving and MCP server exposure
   - Acceptance Criteria:
     - Functional: an optional server package exposes selected agents and workflows through a Web `Request -> Response` handler with direct result, bounded event streaming, abort, status, and resume endpoints.
     - Functional: the existing MCP package can expose selected Prism tools and approved workflow/agent operations using the installed MCP SDK server APIs; existing client behavior remains unchanged.
@@ -560,6 +638,15 @@ Updated: 2026-07-15
     - MCP list/call selected tool, unknown/denied tool, tool error, abort, list-changed notification, workflow operation allow-list.
     - Web-standard handler runs without framework dependency; packed server and MCP package imports.
     - Concurrency/body/event limit tests and secret scan.
+  - Completion Evidence (2026-07-16):
+    - Added optional `@arnilo/prism-server` with one framework-free `createPrismHandler()` over Web `Request`, `Response`, and `ReadableStream`; no core change, listener, framework, auth provider, user database, route discovery, or hidden activation.
+    - Handler exposes only selected agent/workflow IDs: direct and bounded SSE agent runs; direct/SSE workflow starts; ownership-scoped durable workflow status, cancellation, and Phase 8 approve/deny CAS resume.
+    - Every matched operation requires host `authorize()` returning non-empty ownership; request identity is never trusted. Exact host/origin/CORS policy is opt-in. JSON content type, route IDs, body/result/event/stream/queue/concurrency/timeouts, abort/disconnect, generic errors, and known-secret redaction are bounded/fail closed.
+    - Extended `@arnilo/prism-mcp` with `createPrismMcpServer()` for explicit `ToolDefinition`/`CommandDefinition` registration through SDK v1.29 `McpServer.registerTool`; JSON Schema converts through direct Zod v4, tools retain core dispatch permission/validator/redactor gates, and per-call authorization is mandatory.
+    - Added `createPrismMcpWebHandler()` using SDK `WebStandardStreamableHTTPServerTransport` with bounded pre-parsed JSON, bounded response/concurrency/timeout, optional host authentication mapping, and explicit SDK host/origin rebinding policy. Existing MCP client bridge behavior remains unchanged.
+    - Added 6 focused Web-handler tests and 4 MCP-server tests covering direct/stream/status/resume/cancel, auth/ownership/routing/content/host/origin denial, disconnect, concurrency/timeouts/result/event bounds, redaction, in-memory list/call, validation/permission, unknown/duplicate capabilities, and Web transport. Existing 12 MCP client tests remain green.
+    - Added package/API docs, `examples/web-standard-server.ts`, `examples/mcp-server.ts`, release/install/migration/security/review/performance cross-links, and plan `062-web-server-and-mcp-exposure.md`. Publishable graph is 29 packages; server remains outside profile bundles pending size/use review.
+    - Final `npm run sdk:ready`: 1,576 tests, 1,551 pass, 25 explicit live skips, 0 fail; all 29 dry-run packs successful; npm audit reports 0 vulnerabilities. Server tarball: 8.4 kB packed / 34.4 kB unpacked / 12 files; MCP tarball: 11.6 kB packed / 45.0 kB unpacked / 20 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; new server package and MCP server API.
     - Docs pages to create/edit:
@@ -569,7 +656,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; add Server/API section and update MCP entry.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 11 — Extend workflows with schedules, background execution, composition, state, and replay
+- [x] Phase 11 — Extend workflows with schedules, background execution, composition, state, and replay
   - Acceptance Criteria:
     - Functional: hosts can create, list, pause, resume, trigger, and delete durable one-time/interval schedules that enqueue workflow runs idempotently through the existing coordinator.
     - Functional: a workflow can be used as a node, share typed/validated state, and replay from an eligible completed node while preserving original-run lineage and immutable prior evidence.
@@ -604,6 +691,16 @@ Updated: 2026-07-15
     - Nested workflow success/failure/suspend/cancel, max depth, state validation/size bound.
     - Replay lineage, eligible/ineligible node, unchanged prior evidence, new downstream side effects only, authorization, and approval recheck.
     - SQLite/PostgreSQL live coordination plus deterministic network-free in-memory tests.
+  - Completion Evidence (2026-07-16):
+    - Added `createWorkflowSchedules()` inside `@arnilo/prism-workflows`: mandatory tenant + account/user scope; create/get/list/pause/resume/idempotent-trigger/delete; one-time, fixed interval, and explicit host calculator IDs; abortable `pollOnce()`/`run()`; bounded input/page/claims/poll/lease settings. No scheduler starts on import or construction.
+    - Schedule records use core `CheckpointStore` namespace `prism.workflow.schedule`; administrative/fire operations share `LeaseStore` exclusion, record updates use CAS, and deterministic run IDs make enqueue-before-advance crash retry idempotent. Due work enters existing `enqueueWorkflow()`/`createWorkflowCoordinator()`; `startWorkflowBackground` is the explicit enqueue alias. SQLite/PostgreSQL generic checkpoint/lease adapters need no migration.
+    - Added `workflowNode()` composition through the same runner. Child workflows inherit ownership, agents/tools, `ExecutionPolicy`, redactor, abort, checkpoints, metadata, event bus, and an inherited nested-depth ceiling. Child state returns to parent; child suspension/approval/denial bubbles without leaving an orphaned suspended child.
+    - Added bounded shared JSON state: `state.initial`/`schema`, `ctx.state`/`stateVersion`/async `updateState(merge|replace)`, host `validateState`, redaction, byte/history bounds, state snapshots in existing checkpoint JSON, and final `WorkflowRunResult.state`.
+    - Added `replayWorkflow()`: succeeded source/node checks, ownership + definition hash checks, new checkpoint/run identity, strict downstream rerun, selected-node pre-state restoration, immutable `{ sourceRunId, fromNodeId, rootRunId, depth }` lineage, replay-depth cap, and rejection when copied evidence contains a prior tool/nested approval so Phase 8 approval executes fresh.
+    - `createWorkflowCommands()` now exposes `workflow.enqueue`/`workflow.replay`; six `schedule.*` commands appear only when a schedule service is selected. `@arnilo/prism-server` adds authorized enqueue/replay and optional authorization-selected ownership-scoped schedule routes. MCP exposure remains explicit by passing these command definitions.
+    - Added 11 focused workflow behavior tests and 2 server-route tests covering concurrent/restarted schedule firing, coordinator background execution, pause/resume/trigger/delete/calculator/redaction/ownership/bounds/abort, nested state/suspension/denial/depth, replay state/lineage/source immutability/approval/ownership, commands, and Web routes. Focused totals: 54 workflow + 8 server tests pass.
+    - Updated workflow/API/security/persistence/CLI/MCP/server/index/migration/release/review/performance docs, package READMEs/changelogs, and runnable `examples/workflow-schedules-replay.ts`; completed plan `063-workflow-schedules-composition-state-replay.md`.
+    - Final `npm run sdk:ready`: 1,589 tests, 1,564 pass, 25 explicit live skips, 0 fail; all 29 dry-run packs successful; npm audit reports 0 vulnerabilities. Workflow tarball: 34.7 kB packed / 171.5 kB unpacked / 38 files; server tarball: 9.9 kB packed / 45.2 kB unpacked / 12 files.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; workflow node/status/state/schedule/replay APIs, persistence, commands, and events change.
     - Docs pages to create/edit:
@@ -611,7 +708,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; workflow entry must mention schedules, composition, state, and replay.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 12 — Add trace/run feedback and evaluation linkage
+- [x] Phase 12 — Add trace/run feedback and evaluation linkage
   - Acceptance Criteria:
     - Functional: hosts can attach rating, comment, tags, and optional scorer/evaluation IDs to a run/trace; records are queryable and immutable or versioned according to documented semantics.
     - Functional: OpenTelemetry instrumentation emits metadata-only feedback/evaluation events or attributes without embedding unrestricted comments in metric labels.
@@ -650,6 +747,15 @@ Updated: 2026-07-15
     - Append/query/version/delete or tombstone behavior, pagination, bounds, and missing run.
     - Cross-owner denial, canary redaction, retention, exporter failure isolation.
     - OTel test verifies only safe low-cardinality fields become attributes/events.
+  - Completion Evidence (2026-07-16):
+    - Added core `RunFeedbackRecord`, append/query/delete contracts, `RunFeedbackStore`, mandatory exact ownership (tenant plus account/user), `createMemoryRunFeedbackStore()`, bounded/redacted validation, abort handling, and optional `ProductionPersistenceStore.feedback`. Records are immutable; correction appends a new ID and owned deletion handles privacy/retention.
+    - Bounds: finite rating `[-1,1]`; comment 4/16 KiB; tags 16/64; scorer/evaluation links 16/64; metadata 16/64 KiB; page 100/500 default/hard; tag/ID lengths 64/128. Run resolution occurs before redaction/persistence and missing/cross-owned runs fail with the same not-found result.
+    - Added `@arnilo/prism/testing/feedback` conformance plus SQLite/PostgreSQL schema migration `003_run_feedback`: dedicated run-FK table, cascade deletion, owner/run/trace creation indexes, parameterized exact-owner append/query/delete, reopen behavior, and optional adapter `feedbackRedactor`. Shared schema version is 3; PostgreSQL migration remains advisory-lock serialized and live tests remain env-gated.
+    - Added `appendEvaluationFeedback()` in `@arnilo/prism-evals`: resolves 1–64 unique IDs from `EvaluationStore`, rejects missing/mismatched run/trace/ownership, and copies only evaluation/scorer IDs — never score, reason, error, or metadata payloads.
+    - Extended `@arnilo/prism-observability-opentelemetry` with `handleRunFeedback()`/`handleEvaluation()`: safe scalar metadata becomes active-run span events or short post-run spans; counters use fixed rating/link/status vocabularies. Comments, tag values, scorer/evaluation IDs, arbitrary metadata, and run/trace IDs never become metric labels. Disabled/exporter-failing instrumentation remains isolated.
+    - Added focused tests for immutable memory append/query/delete, bounds/abort/redaction/missing and cross-owned runs, evaluation resolution/link mismatch/unknown IDs, SQLite migration/reopen/tenant isolation/redaction, PostgreSQL DDL/live conformance, and safe/failing OTel projection. Added runnable `examples/run-feedback.ts`.
+    - Updated runs/evaluations/observability/public-contract/persistence/migration/security/performance/navigation docs, package READMEs/changelogs, release subpath inventory, review coverage, and completed plan `064-trace-run-feedback-evaluation-linkage.md`.
+    - Final `npm run sdk:ready`: 1,600 tests, 1,575 pass, 25 explicit live skips, 0 fail; all 29 dry-run packs pass; npm audit reports 0 vulnerabilities. Core 398.1 kB packed / 1.4 MB unpacked / 219 files; evals 9.8/38.4 kB; OTel 6.3/26.5 kB; SQLite 17.7/89.8 kB; PostgreSQL 18.1/89.8 kB.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; feedback persistence/query and telemetry behavior are new.
     - Docs pages to create/edit:
@@ -657,7 +763,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: no new page; update Observability and Evaluations descriptions.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 13 — Add optional supervisor delegation and A2A interoperability
+- [x] Phase 13 — Add optional supervisor delegation and A2A interoperability
   - Acceptance Criteria:
     - Functional: an optional supervisor can delegate to an explicit allow-list of local child agents, return child results, isolate child resource/thread IDs, propagate cancellation, and enforce per-delegation step/token/time/tool budgets.
     - Functional: hooks can approve, reject, narrow, or modify a delegation and inspect completion without granting broader permissions than the parent.
@@ -696,6 +802,19 @@ Updated: 2026-07-15
     - Parent/child memory isolation, permission narrowing, credential ownership, and secret redaction.
     - A2A card sign/verify/tamper/expiry, unauthorized invoke, malformed/oversized stream, timeout, abort, and remote error.
     - Deterministic workflow path remains unaffected and no supervisor package is loaded by core.
+  - Completion Evidence (2026-07-16):
+    - Added independently installable zero-runtime-dependency `@arnilo/prism-supervisor` as the 30th publishable package. Core, `createAgent()`, workflows, server, and profile bundles have no supervisor/A2A import or activation; package stays profile-excluded pending Phase 14 review.
+    - `createSupervisor()` delegates only to explicit child descriptors. Child factories receive exact ownership, immutable path/depth, package-derived unique resource/thread IDs, AND-composed parent/child/hook/returned-agent/tool-budget permission, cooperative abort, and bounded nested `delegate()`. They receive no credentials; provider/credential/memory construction remains child-owned.
+    - Before hooks can reject, redact/modify input, or narrow policy/limits; after hooks observe redacted terminal summaries and cannot change settled results. Bounded metadata events cover start/finish/reject/error. Cycles, depth, active-child overflow, oversized input, timeout, excess tool side effects, and terminal token overage fail closed.
+    - Local defaults/hard caps: depth 4/16, active children 4/32, message 64 KiB/1 MiB, tool rounds 8/64, tool calls 32/256, tokens 20k/1m, timeout 60s/30m, event queue 128/4096. Token enforcement uses provider-reported terminal aggregate and may overshoot by one provider turn; no result beyond limit is returned.
+    - Implemented current A2A protocol 1.0 text subset from `a2a-protocol.org/latest`: validated HTTPS `JSONRPC` Agent Cards and `/.well-known/agent-card.json`, `SendMessage`, `SendStreamingMessage`, `GetExtendedAgentCard`, task/artifact mapping, and backpressure-driven SSE.
+    - Added WebCrypto ES256 JWS card sign/verify with canonical unsigned-card payload, algorithm/key/issued/expiry/max-age pinning, tamper rejection, and no automatic `jku` retrieval. Handler authorization is host-provided per method; ordinary Prism server routes remain unchanged.
+    - Added explicit remote client with exact HTTPS origin allow-list checked before fetch, redirect rejection, card endpoint/interface/version verification, optional pinned signature verifier, post-serialization auth callback, bounded JSON/SSE parsing, terminal task validation, timeout/abort/concurrency limits, redaction, and no credential forwarding/discovery.
+    - A2A defaults/hard caps: request/card/event 64 KiB/1 MiB, response 1/8 MiB, stream 10/64 MiB and 10k/100k events, concurrency 16/256, timeout 120s/30m. Only text parts ship; file/data parts, push notifications, durable remote tasks, gRPC/HTTP+JSON, and automatic key/endpoint discovery fail closed or remain absent.
+    - Added 11 focused tests covering local success/reject/modify/failure/abort, scope isolation, narrowing permissions, cycle/depth/concurrency/input/tool/token/time ceilings, redaction, card sign/verify/tamper/expiry, authorization, malformed/oversized protocol input, SSE, origin rejection, remote mapping, timeout/abort, and offline handler/client composition. Added runnable `examples/supervisor-a2a.ts`.
+    - Registered package across workspace, pack/install/profile/docs/release/example maps; added package README/changelog, `docs/supervisors.md`, `docs/a2a.md`, host-security/memory/server/workflow/migration cross-links, navigation, review coverage, and plan `065-supervisor-delegation-and-a2a.md`.
+    - Synthetic Node v24.18.0 mock run: 100 local delegations 11.83 ms; 100 card-discovery + in-process A2A JSON-RPC round trips 34.17 ms. Tarball: 15.3 kB packed / 69.4 kB unpacked / 22 files.
+    - Final `npm run sdk:ready`: 1,616 tests, 1,591 pass, 25 explicit live skips, 0 fail; all 30 dry-run packs pass; npm audit reports 0 vulnerabilities; `git diff --check` clean.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; optional supervisor and A2A APIs/protocol mapping.
     - Docs pages to create/edit:
@@ -705,7 +824,7 @@ Updated: 2026-07-15
     - `docs/index.md` update: yes; add Multi-agent and interoperability entries.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Phase 14 — Complete maintainability, documentation, packaging, and 0.0.5 release validation
+- [x] Phase 14 — Complete maintainability, documentation, packaging, and 0.0.5 release validation
   - Acceptance Criteria:
     - Functional: all 0.0.5 features compose through public packed imports; examples and generated projects work without workspace-relative paths; optional packages remain independently installable.
     - Functional: every package manifest, lockfile entry, internal dependency/peer range, changelog, migration note, bundle/profile decision, tarball, provenance report, and release artifact consistently targets 0.0.5.
@@ -745,6 +864,16 @@ Updated: 2026-07-15
     - PostgreSQL live adapter suite and optional credential-gated provider/A2A smoke commands documented and operator-run where credentials exist.
     - Tarball allow/deny lists, fresh install, dependency graph, version/range/tag checks, provenance dry-run, secret scan, audit/license/install-script review.
     - Release assertion: npm has no `@arnilo/*@0.0.5` collision and all 0.0.4 packages remain unpublished unless already externally present.
+  - Completion Evidence (2026-07-16):
+    - Retargeted all 30 publishable manifests, lockfile workspace entries, internal runtime/optional/peer ranges, runtime identities, generated scaffolds, tests, docs, changelogs, and tarball assertions to exact 0.0.5. Core retains zero runtime dependencies and Node >=20.
+    - Finalized root + 29 package changelogs; updated migration/release/navigation/review docs; indexed all 67 immutable numbered plans in `plans/README.md`. Reviewed 1,562-line contracts, 881-line agent runtime, and 1,248-line workflow runner; no cohesive low-risk release-time split justified.
+    - Follow-up profile review includes AI SDK interoperability in `prism-providers` and all six Phase 4-13 capability packages in `prism-all`. Base/code/SDK remain unchanged; direct packages remain independently installable and every capability remains inert until host wiring. Exact dependency and transitive-completeness gates pass; final `sdk:ready` remains 1,618 tests / 1,593 pass / 25 skipped / 0 fail with all 30 packs successful. No dead runtime dependency/export or workspace install script was found; no unrelated major upgrade was taken.
+    - Extended fresh-tarball validation across all 30 packages and 44 built exports. Packed public composition now exercises streaming result, fake AI SDK, eval+feedback, working/semantic memory, RAG, durable approval, schedule/replay, server/MCP, and supervisor/A2A without live credentials or workspace-relative imports. Generated `prism init` output installs packed core, typechecks, and tests.
+    - Final Node 24 matrix: `npm test` 32.247 s; `npm run sdk:ready` 70.560 s; 1,618 tests / 1,593 pass / 25 explicit live skips / 0 fail; all 30 packs pass. Node 20.20.2 imports all 44 built export targets.
+    - Fresh `pgvector/pgvector:pg16` live matrix passes 29/29 session/run/feedback/checkpoint/lease/memory/vector checks. Audit and dependency tree are clean; SBOM has 181 permissively licensed components; `better-sqlite3` is the sole install-script dependency and remains opt-in.
+    - Release artifacts: 30 tarballs, 689,687 packed / 2,636,449 unpacked bytes / 699 files; core 402,985 / 1,456,420 bytes / 221 files. All SHA-256 checksums verify; artifact token/private-key scan has zero hits; production TypeScript strict scan and `git diff --check` pass.
+    - npm registry preflight reports 30/30 exact 0.0.5 versions available. Dependency-ordered `npm publish --dry-run` completes 30/30 with public/latest/provenance arguments and retained JSON report. No package was published and no tag was created.
+    - Release verdict: GO after protected clean-branch CI, npm authentication, signed `v0.0.5` tag, OIDC publication, and post-publish latest/integrity verification. Provider/keychain/external-A2A live smokes remain unrun because credentials/endpoints were unavailable; offline conformance is authoritative.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; this is the complete 0.0.5 documentation and release gate.
     - Docs pages to create/edit:
@@ -754,16 +883,16 @@ Updated: 2026-07-15
 
 ## 0.0.5 Release Checklist
 
-- [ ] Every phase above is checked with dated evidence and no unresolved release blocker.
-- [ ] Core runtime dependencies remain zero and Node.js 20 compatibility passes.
-- [ ] `npm run sdk:ready` passes within the approved budget.
-- [ ] PostgreSQL live integration passes in CI.
-- [ ] Optional live provider/A2A checks are run when credentials/endpoints are available; offline conformance remains authoritative by default.
-- [ ] `npm audit --audit-level=high` reports zero high/critical vulnerabilities.
-- [ ] `npm ls --all` is clean.
-- [ ] All source/tests/docs/examples/generated projects and tarballs pass secret scanning.
-- [ ] All packages, lock entries, and internal dependency ranges are exactly 0.0.5.
-- [ ] Every tarball passes fresh-install public import and documented-example smoke tests.
+- [x] Every phase above is checked with dated evidence and no unresolved implementation/release-candidate blocker.
+- [x] Core runtime dependencies remain zero and Node.js 20 compatibility passes.
+- [x] `npm run sdk:ready` passes within the approved budget.
+- [x] PostgreSQL live integration passes locally and is required in CI.
+- [x] Optional live provider/A2A checks are run when credentials/endpoints are available; none were configured, so offline conformance remains authoritative.
+- [x] `npm audit --audit-level=high` reports zero high/critical vulnerabilities.
+- [x] `npm ls --all` is clean.
+- [x] Source/tests/docs/examples/generated projects and extracted tarballs pass layered secret/canary scanning.
+- [x] All packages, lock entries, and internal dependency ranges are exactly 0.0.5.
+- [x] Every tarball passes fresh-install public import and packed cross-capability smoke tests.
 - [ ] `npm run release:check -- --version 0.0.5` confirms registry availability and tagged clean state at publication time.
 - [ ] Release artifacts/checksums/report are retained and publication uses dependency order, resume support, and provenance.
 - [ ] npm `latest` points to 0.0.5 only after every package publishes successfully.
@@ -784,8 +913,18 @@ Updated: 2026-07-15
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- Release completion means validated release candidate and deterministic handoff, not an in-session immutable npm publication. Clean signed tag, OIDC attestation, `latest`, and post-publish integrity remain operator/workflow-only gates.
+- `prism-all` now installs every first-party package and `prism-providers` installs all seven provider adapters. Focused base/code/SDK profiles stay unchanged; installation never activates evaluation, memory, server, provider, or delegation behavior.
+- Large contracts/agent/workflow files remain intact. Their state and public-type changes are cross-cutting; release-time splitting offered churn without deletion or ownership isolation.
+- Historical source/docs boundary tests were not mass-rewritten. Touched runtime assertions use behavior/types/exports; manifest/docs/absence tests still inspect artifacts because text is their contract.
+- Provider, OS-keychain, and external-A2A live smokes were unavailable. Offline conformance plus live PostgreSQL/pgvector are the release authority.
+- Token and private-key scanning uses bounded known-pattern/canary checks, not a new scanner dependency; CI artifact allow/deny lists and redaction threat suites provide complementary coverage.
 
 ## Further Actions
 
-- To be filled after task completion with measured improvements, rationale, and priority.
+- Priority high, release operator: merge through protected CI, confirm npm token/OIDC permissions, create signed `v0.0.5`, retain artifacts/report, verify all 30 `latest`/integrity/attestations.
+- Priority medium: split contracts/agent/workflow hotspots only in dedicated compatibility-preserving refactors with measurable conflict reduction.
+- Priority medium: replace remaining historical implementation-source assertions when their owning APIs next change; do not churn stable boundary tests solely for style.
+- Priority medium: run credentialed provider, keychain, and external A2A interoperability smokes before 1.x or when deployment credentials/endpoints exist.
+- Priority low: use adoption/install data to decide whether future capabilities belong only in `prism-all` or justify another existing focused profile; do not create new profile families speculatively.
+- Priority low: evaluate a dedicated secret-scanner/SBOM policy tool only if CI's stdlib scans and npm audit cease meeting compliance needs.

@@ -179,6 +179,7 @@ Use `activateAllCapabilities: true` only as a temporary all-skills/all-tools com
 - [Agent/session runtime](agent-session-runtime.md): consumes host-selected context providers and skills from explicit agent config.
 - [Input and prompt assembly](input-and-prompt-assembly.md): default prompt builder and provider-input assembly helper.
 - [Instruction injection](instruction-injection.md): package injectors contribute `contextBlocks` that merge after host+skill provider blocks.
+- [Retrieval-augmented generation](rag.md): optional retrieved citations contribute through the same explicit inert context seam.
 - [Public contracts](public-contracts.md): `ContextProvider`, `ContextResolutionContext`, `ContextBlock`, `Skill`, `SkillRegistry`, `PromptBuilder`, and `PromptBuildRequest`.
 - [Middleware hooks](middleware-hooks.md): `context` and `prompt_build` hooks.
 - [Contribution registries](contribution-registries.md): inert context provider and skill contributions.

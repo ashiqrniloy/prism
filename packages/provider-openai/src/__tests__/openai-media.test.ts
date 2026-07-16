@@ -59,6 +59,37 @@ describe("@arnilo/prism-provider-openai multimodal responses", () => {
     assert.match(String((events.at(-1) as { error?: { message?: string } })?.error?.message ?? events.at(-1)), /audio input/);
   });
 
+  it("openai_responses_rejects_request media limits before upload or provider fetch", async () => {
+    let uploads = 0;
+    let providerFetches = 0;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      uploadManager: {
+        inlineMaxBytes: 1,
+        maxItemBytes: 10_000_000,
+        resolveFileWire: async (_mediaType, _bytes, filename) => { uploads += 1; return { filename, fileId: "unexpected", uploaded: true }; },
+        cleanup: async () => {},
+      },
+      fetch: (async () => { providerFetches += 1; return ok(sse([])); }) as typeof fetch,
+    });
+    const events: ProviderEvent[] = [];
+    for await (const event of provider.generate({
+      model: { provider: "openai", model: "gpt-5.1", capabilities: { input: ["file"] } },
+      messages: [{
+        role: "user",
+        content: Array.from({ length: 33 }, (_, index) => ({
+          type: "file" as const,
+          mediaType: "application/pdf",
+          name: `${index}.pdf`,
+          data: tinyPdf,
+        })),
+      }],
+    })) events.push(event);
+    assert.equal(events.at(-1)?.type, "error");
+    assert.equal(uploads, 0);
+    assert.equal(providerFetches, 0);
+  });
+
   it("openai_upload_manager_caches_and_cleans_up_remote_files", async () => {
     const deleted: string[] = [];
     const uploaded: string[] = [];

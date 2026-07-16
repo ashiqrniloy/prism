@@ -317,7 +317,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
             operation: "read",
             paths: [absolutePath],
             risk: "low",
-            metadata: { offset, limit, signal: context.signal },
+            metadata: { offset, limit, sessionId: context.sessionId, runId: context.runId, signal: context.signal },
           },
           toolCallId,
           "read",

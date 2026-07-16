@@ -93,6 +93,9 @@ export interface UsageRow {
   readonly session_id: string;
   readonly run_id: string | null;
   readonly entry_id: string | null;
+  readonly scope: string;
+  readonly turn: number | null;
+  readonly attempt: number | null;
   readonly usage: string;
   readonly recorded_at: string;
   readonly tenant_id: string | null;
@@ -286,6 +289,9 @@ export function usageRecordToRow(record: UsageRecord): UsageRow {
     session_id: record.sessionId,
     run_id: record.runId ?? null,
     entry_id: record.entryId ?? null,
+    scope: record.scope,
+    turn: record.turn ?? null,
+    attempt: record.attempt ?? null,
     usage: JSON.stringify(record.usage),
     recorded_at: record.recordedAt,
     tenant_id: record.tenantId ?? null,
@@ -301,6 +307,9 @@ export function rowToUsageRecord(row: UsageRow): UsageRecord {
     sessionId: row.session_id,
     runId: row.run_id ?? undefined,
     entryId: row.entry_id ?? undefined,
+    scope: row.scope as UsageRecord["scope"],
+    turn: row.turn ?? undefined,
+    attempt: row.attempt ?? undefined,
     usage: JSON.parse(row.usage),
     recordedAt: row.recorded_at,
     tenantId: row.tenant_id ?? undefined,
