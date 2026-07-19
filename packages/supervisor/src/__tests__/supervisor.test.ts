@@ -99,7 +99,7 @@ describe("createSupervisor", () => {
       providerDone(),
     ]), tools });
     const bounded = createSupervisor({ ownership, limits: { maxToolCalls: 1 }, children: { child: { createAgent: () => toolAgent } } });
-    await bounded.delegate({ childId: "child", input: "x" });
+    await assert.rejects(bounded.delegate({ childId: "child", input: "x" }), /tool-call limit/);
     assert.equal(calls, 1);
   });
 

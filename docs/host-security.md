@@ -25,10 +25,12 @@ Start from explicit host inputs. Do not let runtime code discover security state
 | Permission decisions | allow/deny rules or approval UI result | `createStaticPermissionPolicy`, `assertPermission()` |
 | Tool allow-list | active tools for this agent/session/run | `createToolRegistry`, `filterTools()`, `dispatchToolCall()` |
 | Tool argument rules | host validator | `AgentConfig.validator`, `RunOptions.validate`, `ToolValidator` |
+| Guardrail decisions | host callback allow/block/tripwire policy | `Guardrails`, `Guardrail`, `GuardrailError` |
 | Coding execution policy | path/command approval adapter | `ExecutionPolicy`, `@arnilo/prism-coding-security` |
 | Remote media policy | public/default pinned DNS or explicit trusted transport | `SsrfPolicy`, `resolveMediaContentBlock()` |
 | Durable history | host database adapter | `SessionStore`, `assertSessionStoreConforms()` |
 | Durable audit | host ledger adapter | `RunLedger`, `redactRunLedgerRecord()` |
+| Durable interruption | host checkpoint + session stores, exact ownership | `RunOptions.runState`, `resumeAgentRun()`, `createAgentRunLifecycle()`, `createSecureAgent()` |
 | Extensions | explicit package imports only | `createExtensionKernel`, `ExtensionAPI` |
 | Remote agent/workflow API | host authentication + ownership mapping | `@arnilo/prism-server`, `createPrismHandler()` |
 | MCP server exposure | host MCP auth + selected capability list | `createPrismMcpServer()`, `createPrismMcpWebHandler()` |
@@ -41,7 +43,9 @@ Security controls fail closed before side effects when wired at the guarded edge
 - permission denial blocks extension setup, resource loading, and tool execution
 - unknown or denied tools emit `tool_execution_blocked`
 - validator failures emit `tool_execution_blocked` with `validation_failed`
-- configured redactors scrub provider requests, agent events, session entries, ledger records, tool errors, extension errors, and injector context
+- configured guardrails fail closed; output stages buffer blocked provider/tool content before events, ledgers, session entries, or MCP responses
+- configured redactors scrub provider requests, agent events, session entries, ledger records, tool errors, extension errors, injector context, and durable run checkpoints
+- durable resume requires host-derived exact ownership and checkpoint version; `createAgentRunLifecycle()` exposes only public state through explicitly selected server/MCP capabilities; never accept ownership or resume input from an approval body
 
 These checks are explicit function calls during load, assembly, dispatch, append, or run handling. Prism adds no background watchers, filesystem scanners, network probes, credential polling, or automatic extension discovery.
 
@@ -104,7 +108,7 @@ const tools = createToolRegistry(filterTools([readNotes], { allow: ["notes/read"
 void { apiKey, redactor, permission, trust, tools, validate };
 ```
 
-Wire those values where they matter: provider adapters receive the resolved credential, agents/runs receive `redactor`, tool dispatch receives `permission` and `validate`, resource/extension loaders receive `trust` and `permission`, and durable adapters receive already-redacted entries/records.
+Wire those values where they matter: provider adapters receive the resolved credential, agents/runs receive `redactor`, tool dispatch receives `trust`, `permission`, and `validate`, resource/extension loaders receive `trust` and `permission`, and durable adapters receive already-redacted entries/records. `createSecureAgent()` is an opt-in shortcut that requires these agent/tool seams, strict schemas, finite limits, exact ownership, and durable approval before every tool side effect; low-level `createAgent()` stays explicit.
 
 ## Extension and configuration notes
 

@@ -2,7 +2,7 @@ import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createSecretRedactor, createStaticPermissionPolicy, type CommandDefinition, type ToolDefinition } from "@arnilo/prism";
+import { createAgent, createAgentRunLifecycle, createMemoryCheckpointStore, createMockProvider, createSecretRedactor, createStaticPermissionPolicy, providerDone, toolCallContent, type CommandDefinition, type ToolDefinition } from "@arnilo/prism";
 import { createPrismMcpServer, createPrismMcpWebHandler } from "../server.js";
 import { McpBridgeError } from "../types.js";
 
@@ -68,6 +68,42 @@ describe("Prism MCP server", () => {
     const status = await item.client.callTool({ name: "workflow.status", arguments: { runId: "r1" } });
     assert.match(JSON.stringify(status.content), /suspended/);
     assert.deepEqual(seen, ["tool:echo", "command:workflow.status"]);
+  });
+
+  it("registers durable agent lifecycle tools only when explicitly selected", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    let calls = 0;
+    const agent = createAgent({
+      id: "support",
+      model: { provider: "mock", model: "offline" },
+      provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-1", "write", {}) }, providerDone()]),
+      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    });
+    const suspended = await agent.createSession().run("go", { ownership: { tenantId: "tenant-1", userId: "user-1" } });
+    const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
+    const item = await fixture({
+      agentRuns: { support: { lifecycle } },
+      authorize: () => ({ allowed: true, ownership: { tenantId: "tenant-1", userId: "user-1" } }),
+    });
+    open.push(item);
+    assert.deepEqual((await item.client.listTools()).tools.map((entry) => entry.name).sort(), ["agent.support.resume", "agent.support.status"]);
+    const status = await item.client.callTool({ name: "agent.support.status", arguments: { runId: suspended.runId } });
+    assert.equal(status.isError, false);
+    assert.match(JSON.stringify(status.content), /suspended/);
+    const denied = await item.client.callTool({ name: "agent.support.resume", arguments: {
+      runId: suspended.runId, decision: "deny", expectedVersion: suspended.runState!.version,
+    } });
+    assert.equal(denied.isError, false);
+    assert.match(JSON.stringify(denied.content), /denied/);
+    assert.equal(calls, 0);
+
+    const empty = await fixture({
+      tools: [{ name: "echo", execute: () => ({ toolCallId: "echo", name: "echo" }) }],
+      authorize: () => ({ allowed: true, ownership: { tenantId: "tenant-1", userId: "user-1" } }),
+    });
+    open.push(empty);
+    assert.equal((await empty.client.listTools()).tools.some((tool) => tool.name.startsWith("agent.")), false);
   });
 
   it("fails closed on authorization, validation, permission, duplicate names, and unknown tools", async () => {

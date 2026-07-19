@@ -1,6 +1,6 @@
 # @arnilo/prism-mcp
 
-Optional MCP client bridge and explicit Prism MCP server exposure. Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler.
+Optional MCP client bridge and explicit Prism MCP server exposure. Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler. Server `guardrails` apply shared core tool stages to registered tools; commands remain host callbacks.
 
 ## Install
 
@@ -69,7 +69,7 @@ const server = createPrismMcpServer({
 const handleMcp = await createPrismMcpWebHandler(server, { resolveAuthInfo });
 ```
 
-Nothing is exposed by default. Handler uses SDK Web-standard Streamable HTTP transport; no listener or auth provider starts. Request/result/concurrency/timeouts are bounded. Use `server.connect()` directly for SDK stdio/in-memory transports.
+Nothing is exposed by default. To expose a durable agent, pass `agentRuns: { support: { lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent }) } }`; this registers only `agent.support.status` and `agent.support.resume` under normal MCP authorization. Handler uses SDK Web-standard Streamable HTTP transport; no listener or auth provider starts. Request/result/concurrency/timeouts are bounded. Use `server.connect()` directly for SDK stdio/in-memory transports.
 
 ## Security
 

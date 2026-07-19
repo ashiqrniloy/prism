@@ -6,13 +6,14 @@ import {
   loadBoundedBinaryResource,
   type MediaContentBounds,
 } from "./content.js";
-import { assertPermission } from "./security.js";
+import { assertPermission, assertTrusted } from "./security.js";
 
 export async function loadTextResource(
   loader: ResourceLoader,
   uri: string,
   context?: ResourceLoadContext,
 ): Promise<string> {
+  await assertTrusted(context?.trust, { kind: "resource", target: uri, capability: "load", metadata: context?.metadata });
   await assertPermission(context?.permission, { kind: "resource", action: "load", target: uri, metadata: context?.metadata });
   const resource = await loader.load(uri, context);
   if (resource.text !== undefined) return resource.text;

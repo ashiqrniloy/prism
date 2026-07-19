@@ -57,7 +57,7 @@ await session.run(input, {
     parser: hostParser,       // optional; default treats assistant text as the value
     repairer: hostRepairer,  // optional; default stringifies validation.errors[].message
     maxRevisions: 3,         // optional; default 3
-    toolCalls: "bounded",    // optional; default "disabled"; uses RunOptions.maxToolRounds
+    toolCalls: "bounded",    // optional; default "disabled"; uses limits.maxToolRounds
   },
 });
 
@@ -80,7 +80,7 @@ type AgentLoopOptions =
       readonly parser?: ArtifactParser<unknown>;
       readonly repairer?: ArtifactRepairer<unknown>;
       readonly maxRevisions?: number;
-      /** Default "disabled". "bounded" dispatches sequentially up to RunOptions.maxToolRounds. */
+      /** Default "disabled". "bounded" dispatches sequentially up to limits.maxToolRounds. */
       readonly toolCalls?: "disabled" | "bounded";
     };
 ```
@@ -108,6 +108,10 @@ Host callback contracts (all generic over host `T`):
 | `dispatchToolCall(call)` | Wraps `dispatchToolCall()` with resolved registry/middleware/permission/redactor/validate. |
 | `appendMessage(message)` | Appends to the store under the run (redacted). |
 | `emit(event)` | Emits a redacted `AgentEvent`. |
+
+## Durable runs
+
+`RunOptions.runState` supports only built-in loop options (`single-shot` and `generate-validate-revise`). A custom `AgentLoopStrategy` has arbitrary in-memory cursor state, so durable configuration rejects it before provider work. Built-in suspension occurs only before an input provider call or immediately before a tool side effect; completed provider turns remain in `SessionStore` history and are not repeated after `resumeAgentRun()`.
 
 ## Outputs / response / events
 
@@ -202,7 +206,7 @@ await session.run(input, { loop: twoShotLoop });
 - `{ strategy: "single-shot" }` resolves to the exported `singleShotLoop`; `{ strategy: "generate-validate-revise", ... }` is mapped by `resolveLoop()` to `generateValidateReviseLoop(opts)`. An unknown `strategy` throws before the first turn. Passing an `AgentLoopStrategy` instance bypasses the options form entirely (custom-loop escape hatch).
 - The loop is resolved once per run inside `RuntimeAgentSession.run()`, after the usual setup (provider/skills/tools resolution, history rebuild, model-change entry, input append, auto-compaction). The runtime's outer try/catch/finally, run-exclusivity, abort bridging, and subscriber close remain in place around `loop.run(ctx)`.
 - `LoopContext.assemble(nextInput, toolResults?)` accepts an optional tool-result accumulator so `singleShotLoop` can pass its loop-local results. Bounded artifact tools append results directly to shared history, then assemble the next turn with empty new input; no second transcript path exists.
-- `maxToolRounds` bounds both `singleShotLoop` and opt-in bounded artifact tool rounds across the whole run. Artifact mode always dispatches sequentially, regardless of `toolConcurrency`; all dispatches still use existing registry/filter/permission/validator/middleware/redactor/ledger guards.
+- `limits.maxToolRounds` bounds both `singleShotLoop` and opt-in bounded artifact tool rounds across the whole run. Artifact mode always dispatches sequentially, regardless of `toolConcurrency`; all dispatches still use existing registry/filter/permission/validator/middleware/redactor/ledger guards. Deprecated `maxToolRounds` only narrows this limit.
 - `maxRevisions` (default 3) counts only failed call-free artifact candidates. Bounded artifact runs make at most `1 + maxRevisions + maxToolRounds` provider turns. A tool-round limit is terminal and returns last usage after `artifact_failed`; it does not throw.
 - A revision cycle appends one assistant draft and one repair user message per revision to the session store, so store entries reflect every attempted draft. The original user input is stored once by the runtime and pushed into loop history once on the first turn. Repair messages are assembled as the next provider `nextInput` and only pushed into live history after that revision request has been generated, so the model never receives a duplicated repair instruction.
 
@@ -214,6 +218,10 @@ await session.run(input, { loop: twoShotLoop });
 - Bounded artifact tool calls run sequentially through `dispatchToolCall` (permission + validation + execute); their assistant call and result are persisted before the next provider request. `singleShotLoop` retains its bounded parallel worker pool and original call-order transcript behavior.
 - The loop is a plain object/factory; no class hierarchy, no background work, no extra dependencies. `LoopContext` is a single object literal of bound arrows built once per run.
 - The Synapta-free boundary is guarded by tests: `src/` imports no `synapta*` package, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts contain no `workflow`/`node`/`step` field names. Hosts supply their own schema; no host domain type is imported by `src/`.
+
+## Guardrails
+
+Built-in loops and custom loops that use `LoopContext.generate()` / `LoopContext.dispatchToolCall()` inherit runtime guardrails. Provider output is checked before a loop appends assistant content; tool stages remain in shared dispatch. Do not call providers or `ToolDefinition.execute()` directly if guardrail enforcement is required; see [Guardrails](guardrails.md).
 
 ## Related APIs
 - [Agent/session runtime](agent-session-runtime.md): `RuntimeAgentSession.run()` builds the `LoopContext` and delegates to the resolved loop.

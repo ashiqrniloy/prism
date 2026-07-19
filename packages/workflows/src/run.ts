@@ -1,6 +1,9 @@
 import {
   assertExecutionAllowed,
+  createToolRegistry,
+  dispatchToolCall,
   type AgentSession,
+  type Guardrails,
   type JsonObject,
   type Message,
   type ToolDefinition,
@@ -822,7 +825,6 @@ async function executeNode(
           runId: ctx.runId,
         },
       };
-      await assertExecutionAllowed(options.executionPolicy, enriched);
       const toolContext: ToolExecutionContext = {
         sessionId: `workflow:${ctx.workflowId}`,
         runId: ctx.runId,
@@ -833,7 +835,16 @@ async function executeNode(
           nodeId: ctx.nodeId,
         },
       };
-      const result = await tool.execute(args, toolContext);
+      const result = await dispatchToolCall({
+        call: { type: "tool_call", id: toolContext.toolCallId, name: tool.name, arguments: args },
+        registry: createToolRegistry([tool]),
+        context: toolContext,
+        guardrails: options.guardrails,
+        redactor: options.redactor,
+        ledger: options.runLedger,
+        ownership: options.ownership,
+        beforeExecute: async () => { await assertExecutionAllowed(options.executionPolicy, enriched); },
+      });
       if (result.error) {
         throw new WorkflowRuntimeError(result.error.message, result.error.code ?? "ERR_PRISM_WORKFLOW_TOOL");
       }
@@ -906,6 +917,7 @@ async function executeNode(
         const input = node.input ? await node.input(ctx) : ctx.workflowInput;
         const runResult = await session.run(toAgentInput(input), {
           signal: ctx.signal,
+          limits: options.limits,
           ownership: options.ownership,
           redactor: options.redactor,
           runLedger: options.runLedger,

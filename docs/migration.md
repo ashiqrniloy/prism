@@ -7,6 +7,24 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.6 → 0.0.7 secure run lifecycle
+
+`createAgent()` remains backward-compatible. Version 0.0.7 adds opt-in typed `Guardrails` (`input`, provider `output`, `toolInput`, `toolOutput`) and narrowing-only `RunLimits`. Output guardrails and configured output-token/total-token/cost limits buffer provider output before exposure; blocked content is neither emitted nor persisted. A breach emits one redacted `run_limit_exceeded` event and rejects with `AgentRunError.result.limit`.
+
+Built-in agent loops can opt into durable `runState` with a checkpoint store and stable `definitionRevision`. `interruptBeforeTool: true` suspends before any tool side effect. Resume requires exact ownership, current fingerprint/revision, and checkpoint `expectedVersion`; a crash after dispatch is ambiguous and requires operator resolution rather than replaying the tool. Custom `AgentLoopStrategy` objects are not durable. Persisted state is bounded/redacted and excludes credentials, raw input, callbacks, providers, and pending tool arguments.
+
+`createSecureAgent()` is new and opt-in. Adopt it when every active tool must have a host validator/schema, trust and permission policies, secret redaction, finite limits, exact ownership, and durable pre-tool approval. Run options may narrow its limits and append guardrails, but cannot replace its redactor, validator, ownership, or checkpoint policy. To expose durable agent status/resume remotely, explicitly create `createAgentRunLifecycle({ checkpoints, resolveAgent })` and pass it to selected server `agentRuns` or MCP `agentRuns`; no route/tool is added otherwise.
+
+```ts
+const suspended = await agent.createSession().run("send", {
+  runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+  limits: { maxToolCalls: 1, maxTotalTokens: 50_000 },
+});
+const result = await resumeAgentRun(agent, { runId: suspended.runId }, {
+  decision: "approve", expectedVersion: suspended.runState!.version!,
+}, { checkpoints, definitionRevision: "1" });
+```
+
 Phase 4 adds optional `@arnilo/prism-evals` for deterministic scorers/datasets/experiments. It is not a core dependency; install it directly or through `@arnilo/prism-all`.
 
 Phase 5 adds `prism init <dir>` to the existing CLI. It scaffolds a tiny TypeScript project with one selected provider and an offline mock test. Optional `--with-workflows` / `--with-evals` flags add only those packages; storage and telemetry stay opt-in elsewhere.

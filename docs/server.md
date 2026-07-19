@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-server` exposes explicitly selected agents and workflows through one framework-free `(Request) => Promise<Response>` handler. It supports direct agent results, bounded agent/workflow SSE, durable workflow start/enqueue/status/cancel/resume/replay, ownership-scoped schedules, host authorization, ownership propagation, redaction, and resource ceilings.
+`@arnilo/prism-server` exposes explicitly selected agents and workflows through one framework-free `(Request) => Promise<Response>` handler. It supports direct agent results, bounded agent/workflow SSE, opt-in durable agent status/resume, durable workflow start/enqueue/status/cancel/resume/replay, ownership-scoped schedules, host authorization, ownership propagation, redaction, and resource ceilings.
 
 No listener starts on import. Empty `agents`/`workflows` maps expose nothing. Authentication, authorization, route selection, durable stores, TLS, rate limiting, and framework/serverless adaptation remain host-owned.
 
@@ -17,6 +17,7 @@ Use `AgentSession` or workflow APIs directly for in-process applications. Do not
 ```ts
 const handler = createPrismHandler({
   agents?: Record<string, Agent | PrismAgentExposure>,
+  agentRuns?: Record<string, PrismAgentRunExposure>, // explicit durable status/resume only
   workflows?: Record<string, PrismWorkflowExposure>,
   schedules?: WorkflowSchedules | ((authorization, signal) => WorkflowSchedules),
   authorize: async ({ request, operation, capabilityId }) => false | {
@@ -38,6 +39,8 @@ At least one non-empty ownership field must come from `authorize()`. Request JSO
 | --- | --- | --- |
 | `POST /prism/agents/:id/runs` | `agent.run` | `{ "input": string | Message | Message[] }` |
 | `POST /prism/agents/:id/stream` | `agent.stream` | same; SSE response |
+| `GET /prism/agents/:id/runs/:runId` | `agent.status` | none; redacted public state/version only |
+| `POST /prism/agents/:id/runs/:runId/resume` | `agent.resume` | `{ "decision": "approve" | "deny", "expectedVersion": number }` |
 | `POST /prism/workflows/:id/runs` | `workflow.run` | `{ "input": unknown, "runId"?: string }` |
 | `POST /prism/workflows/:id/stream` | `workflow.stream` | same; SSE response |
 | `POST /prism/workflows/:id/enqueue` | `workflow.enqueue` | `{ "input": unknown, "runId"?: string }`; returns `202` queued handle |
@@ -125,7 +128,7 @@ Default/hard ceilings:
 - SSE uses bounded upstream subscriber queues. Consumer cancellation aborts owned work by default and releases concurrency; set `disconnectAborts: false` only when the host deliberately owns background completion.
 - Source inputs/resource URLs remain host responsibilities and use existing resource/media SSRF policies. Server package does not fetch URLs.
 - Schedule routes never accept ownership from JSON. Services carry mandatory ownership and explicit workflow/calculator registries; route authorization cannot broaden either. Replay applies workflow ownership/hash/approval checks.
-- No agent status/reconnect store is invented. Durable reconnect/status/resume is the workflow path; persistent agent run querying remains a host persistence API.
+- Agent status/resume routes exist only for keys in `agentRuns`. Supply one core `createAgentRunLifecycle({ checkpoints, resolveAgent })` capability per selected agent; its resolver returns current `{ agent, definitionRevision }`. It reuses core checkpoint parsing/CAS/fingerprint checks, returns only public state/version, and needs a durable `SessionStore` as well as checkpoints for restart-safe resume. Empty/default configuration adds no agent lifecycle route, polling, or server cache.
 
 A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-supervisor` and explicitly mount `createA2AHandler()` when protocol interoperability is required; this keeps cards and remote invoke absent from ordinary Prism servers.
 

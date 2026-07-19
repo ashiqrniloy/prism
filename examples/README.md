@@ -43,6 +43,8 @@ node examples/workflow-multimodal-document.ts
 node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL is set
 node examples/workflow-distributed-coordinator.ts
 node examples/workflow-schedules-replay.ts
+node examples/agent-durable-approval.ts
+node examples/secure-agent.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -50,6 +52,8 @@ Each demo prints a single JSON line with its result.
 ## Files
 
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
+- `secure-agent.ts` — opt-in fail-closed agent composition with validation, trust/permission, redaction, limits, ownership, and durable approval.
+- `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, and safe low-cardinality OpenTelemetry projection.
 - `supervisor-a2a.ts` — bounded allow-listed local child delegation plus an offline A2A 1.0 handler/client round trip.

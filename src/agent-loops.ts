@@ -192,6 +192,7 @@ export function resolveToolConcurrency(
 /** Dispatch tool calls with bounded concurrency; append transcript rows in call order. */
 export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[], ctx: LoopContext): Promise<void> {
   if (calls.length === 0) return;
+  ctx.chargeToolRound?.(calls);
   const concurrency = calls.some((call) => ctx.isToolCallExclusive?.(call))
     ? 1
     : Math.max(1, Math.min(ctx.toolConcurrency, calls.length));

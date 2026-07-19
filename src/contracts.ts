@@ -2,7 +2,7 @@ import type { AgentInput } from "./input.js";
 import type { ContributionRegistries } from "./contributions.js";
 import type { Middleware, MiddlewareHookName, MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
-import type { PermissionPolicy } from "./security.js";
+import type { PermissionPolicy, TrustPolicy } from "./security.js";
 import type { ManifestContributionDeclaration } from "./manifests.js";
 import type { ToolValidator } from "./tools.js";
 import type { AudioContent, DocumentContent, FileContent } from "./content.js";
@@ -132,6 +132,95 @@ export interface Usage {
   readonly currency?: string;
 }
 
+export interface RunLimits {
+  readonly maxTurns?: number;
+  readonly maxProviderAttempts?: number;
+  readonly maxToolRounds?: number;
+  readonly maxToolCalls?: number;
+  readonly maxWallTimeMs?: number;
+  readonly maxRequestBytes?: number;
+  readonly maxResponseBytes?: number;
+  readonly maxInputTokens?: number;
+  readonly maxOutputTokens?: number;
+  readonly maxTotalTokens?: number;
+  readonly maxCost?: { readonly amount: number; readonly currency: string };
+}
+
+export type RunLimitName = keyof Required<RunLimits>;
+
+export interface RunLimitCounters {
+  readonly turns: number;
+  readonly providerAttempts: number;
+  readonly toolRounds: number;
+  readonly toolCalls: number;
+  readonly wallTimeMs: number;
+  readonly requestBytes: number;
+  readonly responseBytes: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly totalTokens: number;
+  readonly cost: number;
+}
+
+export interface RunLimitBreach {
+  readonly limit: RunLimitName;
+  readonly maximum: number;
+  readonly observed: number;
+  readonly currency?: string;
+}
+
+export type GuardrailStage = "input" | "output" | "tool_input" | "tool_output";
+export type GuardrailAction = "allow" | "block" | "tripwire" | "interrupt";
+
+export type GuardrailValue<S extends GuardrailStage> =
+  S extends "input" ? readonly Message[] :
+  S extends "output" ? ProviderTurnResult :
+  S extends "tool_input" ? ToolCallContent :
+  ToolResult;
+
+export interface GuardrailContext<S extends GuardrailStage> {
+  readonly stage: S;
+  readonly value: GuardrailValue<S>;
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly toolCallId?: string;
+  readonly toolName?: string;
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly signal: AbortSignal;
+}
+
+export interface GuardrailDecision {
+  readonly action: GuardrailAction;
+  readonly reason?: string;
+  /** Public data only; Prism JSON-normalizes, bounds, and redacts it before emission. */
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface Guardrail<S extends GuardrailStage = GuardrailStage> {
+  readonly name: string;
+  readonly stage: S;
+  /** Host-authored stable identity for durable definitions; unused by ordinary runs. */
+  readonly revision?: string;
+  evaluate(context: GuardrailContext<S>): GuardrailDecision | Promise<GuardrailDecision>;
+}
+
+export interface GuardrailRecord {
+  readonly guardrail: string;
+  readonly stage: GuardrailStage;
+  readonly action: GuardrailAction;
+  readonly reason?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface Guardrails {
+  readonly input?: readonly Guardrail<"input">[];
+  readonly output?: readonly Guardrail<"output">[];
+  readonly toolInput?: readonly Guardrail<"tool_input">[];
+  readonly toolOutput?: readonly Guardrail<"tool_output">[];
+  /** Defaults to sequential; at most 16 stage evaluations run at once. */
+  readonly maxConcurrency?: number;
+}
+
 export type CacheRetention = "none" | "short" | "long";
 export type PromptCacheKind = "implicit" | "openai_key" | "cache_control" | "provider_specific" | "none";
 
@@ -216,7 +305,10 @@ export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly model?: ModelConfig;
   readonly providerSource?: ProviderResolver;
+  /** @deprecated Use `limits.maxToolRounds`. */
   readonly maxToolRounds?: number;
+  /** Run-scoped ceilings. When an agent config also sets limits, these can only narrow it. */
+  readonly limits?: RunLimits;
   readonly providerOptions?: ProviderRequestOptions;
   readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
   readonly systemPrompt?: SystemPromptConfig;
@@ -233,6 +325,10 @@ export interface RunOptions {
   readonly instructionInjectors?: readonly InstructionInjector[];
   readonly inputLayout?: InputAssemblyLayout;
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
+  /** Appended to agent-level guardrails for this run. */
+  readonly guardrails?: Guardrails;
+  /** Opt-in durable interruption/checkpointing. */
+  readonly runState?: AgentRunStateOptions;
 }
 
 export interface AgentDefinition {
@@ -282,6 +378,8 @@ export interface AgentConfig {
   readonly resourceLoader?: ResourceLoader;
   readonly store?: SessionStore;
   readonly permission?: PermissionPolicy;
+  /** Optional trust check for tool and resource targets. */
+  readonly trust?: TrustPolicy;
   readonly providerOptions?: ProviderRequestOptions;
   readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
   readonly systemPrompt?: SystemPromptConfig;
@@ -291,11 +389,32 @@ export interface AgentConfig {
   readonly idempotencyKey?: string;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
+  /** Agent-wide ceilings; per-run limits may only narrow these values. */
+  readonly limits?: RunLimits;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly validator?: ToolValidator;
   readonly instructionInjectors?: readonly InstructionInjector[];
   readonly inputLayout?: InputAssemblyLayout;
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
+  readonly guardrails?: Guardrails;
+  /** Opt-in durable interruption/checkpointing default for this agent. */
+  readonly runState?: AgentRunStateOptions;
+  /** Internal marker set by createSecureAgent(); makes security defaults immutable per run. */
+  readonly secure?: true;
+}
+
+/** Opt-in fail-closed composition over the normal explicit AgentConfig API. */
+export interface SecureAgentOptions extends Omit<AgentConfig, "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "limits" | "runState" | "secure"> {
+  readonly id: string;
+  readonly tools: readonly ToolDefinition[];
+  readonly toolArgumentValidator: import("./tools.js").ToolArgumentValidator;
+  readonly redactor: SecretRedactor;
+  readonly permission: PermissionPolicy;
+  readonly trust: TrustPolicy;
+  readonly ownership: OwnershipScope;
+  readonly limits: RunLimits;
+  readonly definitionRevision: string;
+  readonly runState: Omit<AgentRunStateOptions, "definitionRevision" | "interruptBeforeTool">;
 }
 
 export interface Agent {
@@ -329,7 +448,70 @@ export interface SubscribeOptions {
   readonly overflow?: SubscriberOverflowPolicy;
 }
 
-export type AgentRunStatus = "succeeded" | "failed" | "aborted";
+export type AgentRunStatus = "succeeded" | "failed" | "aborted" | "suspended" | "denied";
+
+export type AgentRunInterruptionKind = "input_guardrail" | "tool_approval";
+
+/** Redacted safe-boundary descriptor; never contains tool arguments. */
+export interface AgentRunInterruption {
+  readonly kind: AgentRunInterruptionKind;
+  readonly reason: string;
+  readonly toolCallId?: string;
+  readonly toolName?: string;
+}
+
+export interface AgentRunStateOptions {
+  readonly checkpoints: CheckpointStore;
+  /** Host-authored immutable revision required for durable runs. */
+  readonly definitionRevision: string;
+  /** Suspend every tool call before its side effect. */
+  readonly interruptBeforeTool?: boolean;
+  readonly maxStateBytes?: number;
+  readonly fencingToken?: number;
+}
+
+/** Versioned, redacted checkpoint payload. Treat as opaque except status/version/interruption. */
+export interface AgentRunState {
+  readonly schemaVersion: 1;
+  readonly agentId: string;
+  readonly definitionRevision: string;
+  readonly fingerprint: string;
+  readonly runId: string;
+  readonly sessionId: string;
+  readonly leafId?: string;
+  readonly model: ModelConfig;
+  readonly status: AgentRunStatus | "running";
+  readonly interruption?: AgentRunInterruption;
+  readonly version?: number;
+}
+
+export interface AgentRunResume {
+  readonly decision: "approve" | "deny";
+  readonly expectedVersion: number;
+}
+
+export interface AgentRunResumeOptions {
+  readonly checkpoints: CheckpointStore;
+  /** Current host-authored revision; must exactly match the checkpoint. */
+  readonly definitionRevision: string;
+  readonly ownership?: OwnershipScope;
+  readonly fencingToken?: number;
+}
+
+export interface AgentRunRef {
+  readonly runId: string;
+  readonly sessionId?: string;
+}
+
+export interface AgentRunStatusResult {
+  readonly state: AgentRunState;
+  readonly version: number;
+}
+
+export class AgentRunStateError extends Error {
+  readonly code = "ERR_PRISM_AGENT_RUN_STATE";
+  constructor(message: string) { super(message); this.name = "AgentRunStateError"; }
+}
 
 /** Terminal result of `session.run()` / `session.prompt()`. Failed and aborted runs throw {@link AgentRunError} with this shape attached. */
 export interface AgentRunResult {
@@ -346,10 +528,16 @@ export interface AgentRunResult {
   readonly message?: Message;
   /** Aggregate usage across provider turns (`run_total` scope). */
   readonly usage?: Usage;
+  /** Present when the run hit a configured resource ceiling. */
+  readonly limit?: RunLimitBreach;
   /** Present when `status` is `"failed"` or when a failed attempt still produced partial output. */
   readonly error?: ErrorInfo;
   /** String form of the abort reason when `status` is `"aborted"`. */
   readonly abortReason?: string;
+  /** Present for durable suspended/terminal runs. Payload is redacted and bounded. */
+  readonly runState?: AgentRunState;
+  /** Present only while awaiting an operator decision. */
+  readonly interruption?: AgentRunInterruption;
 }
 
 export class AgentRunError extends Error {
@@ -399,6 +587,9 @@ export interface ToolExecutionMetadata {
 export type AgentEvent =
   | { readonly type: "agent_started"; readonly sessionId: string; readonly runId: string }
   | { readonly type: "agent_finished"; readonly sessionId: string; readonly runId: string; readonly usage?: Usage }
+  | { readonly type: "agent_suspended"; readonly sessionId: string; readonly runId: string; readonly interruption: AgentRunInterruption; readonly version: number }
+  | { readonly type: "agent_resumed"; readonly sessionId: string; readonly runId: string; readonly version: number }
+  | { readonly type: "agent_denied"; readonly sessionId: string; readonly runId: string; readonly interruption: AgentRunInterruption; readonly version: number }
   | { readonly type: "turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number }
   | { readonly type: "turn_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number }
   | { readonly type: "provider_turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly metadata: ProviderTurnMetadata }
@@ -411,6 +602,8 @@ export type AgentEvent =
   | { readonly type: "tool_execution_finished"; readonly sessionId: string; readonly runId: string; readonly result: ToolResult; readonly metadata: ToolExecutionMetadata }
   | { readonly type: "tool_execution_error"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent; readonly error: ErrorInfo; readonly metadata: ToolExecutionMetadata }
   | { readonly type: "tool_execution_blocked"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly reason: string; readonly error: ErrorInfo; readonly metadata: ToolExecutionMetadata }
+  | { readonly type: "guardrail_decision"; readonly sessionId: string; readonly runId: string; readonly toolCallId?: string; readonly toolName?: string; readonly record: GuardrailRecord }
+  | { readonly type: "run_limit_exceeded"; readonly sessionId: string; readonly runId: string; readonly breach: RunLimitBreach }
   | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
   | { readonly type: "event_subscriber_overflow"; readonly sessionId: string; readonly runId?: string; readonly droppedEvents: number; readonly maxQueuedEvents: number; readonly overflow: SubscriberOverflowPolicy }
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
@@ -548,6 +741,8 @@ export interface InputBuildContext {
   readonly runId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly signal?: AbortSignal;
+  readonly permission?: PermissionPolicy;
+  readonly trust?: TrustPolicy;
 }
 
 export interface PromptBuilder {
@@ -1025,7 +1220,7 @@ export interface BranchRecord {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "aborted";
+export type RunStatus = "queued" | "running" | "suspended" | "denied" | "succeeded" | "failed" | "aborted";
 
 /** Stored run record. */
 export interface RunRecord extends OwnershipScope {
@@ -1438,6 +1633,7 @@ export interface ResourceLoadContext {
   readonly signal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly permission?: PermissionPolicy;
+  readonly trust?: TrustPolicy;
 }
 
 export interface SettingsProvider {
@@ -1495,6 +1691,8 @@ export interface LoopContext {
   /** Maximum independent tool calls dispatched concurrently per provider turn. Default `1`. */
   readonly toolConcurrency: number;
   assemble(nextInput: AgentInput, toolResults?: readonly ToolResult[], turn?: number): Promise<ProviderRequest>;
+  /** Charges a complete tool round before any call in it can start. */
+  chargeToolRound?(calls: readonly ToolCallContent[]): void;
   generate(request: ProviderRequest): Promise<ProviderTurnResult>;
   dispatchToolCall(call: ToolCallContent): Promise<ToolResult>;
   isToolCallExclusive?(call: ToolCallContent): boolean;

@@ -291,6 +291,8 @@ async function resourceMessage(uri: string, context: DefaultInputBuildContext, a
   const text = await loadTextResource(context.resourceLoader, uri, {
     signal: context.signal,
     metadata: context.metadata,
+    permission: context.permission,
+    trust: context.trust,
   });
   const label = attachment?.name ?? uri;
   return textMessage("user", `Resource ${label}:\n${text}`, attachmentMetadata({ ...attachment, uri }));

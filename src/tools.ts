@@ -1,10 +1,12 @@
-import type { AgentEvent, ErrorInfo, JsonObject, OwnershipScope, RunLedger, ToolCallContent, ToolCallRecord, ToolCallStatus, ToolDefinition, ToolExecutionContext, ToolExecutionMetadata, ToolRegistry, ToolResult } from "./contracts.js";
+import type { AgentEvent, ErrorInfo, Guardrails, JsonObject, OwnershipScope, RunLedger, ToolCallContent, ToolCallRecord, ToolCallStatus, ToolDefinition, ToolExecutionContext, ToolExecutionMetadata, ToolRegistry, ToolResult } from "./contracts.js";
 import { isJsonObject } from "./config.js";
 import { createId } from "./ids.js";
+import { GuardrailError, runGuardrails } from "./guardrails.js";
+import type { RunLimitTracker } from "./run-limits.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
-import { assertPermission, type PermissionPolicy } from "./security.js";
+import { assertPermission, assertTrusted, type PermissionPolicy, type TrustPolicy } from "./security.js";
 
 export interface ToolFilter {
   readonly allow?: readonly string[];
@@ -62,12 +64,19 @@ export interface DispatchToolCallOptions {
   readonly filter?: ToolFilterInput;
   readonly middleware?: MiddlewareRegistry;
   readonly validate?: ToolValidator;
+  /** Adapter-specific policy check immediately before the tool side effect. */
+  readonly beforeExecute?: (call: ToolCallContent, tool: ToolDefinition, context: ToolExecutionContext) => void | Promise<void>;
   readonly emit?: (event: AgentEvent) => void | Promise<void>;
   readonly secrets?: readonly (string | undefined)[];
   readonly permission?: PermissionPolicy;
+  readonly trust?: TrustPolicy;
   readonly redactor?: SecretRedactor;
   readonly ledger?: RunLedger;
   readonly ownership?: OwnershipScope;
+  /** Tool stages run after middleware normalization and before side effects/exposure. */
+  readonly guardrails?: Guardrails;
+  /** Shared run tracker; direct hosts may supply one for their call scope. */
+  readonly limitTracker?: RunLimitTracker;
 }
 
 export interface ToolRegistryOptions extends DuplicateRegistrationOptions {}
@@ -112,10 +121,27 @@ function toolExecutionMetadata(startedAt: string, status: ToolCallStatus): ToolE
 export async function dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult> {
   const secrets = options.secrets ?? [];
   const startedAt = new Date().toISOString();
-  const precheck = await checkCall(options.call, options, startedAt);
-  if (precheck) return precheck;
-
+  options.limitTracker?.charge("maxToolCalls");
   const mediatedCall = await (options.middleware?.run<ToolCallContent>("tool_call", options.call) ?? options.call);
+  const inputGuards = await runGuardrails({
+    stage: "tool_input",
+    guardrails: options.guardrails,
+    value: mediatedCall,
+    context: {
+      sessionId: options.context.sessionId,
+      runId: options.context.runId,
+      toolCallId: mediatedCall.id,
+      toolName: mediatedCall.name,
+      metadata: options.context.metadata ?? {},
+      signal: options.context.signal,
+    },
+    redactor: options.redactor,
+    emit: options.emit,
+  });
+  if (inputGuards.terminal) {
+    if (inputGuards.terminal.action !== "block") throw new GuardrailError(inputGuards.terminal);
+    return blocked(mediatedCall, options.context, "guardrail_blocked", { message: "Tool call blocked by guardrail" }, options, startedAt);
+  }
   const tool = options.registry.get(mediatedCall.name);
   const postcheck = await checkCall(mediatedCall, options, startedAt);
   if (postcheck) return postcheck;
@@ -143,6 +169,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   };
 
   try {
+    await assertTrusted(options.trust, { kind: "tool", target: mediatedCall.name, capability: "execute", metadata: options.context.metadata });
     await assertPermission(options.permission, { kind: "tool", action: "execute", target: mediatedCall.name, metadata: options.context.metadata });
   } catch (error) {
     return blocked(mediatedCall, context, "permission_denied", errorToErrorInfo(error, secrets), options, startedAt);
@@ -151,12 +178,38 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   const validation = await options.validate?.(tool!, mediatedCall.arguments, context);
   if (validation) return blocked(mediatedCall, context, "validation_failed", toErrorInfo(validation, secrets), options, startedAt);
 
+  try {
+    await options.beforeExecute?.(mediatedCall, tool!, context);
+  } catch (error) {
+    if ((error as { code?: unknown })?.code === "ERR_PRISM_AGENT_RUN_SUSPENDED") throw error;
+    return blocked(mediatedCall, context, "execution_denied", errorToErrorInfo(error, secrets), options, startedAt);
+  }
+
   await options.emit?.({ type: "tool_execution_started", sessionId: context.sessionId, runId: context.runId, call: mediatedCall });
   await appendToolCallRecord(options, "started", mediatedCall, startedAt, {});
 
   try {
     const raw = await tool!.execute(mediatedCall.arguments, context);
     const mediatedResult = await (options.middleware?.run<ToolResult>("tool_result", raw) ?? raw);
+    const outputGuards = await runGuardrails({
+      stage: "tool_output",
+      guardrails: options.guardrails,
+      value: mediatedResult,
+      context: {
+        sessionId: context.sessionId,
+        runId: context.runId,
+        toolCallId: mediatedCall.id,
+        toolName: mediatedCall.name,
+        metadata: context.metadata ?? {},
+        signal: context.signal,
+      },
+      redactor: options.redactor,
+      emit: options.emit,
+    });
+    if (outputGuards.terminal) {
+      if (outputGuards.terminal.action !== "block") throw new GuardrailError(outputGuards.terminal);
+      return blocked(mediatedCall, context, "guardrail_blocked", { message: "Tool result blocked by guardrail" }, options, startedAt);
+    }
     const result = options.redactor?.redact(mediatedResult) ?? mediatedResult;
     const finishedAt = new Date().toISOString();
     const metadata = toolExecutionMetadata(startedAt, "finished");
@@ -164,6 +217,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     await appendToolCallRecord(options, "finished", mediatedCall, startedAt, { finishedAt, result });
     return result;
   } catch (error) {
+    if (error instanceof GuardrailError) throw error;
     const info = errorToErrorInfo(error, secrets);
     const result = { toolCallId: mediatedCall.id, name: mediatedCall.name, error: info };
     const finishedAt = new Date().toISOString();

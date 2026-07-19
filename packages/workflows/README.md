@@ -1,6 +1,6 @@
 # @arnilo/prism-workflows
 
-Optional typed bounded DAG workflow orchestration for Prism. Defines acyclic and nested workflows, schedules dependency-ready nodes with a Kahn worker pool, supports bounded shared state and immutable-lineage replay, and emits package-local `WorkflowEvent`s. Agent nodes call public `AgentSession.run()` only.
+Optional typed bounded DAG workflow orchestration for Prism. Defines acyclic and nested workflows, schedules dependency-ready nodes with a Kahn worker pool, supports bounded shared state and immutable-lineage replay, and emits package-local `WorkflowEvent`s. Agent nodes call public `AgentSession.run()` only. `RunWorkflowOptions.guardrails` routes tool nodes through core tool dispatch; see root [Guardrails](../../docs/guardrails.md) guide.
 
 Included through `@arnilo/prism-sdk` and `@arnilo/prism-all`, or install explicitly when only workflow orchestration is needed.
 

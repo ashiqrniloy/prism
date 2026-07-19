@@ -35,12 +35,39 @@ Set the ledger and optional ownership scope/idempotency key on the agent or the 
 
 | Method | Record | When called |
 | --- | --- | --- |
-| `appendRun` | `RunRecord` | After run starts (`running`) and again at finish (`succeeded`/`failed`/`aborted`). |
+| `appendRun` | `RunRecord` | After run starts (`running`) and again at finish (`suspended`/`denied`/`succeeded`/`failed`/`aborted`). |
 | `appendEvent` | `AgentEventRecord` | After every emitted `AgentEvent`, after redaction. |
 | `appendToolCall` | `ToolCallRecord` | For each tool-call `started`, `progress`, `finished`, `error`, and `blocked` transition. |
 | `appendUsage` | `UsageRecord` | Once per terminal provider turn (`scope: "provider_turn"`) and once for the O(turns) aggregate (`scope: "run_total"`). |
 
 All methods may be sync or async (`void | Promise<void>`). The runtime awaits them at safe boundaries, so a slow adapter blocks the run.
+
+## Run limits
+
+`RunLimits` bounds one `session.run()` across turns, provider attempts, tool rounds/calls, elapsed wall time, request/response bytes, token usage, and optional cost. Configure defaults on `AgentConfig.limits`; `RunOptions.limits` can only narrow an agent-configured value.
+
+```ts
+await session.run("Summarize", {
+  limits: {
+    maxTurns: 4,
+    maxProviderAttempts: 6,
+    maxToolCalls: 8,
+    maxWallTimeMs: 30_000,
+    maxTotalTokens: 12_000,
+    maxCost: { amount: 0.25, currency: "USD" },
+  },
+});
+```
+
+Defaults/hard caps are respectively: turns 16/64, provider attempts 24/256, tool rounds 8/64, tool calls 32/256, wall time 120 seconds/30 minutes, request and response bytes 8/64 MiB, input tokens 40,000/1,000,000, output tokens 10,000/250,000, total tokens 50,000/1,000,000, and cost 10,000 currency units. Integer values must be positive safe integers. Cost needs a finite non-negative amount plus one currency; when cost is limited, absent, non-finite, or mixed-currency provider cost fails closed.
+
+Prism charges turns before assembly, provider attempts and request bytes before generation, response bytes per provider event, tool rounds before a batch, tool calls before dispatch, and usage before another turn. A breach stops new work, aborts active work through the run signal, emits exactly one redacted `run_limit_exceeded` event/ledger row, and throws `AgentRunError` with `result.limit` (`limit`, `maximum`, `observed`, optional `currency`). Provider-reported token/cost totals arrive after generation, so that completed provider turn can be the unavoidable overshoot boundary.
+
+`createRunLimitTracker()` and `resolveRunLimits()` are public for adapters that need the same validation and accounting semantics. Workflow agent nodes forward `RunWorkflowOptions.limits`; supervisor delegation narrows its step/tool/token/timeout budget into core limits; MCP tool calls use a per-call tracker.
+
+## Durable run state
+
+`RunOptions.runState` writes a bounded, versioned checkpoint only at a safe interruption boundary. Its counters and absolute deadline resume with the run, while transcript history stays in `SessionStore` by session/leaf reference. `AgentRunResult.runState` exposes only redacted identity/status/version data; `interruption` excludes tool arguments. See [Agent/session runtime](agent-session-runtime.md#durable-interruption).
 
 ## Outputs / response / events
 
@@ -56,7 +83,7 @@ The adapter receives these record shapes:
 | `model` | Resolved model config for the run. |
 | `provider` | Resolved provider id for the run. |
 | `idempotencyKey` | Optional host key. |
-| `status` | `queued` \| `running` \| `succeeded` \| `failed` \| `aborted`. |
+| `status` | `queued` \| `running` \| `suspended` \| `denied` \| `succeeded` \| `failed` \| `aborted`. |
 | `startedAt` / `finishedAt` | ISO timestamps. |
 | `abortReason` | Set when status is `aborted`. |
 | `error` | `ErrorInfo` when status is `failed`. |

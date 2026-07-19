@@ -53,6 +53,7 @@ When multiple filters are provided, each non-empty allow list must include the t
 | `filter` | Optional exact allow/deny filter or ordered filters. |
 | `middleware` | Optional `MiddlewareRegistry`; `tool_call` runs before validation/execution and `tool_result` runs after execution. |
 | `validate` | Optional host validator returning `void`, a message string, or `ErrorInfo`. A non-`void` return blocks dispatch with reason `validation_failed` (redacted). Runs after the permission assertion and before `tool.execute()`. |
+| `beforeExecute` | Optional adapter policy check immediately before the side effect; a rejection blocks dispatch with `execution_denied`. Workflows use it to retain `ExecutionPolicy` attribution after core guardrails. |
 | `emit` | Optional `AgentEvent` callback for lifecycle events. |
 | `secrets` | Known secret values to redact from thrown tool errors. |
 | `redactor` | Optional `SecretRedactor` used to redact tool-call ledger records. |
@@ -244,6 +245,10 @@ createJsonSchemaToolArgumentValidator({
 });
 ```
 
+## Guardrails
+
+`DispatchToolCallOptions.guardrails` evaluates `tool_input` after `tool_call` middleware normalization and before lookup, permission, validation, execution policy, or side effect. `tool_output` evaluates raw completed results before redaction, event emission, ledger rows, and transcript append. A block returns a blocked result; tripwire fails the enclosing run. See [Guardrails](guardrails.md).
+
 ## Related APIs
 
 - [Agent/session runtime](agent-session-runtime.md): dispatches complete provider tool calls through the host-active tool harness and returns tool results on the next provider turn.
@@ -258,4 +263,4 @@ createJsonSchemaToolArgumentValidator({
 - [MCP client bridge](mcp-tools.md): optional `@arnilo/prism-mcp` remote tool mapping.
 - [Coding agent tools](coding-agent-tools.md): optional first-party `@arnilo/prism-coding-agent` `shell`/`read`/`write`/`edit` tools a host registers into this harness.
 
-`DispatchToolCallOptions.permission` can provide a `PermissionPolicy`; denial emits `tool_execution_blocked` before validation or `execute()`. Middleware cannot bypass this guard. `AgentConfig.validator`/`RunOptions.validate` run after this guard; their output is redacted through the active `SecretRedactor`. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).
+`DispatchToolCallOptions.trust` and `.permission` run before validation or `execute()`; denial emits `tool_execution_blocked`. Middleware cannot bypass either guard. `AgentConfig.validator`/`RunOptions.validate` run after these guards; their output is redacted through the active `SecretRedactor`. `createSecureAgent()` requires all three seams plus non-empty schemas and durable pre-tool approval. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

@@ -6,9 +6,10 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Public contracts](public-contracts.md): type shapes for messages, agents, tools, stores, generic `CheckpointStore`, atomic `LeaseStore`, bounded `EventMultiplexer`, resources, credentials, and events.
 
 ## Agent/session runtime
-- [Agent/session runtime](agent-session-runtime.md): create agents and sessions, get direct `AgentRunResult` values from `run`/`prompt`, use integrated `stream()`, and subscribe to normalized events. Covers tool-call loop transcript shape and prior-reasoning preservation across turns.
+- [Agent/session runtime](agent-session-runtime.md): create explicit or opt-in secure agents/sessions, get direct `AgentRunResult` values from `run`/`prompt`, use integrated `stream()`, subscribe to normalized events, and expose opted-in durable lifecycle capabilities.
 - [Agent definitions](agent-definitions.md): resolve declarative `AgentDefinition` values via `resolveAgentDefinition`, and turn app-config `<configRoot>/agents/<name>/AGENT.md` bundles into runnable agents via `discoverAgentBundles` / `resolveAgentBundle` (explicit tool/skill activation by name, fail-closed omitted capabilities, migration-only `activateAllCapabilities`, strict duplicate scope checks, configurable prompt layers, no auto-discovery).
 - [Agent loops](agent-loops.md): replaceable per-run control loops — `singleShotLoop` default and opt-in bounded artifact-loop tool rounds with host-supplied `validator`/`parser`/`repairer` callbacks.
+- [Guardrails](guardrails.md): typed fail-closed input/output/tool checks with buffered provider output and redacted decision records.
 - [Agent events](agent-events.md): the `AgentEvent` stream — agent/turn/message (including live `tool_call_delta` fragments), provider turn timing, tool execution, queue/subscriber overflow, compaction/retry, artifact validation/refinement, and error variants, redacted via `redactAgentEvent`.
 - [Observability](observability.md): metadata-only provider/tool and run-feedback/evaluation projection, terminal span cleanup, low-cardinality metrics, and optional `@arnilo/prism-observability-opentelemetry` adapter.
 - [Evaluations](evaluations.md): optional deterministic scorers/datasets/experiments plus ID-only linkage from evaluation records to immutable owned run feedback.
@@ -26,7 +27,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Database persistence](database-persistence.md): production persistence contracts, shared checksummed migration/full-shape catalog primitives (`@arnilo/prism/testing/persistence-schema`), conditional append, indexes, `readBranchPath`, reference relational schema, retention, and NoSQL mapping.
 - [SQLite persistence](sqlite-persistence.md): optional `better-sqlite3` adapter with session/run storage, checkpoints/leases, feedback, and transactionally verified/backfilled migration-v3 metadata.
 - [PostgreSQL persistence](postgres-persistence.md): optional pooled `pg` adapter with session/run/checkpoint/lease/feedback storage, advisory-locked checksummed/full-shape migrations, and opt-in live conformance.
-- [Migration guide](migration.md): 0.0.3 compatibility and 0.0.6 adoption — workflow revisions, finite trust-boundary limits, first-party/custom database persistence, and explicit fail-closed tool/skill activation.
+- [Migration guide](migration.md): 0.0.3 compatibility, 0.0.6 hardening, and 0.0.7 guardrails, RunLimits, durable approval/resume, and secure composition.
 - [Node JSONL session store](node-jsonl-session-store.md): development-only JSONL file adapter for single-process Node hosts; no cross-process safety.
 - [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): Plan 056 inventory — session/run-ledger/persistence contracts, credential/OAuth seams, content/resource/model capabilities, package dependency matrix, conformance matrix, and threat model for production adapters.
 
@@ -56,7 +57,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Tools](tools.md): register host-owned active tools with replace-or-error duplicate policy, apply exact allow/deny filtering, dispatch normal or opt-in bounded artifact-loop calls, and optionally bound untrusted JSON Schema compilation.
 - [Tool execution primitives](tool-execution-primitives.md): finite JSON Schema LRU validation, exclusive-aware bounded parallel dispatch, MCP bridge mapping, coding execution policy, and image-read bounds.
 - [Tool validator JSON Schema package](../packages/tool-validator-json-schema/README.md): optional `@arnilo/prism-tool-validator-json-schema` adapter for `tool.parameters`.
-- [MCP client bridge and server exposure](mcp-tools.md): optional bounded atomic tool discovery/results, exact-origin DNS-pinned HTTPS/loopback-only HTTP client transport, and explicitly authorized Prism tools/commands on SDK `McpServer`.
+- [MCP client bridge and server exposure](mcp-tools.md): optional bounded atomic tool discovery/results, exact-origin DNS-pinned HTTPS/loopback-only HTTP client transport, and explicitly authorized Prism tools/commands/durable agent lifecycle on SDK `McpServer`.
 - [Coding agent tools](coding-agent-tools.md): optional `shell`, `read`, `write`, and `edit` definitions with streamed text pages, bounded image/edit reads and write/edit payloads, finite shell wall/total-output limits, secure host-owned spill cleanup, pluggable bounded operation contracts, per-path mutation serialization, and optional `ExecutionPolicy`. Limits do not sandbox host access—gate with permission/trust policy and `@arnilo/prism-coding-security`.
 - [Coding execution approval and sandboxing](coding-security.md): path/command approval, identity-scoped caching, shell-turn exclusivity, and abort-aware streaming sandbox adapters for coding tools.
 
@@ -73,7 +74,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Resource loading](resource-loading.md): decode text, JSON, binary, and manifest resources through caller-provided loaders with bounded byte limits.
 
 ## Server/API
-- [Web-standard server handler](server.md): optional framework-free authorized direct/SSE agent and durable workflow run/status/cancel/resume routes with explicit bounds and zero default exposure.
+- [Web-standard server handler](server.md): optional framework-free authorized direct/SSE agent, explicitly selected durable agent lifecycle, and durable workflow routes with explicit bounds and zero default exposure.
 
 ## Multi-agent and interoperability
 - [Supervisor delegation](supervisors.md): optional explicit child allow-list, derived memory scopes, narrowing-only permissions, lifecycle hooks, nested delegation, cancellation, and finite budgets.

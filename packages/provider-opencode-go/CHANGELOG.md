@@ -1,4 +1,7 @@
 # Changelog
+## [0.0.7] - 2026-07-19
+
+- Released with the exact 0.0.7 first-party package graph.
 
 All notable changes to @arnilo/prism-provider-opencode-go will be documented in this file.
 

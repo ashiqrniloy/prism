@@ -232,6 +232,29 @@ describe("runWorkflow", () => {
     assert.equal(seen[0]?.metadata?.nodeId, "node");
   });
 
+  it("routes workflow tools through core guardrails before side effects", async () => {
+    let executed = false;
+    const tool: ToolDefinition = {
+      name: "blocked",
+      execute: () => {
+        executed = true;
+        return { toolCallId: "x", name: "blocked" };
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "guarded-tool",
+      nodes: { node: toolNode({ tool, args: async () => ({}) }) },
+    });
+    await assert.rejects(
+      () => runWorkflow(workflow, null, {
+        guardrails: { toolInput: [{ name: "deny", stage: "tool_input", evaluate: () => ({ action: "block" }) }] },
+      }),
+      /Tool call blocked by guardrail/,
+    );
+    assert.equal(executed, false);
+  });
+
   it("durably approves a tool before side effects and rechecks execution policy", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     let executions = 0;

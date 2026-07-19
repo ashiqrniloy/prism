@@ -97,15 +97,31 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         redactor: options.redactor ?? childAgent.config.redactor,
       });
       const session = agent.createSession({ id: `${delegationId}-session`, metadata: { supervisorId: id, delegationId, resourceId, threadId } });
-      const result = await abortable(session.run(input, {
-        signal: controller.signal,
-        maxToolRounds: limits.maxSteps,
-        ownership: options.ownership,
-        redactor: options.redactor,
-        metadata: { ...request.metadata, supervisorId: id, delegationId, resourceId, threadId, depth },
-      }), controller.signal);
+      let result: AgentRunResult;
+      try {
+        result = await abortable(session.run(input, {
+          signal: controller.signal,
+          limits: {
+            maxToolRounds: limits.maxSteps,
+            maxToolCalls: limits.maxToolCalls,
+            maxTotalTokens: limits.maxTokens,
+            maxWallTimeMs: limits.timeoutMs,
+          },
+          ownership: options.ownership,
+          redactor: options.redactor,
+          metadata: { ...request.metadata, supervisorId: id, delegationId, resourceId, threadId, depth },
+        }), controller.signal);
+      } catch (error) {
+        if (error instanceof AgentRunError && error.result.limit) {
+          const label = error.result.limit.limit === "maxTotalTokens" ? "token"
+            : error.result.limit.limit === "maxToolCalls" ? "tool-call"
+            : error.result.limit.limit === "maxWallTimeMs" ? "timeout"
+            : "run";
+          throw new SupervisorLimitError(`Delegation ${label} limit exceeded`);
+        }
+        throw error;
+      }
       const totalTokens = result.usage?.totalTokens ?? ((result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0));
-      if (totalTokens > limits.maxTokens) throw new SupervisorLimitError("Delegation token limit exceeded");
       events.publish({ type: "delegation_finished", childId: request.childId, delegationId, depth, status: result.status, totalTokens });
       await complete(toCompletion(result, request.childId, delegationId, depth, options));
       completionSent = true;

@@ -4,10 +4,13 @@ import {
   createAgent,
   createMemoryCheckpointStore,
   createMemoryLeaseStore,
+  createMemorySessionStore,
+  createAgentRunLifecycle,
   createMockProvider,
   createSecretRedactor,
   providerDone,
   providerTextDelta,
+  toolCallContent,
   type AIProvider,
 } from "@arnilo/prism";
 import {
@@ -60,6 +63,67 @@ describe("createPrismHandler", () => {
     assert.match(text, /message_delta/);
     assert.match(text, /agent_finished/);
     assert.deepEqual(calls, ["agent.run:support", "agent.stream:support"]);
+  });
+
+  it("exposes durable agent status and resume only through explicit lifecycle capabilities", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const store = createMemorySessionStore();
+    const secret = "agent-lifecycle-secret";
+    let calls = 0;
+    let turn = 0;
+    const agent = createAgent({
+      id: "support",
+      model: { provider: "mock", model: "offline" },
+      provider: {
+        id: "mock",
+        async *generate() {
+          if (++turn === 1) {
+            yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { secret }) };
+            yield providerDone();
+            return;
+          }
+          yield providerTextDelta("finished");
+          yield providerDone();
+        },
+      },
+      redactor: createSecretRedactor([secret]),
+      store,
+      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    });
+    const lifecycle = createAgentRunLifecycle({
+      checkpoints,
+      resolveAgent: () => ({ agent, definitionRevision: "1" }),
+    });
+    const handler = createPrismHandler({
+      agents: { support: agent },
+      agentRuns: { support: { lifecycle } },
+      authorize: () => authorization,
+      redactor: createSecretRedactor([secret]),
+    });
+    const suspended = await handler(jsonRequest("/prism/agents/support/runs", { input: "go" }));
+    const started = await suspended.json() as { status: string; runId: string; runState: { version: number } };
+    assert.equal(started.status, "suspended");
+    assert.equal(calls, 0);
+
+    await assert.doesNotReject(() => lifecycle.status({ runId: started.runId }, { ownership: authorization.ownership }));
+    const status = await handler(new Request(`https://example.test/prism/agents/support/runs/${started.runId}`));
+    assert.equal(status.status, 200);
+    const publicState = await status.text();
+    assert.match(publicState, /suspended/);
+    assert.doesNotMatch(publicState, new RegExp(secret));
+    const wrongCapability = createPrismHandler({ agentRuns: { other: { lifecycle } }, authorize: () => authorization });
+    assert.equal((await wrongCapability(new Request(`https://example.test/prism/agents/other/runs/${started.runId}`))).status, 404);
+    const version = (JSON.parse(publicState) as { version: number }).version;
+
+    const resumed = await handler(jsonRequest(`/prism/agents/support/runs/${started.runId}/resume`, { decision: "approve", expectedVersion: version }));
+    assert.equal(resumed.status, 200, await resumed.clone().text());
+    assert.equal((await resumed.json() as { status: string }).status, "succeeded");
+    assert.equal(calls, 1);
+    assert.equal((await handler(jsonRequest(`/prism/agents/support/runs/${started.runId}/resume`, { decision: "approve", expectedVersion: version }))).status, 404);
+
+    const noExposure = createPrismHandler({ agents: { support: agent }, authorize: () => authorization });
+    assert.equal((await noExposure(new Request(`https://example.test/prism/agents/support/runs/${started.runId}`))).status, 404);
   });
 
   it("runs, loads, resumes, and cancels durable workflow checkpoints", async () => {

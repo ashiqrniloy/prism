@@ -5,6 +5,7 @@
 The agent/session runtime adds the minimal shared SDK surface for running provider turns, dispatching complete host-owned tool calls, and subscribing to session events:
 
 - `createAgent(config)`
+- `createSecureAgent(options)` for opt-in fail-closed composition
 - `createAgentSession(config)`
 - `agent.createSession(config)`
 - `session.run(input, options)` → `AgentRunResult`
@@ -17,6 +18,8 @@ The agent/session runtime adds the minimal shared SDK surface for running provid
 - `session.checkout(leafId?)`
 - `session.fork(options?)`
 - `session.clone(options?)`
+- `resumeAgentRun(agent, ref, decision, options)`
+- `createAgentRunLifecycle({ checkpoints, resolveAgent })` for host-selected remote status/resume adapters
 
 The runtime streams provider text/tool-call content into `AgentEvent` values. Complete `tool_call` events are dispatched through the active host `ToolRegistry`, then returned as tool-result messages on the next provider turn. When a store is supplied, user, assistant, tool-result, and model-change entries are appended under the current branch leaf. Abort propagation and run exclusivity use native `AbortController`.
 
@@ -43,7 +46,9 @@ string | Message | readonly Message[]
 
 `AgentSessionConfig.store` overrides `AgentConfig.store`; otherwise the session gets a private memory store. `AgentSessionConfig.leafId` selects the branch leaf to resume from.
 
-`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `AgentConfig.inputLayout` selects the default input assembly layout (`"legacy"` by default, or opt-in `"cache_aware"`); `RunOptions.inputLayout` wins for one run. `AgentConfig.providerOptions`/`RunOptions.providerOptions` supply generic provider request options; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert provider-level hints in first-party providers. Use `RunOptions.signal`/host abort controllers for timeouts and `AgentConfig.retry`/`RunOptions.retry` for retry. `AgentConfig.providerRequestPolicies`/`RunOptions.providerRequestPolicies` run before `AIProvider.generate()` and before `provider_request` middleware. `AgentConfig.systemPrompt` and `RunOptions.systemPrompt` add explicit layered system prompt contributions; `RunOptions.systemPrompt: false` disables configured prompt layers for that run while keeping `AgentConfig.instructions` as the base path. `RunOptions.compaction` can enable auto-compaction for that run or use `false` to disable configured auto-compaction. `RunOptions.retry` can enable provider-turn retry for that run or use `false` to disable configured retry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. `RunOptions.maxToolRounds` bounds repeated tool turns and defaults to `1`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, tools, auto-compaction, and retry backoff.
+`AgentConfig.limits` sets run ceilings; `RunOptions.limits` may only narrow configured agent values. Limits cover turns, provider attempts, tool rounds/calls, wall time, request/response bytes, tokens, and optional single-currency cost. A breach emits one `run_limit_exceeded` event and throws `AgentRunError` with `result.limit`; see [Runs and usage ledger](runs-and-usage.md#run-limits).
+
+`RunOptions.model` can override the request model for a run. Model overrides append a `model_change` entry. `AgentConfig.inputLayout` selects the default input assembly layout (`"legacy"` by default, or opt-in `"cache_aware"`); `RunOptions.inputLayout` wins for one run. `AgentConfig.providerOptions`/`RunOptions.providerOptions` supply generic provider request options; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert provider-level hints in first-party providers. Use `RunOptions.signal`/host abort controllers for timeouts and `AgentConfig.retry`/`RunOptions.retry` for retry. `AgentConfig.providerRequestPolicies`/`RunOptions.providerRequestPolicies` run before `AIProvider.generate()` and before `provider_request` middleware. `AgentConfig.systemPrompt` and `RunOptions.systemPrompt` add explicit layered system prompt contributions; `RunOptions.systemPrompt: false` disables configured prompt layers for that run while keeping `AgentConfig.instructions` as the base path. `RunOptions.compaction` can enable auto-compaction for that run or use `false` to disable configured auto-compaction. `RunOptions.retry` can enable provider-turn retry for that run or use `false` to disable configured retry. `RunOptions.metadata` is merged with agent/session metadata for assembly, provider requests, and tool contexts. Deprecated `RunOptions.maxToolRounds` narrows `limits.maxToolRounds`. `RunOptions.signal` is bridged into the per-run abort signal passed to assembly, providers, tools, auto-compaction, and retry backoff.
 
 ## Outputs / response / events
 
@@ -159,6 +164,33 @@ await agent.createSession().run("Hi", { model: overrideModel });
 - Store entries contain explicit session data only; Prism does not store provider objects, credential resolvers, resolved credentials, full provider requests, settings, or hidden metadata.
 - Runtime events contain messages/content only; do not put secrets in prompts, metadata, provider events, session entries, or docs examples.
 - The event broadcaster is in-memory, live-only, and bounded per subscriber by `SubscribeOptions`. It adds no dependency, timer, filesystem/network discovery, worker, or durable queue.
+
+## Durable interruption
+
+Set `runState` with a host-owned `CheckpointStore`, stable `definitionRevision`, and `interruptBeforeTool: true` to suspend at a persisted pre-side-effect boundary. A suspended result has `status: "suspended"`, a redacted `interruption`, and `runState.version`; it releases session resources before returning.
+
+```ts
+const result = await session.run("Publish draft", {
+  runState: { checkpoints, definitionRevision: "2026-07-20.1", interruptBeforeTool: true },
+});
+if (result.status === "suspended") {
+  await resumeAgentRun(agent, { runId: result.runId, sessionId: result.sessionId }, {
+    decision: "approve", expectedVersion: result.runState!.version!,
+  }, { checkpoints, definitionRevision: "2026-07-20.1" });
+}
+```
+
+Resume requires exact checkpoint ownership, version, agent fingerprint, and revision. Prism CAS-claims approval before work, rechecks normal guardrail/permission/validation/limit paths, and marks a pending tool dispatched before its side effect. `createAgentRunLifecycle()` wraps the same core path for server/MCP hosts: adapters pass only authorized ownership, status returns only `{ state, version }`, and `resolveAgent()` supplies current agent/revision. Remote restart requires both checkpoint and session stores to be durable. A crash after that mark is ambiguous and is never replayed automatically; use host tool idempotency keyed by `runId`/`toolCallId` or resolve it manually. Checkpoints contain bounded redacted state plus session/leaf references, never provider objects, callbacks, signals, credentials, or raw secrets. Only built-in loop options are durable; custom `AgentLoopStrategy` rejects before provider work.
+
+## Secure composition
+
+`createSecureAgent()` is optional; `createAgent()` remains explicit and backward-compatible. Secure composition requires an ID, non-empty definition revision, exact non-empty ownership, redactor, permission and trust policies, finite explicit limits, a host `ToolArgumentValidator`, non-empty schema for every tool, and checkpoints. It builds a duplicate-error registry, rejects missing schemas, always enables durable pre-tool interruption, and reuses normal provider/request policies without discovery or background work.
+
+Per-run options may narrow `limits` and append `guardrails`; they cannot replace secure ownership, redaction, validator, or durable checkpoint policy. Every active tool is trust-checked then permission-checked before validation and its side effect. See [`examples/secure-agent.ts`](../examples/secure-agent.ts).
+
+## Guardrails
+
+`AgentConfig.guardrails` applies typed input, output, tool-input, and tool-output checks to every run. `RunOptions.guardrails` appends checks for one run. Input checks run before session append; configured output checks buffer provider content until allowed, so blocked content is never emitted or stored. See [Guardrails](guardrails.md).
 
 ## Related APIs
 

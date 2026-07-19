@@ -1,6 +1,8 @@
 export type * from "./contracts.js";
-export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError } from "./contracts.js";
-export { createAgent, createAgentSession } from "./agents.js";
+export type { RunLimitCounters, RunLimitName, SecureAgentOptions } from "./contracts.js";
+export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError, AgentRunStateError } from "./contracts.js";
+export { createAgent, createAgentSession, resumeAgentRun } from "./agents.js";
+export { createSecureAgent } from "./secure-agent.js";
 export {
   createMemoryRunFeedbackStore,
   prepareRunFeedback,
@@ -16,6 +18,10 @@ export type {
   RunFeedbackRunResolver,
 } from "./feedback.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
+export { AGENT_RUN_STATE_NAMESPACE, AGENT_RUN_STATE_SCHEMA_VERSION, DEFAULT_MAX_AGENT_RUN_STATE_BYTES, HARD_MAX_AGENT_RUN_STATE_BYTES, agentFingerprint, loadAgentRunState } from "./agent-run-state.js";
+export type { StoredAgentRunState } from "./agent-run-state.js";
+export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
+export type { AgentRunLifecycle, AgentRunLifecycleAgent, AgentRunLifecycleOptions, AgentRunLifecycleRequest } from "./agent-run-lifecycle.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { LEASE_CONFLICT_CODE, LeaseConflictError, createMemoryLeaseStore } from "./leases.js";
 export { createEventMultiplexer } from "./event-multiplexer.js";
@@ -147,6 +153,15 @@ export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.
 export { resolveInstructionInjectors, runInstructionInjectors } from "./instruction-injection.js";
 export type { ResolveInstructionInjectorsOptions } from "./instruction-injection.js";
 export { createToolRegistry, dispatchToolCall, filterTools, createToolParameterValidator } from "./tools.js";
+export { assertGuardrailsAllowed, GuardrailError, MAX_GUARDRAIL_CONCURRENCY, runGuardrails } from "./guardrails.js";
+export { createRunLimitTracker, DEFAULT_RUN_LIMITS, HARD_MAX_RUN_COST, HARD_RUN_LIMITS, RunLimitError, RunLimitTracker, resolveRunLimits } from "./run-limits.js";
+export type {
+  GuardrailRunResult,
+  RunGuardrailsOptions,
+} from "./guardrails.js";
+export type {
+  RunLimitTrackerOptions,
+} from "./run-limits.js";
 export type {
   DispatchToolCallOptions,
   ToolArgumentValidationError,
@@ -162,6 +177,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.6";
+export const version = "0.0.7";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.7] - 2026-07-19
+
+- Tool nodes now use core `dispatchToolCall()` and accept `RunWorkflowOptions.guardrails`, so shared tool-input/output checks run before execution-policy side effects and output exposure.
+- `RunWorkflowOptions.limits` forwards core run budgets to agent nodes.
+
 ## [0.0.6] - 2026-07-19
 
 - Require explicit workflow revisions and include parent/nested revisions in durable definition hashes.

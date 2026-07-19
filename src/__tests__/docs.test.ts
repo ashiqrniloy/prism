@@ -10,6 +10,7 @@ const apiPages = [
   "docs/agent-session-runtime.md",
   "docs/agent-definitions.md",
   "docs/agent-loops.md",
+  "docs/guardrails.md",
   "docs/agent-events.md",
   "docs/observability.md",
   "docs/evaluations.md",
@@ -206,11 +207,11 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 69, "numbered plan count drifted");
+    assert.equal(plans.length, 70, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
-  it("every publishable package ships current README and 0.0.6 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.7 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")));
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -220,7 +221,7 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.6] - 2026-07-19"), `${dir}/CHANGELOG.md missing finalized 0.0.6 section`);
+      assert.ok(changelog.includes("## [0.0.7] - 2026-07-19"), `${dir}/CHANGELOG.md missing finalized 0.0.7 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -722,12 +723,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.6 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.7 publish handoff"), docs.indexOf("## Extension and configuration notes"));
     for (const phrase of [
       "Decision: GO",
       "available` for all 30",
-      "git tag -s v0.0.6",
-      "git push origin v0.0.6",
+      "git tag -s v0.0.7",
+      "git push origin v0.0.7",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",

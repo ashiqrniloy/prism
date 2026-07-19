@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.0.7] - 2026-07-19
+
+- Explicit `agentRuns` lifecycle capabilities expose bounded redacted durable agent status/resume routes through core CAS/fingerprint checks; no lifecycle route is enabled by default.
+
 ## [0.0.6] - 2026-07-19
 
 - Workflow cancellation now forwards the registered revised definition and exact authorized ownership for pre-abort hash/owner verification.

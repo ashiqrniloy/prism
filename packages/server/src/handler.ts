@@ -1,4 +1,4 @@
-import type { Agent, AgentEvent, AgentSession, JsonObject, Message } from "@arnilo/prism";
+import { AgentRunStateError, type Agent, type AgentEvent, type AgentSession, type JsonObject, type Message } from "@arnilo/prism";
 import {
   cancelWorkflowRun,
   createWorkflowEventBus,
@@ -112,6 +112,36 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
           return respond(json(await awaitWithSignal(schedules.trigger(route.capabilityId, { idempotencyKey, signal: owned.signal }), owned.signal), 200, limits, options));
         } finally {
           owned.dispose();
+        }
+      }
+
+      if (route.kind === "agent-status" || route.kind === "agent-resume") {
+        const exposure = options.agentRuns?.[route.capabilityId];
+        if (!exposure) throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
+        if (route.kind === "agent-status") {
+          const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
+          try {
+            return respond(json(await awaitWithSignal(exposure.lifecycle.status({ runId: route.runId }, {
+              ownership: authorization.ownership,
+              signal: owned.signal,
+              agentId: route.capabilityId,
+            }), owned.signal), 200, limits, options));
+          } finally {
+            owned.dispose();
+          }
+        }
+        acquire();
+        const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
+        try {
+          const body = await readJsonObject(request, limits.maxRequestBytes, owned.signal);
+          return respond(json(await awaitWithSignal(exposure.lifecycle.resume({ runId: route.runId }, readAgentResume(body), {
+            ownership: authorization.ownership,
+            signal: owned.signal,
+            agentId: route.capabilityId,
+          }), owned.signal), 200, limits, options));
+        } finally {
+          owned.dispose();
+          release();
         }
       }
 
@@ -305,6 +335,8 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
 
 type Route =
   | { readonly kind: "agent-run" | "agent-stream"; readonly operation: "agent.run" | "agent.stream"; readonly capabilityId: string }
+  | { readonly kind: "agent-status"; readonly operation: "agent.status"; readonly capabilityId: string; readonly runId: string }
+  | { readonly kind: "agent-resume"; readonly operation: "agent.resume"; readonly capabilityId: string; readonly runId: string }
   | { readonly kind: "workflow-run" | "workflow-stream" | "workflow-enqueue"; readonly operation: "workflow.run" | "workflow.stream" | "workflow.enqueue"; readonly capabilityId: string }
   | { readonly kind: "workflow-status"; readonly operation: "workflow.status"; readonly capabilityId: string; readonly runId: string }
   | { readonly kind: "workflow-cancel"; readonly operation: "workflow.cancel"; readonly capabilityId: string; readonly runId: string }
@@ -344,6 +376,10 @@ function parseRoute(request: Request, base: string): Route | undefined {
   }
   if (group === "agents" && segment === "stream" && parts.length === 3 && request.method === "POST") {
     return { kind: "agent-stream", operation: "agent.stream", capabilityId: id };
+  }
+  if (group === "agents" && segment === "runs" && runId && validId(runId)) {
+    if (parts.length === 4 && request.method === "GET") return { kind: "agent-status", operation: "agent.status", capabilityId: id, runId };
+    if (parts.length === 5 && action === "resume" && request.method === "POST") return { kind: "agent-resume", operation: "agent.resume", capabilityId: id, runId };
   }
   if (group !== "workflows") return undefined;
   if (segment === "runs" && parts.length === 3 && request.method === "POST") {
@@ -473,6 +509,19 @@ function isMessage(value: unknown): value is Message {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
   return ["system", "user", "assistant", "tool"].includes(String(item.role)) && Array.isArray(item.content);
+}
+
+function readAgentResume(body: JsonObject): { readonly decision: "approve" | "deny"; readonly expectedVersion: number } {
+  if (Object.keys(body).some((key) => key !== "decision" && key !== "expectedVersion")) {
+    throw new PrismServerError("Invalid agent resume body", 400, "ERR_PRISM_SERVER_RESUME");
+  }
+  if (body.decision !== "approve" && body.decision !== "deny") {
+    throw new PrismServerError("decision must be approve or deny", 400, "ERR_PRISM_SERVER_RESUME");
+  }
+  if (!Number.isSafeInteger(body.expectedVersion) || Number(body.expectedVersion) < 1) {
+    throw new PrismServerError("expectedVersion must be a positive safe integer", 400, "ERR_PRISM_SERVER_RESUME");
+  }
+  return { decision: body.decision, expectedVersion: Number(body.expectedVersion) };
 }
 
 function readResume(body: JsonObject): WorkflowResumeRequest {
@@ -654,9 +703,10 @@ function errorResponse(error: unknown, limits: ResolvedPrismServerLimits, option
             ? { status: 409, code: workflowCode, message: "Workflow checkpoint operation rejected" }
             : undefined;
   const known = error instanceof PrismServerError;
-  const status = mapped?.status ?? (known ? error.status : error instanceof DOMException && error.name === "AbortError" ? 499 : 500);
-  const code = mapped?.code ?? (known ? error.code : status === 499 ? "ERR_PRISM_SERVER_ABORTED" : "ERR_PRISM_SERVER_INTERNAL");
-  const message = mapped?.message ?? (known ? error.message : status === 499 ? "Request aborted" : "Internal server error");
+  const agentState = error instanceof AgentRunStateError;
+  const status = mapped?.status ?? (agentState ? 404 : known ? error.status : error instanceof DOMException && error.name === "AbortError" ? 499 : 500);
+  const code = mapped?.code ?? (agentState ? "ERR_PRISM_SERVER_NOT_FOUND" : known ? error.code : status === 499 ? "ERR_PRISM_SERVER_ABORTED" : "ERR_PRISM_SERVER_INTERNAL");
+  const message = mapped?.message ?? (agentState ? "Not found" : known ? error.message : status === 499 ? "Request aborted" : "Internal server error");
   try {
     return json({ error: { code, message } }, status, limits, options);
   } catch {

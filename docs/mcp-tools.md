@@ -63,7 +63,7 @@ Do **not** use this package as a sandbox, permission engine, or auto-discovery l
 
 The resolved `McpToolBridge` exposes `tools`, `refresh()`, and `close()`. Each discovered MCP tool becomes a normal Prism `ToolDefinition`; calls return `ToolResult`, with remote `isError` mapped to `ToolResult.error`. List-change notifications invalidate the cache but register nothing automatically.
 
-`createPrismMcpServer()` returns the SDK `McpServer`. It lists only passed tools/commands; JSON Schema parameters are converted through installed Zod v4 for SDK validation, then Prism tool calls still pass through `dispatchToolCall` permission/validator/redactor gates. Command definitions support explicitly selected direct/background/replay workflow operations and optional ownership-scoped schedule operations from `createWorkflowCommands()`; none are registered unless the host passes those command definitions. Calls return bounded MCP text content and `isError` on denial/failure. `createPrismMcpWebHandler()` returns `(Request) => Promise<Response>`.
+`createPrismMcpServer()` returns the SDK `McpServer`. It lists only passed tools/commands and explicitly selected `agentRuns` lifecycle tools; JSON Schema parameters are converted through installed Zod v4 for SDK validation, then Prism tool calls still pass through `dispatchToolCall` permission/validator/redactor gates. Command definitions support explicitly selected direct/background/replay workflow operations and optional ownership-scoped schedule operations from `createWorkflowCommands()`; none are registered unless the host passes those command definitions. Calls return bounded MCP text content and `isError` on denial/failure. `createPrismMcpWebHandler()` returns `(Request) => Promise<Response>`.
 
 ## Request/response example
 
@@ -160,6 +160,7 @@ Plaintext is accepted only when `allowLoopbackHttp: true`, the URL hostname is l
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `tools` / `commands` | empty | Explicit allow-list; zero default exposure |
+| `agentRuns` | empty | Explicit `{ [agentId]: { lifecycle } }` map; registers `agent.<id>.status` and `agent.<id>.resume` only |
 | `authorize` | required | Per-call host authz using SDK auth/session metadata |
 | `permission` / `validate` / `redactor` | none | Core tool-dispatch gates and known-secret redaction |
 | `maxResultBytes` | 1 MiB (8 MiB hard) | Bound mapped MCP call output |
@@ -179,11 +180,14 @@ Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 
 | Oversized/deep/wide server output | One aggregate byte/depth/property walk covers content, structured content, compatibility `toolResult`, and bounded remote errors before `ToolResult` |
 | Unvalidated arguments | Register tools with `createJsonSchemaToolArgumentValidator()` at dispatch |
 | Missing permission gate | Client direction: `PermissionPolicy` on `tool:mcp:<serverId>:<name>:execute`; server direction: required MCP `authorize` plus optional core `PermissionPolicy` |
-| Accidental server exposure | Empty default arrays, duplicate-name rejection, explicit tools/commands only |
+| Accidental server exposure | Empty default arrays/maps, duplicate-name rejection, explicit tools/commands/lifecycle only |
+| Agent lifecycle data leak or cross-tenant resume | `agentRuns` requires exact tenant plus account/user ownership; core lifecycle returns public redacted state only and CAS-resumes with current agent/revision |
 | Unbounded MCP HTTP | Bounded pre-parsed JSON, response bytes, concurrent requests, call timeout, SDK web-standard transport |
 | Cross-tenant operation | Authorizer derives ownership from validated auth and passes it to tool dispatch/selected workflow commands; never trust arguments as identity |
 
-MCP output is untrusted. Register bridge tools through core dispatch with a `SecretRedactor` so bounded remote content/errors are redacted before persistence or display. Prism does not infer unknown secrets. MCP server authorization does not replace tool `PermissionPolicy`, argument validation, coding `ExecutionPolicy`, workflow ownership checks, TLS, rate limiting, or sandboxing. A timed-out tool must cooperate with `AbortSignal` to stop side effects; protocol retention and HTTP responses remain bounded when remote work ignores abort.
+For durable lifecycle exposure, construct `createAgentRunLifecycle({ checkpoints, resolveAgent })` in core, then pass selected entries as `agentRuns: { support: { lifecycle } }`. MCP registers two tools: `agent.support.status` accepts `{ runId, sessionId? }`; `agent.support.resume` accepts `{ runId, sessionId?, decision, expectedVersion }`. Do not expose an agent without durable checkpoints and a restart-safe `SessionStore`; no lifecycle tool appears by default.
+
+MCP output is untrusted. Register bridge tools through core dispatch with a `SecretRedactor` so bounded remote content/errors are redacted before persistence or display. `CreatePrismMcpServerOptions.guardrails` applies shared tool-input/output stages to registered Prism tools; commands remain host callbacks. See [Guardrails](guardrails.md). Prism does not infer unknown secrets. MCP server authorization does not replace tool `PermissionPolicy`, argument validation, coding `ExecutionPolicy`, workflow ownership checks, TLS, rate limiting, or sandboxing. A timed-out tool must cooperate with `AbortSignal` to stop side effects; protocol retention and HTTP responses remain bounded when remote work ignores abort.
 
 Discovery validation is atomic: cursor/page/tool/name/description/schema failures reject `refresh()` and preserve the previous immutable tool-array reference. The bridge intentionally uses raw SDK `request()` for `tools/list` and `tools/call`; this avoids eager Ajv compilation/validation of untrusted remote output schemas. Host `ToolValidator` remains the argument-validation owner.
 

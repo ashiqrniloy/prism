@@ -51,6 +51,7 @@ export type {
   PrismMcpAuthorizationInput,
   PrismMcpAuthorization,
   PrismMcpAuthorizer,
+  PrismMcpAgentRunExposure,
   CreatePrismMcpServerOptions,
   CreatePrismMcpWebHandlerOptions,
   PrismMcpWebHandler,

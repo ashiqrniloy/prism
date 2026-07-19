@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.7] - 2026-07-19
+
+- `CreatePrismMcpServerOptions.guardrails` applies shared core tool-input/output guardrails to registered Prism tools; commands remain explicit host callbacks.
+- `CreatePrismMcpServerOptions.limits` applies shared core tool-call accounting to registered Prism tools.
+- Explicit `agentRuns` capabilities register bounded `agent.<id>.status` and `agent.<id>.resume` tools backed by core durable lifecycle CAS; no lifecycle tool is registered by default.
+
 ## [0.0.6] - 2026-07-19
 
 - Added finite page/tool/cursor/metadata/schema/JSON/result/client-option limits and atomic discovery refresh using raw SDK list/call requests.

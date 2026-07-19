@@ -3,9 +3,11 @@ import type {
   AgentSession,
   ExecutionAction,
   ExecutionPolicy,
+  Guardrails,
   JsonObject,
   OwnershipScope,
   RunLedger,
+  RunLimits,
   SecretRedactor,
   SubscribeOptions,
   ToolDefinition,
@@ -477,6 +479,10 @@ export interface RunWorkflowOptions {
   readonly runLedger?: RunLedger;
   readonly ownership?: OwnershipScope;
   readonly redactor?: SecretRedactor;
+  /** Passed to every agent node; child agent config can only be narrowed. */
+  readonly limits?: RunLimits;
+  /** Tool-node stages are evaluated by core dispatch, never adapter-local code. */
+  readonly guardrails?: Guardrails;
   readonly signal?: AbortSignal;
   readonly onEvent?: (event: WorkflowEvent) => void;
   readonly eventBus?: WorkflowEventBus;

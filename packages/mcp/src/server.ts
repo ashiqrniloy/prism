@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { createToolRegistry, dispatchToolCall, type JsonObject, type ToolResult } from "@arnilo/prism";
+import { AgentRunStateError, createRunLimitTracker, createToolRegistry, dispatchToolCall, type JsonObject, type ToolResult } from "@arnilo/prism";
 import * as z from "zod/v4";
 import type {
   CreatePrismMcpServerOptions,
@@ -25,6 +25,7 @@ const HARD_MAX_HTTP_RESPONSE_BYTES = 16 * 1024 * 1024;
 export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpServer {
   const tools = options.tools ?? [];
   const commands = options.commands ?? [];
+  const agentRuns = options.agentRuns ?? {};
   const names = new Set<string>();
   for (const capability of [...tools, ...commands]) {
     if (!capability.name || names.has(capability.name)) {
@@ -32,18 +33,27 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
     }
     names.add(capability.name);
   }
+  for (const agentId of Object.keys(agentRuns)) {
+    if (!validCapabilityId(agentId)) throw new McpBridgeError(`Invalid agent lifecycle capability id: ${agentId}`);
+    for (const name of [`agent.${agentId}.status`, `agent.${agentId}.resume`]) {
+      if (names.has(name)) throw new McpBridgeError(`Duplicate MCP capability name: ${name}`);
+      names.add(name);
+    }
+  }
   const maxResultBytes = bounded(options.maxResultBytes, DEFAULT_MAX_SERVER_RESULT_BYTES, HARD_MAX_SERVER_RESULT_BYTES, "maxResultBytes");
   const maxConcurrentCalls = bounded(options.maxConcurrentCalls, DEFAULT_MAX_SERVER_CONCURRENT_CALLS, HARD_MAX_SERVER_CONCURRENT_CALLS, "maxConcurrentCalls");
   const callTimeoutMs = bounded(options.callTimeoutMs, DEFAULT_SERVER_CALL_TIMEOUT_MS, HARD_SERVER_CALL_TIMEOUT_MS, "callTimeoutMs");
   const registry = createToolRegistry(tools, { duplicate: "error" });
   const server = new McpServer(
-    { name: options.name ?? "prism-mcp-server", version: options.version ?? "0.0.6" },
+    { name: options.name ?? "prism-mcp-server", version: options.version ?? "0.0.7" },
     { capabilities: { tools: { listChanged: true } } },
   );
   let activeCalls = 0;
 
   for (const tool of tools) {
     register(tool.name, tool.description, tool.parameters, "tool", async (args, authorization, signal, requestId, sessionId) => {
+      const limits = createRunLimitTracker(options.limits);
+      try {
       const result = await dispatchToolCall({
         call: { type: "tool_call", id: requestId, name: tool.name, arguments: args },
         registry,
@@ -58,8 +68,13 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
         permission: options.permission,
         redactor: options.redactor,
         ownership: authorization.ownership,
+        guardrails: options.guardrails,
+        limitTracker: limits,
       });
       return toolResult(result, maxResultBytes, options.redactor);
+      } finally {
+        limits.dispose();
+      }
     });
   }
 
@@ -79,6 +94,38 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
         error: result.error,
         metadata: result.metadata,
       }, maxResultBytes, options.redactor);
+    });
+  }
+
+  for (const [agentId, exposure] of Object.entries(agentRuns)) {
+    register(`agent.${agentId}.status`, "Get redacted durable agent run status", {
+      type: "object", properties: { runId: { type: "string" }, sessionId: { type: "string" } }, required: ["runId"], additionalProperties: false,
+    }, "tool", async (args, authorization, signal, requestId) => {
+      const ownership = requireLifecycleOwnership(authorization);
+      try {
+        const result = await exposure.lifecycle.status({ runId: lifecycleId(args.runId), sessionId: optionalLifecycleId(args.sessionId) }, { ownership, signal, agentId });
+        return toolResult({ toolCallId: requestId, name: `agent.${agentId}.status`, value: result }, maxResultBytes, options.redactor);
+      } catch (error) {
+        if (error instanceof AgentRunStateError) throw new McpBridgeError("Agent run not found");
+        throw error;
+      }
+    });
+    register(`agent.${agentId}.resume`, "Approve or deny durable agent run interruption", {
+      type: "object", properties: {
+        runId: { type: "string" }, sessionId: { type: "string" }, decision: { type: "string", enum: ["approve", "deny"] }, expectedVersion: { type: "integer", minimum: 1 },
+      }, required: ["runId", "decision", "expectedVersion"], additionalProperties: false,
+    }, "tool", async (args, authorization, signal, requestId) => {
+      const ownership = requireLifecycleOwnership(authorization);
+      try {
+        const result = await exposure.lifecycle.resume({ runId: lifecycleId(args.runId), sessionId: optionalLifecycleId(args.sessionId) }, {
+          decision: args.decision === "approve" ? "approve" : args.decision === "deny" ? "deny" : invalidLifecycleResume(),
+          expectedVersion: lifecycleVersion(args.expectedVersion),
+        }, { ownership, signal, agentId });
+        return toolResult({ toolCallId: requestId, name: `agent.${agentId}.resume`, value: result }, maxResultBytes, options.redactor);
+      } catch (error) {
+        if (error instanceof AgentRunStateError) throw new McpBridgeError("Agent run not found");
+        throw error;
+      }
     });
   }
 
@@ -183,6 +230,34 @@ export async function createPrismMcpWebHandler(
       activeRequests -= 1;
     }
   };
+}
+
+function validCapabilityId(value: string): boolean {
+  return value.length > 0 && value.length <= 128 && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value);
+}
+
+function lifecycleId(value: unknown): string {
+  if (typeof value !== "string" || !validCapabilityId(value)) throw new McpBridgeError("Invalid agent run id");
+  return value;
+}
+
+function optionalLifecycleId(value: unknown): string | undefined {
+  return value === undefined ? undefined : lifecycleId(value);
+}
+
+function lifecycleVersion(value: unknown): number {
+  if (!Number.isSafeInteger(value) || Number(value) < 1) throw new McpBridgeError("Invalid agent run version");
+  return Number(value);
+}
+
+function invalidLifecycleResume(): never {
+  throw new McpBridgeError("Invalid agent run resume decision");
+}
+
+function requireLifecycleOwnership(authorization: PrismMcpAuthorization) {
+  const ownership = authorization.ownership;
+  if (!ownership?.tenantId || (!ownership.accountId && !ownership.userId)) throw new McpBridgeError("Forbidden");
+  return ownership;
 }
 
 function jsonObject(value: unknown): JsonObject {

@@ -1,6 +1,9 @@
 import type {
+  AgentRunLifecycle,
   CommandDefinition,
+  Guardrails,
   JsonObject,
+  RunLimits,
   OwnershipScope,
   PermissionPolicy,
   SecretRedactor,
@@ -54,15 +57,26 @@ export type PrismMcpAuthorizer = (
   input: PrismMcpAuthorizationInput,
 ) => false | PrismMcpAuthorization | Promise<false | PrismMcpAuthorization>;
 
+/** Explicit durable agent lifecycle capability. Omit it to register no status/resume tools. */
+export interface PrismMcpAgentRunExposure {
+  readonly lifecycle: AgentRunLifecycle;
+}
+
 export interface CreatePrismMcpServerOptions {
   readonly name?: string;
   readonly version?: string;
   readonly tools?: readonly ToolDefinition[];
   readonly commands?: readonly CommandDefinition[];
+  /** Explicit durable agent lifecycle capabilities keyed by host-selected agent id. */
+  readonly agentRuns?: Readonly<Record<string, PrismMcpAgentRunExposure>>;
   readonly authorize: PrismMcpAuthorizer;
   readonly permission?: PermissionPolicy;
   readonly validate?: ToolValidator;
   readonly redactor?: SecretRedactor;
+  /** Applied only to registered Prism tools; commands remain host callbacks. */
+  readonly guardrails?: Guardrails;
+  /** Per MCP tool-call ceilings. */
+  readonly limits?: RunLimits;
   readonly maxResultBytes?: number;
   readonly maxConcurrentCalls?: number;
   readonly callTimeoutMs?: number;

@@ -28,6 +28,7 @@ export type {
   PrismServerAuthorizationInput,
   PrismServerAuthorizer,
   PrismAgentExposure,
+  PrismAgentRunExposure,
   PrismWorkflowExposure,
   PrismScheduleExposure,
   CreatePrismHandlerOptions,

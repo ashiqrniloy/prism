@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2026-07-19
+
+### Added
+
+- Typed `Guardrails` for input, provider output, tool input, and tool output. Guardrail decisions are bounded/redacted `guardrail_decision` events; provider output is buffered before exposure when output checks are configured.
+- Workflow tool nodes and MCP server tool registrations now route optional tool guardrails through shared `dispatchToolCall()`.
+- `RunLimits` adds validated, narrowing-only budgets for turns, provider attempts, tool rounds/calls, wall time, request/response bytes, token usage, and optional single-currency cost. Breaches emit one `run_limit_exceeded` event and return `AgentRunError.result.limit`.
+- Opt-in durable built-in agent runs can suspend before a tool side effect and resume through versioned, bounded, redacted checkpoint state with CAS approval, ownership/fingerprint checks, and no automatic replay of an ambiguous dispatched tool.
+- `createSecureAgent()` composes strict tool schemas/validation, trust and permission gates, redaction, finite limits, exact ownership, and durable pre-tool approval without changing low-level `createAgent()` defaults.
+- `createAgentRunLifecycle()` adds explicit, ownership-scoped durable agent status/resume capability for selected server and MCP exposures; no lifecycle route/tool is enabled by default.
+
 ## [0.0.6] - 2026-07-19
 
 ### Added

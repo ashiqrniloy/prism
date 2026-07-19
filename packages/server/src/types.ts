@@ -1,5 +1,6 @@
 import type {
   Agent,
+  AgentRunLifecycle,
   AgentSession,
   OwnershipScope,
   RunOptions,
@@ -16,6 +17,8 @@ import type { PrismServerLimits } from "./limits.js";
 export type PrismServerOperation =
   | "agent.run"
   | "agent.stream"
+  | "agent.status"
+  | "agent.resume"
   | "workflow.run"
   | "workflow.stream"
   | "workflow.status"
@@ -51,6 +54,11 @@ export interface PrismAgentExposure {
   readonly runOptions?: Omit<RunOptions, "ownership" | "signal" | "redactor">;
 }
 
+/** Explicit durable status/resume capability. Omit it to expose no agent lifecycle routes. */
+export interface PrismAgentRunExposure {
+  readonly lifecycle: AgentRunLifecycle;
+}
+
 export interface PrismWorkflowExposure {
   readonly definition: WorkflowDefinition;
   readonly checkpoints: WorkflowCheckpointAdapter;
@@ -61,6 +69,8 @@ export type PrismScheduleExposure = WorkflowSchedules | ((authorization: PrismSe
 
 export interface CreatePrismHandlerOptions {
   readonly agents?: Readonly<Record<string, Agent | PrismAgentExposure>>;
+  /** Durable agent lifecycle capabilities, separate from direct agent run exposure. */
+  readonly agentRuns?: Readonly<Record<string, PrismAgentRunExposure>>;
   readonly workflows?: Readonly<Record<string, PrismWorkflowExposure>>;
   readonly schedules?: PrismScheduleExposure;
   readonly authorize: PrismServerAuthorizer;

@@ -4,6 +4,11 @@ import type {
   AgentEvent,
   AgentEventRecord,
   AgentRunResult,
+  AgentRunResume,
+  AgentRunResumeOptions,
+  AgentRunState,
+  AgentRunStateOptions,
+  AgentRunRef,
   AgentSession,
   AgentSessionConfig,
   AIProvider,
@@ -12,6 +17,7 @@ import type {
   CompactionResult,
   ContentBlock,
   ErrorInfo,
+  Guardrails,
   LoopContext,
   Message,
   OwnershipScope,
@@ -39,9 +45,10 @@ import type {
   Usage,
   UsageRecord,
 } from "./contracts.js";
-import { AgentRunError } from "./contracts.js";
+import { AgentRunError, AgentRunStateError } from "./contracts.js";
 import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
 import { createId } from "./ids.js";
+import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "./guardrails.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
@@ -53,6 +60,8 @@ import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.j
 import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "./session-stores.js";
 import { createToolRegistry, dispatchToolCall } from "./tools.js";
+import { RunLimitError, RunLimitTracker, resolveRunLimits } from "./run-limits.js";
+import { agentFingerprint, initialAgentRunState, loadAgentRunState, publicState, saveAgentRunState, validateRunStateOptions, type StoredAgentRunState } from "./agent-run-state.js";
 import { resolveActiveSkills } from "./skills.js";
 
 export function createAgent(config: AgentConfig): Agent {
@@ -66,6 +75,68 @@ export function createAgent(config: AgentConfig): Agent {
 
 export function createAgentSession(config: AgentSessionConfig & { readonly agent: Agent }): AgentSession {
   return new RuntimeAgentSession(config);
+}
+
+/** Resume a persisted built-in run. A claimed/dispatched tool is never replayed automatically. */
+export async function resumeAgentRun(
+  agent: Agent,
+  ref: AgentRunRef,
+  resume: AgentRunResume,
+  options: AgentRunResumeOptions,
+): Promise<AgentRunResult> {
+  const { record, state } = await loadAgentRunState(options.checkpoints, ref, options.ownership);
+  if (state.definitionRevision !== options.definitionRevision || state.agentId !== (agent.config.id ?? agent.config.name) || state.fingerprint !== agentFingerprint(agent, options.definitionRevision)) {
+    throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on resume");
+  }
+  if (record.version !== resume.expectedVersion || state.status !== "suspended") {
+    throw new AgentRunStateError("Stale or non-suspended agent run resume");
+  }
+  if (resume.decision === "deny") {
+    const denied = await saveAgentRunState({
+      checkpoints: options.checkpoints,
+      state: { ...state, status: "denied" },
+      expectedVersion: record.version,
+      ownership: options.ownership,
+      fencingToken: options.fencingToken,
+    });
+    const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
+    await session.recordDurableDenial(state.runId, state.interruption!, denied.record.version, options.ownership);
+    const runState = publicState(denied.state);
+    return { sessionId: state.sessionId, runId: state.runId, status: "denied", leafId: state.leafId, text: "", content: [], runState, interruption: state.interruption };
+  }
+  if (state.pending?.status === "dispatched") throw new AgentRunStateError("Ambiguous dispatched tool requires operator resolution");
+  const configured = agent.config.runState;
+  if (configured && (configured.checkpoints !== options.checkpoints || configured.definitionRevision !== options.definitionRevision)) {
+    throw new AgentRunStateError("Agent durable run-state configuration mismatch on resume");
+  }
+  const claimed = await saveAgentRunState({
+    checkpoints: options.checkpoints,
+    state: { ...state, status: "running", interruption: undefined },
+    expectedVersion: record.version,
+    ownership: options.ownership,
+    fencingToken: options.fencingToken,
+  });
+  const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
+  return session.resumeDurable(claimed.state, configured ?? {
+    checkpoints: options.checkpoints,
+    definitionRevision: options.definitionRevision,
+    interruptBeforeTool: state.interruptBeforeTool,
+    fencingToken: options.fencingToken,
+  }, options.ownership);
+}
+
+class AgentRunSuspended extends Error {
+  readonly code = "ERR_PRISM_AGENT_RUN_SUSPENDED";
+  constructor(readonly state: AgentRunState, readonly interruption: import("./contracts.js").AgentRunInterruption) {
+    super("Agent run suspended");
+    this.name = "AgentRunSuspended";
+  }
+}
+
+interface ActiveDurableRun {
+  readonly options: AgentRunStateOptions;
+  state?: StoredAgentRunState;
+  version: number;
 }
 
 class RuntimeAgentSession implements AgentSession {
@@ -82,6 +153,11 @@ class RuntimeAgentSession implements AgentSession {
   private activeLedger?: RunLedger;
   private activeOwnership?: OwnershipScope;
   private activeIdempotencyKey?: string;
+  private activeGuardrails?: Guardrails;
+  private activeMetadata?: Readonly<Record<string, unknown>>;
+  private activeLimits?: RunLimitTracker;
+  private activeLimitOutputBuffer = false;
+  private activeDurable?: ActiveDurableRun;
   private activeLoopTurn = 1;
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
@@ -105,7 +181,52 @@ class RuntimeAgentSession implements AgentSession {
   }
 
   async run(input: AgentInput, options: RunOptions = {}): Promise<AgentRunResult> {
-    const runId = randomId("run");
+    return this.runInternal(input, options, randomId("run"));
+  }
+
+  async resumeDurable(state: StoredAgentRunState, runState: AgentRunStateOptions, ownership?: OwnershipScope): Promise<AgentRunResult> {
+    return this.runInternal(state.input ?? [], { runState, ownership }, state.runId, { options: runState, state, version: state.version! });
+  }
+
+  async recordDurableDenial(
+    runId: string,
+    interruption: import("./contracts.js").AgentRunInterruption,
+    version: number,
+    ownership?: OwnershipScope,
+  ): Promise<void> {
+    this.activeLedger = this.agent.config.runLedger;
+    this.activeOwnership = ownership ?? this.agent.config.ownership;
+    this.activeRedactor = this.agent.config.redactor;
+    this.emit({ type: "agent_denied", sessionId: this.id, runId, interruption, version });
+    await this.drainLedger();
+    this.activeLedger = undefined;
+    this.activeOwnership = undefined;
+    this.activeRedactor = undefined;
+  }
+
+  private async runInternal(
+    input: AgentInput,
+    options: RunOptions,
+    runId: string,
+    resumed?: ActiveDurableRun,
+  ): Promise<AgentRunResult> {
+    if (this.agent.config.secure && (options.redactor !== undefined || options.ownership !== undefined || options.validate !== undefined || options.runState !== undefined)) {
+      throw new AgentRunStateError("Secure agent defaults cannot be replaced per run");
+    }
+    const requestedLimits = options.maxToolRounds === undefined
+      ? options.limits
+      : { ...options.limits, maxToolRounds: Math.min(options.maxToolRounds, options.limits?.maxToolRounds ?? options.maxToolRounds) };
+    const resolvedLimits = resolveRunLimits(this.agent.config.limits, requestedLimits);
+    const durableOptions = options.runState ?? this.agent.config.runState;
+    if (this.agent.config.runState && options.runState && this.agent.config.runState !== options.runState) {
+      throw new AgentRunStateError("RunOptions cannot replace agent durable run-state configuration");
+    }
+    if (durableOptions) {
+      validateRunStateOptions(durableOptions);
+      if (options.model || options.guardrails || options.loop) throw new AgentRunStateError("Durable runs require model, guardrails, and loop on AgentConfig for fingerprinting");
+      const configuredLoop = this.agent.config.loop;
+      if (configuredLoop && !isBuiltInLoop(configuredLoop)) throw new AgentRunStateError("Custom AgentLoopStrategy is not durable");
+    }
     if (this.activeRun) {
       const error = new Error("Agent session already has an active run");
       this.emit({ type: "error", sessionId: this.id, runId, error: errorToErrorInfo(error) });
@@ -119,17 +240,35 @@ class RuntimeAgentSession implements AgentSession {
     this.activeLedger = options.runLedger ?? this.agent.config.runLedger;
     this.activeOwnership = options.ownership ?? this.agent.config.ownership;
     this.activeIdempotencyKey = options.idempotencyKey ?? this.agent.config.idempotencyKey;
+    this.activeGuardrails = mergeGuardrails(this.agent.config.guardrails, options.guardrails);
+    this.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
 
     const model = options.model ?? this.agent.config.model;
     const startedAt = new Date().toISOString();
     let runError: ErrorInfo | undefined;
+    let runStatus: AgentRunResult["status"] = "succeeded";
     const runUsage = createUsageAccumulator();
     let usage: Usage | undefined;
+    const metadata = { ...this.agent.config.metadata, ...this.metadata, ...options.metadata };
+    this.activeMetadata = metadata;
+    const limits = new RunLimitTracker(resolvedLimits, {
+      onExceeded: (breach) => {
+        this.emit({ type: "run_limit_exceeded", sessionId: this.id, runId, breach });
+        controller.abort(new RunLimitError(breach));
+      },
+      snapshot: resumed?.state?.counters,
+      deadlineAt: resumed?.state?.deadlineAt,
+    });
+    this.activeLimits = limits;
+    this.activeLimitOutputBuffer = [this.agent.config.limits, requestedLimits].some((value) =>
+      value?.maxOutputTokens !== undefined || value?.maxTotalTokens !== undefined || value?.maxCost !== undefined,
+    );
 
     try {
       this.resolveRunProvider(options);
       throwIfAborted(controller.signal);
       this.emit({ type: "agent_started", sessionId: this.id, runId });
+      if (resumed) this.emit({ type: "agent_resumed", sessionId: this.id, runId, version: resumed.version });
 
       const startRecord: RunRecord = {
         id: runId,
@@ -151,11 +290,25 @@ class RuntimeAgentSession implements AgentSession {
         await this.appendEntry(createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "model_change", previousModel: this.agent.config.model, model: options.model }));
       }
       const inputMessages = inputToMessages(input).map((message) => this.redact(message));
+      const inputGuardrails = await runGuardrails({
+        stage: "input",
+        guardrails: this.activeGuardrails,
+        value: inputMessages,
+        context: { sessionId: this.id, runId, metadata, signal: controller.signal },
+        redactor: this.activeRedactor,
+        emit: (event) => this.emit(event),
+      });
+      if (inputGuardrails.terminal?.action === "interrupt" && this.activeDurable) {
+        if (!resumed) {
+          const interruption = { kind: "input_guardrail" as const, reason: inputGuardrails.terminal.reason ?? "Input requires approval" };
+          throw new AgentRunSuspended(await this.suspendDurable({ runId, model, limits, interruption, messages: inputMessages }), interruption);
+        }
+      } else {
+        assertGuardrailsAllowed(inputGuardrails);
+      }
       for (const message of inputMessages) await this.appendMessage(message, runId);
       await this.autoCompact(runId, options, controller.signal, inputMessages);
-
-      const metadata = { ...this.agent.config.metadata, ...this.metadata, ...options.metadata };
-      const maxToolRounds = options.maxToolRounds ?? 1;
+      const maxToolRounds = resolvedLimits.maxToolRounds;
       const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(this.agent.config.systemPrompt, options.systemPrompt), { base: this.agent.config.instructions });
       const contextProviders = [
         ...(this.agent.config.context ?? []),
@@ -172,7 +325,9 @@ class RuntimeAgentSession implements AgentSession {
       const toolConcurrency = resolveToolConcurrency(options, this.agent.config);
 
       this.activeLoopTurn = 1;
-      const recordProviderUsage = async (turnUsage: Usage, turn: number, attempt: number) => {
+      const recordProviderUsage = async (turnUsage: Usage | undefined, turn: number, attempt: number) => {
+        limits.recordUsage(turnUsage);
+        if (!turnUsage) return;
         runUsage.add(turnUsage);
         if (!this.activeLedger) return;
         const usageRecord: UsageRecord = {
@@ -189,6 +344,7 @@ class RuntimeAgentSession implements AgentSession {
         await this.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, this.activeRedactor));
       };
       // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
+      let assembledTurn = false;
       const ctx: LoopContext = {
         sessionId: this.id,
         runId,
@@ -199,7 +355,9 @@ class RuntimeAgentSession implements AgentSession {
         inputMessages,
         maxToolRounds,
         toolConcurrency,
-        assemble: async (nextInput, toolResults, turn) => assembleProviderInput({
+        assemble: async (nextInput, toolResults, turn) => {
+          limits.charge("maxTurns");
+          const request = await assembleProviderInput({
           model: options.model ?? this.agent.config.model,
           input: nextInput,
           history: this.history,
@@ -215,6 +373,8 @@ class RuntimeAgentSession implements AgentSession {
           skills: activeSkills,
           tools,
           resourceLoader: this.agent.config.resourceLoader,
+          permission: this.agent.config.permission,
+          trust: this.agent.config.trust,
           providerOptions,
           redactor: this.activeRedactor,
           middleware: this.agent.config.middleware,
@@ -222,8 +382,16 @@ class RuntimeAgentSession implements AgentSession {
           runId,
           metadata,
           signal: controller.signal,
-        }),
+          });
+          assembledTurn = true;
+          return request;
+        },
+        chargeToolRound: (calls) => {
+          if (calls.length > 0) limits.charge("maxToolRounds");
+        },
         generate: async (request) => {
+          if (!assembledTurn) limits.charge("maxTurns");
+          assembledTurn = false;
           const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
           const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
           return this.generateWithRetry(
@@ -244,9 +412,30 @@ class RuntimeAgentSession implements AgentSession {
           middleware: this.agent.config.middleware,
           emit: (event) => this.emit(event),
           permission: this.agent.config.permission,
+          trust: this.agent.config.trust,
           redactor: this.activeRedactor,
           ledger: this.activeLedger,
           ownership: this.activeOwnership,
+          guardrails: this.activeGuardrails,
+          limitTracker: limits,
+          beforeExecute: async (mediatedCall) => {
+            const durable = this.activeDurable;
+            if (!durable) return;
+            const pending = durable.state?.pending;
+            if (pending?.call.id === mediatedCall.id && pending.status === "ready") {
+              await this.persistDurable({ ...durable.state!, status: "running", pending: { ...pending, status: "dispatched" }, interruption: undefined });
+              return;
+            }
+            if (!durable.options.interruptBeforeTool) return;
+            const interruption = { kind: "tool_approval" as const, reason: "Tool side effect requires approval", toolCallId: mediatedCall.id, toolName: mediatedCall.name };
+            throw new AgentRunSuspended(await this.suspendDurable({
+              runId,
+              model,
+              limits,
+              interruption,
+              pending: { call: mediatedCall, status: "ready" },
+            }), interruption);
+          },
           // ponytail: RunOptions wins; array-compose deferred (roadmap: compose-later).
           validate,
         }),
@@ -257,6 +446,14 @@ class RuntimeAgentSession implements AgentSession {
         },
       };
 
+      if (resumed?.state?.pending?.status === "ready") {
+        const result = await ctx.dispatchToolCall(resumed.state.pending.call);
+        await ctx.appendMessage({
+          role: "tool",
+          content: [{ type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error }, ...(result.content ?? [])],
+          metadata: result.metadata,
+        });
+      }
       const loopUsage = await loop.run(ctx);
       usage = runUsage.value() ?? loopUsage;
       if (usage && this.activeLedger) {
@@ -272,21 +469,33 @@ class RuntimeAgentSession implements AgentSession {
         await this.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, this.activeRedactor));
       }
       await this.drainLedger();
+      const runState = this.activeDurable?.state
+        ? await this.persistDurable({ ...this.activeDurable.state, status: "succeeded", pending: undefined, interruption: undefined })
+        : undefined;
       this.emit({ type: "agent_finished", sessionId: this.id, runId, usage });
-      return this.buildRunResult({
-        runId,
-        status: "succeeded",
-        usage,
-      });
+      return this.buildRunResult({ runId, status: "succeeded", usage, runState });
     } catch (error) {
+      if (error instanceof AgentRunSuspended) {
+        runStatus = "suspended";
+        const version = error.state.version!;
+        this.emit({ type: "agent_suspended", sessionId: this.id, runId, interruption: error.interruption, version });
+        return this.buildRunResult({ runId, status: "suspended", runState: error.state, interruption: error.interruption });
+      }
       runError = errorToErrorInfo(error);
       this.emit({ type: "error", sessionId: this.id, runId, error: runError });
+      const breach = error instanceof RunLimitError ? error.breach : limits.breach;
+      runStatus = breach ? "failed" : controller.signal.aborted ? "aborted" : "failed";
+      const runState = this.activeDurable?.state
+        ? await this.persistDurable({ ...this.activeDurable.state, status: runStatus, interruption: undefined })
+        : undefined;
       const result = this.buildRunResult({
         runId,
-        status: controller.signal.aborted ? "aborted" : "failed",
+        status: runStatus,
         usage: runUsage.value() ?? usage,
+        limit: breach,
         error: runError,
-        abortReason: controller.signal.aborted ? String(controller.signal.reason) : undefined,
+        abortReason: !breach && controller.signal.aborted ? String(controller.signal.reason) : undefined,
+        runState,
       });
       throw new AgentRunError(result, { cause: error });
     } finally {
@@ -294,7 +503,7 @@ class RuntimeAgentSession implements AgentSession {
       try {
         await this.drainLedger();
         if (this.activeLedger) {
-          const status = controller.signal.aborted ? "aborted" : runError ? "failed" : "succeeded";
+          const status = runStatus;
           const finishRecord: RunRecord = {
             id: runId,
             sessionId: this.id,
@@ -315,6 +524,11 @@ class RuntimeAgentSession implements AgentSession {
         this.activeLedger = undefined;
         this.activeOwnership = undefined;
         this.activeIdempotencyKey = undefined;
+        this.activeGuardrails = undefined;
+        this.activeMetadata = undefined;
+        this.activeLimits?.dispose();
+        this.activeLimits = undefined;
+        this.activeLimitOutputBuffer = false;
         this.activeRedactor = undefined;
         this.activeProvider = undefined;
         cleanupSignal();
@@ -356,8 +570,11 @@ class RuntimeAgentSession implements AgentSession {
     readonly runId: string;
     readonly status: AgentRunResult["status"];
     readonly usage?: Usage;
+    readonly limit?: import("./contracts.js").RunLimitBreach;
     readonly error?: ErrorInfo;
     readonly abortReason?: string;
+    readonly runState?: AgentRunState;
+    readonly interruption?: import("./contracts.js").AgentRunInterruption;
   }): AgentRunResult {
     const final = finalAssistantMessage(this.history);
     return {
@@ -369,9 +586,65 @@ class RuntimeAgentSession implements AgentSession {
       content: final.content,
       message: final.message,
       usage: input.usage,
+      limit: input.limit,
       error: input.error,
       abortReason: input.abortReason,
+      runState: input.runState,
+      interruption: input.interruption,
     };
+  }
+
+  private async suspendDurable(input: {
+    readonly runId: string;
+    readonly model: import("./contracts.js").ModelConfig;
+    readonly limits: RunLimitTracker;
+    readonly interruption: import("./contracts.js").AgentRunInterruption;
+    readonly messages?: readonly Message[];
+    readonly pending?: StoredAgentRunState["pending"];
+  }): Promise<AgentRunState> {
+    const durable = this.activeDurable;
+    if (!durable) throw new AgentRunStateError("Durable interruption is not configured");
+    const state = durable.state ?? initialAgentRunState({
+      agent: this.agent,
+      options: durable.options,
+      runId: input.runId,
+      sessionId: this.id,
+      leafId: this.currentLeafId,
+      model: input.model,
+      counters: input.limits.snapshot(),
+      deadlineAt: input.limits.deadlineAt,
+      status: "suspended",
+      interruption: input.interruption,
+      messages: input.messages,
+      pending: input.pending,
+      interruptBeforeTool: durable.options.interruptBeforeTool,
+    });
+    return this.persistDurable({
+      ...state,
+      leafId: this.currentLeafId,
+      status: "suspended",
+      interruption: input.interruption,
+      ...(input.messages ? { input: input.messages } : {}),
+      ...(input.pending ? { pending: input.pending } : {}),
+      counters: input.limits.snapshot(),
+    });
+  }
+
+  private async persistDurable(state: StoredAgentRunState): Promise<AgentRunState> {
+    const durable = this.activeDurable;
+    if (!durable) throw new AgentRunStateError("Durable run state is not configured");
+    const saved = await saveAgentRunState({
+      checkpoints: durable.options.checkpoints,
+      state,
+      expectedVersion: durable.version,
+      ownership: this.activeOwnership,
+      fencingToken: durable.options.fencingToken,
+      redactor: this.activeRedactor,
+      maxStateBytes: durable.options.maxStateBytes,
+    });
+    durable.state = saved.state;
+    durable.version = saved.record.version;
+    return publicState(saved.state);
   }
 
   async compact(options: CompactionOptions = {}): Promise<CompactionResult> {
@@ -494,7 +767,7 @@ class RuntimeAgentSession implements AgentSession {
     signal: AbortSignal,
     requestSecrets: readonly (string | undefined)[] = [],
     turn = 1,
-    recordUsage?: (usage: Usage, turn: number, attempt: number) => Promise<void>,
+    recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>,
   ): Promise<ProviderTurnResult> {
     const retry = mergeRetry(this.agent.config.retry, options.retry);
     const secrets = [...requestSecrets, ...(retry?.secrets ?? [])];
@@ -503,6 +776,7 @@ class RuntimeAgentSession implements AgentSession {
       try {
         return await this.generateProviderTurn(request, runId, signal, secrets, turn, attempt, recordUsage);
       } catch (error) {
+        if (error instanceof GuardrailError) throw error;
         const failure = error instanceof ProviderTurnFailure ? error : undefined;
         const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
         if (!policy || failure?.observable) throw errorFromInfo(info);
@@ -525,8 +799,10 @@ class RuntimeAgentSession implements AgentSession {
     secrets: readonly (string | undefined)[] = [],
     turn = 1,
     attempt = 1,
-    recordUsage?: (usage: Usage, turn: number, attempt: number) => Promise<void>,
+    recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>,
   ): Promise<ProviderTurnResult> {
+    this.activeLimits!.charge("maxProviderAttempts");
+    this.activeLimits!.charge("maxRequestBytes", jsonBytes(request));
     const startedAt = performance.now();
     const providerId = this.activeProvider?.id ?? request.model.provider;
     const buildMetadata = (extra: Omit<ProviderTurnMetadata, "providerId" | "model"> = {}) =>
@@ -545,14 +821,21 @@ class RuntimeAgentSession implements AgentSession {
     let started = false;
     let usage: Usage | undefined;
     let usageRecorded = false;
+    const bufferedOutput: AgentEvent[] = [];
+    const bufferOutput = Boolean(this.activeGuardrails?.output?.length || this.activeLimitOutputBuffer);
+    const emitOutput = (event: AgentEvent) => {
+      if (bufferOutput) bufferedOutput.push(event);
+      else this.emit(event);
+    };
     const recordTurnUsage = async () => {
-      if (!usage || usageRecorded) return;
+      if (usageRecorded) return;
       usageRecorded = true;
       await recordUsage?.(usage, turn, attempt);
     };
     try {
       for await (const event of this.activeProvider!.generate(request)) {
         throwIfAborted(signal);
+        this.activeLimits!.charge("maxResponseBytes", jsonBytes(event));
         if (event.type === "error") throw new ProviderTurnFailure(event.error, started);
         if (event.type === "usage") usage = event.usage;
         if (event.type === "done") {
@@ -562,31 +845,42 @@ class RuntimeAgentSession implements AgentSession {
         if (event.type === "message_start") {
           started = true;
           messageId = event.messageId;
-          this.emit({ type: "message_started", sessionId: this.id, runId, message: { id: messageId, role: "assistant", content: [] } });
+          emitOutput({ type: "message_started", sessionId: this.id, runId, message: { id: messageId, role: "assistant", content: [] } });
           continue;
         }
         if (event.type === "content_delta" || event.type === "tool_call" || event.type === "tool_call_delta") {
           if (!started) {
             started = true;
-            this.emit({ type: "message_started", sessionId: this.id, runId, message: { role: "assistant", content: [] } });
+            emitOutput({ type: "message_started", sessionId: this.id, runId, message: { role: "assistant", content: [] } });
           }
           if (event.type === "tool_call_delta") {
             toolDeltas.push(event);
-            this.emit({ type: "message_delta", sessionId: this.id, runId, content: providerToolCallDeltaContent(event) });
+            emitOutput({ type: "message_delta", sessionId: this.id, runId, content: providerToolCallDeltaContent(event) });
             continue;
           }
           const block = providerContent(event);
           content.push(block);
           if (block.type === "tool_call") calls.push(block);
-          this.emit({ type: "message_delta", sessionId: this.id, runId, content: block });
+          emitOutput({ type: "message_delta", sessionId: this.id, runId, content: block });
         }
       }
       for (const call of reconstructMissingToolCalls(toolDeltas, calls)) {
         content.push(call);
         calls.push(call);
-        this.emit({ type: "message_delta", sessionId: this.id, runId, content: call });
+        emitOutput({ type: "message_delta", sessionId: this.id, runId, content: call });
       }
       await recordTurnUsage();
+      if (this.activeGuardrails?.output?.length) {
+        assertGuardrailsAllowed(await runGuardrails({
+          stage: "output",
+          guardrails: this.activeGuardrails,
+          value: { content, calls, messageId, started, usage },
+          context: { sessionId: this.id, runId, metadata: this.activeMetadata ?? {}, signal },
+          redactor: this.activeRedactor,
+          emit: (event) => this.emit(event),
+        }));
+      }
+      if (bufferOutput) for (const event of bufferedOutput) this.emit(event);
       const latencyMs = Math.round(performance.now() - startedAt);
       this.emit({
         type: "provider_turn_finished",
@@ -610,7 +904,7 @@ class RuntimeAgentSession implements AgentSession {
         usage,
         error: info,
       });
-      if (error instanceof ProviderTurnFailure) throw error;
+      if (error instanceof GuardrailError || error instanceof ProviderTurnFailure) throw error;
       throw new ProviderTurnFailure(info, started);
     }
   }
@@ -818,6 +1112,21 @@ function mergeCompaction(agent: false | CompactionOptions | undefined, run: fals
   return agent || undefined;
 }
 
+function isBuiltInLoop(loop: import("./contracts.js").AgentLoopStrategy | import("./contracts.js").AgentLoopOptions): boolean {
+  return typeof loop === "object" && loop !== null && "strategy" in loop;
+}
+
+function mergeGuardrails(agent: Guardrails | undefined, run: Guardrails | undefined): Guardrails | undefined {
+  if (!agent && !run) return undefined;
+  return {
+    input: [...(agent?.input ?? []), ...(run?.input ?? [])],
+    output: [...(agent?.output ?? []), ...(run?.output ?? [])],
+    toolInput: [...(agent?.toolInput ?? []), ...(run?.toolInput ?? [])],
+    toolOutput: [...(agent?.toolOutput ?? []), ...(run?.toolOutput ?? [])],
+    maxConcurrency: run?.maxConcurrency ?? agent?.maxConcurrency,
+  };
+}
+
 function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[] {
   const next = [...messages];
   for (let i = input.length - 1; i >= 0; i -= 1) {
@@ -841,6 +1150,14 @@ function throwIfAborted(signal: AbortSignal): void {
 
 function throwIfAbortedSignal(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
+}
+
+function jsonBytes(value: unknown): number {
+  try {
+    return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+  } catch {
+    throw new TypeError("Provider request or event must be JSON-serializable for run limits");
+  }
 }
 
 function createUsageAccumulator(): { add(usage: Usage): void; value(): Usage | undefined } {

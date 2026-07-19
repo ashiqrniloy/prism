@@ -24,7 +24,7 @@ const response = await handler(new Request("https://api.example.test/prism/agent
 }));
 ```
 
-Routes: direct/SSE agent run, direct/SSE workflow run, durable workflow enqueue/status/cancel/resume/replay, and optional ownership-scoped schedule create/list/pause/resume/trigger/delete. All bodies, responses, events, queues, concurrency, and timeouts are bounded.
+Routes: direct/SSE agent run, explicitly selected durable agent status/resume through `agentRuns`, direct/SSE workflow run, durable workflow enqueue/status/cancel/resume/replay, and optional ownership-scoped schedule create/list/pause/resume/trigger/delete. `agentRuns` uses core `createAgentRunLifecycle()`; no lifecycle route exists by default. All bodies, responses, events, queues, concurrency, and timeouts are bounded.
 
 Nothing is exposed by default. Authorization is required; ownership comes only from its result. No listener, framework, auth provider, user database, credential discovery, or hidden package activation ships.
 

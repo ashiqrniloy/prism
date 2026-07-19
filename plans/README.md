@@ -73,5 +73,6 @@ Numbered plans are immutable implementation records. Current release status live
 | [066-maintainability-documentation-packaging-and-0-0-5-release.md](066-maintainability-documentation-packaging-and-0-0-5-release.md) | Maintainability, Documentation, Packaging, and 0.0.5 Release Validation |
 | [067-provider-doc-validation-caching-discovery-and-review-hardening.md](067-provider-doc-validation-caching-discovery-and-review-hardening.md) | Completed provider doc validation, caller-gated discovery, caching/thinking conformance, use-case model selection, and final SDK verification |
 | [068-release-0-0-6-production-blockers.md](068-release-0-0-6-production-blockers.md) | Phase 1 / Release 0.0.6 — close production release blockers |
+| [069-release-0-0-7-secure-run-lifecycle.md](069-release-0-0-7-secure-run-lifecycle.md) | Release 0.0.7 — Secure Run Lifecycle, Guardrails, Budgets, and Durable Interruption |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

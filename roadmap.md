@@ -28,8 +28,8 @@ Updated: 2026-07-19
 
 - 30 publishable packages: core plus 29 workspaces; 24 code packages and 6 manifest/profile packages.
 - 189 production TypeScript files / 26,280 lines; 28,983 test lines; 42,074 docs and plan lines.
-- `npm run sdk:ready`: 1,767 tests, 1,742 pass, 25 explicit live skips, 0 fail; all builds and 30 dry-run packs pass within the five-minute CI backstop on the 2026-07-19 release-candidate environment.
-- Root package: 430.3 kB packed / 1.5 MB unpacked. Workspace install: 73 MB.
+- `npm run sdk:ready`: 1,785 tests, 1,760 pass, 25 explicit live skips, 0 fail; all builds and 30 dry-run packs pass within the five-minute CI backstop on the 2026-07-19 release-candidate environment.
+- Root package: 466.5 kB packed / 1.7 MB unpacked (241 files). Workspace install baseline: 73 MB.
 - `npm audit`: zero known vulnerabilities across 223 installed dependencies. This is not a substitute for SAST, secret scanning, SBOM, or live integration testing.
 - Live provider, PostgreSQL, keychain, and external A2A tests require configured services/credentials and are not part of this baseline unless a release gate explicitly provisions them.
 
@@ -132,7 +132,7 @@ Updated: 2026-07-19
     - `npm run sdk:ready` passed with 1,767 tests (1,742 pass, 25 explicit live skips, 0 fail); Node 20 build/public-import, packed offline consumer, PostgreSQL/pgvector (31 checks), audit, dependency graph, registry preflight, and 30-package provenance dry-run passed.
     - No commit, tag, or publication was created. Release host still must provide a working OS keychain for the explicit `PRISM_TEST_KEYCHAIN=1` round-trip before publication.
 
-- [ ] Phase 2 — Release 0.0.7: secure run lifecycle, guardrails, budgets, and durable interruption
+- [x] Phase 2 — Release 0.0.7: secure run lifecycle, guardrails, budgets, and durable interruption
   - Acceptance Criteria:
     - Functional: typed input, output, tool-input, and tool-output guardrails run in documented order, support tripwires, produce redacted attributable decisions, and cannot be bypassed by retries, revisions, delegation, MCP, or workflows.
     - Functional: shared `RunLimits` bounds turns, provider attempts, tool rounds/calls, wall time, request/response bytes, input/output/total tokens, and optional cost; terminal results/events identify the breached limit.
@@ -187,6 +187,11 @@ Updated: 2026-07-19
       - `docs/guardrails.md`, `docs/agent-session-runtime.md`, `docs/agent-loops.md`, `docs/runs-and-usage.md`, `docs/workflows.md`, `docs/host-security.md`, `docs/server.md`, `docs/mcp-tools.md`, `docs/migration.md`.
     - `docs/index.md` update: yes; add Guardrails and update Agent/session runtime and Security entries.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion Evidence (2026-07-19):
+    - Plan 069 completed typed guardrails, O(1) RunLimits accounting, bounded/redacted durable built-in agent runs with CAS resume, opt-in `createSecureAgent()`, and explicitly selected server/MCP lifecycle exposure. No default route/tool, credential persistence, or ambiguous tool replay was added.
+    - Versioned all 30 publishable manifests, exact internal ranges, lockfile records, runtime metadata, release/package tests, and changelogs to `0.0.7`; added network-free durable-approval example and complete migration/release guidance.
+    - `npm run sdk:ready` passed: 1,785 tests (1,760 pass, 25 explicit live skips, 0 fail), typecheck, offline packed consumer, docs/export/secret/tarball guards, and 30 dry-run packs. Core artifact: 241 files, 466.5 kB packed, 1.7 MB unpacked.
+    - Docker Node 20.20.2 build/public-import, `npm audit --audit-level=high` (0 vulnerabilities), `npm ls --all --depth=0`, exact 30-package registry preflight, and 30/30 provenance/public/latest publish dry-run passed. No commit, tag, or publication was created. PostgreSQL/provider/keychain live gates remain explicit release-host/CI prerequisites.
 
 - [ ] Phase 3 — Release 0.0.8: production telemetry, evaluations, protocols, and web research
   - Acceptance Criteria:

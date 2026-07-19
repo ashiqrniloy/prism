@@ -38,11 +38,12 @@ The `AgentEvent` union (grouped by concern):
 
 | Group | Variants |
 | --- | --- |
-| Agent lifecycle | `agent_started`, `agent_finished` |
+| Agent lifecycle | `agent_started`, `agent_suspended`, `agent_resumed`, `agent_denied`, `agent_finished` |
 | Turns | `turn_started`, `turn_finished` |
 | Provider turns | `provider_turn_started`, `provider_turn_finished` |
 | Assistant messages | `message_started`, `message_delta`, `message_finished` |
 | Tool execution | `tool_execution_started`, `tool_execution_progress`, `tool_execution_finished`, `tool_execution_error`, `tool_execution_blocked` |
+| Guardrails | `guardrail_decision` |
 | Queue/subscribers | `queue_updated`, `event_subscriber_overflow` |
 | Compaction | `compaction_started`, `compaction_finished` |
 | Retry | `retry_scheduled` |
@@ -59,6 +60,9 @@ Agent / turn / message events:
 | --- | --- |
 | `agent_started` | `sessionId`, `runId` |
 | `agent_finished` | `sessionId`, `runId`, `usage?: Usage` (aggregate of all usage-bearing provider turns) |
+| `agent_suspended` | `sessionId`, `runId`, redacted `interruption`, checkpoint `version`; no tool side effect has started. |
+| `agent_resumed` | `sessionId`, `runId`, checkpoint `version`. |
+| `agent_denied` | `sessionId`, `runId`, redacted `interruption`, checkpoint `version`; no tool side effect runs. |
 | `turn_started` / `turn_finished` | `sessionId`, `runId`, `turn: number` |
 | `message_started` / `message_finished` | `sessionId`, `runId`, `message: Message` |
 | `message_delta` | `sessionId`, `runId`, `content: ContentBlock` (`tool_call_delta` fragments may appear here for live UI streaming; stored messages use final `tool_call` blocks) |
@@ -74,6 +78,14 @@ Tool execution events:
 | `tool_execution_finished` | `sessionId`, `runId`, `result: ToolResult`, `metadata: ToolExecutionMetadata` |
 | `tool_execution_error` | `sessionId`, `runId`, `call: ToolCallContent`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
 | `tool_execution_blocked` | `sessionId`, `runId`, `toolCallId`, `name`, `reason: string`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
+
+Guardrail events:
+
+| Variant | Fields |
+| --- | --- |
+| `guardrail_decision` | `sessionId`, `runId`, optional `toolCallId`/`toolName`, and redacted bounded `record: GuardrailRecord` (`guardrail`, stage, action, reason, metadata). |
+
+Guardrails emit their decision before a terminal run error or blocked tool result. Provider-output checks buffer assistant content, and tool-output checks discard blocked raw results before event/ledger/transcript exposure; see [Guardrails](guardrails.md).
 
 Queue / subscriber / compaction / retry / provider events:
 
