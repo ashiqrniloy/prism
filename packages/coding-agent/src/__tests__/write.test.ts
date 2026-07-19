@@ -199,6 +199,41 @@ test("absolute path outside cwd is writable (no sandbox)", async () => {
   }
 });
 
+test("oversized UTF-8 write input fails before policy or filesystem mutation", async () => {
+  const cwd = await tmp();
+  let policyCalls = 0;
+  let operationCalls = 0;
+  try {
+    const operations: WriteOperations = {
+      mkdir: async () => { operationCalls++; },
+      writeFile: async () => { operationCalls++; },
+    };
+    const tool = createWriteTool(cwd, {
+      maxInputBytes: 3,
+      executionPolicy: { check: () => { policyCalls++; return { allowed: true }; } },
+      operations,
+    });
+    const result = await tool.execute({ path: "no.txt", content: "☃x" }, ctx());
+    assert.match(result.error?.message ?? "", /exceeds 3 byte limit/);
+    assert.equal(policyCalls, 0);
+    assert.equal(operationCalls, 0);
+    await assert.rejects(() => stat(join(cwd, "no.txt")));
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("write maxInputBytes rejects invalid limits", async () => {
+  const cwd = await tmp();
+  try {
+    for (const value of [0, Infinity, Number.MAX_SAFE_INTEGER, 64 * 1024 * 1024 + 1]) {
+      assert.throws(() => createWriteTool(cwd, { maxInputBytes: value }), /positive safe integer/);
+    }
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("tilde-prefixed path resolves to homedir", async () => {
   const cwd = await tmp();
   try {

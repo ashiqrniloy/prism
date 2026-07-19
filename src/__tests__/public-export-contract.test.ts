@@ -15,7 +15,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "AgentRunError", "CHECKPOINT_CONFLICT_CODE", "CheckpointConflictError", "LEASE_CONFLICT_CODE", "LeaseConflictError", "PermissionDeniedError", "SESSION_APPEND_CONFLICT_CODE", "SESSION_ENTRY_KINDS",
   "SESSION_ENTRY_SCHEMA_VERSION", "SessionAppendConflictError", "RunFeedbackError", "TrustDeniedError",
-  "applyCacheControl", "applyExecutionDecision", "assembleProviderInput", "assertDeclaredMediaTypeMatches", "assertExecutionAllowed", "assertJsonObject", "assertMediaBlocksWithinBounds", "assertMessagesSupportModelCapabilities", "assertModelSupportsContentBlocks", "assertPermission",
+  "applyCacheControl", "applyExecutionDecision", "applyThinkingLevel", "assembleProviderInput", "assertDeclaredMediaTypeMatches", "assertExecutionAllowed", "assertJsonObject", "assertMediaBlocksWithinBounds", "assertMessagesSupportModelCapabilities", "assertModelSupportsContentBlocks", "assertPermission",
   "assertSsrfAllowedUrl", "assertStructuredOutputRequestSupported", "assertTrusted", "authMethodKey", "cacheHitRate", "cacheSavings", "cacheUsageReport",
   "checkExecution", "checkPermission", "collectMessageContentBlocks", "composeSystemPrompt", "contentBlockInputModality", "createAgent", "createAgentSession",
   "createChainedCredentialResolver", "createChainedSettingsProvider",
@@ -34,9 +34,9 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "dispatchToolCall", "dispatchToolCallsInOrder", "errorToErrorInfo", "ExecutionDeniedError", "filterTools", "generateValidateReviseLoop",
   "getSessionBranchEntries", "isAgentLoopOptions", "isCompactionEntryData",
   "isJsonObject", "isSessionAppendConflict", "isSessionEntryKind", "isTransientErrorInfo",
-  "isTrusted", "listSessionBranches", "loadBinaryResource", "loadBoundedBinaryResource", "loadConfigLayers", "loadJsonResource",
+  "isTrusted", "isThinkingLevel", "listSessionBranches", "loadBinaryResource", "loadBoundedBinaryResource", "loadConfigLayers", "loadJsonResource",
   "loadManifestResource", "loadTextResource", "mapCacheRetention", "mergeConfigLayers",
-  "mergeProviderRequestOptions", "mergeSystemPromptConfig", "MediaContentError", "MODEL_INPUT_CAPABILITIES", "modelSupportsStructuredOutput", "name", "parseAgentFile",
+  "mergeProviderRequestOptions", "mergeSystemPromptConfig", "MediaContentError", "MODEL_INPUT_CAPABILITIES", "modelSupportsStructuredOutput", "name", "normalizeThinkingLevel", "parseAgentFile",
   "parsePrismManifest", "parseSkillFile", "prepareRunFeedback", "providerContentDelta", "providerDone",
   "providerError", "providerTextDelta", "providerThinkingDelta", "providerToolCall",
   "providerToolCallDelta", "providerUsage", "readProviderHttpStatus", "rebuildSessionContext", "redactAgentEvent",
@@ -44,8 +44,8 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "redactSessionEntry", "refreshOAuthCredential", "registerDiscoveredContributions",
   "renderPromptTemplate", "requireRunFeedbackOwnership", "resolveActiveSkills", "resolveAgentDefinition",
   "resolveContextProviders", "resolveCredentialValue", "resolveInstructionInjectors", "resolveMediaContentBlock", "resolveMediaContentBlocks",
-  "resolveLoop", "resolveRunProviderOptions", "resolveToolConcurrency", "runFeedbackPageLimit", "runInstructionInjectors", "sanitizeCacheKey", "singleShotLoop", "sniffMediaMimeType",
-  "StructuredOutputError", "systemPromptContributionKey", "toolCallContent", "UnsupportedModalityError", "validateStructuredOutputOptions", "version", "waitForRetry",
+  "resolveLoop", "resolveRunProviderOptions", "resolveToolConcurrency", "resolveUseCaseModel", "resolveUseCaseModelBinding", "runFeedbackPageLimit", "runInstructionInjectors", "sanitizeCacheKey", "singleShotLoop", "sniffMediaMimeType",
+  "StructuredOutputError", "systemPromptContributionKey", "THINKING_LEVELS", "thinkingCompatFor", "thinkingFamilyForModel", "toolCallContent", "UnsupportedModalityError", "useCaseCredentialProviderId", "validateStructuredOutputOptions", "version", "waitForRetry",
 ];
 
 const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
@@ -79,7 +79,8 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "PrepareRunFeedbackOptions", "ProviderRegistry", "ProviderRegistryOptions", "ProviderResolver", "ResolvedMediaContent", "ResolveMediaContentOptions",
   "ResolveActiveSkillsOptions", "ResolveContextOptions", "ResolveInstructionInjectorsOptions", "RunFeedbackLimits", "RunFeedbackRun", "RunFeedbackRunResolver",
   "SecretRedactor", "SessionBranch", "SessionBranchOptions", "SessionCachePolicyOptions",
-  "SessionContextSnapshot", "SkillRegistryOptions", "SsrfPolicy", "ToolArgumentValidationError", "ToolArgumentValidationResult",
+  "ResolveUseCaseModelInput", "ResolvedUseCaseModel", "SessionContextSnapshot", "SkillRegistryOptions", "SsrfPolicy", "ThinkingCompatFamily", "ThinkingLevel", "ToolArgumentValidationError", "ToolArgumentValidationResult",
+  "UseCaseModelBinding",
   "ToolArgumentValidator", "ToolFilter", "ToolFilterInput", "ToolParameterValidatorOptions",
   "ToolRegistryOptions", "ToolValidator", "TrustDecision", "TrustPolicy", "TrustRequest",
 ];

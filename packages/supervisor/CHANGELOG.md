@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Fixed A2A streaming UTF-8 corruption across chunk boundaries with one fatal streaming decoder and incremental LF/CRLF/multiline SSE parsing; truncated or post-terminal streams fail without changing existing limits.
 
 ## [0.0.5] - 2026-07-16
 

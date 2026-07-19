@@ -5,6 +5,7 @@ import { createOpenCodeGoProvider, type OpenCodeGoProviderOptions } from "./prov
 export interface OpenCodeGoProviderPackageOptions {
   readonly apiKey?: CredentialValueSource;
   readonly fetch?: typeof fetch;
+  /** Defaults to official `https://opencode.ai/zen/go/v1`. */
   readonly baseUrl?: string;
   readonly models?: readonly ModelConfig[];
 }
@@ -23,4 +24,31 @@ export function createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPacka
 }
 
 export { createOpenCodeGoProvider, type OpenCodeGoProviderOptions } from "./provider.js";
-export { openCodeGoModels } from "./models.js";
+export {
+  OPENCODE_GO_DEFAULT_BASE_URL,
+  defineOpenCodeGoModel,
+  listOpenCodeGoModels,
+  mapOpenCodeGoModel,
+  openCodeGoModels,
+  routeForOpenCodeGoModel,
+  type ListOpenCodeGoModelsOptions,
+  type OpenCodeGoModelConfig,
+  type OpenCodeGoModelEntry,
+  type OpenCodeGoRoute,
+} from "./models.js";
+export {
+  OPENCODE_SESSION_ID_MAX_LENGTH,
+  applyOpencodeAnthropicCacheControl,
+  opencodeAnthropicCacheEnabled,
+  opencodeOwnedHeaders,
+  opencodeSessionId,
+} from "./cache.js";
+export {
+  openCodeGoPreserveThinking,
+  openCodeGoReasoning,
+  openCodeGoReasoningEffort,
+  openCodeGoThinking,
+  stripOpenCodeGoOwnedCompat,
+} from "./thinking.js";
+export { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
+export { openAIChatBody, openAIChatEvents, serializeOpenCodeGoChatMessage } from "./openai-chat.js";

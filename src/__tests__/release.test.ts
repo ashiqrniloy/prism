@@ -8,7 +8,7 @@ import test from "node:test";
 // @ts-expect-error stdlib-only release CLI intentionally ships as directly runnable JavaScript.
 import { assertGitState, loadRelease, publishArgs, runRelease, validateRelease } from "../../scripts/release.mjs";
 
-const VERSION = "0.0.5";
+const VERSION = "0.0.6";
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "prism-release-"));
@@ -46,9 +46,9 @@ test("release graph validates exact versions and uses deterministic dependency o
 
   const addonPath = join(root, "packages/addon/package.json");
   const addon = JSON.parse(readFileSync(addonPath, "utf8"));
-  addon.peerDependencies["@arnilo/prism"] = "^0.0.5";
+  addon.peerDependencies["@arnilo/prism"] = "^0.0.6";
   writeFileSync(addonPath, JSON.stringify(addon));
-  assert.throws(() => validateRelease(loadRelease(root), VERSION), /expected 0\.0\.5/);
+  assert.throws(() => validateRelease(loadRelease(root), VERSION), /expected 0\.0\.6/);
 });
 
 test("registry preflight rejects collisions and resume skips only matching manifests", async () => {
@@ -114,7 +114,7 @@ test("release requires clean tagged git state", () => {
   git("config", "user.name", "Release Test");
   git("add", ".");
   git("commit", "-m", "fixture");
-  assert.throws(() => assertGitState(root, VERSION), /tag v0\.0\.5/);
+  assert.throws(() => assertGitState(root, VERSION), /tag v0\.0\.6/);
   git("tag", `v${VERSION}`);
   assert.doesNotThrow(() => assertGitState(root, VERSION));
   mkdirSync(join(root, "release-artifacts"));
@@ -133,4 +133,15 @@ test("registry failures stay attributable without leaking environment tokens", a
     (error: Error) => error.message.includes("HTTP 500") && !error.message.includes(token),
   );
   delete process.env.NODE_AUTH_TOKEN;
+});
+
+test("release workflow publishes with provenance from the exact v* tag", () => {
+  const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
+  assert.match(workflow, /tags:\s*\["v\*"\]/);
+  assert.match(workflow, /id-token:\s*write/);
+  assert.match(workflow, /npm run release:publish -- --version "\$\{GITHUB_REF_NAME#v\}"/);
+  assert.match(workflow, /--resume/);
+  const releaseCli = readFileSync(join(process.cwd(), "scripts/release.mjs"), "utf8");
+  assert.match(releaseCli, /--provenance/);
+  assert.match(releaseCli, /HEAD must have tag v\$\{version\}/);
 });

@@ -18,6 +18,7 @@ function buildWorkflow() {
     execute: async (ctx) => ({ echo: ctx.workflowInput }),
   });
   return defineWorkflow({
+    revision: "1",
     id: "demo",
     nodes: { step },
     edges: [],
@@ -100,7 +101,7 @@ describe("createWorkflowCommands", () => {
         return "done";
       },
     });
-    const workflow = defineWorkflow({ id: "cancel-me", nodes: { slow }, edges: [] });
+    const workflow = defineWorkflow({ revision: "1", id: "cancel-me", nodes: { slow }, edges: [] });
     const runPromise = runWorkflow(workflow, null, {
       checkpoints,
       ownership: { tenantId: "t1" },
@@ -112,6 +113,7 @@ describe("createWorkflowCommands", () => {
     const cancelled = await cancelWorkflowRun({
       workflowId: "cancel-me",
       runId: "wfr_cancel_1",
+      workflow,
       checkpoints,
       ownership: { tenantId: "t1" },
     });
@@ -130,29 +132,29 @@ describe("createWorkflowCommands", () => {
 
   it("marks orphaned running checkpoints aborted", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
-    await checkpoints.save({
+    const workflow = buildWorkflow();
+    await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "orphan",
+      ownership: { tenantId: "t1" },
+    });
+    const completed = await checkpoints.load({
       workflowId: "demo",
       runId: "orphan",
-      version: 1,
       ownership: { tenantId: "t1" },
-      value: {
-        schemaVersion: 1,
-        workflowId: "demo",
-        runId: "orphan",
-        definitionHash: "x",
-        status: "running",
-        readyNodeIds: [],
-        completedNodeIds: [],
-        nodes: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        redacted: false,
-      },
+    });
+    assert.ok(completed);
+    await checkpoints.save({
+      ...completed,
+      version: completed.version + 1,
+      expectedVersion: completed.version,
+      value: { ...completed.value, status: "running" },
     });
 
     const result = await cancelWorkflowRun({
       workflowId: "demo",
       runId: "orphan",
+      workflow,
       checkpoints,
       ownership: { tenantId: "t1" },
     });
@@ -165,12 +167,13 @@ describe("createWorkflowCommands", () => {
       ownership: { tenantId: "t1" },
     });
     assert.equal(record?.value.status, "aborted");
-    assert.equal(record?.version, 2);
+    assert.equal(record?.version, completed.version + 2);
   });
 
   it("resumes via workflow.resume command after cancel", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({
+      revision: "1",
       id: "resume-demo",
       nodes: {
         first: functionNode({ execute: async () => "one" }),
@@ -182,6 +185,7 @@ describe("createWorkflowCommands", () => {
     });
 
     const gated = defineWorkflow({
+      revision: "1",
       id: "resume-demo",
       nodes: {
         first: functionNode({ execute: async () => "one" }),
@@ -210,6 +214,7 @@ describe("createWorkflowCommands", () => {
     await cancelWorkflowRun({
       workflowId: "resume-demo",
       runId: "wfr_resume_1",
+      workflow: gated,
       checkpoints,
       ownership: { tenantId: "t1" },
     });
@@ -234,6 +239,7 @@ describe("createWorkflowCommands", () => {
   it("passes durable approval payload and expected version through workflow.resume", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({
+      revision: "1",
       id: "command-suspend",
       nodes: {
         review: functionNode({

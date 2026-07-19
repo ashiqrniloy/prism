@@ -24,5 +24,27 @@ export function createZaiProviderPackage(options: ZaiProviderPackageOptions = {}
   });
 }
 
-export { defineZaiModel, zaiModels, type ZaiModelConfig } from "./models.js";
-export { createZaiProvider, zaiBody, zaiEvents, type ZaiProviderOptions } from "./provider.js";
+export {
+  defineZaiModel,
+  listZaiModels,
+  mapZaiModel,
+  zaiModels,
+  type ListZaiModelsOptions,
+  type ZaiModelConfig,
+  type ZaiModelEntry,
+} from "./models.js";
+export {
+  createZaiProvider,
+  toZaiMessage,
+  zaiBody,
+  zaiEvents,
+  ZAI_DEFAULT_BASE_URL,
+  type ZaiProviderOptions,
+} from "./provider.js";
+export {
+  zaiClearThinking,
+  zaiPreserveThinking,
+  zaiReasoningEffort,
+  zaiThinking,
+  zaiToolStream,
+} from "./thinking.js";

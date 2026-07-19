@@ -93,12 +93,19 @@ describe("agent loop strategies", () => {
 
     it("keeps multi-round tool transcript chronological in history and requests", async () => {
       const assembledRoles: string[][] = [];
+      const assembledToolCallIds: Array<Array<string | undefined>> = [];
       let generateCalls = 0;
       const ctx = stubCtx({
         input: "Hi",
+        inputMessages: [{ role: "user", content: [{ type: "text", text: "Hi" }] }],
         maxToolRounds: 2,
         assemble: async (_nextInput, _toolResults, turn) => {
           assembledRoles.push(ctx.history.map((message) => message.role));
+          assembledToolCallIds.push(
+            ctx.history
+              .filter((message) => message.role === "tool")
+              .map((message) => message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined),
+          );
           return { model: { provider: "mock", model: "demo" }, messages: ctx.history } as ProviderRequest;
         },
         generate: async () => {
@@ -106,7 +113,10 @@ describe("agent loop strategies", () => {
           if (generateCalls === 1) {
             return {
               content: [{ type: "text", text: "round1" }],
-              calls: [toolCallContent("c1", "echo", { text: "one" })],
+              calls: [
+                toolCallContent("c1a", "echo", { text: "one-a" }),
+                toolCallContent("c1b", "echo", { text: "one-b" }),
+              ],
               messageId: "m1",
               started: true,
             };
@@ -114,7 +124,10 @@ describe("agent loop strategies", () => {
           if (generateCalls === 2) {
             return {
               content: [{ type: "text", text: "round2" }],
-              calls: [toolCallContent("c2", "echo", { text: "two" })],
+              calls: [
+                toolCallContent("c2a", "echo", { text: "two-a" }),
+                toolCallContent("c2b", "echo", { text: "two-b" }),
+              ],
               messageId: "m2",
               started: true,
             };
@@ -127,9 +140,16 @@ describe("agent loop strategies", () => {
       await singleShotLoop.run(ctx);
       assert.equal(generateCalls, 3);
       assert.deepEqual(ctx.history.map((message) => message.role), [
-        "assistant", "tool", "assistant", "tool", "assistant",
+        "user", "assistant", "tool", "tool", "assistant", "tool", "tool", "assistant",
       ]);
-      assert.deepEqual(assembledRoles[2], ["assistant", "tool", "assistant", "tool"]);
+      assert.deepEqual(
+        ctx.history
+          .filter((message) => message.role === "tool")
+          .map((message) => message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined),
+        ["c1a", "c1b", "c2a", "c2b"],
+      );
+      assert.deepEqual(assembledRoles[2], ["user", "assistant", "tool", "tool", "assistant", "tool", "tool"]);
+      assert.deepEqual(assembledToolCallIds[2], ["c1a", "c1b", "c2a", "c2b"]);
     });
 
     it("defaults toolConcurrency to sequential dispatch", async () => {
@@ -529,6 +549,125 @@ describe("agent loop strategies", () => {
       await loop.run(ctx);
       assert.equal(events.some((event) => event.type === "error"), false, "validation failure raised an error event");
     });
+
+    it("dispatches bounded initial tool calls before parsing the artifact", async () => {
+      const seen: string[] = [];
+      const assembled: string[][] = [];
+      let generated = 0;
+      let active = 0;
+      let maxActive = 0;
+      const ctx = stubCtx({
+        input: "build",
+        inputMessages: [{ role: "user", content: [{ type: "text", text: "build" }] }],
+        toolConcurrency: 2,
+        assemble: async () => {
+          assembled.push(ctx.history.map((message) => message.role));
+          return { model: { provider: "mock", model: "demo" }, messages: ctx.history };
+        },
+        generate: async () => {
+          generated += 1;
+          return generated === 1
+            ? {
+                content: [toolCallContent("lookup-1", "read", {}), toolCallContent("lookup-2", "read", {})],
+                calls: [toolCallContent("lookup-1", "read", {}), toolCallContent("lookup-2", "read", {})],
+                messageId: "m1",
+                started: true,
+              }
+            : { content: [{ type: "text", text: "artifact" }], calls: [], messageId: "m2", started: true };
+        },
+        dispatchToolCall: async (call) => {
+          active += 1;
+          maxActive = Math.max(maxActive, active);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          active -= 1;
+          return { toolCallId: call.id, name: call.name, value: "reference" };
+        },
+        emit: () => {},
+      });
+      await generateValidateReviseLoop({ toolCalls: "bounded", maxRevisions: 0, validator: (value) => { seen.push(String(value)); return { ok: true }; } }).run(ctx);
+      assert.deepEqual(seen, ["artifact"]);
+      assert.equal(generated, 2);
+      assert.equal(maxActive, 1, "artifact tools stay sequential");
+      assert.deepEqual(assembled[1], ["user", "assistant", "tool", "tool"]);
+      assert.deepEqual(ctx.history.map((message) => message.role), ["user", "assistant", "tool", "tool", "assistant"]);
+    });
+
+    it("shares tool-round budget across revisions and preserves candidate budget", async () => {
+      const validated: string[] = [];
+      const calls: string[] = [];
+      let generated = 0;
+      const ctx = stubCtx({
+        maxToolRounds: 2,
+        generate: async () => {
+          generated += 1;
+          if (generated === 1) return { content: [{ type: "text", text: "bad" }], calls: [], started: true };
+          if (generated === 2) return { content: [toolCallContent("repair-lookup", "read", {})], calls: [toolCallContent("repair-lookup", "read", {})], started: true };
+          if (generated === 3) return { content: [toolCallContent("final-lookup", "read", {})], calls: [toolCallContent("final-lookup", "read", {})], started: true };
+          return { content: [{ type: "text", text: "good" }], calls: [], started: true };
+        },
+        dispatchToolCall: async (call) => { calls.push(call.id); return { toolCallId: call.id, name: call.name, value: "ok" }; },
+        emit: () => {},
+      });
+      await generateValidateReviseLoop({
+        toolCalls: "bounded",
+        maxRevisions: 1,
+        validator: (value) => { validated.push(String(value)); return { ok: value === "good", errors: [{ message: "bad" }] }; },
+      }).run(ctx);
+      assert.deepEqual(validated, ["bad", "good"]);
+      assert.deepEqual(calls, ["repair-lookup", "final-lookup"]);
+      assert.equal(generated, 4, "1 + maxRevisions + maxToolRounds");
+      assert.equal(ctx.history.filter((message) => message.role === "user").length, 1, "tool rounds do not create repairs");
+    });
+
+    it("fails closed without dispatching a tool round beyond the shared limit", async () => {
+      const events: AgentEvent[] = [];
+      const calls: string[] = [];
+      let generated = 0;
+      const ctx = stubCtx({
+        maxToolRounds: 1,
+        generate: async () => {
+          generated += 1;
+          const call = toolCallContent(`c${generated}`, "read", {});
+          return { content: [call], calls: [call], started: true };
+        },
+        dispatchToolCall: async (call) => { calls.push(call.id); return { toolCallId: call.id, name: call.name }; },
+        emit: (event) => events.push(event),
+      });
+      await generateValidateReviseLoop({ toolCalls: "bounded", maxRevisions: 0, validator: () => ({ ok: true }) }).run(ctx);
+      assert.equal(generated, 2);
+      assert.deepEqual(calls, ["c1"]);
+      const failure = events.find((event) => event.type === "artifact_failed");
+      assert.deepEqual(failure?.type === "artifact_failed" ? failure.result.metadata : undefined, { reason: "tool_round_limit" });
+    });
+
+    it("aborts after bounded dispatch without another provider turn", async () => {
+      const controller = new AbortController();
+      let generated = 0;
+      const call = toolCallContent("abort", "read", {});
+      const ctx = stubCtx({
+        signal: controller.signal,
+        generate: async () => { generated += 1; return { content: [call], calls: [call], started: true }; },
+        dispatchToolCall: async () => {
+          controller.abort(new Error("stop artifact tools"));
+          return { toolCallId: "abort", name: "read" };
+        },
+        emit: () => {},
+      });
+      await assert.rejects(() => generateValidateReviseLoop({ toolCalls: "bounded", validator: () => ({ ok: true }) }).run(ctx), /stop artifact tools/);
+      assert.equal(generated, 1);
+    });
+
+    it("keeps tool calls inert unless bounded mode is explicitly selected", async () => {
+      let dispatched = 0;
+      const call = toolCallContent("inert", "read", {});
+      const ctx = stubCtx({
+        generate: async () => ({ content: [call], calls: [call], started: true }),
+        dispatchToolCall: async () => { dispatched += 1; throw new Error("must stay inert"); },
+        emit: () => {},
+      });
+      await generateValidateReviseLoop({ validator: (value) => ({ ok: value === "" }) }).run(ctx);
+      assert.equal(dispatched, 0);
+    });
   });
 
   describe("generateValidateReviseLoop end-to-end via RuntimeAgentSession", () => {
@@ -570,6 +709,42 @@ describe("agent loop strategies", () => {
       assert.equal(events.some((event) => event.type === "error"), false);
     });
 
+    it("uses runtime tool guards and redacts bounded artifact-tool transcripts", async () => {
+      const secret = "bounded-artifact-secret";
+      const requests: ProviderRequest[] = [];
+      let generated = 0;
+      let executed = 0;
+      const provider: AIProvider = {
+        id: "mock",
+        async *generate(request) {
+          requests.push(request);
+          generated += 1;
+          if (generated === 1) yield { type: "tool_call", call: toolCallContent("blocked", "read", { token: secret }) };
+          else yield providerTextDelta("good");
+          yield providerDone();
+        },
+      };
+      const store = createMemorySessionStore();
+      const agent = createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        store,
+        redactor: createSecretRedactor([secret]),
+        tools: [{ name: "read", execute: () => { executed += 1; return { toolCallId: "blocked", name: "read" }; } }],
+        validator: () => `blocked ${secret}`,
+      });
+      const session = agent.createSession({ id: "s-bounded-artifact-tools" });
+      const reader = collect(session.subscribe());
+      await session.run("build", { maxToolRounds: 1, loop: { strategy: "generate-validate-revise", toolCalls: "bounded", validator: (value) => ({ ok: value === "good" }) } });
+      const events = await reader;
+      assert.equal(executed, 0);
+      assert.equal(generated, 2);
+      assert.equal(events.some((event) => event.type === "tool_execution_blocked"), true);
+      assert.equal(JSON.stringify(events).includes(secret), false);
+      assert.equal(JSON.stringify(requests[1]).includes(secret), false);
+      assert.equal(JSON.stringify(await store.list("s-bounded-artifact-tools")).includes(secret), false);
+    });
+
     it("revision with redactor reaches second provider request without duplicate repair messages", async () => {
       const secret = "SUPERSECRET-api-key";
       const requests: ProviderRequest[] = [];
@@ -601,6 +776,8 @@ describe("agent loop strategies", () => {
       const revisionRequest = requests[1]!;
       const repairMessages = revisionRequest.messages.filter((message) => message.role === "user");
       assert.equal(repairMessages.length, 2, "expected original user prompt plus one repair message");
+      const repairTexts = repairMessages.map((message) => message.content[0]?.type === "text" ? message.content[0].text : undefined);
+      assert.deepEqual(repairTexts, ["build", "fix [REDACTED]"]);
       assert.equal(JSON.stringify(revisionRequest).includes(secret), false);
       assert.equal(JSON.stringify(revisionRequest).includes("[Circular]"), false);
     });

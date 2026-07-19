@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import {
   PERSISTENCE_SCHEMA_VERSION,
   assertAdapterSchemaMatchesModel,
+  assertAppliedPersistenceMigrations,
   assertMigrationUpAndReopen,
+  assertPersistenceSchemaShape,
   assertParameterizedQuery,
   assertPersistenceMigrationContract,
   assertPersistenceQueryPaginationConforms,
@@ -22,7 +24,7 @@ void describe("persistence schema model", () => {
     assert.equal(model.version, PERSISTENCE_SCHEMA_VERSION);
     assertPersistenceSchemaModel(model);
     assert.ok(model.tables.some((table) => table.name === "prism_session_append_idempotency"));
-    assert.ok(model.indexes.some((index) => index.unique && index.table === "prism_session_append_idempotency"));
+    assert.deepEqual(model.tables.find((table) => table.name === "prism_session_append_idempotency")?.primaryKey, ["session_id", "expected_parent_id", "idempotency_key"]);
   });
 
   it("documents pagination cursors for indexed reads", () => {
@@ -36,9 +38,42 @@ void describe("persistence schema model", () => {
     assertPersistenceMigrationContract(contract);
     assertMigrationUpAndReopen(
       contract,
-      [{ name: "001_init", version: "1" }, { name: "002_usage_scope", version: "2" }, { name: "003_run_feedback", version: "3" }],
-      [{ name: "001_init", version: "1" }, { name: "002_usage_scope", version: "2" }, { name: "003_run_feedback", version: "3" }],
+      contract.steps.map((step) => ({ name: step.name, version: String(step.version), checksum: step.checksum })),
+      contract.steps.map((step) => ({ name: step.name, version: String(step.version), checksum: step.checksum })),
     );
+  });
+
+  it("rejects migration history drift and permits only complete legacy checksum backfill", () => {
+    const contract = createPersistenceMigrationContract();
+    const valid = contract.steps.map((step) => ({ name: step.name, version: String(step.version), checksum: step.checksum }));
+    assert.deepEqual(assertAppliedPersistenceMigrations(contract, valid), { legacyChecksums: false });
+    assert.deepEqual(assertAppliedPersistenceMigrations(contract, valid.map((step) => ({ ...step, checksum: null }))), { legacyChecksums: true });
+    assert.throws(() => assertAppliedPersistenceMigrations(contract, [{ ...valid[0]!, checksum: "bad" }]), /checksum mismatch/);
+    assert.throws(() => assertAppliedPersistenceMigrations(contract, [valid[1]!, valid[0]!]), /does not match/);
+    assert.throws(() => assertAppliedPersistenceMigrations(contract, [...valid.slice(0, 2), { ...valid[2]!, checksum: null }]), /incomplete legacy/);
+  });
+
+  it("compares complete normalized schema shape", () => {
+    const model = createPersistenceSchemaModel();
+    const shape = {
+      tables: model.tables.map((table) => ({
+        name: table.name,
+        columns: table.columns.map((column) => ({
+          name: column.name,
+          type: column.type === "integer" || column.type === "boolean" ? "INTEGER" : column.type === "number" ? "REAL" : "TEXT",
+          nullable: column.nullable === true,
+          defaultValue: column.defaultValue,
+        })),
+        primaryKey: table.primaryKey,
+        uniqueKeys: table.uniqueKeys ?? [],
+        foreignKeys: table.foreignKeys ?? [],
+      })),
+      indexes: model.indexes.map((index) => ({ name: index.name, table: index.table, columns: index.columns, unique: index.unique === true })),
+    };
+    assert.doesNotThrow(() => assertPersistenceSchemaShape(shape, "sqlite", model));
+    const drifted = structuredClone(shape);
+    drifted.tables.find((table) => table.name === "prism_usage")!.columns.find((column) => column.name === "scope")!.defaultValue = "'turn'";
+    assert.throws(() => assertPersistenceSchemaShape(drifted, "sqlite", model), /incompatible default/);
   });
 
   it("adapter schema matcher requires canonical tables and indexes", () => {

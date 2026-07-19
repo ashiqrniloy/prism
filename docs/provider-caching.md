@@ -21,6 +21,7 @@ Use this page when a host or provider package needs to:
 - Carry a stable cache key across turns without putting provider-specific fields in core.
 - Read `ModelConfig.cache` to decide whether to map hints to implicit caching, key-based caching, cache-control breakpoints, provider-specific caching, or no caching.
 - Compute normalized cache diagnostics from `Usage.cacheReadTokens` / `Usage.cacheWriteTokens`, including providers that only report reads.
+- Understand when **caller-gated model discovery** may fill `ModelConfig.cache` / `ModelConfig.cost` from a live `/models` response (see [Discovery and live cache/cost metadata](#discovery-and-live-cache-cost-metadata)).
 
 Do not use cache keys for credentials, bearer tokens, API keys, OAuth tokens, user secrets, or raw private prompts.
 
@@ -145,21 +146,23 @@ Provider request policies can set `ProviderRequestOptions.cache` or the legacy `
 | Provider package | Cache kind | Explicit cache hints | Multi-turn reuse notes | Caveats |
 | --- | --- | --- | --- | --- |
 | `@arnilo/prism-provider-openai` | `openai_key` | Sends sanitized `prompt_cache_key`; `prompt_cache_retention: "24h"` only when the model declares `longRetention`. | Stable cache key + stable prefix can improve reuse. | Best-effort only; `"short"`/`"none"` omit retention. |
-| `@arnilo/prism-provider-openrouter` | `cache_control` | Applies `cache_control` markers only to caller-selected `cache.breakpoints`; `"long"` may add `ttl: "1h"`. | Breakpoint-stable prefixes can be reused by upstream providers. | Best-effort only; no marker is added to every block. |
+| `@arnilo/prism-provider-openrouter` | `cache_control` | Top-level automatic `cache_control` when enabled without breakpoints; otherwise markers only on caller-selected `cache.breakpoints`; `"long"` may add `ttl: "1h"`. Sticky `session_id` routing. | Breakpoint-stable / automatic prefixes can be reused by upstream providers. | Best-effort only; top-level automatic may exclude some backends from routing. |
 | `@arnilo/prism-provider-opencode-go` | route-specific | Sends sanitized `x-opencode-session`; Anthropic route applies selected `cache_control` breakpoints; OpenAI route sends none. | Session id + unchanged selected anchors can help route-native caches. | Best-effort and route-dependent. |
 | `@arnilo/prism-provider-zai` | `implicit` | No explicit cache payload; GLM context caching is automatic. | Resend unchanged prior history for implicit context-cache reuse. | Best-effort only; cache options do not force hits. |
 | `@arnilo/prism-provider-kimi` | implicit by default, optional `cache_control` | Default catalog models send no `cache_control`; hosts may opt in on Anthropic `/messages` models with `ModelConfig.cache.kind: "cache_control"`. | Keep selected Anthropic anchors and prior history stable. | Best-effort and model/route-dependent. |
 | `@arnilo/prism-provider-neuralwatt` | `implicit` | No `cache_control`, `cacheKey`, `prompt_cache`, or `cacheRetention` payload; NeuralWatt vLLM prefix caching is automatic. | Full prior history must be resent unchanged with only the new turn appended; `inputLayout: "cache_aware"` keeps stable prefixes first. | Best-effort only; does not promise cache hits; `cacheRetention: "none"` disables Prism hints only, not the implicit backend prefix cache. |
+| `@arnilo/prism-provider-ai-sdk` | host-owned | No Prism cache payload; host `LanguageModelV4` owns upstream caching. | Host model/provider decides cache keys, breakpoints, and sticky routing. | Adapter maps `inputTokens.cacheRead`/`cacheWrite` from `finish.usage` only; does not invent cache fields. |
 
 Detailed first-party provider notes:
 
-- OpenAI Responses (`@arnilo/prism-provider-openai`): `kind: "openai_key"`. Sanitizes/clamps `prompt_cache_key` to 64 chars; `"long"` retention maps to `prompt_cache_retention: "24h"` only when the model declares `cache.longRetention`; `"short"`/`"none"` omit the field. `input_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
+- OpenAI Responses (`@arnilo/prism-provider-openai`): `kind: "openai_key"`. Sanitizes/clamps `prompt_cache_key` to 64 chars; `"long"` retention maps to `prompt_cache_retention: "24h"` only when the model declares `cache.longRetention`; `"short"`/`"none"` omit the field. GPT-5.6+ official docs use `prompt_cache_options` / breakpoints instead of retention — `listOpenAIModels` sets `longRetention: false` for those ids. `input_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
 - OpenAI-compatible Chat Completions adapter: minimal scope, sends no cache payload; see [OpenAI-compatible provider](providers/openai-compatible.md).
-- OpenRouter (`@arnilo/prism-provider-openrouter`): `kind: "cache_control"`. Sanitizes/clamps `session_id`/`X-Session-Id` to 256 chars; applies Anthropic-style `cache_control` markers only to caller-selected `cache.breakpoints` (last content block of each selected message), not every block; `"long"` retention adds `ttl: "1h"` when the model allows it. `prompt_tokens_details.cached_tokens`/`cache_write_tokens` map to `Usage.cacheReadTokens`/`cacheWriteTokens`.
-- OpenCode Go (`@arnilo/prism-provider-opencode-go`): `x-opencode-session` from `cacheKey ?? sessionId`, sanitized to 128 chars; the Anthropic route applies `cache_control` markers only to selected breakpoints (`"long"` → `ttl: "1h"`), the OpenAI route sends none. OpenAI route maps `prompt_tokens_details.cached_tokens`/`cache_write_tokens`; Anthropic route maps `cache_read_input_tokens`/`cache_creation_input_tokens`.
+- OpenRouter (`@arnilo/prism-provider-openrouter`): `kind: "cache_control"`. Sanitizes/clamps `session_id`/`X-Session-Id` to 256 chars for sticky routing; with no breakpoints emits top-level automatic `cache_control: { type: "ephemeral" }`; with breakpoints applies Anthropic-style markers only to caller-selected locations (last content block of each selected message); `"long"` retention adds `ttl: "1h"` when the model allows it. `prompt_tokens_details.cached_tokens`/`cache_write_tokens` map to `Usage.cacheReadTokens`/`cacheWriteTokens`. Optional `listOpenRouterModels()` may populate `ModelConfig.cache`/`cost` from live pricing.
+- OpenCode Go (`@arnilo/prism-provider-opencode-go`): default base `https://opencode.ai/zen/go/v1`; `x-opencode-session` from `cacheKey ?? sessionId`, sanitized to 128 chars; the Anthropic route (MiniMax/Qwen) applies `cache_control` markers only to selected breakpoints (`"long"` → `ttl: "1h"`), the OpenAI route (Grok/GLM/Kimi/MiMo/DeepSeek) sends none and preserves `reasoning_content`. OpenAI route maps `prompt_tokens_details.cached_tokens`/`cache_write_tokens`; Anthropic route maps `cache_read_input_tokens`/`cache_creation_input_tokens`. Caller-gated `listOpenCodeGoModels` against official `GET /zen/go/v1/models`.
 - Z.AI (`@arnilo/prism-provider-zai`): `kind: "implicit"`. GLM context caching is automatic; sends no explicit cache payload regardless of cache options. `prompt_tokens_details.cached_tokens`/`cache_write_tokens` map to `Usage.cacheReadTokens`/`cacheWriteTokens`.
 - NeuralWatt (`@arnilo/prism-provider-neuralwatt`): `kind: "implicit"`. NeuralWatt prefix caching is automatic; sends no explicit cache payload regardless of cache options. `cacheRetention: "none"` disables Prism cache-control hints only (not the implicit backend prefix cache). `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`; NeuralWatt does not report a cache-write token, so `Usage.cacheWriteTokens` is never fabricated (stays `undefined`). NeuralWatt's `/v1/models` catalog advertises exact `cached_input_per_million` rates for cache reads and `cached_output_per_million: null`; static curated aliases do not guess those prices.
 - Kimi (`@arnilo/prism-provider-kimi`): default catalog models use implicit caching (no `cache_control`); hosts opt in via `ModelConfig.cache.kind: "cache_control"` on the Anthropic `/messages` route, then `cache_control` markers apply only to selected breakpoints (`"long"` → `ttl: "1h"`); the Moonshot OpenAI route sends none. `cache_read_input_tokens`/`cache_creation_input_tokens` map to `Usage.cacheReadTokens`/`cacheWriteTokens`.
+- AI SDK adapter (`@arnilo/prism-provider-ai-sdk`): **host-owned**. Sends no Prism cache payload; the supplied `LanguageModelV4` and its upstream provider own request caching. Maps AI SDK v4 `finish.usage.inputTokens.cacheRead`/`cacheWrite` to `Usage.cacheReadTokens`/`cacheWriteTokens`. No `list*Models()` export.
 
 ### NeuralWatt cache-aware limiter
 
@@ -184,6 +187,15 @@ sessions differently from one-shot chat:
 
 See [NeuralWatt provider](providers/neuralwatt.md) for the package-level cache,
 usage, and retry details.
+
+## Discovery and live cache/cost metadata
+
+Caller-gated `list*Models()` helpers (see [Provider packages — Caller-gated model discovery](provider-packages.md#caller-gated-model-discovery)) may map official list-models fields onto `ModelConfig`:
+
+- `cache` — when the provider documents cache kind / long-retention / breakpoint support in model metadata (otherwise keep the package's known default, e.g. NeuralWatt/Z.AI `implicit`, OpenAI `openai_key`).
+- `cost` — when the provider documents per-token or per-million rates, including cache-read rates such as NeuralWatt `cached_input_per_million`.
+
+Static featured catalogs remain offline bootstrap and must **not** invent pricing or cache capabilities the official docs do not state. Discovery is never invoked by `create*ProviderPackage()`; hosts that want live `cost`/`cache` pass the returned models into package `models:` (or register them themselves).
 
 ## Security and performance notes
 

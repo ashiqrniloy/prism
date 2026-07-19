@@ -56,7 +56,7 @@ import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Closes the underlying database when the adapter opened it. |
 
-Migrations run automatically on open and are idempotent across reopen.
+Migrations run automatically on open and are idempotent across reopen. Under the SQLite migration transaction, startup checks ordered contract name/version/SHA-256 rows plus full schema-v3 PRAGMA/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
 
 ## Request/response example
 
@@ -109,7 +109,7 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - **No path interpolation.** The adapter opens exactly the caller-supplied `filename`; it does not expand environment variables or discover paths.
 - **Redaction upstream.** Event and tool-call payloads may contain secrets; redact before ledger writes. The adapter does not scan or rewrite row contents.
 - **WAL + busy timeout.** WAL is enabled by default; busy timeout defaults to 5 seconds. This meets the Plan 056 local workload target but SQLite still serializes writers — prefer PostgreSQL for high write concurrency.
-- **Indexed operations.** Append, parent validation, idempotency dedup, branch reads, and pagination use the indexes documented in [Database persistence](database-persistence.md); normal paths avoid whole-database scans.
+- **Indexed operations.** Append, parent validation, idempotency dedup, branch reads, and pagination use the indexes documented in [Database persistence](database-persistence.md); normal paths avoid whole-database scans. Startup validation reads SQLite catalog/PRAGMA metadata only, never application rows.
 - **Tenant isolation.** `tenant_id` / `account_id` / `user_id` columns on run and ownership tables participate in query filters; hosts must still scope writes correctly.
 
 ## Related APIs

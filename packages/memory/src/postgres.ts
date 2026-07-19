@@ -5,6 +5,7 @@ import { buildMemoryDdl, DEFAULT_MEMORY_SCHEMA } from "./postgres-ddl.js";
 import { qualifyTable, validateIdentifier } from "./postgres-identifiers.js";
 import {
   assertByteLimit,
+  assertFiniteVector,
   assertNotAborted,
   assertTextLimit,
   cloneJsonObject,
@@ -193,9 +194,7 @@ export async function createPostgresMemoryStores(
           requireScope(record, true);
           requireNonEmptyString(record.id, "id");
           assertTextLimit(record.text, maxEntryTextChars, "vector text");
-          if (dimensions !== undefined && record.embedding.length !== dimensions) {
-            throw new MemoryLimitError(`embedding length ${record.embedding.length} != ${dimensions}`);
-          }
+          assertFiniteVector(record.embedding, "embedding", dimensions);
           await client.query(
             `INSERT INTO ${semanticTable}
               (tenant_id, resource_id, thread_id, id, text, embedding, sequence, metadata, created_at)
@@ -228,6 +227,7 @@ export async function createPostgresMemoryStores(
     async query(query: VectorQuery) {
       assertNotAborted(query.signal);
       const scope = requireScope(query, true) as Required<WorkingMemoryKey> & { threadId: string };
+      assertFiniteVector(query.embedding, "query embedding", dimensions);
       const result = await pool.query(
         `SELECT tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, created_at,
                 1 - (embedding <=> $4::vector) AS score
@@ -294,6 +294,9 @@ function mapWorkingRow(row: Record<string, unknown>): WorkingMemoryRecord {
 }
 
 function mapVectorRow(row: Record<string, unknown>, score?: number): MemoryVectorRecord | MemoryVectorHit {
+  const embedding = parseVectorLiteral(String(row.embedding));
+  assertFiniteVector(embedding, "stored embedding");
+  if (score !== undefined && !Number.isFinite(score)) throw new MemoryValidationError("stored vector score must be finite");
   const metadata =
     row.metadata == null
       ? undefined
@@ -304,7 +307,7 @@ function mapVectorRow(row: Record<string, unknown>, score?: number): MemoryVecto
     threadId: String(row.thread_id),
     id: String(row.id),
     text: String(row.text),
-    embedding: parseVectorLiteral(String(row.embedding)),
+    embedding,
     sequence: Number(row.sequence),
     createdAt: new Date(String(row.created_at)).toISOString(),
     ...(metadata ? { metadata } : {}),
@@ -313,6 +316,7 @@ function mapVectorRow(row: Record<string, unknown>, score?: number): MemoryVecto
 }
 
 function toVectorLiteral(values: readonly number[]): string {
+  assertFiniteVector(values, "embedding");
   return `[${values.join(",")}]`;
 }
 

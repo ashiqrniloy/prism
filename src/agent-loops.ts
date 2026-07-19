@@ -1,5 +1,6 @@
 import type { AgentInput } from "./input.js";
 import { inputMessages } from "./input.js";
+import { createId } from "./ids.js";
 import type {
   AgentEvent,
   AgentLoopOptions,
@@ -77,15 +78,14 @@ function defaultRepairer<T>(): ArtifactRepairer<T> {
 }
 
 // ponytail: GenerateValidateReviseLoop reuses LoopContext primitives only —
-// no provider/retry/store/event re-implementation. T is host-defined, Prism
-// never instantiates it. No tools in artifact revisions (roadmap scope is
-// generate→validate→revise; tool coupling deferred). Phase 28 fires
-// artifact_* events at the marked seams (noop here).
+// no provider/retry/store/event re-implementation. Bounded artifact tools use
+// same dispatcher at concurrency one; add parallelism only with ordering need.
 export function generateValidateReviseLoop(opts: {
   readonly validator: ArtifactValidator<unknown>;
   readonly parser?: ArtifactParser<unknown>;
   readonly repairer?: ArtifactRepairer<unknown>;
   readonly maxRevisions?: number;
+  readonly toolCalls?: "disabled" | "bounded";
 }): AgentLoopStrategy {
   const max = opts.maxRevisions ?? 3;
   const repairer = opts.repairer ?? defaultRepairer<unknown>();
@@ -95,13 +95,15 @@ export function generateValidateReviseLoop(opts: {
       let usage: Usage | undefined;
       let nextInput: AgentInput = ctx.input;
       let pendingHistory: Message[] = [];
+      let toolRounds = 0;
+      let attempts = 0;
 
-      for (let turn = 1; turn <= max + 1; turn += 1) {
+      for (let turn = 1; attempts <= max; turn += 1) {
         throwIfAborted(ctx.signal);
         ctx.emit({ type: "turn_started", sessionId: ctx.sessionId, runId: ctx.runId, turn });
         const request = await ctx.assemble(nextInput, undefined, turn);
         throwIfAborted(ctx.signal);
-        const { content, messageId, started, usage: turnUsage } = await ctx.generate(request);
+        const { content, calls, messageId, started, usage: turnUsage } = await ctx.generate(request);
         usage = turnUsage ?? usage;
 
         if (pendingHistory.length > 0) {
@@ -117,10 +119,18 @@ export function generateValidateReviseLoop(opts: {
         }
         ctx.emit({ type: "turn_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn });
 
-        const text = content
-          .filter((b): b is TextContent => b.type === "text")
-          .map((b) => b.text)
-          .join("");
+        if (opts.toolCalls === "bounded" && calls.length > 0) {
+          if (toolRounds >= ctx.maxToolRounds) {
+            const result = { ok: false as const, errors: [{ message: "maximum tool rounds exceeded" }], metadata: { reason: "tool_round_limit" } };
+            ctx.emit({ type: "artifact_failed", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt: attempts + 1, result });
+            return usage;
+          }
+          toolRounds += 1;
+          await dispatchToolCallsInOrder(calls, { ...ctx, toolConcurrency: 1 });
+          nextInput = [];
+          continue;
+        }
+
         const artifactCtx: ArtifactContext = {
           sessionId: ctx.sessionId,
           runId: ctx.runId,
@@ -128,7 +138,10 @@ export function generateValidateReviseLoop(opts: {
           signal: ctx.signal,
           metadata: ctx.metadata,
         };
-
+        const text = content
+          .filter((b): b is TextContent => b.type === "text")
+          .map((b) => b.text)
+          .join("");
         const parsed = opts.parser
           ? await opts.parser(text, artifactCtx)
           : { ok: true as const, value: text };
@@ -136,7 +149,7 @@ export function generateValidateReviseLoop(opts: {
         // Parse failure ends the loop silently (terminal parse errors stay on `error`).
         if (!parsed.ok || parsed.value === undefined) return usage;
 
-        const attempt = turn;
+        const attempt = ++attempts;
         ctx.emit({ type: "artifact_validation_started", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt });
         const result = await opts.validator(parsed.value, artifactCtx);
         ctx.emit({ type: "artifact_validation_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
@@ -144,7 +157,7 @@ export function generateValidateReviseLoop(opts: {
           ctx.emit({ type: "artifact_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
           return usage;
         }
-        if (turn > max) {
+        if (attempt > max) {
           ctx.emit({ type: "artifact_failed", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
           return usage;
         }
@@ -154,7 +167,6 @@ export function generateValidateReviseLoop(opts: {
         for (const message of repairMessages) await ctx.appendMessage(message);
         pendingHistory = repairMessages;
         nextInput = repairMessages;
-        continue;
       }
 
       return usage;
@@ -227,6 +239,7 @@ export function resolveLoop(options: { loop?: AgentLoopStrategy | AgentLoopOptio
         parser: loop.parser,
         repairer: loop.repairer,
         maxRevisions: loop.maxRevisions,
+        toolCalls: loop.toolCalls,
       });
     }
     throw new Error(`Unknown agent loop strategy: ${strategy}`);
@@ -234,6 +247,4 @@ export function resolveLoop(options: { loop?: AgentLoopStrategy | AgentLoopOptio
   return loop;
 }
 
-function randomId(prefix: string): string {
-  return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
-}
+const randomId = createId;

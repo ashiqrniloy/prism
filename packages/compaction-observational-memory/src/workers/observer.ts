@@ -1,11 +1,12 @@
 import type { AIProvider, ModelConfig, ProviderRequestOptions, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
+import { resolveMemoryWorkerLimits, type MemoryWorkerLimitOptions } from "../limits.js";
 import { serializeSourceEntries } from "../serialize.js";
 import { estimateTextTokens } from "../tokens.js";
 import { isMemoryObservation, type MemoryObservation } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
-export interface RunObserverOptions {
+export interface RunObserverOptions extends MemoryWorkerLimitOptions {
   readonly entries: readonly SessionEntry[];
   readonly provider: AIProvider;
   readonly model: ModelConfig;
@@ -32,6 +33,7 @@ export async function runObserver(options: RunObserverOptions): Promise<readonly
       return { toolCallId: context.toolCallId, name: "record_observation", value: { ok: true } };
     },
   };
-  await runMemoryWorkerLoop({ ...options, system: "Find durable source-backed facts from this coding session. Call record_observation for each useful fact.", prompt: serializeSourceEntries(options.entries, options.secrets), tools: [tool] });
+  const limits = resolveMemoryWorkerLimits(options);
+  await runMemoryWorkerLoop({ ...options, system: "Find durable source-backed facts from this coding session. Call record_observation for each useful fact.", prompt: serializeSourceEntries(options.entries, options.secrets, limits.maxMessageBytes), tools: [tool] });
   return observations;
 }

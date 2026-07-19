@@ -5,7 +5,19 @@ All notable changes to @arnilo/prism-provider-opencode-go will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+### Changed
+
+- Default base URL is now official `https://opencode.ai/zen/go/v1` (was `https://api.opencode.ai/v1`).
+- Featured catalog refreshed to official Go open coding models (Grok/GLM/Kimi/MiMo/MiniMax/Qwen/DeepSeek); removed stale Zen-style `gpt-5.1-go` / `claude-sonnet-4.5-go` aliases.
+- Anthropic route assigned to MiniMax + Qwen per official endpoint table; OpenAI route for all others.
+- OpenAI route preserves thinking as `reasoning_content` (never folds into text); Anthropic preserveThinking uses shared helper; owned compat keys stripped before opaque spreads.
+
+### Added
+
+- Caller-gated `listOpenCodeGoModels` / `mapOpenCodeGoModel` / `defineOpenCodeGoModel` / `routeForOpenCodeGoModel` against official `GET /zen/go/v1/models`.
+- Thinking helpers: `openCodeGoThinking`, `openCodeGoReasoningEffort`, `openCodeGoReasoning`, `openCodeGoPreserveThinking`, `stripOpenCodeGoOwnedCompat`.
 
 ## [0.0.5] - 2026-07-16
 

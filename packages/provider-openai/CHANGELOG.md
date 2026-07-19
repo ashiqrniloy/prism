@@ -5,7 +5,18 @@ All notable changes to @arnilo/prism-provider-openai will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+### Added
+
+- Caller-gated `listOpenAIModels()` / `mapOpenAIModel()` / `defineOpenAIModel()` against official `GET /models`.
+- `createOpenAIProviderPackage({ models?, codexModels? })` catalog overrides.
+
+### Fixed
+
+- Responses input serialization: assistant history uses `output_text`; `function_call` items are top-level with `call_id`.
+- SSE tool streaming accepts official string `delta` on `response.function_call_arguments.delta`.
+- First-class `reasoning` merge from model + per-turn `compat.reasoning`.
 
 ## [0.0.5] - 2026-07-16
 

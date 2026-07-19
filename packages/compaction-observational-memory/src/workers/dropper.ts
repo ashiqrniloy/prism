@@ -1,8 +1,9 @@
 import type { AIProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
+import { joinWorkerText, resolveMemoryWorkerLimits, type MemoryWorkerLimitOptions } from "../limits.js";
 import { type MemoryObservation } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
-export interface RunDropperOptions {
+export interface RunDropperOptions extends MemoryWorkerLimitOptions {
   readonly observations: readonly MemoryObservation[];
   readonly targetTokens: number;
   readonly provider: AIProvider;
@@ -30,7 +31,12 @@ export async function runDropper(options: RunDropperOptions): Promise<readonly s
       return { toolCallId: context.toolCallId, name: "drop_observations", value: { ok: true } };
     },
   };
-  const prompt = active.map((item) => `[${item.id}] (${item.tokenCount}) ${item.content}`).join("\n");
+  const limits = resolveMemoryWorkerLimits(options);
+  const prompt = joinWorkerText(observationLines(active), limits.maxMessageBytes, "Observational memory drop prompt");
   await runMemoryWorkerLoop({ ...options, system: `Drop enough observations to approach ${options.targetTokens} tokens. Call drop_observations.`, prompt, tools: [tool] });
   return [...dropped];
+}
+
+function* observationLines(observations: readonly MemoryObservation[]): Generator<string> {
+  for (const item of observations) yield `[${item.id}] (${item.tokenCount}) ${item.content}`;
 }

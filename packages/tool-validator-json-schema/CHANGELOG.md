@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Bound untrusted schema bytes/depth/properties/keywords/refs before Ajv compilation, reject every non-local `$ref`, and use a finite LRU compiled-schema cache.
 
 ## [0.0.5] - 2026-07-16
 

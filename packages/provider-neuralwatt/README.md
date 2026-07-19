@@ -15,7 +15,7 @@ await kernel.load([createNeuralWattProviderPackage({ apiKey: "fake-neuralwatt-ke
 - `createNeuralWattProviderPackage()` — inert provider package (provider + models + `api_key` auth).
 - `createNeuralWattProvider()` — raw provider adapter.
 - `defineNeuralWattModel()` — add custom NeuralWatt model configs.
-- `neuralWattModels` — curated registry of NeuralWatt featured aliases (`glm-5.2`, `glm-5.2-fast`, `glm-5.2-short`, `glm-5.2-short-fast`, `kimi-k2.6`, `kimi-k2.6-fast`, `kimi-k2.7-code`, `qwen3.5-397b`, `qwen3.5-397b-fast`, `qwen3.6-35b`, `qwen3.6-35b-fast`) plus the legacy `kimi-k2` entry.
+- `neuralWattModels` — curated registry of official NeuralWatt featured aliases (`glm-5.2`, `glm-5.2-fast`, `glm-5.2-short`, `glm-5.2-short-fast`, `gemma-4-31b`, `kimi-k2.6`, `kimi-k2.6-fast`, `kimi-k2.7-code`, `qwen3.5-397b`, `qwen3.5-397b-fast`, `qwen3.6-35b`, `qwen3.6-35b-fast`).
 - `listNeuralWattModels()` — explicit one-call `/v1/models` discovery helper that maps returned aliases to `ModelConfig`/`ModelCost`.
 - `getNeuralWattQuota()` — explicit one-call `/v1/quota` helper returning typed account quota (`balance`, `usage`, `limits`, `subscription`, `key`). Requires an API key; caller owns throttling (1 rps per customer).
 - `neuralWattBody()` / `neuralWattEvents()` / `toUsage()` — serializer, SSE parser, usage mapper.
@@ -24,7 +24,8 @@ await kernel.load([createNeuralWattProviderPackage({ apiKey: "fake-neuralwatt-ke
 - `classifyNeuralWattError()` / `neuralWattHttpError()` — retry classifier for NeuralWatt status codes, `Retry-After`, and `retry_strategy`.
 
 NeuralWatt-specific request fields flow through `ProviderRequestOptions.compat`/`extra`:
-`reasoning_effort`, `thinking_token_budget`, `chat_template_kwargs`, `tool_choice`.
+`reasoning_effort`, `thinking_token_budget`, `chat_template_kwargs` (including
+`preserve_thinking` / `clear_thinking` per official gateway docs), and `tool_choice`.
 Default base URL: `https://api.neuralwatt.com/v1`.
 
 The static catalog records documented context windows, text/image input support, tool

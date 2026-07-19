@@ -67,6 +67,7 @@ console.log(config);
 
 - This loader is an explicit Node subpath. Importing `@arnilo/prism` does not read files or compute config layers.
 - Hosts choose which paths to read and which missing files are optional.
+- Optional missing files are detected with typed Node `error.code === "ENOENT"` via `isNodeErrorCode()` — not by matching `"ENOENT"` in `error.message`.
 - The loader returns `ConfigLayer[]`; use `mergeConfigLayers()` from the root package to combine layers.
 - It does not discover packages, scan directories, watch files, import extension modules, load manifests, or start agent/session runtime behavior.
 

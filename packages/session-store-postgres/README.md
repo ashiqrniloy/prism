@@ -31,6 +31,8 @@ await persistence.close();
 
 The same object satisfies session/run/query contracts and exposes `persistence.checkpoints` for versioned durable state and `persistence.leases` for database-clock claims with monotonic fencing. Workflow hosts pass that capability to `createWorkflowCheckpoints({ store })`.
 
+Open holds its existing per-schema advisory transaction lock while validating ordered SHA-256 migration history and complete schema-v3 catalog shape before runtime writes. Complete legacy v0.0.5 `NULL` checksums are shape-verified then backfilled transactionally; altered, partial, unknown, or mismatched history fails closed.
+
 ## Options
 
 | Field | Default | Purpose |
@@ -53,13 +55,13 @@ Shared suites:
 
 - `@arnilo/prism/testing/session-store-conformance` — append/idempotency/conflict/branch/reopen
 - `@arnilo/prism/testing/run-ledger-conformance` — run/event/tool/usage durability
-- `@arnilo/prism/testing/persistence-schema` — pagination and tenant isolation fixtures
+- `@arnilo/prism/testing/persistence-schema` — pagination, tenant isolation, migration checksums, and normalized full-schema shape fixtures
 
 ## Security
 
 - Schema/table identifiers are validated and double-quoted; values are always bound as query parameters.
 - Hosts own TLS configuration, credentials, and pool sizing via `pg` `Pool` / `PoolConfig`.
 - Redact secrets before `append` / ledger writes; the adapter stores rows as provided.
-- Migrations use `pg_advisory_xact_lock` to prevent concurrent setup races.
+- Migrations use `pg_advisory_xact_lock` to prevent concurrent setup races. Catalog reads cover metadata only, never application rows; repair schema/history drift through reviewed DDL or restore, not checksum edits.
 
 See [PostgreSQL persistence](../../docs/postgres-persistence.md) and [Database persistence](../../docs/database-persistence.md).

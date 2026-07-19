@@ -152,6 +152,7 @@ await runMemoryConformance(() => ({
 - Configure `secrets` / `redactor` so memory text and metadata cannot persist or inject raw canaries.
 - Injected context is inert text — it cannot grant tools or permissions.
 - Hard caps: top-K ≤ 32, messageRange ≤ 4, embed batch ≤ 128, injected tokens ≤ 8000, payload/working-memory byte limits enforced.
+- Every embedding is a non-empty finite number vector. `embedBatched()`, in-memory `VectorStore` upserts/queries, and PostgreSQL/pgvector parameters reject NaN, ±Infinity, non-numbers, and wrong configured dimensions before similarity scoring or SQL. Custom adapters can call `assertFiniteVector(vector, label, expectedLength?)` at their trust boundary.
 - Default `remember()` does not block agent completion; pass `{ wait: true }` when indexing must finish first.
 - PostgreSQL live suite is gated by `PRISM_TEST_POSTGRES_URL` and requires the `vector` extension.
 

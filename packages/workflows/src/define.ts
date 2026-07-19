@@ -1,15 +1,17 @@
 import { WorkflowDefinitionError } from "./errors.js";
 import {
   DEFAULT_MAX_NODES,
-  HARD_MAX_NESTED_DEPTH,
-  HARD_MAX_REPLAY_DEPTH,
-  HARD_MAX_STATE_BYTES,
-  HARD_MAX_STATE_HISTORY,
+  HARD_MAX_FAN_OUT,
+  HARD_MAX_NODE_RETRIES,
+  HARD_MAX_NODE_TIMEOUT_MS,
+  validateWorkflowLimit,
+  validateWorkflowLimits,
 } from "./limits.js";
 import type { WorkflowDefinition, WorkflowLimits, WorkflowNodeDefinition } from "./types.js";
 
 export interface DefineWorkflowInput {
   readonly id: string;
+  readonly revision: string;
   readonly nodes: Readonly<Record<string, WorkflowNodeDefinition>>;
   readonly edges?: readonly (readonly [string, string])[];
   readonly limits?: WorkflowLimits;
@@ -20,7 +22,10 @@ export interface DefineWorkflowInput {
 export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
   const id = input.id?.trim();
   if (!id) throw new WorkflowDefinitionError("Workflow id is required");
+  const revision = input.revision?.trim();
+  if (!revision) throw new WorkflowDefinitionError("Workflow revision is required");
 
+  validateWorkflowLimits(input.limits);
   const nodeIds = Object.keys(input.nodes);
   if (nodeIds.length === 0) throw new WorkflowDefinitionError("Workflow must declare at least one node");
 
@@ -29,7 +34,6 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
     throw new WorkflowDefinitionError(`Workflow exceeds maxNodes (${nodeIds.length} > ${maxNodes})`);
   }
 
-  validateLimits(input.limits);
   const nodeSet = new Set(nodeIds);
   const edges = input.edges ?? [];
   for (const [from, to] of edges) {
@@ -51,16 +55,20 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
     if (node.kind === "join" && node.from && !nodeSet.has(node.from)) {
       throw new WorkflowDefinitionError(`Join node "${nodeId}" references unknown node "${node.from}"`);
     }
-    if (node.retries !== undefined && (!Number.isInteger(node.retries) || node.retries < 0)) {
-      throw new WorkflowDefinitionError(`Node "${nodeId}" retries must be a non-negative integer`);
+    if (node.retries !== undefined && (!Number.isSafeInteger(node.retries) || node.retries < 0 || node.retries > HARD_MAX_NODE_RETRIES)) {
+      throw new WorkflowDefinitionError(`Node "${nodeId}" retries must be a non-negative safe integer at most ${HARD_MAX_NODE_RETRIES}`);
     }
-    if (node.timeoutMs !== undefined && (!Number.isFinite(node.timeoutMs) || node.timeoutMs <= 0)) {
-      throw new WorkflowDefinitionError(`Node "${nodeId}" timeoutMs must be a positive number`);
+    if (node.timeoutMs !== undefined) {
+      validateWorkflowLimit(`Node "${nodeId}" timeoutMs`, node.timeoutMs, HARD_MAX_NODE_TIMEOUT_MS);
+    }
+    if (node.kind === "fan_out" && node.maxFanOut !== undefined) {
+      validateWorkflowLimit(`Node "${nodeId}" maxFanOut`, node.maxFanOut, HARD_MAX_FAN_OUT);
     }
   }
 
   return Object.freeze({
     id,
+    revision,
     nodes: Object.freeze({ ...input.nodes }),
     edges: Object.freeze(edges.map(([from, to]) => Object.freeze([from, to] as const))),
     limits: input.limits ? Object.freeze({ ...input.limits }) : undefined,
@@ -71,22 +79,6 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
     }) : undefined,
     metadata: input.metadata ? Object.freeze({ ...input.metadata }) : undefined,
   });
-}
-
-function validateLimits(limits?: WorkflowLimits): void {
-  if (!limits) return;
-  const capped: readonly [keyof WorkflowLimits, number][] = [
-    ["maxNestedDepth", HARD_MAX_NESTED_DEPTH],
-    ["maxStateBytes", HARD_MAX_STATE_BYTES],
-    ["maxStateHistory", HARD_MAX_STATE_HISTORY],
-    ["maxReplayDepth", HARD_MAX_REPLAY_DEPTH],
-  ];
-  for (const [name, hardCap] of capped) {
-    const value = limits[name];
-    if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > hardCap)) {
-      throw new WorkflowDefinitionError(`${name} must be a positive safe integer at most ${hardCap}`);
-    }
-  }
 }
 
 function assertAcyclic(

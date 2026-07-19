@@ -23,6 +23,7 @@ import {
 const fileStore = await openEncryptedCredentialStore({
   path: "./credentials.vault",
   getPassphrase: () => process.env.PRISM_CREDENTIAL_PASSPHRASE!,
+  limits: { maxFileBytes: 4 * 1024 * 1024, maxVaultBytes: 3 * 1024 * 1024 },
 });
 
 const keychainStore = createKeychainCredentialStore({
@@ -49,16 +50,16 @@ await refreshOAuthCredential({
 | Encrypted file | CLI tools, local desktop hosts, CI fixtures |
 | System keychain | Desktop hosts with OS secret-service integration |
 
-Encrypted files use AES-256-GCM with scrypt (default `N=32768`, `r=8`, `p=1`) and atomic rename writes. Credential files default to mode `0600` on Unix.
+Encrypted files use AES-256-GCM with asynchronous scrypt (default `N=32768`, `r=8`, `p=1`) and bounded atomic rename writes. Envelopes/vaults default to 4 MiB/3 MiB limits (hard 16 MiB/12 MiB). Existing and new Unix files must deny group/other access; default mode is `0600`.
 
-Keychain entries are namespaced by `service`, optional `namespace`, provider, and account id. There is **no silent fallback** to plaintext file storage when the keychain is unavailable.
+Keychain entries are namespaced by `service`, optional `namespace`, provider, and account id. Abort-aware native async operations default to a 5-second timeout (60-second hard cap), and payloads default to 3 MiB (12 MiB hard). There is **no silent fallback** to plaintext file storage when the keychain is unavailable.
 
 ## Security
 
-- Wrong passphrase or tampered ciphertext fails closed (`CredentialDecryptError`).
-- Passphrase-derived keys are zeroed after use.
+- Wrong passphrase, malformed/tampered envelope, excessive KDF work, oversized payload, or permissive Unix mode fails before unsafe work.
+- Passphrase-derived keys and package-owned plaintext buffers are zeroed after use.
 - Credential payloads are never written to disk in plaintext.
-- Configure restrictive `fileMode` and host-owned passphrase retrieval.
+- `encryptBytes()` / `decryptBytes()` are asynchronous in 0.0.6.
 
 ## Tests
 

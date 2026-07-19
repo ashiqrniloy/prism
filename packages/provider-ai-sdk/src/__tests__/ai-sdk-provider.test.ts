@@ -11,9 +11,11 @@ import {
   assertToolCallDeltasReconstruct,
   collectProviderEvents,
 } from "@arnilo/prism/testing/provider-conformance";
+import * as aiSdkExports from "../index.js";
 import { createAiSdkProvider } from "../provider.js";
 import { AiSdkProviderError } from "../errors.js";
 import { toAiSdkCallOptions } from "../prompt.js";
+import { mapUsage } from "../stream.js";
 
 const MODEL: ModelConfig = {
   provider: "ai-sdk",
@@ -275,5 +277,83 @@ describe("createAiSdkProvider", () => {
       () => createAiSdkProvider({ model: { specificationVersion: "v3" } as unknown as LanguageModelV4 }),
       (error: unknown) => error instanceof AiSdkProviderError && error.code === "unsupported_specification",
     );
+  });
+
+  it("mapUsage maps LanguageModelV4Usage cacheRead and cacheWrite to Prism Usage", () => {
+    assert.deepEqual(mapUsage(usage(12, 5, 4, 2)), {
+      inputTokens: 12,
+      outputTokens: 5,
+      totalTokens: 17,
+      cacheReadTokens: 4,
+      cacheWriteTokens: 2,
+    });
+    assert.equal(mapUsage(undefined), undefined);
+    assert.equal(mapUsage(emptyUsage()), undefined);
+  });
+
+  it("does not export model discovery helpers or invent cache request fields", () => {
+    const exportNames = Object.keys(aiSdkExports).sort();
+    assert.equal(exportNames.some((name) => /^list[A-Z].*Models$/.test(name)), false);
+    const options = toAiSdkCallOptions(request({
+      options: {
+        cache: { key: "tenant:v1", retention: "long" },
+        cacheKey: "should-not-emit",
+        cacheRetention: "long",
+      },
+    }));
+    assert.equal(options.providerOptions?.prism, undefined);
+    assert.equal("cacheKey" in options, false);
+    assert.equal("cacheRetention" in options, false);
+    assert.equal("cache_control" in options, false);
+  });
+
+  it("passes compat and extra through providerOptions.prism for host models", () => {
+    const options = toAiSdkCallOptions(request({
+      options: {
+        compat: { reasoning: { effort: "low" } },
+        extra: { gateway: { order: ["openai"] } },
+      },
+    }));
+    assert.deepEqual(options.providerOptions?.prism, {
+      compat: { reasoning: { effort: "low" } },
+      extra: { gateway: { order: ["openai"] } },
+    });
+  });
+
+  it("maps assistant thinking blocks to AI SDK reasoning prompt parts", () => {
+    const options = toAiSdkCallOptions(request({
+      messages: [{
+        role: "assistant",
+        content: [
+          { type: "thinking", text: "step one" },
+          { type: "text", text: "answer" },
+        ],
+      }],
+    }));
+    const assistant = options.prompt[0];
+    assert.ok(assistant && assistant.role === "assistant");
+    assert.deepEqual(assistant.content[0], { type: "reasoning", text: "step one" });
+    assert.deepEqual(assistant.content[1], { type: "text", text: "answer" });
+  });
+
+  it("ignores provider-executed tool calls in the stream", async () => {
+    const provider = createAiSdkProvider({
+      model: createFakeModel({
+        parts: [
+          {
+            type: "tool-call",
+            toolCallId: "call_server",
+            toolName: "lookup",
+            input: "{\"ok\":true}",
+            providerExecuted: true,
+          },
+          { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: usage(1, 1) },
+        ],
+      }),
+    });
+    const events = await collectProviderEvents(provider, request());
+    assert.equal(events.some((event) => event.type === "tool_call"), false);
+    assert.equal(events.some((event) => event.type === "tool_call_delta"), false);
+    assert.equal(events.at(-1)?.type, "done");
   });
 });

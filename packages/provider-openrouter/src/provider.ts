@@ -1,9 +1,20 @@
-import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, JsonObject, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput, serializeOpenAITool } from "@arnilo/prism/providers/openai";
 import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
 import { parseJsonObjectArguments, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
-import { applyOpenRouterCacheControl, openRouterSessionId, openRouterUsage, type OpenRouterUsage } from "./cache.js";
+import {
+  applyOpenRouterCacheControl,
+  openRouterSessionId,
+  openRouterTopLevelCacheControl,
+  openRouterUsage,
+  type OpenRouterUsage,
+} from "./cache.js";
+import {
+  openRouterPreserveThinking,
+  resolveOpenRouterReasoning,
+  stripOpenRouterOwnedCompat,
+} from "./thinking.js";
 
 export interface OpenRouterProviderOptions {
   readonly id?: string;
@@ -57,29 +68,37 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
 
 export function openRouterBody(request: ProviderRequest, sessionId = openRouterSessionId(request.options)): JsonObject {
   assertStructuredOutputRequestSupported(request.model, request.options);
-  const routing = request.model.compat?.openRouterRouting;
-  const reasoning = request.options?.compat?.reasoning ?? request.model.compat?.reasoning;
+  const routing =
+    (request.options?.compat?.openRouterRouting as JsonObject | undefined)
+    ?? (request.model.compat?.openRouterRouting as JsonObject | undefined);
+  const reasoning = resolveOpenRouterReasoning(request.model, request.options);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const messages = applyOpenRouterCacheControl(request);
+  const preserveThinking = openRouterPreserveThinking(request);
   const body: Record<string, unknown> = {
     model: request.model.model,
-    messages: messages.map((message) => toOpenRouterMessage(message, request.model)),
+    messages: messages.map((message) => toOpenRouterMessage(message, request.model, preserveThinking)),
     tools: request.tools?.map(serializeOpenAITool),
     stream: true,
     stream_options: { include_usage: true },
     provider: routing,
     reasoning,
     session_id: sessionId,
+    cache_control: openRouterTopLevelCacheControl(request),
     ...parameters,
     max_tokens: maxTokens,
-    ...request.options?.compat,
+    ...stripOpenRouterOwnedCompat(request.options?.compat as JsonObject | undefined),
     ...request.options?.extra,
   };
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
 
-function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig): JsonObject {
+function toOpenRouterMessage(
+  message: CacheControlledMessage,
+  model: ModelConfig,
+  preserveThinking: boolean,
+): JsonObject {
   const capabilities = model.capabilities ?? {};
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
@@ -89,26 +108,39 @@ function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig
       content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
     };
   }
+
+  const thinkingText = message.content
+    .filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking")
+    .map((part) => part.text)
+    .join("\n");
+  const reasoningField = preserveThinking && thinkingText ? thinkingText : undefined;
+
   if (message.role === "assistant") {
     const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
-    const textParts = message.content.filter((part) => part.type === "text" || part.type === "thinking");
+    const textParts = message.content.filter((part): part is Extract<ContentBlock, { type: "text" }> => part.type === "text");
     if (toolCalls.length > 0) {
-      return {
+      return clean({
         role: "assistant",
         content: textParts.map((part) => part.text).join("\n") || null,
+        reasoning: reasoningField,
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
           function: { name: call.name, arguments: JSON.stringify(call.arguments) },
         })),
-      };
+      });
     }
   }
 
   const content: JsonObject[] = [];
   for (const part of message.content) {
-    if (part.type === "text" || part.type === "thinking") {
+    if (part.type === "text") {
       content.push(withMarker({ type: "text", text: part.text }, part.cache_control as JsonObject | undefined));
+    } else if (part.type === "thinking") {
+      // Preserved as top-level `reasoning`; when not preserving, fold into text.
+      if (!preserveThinking) {
+        content.push(withMarker({ type: "text", text: part.text }, part.cache_control as JsonObject | undefined));
+      }
     } else if (part.type === "image") {
       if (!capabilities.input?.includes("image")) {
         throw new Error(`OpenRouter request includes image but model does not declare image input capability`);
@@ -126,9 +158,12 @@ function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig
   }
 
   if (content.length === 1 && content[0]!.type === "text" && !(content[0]! as { cache_control?: unknown }).cache_control) {
-    return { role: message.role, content: content[0]!.text };
+    return clean({ role: message.role, content: content[0]!.text, reasoning: reasoningField });
   }
-  return { role: message.role, content };
+  if (content.length === 0 && reasoningField) {
+    return clean({ role: message.role, content: null, reasoning: reasoningField });
+  }
+  return clean({ role: message.role, content, reasoning: reasoningField });
 }
 
 function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObject {
@@ -183,6 +218,17 @@ function cleanHeaders(value: Record<string, string | undefined>): Record<string,
 }
 
 interface OpenRouterChunk {
-  readonly choices?: readonly { readonly delta?: { readonly content?: string; readonly reasoning?: string; readonly reasoning_content?: string; readonly tool_calls?: readonly { readonly index?: number; readonly id?: string; readonly function?: { readonly name?: string; readonly arguments?: string } }[] } }[];
+  readonly choices?: readonly {
+    readonly delta?: {
+      readonly content?: string;
+      readonly reasoning?: string;
+      readonly reasoning_content?: string;
+      readonly tool_calls?: readonly {
+        readonly index?: number;
+        readonly id?: string;
+        readonly function?: { readonly name?: string; readonly arguments?: string };
+      }[];
+    };
+  }[];
   readonly usage?: OpenRouterUsage;
 }

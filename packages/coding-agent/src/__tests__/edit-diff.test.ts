@@ -1,11 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import {
   applyEditsToNormalizedContent,
-  computeEditsDiff,
   detectLineEnding,
   fuzzyFindText,
   generateDiffString,
@@ -154,29 +150,4 @@ test("generateDiffString: returns diff and first changed line", () => {
   assert.equal(firstChangedLine, 2); // line 2 changed in new file
   assert.ok(diff.includes("+2 B"));
   assert.ok(diff.includes("-2 b"));
-});
-
-test("computeEditsDiff: reads file and returns diff", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ed-"));
-  try {
-    const f = join(dir, "x.txt");
-    await writeFile(f, "alpha\nbeta\ngamma\n", "utf-8");
-    const res = await computeEditsDiff("x.txt", [{ oldText: "beta", newText: "BETA" }], dir);
-    assert.ok("diff" in res && !("error" in res));
-    assert.equal(res.firstChangedLine, 2);
-    assert.ok((res as { diff: string }).diff.includes("+2 BETA"));
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-test("computeEditsDiff: missing file returns error", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ed-"));
-  try {
-    const res = await computeEditsDiff("nope.txt", [{ oldText: "a", newText: "b" }], dir);
-    assert.ok("error" in res);
-    assert.match((res as { error: string }).error, /Could not edit file/);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
 });

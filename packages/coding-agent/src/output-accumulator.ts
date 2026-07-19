@@ -1,25 +1,27 @@
-/**
- * Streaming output accumulator with bounded memory.
- *
- * Behavioral port of pi's core/tools/output-accumulator for @arnilo/prism-coding-agent.
- * Appends raw chunks through a streaming UTF-8 decoder, keeps only a decoded tail
- * for display snapshots, and spills the full output to a temp file once limits are
- * exceeded. stdlib only (node:crypto/fs/os).
- *
- * Single deviation from pi: the default temp-file prefix is `prism-output`
- * (pi uses `pi-output`) — cosmetic, user-overridable via `tempFilePrefix`.
- */
+/** Streaming UTF-8 output retention with bounded memory and spill storage. */
 import { randomBytes } from "node:crypto";
-import { createWriteStream, type WriteStream } from "node:fs";
+import { closeSync, openSync, writeSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, truncateTail } from "./truncate.js";
-import type { TruncationResult } from "./truncate.js";
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
+  HARD_MAX_BYTES,
+  HARD_MAX_LINES,
+  HARD_MAX_TOTAL_OUTPUT_BYTES,
+  validateCodingLimit,
+} from "./limits.js";
+import { truncateTail, type TruncationResult } from "./truncate.js";
 
 export interface OutputAccumulatorOptions {
   maxLines?: number;
   maxBytes?: number;
+  maxTotalOutputBytes?: number;
   tempFilePrefix?: string;
+  onLimit?: () => void;
+  onStorageError?: () => void;
 }
 
 export interface OutputSnapshot {
@@ -29,26 +31,21 @@ export interface OutputSnapshot {
 }
 
 function defaultTempFilePath(prefix: string): string {
-  const id = randomBytes(8).toString("hex");
-  return join(tmpdir(), `${prefix}-${id}.log`);
+  return join(tmpdir(), `${prefix}-${randomBytes(16).toString("hex")}.log`);
 }
 
 function byteLength(text: string): number {
   return Buffer.byteLength(text, "utf-8");
 }
 
-/**
- * Incrementally tracks streaming output with bounded memory.
- *
- * Appends decode chunks with a streaming UTF-8 decoder, keeps only a decoded
- * tail for display snapshots, and opens a temp file when the full output needs
- * to be preserved.
- */
 export class OutputAccumulator {
   private readonly maxLines: number;
   private readonly maxBytes: number;
+  private readonly maxTotalOutputBytes: number;
   private readonly maxRollingBytes: number;
   private readonly tempFilePrefix: string;
+  private readonly onLimit?: () => void;
+  private readonly onStorageError?: () => void;
   private readonly decoder = new TextDecoder();
   private rawChunks: Buffer[] = [];
   private tailText = "";
@@ -61,39 +58,57 @@ export class OutputAccumulator {
   private currentLineBytes = 0;
   private hasOpenLine = false;
   private finished = false;
+  private exceeded = false;
   private tempFilePath?: string;
-  private tempFileStream?: WriteStream;
+  private tempFileFd?: number;
+  private tempFileError?: Error;
 
   constructor(options: OutputAccumulatorOptions = {}) {
-    this.maxLines = options.maxLines ?? DEFAULT_MAX_LINES;
-    this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
-    this.maxRollingBytes = Math.max(this.maxBytes * 2, 1);
+    this.maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
+    this.maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
+    this.maxTotalOutputBytes = validateCodingLimit(
+      "maxTotalOutputBytes",
+      options.maxTotalOutputBytes ?? DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
+      HARD_MAX_TOTAL_OUTPUT_BYTES,
+    );
+    if (this.maxTotalOutputBytes < this.maxBytes) {
+      throw new Error("maxTotalOutputBytes must be at least maxBytes");
+    }
+    this.maxRollingBytes = this.maxBytes * 2;
     this.tempFilePrefix = options.tempFilePrefix ?? "prism-output";
+    if (!/^[A-Za-z0-9._-]+$/.test(this.tempFilePrefix)) {
+      throw new Error("tempFilePrefix may contain only letters, numbers, dot, underscore, and hyphen");
+    }
+    this.onLimit = options.onLimit;
+    this.onStorageError = options.onStorageError;
   }
 
-  append(data: Buffer): void {
-    if (this.finished) {
-      throw new Error("Cannot append to a finished output accumulator");
+  append(data: Buffer): boolean {
+    if (this.finished) throw new Error("Cannot append to a finished output accumulator");
+    const remaining = this.maxTotalOutputBytes - this.totalRawBytes;
+    const accepted = remaining > 0 ? data.subarray(0, remaining) : data.subarray(0, 0);
+    if (accepted.length > 0) {
+      this.totalRawBytes += accepted.length;
+      this.appendDecodedText(this.decoder.decode(accepted, { stream: true }));
+      if (this.tempFileFd !== undefined || this.shouldUseTempFile()) {
+        this.ensureTempFile();
+        this.writeTemp(accepted);
+      } else {
+        this.rawChunks.push(Buffer.from(accepted));
+      }
     }
-    this.totalRawBytes += data.length;
-    this.appendDecodedText(this.decoder.decode(data, { stream: true }));
-    if (this.tempFileStream || this.shouldUseTempFile()) {
-      this.ensureTempFile();
-      this.tempFileStream?.write(data);
-    } else if (data.length > 0) {
-      this.rawChunks.push(data);
+    if (accepted.length !== data.length && !this.exceeded) {
+      this.exceeded = true;
+      this.onLimit?.();
     }
+    return !this.exceeded;
   }
 
   finish(): void {
-    if (this.finished) {
-      return;
-    }
+    if (this.finished) return;
     this.finished = true;
     this.appendDecodedText(this.decoder.decode());
-    if (this.shouldUseTempFile()) {
-      this.ensureTempFile();
-    }
+    if (this.shouldUseTempFile()) this.ensureTempFile();
   }
 
   snapshot(options: { persistIfTruncated?: boolean } = {}): OutputSnapshot {
@@ -101,65 +116,78 @@ export class OutputAccumulator {
       maxLines: this.maxLines,
       maxBytes: this.maxBytes,
     });
-    const truncated = this.totalLines > this.maxLines || this.totalDecodedBytes > this.maxBytes;
-    const truncatedBy = truncated
-      ? (tailTruncation.truncatedBy ?? (this.totalDecodedBytes > this.maxBytes ? "bytes" : "lines"))
-      : null;
+    const truncated = this.totalLines > this.maxLines || this.totalDecodedBytes > this.maxBytes || this.exceeded;
     const truncation: TruncationResult = {
       ...tailTruncation,
       truncated,
-      truncatedBy,
+      truncatedBy: truncated
+        ? (tailTruncation.truncatedBy ?? (this.totalDecodedBytes > this.maxBytes || this.exceeded ? "bytes" : "lines"))
+        : null,
       totalLines: this.totalLines,
+      totalLinesKnown: true,
       totalBytes: this.totalDecodedBytes,
+      totalBytesKnown: !this.exceeded,
       maxLines: this.maxLines,
       maxBytes: this.maxBytes,
     };
-    if (options.persistIfTruncated && truncation.truncated) {
-      this.ensureTempFile();
-    }
+    if (options.persistIfTruncated && truncation.truncated) this.ensureTempFile();
     return {
       content: truncation.content,
       truncation,
-      fullOutputPath: this.tempFilePath,
+      fullOutputPath: this.tempFileError ? undefined : this.tempFilePath,
     };
   }
 
   async closeTempFile(): Promise<void> {
-    if (!this.tempFileStream) {
-      return;
+    if (this.tempFileFd !== undefined) {
+      const fd = this.tempFileFd;
+      this.tempFileFd = undefined;
+      try {
+        closeSync(fd);
+      } catch (error) {
+        this.recordTempError(error);
+      }
     }
-    const stream = this.tempFileStream;
-    this.tempFileStream = undefined;
-    await new Promise<void>((resolve, reject) => {
-      const onError = (error: Error) => {
-        stream.off("finish", onFinish);
-        reject(error);
-      };
-      const onFinish = () => {
-        stream.off("error", onError);
-        resolve();
-      };
-      stream.once("error", onError);
-      stream.once("finish", onFinish);
-      stream.end();
-    });
+    if (this.tempFileError) throw this.tempFileError;
+  }
+
+  async cleanupTempFile(): Promise<void> {
+    const path = this.tempFilePath;
+    let closeError: unknown;
+    try {
+      await this.closeTempFile();
+    } catch (error) {
+      closeError = error;
+    }
+    this.tempFilePath = undefined;
+    this.tempFileError = undefined;
+    if (path) await rm(path, { force: true });
+    if (closeError) throw closeError;
   }
 
   getLastLineBytes(): number {
     return this.currentLineBytes;
   }
 
+  getTotalRawBytes(): number {
+    return this.totalRawBytes;
+  }
+
+  isOutputLimitExceeded(): boolean {
+    return this.exceeded;
+  }
+
+  hasStorageError(): boolean {
+    return this.tempFileError !== undefined;
+  }
+
   private appendDecodedText(text: string): void {
-    if (text.length === 0) {
-      return;
-    }
+    if (text.length === 0) return;
     const bytes = byteLength(text);
     this.totalDecodedBytes += bytes;
     this.tailText += text;
     this.tailBytes += bytes;
-    if (this.tailBytes > this.maxRollingBytes * 2) {
-      this.trimTail();
-    }
+    if (this.tailBytes > this.maxRollingBytes * 2) this.trimTail();
     let newlines = 0;
     let lastNewline = -1;
     for (let i = text.indexOf("\n"); i !== -1; i = text.indexOf("\n", i + 1)) {
@@ -185,40 +213,50 @@ export class OutputAccumulator {
       return;
     }
     let start = buffer.length - this.maxRollingBytes;
-    while (start < buffer.length && (buffer[start] & 0xc0) === 0x80) {
-      start++;
-    }
-    this.tailStartsAtLineBoundary =
-      start === 0 ? this.tailStartsAtLineBoundary : buffer[start - 1] === 0x0a;
+    while (start < buffer.length && (buffer[start] & 0xc0) === 0x80) start++;
+    this.tailStartsAtLineBoundary = start === 0 ? this.tailStartsAtLineBoundary : buffer[start - 1] === 0x0a;
     this.tailText = buffer.subarray(start).toString("utf-8");
     this.tailBytes = byteLength(this.tailText);
   }
 
   private getSnapshotText(): string {
-    if (this.tailStartsAtLineBoundary) {
-      return this.tailText;
-    }
+    if (this.tailStartsAtLineBoundary) return this.tailText;
     const firstNewline = this.tailText.indexOf("\n");
     return firstNewline === -1 ? this.tailText : this.tailText.slice(firstNewline + 1);
   }
 
   private shouldUseTempFile(): boolean {
-    return (
-      this.totalRawBytes > this.maxBytes ||
-      this.totalDecodedBytes > this.maxBytes ||
-      this.totalLines > this.maxLines
-    );
+    return this.totalRawBytes > this.maxBytes || this.totalDecodedBytes > this.maxBytes || this.totalLines > this.maxLines;
   }
 
   private ensureTempFile(): void {
-    if (this.tempFilePath) {
-      return;
+    if (this.tempFilePath || this.tempFileError) return;
+    const path = defaultTempFilePath(this.tempFilePrefix);
+    try {
+      this.tempFileFd = openSync(path, "wx", 0o600);
+      this.tempFilePath = path;
+      for (const chunk of this.rawChunks) this.writeTemp(chunk);
+    } catch (error) {
+      this.recordTempError(error);
+    } finally {
+      this.rawChunks = [];
     }
-    this.tempFilePath = defaultTempFilePath(this.tempFilePrefix);
-    this.tempFileStream = createWriteStream(this.tempFilePath);
-    for (const chunk of this.rawChunks) {
-      this.tempFileStream.write(chunk);
+  }
+
+  private writeTemp(data: Buffer): void {
+    // ponytail: synchronous spill is zero-queue backpressure; use a bounded async writer only if measured throughput requires it.
+    if (this.tempFileFd === undefined || this.tempFileError) return;
+    try {
+      let offset = 0;
+      while (offset < data.length) offset += writeSync(this.tempFileFd, data, offset);
+    } catch (error) {
+      this.recordTempError(error);
     }
-    this.rawChunks = [];
+  }
+
+  private recordTempError(error: unknown): void {
+    if (this.tempFileError) return;
+    this.tempFileError = error instanceof Error ? error : new Error(String(error));
+    this.onStorageError?.();
   }
 }

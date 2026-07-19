@@ -4,6 +4,24 @@ export { createObservationalMemoryExtension } from "./extension.js";
 export type { ObservationalMemoryExtensionOptions } from "./extension.js";
 export { createMemoryId, isMemoryId } from "./ids.js";
 export { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
+export {
+  DEFAULT_MAX_WORKER_ARGUMENT_BYTES,
+  DEFAULT_MAX_WORKER_ERROR_BYTES,
+  DEFAULT_MAX_WORKER_MESSAGE_BYTES,
+  DEFAULT_MAX_WORKER_RESULT_BYTES,
+  DEFAULT_MAX_WORKER_TOOL_CALLS,
+  DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN,
+  DEFAULT_MAX_WORKER_TURNS,
+  HARD_MAX_WORKER_ARGUMENT_BYTES,
+  HARD_MAX_WORKER_ERROR_BYTES,
+  HARD_MAX_WORKER_MESSAGE_BYTES,
+  HARD_MAX_WORKER_RESULT_BYTES,
+  HARD_MAX_WORKER_TOOL_CALLS,
+  HARD_MAX_WORKER_TOOL_CALLS_PER_TURN,
+  HARD_MAX_WORKER_TURNS,
+  resolveMemoryWorkerLimits,
+} from "./limits.js";
+export type { MemoryWorkerLimitOptions, ResolvedMemoryWorkerLimits } from "./limits.js";
 export type { ObservationalMemoryLedger } from "./ledger.js";
 export { buildObservationalMemoryProjection, createFoldedMemoryDetails } from "./projection.js";
 export type { ObservationalMemoryProjection } from "./projection.js";

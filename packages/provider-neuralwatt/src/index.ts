@@ -45,6 +45,15 @@ export {
   type NeuralWattQuotaUsage,
 } from "./quota.js";
 export {
+  neuralWattChatTemplateKwargs,
+  neuralWattClearThinking,
+  neuralWattPreserveThinking,
+  neuralWattReasoningEffort,
+  neuralWattThinkingTokenBudget,
+  neuralWattToolChoice,
+  stripNeuralWattOwnedCompat,
+} from "./thinking.js";
+export {
   classifyNeuralWattError,
   neuralWattHttpError,
   type NeuralWattErrorInput,

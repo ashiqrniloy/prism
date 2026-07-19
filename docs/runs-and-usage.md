@@ -241,7 +241,7 @@ console.log(cacheUsageReport(aggregate?.usage));
 - `AgentConfig.ownership` is the default ownership scope; `RunOptions.ownership` overrides it per run.
 - `AgentConfig.idempotencyKey` is the default idempotency key; `RunOptions.idempotencyKey` overrides it per run.
 - The runtime resolves `model` and `provider` from `AgentConfig`/`RunOptions`/`AgentDefinition` before writing the start `RunRecord`.
-- Adapters should treat appends as ordered within a `runId`: event and tool-call rows preserve emission order because the runtime drains pending appends before writing the final `RunRecord`.
+- Adapters should treat appends as ordered within a `runId`: event and tool-call rows preserve emission order because the runtime serializes event ledger appends through one promise chain (concurrency 1), drains pending appends before writing the final `RunRecord`, and propagates append failures by rejecting run completion.
 - Billing queries must filter `scope = "provider_turn"`; presentation queries normally read the single `run_total`. `UsageQuery.scope`, `turn`, and `attempt` are explicit filters.
 - Adapters that need upsert semantics can use `RunRecord.id` (== `runId`) as the stable key.
 - Use `cacheUsageReport(record.usage, model)` for cache diagnostics from normalized usage. It works when a provider reports `cacheReadTokens` without `cacheWriteTokens`; missing write tokens are reported as `0`, and unavailable hit rate/savings stay `undefined`.

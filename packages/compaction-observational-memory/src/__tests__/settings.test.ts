@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createStaticSettingsProvider } from "@arnilo/prism";
-import { defaultObservationalMemorySettings, resolveObservationalMemorySettings } from "../index.js";
+import { defaultObservationalMemorySettings, HARD_MAX_WORKER_TURNS, resolveObservationalMemorySettings } from "../index.js";
 
 describe("observational memory settings", () => {
   it("observational_memory_settings_resolve_defaults_and_overrides", async () => {
@@ -12,5 +12,12 @@ describe("observational memory settings", () => {
     assert.equal(resolved.agentMaxTurns, 2);
     assert.equal(resolved.passive, false);
     assert.equal(resolved.compactAfterTokens, defaultObservationalMemorySettings.compactAfterTokens);
+  });
+
+  it("observational_memory_settings_reject_invalid_worker_turn_limits", async () => {
+    for (const value of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, HARD_MAX_WORKER_TURNS + 1]) {
+      await assert.rejects(resolveObservationalMemorySettings(undefined, { agentMaxTurns: value }), /agentMaxTurns/);
+    }
+    assert.equal((await resolveObservationalMemorySettings(undefined, { agentMaxTurns: HARD_MAX_WORKER_TURNS })).agentMaxTurns, HARD_MAX_WORKER_TURNS);
   });
 });

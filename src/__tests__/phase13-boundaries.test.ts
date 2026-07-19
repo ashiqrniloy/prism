@@ -57,7 +57,7 @@ describe("phase 13 compaction llm boundaries", () => {
     assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
     assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.5");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.6");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 

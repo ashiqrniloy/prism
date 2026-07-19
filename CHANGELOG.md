@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+### Added
+
+- Caller-gated model discovery: `listOpenAIModels`, `listKimiModels`, `listZaiModels`, `listOpenRouterModels`, and `listOpenCodeGoModels`. Provider setup remains network-free; hosts explicitly fetch and register current models.
+- Shared `ThinkingLevel` helpers and use-case model bindings. Background compaction and observational-memory jobs can use an explicit provider/model or a supplied session-model fallback.
+- Opt-in sequential artifact-loop tools: `loop: { strategy: "generate-validate-revise", toolCalls: "bounded" }`. Tool rounds use existing authorization/redaction/ledger paths, share `maxToolRounds` across candidates, and fail with `artifact_failed` metadata `{ reason: "tool_round_limit" }` after exhaustion.
+- Checksummed SQLite/PostgreSQL migration histories and catalog-shape verification, bounded JSON Schema compilation LRU, and public `assertFiniteVector` validation.
+
+### Changed
+
+- Provider packages now document and implement current cache, reasoning, streaming, and discovery behavior. OpenAI Responses replay/function-call/SSE argument handling is corrected; Kimi adds optional Moonshot support; Z.AI and OpenCode Go catalogs/routes were refreshed; OpenRouter discovery/reasoning and NeuralWatt thinking controls are hardened. AI SDK remains host-model-owned.
+- Workflow definitions now require a non-empty `revision`; cancellation requires exact ownership and the current workflow definition. All workflow limits have finite hard caps.
+- Coding tools now enforce bounded streamed reads, write/edit inputs, shell wall time, total output, and spill-file lifecycle. Custom coding operation interfaces now receive bounded read/stat/write/edit options and abort signals.
+- Encrypted credential helpers `encryptBytes`, `decryptBytes`, and envelope rotation are asynchronous. Existing credential files must meet restrictive Unix permission requirements. Linux Secret Service/GNOME Keyring byte-array reads are accepted by the keychain store.
+- MCP Streamable HTTP requires HTTPS and explicit `allowedOrigins`; loopback HTTP requires explicit opt-in. Discovery, schemas, results, and response bodies are bounded.
+- Compaction and observational-memory workers now have finite turn/call/transcript/error budgets. A2A streaming uses strict incremental UTF-8 and LF/CRLF SSE parsing.
+- Generated Prism, workflow, and evaluation IDs use cryptographic UUIDs; non-finite embedding vectors now fail before scoring or persistence.
+
+### Security
+
+- Fixed cross-owner workflow cancellation and duplicate active-run overwrite risks.
+- Added fail-closed limits and validation at file, process, credential, MCP, migration, schema, vector, provider-worker, and A2A trust boundaries.
+
+### Upgrade notes
+
+- Finish or deliberately migrate pre-0.0.6 workflow runs/checkpoints before upgrading: their definition hashes lack the required revision.
+- Update workflow definitions with `revision`, cancellation callers with `workflow` plus exact ownership, MCP HTTP configs with `allowedOrigins`, and custom coding/credential integrations for the changed interfaces above.
 
 ## [0.0.5] - 2026-07-16
 

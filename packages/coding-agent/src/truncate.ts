@@ -10,8 +10,15 @@
  * Never returns partial lines (except the documented tail single-line edge case).
  */
 
-export const DEFAULT_MAX_LINES = 2000;
-export const DEFAULT_MAX_BYTES = 50 * 1024; // 50KB
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  HARD_MAX_BYTES,
+  HARD_MAX_LINES,
+  validateCodingLimit,
+} from "./limits.js";
+
+export { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "./limits.js";
 
 /**
  * Default char cap for {@link truncateLine}. pi names this GREP_MAX_LINE_LENGTH
@@ -34,10 +41,14 @@ export interface TruncationResult {
   truncated: boolean;
   /** Which limit was hit: "lines", "bytes", or null if not truncated */
   truncatedBy: "lines" | "bytes" | null;
-  /** Total number of lines in the original content */
+  /** Total lines when known; otherwise a scanned lower bound. */
   totalLines: number;
-  /** Total number of bytes in the original content */
+  /** Whether `totalLines` is exact (streamed text pages may stop early). */
+  totalLinesKnown?: boolean;
+  /** Total bytes when known; otherwise scanned bytes. */
   totalBytes: number;
+  /** Whether `totalBytes` is exact (streamed text pages may stop early). */
+  totalBytesKnown?: boolean;
   /** Number of complete lines in the truncated output */
   outputLines: number;
   /** Number of bytes in the truncated output */
@@ -74,8 +85,8 @@ export function formatSize(bytes: number): string {
  * returns empty content with firstLineExceedsLimit=true.
  */
 export function truncateHead(content: string, options: TruncationOptions = {}): TruncationResult {
-  const maxLines = options.maxLines ?? DEFAULT_MAX_LINES;
-  const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
+  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
   const totalBytes = Buffer.byteLength(content, "utf-8");
   const lines = splitLinesForCounting(content);
   const totalLines = lines.length;
@@ -157,8 +168,8 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
  * the byte limit.
  */
 export function truncateTail(content: string, options: TruncationOptions = {}): TruncationResult {
-  const maxLines = options.maxLines ?? DEFAULT_MAX_LINES;
-  const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
+  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
   const totalBytes = Buffer.byteLength(content, "utf-8");
   const lines = splitLinesForCounting(content);
   const totalLines = lines.length;

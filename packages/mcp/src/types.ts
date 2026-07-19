@@ -6,6 +6,7 @@ import type {
   SecretRedactor,
   ToolDefinition,
   ToolValidator,
+  MediaHostnameResolver,
 } from "@arnilo/prism";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 
@@ -21,8 +22,15 @@ export interface McpStdioTransport {
 export interface McpStreamableHttpTransport {
   readonly type: "streamable-http";
   readonly url: string;
+  /** Exact origins allowed for the initial endpoint and every session/reconnect request. */
+  readonly allowedOrigins: readonly string[];
+  /** Permit plaintext only when every resolved address is loopback. */
+  readonly allowLoopbackHttp?: boolean;
+  readonly maxResponseBytes?: number;
   readonly requestInit?: RequestInit;
   readonly sessionId?: string;
+  /** Test/host DNS seam; every returned address is still validated and one address is pinned. */
+  readonly resolveHostname?: MediaHostnameResolver;
 }
 
 export type McpTransportConfig = McpStdioTransport | McpStreamableHttpTransport;
@@ -81,6 +89,15 @@ export interface ConnectMcpToolsOptions {
   readonly listCacheTtlMs?: number;
   readonly callTimeoutMs?: number;
   readonly maxResultBytes?: number;
+  readonly maxListPages?: number;
+  readonly maxTools?: number;
+  readonly maxCursorBytes?: number;
+  readonly maxToolNameBytes?: number;
+  readonly maxToolDescriptionBytes?: number;
+  readonly maxToolSchemaBytes?: number;
+  readonly maxTotalToolSchemaBytes?: number;
+  readonly maxJsonDepth?: number;
+  readonly maxJsonProperties?: number;
   readonly signal?: AbortSignal;
 }
 

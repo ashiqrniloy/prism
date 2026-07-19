@@ -20,6 +20,12 @@ function entry(id: string, parentId?: string): SessionEntry {
 }
 
 describe("session store helpers", () => {
+  it("uses cryptographic UUIDs for generated entry identifiers", () => {
+    const ids = new Set(Array.from({ length: 32 }, () => createSessionEntry({ sessionId: "s1", kind: "label", label: "id" }).id));
+    assert.equal(ids.size, 32);
+    assert.ok([...ids].every((id) => /^entry_[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)));
+  });
+
   it("session entry helper creates typed label model custom summary and compaction entries", () => {
     const now = () => new Date("2026-01-01T00:00:00.000Z");
     const createId = () => "entry_1";

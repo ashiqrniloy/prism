@@ -14,7 +14,7 @@ import {
 } from "../index.js";
 
 function workflow(id: string, execute: () => unknown | Promise<unknown>) {
-  return defineWorkflow({ id, nodes: { work: functionNode({ execute }) }, edges: [] });
+  return defineWorkflow({ revision: "1", id, nodes: { work: functionNode({ execute }) }, edges: [] });
 }
 
 async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 2_000): Promise<void> {
@@ -86,7 +86,7 @@ describe("distributed workflow coordinator", () => {
     const coordinator = createWorkflowCoordinator({ coordinatorId: "worker", workflows: { [definition.id]: definition }, checkpoints, leases, leaseTtlMs: 60, renewalIntervalMs: 5 });
     await coordinator.pollOnce();
     await waitFor(async () => (await getWorkflowRun(checkpoints, queued))?.value.status === "running");
-    await cancelWorkflowRun({ ...queued, checkpoints });
+    await cancelWorkflowRun({ ...queued, workflow: definition, checkpoints });
     await waitFor(async () => (await getWorkflowRun(checkpoints, queued))?.value.status === "aborted");
   });
 
@@ -106,7 +106,8 @@ describe("distributed workflow coordinator", () => {
     const replacement = createWorkflowCoordinator({ coordinatorId: "replacement", workflows: { [definition.id]: definition }, checkpoints, leases: sharedLeases, leaseTtlMs: 100, renewalIntervalMs: 20 });
 
     assert.equal(await stale.pollOnce(), 1);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // In-process registry rejects duplicate exact runs; wait for stale local execution to unwind.
+    await waitFor(() => stale.activeRuns === 0);
     assert.equal(await replacement.pollOnce(), 1);
     await waitFor(async () => (await getWorkflowRun(checkpoints, queued))?.value.status === "succeeded");
     await waitFor(() => staleErrors.length > 0);

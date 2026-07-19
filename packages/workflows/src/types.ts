@@ -225,6 +225,7 @@ export interface WorkflowLimits {
 
 export interface WorkflowDefinition {
   readonly id: string;
+  readonly revision: string;
   readonly nodes: Readonly<Record<string, WorkflowNodeDefinition>>;
   readonly edges: readonly (readonly [string, string])[];
   readonly limits?: WorkflowLimits;

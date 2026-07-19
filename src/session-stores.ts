@@ -1,4 +1,5 @@
 import { SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError } from "./contracts.js";
+import { createId } from "./ids.js";
 import type { CompactionEntryData, Message, SessionAppendOptions, SessionBranchRead, BranchReader, SessionEntry, SessionStore } from "./contracts.js";
 
 export interface CreateSessionEntryOptions extends Omit<SessionEntry, "id" | "timestamp"> {
@@ -211,6 +212,4 @@ function indexEntries(entries: readonly SessionEntry[]): { byId: Map<string, Ses
   return { byId, parentIds };
 }
 
-function randomId(prefix: string): string {
-  return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
-}
+const randomId = createId;

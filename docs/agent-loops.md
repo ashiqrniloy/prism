@@ -16,7 +16,7 @@ The `Artifact*` contracts (`ArtifactValidation`, `ArtifactContext`, `ArtifactPar
 
 Use the default `singleShotLoop` implicitly whenever you call `session.run()` — no configuration needed. Opt into `generateValidateReviseLoop` when a run should produce an artifact that must satisfy a host-supplied schema before it is considered complete (e.g. structured output, a validated JSON document, a generated file passing lint) and the host wants Prism to drive the revision turns.
 
-Do not use a loop to re-implement provider calls, retry, abort, store, or event emission — those stay runtime-owned and are exposed to the loop only through `LoopContext`. A loop that needs tools in revision turns is out of scope for `generateValidateReviseLoop`; use `singleShotLoop` or supply a custom `AgentLoopStrategy`.
+Do not use a loop to re-implement provider calls, retry, abort, store, or event emission — those stay runtime-owned and are exposed to the loop only through `LoopContext`. Artifact-loop tools stay disabled by default; opt into bounded calls only for host-registered, least-privilege lookup tools that must inform an artifact candidate.
 
 ## Inputs / request
 
@@ -57,6 +57,7 @@ await session.run(input, {
     parser: hostParser,       // optional; default treats assistant text as the value
     repairer: hostRepairer,  // optional; default stringifies validation.errors[].message
     maxRevisions: 3,         // optional; default 3
+    toolCalls: "bounded",    // optional; default "disabled"; uses RunOptions.maxToolRounds
   },
 });
 
@@ -79,6 +80,8 @@ type AgentLoopOptions =
       readonly parser?: ArtifactParser<unknown>;
       readonly repairer?: ArtifactRepairer<unknown>;
       readonly maxRevisions?: number;
+      /** Default "disabled". "bounded" dispatches sequentially up to RunOptions.maxToolRounds. */
+      readonly toolCalls?: "disabled" | "bounded";
     };
 ```
 
@@ -112,7 +115,7 @@ Host callback contracts (all generic over host `T`):
 
 Events during a loop run are the existing `AgentEvent`s (`turn_started`, `message_started`, `message_delta`, `message_finished`, `turn_finished`, tool-execution events when the loop dispatches tools, `error` on real failures). Both built-in loops emit `turn_started` before each provider turn, `message_finished` for every assistant draft, and `turn_finished` after the assistant draft is appended. First-turn input is appended to live history once, matching the already-persisted user message.
 
-Validation-failure-triggering-a-revision is **not** an `error` event — it is recoverable, like `tool_execution_blocked`. `generateValidateReviseLoop` emits normal turn/message events around each provider turn, then the artifact event sequence `artifact_validation_started` → `artifact_validation_finished` → (`artifact_revision_started`)* → `artifact_finished` (success) | `artifact_failed` (budget exhausted), correlated by `runId`/`turn`/`attempt`; see [Agent events § Artifact event ordering](agent-events.md#artifact-event-ordering). `singleShotLoop` emits zero artifact events. Real failures stay on the `error` channel.
+Validation-failure-triggering-a-revision is **not** an `error` event — it is recoverable, like `tool_execution_blocked`. In bounded artifact mode, a tool-calling provider response emits normal assistant/tool lifecycle events, skips artifact parsing/validation, then the next turn sees its persisted result. `generateValidateReviseLoop` emits artifact events only for call-free candidates: `artifact_validation_started` → `artifact_validation_finished` → (`artifact_revision_started`)* → `artifact_finished` | `artifact_failed`. A request beyond `maxToolRounds` executes nothing and emits terminal `artifact_failed` with `result.metadata.reason === "tool_round_limit"`; see [Agent events § Artifact event ordering](agent-events.md#artifact-event-ordering). `singleShotLoop` emits zero artifact events. Real failures stay on the `error` channel.
 
 A loop has no path to credentials, provider objects, or unredacted secrets. `LoopContext.generate` receives the already-policy-applied, middleware-run, redacted request; `LoopContext.emit` runs through `redactAgentEvent` with the active `SecretRedactor`.
 
@@ -198,17 +201,17 @@ await session.run(input, { loop: twoShotLoop });
 - `RunOptions.loop` wins over `AgentConfig.loop`; when neither is set the runtime uses `singleShotLoop`. This mirrors the other `RunOptions` overrides (`redactor`, `validate`, `activeSkills`).
 - `{ strategy: "single-shot" }` resolves to the exported `singleShotLoop`; `{ strategy: "generate-validate-revise", ... }` is mapped by `resolveLoop()` to `generateValidateReviseLoop(opts)`. An unknown `strategy` throws before the first turn. Passing an `AgentLoopStrategy` instance bypasses the options form entirely (custom-loop escape hatch).
 - The loop is resolved once per run inside `RuntimeAgentSession.run()`, after the usual setup (provider/skills/tools resolution, history rebuild, model-change entry, input append, auto-compaction). The runtime's outer try/catch/finally, run-exclusivity, abort bridging, and subscriber close remain in place around `loop.run(ctx)`.
-- `LoopContext.assemble(nextInput, toolResults?)` accepts an optional tool-result accumulator so `singleShotLoop` can pass its loop-local `toolResults`; `generateValidateReviseLoop` omits it (no tools in revision turns).
-- `maxToolRounds` bounds `singleShotLoop` tool rounds; `toolConcurrency` (default `1`) bounds how many independent tool calls from one provider turn may execute concurrently. Results and transcript rows are still appended in original call order. If any resolved `ToolDefinition` in a turn has `exclusive: true`, that turn uses concurrency `1`; later non-exclusive turns restore configured concurrency.
-- `maxRevisions` (default 3) bounds `generateValidateReviseLoop` revision turns. Budget exhaustion ends the loop and returns the last usage; it does not throw.
-- A revision cycle appends one assistant draft and one repair user message per revision to the session store, so store entries reflect every attempted draft. The original user input is stored once by the runtime and pushed into loop history once on the first turn.
+- `LoopContext.assemble(nextInput, toolResults?)` accepts an optional tool-result accumulator so `singleShotLoop` can pass its loop-local results. Bounded artifact tools append results directly to shared history, then assemble the next turn with empty new input; no second transcript path exists.
+- `maxToolRounds` bounds both `singleShotLoop` and opt-in bounded artifact tool rounds across the whole run. Artifact mode always dispatches sequentially, regardless of `toolConcurrency`; all dispatches still use existing registry/filter/permission/validator/middleware/redactor/ledger guards.
+- `maxRevisions` (default 3) counts only failed call-free artifact candidates. Bounded artifact runs make at most `1 + maxRevisions + maxToolRounds` provider turns. A tool-round limit is terminal and returns last usage after `artifact_failed`; it does not throw.
+- A revision cycle appends one assistant draft and one repair user message per revision to the session store, so store entries reflect every attempted draft. The original user input is stored once by the runtime and pushed into loop history once on the first turn. Repair messages are assembled as the next provider `nextInput` and only pushed into live history after that revision request has been generated, so the model never receives a duplicated repair instruction.
 
 ## Security and performance notes
 
 - Loops have no path to credentials, provider objects, or unredacted secrets. `LoopContext.generate` consumes an already-redacted request; `LoopContext.emit` runs through `redactAgentEvent` with the active `SecretRedactor`; `LoopContext.appendMessage` appends a redacted entry.
 - `ArtifactValidation.errors[].message` may echo model text — `artifact_*` event payloads flow through the same `redactAgentEvent` path as other `AgentEvent`s (see [Agent events](agent-events.md)).
-- `generateValidateReviseLoop` makes at most `maxRevisions + 1` provider turns; it cannot loop forever on an always-failing validator. Each revision costs one provider turn plus one store append.
-- Parallel tool dispatch uses a bounded worker pool over the calls in one turn; queue depth is `calls.length`, not unbounded. Exclusive turns use the same sequential path. Each call still runs through `dispatchToolCall` (permission + validation + execute). Tool lifecycle events may complete out of order; history/store appends stay in call order.
+- `generateValidateReviseLoop` makes at most `1 + maxRevisions + maxToolRounds` provider turns when bounded tools are enabled (otherwise `maxRevisions + 1`); it cannot loop forever. Each revision costs one provider turn plus one store append.
+- Bounded artifact tool calls run sequentially through `dispatchToolCall` (permission + validation + execute); their assistant call and result are persisted before the next provider request. `singleShotLoop` retains its bounded parallel worker pool and original call-order transcript behavior.
 - The loop is a plain object/factory; no class hierarchy, no background work, no extra dependencies. `LoopContext` is a single object literal of bound arrows built once per run.
 - The Synapta-free boundary is guarded by tests: `src/` imports no `synapta*` package, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts contain no `workflow`/`node`/`step` field names. Hosts supply their own schema; no host domain type is imported by `src/`.
 

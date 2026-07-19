@@ -31,6 +31,7 @@ export {
 
 export { validateAgainstJsonSchema } from "./schema.js";
 export { createHashEmbedder, embedBatched } from "./embedder.js";
+export { assertFiniteVector } from "./util.js";
 export type { HashEmbedderOptions } from "./embedder.js";
 
 export { createMemoryVectorStore, selectAdjacentRecords } from "./vector-memory.js";

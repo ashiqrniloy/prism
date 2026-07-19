@@ -21,6 +21,7 @@ const unstable = functionNode({
   },
 });
 const workflow = defineWorkflow({
+  revision: "1",
   id: "postgres-resume-demo",
   nodes: { unstable },
   limits: { maxNodes: 16, maxConcurrency: 1, maxCheckpointBytes: 128 * 1_024 },

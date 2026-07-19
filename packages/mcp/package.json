@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-mcp",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Optional MCP client bridge and explicit Prism tool/command server exposure.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.5"
+    "@arnilo/prism": "0.0.6"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

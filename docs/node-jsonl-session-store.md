@@ -32,12 +32,12 @@ import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl"
 
 `createJsonlSessionStore()` returns a `SessionStore`:
 
-- `append(entry, options?)` appends one JSON line, rejects duplicate entry ids, honors `expectedParentId` existence checks, and deduplicates exact idempotency retries within this store instance.
+- `append(entry, options?)` appends one JSON line, rejects duplicate entry ids, honors `expectedParentId` existence checks, and deduplicates exact idempotency retries within this store instance. Append **fails closed** when the file already contains any corrupt or shape-invalid line (`Invalid JSONL at line N: …`) so writers cannot extend a damaged log.
 - `list(sessionId)` reads the file and returns valid entries for that session id. Corrupt or shape-invalid lines are skipped; they do not poison the whole file.
 - `get(id)` reads the file and returns the matching valid entry, if any.
 - `readJsonlSessionEntries(path)` returns `{ entries: SessionEntry[]; errors: SessionEntryParseError[] }` so hosts/tests can inspect per-line parse errors.
 
-Missing files read as empty stores. Invalid JSON, missing required fields, unsupported `schemaVersion`, unknown `kind`, or wrong per-kind shapes (`message`, `summary`, `model_change`, `custom`, `compaction`, `label`, `event`, `metadata`, or non-string `parentId`) are quarantined per line with line number and reason; the raw line is included in `SessionEntryParseError.raw`. Unknown entry kinds and future schema versions fail closed: the line is skipped and never returned by `list()` or `get()`.
+Missing files read as empty stores (typed Node `ENOENT`). Invalid JSON, missing required fields, unsupported `schemaVersion`, unknown `kind`, or wrong per-kind shapes (`message`, `summary`, `model_change`, `custom`, `compaction`, `label`, `event`, `metadata`, or non-string `parentId`) are quarantined per line with line number and reason; the raw line is included in `SessionEntryParseError.raw`. Unknown entry kinds and future schema versions fail closed for reads: the line is skipped and never returned by `list()` or `get()`. For writes, any parse error blocks `append()` until the host repairs or replaces the file.
 
 ## Request/response example
 
@@ -65,15 +65,16 @@ Use `createMemorySessionStore()` for tests or throwaway sessions; use the JSONL 
 - This adapter is an explicit Node subpath. Importing `@arnilo/prism` does not touch the filesystem.
 - Hosts choose the file path. Prism does not discover, watch, rotate, compact, or migrate files.
 - The adapter stores only `SessionEntry` data passed to `append()`.
-- `SessionAppendOptions` idempotency tracking is in memory for the store instance. It is a development guard, not a durable cross-process coordination mechanism.
+- `SessionAppendOptions` idempotency tracking is in memory for the store instance. It resets on process restart and is a development guard, not a durable cross-process coordination mechanism.
 
 ## Security and performance notes
 
 - Reads and writes use only the caller-provided path.
 - Errors include path/reason or line number, not file contents.
 - Do not put secrets in messages, metadata, summaries, labels, or custom entries.
-- Reads are linear in file size. Appends are serialized per store instance.
+- Reads are linear in file size. Appends also re-read and re-parse the whole file for duplicate/parent/corruption checks before writing one line, and are serialized per store instance.
 - There is no cross-process lock or durable idempotency table; two processes writing the same file can race. Add a database or external lock if multiple processes write the same file.
+- Treat this adapter as development/single-process storage. Production multi-writer hosts should use an indexed database `SessionStore` adapter.
 
 ## Related APIs
 

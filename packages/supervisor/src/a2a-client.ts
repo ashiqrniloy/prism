@@ -65,38 +65,20 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
       const response = await fetcher(endpoint, { method: "POST", signal: owned.signal, redirect: "error", headers: { ...headersObject(authHeaders), "content-type": "application/a2a+json", accept: "text/event-stream" }, body });
       if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith("text/event-stream")) throw new A2AError("A2A stream request failed", response.status, "ERR_PRISM_A2A_REMOTE");
       reader = response.body.getReader();
-      let buffered = "";
-      let totalBytes = 0;
-      let eventCount = 0;
       let terminal = false;
-      while (true) {
-        owned.signal.throwIfAborted();
-        const next = await reader.read();
-        if (next.done) break;
-        totalBytes += next.value.byteLength;
-        if (totalBytes > limits.maxStreamBytes) throw new A2AError("A2A stream exceeds max bytes", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
-        buffered += new TextDecoder().decode(next.value, { stream: true });
-        while (buffered.includes("\n\n")) {
-          const split = buffered.indexOf("\n\n");
-          const frame = buffered.slice(0, split);
-          buffered = buffered.slice(split + 2);
-          if (new TextEncoder().encode(frame).byteLength > limits.maxEventBytes) throw new A2AError("A2A event exceeds max bytes", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
-          eventCount += 1;
-          if (eventCount > limits.maxStreamEvents) throw new A2AError("A2A stream exceeds max events", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
-          const data = frame.split("\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n");
-          if (!data) continue;
-          let parsed: unknown;
-          try { parsed = JSON.parse(data); } catch { throw new A2AError("Malformed A2A stream event", 502, "ERR_PRISM_A2A_REMOTE"); }
-          const rpc = parseRpcResponse(parsed, id);
-          if (rpc.error) throw new A2AError(safeRemote(rpc.error.message, options), 502, "ERR_PRISM_A2A_REMOTE");
-          const task = parseTaskResult(rpc.result);
-          if (task.status.state === "TASK_STATE_FAILED" || task.status.state === "TASK_STATE_CANCELED") throw new A2AError("Remote A2A stream task failed", 502, "ERR_PRISM_A2A_REMOTE");
-          if (task.status.state === "TASK_STATE_COMPLETED") terminal = true;
-          for (const artifact of task.artifacts ?? []) for (const part of artifact.parts) yield options.redactor?.redact(part.text) ?? part.text;
-        }
+      for await (const data of readA2AStreamData(reader, limits, owned.signal)) {
+        if (terminal) throw new A2AError("A2A stream continued after terminal task state", 502, "ERR_PRISM_A2A_REMOTE");
+        if (!data) continue;
+        let parsed: unknown;
+        try { parsed = JSON.parse(data); } catch { throw new A2AError("Malformed A2A stream event", 502, "ERR_PRISM_A2A_REMOTE"); }
+        const rpc = parseRpcResponse(parsed, id);
+        if (rpc.error) throw new A2AError(safeRemote(rpc.error.message, options), 502, "ERR_PRISM_A2A_REMOTE");
+        const task = parseTaskResult(rpc.result);
+        if (task.status.state === "TASK_STATE_FAILED" || task.status.state === "TASK_STATE_CANCELED") throw new A2AError("Remote A2A stream task failed", 502, "ERR_PRISM_A2A_REMOTE");
+        if (task.status.state === "TASK_STATE_COMPLETED") terminal = true;
+        for (const artifact of task.artifacts ?? []) for (const part of artifact.parts) yield options.redactor?.redact(part.text) ?? part.text;
       }
       if (!terminal) throw new A2AError("A2A stream ended before terminal task state", 502, "ERR_PRISM_A2A_REMOTE");
-      if (buffered.trim()) throw new A2AError("Truncated A2A stream", 502, "ERR_PRISM_A2A_REMOTE");
     } finally {
       await reader?.cancel().catch(() => undefined);
       owned.dispose();
@@ -114,6 +96,93 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
   }
 
   return { getCard, send, stream };
+}
+
+async function* readA2AStreamData(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  limits: ClientLimits,
+  signal: AbortSignal,
+): AsyncGenerator<string> {
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const lineParts: string[] = [];
+  let lineTail = "";
+  let lineBytes = 0;
+  let eventBytes = 0;
+  let eventCount = 0;
+  let eventHasLine = false;
+  let previousEndingBytes = 0;
+  let dataLines: string[] = [];
+  let totalBytes = 0;
+
+  const appendLine = (text: string): void => {
+    lineBytes += Buffer.byteLength(text, "utf8");
+    const projectedEventBytes = eventBytes + (eventHasLine ? previousEndingBytes : 0) + lineBytes;
+    if (projectedEventBytes > limits.maxEventBytes + 1) throw new A2AError("A2A event exceeds max bytes", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
+    lineTail += text;
+    // ponytail: 4 KiB coalescing bounds one-byte chunk overhead; tune only if parser profiling requires it.
+    if (lineTail.length >= 4096) { lineParts.push(lineTail); lineTail = ""; }
+  };
+  const completeLine = (raw: string, endingBytes: number): string | undefined => {
+    const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
+    if (!line) {
+      eventCount += 1;
+      if (eventCount > limits.maxStreamEvents) throw new A2AError("A2A stream exceeds max events", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
+      const data = dataLines.join("\n");
+      eventBytes = 0;
+      eventHasLine = false;
+      previousEndingBytes = 0;
+      dataLines = [];
+      return data;
+    }
+    if (eventHasLine) eventBytes += previousEndingBytes;
+    eventBytes += Buffer.byteLength(line, "utf8");
+    if (eventBytes > limits.maxEventBytes) throw new A2AError("A2A event exceeds max bytes", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
+    eventHasLine = true;
+    previousEndingBytes = endingBytes;
+    if (!line.startsWith(":")) {
+      const colon = line.indexOf(":");
+      const field = colon === -1 ? line : line.slice(0, colon);
+      const value = colon === -1 ? "" : line.slice(colon + 1).replace(/^ /, "");
+      if (field === "data") dataLines.push(value);
+    }
+    return undefined;
+  };
+  const feed = (text: string): string[] => {
+    const completed: string[] = [];
+    let start = 0;
+    while (true) {
+      const newline = text.indexOf("\n", start);
+      if (newline === -1) break;
+      appendLine(text.slice(start, newline));
+      const raw = `${lineParts.join("")}${lineTail}`;
+      const data = completeLine(raw, raw.endsWith("\r") ? 2 : 1);
+      if (data !== undefined) completed.push(data);
+      lineParts.length = 0;
+      lineTail = "";
+      lineBytes = 0;
+      start = newline + 1;
+    }
+    appendLine(text.slice(start));
+    return completed;
+  };
+
+  try {
+    while (true) {
+      signal.throwIfAborted();
+      const next = await reader.read();
+      if (next.done) break;
+      totalBytes += next.value.byteLength;
+      if (totalBytes > limits.maxStreamBytes) throw new A2AError("A2A stream exceeds max bytes", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
+      for (const data of feed(decoder.decode(next.value, { stream: true }))) yield data;
+    }
+    for (const data of feed(decoder.decode())) yield data;
+  } catch (error) {
+    if (signal.aborted) throw signal.reason;
+    if (error instanceof A2AError) throw error;
+    throw new A2AError("Malformed A2A UTF-8 stream", 502, "ERR_PRISM_A2A_REMOTE");
+  }
+  const tail = `${lineParts.join("")}${lineTail}`;
+  if (eventHasLine || tail.trim()) throw new A2AError("Truncated A2A stream", 502, "ERR_PRISM_A2A_REMOTE");
 }
 
 function requestBody(id: number, method: "SendMessage" | "SendStreamingMessage", input: string) {

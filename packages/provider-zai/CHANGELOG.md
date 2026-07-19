@@ -5,7 +5,19 @@ All notable changes to @arnilo/prism-provider-zai will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+### Added
+
+- Caller-gated `listZaiModels()` / `mapZaiModel()` (OpenAI-compatible `GET /models`).
+- Official `clear_thinking` + Preserved Thinking (`reasoning_content` replay).
+- Featured catalog refreshed to official GLM-5.x / 4.7 / 4.6 / 4.5 ids.
+
+### Changed
+
+- Default base URL is official international `https://api.z.ai/api/paas/v4`.
+- Docs aligned to official thinking / reasoning_effort / tool_stream fields (removed obsolete compat docs names).
+- Resolved `thinking` / `reasoning_effort` / `tool_stream` win over raw compat spreads.
 
 ## [0.0.5] - 2026-07-16
 

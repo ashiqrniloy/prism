@@ -56,6 +56,7 @@ const done = functionNode({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "event-sink-demo",
   nodes: { research, shouldFlag, flag, done },
   edges: [

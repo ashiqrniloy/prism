@@ -84,6 +84,50 @@ describe("createJsonSchemaArgumentValidator", () => {
     assert.equal(result.ok, false);
     assert.ok(result.errors?.[0]?.message);
   });
+
+  it("rejects invalid schema limits before compilation", () => {
+    const options = [
+      "maxErrors", "maxDepth", "maxProperties", "maxStringLength", "maxArrayLength",
+      "maxSchemaBytes", "maxSchemaDepth", "maxSchemaProperties", "maxSchemaRefs", "maxSchemaKeywords", "maxCompiledSchemas",
+    ] as const;
+    for (const option of options) {
+      for (const value of [0, -1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+        assert.throws(() => createJsonSchemaArgumentValidator({ [option]: value }), RangeError, `${option}=${value}`);
+      }
+    }
+  });
+
+  it("accepts every hard schema limit", () => {
+    assert.doesNotThrow(() => createJsonSchemaArgumentValidator({
+      maxErrors: 64,
+      maxDepth: 128,
+      maxProperties: 100_000,
+      maxStringLength: 8 * 1024 * 1024,
+      maxArrayLength: 100_000,
+      maxSchemaBytes: 1024 * 1024,
+      maxSchemaDepth: 128,
+      maxSchemaProperties: 100_000,
+      maxSchemaRefs: 1_024,
+      maxSchemaKeywords: 100_000,
+      maxCompiledSchemas: 1_024,
+    }));
+  });
+
+  it("bounds schema shape before Ajv compilation", () => {
+    const deep = { type: "object", properties: { x: { type: "object", properties: { y: { type: "string" } } } } };
+    assert.match(createJsonSchemaArgumentValidator({ maxSchemaDepth: 2 }).validate(deep, {}).errors?.[0]?.message ?? "", /schema depth/i);
+    assert.match(createJsonSchemaArgumentValidator({ maxSchemaBytes: 32 }).validate({ description: "x".repeat(64) }, {}).errors?.[0]?.message ?? "", /maximum bytes/i);
+    assert.match(createJsonSchemaArgumentValidator({ maxSchemaProperties: 2 }).validate({ type: "object", properties: { x: {}, y: {} } }, {}).errors?.[0]?.message ?? "", /maximum properties/i);
+    assert.match(createJsonSchemaArgumentValidator({ maxSchemaKeywords: 2 }).validate({ type: "object", properties: { x: {} } }, {}).errors?.[0]?.message ?? "", /maximum keywords/i);
+    assert.match(createJsonSchemaArgumentValidator({ maxSchemaRefs: 1 }).validate({ allOf: [{ $ref: "#/$defs/x" }, { $ref: "#/$defs/x" }], $defs: { x: {} } }, {}).errors?.[0]?.message ?? "", /maximum refs/i);
+    assert.match(createJsonSchemaArgumentValidator().validate({ $ref: "other.json" }, {}).errors?.[0]?.message ?? "", /remote \$ref/i);
+  });
+
+  it("evicts least-recently-used compiled schemas", () => {
+    const validator = createJsonSchemaArgumentValidator({ maxCompiledSchemas: 1 });
+    assert.equal(validator.validate({ $id: "same", type: "object", properties: { first: { type: "string" } } }, { first: "ok" }).ok, true);
+    assert.equal(validator.validate({ $id: "same", type: "object", properties: { second: { type: "number" } } }, { second: 1 }).ok, true);
+  });
 });
 
 describe("createJsonSchemaToolArgumentValidator", () => {

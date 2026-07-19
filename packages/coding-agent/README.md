@@ -44,6 +44,8 @@ const shell = createShellTool(process.cwd(), {
   shellPath: "/bin/bash",        // force bash; default: SHELL env → /bin/bash → sh
   commandPrefix: "set -euo pipefail",
   maxLines: 500,
+  timeout: 600,
+  maxTotalOutputBytes: 64 * 1024 * 1024,
 });
 
 const remoteWrite = createWriteTool(process.cwd(), {
@@ -58,10 +60,10 @@ const remoteWrite = createWriteTool(process.cwd(), {
 
 | Tool | Input | Result |
 | --- | --- | --- |
-| `shell` | `{ command, timeout? }` | Combined output + `metadata.exitCode`. Non-zero exit is **not** an error. |
-| `read` | `{ path, offset?, limit? }` | `TextContent` (text) or `[note, ImageContent]` (image). |
-| `write` | `{ path, content }` | `Successfully wrote N bytes (M lines) to <abs>`. |
-| `edit` | `{ path, edits: [{oldText,newText}] }` | `Successfully replaced N block(s)` + `metadata.{diff,patch,firstChangedLine}`. |
+| `shell` | `{ command, timeout? }` | Combined output + `metadata.exitCode`; 600-second default timeout and 64 MiB total-output cap. Non-zero exit is **not** an error. |
+| `read` | `{ path, offset?, limit? }` | Streamed bounded text page or bounded `[note, ImageContent]`. |
+| `write` | `{ path, content }` | Bounded UTF-8 input; `Successfully wrote N bytes (M lines) to <abs>`. |
+| `edit` | `{ path, edits: [{oldText,newText}] }` | Bounded target/input/count; `Successfully replaced N block(s)` + diff metadata. |
 
 ### pi name mapping
 
@@ -74,9 +76,11 @@ const remoteWrite = createWriteTool(process.cwd(), {
 
 Factories: `createShellTool`, `createReadTool`, `createWriteTool`, `createEditTool`, `createCodingTools`, `createReadOnlyTools`, `createAllTools`, `createLocalBashOperations`.
 
-Helpers: `detectSupportedImageMimeType`, `detectSupportedImageMimeTypeFromFile`, `getShellConfig`, `killProcessTree`, `waitForChildProcess`, `withFileMutationQueue`.
+Helpers: `detectSupportedImageMimeType`, `detectSupportedImageMimeTypeFromFile`, `getShellConfig`, `killProcessTree`, `waitForChildProcess`, `withFileMutationQueue`. Default/hard coding limit constants are exported for host configuration.
 
-Option/operation types: `ToolsOptions`, `ShellToolOptions`/`BashOperations`, `ReadToolOptions`/`ReadOperations`, `WriteToolOptions`/`WriteOperations`, `EditToolOptions`/`EditOperations`/`EditToolDetails`.
+Option/operation types: `ToolsOptions`, `ShellToolOptions`/`BashOperations`, `ReadToolOptions`/`ReadOperations`/`ReadTextOptions`/`ReadTextResult`, `WriteToolOptions`/`WriteOperations`, `EditToolOptions`/`EditOperations`/`EditToolDetails`.
+
+Text reads stop after one page or `maxScanBytes` instead of loading the file. Custom `ReadOperations` must implement bounded `readText` and `statFile`; custom `EditOperations` must implement `statFile` and honor the supplied read cap/signal. Successful truncated shell output is retained in an exclusive Unix `0600` temp file owned by the host; timeout, abort, output-limit, and spill failures remove unpublished spill files. Hosts should delete published `metadata.fullOutputPath` files after use.
 
 ## License
 

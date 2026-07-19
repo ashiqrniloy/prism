@@ -60,6 +60,7 @@ const summarise = agentNode({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "parallel-research",
   nodes: { fanOut, topics, researchA, researchB, researchC, combine, summarise },
   edges: [

@@ -1,10 +1,11 @@
 import type { AIProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
+import { joinWorkerText, resolveMemoryWorkerLimits, type MemoryWorkerLimitOptions } from "../limits.js";
 import { estimateTextTokens } from "../tokens.js";
 import { isMemoryReflection, type MemoryObservation, type MemoryReflection } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
-export interface RunReflectorOptions {
+export interface RunReflectorOptions extends MemoryWorkerLimitOptions {
   readonly observations: readonly MemoryObservation[];
   readonly provider: AIProvider;
   readonly model: ModelConfig;
@@ -30,7 +31,12 @@ export async function runReflector(options: RunReflectorOptions): Promise<readon
       return { toolCallId: context.toolCallId, name: "record_reflection", value: { ok: true } };
     },
   };
-  const prompt = options.observations.map((item) => `[${item.id}] ${item.content}`).join("\n");
+  const limits = resolveMemoryWorkerLimits(options);
+  const prompt = joinWorkerText(observationLines(options.observations), limits.maxMessageBytes, "Observational memory reflection prompt");
   await runMemoryWorkerLoop({ ...options, system: "Distill durable reflections from observations. Call record_reflection with supporting observation ids.", prompt, tools: [tool] });
   return reflections;
+}
+
+function* observationLines(observations: readonly MemoryObservation[]): Generator<string> {
+  for (const item of observations) yield `[${item.id}] ${item.content}`;
 }

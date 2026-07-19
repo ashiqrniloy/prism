@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Added finite page/tool/cursor/metadata/schema/JSON/result/client-option limits and atomic discovery refresh using raw SDK list/call requests.
+- Streamable HTTP now requires exact HTTPS origins, rejects credentials/fragments/redirects/private or mixed DNS, pins a validated address for every request, and bounds responses; plaintext is loopback-only and explicit.
+- Structured content, compatibility `toolResult`, content blocks, and remote error summaries now enter Prism through one aggregate byte/depth/property boundary.
 
 ## [0.0.5] - 2026-07-16
 

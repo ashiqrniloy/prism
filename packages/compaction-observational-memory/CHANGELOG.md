@@ -5,7 +5,12 @@ All notable changes to @arnilo/prism-compaction-observational-memory will be doc
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+### Changed
+
+- Added validated hard-capped worker turns, per-turn/total calls, arguments, results, transcript, and surfaced-error limits.
+- Unknown/excess tool calls and oversized/deep/cyclic values now fail deterministically before provider replay; provider/tool/runtime errors and replayed results are bounded and known-secret redacted.
 
 ## [0.0.5] - 2026-07-16
 

@@ -133,6 +133,44 @@ await assertProviderStreamConforms({
 });
 ```
 
+## Model discovery checklist
+
+Every first-party package that ships (or plans) a `list*Models()` helper must keep setup network-free. Add these assertions in the package suite (pattern from NeuralWatt):
+
+1. **`*_provider_setup_does_not_call_model_discovery`** — inject a counting `fetch` into `create*ProviderPackage({ fetch })`, run `setup`, assert `calls === 0`.
+2. **`list_*_models_maps_fixture_…`** — fixture response maps to `ModelConfig` (`id` → `model`, documented capabilities/limits/cost/cache); no credentials in returned objects.
+3. **`list_*_models_forwards_auth_abort_baseurl`** (as applicable) — Authorization owned by helper when key present; auth omitted when optional and unset; `signal` / `baseUrl` forwarded.
+4. **`list_*_models_redacts_token_in_errors`** — non-OK bodies use `readBoundedResponseText` + `redactSecrets`; secret canaries absent from thrown messages.
+5. **Malformed payload rejects** — missing `data` array (or provider-equivalent) throws a clear discovery error.
+
+OpenRouter stays app-registration-first: an optional list helper must still not run during setup. AI SDK has no discovery export. Packages without a public list API document curated official-doc refresh instead of inventing a fake helper.
+
+Canonical contract: [Provider packages — Caller-gated model discovery](provider-packages.md#caller-gated-model-discovery).
+
+## Thinking / reasoning checklist
+
+Every first-party package that exposes thinking or reasoning controls should cover:
+
+1. **Model default** — `ModelConfig.compat` (or documented capability) sets the official wire field when no per-turn override is present.
+2. **Per-turn override wins** — `ProviderRequestOptions.compat` via `mergeProviderRequestOptions` / `applyThinkingLevel` overrides the model default.
+3. **Shared family mapping** — effort levels from `ThinkingLevel` land in the package's recommended family (`openai_reasoning` / `reasoning_effort` / `thinking_type` / `noop`) per [Thinking and reasoning](thinking-and-reasoning.md).
+4. **Non-reasoning / noop** — applying a level with `noop` (or omitting compat) must not invent unsupported body fields.
+5. **No inert `extra.thinkingLevel`** — package code must not rely on `options.extra.thinkingLevel` for wire mapping.
+
+Canonical contract: [Thinking and reasoning](thinking-and-reasoning.md).
+
+## AI SDK adapter checklist
+
+`@arnilo/prism-provider-ai-sdk` is a host-owned `LanguageModelV4` bridge. It does not participate in the discovery or thinking/reasoning checklists above. Cover instead:
+
+1. **No catalog / no setup fetch** — package exports no `list*Models()`; `createAiSdkProvider` wraps a host model only.
+2. **Specification gate** — rejects non-v4 models (`specificationVersion !== "v4"` or missing `doStream`).
+3. **Cache usage mapping** — `finish.usage.inputTokens.cacheRead`/`cacheWrite` map to `Usage.cacheReadTokens`/`cacheWriteTokens`; adapter does not emit cache request fields.
+4. **Reasoning stream mapping** — `reasoning-delta` → thinking deltas; assistant `thinking` blocks replay as AI SDK `reasoning` prompt parts.
+5. **Host-owned controls** — `options.compat` / `options.extra` forward as `providerOptions.prism`; reasoning effort stays on the host model.
+
+Canonical contract: [AI SDK provider adapter](providers/ai-sdk.md).
+
 ## Extension and configuration notes
 
 The helpers are a testing subpath only. Provider packages can use them with their own mocked fetch/transport or `createMockProvider()`. Live provider tests should stay opt-in and env-gated outside Prism's default test suite.
@@ -148,7 +186,7 @@ The helpers are a testing subpath only. Provider packages can use them with thei
 ## Related APIs
 
 - [Provider layer](provider-layer.md): `AIProvider`, provider events, and mock provider.
-- [Provider packages](provider-packages.md): package authors can use conformance helpers for adapters.
+- [Provider packages](provider-packages.md): package authors can use conformance helpers for adapters; includes the caller-gated discovery contract and setup zero-fetch rule.
 - [AI SDK provider adapter](providers/ai-sdk.md): optional `LanguageModelV4` bridge tested with a fake AI SDK model.
 - [OpenAI-compatible provider](providers/openai-compatible.md): optional provider adapter tested with mocked streams.
 - [Public contracts](public-contracts.md): provider request/event/usage contracts.

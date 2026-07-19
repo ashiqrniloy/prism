@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../contracts.js";
 
 // ponytail: dialect-neutral persistence schema model and migration contracts for
@@ -31,6 +32,8 @@ export interface PersistenceColumnDefinition {
   readonly name: string;
   readonly type: PersistenceColumnType;
   readonly nullable?: boolean;
+  /** Portable SQL default literal, if the schema requires one. */
+  readonly defaultValue?: string;
   /** Column participates in tenant isolation boundaries when true. */
   readonly tenantScoped?: boolean;
 }
@@ -71,6 +74,8 @@ export interface PersistenceMigrationStep {
   readonly version: number;
   readonly name: string;
   readonly description?: string;
+  /** SHA-256 of the canonical checked-in migration schema content. */
+  readonly checksum: string;
 }
 
 /** Versioned migration expectations shared by production database adapters. */
@@ -198,7 +203,7 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
           { name: "run_id", type: "text", nullable: true },
           { name: "timestamp", type: "timestamp" },
           { name: "kind", type: "text" },
-          { name: "schema_version", type: "integer" },
+          { name: "schema_version", type: "integer", nullable: true },
           { name: "message", type: "json", nullable: true },
           { name: "event", type: "json", nullable: true },
           { name: "model", type: "json", nullable: true },
@@ -247,7 +252,6 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
           ...TENANT_COLUMNS,
           { name: "metadata", type: "json", nullable: true },
         ],
-        uniqueKeys: [["tenant_id", "idempotency_key"]],
         foreignKeys: [{ columns: ["session_id"], referencesTable: "prism_sessions", referencesColumns: ["id"] }],
       },
       {
@@ -301,7 +305,7 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
           { name: "session_id", type: "text" },
           { name: "run_id", type: "text", nullable: true },
           { name: "entry_id", type: "text", nullable: true },
-          { name: "scope", type: "text" },
+          { name: "scope", type: "text", defaultValue: "'run_total'" },
           { name: "turn", type: "integer", nullable: true },
           { name: "attempt", type: "integer", nullable: true },
           { name: "usage", type: "json" },
@@ -326,7 +330,9 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
           { name: "evaluation_ids", type: "json" },
           { name: "created_at", type: "timestamp" },
           { name: "created_by", type: "text", nullable: true },
-          ...TENANT_COLUMNS,
+          { name: "tenant_id", type: "text", tenantScoped: true },
+          { name: "account_id", type: "text", nullable: true, tenantScoped: true },
+          { name: "user_id", type: "text", nullable: true, tenantScoped: true },
           { name: "metadata", type: "json", nullable: true },
         ],
         foreignKeys: [{ columns: ["run_id"], referencesTable: "prism_runs", referencesColumns: ["id"] }],
@@ -372,7 +378,7 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
       { name: "prism_session_entries_session_run_ts_idx", table: "prism_session_entries", columns: ["session_id", "run_id", "timestamp"], purpose: "run-scoped entry listing" },
       { name: "prism_session_entries_session_ts_id_idx", table: "prism_session_entries", columns: ["session_id", "timestamp", "id"], purpose: "cursor pagination without full scans" },
       { name: "prism_session_entries_session_id_idx", table: "prism_session_entries", columns: ["session_id", "id"], purpose: "append parent validation and recursive branch reads" },
-      { name: "prism_session_append_idempotency_unique", table: "prism_session_append_idempotency", columns: ["session_id", "expected_parent_id", "idempotency_key"], unique: true, purpose: "append retry deduplication" },
+      { name: "prism_session_append_idempotency_unique", table: "prism_session_append_idempotency", columns: ["session_id", "expected_parent_id", "idempotency_key"], purpose: "append retry deduplication (primary key enforces uniqueness)" },
       { name: "prism_runs_session_started_idx", table: "prism_runs", columns: ["session_id", "started_at", "id"], purpose: "run history pagination" },
       { name: "prism_runs_branch_started_idx", table: "prism_runs", columns: ["branch_id", "started_at", "id"], purpose: "branch-scoped runs" },
       { name: "prism_runs_tenant_idempotency_unique", table: "prism_runs", columns: ["tenant_id", "idempotency_key"], unique: true, purpose: "run-level idempotency deduplication per tenant" },
@@ -387,8 +393,30 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
       { name: "prism_run_feedback_run_created_idx", table: "prism_run_feedback", columns: ["run_id", "created_at", "id"], purpose: "run feedback lookup" },
       { name: "prism_run_feedback_trace_created_idx", table: "prism_run_feedback", columns: ["trace_id", "created_at", "id"], purpose: "trace feedback lookup" },
       { name: "prism_agent_definitions_name_version_idx", table: "prism_agent_definitions", columns: ["name", "version"], purpose: "definition lookup" },
-      { name: "prism_migrations_name_version_idx", table: "prism_migrations", columns: ["name", "version"], unique: true, purpose: "applied-migration uniqueness" },
+      { name: "prism_migrations_name_version_idx", table: "prism_migrations", columns: ["name", "version"], purpose: "applied-migration lookup (table constraint enforces uniqueness)" },
     ],
+  };
+}
+
+function migrationStep(version: number, name: string, description: string): PersistenceMigrationStep {
+  const model = createPersistenceSchemaModel();
+  const content = version === 1
+    ? {
+        tables: model.tables
+          .filter((table) => table.name !== "prism_run_feedback")
+          .map((table) => table.name === "prism_usage"
+            ? { ...table, columns: table.columns.filter((column) => !["scope", "turn", "attempt"].includes(column.name)) }
+            : table),
+        indexes: model.indexes.filter((index) => !index.name.startsWith("prism_usage_session_scope_") && !index.name.startsWith("prism_run_feedback_")),
+      }
+    : version === 2
+      ? { table: "prism_usage", columns: ["scope", "turn", "attempt"], indexes: ["prism_usage_session_scope_recorded_idx"] }
+      : { tables: ["prism_run_feedback"], indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name) };
+  return {
+    version,
+    name,
+    description,
+    checksum: createHash("sha256").update(JSON.stringify({ version, name, content })).digest("hex"),
   };
 }
 
@@ -398,9 +426,9 @@ export function createPersistenceMigrationContract(): PersistenceMigrationContra
     targetSchemaVersion: PERSISTENCE_SCHEMA_VERSION,
     appliedMigrationsTable: "prism_migrations",
     steps: [
-      { version: 1, name: "001_init", description: "Create core session, branch, entry, idempotency, run, ledger, and migration tables." },
-      { version: 2, name: "002_usage_scope", description: "Distinguish provider-turn usage from aggregate run totals." },
-      { version: 3, name: "003_run_feedback", description: "Add immutable ownership-scoped run/trace feedback and evaluation links." },
+      migrationStep(1, "001_init", "Create core session, branch, entry, idempotency, run, ledger, and migration tables."),
+      migrationStep(2, "002_usage_scope", "Distinguish provider-turn usage from aggregate run totals."),
+      migrationStep(3, "003_run_feedback", "Add immutable ownership-scoped run/trace feedback and evaluation links."),
     ],
     lockGuidance:
       "Acquire a dialect-specific migration lock before applying steps (PostgreSQL advisory lock; SQLite exclusive transaction). Only one process should migrate at a time.",
@@ -490,12 +518,151 @@ export function assertPersistenceMigrationContract(contract: PersistenceMigratio
   for (const step of contract.steps) {
     if (step.version <= previous) throw new Error(`Migration steps must be strictly increasing; ${step.name} is out of order`);
     if (names.has(step.name)) throw new Error(`Duplicate migration step name: ${step.name}`);
+    if (!/^[a-f0-9]{64}$/.test(step.checksum)) throw new Error(`Migration step ${step.name} must have a SHA-256 checksum`);
     names.add(step.name);
     previous = step.version;
   }
   if (previous !== contract.targetSchemaVersion) {
     throw new Error(`Last migration step version ${previous} must equal targetSchemaVersion ${contract.targetSchemaVersion}`);
   }
+}
+
+export type PersistenceSchemaDialect = "sqlite" | "postgres";
+
+export interface PersistenceSchemaShapeColumn {
+  readonly name: string;
+  readonly type: string;
+  readonly nullable: boolean;
+  readonly defaultValue?: string;
+}
+
+export interface PersistenceSchemaShapeForeignKey {
+  readonly columns: readonly string[];
+  readonly referencesTable: string;
+  readonly referencesColumns: readonly string[];
+}
+
+export interface PersistenceSchemaShapeTable {
+  readonly name: string;
+  readonly columns: readonly PersistenceSchemaShapeColumn[];
+  readonly primaryKey: readonly string[];
+  readonly uniqueKeys: readonly (readonly string[])[];
+  readonly foreignKeys: readonly PersistenceSchemaShapeForeignKey[];
+}
+
+export interface PersistenceSchemaShapeIndex {
+  readonly name: string;
+  readonly table: string;
+  readonly columns: readonly string[];
+  readonly unique: boolean;
+}
+
+export interface PersistenceSchemaShape {
+  readonly tables: readonly PersistenceSchemaShapeTable[];
+  readonly indexes: readonly PersistenceSchemaShapeIndex[];
+}
+
+function schemaKey(columns: readonly string[]): string {
+  return columns.join("\u0000");
+}
+
+function normalizedDefault(value: string | undefined): string | undefined {
+  return value?.trim().toLowerCase().replace(/::[a-z_ ]+$/, "");
+}
+
+function compatibleColumnType(dialect: PersistenceSchemaDialect, actual: string, expected: PersistenceColumnType): boolean {
+  const type = actual.trim().toUpperCase();
+  if (dialect === "sqlite") {
+    if (expected === "integer" || expected === "boolean") return type === "INTEGER";
+    if (expected === "number") return type === "REAL";
+    return type === "TEXT";
+  }
+  if (expected === "integer") return type === "INTEGER";
+  if (expected === "boolean") return type === "BOOLEAN";
+  if (expected === "number") return type === "DOUBLE PRECISION";
+  return type === "TEXT";
+}
+
+/** Compare bounded dialect catalog output against every required schema-v3 detail. */
+export function assertPersistenceSchemaShape(
+  shape: PersistenceSchemaShape,
+  dialect: PersistenceSchemaDialect,
+  model: PersistenceSchemaModel = createPersistenceSchemaModel(),
+): void {
+  assertPersistenceSchemaModel(model);
+  const actualTables = new Map(shape.tables.map((table) => [table.name, table]));
+  for (const expected of model.tables) {
+    const actual = actualTables.get(expected.name);
+    if (!actual) throw new Error(`Persistence schema missing table ${expected.name}`);
+    if (actual.columns.length !== expected.columns.length) throw new Error(`Persistence schema table ${expected.name} has unexpected columns`);
+    const actualColumns = new Map(actual.columns.map((column) => [column.name, column]));
+    for (const column of expected.columns) {
+      const found = actualColumns.get(column.name);
+      if (!found) throw new Error(`Persistence schema table ${expected.name} missing column ${column.name}`);
+      if (!compatibleColumnType(dialect, found.type, column.type)) {
+        throw new Error(`Persistence schema column ${expected.name}.${column.name} has incompatible type`);
+      }
+      if (found.nullable !== (column.nullable === true)) {
+        throw new Error(`Persistence schema column ${expected.name}.${column.name} has incompatible nullability`);
+      }
+      if (normalizedDefault(found.defaultValue) !== normalizedDefault(column.defaultValue)) {
+        throw new Error(`Persistence schema column ${expected.name}.${column.name} has incompatible default`);
+      }
+    }
+    if (schemaKey(actual.primaryKey) !== schemaKey(expected.primaryKey)) {
+      throw new Error(`Persistence schema table ${expected.name} has incompatible primary key`);
+    }
+    const unique = new Set(actual.uniqueKeys.map(schemaKey));
+    for (const key of expected.uniqueKeys ?? []) {
+      if (!unique.has(schemaKey(key)) && schemaKey(actual.primaryKey) !== schemaKey(key)) {
+        throw new Error(`Persistence schema table ${expected.name} missing unique key (${key.join(", ")})`);
+      }
+    }
+    const foreign = new Set(actual.foreignKeys.map((key) => `${schemaKey(key.columns)}>${key.referencesTable}:${schemaKey(key.referencesColumns)}`));
+    for (const key of expected.foreignKeys ?? []) {
+      if (!foreign.has(`${schemaKey(key.columns)}>${key.referencesTable}:${schemaKey(key.referencesColumns)}`)) {
+        throw new Error(`Persistence schema table ${expected.name} missing foreign key (${key.columns.join(", ")})`);
+      }
+    }
+  }
+  const actualIndexes = new Map(shape.indexes.map((index) => [index.name, index]));
+  for (const expected of model.indexes) {
+    const actual = actualIndexes.get(expected.name);
+    if (!actual) throw new Error(`Persistence schema missing required index ${expected.name}`);
+    if (actual.table !== expected.table || schemaKey(actual.columns) !== schemaKey(expected.columns) || actual.unique !== (expected.unique === true)) {
+      throw new Error(`Persistence schema index ${expected.name} has incompatible definition`);
+    }
+  }
+}
+
+export interface AppliedPersistenceMigration {
+  readonly name: string;
+  readonly version: string;
+  readonly checksum: string | null;
+}
+
+/** Reject altered migration history before any new DDL or runtime write. */
+export function assertAppliedPersistenceMigrations(
+  contract: PersistenceMigrationContract,
+  applied: readonly AppliedPersistenceMigration[],
+): { readonly legacyChecksums: boolean } {
+  assertPersistenceMigrationContract(contract);
+  if (applied.length > contract.steps.length) throw new Error("Migration history has unknown rows");
+  const legacyChecksums = applied.some((row) => row.checksum === null);
+  if (legacyChecksums && (applied.length !== contract.steps.length || !applied.every((row) => row.checksum === null))) {
+    throw new Error("Migration history has incomplete legacy checksums");
+  }
+  for (let index = 0; index < applied.length; index++) {
+    const row = applied[index]!;
+    const expected = contract.steps[index]!;
+    if (row.name !== expected.name || row.version !== String(expected.version)) {
+      throw new Error(`Migration history row ${index} does not match ${expected.name}`);
+    }
+    if (!legacyChecksums && row.checksum !== expected.checksum) {
+      throw new Error(`Migration history checksum mismatch for ${expected.name}`);
+    }
+  }
+  return { legacyChecksums };
 }
 
 /**
@@ -532,26 +699,20 @@ export function assertParameterizedQuery(sql: string, boundValues: readonly unkn
 /** Simulate migration up + reopen: applied steps must match the contract in order. */
 export function assertMigrationUpAndReopen(
   contract: PersistenceMigrationContract,
-  appliedAfterUp: readonly { readonly name: string; readonly version: string }[],
-  appliedAfterReopen: readonly { readonly name: string; readonly version: string }[],
+  appliedAfterUp: readonly AppliedPersistenceMigration[],
+  appliedAfterReopen: readonly AppliedPersistenceMigration[],
 ): void {
-  assertPersistenceMigrationContract(contract);
-  if (appliedAfterUp.length !== contract.steps.length) {
-    throw new Error("Migration up did not apply every contract step");
+  const first = assertAppliedPersistenceMigrations(contract, appliedAfterUp);
+  if (appliedAfterUp.length !== contract.steps.length || first.legacyChecksums) {
+    throw new Error("Migration up did not apply every checksummed contract step");
   }
-  for (let i = 0; i < contract.steps.length; i++) {
-    const step = contract.steps[i]!;
-    const row = appliedAfterUp[i]!;
-    if (row.name !== step.name || row.version !== String(step.version)) {
-      throw new Error(`Applied migration row ${i} does not match contract step ${step.name}`);
-    }
+  const second = assertAppliedPersistenceMigrations(contract, appliedAfterReopen);
+  if (second.legacyChecksums || appliedAfterReopen.length !== appliedAfterUp.length) {
+    throw new Error("Reopened adapter migration history diverged");
   }
-  if (appliedAfterReopen.length !== appliedAfterUp.length) {
-    throw new Error("Reopened adapter must not re-apply migrations; applied row count changed");
-  }
-  for (let i = 0; i < appliedAfterUp.length; i++) {
-    if (appliedAfterReopen[i]!.name !== appliedAfterUp[i]!.name) {
-      throw new Error("Reopened adapter migration history diverged");
+  for (let index = 0; index < appliedAfterUp.length; index++) {
+    if (appliedAfterReopen[index]!.checksum !== appliedAfterUp[index]!.checksum) {
+      throw new Error("Reopened adapter migration checksums diverged");
     }
   }
 }

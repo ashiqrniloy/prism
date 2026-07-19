@@ -98,6 +98,20 @@ export function redactJson<T>(value: T, redactor?: SecretRedactor): T {
   return redactor ? redactor.redact(value) : value;
 }
 
+export function assertFiniteVector(value: unknown, label: string, expectedLength?: number): asserts value is readonly number[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new MemoryValidationError(`${label} must be a non-empty finite number array`);
+  }
+  if (expectedLength !== undefined && value.length !== expectedLength) {
+    throw new MemoryValidationError(`${label} length ${value.length}, expected ${expectedLength}`);
+  }
+  for (const entry of value) {
+    if (typeof entry !== "number" || !Number.isFinite(entry)) {
+      throw new MemoryValidationError(`${label} must contain only finite numbers`);
+    }
+  }
+}
+
 export function cosineSimilarity(a: readonly number[], b: readonly number[]): number {
   if (a.length !== b.length || a.length === 0) return Number.NEGATIVE_INFINITY;
   let dot = 0;

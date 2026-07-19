@@ -31,6 +31,8 @@ export {
 export type {
   ReadToolOptions,
   ReadOperations,
+  ReadTextOptions,
+  ReadTextResult,
   TransformImage,
   TransformImageInput,
 } from "./read.js";
@@ -45,6 +47,27 @@ export type { EditToolOptions, EditOperations, EditToolDetails, Edit } from "./e
 
 export { withFileMutationQueue } from "./file-mutation-queue.js";
 export { enforceExecutionPolicy } from "./execution-policy.js";
+export {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  DEFAULT_MAX_TEXT_SCAN_BYTES,
+  DEFAULT_MAX_WRITE_BYTES,
+  DEFAULT_MAX_EDIT_FILE_BYTES,
+  DEFAULT_MAX_EDIT_INPUT_BYTES,
+  DEFAULT_MAX_EDITS,
+  DEFAULT_SHELL_TIMEOUT_SECONDS,
+  DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
+  HARD_MAX_BYTES,
+  HARD_MAX_LINES,
+  HARD_MAX_TEXT_SCAN_BYTES,
+  HARD_MAX_IMAGE_BYTES,
+  HARD_MAX_WRITE_BYTES,
+  HARD_MAX_EDIT_FILE_BYTES,
+  HARD_MAX_EDIT_INPUT_BYTES,
+  HARD_MAX_EDITS,
+  HARD_SHELL_TIMEOUT_SECONDS,
+  HARD_MAX_TOTAL_OUTPUT_BYTES,
+} from "./limits.js";
 
 // --- aggregators ---
 

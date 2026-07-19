@@ -21,7 +21,7 @@ Use it to expose one explicitly selected Prism agent at an A2A endpoint or call 
 
 ## Outputs / response / events
 
-The handler serves `GET /.well-known/agent-card.json` and its configured POST endpoint. JSON-RPC returns `{ result: { task } }` or a bounded error. Streaming returns backpressure-driven SSE task envelopes. Client `send()` maps a terminal remote task to `AgentRunResult`; `stream()` yields validated/redacted text artifacts.
+The handler serves `GET /.well-known/agent-card.json` and its configured POST endpoint. JSON-RPC returns `{ result: { task } }` or a bounded error. Streaming returns backpressure-driven SSE task envelopes. Client `send()` maps a terminal remote task to `AgentRunResult`; `stream()` incrementally yields validated/redacted text artifacts. Client SSE accepts LF, CRLF, mixed blank-line separators, comments/unknown fields, and multiline `data:` joined with LF.
 
 ## Request/response example
 
@@ -59,7 +59,9 @@ Only `text` parts are accepted. File/data parts, push notifications, task persis
 ## Security and performance notes
 
 - Endpoints and card URLs must be HTTPS and exactly origin-allow-listed before fetch; `redirect: "error"` prevents redirect SSRF.
-- Treat every remote card, error, task, status, artifact, and SSE frame as untrusted. Shape/count/byte/time limits apply before mapping.
+- Treat every remote card, error, task, status, artifact, and SSE frame as untrusted. Shape/count/byte/time limits apply before mapping. Streaming keeps raw stream bytes, current frame bytes, and event count as separate existing limits.
+- One fatal streaming UTF-8 decoder is reused across every body chunk and flushed once at EOF. Split multibyte code points are preserved; malformed/truncated UTF-8 fails rather than inserting `U+FFFD` into JSON. A small coalesced line buffer keeps one-byte chunk handling incremental.
+- SSE frames require a terminating blank line. A non-whitespace final partial frame, malformed JSON, missing terminal task, failed/canceled task, or any event after a completed task fails with bounded package-owned text. Existing request/response/event/stream/count/timeout hard caps are unchanged.
 - Card verification pins `alg=ES256`, optional key ID, issue/expiry, optional maximum age, and canonical unsigned-card payload. Hosts provision trusted public keys; remote `jku` is never fetched automatically.
 - Card discovery is public; extended-card and invoke methods call host authorization. Use TLS, rate limits, and replay controls at the host edge.
 - Credentials remain in the client auth callback or server authorizer and never enter cards, messages, events, or metrics.

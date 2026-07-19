@@ -9,7 +9,7 @@ and implicit prefix caching.
 
 The package registers a provider, default model metadata for the featured NeuralWatt
 aliases (`glm-5.2`, `glm-5.2-fast`, `glm-5.2-short`, `glm-5.2-short-fast`,
-`kimi-k2.6`, `kimi-k2.6-fast`, `kimi-k2.7-code`, `qwen3.5-397b`,
+`gemma-4-31b`, `kimi-k2.6`, `kimi-k2.6-fast`, `kimi-k2.7-code`, `qwen3.5-397b`,
 `qwen3.5-397b-fast`, `qwen3.6-35b`, `qwen3.6-35b-fast`), and an `api_key` auth
 method through `createExtensionKernel().load([...])`.
 
@@ -79,13 +79,15 @@ The endpoint is rate-limited to **1 request per second per customer** (429 with
 from `generate()` or package setup; the caller owns throttling.
 
 NeuralWatt-specific request fields flow through the generic `ProviderRequestOptions.compat`
-/ `extra` escape hatches: `compat.reasoning_effort` (`"low" | "medium" | "high"`),
-`compat.thinking_token_budget`, `compat.chat_template_kwargs` (including `enable_thinking`),
-`compat.preserve_thinking`, `compat.clear_thinking`, and `compat.tool_choice`.
-`preserve_thinking: true` keeps prior assistant reasoning in request history so
-multi-turn reasoning continues with the earlier chain of thought; `clear_thinking:
-true` drops it for the next turn, resetting the chain. `options.extra` spreads after
-`compat` so per-call values and overrides win.
+/ `extra` escape hatches: `compat.reasoning_effort` (OpenAI-style scale; GLM-5.2 defaults
+unset to `max` per official docs), `compat.thinking_token_budget`,
+`compat.chat_template_kwargs` (including `enable_thinking`, `preserve_thinking`, and
+`clear_thinking` per official gateway docs), and `compat.tool_choice`.
+`preserve_thinking` / `clear_thinking` compat flags are routed into `chat_template_kwargs`
+on the wire (not top-level body fields). Prism also uses these flags for client-side
+message serialization: `preserve_thinking: true` keeps prior assistant reasoning in
+request history; `clear_thinking: true` drops it for the next turn. `options.extra` spreads
+after resolved fields so per-call values and overrides win.
 
 ## Outputs / response / events
 
@@ -112,7 +114,7 @@ Example request body (OpenAI-compatible Chat Completions shape):
   "messages": [{ "role": "user", "content": "Hello" }],
   "stream": true,
   "stream_options": { "include_usage": true },
-  "reasoning_effort": "medium",
+  "reasoning_effort": "max",
   "thinking_token_budget": 8192
 }
 ```
@@ -192,6 +194,7 @@ validation. The caller owns throttling/caching — the helper makes one explicit
 | `glm-5.2-fast` | 1024K | Tools, fast/no reasoning |
 | `glm-5.2-short` | 195K | Tools, reasoning |
 | `glm-5.2-short-fast` | 195K | Tools, fast/no reasoning |
+| `gemma-4-31b` | 256K | Tools, vision, JSON mode |
 | `kimi-k2.6` | 256K | Tools, reasoning, vision, JSON mode |
 | `kimi-k2.6-fast` | 256K | Tools, vision, JSON mode, fast/no reasoning |
 | `kimi-k2.7-code` | 256K | Tools, reasoning, vision, JSON mode |
@@ -255,15 +258,18 @@ so multi-turn sessions continue the earlier chain of thought:
 
 - Prior `thinking` content blocks on an assistant message are serialized under a
   `reasoning_content` field on that message (matching the streaming
-  `delta.reasoning_content` field). They are **not** flattened into text `content`, so
+  `delta.reasoning_content` field; the gateway also accepts `reasoning` as an alias).
+  They are **not** flattened into text `content`, so
   the model sees reasoning and answer as distinct.
 - Preservation is gated on `model.capabilities.reasoning === true` **or**
   `compat.preserve_thinking: true`. Non-reasoning models receive no `reasoning_content`
   field and prior `thinking` blocks are dropped — they never leak into text content for
   providers/models that do not support reasoning.
-- `compat.clear_thinking: true` drops prior reasoning for the next turn even on
-  reasoning-capable models, resetting the chain of thought. `clear_thinking` takes
-  precedence over `preserve_thinking`.
+- `compat.preserve_thinking` / `compat.clear_thinking` map into `chat_template_kwargs`
+  on the request body per official NeuralWatt docs (Kimi K2.6 `preserve_thinking`, GLM
+  `clear_thinking: false` for full-history). Prism also uses `clear_thinking: true` to
+  drop prior reasoning client-side even on reasoning-capable models; `clear_thinking`
+  takes precedence over `preserve_thinking`.
 - The provider only echoes caller-provided `thinking` blocks; it never synthesizes new
   reasoning.
 

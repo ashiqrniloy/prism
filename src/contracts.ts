@@ -1519,6 +1519,8 @@ export type AgentLoopOptions =
       readonly parser?: ArtifactParser<unknown>;
       readonly repairer?: ArtifactRepairer<unknown>;
       readonly maxRevisions?: number;
+      /** Dispatch provider tool calls in artifact turns. Default `"disabled"`; `"bounded"` uses RunOptions.maxToolRounds sequentially. */
+      readonly toolCalls?: "disabled" | "bounded";
       /** Native provider JSON-schema output. Ignored when `structuredOutputMode` is `artifact-loop`. */
       readonly structuredOutput?: StructuredOutputOptions;
       /** `native` maps schema to capable providers; `artifact-loop` keeps repair turns only. */

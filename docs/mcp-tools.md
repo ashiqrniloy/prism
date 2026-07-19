@@ -98,7 +98,7 @@ for (const tool of bridge.tools) registry.register(tool);
 | `tools/call` content blocks | `ToolResult.content` (`text`, `image`; resource/audio/link → descriptive `text`) |
 | Tool `name` | Prefixed `mcp:<serverId>:<name>` (override with `namePrefix`) |
 | `isError` results | `ToolResult.error` with summarized text |
-| `structuredContent` | `ToolResult.value` / metadata |
+| `structuredContent` | `ToolResult.value` (MCP attribution/byte count remains in metadata) |
 
 Duplicate prefixed names throw `McpToolNameCollisionError` at refresh time.
 
@@ -109,10 +109,17 @@ Duplicate prefixed names throw `McpToolNameCollisionError` at refresh time.
 | `serverId` | required | Stable identifier used in default name prefix |
 | `transport` | required | `stdio` or `streamable-http` config |
 | `namePrefix` | `mcp:<serverId>:` | Registry namespace for remote tools |
-| `listCacheTtlMs` | `30000` | Skip re-listing until TTL expires (invalidated on list-changed) |
-| `callTimeoutMs` | `60000` | Per-call MCP request timeout |
-| `maxResultBytes` | `10000000` | Bound mapped result content |
-| `signal` | none | Abort connect and trigger close on abort |
+| `listCacheTtlMs` | 30 s (24 h hard) | Skip re-listing until TTL expires (invalidated on list-changed) |
+| `callTimeoutMs` | 60 s (30 min hard) | Connect, list-page, and tool-call SDK request timeout/abort |
+| `maxListPages` / `maxTools` | 20 / 500 (hard 100 / 5,000) | Stop pagination before another request/append |
+| `maxCursorBytes` | 4 KiB (16 KiB hard) | Reject long or repeated cursors |
+| `maxToolNameBytes` | 256 B (1 KiB hard) | Bound each remote name before mapping |
+| `maxToolDescriptionBytes` | 16 KiB (64 KiB hard) | Bound each retained description |
+| `maxToolSchemaBytes` | 256 KiB (1 MiB hard) | Combined input/output schemas per tool |
+| `maxTotalToolSchemaBytes` | 4 MiB (16 MiB hard) | Aggregate schemas per refresh |
+| `maxResultBytes` | 10,000,000 B (16 MiB hard) | Aggregate remote result before `ToolResult` |
+| `maxJsonDepth` / `maxJsonProperties` | 64 / 10,000 (hard 128 / 100,000) | Bound schema and result JSON walks |
+| `signal` | none | Abort connect/list and trigger close on connect abort |
 
 ### Stdio transport
 
@@ -135,12 +142,18 @@ The host explicitly chooses the executable, arguments, environment, and working 
 {
   type: "streamable-http",
   url: "https://mcp.example.com/mcp",
+  allowedOrigins: ["https://mcp.example.com"],
+  maxResponseBytes?: number,       // 16 MiB default, 64 MiB hard
+  allowLoopbackHttp?: boolean,     // false; development loopback only
   requestInit?: RequestInit,
   sessionId?: string,
+  resolveHostname?: MediaHostnameResolver,
 }
 ```
 
-Only `http:` and `https:` URLs are accepted. Authentication (Bearer tokens, cookies) is supplied through `requestInit.headers` by the host.
+HTTPS and at least one exact origin are required. The endpoint and every SDK session/reconnect request must match both the configured endpoint origin and `allowedOrigins`; origins cannot contain paths, credentials, fragments, or wildcards. Each request resolves at most 32 addresses, rejects the whole answer on any private/malformed address, pins one validated address through Node's HTTP(S) `lookup` seam, rejects redirects, and streams through the response cap. This covers initialization POSTs, SSE GET/reconnect, tool calls, and session DELETE. Authorization headers therefore never cross an origin or redirect.
+
+Plaintext is accepted only when `allowLoopbackHttp: true`, the URL hostname is loopback/`localhost`, and every DNS answer is loopback. This is a development escape hatch, not private-network MCP access. `resolveHostname` is a test/host DNS seam; returned addresses still receive all checks and pinning. Authentication headers/cookies remain explicit host input through `requestInit.headers`.
 
 ### MCP server options
 
@@ -160,16 +173,19 @@ Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 
 | Risk | Mitigation |
 | --- | --- |
 | Untrusted subprocess (stdio) | Explicit `command` / `args` / `env` / `cwd`; review before deploy |
-| SSRF / open redirects (HTTP) | Host URL allow-lists, network policy, no implicit discovery |
+| SSRF / DNS rebinding / redirects (HTTP) | Exact HTTPS origins; credentials/fragments/redirects denied; every DNS answer public; one address pinned per request; explicit loopback-only HTTP escape hatch |
+| Hostile discovery / schema compilation | Raw SDK `tools/list` requests avoid SDK Ajv output-schema compilation; finite pages/tools/cursors/metadata/schema totals; failed refresh leaves previous tools unchanged |
 | Tool-name shadowing | Prefixed names + `createToolRegistry({ duplicate: "error" })` |
-| Oversized server output | `maxResultBytes` on content mapping |
+| Oversized/deep/wide server output | One aggregate byte/depth/property walk covers content, structured content, compatibility `toolResult`, and bounded remote errors before `ToolResult` |
 | Unvalidated arguments | Register tools with `createJsonSchemaToolArgumentValidator()` at dispatch |
 | Missing permission gate | Client direction: `PermissionPolicy` on `tool:mcp:<serverId>:<name>:execute`; server direction: required MCP `authorize` plus optional core `PermissionPolicy` |
 | Accidental server exposure | Empty default arrays, duplicate-name rejection, explicit tools/commands only |
 | Unbounded MCP HTTP | Bounded pre-parsed JSON, response bytes, concurrent requests, call timeout, SDK web-standard transport |
 | Cross-tenant operation | Authorizer derives ownership from validated auth and passes it to tool dispatch/selected workflow commands; never trust arguments as identity |
 
-MCP output is untrusted. Apply `SecretRedactor` and host logging policy to `ToolResult` before persisting or displaying. MCP server authorization does not replace tool `PermissionPolicy`, argument validation, coding `ExecutionPolicy`, workflow ownership checks, TLS, rate limiting, or sandboxing. A timed-out tool must cooperate with `AbortSignal` to stop side effects; the response is bounded even when untrusted code ignores abort.
+MCP output is untrusted. Register bridge tools through core dispatch with a `SecretRedactor` so bounded remote content/errors are redacted before persistence or display. Prism does not infer unknown secrets. MCP server authorization does not replace tool `PermissionPolicy`, argument validation, coding `ExecutionPolicy`, workflow ownership checks, TLS, rate limiting, or sandboxing. A timed-out tool must cooperate with `AbortSignal` to stop side effects; protocol retention and HTTP responses remain bounded when remote work ignores abort.
+
+Discovery validation is atomic: cursor/page/tool/name/description/schema failures reject `refresh()` and preserve the previous immutable tool-array reference. The bridge intentionally uses raw SDK `request()` for `tools/list` and `tools/call`; this avoids eager Ajv compilation/validation of untrusted remote output schemas. Host `ToolValidator` remains the argument-validation owner.
 
 ## Related APIs
 
@@ -181,4 +197,4 @@ MCP output is untrusted. Apply `SecretRedactor` and host logging policy to `Tool
 
 ## Testing
 
-Package tests use in-memory MCP transports (no network). Hosts should integration-test their configured stdio commands and HTTP endpoints in staging before production registration.
+Package tests use in-memory MCP transports plus loopback-only HTTP fixtures for redirect, rebinding, response-cap, abort, and POST/GET/DELETE policy coverage. No public network is required. Hosts should integration-test configured stdio commands and HTTPS endpoints in staging before production registration.

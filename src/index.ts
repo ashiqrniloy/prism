@@ -50,6 +50,25 @@ export {
 export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProviderRequestOptions } from "./provider-request-policy.js";
 export type { SessionCachePolicyOptions } from "./provider-request-policy.js";
+export {
+  THINKING_LEVELS,
+  applyThinkingLevel,
+  isThinkingLevel,
+  normalizeThinkingLevel,
+  thinkingCompatFor,
+  thinkingFamilyForModel,
+} from "./thinking.js";
+export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js";
+export {
+  resolveUseCaseModel,
+  resolveUseCaseModelBinding,
+  useCaseCredentialProviderId,
+} from "./use-case-model.js";
+export type {
+  ResolveUseCaseModelInput,
+  ResolvedUseCaseModel,
+  UseCaseModelBinding,
+} from "./use-case-model.js";
 export { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
 export type { ComposeSystemPromptOptions } from "./system-prompts.js";
 export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
@@ -143,6 +162,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.5";
+export const version = "0.0.6";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

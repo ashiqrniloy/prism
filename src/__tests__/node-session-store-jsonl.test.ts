@@ -109,6 +109,27 @@ describe("node jsonl session store", () => {
     );
   });
 
+  it("blocks append when the file contains shape-invalid lines", async () => {
+    const path = await tempPath();
+    const valid = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "ok" });
+    const badShape = JSON.stringify({
+      id: "bad",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "message",
+      message: { role: 123 },
+    });
+    await writeFile(path, [JSON.stringify(valid), badShape].join("\n"), "utf8");
+    const store = createJsonlSessionStore(path);
+
+    await assert.rejects(
+      () => store.append(createSessionEntry({ id: "e2", sessionId: "s1", kind: "label", label: "new" })),
+      /Invalid JSONL at line 2/,
+    );
+    // Reads still quarantine rather than fail the whole file.
+    assert.deepEqual((await store.list("s1")).map((entry) => entry.id), ["e1"]);
+  });
+
   it("does not poison a branch when one entry is invalid", async () => {
     const path = await tempPath();
     const good = createSessionEntry({ id: "good", sessionId: "s1", kind: "message", message: { role: "user", content: [{ type: "text", text: "hi" }] } });

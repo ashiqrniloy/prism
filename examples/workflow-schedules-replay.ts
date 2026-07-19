@@ -15,6 +15,7 @@ const leases = createMemoryLeaseStore();
 const checkpoints = createWorkflowCheckpoints({ store });
 
 const child = defineWorkflow({
+  revision: "1",
   id: "enrich",
   nodes: {
     enrich: functionNode({
@@ -24,6 +25,7 @@ const child = defineWorkflow({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "scheduled-report",
   state: { initial: { attempts: 0 }, schema: { type: "object" } },
   nodes: {

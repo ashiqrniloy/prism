@@ -2,8 +2,8 @@
  * Read tool: read a file from the host filesystem.
  *
  * Behavioral port of pi's core/tools/read for @arnilo/prism-coding-agent, adapted to Prism's
- * `ToolDefinition` contract. Faithfully ports pi's text path (offset/limit → `truncateHead` →
- * continuation notices) and image path (magic-byte MIME → `ImageContent` with base64). Drops pi's
+ * `ToolDefinition` contract. Keeps pi's offset/limit continuation behavior while streaming one
+ * bounded text page; image path remains magic-byte MIME → bounded `ImageContent`. Drops pi's
  * TUI (`renderCall`/`renderResult`, theme/syntax-highlight, compact classifications, key hints) and
  * the model-aware non-vision note (Prism's `ToolExecutionContext` has no model field).
  *
@@ -21,7 +21,7 @@
  */
 import { Buffer } from "node:buffer";
 import { constants } from "node:fs";
-import { access as fsAccess, open, readFile as fsReadFile, stat as fsStat } from "node:fs/promises";
+import { access as fsAccess, open, stat as fsStat } from "node:fs/promises";
 import type {
   ExecutionPolicy,
   JsonObject,
@@ -29,15 +29,21 @@ import type {
   ToolExecutionContext,
   ToolResult,
 } from "@arnilo/prism";
+import { readFileBounded } from "./bounded-file.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { resolveReadPathAsync } from "./path-utils.js";
 import {
   DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_IMAGE_BYTES,
   DEFAULT_MAX_LINES,
-  formatSize,
-  truncateHead,
-  type TruncationResult,
-} from "./truncate.js";
+  DEFAULT_MAX_TEXT_SCAN_BYTES,
+  HARD_MAX_BYTES,
+  HARD_MAX_IMAGE_BYTES,
+  HARD_MAX_LINES,
+  HARD_MAX_TEXT_SCAN_BYTES,
+  validateCodingLimit,
+} from "./limits.js";
+import { formatSize, type TruncationResult } from "./truncate.js";
 
 // --- magic-byte image MIME detection (faithful port of pi utils/mime.js, pure JS, no deps) ---
 
@@ -158,7 +164,7 @@ function startsWithAscii(buffer: Buffer, offset: number, text: string): boolean 
 // --- read tool ---
 
 /** Default maximum image file size before read/transform (10 MB). */
-export const DEFAULT_MAX_IMAGE_BYTES = 10_000_000;
+export { DEFAULT_MAX_IMAGE_BYTES } from "./limits.js";
 
 /** Input passed to an optional host-owned image transformer. */
 export interface TransformImageInput {
@@ -173,13 +179,37 @@ export type TransformImage = (input: TransformImageInput) => Promise<Buffer>;
  * Pluggable operations for the read tool. Override to delegate file reading to remote systems
  * (e.g. SSH) while keeping the tool's truncation/offset/limit behavior.
  */
+export interface ReadTextOptions {
+  readonly offset: number;
+  readonly limit?: number;
+  readonly maxLines: number;
+  readonly maxBytes: number;
+  readonly maxScanBytes: number;
+  readonly signal?: AbortSignal;
+}
+
+export interface ReadTextResult {
+  readonly content: string;
+  readonly startLine: number;
+  readonly outputLines: number;
+  readonly hasMore: boolean;
+  readonly nextOffset?: number;
+  readonly truncatedBy: "lines" | "bytes" | null;
+  readonly firstLineExceedsLimit: boolean;
+  readonly scannedBytes: number;
+  readonly totalLines?: number;
+  readonly totalBytes?: number;
+}
+
 export interface ReadOperations {
-  /** Read file contents as a Buffer. */
-  readFile: (absolutePath: string) => Promise<Buffer>;
+  /** Read a bounded binary file. Backends must honor `maxBytes` before retaining more data. */
+  readFile: (absolutePath: string, options: { maxBytes: number; signal?: AbortSignal }) => Promise<Buffer>;
+  /** Read one bounded text page. Required so remote backends cannot fall back to a full-file read. */
+  readText: (absolutePath: string, options: ReadTextOptions) => Promise<ReadTextResult>;
   /** Check the file is readable (throw if not). */
-  access: (absolutePath: string) => Promise<void>;
-  /** Return file size in bytes for image bound checks (default: local `fs.stat`). */
-  statFile?: (absolutePath: string) => Promise<{ size: number }>;
+  access: (absolutePath: string, options?: { signal?: AbortSignal }) => Promise<void>;
+  /** Return file size in bytes for image bound checks. */
+  statFile: (absolutePath: string, options?: { signal?: AbortSignal }) => Promise<{ size: number }>;
   /** Detect image MIME type from the file; return null/undefined for non-images. */
   detectImageMimeType?: (absolutePath: string) => Promise<string | null | undefined>;
 }
@@ -194,6 +224,8 @@ export interface ReadToolOptions {
   autoResizeImages?: boolean;
   /** Reject image reads larger than this many bytes (default {@link DEFAULT_MAX_IMAGE_BYTES}). */
   maxImageBytes?: number;
+  /** Maximum raw bytes scanned to reach one text page (default 64 MiB). */
+  maxScanBytes?: number;
   /** Optional host callback to resize or re-encode images before base64 encoding. */
   transformImage?: TransformImage;
   /** Custom operations backend (default: local filesystem). */
@@ -204,8 +236,124 @@ export interface ReadToolOptions {
   maxBytes?: number;
 }
 
+async function readLocalTextPage(
+  path: string,
+  options: ReadTextOptions,
+): Promise<ReadTextResult> {
+  const handle = await open(path, "r");
+  let fileSize: number;
+  try {
+    fileSize = (await handle.stat()).size;
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+  const chunks: Buffer[] = [];
+  let retainedBytes = 0;
+  let outputLines = 0;
+  let lineNumber = 1;
+  let scannedBytes = 0;
+  let lineChunkStart = 0;
+  let lineByteStart = 0;
+  const targetLines = options.limit ?? options.maxLines;
+
+  const content = (trimFinalLf: boolean): string => {
+    const buffer = Buffer.concat(chunks, retainedBytes);
+    const end = trimFinalLf && buffer[buffer.length - 1] === 0x0a ? buffer.length - 1 : buffer.length;
+    return buffer.subarray(0, end).toString("utf-8");
+  };
+  const partial = (
+    truncatedBy: "lines" | "bytes" | null,
+    nextOffset: number,
+    firstLineExceedsLimit = false,
+    totalLines?: number,
+  ): ReadTextResult => ({
+    content: firstLineExceedsLimit ? "" : content(true),
+    startLine: options.offset,
+    outputLines,
+    hasMore: true,
+    nextOffset,
+    truncatedBy,
+    firstLineExceedsLimit,
+    scannedBytes,
+    totalLines,
+    totalBytes: fileSize,
+  });
+
+  try {
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    while (true) {
+      if (options.signal?.aborted) throw new Error("Operation aborted");
+      if (scannedBytes >= options.maxScanBytes) {
+        if (scannedBytes >= fileSize) break;
+        throw new Error(`Text read exceeded ${formatSize(options.maxScanBytes)} scan limit before reaching the requested page`);
+      }
+      const length = Math.min(buffer.length, options.maxScanBytes - scannedBytes);
+      const { bytesRead } = await handle.read(buffer, 0, length, null);
+      if (bytesRead === 0) break;
+      scannedBytes += bytesRead;
+
+      let cursor = 0;
+      while (cursor < bytesRead) {
+        const newline = buffer.indexOf(0x0a, cursor);
+        const end = newline === -1 || newline >= bytesRead ? bytesRead : newline + 1;
+        const selected = lineNumber >= options.offset && outputLines < targetLines;
+        if (selected) {
+          const piece = buffer.subarray(cursor, end);
+          if (retainedBytes + piece.length > options.maxBytes) {
+            chunks.length = lineChunkStart;
+            retainedBytes = lineByteStart;
+            return partial("bytes", lineNumber, outputLines === 0);
+          }
+          chunks.push(Buffer.from(piece));
+          retainedBytes += piece.length;
+        }
+        cursor = end;
+        if (newline === -1 || newline >= bytesRead) break;
+
+        if (selected) {
+          outputLines++;
+          if (outputLines >= targetLines) {
+            let totalLines: number | undefined;
+            if (scannedBytes === fileSize) {
+              let remainingNewlines = 0;
+              for (let index = cursor; index < bytesRead; index++) {
+                if (buffer[index] === 0x0a) remainingNewlines++;
+              }
+              totalLines = lineNumber + remainingNewlines + 1;
+            }
+            return partial(options.limit === undefined ? "lines" : null, lineNumber + 1, false, totalLines);
+          }
+        }
+        lineNumber++;
+        lineChunkStart = chunks.length;
+        lineByteStart = retainedBytes;
+      }
+    }
+
+    if (lineNumber < options.offset) {
+      throw new Error(`Offset ${options.offset} is beyond end of file (${lineNumber} lines total)`);
+    }
+    if (lineNumber >= options.offset && outputLines < targetLines) outputLines++;
+    return {
+      content: content(false),
+      startLine: options.offset,
+      outputLines,
+      hasMore: false,
+      truncatedBy: null,
+      firstLineExceedsLimit: false,
+      scannedBytes,
+      totalLines: lineNumber,
+      totalBytes: scannedBytes,
+    };
+  } finally {
+    await handle.close();
+  }
+}
+
 const defaultReadOperations: ReadOperations = {
-  readFile: (path) => fsReadFile(path),
+  readFile: (path, options) => readFileBounded(path, options.maxBytes, options.signal),
+  readText: readLocalTextPage,
   access: (path) => fsAccess(path, constants.R_OK),
   statFile: async (path) => {
     const info = await fsStat(path);
@@ -233,14 +381,15 @@ async function loadImageBuffer(
     throw new Error("Operation aborted");
   }
 
-  if (ops.statFile) {
-    const { size } = await ops.statFile(absolutePath);
-    if (size > options.maxImageBytes) {
-      throw new Error(imageSizeError(size, options.maxImageBytes));
-    }
+  const { size } = await ops.statFile(absolutePath, { signal: options.signal });
+  if (size > options.maxImageBytes) {
+    throw new Error(imageSizeError(size, options.maxImageBytes));
   }
 
-  let buffer = await ops.readFile(absolutePath);
+  let buffer = await ops.readFile(absolutePath, {
+    maxBytes: options.maxImageBytes,
+    signal: options.signal,
+  });
   if (buffer.length > options.maxImageBytes) {
     throw new Error(imageSizeError(buffer.length, options.maxImageBytes));
   }
@@ -274,10 +423,19 @@ function errorResult(toolCallId: string, message: string): ToolResult {
 }
 
 export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition {
-  const ops: ReadOperations = { ...defaultReadOperations, ...options?.operations };
-  const maxLines = options?.maxLines ?? DEFAULT_MAX_LINES;
-  const maxBytes = options?.maxBytes ?? DEFAULT_MAX_BYTES;
-  const maxImageBytes = options?.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES;
+  const ops = options?.operations ?? defaultReadOperations;
+  const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
+  const maxImageBytes = validateCodingLimit(
+    "maxImageBytes",
+    options?.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES,
+    HARD_MAX_IMAGE_BYTES,
+  );
+  const maxScanBytes = validateCodingLimit(
+    "maxScanBytes",
+    options?.maxScanBytes ?? DEFAULT_MAX_TEXT_SCAN_BYTES,
+    HARD_MAX_TEXT_SCAN_BYTES,
+  );
 
   return {
     name: "read",
@@ -308,6 +466,10 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
       }
 
       try {
+        const startLine = validateCodingLimit("offset", offset ?? 1, Number.MAX_SAFE_INTEGER);
+        const requestedLines = limit === undefined
+          ? undefined
+          : validateCodingLimit("limit", limit, HARD_MAX_LINES);
         const absolutePath = await resolveReadPathAsync(path, cwd);
 
         const policyCheck = await enforceExecutionPolicy(
@@ -325,7 +487,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
         if (!policyCheck.allowed) return policyCheck.result;
         const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
 
-        await ops.access(allowedPath);
+        await ops.access(allowedPath, { signal: context.signal });
 
         const mimeType = ops.detectImageMimeType ? await ops.detectImageMimeType(allowedPath) : undefined;
 
@@ -347,60 +509,54 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
           };
         }
 
-        // Text path: faithful port of pi's offset/limit → truncateHead → continuation logic.
-        const buffer = await ops.readFile(allowedPath);
-        const textContent = buffer.toString("utf-8");
-        const allLines = textContent.split("\n");
-        const totalFileLines = allLines.length;
-
-        // 1-indexed offset → 0-indexed array access.
-        const startLine = offset ? Math.max(0, offset - 1) : 0;
-        const startLineDisplay = startLine + 1;
-
-        if (startLine >= allLines.length) {
-          throw new Error(`Offset ${offset} is beyond end of file (${allLines.length} lines total)`);
+        const page = await ops.readText(allowedPath, {
+          offset: startLine,
+          limit: requestedLines,
+          maxLines,
+          maxBytes,
+          maxScanBytes,
+          signal: context.signal,
+        });
+        const contentBytes = Buffer.byteLength(page.content, "utf-8");
+        if (contentBytes > maxBytes || page.outputLines > (requestedLines ?? maxLines)) {
+          throw new Error("ReadOperations.readText returned data beyond the requested bounds");
         }
-
-        let selectedContent: string;
-        let userLimitedLines: number | undefined;
-        if (limit !== undefined) {
-          const endLine = Math.min(startLine + limit, allLines.length);
-          selectedContent = allLines.slice(startLine, endLine).join("\n");
-          userLimitedLines = endLine - startLine;
-        } else {
-          selectedContent = allLines.slice(startLine).join("\n");
-        }
-
-        const truncation = truncateHead(selectedContent, { maxLines, maxBytes });
-        let outputText: string;
-
-        if (truncation.firstLineExceedsLimit) {
-          // First line alone exceeds the byte limit — point at a shell fallback.
-          const firstLineSize = formatSize(Buffer.byteLength(allLines[startLine], "utf-8"));
-          outputText = `[Line ${startLineDisplay} is ${firstLineSize}, exceeds ${formatSize(maxBytes)} limit. Use the shell tool: sed -n '${startLineDisplay}p' ${path} | head -c ${maxBytes}]`;
-        } else if (truncation.truncated) {
-          const endLineDisplay = startLineDisplay + truncation.outputLines - 1;
-          const nextOffset = endLineDisplay + 1;
-          outputText = truncation.content;
-          if (truncation.truncatedBy === "lines") {
-            outputText += `\n\n[Showing lines ${startLineDisplay}-${endLineDisplay} of ${totalFileLines}. Use offset=${nextOffset} to continue.]`;
+        const totalLines = page.totalLines ?? page.startLine + page.outputLines + (page.hasMore ? 1 : 0) - 1;
+        const truncation: TruncationResult = {
+          content: page.content,
+          truncated: page.truncatedBy !== null,
+          truncatedBy: page.truncatedBy,
+          totalLines,
+          totalBytes: page.totalBytes ?? page.scannedBytes,
+          outputLines: page.outputLines,
+          outputBytes: contentBytes,
+          lastLinePartial: false,
+          firstLineExceedsLimit: page.firstLineExceedsLimit,
+          maxLines,
+          maxBytes,
+          totalLinesKnown: page.totalLines !== undefined,
+          totalBytesKnown: page.totalBytes !== undefined,
+        };
+        let outputText = page.content;
+        if (page.firstLineExceedsLimit) {
+          outputText = `[Line ${page.startLine} exceeds ${formatSize(maxBytes)} limit. Use the shell tool: sed -n '${page.startLine}p' ${path} | head -c ${maxBytes}]`;
+        } else if (page.hasMore && page.nextOffset !== undefined) {
+          const endLine = page.startLine + page.outputLines - 1;
+          if (page.totalLines !== undefined) {
+            const remaining = page.totalLines - endLine;
+            outputText += page.truncatedBy
+              ? `\n\n[Showing lines ${page.startLine}-${endLine} of ${page.totalLines}${page.truncatedBy === "bytes" ? ` (${formatSize(maxBytes)} limit)` : ""}. Use offset=${page.nextOffset} to continue.]`
+              : `\n\n[${remaining} more lines in file. Use offset=${page.nextOffset} to continue.]`;
           } else {
-            outputText += `\n\n[Showing lines ${startLineDisplay}-${endLineDisplay} of ${totalFileLines} (${formatSize(maxBytes)} limit). Use offset=${nextOffset} to continue.]`;
+            outputText += `\n\n[Showing lines ${page.startLine}-${endLine}${page.truncatedBy === "bytes" ? ` (${formatSize(maxBytes)} limit)` : ""}. Use offset=${page.nextOffset} to continue.]`;
           }
-        } else if (userLimitedLines !== undefined && startLine + userLimitedLines < allLines.length) {
-          // User limit stopped early but the file has more content.
-          const remaining = allLines.length - (startLine + userLimitedLines);
-          const nextOffset = startLine + userLimitedLines + 1;
-          outputText = `${truncation.content}\n\n[${remaining} more lines in file. Use offset=${nextOffset} to continue.]`;
-        } else {
-          outputText = truncation.content;
         }
 
         return {
           toolCallId,
           name: "read",
           content: [{ type: "text", text: outputText }],
-          metadata: { truncation },
+          metadata: { truncation, scannedBytes: page.scannedBytes },
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -39,6 +39,7 @@ describe("runWorkflow", () => {
       execute: async (ctx) => `${ctx.upstream.left}:${ctx.upstream.right}`,
     });
     const workflow = defineWorkflow({
+      revision: "1",
       id: "diamond",
       nodes: { left, right, join },
       edges: [["left", "join"], ["right", "join"]],
@@ -64,6 +65,7 @@ describe("runWorkflow", () => {
     const expensive = functionNode({ execute: async () => "nope" });
     const fallback = functionNode({ execute: async () => "ok" });
     const workflow = defineWorkflow({
+      revision: "1",
       id: "cond",
       nodes: { gate, expensive, fallback },
       edges: [["gate", "expensive"], ["gate", "fallback"]],
@@ -81,6 +83,7 @@ describe("runWorkflow", () => {
       maxFanOut: 2,
     });
     const workflow = defineWorkflow({
+      revision: "1",
       id: "fan",
       nodes: { expand },
     });
@@ -100,6 +103,7 @@ describe("runWorkflow", () => {
       reduce: async (items) => (items as number[]).reduce((sum, n) => sum + n, 0),
     });
     const workflow = defineWorkflow({
+      revision: "1",
       id: "mapjoin",
       nodes: { expand, reduce },
       edges: [["expand", "reduce"]],
@@ -118,6 +122,7 @@ describe("runWorkflow", () => {
       if (index > 0) edges.push([`n${index - 1}`, id]);
     }
     const workflow = defineWorkflow({
+      revision: "1",
       id: "thousand-node-chain",
       nodes,
       edges,
@@ -139,7 +144,7 @@ describe("runWorkflow", () => {
         return "ok";
       },
     });
-    const workflow = defineWorkflow({ id: "retry", nodes: { flaky } });
+    const workflow = defineWorkflow({ revision: "1", id: "retry", nodes: { flaky } });
     const result = await runWorkflow(workflow, null);
     assert.equal(result.outputs.flaky, "ok");
     assert.equal(attempts, 3);
@@ -159,7 +164,7 @@ describe("runWorkflow", () => {
         return "late";
       },
     });
-    const workflow = defineWorkflow({ id: "timeout", nodes: { hung } });
+    const workflow = defineWorkflow({ revision: "1", id: "timeout", nodes: { hung } });
     await assert.rejects(() => runWorkflow(workflow, null), /Abort|timeout|failed|Workflow/i);
   });
 
@@ -178,7 +183,7 @@ describe("runWorkflow", () => {
         return "done";
       },
     });
-    const workflow = defineWorkflow({ id: "abort", nodes: { slow } });
+    const workflow = defineWorkflow({ revision: "1", id: "abort", nodes: { slow } });
     await assert.rejects(
       () => runWorkflow(workflow, null, { signal: ac.signal }),
       (error: unknown) => error instanceof WorkflowAbortError || isAbortLike(error),
@@ -194,7 +199,7 @@ describe("runWorkflow", () => {
       agent: "researcher",
       input: (ctx) => String(ctx.workflowInput),
     });
-    const workflow = defineWorkflow({ id: "agentic", nodes: { research } });
+    const workflow = defineWorkflow({ revision: "1", id: "agentic", nodes: { research } });
     const result = await runWorkflow(workflow, "topic", {
       agentFactory: async () => agent.createSession({ id: "s-research" }),
     });
@@ -213,7 +218,7 @@ describe("runWorkflow", () => {
       tool: echo,
       args: async (ctx) => ({ text: String(ctx.workflowInput) }),
     });
-    const workflow = defineWorkflow({ id: "tools", nodes: { node } });
+    const workflow = defineWorkflow({ revision: "1", id: "tools", nodes: { node } });
     const result = await runWorkflow(workflow, "hi", {
       executionPolicy: {
         check(action) {
@@ -239,6 +244,7 @@ describe("runWorkflow", () => {
       },
     };
     const workflow = defineWorkflow({
+      revision: "1",
       id: "approve-tool",
       nodes: {
         publish: toolNode({
@@ -292,6 +298,7 @@ describe("runWorkflow", () => {
       },
     });
     const workflow = defineWorkflow({
+      revision: "1",
       id: "resume",
       nodes: { first, second },
       edges: [["first", "second"]],
@@ -334,7 +341,7 @@ describe("runWorkflow", () => {
         return { approvedBy: (ctx.resume.input as { reviewer: string }).reviewer };
       },
     });
-    const workflow = defineWorkflow({ id: "human-publish", nodes: { publish } });
+    const workflow = defineWorkflow({ revision: "1", id: "human-publish", nodes: { publish } });
     const suspended = await runWorkflow(workflow, null, {
       checkpoints,
       runId: "suspend-1",
@@ -381,6 +388,7 @@ describe("runWorkflow", () => {
       },
     });
     const workflow = defineWorkflow({
+      revision: "1",
       id: "two-reviews",
       nodes: { a: reviewNode("a"), b: reviewNode("b") },
       edges: [],
@@ -411,7 +419,7 @@ describe("runWorkflow", () => {
         return "done";
       },
     });
-    const workflow = defineWorkflow({ id: "human-deny", nodes: { node } });
+    const workflow = defineWorkflow({ revision: "1", id: "human-deny", nodes: { node } });
     const deniedStart = await runWorkflow(workflow, null, { checkpoints, runId: "deny-1" });
     const denied = await resumeWorkflow(workflow, { runId: deniedStart.runId }, {
       checkpoints,
@@ -432,6 +440,7 @@ describe("runWorkflow", () => {
     const cancelled = await cancelWorkflowRun({
       workflowId: workflow.id,
       runId: cancelStart.runId,
+      workflow,
       checkpoints,
     });
     assert.equal(cancelled.status, "aborted");
@@ -440,6 +449,7 @@ describe("runWorkflow", () => {
   it("resumes and cancels suspended checkpoints left by a fenced coordinator", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({
+      revision: "1",
       id: "fenced-human",
       nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review" }) }) },
     });
@@ -462,6 +472,7 @@ describe("runWorkflow", () => {
     const cancelled = await cancelWorkflowRun({
       workflowId: workflow.id,
       runId: cancellable.runId,
+      workflow,
       checkpoints,
     });
     assert.equal(cancelled.status, "aborted");
@@ -470,6 +481,7 @@ describe("runWorkflow", () => {
   it("validates suspended resume input and rejects wrong ownership or stale versions", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({
+      revision: "1",
       id: "validate-resume",
       nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review", resumeSchema: { type: "object" } }) }) },
     });
@@ -509,6 +521,7 @@ describe("runWorkflow", () => {
   it("redacts suspension and resume payloads in durable checkpoints", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints({ secrets: ["sekrit"] });
     const workflow = defineWorkflow({
+      revision: "1",
       id: "redact-suspend",
       nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review", data: { token: "sekrit" } }) }) },
     });
@@ -531,7 +544,7 @@ describe("runWorkflow", () => {
   it("redacts node outputs before checkpoint persistence", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints({ secrets: ["sekrit"] });
     const node = functionNode({ execute: async () => "carry-sekrit-please" });
-    const workflow = defineWorkflow({ id: "redact", nodes: { node } });
+    const workflow = defineWorkflow({ revision: "1", id: "redact", nodes: { node } });
     await runWorkflow(workflow, null, {
       checkpoints,
       runId: "r-redact",
@@ -544,7 +557,7 @@ describe("runWorkflow", () => {
   it("rejects resume across tenants", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const node = functionNode({ execute: async () => 1 });
-    const workflow = defineWorkflow({ id: "tenant", nodes: { node } });
+    const workflow = defineWorkflow({ revision: "1", id: "tenant", nodes: { node } });
     await runWorkflow(workflow, null, {
       checkpoints,
       runId: "r-tenant",

@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Reject empty, non-number, NaN, and infinite embedder/vector-store/pgvector values before scoring or storage; export `assertFiniteVector()` for custom adapters.
 
 ## [0.0.5] - 2026-07-16
 

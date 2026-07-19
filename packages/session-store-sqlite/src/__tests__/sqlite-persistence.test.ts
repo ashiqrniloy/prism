@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync } from "node:fs";
+import Database from "better-sqlite3";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, afterEach } from "node:test";
@@ -12,6 +13,7 @@ import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 import { createSqlitePersistence } from "../persistence.js";
+import { applySqliteMigrations } from "../migrations.js";
 
 const tempDirs: string[] = [];
 
@@ -110,6 +112,29 @@ describe("createSqlitePersistence", () => {
       firstMigrations.items.map((row) => row.name),
     );
     reopened.close();
+  });
+
+  it("backfills only complete legacy checksum history after shape verification", async () => {
+    const filename = tempDbPath("legacy-checksum");
+    const db = new Database(filename);
+    applySqliteMigrations(db);
+    db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
+    const persistence = createSqlitePersistence({ filename, database: db });
+    assert.equal((await persistence.queryMigrations({})).items.every((row) => typeof row.checksum === "string" && row.checksum.length === 64), true);
+    db.close();
+  });
+
+  it("fails closed on migration checksum or schema drift before adapter use", () => {
+    const filename = tempDbPath("migration-drift");
+    const db = new Database(filename);
+    applySqliteMigrations(db);
+    db.prepare("UPDATE prism_migrations SET checksum = 'tampered' WHERE name = '001_init'").run();
+    assert.throws(() => createSqlitePersistence({ filename, database: db }), /checksum mismatch/);
+    db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
+    db.exec("DROP INDEX prism_usage_session_scope_recorded_idx");
+    assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
+    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 3);
+    db.close();
   });
 
   it("survives close and reopen with durable rows", async () => {

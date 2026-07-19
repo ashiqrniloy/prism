@@ -21,6 +21,9 @@ import {
   DEFAULT_MAX_NODES,
   DEFAULT_MAX_STATE_BYTES,
   DEFAULT_MAX_STATE_HISTORY,
+  HARD_MAX_CONCURRENCY,
+  HARD_MAX_NESTED_DEPTH,
+  validateWorkflowLimit,
   WORKFLOW_CHECKPOINT_SCHEMA_VERSION,
 } from "./limits.js";
 import type {
@@ -42,6 +45,7 @@ import type {
   WorkflowSuspensionDescriptor,
   RunWorkflowOptions,
 } from "./types.js";
+import { randomUUID } from "node:crypto";
 import {
   assertWithinBytes,
   boundNodeOutput,
@@ -115,6 +119,7 @@ export async function runWorkflow(
   input: unknown,
   options: RunWorkflowOptions = {},
 ): Promise<WorkflowRunResult> {
+  validateRunOptions(options);
   const runId = options.runId ?? createRunId();
   const definitionHash = hashWorkflowDefinition(workflow);
   const graph = buildGraph(workflow);
@@ -169,6 +174,7 @@ export async function resumeWorkflow(
   ref: { readonly runId: string; readonly workflowId?: string },
   options: RunWorkflowOptions & { readonly checkpoints: WorkflowCheckpointAdapter },
 ): Promise<WorkflowRunResult> {
+  validateRunOptions(options);
   const workflowId = ref.workflowId ?? workflow.id;
   const record = await options.checkpoints.load({
     workflowId,
@@ -342,13 +348,15 @@ async function executeScheduler(
   registerActiveWorkflowRun({
     workflowId: state.workflow.id,
     runId: state.runId,
+    ownership: options.ownership,
+    definitionHash: state.definitionHash,
     controller: runController,
   });
 
   try {
     return await executeSchedulerBody(state, options);
   } finally {
-    unregisterActiveWorkflowRun(state.workflow.id, state.runId);
+    unregisterActiveWorkflowRun(state.workflow.id, state.runId, options.ownership);
   }
 }
 
@@ -356,12 +364,8 @@ async function executeSchedulerBody(
   state: SchedulerState,
   options: RunWorkflowOptions,
 ): Promise<WorkflowRunResult> {
-  const concurrency = Math.max(
-    1,
-    options.concurrency
-      ?? state.workflow.limits?.maxConcurrency
-      ?? DEFAULT_MAX_CONCURRENCY,
-  );
+  const workflowConcurrency = state.workflow.limits?.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY;
+  const concurrency = Math.min(options.concurrency ?? workflowConcurrency, workflowConcurrency);
   const maxNodes = state.workflow.limits?.maxNodes ?? DEFAULT_MAX_NODES;
   const nestedDepth = options.nestedDepth ?? 0;
   const maxNestedDepth = Math.min(
@@ -822,7 +826,7 @@ async function executeNode(
       const toolContext: ToolExecutionContext = {
         sessionId: `workflow:${ctx.workflowId}`,
         runId: ctx.runId,
-        toolCallId: `wf_${ctx.nodeId}_${Date.now().toString(36)}`,
+        toolCallId: `wf_${ctx.nodeId}_${randomUUID()}`,
         signal: ctx.signal,
         metadata: {
           workflowId: ctx.workflowId,
@@ -1244,5 +1248,19 @@ async function updateWorkflowState(
 /** Resolve the effective fan-out limit for a node. */
 export function resolveMaxFanOut(workflow: WorkflowDefinition, node: WorkflowNodeDefinition): number {
   if (node.kind !== "fan_out") return DEFAULT_MAX_FAN_OUT;
-  return node.maxFanOut ?? workflow.limits?.maxFanOut ?? DEFAULT_MAX_FAN_OUT;
+  const workflowLimit = workflow.limits?.maxFanOut ?? DEFAULT_MAX_FAN_OUT;
+  return Math.min(node.maxFanOut ?? workflowLimit, workflowLimit);
+}
+
+function validateRunOptions(options: RunWorkflowOptions): void {
+  if (options.concurrency !== undefined) {
+    validateWorkflowLimit("concurrency", options.concurrency, HARD_MAX_CONCURRENCY);
+  }
+  if (options.nestedDepth !== undefined
+    && (!Number.isSafeInteger(options.nestedDepth) || options.nestedDepth < 0 || options.nestedDepth > HARD_MAX_NESTED_DEPTH)) {
+    throw new WorkflowRuntimeError(`nestedDepth must be a non-negative safe integer at most ${HARD_MAX_NESTED_DEPTH}`);
+  }
+  if (options.nestedDepthLimit !== undefined) {
+    validateWorkflowLimit("nestedDepthLimit", options.nestedDepthLimit, HARD_MAX_NESTED_DEPTH);
+  }
 }

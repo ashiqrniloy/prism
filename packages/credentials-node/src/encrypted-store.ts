@@ -1,9 +1,15 @@
 import type { Credential, CredentialRequest, OAuthCredentials } from "@arnilo/prism";
 import type { CredentialRecord } from "@arnilo/prism";
-import type { EncryptedCredentialStoreOptions, EncryptedEnvelope } from "./types.js";
+import type {
+  EncryptedCredentialStoreOptions,
+  EncryptedEnvelope,
+  RotateEncryptedCredentialStoreOptions,
+} from "./types.js";
 import { DEFAULT_FILE_MODE } from "./types.js";
-import { decryptBytes, encryptBytes } from "./envelope.js";
-import { atomicWriteFile, readFileIfExists } from "./file-io.js";
+import { CredentialDecryptError, CredentialStoreError, WeakKdfParametersError } from "./errors.js";
+import { decryptBytes, encryptBytes, parseEncryptedEnvelope, resolveScryptParameters } from "./envelope.js";
+import { atomicWriteFile, assertCredentialFileMode, readFileIfExists } from "./file-io.js";
+import { resolveEncryptedCredentialStoreLimits, type ResolvedEncryptedCredentialStoreLimits } from "./limits.js";
 import {
   createEmptyVault,
   deleteCredentialEntry,
@@ -37,43 +43,72 @@ export interface EncryptedCredentialStore extends StoredCredentialStore {
 }
 
 async function resolvePassphrase(getPassphrase: () => string | Promise<string>): Promise<string> {
-  return getPassphrase();
+  try {
+    const passphrase = await getPassphrase();
+    if (typeof passphrase !== "string") throw new Error();
+    return passphrase;
+  } catch {
+    throw new CredentialStoreError("credential_passphrase_failed", "Credential passphrase retrieval failed");
+  }
 }
 
-function readEnvelope(path: string): EncryptedEnvelope | undefined {
-  const raw = readFileIfExists(path);
+function readEnvelope(path: string, limits: ResolvedEncryptedCredentialStoreLimits): EncryptedEnvelope | undefined {
+  const raw = readFileIfExists(path, limits.maxFileBytes);
   if (!raw) return undefined;
-  return JSON.parse(raw.toString("utf8")) as EncryptedEnvelope;
+  try {
+    return parseEncryptedEnvelope(JSON.parse(raw.toString("utf8")), limits);
+  } catch (error) {
+    if (error instanceof CredentialDecryptError || error instanceof WeakKdfParametersError) throw error;
+    throw new CredentialDecryptError("Invalid encrypted credential envelope");
+  }
 }
 
-function writeEnvelope(path: string, envelope: EncryptedEnvelope, fileMode: number): void {
-  atomicWriteFile(path, Buffer.from(JSON.stringify(envelope), "utf8"), fileMode);
+function writeEnvelope(
+  path: string,
+  envelope: EncryptedEnvelope,
+  fileMode: number,
+  maxFileBytes: number,
+): void {
+  const bytes = Buffer.from(JSON.stringify(envelope), "utf8");
+  if (bytes.length > maxFileBytes) throw new RangeError(`Credential envelope exceeds ${maxFileBytes} byte limit`);
+  atomicWriteFile(path, bytes, fileMode);
 }
 
 export function createEncryptedCredentialStore(options: EncryptedCredentialStoreOptions): EncryptedCredentialStore {
   const fileMode = options.fileMode ?? DEFAULT_FILE_MODE;
+  assertCredentialFileMode(fileMode);
+  const limits = resolveEncryptedCredentialStoreLimits(options.limits);
+  const scrypt = resolveScryptParameters(options.scrypt, limits.maxScryptMemoryBytes);
   let vault = createEmptyVault();
-  let envelope: EncryptedEnvelope | undefined;
 
-  const persist = async (): Promise<void> => {
-    const passphrase = await resolvePassphrase(options.getPassphrase);
-    envelope = encryptBytes(serializeVault(vault), passphrase, options.scrypt);
-    writeEnvelope(options.path, envelope, fileMode);
+  const persist = async (nextVault = vault): Promise<void> => {
+    const plaintext = serializeVault(nextVault, limits.maxVaultBytes);
+    try {
+      const passphrase = await resolvePassphrase(options.getPassphrase);
+      const envelope = await encryptBytes(plaintext, passphrase, scrypt, limits);
+      writeEnvelope(options.path, envelope, fileMode, limits.maxFileBytes);
+      vault = nextVault;
+    } finally {
+      plaintext.fill(0);
+    }
   };
 
   const load = async (): Promise<void> => {
-    const existing = readEnvelope(options.path);
+    const existing = readEnvelope(options.path, limits);
     if (!existing) {
       vault = createEmptyVault();
-      envelope = undefined;
       return;
     }
     const passphrase = await resolvePassphrase(options.getPassphrase);
-    vault = parseVault(decryptBytes(existing, passphrase));
-    envelope = existing;
+    const plaintext = await decryptBytes(existing, passphrase, limits);
+    try {
+      vault = parseVault(plaintext, limits.maxVaultBytes);
+    } finally {
+      plaintext.fill(0);
+    }
   };
 
-  const store: EncryptedCredentialStore = {
+  return {
     path: options.path,
     async resolve(request) {
       return getCredentialEntry(vault, request.name, request.provider);
@@ -82,28 +117,24 @@ export function createEncryptedCredentialStore(options: EncryptedCredentialStore
       return getCredentialEntry(vault, request.name, request.provider);
     },
     async set(record) {
-      vault = upsertCredentialEntry(vault, record);
-      await persist();
+      await persist(upsertCredentialEntry(vault, record));
     },
     async delete(request) {
       const result = deleteCredentialEntry(vault, request.name, request.provider);
-      vault = result.vault;
       if (!result.deleted) return false;
-      await persist();
+      await persist(result.vault);
       return true;
     },
     async setOAuth(provider, credentials, accountId) {
-      vault = upsertOAuthEntry(vault, provider, credentials, accountId);
-      await persist();
+      await persist(upsertOAuthEntry(vault, provider, credentials, accountId));
     },
     async getOAuth(provider, accountId) {
       return getOAuthEntry(vault, provider, accountId);
     },
     async deleteOAuth(provider, accountId) {
       const result = deleteOAuthEntry(vault, provider, accountId);
-      vault = result.vault;
       if (!result.deleted) return false;
-      await persist();
+      await persist(result.vault);
       return true;
     },
     async list() {
@@ -119,8 +150,6 @@ export function createEncryptedCredentialStore(options: EncryptedCredentialStore
       await persist();
     },
   };
-
-  return store;
 }
 
 export async function openEncryptedCredentialStore(options: EncryptedCredentialStoreOptions): Promise<EncryptedCredentialStore> {
@@ -129,19 +158,28 @@ export async function openEncryptedCredentialStore(options: EncryptedCredentialS
   return store;
 }
 
-export async function rotateEncryptedCredentialStorePassphrase(options: {
-  readonly path: string;
-  readonly getCurrentPassphrase: () => string | Promise<string>;
-  readonly getNewPassphrase: () => string | Promise<string>;
-  readonly scrypt?: EncryptedCredentialStoreOptions["scrypt"];
-  readonly fileMode?: number;
-}): Promise<void> {
+export async function rotateEncryptedCredentialStorePassphrase(
+  options: RotateEncryptedCredentialStoreOptions,
+): Promise<void> {
   const fileMode = options.fileMode ?? DEFAULT_FILE_MODE;
-  const existing = readEnvelope(options.path);
+  assertCredentialFileMode(fileMode);
+  const limits = resolveEncryptedCredentialStoreLimits(options.limits);
+  const scrypt = resolveScryptParameters(options.scrypt, limits.maxScryptMemoryBytes);
+  const existing = readEnvelope(options.path, limits);
   if (!existing) return;
-  const current = await options.getCurrentPassphrase();
-  const vault = parseVault(decryptBytes(existing, current));
-  const next = await options.getNewPassphrase();
-  const envelope = encryptBytes(serializeVault(vault), next, options.scrypt);
-  writeEnvelope(options.path, envelope, fileMode);
+  const current = await resolvePassphrase(options.getCurrentPassphrase);
+  const plaintext = await decryptBytes(existing, current, limits);
+  try {
+    const vault = parseVault(plaintext, limits.maxVaultBytes);
+    const serialized = serializeVault(vault, limits.maxVaultBytes);
+    try {
+      const next = await resolvePassphrase(options.getNewPassphrase);
+      const envelope = await encryptBytes(serialized, next, scrypt, limits);
+      writeEnvelope(options.path, envelope, fileMode, limits.maxFileBytes);
+    } finally {
+      serialized.fill(0);
+    }
+  } finally {
+    plaintext.fill(0);
+  }
 }

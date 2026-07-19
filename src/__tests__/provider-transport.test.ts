@@ -1,5 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import {
   DEFAULT_MAX_BUFFER_BYTES,
   DEFAULT_MAX_EVENT_BYTES,
@@ -137,5 +139,39 @@ describe("provider transport primitives", () => {
     assert.equal(DEFAULT_MAX_EVENT_BYTES, 262_144);
     assert.equal(DEFAULT_MAX_BUFFER_BYTES, 524_288);
     assert.equal(DEFAULT_MAX_RESPONSE_BODY_BYTES, 65_536);
+  });
+
+  it("keeps shared transport authoritative across first-party providers", () => {
+    const packagesRoot = join(process.cwd(), "packages");
+    const providerDirs = readdirSync(packagesRoot)
+      .filter((name) => name.startsWith("provider-"))
+      .map((name) => join(packagesRoot, name, "src"));
+
+    const forbidden = [
+      /function\s+safeText\s*\(/,
+      /async\s+function\*?\s+readSse(?:Data|Events|Frames)?\s*\(/,
+      /export\s+async\s+function\*?\s+readSse(?:Data|Events|Frames)?\s*\(/,
+    ];
+    const offenders: string[] = [];
+
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir)) {
+        const path = join(dir, entry);
+        const info = statSync(path);
+        if (info.isDirectory()) {
+          if (entry === "__tests__" || entry === "dist") continue;
+          walk(path);
+          continue;
+        }
+        if (!entry.endsWith(".ts")) continue;
+        const source = readFileSync(path, "utf8");
+        for (const pattern of forbidden) {
+          if (pattern.test(source)) offenders.push(`${path} matches ${pattern}`);
+        }
+      }
+    };
+
+    for (const dir of providerDirs) walk(dir);
+    assert.deepEqual(offenders, [], offenders.join("\n"));
   });
 });

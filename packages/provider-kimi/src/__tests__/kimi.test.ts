@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
-import { createKimiCodingProvider, createKimiProviderPackage, kimiCodingModels, moonshotKimiModels } from "../index.js";
+import {
+  createKimiCodingProvider,
+  createKimiProviderPackage,
+  createMoonshotProvider,
+  kimiCodingModels,
+  listKimiModels,
+  mapKimiModel,
+  moonshotBody,
+  moonshotKimiModels,
+} from "../index.js";
 
 const request: ProviderRequest = {
   model: kimiCodingModels[0],
@@ -23,8 +32,28 @@ describe("@arnilo/prism-provider-kimi", () => {
       registerAuthMethod: (method: AuthMethod) => registered.push(method),
     } as any);
     assert(registered.some((item: any) => item.id === "kimi-coding"));
-    assert(registered.some((item: any) => item.provider === "kimi-coding" && item.model === "kimi-k2.7-code"));
-    assert(!registered.some((item: any) => item.provider === "moonshot"));
+    assert(registered.some((item: any) => item.provider === "kimi-coding" && item.model === "kimi-for-coding"));
+    assert(registered.some((item: any) => item.provider === "kimi-coding" && item.model === "k3"));
+    assert(!registered.some((item: any) => item.provider === "moonshot" || item.id === "moonshot"));
+  });
+
+  it("kimi_provider_setup_does_not_call_model_discovery", async () => {
+    let fetchCalls = 0;
+    const fetchImpl = (async () => {
+      fetchCalls += 1;
+      return ok(sse([]));
+    }) as typeof fetch;
+    await createKimiProviderPackage({
+      kimiApiKey: "fake-kimi-key",
+      includeMoonshotModels: true,
+      moonshotApiKey: "fake-moonshot-key",
+      fetch: fetchImpl,
+    }).setup({
+      registerProvider: () => {},
+      registerModel: () => {},
+      registerAuthMethod: () => {},
+    } as any);
+    assert.equal(fetchCalls, 0);
   });
 
   it("kimi_anthropic_stream_maps_text_thinking_tool_calls_usage", async () => {
@@ -51,16 +80,49 @@ describe("@arnilo/prism-provider-kimi", () => {
     assert.equal(body.max_tokens, 444);
     assert.equal(body.maxTokens, undefined);
     assert.equal(body.temperature, 0.5);
+    // Official: omit thinking for K2.7-code unless the host sets compat.thinking
+    assert.equal(body.thinking, undefined);
   });
 
-  it("kimi_optional_moonshot_metadata_is_app_selected", async () => {
+  it("kimi_per_turn_thinking_and_reasoning_effort_override_model_defaults", async () => {
+    let body: any;
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    const model: ModelConfig = {
+      ...kimiCodingModels.find((item) => item.model === "k3")!,
+      compat: { route: "anthropic", preserveThinking: true, reasoning_effort: "max" },
+    };
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model,
+        options: { compat: { reasoning_effort: "high", thinking: { type: "enabled" } } },
+      },
+    });
+    assert.equal(body.reasoning_effort, "high");
+    assert.deepEqual(body.thinking, { type: "enabled" });
+  });
+
+  it("kimi_optional_moonshot_registers_callable_provider_and_models", async () => {
     const registered: unknown[] = [];
-    await createKimiProviderPackage({ kimiApiKey: "fake-kimi-key", includeMoonshotModels: true, moonshotModels: moonshotKimiModels, fetch: mockFetch(sse([])) }).setup({
+    await createKimiProviderPackage({
+      kimiApiKey: "fake-kimi-key",
+      includeMoonshotModels: true,
+      moonshotApiKey: "fake-moonshot-key",
+      moonshotModels: moonshotKimiModels,
+      fetch: mockFetch(sse([])),
+    }).setup({
       registerProvider: (provider: AIProvider) => registered.push(provider),
       registerModel: (model: ModelConfig) => registered.push(model),
       registerAuthMethod: (method: AuthMethod) => registered.push(method),
     } as any);
-    assert(registered.some((item: any) => item.provider === "moonshot" && item.model === "kimi-k2.7-code-preview"));
+    assert(registered.some((item: any) => item.id === "moonshot"));
+    assert(registered.some((item: any) => item.provider === "moonshot" && item.model === "kimi-k2.7-code"));
+    assert(registered.some((item: any) => item.provider === "moonshot" && item.model === "kimi-k3"));
+    assert(registered.some((item: any) => item.provider === "moonshot" && item.kind === "api_key"));
   });
 
   it("kimi_anthropic_preserves_thinking_tool_use_and_tool_result", async () => {
@@ -87,7 +149,6 @@ describe("@arnilo/prism-provider-kimi", () => {
       return ok(sse([]));
     }) as typeof fetch });
     await assertProviderStreamConforms({ provider, request: { ...request, options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } } } });
-    // Default catalog model has no cache metadata; no cache_control emitted.
     assert.ok(!JSON.stringify(body).includes("cache_control"), "default Kimi body must not contain cache_control");
   });
 
@@ -108,10 +169,146 @@ describe("@arnilo/prism-provider-kimi", () => {
       messages,
       options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } },
     } });
-    // last_stable_message is index 1 (the assistant turn); only its last block carries cache_control with 1h ttl.
     assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
     const others = body.messages.filter((m: any) => m.role !== "assistant");
     for (const m of others) for (const block of m.content) assert.equal(block.cache_control, undefined);
+  });
+
+  it("moonshot_openai_route_never_emits_anthropic_cache_control", async () => {
+    const body = moonshotBody({
+      model: { ...moonshotKimiModels[0], cache: { kind: "cache_control" as const } },
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: {
+        cacheRetention: "long",
+        cache: { breakpoints: [{ location: "last_stable_message" as const }] },
+      },
+    });
+    assert.ok(!JSON.stringify(body).includes("cache_control"));
+  });
+
+  it("moonshot_preserves_reasoning_content_on_assistant_replay", async () => {
+    let body: any;
+    const provider = createMoonshotProvider({
+      apiKey: "fake-moonshot-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(chatSse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        model: moonshotKimiModels[0],
+        messages: [
+          { role: "assistant", content: [{ type: "thinking", text: "plan" }, { type: "text", text: "done" }] },
+          { role: "user", content: [{ type: "text", text: "continue" }] },
+        ],
+      },
+    });
+    assert.equal(body.messages[0].role, "assistant");
+    assert.equal(body.messages[0].content, "done");
+    assert.equal(body.messages[0].reasoning_content, "plan");
+    assert.equal(body.thinking, undefined);
+  });
+
+  it("moonshot_stream_maps_reasoning_content_and_usage", async () => {
+    const provider = createMoonshotProvider({
+      apiKey: "fake-moonshot-key",
+      fetch: mockFetch(chatSse([
+        { choices: [{ delta: { reasoning_content: "think" } }] },
+        { choices: [{ delta: { content: "hello" } }] },
+        { usage: { prompt_tokens: 2, completion_tokens: 3, prompt_tokens_details: { cached_tokens: 1 } } },
+      ])),
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: { model: moonshotKimiModels[0], messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] },
+      expect: { text: "hello", usage: { inputTokens: 2, outputTokens: 3, cacheReadTokens: 1 } },
+    });
+  });
+
+  it("list_kimi_models_maps_fixture_and_forwards_auth_abort_baseurl", async () => {
+    let url = "";
+    let headers: Headers | undefined;
+    let signal: AbortSignal | null | undefined;
+    const controller = new AbortController();
+    const models = await listKimiModels({
+      apiKey: "sk-moonshot-secret",
+      baseUrl: "https://example.test/v1/",
+      signal: controller.signal,
+      fetch: (async (input, init) => {
+        url = String(input);
+        headers = new Headers(init?.headers);
+        signal = init?.signal;
+        return new Response(JSON.stringify({
+          object: "list",
+          data: [
+            {
+              id: "kimi-k3",
+              object: "model",
+              created: 1,
+              owned_by: "moonshot",
+              context_length: 1_048_576,
+              supports_image_in: true,
+              supports_video_in: false,
+              supports_reasoning: true,
+            },
+            {
+              id: "kimi-k2.7-code",
+              object: "model",
+              created: 2,
+              owned_by: "moonshot",
+              context_length: 256_000,
+              supports_image_in: false,
+              supports_reasoning: true,
+            },
+            {
+              id: "moonshot-v1-8k",
+              object: "model",
+              created: 3,
+              owned_by: "moonshot",
+              context_length: 8192,
+              supports_image_in: false,
+              supports_reasoning: false,
+            },
+          ],
+        }), { status: 200 });
+      }) as typeof fetch,
+    });
+    assert.equal(url, "https://example.test/v1/models");
+    assert.equal(headers?.get("authorization"), "Bearer sk-moonshot-secret");
+    assert.equal(signal ?? undefined, controller.signal);
+    assert.equal(models.length, 3);
+    assert.equal(models[0]?.model, "kimi-k3");
+    assert.equal(models[0]?.provider, "moonshot");
+    assert.equal(models[0]?.compat?.route, "openai");
+    assert.equal(models[0]?.compat?.reasoning_effort, "max");
+    assert.equal(models[0]?.limits?.contextWindow, 1_048_576);
+    assert.deepEqual(models[0]?.capabilities?.input, ["text", "image"]);
+    assert.equal(models[1]?.model, "kimi-k2.7-code");
+    assert.equal(models[1]?.compat?.preserveThinking, true);
+    assert.equal(models[1]?.compat?.thinking, undefined);
+    assert.equal(models[2]?.capabilities?.reasoning, false);
+  });
+
+  it("list_kimi_models_redacts_token_in_errors", async () => {
+    await assert.rejects(
+      () => listKimiModels({
+        apiKey: "sk-leaked-moonshot",
+        fetch: (async () => new Response("unauthorized sk-leaked-moonshot", { status: 401 })) as typeof fetch,
+      }),
+      (error: unknown) => {
+        const message = String(error);
+        assert.match(message, /Kimi model discovery failed: 401/);
+        assert.equal(message.includes("sk-leaked-moonshot"), false);
+        assert.match(message, /\[REDACTED\]/);
+        return true;
+      },
+    );
+  });
+
+  it("map_kimi_model_rejects_malformed_entry", () => {
+    assert.throws(() => mapKimiModel({ id: "" } as any), /missing id/);
   });
 
   it("kimi_keeps_provider_owned_headers_after_caller_headers", async () => {
@@ -133,6 +330,14 @@ describe("@arnilo/prism-provider-kimi", () => {
     assert.equal(events.at(-1)?.type, "error");
     assert(!JSON.stringify(events).includes("fake-kimi-key"));
   });
+
+  it("featured_coding_ids_prefer_official_over_pi_k2p7_alias", () => {
+    assert.ok(kimiCodingModels.some((model) => model.model === "kimi-for-coding"));
+    assert.ok(kimiCodingModels.some((model) => model.model === "kimi-for-coding-highspeed"));
+    assert.ok(kimiCodingModels.some((model) => model.model === "k3"));
+    assert.ok(!kimiCodingModels.some((model) => model.model === "k2p7"));
+    assert.ok(!kimiCodingModels.some((model) => model.model === "kimi-k2.7-code"), "Open Platform id belongs on moonshot featured catalog");
+  });
 });
 
 function mockFetch(body: ReadableStream<Uint8Array>): typeof fetch {
@@ -146,4 +351,8 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
   const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
   return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+}
+
+function chatSse(events: readonly object[]): ReadableStream<Uint8Array> {
+  return sse(events);
 }

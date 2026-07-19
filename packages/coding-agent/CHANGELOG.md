@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+### Added
+
+- Finite validated defaults/hard caps for text scans, image/file/input/edit counts, shell wall time, display output, and total shell output.
+- Exported coding limit constants plus bounded `ReadOperations.readText` page contracts.
+
+### Changed
+
+- Text reads stream one bounded page instead of loading the entire file; edit/image reads use a shared bounded file reader after stat checks.
+- Shell defaults to a 600-second timeout, kills the operation at 64 MiB combined output, and creates exclusive Unix `0600` spill files.
+- Failed/aborted/timed-out/output-limited shell calls delete unpublished spill files; successful truncated output remains host-owned at `metadata.fullOutputPath`.
+- Custom `ReadOperations` now require `readText` and `statFile`; custom `EditOperations` require `statFile` and receive byte/signal options.
+- Removed non-exported filesystem edit-preview helpers that duplicated the edit tool's file read path.
 
 ## [0.0.5] - 2026-07-16
 

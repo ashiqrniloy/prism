@@ -387,6 +387,7 @@ const review = functionNode({ execute: async (ctx) => lint(ctx.upstream.draft) }
 
 const workflow = defineWorkflow({
   id: "research-draft-review",
+  revision: "2026-07-19.1",
   nodes: { research, draft, review },
   edges: [
     ["research", "draft"],

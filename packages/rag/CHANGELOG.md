@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Released with the exact 0.0.6 first-party package graph.
 
 ## [0.0.5] - 2026-07-16
 

@@ -63,6 +63,7 @@ const summarize = agentNode({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "multimodal-document",
   nodes: { prepare, summarize },
   edges: [["prepare", "summarize"]],

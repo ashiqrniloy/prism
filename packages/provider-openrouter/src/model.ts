@@ -5,7 +5,10 @@ export interface OpenRouterModelConfig extends Omit<ModelConfig, "provider" | "c
   readonly compat?: JsonObject & {
     readonly openRouterRouting?: JsonObject;
     readonly openRouterCache?: boolean;
+    /** Official OpenRouter `reasoning` object (`effort`, `max_tokens`, `exclude`, …). */
     readonly reasoning?: JsonObject;
+    /** Replay assistant thinking as body `reasoning` (tool-call continuity). */
+    readonly preserveThinking?: boolean;
   };
 }
 

@@ -57,6 +57,7 @@ const reviewNode = agentNode({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "research-draft-review",
   nodes: { research: researchNode, draft: draftNode, review: reviewNode },
   edges: [

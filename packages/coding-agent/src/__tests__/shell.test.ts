@@ -188,6 +188,65 @@ test("spawnHook can rewrite command/cwd/env", async () => {
   }
 });
 
+test("total output overflow aborts custom and local operations and removes spill", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "shell-"));
+  try {
+    let sawAbort = false;
+    const operations: BashOperations = {
+      exec: async (_command, _cwd, { onData, signal }) => {
+        while (!signal?.aborted) onData(Buffer.alloc(1024, 0x78));
+        sawAbort = true;
+        return { exitCode: null };
+      },
+    };
+    const custom = await createShellTool(cwd, {
+      operations,
+      maxBytes: 1024,
+      maxTotalOutputBytes: 4096,
+    }).execute({ command: "infinite" }, ctx());
+    assert.equal(sawAbort, true);
+    assert.match(custom.error?.message ?? "", /output exceeded 4\.0KB limit/);
+    assert.equal(custom.metadata?.totalOutputBytes, 4096);
+    assert.equal(custom.metadata?.fullOutputPath, undefined);
+
+    const local = await createShellTool(cwd, {
+      maxBytes: 1024,
+      maxTotalOutputBytes: 4096,
+    }).execute({ command: "yes x" }, ctx());
+    assert.match(local.error?.message ?? "", /output exceeded 4\.0KB limit/);
+    assert.equal(local.metadata?.totalOutputBytes, 4096);
+    assert.equal(local.metadata?.fullOutputPath, undefined);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("configured default timeout kills quiet commands without a request timeout", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "shell-"));
+  try {
+    const result = await createShellTool(cwd, { timeout: 1 }).execute({ command: "sleep 5" }, ctx());
+    assert.match(result.error?.message ?? "", /timed out after 1 seconds/);
+    assert.equal(result.metadata?.exitCode, null);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("shell limits reject non-finite, zero, and above-hard-cap values", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "shell-"));
+  try {
+    assert.throws(() => createShellTool(cwd, { timeout: Infinity }), /positive safe integer/);
+    assert.throws(() => createShellTool(cwd, { maxTotalOutputBytes: 1024 * 1024 * 1024 + 1 }), /positive safe integer/);
+    const tool = createShellTool(cwd);
+    for (const timeout of [0, Infinity, 3_601]) {
+      const result = await tool.execute({ command: "echo no", timeout }, ctx());
+      assert.match(result.error?.message ?? "", /positive safe integer/);
+    }
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("cwd is honored for relative paths", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "shell-"));
   try {

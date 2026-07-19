@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createSecretRedactor, resolveContextProviders } from "@arnilo/prism";
 import {
+  assertFiniteVector,
   createHashEmbedder,
   createMemory,
   createMemoryVectorStore,
@@ -59,6 +60,27 @@ describe("@arnilo/prism-memory", () => {
       vectorStore: createMemoryVectorStore(),
       workingStore: createMemoryWorkingStore(),
     }));
+  });
+
+  it("rejects non-finite vectors before embedding, storage, or scoring", async () => {
+    for (const vector of [[NaN], [Infinity], [-Infinity], ["x"]] as const) {
+      assert.throws(() => assertFiniteVector(vector, "vector"), MemoryValidationError);
+    }
+    assert.throws(() => assertFiniteVector([], "vector"), MemoryValidationError);
+    assert.throws(() => assertFiniteVector([1], "vector", 2), MemoryValidationError);
+
+    const store = createMemoryVectorStore();
+    const record = { tenantId: "t", resourceId: "r", threadId: "th", id: "id", text: "text", embedding: [1, 0], sequence: 1, createdAt: new Date().toISOString() };
+    await assert.rejects(store.upsert([{ ...record, embedding: [NaN] }]), MemoryValidationError);
+    await assert.rejects(store.query({ tenantId: "t", resourceId: "r", threadId: "th", embedding: [Infinity], topK: 1 }), MemoryValidationError);
+
+    const memory = createMemory({
+      tenantId: "t",
+      resourceId: "r",
+      threadId: "th",
+      embedder: { dimensions: 2, async embed() { return [[1, NaN]]; } },
+    });
+    await assert.rejects(memory.remember({ entries: [{ id: "bad", text: "bad" }] }, { wait: true }), MemoryValidationError);
   });
 
   it("enforces working-memory merge/replace, conflicts, and thread isolation", async () => {

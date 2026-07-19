@@ -64,6 +64,8 @@ test("createReadOnlyTools applies shared executionPolicy before filesystem acces
         operations: {
           access: async () => { accesses++; },
           readFile: async () => Buffer.from("must not read"),
+          readText: async () => { throw new Error("must not read"); },
+          statFile: async () => ({ size: 0 }),
         },
       },
     });

@@ -1,9 +1,10 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { OwnershipScope, SecretRedactor } from "@arnilo/prism";
 import { WorkflowCheckpointError } from "./errors.js";
 import {
   DEFAULT_MAX_CHECKPOINT_BYTES,
   DEFAULT_MAX_NODE_OUTPUT_BYTES,
+  validateWorkflowLimits,
 } from "./limits.js";
 import type { WorkflowDefinition, WorkflowNodeDefinition } from "./types.js";
 
@@ -31,6 +32,8 @@ export function hashWorkflowDefinition(workflow: WorkflowDefinition): string {
 }
 
 function hashWorkflow(workflow: WorkflowDefinition, active: Set<WorkflowDefinition>): string {
+  if (!workflow.revision?.trim()) throw new WorkflowCheckpointError("Workflow revision is required");
+  validateWorkflowLimits(workflow.limits);
   if (active.has(workflow)) throw new WorkflowCheckpointError("Nested workflow definitions contain a cycle");
   active.add(workflow);
   const nodes: Record<string, { kind: string; metadata?: unknown; workflowHash?: string }> = {};
@@ -43,6 +46,7 @@ function hashWorkflow(workflow: WorkflowDefinition, active: Set<WorkflowDefiniti
   }
   const payload = {
     id: workflow.id,
+    revision: workflow.revision,
     nodes,
     edges: workflow.edges.map(([from, to]) => [from, to]),
     limits: workflow.limits ?? {},
@@ -97,6 +101,24 @@ export function ownershipMatches(
   return true;
 }
 
+export function ownershipExactlyMatches(
+  expected: OwnershipScope | undefined,
+  actual: OwnershipScope | undefined,
+): boolean {
+  return expected?.tenantId === actual?.tenantId
+    && expected?.accountId === actual?.accountId
+    && expected?.userId === actual?.userId;
+}
+
+export function exactOwnershipKey(ownership?: OwnershipScope): string {
+  const field = (value: unknown) => value === undefined ? [0] : [1, value];
+  return JSON.stringify([
+    field(ownership?.tenantId),
+    field(ownership?.accountId),
+    field(ownership?.userId),
+  ]);
+}
+
 export function nodeKindOf(node: WorkflowNodeDefinition): string {
   return node.kind;
 }
@@ -106,7 +128,7 @@ export function nowIso(): string {
 }
 
 export function createRunId(): string {
-  return `wfr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return `wfr_${randomUUID()}`;
 }
 
 export function combineSignals(signals: readonly (AbortSignal | undefined)[]): AbortSignal | undefined {

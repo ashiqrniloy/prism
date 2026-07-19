@@ -60,6 +60,7 @@ const agent = createAgent({
 | `createMemory` | Facade for working memory + semantic recall |
 | `Embedder` / `VectorStore` / `WorkingMemoryStore` | Narrow package-owned contracts (RAG reuses embed/vector) |
 | `createHashEmbedder` | Deterministic offline embedder for tests/demos |
+| `assertFiniteVector` | Reject empty, non-number, NaN, Infinity, or wrong-dimension vectors before a custom store |
 | `createMemoryVectorStore` / `createMemoryWorkingStore` | In-memory reference adapters |
 | `createPostgresMemoryStores` | PostgreSQL/pgvector production path |
 | `runMemoryConformance` | Shared network-free conformance helper |
@@ -71,5 +72,6 @@ const agent = createAgent({
 - Memory text/metadata are redacted when `secrets` / `redactor` are configured.
 - Injected context is inert text only — no tools or permissions.
 - Cross-tenant and cross-thread recall is denied.
+- Embedder output, in-memory upserts/queries, and PostgreSQL/pgvector parameters accept only non-empty finite number vectors; NaN, ±Infinity, non-numbers, and wrong configured dimensions fail before scoring or SQL.
 
 See [Working and semantic memory](../../docs/working-and-semantic-memory.md).

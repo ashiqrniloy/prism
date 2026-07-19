@@ -8,16 +8,18 @@ import {
   serializePdfDocumentWireBlock,
 } from "@arnilo/prism/providers/media";
 import { applyOpencodeAnthropicCacheControl } from "./cache.js";
+import { openCodeGoPreserveThinking, stripOpenCodeGoOwnedCompat } from "./thinking.js";
 import { parseJsonObjectArguments, readSseData } from "@arnilo/prism/providers/transport";
 
 interface PartialBlock { id?: string; name?: string; argumentsText: string }
 
 export async function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject> {
   assertStructuredOutputRequestSupported(request.model, request.options);
-  const preserveThinking = request.model.compat?.preserveThinking === true;
+  const preserveThinking = openCodeGoPreserveThinking(request);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const messages = applyOpencodeAnthropicCacheControl(request);
   const resolvedMedia = await resolveProviderMediaMessages(messages, request.model, { signal: request.signal });
+  const compatRest = stripOpenCodeGoOwnedCompat(request.options?.compat);
   return clean({
     model: request.model.model,
     messages: await Promise.all(messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia))),
@@ -26,7 +28,7 @@ export async function anthropicMessagesBody(request: ProviderRequest): Promise<J
     stream: true,
     ...parameters,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
-    ...(request.options?.compat ?? {}),
+    ...compatRest,
     ...(request.options?.extra ?? {}),
   });
 }
@@ -151,7 +153,7 @@ function toTool(tool: ToolDefinition): JsonObject {
 function text(message: Message, preserveThinking = false): string {
   return message.content.map((part) => {
     if (part.type === "text") return part.text;
-    if (part.type === "thinking") return preserveThinking ? part.text : part.text;
+    if (part.type === "thinking") return preserveThinking ? part.text : "";
     return "";
   }).join("");
 }

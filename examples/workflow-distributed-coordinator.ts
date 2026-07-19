@@ -19,6 +19,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   try {
     let executions = 0;
     const workflow = defineWorkflow({
+      revision: "1",
       id: "distributed-demo",
       nodes: {
         work: functionNode({ execute: async () => {

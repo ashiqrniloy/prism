@@ -41,6 +41,27 @@ export function applyOpenRouterCacheControl(request: ProviderRequest): readonly 
   return applyCacheControl(request.messages, breakpoints, options) as readonly Message[];
 }
 
+/**
+ * Official OpenRouter automatic Anthropic-style caching: a single top-level
+ * `cache_control` when caching is enabled and the host did not select explicit
+ * breakpoints. Prefer breakpoints for fine-grained control.
+ * @see https://openrouter.ai/docs/guides/best-practices/prompt-caching
+ */
+export function openRouterTopLevelCacheControl(request: ProviderRequest): JsonObject | undefined {
+  if (!openRouterCacheEnabled(request)) return undefined;
+  if (request.options?.cache?.breakpoints?.length) return undefined;
+  // Only emit top-level automatic cache_control for explicit cache_control models
+  // (or legacy openRouterCache / cache.mode on). Implicit-cache models do not need it.
+  const explicit =
+    request.model.cache?.kind === "cache_control"
+    || request.model.compat?.openRouterCache === true
+    || request.options?.cache?.mode === "on";
+  if (!explicit) return undefined;
+  return openRouterCacheTtl(request)
+    ? { type: "ephemeral", ttl: "1h" }
+    : { type: "ephemeral" };
+}
+
 function openRouterCacheTtl(request: ProviderRequest): boolean {
   // Anthropic cache_control supports a `ttl: "1h"` long-retention window. Only
   // emit it when the caller asks for long retention and the model allows it.

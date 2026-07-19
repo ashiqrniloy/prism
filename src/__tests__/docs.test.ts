@@ -206,11 +206,11 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 67, "numbered plan count drifted");
+    assert.equal(plans.length, 69, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
-  it("every publishable package ships current README and 0.0.5 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.6 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")));
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -220,7 +220,7 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.5] - 2026-07-16"), `${dir}/CHANGELOG.md missing finalized 0.0.5 section`);
+      assert.ok(changelog.includes("## [0.0.6] - 2026-07-19"), `${dir}/CHANGELOG.md missing finalized 0.0.6 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -722,12 +722,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.5 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.6 publish handoff"), docs.indexOf("## Extension and configuration notes"));
     for (const phrase of [
       "Decision: GO",
       "available` for all 30",
-      "git tag -s v0.0.5",
-      "git push origin v0.0.5",
+      "git tag -s v0.0.6",
+      "git push origin v0.0.6",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",
@@ -1877,6 +1877,7 @@ describe("docs", () => {
       "@arnilo/prism-provider-zai",
       "@arnilo/prism-provider-kimi",
       "@arnilo/prism-provider-neuralwatt",
+      "@arnilo/prism-provider-ai-sdk",
     ]) {
       assert.ok(caching.includes(pkg), `provider-caching.md matrix missing ${pkg}`);
     }
@@ -1886,6 +1887,161 @@ describe("docs", () => {
     assert.ok(neuralwatt.includes("cross-provider"), "neuralwatt.md does not link the cross-provider cache matrix");
     assert.ok(packages.includes("canonical explicit/implicit matrix"), "provider-packages.md does not link the canonical cache matrix");
     assert.ok(index.includes("per-provider explicit/implicit cache matrix"), "docs/index.md does not advertise the provider cache matrix");
+  });
+
+  it("2026-07-17 provider validation matrix lists all packages and P0-P2 ids and is indexed", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(
+      index.includes("(review-coverage-2026-07-17-provider-validation.md)"),
+      "docs/index.md does not link the 2026-07-17 provider validation matrix",
+    );
+
+    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    for (const pkg of [
+      "provider-openai",
+      "provider-kimi",
+      "provider-zai",
+      "provider-openrouter",
+      "provider-opencode-go",
+      "provider-neuralwatt",
+      "provider-ai-sdk",
+    ]) {
+      assert.ok(coverage.includes(pkg), `provider validation matrix missing ${pkg}`);
+    }
+    for (const id of ["R-001", "R-002", "R-003", "R-004", "R-005", "R-006", "R-008", "R-009", "R-010", "R-011", "R-012"]) {
+      assert.ok(coverage.includes(id), `provider validation matrix missing review id ${id}`);
+    }
+    for (const phrase of [
+      "official-doc",
+      "Pi secondary",
+      "listNeuralWattModels",
+      "thinkingFormat",
+      "extra.thinkingLevel",
+      "workerModel",
+      "package-local",
+      "Never** call discovery",
+    ]) {
+      assert.ok(coverage.includes(phrase), `provider validation matrix missing evidence phrase ${phrase}`);
+    }
+  });
+
+  it("caller_gated_model_discovery_contract_is_documented", () => {
+    const packages = readFileSync("docs/provider-packages.md", "utf8");
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    const conformance = readFileSync("docs/provider-conformance.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+
+    assert.ok(packages.includes("## Caller-gated model discovery"), "provider-packages.md missing discovery section");
+    assert.ok(packages.includes("list*Models"), "provider-packages.md missing list*Models contract");
+    assert.ok(packages.includes("performs **zero** fetches"), "provider-packages.md missing setup zero-fetch rule");
+    assert.ok(packages.includes("listNeuralWattModels"), "provider-packages.md missing NeuralWatt template");
+    assert.ok(packages.includes("listOpenRouterModels"), "provider-packages.md missing OpenRouter discovery helper");
+    assert.ok(packages.includes("create*ProviderPackage"), "provider-packages.md missing create*ProviderPackage setup rule");
+    assert.ok(packages.includes("package-local"), "provider-packages.md missing package-local preference");
+    assert.ok(packages.includes("ModelConfig.cache"), "provider-packages.md missing cache metadata note");
+    assert.ok(packages.includes("ModelConfig.cost"), "provider-packages.md missing cost metadata note");
+    assert.ok(caching.includes("Discovery and live cache/cost metadata"), "provider-caching.md missing discovery cost/cache section");
+    assert.ok(caching.includes("cached_input_per_million"), "provider-caching.md missing live cache-read pricing example");
+    assert.ok(conformance.includes("Model discovery checklist"), "provider-conformance.md missing discovery checklist");
+    assert.ok(conformance.includes("setup_does_not_call_model_discovery"), "provider-conformance.md missing setup zero-fetch test name");
+    assert.ok(index.includes("caller-gated on-demand model discovery"), "docs/index.md does not mention on-demand model discovery");
+  });
+
+  it("per_turn_thinking_reasoning_contract_is_documented", () => {
+    const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
+    const packages = readFileSync("docs/provider-packages.md", "utf8");
+    const conformance = readFileSync("docs/provider-conformance.md", "utf8");
+    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const compaction = readFileSync("docs/compaction-llm.md", "utf8");
+
+    assert.ok(thinking.includes("applyThinkingLevel"), "thinking-and-reasoning.md missing applyThinkingLevel");
+    assert.ok(thinking.includes("thinkingCompatFor"), "thinking-and-reasoning.md missing thinkingCompatFor");
+    assert.ok(thinking.includes("openai_reasoning"), "thinking-and-reasoning.md missing openai_reasoning family");
+    assert.ok(thinking.includes("reasoning_effort"), "thinking-and-reasoning.md missing reasoning_effort family");
+    assert.ok(thinking.includes("thinking_type"), "thinking-and-reasoning.md missing thinking_type family");
+    assert.ok(thinking.includes("ProviderRequestOptions.compat"), "thinking-and-reasoning.md missing compat contract");
+    assert.ok(thinking.includes("extra.thinkingLevel"), "thinking-and-reasoning.md must document inert extra.thinkingLevel");
+    assert.ok(packages.includes("## Per-turn thinking / reasoning"), "provider-packages.md missing thinking section");
+    assert.ok(conformance.includes("Thinking / reasoning checklist"), "provider-conformance.md missing thinking checklist");
+    assert.ok(conformance.includes("No inert `extra.thinkingLevel`"), "provider-conformance.md missing extra.thinkingLevel ban");
+    assert.ok(coverage.includes("applyThinkingLevel"), "provider validation matrix missing applyThinkingLevel decision");
+    assert.ok(coverage.includes("thinking-and-reasoning.md"), "provider validation matrix missing thinking docs link");
+    assert.ok(index.includes("(thinking-and-reasoning.md)"), "docs/index.md missing thinking-and-reasoning link");
+    assert.ok(compaction.includes("applyThinkingLevel"), "compaction-llm.md missing applyThinkingLevel wiring");
+    assert.ok(compaction.includes("not inert `extra.thinkingLevel`"), "compaction-llm.md must document the move off inert extra.thinkingLevel");
+  });
+
+  it("use_case_model_selection_contract_is_documented", () => {
+    const page = readFileSync("docs/use-case-model-selection.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
+    const compaction = readFileSync("docs/compaction-llm.md", "utf8");
+    const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
+
+    assert.ok(page.includes("resolveUseCaseModel"), "use-case-model-selection.md missing resolveUseCaseModel");
+    assert.ok(page.includes("UseCaseModelBinding"), "use-case-model-selection.md missing UseCaseModelBinding");
+    assert.ok(page.includes("requireExplicitModel"), "use-case-model-selection.md missing requireExplicitModel escape hatch");
+    assert.ok(page.includes("sessionModel"), "use-case-model-selection.md missing sessionModel");
+    assert.ok(page.includes("source: \"configured\"") || page.includes('source: "configured"'), "use-case-model-selection.md missing configured source");
+    assert.ok(page.includes("Embedder"), "use-case-model-selection.md must note Embedder as non-chat");
+    assert.ok(index.includes("(use-case-model-selection.md)"), "docs/index.md missing use-case-model-selection link");
+    assert.ok(coverage.includes("resolveUseCaseModel"), "provider validation matrix missing resolveUseCaseModel");
+    assert.ok(om.includes("sessionModel"), "compaction-observational-memory.md missing sessionModel");
+    assert.ok(om.includes("use-case-model-selection.md"), "compaction-observational-memory.md missing use-case link");
+    assert.ok(compaction.includes("resolveUseCaseModel"), "compaction-llm.md missing resolveUseCaseModel");
+    assert.ok(thinking.includes("use-case-model-selection.md"), "thinking-and-reasoning.md missing use-case link");
+  });
+
+  it("ai_sdk_adapter_contract_is_documented", () => {
+    const page = readFileSync("docs/providers/ai-sdk.md", "utf8");
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    const conformance = readFileSync("docs/provider-conformance.md", "utf8");
+    const packages = readFileSync("docs/provider-packages.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+
+    for (const phrase of [
+      "no Prism-side model catalog",
+      "no `list*Models()` export",
+      "inputTokens.cacheRead",
+      "cacheReadTokens",
+      "host-model-owned",
+      "providerOptions.prism",
+      "reasoning-delta",
+    ]) {
+      assert.ok(page.includes(phrase), `docs/providers/ai-sdk.md missing ${phrase}`);
+    }
+    assert.ok(caching.includes("@arnilo/prism-provider-ai-sdk"), "provider-caching.md missing AI SDK adapter row");
+    assert.ok(conformance.includes("## AI SDK adapter checklist"), "provider-conformance.md missing AI SDK checklist");
+    assert.ok(packages.includes("No Prism-side catalog by design"), "provider-packages.md missing AI SDK no-catalog note");
+    assert.ok(index.includes("no Prism catalog"), "docs/index.md missing AI SDK host-owned catalog blurb");
+    assert.ok(coverage.includes("host-owned catalog/cache/reasoning validated"), "provider validation matrix missing AI SDK fixed status");
+  });
+
+  it("provider_validation_final_contract_covers_all_adapters_and_binding_sites", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
+    const useCases = readFileSync("docs/use-case-model-selection.md", "utf8");
+    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const providerMatrix = coverage.split("## Provider package validation matrix\n")[1]?.split("\n## Frozen official evidence sources")[0] ?? "";
+
+    for (const name of ["openai", "kimi", "zai", "openrouter", "opencode-go", "neuralwatt", "ai-sdk"]) {
+      const pkg = `@arnilo/prism-provider-${name}`;
+      assert.ok(index.includes(`(providers/${name}.md)`), `docs/index.md missing providers/${name}.md`);
+      assert.ok(caching.includes(pkg), `provider-caching.md missing ${pkg}`);
+      assert.ok(thinking.includes(pkg), `thinking-and-reasoning.md missing ${pkg}`);
+      const row = providerMatrix.split("\n").find((line) => line.includes(`\`${pkg}\``));
+      assert.ok(row?.includes("**fixed**"), `provider validation matrix does not mark ${pkg} fixed`);
+    }
+    for (const kind of ["openai_key", "cache_control", "implicit", "host-owned"])
+      assert.ok(caching.includes(kind), `provider-caching.md missing ${kind}`);
+    for (const site of ["Observational memory", "LLM compaction", "RunOptions.model", "Declarative", "Supervisor", "Evals / workflows / RPC / CLI", "Memory / RAG"])
+      assert.ok(useCases.includes(site), `use-case-model-selection.md missing ${site}`);
+    for (const page of ["provider-caching.md", "thinking-and-reasoning.md", "use-case-model-selection.md", "review-coverage-2026-07-17-provider-validation.md"])
+      assert.ok(index.includes(`(${page})`), `docs/index.md missing ${page}`);
   });
 
   it("0.0.4 release scope matrix has owners/evidence and completed predecessors", () => {

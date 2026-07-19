@@ -10,6 +10,7 @@ import {
   signA2AAgentCard,
   verifyA2AAgentCard,
   type A2AAgentCard,
+  type A2ALimits,
 } from "../index.js";
 
 const endpoint = "https://agent.example/a2a/v1";
@@ -26,6 +27,24 @@ const baseCard = (): A2AAgentCard => ({
 const ownership = { tenantId: "tenant", userId: "user" };
 const session = () => createAgent({ model: { provider: "mock", model: "test" }, provider: createMockProvider([providerTextDelta("answer"), providerDone()]) }).createSession();
 const rpc = (method = "SendMessage", input = "question") => ({ jsonrpc: "2.0", id: 1, method, params: { message: { role: "user", messageId: "m1", parts: [{ text: input }] } } });
+const streamEvent = (state: string, text?: string) => JSON.stringify({ jsonrpc: "2.0", id: 1, result: { task: { id: "t1", contextId: "c1", status: { state }, artifacts: text === undefined ? [] : [{ artifactId: "a1", parts: [{ text }] }] } } });
+
+function streamClient(chunks: readonly Uint8Array[], limits?: A2ALimits) {
+  return createA2AClient({
+    endpoint,
+    allowedOrigins: ["https://agent.example"],
+    limits,
+    fetch: async (input) => new URL(String(input)).pathname.includes("well-known")
+      ? Response.json(baseCard())
+      : new Response(new ReadableStream<Uint8Array>({ start(controller) { for (const chunk of chunks) controller.enqueue(chunk); controller.close(); } }), { headers: { "content-type": "text/event-stream" } }),
+  });
+}
+
+async function collectStream(client: ReturnType<typeof createA2AClient>): Promise<string[]> {
+  const output: string[] = [];
+  for await (const chunk of client.stream("question")) output.push(chunk);
+  return output;
+}
 
 describe("A2A agent cards", () => {
   it("canonicalizes, signs, verifies, and rejects tamper/expiry", async () => {
@@ -97,6 +116,32 @@ describe("createA2AClient", () => {
     const chunks: string[] = [];
     for await (const chunk of client.stream("question")) chunks.push(chunk);
     assert.deepEqual(chunks, ["answer"]);
+  });
+
+  it("parses split UTF-8, CRLF, mixed separators, and multiline data incrementally", async () => {
+    const encoder = new TextEncoder();
+    const frame = `data: ${streamEvent("TASK_STATE_COMPLETED", "hé😀")}\r\n\r\n`;
+    const bytes = encoder.encode(frame);
+    for (let split = 1; split < bytes.length; split += 1) {
+      assert.deepEqual(await collectStream(streamClient([bytes.slice(0, split), bytes.slice(split)])), ["hé😀"]);
+    }
+    assert.deepEqual(await collectStream(streamClient([...bytes].map((_byte, index) => bytes.slice(index, index + 1)))), ["hé😀"]);
+
+    const multiline = JSON.stringify(JSON.parse(streamEvent("TASK_STATE_COMPLETED", "multiline")), null, 2)
+      .split("\n")
+      .map((line) => `data: ${line}`)
+      .join("\r\n") + "\r\n\n";
+    assert.deepEqual(await collectStream(streamClient([encoder.encode(multiline)])), ["multiline"]);
+  });
+
+  it("rejects malformed UTF-8, truncated frames, post-terminal events, and existing stream limits", async () => {
+    const encoder = new TextEncoder();
+    await assert.rejects(collectStream(streamClient([Uint8Array.from([0x64, 0x61, 0x74, 0x61, 0x3a, 0x20, 0xc3])])), /Malformed A2A UTF-8 stream/);
+    await assert.rejects(collectStream(streamClient([encoder.encode(`data: ${streamEvent("TASK_STATE_COMPLETED")}`)])), /Truncated A2A stream/);
+    await assert.rejects(collectStream(streamClient([encoder.encode(`data: ${streamEvent("TASK_STATE_COMPLETED")}\n\ndata: ${streamEvent("TASK_STATE_WORKING")}\n\n`)])), /continued after terminal/);
+    await assert.rejects(collectStream(streamClient([encoder.encode(`data: ${"x".repeat(64)}\n\n`)], { maxEventBytes: 32 })), /event exceeds max bytes/);
+    await assert.rejects(collectStream(streamClient([encoder.encode(`data: ${streamEvent("TASK_STATE_COMPLETED")}\n\n`)], { maxStreamBytes: 32 })), /stream exceeds max bytes/);
+    await assert.rejects(collectStream(streamClient([encoder.encode(`:\n\ndata: ${streamEvent("TASK_STATE_COMPLETED")}\n\n`)], { maxStreamEvents: 1 })), /stream exceeds max events/);
   });
 
   it("rejects origins before fetch and malformed/oversized/aborted remote data", async () => {

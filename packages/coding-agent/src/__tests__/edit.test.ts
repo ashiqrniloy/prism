@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, readFile, symlink } from "node:fs/promises";
 import { Buffer } from "node:buffer";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -272,6 +272,7 @@ test("custom EditOperations override is used instead of local fs", async () => {
       writeContent = content;
     },
     access: async () => {},
+    statFile: async (p) => ({ size: Buffer.byteLength(store.get(p) ?? "", "utf-8") }),
   };
   try {
     const tool = createEditTool(cwd, { operations: fakeOps });
@@ -282,6 +283,66 @@ test("custom EditOperations override is used instead of local fs", async () => {
     assert.equal(r.error, undefined);
     assert.equal(store.get("/virt.txt"), "goodbye world");
     assert.equal(writeContent, "goodbye world");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("edit count/input/target bounds fail before mutation", async () => {
+  const cwd = await tmp();
+  let reads = 0;
+  let writes = 0;
+  try {
+    const operations: EditOperations = {
+      access: async () => {},
+      statFile: async () => ({ size: 11 }),
+      readFile: async () => { reads++; return Buffer.from("hello world"); },
+      writeFile: async () => { writes++; },
+    };
+    const countTool = createEditTool(cwd, { operations, maxEdits: 1 });
+    const countResult = await countTool.execute({
+      path: "/remote",
+      edits: [{ oldText: "a", newText: "b" }, { oldText: "c", newText: "d" }],
+    }, ctx());
+    assert.match(countResult.error?.message ?? "", /exceeds 1 limit/);
+
+    const inputTool = createEditTool(cwd, { operations, maxInputBytes: 3 });
+    const inputResult = await inputTool.execute({
+      path: "/remote",
+      edits: [{ oldText: "☃", newText: "x" }],
+    }, ctx());
+    assert.match(inputResult.error?.message ?? "", /exceeds 3 byte limit/);
+
+    const targetTool = createEditTool(cwd, { operations, maxFileBytes: 10 });
+    const targetResult = await targetTool.execute({
+      path: "/remote",
+      edits: [{ oldText: "hello", newText: "bye" }],
+    }, ctx());
+    assert.match(targetResult.error?.message ?? "", /target is 11 bytes/);
+    assert.equal(reads, 0);
+    assert.equal(writes, 0);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("oversized symlink target is rejected and edit limits reject invalid values", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "target.txt"), "01234567890");
+    await symlink(join(cwd, "target.txt"), join(cwd, "link.txt"));
+    const result = await createEditTool(cwd, { maxFileBytes: 10 }).execute({
+      path: "link.txt",
+      edits: [{ oldText: "0", newText: "x" }],
+    }, ctx());
+    assert.match(result.error?.message ?? "", /target is 11 bytes/);
+    assert.equal(await readFile(join(cwd, "target.txt"), "utf-8"), "01234567890");
+
+    for (const options of [
+      { maxFileBytes: Infinity },
+      { maxInputBytes: 0 },
+      { maxEdits: 1_001 },
+    ]) assert.throws(() => createEditTool(cwd, options), /positive safe integer/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

@@ -15,6 +15,8 @@
 | `createAllTools(cwd, options?)` | Every tool the package provides (currently identical to `createCodingTools`). |
 | `detectSupportedImageMimeType(buf)` / `detectSupportedImageMimeTypeFromFile(path)` | Magic-byte image MIME detection (PNG/JPEG/GIF/WebP/BMP) used by `read`. |
 | `DEFAULT_MAX_IMAGE_BYTES` | Default `read` image size ceiling (10 MB). |
+| `DEFAULT_*` / `HARD_*` coding limit constants | Published text-scan, image, write/edit, shell timeout, display, and total-output ceilings. |
+| `ReadTextOptions` / `ReadTextResult` | Bounded text-page contract required by custom `ReadOperations`. |
 | `TransformImage` / `TransformImageInput` | Types for the optional `read` `transformImage` callback. |
 | `withFileMutationQueue(path, fn)` | Per-path serialization primitive re-exported for hosts. |
 
@@ -65,7 +67,7 @@ Run a shell command and return combined stdout+stderr.
 | Field | Type | Purpose |
 | --- | --- | --- |
 | `command` | `string` | Shell command to execute (required). |
-| `timeout` | `number` | Timeout in **seconds** (optional; no default). |
+| `timeout` | `number` | Timeout in **seconds** (optional; defaults to 600, hard maximum 3600). |
 
 **Outputs:** a `ToolResult` whose `content[0]` is a `TextContent` with the combined output. Non-zero exit is **not** a tool error: it is returned as a normal result with `[Command exited with code N]` appended to the content and `exitCode` in metadata. Timeout and abort are error results that still carry the partial output captured so far.
 
@@ -75,9 +77,11 @@ Run a shell command and return combined stdout+stderr.
 | --- | --- | --- |
 | `exitCode` | always | Process exit code, or `null` when the process was killed by timeout/abort. |
 | `truncation` | always | `TruncationResult` from the bounded output accumulator. |
-| `fullOutputPath?` | truncated only | Path to the spilled temp file holding the full output. |
+| `fullOutputPath?` | successful and truncated only | Host-owned path to retained output. Failed/aborted/timed-out/output-limited calls remove unpublished spills. |
+| `totalOutputBytes` | shell executed | Raw bytes retained, never above `maxTotalOutputBytes`. |
+| `outputLimitExceeded` / `outputStorageFailed` | shell executed | Attributable resource failure flags. |
 
-Shell resolution honors `options.shellPath` → `SHELL` env → `/bin/bash` → `sh`, and the process group is killed on timeout/abort (`process.kill(-pid)` on Unix, `taskkill /F /T` on Windows).
+Shell resolution honors `options.shellPath` → `SHELL` env → `/bin/bash` → `sh`. The process group is killed on timeout, caller abort, spill failure, or total-output overflow (`process.kill(-pid)` on Unix, `taskkill /F /T` on Windows). Combined output defaults to a 64 MiB total cap (1 GiB hard cap). Spill files use random exclusive creation and Unix mode `0600`; hosts own and must delete a successful result's `fullOutputPath` after consumption.
 
 ### `read`
 
@@ -91,7 +95,7 @@ Read a text or image file.
 | `offset` | `number` | Line to start reading from (1-indexed). |
 | `limit` | `number` | Maximum number of lines to read. |
 
-**Outputs:** text files become a single `TextContent`, truncated to `maxLines`/`maxBytes` (defaults 2000 lines / 50 KB) with a `Use offset=N to continue` footer when more remains. Image files (PNG/JPEG/GIF/WebP/BMP by **magic bytes**, not extension) become `[TextContent note, ImageContent]` with base64 `data` and `mimeType`. Oversize images are rejected by `stat` (when available) or `buffer.length` against `maxImageBytes` (default 10 MB) before base64 encoding. An optional `transformImage` callback lets hosts resize or re-encode images without adding image-processing dependencies to the base package. Read failures (missing file, offset beyond end, oversize image, abort) are error results.
+**Outputs:** text files are scanned incrementally until one requested page, `maxLines`/`maxBytes`, EOF, or `maxScanBytes` (default 64 MiB scanned per call; 1 GiB hard cap). The default path never loads the complete file and returns a `Use offset=N to continue` footer when more remains. Exact total line count is reported only when EOF was already reached in the bounded scan. Image files (PNG/JPEG/GIF/WebP/BMP by **magic bytes**, not extension) become `[TextContent note, ImageContent]` with base64 `data` and `mimeType`. Oversize images are rejected by `stat` (when available) or `buffer.length` against `maxImageBytes` (default 10 MB) before base64 encoding. An optional `transformImage` callback lets hosts resize or re-encode images without adding image-processing dependencies to the base package. Read failures (missing file, offset beyond end, oversize image, abort) are error results.
 
 `read` tool options (via `createReadTool(cwd, options)` or `ToolsOptions.read`):
 
@@ -100,8 +104,9 @@ Read a text or image file.
 | `maxImageBytes` | `DEFAULT_MAX_IMAGE_BYTES` (10 MB) | Reject image reads larger than this many bytes. |
 | `transformImage` | — | Host callback `( { buffer, mimeType } ) => Promise<Buffer>` run after read, before base64. |
 | `autoResizeImages` | — | **Deprecated.** Ignored unless `transformImage` is also set (use `transformImage` instead). |
-| `maxLines` / `maxBytes` | 2000 / 50 KB | Text head truncation limits. |
-| `operations` | local fs | Pluggable `ReadOperations` backend. |
+| `maxLines` / `maxBytes` | 2000 / 50 KiB | Text page display limits (hard: 100,000 / 1 MiB). |
+| `maxScanBytes` | 64 MiB | Raw bytes scanned to reach one page (hard: 1 GiB). |
+| `operations` | local fs | Pluggable bounded `ReadOperations` backend. |
 | `executionPolicy` | — | Structured pre-execution policy (see [Coding security](coding-security.md)). |
 
 ```ts
@@ -133,7 +138,7 @@ Create or overwrite a file, creating parent directories as needed.
 | `path` | `string` | Path to the file to write (relative or absolute). Required. |
 | `content` | `string` | Content to write (empty string creates an empty file). Required. |
 
-**Outputs:** a `TextContent` confirmation naming the **absolute path** with UTF-8 byte and line counts (e.g. `Successfully wrote 42 bytes (3 lines) to /abs/path.txt`). Write failures and abort are error results. Empty `content` is valid.
+**Outputs:** a `TextContent` confirmation naming the **absolute path** with UTF-8 byte and line counts (e.g. `Successfully wrote 42 bytes (3 lines) to /abs/path.txt`). `maxInputBytes` defaults to 8 MiB (64 MiB hard cap); oversized UTF-8 input fails before policy evaluation, directory creation, or write. Write failures and abort are error results. Empty `content` is valid.
 
 `write` result `metadata`: `{ bytes, lines, path }` (absolute path). Concurrent writes to the same path serialize through `withFileMutationQueue`; writes to different paths run in parallel.
 
@@ -148,7 +153,7 @@ Precise text replacement in an existing file via exact-then-fuzzy matching.
 | `path` | `string` | Path to the file to edit. Required. |
 | `edits` | `Array<{ oldText: string, newText: string }>` | Targeted replacements, each matched against the **original** file (not incrementally). No overlapping/nested edits. Required, non-empty. |
 
-Each `edits[].oldText` must match a unique, non-overlapping region of the original file. Matching is exact first, then fuzzy (unicode normalization / whitespace collapse). A BOM is stripped before matching and re-prepended on write; original line endings are restored.
+Each `edits[].oldText` must match a unique, non-overlapping region of the original file. Matching is exact first, then fuzzy (unicode normalization / whitespace collapse). A BOM is stripped before matching and re-prepended on write; original line endings are restored. Defaults reject targets over 8 MiB, aggregate old/new UTF-8 input over 2 MiB, or more than 100 edits (hard caps: 64 MiB, 16 MiB, and 1,000). Stat and bounded read checks run before matching or mutation.
 
 **Outputs:** a `TextContent` confirmation (`Successfully replaced N block(s) in {path}.`) plus `metadata`. Any failure — missing/unreadable file, no match, duplicate (non-unique) match, overlap, empty `oldText`, no-op edit, or abort — is an error result, and the file is left **unchanged** (the match runs before the write).
 
@@ -156,7 +161,7 @@ Each `edits[].oldText` must match a unique, non-overlapping region of the origin
 
 ## Outputs / response / events
 
-Every tool returns a `ToolResult` with `toolCallId`, `name`, `content` (`readonly ContentBlock[]`), optional `error`, and optional `metadata`. Mutating tools (`shell` with same cwd, `write`, `edit`) serialize per realpath through `withFileMutationQueue` so concurrent calls targeting one file do not interleave. The package emits no events of its own; hosts observe tool execution through the normal Prism `AgentEvent` stream via `dispatchToolCall`.
+Every tool returns a `ToolResult` with `toolCallId`, `name`, `content` (`readonly ContentBlock[]`), optional `error`, and optional `metadata`. `write` and `edit` serialize per realpath through `withFileMutationQueue` so concurrent calls targeting one file do not interleave. `shell` is marked `exclusive`; tool dispatch serializes it at the turn level. The package emits no events of its own; hosts observe tool execution through the normal Prism `AgentEvent` stream via `dispatchToolCall`.
 
 ## Request/response example
 
@@ -208,6 +213,8 @@ const shell = createShellTool("/repo", {
   shellPath: "/bin/bash",
   commandPrefix: "set -euo pipefail",
   maxLines: 500,
+  timeout: 600,
+  maxTotalOutputBytes: 64 * 1024 * 1024,
 });
 
 const remoteWrite = createWriteTool("/repo", {
@@ -220,8 +227,8 @@ const remoteWrite = createWriteTool("/repo", {
 
 ## Extension and configuration notes
 
-- **Pluggable operation backends.** Every tool accepts an `operations` seam so a host can delegate to a remote system (e.g. SSH) while keeping the tool's matching/serialization behavior: `BashOperations` (`shell`), `ReadOperations` (`read`), `WriteOperations` (`write`), `EditOperations` (`edit`).
-- **Per-tool options.** `ShellToolOptions` (`shellPath`, `commandPrefix`, `maxLines`, `maxBytes`, `tempFilePrefix`, `operations`, `spawnHook`, `executionPolicy`); `ReadToolOptions` (`operations`, `maxImageBytes`, `transformImage`, `maxLines`, `maxBytes`, `executionPolicy`; `autoResizeImages` deprecated); `WriteToolOptions` (`operations`, `executionPolicy`); `EditToolOptions` (`operations`, `executionPolicy`).
+- **Pluggable operation backends.** Every tool accepts an `operations` seam. Custom `ReadOperations` must implement bounded `readText` plus `statFile`; custom `EditOperations` must implement `statFile`; read/write methods receive caps/signals. `BashOperations` must stream through `onData` and honor `signal`/`timeout`. A hostile custom backend can still violate its host-owned contract, so isolate it separately.
+- **Per-tool options.** `ShellToolOptions` adds `timeout` and `maxTotalOutputBytes`; `ReadToolOptions` adds `maxScanBytes`; `WriteToolOptions` adds `maxInputBytes`; `EditToolOptions` adds `maxFileBytes`, `maxInputBytes`, and `maxEdits`. Invalid/non-finite/unsafe/above-hard-cap values throw during tool construction; request `timeout` errors before spawn.
 - **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override.
 - **`ToolsOptions`** and the per-tool option types are exported from the package barrel for host configuration.
 - No auto-discovery or manifest registration: import and register explicitly. This package registers no extensions and owns no globals (the mutation queue is a process-wide per-path map — see `ponytail:` note in the source).
@@ -230,9 +237,23 @@ const remoteWrite = createWriteTool("/repo", {
 
 - **Host shell/filesystem access.** These tools run real commands and read/write real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. Shared `executionPolicy` applies to both full and read-only aggregators before filesystem/process side effects. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).
 - **Non-zero exit is not an error.** A failing command is a normal `shell` result (exit code in metadata); only timeout/abort/spawn failures are error results. Do not assume `error == undefined` means the command succeeded.
-- **Bounded output.** `shell`/`read` accumulate output into a rolling tail bounded by `maxLines`/`maxBytes`; oversized output spills to a temp file (`fullOutputPath`), so memory use is bounded regardless of command output size.
+- **Bounded I/O.** `read` streams one page and bounds scan bytes; image/edit reads use stat plus a shared cap-enforcing reader; write/edit inputs are measured before mutation. `shell` retains only a rolling display tail and synchronously spills accepted raw chunks so stream backpressure cannot grow heap; wall time and total raw output remain finite.
 - **Per-path serialization.** Concurrent mutations to the same file serialize; concurrent mutations to different files do not block each other. The queue is a process-wide map — across sessions in one process, same-path writes still serialize (upgrade path: scope per registry if throughput matters).
 - **Bounded image reads.** `read` rejects images over `maxImageBytes` (default 10 MB) by `stat` before read when possible; MIME is detected from magic bytes only. Optional `transformImage` is host-owned — the base package has no image-processing dependency.
+
+### Resource-limit defaults and hard caps
+
+| Boundary | Default | Hard cap | Failure point |
+| --- | ---: | ---: | --- |
+| Display lines / bytes | 2,000 / 50 KiB | 100,000 / 1 MiB | tool construction |
+| Text scan per read | 64 MiB | 1 GiB | bounded scan before more input is retained |
+| Image | 10,000,000 bytes | 32 MiB | stat and bounded read before base64/transform result use |
+| Write UTF-8 input | 8 MiB | 64 MiB | before policy/filesystem mutation |
+| Edit target / input / count | 8 MiB / 2 MiB / 100 | 64 MiB / 16 MiB / 1,000 | before target read/matching/write |
+| Shell wall time | 600 seconds | 3,600 seconds | process-tree kill |
+| Shell total stdout+stderr | 64 MiB | 1 GiB | process-tree kill; spill removal |
+
+Every configurable value is a positive safe integer; Prism rejects rather than clamps invalid values. Limits control resources, not authority: they do not replace root containment, approval, validation, or a sandbox.
 
 ## Related APIs
 

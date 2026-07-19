@@ -2,7 +2,7 @@
 
 ## What it does
 
-Prism 0.0.5 preserves documented 0.0.3 agent construction except for two intentional Phase 3 public-API cleanups:
+Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intentional Phase 3 public-API cleanups:
 
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
@@ -23,6 +23,150 @@ Phase 10 adds optional `@arnilo/prism-server` and extends `@arnilo/prism-mcp` wi
 
 Phase 11 compatibly extends `@arnilo/prism-workflows` with `workflowNode`, shared state fields/context updates, replay lineage, explicit background enqueue, and ownership-scoped schedules. Existing workflow definitions and direct runs remain valid; `WorkflowRunResult` now always includes `state`. State schemas require a host `validateState` callback. Schedules reuse generic checkpoint/lease stores, so SQLite/PostgreSQL need no migration and no scheduler starts automatically.
 
+Prism 0.0.6 intentionally hardens workflow identity and resource limits:
+
+- Every `defineWorkflow()` input requires a non-empty host-authored `revision`. Revision and nested workflow revisions enter `definitionHash`; bump revision whenever function/tool behavior changes. Existing checkpoints with a different hash fail resume/replay/cancel before mutation.
+- `cancelWorkflowRun()` now requires `workflow` as well as IDs/checkpoints. Cancellation compares exact tenant/account/user ownership; tenant-only or missing ownership no longer matches a run stored with account/user identity.
+- Active runs are keyed by workflow ID, run ID, and exact ownership. Duplicate exact registration throws `ERR_PRISM_WORKFLOW_ALREADY_ACTIVE`; same IDs under distinct exact owners remain isolated.
+- All `WorkflowLimits`, runtime `concurrency`, node retries/timeouts, and checkpoint byte options reject non-finite, unsafe, zero/negative, or above-hard-cap values instead of accepting/clamping them.
+
+```ts
+// Before
+const workflow = defineWorkflow({ id: "publish", nodes });
+await cancelWorkflowRun({ workflowId: workflow.id, runId, checkpoints, ownership });
+
+// 0.0.6
+const workflow = defineWorkflow({ id: "publish", revision: "2026-07-19.1", nodes });
+await cancelWorkflowRun({ workflowId: workflow.id, runId, workflow, checkpoints, ownership });
+```
+
+Checkpoint schema remains version 1; no table migration is required. Pre-0.0.6 checkpoint hashes do not include revision and therefore fail against 0.0.6 definitions. Complete them before upgrade, or perform an explicit host-owned checkpoint rewrite only after verifying the exact old/new definition; do not guess a revision to bypass evidence checks.
+
+Prism 0.0.6 also makes coding-agent I/O finite:
+
+- `shell` now defaults to 600 seconds and 64 MiB combined output; request/config timeout cannot exceed 3,600 seconds. Timeout, abort, overflow, and spill failure kill signal-aware operations and remove unpublished spills.
+- `read` streams one text page with a 64 MiB scan ceiling instead of calling full-file `readFile()`. Custom `ReadOperations` must implement `readText(path, ReadTextOptions)` and `statFile()`; text results must stay within requested caps.
+- `write` rejects UTF-8 input over `maxInputBytes` before policy/filesystem mutation.
+- `edit` requires custom `EditOperations.statFile()`, caps the target, aggregate old/new input, and replacement count, and passes caps/signals into operation methods.
+
+```ts
+const tools = createCodingTools(root, {
+  shell: { timeout: 600, maxTotalOutputBytes: 64 * 1024 * 1024 },
+  read: { maxScanBytes: 64 * 1024 * 1024 },
+  write: { maxInputBytes: 8 * 1024 * 1024 },
+  edit: { maxFileBytes: 8 * 1024 * 1024, maxInputBytes: 2 * 1024 * 1024, maxEdits: 100 },
+});
+```
+
+Custom shell/sandbox adapters must honor the composed `signal` and finite `timeout`; Prism cannot kill an opaque remote operation that ignores its host contract. Successful truncated local output remains at `metadata.fullOutputPath` for the host to consume and delete.
+
+Prism 0.0.6 also bounds JSON Schema, vectors, and generated IDs:
+
+- `@arnilo/prism-tool-validator-json-schema` now rejects invalid instance/schema/cache limits during construction, then rejects schemas over default 256 KiB, depth 64, 10,000 properties/keywords, or 128 refs before Ajv compilation. Only `#` fragment refs remain valid; the compiled cache is a finite 256-entry LRU. Configure an explicit lower cap where tools accept third-party schemas.
+- `@arnilo/prism-memory` now fails before scoring/storage for empty, non-number, NaN, or infinite embeddings and for dimension mismatches in configured PostgreSQL/pgvector stores. Fix the host embedder/data rather than filtering invalid values after a query.
+- Generated core/workflow/evaluation IDs are cryptographic UUIDs. No API shape changes, but tests or parsers that assumed timestamp/base36 IDs must treat IDs as opaque strings.
+
+Prism 0.0.6 hardens `@arnilo/prism-credentials-node`:
+
+- `encryptBytes()` and `decryptBytes()` now return Promises because scrypt runs asynchronously instead of blocking the JavaScript event loop.
+- Encrypted files default to 4 MiB and decrypted vaults to 3 MiB (hard 16 MiB/12 MiB). Strict envelope parsing rejects unknown properties, non-canonical base64, invalid salt/IV/tag lengths, unsupported algorithms/version, and excessive KDF work before scrypt.
+- scrypt requires power-of-two `N` from 16,384–262,144, `r≤32`, `p≤16`, exact 32-byte keys, `N*r*p≤2,097,152`, and `128*N*r≤256 MiB`.
+- Existing Unix vault files with group/other permissions now fail on open/rotate before content read. Fix deliberately with `chmod 600 <vault>` after confirming ownership; Prism does not silently chmod an existing file.
+- Keychain calls use abort-aware native async operations, a 5-second default/60-second hard timeout, and a 3 MiB default/12 MiB hard payload bound. Unknown native messages are no longer rethrown.
+
+```ts
+// Before
+const envelope = encryptBytes(plaintext, passphrase);
+const bytes = decryptBytes(envelope, passphrase);
+
+// 0.0.6
+const envelope = await encryptBytes(plaintext, passphrase);
+const bytes = await decryptBytes(envelope, passphrase);
+
+const store = await openEncryptedCredentialStore({
+  path: "./credentials.vault",
+  getPassphrase,
+  limits: { maxFileBytes: 4 * 1024 * 1024, maxVaultBytes: 3 * 1024 * 1024 },
+});
+```
+
+Version-1 AES-GCM envelopes written with documented 0.0.5 defaults remain compatible when canonical and within limits. Oversized, permissive-mode, malformed, or previously out-of-policy custom KDF files require explicit host review; no automatic rewrite bypass is provided.
+
+Prism 0.0.6 makes MCP client discovery/results and Streamable HTTP fail closed:
+
+- Every `streamable-http` config now requires `allowedOrigins` with exact HTTPS origins. URLs with credentials/fragments, redirects, public plaintext HTTP, private/mixed DNS, and origin changes fail. Every SDK POST/GET/DELETE/reconnect pins one validated address and defaults to a 16 MiB response cap (64 MiB hard).
+- Local development plaintext requires `allowLoopbackHttp: true`; both hostname and every DNS answer must remain loopback. This does not enable arbitrary private-network endpoints.
+- Discovery defaults to 20 pages, 500 tools, 4 KiB cursors, 256-byte names, 16 KiB descriptions, 256 KiB schema/tool, and 4 MiB aggregate schemas. Repeated cursors and failed refreshes reject without replacing the previous tools.
+- `content`, `structuredContent`, and legacy SDK `toolResult` now share `maxResultBytes` plus JSON depth/property limits. `structuredContent` remains `ToolResult.value` but is no longer duplicated under metadata.
+- `listAllMcpTools(client, signal?, limits?)` accepts an optional third finite-limits object. Bridge options expose the same discovery/result fields. Invalid, non-finite, unsafe, zero/negative, or above-hard-cap values reject at setup.
+
+```ts
+// Before: HTTP accepted without package-enforced origin/DNS policy.
+transport: { type: "streamable-http", url: "http://mcp.example.test/mcp" }
+
+// 0.0.6: exact HTTPS origin and finite discovery/result configuration.
+const bridge = await connectMcpTools({
+  serverId: "docs",
+  transport: {
+    type: "streamable-http",
+    url: "https://mcp.example.test/mcp",
+    allowedOrigins: ["https://mcp.example.test"],
+  },
+  maxListPages: 20,
+  maxTools: 500,
+  maxToolSchemaBytes: 256 * 1024,
+  maxResultBytes: 2 * 1024 * 1024,
+});
+```
+
+Stdio remains an explicit host-selected executable and does not gain network policy. MCP bridge calls should still pass through core dispatch with a host `SecretRedactor`, `PermissionPolicy`, and `ToolValidator`; package limits do not establish server trust or sandbox subprocesses.
+
+Prism 0.0.6 makes first-party persistence startup fail closed on migration/schema drift:
+
+- `@arnilo/prism-session-store-sqlite` and `@arnilo/prism-session-store-postgres` now write deterministic SHA-256 checksums for every new `prism_migrations` row and validate exact ordered name/version/checksum history before applying DDL or exposing runtime writes.
+- Open also checks full schema version 3 metadata: required tables, columns/types/nullability/defaults, primary/unique/foreign keys, and named index definitions. SQLite uses bounded PRAGMAs/catalog reads; PostgreSQL uses bounded `information_schema`/system-catalog reads while its existing per-schema advisory transaction lock is held. Neither scans application rows.
+- Existing complete 0.0.5 histories with all `checksum` values `NULL` are accepted exactly once: Prism verifies full current shape, backfills every checksum inside the migration transaction, and then opens. Unknown, duplicate, out-of-order, name/version/checksum-mismatched, mixed/partial legacy rows or shape drift now reject before runtime writes.
+
+```ts
+// No call-site API change. Open either verifies/backfills safely or fails.
+const sqlite = createSqlitePersistence({ filename: "./prism.db" });
+const postgres = await createPostgresPersistence({ pool, schema: "prism" });
+```
+
+Before upgrade, back up the database and complete any in-flight migration. On a drift error, restore a known schema or apply a reviewed DDL repair that matches version 3, then reopen. Do not update `prism_migrations.checksum` manually: that bypasses evidence rather than repairing the schema.
+
+Prism 0.0.6 makes compaction workers and A2A stream decoding finite:
+
+- LLM compaction now defaults `maxSummaryTokens` to 16,384 (131,072 hard), `reserveTokens` to 16,384 (131,072 hard), and `maxErrorBytes` to 1 KiB (8 KiB hard). `maxOutputTokens` remains an alias. Invalid values reject when the strategy is created. Every post-policy provider request must retain finite `model.parameters.maxTokens`; streamed text and even empty/non-text event counts terminate at derived finite bounds.
+- Final summaries are capped at four UTF-16 code units per configured token without splitting a surrogate pair. Tiny caps may omit the human truncation marker to honor the actual ceiling. Provider error/factory/policy text is exact-known-secret redacted and UTF-8 bounded.
+- Observational-memory runtime adds flat `maxWorkerTurns`, `maxWorkerToolCallsPerTurn`, `maxWorkerToolCalls`, `maxWorkerArgumentBytes`, `maxWorkerResultBytes`, `maxWorkerMessageBytes`, and `maxWorkerErrorBytes` options. Defaults are 16 turns, 32/128 calls, 64 KiB arguments/results, 1 MiB messages, and 1 KiB errors; hard caps are 64, 256/1,024, 1 MiB, 1 MiB, 8 MiB, and 8 KiB.
+- Settings `agentMaxTurns` now rejects fractions, non-finite values, zero/negative values, and values above 64 instead of flooring or falling back. Runtime `maxWorkerTurns` overrides it. Direct worker calls retain required `maxTurns` and use the shorter corresponding option names.
+- Unknown/excess worker calls and oversized/deep/cyclic/non-JSON arguments/results now reject. Replayed arguments/results and runtime status/debug errors are bounded/redacted; pass all known secrets explicitly.
+- A2A public limit defaults/options do not change. Client streaming now correctly preserves split UTF-8, accepts LF/CRLF/mixed separators and multiline `data:`, and rejects malformed UTF-8, unterminated frames, missing terminal state, or events after completion.
+
+```ts
+const strategy = createLlmCompactionStrategy({
+  provider: summaryProvider,
+  model: summaryModel,
+  maxSummaryTokens: 4_096,
+  maxErrorBytes: 1_024,
+});
+
+const memory = createObservationalMemoryRuntime({
+  session,
+  appendEntry,
+  workerProvider,
+  sessionModel,
+  maxWorkerTurns: 8,
+  maxWorkerToolCalls: 64,
+  maxWorkerResultBytes: 64 * 1024,
+});
+```
+
+No background worker, provider call, or network connection activates at import/setup. Host-provided observational-memory tools remain trusted code: Prism can reject an oversized result after return but cannot undo tool side effects.
+
+Prism 0.0.6 also adds opt-in bounded artifact-loop tools. Set `loop: { strategy: "generate-validate-revise", toolCalls: "bounded", validator }` with `maxToolRounds`; calls dispatch sequentially through normal permission, validation, redaction, ledger, and lifecycle paths. Tool-call turns do not consume artifact revisions or parse/validate an artifact. The shared round cap emits terminal `artifact_failed` metadata `{ reason: "tool_round_limit" }`; omitted or `"disabled"` preserves prior inert-call behavior.
+
 This page also covers two optional adoption paths:
 
 1. **In-memory / JSONL → database-backed persistence** — replace the single-process development `SessionStore` with `@arnilo/prism-session-store-sqlite`, `@arnilo/prism-session-store-postgres`, or a host implementation, and optionally attach its durable `RunLedger`.
@@ -36,7 +180,7 @@ Read this page when:
 
 - you are taking an app from the `createMemorySessionStore()` / `createJsonlSessionStore()` path to a multi-process, multi-tenant, or durable database backend;
 - you are hardening an agent that previously relied on "every scoped tool/skill is active" and need to name capabilities explicitly;
-- you are adopting 0.0.5 persistence, checkpoints/leases, workflows, structured output, multimodality, or explicit tool safety for the first time.
+- you are adopting 0.0.6 persistence, checkpoints/leases, workflows, structured output, multimodality, or explicit tool safety for the first time.
 
 If you are new to Prism, start at [Session stores](session-stores.md) and [Agent/session runtime](agent-session-runtime.md) instead.
 

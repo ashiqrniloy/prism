@@ -26,6 +26,6 @@ const supervisor = createSupervisor({
 console.log((await supervisor.delegate({ childId: "research", input: "Check sources" })).text);
 ```
 
-Also exports A2A 1.0 `createA2AAgentCard`, `signA2AAgentCard`, `verifyA2AAgentCard`, `createA2AHandler`, and `createA2AClient`. Only text parts and JSON-RPC `SendMessage`, `SendStreamingMessage`, and `GetExtendedAgentCard` are supported. Hosts own authentication, TLS, endpoint allow-lists, child credential resolution, and memory construction from package-derived resource/thread IDs.
+Also exports A2A 1.0 `createA2AAgentCard`, `signA2AAgentCard`, `verifyA2AAgentCard`, `createA2AHandler`, and `createA2AClient`. Streaming uses one fatal UTF-8 decoder, accepts LF/CRLF/mixed SSE separators and multiline `data:`, rejects truncated/post-terminal frames, and retains existing finite byte/event/time limits. Only text parts and JSON-RPC `SendMessage`, `SendStreamingMessage`, and `GetExtendedAgentCard` are supported. Hosts own authentication, TLS, endpoint allow-lists, child credential resolution, and memory construction from package-derived resource/thread IDs.
 
 See [Supervisors](../../docs/supervisors.md) and [A2A interoperability](../../docs/a2a.md).

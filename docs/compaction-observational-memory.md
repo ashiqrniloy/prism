@@ -27,6 +27,20 @@ Memory records use `SessionEntry.kind: "custom"` with `entry.data.type` markers:
 
 Ids are known, source-backed 12-character lowercase hex strings matching `^[a-f0-9]{12}$`.
 
+Worker limits are finite positive safe integers:
+
+| Runtime option | Default | Hard cap | Scope |
+| --- | ---: | ---: | --- |
+| `maxWorkerTurns` | 16 | 64 | Provider turns per observer/reflector/dropper run; overrides settings `agentMaxTurns` |
+| `maxWorkerToolCallsPerTurn` | 32 | 256 | Calls retained from one provider response |
+| `maxWorkerToolCalls` | 128 | 1,024 | Calls across all turns in one worker run |
+| `maxWorkerArgumentBytes` | 64 KiB | 1 MiB | Each raw and redacted JSON argument object |
+| `maxWorkerResultBytes` | 64 KiB | 1 MiB | Full tool result and replayed value/error payload |
+| `maxWorkerMessageBytes` | 1 MiB | 8 MiB | System/prompt plus assistant-call/tool-result transcript |
+| `maxWorkerErrorBytes` | 1 KiB | 8 KiB | Provider/tool/runtime error text after exact known-secret redaction |
+
+Direct `runObserver()` / `runReflector()` / `runDropper()` calls retain required `maxTurns` and accept the corresponding shorter worker fields (`maxToolCalls`, `maxResultBytes`, etc.). Named default/hard constants and `resolveMemoryWorkerLimits()` are exported.
+
 ## Outputs / response / events
 
 Key exports:
@@ -78,7 +92,12 @@ const memory = createObservationalMemoryRuntime({
   session,
   appendEntry: (entry) => store.append(entry),
   workerProvider,
-  workerModel: { provider: "mock", model: "memory" },
+  sessionModel: agent.config.model, // fallback when workerModel unset
+  // workerModel: { provider: "mock", model: "memory" }, // optional override
+  maxWorkerTurns: 8,
+  maxWorkerToolCalls: 64,
+  maxWorkerResultBytes: 64 * 1024,
+  overrides: { thinkingLevel: "low" },
 });
 await memory.flush();
 await session.compact({ strategy: createObservationalMemoryCompactionStrategy({ keepRecentEntries: 8 }) });
@@ -92,9 +111,9 @@ await kernel.load([createObservationalMemoryExtension({ recallTool: { getEntries
 
 ## Extension and configuration notes
 
-Settings are read from the `observational-memory` key only when a host calls `resolveObservationalMemorySettings()` or `runtime.flush()`. Defaults are `observeAfterTokens: 10000`, `reflectAfterTokens: 20000`, `compactAfterTokens: 81000`, `observationsPoolMaxTokens: 20000`, `observationsPoolTargetTokens: 10000`, `agentMaxTurns: 16`, `passive: false`, and `debugLog: false`.
+Settings are read from the `observational-memory` key only when a host calls `resolveObservationalMemorySettings()` or `runtime.flush()`. Defaults are `observeAfterTokens: 10000`, `reflectAfterTokens: 20000`, `compactAfterTokens: 81000`, `observationsPoolMaxTokens: 20000`, `observationsPoolTargetTokens: 10000`, `agentMaxTurns: 16`, `passive: false`, and `debugLog: false`. `agentMaxTurns` now rejects non-integer/non-finite/out-of-range input (hard 64) instead of flooring/falling back. Runtime `maxWorkerTurns` takes precedence.
 
-The runtime requires host-supplied `session`, an `appendEntry` callback bound to that session's owning store/branch, `workerProvider`, and `workerModel`. It no longer accepts a separate `store` option because mismatched session/store pairs can append memory entries outside the active branch. After each memory append, the runtime checks the appended entry is visible at the session leaf and fails closed/restores the previous checkout if the callback points elsewhere. Optional credential resolution is explicit; missing requested credentials skip worker execution.
+The runtime requires host-supplied `session`, an `appendEntry` callback bound to that session's owning store/branch, and `workerProvider`. Model selection uses [use-case model selection](use-case-model-selection.md): pass optional `workerModel` (or settings `workerModel`) to override, and `sessionModel: agent.config.model` so workers fall back to the session model when no worker model is configured. `requireExplicitModel: true` restores the historical `missing_model` skip when no explicit worker model is set. It no longer accepts a separate `store` option because mismatched session/store pairs can append memory entries outside the active branch. After each memory append, the runtime checks the appended entry is visible at the session leaf and fails closed/restores the previous checkout if the callback points elsewhere. Optional credential resolution is explicit; missing requested credentials skip worker execution. Default credential requests use the **resolved** model's provider id.
 
 `createObservationalMemoryCompactionStrategy()` keeps recent message entries like the default compaction strategy, renders existing observations/reflections as the summary, and returns a standard Prism compaction entry. Its `data` includes `throughEntryId`, `keepEntryIds`, `strategy`, `trigger`, and `memory: { type: "om.folded", version: 1, fullFold, observations, reflections, droppedObservationIds }`. When active observations exceed `observationsPoolMaxTokens`, it performs a full fold into `data.memory`.
 
@@ -110,13 +129,18 @@ The runtime requires host-supplied `session`, an `appendEntry` callback bound to
 - Recall tool and commands only see current-branch entries supplied by the host callback.
 - Invalid or missing ids fail closed; invalid recall tool ids skip entry lookup.
 - Utilities and fast compaction are O(n) over supplied entries and use no provider, network, filesystem, timer, worker, credential, or settings access.
-- Workers serialize only supplied branch entries, enforce `agentMaxTurns`, and run one consolidation pipeline at a time per runtime. Worker transcripts replay assistant `tool_call` messages before matching role `tool` `tool_result` messages so provider requests stay valid for call/result-pairing providers.
+- Workers serialize only supplied branch entries within `maxWorkerMessageBytes`, enforce finite turns/calls/arguments/results/messages/errors, and run one consolidation pipeline at a time per runtime. Source serialization and reflection/drop prompts fail before joining beyond the transcript cap.
+- Every provider call must name a registered worker tool. Unknown calls, call overflow, oversized/deep/cyclic/non-JSON arguments/results, and transcript overflow fail deterministically; no excess call enters the assistant transcript or executes.
+- Raw arguments are measured before tool execution. Full results are measured before redaction/replay; the bounded redacted value/error is then measured again because replacement text can grow. Replayed call arguments, tool values/errors, runtime `lastError`, and debug error data contain exact known-secret redaction. Host tools may already have caused side effects before returning an invalid oversized result; keep worker tools small/idempotent.
+- Worker transcripts replay assistant `tool_call` messages before matching role `tool` `tool_result` messages so provider requests stay valid for call/result-pairing providers. Calls produced on the final allowed turn execute and persist, but no additional provider turn starts.
 - Compaction preserves raw history; Prism appends one standard compaction entry and rebuilds provider context from its summary plus kept recent messages.
 - Pass known secrets to render/recall/runtime/tool/command helpers to redact exact values from prompts, records, structured results, and text output.
 - Live tests are opt-in with `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1`.
 
 ## Related APIs
 
+- [Use-case model selection](use-case-model-selection.md): session vs worker model binding and `resolveUseCaseModel`.
+- [Thinking and reasoning](thinking-and-reasoning.md): `thinkingLevel` → provider `compat`.
 - [Compaction and retry policies](compaction-and-retry.md): replaceable compaction strategy boundary.
 - [LLM compaction package](compaction-llm.md): existing optional compaction-package pattern.
 - [Session stores and branching](session-stores-and-branching.md): branch entries that observational memory reads and appends to.

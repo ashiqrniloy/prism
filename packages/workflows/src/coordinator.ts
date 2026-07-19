@@ -1,7 +1,7 @@
 import type { LeaseRecord, LeaseStore, OwnershipScope } from "@arnilo/prism";
 import { buildGraph } from "./define.js";
 import { WorkflowAbortError, WorkflowRuntimeError } from "./errors.js";
-import { WORKFLOW_CHECKPOINT_SCHEMA_VERSION } from "./limits.js";
+import { HARD_LIST_PAGE_CAP, HARD_MAX_CONCURRENCY, validateWorkflowLimit, WORKFLOW_CHECKPOINT_SCHEMA_VERSION } from "./limits.js";
 import { resumeWorkflow } from "./run.js";
 import type {
   RunWorkflowOptions,
@@ -94,8 +94,8 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
   const leaseTtlMs = integer(options.leaseTtlMs ?? 30_000, "leaseTtlMs");
   const renewalIntervalMs = integer(options.renewalIntervalMs ?? Math.max(1, Math.floor(leaseTtlMs / 3)), "renewalIntervalMs");
   const pollIntervalMs = integer(options.pollIntervalMs ?? 1_000, "pollIntervalMs");
-  const maxConcurrentRuns = integer(options.maxConcurrentRuns ?? 4, "maxConcurrentRuns");
-  const pageSize = Math.min(integer(options.pageSize ?? 100, "pageSize"), 500);
+  const maxConcurrentRuns = validateWorkflowLimit("maxConcurrentRuns", options.maxConcurrentRuns ?? 4, HARD_MAX_CONCURRENCY);
+  const pageSize = validateWorkflowLimit("pageSize", options.pageSize ?? 100, HARD_LIST_PAGE_CAP);
   if (renewalIntervalMs >= leaseTtlMs) throw new WorkflowRuntimeError("renewalIntervalMs must be less than leaseTtlMs");
   if (!options.coordinatorId) throw new WorkflowRuntimeError("coordinatorId is required");
   const active = new Map<string, Promise<void>>();

@@ -41,6 +41,7 @@ import type {
 } from "./contracts.js";
 import { AgentRunError } from "./contracts.js";
 import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
+import { createId } from "./ids.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import { assembleProviderInput, type AgentInput } from "./input.js";
@@ -876,6 +877,4 @@ function createUsageAccumulator(): { add(usage: Usage): void; value(): Usage | u
   };
 }
 
-function randomId(prefix: string): string {
-  return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
-}
+const randomId = createId;

@@ -2,14 +2,11 @@
  * Shared diff computation utilities for the edit and similar tools.
  *
  * Behavioral port of pi's core/tools/edit-diff for @arnilo/prism-coding-agent.
- * stdlib (node:fs/promises, node:fs constants) plus the `diff` package for
+ * The `diff` package provides unified-patch / display-diff generation;
  * unified-patch / display-diff generation. Fuzzy matching, replacement
  * preservation, BOM/line-ending handling are dep-free.
  */
 import * as Diff from "diff";
-import { constants } from "node:fs";
-import { access, readFile } from "node:fs/promises";
-import { resolveToCwd } from "./path-utils.js";
 
 export interface Edit {
   oldText: string;
@@ -371,9 +368,6 @@ export interface EditDiffResult {
   diff: string;
   firstChangedLine: number | undefined;
 }
-export interface EditDiffError {
-  error: string;
-}
 
 /**
  * Generate a display-oriented diff string with line numbers and context.
@@ -486,43 +480,4 @@ export function generateDiffString(
     }
   }
   return { diff: output.join("\n"), firstChangedLine };
-}
-
-/**
- * Compute the diff for one or more edit operations without applying them.
- * Used for preview before the edit tool executes.
- */
-export async function computeEditsDiff(
-  path: string,
-  edits: Edit[],
-  cwd: string,
-): Promise<EditDiffResult | EditDiffError> {
-  const absolutePath = resolveToCwd(path, cwd);
-  try {
-    try {
-      await access(absolutePath, constants.R_OK);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error && "code" in error ? `Error code: ${String((error as NodeJS.ErrnoException).code)}` : String(error);
-      return { error: `Could not edit file: ${path}. ${errorMessage}.` };
-    }
-    const rawContent = await readFile(absolutePath, "utf-8");
-    // Strip BOM before matching (LLM won't include invisible BOM in oldText).
-    const { text: content } = stripBom(rawContent);
-    const normalizedContent = normalizeToLF(content);
-    const { baseContent, newContent } = applyEditsToNormalizedContent(normalizedContent, edits, path);
-    return generateDiffString(baseContent, newContent);
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : String(err) };
-  }
-}
-
-/** Compute the diff for a single edit operation without applying it. */
-export async function computeEditDiff(
-  path: string,
-  oldText: string,
-  newText: string,
-  cwd: string,
-): Promise<EditDiffResult | EditDiffError> {
-  return computeEditsDiff(path, [{ oldText, newText }], cwd);
 }

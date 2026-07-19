@@ -29,29 +29,32 @@ Use `createWorkflowCoordinator()` when multiple processes share SQLite/PostgreSQ
 
 ## Inputs / request
 
-`defineWorkflow({ id, nodes, edges, limits? })`:
+`defineWorkflow({ id, revision, nodes, edges, limits? })`:
 
 | Field | Notes |
 | --- | --- |
 | `id` | Stable workflow id (required) |
+| `revision` | Non-empty host-authored definition revision (required); parent and nested revisions enter `definitionHash` |
 | `nodes` | Record of node definitions (`kind` + typed fields) |
 | `edges` | `[from, to]` pairs; must be acyclic; unknown ids rejected |
-| `limits.maxNodes` | Default 1000 |
-| `limits.maxFanOut` | Default 64 |
-| `limits.maxConcurrency` | Default 8 |
-| `limits.maxNodeOutputBytes` | Default 4 MiB |
-| `limits.maxCheckpointBytes` | Default 1 MiB |
+| `limits.maxNodes` | Default 1,000 / hard cap 10,000 |
+| `limits.maxFanOut` | Default 64 / hard cap 1,024 |
+| `limits.maxConcurrency` | Default 8 / hard cap 256 |
+| `limits.maxNodeOutputBytes` | Default 4 MiB / hard cap 16 MiB |
+| `limits.maxCheckpointBytes` | Default 1 MiB / hard cap 8 MiB |
 | `limits.maxNestedDepth` / hard cap | 8 / 32; inherited by child workflows |
 | `limits.maxStateBytes` / hard cap | 64 KiB / 512 KiB |
 | `limits.maxStateHistory` / hard cap | 32 / 128 state snapshots; updates stop before evidence would be discarded |
 | `limits.maxReplayDepth` / hard cap | 8 / 32 lineage generations |
 | `state.initial` / `state.schema` | Initial shared JSON object and optional host-validated schema |
 
+All workflow limits and runtime `concurrency` reject non-safe integers, zero, negatives, NaN, `Infinity`, and values above the named hard cap. Node retries allow 0–100; an explicit node timeout allows 1–86,400,000 ms. Omitting `timeoutMs` remains an explicit host choice.
+
 `runWorkflow(workflow, input, options?)`:
 
 | Option | Notes |
 | --- | --- |
-| `concurrency` | Worker pool size (capped by workflow/global limits) |
+| `concurrency` | Worker pool size; positive safe integer, hard cap 256, and capped by the workflow limit |
 | `checkpoints` | `WorkflowCheckpointAdapter` for save/load/list |
 | `agentFactory` | `(agentName) => AgentSession` for agent nodes |
 | `tools` | Tool registry/lookup for tool nodes |
@@ -100,6 +103,7 @@ Package-local `WorkflowEvent` types: `workflow_started`, `workflow_suspended`, `
 ```json
 {
   "id": "research-draft",
+  "revision": "2026-07-19.1",
   "nodes": ["research", "draft"],
   "edges": [["research", "draft"]],
   "limits": { "maxNodes": 256, "maxFanOut": 32, "maxConcurrency": 4 }
@@ -159,6 +163,7 @@ const publish = functionNode({
 
 const workflow = defineWorkflow({
   id: "research-draft",
+  revision: "2026-07-19.1",
   nodes: { research, draft, publish },
   edges: [["research", "draft"], ["draft", "publish"]],
   limits: { maxNodes: 256, maxFanOut: 32, maxConcurrency: 4 },
@@ -209,6 +214,7 @@ if (result.status === "suspended") {
 await cancelWorkflowRun({
   workflowId: workflow.id,
   runId: result.runId,
+  workflow,
   checkpoints,
   ownership: { tenantId: "t1" },
 });
@@ -258,15 +264,16 @@ runRpcServer({
 
 ## Security and performance notes
 
-- Definitions fail closed on cycles, unknown edges, self-edges, and `maxNodes` overflow.
-- Fan-out length is bounded by `maxFanOut`; concurrency by `maxConcurrency`.
+- Definitions require a non-empty host-authored `revision` and fail closed on cycles, unknown edges, self-edges, invalid limits, and `maxNodes` overflow. Revision and every nested revision enter the deterministic definition hash; hosts must bump revision when function/tool behavior changes.
+- Fan-out length is bounded by `maxFanOut`; concurrency by `maxConcurrency`; every count/byte/runtime option has a finite hard cap.
 - Node outputs, shared state/history, schedule input/records, and checkpoints are byte/count/depth bounded. Checkpoint size remains the final aggregate ceiling.
 - Event buses use a bounded buffer (default 2048) with `close` / `drop_oldest` / `drop_newest` overflow.
 - Checkpoints redact suspension/resume payloads via `SecretRedactor` / `secrets` before save; resume rejects tenant, schema, definition-hash, and expected-version mismatch.
 - Suspension requires a checkpoint adapter, consumes no worker/polling slot, and is ignored by distributed coordinators until explicit resume.
 - Concurrent resumes race on checkpoint CAS before node execution; one wins and stale/duplicate reviewers fail closed. Approved tool nodes then re-run current `ExecutionPolicy`, so durable approval cannot grant stale permissions.
 - `toolNode({ approval: { reason, data?, resumeSchema? } })` suspends before tool execution. Denial is terminal `denied`; no tool side effect occurs.
-- `cancelWorkflowRun` aborts local runs immediately and writes a durable cancellation request for a remotely leased run; workers check it during lease renewal.
+- `cancelWorkflowRun` requires the current workflow definition and exact tenant/account/user ownership. It verifies recursive definition hash before abort/mutation, then aborts local runs or writes a durable cancellation request for remotely leased work. Tenant-only or missing ownership cannot cancel a more-specific owned run.
+- Active registry identity includes workflow ID, run ID, and exact ownership. Exact duplicates fail instead of overwriting; distinct owners remain isolated in lookup/list/cancel/unregister.
 - Tool nodes attach `workflowId` / `nodeId` on `ExecutionAction.metadata` for approval/audit context.
 - Nested workflows inherit host registries/policies and cannot inject broader tools, agents, ownership, or credentials. Nested depth is inherited; child suspension bubbles to the parent review cursor.
 - Replay source ownership/hash/status/node eligibility are checked before a new checkpoint is created. Source records are immutable, lineage is bounded, and copied approval-bearing paths are rejected.

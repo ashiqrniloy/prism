@@ -333,9 +333,11 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
       try {
         const workflowId = requireWorkflowId(args);
         const runId = requireRunId(args);
+        const workflow = resolveWorkflow(workflows, workflowId);
         const result = await cancelWorkflowRun({
           workflowId,
           runId,
+          workflow,
           checkpoints,
           ownership: readOwnership(args) ?? runOptions?.ownership,
           signal: context.signal,

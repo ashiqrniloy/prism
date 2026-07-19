@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
-import { cacheSavings } from "@arnilo/prism";
+import { applyThinkingLevel, cacheSavings } from "@arnilo/prism";
 import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
 import {
   createNeuralWattProvider,
@@ -142,6 +142,7 @@ describe("@arnilo/prism-provider-neuralwatt (model registry)", () => {
       "glm-5.2-fast",
       "glm-5.2-short",
       "glm-5.2-short-fast",
+      "gemma-4-31b",
       "kimi-k2.6",
       "kimi-k2.6-fast",
       "kimi-k2.7-code",
@@ -170,6 +171,8 @@ describe("@arnilo/prism-provider-neuralwatt (model registry)", () => {
       assert.ok(limits!.contextWindow > 0);
     }
     assert.deepEqual(neuralWattModels.find((m) => m.model === "kimi-k2.6")?.capabilities?.input, ["text", "image"]);
+    assert.deepEqual(neuralWattModels.find((m) => m.model === "gemma-4-31b")?.capabilities?.input, ["text", "image"]);
+    assert.equal(neuralWattModels.find((m) => m.model === "glm-5.2")?.compat?.reasoning_effort, "max");
     assert.equal(neuralWattModels.find((m) => m.model === "glm-5.2-fast")?.capabilities?.reasoning, false);
   });
 
@@ -213,7 +216,7 @@ describe("@arnilo/prism-provider-neuralwatt (model discovery)", () => {
       cache: { kind: "implicit" },
       compat: {
         reasoning: true,
-        reasoning_effort: "medium",
+        reasoning_effort: "max",
         tool_stream: true,
         json_mode: true,
         neuralwatt: {
@@ -345,7 +348,7 @@ describe("@arnilo/prism-provider-neuralwatt (serializer)", () => {
     assert.deepEqual(body.stream_options, { include_usage: true });
   });
 
-  it("neuralwatt_preserve_and_clear_thinking_passthrough", () => {
+  it("neuralwatt_preserve_and_clear_thinking_route_to_chat_template_kwargs", () => {
     const req: ProviderRequest = {
       ...request,
       options: {
@@ -356,13 +359,14 @@ describe("@arnilo/prism-provider-neuralwatt (serializer)", () => {
       },
     };
     const body = neuralWattBody(req);
-    assert.equal(body.preserve_thinking, true);
-    assert.equal(body.clear_thinking, false);
+    assert.deepEqual(body.chat_template_kwargs, { preserve_thinking: true, clear_thinking: false });
+    assert.equal("preserve_thinking" in body, false, "preserve_thinking must not be top-level");
+    assert.equal("clear_thinking" in body, false, "clear_thinking must not be top-level");
   });
 
   it("neuralwatt_preserve_and_clear_thinking_omitted_when_undefined", () => {
-    // No compat set -> the fields must not appear at all (clean() drops undefined).
     const body = neuralWattBody(request);
+    assert.equal(body.chat_template_kwargs, undefined);
     assert.equal("preserve_thinking" in body, false);
     assert.equal("clear_thinking" in body, false);
   });
@@ -373,8 +377,7 @@ describe("@arnilo/prism-provider-neuralwatt (serializer)", () => {
       model: { ...request.model, compat: { preserve_thinking: true, clear_thinking: true } },
     };
     const body = neuralWattBody(req);
-    assert.equal(body.preserve_thinking, true);
-    assert.equal(body.clear_thinking, true);
+    assert.deepEqual(body.chat_template_kwargs, { preserve_thinking: true, clear_thinking: true });
   });
 
   it("neuralwatt_all_reasoning_controls_round_trip", () => {
@@ -393,12 +396,57 @@ describe("@arnilo/prism-provider-neuralwatt (serializer)", () => {
     const body = neuralWattBody(req);
     assert.equal(body.reasoning_effort, "high");
     assert.equal(body.thinking_token_budget, 4096);
-    assert.deepEqual(body.chat_template_kwargs, { enable_thinking: true });
-    assert.equal(body.preserve_thinking, true);
-    assert.equal(body.clear_thinking, false);
+    assert.deepEqual(body.chat_template_kwargs, {
+      enable_thinking: true,
+      preserve_thinking: true,
+      clear_thinking: false,
+    });
+    assert.equal(body.preserve_thinking, undefined);
+    assert.equal(body.clear_thinking, undefined);
   });
 
-  it("neuralwatt_body_extra_escape_hatch_overrides", () => {
+  it("neuralwatt_chat_template_kwargs_merge_and_explicit_kwargs_win", () => {
+    const req: ProviderRequest = {
+      ...request,
+      options: {
+        compat: {
+          preserve_thinking: true,
+          chat_template_kwargs: { enable_thinking: true, preserve_thinking: false },
+        },
+      },
+    };
+    const body = neuralWattBody(req);
+    assert.deepEqual(body.chat_template_kwargs, { enable_thinking: true, preserve_thinking: false });
+  });
+
+  it("neuralwatt_resolved_reasoning_controls_win_over_opaque_compat_spread", () => {
+    const req: ProviderRequest = {
+      ...request,
+      model: { ...request.model, compat: { reasoning_effort: "max" } },
+      options: {
+        compat: {
+          reasoning_effort: "low",
+          thinking_token_budget: 999,
+          tool_choice: "none",
+        },
+      },
+    };
+    const body = neuralWattBody(req);
+    assert.equal(body.reasoning_effort, "low");
+    assert.equal(body.thinking_token_budget, 999);
+    assert.equal(body.tool_choice, "none");
+  });
+
+  it("neuralwatt_apply_thinking_level_integrates_with_reasoning_effort", () => {
+    const req: ProviderRequest = {
+      ...request,
+      options: applyThinkingLevel({ compat: { reasoning_effort: "max" } }, "high", "reasoning_effort"),
+    };
+    const body = neuralWattBody(req);
+    assert.equal(body.reasoning_effort, "high");
+  });
+
+  it("neuralwatt_body_extra_escape_hatch_adds_custom_fields", () => {
     const req: ProviderRequest = {
       ...request,
       options: {
@@ -407,8 +455,8 @@ describe("@arnilo/prism-provider-neuralwatt (serializer)", () => {
       },
     };
     const body = neuralWattBody(req);
-    // extra spreads after compat, so it wins.
-    assert.equal(body.reasoning_effort, "high");
+    // Resolved owned fields win over stale extra escape hatches.
+    assert.equal(body.reasoning_effort, "medium");
     assert.equal((body as Record<string, unknown>).custom_neuralwatt_field, "override-wins");
   });
 

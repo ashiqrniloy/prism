@@ -27,6 +27,11 @@ import type {
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { resolveToCwd } from "./path-utils.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
+import {
+  DEFAULT_MAX_WRITE_BYTES,
+  HARD_MAX_WRITE_BYTES,
+  validateCodingLimit,
+} from "./limits.js";
 
 /**
  * Pluggable operations for the write tool. Override to delegate file writing to remote systems
@@ -34,9 +39,13 @@ import { withFileMutationQueue } from "./file-mutation-queue.js";
  */
 export interface WriteOperations {
   /** Write content to a file (creating or overwriting). */
-  writeFile: (absolutePath: string, content: string) => Promise<void>;
+  writeFile: (
+    absolutePath: string,
+    content: string,
+    options?: { maxBytes: number; signal?: AbortSignal },
+  ) => Promise<void>;
   /** Create a directory recursively. */
-  mkdir: (dir: string) => Promise<void>;
+  mkdir: (dir: string, options?: { signal?: AbortSignal }) => Promise<void>;
 }
 
 export interface WriteToolOptions {
@@ -44,10 +53,12 @@ export interface WriteToolOptions {
   executionPolicy?: ExecutionPolicy;
   /** Custom operations backend (default: local filesystem). */
   operations?: WriteOperations;
+  /** Maximum UTF-8 input bytes accepted before any filesystem mutation (default 8 MiB). */
+  maxInputBytes?: number;
 }
 
 const defaultWriteOperations: WriteOperations = {
-  writeFile: (path, content) => fsWriteFile(path, content, "utf-8"),
+  writeFile: (path, content, options) => fsWriteFile(path, content, { encoding: "utf-8", signal: options?.signal }),
   mkdir: (dir) => fsMkdir(dir, { recursive: true }).then(() => {}),
 };
 
@@ -67,6 +78,11 @@ function countLines(content: string): number {
 
 export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition {
   const ops = options?.operations ?? defaultWriteOperations;
+  const maxInputBytes = validateCodingLimit(
+    "maxInputBytes",
+    options?.maxInputBytes ?? DEFAULT_MAX_WRITE_BYTES,
+    HARD_MAX_WRITE_BYTES,
+  );
 
   return {
     name: "write",
@@ -93,6 +109,10 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
       if (content === undefined) {
         return errorResult(toolCallId, "content is required and must be a string.");
       }
+      const bytes = Buffer.byteLength(content, "utf-8");
+      if (bytes > maxInputBytes) {
+        return errorResult(toolCallId, `Write input is ${bytes} bytes, exceeds ${maxInputBytes} byte limit.`);
+      }
 
       try {
         const absolutePath = resolveToCwd(path, cwd);
@@ -104,7 +124,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
             operation: "write",
             paths: [absolutePath],
             risk: "medium",
-            metadata: { bytes: Buffer.byteLength(content, "utf-8"), sessionId: context.sessionId, runId: context.runId, signal: context.signal },
+            metadata: { bytes, sessionId: context.sessionId, runId: context.runId, signal: context.signal },
           },
           toolCallId,
           "write",
@@ -117,11 +137,11 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
           // Check abort before each fs op — do not start a new operation once aborted. We intentionally
           // do NOT throw from an abort listener: that could release the mutation queue mid-operation.
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
-          await ops.mkdir(dir);
+          await ops.mkdir(dir, { signal: context.signal });
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
-          await ops.writeFile(allowedPath, content);
+          await ops.writeFile(allowedPath, content, { maxBytes: maxInputBytes, signal: context.signal });
 
-          const bytes = Buffer.byteLength(content, "utf-8");
+
           const lines = countLines(content);
           return {
             toolCallId,

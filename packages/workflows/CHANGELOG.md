@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Require explicit workflow revisions and include parent/nested revisions in durable definition hashes.
+- Isolate active runs and cancellation by exact tenant/account/user ownership; reject duplicate exact registrations and definition mismatch before abort/mutation.
+- Reject non-finite, unsafe, or above-hard-cap workflow/runtime/node/checkpoint limits.
+- Generate workflow run and tool-call IDs with cryptographic UUIDs.
 
 ## [0.0.5] - 2026-07-16
 

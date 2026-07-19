@@ -67,7 +67,7 @@ Phase 6 also adds optional [`@arnilo/prism-provider-ai-sdk`](providers/ai-sdk.md
 
 Provider live tests are real smoke tests gated by `PRISM_LIVE_PROVIDER_TESTS=1` plus the provider-specific API key (`OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `KIMI_API_KEY`, `ZAI_API_KEY`, `NEURALWATT_API_KEY`, or `OPENCODE_API_KEY`). They cover text generation, tool-call loop behavior, abort/error paths where supported, and no-secret-leak assertions; they skip by default and never run in release verification.
 
-These workspaces still follow the same rule as external packages: no provider SDK dependency, catalog fetch, env scan, keychain/file credential lookup, shell auth command, OAuth login, or live provider call runs by default. `@arnilo/prism-provider-openai` now registers OpenAI Responses and OpenAI Codex providers from caller-supplied credentials only. `@arnilo/prism-provider-opencode-go` now registers static OpenCode Go metadata and package-local OpenAI/Anthropic-compatible routes from caller-supplied credentials only. `@arnilo/prism-provider-openrouter` now registers an app-controlled OpenRouter catalog with routing/reasoning/cache passthrough and no setup catalog fetch. `@arnilo/prism-provider-zai` now registers static GLM metadata with Z.AI thinking/reasoning/tool-stream request mapping. `@arnilo/prism-provider-kimi` now registers Kimi Coding Anthropic-compatible behavior by default and optional Moonshot metadata only when requested. `@arnilo/prism-provider-neuralwatt` now registers static featured model metadata with NeuralWatt reasoning_effort/thinking_token_budget/chat_template_kwargs request mapping, SSE comment tolerance, an opt-in `listNeuralWattModels()` helper for explicit `/v1/models` discovery, `getNeuralWattQuota()` for on-demand account balance/usage/energy, `neuralWattEventsWithTelemetry()`/`mapNeuralWattTelemetry()` for `: energy`/`: cost` telemetry, and `classifyNeuralWattError()` for retry classification. None of these helpers run during package setup or generation.
+These workspaces still follow the same rule as external packages: no provider SDK dependency, catalog fetch, env scan, keychain/file credential lookup, shell auth command, OAuth login, or live provider call runs by default. `@arnilo/prism-provider-openai` now registers OpenAI Responses and OpenAI Codex providers from caller-supplied credentials only, with optional `models`/`codexModels` overrides and an opt-in `listOpenAIModels()` helper for official `GET /models` discovery. `@arnilo/prism-provider-opencode-go` now registers docs-verified OpenCode Go open coding models with dual OpenAI/Anthropic routes (`compat.route`), official default base `https://opencode.ai/zen/go/v1`, `reasoning_content`/thinking preserve, and an opt-in `listOpenCodeGoModels()` helper for official `GET /zen/go/v1/models`. `@arnilo/prism-provider-openrouter` now registers an app-controlled OpenRouter catalog with routing/`reasoning`/cache passthrough, assistant `reasoning` replay, optional top-level automatic `cache_control`, and an opt-in `listOpenRouterModels()` helper for official `GET /api/v1/models` (setup still never fetches). `@arnilo/prism-provider-zai` now registers featured GLM-5.x/4.x metadata with official `thinking`/`reasoning_effort`/`tool_stream`/`clear_thinking` mapping, Preserved Thinking `reasoning_content` replay, implicit context caching, and an opt-in `listZaiModels()` helper for OpenAI-compatible `GET /models`. `@arnilo/prism-provider-kimi` now registers Kimi Coding Anthropic-compatible behavior by default, optional callable Moonshot Open Platform Chat Completions when `includeMoonshotModels` is requested, official Coding/Open Platform featured ids, thinking/`reasoning_effort` compat mapping, and an opt-in `listKimiModels()` helper for Moonshot `GET /v1/models`. `@arnilo/prism-provider-neuralwatt` now registers static featured model metadata with NeuralWatt reasoning_effort/thinking_token_budget/chat_template_kwargs request mapping, SSE comment tolerance, an opt-in `listNeuralWattModels()` helper for explicit `/v1/models` discovery, `getNeuralWattQuota()` for on-demand account balance/usage/energy, `neuralWattEventsWithTelemetry()`/`mapNeuralWattTelemetry()` for `: energy`/`: cost` telemetry, and `classifyNeuralWattError()` for retry classification. None of these helpers run during package setup or generation.
 
 ### First-party cache behavior
 
@@ -75,13 +75,70 @@ Every first-party provider package hardens prompt-cache behavior so it cannot em
 
 - **OpenAI** (`kind: openai_key`): `prompt_cache_key` is sanitized and clamped to 64 chars; `prompt_cache_retention` is emitted as `24h` only when the model declares `cache.longRetention`, and omitted for `short`/`none` (the API only accepts absent or `24h`). `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
 - **OpenAI-compatible core adapter**: Chat Completions sends no `prompt_cache_key`/`prompt_cache_retention`/`cache_control` fields; endpoints cache implicitly. `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
-- **OpenRouter** (`kind: cache_control`): `session_id`/`x-session-id` sanitized and clamped to 256 chars; `cache_control` markers applied only to caller-selected `cache.breakpoints` (not every block); `cacheRetention: long` adds `ttl: 1h` when allowed. Preserves `cached_tokens`/`cache_write_tokens`.
-- **OpenCode Go**: `x-opencode-session` from `cacheKey ?? sessionId` sanitized to 128 chars; the Anthropic route applies `cache_control` only to selected breakpoints (`long` → `ttl: 1h`), the OpenAI route sends none. Per-route usage mapping.
+- **OpenRouter** (`kind: cache_control`): `session_id`/`x-session-id` sanitized and clamped to 256 chars; with no breakpoints, emits top-level automatic `cache_control: { type: ephemeral }`; with breakpoints, markers applied only to caller-selected locations (not every block); `cacheRetention: long` adds `ttl: 1h` when allowed. Preserves `cached_tokens`/`cache_write_tokens`.
+- **OpenCode Go**: default base `https://opencode.ai/zen/go/v1`; `x-opencode-session` from `cacheKey ?? sessionId` sanitized to 128 chars; Anthropic route (MiniMax/Qwen) applies `cache_control` only to selected breakpoints (`long` → `ttl: 1h`); OpenAI route (Grok/GLM/Kimi/MiMo/DeepSeek) sends none and preserves `reasoning_content`. Per-route usage mapping. Caller-gated `listOpenCodeGoModels`.
 - **Z.AI** (`kind: implicit`): GLM context caching is automatic; no explicit cache payload sent regardless of cache options. `prompt_tokens_details.cached_tokens`/`cache_write_tokens` map to cache usage.
 - **NeuralWatt** (`kind: implicit`): NeuralWatt prefix caching is automatic; sends no explicit cache payload regardless of cache options. `cacheRetention: "none"` disables Prism cache-control hints only (not the implicit backend prefix cache). `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`; NeuralWatt does not report a cache-write token so `Usage.cacheWriteTokens` is never fabricated.
 - **Kimi**: default catalog models use implicit caching (no `cache_control`); hosts opt in via `ModelConfig.cache.kind: cache_control` on the Anthropic `/messages` route, then markers apply only to selected breakpoints (`long` → `ttl: 1h`); the Moonshot OpenAI route sends none. `cache_read_input_tokens`/`cache_creation_input_tokens` map to cache usage.
 
 See [Provider caching](provider-caching.md) for the `PromptCacheHints` surface and shared helpers, and [Provider conformance](provider-conformance.md) for the `assertUsageAccounting` and `assertProviderOwnedHeadersWin` checks every first-party package exercises.
+
+## Caller-gated model discovery
+
+First-party packages keep `create*ProviderPackage()` network-free. Latest models come from **caller-gated** `list*Models()` helpers that hosts invoke explicitly and then pass back via `models:` (or register themselves). Plan 015's "no setup catalog fetch" rule still holds; Plan 067 adds on-demand discovery without hidden latency.
+
+### Contract
+
+```ts
+export async function listExampleModels(options: {
+  apiKey?: CredentialValueSource;
+  fetch?: typeof fetch;
+  baseUrl?: string;
+  signal?: AbortSignal;
+  headers?: Readonly<Record<string, string>>;
+}): Promise<ModelConfig[]> {
+  // GET {baseUrl}/models — never called from create*ProviderPackage()
+}
+```
+
+| Rule | Requirement |
+| --- | --- |
+| Setup | `create*ProviderPackage().setup` performs **zero** fetches / discovery calls |
+| Shape | Package-local `list*Models(options) → Promise<ModelConfig[]>` + optional `map*Model(entry)` |
+| Injectables | `fetch`, `baseUrl`, `signal`, optional `apiKey` / `headers` |
+| Transport | Error bodies via `@arnilo/prism/providers/transport` `readBoundedResponseText`; credentials via `resolveCredentialValue` + `redactSecrets` |
+| Return | `ModelConfig[]` only — never embed API keys, tokens, or auth headers in returned metadata |
+| Static catalog | Featured aliases / offline bootstrap only; may omit live pricing until discovery fills `cost` / `cache` |
+| Core | Prefer package-local helpers. Do **not** add a core model-discovery registry. Extract a shared HTTP/list helper only when ≥2 packages share identical parsing |
+
+Template: [`listNeuralWattModels`](providers/neuralwatt.md) in `@arnilo/prism-provider-neuralwatt`.
+
+### Per-package policy
+
+| Package | Discovery helper | Setup catalog | Notes |
+| --- | --- | --- | --- |
+| OpenAI | **`listOpenAIModels` (exists)** | Featured Responses/Codex aliases; factory accepts `models?` / `codexModels?` | Official `GET /v1/models`; Codex not listed by api.openai.com |
+| Kimi | **`listKimiModels`** (Moonshot `GET /v1/models`) | Featured Coding ids + optional callable Moonshot | Official Moonshot/Kimi list-models; Coding curated |
+| Z.AI | **`listZaiModels`** (OpenAI-compatible `GET /models`) + curated featured refresh | Featured GLM-5.2…4.5 aliases | No first-class docs.z.ai list page; discovery is best-effort; featured set from Chat Completions enum / overview |
+| OpenRouter | **`listOpenRouterModels`** (official `GET /api/v1/models`) | **App-controlled** `models:` only — no bundled mega-catalog | Helper feeds host registration; setup still does not fetch |
+| OpenCode Go | **`listOpenCodeGoModels`** (official `GET /zen/go/v1/models`) | Featured dual-route official Go aliases | Official Go docs endpoint table + sparse list API |
+| NeuralWatt | **`listNeuralWattModels` (exists)** | Featured aliases without guessed pricing | Auth optional for public models |
+| AI SDK | None | Host-owned `LanguageModelV4` | No Prism-side catalog by design |
+
+Host pattern:
+
+```ts
+const models = await listNeuralWattModels({ apiKey, fetch });
+await kernel.load([createNeuralWattProviderPackage({ apiKey, models })]);
+```
+
+Discovery may populate `ModelConfig.cache` and `ModelConfig.cost` from live metadata when the provider documents those fields; see [Provider caching](provider-caching.md#discovery-and-live-cache-cost-metadata). Package authors: include the [setup zero-fetch checklist](provider-conformance.md#model-discovery-checklist) in every first-party suite that ships or plans a `list*Models` helper.
+
+## Per-turn thinking / reasoning
+
+Hosts set effort with portable helpers from `@arnilo/prism` (`applyThinkingLevel`, `thinkingCompatFor`) that write official fields into `ProviderRequestOptions.compat`. Model defaults stay on `ModelConfig.compat`; per-turn patches win via `mergeProviderRequestOptions`. Providers keep reading `options.compat` / `model.compat` — do not invent a parallel options tree or put effort only in `extra`.
+
+Canonical contract: [Thinking and reasoning](thinking-and-reasoning.md). Package-local knobs (NeuralWatt budgets, Z.AI `tool_stream`, Kimi keep/all) remain on `compat` beside the shared families.
 
 ## Third-party provider packaging
 

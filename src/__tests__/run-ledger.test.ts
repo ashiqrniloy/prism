@@ -385,6 +385,7 @@ describe("RunLedger runtime wiring", () => {
   it("serializes ledger appends with concurrency of one", async () => {
     let active = 0;
     let maxActive = 0;
+    const seen: string[] = [];
     const memory = createMemoryLedger();
     const ledger: RunLedger = {
       ...memory.ledger,
@@ -392,6 +393,9 @@ describe("RunLedger runtime wiring", () => {
         active += 1;
         maxActive = Math.max(maxActive, active);
         await new Promise((resolve) => setTimeout(resolve, 0));
+        if (record.event.type === "message_delta" && record.event.content.type === "text") {
+          seen.push(record.event.content.text);
+        }
         active -= 1;
         return memory.ledger.appendEvent(record);
       },
@@ -407,5 +411,29 @@ describe("RunLedger runtime wiring", () => {
 
     assert.equal(maxActive, 1);
     assert.ok(memory.events.length >= 50, "expected streamed events in ledger");
+    assert.deepEqual(seen, deltas.map((_, index) => `chunk-${index}`));
+  });
+
+  it("propagates ledger append failures when draining the run", async () => {
+    const memory = createMemoryLedger();
+    const ledger: RunLedger = {
+      ...memory.ledger,
+      appendEvent: async (record) => {
+        if (record.event.type === "message_delta") {
+          throw new Error("ledger write failed");
+        }
+        return memory.ledger.appendEvent(record);
+      },
+    };
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("chunk-0"), providerDone()]),
+      runLedger: ledger,
+    });
+
+    await assert.rejects(
+      agent.createSession({ id: "s-ledger-fail" }).run("stream and fail"),
+      /ledger write failed/,
+    );
   });
 });

@@ -123,8 +123,8 @@ Package performs **no** `PermissionPolicy`, `ToolValidator`, or trust checks of 
 | --- | --- |
 | `ToolDefinition.parameters` | Stored and forwarded to providers; **not validated** by core |
 | `ToolValidator` | Host function hook; Phase 25 threads through agent runtime |
-| Standards-based schema validation | **Not shipped** — capability gap C-001 |
-| Schema compile cache | **None** — every dispatch would re-validate if host validator is naive |
+| Standards-based schema validation | Optional `@arnilo/prism-tool-validator-json-schema`; host wires it through `ToolValidator` |
+| Schema compile cache | Adapter-owned finite LRU; core never compiles schemas |
 
 ### MCP mapping (shipped — Task 3)
 
@@ -186,7 +186,7 @@ import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-tool-valida
 createAgent({ model, validator: createJsonSchemaToolArgumentValidator() });
 ```
 
-**Cache key:** stable `JSON.stringify(schema)` in adapter-owned `Map`. **Bounds:** configurable depth/properties/string/array limits before Ajv validation. **Security:** remote `$ref` rejected; prototype-pollution keys rejected in schemas and instances.
+**Cache key:** stable `JSON.stringify(schema)` in an adapter-owned 256-entry LRU (hard cap 1,024); eviction removes the matching Ajv schema. **Bounds:** schemas default to 256 KiB, depth 64, 10,000 properties/keywords, and 128 refs (hard 1 MiB/128/100,000/1,024); instance depth/properties/string/array limits remain configurable. Every limit rejects non-finite, unsafe, zero/negative, and above-hard values. **Security:** only fragment-local `$ref` is accepted; prototype-pollution keys, cycles, and non-finite schema numbers reject before Ajv compilation.
 
 ### Task 2 — Parallel tool execution — **shipped**
 

@@ -32,7 +32,18 @@ import type {
 } from "@arnilo/prism";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { OutputAccumulator, type OutputSnapshot } from "./output-accumulator.js";
-import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult } from "./truncate.js";
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
+  DEFAULT_SHELL_TIMEOUT_SECONDS,
+  HARD_MAX_BYTES,
+  HARD_MAX_LINES,
+  HARD_MAX_TOTAL_OUTPUT_BYTES,
+  HARD_SHELL_TIMEOUT_SECONDS,
+  validateCodingLimit,
+} from "./limits.js";
+import { formatSize, type TruncationResult } from "./truncate.js";
 
 const EXIT_STDIO_GRACE_MS = 100;
 
@@ -80,6 +91,10 @@ export interface ShellToolOptions {
   maxLines?: number;
   /** Max bytes kept in the tail snapshot (default 50KB). */
   maxBytes?: number;
+  /** Default wall timeout in seconds (default 600, hard cap 3600). */
+  timeout?: number;
+  /** Maximum combined raw stdout/stderr retained or spilled (default 64 MiB). */
+  maxTotalOutputBytes?: number;
   /** Temp-file prefix for spilled full output (default "prism-shell"). */
   tempFilePrefix?: string;
 }
@@ -208,6 +223,11 @@ export function waitForChildProcess(child: ChildProcess): Promise<number | null>
 export function createLocalBashOperations(options?: { shellPath?: string }): BashOperations {
   return {
     exec: async (command, cwd, { onData, signal, timeout, env }) => {
+      const timeoutSeconds = validateCodingLimit(
+        "timeout",
+        timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS,
+        HARD_SHELL_TIMEOUT_SECONDS,
+      );
       const shellConfig = getShellConfig(options?.shellPath);
       try {
         await fsAccess(cwd, constants.F_OK);
@@ -230,12 +250,10 @@ export function createLocalBashOperations(options?: { shellPath?: string }): Bas
         if (child.pid) killProcessTree(child.pid);
       };
       try {
-        if (timeout !== undefined && timeout > 0) {
-          timeoutHandle = setTimeout(() => {
-            timedOut = true;
-            if (child.pid) killProcessTree(child.pid);
-          }, timeout * 1000);
-        }
+        timeoutHandle = setTimeout(() => {
+          timedOut = true;
+          if (child.pid) killProcessTree(child.pid);
+        }, timeoutSeconds * 1000);
         child.stdout?.on("data", onData);
         child.stderr?.on("data", onData);
         if (signal) {
@@ -244,7 +262,7 @@ export function createLocalBashOperations(options?: { shellPath?: string }): Bas
         }
         const exitCode = await waitForChildProcess(child);
         if (signal?.aborted) throw new Error("aborted");
-        if (timedOut) throw new Error(`timeout:${timeout}`);
+        if (timedOut) throw new Error(`timeout:${timeoutSeconds}`);
         return { exitCode };
       } finally {
         if (timeoutHandle) clearTimeout(timeoutHandle);
@@ -268,11 +286,11 @@ function formatOutput(
     const endLine = truncation.totalLines;
     if (truncation.lastLinePartial) {
       const lastLineSize = formatSize(lastLineBytes);
-      text += `\n\n[Showing last ${formatSize(truncation.outputBytes)} of line ${endLine} (line is ${lastLineSize}). Full output: ${snapshot.fullOutputPath}]`;
+      text += `\n\n[Showing last ${formatSize(truncation.outputBytes)} of line ${endLine} (line is ${lastLineSize}).${snapshot.fullOutputPath ? ` Full output: ${snapshot.fullOutputPath}` : ""}]`;
     } else if (truncation.truncatedBy === "lines") {
-      text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines}. Full output: ${snapshot.fullOutputPath}]`;
+      text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines}.${snapshot.fullOutputPath ? ` Full output: ${snapshot.fullOutputPath}` : ""}]`;
     } else {
-      text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines} (${formatSize(truncation.maxBytes)} limit). Full output: ${snapshot.fullOutputPath}]`;
+      text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines} (${formatSize(truncation.maxBytes)} limit).${snapshot.fullOutputPath ? ` Full output: ${snapshot.fullOutputPath}` : ""}]`;
     }
   }
   return { text, truncation, fullOutputPath: snapshot.fullOutputPath };
@@ -288,19 +306,30 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
   const ops = options?.operations ?? createLocalBashOperations({ shellPath: options?.shellPath });
   const commandPrefix = options?.commandPrefix;
   const spawnHook = options?.spawnHook;
-  const maxLines = options?.maxLines ?? DEFAULT_MAX_LINES;
-  const maxBytes = options?.maxBytes ?? DEFAULT_MAX_BYTES;
+  const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
+  const defaultTimeout = validateCodingLimit(
+    "timeout",
+    options?.timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS,
+    HARD_SHELL_TIMEOUT_SECONDS,
+  );
+  const maxTotalOutputBytes = validateCodingLimit(
+    "maxTotalOutputBytes",
+    options?.maxTotalOutputBytes ?? DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
+    HARD_MAX_TOTAL_OUTPUT_BYTES,
+  );
+  if (maxTotalOutputBytes < maxBytes) throw new Error("maxTotalOutputBytes must be at least maxBytes");
   const tempFilePrefix = options?.tempFilePrefix ?? "prism-shell";
 
   return {
     name: "shell",
     exclusive: true,
-    description: `Execute a shell command in the current working directory. Returns combined stdout and stderr. Output is truncated to the last ${maxLines} lines or ${maxBytes / 1024}KB (whichever is hit first). If truncated, full output is saved to a temp file. Optionally provide a timeout in seconds.`,
+    description: `Execute a shell command in the current working directory. Returns combined stdout and stderr. Output is truncated to the last ${maxLines} lines or ${maxBytes / 1024}KB and capped at ${formatSize(maxTotalOutputBytes)} total. Truncated successful output is saved to a temp file. Timeout defaults to ${defaultTimeout} seconds.`,
     parameters: {
       type: "object",
       properties: {
         command: { type: "string", description: "Shell command to execute" },
-        timeout: { type: "number", description: "Timeout in seconds (optional, no default timeout)" },
+        timeout: { type: "number", description: `Timeout in seconds (default ${defaultTimeout}, max ${HARD_SHELL_TIMEOUT_SECONDS})` },
       },
       required: ["command"],
       additionalProperties: false,
@@ -308,7 +337,7 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
     async execute(args, context): Promise<ToolResult> {
       const toolCallId = context.toolCallId;
       const command = typeof args.command === "string" ? args.command : "";
-      const timeout = typeof args.timeout === "number" ? args.timeout : undefined;
+      const timeoutInput = typeof args.timeout === "number" ? args.timeout : undefined;
 
       if (command.length === 0) {
         return {
@@ -317,6 +346,14 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
           content: [{ type: "text", text: "Error: command is required and must be a non-empty string." }],
           error: { message: "command is required and must be a non-empty string." },
         };
+      }
+
+      let timeout: number;
+      try {
+        timeout = validateCodingLimit("timeout", timeoutInput ?? defaultTimeout, HARD_SHELL_TIMEOUT_SECONDS);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { toolCallId, name: "shell", content: [{ type: "text", text: message }], error: { message } };
       }
 
       const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
@@ -342,76 +379,86 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
         spawnContext = { ...spawnContext, command: policyCheck.action.command };
       }
 
-      const output = new OutputAccumulator({ maxLines, maxBytes, tempFilePrefix });
+      const outputAbort = new AbortController();
+      const output = new OutputAccumulator({
+        maxLines,
+        maxBytes,
+        maxTotalOutputBytes,
+        tempFilePrefix,
+        onLimit: () => outputAbort.abort("output-limit"),
+        onStorageError: () => outputAbort.abort("output-storage-error"),
+      });
+      const signal = context.signal
+        ? AbortSignal.any([context.signal, outputAbort.signal])
+        : outputAbort.signal;
       let acceptingOutput = true;
       const handleData = (data: Buffer) => {
-        if (!acceptingOutput) return;
-        output.append(data);
+        if (acceptingOutput) output.append(data);
       };
-      const finishOutput = async (): Promise<OutputSnapshot> => {
+      const finishOutput = async (retainSpill: boolean): Promise<OutputSnapshot> => {
         acceptingOutput = false;
         output.finish();
         const snapshot = output.snapshot({ persistIfTruncated: true });
-        await output.closeTempFile();
-        return snapshot;
+        if (retainSpill) {
+          await output.closeTempFile();
+          return snapshot;
+        }
+        const hadStorageError = output.hasStorageError();
+        try {
+          await output.cleanupTempFile();
+        } catch (error) {
+          if (!hadStorageError) throw error;
+        }
+        return { ...snapshot, fullOutputPath: undefined };
       };
 
-      // Safety net: never leak an unhandled throw to the host runtime.
       try {
-        let exitCode: number | null;
+        let exitCode: number | null = null;
+        let executionError: unknown;
         try {
-          const result = await ops.exec(spawnContext.command, spawnContext.cwd, {
+          exitCode = (await ops.exec(spawnContext.command, spawnContext.cwd, {
             onData: handleData,
-            signal: context.signal,
+            signal,
             timeout,
             env: spawnContext.env,
-          });
-          exitCode = result.exitCode;
-        } catch (err) {
-          const snapshot = await finishOutput();
+          })).exitCode;
+        } catch (error) {
+          executionError = error;
+        }
+
+        if (executionError !== undefined || output.isOutputLimitExceeded() || output.hasStorageError() || context.signal?.aborted) {
+          const outputLimitExceeded = output.isOutputLimitExceeded();
+          const outputStorageFailed = output.hasStorageError();
+          const snapshot = await finishOutput(false);
           const { text } = formatOutput(snapshot, output.getLastLineBytes(), "");
-          const message = err instanceof Error ? err.message : String(err);
-          const meta = {
-            exitCode: null,
-            truncation: snapshot.truncation,
-            fullOutputPath: snapshot.fullOutputPath,
-          };
-          if (message === "aborted") {
-            return {
-              toolCallId,
-              name: "shell",
-              content: [{ type: "text", text: appendStatus(text, "[Command aborted]") }],
-              error: { message: "Command aborted" },
-              metadata: meta,
-            };
-          }
-          if (message.startsWith("timeout:")) {
-            const timeoutSecs = message.split(":")[1];
-            const status = `Command timed out after ${timeoutSecs} seconds`;
-            return {
-              toolCallId,
-              name: "shell",
-              content: [{ type: "text", text: appendStatus(text, `[${status}]`) }],
-              error: { message: status },
-              metadata: meta,
-            };
-          }
-          // Spawn error (missing cwd, shell ENOENT, …): message is already host-friendly.
+          const rawMessage = executionError instanceof Error ? executionError.message : String(executionError ?? "");
+          const status = outputLimitExceeded
+            ? `Command output exceeded ${formatSize(maxTotalOutputBytes)} limit`
+            : outputStorageFailed
+              ? "Command output spill failed"
+              : rawMessage.startsWith("timeout:")
+              ? `Command timed out after ${rawMessage.split(":")[1]} seconds`
+              : context.signal?.aborted
+                ? "Command aborted"
+                : rawMessage || "Command failed";
           return {
             toolCallId,
             name: "shell",
-            content: [{ type: "text", text: appendStatus(text, message) }],
-            error: { message },
-            metadata: meta,
+            content: [{ type: "text", text: appendStatus(text, `[${status}]`) }],
+            error: { message: status },
+            metadata: {
+              exitCode: null,
+              truncation: snapshot.truncation,
+              totalOutputBytes: output.getTotalRawBytes(),
+              outputLimitExceeded,
+              outputStorageFailed,
+            },
           };
         }
-        const snapshot = await finishOutput();
-        const formatted = formatOutput(snapshot, output.getLastLineBytes());
-        let text = formatted.text;
-        // Non-zero exit is not a tool error: surface exit code in a footer + metadata.
-        if (exitCode !== 0 && exitCode !== null) {
-          text = appendStatus(text, `[Command exited with code ${exitCode}]`);
-        }
+
+        const snapshot = await finishOutput(true);
+        let text = formatOutput(snapshot, output.getLastLineBytes()).text;
+        if (exitCode !== 0 && exitCode !== null) text = appendStatus(text, `[Command exited with code ${exitCode}]`);
         return {
           toolCallId,
           name: "shell",
@@ -420,16 +467,14 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
             exitCode,
             truncation: snapshot.truncation,
             fullOutputPath: snapshot.fullOutputPath,
+            totalOutputBytes: output.getTotalRawBytes(),
+            outputLimitExceeded: false,
           },
         };
       } catch (err) {
+        try { await output.cleanupTempFile(); } catch { /* retain primary error */ }
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          toolCallId,
-          name: "shell",
-          content: [{ type: "text", text: message }],
-          error: { message },
-        };
+        return { toolCallId, name: "shell", content: [{ type: "text", text: message }], error: { message } };
       }
     },
   };

@@ -65,6 +65,7 @@ describe("createPrismHandler", () => {
   it("runs, loads, resumes, and cancels durable workflow checkpoints", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({
+      revision: "1",
       id: "publish",
       nodes: {
         review: functionNode({ execute: (ctx) => ctx.resume
@@ -106,6 +107,7 @@ describe("createPrismHandler", () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     let calls = 0;
     const workflow = defineWorkflow({
+      revision: "1",
       id: "background",
       nodes: { work: functionNode({ execute: () => ++calls }) },
     });
@@ -129,7 +131,7 @@ describe("createPrismHandler", () => {
 
   it("serves only explicitly registered ownership-scoped schedules", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
-    const workflow = defineWorkflow({ id: "scheduled", nodes: { work: functionNode({ execute: () => true }) } });
+    const workflow = defineWorkflow({ revision: "1", id: "scheduled", nodes: { work: functionNode({ execute: () => true }) } });
     const schedules = createWorkflowSchedules({
       store: createMemoryCheckpointStore(),
       leases: createMemoryLeaseStore(),
@@ -168,6 +170,7 @@ describe("createPrismHandler", () => {
   it("streams workflow events and releases its concurrency slot", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({
+      revision: "1",
       id: "quick",
       nodes: { work: functionNode({ execute: () => "done" }) },
       edges: [],
@@ -186,7 +189,7 @@ describe("createPrismHandler", () => {
 
   it("fails closed on auth, ownership, routes, content type, body size, host, and origin", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
-    const workflow = defineWorkflow({ id: "safe", nodes: { one: functionNode({ execute: () => 1 }) }, edges: [] });
+    const workflow = defineWorkflow({ revision: "1", id: "safe", nodes: { one: functionNode({ execute: () => 1 }) }, edges: [] });
     const handler = createPrismHandler({
       agents: { allowed: mockAgent() },
       workflows: { safe: { definition: workflow, checkpoints } },

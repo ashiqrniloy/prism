@@ -66,4 +66,31 @@ describe("runtime redaction", () => {
     assert.equal(mapRedacted.safe, "ok");
   });
 
+  it("resolves redacted key collisions deterministically for objects and Maps", () => {
+    const secretA = "secret-a";
+    const secretB = "secret-b";
+    const redactor = createSecretRedactor([secretA, secretB]);
+    const objectRedacted = redactor.redact({
+      "[REDACTED]": 0,
+      [secretA]: 1,
+      [secretB]: 2,
+    }) as Record<string, unknown>;
+    assert.equal(JSON.stringify(objectRedacted).includes(secretA), false);
+    assert.equal(JSON.stringify(objectRedacted).includes(secretB), false);
+    assert.equal(objectRedacted["[REDACTED]"], 0);
+    assert.equal(objectRedacted["[REDACTED]__2"], 1);
+    assert.equal(objectRedacted["[REDACTED]__3"], 2);
+
+    const mapRedacted = redactor.redact(new Map([
+      ["[REDACTED]", "zero"],
+      [secretA, "one"],
+      [secretB, "two"],
+    ])) as unknown as Record<string, unknown>;
+    assert.equal(JSON.stringify(mapRedacted).includes(secretA), false);
+    assert.equal(JSON.stringify(mapRedacted).includes(secretB), false);
+    assert.equal(mapRedacted["[REDACTED]"], "zero");
+    assert.equal(mapRedacted["[REDACTED]__2"], "one");
+    assert.equal(mapRedacted["[REDACTED]__3"], "two");
+  });
+
 });

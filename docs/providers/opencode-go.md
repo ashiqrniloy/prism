@@ -2,27 +2,41 @@
 
 ## What it does
 
-`@arnilo/prism-provider-opencode-go` provides explicit, side-effect-free setup for the
-OpenCode Go API-key provider using Prism model metadata and
-OpenAI-compatible/Anthropic-compatible routes with `x-opencode-session`
-cache/session headers.
+`@arnilo/prism-provider-opencode-go` provides explicit, side-effect-free setup for
+[OpenCode Go](https://opencode.ai/docs/go/) — a low-cost subscription gateway for
+open coding models. The package dual-routes by `ModelConfig.compat.route`:
 
-The package registers a provider, default model metadata, and an `api_key` auth
-method through `createExtensionKernel().load([...])`.
+| Route | Endpoint | Official model families |
+| --- | --- | --- |
+| `"openai"` (default) | `POST {baseUrl}/chat/completions` | Grok, GLM, Kimi, MiMo, DeepSeek |
+| `"anthropic"` | `POST {baseUrl}/messages` | MiniMax, Qwen |
+
+Default base URL is the official Go API root:
+
+```txt
+https://opencode.ai/zen/go/v1
+```
+
+Session stickiness uses the sanitized `x-opencode-session` header. Anthropic-route
+models may emit selected `cache_control` breakpoints; OpenAI-route models use
+implicit caching and never receive Anthropic cache fields.
 
 ## When to use it
 
-Use it when a host app wants to run an OpenAI-compatible or Anthropic-compatible
-OpenCode Go endpoint through Prism's `AgentSession` runtime with per-request
-session/cache headers.
+Use it when a host app wants OpenCode Go models through Prism's `AgentSession`
+runtime with dual-route serialization, per-request session headers, and optional
+caller-gated model discovery.
 
-Do not use it for automatic credential discovery, catalog fetches, or
+Do not use it for automatic credential discovery, setup-time catalog fetches, or
 real-network tests.
 
 ## Inputs / request
 
 ```ts
-import { createOpenCodeGoProviderPackage } from "@arnilo/prism-provider-opencode-go";
+import {
+  createOpenCodeGoProviderPackage,
+  listOpenCodeGoModels,
+} from "@arnilo/prism-provider-opencode-go";
 
 createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions): ProviderPackage
 ```
@@ -31,29 +45,49 @@ createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions): Prov
 | --- | --- | --- |
 | `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
 | `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides the OpenCode Go base URL. |
-| `models` | `readonly ModelConfig[]` | Overrides `openCodeGoModels` defaults. |
+| `baseUrl` | `string` | Overrides official `https://opencode.ai/zen/go/v1`. |
+| `models` | `readonly ModelConfig[]` | Overrides featured `openCodeGoModels` defaults. |
 
 `ProviderRequest.options.cacheKey` (falling back to `sessionId`) maps to the
-`x-opencode-session` header; the Anthropic-compatible route accepts
-`cache_control` breakpoints; `cacheRetention` maps to cache retention.
+`x-opencode-session` header. Anthropic-route `cache_control` breakpoints and
+`cacheRetention` map as documented below.
 
 ## Outputs / response / events
 
 | Surface | Behavior |
 | --- | --- |
 | Provider stream | Prism text, thinking, tool-call delta/final, `usage`, `done`, redacted `error`. |
-| Session/cache | `x-opencode-session` and cache headers added before `generate()`. |
+| OpenAI thinking | `delta.reasoning_content` → thinking deltas; replay via `reasoning_content` when `preserveThinking`. |
+| Anthropic thinking | `thinking_delta` → thinking deltas; replay via Anthropic thinking blocks when `preserveThinking`. |
+| Session/cache | `x-opencode-session` + route-specific cache markers. |
 | Auth method | `api_key` for `opencode-go`, credential name `apiKey`. |
 
 ## Request/response example
 
-Example headers added before fetch:
-
 ```json
 {
   "Authorization": "Bearer <resolved-key>",
+  "content-type": "application/json",
   "x-opencode-session": "<ProviderRequest.options.cacheKey ?? sessionId>"
+}
+```
+
+OpenAI-route body (thinking passthrough + preserved reasoning):
+
+```json
+{
+  "model": "kimi-k3",
+  "stream": true,
+  "stream_options": { "include_usage": true },
+  "reasoning_effort": "high",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "calling",
+      "tool_calls": [{ "id": "call_1", "type": "function", "function": { "name": "lookup", "arguments": "{\"q\":\"x\"}" } }],
+      "reasoning_content": "plan the lookup"
+    }
+  ]
 }
 ```
 
@@ -61,27 +95,76 @@ Example headers added before fetch:
 
 ```ts
 import { createExtensionKernel } from "@arnilo/prism";
-import { createOpenCodeGoProviderPackage } from "@arnilo/prism-provider-opencode-go";
+import {
+  createOpenCodeGoProviderPackage,
+  listOpenCodeGoModels,
+  openCodeGoModels,
+} from "@arnilo/prism-provider-opencode-go";
 
 const kernel = createExtensionKernel();
-await kernel.load([createOpenCodeGoProviderPackage({ apiKey: "fake-opencode-key" })]);
+await kernel.load([createOpenCodeGoProviderPackage({ apiKey: process.env.OPENCODE_API_KEY })]);
 ```
 
-Override model metadata:
+Caller-gated live catalog (never runs during package setup):
 
 ```ts
-import { createOpenCodeGoProviderPackage, openCodeGoModels } from "@arnilo/prism-provider-opencode-go";
+const models = await listOpenCodeGoModels({ apiKey: process.env.OPENCODE_API_KEY });
+await kernel.load([createOpenCodeGoProviderPackage({ apiKey: process.env.OPENCODE_API_KEY, models })]);
+```
 
+Offline bootstrap with featured docs-verified aliases:
+
+```ts
 await kernel.load([
   createOpenCodeGoProviderPackage({ apiKey: "fake", models: openCodeGoModels }),
 ]);
 ```
 
+## Featured models and routes
+
+Featured `openCodeGoModels` mirrors the official Go docs list (open coding models
+only — **not** Zen GPT/Claude ids). Route selection follows the official endpoint
+table; Pi secondary metadata is used only for context/output limits when docs omit them.
+
+| Model ID | Route | Cache kind |
+| --- | --- | --- |
+| `grok-4.5`, `glm-5.2`, `glm-5.1`, `kimi-k3`, `kimi-k2.7-code`, `kimi-k2.6`, `mimo-v2.5`, `mimo-v2.5-pro`, `deepseek-v4-pro`, `deepseek-v4-flash` | `openai` | `implicit` |
+| `minimax-m3`, `minimax-m2.7`, `minimax-m2.5`, `qwen3.7-max`, `qwen3.7-plus`, `qwen3.6-plus` | `anthropic` | `cache_control` |
+
+## Model discovery
+
+Official list endpoint (sparse OpenAI-compatible shape):
+
+```txt
+GET https://opencode.ai/zen/go/v1/models
+```
+
+`listOpenCodeGoModels({ apiKey?, fetch?, baseUrl?, signal?, headers? })` maps each
+`{ id, owned_by }` entry to `ModelConfig` with route/cache heuristics from the docs
+endpoint table. Featured metadata (pricing/limits/thinking defaults) is applied when
+the id matches `openCodeGoModels`. Discovery is **caller-gated** — setup performs
+zero fetches.
+
+## Thinking / reasoning
+
+OpenCode Go does not document gateway-owned thinking fields; Prism forwards
+upstream-compatible compat and preserves prior reasoning for tool-call continuity:
+
+| Surface | Behavior |
+| --- | --- |
+| OpenAI route stream | `reasoning_content` → thinking deltas |
+| OpenAI route replay | thinking blocks → top-level `reasoning_content` when `preserveThinking` (default for reasoning models); never folded into text |
+| OpenAI route body | optional `thinking` / `reasoning_effort` / `reasoning` from model + per-turn `options.compat` (request wins) |
+| Anthropic route stream | `thinking_delta` → thinking deltas |
+| Anthropic route replay | thinking blocks with optional `signature` when `preserveThinking` |
+
+Owned compat keys (`route`, `thinking`, `reasoning`, `reasoning_effort`,
+`preserveThinking`) are stripped before opaque compat spread so resolved values win.
+
 ## Extension and configuration notes
 
 - Hosts choose base URL, model list, credential source, and `fetch` impl.
-- The serializer is inherited from the OpenAI-compatible route; Anthropic-compatible
-  routes preserve `tool_use`/`tool_result` blocks.
+- Route selection is explicit via `compat.route` (`"anthropic"` or default `"openai"`).
 - Package contributes models via the extension `api` and an `api_key` auth method.
 
 ### Cache and session behavior
@@ -114,19 +197,24 @@ await kernel.load([
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers and
-  redacted from errors.
+  redacted from errors (including discovery failures).
 - Caller-supplied `ProviderRequest.options.headers` can add non-owned headers, but
   provider-owned headers (`content-type`, `x-opencode-session`, `authorization`)
   are applied last and cannot be overridden by caller headers.
-- Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe
-  provider-specific env names; default tests are network-free.
+- Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus `OPENCODE_API_KEY`;
+  default tests are network-free.
+
+## Official evidence
+
+- [OpenCode Go](https://opencode.ai/docs/go/) — model list, dual endpoints, pricing/usage, `GET /zen/go/v1/models`
+- Pi secondary (ids/limits only): `packages/ai/src/providers/opencode-go.ts`, `opencode-go.models.ts`
 
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,
-  `ModelConfig`, request/cache policies.
+  `ModelConfig`, discovery contract, request/cache policies.
+- [Thinking and reasoning](../thinking-and-reasoning.md): per-turn `ThinkingLevel` → compat families.
 - [Credentials and redaction](../credentials-and-redaction.md):
   `resolveCredentialValue`, `redactSecrets`.
-- [OpenAI-compatible provider](openai-compatible.md): underlying Chat Completions
-  adapter.
+- [Provider caching](../provider-caching.md): route-specific OpenCode Go cache matrix.
 - [Provider conformance](../provider-conformance.md): network-free adapter tests.

@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
-import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, mkdir, truncate } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import type { JsonObject, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import {
   createReadTool,
   detectSupportedImageMimeType,
@@ -175,7 +175,7 @@ test("first line exceeds byte limit → shell-fallback notice, no dump", async (
     const r = await tool.execute({ path: "oneline.txt" }, ctx());
     const t = textOf(r);
     assert.equal(trunc(r)?.firstLineExceedsLimit, true);
-    assert.match(t, /^\[Line 1 is .*, exceeds 50\.0KB limit\. Use the shell tool: sed/);
+    assert.match(t, /^\[Line 1 exceeds 50\.0KB limit\. Use the shell tool: sed/);
     assert.ok(t.length < 1000, "must not dump the giant line");
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -277,7 +277,22 @@ test("custom ReadOperations override is used instead of local fs", async () => {
       readFileCalled = true;
       return Buffer.from("injected", "utf-8");
     },
+    readText: async (_path, options) => {
+      readFileCalled = true;
+      return {
+        content: "injected",
+        startLine: options.offset,
+        outputLines: 1,
+        hasMore: false,
+        truncatedBy: null,
+        firstLineExceedsLimit: false,
+        scannedBytes: 8,
+        totalLines: 1,
+        totalBytes: 8,
+      };
+    },
     access: async () => {},
+    statFile: async () => ({ size: 8 }),
     detectImageMimeType: async () => null,
   };
   try {
@@ -390,6 +405,7 @@ test("stat rejects oversize image before readFile is called", async () => {
       readFileCalled = true;
       return ONE_PX_PNG;
     },
+    readText: async () => { throw new Error("not text"); },
     access: async () => {},
     statFile: async () => ({ size: 99_999_999 }),
     detectImageMimeType: async () => "image/png",
@@ -486,6 +502,91 @@ test("autoResizeImages without transformImage is ignored (deprecated no-op)", as
     assert.equal(r.error, undefined);
     assert.equal(imageData(r), ONE_PX_PNG.toString("base64"));
     assert.equal(image(r)?.resized, false);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("streamed text pages stay bounded for sparse and distant-offset files", async () => {
+  const cwd = await tmp();
+  try {
+    const sparse = join(cwd, "sparse.txt");
+    await writeFile(sparse, "first\nsecond\n");
+    await truncate(sparse, 4 * 1024 * 1024 * 1024);
+    const first = await createReadTool(cwd).execute({ path: sparse, limit: 1 }, ctx());
+    assert.equal(first.error, undefined);
+    assert.match(textOf(first), /^first\n\n\[Showing lines 1-1/);
+    assert.ok((first.metadata?.scannedBytes as number) <= 64 * 1024);
+
+    const lines = Array.from({ length: 50_000 }, (_, index) => `line-${index + 1}`).join("\n");
+    await writeFile(join(cwd, "distant.txt"), lines);
+    const distant = await createReadTool(cwd, { maxScanBytes: 1024 * 1024 }).execute(
+      { path: "distant.txt", offset: 49_999, limit: 1 },
+      ctx(),
+    );
+    assert.equal(distant.error, undefined);
+    assert.match(textOf(distant), /^line-49999/);
+    assert.ok((distant.metadata?.scannedBytes as number) <= 1024 * 1024);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("text scan limit and custom backend over-return fail bounded", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "long.txt"), "x".repeat(4096));
+    const limited = await createReadTool(cwd, { maxScanBytes: 1024, maxBytes: 100 }).execute(
+      { path: "long.txt", offset: 2 },
+      ctx(),
+    );
+    assert.match(limited.error?.message ?? "", /scan limit/);
+
+    const operations: ReadOperations = {
+      access: async () => {},
+      statFile: async () => ({ size: 1 }),
+      readFile: async () => Buffer.alloc(0),
+      detectImageMimeType: async () => null,
+      readText: async (path, options) => ({
+        content: "x".repeat(options.maxBytes + 1),
+        startLine: options.offset,
+        outputLines: 1,
+        hasMore: false,
+        truncatedBy: null,
+        firstLineExceedsLimit: false,
+        scannedBytes: options.maxBytes + 1,
+      }),
+    };
+    const hostile = await createReadTool(cwd, { operations, maxBytes: 10 }).execute({ path: "remote" }, ctx());
+    assert.match(hostile.error?.message ?? "", /beyond the requested bounds/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read options and request pagination reject invalid limits", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "page.txt"), "a\nb");
+    const tool = createReadTool(cwd);
+    const invalidPages: JsonObject[] = [
+      { path: "page.txt", offset: 0 },
+      { path: "page.txt", offset: Infinity },
+      { path: "page.txt", limit: -1 },
+      { path: "page.txt", limit: 100_001 },
+    ];
+    for (const args of invalidPages) {
+      const result = await tool.execute(args, ctx());
+      assert.match(result.error?.message ?? "", /positive safe integer/);
+    }
+    for (const options of [
+      { maxLines: Infinity },
+      { maxBytes: 0 },
+      { maxImageBytes: 32 * 1024 * 1024 + 1 },
+      { maxScanBytes: 1024 * 1024 * 1024 + 1 },
+    ]) {
+      assert.throws(() => createReadTool(cwd, options), /positive safe integer/);
+    }
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

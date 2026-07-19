@@ -9,6 +9,12 @@ import {
 } from "@arnilo/prism/providers/media";
 import { parseJsonObjectArguments, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { applyKimiAnthropicCacheControl } from "./cache.js";
+import {
+  kimiPreserveThinking,
+  kimiReasoningEffort,
+  kimiThinking,
+  stripKimiThinkingCompat,
+} from "./thinking.js";
 
 export interface KimiCodingProviderOptions {
   readonly id?: string;
@@ -61,19 +67,23 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
 
 export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject> {
   assertStructuredOutputRequestSupported(request.model, request.options);
-  const preserveThinking = request.model.compat?.preserveThinking === true;
+  const preserveThinking = kimiPreserveThinking(request);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const messages = applyKimiAnthropicCacheControl(request);
   const resolvedMedia = await resolveProviderMediaMessages(messages, request.model, { signal: request.signal });
+  // Official thinking/reasoning_effort fields (K2.x / K3) when documented for the model;
+  // Anthropic `/messages` contract remains under-documented — fields are best-effort passthrough.
   return clean({
     model: request.model.model,
     messages: await Promise.all(messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia))),
     system: messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
+    thinking: kimiThinking(request),
+    reasoning_effort: kimiReasoningEffort(request),
     ...parameters,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
-    ...request.options?.compat,
+    ...stripKimiThinkingCompat(request.options?.compat as JsonObject | undefined),
     ...request.options?.extra,
   });
 }

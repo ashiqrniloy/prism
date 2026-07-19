@@ -230,7 +230,7 @@ console.log("PACKED INTEGRATION OK");
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Compose every 0.0.5 optional capability family from packed public imports.
+  // 5. Compose every 0.0.6 optional capability family from packed public imports.
   writeFileSync(join(consumer, "composition.mjs"), `
 import assert from "node:assert/strict";
 import {
@@ -293,7 +293,7 @@ const feedback = createMemoryRunFeedbackStore({ resolveRun: ({ runId }) => runId
 const linked = await appendEvaluationFeedback({ feedbackStore: feedback, evaluationStore: evaluations, evaluationIds: [evaluation.id], feedback: { id: "feedback-1", runId: runResult.runId, rating: 1, ...ownership } });
 assert.deepEqual(linked.evaluationIds, [evaluation.id]);
 
-const approvalFlow = defineWorkflow({ id: "approval", nodes: {
+const approvalFlow = defineWorkflow({ revision: "1", id: "approval", nodes: {
   review: functionNode({ execute: (ctx) => ctx.resume === undefined ? suspend({ reason: "approve", data: { operation: "read" } }) : { approved: true } }),
 } });
 const approvalCheckpoints = createMemoryWorkflowCheckpoints();
@@ -305,7 +305,7 @@ assert.equal(approved.status, "succeeded");
 const store = createMemoryCheckpointStore();
 const leases = createMemoryLeaseStore();
 const checkpoints = createWorkflowCheckpoints({ store });
-const scheduledFlow = defineWorkflow({ id: "scheduled", nodes: { done: functionNode({ execute: () => ({ done: true }) }) } });
+const scheduledFlow = defineWorkflow({ revision: "1", id: "scheduled", nodes: { done: functionNode({ execute: () => ({ done: true }) }) } });
 const schedules = createWorkflowSchedules({ store, leases, checkpoints, workflows: { scheduled: scheduledFlow }, ownership, ownerId: "packed-scheduler" });
 await schedules.create({ id: "once", workflowId: "scheduled", nextRunAt: "2026-01-01T00:00:00.000Z", input: {} });
 await schedules.pollOnce({ now: new Date("2026-01-02T00:00:00.000Z") });
@@ -337,7 +337,7 @@ const card = { name: "Packed", description: "Packed test agent", supportedInterf
 const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: () => servedAgent().createSession() }, authorize: () => ({ ownership }) });
 const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
 assert.equal((await a2a.send("hello")).text, "served");
-console.log("PACKED 0.0.5 COMPOSITION OK");
+console.log("PACKED 0.0.6 COMPOSITION OK");
 `);
   const composition = run("node", ["composition.mjs"], consumer);
   result.compositionStatus = composition.status;
@@ -379,7 +379,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("packed 0.0.5 optional capabilities compose through public imports", () => {
+  it("packed 0.0.6 optional capabilities compose through public imports", () => {
     assert.equal(result.compositionStatus, 0, result.compositionOut);
   });
 
@@ -389,16 +389,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal((result.integrationOut + result.compositionOut).includes("packed-integration-secret"), false, "canary leaked into packed journey output");
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.5.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.6.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.0.5.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.0.6.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.0.5.tgz"),
-      `expected 'arnilo-prism-0.0.5.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.0.6.tgz"),
+      `expected 'arnilo-prism-0.0.6.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.0.5.tgz", "arnilo-prism-compaction-0.0.5.tgz", "arnilo-prism-all-0.0.5.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.0.6.tgz", "arnilo-prism-compaction-0.0.6.tgz", "arnilo-prism-all-0.0.6.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

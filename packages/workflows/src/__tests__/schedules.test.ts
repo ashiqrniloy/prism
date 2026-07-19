@@ -20,6 +20,7 @@ function fixture(ownerId = "scheduler-a") {
   const checkpoints = createMemoryWorkflowCheckpoints();
   let executions = 0;
   const workflow = defineWorkflow({
+    revision: "1",
     id: "scheduled",
     nodes: { execute: functionNode({ execute: () => ++executions }) },
   });

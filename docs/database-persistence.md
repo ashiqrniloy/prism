@@ -128,7 +128,7 @@ A branch leaf (`leaf_entry_id`) is the current entry id for that branch. Rebuild
 | --- | --- |
 | `prism_session_entries` | `id` PK, `session_id` FK, `parent_id`, `run_id`, `timestamp`, `kind`, `schema_version`, `message` JSONB, `event` JSONB, `model` JSONB, `previous_model` JSONB, `label`, `summary`, `data` JSONB, `metadata` JSONB |
 
-Maps directly to `SessionEntry`. `kind` is one of the `SessionEntryKind` values. `schema_version` defaults to `1`. `parent_id` may be null for the root entry of a session.
+Maps directly to `SessionEntry`. `kind` is one of the `SessionEntryKind` values. `schema_version` is nullable in schema version 3 for existing entry compatibility; hosts writing new rows should persist the entry's current schema version. `parent_id` may be null for the root entry of a session.
 
 `SessionAppendOptions.idempotencyKey` is not part of `SessionEntry`; store it in an adapter-owned side table when you need durable retry detection:
 
@@ -214,7 +214,8 @@ await runRunLedgerConformance(() => createLedger(testDatabase), { exerciseReopen
 | Primitive | Purpose |
 | --- | --- |
 | `PersistenceSchemaModel` | Versioned table/column/index model covering sessions, entries, parent chain, idempotency side table, runs, events, tool calls, usage, tenant columns, and `prism_migrations` |
-| `createPersistenceMigrationContract()` | Strictly increasing migration steps, `prism_migrations` recording, advisory-lock guidance, and least-privilege migration/runtime role guidance |
+| `createPersistenceMigrationContract()` | Strictly increasing checked-in migration steps with deterministic SHA-256 checksums, `prism_migrations` recording, advisory-lock guidance, and least-privilege migration/runtime role guidance |
+| `assertAppliedPersistenceMigrations()` / `assertPersistenceSchemaShape()` | Testable fail-closed history and normalized SQLite/PostgreSQL catalog checks for every required table, column/type/null/default, PK/unique/FK, and named index. |
 | `getPersistencePaginationCursors()` | Indexed `(session_id, timestamp, id)`, `(run_id, sequence)`, `(run_id, recorded_at, id)` cursor shapes that avoid offset scans |
 | `assertPersistenceQueryPaginationConforms()` | Generic cursor pagination fixture for `queryEntries` |
 | `assertTenantScopedQueryIsolation()` | Tenant-filtered reads must not leak rows or primary-id collisions across tenants |
@@ -345,7 +346,11 @@ Retention jobs should not run inside the agent/session runtime. They are a host 
 
 ## Migrations
 
-Hosts own schema migrations. Prism publishes only the TypeScript contracts; no DDL is generated or executed by the core library. Recommended migration practices:
+Hosts own schema migrations. Prism publishes only the TypeScript contracts; no DDL is generated or executed by the core library. First-party SQLite/PostgreSQL adapters automatically verify their checked-in schema-v3 history and catalog at open, before runtime writes. Their catalog reads are bounded metadata queries/PRAGMAs, not table-data scans.
+
+Each new adapter-owned migration row records the contract SHA-256 checksum. A complete known v0.0.5 history whose checksum values are all `NULL` is a one-time compatibility case: under the SQLite transaction or PostgreSQL advisory transaction lock, the adapter verifies the full current shape, backfills all checksums, and continues. Unknown/duplicate/out-of-order/name-version/checksum mismatch, mixed/partial legacy values, or any missing/renamed/wrong-type/null/default/key/index artifact fails closed. Restore or apply a reviewed host migration; never edit checksums to silence drift.
+
+Recommended migration practices:
 
 - Use a sequential or timestamped migration naming convention.
 - Store applied migrations in `prism_migrations` with `name`, `version`, `applied_at`, `applied_by`, and `checksum`.

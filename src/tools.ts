@@ -1,5 +1,6 @@
 import type { AgentEvent, ErrorInfo, JsonObject, OwnershipScope, RunLedger, ToolCallContent, ToolCallRecord, ToolCallStatus, ToolDefinition, ToolExecutionContext, ToolExecutionMetadata, ToolRegistry, ToolResult } from "./contracts.js";
 import { isJsonObject } from "./config.js";
+import { createId } from "./ids.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
@@ -204,9 +205,7 @@ function toErrorInfo(value: string | ErrorInfo, secrets: readonly (string | unde
   return typeof value === "string" ? errorToErrorInfo(value, secrets) : redactSecrets(value, secrets);
 }
 
-function randomId(prefix: string): string {
-  return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
-}
+const randomId = createId;
 
 function appendToolCallRecord(
   options: DispatchToolCallOptions,

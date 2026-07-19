@@ -5,7 +5,9 @@ All notable changes to @arnilo/prism-provider-kimi will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Released with the exact 0.0.6 first-party package graph.
 
 ## [0.0.5] - 2026-07-16
 

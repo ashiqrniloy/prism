@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Generate evaluation and experiment IDs with cryptographic UUIDs; injectable `Math.random()` remains sampling-only.
 
 ## [0.0.5] - 2026-07-16
 

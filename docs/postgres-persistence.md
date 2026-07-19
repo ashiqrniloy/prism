@@ -24,7 +24,7 @@ Use this package when you need server-backed persistence with pooled connections
 - managed cloud databases (RDS, Cloud SQL, Neon, Supabase, etc.)
 - CI integration tests against a real PostgreSQL service
 
-Prefer [`@arnilo/prism-session-store-sqlite`](sqlite-persistence.md) for local CLI tools, single-writer workloads, and network-free default tests.
+Prefer [`@arnilo/prism-session-store-sqlite`](sqlite-persistence.md) for local CLI tools, single-writer workloads, and network-free default tests. This adapter stores sessions/runs, not semantic vectors; use the separate [`@arnilo/prism-memory` pgvector path](working-and-semantic-memory.md), which rejects non-finite vectors before SQL, when vector recall is needed.
 
 ## Inputs / request
 
@@ -59,7 +59,7 @@ Hosts own TLS (`ssl` in `poolConfig`), credentials, connection limits, and backu
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Ends the pool when the adapter created it from `connectionString`. |
 
-Migrations run automatically on open and are idempotent across reopen. Concurrent setup uses per-schema advisory transaction locks.
+Migrations run automatically on open and are idempotent across reopen. Concurrent setup uses per-schema advisory transaction locks. While holding that lock, startup verifies ordered contract name/version/SHA-256 rows and full schema-v3 `information_schema`/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
 
 ## Request/response example
 
@@ -127,7 +127,7 @@ PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnil
 - **Redaction upstream.** Event and tool-call payloads may contain secrets; redact before ledger writes. The adapter does not scan or rewrite row contents.
 - **Bounded pool.** Adapter-owned pools default to `max: 10`. Hosts with heavy concurrency should supply their own pool sizing.
 - **Indexed operations.** Append, parent validation, idempotency dedup, branch reads, and pagination use the indexes documented in [Database persistence](database-persistence.md); normal paths avoid sequential scans.
-- **Migration locking.** `pg_advisory_xact_lock` prevents concurrent migration races when multiple processes open the adapter at once.
+- **Migration locking.** `pg_advisory_xact_lock` prevents concurrent migration races when multiple processes open the adapter at once. Startup catalog reads are bounded metadata queries, not application-row scans.
 - **Tenant isolation.** `tenant_id` / `account_id` / `user_id` columns participate in query filters; hosts must still scope writes correctly.
 - **Benchmark target.** Indexed append + paginated branch read on a warm pool should stay under **50 ms p95** for local/CI-sized datasets (≤100k entries per session); measure with your pool size and hardware before production sizing.
 

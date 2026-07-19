@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
+
+- Workflow cancellation now forwards the registered revised definition and exact authorized ownership for pre-abort hash/owner verification.
 
 ## [0.0.5] - 2026-07-16
 

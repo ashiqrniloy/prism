@@ -3,13 +3,14 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-const packages = ["openai", "opencode-go", "openrouter", "zai", "kimi"] as const;
+const packages = ["openai", "opencode-go", "openrouter", "zai", "kimi", "neuralwatt"] as const;
 const packageFactories = [
-  ["openai", "createOpenAIProviderPackage", { apiKey: "fake-openai-key" }],
-  ["opencode-go", "createOpenCodeGoProviderPackage", { apiKey: "fake-opencode-key" }],
-  ["openrouter", "createOpenRouterProviderPackage", { apiKey: "fake-openrouter-key" }],
-  ["zai", "createZaiProviderPackage", { apiKey: "fake-zai-key" }],
-  ["kimi", "createKimiProviderPackage", { kimiApiKey: "fake-kimi-key" }],
+  ["openai", "createOpenAIProviderPackage", "listOpenAIModels", { apiKey: "fake-openai-key" }],
+  ["opencode-go", "createOpenCodeGoProviderPackage", "listOpenCodeGoModels", { apiKey: "fake-opencode-key" }],
+  ["openrouter", "createOpenRouterProviderPackage", "listOpenRouterModels", { apiKey: "fake-openrouter-key" }],
+  ["zai", "createZaiProviderPackage", "listZaiModels", { apiKey: "fake-zai-key" }],
+  ["kimi", "createKimiProviderPackage", "listKimiModels", { kimiApiKey: "fake-kimi-key" }],
+  ["neuralwatt", "createNeuralWattProviderPackage", "listNeuralWattModels", { apiKey: "fake-neuralwatt-key" }],
 ] as const;
 
 function files(dir: string, predicate: (path: string) => boolean): string[] {
@@ -21,14 +22,15 @@ function files(dir: string, predicate: (path: string) => boolean): string[] {
 
 describe("phase 12 provider package boundaries", () => {
   it("phase12_provider_packages_import_from_public_entrypoints", async () => {
-    for (const [name, factory] of packageFactories) {
+    for (const [name, factory, discovery] of packageFactories) {
       const mod = await import(`../../packages/provider-${name}/dist/index.js`) as Record<string, unknown>;
       assert.equal(typeof mod[factory], "function", `missing ${factory}`);
+      assert.equal(typeof mod[discovery], "function", `missing ${discovery}`);
     }
   });
 
   it("phase12_provider_packages_setup_without_network_and_register_auth", async () => {
-    for (const [name, factory, options] of packageFactories) {
+    for (const [name, factory, , options] of packageFactories) {
       let fetchCalls = 0;
       const registered: unknown[] = [];
       const specifier = `../../packages/provider-${name}/dist/index.js`;
@@ -58,6 +60,7 @@ describe("phase 12 provider package boundaries", () => {
       openrouter: "OPENROUTER_API_KEY",
       zai: "ZAI_API_KEY",
       kimi: "KIMI_API_KEY",
+      neuralwatt: "NEURALWATT_API_KEY",
     };
     for (const name of packages) {
       const text = readFileSync(`packages/provider-${name}/src/__tests__/live.test.ts`, "utf8");

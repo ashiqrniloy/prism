@@ -20,7 +20,11 @@
  *    completed, the edit is real and is reported as success rather than a misleading "aborted".
  */
 import { Buffer } from "node:buffer";
-import { access as fsAccess, readFile as fsReadFile, writeFile as fsWriteFile } from "node:fs/promises";
+import {
+  access as fsAccess,
+  stat as fsStat,
+  writeFile as fsWriteFile,
+} from "node:fs/promises";
 import { constants } from "node:fs";
 import type {
   ExecutionPolicy,
@@ -29,9 +33,19 @@ import type {
   ToolExecutionContext,
   ToolResult,
 } from "@arnilo/prism";
+import { readFileBounded } from "./bounded-file.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { resolveToCwd } from "./path-utils.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
+import {
+  DEFAULT_MAX_EDIT_FILE_BYTES,
+  DEFAULT_MAX_EDIT_INPUT_BYTES,
+  DEFAULT_MAX_EDITS,
+  HARD_MAX_EDIT_FILE_BYTES,
+  HARD_MAX_EDIT_INPUT_BYTES,
+  HARD_MAX_EDITS,
+  validateCodingLimit,
+} from "./limits.js";
 import {
   applyEditsToNormalizedContent,
   detectLineEnding,
@@ -62,12 +76,17 @@ export interface EditToolDetails {
  * (e.g. SSH) while keeping the tool's matching + per-path serialization behavior.
  */
 export interface EditOperations {
-  /** Read file contents as a Buffer. */
-  readFile: (absolutePath: string) => Promise<Buffer>;
+  /** Read bounded file contents as a Buffer. */
+  readFile: (
+    absolutePath: string,
+    options: { maxBytes: number; signal?: AbortSignal },
+  ) => Promise<Buffer>;
   /** Write content to a file. */
-  writeFile: (absolutePath: string, content: string) => Promise<void>;
+  writeFile: (absolutePath: string, content: string, options?: { signal?: AbortSignal }) => Promise<void>;
   /** Check the file is readable and writable (throw if not). */
-  access: (absolutePath: string) => Promise<void>;
+  access: (absolutePath: string, options?: { signal?: AbortSignal }) => Promise<void>;
+  /** Return target size before the bounded read. */
+  statFile: (absolutePath: string, options?: { signal?: AbortSignal }) => Promise<{ size: number }>;
 }
 
 export interface EditToolOptions {
@@ -75,12 +94,19 @@ export interface EditToolOptions {
   executionPolicy?: ExecutionPolicy;
   /** Custom operations backend (default: local filesystem). */
   operations?: EditOperations;
+  /** Maximum target file bytes read for matching (default 8 MiB). */
+  maxFileBytes?: number;
+  /** Maximum aggregate UTF-8 bytes across old/new edit text (default 2 MiB). */
+  maxInputBytes?: number;
+  /** Maximum replacements per call (default 100). */
+  maxEdits?: number;
 }
 
 const defaultEditOperations: EditOperations = {
-  readFile: (path) => fsReadFile(path),
-  writeFile: (path, content) => fsWriteFile(path, content, "utf-8"),
+  readFile: (path, options) => readFileBounded(path, options.maxBytes, options.signal),
+  writeFile: (path, content, options) => fsWriteFile(path, content, { encoding: "utf-8", signal: options?.signal }),
   access: (path) => fsAccess(path, constants.R_OK | constants.W_OK),
+  statFile: async (path) => ({ size: (await fsStat(path)).size }),
 };
 
 function errorResult(toolCallId: string, message: string): ToolResult {
@@ -114,15 +140,21 @@ function prepareEditArguments(input: JsonObject): { path: string; edits: unknown
   return { path, edits };
 }
 
-function validateEdits(edits: unknown): Edit[] | string {
+function validateEdits(edits: unknown, maxEdits: number, maxInputBytes: number): Edit[] | string {
   if (!Array.isArray(edits) || edits.length === 0) {
     return "edits must contain at least one replacement.";
   }
+  if (edits.length > maxEdits) return `edits contains ${edits.length} replacements, exceeds ${maxEdits} limit.`;
   const out: Edit[] = [];
+  let inputBytes = 0;
   for (let i = 0; i < edits.length; i++) {
     const e = edits[i] as { oldText?: unknown; newText?: unknown };
     if (typeof e?.oldText !== "string" || typeof e?.newText !== "string") {
       return `edits[${i}] must have string oldText and newText.`;
+    }
+    inputBytes += Buffer.byteLength(e.oldText, "utf-8") + Buffer.byteLength(e.newText, "utf-8");
+    if (inputBytes > maxInputBytes) {
+      return `edit input is ${inputBytes} bytes, exceeds ${maxInputBytes} byte limit.`;
     }
     out.push({ oldText: e.oldText, newText: e.newText });
   }
@@ -131,6 +163,17 @@ function validateEdits(edits: unknown): Edit[] | string {
 
 export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition {
   const ops = options?.operations ?? defaultEditOperations;
+  const maxFileBytes = validateCodingLimit(
+    "maxFileBytes",
+    options?.maxFileBytes ?? DEFAULT_MAX_EDIT_FILE_BYTES,
+    HARD_MAX_EDIT_FILE_BYTES,
+  );
+  const maxInputBytes = validateCodingLimit(
+    "maxInputBytes",
+    options?.maxInputBytes ?? DEFAULT_MAX_EDIT_INPUT_BYTES,
+    HARD_MAX_EDIT_INPUT_BYTES,
+  );
+  const maxEdits = validateCodingLimit("maxEdits", options?.maxEdits ?? DEFAULT_MAX_EDITS, HARD_MAX_EDITS);
 
   return {
     name: "edit",
@@ -164,12 +207,15 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
     } as JsonObject,
     async execute(args, context: ToolExecutionContext): Promise<ToolResult> {
       const toolCallId = context.toolCallId;
+      if (typeof args.edits === "string" && Buffer.byteLength(args.edits, "utf-8") > maxInputBytes) {
+        return errorResult(toolCallId, `edit input exceeds ${maxInputBytes} byte limit.`);
+      }
 
       const prepared = prepareEditArguments(args);
       if (prepared.path.length === 0) {
         return errorResult(toolCallId, "path is required and must be a non-empty string.");
       }
-      const editsOrError = validateEdits(prepared.edits);
+      const editsOrError = validateEdits(prepared.edits, maxEdits, maxInputBytes);
       if (typeof editsOrError === "string") {
         return errorResult(toolCallId, editsOrError);
       }
@@ -198,7 +244,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
           // Check the file is readable + writable.
           try {
-            await ops.access(allowedPath);
+            await ops.access(allowedPath, { signal: context.signal });
           } catch (error) {
             if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
             const err = error as NodeJS.ErrnoException;
@@ -209,7 +255,15 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
 
-          const buffer = await ops.readFile(allowedPath);
+          const { size } = await ops.statFile(allowedPath, { signal: context.signal });
+          if (size > maxFileBytes) {
+            return errorResult(toolCallId, `Edit target is ${size} bytes, exceeds ${maxFileBytes} byte limit.`);
+          }
+          if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
+          const buffer = await ops.readFile(allowedPath, { maxBytes: maxFileBytes, signal: context.signal });
+          if (buffer.length > maxFileBytes) {
+            return errorResult(toolCallId, `Edit target is ${buffer.length} bytes, exceeds ${maxFileBytes} byte limit.`);
+          }
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
 
           const rawContent = buffer.toString("utf-8");
@@ -235,7 +289,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
 
           const finalContent = bom + restoreLineEndings(newContent, originalEnding);
-          await ops.writeFile(allowedPath, finalContent);
+          await ops.writeFile(allowedPath, finalContent, { signal: context.signal });
 
           const diffResult = generateDiffString(baseContent, newContent);
           const patch = generateUnifiedPatch(prepared.path, baseContent, newContent);

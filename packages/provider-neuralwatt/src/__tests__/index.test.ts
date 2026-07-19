@@ -12,7 +12,7 @@ describe("@arnilo/prism-provider-neuralwatt package manifest", () => {
   it("provider_package_has_no_runtime_dependencies_and_peers_prism", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.deepEqual(pkg.dependencies ?? {}, {}, "package must have zero runtime deps");
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.5");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.6");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 
@@ -20,8 +20,8 @@ describe("@arnilo/prism-provider-neuralwatt package manifest", () => {
     const providersPkg = JSON.parse(readFileSync("../prism-providers/package.json", "utf8"));
     assert.equal(
       providersPkg.dependencies["@arnilo/prism-provider-neuralwatt"],
-      "0.0.5",
-      "prism-providers must depend on @arnilo/prism-provider-neuralwatt@0.0.5",
+      "0.0.6",
+      "prism-providers must depend on @arnilo/prism-provider-neuralwatt@0.0.6",
     );
     const providersReadme = readFileSync("../prism-providers/README.md", "utf8");
     assert.match(providersReadme, /@arnilo\/prism-provider-neuralwatt/);
@@ -31,7 +31,7 @@ describe("@arnilo/prism-provider-neuralwatt package manifest", () => {
     const allPkg = JSON.parse(readFileSync("../prism-all/package.json", "utf8"));
     // prism-all depends on prism-providers (the aggregator), which transitively
     // pulls NeuralWatt — match the established wiring pattern.
-    assert.equal(allPkg.dependencies["@arnilo/prism-providers"], "0.0.5");
+    assert.equal(allPkg.dependencies["@arnilo/prism-providers"], "0.0.6");
     const allReadme = readFileSync("../prism-all/README.md", "utf8");
     assert.match(allReadme, /neuralwatt/);
   });

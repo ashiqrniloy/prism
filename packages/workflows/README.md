@@ -35,6 +35,7 @@ const draft = functionNode({
 
 const workflow = defineWorkflow({
   id: "research-draft",
+  revision: "2026-07-19.1",
   nodes: { research, draft },
   edges: [["research", "draft"]],
   limits: { maxNodes: 256, maxFanOut: 32, maxConcurrency: 4 },
@@ -63,13 +64,13 @@ const result = await runWorkflow(workflow, { topic: "hooks" }, {
 
 ## Limits (defaults)
 
-| Limit | Default |
+| Limit | Default / hard cap |
 | --- | ---: |
-| `maxNodes` | 1000 |
-| `maxFanOut` | 64 |
-| `maxConcurrency` | 8 |
-| `maxNodeOutputBytes` | 4 MiB |
-| `maxCheckpointBytes` | 1 MiB |
+| `maxNodes` | 1,000 / 10,000 |
+| `maxFanOut` | 64 / 1,024 |
+| `maxConcurrency` | 8 / 256 |
+| `maxNodeOutputBytes` | 4 MiB / 16 MiB |
+| `maxCheckpointBytes` | 1 MiB / 8 MiB |
 | event buffer | 2048 |
 
 ## Checkpointing and host control
@@ -79,7 +80,7 @@ const result = await runWorkflow(workflow, { topic: "hooks" }, {
 - SQLite/PostgreSQL checkpoint tables and queries are owned by their persistence packages, not this workflow package
 - `suspend()` — persist human review data and release the worker; approved resume requires checkpoint `expectedVersion`
 - `toolNode({ approval })` — suspend before tool side effects, then recheck current `ExecutionPolicy` after approval
-- `cancelWorkflowRun()` — abort in-flight or suspended runs; mark orphaned durable checkpoints `aborted`
+- `cancelWorkflowRun({ workflow, ownership, ... })` — verify current recursive definition hash and exact ownership before aborting in-flight/suspended runs or marking orphaned checkpoints `aborted`
 - `createWorkflowCommands()` — optional RPC/MCP commands for direct/background/replay/status/list/cancel/resume plus selected schedules
 - `workflowNode()` — nested execution through the same runner with inherited ownership/tools/policy/abort/checkpoints
 - `ctx.updateState()` — merge/replace bounded shared JSON state with optional host validation
@@ -89,7 +90,8 @@ const result = await runWorkflow(workflow, { topic: "hooks" }, {
 
 ## Security
 
-- Definitions are validated for cycles, unknown edges, and `maxNodes`.
+- Definitions require a non-empty host-authored `revision`; parent/nested revisions enter checkpoint identity. Limits reject non-finite/unsafe/out-of-range values before scheduling.
+- Active runs are keyed by workflow/run/exact ownership; duplicate exact registrations fail and partial ownership cannot cancel a more-specific run.
 - Tool nodes attach `workflowId` / `nodeId` to `ExecutionAction.metadata`.
 - Checkpoints redact via `SecretRedactor` / `secrets` and enforce byte bounds.
 - Suspended resume fails closed on tenant, schema, definition hash, validation, and stale/duplicate expected version; payloads are redacted before persistence.

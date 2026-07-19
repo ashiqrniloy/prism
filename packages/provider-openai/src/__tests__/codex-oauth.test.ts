@@ -253,12 +253,18 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
   });
 
   it("codex_oauth_refresh_redacts_tokens_from_errors", async () => {
-    const provider = createOpenAICodexOAuthProvider({ fetch: (async () => new Response("bad fake-refresh", { status: 400 })) as typeof fetch });
-    await assert.rejects(async () => provider.refresh!({ access: "fake-access", refresh: "fake-refresh" }), (error: Error) => {
-      assert(!error.message.includes("fake-refresh"));
-      assert(error.message.includes("[REDACTED]"));
-      return true;
+    const provider = createOpenAICodexOAuthProvider({
+      fetch: (async () => new Response("bad fake-access fake-refresh", { status: 400 })) as typeof fetch,
     });
+    await assert.rejects(
+      async () => provider.refresh!({ access: "fake-access", refresh: "fake-refresh" }),
+      (error: Error) => {
+        assert(!error.message.includes("fake-access"));
+        assert(!error.message.includes("fake-refresh"));
+        assert(error.message.includes("[REDACTED]"));
+        return true;
+      },
+    );
   });
 });
 

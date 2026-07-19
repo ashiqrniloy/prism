@@ -1,5 +1,6 @@
 import { MemoryScopeError, MemoryValidationError } from "./errors.js";
 import {
+  assertFiniteVector,
   assertNotAborted,
   assertSameScope,
   assertTextLimit,
@@ -36,9 +37,7 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
         requireScope(record, true);
         requireNonEmptyString(record.id, "id");
         assertTextLimit(record.text, maxEntryTextChars, "vector text");
-        if (!Array.isArray(record.embedding) || record.embedding.length === 0) {
-          throw new MemoryValidationError("embedding must be a non-empty number array");
-        }
+        assertFiniteVector(record.embedding, "embedding");
         if (!Number.isInteger(record.sequence)) {
           throw new MemoryValidationError("sequence must be an integer");
         }
@@ -49,6 +48,7 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
     async query(query) {
       assertNotAborted(query.signal);
       const scope = requireScope(query, true) as Required<typeof query>;
+      assertFiniteVector(query.embedding, "query embedding");
       const hits: MemoryVectorHit[] = [];
       for (const record of records.values()) {
         if (

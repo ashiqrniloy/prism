@@ -10,6 +10,8 @@ const strategy = createLlmCompactionStrategy({
   model: { provider: "mock", model: "cheap-summary" },
   keepRecentTokens: 20_000,
   reserveTokens: 16_384,
+  maxSummaryTokens: 4_096,
+  maxErrorBytes: 1_024,
   providerOptions: { cacheRetention: "short" },
   customInstructions: "Focus on current files and failing tests.",
 });
@@ -38,5 +40,7 @@ const strategy = createLlmCompactionStrategy({
   summaryModel: { provider: "example", model: "cheap-summary" },
 });
 ```
+
+Summary retention defaults to 16,384 approximate tokens (131,072 hard), reserve defaults to 16,384 (131,072 hard), and provider error detail defaults to 1 KiB (8 KiB hard). Limits reject invalid values at strategy creation. Every request keeps finite `model.parameters.maxTokens`; streamed text/event retention stops at the configured budget and provider errors are bounded/redacted.
 
 No provider SDKs, credentials, network calls, or filesystem discovery run at import/setup time.

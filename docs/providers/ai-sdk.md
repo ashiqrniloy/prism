@@ -52,6 +52,8 @@ Unsupported content fails before `doStream` (for example unresolved `resourceUri
 | `finish` usage | `usage` then `done` |
 | `error` / thrown / abort | redacted `error` |
 
+`finish.usage.inputTokens.cacheRead` / `cacheWrite` map to Prism `Usage.cacheReadTokens` / `cacheWriteTokens`. The adapter does not invent cache request fields; prompt caching is owned by the host `LanguageModelV4` and its upstream provider.
+
 Provider-executed tool calls, files/sources/custom parts, warnings, and raw chunks are ignored rather than silently converted into unsupported Prism content.
 
 ## Request/response example
@@ -88,6 +90,40 @@ const agent = createAgent({
 const result = await agent.createSession().run("Summarize this");
 console.log(result.text);
 ```
+
+## Model catalog and discovery
+
+There is **no Prism-side model catalog** and **no `list*Models()` export** by design. Hosts supply a ready-made `LanguageModelV4` instance (typically from `@ai-sdk/openai`, `@ai-sdk/anthropic`, AI Gateway, or a custom provider) and register a matching `ModelConfig` for capabilities/limits.
+
+Prism setup remains network-free: `createAiSdkProvider` only wraps the supplied model and never fetches catalogs or credentials.
+
+## Prompt caching
+
+The adapter is **host-owned for request caching**. It does not emit `cache_control`, `prompt_cache_key`, `cacheKey`, or `cacheRetention` on AI SDK call options. Hosts configure caching on the underlying AI SDK model/provider (for example via AI SDK `providerOptions` on the model factory or per-call options forwarded through `options.compat` / `options.extra` → `providerOptions.prism`).
+
+When the host model reports cache accounting on the `finish` stream part, Prism maps official AI SDK v4 usage fields:
+
+| AI SDK `LanguageModelV4Usage` | Prism `Usage` |
+| --- | --- |
+| `inputTokens.cacheRead` | `cacheReadTokens` |
+| `inputTokens.cacheWrite` | `cacheWriteTokens` |
+| `inputTokens.total` | `inputTokens` |
+| `outputTokens.total` | `outputTokens` |
+
+See [Provider caching](../provider-caching.md) for the cross-provider matrix.
+
+## Thinking and reasoning
+
+Reasoning effort, budgets, and provider-specific thinking controls are **host-model-owned**. Prism does not map `ThinkingLevel` into AI SDK call options (`thinkingFamilyForModel` → `noop`). Hosts configure reasoning on the AI SDK model (for example OpenAI `reasoning.effort` via AI SDK `providerOptions`) and may pass per-turn overrides through `ProviderRequestOptions.compat` / `extra`, which the adapter forwards as `providerOptions.prism`.
+
+Stream mapping:
+
+| Direction | Mapping |
+| --- | --- |
+| AI SDK `reasoning-delta` → Prism | `content_delta` thinking |
+| Prism `thinking` blocks → AI SDK prompt | `{ type: "reasoning", text }` on assistant messages |
+
+Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/providers/community-providers/custom-providers); [Language Model Specification V4](https://github.com/vercel/ai/tree/main/packages/provider/src/language-model/v4); `@ai-sdk/provider` `LanguageModelV4Usage` (`inputTokens.cacheRead` / `cacheWrite`).
 
 ## Extension and configuration notes
 

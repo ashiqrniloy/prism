@@ -10,10 +10,11 @@ import type {
   WorkflowCheckpointListPage,
   WorkflowCheckpointLoadInput,
   WorkflowCheckpointRecord,
+  WorkflowDefinition,
   WorkflowRunStatus,
 } from "./types.js";
 import type { OwnershipScope } from "@arnilo/prism";
-import { nowIso, ownershipMatches } from "./util.js";
+import { hashWorkflowDefinition, nowIso, ownershipExactlyMatches } from "./util.js";
 
 export async function getWorkflowRun(
   checkpoints: WorkflowCheckpointAdapter,
@@ -35,6 +36,7 @@ export async function listWorkflowRuns(
 export interface CancelWorkflowRunInput {
   readonly workflowId: string;
   readonly runId: string;
+  readonly workflow: WorkflowDefinition;
   readonly checkpoints?: WorkflowCheckpointAdapter;
   readonly ownership?: OwnershipScope;
   readonly signal?: AbortSignal;
@@ -53,9 +55,15 @@ export interface CancelWorkflowRunResult {
 export async function cancelWorkflowRun(
   input: CancelWorkflowRunInput,
 ): Promise<CancelWorkflowRunResult> {
+  if (input.workflow.id !== input.workflowId) {
+    throw new WorkflowCheckpointError("Workflow definition does not match cancellation target");
+  }
+  const definitionHash = hashWorkflowDefinition(input.workflow);
   const wasActive = abortActiveWorkflowRun(
     input.workflowId,
     input.runId,
+    input.ownership,
+    definitionHash,
     new WorkflowAbortError("Workflow cancelled"),
   );
 
@@ -82,8 +90,11 @@ export async function cancelWorkflowRun(
       "ERR_PRISM_WORKFLOW_NOT_FOUND",
     );
   }
-  if (!ownershipMatches(input.ownership, record.ownership)) {
+  if (!ownershipExactlyMatches(input.ownership, record.ownership)) {
     throw new WorkflowCheckpointError("Checkpoint tenant/ownership mismatch");
+  }
+  if (record.value.definitionHash !== definitionHash) {
+    throw new WorkflowCheckpointError("Workflow definition hash mismatch on cancel");
   }
 
   if (record.value.status === "aborted") {
@@ -105,7 +116,7 @@ export async function cancelWorkflowRun(
     await input.checkpoints.requestCancel({
       workflowId: input.workflowId,
       runId: input.runId,
-      ownership: input.ownership,
+      ownership: record.ownership,
       signal: input.signal,
     });
     return { aborted: true, wasActive: false, status: record.value.status };

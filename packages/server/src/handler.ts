@@ -214,6 +214,7 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
           const result = await awaitWithSignal(cancelWorkflowRun({
             workflowId: exposure.definition.id,
             runId: route.runId,
+            workflow: exposure.definition,
             checkpoints: exposure.checkpoints,
             ownership: authorization.ownership,
             signal: owned.signal,

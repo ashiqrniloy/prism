@@ -10,6 +10,7 @@ import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 import { createPostgresPersistence } from "../persistence.js";
+import { qualifyTable, quoteIdentifier } from "../identifiers.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
 const describeIntegration = postgresUrl ? describe : describe.skip;
@@ -135,6 +136,17 @@ describeIntegration("createPostgresPersistence integration", () => {
       firstMigrations.items.map((row) => row.name),
     );
     await reopened.close();
+  });
+
+  it("backfills complete legacy migration checksums and rejects shape drift", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    await createPostgresPersistence({ pool, schema });
+    await pool.query(`UPDATE ${qualifyTable(schema, "prism_migrations")} SET checksum = NULL`);
+    const backfilled = await createPostgresPersistence({ pool, schema });
+    assert.equal((await backfilled.queryMigrations({})).items.every((row) => typeof row.checksum === "string" && row.checksum.length === 64), true);
+    await pool.query(`DROP INDEX ${quoteIdentifier(schema)}.${quoteIdentifier("prism_usage_session_scope_recorded_idx")}`);
+    await assert.rejects(createPostgresPersistence({ pool, schema }), /missing required index/);
   });
 
   it("honors entry pagination cursors without overlap", async () => {

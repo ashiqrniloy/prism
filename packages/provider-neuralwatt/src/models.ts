@@ -49,7 +49,7 @@ export function defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfi
 
 const implicitCache = { kind: "implicit" } as const;
 const reasoningCompat = {
-  reasoning_effort: "medium",
+  reasoning_effort: "max",
   thinking_token_budget: 8_192,
   tool_stream: true,
   reasoning: true,
@@ -106,7 +106,7 @@ export function mapNeuralWattModel(entry: NeuralWattModelEntry): ModelConfig {
     cache: implicitCache,
     compat: cleanJson({
       reasoning: capabilities.reasoning,
-      reasoning_effort: capabilities.reasoning_effort ? "medium" : undefined,
+      reasoning_effort: capabilities.reasoning_effort ? "max" : undefined,
       tool_stream: capabilities.tools,
       json_mode: capabilities.json_mode,
       neuralwatt: cleanJson({
@@ -151,6 +151,13 @@ export const neuralWattModels = [
     limits: { contextWindow: 195_000 },
     capabilities: { reasoning: false },
     compat: fastCompat,
+  }),
+  featuredModel({
+    model: "gemma-4-31b",
+    displayName: "Gemma 4 31B",
+    limits: { contextWindow: 256_000 },
+    capabilities: { input: ["text", "image"], reasoning: false },
+    compat: { ...fastCompat, ...jsonMode },
   }),
   featuredModel({
     model: "kimi-k2.6",
@@ -199,12 +206,6 @@ export const neuralWattModels = [
     limits: { contextWindow: 128_000 },
     capabilities: { input: ["text", "image"], reasoning: false },
     compat: { ...fastCompat, ...jsonMode },
-  }),
-  featuredModel({
-    model: "kimi-k2",
-    displayName: "Kimi-K2",
-    limits: { contextWindow: 200_000, maxOutputTokens: 32_000 },
-    compat: reasoningCompat,
   }),
 ] as const satisfies readonly ModelConfig[];
 

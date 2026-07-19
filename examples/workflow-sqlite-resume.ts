@@ -51,6 +51,7 @@ const agentNodeDef = agentNode({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "durable-demo",
   nodes: { echo: echoNode, agent: agentNodeDef },
   edges: [["echo", "agent"]],

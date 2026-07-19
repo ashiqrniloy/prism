@@ -36,16 +36,22 @@ createOpenAIProviderPackage(options: OpenAIProviderPackageOptions): ProviderPack
 | `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
 | `baseUrl` | `string` | Overrides `https://api.openai.com/v1`. |
 | `codexBaseUrl` | `string` | Overrides `https://chatgpt.com/backend-api/codex`. |
+| `models` | `readonly ModelConfig[]` | Optional override for registered OpenAI Responses models (defaults to featured `openAIModels`). |
+| `codexModels` | `readonly ModelConfig[]` | Optional override for registered Codex models (defaults to featured `openAICodexModels`). |
 
 `ProviderRequest.options.sessionId`, `cacheKey`, `cacheRetention`, `headers`,
-`compat`, and `extra` map to request headers/payload fields.
+`compat`, and `extra` map to request headers/payload fields. Per-turn reasoning
+uses official Responses `reasoning: { effort, summary? }` via
+`ModelConfig.compat.reasoning` defaults merged with
+`ProviderRequestOptions.compat.reasoning` (request wins). Prefer
+`applyThinkingLevel(..., "openai_reasoning")` from `@arnilo/prism`.
 
 ## Outputs / response / events
 
 | Surface | Behavior |
 | --- | --- |
 | Provider stream | Prism text, thinking (downgraded to text), `tool_call` deltas/finals, `usage`, `done`, redacted `error` events. |
-| Block preservation | Text, thinking (downgraded), assistant `tool_call` → `function_call` input items, `tool_result` → `function_call_output` input items, images when `capabilities.input` includes `"image"`. |
+| Block preservation | User/system text → `input_text`; assistant text → `output_text`; assistant `tool_call` → top-level `function_call` with `call_id`; `tool_result` → top-level `function_call_output`; images/files/audio when declared on the model. Bare thinking without an encrypted Responses reasoning item is omitted on replay. |
 | Auth methods | `api_key` for `openai`; `oauth` for `openai-codex`. |
 
 Unsupported block placements or unclaimed images fail before `fetch`.
@@ -56,10 +62,17 @@ Responses request body (Codex subscription shape, abbreviated):
 
 ```json
 {
-  "model": "gpt-5-codex",
-  "instructions": "You are a coding agent.",
-  "input": [{ "type": "message", "role": "user", "content": [{ "type": "input_text", "text": "Hello" }] }],
-  "stream": true
+  "model": "gpt-5.1",
+  "input": [
+    { "role": "user", "content": [{ "type": "input_text", "text": "Hello" }] },
+    { "role": "assistant", "content": [{ "type": "output_text", "text": "Calling lookup" }] },
+    { "type": "function_call", "call_id": "call_1", "name": "lookup", "arguments": "{\"q\":\"x\"}" },
+    { "type": "function_call_output", "call_id": "call_1", "output": "{\"ok\":true}" }
+  ],
+  "reasoning": { "effort": "high" },
+  "prompt_cache_key": "session-1",
+  "stream": true,
+  "store": false
 }
 ```
 
@@ -73,13 +86,13 @@ https://auth.openai.com/authorize?response_type=code&client_id=...&code_challeng
 
 ```ts
 import { createExtensionKernel, createEnvCredentialResolver } from "@arnilo/prism";
-import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+import { createOpenAIProviderPackage, listOpenAIModels } from "@arnilo/prism-provider-openai";
 
+const apiKey = createEnvCredentialResolver({ OPENAI_API_KEY: "fake" }, { openai: "OPENAI_API_KEY" });
+const models = await listOpenAIModels({ apiKey }); // caller-gated; never runs during setup
 const kernel = createExtensionKernel();
 await kernel.load([
-  createOpenAIProviderPackage({
-    apiKey: createEnvCredentialResolver({ OPENAI_API_KEY: "fake" }, { openai: "OPENAI_API_KEY" }),
-  }),
+  createOpenAIProviderPackage({ apiKey, models }),
 ]);
 ```
 
@@ -115,24 +128,54 @@ const challenge = computeS256Challenge(verifier);
 
 ### Cache behavior
 
+Official: [Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching).
+
 - `prompt_cache_key` is derived from `ProviderRequestOptions.cacheKey` (falling
   back to `sessionId`) and sanitized + clamped to 64 characters via the shared
   `sanitizeCacheKey()` helper. Cache keys are session/customer identifiers only;
   never credentials or raw prompts.
-- `prompt_cache_retention` accepts only `"24h"` on the OpenAI Responses API
+- `prompt_cache_retention` accepts only `"24h"` on pre-GPT-5.6 Responses models
   (extended caching). Prism `cacheRetention: "short"` and `"none"` omit the field
   so default automatic/implicit caching applies and no invalid literal is sent.
   `cacheRetention: "long"` maps to `prompt_cache_retention: "24h"` only when the
   model declares `ModelConfig.cache.longRetention === true`; models without that
-  metadata omit the field. The catalog `gpt-5.1` model declares
+  metadata omit the field. Featured `gpt-5.1` declares
   `cache: { kind: "openai_key", longRetention: true, maxKeyLength: 64 }`.
+- GPT-5.6+ official docs prefer `prompt_cache_options` / explicit breakpoints;
+  `listOpenAIModels` sets `longRetention: false` for those ids so Prism does not
+  emit deprecated `prompt_cache_retention` for them. Breakpoint helpers are not
+  shipped in this package yet — hosts may pass `prompt_cache_options` through
+  `compat` / `extra` when needed.
 - Cache accounting is preserved in normalized `Usage`: OpenAI
   `input_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`. OpenAI
-  Responses does not report a cache-write token field.
+  Responses does not report a cache-write token field on older models.
 - Provider-owned headers (`content-type`, `authorization`, `x-client-request-id`)
   are applied after caller `ProviderRequestOptions.headers` so caller config
   cannot replace credentials, content type, or the session request id; non-owned
   caller headers are kept.
+
+### Model discovery
+
+- `listOpenAIModels({ apiKey, fetch, baseUrl, signal, headers })` calls official
+  [`GET /models`](https://developers.openai.com/api/reference/resources/models/methods/list)
+  and maps sparse `{ id, created, owned_by }` entries to `ModelConfig` with
+  `cache.kind: "openai_key"` and heuristic `longRetention` / `capabilities.reasoning`.
+- `createOpenAIProviderPackage` never calls discovery; pass results via `models:`.
+- Codex subscription models are **not** listed by `api.openai.com` — keep using
+  featured `openAICodexModels` or `codexModels:` override.
+- Static `openAIModels` / `openAICodexModels` are offline bootstrap / featured aliases only.
+
+### Reasoning
+
+Official: [Reasoning models](https://developers.openai.com/api/docs/guides/reasoning).
+
+- Body field is top-level `reasoning: { effort, summary?, mode?, context? }`.
+- Model defaults: `ModelConfig.compat.reasoning`; per-turn override:
+  `ProviderRequestOptions.compat.reasoning` (shallow-merged; request wins).
+- Portable helper: `applyThinkingLevel(options, level, "openai_reasoning")`.
+- Streaming tool args follow official
+  `response.output_item.added` + `response.function_call_arguments.delta`
+  (string `delta`), not Chat Completions object deltas.
 
 ## Security and performance notes
 

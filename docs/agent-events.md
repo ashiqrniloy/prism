@@ -100,28 +100,23 @@ Artifact validation/refinement events (emitted only by `generateValidateReviseLo
 | `artifact_validation_finished` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` |
 | `artifact_revision_started` | `sessionId`, `runId`, `turn`, `attempt`, `failure: ArtifactValidation` |
 | `artifact_finished` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` (loop ended successfully) |
-| `artifact_failed` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` (budget exhausted) |
+| `artifact_failed` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` (candidate budget exhausted, or `result.metadata.reason === "tool_round_limit"`) |
 
 ### Artifact event ordering
 
-A `generateValidateReviseLoop` run emits normal turn/message events for every provider turn, then a strictly ordered artifact sequence, correlated by `runId` / `turn` / `attempt`:
+A call-free candidate in `generateValidateReviseLoop` emits normal turn/message events then a strictly ordered artifact sequence, correlated by `runId` / `turn` / `attempt`:
 
 ```
-turn_started
-  → message_started
-    → message_delta*
-      → message_finished
-        → turn_finished
-          → artifact_validation_started
-            → artifact_validation_finished
-              → artifact_revision_started   # when a revision will run next
-               | artifact_finished          # loop ended successfully
-               | artifact_failed            # budget exhausted (maxRevisions+1 attempts)
+turn_started → message_started → message_delta* → message_finished → turn_finished
+  → artifact_validation_started → artifact_validation_finished
+    → artifact_revision_started | artifact_finished | artifact_failed
 ```
 
-- `attempt` is 1-indexed per validation attempt and equals the provider `turn` within `generateValidateReviseLoop`; it mirrors `retry_scheduled.attempt` and the `tool_execution_*` block/finish pairing.
+With opt-in `toolCalls: "bounded"`, a provider turn containing calls emits its normal assistant envelope followed by existing `tool_execution_*` events and matching persisted tool results; it emits no validation event and the next provider turn consumes that transcript. A post-`maxToolRounds` call emits terminal `artifact_failed` directly after `turn_finished` and has no tool execution event.
+
+- `attempt` is 1-indexed per call-free validation candidate. It can differ from provider `turn` when bounded tool calls occur.
 - Single-shot runs emit zero artifact events.
-- **Validation failure triggering a revision is recoverable and never an `error`.** Only terminal budget exhaustion emits `artifact_failed`. The `error` channel is reserved for real failures (provider failures not caught by retry, aborts, etc.), matching the existing convention used by `tool_execution_blocked`.
+- **Validation failure triggering a revision is recoverable and never an `error`.** Terminal candidate-budget or `tool_round_limit` exhaustion emits `artifact_failed`; real failures remain on the `error` channel.
 
 ## Request/response example
 
@@ -193,7 +188,7 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 - Slow consumers are bounded by `SubscribeOptions`. Use `RunLedger` or host storage for durable replay; do not rely on a live subscriber as a queue.
 - Redaction is exact-string-match only and opt-in via `createSecretRedactor`; values not passed as known secrets are not redacted.
 - `ArtifactValidation.errors[].message` and `metadata` may echo model text; `redactAgentEvent` walks arbitrary nesting and replaces cyclic references with `"[Circular]"` (WeakSet cycle guard), so secret values in `result`/`failure` are redacted without crashing.
-- `artifact_*` events are bounded by `maxRevisions + 1` validation attempts; an always-failing validator cannot loop forever and emits exactly one terminal `artifact_failed`.
+- `artifact_*` validation events are bounded by `maxRevisions + 1` call-free candidates. With opt-in bounded artifact tools, provider turns are additionally bounded by run-global `maxToolRounds` (maximum `1 + maxRevisions + maxToolRounds`); a post-cap call emits exactly one terminal `artifact_failed` with `result.metadata.reason === "tool_round_limit"` and has no tool lifecycle event because it never dispatches.
 - Runtime events contain messages/content only; do not put secrets in prompts, metadata, provider events, session entries, tool results, or artifact validation payloads.
 
 ## Related APIs

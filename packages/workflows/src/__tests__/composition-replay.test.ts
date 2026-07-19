@@ -20,6 +20,7 @@ describe("workflow composition and state", () => {
   test("shares validated bounded state through a nested workflow", async () => {
     const validated: unknown[] = [];
     const child = defineWorkflow({
+      revision: "1",
       id: "child",
       nodes: {
         update: functionNode({ execute: async (ctx) => {
@@ -29,6 +30,7 @@ describe("workflow composition and state", () => {
       },
     });
     const parent = defineWorkflow({
+      revision: "1",
       id: "parent",
       state: { initial: { count: 1 }, schema: { type: "object" } },
       nodes: {
@@ -50,12 +52,14 @@ describe("workflow composition and state", () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     let effects = 0;
     const child = defineWorkflow({
+      revision: "1",
       id: "review-child",
       nodes: {
         review: functionNode({ execute: (ctx) => ctx.resume ? ++effects : suspend({ reason: "approve child" }) }),
       },
     });
     const parent = defineWorkflow({
+      revision: "1",
       id: "review-parent",
       nodes: { child: workflowNode({ workflow: child }) },
     });
@@ -84,10 +88,28 @@ describe("workflow composition and state", () => {
     assert.equal(childRecord?.value.status, "denied");
   });
 
+  test("includes nested revisions in resume and replay identity", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const child = defineWorkflow({ revision: "1", id: "revision-child", nodes: { done: functionNode({ execute: () => true }) } });
+    const parent = defineWorkflow({ revision: "1", id: "revision-parent", nodes: { child: workflowNode({ workflow: child }) } });
+    const source = await runWorkflow(parent, null, { checkpoints, ownership });
+    const changedChild = defineWorkflow({ revision: "2", id: child.id, nodes: child.nodes });
+    const changedParent = defineWorkflow({ revision: "1", id: parent.id, nodes: { child: workflowNode({ workflow: changedChild }) } });
+    await assert.rejects(
+      (await import("../index.js")).resumeWorkflow(changedParent, { runId: source.runId }, { checkpoints, ownership }),
+      /definition hash mismatch/i,
+    );
+    await assert.rejects(
+      replayWorkflow(changedParent, { sourceRunId: source.runId, fromNodeId: "child" }, { checkpoints, ownership }),
+      /definition hash mismatch/i,
+    );
+  });
+
   test("enforces inherited nesting and state-history ceilings", async () => {
-    const leaf = defineWorkflow({ id: "leaf", nodes: { done: functionNode({ execute: () => true }) } });
-    const child = defineWorkflow({ id: "middle", nodes: { leaf: workflowNode({ workflow: leaf }) } });
+    const leaf = defineWorkflow({ revision: "1", id: "leaf", nodes: { done: functionNode({ execute: () => true }) } });
+    const child = defineWorkflow({ revision: "1", id: "middle", nodes: { leaf: workflowNode({ workflow: leaf }) } });
     const parent = defineWorkflow({
+      revision: "1",
       id: "top",
       limits: { maxNestedDepth: 1 },
       nodes: { child: workflowNode({ workflow: child }) },
@@ -96,6 +118,7 @@ describe("workflow composition and state", () => {
       error instanceof WorkflowRuntimeError && error.code === "ERR_PRISM_WORKFLOW_NESTED_DEPTH");
 
     const stateful = defineWorkflow({
+      revision: "1",
       id: "history",
       limits: { maxStateHistory: 2 },
       nodes: {
@@ -109,6 +132,7 @@ describe("workflow composition and state", () => {
       error instanceof WorkflowRuntimeError && error.code === "ERR_PRISM_WORKFLOW_STATE_HISTORY");
 
     const bounded = defineWorkflow({
+      revision: "1",
       id: "bounded-state",
       limits: { maxStateBytes: 32 },
       nodes: { update: functionNode({ execute: (ctx) => ctx.updateState({ value: "x".repeat(64) }) }) },
@@ -116,6 +140,7 @@ describe("workflow composition and state", () => {
     await assert.rejects(runWorkflow(bounded, null), /Workflow state exceeds max bytes/);
 
     const secret = defineWorkflow({
+      revision: "1",
       id: "redacted-state",
       state: { initial: { token: "state-canary" } },
       nodes: { done: functionNode({ execute: (ctx) => ctx.state }) },
@@ -130,6 +155,7 @@ describe("workflow replay", () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const calls = { prepare: 0, review: 0, publish: 0 };
     const workflow = defineWorkflow({
+      revision: "1",
       id: "replayable",
       state: { initial: { version: 0 } },
       nodes: {
@@ -165,6 +191,7 @@ describe("workflow replay", () => {
   test("rejects replay that would copy prior approval or cross ownership", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({
+      revision: "1",
       id: "approval-replay",
       nodes: {
         approval: toolNode({

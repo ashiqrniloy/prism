@@ -44,8 +44,11 @@ import {
 | --- | --- | --- |
 | `path` | `string` | Vault file path. Parent directories are created as needed. |
 | `getPassphrase` | `() => string \| Promise<string>` | Host-owned passphrase retrieval. Never logged by the adapter. |
-| `scrypt` | `{ N?, r?, p?, keyLength? }` | Optional KDF tuning. Defaults: `N=32768`, `r=8`, `p=1`, `keyLength=32`. Minimum `N=16384`. |
-| `fileMode` | `number` | Unix mode for newly written files. Defaults to `0o600`. |
+| `scrypt` | `{ N?, r?, p?, keyLength? }` | Optional KDF tuning. Defaults: `N=32768`, `r=8`, `p=1`, `keyLength=32`; limits are listed below. |
+| `fileMode` | `number` | Unix mode for files. Defaults to `0o600`; group/other permissions are rejected. |
+| `limits.maxFileBytes` | `number` | Encrypted envelope file: 4 MiB default, 16 MiB hard cap. |
+| `limits.maxVaultBytes` | `number` | Decrypted vault/plaintext: 3 MiB default, 12 MiB hard cap. |
+| `limits.maxScryptMemoryBytes` | `number` | `128*N*r` memory estimate: 256 MiB default and hard cap. |
 
 ### System keychain
 
@@ -53,7 +56,8 @@ import {
 | --- | --- | --- |
 | `service` | `string` | Keychain service name (application identifier). |
 | `namespace` | `string` | Optional prefix separating environments or tenants within one service. |
-| `timeoutMs` | `number` | Operation timeout. Defaults to `5000`. |
+| `timeoutMs` | `number` | Operation timeout. Defaults to 5,000 ms; hard cap 60,000 ms. |
+| `maxPayloadBytes` | `number` | Decrypted keychain payload: 3 MiB default, 12 MiB hard cap. |
 
 ## Outputs / response / events
 
@@ -70,6 +74,8 @@ Encrypted file stores also expose:
 
 - `reload()` — re-read and decrypt from disk
 - `flush()` — force rewrite of the encrypted envelope
+
+`encryptBytes()` and `decryptBytes()` are Promise-based because they use asynchronous `node:crypto.scrypt`.
 
 Errors are explicit and fail closed:
 
@@ -123,6 +129,7 @@ import {
 const store = await openEncryptedCredentialStore({
   path: "./credentials.vault",
   getPassphrase: () => process.env.MY_APP_CREDENTIAL_PASSPHRASE!,
+  limits: { maxFileBytes: 4 * 1024 * 1024, maxVaultBytes: 3 * 1024 * 1024 },
 });
 
 const resolver = createExplicitCredentialResolver([
@@ -151,6 +158,47 @@ await rotateEncryptedCredentialStorePassphrase({
 });
 ```
 
+### Desktop keychain and explicit overrides
+
+```ts
+import {
+  createEnvCredentialResolver,
+  createExplicitCredentialResolver,
+  createMemoryCredentialStore,
+} from "@arnilo/prism";
+import {
+  createKeychainCredentialStore,
+  createStoredCredentialResolver,
+} from "@arnilo/prism-credentials-node";
+import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+
+const keychain = createKeychainCredentialStore({
+  service: "com.example.my-app",
+  namespace: "production",
+});
+await keychain.set({
+  name: "apiKey",
+  provider: "openai",
+  credential: { type: "api_key", value: userSuppliedKey },
+});
+
+const runtimeOverrides = createMemoryCredentialStore();
+// Set only for this user/agent instance; it wins over stored and env values.
+runtimeOverrides.set({
+  name: "apiKey",
+  provider: "openai",
+  credential: { type: "api_key", value: temporaryOverride },
+});
+
+const apiKey = createExplicitCredentialResolver([
+  { name: "runtime", resolver: runtimeOverrides },
+  { name: "keychain", resolver: createStoredCredentialResolver(keychain) },
+  { name: "env", resolver: createEnvCredentialResolver(process.env, { openai: "OPENAI_API_KEY" }) },
+]);
+
+const providers = createOpenAIProviderPackage({ apiKey });
+```
+
 ## Extension and configuration notes
 
 - Passphrase retrieval, TLS, and OS permission prompts remain host-owned.
@@ -161,12 +209,13 @@ await rotateEncryptedCredentialStorePassphrase({
 
 ## Security and performance notes
 
-- Authenticated encryption uses Node built-in `aes-256-gcm` and `scrypt`; no extra crypto dependencies for the file backend.
-- Atomic writes use temp file + rename; partial writes cannot replace a valid vault.
-- Derived keys are zeroed after encrypt/decrypt operations where practical.
-- Default scrypt `N=32768` targets interactive CLI unlock; raise `N` for higher security at the cost of unlock latency.
-- Keychain operations honor `timeoutMs` and surface `CredentialStoreTimeoutError` instead of blocking indefinitely.
-- Never log passphrases, derived keys, or decrypted credential payloads. Error messages do not echo secret values.
+- Authenticated encryption uses Node built-in `aes-256-gcm` and asynchronous `scrypt`; no extra crypto dependency is added for the file backend.
+- Envelope parsing rejects unknown shape, non-canonical/oversized base64, wrong salt/IV/tag size, unsupported algorithms/version, and excessive KDF work before scrypt. `N` must be a power of two from 16,384–262,144; `r≤32`, `p≤16`, `keyLength=32`, `N*r*p≤2,097,152`, and `128*N*r` must fit `maxScryptMemoryBytes`.
+- Existing Unix vaults are checked before content read and must deny group/other access. Atomic writes create a random exclusive temp file at the requested restrictive mode, then rename; Windows skips Unix mode checks.
+- Derived keys and package-owned plaintext buffers are zeroed after use. JavaScript passphrase strings and returned credentials remain host-owned.
+- Keychain operations use `@napi-rs/keyring`'s abort-aware `AsyncEntry`, so native work runs outside the JavaScript event loop. A main-loop timer aborts and rejects at `timeoutMs`; native cancellation remains OS/backend-dependent and may briefly retain one libuv worker after rejection.
+- Keychain payloads are bytes rather than password strings and are zeroed after parse/write. Unknown native errors are mapped to sanitized typed errors; no native message or secret value is echoed.
+- Never log passphrases, derived keys, or decrypted credential payloads.
 - Live keychain tests are opt-in (`PRISM_TEST_KEYCHAIN=1`); default `npm test` stays offline.
 
 ## Related APIs

@@ -1,4 +1,5 @@
 import type { ModelConfig, SettingsProvider } from "@arnilo/prism";
+import { HARD_MAX_WORKER_TURNS } from "./limits.js";
 
 export interface ObservationalMemorySettings {
   readonly observeAfterTokens: number;
@@ -11,6 +12,8 @@ export interface ObservationalMemorySettings {
   readonly debugLog: boolean;
   readonly workerModel?: ModelConfig;
   readonly thinkingLevel?: string;
+  /** When true, skip session-model fallback (runtime still needs an explicit workerModel). */
+  readonly requireExplicitModel?: boolean;
 }
 
 export const defaultObservationalMemorySettings: ObservationalMemorySettings = {
@@ -36,12 +39,20 @@ export async function resolveObservationalMemorySettings(settings?: SettingsProv
     compactAfterTokens: positive(merged.compactAfterTokens, defaultObservationalMemorySettings.compactAfterTokens),
     observationsPoolMaxTokens: positive(merged.observationsPoolMaxTokens, defaultObservationalMemorySettings.observationsPoolMaxTokens),
     observationsPoolTargetTokens: positive(merged.observationsPoolTargetTokens, defaultObservationalMemorySettings.observationsPoolTargetTokens),
-    agentMaxTurns: Math.max(1, Math.floor(positive(merged.agentMaxTurns, defaultObservationalMemorySettings.agentMaxTurns))),
+    agentMaxTurns: workerTurns(merged.agentMaxTurns),
     passive: Boolean(merged.passive),
     debugLog: Boolean(merged.debugLog),
+    requireExplicitModel: merged.requireExplicitModel === true ? true : undefined,
   };
 }
 
 function positive(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function workerTurns(value: unknown): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > HARD_MAX_WORKER_TURNS) {
+    throw new RangeError(`agentMaxTurns must be a positive safe integer at most ${HARD_MAX_WORKER_TURNS}`);
+  }
+  return value as number;
 }

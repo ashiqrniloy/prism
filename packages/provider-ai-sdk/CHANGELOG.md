@@ -1,7 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.6] - 2026-07-19
 
+- Validated against official AI SDK Language Model V4 spec (`@ai-sdk/provider@^4`): host-owned catalog/caching/reasoning; `finish.usage.inputTokens.cacheRead`/`cacheWrite` usage mapping; docs and conformance checklist expanded.
 ## [0.0.5] - 2026-07-16
 
 - Added the optional AI SDK LanguageModelV4-to-Prism provider adapter.

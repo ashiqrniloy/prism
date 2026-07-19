@@ -54,6 +54,7 @@ const finalStep = agentNode({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "cancel-resume-demo",
   nodes: { fast: fastStep, slow: slowStep, final: finalStep },
   edges: [
@@ -83,6 +84,7 @@ export async function demo() {
 
   const cancelResult = await cancelWorkflowRun({
     workflowId: workflow.id,
+    workflow,
     checkpoints,
     ownership: { tenantId: "demo" },
     runId: "cancel-test-run",

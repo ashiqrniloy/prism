@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createMockProvider, createSessionEntry, providerError, providerTextDelta, type ProviderRequest, type SessionEntry } from "@arnilo/prism";
+import { createMockProvider, createSessionEntry, providerError, providerTextDelta, type AIProvider, type ProviderRequest, type SessionEntry } from "@arnilo/prism";
+import { HARD_MAX_SUMMARY_ERROR_BYTES, HARD_MAX_SUMMARY_TOKENS, HARD_RESERVE_TOKENS } from "../limits.js";
 import { createLlmCompactionStrategy } from "../strategy.js";
 
 const timestamp = "2026-01-01T00:00:00.000Z";
@@ -106,9 +107,10 @@ test("llm_compaction_strategy_applies_policy_thinking_and_max_summary_tokens", a
   const result = await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")] });
 
   assert.equal(request?.options?.cacheRetention, "long");
-  assert.equal(request?.options?.extra?.thinkingLevel, "low");
+  assert.equal(request?.options?.compat?.reasoning_effort, "low");
+  assert.equal(request?.options?.extra?.thinkingLevel, undefined);
   assert.equal(request?.model.parameters?.maxTokens, 2);
-  assert.match(result.summary, /characters truncated/);
+  assert.equal(result.summary.length, 8);
 });
 
 test("llm_compaction_strategy_resolves_credential_per_call_without_storing_it", async () => {
@@ -136,6 +138,78 @@ test("llm_compaction_strategy_throws_on_provider_error_without_result", async ()
   const entries = [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")];
 
   await assert.rejects(async () => strategy.compact({ sessionId: "s1", entries }), /Summarization failed: boom/);
+});
+
+test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_policy_budget", async () => {
+  let closed = false;
+  let request: ProviderRequest | undefined;
+  const provider: AIProvider = {
+    id: "bounded",
+    async *generate(value) {
+      request = value;
+      try {
+        yield providerTextDelta("😀".repeat(100));
+        while (true) yield { type: "done" };
+      } finally {
+        closed = true;
+      }
+    },
+  };
+  const strategy = createLlmCompactionStrategy({ provider, model, keepRecentTokens: 1, maxSummaryTokens: 10 });
+  const result = await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")] });
+  assert.ok(result.summary.length <= 40);
+  assert.equal(result.summary.includes("\uFFFD"), false);
+  assert.equal(closed, true);
+  assert.equal(request?.model.parameters?.maxTokens, 10);
+
+  const splitUnicode = createLlmCompactionStrategy({
+    provider: createMockProvider([providerTextDelta("\uD83D"), providerTextDelta("\uDE00"), { type: "done" }]),
+    model,
+    keepRecentTokens: 1,
+    maxSummaryTokens: 2,
+  });
+  const splitUnicodeSummary = (await splitUnicode.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")] })).summary;
+  assert.equal(splitUnicodeSummary.startsWith("😀"), true);
+  assert.equal(splitUnicodeSummary.includes("\uFFFD"), false);
+  assert.ok(splitUnicodeSummary.length <= 8);
+
+  const secret = "provider-secret";
+  const throwing: AIProvider = { id: "throwing", async *generate() { throw new Error(`${secret}-${"x".repeat(100)}`); } };
+  await assert.rejects(
+    async () => createLlmCompactionStrategy({ provider: throwing, model, keepRecentTokens: 1, maxErrorBytes: 16 }).compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")], secrets: [secret] }),
+    (error: unknown) => error instanceof Error && !error.message.includes(secret) && Buffer.byteLength(error.message, "utf8") <= 40,
+  );
+
+  const infiniteEvents: AIProvider = { id: "events", async *generate() { while (true) yield { type: "done" }; } };
+  await assert.rejects(
+    async () => createLlmCompactionStrategy({ provider: infiniteEvents, model, keepRecentTokens: 1, maxSummaryTokens: 1 }).compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")] }),
+    /provider event limit exceeded/,
+  );
+  await assert.rejects(
+    async () => createLlmCompactionStrategy({
+      provider: createMockProvider([providerTextDelta("unused")]),
+      model,
+      keepRecentTokens: 1,
+      providerRequestPolicies: { name: "bad-budget", apply: ({ request }) => ({ ...request, model: { ...request.model, parameters: { maxTokens: Infinity } } }) },
+    }).compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")] }),
+    /provider request maxTokens/,
+  );
+});
+
+test("llm_compaction_strategy_rejects_invalid_limits_and_accepts_hard_boundaries", () => {
+  const base = { provider: createMockProvider([{ type: "done" }]), model };
+  const limits = [
+    ["maxSummaryTokens", HARD_MAX_SUMMARY_TOKENS],
+    ["maxOutputTokens", HARD_MAX_SUMMARY_TOKENS],
+    ["reserveTokens", HARD_RESERVE_TOKENS],
+    ["maxErrorBytes", HARD_MAX_SUMMARY_ERROR_BYTES],
+  ] as const;
+  for (const [name, hardCap] of limits) {
+    assert.doesNotThrow(() => createLlmCompactionStrategy({ ...base, [name]: hardCap }));
+    for (const value of [0, -1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, hardCap + 1]) {
+      assert.throws(() => createLlmCompactionStrategy({ ...base, [name]: value }), new RegExp(name));
+    }
+  }
 });
 
 test("llm_compaction_strategy_observes_abort_signal", async () => {

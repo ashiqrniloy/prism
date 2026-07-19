@@ -234,7 +234,7 @@ Key cross-seam points:
 - The default parser treats assistant text as the value (`{ ok: true, value: text }`); supply a host parser whenever `T` is not `string`.
 - The default repairer builds a user message from `validation.errors[].message`; supply a host repairer for schema-specific guidance.
 - `maxRevisions` (default 3) bounds revision turns; budget exhaustion ends the loop and emits `artifact_failed` (it does not throw).
-- Tools are not dispatched in revision turns. Hosts needing tools in artifact turns use `singleShotLoop` or a custom loop.
+- Tools are inert in artifact turns unless `loop.toolCalls: "bounded"` is explicit. Bounded mode uses run-global `maxToolRounds`, dispatches calls sequentially through normal runtime guards, skips parser/validator for tool-calling responses, and permits at most `1 + maxRevisions + maxToolRounds` provider turns. An extra tool response yields terminal `artifact_failed` with `result.metadata.reason === "tool_round_limit"` and executes nothing.
 
 ## Security and performance notes
 

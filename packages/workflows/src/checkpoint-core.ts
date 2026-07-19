@@ -5,6 +5,9 @@ import {
   DEFAULT_MAX_CHECKPOINT_BYTES,
   DEFAULT_MAX_NODE_OUTPUT_BYTES,
   HARD_LIST_PAGE_CAP,
+  HARD_MAX_CHECKPOINT_BYTES,
+  HARD_MAX_NODE_OUTPUT_BYTES,
+  validateWorkflowLimit,
   WORKFLOW_CHECKPOINT_SCHEMA_VERSION,
 } from "./limits.js";
 import type {
@@ -133,8 +136,16 @@ export function adapterByteLimits(options: WorkflowCheckpointAdapterOptions = {}
   readonly maxNodeOutputBytes: number;
 } {
   return {
-    maxCheckpointBytes: options.maxCheckpointBytes ?? DEFAULT_MAX_CHECKPOINT_BYTES,
-    maxNodeOutputBytes: options.maxNodeOutputBytes ?? DEFAULT_MAX_NODE_OUTPUT_BYTES,
+    maxCheckpointBytes: validateWorkflowLimit(
+      "maxCheckpointBytes",
+      options.maxCheckpointBytes ?? DEFAULT_MAX_CHECKPOINT_BYTES,
+      HARD_MAX_CHECKPOINT_BYTES,
+    ),
+    maxNodeOutputBytes: validateWorkflowLimit(
+      "maxNodeOutputBytes",
+      options.maxNodeOutputBytes ?? DEFAULT_MAX_NODE_OUTPUT_BYTES,
+      HARD_MAX_NODE_OUTPUT_BYTES,
+    ),
   };
 }
 

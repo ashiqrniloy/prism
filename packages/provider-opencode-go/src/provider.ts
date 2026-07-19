@@ -3,10 +3,12 @@ import { providerError, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
 import { opencodeOwnedHeaders } from "./cache.js";
+import { OPENCODE_GO_DEFAULT_BASE_URL } from "./models.js";
 import { openAIChatBody, openAIChatEvents } from "./openai-chat.js";
 
 export interface OpenCodeGoProviderOptions {
   readonly id?: string;
+  /** Defaults to official `https://opencode.ai/zen/go/v1`. */
   readonly baseUrl?: string;
   readonly apiKey?: CredentialValueSource;
   readonly fetch?: typeof fetch;
@@ -14,7 +16,7 @@ export interface OpenCodeGoProviderOptions {
 
 export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}): AIProvider {
   const id = options.id ?? "opencode-go";
-  const baseUrl = (options.baseUrl ?? "https://api.opencode.ai/v1").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL).replace(/\/$/, "");
   return {
     id,
     async *generate(request) {

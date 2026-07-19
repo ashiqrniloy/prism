@@ -154,6 +154,10 @@ const agent = createAgent({ model, provider, tools: activeTools, permission, val
 
 Need different tools for one request? Build a short-lived agent/session with a narrower registry, or block extra calls with `PermissionPolicy` / `RunOptions.validate`. No extra per-run tool API exists yet; add one only when host apps need it.
 
+### Artifact-loop tools
+
+`generate-validate-revise` treats provider tools as inert by default. Set `loop.toolCalls: "bounded"` and `RunOptions.maxToolRounds` only when an artifact needs a host-owned lookup before its next candidate. Each response with one-or-more calls consumes one shared round, dispatches calls sequentially through this exact `dispatchToolCall()` path, persists assistant-call then result transcript rows, and skips artifact parsing/validation for that response. A post-limit call executes nothing; the loop emits `artifact_failed` with `metadata.reason: "tool_round_limit"`. Tools do not consume `maxRevisions`, and tool schemas/context never grant authority.
+
 ### Runtime-supplied validators
 
 `AgentConfig.validator?` and `RunOptions.validate?` expose the same `ToolValidator` seam that `DispatchToolCallOptions.validate` already uses. The runtime threads `validate: RunOptions.validate ?? AgentConfig.validator` into every `dispatchToolCall` it issues during the tool loop, so an app can supply argument validation without taking ownership of dispatch itself. `RunOptions.validate` overrides `AgentConfig.validator` on a per-run basis (RunOptions wins). When neither is set, dispatch runs unmodified.
@@ -228,6 +232,17 @@ await session.run(input, {
 - Prism does not sandbox host tools and does not include built-in app tools.
 - Contribution registration and registry/filter calls do not perform provider calls, credential resolution, resource loading, network, filesystem discovery, or tool execution.
 - Dispatch performs explicit in-memory checks and executes only the selected host-active tool; it adds no retries, queues, timers, or new dependencies.
+
+## JSON Schema validator limits
+
+Core stores `ToolDefinition.parameters` but does not compile schemas. Hosts that install `@arnilo/prism-tool-validator-json-schema` receive pre-Ajv schema limits: 256 KiB bytes, depth 64, 10,000 properties/keywords, 128 refs, and a 256-entry LRU compiled cache by default. All reject invalid values and have finite hard ceilings. Only fragment-local `$ref` values are accepted; non-local refs, cycles, forbidden keys, and non-finite schema numbers fail before tool execution.
+
+```ts
+createJsonSchemaToolArgumentValidator({
+  maxSchemaBytes: 256 * 1024,
+  maxCompiledSchemas: 256,
+});
+```
 
 ## Related APIs
 

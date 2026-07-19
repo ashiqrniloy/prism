@@ -10,6 +10,12 @@ export const MIN_SCRYPT_N = 16384;
 export const DEFAULT_FILE_MODE = 0o600;
 export const DEFAULT_KEYCHAIN_TIMEOUT_MS = 5000;
 
+export interface EncryptedCredentialStoreLimits {
+  readonly maxFileBytes?: number;
+  readonly maxVaultBytes?: number;
+  readonly maxScryptMemoryBytes?: number;
+}
+
 export interface ScryptParameters {
   readonly N: number;
   readonly r: number;
@@ -62,12 +68,14 @@ export interface EncryptedCredentialStoreOptions {
   readonly getPassphrase: () => string | Promise<string>;
   readonly scrypt?: Partial<ScryptParameters>;
   readonly fileMode?: number;
+  readonly limits?: EncryptedCredentialStoreLimits;
 }
 
 export interface KeychainCredentialStoreOptions {
   readonly service: string;
   readonly namespace?: string;
   readonly timeoutMs?: number;
+  readonly maxPayloadBytes?: number;
 }
 
 export interface RotateEncryptedCredentialStoreOptions {
@@ -76,4 +84,5 @@ export interface RotateEncryptedCredentialStoreOptions {
   readonly getNewPassphrase: () => string | Promise<string>;
   readonly scrypt?: Partial<ScryptParameters>;
   readonly fileMode?: number;
+  readonly limits?: EncryptedCredentialStoreLimits;
 }

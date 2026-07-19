@@ -1,5 +1,5 @@
 import { MemoryLimitError, MemoryValidationError } from "./errors.js";
-import { assertNotAborted, chunkArray } from "./util.js";
+import { assertFiniteVector, assertNotAborted, chunkArray } from "./util.js";
 import type { Embedder } from "./types.js";
 
 export interface HashEmbedderOptions {
@@ -42,9 +42,7 @@ export async function embedBatched(
       throw new MemoryValidationError("embedder returned unexpected vector count");
     }
     for (const vector of vectors) {
-      if (vector.length !== embedder.dimensions) {
-        throw new MemoryValidationError(`embedder returned vector length ${vector.length}, expected ${embedder.dimensions}`);
-      }
+      assertFiniteVector(vector, "embedder returned vector", embedder.dimensions);
       output.push(vector);
     }
   }

@@ -16,7 +16,7 @@ import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
 import { parseJsonObjectArguments, readBoundedResponseText, readSseEvents } from "@arnilo/prism/providers/transport";
 import { parseNeuralWattComment, type NeuralWattEvent } from "./telemetry.js";
 import { classifyNeuralWattError, neuralWattHttpError } from "./retry.js";
-import { neuralWattChatTemplateKwargs, neuralWattClearThinking, neuralWattPreserveThinking, neuralWattReasoningEffort, neuralWattThinkingTokenBudget, neuralWattToolChoice } from "./thinking.js";
+import { neuralWattChatTemplateKwargs, neuralWattClearThinking, neuralWattPreserveThinking, neuralWattReasoningEffort, neuralWattThinkingTokenBudget, neuralWattToolChoice, stripNeuralWattOwnedCompat } from "./thinking.js";
 
 export interface NeuralWattProviderOptions {
   readonly id?: string;
@@ -91,18 +91,16 @@ export function neuralWattBody(request: ProviderRequest): JsonObject {
     model: request.model.model,
     messages: request.messages.map((message) => toMessage(message, request.model, shouldPreserveReasoning(request), shouldClearReasoning(request))),
     tools: request.tools?.map((tool) => clean(serializeOpenAITool(tool) as Record<string, unknown>)),
-    tool_choice: neuralWattToolChoice(request),
     stream: true,
     stream_options: { include_usage: true },
+    ...parameters,
+    max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
+    ...stripNeuralWattOwnedCompat(request.options?.compat),
+    ...request.options?.extra,
+    tool_choice: neuralWattToolChoice(request),
     reasoning_effort: neuralWattReasoningEffort(request),
     thinking_token_budget: neuralWattThinkingTokenBudget(request),
     chat_template_kwargs: neuralWattChatTemplateKwargs(request),
-    preserve_thinking: neuralWattPreserveThinking(request),
-    clear_thinking: neuralWattClearThinking(request),
-    ...parameters,
-    max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
-    ...request.options?.compat,
-    ...request.options?.extra,
   };
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);

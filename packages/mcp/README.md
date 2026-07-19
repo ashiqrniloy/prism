@@ -40,6 +40,7 @@ const bridge = await connectMcpTools({
   transport: {
     type: "streamable-http",
     url: "https://mcp.example.com/mcp",
+    allowedOrigins: ["https://mcp.example.com"],
     requestInit: {
       headers: { Authorization: "Bearer <token>" },
     },
@@ -73,8 +74,9 @@ Nothing is exposed by default. Handler uses SDK Web-standard Streamable HTTP tra
 ## Security
 
 - Stdio command, args, env, and cwd are **explicit host configuration** — Prism does not auto-launch unknown servers.
-- HTTP URLs and auth headers are host-supplied; use URL allow-lists and network policy to mitigate SSRF.
-- MCP server output is treated as untrusted; `maxResultBytes` bounds mapped content.
+- Streamable HTTP requires HTTPS plus an exact `allowedOrigins` entry. Every POST/GET/DELETE/reconnect resolves all DNS answers, rejects mixed/private results, pins one public address, rejects credentials/fragments/redirects, and bounds each response. Plaintext requires `allowLoopbackHttp: true` and loopback-only DNS.
+- Discovery defaults to 20 pages/500 tools, finite metadata/schema budgets, and atomic refresh. Raw SDK list/call requests avoid compiling untrusted output schemas.
+- Every result branch (`content`, `structuredContent`, legacy `toolResult`) shares `maxResultBytes`, JSON depth, and property bounds before `ToolResult` retention.
 - Register returned tools only after reviewing server trust; core `PermissionPolicy` and `ToolValidator` still apply at dispatch.
 
 See [MCP client/server exposure](../../docs/mcp-tools.md) and [Tool execution primitives](../../docs/tool-execution-primitives.md).

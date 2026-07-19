@@ -103,6 +103,7 @@ const scanNode = toolNode({
 });
 
 const workflow = defineWorkflow({
+  revision: "1",
   id: "research-and-scan",
   nodes: { research: researchNode, scan: scanNode },
   edges: [["research", "scan"]],

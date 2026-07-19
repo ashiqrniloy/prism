@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
+import { rm, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OutputAccumulator } from "../output-accumulator.js";
@@ -89,7 +89,7 @@ test("tempFilePrefix option names the temp file", async () => {
   if (snap.fullOutputPath) await rm(snap.fullOutputPath, { force: true });
 });
 
-test("rolling tail trims very large output without losing the final tail", () => {
+test("rolling tail trims very large output without losing the final tail", async () => {
   // maxBytes tiny → maxRollingBytes tiny → trimTail kicks in; tail must still end correctly.
   const acc = new OutputAccumulator({ maxBytes: 4, maxLines: 10000 });
   // many lines so decoded bytes blow past maxRollingBytes (8)
@@ -100,7 +100,35 @@ test("rolling tail trims very large output without losing the final tail", () =>
   assert.equal(snap.truncation.truncated, true);
   // full temp file preserves everything
   assert.ok(snap.fullOutputPath);
-  acc.closeTempFile().then(() => {
-    if (snap.fullOutputPath) return rm(snap.fullOutputPath, { force: true });
+  await acc.closeTempFile();
+  if (snap.fullOutputPath) await rm(snap.fullOutputPath, { force: true });
+});
+
+test("total output cap retains only the cap and cleanup removes secure spill", async () => {
+  let limits = 0;
+  const acc = new OutputAccumulator({
+    maxBytes: 4,
+    maxLines: 100,
+    maxTotalOutputBytes: 8,
+    onLimit: () => { limits++; },
   });
+  assert.equal(acc.append(Buffer.from("0123456789ab")), false);
+  acc.finish();
+  const snapshot = acc.snapshot({ persistIfTruncated: true });
+  assert.equal(acc.isOutputLimitExceeded(), true);
+  assert.equal(acc.getTotalRawBytes(), 8);
+  assert.equal(limits, 1);
+  assert.ok(snapshot.fullOutputPath);
+  await acc.closeTempFile();
+  assert.equal((await readFile(snapshot.fullOutputPath!)).length, 8);
+  if (process.platform !== "win32") assert.equal((await stat(snapshot.fullOutputPath!)).mode & 0o777, 0o600);
+  await acc.cleanupTempFile();
+  await assert.rejects(() => stat(snapshot.fullOutputPath!));
+});
+
+test("accumulator rejects invalid limits and unsafe temp prefixes", () => {
+  assert.throws(() => new OutputAccumulator({ maxBytes: 10, maxTotalOutputBytes: 9 }), /at least maxBytes/);
+  assert.throws(() => new OutputAccumulator({ maxLines: Infinity }), /positive safe integer/);
+  assert.throws(() => new OutputAccumulator({ maxTotalOutputBytes: 1024 * 1024 * 1024 + 1 }), /positive safe integer/);
+  assert.throws(() => new OutputAccumulator({ tempFilePrefix: "../escape" }), /tempFilePrefix/);
 });
