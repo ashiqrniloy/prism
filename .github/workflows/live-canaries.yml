@@ -39,7 +39,7 @@ jobs:
           PRISM_CANARY_A2A_TOKEN: ${{ secrets.PRISM_CANARY_A2A_TOKEN }}
           PRISM_BRAVE_SEARCH_TOKEN: ${{ secrets.PRISM_BRAVE_SEARCH_TOKEN }}
         run: node scripts/live-canary.mjs
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: live-canary-status-${{ github.run_id }}
