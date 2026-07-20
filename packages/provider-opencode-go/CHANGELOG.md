@@ -1,4 +1,15 @@
 # Changelog
+
+## [0.0.8] - 2026-07-20
+
+- Released with the exact 0.0.8 first-party package graph.
+
+### Fixed
+
+- Anthropic route (`POST /messages`) sends provider-owned `x-api-key` and `anthropic-version: 2023-06-01` headers alongside Bearer, fixing HTTP 401 on MiniMax/Qwen models; caller headers cannot override them.
+- `structuredOutput: "json_schema"` is no longer inferred from OpenAI-compatible routing alone. Only live-verified models (`mimo-v2.5`, `mimo-v2.5-pro`) advertise it, fixing HTTP 400 on `deepseek-v4-pro`; hosts can set the capability explicitly via `defineOpenCodeGoModel({ capabilities })`.
+- Both stream parsers require protocol completion evidence (`[DONE]` + terminal `finish_reason` on the OpenAI route, `message_stop` on the Anthropic route) and complete tool-call accumulators; truncated streams end with a terminal `error` instead of a false `done`.
+
 ## [0.0.7] - 2026-07-19
 
 - Released with the exact 0.0.7 first-party package graph.

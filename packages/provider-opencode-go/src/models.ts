@@ -41,6 +41,8 @@ export interface ListOpenCodeGoModelsOptions {
 
 /**
  * Sparse official `GET /zen/go/v1/models` entry (`id` / `object` / `created` / `owned_by`).
+ * If the payload gains capability fields, `capabilities.structured_output` is
+ * honored as gateway-authoritative (see `discoveryStructuredOutput`).
  * @see https://opencode.ai/docs/go/
  */
 export interface OpenCodeGoModelEntry {
@@ -48,6 +50,8 @@ export interface OpenCodeGoModelEntry {
   readonly object?: string;
   readonly created?: number;
   readonly owned_by?: string;
+  /** Forward-compatible capability block; absent from the current sparse payload. */
+  readonly capabilities?: { readonly structured_output?: boolean | "json_schema" };
 }
 
 interface OpenCodeGoModelsResponse {
@@ -71,7 +75,7 @@ export function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfi
       reasoning: true,
       tools: true,
       streaming: true,
-      structuredOutput: route === "openai" ? "json_schema" : undefined,
+      structuredOutput: defaultStructuredOutput(config.model, route),
       ...config.capabilities,
     },
     cache,
@@ -138,7 +142,7 @@ export function mapOpenCodeGoModel(
       provider: (options.provider as "opencode-go" | undefined) ?? "opencode-go",
       model: id,
       displayName: featured.displayName,
-      capabilities: featured.capabilities,
+      capabilities: { ...featured.capabilities, structuredOutput: discoveryStructuredOutput(entry, id, featured.route) },
       limits: featured.limits,
       cost: featured.cost,
       compat: { route: featured.route, preserveThinking: true, ...featured.compat },
@@ -156,12 +160,44 @@ export function mapOpenCodeGoModel(
       reasoning: true,
       tools: true,
       streaming: true,
-      structuredOutput: route === "openai" ? "json_schema" : undefined,
+      structuredOutput: discoveryStructuredOutput(entry, id, route),
     },
     limits: meta.limits,
     cost: meta.cost,
     compat: { route, preserveThinking: true },
   });
+}
+
+/**
+ * Models verified against the live gateway to accept JSON Schema `response_format`.
+ * Route alone never implies support — unverified OpenAI-route models (e.g.
+ * `deepseek-v4-pro`, HTTP 400 upstream) must fall back to artifact-loop parsing.
+ * Extend only with per-model verification evidence.
+ */
+const VERIFIED_JSON_SCHEMA_MODELS: ReadonlySet<string> = new Set(["mimo-v2.5", "mimo-v2.5-pro"]);
+
+function defaultStructuredOutput(modelId: string, route: OpenCodeGoRoute): "json_schema" | undefined {
+  return route === "openai" && VERIFIED_JSON_SCHEMA_MODELS.has(modelId) ? "json_schema" : undefined;
+}
+
+/**
+ * Discovery-driven structured-output mapping. When the `/models` entry carries
+ * `capabilities.structured_output`, the gateway is authoritative:
+ * `"json_schema"`/`true` → verified support, `false`/other → explicitly absent
+ * (overrides the static verified set). Sparse entries (today's payload) fall
+ * back to the live-verified static set.
+ */
+function discoveryStructuredOutput(
+  entry: OpenCodeGoModelEntry,
+  modelId: string,
+  route: OpenCodeGoRoute,
+): "json_schema" | undefined {
+  if (entry.capabilities && "structured_output" in entry.capabilities) {
+    return entry.capabilities.structured_output === "json_schema" || entry.capabilities.structured_output === true
+      ? "json_schema"
+      : undefined;
+  }
+  return defaultStructuredOutput(modelId, route);
 }
 
 interface FeaturedMeta {

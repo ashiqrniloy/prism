@@ -70,7 +70,7 @@ Unsupported block placements or unclaimed images fail before fetch.
 | --- | --- | --- |
 | Base URL | `https://api.kimi.com/coding` | `https://api.moonshot.ai/v1` (or `.cn`) |
 | Wire API | Anthropic `/messages` | OpenAI `/chat/completions` |
-| Featured ids | `kimi-for-coding`, `kimi-for-coding-highspeed`, `k3` | `kimi-k2.7-code`, `kimi-k3` (+ discovery) |
+| Featured ids | `kimi-for-coding`, `kimi-for-coding-highspeed`, `k3` | `kimi-k2.7-code`, `kimi-k2.7-code-highspeed`, `kimi-k2.6`, `kimi-k2.5`, `kimi-k3` (+ discovery) |
 | Discovery | No public list API — curated featured aliases | Official `GET /v1/models` via `listKimiModels()` |
 | Cache | Implicit by default; opt-in Anthropic `cache_control` | Implicit only — never emits Anthropic `cache_control` |
 | Thinking | Block replay + body `thinking` / `reasoning_effort` | `reasoning_content` replay + body `thinking` / `reasoning_effort` |
@@ -86,12 +86,26 @@ Official fields (Open Platform docs; Coding docs for `k3` effort mapping):
 
 | Model family | Official control | Prism `compat` |
 | --- | --- | --- |
-| K3 / Coding `k3` | top-level `reasoning_effort` (`max` on Open Platform; Coding also `low`/`high`) | `compat.reasoning_effort` — use Task 4 family `reasoning_effort` |
+| K3 / Coding `k3` | top-level `reasoning_effort`: `"low"`/`"high"`/`"max"` (Open Platform default `"max"`; Kimi Code default `"high"`) | `compat.reasoning_effort` — use Task 4 family `reasoning_effort` |
 | K2.7-code / Coding | thinking always on; Preserved Thinking always on | omit `thinking` by default; `preserveThinking: true` for replay; do not send `disabled` |
 | K2.6 / K2.5 | `thinking.type` enabled/disabled; K2.6 optional `keep: "all"` | `compat.thinking` — Task 4 family `thinking_type` |
 
 Per-turn `ProviderRequestOptions.compat` wins over `ModelConfig.compat`. Helpers:
 `kimiThinking`, `kimiReasoningEffort`, `kimiPreserveThinking`.
+`stripKimiThinkingCompat` removes provider-owned routing/serialization keys
+(`route`, `preserveThinking`, `preserve_thinking`, thinking/effort keys) before
+the opaque compat spread, so they never leak into wire bodies.
+
+Featured context windows follow the official docs exactly (`262_144` for the
+256K-class models, `1_048_576` for K3). Both stream parsers emit `done` only on
+protocol completion evidence — Coding route: `message_stop` with all `tool_use`
+blocks closed; Moonshot route: `[DONE]` plus a terminal `finish_reason` with no
+dangling tool calls. Truncated streams terminate with an `error` event instead.
+
+The Coding route authenticates with provider-owned `authorization: Bearer`,
+`x-api-key`, and `anthropic-version: 2023-06-01` headers (official third-party
+setup uses `ANTHROPIC_API_KEY` semantics); caller-supplied headers cannot
+override them.
 
 ## Request/response example
 

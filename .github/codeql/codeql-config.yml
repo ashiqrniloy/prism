@@ -1,0 +1,7 @@
+name: prism-codeql
+paths-ignore:
+  - dist
+  - "packages/*/dist"
+  - node_modules
+  - release-artifacts
+  - security-artifacts

@@ -1,8 +1,33 @@
 # Performance limits
 
+Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate trace data; one model-judge attempt with 30-second/16-KiB bounds; 8 comparison candidates, 1-MiB candidate results, 10,000 dataset items, and 4-MiB serialized reports. Hard caps are exported by `@arnilo/prism-evals`; overflow fails rather than truncating grading evidence.
+
 ## What it does
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
+
+## Release 0.0.8 reproducible synthetic evidence
+
+Run `node scripts/benchmark-0.0.8.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000. Script uses no network/credentials and emits environment, throughput, p50/p95 latency, heap, synthetic disk bytes, zero external cost, and backpressure signals. These are evidence fields, not CI timing gates.
+
+2026-07-20 baseline: Node v24.18.0, Linux x64, 1,000 operations/scenario.
+
+| Scenario | ops/s | p95 ms | heap bytes | disk bytes | cost USD | backpressure |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| provider envelope | 675,430 | 0.0026 | 10,974,296 | 0 | 0 | 0 |
+| actual `createBatchedRunLedger` enqueue/flush | 514,493 | 0.0023 | 12,601,840 | 0 | 0 | 7 |
+| one-entry snapshot-cache hit | 4,582,216 | 0.0001 | 10,072,656 | 0 | 0 | 0 |
+| actual in-memory OTel agent span start/end | 295,372 | 0.0049 | 10,357,048 | 0 | 0 | 0 |
+| PostgreSQL-ledger-shaped file workload | 494,403 | 0.0009 | 11,584,760 | 54,890 | 0 | 7 |
+| MCP envelope | 1,243,254 | 0.0008 | 12,915,288 | 0 | 0 | 0 |
+| A2A envelope | 961,492 | 0.0007 | 10,425,024 | 0 | 0 | 0 |
+| web-tools envelope | 1,388,694 | 0.0007 | 11,734,208 | 0 | 0 | 0 |
+
+Ledger and OTel rows exercise shipped implementations; cache row isolates the runtime's one-entry lookup shape. Provider/PostgreSQL/MCP/A2A/web rows remain local serialization/file envelopes and prove repeatability/schema/backpressure instrumentation only—not external latency, throughput, or billing. Real PostgreSQL correctness runs in protected CI; provider/MCP/A2A/web timings and costs remain explicit protected live-canary/release-host evidence because this release-candidate host has no credentials/endpoints. No live claim is inferred from skipped gates.
+
+Security automation is isolated from `npm test`: CodeQL/supply-chain jobs have 10-minute backstops, dependency review and live workflow have 5-minute job backstops, live probe step has 3 minutes, SBOM is capped at 16 MiB/10,000 packages, packed release/security tarballs at 128 MiB aggregate, secret scan at 100,000 files/16 MiB each, and retained security/canary reports expire after 7 days. Live canaries issue four probes plus at most one MCP cleanup, cap responses at 64 KiB and requests at 15 seconds (30 seconds hard), and never enter `sdk:ready`.
+
+Web tools default/hard ceilings are query 4/16 KiB, results 10/20, URLs 5/20, request 256 KiB/1 MiB, response/aggregate 2/16 MiB, Markdown 1/8 MiB, extraction 256 KiB/1 MiB, schema 64/256 KiB, concurrency 4/16, retries 2/4, polling 20/100, and wall time 60 seconds/30 minutes. Bounds charge before request, retention, retry, or polling; overflow fails rather than truncating citation/extraction evidence.
 
 Current surfaces:
 

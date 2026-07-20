@@ -58,7 +58,8 @@ import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } fro
 import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
 import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
-import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "./session-stores.js";
+import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext, type SessionContextSnapshot } from "./session-stores.js";
+import { isFlushableRunLedger } from "./run-ledger.js";
 import { createToolRegistry, dispatchToolCall } from "./tools.js";
 import { RunLimitError, RunLimitTracker, resolveRunLimits } from "./run-limits.js";
 import { agentFingerprint, initialAgentRunState, loadAgentRunState, publicState, saveAgentRunState, validateRunStateOptions, type StoredAgentRunState } from "./agent-run-state.js";
@@ -161,6 +162,8 @@ class RuntimeAgentSession implements AgentSession {
   private activeLoopTurn = 1;
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
+  private snapshotGeneration = 0;
+  private snapshotCache?: { readonly leafId?: string; readonly generation: number; readonly expiresAt: number; readonly value: SessionContextSnapshot };
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -242,6 +245,7 @@ class RuntimeAgentSession implements AgentSession {
     this.activeIdempotencyKey = options.idempotencyKey ?? this.agent.config.idempotencyKey;
     this.activeGuardrails = mergeGuardrails(this.agent.config.guardrails, options.guardrails);
     this.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
+    if (resumed) this.invalidateSnapshot();
 
     const model = options.model ?? this.agent.config.model;
     const startedAt = new Date().toISOString();
@@ -519,6 +523,7 @@ class RuntimeAgentSession implements AgentSession {
             ...this.activeOwnership,
           };
           await this.activeLedger.appendRun(redactRunLedgerRecord(finishRecord, this.activeRedactor));
+          if (isFlushableRunLedger(this.activeLedger) && this.activeLedger.durability === "flush_on_terminal") await this.activeLedger.flush();
         }
       } finally {
         this.activeLedger = undefined;
@@ -665,6 +670,7 @@ class RuntimeAgentSession implements AgentSession {
 
   async checkout(leafId?: string): Promise<void> {
     this.currentLeafId = leafId;
+    this.invalidateSnapshot();
     await this.rebuildHistory();
   }
 
@@ -958,6 +964,12 @@ class RuntimeAgentSession implements AgentSession {
       idempotencyKey: this.activeIdempotencyKey,
     });
     this.currentLeafId = redacted.id;
+    this.invalidateSnapshot();
+  }
+
+  private invalidateSnapshot(): void {
+    this.snapshotGeneration += 1;
+    this.snapshotCache = undefined;
   }
 
   private redact<T>(value: T): T {
@@ -972,11 +984,16 @@ class RuntimeAgentSession implements AgentSession {
     this.history = (await this.snapshot()).messages.slice();
   }
 
-  private async snapshot() {
+  private async snapshot(): Promise<SessionContextSnapshot> {
+    const now = performance.now();
+    const cached = this.snapshotCache;
+    if (cached && cached.leafId === this.currentLeafId && cached.generation === this.snapshotGeneration && cached.expiresAt > now) return cached.value;
     const reader = this.branchReader();
-    return reader
-      ? rebuildSessionContext(reader, { sessionId: this.id, leafId: this.currentLeafId })
+    const value = reader
+      ? await rebuildSessionContext(reader, { sessionId: this.id, leafId: this.currentLeafId })
       : rebuildSessionContext(await this.store.list(this.id), { leafId: this.currentLeafId });
+    this.snapshotCache = { leafId: this.currentLeafId, generation: this.snapshotGeneration, expiresAt: now + 1_000, value };
+    return value;
   }
 }
 

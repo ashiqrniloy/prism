@@ -290,6 +290,7 @@ Use workflows for known, durable, replayable graphs. Use optional supervisor del
 - [Agent/session runtime](agent-session-runtime.md): `AgentSession.run()`/`stream()`, abort, subscribe
 - [Guardrails](guardrails.md): `RunWorkflowOptions.guardrails` routes tool nodes through core dispatch before policy and side effects.
 - [Supervisor delegation](supervisors.md): bounded dynamic child selection.
+- [A2A interoperability](a2a.md): hosts may adapt existing exact-owner workflow status/list/cancel/checkpoint/event surfaces to `A2ATaskLifecycle`; A2A package adds no workflow worker, queue, or schema.
 - [Agent events](agent-events.md): core `AgentEvent` wrapped by `agent_event`
 - [Session stores and branching](session-stores-and-branching.md): session `leafId` reuse on resume
 - [CLI/RPC](cli-rpc.md): host control seam; wire `createWorkflowCommands()` into `runRpcServer`

@@ -1,5 +1,5 @@
 import type { CacheControlledMessage, ContentBlock, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
+import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
 import {
   bytesToBase64,
   isPdfMediaType,
@@ -11,7 +11,7 @@ import { applyOpencodeAnthropicCacheControl } from "./cache.js";
 import { openCodeGoPreserveThinking, stripOpenCodeGoOwnedCompat } from "./thinking.js";
 import { parseJsonObjectArguments, readSseData } from "@arnilo/prism/providers/transport";
 
-interface PartialBlock { id?: string; name?: string; argumentsText: string }
+interface PartialBlock { id?: string; name?: string; argumentsText: string; complete?: boolean }
 
 export async function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject> {
   assertStructuredOutputRequestSupported(request.model, request.options);
@@ -36,11 +36,17 @@ export async function anthropicMessagesBody(request: ProviderRequest): Promise<J
 export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const blocks = new Map<number, PartialBlock>();
   let usage: Usage | undefined;
+  let sawMessageStop = false;
   for await (const data of readSseData(body, { signal })) {
     if (data === "[DONE]") break;
     const event = JSON.parse(data) as AnthropicEvent;
+    if (event.type === "message_stop") sawMessageStop = true;
     if (event.type === "content_block_start" && event.content_block?.type === "tool_use") {
       blocks.set(event.index ?? 0, { id: event.content_block.id, name: event.content_block.name, argumentsText: "" });
+    }
+    if (event.type === "content_block_stop") {
+      const current = blocks.get(event.index ?? 0);
+      if (current) current.complete = true;
     }
     if (event.type === "content_block_delta") {
       const delta = event.delta;
@@ -57,14 +63,22 @@ export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>,
     usage = toUsage(event.message?.usage ?? event.usage) ?? usage;
     if (event.type === "message_delta" && usage) yield providerUsage(usage);
   }
+  const danglingBlock = [...blocks.values()].some((call) => !call.id || !call.name || !call.complete);
+  if (!sawMessageStop || danglingBlock) {
+    // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
+    yield providerError(new Error(
+      `OpenCode Go messages stream ended without completion evidence `
+      + `(message_stop: ${sawMessageStop ? "received" : "missing"}, `
+      + `content blocks complete: ${danglingBlock ? "no" : "yes"})`,
+    ));
+    return;
+  }
   for (const call of blocks.values()) {
-    if (call.id && call.name) {
-      yield providerToolCall(toolCallContent(
-        call.id,
-        call.name,
-        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-      ));
-    }
+    yield providerToolCall(toolCallContent(
+      call.id!,
+      call.name!,
+      parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
+    ));
   }
   yield providerDone(usage);
 }

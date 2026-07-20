@@ -1,17 +1,16 @@
 import type { AgentRunResult, ContentBlock, Message } from "@arnilo/prism";
 import { createA2AAgentCard } from "./a2a-card.js";
+import { resolveA2ALimits, type ResolvedA2ALimits } from "./a2a-parts.js";
 import { A2AError } from "./errors.js";
-import { A2A_PROTOCOL_VERSION, type A2AAgentCard, type A2AClient, type A2AClientOptions, type A2AJsonRpcResponse, type A2ALimits, type A2ATask } from "./a2a-types.js";
+import { A2A_PROTOCOL_VERSION, type A2AAgentCard, type A2AClient, type A2AClientOptions, type A2AJsonRpcResponse, type A2ATask } from "./a2a-types.js";
 
-const DEFAULTS = { maxRequestBytes: 64 * 1024, maxResponseBytes: 1024 * 1024, maxEventBytes: 64 * 1024, maxStreamBytes: 10 * 1024 * 1024, maxStreamEvents: 10_000, maxConcurrentRequests: 16, timeoutMs: 120_000, maxCardBytes: 64 * 1024 } as const;
-const HARD = { maxRequestBytes: 1024 * 1024, maxResponseBytes: 8 * 1024 * 1024, maxEventBytes: 1024 * 1024, maxStreamBytes: 64 * 1024 * 1024, maxStreamEvents: 100_000, maxConcurrentRequests: 256, timeoutMs: 30 * 60_000, maxCardBytes: 1024 * 1024 } as const;
-type ClientLimits = { readonly [K in keyof typeof DEFAULTS]: number };
+type ClientLimits = ResolvedA2ALimits;
 
 export function createA2AClient(options: A2AClientOptions): A2AClient {
   const endpoint = requireAllowedHttpsUrl(options.endpoint, options.allowedOrigins);
   const cardUrl = requireAllowedHttpsUrl(options.cardUrl ?? `${endpoint.origin}/.well-known/agent-card.json`, options.allowedOrigins);
   const fetcher = options.fetch ?? globalThis.fetch;
-  const limits = clientLimits(options.limits);
+  const limits = resolveA2ALimits(options.limits);
   let active = 0;
   let requestId = 0;
 
@@ -42,7 +41,7 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
       const body = JSON.stringify(requestBody(id, "SendMessage", input));
       if (new TextEncoder().encode(body).byteLength > limits.maxRequestBytes) throw new A2AError("A2A request exceeds max bytes", 413, "ERR_PRISM_A2A_REQUEST_LIMIT");
       const authHeaders = await abortable(Promise.resolve(options.authorize?.({ endpoint: endpoint.href, signal }) ?? {}), signal);
-      const response = await fetcher(endpoint, { method: "POST", signal, redirect: "error", headers: { ...headersObject(authHeaders), "content-type": "application/a2a+json", accept: "application/a2a+json" }, body });
+      const response = await fetcher(endpoint, { method: "POST", signal, redirect: "error", headers: { ...headersObject(authHeaders), "content-type": "application/a2a+json", accept: "application/a2a+json", "a2a-version": "1.0" }, body });
       if (!response.ok) throw new A2AError("A2A remote request failed", response.status, "ERR_PRISM_A2A_REMOTE");
       const rpc = parseRpcResponse(await readBoundedJson(response, limits.maxResponseBytes, signal), id);
       if (rpc.error) throw new A2AError(safeRemote(rpc.error.message, options), 502, "ERR_PRISM_A2A_REMOTE");
@@ -62,7 +61,7 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
       const body = JSON.stringify(requestBody(id, "SendStreamingMessage", input));
       if (new TextEncoder().encode(body).byteLength > limits.maxRequestBytes) throw new A2AError("A2A request exceeds max bytes", 413, "ERR_PRISM_A2A_REQUEST_LIMIT");
       const authHeaders = await abortable(Promise.resolve(options.authorize?.({ endpoint: endpoint.href, signal: owned.signal }) ?? {}), owned.signal);
-      const response = await fetcher(endpoint, { method: "POST", signal: owned.signal, redirect: "error", headers: { ...headersObject(authHeaders), "content-type": "application/a2a+json", accept: "text/event-stream" }, body });
+      const response = await fetcher(endpoint, { method: "POST", signal: owned.signal, redirect: "error", headers: { ...headersObject(authHeaders), "content-type": "application/a2a+json", accept: "text/event-stream", "a2a-version": "1.0" }, body });
       if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith("text/event-stream")) throw new A2AError("A2A stream request failed", response.status, "ERR_PRISM_A2A_REMOTE");
       reader = response.body.getReader();
       let terminal = false;
@@ -74,9 +73,10 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
         const rpc = parseRpcResponse(parsed, id);
         if (rpc.error) throw new A2AError(safeRemote(rpc.error.message, options), 502, "ERR_PRISM_A2A_REMOTE");
         const task = parseTaskResult(rpc.result);
-        if (task.status.state === "TASK_STATE_FAILED" || task.status.state === "TASK_STATE_CANCELED") throw new A2AError("Remote A2A stream task failed", 502, "ERR_PRISM_A2A_REMOTE");
+        if (task.status.state === "TASK_STATE_FAILED" || task.status.state === "TASK_STATE_CANCELED" || task.status.state === "TASK_STATE_REJECTED") throw new A2AError("Remote A2A stream task failed", 502, "ERR_PRISM_A2A_REMOTE");
+        if (task.status.state === "TASK_STATE_INPUT_REQUIRED" || task.status.state === "TASK_STATE_AUTH_REQUIRED") throw new A2AError(`Remote A2A task interrupted: ${task.status.state}`, 409, "ERR_PRISM_A2A_INTERRUPTED");
         if (task.status.state === "TASK_STATE_COMPLETED") terminal = true;
-        for (const artifact of task.artifacts ?? []) for (const part of artifact.parts) yield options.redactor?.redact(part.text) ?? part.text;
+        for (const artifact of task.artifacts ?? []) for (const part of artifact.parts) if (typeof part.text === "string") yield options.redactor?.redact(part.text) ?? part.text;
       }
       if (!terminal) throw new A2AError("A2A stream ended before terminal task state", 502, "ERR_PRISM_A2A_REMOTE");
     } finally {
@@ -95,7 +95,53 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
     return card;
   }
 
-  return { getCard, send, stream };
+  async function invoke(method: string, params: Readonly<Record<string, unknown>>, signal?: AbortSignal): Promise<unknown> {
+    return withRequest(signal, async (owned) => {
+      await getCardWithin(owned);
+      const id = ++requestId;
+      const body = JSON.stringify({ jsonrpc: "2.0", id, method, params });
+      if (Buffer.byteLength(body) > limits.maxRequestBytes) throw new A2AError("A2A request exceeds max bytes", 413, "ERR_PRISM_A2A_REQUEST_LIMIT");
+      const authHeaders = await abortable(Promise.resolve(options.authorize?.({ endpoint: endpoint.href, signal: owned }) ?? {}), owned);
+      const response = await fetcher(endpoint, { method: "POST", signal: owned, redirect: "error", headers: { ...headersObject(authHeaders), "content-type": "application/a2a+json", accept: "application/a2a+json", "a2a-version": "1.0" }, body });
+      if (!response.ok) throw new A2AError("A2A remote request failed", response.status, "ERR_PRISM_A2A_REMOTE");
+      const rpc = parseRpcResponse(await readBoundedJson(response, limits.maxResponseBytes, owned), id);
+      if (rpc.error) throw remoteProtocolError(rpc.error.code, rpc.error.message, options);
+      return rpc.result;
+    });
+  }
+
+  async function sendMessage(message: import("./a2a-types.js").A2AMessage, call: { readonly signal?: AbortSignal; readonly returnImmediately?: boolean } = {}): Promise<A2ATask> {
+    return parseTaskResult(await invoke("SendMessage", { message, configuration: { returnImmediately: call.returnImmediately ?? false } }, call.signal));
+  }
+  async function getTask(id: string, call: { readonly signal?: AbortSignal; readonly historyLength?: number } = {}): Promise<A2ATask> { return parseTaskResult(await invoke("GetTask", { id, historyLength: call.historyLength ?? 0 }, call.signal)); }
+  async function listTasks(call: { readonly signal?: AbortSignal; readonly pageSize?: number; readonly pageToken?: string; readonly contextId?: string } = {}): Promise<import("./a2a-types.js").A2ATaskPage> {
+    const value = await invoke("ListTasks", { pageSize: call.pageSize ?? 50, pageToken: call.pageToken, contextId: call.contextId }, call.signal);
+    if (!isRecord(value) || !Array.isArray(value.tasks) || value.tasks.length > limits.maxPageSize) throw new A2AError("Malformed A2A task page", 502, "ERR_PRISM_A2A_REMOTE");
+    return { tasks: value.tasks.map((task) => parseTaskResult(task)), nextPageToken: typeof value.nextPageToken === "string" ? value.nextPageToken : undefined, totalSize: typeof value.totalSize === "number" ? value.totalSize : undefined };
+  }
+  async function cancelTask(id: string, call: { readonly signal?: AbortSignal } = {}): Promise<A2ATask> { return parseTaskResult(await invoke("CancelTask", { id }, call.signal)); }
+  async function* subscribeToTask(id: string, call: { readonly signal?: AbortSignal; readonly afterEventId?: string } = {}): AsyncGenerator<import("./a2a-types.js").A2ATaskEvent> {
+    if (active >= limits.maxConcurrentRequests) throw new A2AError("A2A client concurrency exceeded", 429, "ERR_PRISM_A2A_CONCURRENCY");
+    active += 1; const owned = ownedSignal(call.signal, limits.timeoutMs); let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    try {
+      await getCardWithin(owned.signal); const request = ++requestId;
+      const authHeaders = await abortable(Promise.resolve(options.authorize?.({ endpoint: endpoint.href, signal: owned.signal }) ?? {}), owned.signal);
+      const response = await fetcher(endpoint, { method: "POST", signal: owned.signal, redirect: "error", headers: { ...headersObject(authHeaders), "content-type": "application/a2a+json", accept: "text/event-stream", "a2a-version": "1.0" }, body: JSON.stringify({ jsonrpc: "2.0", id: request, method: "SubscribeToTask", params: { id, afterEventId: call.afterEventId } }) });
+      if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith("text/event-stream")) throw new A2AError("A2A subscribe request failed", response.status, "ERR_PRISM_A2A_REMOTE");
+      reader = response.body.getReader(); let previous = "", count = 0;
+      for await (const data of readA2AStreamData(reader, limits, owned.signal)) {
+        const rpc = parseRpcResponse(JSON.parse(data), request); if (rpc.error) throw remoteProtocolError(rpc.error.code, rpc.error.message, options);
+        const event = parseTaskEvent(rpc.result); if (event.eventId === previous) continue; previous = event.eventId; if (++count > limits.maxReplayEvents) throw new A2AError("A2A replay exceeds event limit", 507, "ERR_PRISM_A2A_STREAM_LIMIT"); yield event;
+      }
+    } finally { await reader?.cancel().catch(() => undefined); owned.dispose(); active -= 1; }
+  }
+
+  async function createPushConfig(config: import("./a2a-types.js").A2APushConfig, call: { readonly signal?: AbortSignal } = {}) { return parsePushConfig(await invoke("CreateTaskPushNotificationConfig", { ...config }, call.signal)); }
+  async function getPushConfig(taskId: string, id: string, call: { readonly signal?: AbortSignal } = {}) { return parsePushConfig(await invoke("GetTaskPushNotificationConfig", { taskId, id }, call.signal)); }
+  async function listPushConfigs(taskId: string, call: { readonly signal?: AbortSignal; readonly pageSize?: number; readonly pageToken?: string } = {}) { const value = await invoke("ListTaskPushNotificationConfigs", { taskId, pageSize: call.pageSize, pageToken: call.pageToken }, call.signal); if (!isRecord(value) || !Array.isArray(value.configs)) throw new A2AError("Malformed A2A push config page", 502, "ERR_PRISM_A2A_REMOTE"); return { configs: value.configs.map(parsePushConfig), nextPageToken: typeof value.nextPageToken === "string" ? value.nextPageToken : undefined }; }
+  async function deletePushConfig(taskId: string, id: string, call: { readonly signal?: AbortSignal } = {}) { await invoke("DeleteTaskPushNotificationConfig", { taskId, id }, call.signal); }
+
+  return { getCard, send, sendMessage, stream, getTask, listTasks, cancelTask, subscribeToTask, createPushConfig, getPushConfig, listPushConfigs, deletePushConfig };
 }
 
 async function* readA2AStreamData(
@@ -191,7 +237,8 @@ function requestBody(id: number, method: "SendMessage" | "SendStreamingMessage",
 
 function taskResult(task: A2ATask, options: A2AClientOptions): AgentRunResult {
   if (task.status.state === "TASK_STATE_SUBMITTED" || task.status.state === "TASK_STATE_WORKING") throw new A2AError("A2A response task is not terminal", 502, "ERR_PRISM_A2A_REMOTE");
-  const text = (task.artifacts ?? []).flatMap((artifact) => artifact.parts.map((part) => part.text)).join("");
+  if (task.status.state === "TASK_STATE_INPUT_REQUIRED" || task.status.state === "TASK_STATE_AUTH_REQUIRED") throw new A2AError(`Remote A2A task interrupted: ${task.status.state}`, 409, "ERR_PRISM_A2A_INTERRUPTED");
+  const text = (task.artifacts ?? []).flatMap((artifact) => artifact.parts.flatMap((part) => "text" in part ? [part.text] : [])).join("");
   const safeText = options.redactor?.redact(text) ?? text;
   const status = task.status.state === "TASK_STATE_COMPLETED" ? "succeeded" : task.status.state === "TASK_STATE_CANCELED" ? "aborted" : "failed";
   const content: readonly ContentBlock[] = safeText ? [{ type: "text", text: safeText }] : [];
@@ -200,25 +247,45 @@ function taskResult(task: A2ATask, options: A2AClientOptions): AgentRunResult {
 }
 
 function parseTaskResult(value: unknown): A2ATask {
-  if (!isRecord(value) || !isRecord(value.task)) throw new A2AError("Malformed A2A task result", 502, "ERR_PRISM_A2A_REMOTE");
-  const task = value.task;
+  if (!isRecord(value)) throw new A2AError("Malformed A2A task result", 502, "ERR_PRISM_A2A_REMOTE");
+  const task = isRecord(value.task) ? value.task : value;
   if (typeof task.id !== "string" || typeof task.contextId !== "string" || !isRecord(task.status) || typeof task.status.state !== "string") throw new A2AError("Malformed A2A task", 502, "ERR_PRISM_A2A_REMOTE");
-  const states = new Set(["TASK_STATE_SUBMITTED", "TASK_STATE_WORKING", "TASK_STATE_COMPLETED", "TASK_STATE_FAILED", "TASK_STATE_CANCELED"]);
+  const states = new Set(["TASK_STATE_SUBMITTED", "TASK_STATE_WORKING", "TASK_STATE_COMPLETED", "TASK_STATE_FAILED", "TASK_STATE_CANCELED", "TASK_STATE_INPUT_REQUIRED", "TASK_STATE_REJECTED", "TASK_STATE_AUTH_REQUIRED"]);
   if (!states.has(task.status.state)) throw new A2AError("Unknown A2A task state", 502, "ERR_PRISM_A2A_REMOTE");
   const artifacts = task.artifacts === undefined ? undefined : parseArtifacts(task.artifacts);
-  return { id: task.id, contextId: task.contextId, status: { state: task.status.state as A2ATask["status"]["state"], timestamp: typeof task.status.timestamp === "string" ? task.status.timestamp : new Date(0).toISOString() }, artifacts };
+  const history = task.history === undefined ? undefined : Array.isArray(task.history) ? task.history.map(parseRemoteMessage) : (() => { throw new A2AError("Malformed A2A task history", 502, "ERR_PRISM_A2A_REMOTE"); })();
+  return { id: task.id, contextId: task.contextId, status: { state: task.status.state as A2ATask["status"]["state"], timestamp: typeof task.status.timestamp === "string" ? task.status.timestamp : new Date(0).toISOString() }, artifacts, history };
 }
 
 function parseArtifacts(value: unknown): A2ATask["artifacts"] {
   if (!Array.isArray(value) || value.length > 32) throw new A2AError("Malformed A2A artifacts", 502, "ERR_PRISM_A2A_REMOTE");
   return value.map((artifact) => {
     if (!isRecord(artifact) || typeof artifact.artifactId !== "string" || !Array.isArray(artifact.parts) || artifact.parts.length > 32) throw new A2AError("Malformed A2A artifact", 502, "ERR_PRISM_A2A_REMOTE");
-    return { artifactId: artifact.artifactId, parts: artifact.parts.map((part) => {
-      if (!isRecord(part) || typeof part.text !== "string") throw new A2AError("Unsupported A2A artifact part", 502, "ERR_PRISM_A2A_REMOTE");
-      return { text: part.text };
-    }) };
+    return { artifactId: artifact.artifactId, parts: artifact.parts.map(parseRemotePart) };
   });
 }
+
+function parseRemotePart(value: unknown): import("./a2a-types.js").A2APart {
+  if (!isRecord(value)) throw new A2AError("Malformed A2A part", 502, "ERR_PRISM_A2A_REMOTE");
+  const keys = ["text", "raw", "url", "data"].filter((key) => Object.hasOwn(value, key));
+  if (keys.length !== 1) throw new A2AError("Malformed A2A part union", 502, "ERR_PRISM_A2A_REMOTE");
+  const base = { mediaType: typeof value.mediaType === "string" ? value.mediaType : undefined, filename: typeof value.filename === "string" ? value.filename : undefined };
+  if (keys[0] === "text" && typeof value.text === "string") return { ...base, text: value.text };
+  if (keys[0] === "raw" && typeof value.raw === "string" && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(value.raw)) return { ...base, raw: value.raw };
+  if (keys[0] === "url" && typeof value.url === "string") { const url = new URL(value.url); if (url.protocol !== "https:" || url.username || url.password || url.hash) throw new A2AError("Unsafe remote A2A URL part", 502, "ERR_PRISM_A2A_REMOTE"); return { ...base, url: url.href }; }
+  if (keys[0] === "data") return { ...base, data: structuredClone(value.data) };
+  throw new A2AError("Malformed A2A part", 502, "ERR_PRISM_A2A_REMOTE");
+}
+function parseRemoteMessage(value: unknown): import("./a2a-types.js").A2AMessage { if (!isRecord(value) || typeof value.messageId !== "string" || !Array.isArray(value.parts) || (value.role !== "ROLE_USER" && value.role !== "ROLE_AGENT" && value.role !== "user" && value.role !== "agent")) throw new A2AError("Malformed A2A message", 502, "ERR_PRISM_A2A_REMOTE"); return { role: value.role, messageId: value.messageId, parts: value.parts.map(parseRemotePart), contextId: typeof value.contextId === "string" ? value.contextId : undefined, taskId: typeof value.taskId === "string" ? value.taskId : undefined }; }
+function parseTaskEvent(value: unknown): import("./a2a-types.js").A2ATaskEvent {
+  if (!isRecord(value) || typeof value.eventId !== "string" || !value.eventId) throw new A2AError("Malformed A2A task event", 502, "ERR_PRISM_A2A_REMOTE");
+  if (isRecord(value.task)) return { eventId: value.eventId, task: parseTaskResult(value.task) };
+  if (isRecord(value.statusUpdate) && typeof value.statusUpdate.taskId === "string" && typeof value.statusUpdate.contextId === "string" && isRecord(value.statusUpdate.status)) { const parsed = parseTaskResult({ id: value.statusUpdate.taskId, contextId: value.statusUpdate.contextId, status: value.statusUpdate.status }); return { eventId: value.eventId, statusUpdate: { taskId: parsed.id, contextId: parsed.contextId, status: parsed.status } }; }
+  if (isRecord(value.artifactUpdate) && typeof value.artifactUpdate.taskId === "string" && typeof value.artifactUpdate.contextId === "string" && isRecord(value.artifactUpdate.artifact)) return { eventId: value.eventId, artifactUpdate: { taskId: value.artifactUpdate.taskId, contextId: value.artifactUpdate.contextId, artifact: parseArtifacts([value.artifactUpdate.artifact])![0]!, append: value.artifactUpdate.append === true, lastChunk: value.artifactUpdate.lastChunk === true } };
+  throw new A2AError("Malformed A2A task event", 502, "ERR_PRISM_A2A_REMOTE");
+}
+function parsePushConfig(value: unknown): import("./a2a-types.js").A2APushConfig { if (!isRecord(value) || typeof value.id !== "string" || typeof value.taskId !== "string" || typeof value.url !== "string") throw new A2AError("Malformed A2A push config", 502, "ERR_PRISM_A2A_REMOTE"); const url = new URL(value.url); if (url.protocol !== "https:" || url.username || url.password || url.hash) throw new A2AError("Unsafe A2A push URL", 502, "ERR_PRISM_A2A_REMOTE"); return { id: value.id, taskId: value.taskId, url: url.href, token: typeof value.token === "string" ? value.token : undefined, authentication: isRecord(value.authentication) && typeof value.authentication.scheme === "string" ? { scheme: value.authentication.scheme, credentials: typeof value.authentication.credentials === "string" ? value.authentication.credentials : undefined } : undefined }; }
+function remoteProtocolError(code: number, message: string, options: A2AClientOptions): A2AError { return new A2AError(safeRemote(message, options), code === -32001 ? 404 : code === -32004 ? 501 : 502, code === -32001 ? "ERR_PRISM_A2A_TASK_NOT_FOUND" : code === -32004 ? "ERR_PRISM_A2A_UNSUPPORTED" : "ERR_PRISM_A2A_REMOTE"); }
 
 function parseRpcResponse(value: unknown, id: string | number): A2AJsonRpcResponse {
   if (!isRecord(value) || value.jsonrpc !== "2.0" || value.id !== id) throw new A2AError("Malformed A2A JSON-RPC response", 502, "ERR_PRISM_A2A_REMOTE");
@@ -283,16 +350,6 @@ function requireAllowedHttpsUrl(value: string, origins: readonly string[]): URL 
   const url = new URL(value);
   if (url.protocol !== "https:" || !origins.includes(url.origin)) throw new A2AError("A2A endpoint origin is not allow-listed HTTPS", 403, "ERR_PRISM_A2A_ORIGIN");
   return url;
-}
-
-function clientLimits(input: A2ALimits = {}): ClientLimits {
-  const output: Record<string, number> = {};
-  for (const key of Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[]) {
-    const value = input[key] ?? DEFAULTS[key];
-    if (!Number.isSafeInteger(value) || value < 1 || value > HARD[key]) throw new A2AError(`${key} is invalid`, 400, "ERR_PRISM_A2A_CONFIG");
-    output[key] = value;
-  }
-  return output as ClientLimits;
 }
 
 function ownedSignal(parent: AbortSignal | undefined, timeoutMs: number) {

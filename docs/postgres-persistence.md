@@ -125,6 +125,7 @@ PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnil
 - **Identifier validation.** Configurable `schema` is validated and double-quoted; table names are fixed constants in adapter SQL.
 - **TLS and credentials.** Configure via `pg` `Pool` / `PoolConfig`; the adapter does not read environment variables unless the host passes them into `connectionString` or `poolConfig`.
 - **Redaction upstream.** Event and tool-call payloads may contain secrets; redact before ledger writes. The adapter does not scan or rewrite row contents.
+- **Optional batching.** PostgreSQL remains write-through by default. Hosts may wrap its ledger with core `createBatchedRunLedger()`; the bounded FIFO retains a failed head record and propagates flush failure instead of silently acknowledging it.
 - **Bounded pool.** Adapter-owned pools default to `max: 10`. Hosts with heavy concurrency should supply their own pool sizing.
 - **Indexed operations.** Append, parent validation, idempotency dedup, branch reads, and pagination use the indexes documented in [Database persistence](database-persistence.md); normal paths avoid sequential scans.
 - **Migration locking.** `pg_advisory_xact_lock` prevents concurrent migration races when multiple processes open the adapter at once. Startup catalog reads are bounded metadata queries, not application-row scans.

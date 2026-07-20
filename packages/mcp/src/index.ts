@@ -5,6 +5,10 @@ export {
   DEFAULT_MAX_RESULT_BYTES,
 } from "./constants.js";
 export {
+  DEFAULT_MAX_CAPABILITY_BYTES,
+  DEFAULT_MAX_CAPABILITY_ITEMS,
+  DEFAULT_MAX_CAPABILITY_PAGES,
+  DEFAULT_MAX_SESSIONS,
   DEFAULT_MAX_CURSOR_BYTES,
   DEFAULT_MAX_HTTP_RESPONSE_BYTES,
   DEFAULT_MAX_JSON_DEPTH,
@@ -16,6 +20,10 @@ export {
   DEFAULT_MAX_TOOLS,
   DEFAULT_MAX_TOTAL_TOOL_SCHEMA_BYTES,
   HARD_CALL_TIMEOUT_MS,
+  HARD_MAX_CAPABILITY_BYTES,
+  HARD_MAX_CAPABILITY_ITEMS,
+  HARD_MAX_CAPABILITY_PAGES,
+  HARD_MAX_SESSIONS,
   HARD_LIST_CACHE_TTL_MS,
   HARD_MAX_CURSOR_BYTES,
   HARD_MAX_HTTP_RESPONSE_BYTES,
@@ -31,6 +39,7 @@ export {
 } from "./limits.js";
 export type { McpClientLimitsInput, ResolvedMcpClientLimits } from "./limits.js";
 export { connectMcpTools, attachMcpToolBridge, listAllMcpTools, mapMcpToolsToDefinitions } from "./bridge.js";
+export { connectMcpCapabilities, attachMcpCapabilities, createMcpCapabilityClient } from "./capabilities.js";
 export {
   boundedMcpErrorMessage,
   estimateUtf8Bytes,
@@ -44,6 +53,12 @@ export { createPrismMcpServer, createPrismMcpWebHandler } from "./server.js";
 export type {
   AttachMcpToolBridgeOptions,
   ConnectMcpToolsOptions,
+  ConnectMcpCapabilitiesOptions,
+  McpCapabilityBridge,
+  McpRoot,
+  PrismMcpSamplingRequest,
+  PrismMcpElicitationRequest,
+  PrismMcpElicitationResult,
   McpStdioTransport,
   McpStreamableHttpTransport,
   McpToolBridge,
@@ -52,12 +67,16 @@ export type {
   PrismMcpAuthorization,
   PrismMcpAuthorizer,
   PrismMcpAgentRunExposure,
+  PrismMcpResource,
+  PrismMcpPrompt,
+  PrismMcpRequestIdentity,
   CreatePrismMcpServerOptions,
   CreatePrismMcpWebHandlerOptions,
   PrismMcpWebHandler,
 } from "./types.js";
 export {
   McpBridgeClosedError,
+  McpUnsupportedCapabilityError,
   McpBridgeError,
   McpToolNameCollisionError,
 } from "./types.js";

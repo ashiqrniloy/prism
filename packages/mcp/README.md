@@ -1,6 +1,6 @@
 # @arnilo/prism-mcp
 
-Optional MCP client bridge and explicit Prism MCP server exposure. Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler. Server `guardrails` apply shared core tool stages to registered tools; commands remain host callbacks.
+Bounded MCP client capabilities and explicit Prism MCP server exposure, pinned to official SDK 1.29.0. Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler. Server `guardrails` apply shared core tool stages to registered tools; commands remain host callbacks.
 
 ## Install
 
@@ -48,7 +48,7 @@ const bridge = await connectMcpTools({
 });
 ```
 
-Remote tool names are prefixed as `mcp:<serverId>:<toolName>` by default to avoid registry collisions.
+Remote tool names are prefixed as `mcp:<serverId>:<toolName>` by default to avoid registry collisions. Use `connectMcpCapabilities()` for separate bounded resources/prompts plus explicit host roots/sampling/elicitation callbacks; missing capability calls throw `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`.
 
 ## Server exposure
 
@@ -67,6 +67,8 @@ const server = createPrismMcpServer({
 });
 
 const handleMcp = await createPrismMcpWebHandler(server, { resolveAuthInfo });
+// Stateful mode additionally requires sessionIdGenerator, exact allowedOrigins,
+// and resolveIdentity to bind every POST/GET/DELETE/SSE request to one principal.
 ```
 
 Nothing is exposed by default. To expose a durable agent, pass `agentRuns: { support: { lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent }) } }`; this registers only `agent.support.status` and `agent.support.resume` under normal MCP authorization. Handler uses SDK Web-standard Streamable HTTP transport; no listener or auth provider starts. Request/result/concurrency/timeouts are bounded. Use `server.connect()` directly for SDK stdio/in-memory transports.
@@ -78,5 +80,6 @@ Nothing is exposed by default. To expose a durable agent, pass `agentRuns: { sup
 - Discovery defaults to 20 pages/500 tools, finite metadata/schema budgets, and atomic refresh. Raw SDK list/call requests avoid compiling untrusted output schemas.
 - Every result branch (`content`, `structuredContent`, legacy `toolResult`) shares `maxResultBytes`, JSON depth, and property bounds before `ToolResult` retention.
 - Register returned tools only after reviewing server trust; core `PermissionPolicy` and `ToolValidator` still apply at dispatch.
+- Server resources/prompts re-authorize every callback. Sampling/model choice, roots, credentials, and form/URL consent remain host-owned; Prism never opens elicitation URLs. Stateful sessions bind a non-secret principal ID and disclose mismatches only as 404.
 
 See [MCP client/server exposure](../../docs/mcp-tools.md) and [Tool execution primitives](../../docs/tool-execution-primitives.md).

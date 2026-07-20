@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+## [0.0.8] - 2026-07-20
+
+### Added
+
+- Added OpenTelemetry GenAI agent/provider/tool hierarchy, context propagation, delegation/guardrail spans, bounded trace references, and evaluation linkage.
+- Added bounded evaluation trace resolution, host model judges, deterministic pairwise reports, serialized artifacts, and CI threshold assertions.
+- Added MCP resources/prompts/roots/sampling/elicitation plus principal-bound Streamable HTTP sessions on pinned SDK 1.29.0, and full A2A 1.0 durable task/rich-part/reconnect/push interoperability.
+- Added immutable-revision CodeQL/dependency/SBOM/license/secret/attestation release gates, weekly dependency updates, and protected bounded provider/MCP/A2A/web live canaries.
+- Added optional `@arnilo/prism-web-tools` with bounded host-selected Brave/Exa search, Firecrawl Markdown/schema extraction, stable citations, late credentials, and explicit untrusted-content results.
+- Added optional `createBatchedRunLedger()` with bounded FIFO/backpressure, explicit durability/flush status, terminal acknowledgement, and documented buffered crash-loss semantics.
+- Added one-leaf, one-second runtime session snapshot caching with mutation/checkout/resume invalidation and reproducible network-free 0.0.8 performance evidence.
+- Versioned all 31 first-party manifests and exact internal ranges to 0.0.8; no tag or publication was created.
+
+### Fixed
+
+- `generateValidateReviseLoop` routes artifact parse failures through the revision budget (`metadata.reason: "parse_error"`, repairer receives `value: undefined`) instead of returning silently after one provider turn.
+- `@arnilo/prism-provider-opencode-go` Anthropic route sends provider-owned `x-api-key` and `anthropic-version: 2023-06-01` headers alongside Bearer, fixing HTTP 401 on MiniMax/Qwen models; `structuredOutput: "json_schema"` is no longer inferred from OpenAI routing alone (verified models only), fixing HTTP 400 on `deepseek-v4-pro`; both stream parsers require protocol completion evidence and fail truncated streams with a terminal `error` instead of a false `done`.
+- `@arnilo/prism-provider-kimi` aligns with official contracts: featured Coding `k3` defaults `reasoning_effort: "high"`, 256K-class context windows use the exact `262_144`, the featured Moonshot catalog adds `kimi-k2.7-code-highspeed`/`kimi-k2.6`/`kimi-k2.5`, routing keys (`route`, `preserve_thinking`) no longer leak into wire bodies, the Coding route sends provider-owned `x-api-key`/`anthropic-version` headers, and both stream parsers fail truncated streams instead of emitting `done`.
+
 ## [0.0.7] - 2026-07-19
 
 ### Added

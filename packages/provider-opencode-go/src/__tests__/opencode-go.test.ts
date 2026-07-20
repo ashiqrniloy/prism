@@ -7,6 +7,7 @@ import {
   createOpenCodeGoProvider,
   createOpenCodeGoProviderPackage,
   listOpenCodeGoModels,
+  defineOpenCodeGoModel,
   mapOpenCodeGoModel,
   openCodeGoModels,
   routeForOpenCodeGoModel,
@@ -335,6 +336,219 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     });
   });
 
+  it("opencode_go_structured_output_capability_requires_per_model_verification", async () => {
+    const featured = (id: string) => openCodeGoModels.find((m) => m.model === id)!;
+    // Verified models keep native JSON Schema structured output.
+    assert.equal(featured("mimo-v2.5").capabilities?.structuredOutput, "json_schema");
+    assert.equal(featured("mimo-v2.5-pro").capabilities?.structuredOutput, "json_schema");
+    // Unverified OpenAI-route models do not — route alone never implies support.
+    assert.equal(featured("deepseek-v4-pro").capabilities?.structuredOutput, undefined);
+    assert.equal(featured("deepseek-v4-flash").capabilities?.structuredOutput, undefined);
+    assert.equal(featured("deepseek-v4-pro").compat?.route, "openai");
+    // Live-discovered unknown OpenAI-route model defaults to undefined.
+    assert.equal(mapOpenCodeGoModel({ id: "future-model-1" }).capabilities?.structuredOutput, undefined);
+    // Caller-explicit capability still wins over the verified-set default.
+    const explicit = defineOpenCodeGoModel({
+      model: "deepseek-v4-pro",
+      capabilities: { structuredOutput: "json_schema" },
+      limits: { contextWindow: 1_000_000, maxOutputTokens: 384_000 },
+    });
+    assert.equal(explicit.capabilities?.structuredOutput, "json_schema");
+    assert.equal(explicit.compat?.route, "openai");
+  });
+
+  it("opencode_go_discovery_capability_fields_override_static_verified_set", () => {
+    // Gateway-authoritative positive: payload capability grants json_schema to
+    // an unverified featured model (forward-compatible with future payloads).
+    assert.equal(
+      mapOpenCodeGoModel({ id: "deepseek-v4-pro", capabilities: { structured_output: "json_schema" } })
+        .capabilities?.structuredOutput,
+      "json_schema",
+    );
+    assert.equal(
+      mapOpenCodeGoModel({ id: "future-model-1", capabilities: { structured_output: true } })
+        .capabilities?.structuredOutput,
+      "json_schema",
+    );
+    // Gateway-authoritative negative: explicit false overrides the static set.
+    assert.equal(
+      mapOpenCodeGoModel({ id: "mimo-v2.5", capabilities: { structured_output: false } })
+        .capabilities?.structuredOutput,
+      undefined,
+    );
+    // Sparse payload (today's shape) still falls back to the static verified set.
+    assert.equal(mapOpenCodeGoModel({ id: "mimo-v2.5" }).capabilities?.structuredOutput, "json_schema");
+    assert.equal(mapOpenCodeGoModel({ id: "deepseek-v4-pro" }).capabilities?.structuredOutput, undefined);
+  });
+
+  it("opencode_go_deepseek_rejects_structured_output_before_dispatch_and_omits_response_format", async () => {
+    const deepseek = openCodeGoModels.find((m) => m.model === "deepseek-v4-pro")!;
+    let fetchCalls = 0;
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => {
+      fetchCalls += 1;
+      return ok(sse([]));
+    }) as typeof fetch });
+    const events: ProviderEvent[] = [];
+    for await (const event of provider.generate({
+      ...baseRequest,
+      model: deepseek,
+      options: { ...baseRequest.options, structuredOutput: { name: "artifact", schema: { type: "object" } } },
+    })) events.push(event);
+    assert.equal(fetchCalls, 0);
+    assert.equal(events.at(-1)?.type, "error");
+    assert.match(String((events.at(-1) as { error?: { message?: string } }).error?.message), /structuredOutput/);
+
+    // Plain request serializes without response_format.
+    let body: any;
+    const plain = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider: plain, request: { ...baseRequest, model: deepseek } });
+    assert.equal(body.response_format, undefined);
+  });
+
+  it("opencode_go_verified_mimo_serializes_response_format", async () => {
+    const mimo = openCodeGoModels.find((m) => m.model === "mimo-v2.5")!;
+    let body: any;
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      body = JSON.parse(String(init?.body));
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: {
+      ...baseRequest,
+      model: mimo,
+      options: { ...baseRequest.options, structuredOutput: { name: "artifact", schema: { type: "object" } } },
+    } });
+    assert.equal(body.response_format?.type, "json_schema");
+    assert.equal(body.response_format?.json_schema?.name, "artifact");
+  });
+
+  it("opencode_go_openai_route_fails_truncated_stream_without_done_or_finish_reason", async () => {
+    // Bug report repro: 36 chunks, no finish_reason, no usage, connection closed.
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sseRaw([
+      ...Array.from({ length: 36 }, () => ({ choices: [{ delta: { content: "partial " } }] })),
+    ]))) as typeof fetch });
+    const events = await assertProviderStreamConforms({ provider, request: baseRequest });
+    assert.equal(events.at(-1)?.type, "error");
+    assert(!events.some((e) => e.type === "done"));
+    assert.match(String((events.at(-1) as { error?: { message?: string } }).error?.message), /completion evidence/);
+  });
+
+  it("opencode_go_openai_route_fails_done_marker_without_finish_reason", async () => {
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sse([
+      { choices: [{ delta: { content: "partial " } }] },
+    ]))) as typeof fetch });
+    const events = await assertProviderStreamConforms({ provider, request: baseRequest });
+    assert.equal(events.at(-1)?.type, "error");
+    assert(!events.some((e) => e.type === "done"));
+  });
+
+  it("opencode_go_openai_route_fails_dangling_tool_call_and_succeeds_when_complete", async () => {
+    const dangling = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sse([
+      { choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "lookup", arguments: "{" } }] } }] },
+      { choices: [{ finish_reason: "tool_calls", delta: {} }] },
+    ]))) as typeof fetch });
+    const danglingEvents = await assertProviderStreamConforms({ provider: dangling, request: baseRequest });
+    assert.equal(danglingEvents.at(-1)?.type, "error");
+
+    const complete = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sse([
+      { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: "{\"q\":" } }] } }] },
+      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: "\"x\"}" } }] } }] },
+      { choices: [{ finish_reason: "tool_calls", delta: {} }] },
+    ]))) as typeof fetch });
+    const completeEvents = await assertProviderStreamConforms({ provider: complete, request: baseRequest });
+    assert.equal(completeEvents.at(-1)?.type, "done");
+    assert(completeEvents.some((e) => e.type === "tool_call"));
+  });
+
+  it("opencode_go_anthropic_route_fails_stream_without_message_stop", async () => {
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sseRaw([
+      { type: "message_start", message: { usage: { input_tokens: 10, output_tokens: 1 } } },
+      { type: "content_block_start", index: 0, content_block: { type: "text" } },
+      { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "partial" } },
+    ]))) as typeof fetch });
+    const events = await assertProviderStreamConforms({ provider, request: { ...baseRequest, model: anthropicModel } });
+    assert.equal(events.at(-1)?.type, "error");
+    assert(!events.some((e) => e.type === "done"));
+    assert.match(String((events.at(-1) as { error?: { message?: string } }).error?.message), /message_stop/);
+  });
+
+  it("opencode_go_anthropic_route_fails_unclosed_tool_block_and_succeeds_when_complete", async () => {
+    const unclosed = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sseRaw([
+      { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "call_1", name: "lookup" } },
+      { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{\"q\":" } },
+      { type: "message_stop" },
+    ]))) as typeof fetch });
+    const unclosedEvents = await assertProviderStreamConforms({ provider: unclosed, request: { ...baseRequest, model: anthropicModel } });
+    assert.equal(unclosedEvents.at(-1)?.type, "error");
+
+    const complete = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async () => ok(sseRaw([
+      { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "call_1", name: "lookup" } },
+      { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{\"q\":\"x\"}" } },
+      { type: "content_block_stop", index: 0 },
+      { type: "message_delta", delta: { stop_reason: "tool_use" } },
+      { type: "message_stop" },
+    ]))) as typeof fetch });
+    const completeEvents = await assertProviderStreamConforms({ provider: complete, request: { ...baseRequest, model: anthropicModel } });
+    assert.equal(completeEvents.at(-1)?.type, "done");
+    assert(completeEvents.some((e) => e.type === "tool_call"));
+  });
+
+  it("opencode_go_anthropic_route_sends_provider_owned_anthropic_auth_headers", async () => {
+    let url = "";
+    let headers = new Headers();
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (input, init) => {
+      url = String(input);
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: { ...baseRequest, model: anthropicModel } });
+    assert.equal(url.endsWith("/messages"), true);
+    assert.equal(headers.get("authorization"), "Bearer fake-opencode-key");
+    assert.equal(headers.get("x-api-key"), "fake-opencode-key");
+    assert.equal(headers.get("anthropic-version"), "2023-06-01");
+  });
+
+  it("opencode_go_anthropic_route_caller_headers_cannot_override_anthropic_auth", async () => {
+    let headers = new Headers();
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: {
+      ...baseRequest,
+      model: anthropicModel,
+      options: {
+        ...baseRequest.options,
+        headers: { authorization: "Bearer attacker", "x-api-key": "attacker-key", "anthropic-version": "1999-01-01", "x-caller": "kept" },
+      },
+    } });
+    assertProviderOwnedHeadersWin(headers, {
+      owned: { authorization: "Bearer fake-opencode-key", "x-api-key": "fake-opencode-key", "anthropic-version": "2023-06-01" },
+      caller: { authorization: "Bearer attacker", "x-api-key": "attacker-key", "anthropic-version": "1999-01-01", "x-caller": "kept" },
+    });
+  });
+
+  it("opencode_go_openai_route_sends_no_anthropic_only_headers", async () => {
+    let headers = new Headers();
+    const provider = createOpenCodeGoProvider({ apiKey: "fake-opencode-key", fetch: (async (_url, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: baseRequest });
+    assert.equal(headers.get("x-api-key"), null);
+    assert.equal(headers.get("anthropic-version"), null);
+  });
+
+  it("opencode_go_anthropic_route_error_redacts_key_from_both_auth_headers", async () => {
+    const provider = createOpenCodeGoProvider({ apiKey: "canary-opencode-key", fetch: (async () => new Response("unauthorized canary-opencode-key", { status: 401 })) as typeof fetch });
+    const events: ProviderEvent[] = [];
+    for await (const event of provider.generate({ ...baseRequest, model: anthropicModel })) events.push(event);
+    assert.equal(events.at(-1)?.type, "error");
+    assert(!JSON.stringify(events).includes("canary-opencode-key"));
+  });
+
   it("opencode_go_openai_route_serializes_max_tokens_and_temperature", async () => {
     let url = "";
     let headers = new Headers();
@@ -487,5 +701,10 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
   const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
+  return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+}
+
+function sseRaw(events: readonly object[]): ReadableStream<Uint8Array> {
+  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
   return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
 }

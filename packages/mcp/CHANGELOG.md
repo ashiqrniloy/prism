@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+## [0.0.8] - 2026-07-20
+
+- Pinned official MCP SDK 1.29.0 and added bounded capability bridge for resources, prompts, roots, sampling, and form/URL elicitation with stable unsupported errors.
+- Added explicitly selected, per-call-authorized server resources/prompts and official list-change capability declarations.
+- Added opt-in Streamable HTTP sessions bound on every request to host-validated principal identity; stateless mode remains default and Last-Event-ID replay remains unsupported.
+
 ## [0.0.7] - 2026-07-19
 
 - `CreatePrismMcpServerOptions.guardrails` applies shared core tool-input/output guardrails to registered Prism tools; commands remain explicit host callbacks.

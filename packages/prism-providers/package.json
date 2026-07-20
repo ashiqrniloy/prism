@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Umbrella package: installs all first-party Prism provider adapters, including AI SDK interoperability.",
   "license": "MIT",
   "scripts": {
@@ -11,13 +11,13 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-provider-openai": "0.0.7",
-    "@arnilo/prism-provider-opencode-go": "0.0.7",
-    "@arnilo/prism-provider-openrouter": "0.0.7",
-    "@arnilo/prism-provider-zai": "0.0.7",
-    "@arnilo/prism-provider-kimi": "0.0.7",
-    "@arnilo/prism-provider-neuralwatt": "0.0.7",
-    "@arnilo/prism-provider-ai-sdk": "0.0.7"
+    "@arnilo/prism-provider-openai": "0.0.8",
+    "@arnilo/prism-provider-opencode-go": "0.0.8",
+    "@arnilo/prism-provider-openrouter": "0.0.8",
+    "@arnilo/prism-provider-zai": "0.0.8",
+    "@arnilo/prism-provider-kimi": "0.0.8",
+    "@arnilo/prism-provider-neuralwatt": "0.0.8",
+    "@arnilo/prism-provider-ai-sdk": "0.0.8"
   },
   "engines": {
     "node": ">=20"

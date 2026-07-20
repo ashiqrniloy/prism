@@ -60,17 +60,43 @@ test("provider_turn and tool spans record metadata without content", async () =>
   detach();
   const events = await reader;
 
-  const providerSpan = memory.spans.find((span) => span.name === "prism.provider.turn");
-  const toolSpan = memory.spans.find((span) => span.name === "prism.tool.execute");
-  assert.ok(providerSpan);
-  assert.equal(providerSpan.attributes["prism.provider_id"], "mock");
+  const runSpan = memory.spans.find((span) => span.name === "invoke_agent prism");
+  const providerSpan = memory.spans.find((span) => span.name === "chat demo");
+  const toolSpan = memory.spans.find((span) => span.name === "execute_tool echo");
+  assert.ok(runSpan && providerSpan && toolSpan);
+  assert.equal(providerSpan.attributes["gen_ai.provider.name"], "mock");
+  assert.equal(providerSpan.parentSpanId, runSpan.spanId);
+  assert.equal(providerSpan.traceId, runSpan.traceId);
   assert.equal(providerSpan.ended, true);
-  assert.ok(toolSpan);
-  assert.equal(toolSpan.attributes["prism.tool_name"], "echo");
+  assert.equal(toolSpan.attributes["gen_ai.tool.name"], "echo");
+  assert.equal(toolSpan.parentSpanId, runSpan.spanId);
   assert.equal(toolSpan.ended, true);
-  assert.ok(memory.metrics.some((metric) => metric.name === "prism.provider.turn.duration_ms"));
-  assert.ok(memory.metrics.some((metric) => metric.name === "prism.tool.execution.duration_ms"));
+  assert.ok(memory.metrics.some((metric) => metric.name === "gen_ai.client.operation.duration"));
+  assert.ok(memory.metrics.some((metric) => metric.name === "gen_ai.execute_tool.duration"));
   assert.equal(events.some((event) => event.type === "provider_turn_started"), true);
+});
+
+test("guardrail and delegation spans share run context without content", () => {
+  const memory = createInMemoryTelemetry();
+  const references: string[] = [];
+  const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, onTraceReference: ({ traceId }) => references.push(traceId) });
+  telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
+  telemetry.handleAgentEvent({
+    type: "guardrail_decision", sessionId: "s1", runId: "r1",
+    record: { guardrail: "secret-name", stage: "input", action: "allow", reason: "secret-reason", metadata: { secret: "canary" } },
+  });
+  telemetry.handleDelegation({ type: "started", runId: "r1", delegationId: "d1", childId: "research" });
+  telemetry.handleDelegation({ type: "finished", runId: "r1", delegationId: "d1", childId: "research" });
+  telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "s1", runId: "r1" });
+
+  const run = memory.spans.find((span) => span.name === "invoke_agent prism")!;
+  for (const span of memory.spans.filter((item) => item !== run)) {
+    assert.equal(span.parentSpanId, run.spanId);
+    assert.equal(span.traceId, run.traceId);
+  }
+  assert.equal(references[0], run.traceId);
+  assert.equal(telemetry.traceId("r1"), run.traceId);
+  assert.doesNotMatch(JSON.stringify(memory.spans), /secret-name|secret-reason|canary/);
 });
 
 test("provider error turn ends span with error status", () => {
@@ -91,9 +117,9 @@ test("provider error turn ends span with error status", () => {
     metadata: { providerId: "mock", model: { provider: "mock", model: "demo" }, attempt: 2, latencyMs: 12, httpStatus: 503 },
     error: { message: "upstream unavailable" },
   });
-  const span = memory.spans.find((item) => item.name === "prism.provider.turn");
+  const span = memory.spans.find((item) => item.name === "chat demo");
   assert.equal(span?.status?.code, "error");
-  assert.equal(span?.attributes["http.status_code"], 503);
+  assert.equal(span?.attributes["http.response.status_code"], 503);
   assert.ok(memory.metrics.some((metric) => metric.attributes.outcome === "error"));
 });
 
@@ -120,8 +146,8 @@ test("run errors and detach close outstanding spans exactly once", async () => {
   });
   telemetry.handleAgentEvent({ type: "error", sessionId: "s1", runId: "r1", error: { message: "aborted" } });
   telemetry.handleAgentEvent({ type: "error", sessionId: "s1", runId: "r1", error: { message: "aborted again" } });
-  assert.equal(ends.get("prism.agent.run"), 1);
-  assert.equal(ends.get("prism.provider.turn"), 1);
+  assert.equal(ends.get("invoke_agent prism"), 1);
+  assert.equal(ends.get("chat demo"), 1);
 
   async function* events(): AsyncIterableIterator<AgentEvent> {
     yield { type: "agent_started", sessionId: "s2", runId: "r2" };
@@ -130,7 +156,7 @@ test("run errors and detach close outstanding spans exactly once", async () => {
   const detach = telemetry.attachSession({ id: "s2", subscribe: events });
   await new Promise((resolve) => setImmediate(resolve));
   detach();
-  assert.equal(ends.get("prism.agent.run"), 2);
+  assert.equal(ends.get("invoke_agent prism"), 2);
 });
 
 test("failed and aborted agent runs leave no active spans", async () => {
@@ -156,7 +182,7 @@ test("failed and aborted agent runs leave no active spans", async () => {
   }
 });
 
-test("provider and aggregate token metrics use distinct instruments", () => {
+test("token metrics follow GenAI semantic conventions without run-total double counting", () => {
   const memory = createInMemoryTelemetry();
   const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
   const usage = { inputTokens: 10, outputTokens: 2, totalTokens: 12 };
@@ -170,8 +196,8 @@ test("provider and aggregate token metrics use distinct instruments", () => {
   });
   telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "s1", runId: "r1", usage });
   assert.deepEqual(
-    memory.metrics.filter((metric) => metric.kind === "counter").map((metric) => metric.name),
-    ["prism.provider.tokens", "prism.provider.tokens", "prism.run.tokens", "prism.run.tokens"],
+    memory.metrics.filter((metric) => metric.name === "gen_ai.client.token.usage").map((metric) => metric.attributes["gen_ai.token.type"]),
+    ["input", "output"],
   );
 });
 
@@ -191,15 +217,18 @@ test("exporter failures are isolated", () => {
   });
 });
 
-test("wrapOpenTelemetryApi bridges optional api types", () => {
+test("wrapOpenTelemetryApi bridges parent and ambient context", () => {
   const calls: string[] = [];
+  const contexts: unknown[] = [];
   const wrapped = wrapOpenTelemetryApi(
     {
-      startSpan(name) {
+      startSpan(name, _options, context) {
         calls.push(`span:${name}`);
+        contexts.push(context);
         return {
           setAttribute() {},
           setStatus() {},
+          spanContext: () => ({ traceId: "a".repeat(32), spanId: "b".repeat(16) }),
           end() {
             calls.push("end");
           },
@@ -216,11 +245,15 @@ test("wrapOpenTelemetryApi bridges optional api types", () => {
         return { record: () => calls.push("histogram-record") };
       },
     },
+    { context: { active: () => "ambient" }, trace: { setSpan: (_context, span) => ({ parent: span }) } },
   );
-  const telemetry = createOpenTelemetryInstrumentation({ tracer: wrapped.tracer, meter: wrapped.meter });
+  const telemetry = createOpenTelemetryInstrumentation({ tracer: wrapped.tracer, meter: wrapped.meter, parentContext: "host-parent" });
   telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
+  telemetry.handleAgentEvent({ type: "provider_turn_started", sessionId: "s1", runId: "r1", turn: 1, metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } } });
   telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "s1", runId: "r1" });
-  assert.ok(calls.includes("span:prism.agent.run"));
+  assert.ok(calls.includes("span:invoke_agent prism"));
+  assert.equal(contexts[0], "host-parent");
+  assert.equal(typeof contexts[1], "object");
 });
 
 test("feedback and evaluations project safe metadata without high-cardinality metric labels", () => {
@@ -229,10 +262,10 @@ test("feedback and evaluations project safe metadata without high-cardinality me
   telemetry.handleAgentEvent({ type: "agent_started", sessionId: "session-secret", runId: "run-secret" });
   telemetry.handleRunFeedback({ runId: "run-secret", rating: 1, hasComment: true, tagCount: 2, scorerCount: 1, evaluationCount: 1 });
   telemetry.handleEvaluation({ runId: "run-secret", status: "scored", score: 0.75, hasReason: true });
-  const run = memory.spans.find((span) => span.name === "prism.agent.run");
-  assert.deepEqual(run?.events.map((event) => event.name), ["prism.run.feedback", "prism.run.evaluation"]);
+  const run = memory.spans.find((span) => span.name === "invoke_agent prism");
+  assert.deepEqual(run?.events.map((event) => event.name), ["prism.run.feedback", "gen_ai.evaluation.result"]);
   assert.equal(run?.events[0]?.attributes["prism.feedback.tag_count"], 2);
-  assert.equal(run?.events[1]?.attributes["prism.evaluation.score"], 0.75);
+  assert.equal(run?.events[1]?.attributes["gen_ai.evaluation.score.value"], 0.75);
   const metricJson = JSON.stringify(memory.metrics.filter((metric) => metric.name.includes("feedback") || metric.name.includes("evaluation")));
   assert.doesNotMatch(metricJson, /run-secret|session-secret|comment|scorer|evaluation_id|tag_count/);
   assert.match(metricJson, /positive|scored/);
@@ -240,6 +273,7 @@ test("feedback and evaluations project safe metadata without high-cardinality me
   telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "session-secret", runId: "run-secret" });
   telemetry.handleRunFeedback({ runId: "run-after", hasComment: false, tagCount: 0, scorerCount: 0, evaluationCount: 0 });
   assert.ok(memory.spans.some((span) => span.name === "prism.run.feedback" && span.ended));
+  assert.equal(telemetry.traceId("run-secret"), run?.traceId);
 });
 
 test("feedback exporter failures are isolated", () => {
@@ -267,5 +301,5 @@ test("blocked tool records duration metric without started span", async () => {
     emit: (event) => telemetry.handleAgentEvent(event),
   });
   assert.equal(memory.spans.length, 0);
-  assert.ok(memory.metrics.some((metric) => metric.name === "prism.tool.execution.duration_ms" && metric.attributes.status === "blocked"));
+  assert.ok(memory.metrics.some((metric) => metric.name === "gen_ai.execute_tool.duration" && metric.attributes.outcome === "blocked"));
 });

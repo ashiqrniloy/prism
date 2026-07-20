@@ -458,6 +458,78 @@ describe("agent loop strategies", () => {
       assert.equal(appendedMessages.filter((message) => message.role === "user").length, 1);
     });
 
+    it("parse failure consumes revision budget: repairer gets undefined value, next turn can succeed", async () => {
+      const events: AgentEvent[] = [];
+      let repairedValue: unknown = "untouched";
+      let repairedFailure: unknown;
+      const { ctx, assistantTexts, appendedMessages } = reviseCtx({
+        generateTexts: ["not-json", "{\"ok\":true}"],
+        validator: () => ({ ok: true }),
+      });
+      const origEmit = ctx.emit;
+      ctx.emit = (event) => { events.push(event); origEmit(event); };
+      const loop = generateValidateReviseLoop({
+        validator: () => ({ ok: true }),
+        parser: (text) => text.startsWith("{") ? { ok: true, value: text } : { ok: false, error: "invalid JSON" },
+        repairer: (value, failure) => {
+          repairedValue = value;
+          repairedFailure = failure;
+          return { role: "user", content: [{ type: "text", text: "emit valid JSON" }] };
+        },
+        maxRevisions: 2,
+      });
+      await loop.run(ctx);
+      // Bug report: parse failure previously returned after 1 turn; now consumes budget.
+      assert.equal(assistantTexts.length, 2);
+      assert.equal(repairedValue, undefined);
+      assert.deepEqual((repairedFailure as { errors?: { message: string }[] }).errors?.map((e) => e.message), ["invalid JSON"]);
+      const repairs = appendedMessages.filter((message) => message.role === "user");
+      assert.equal(repairs.length, 1);
+      assert.equal(repairs[0]?.content[0]?.type === "text" ? repairs[0].content[0].text : undefined, "emit valid JSON");
+      // Parse failure surfaces as a validation failure with parse metadata.
+      const finished = events.filter((event) => event.type === "artifact_validation_finished");
+      assert.equal((finished[0] as { result?: { metadata?: { reason?: string } } })?.result?.metadata?.reason, "parse_error");
+      assert.equal(events.some((event) => event.type === "artifact_revision_started"), true);
+      assert.equal(events.some((event) => event.type === "artifact_finished"), true);
+    });
+
+    it("persistent parse failure exhausts budget: terminal artifact_failed after 1 + maxRevisions turns", async () => {
+      const events: AgentEvent[] = [];
+      const { ctx, assistantTexts, appendedMessages } = reviseCtx({
+        generateTexts: ["bad", "bad", "bad", "bad"],
+        validator: () => ({ ok: true }),
+      });
+      const origEmit = ctx.emit;
+      ctx.emit = (event) => { events.push(event); origEmit(event); };
+      const loop = generateValidateReviseLoop({
+        validator: () => ({ ok: true }),
+        parser: () => ({ ok: false, error: "invalid JSON" }),
+        maxRevisions: 1,
+      });
+      await loop.run(ctx);
+      assert.equal(assistantTexts.length, 2);
+      assert.equal(appendedMessages.filter((message) => message.role === "user").length, 1);
+      const failed = events.filter((event) => event.type === "artifact_failed");
+      assert.equal(failed.length, 1);
+      assert.equal((failed[0] as { result?: { metadata?: { reason?: string } } })?.result?.metadata?.reason, "parse_error");
+      assert.equal(events.some((event) => event.type === "artifact_finished"), false);
+    });
+
+    it("default repairer feeds parse error back as the revision message", async () => {
+      const { ctx, appendedMessages } = reviseCtx({
+        generateTexts: ["bad", "{\"ok\":true}"],
+        validator: () => ({ ok: true }),
+      });
+      const loop = generateValidateReviseLoop({
+        validator: () => ({ ok: true }),
+        parser: (text) => text.startsWith("{") ? { ok: true, value: text } : { ok: false, error: "invalid JSON" },
+        maxRevisions: 1,
+      });
+      await loop.run(ctx);
+      const repair = appendedMessages.find((message) => message.role === "user");
+      assert.equal(repair?.content[0]?.type === "text" ? repair.content[0].text : undefined, "invalid JSON");
+    });
+
     it("no parser: text is passed as the value to validator", async () => {
       let seenValue: unknown = "untouched";
       const { ctx } = reviseCtx({

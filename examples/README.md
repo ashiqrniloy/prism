@@ -31,6 +31,8 @@ node examples/custom-session-store.ts
 node examples/custom-tools-skills-context.ts
 node examples/extension-package.ts
 node examples/evals.ts
+node examples/evaluation-gate.ts
+node examples/web-research.ts
 node examples/run-feedback.ts
 node examples/supervisor-a2a.ts
 node examples/ai-sdk-provider.ts
@@ -55,6 +57,8 @@ Each demo prints a single JSON line with its result.
 - `secure-agent.ts` — opt-in fail-closed agent composition with validation, trust/permission, redaction, limits, ownership, and durable approval.
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
+- `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.
+- `web-research.ts` — network-free host-selected Brave search → Firecrawl Markdown route with fake fetch, stable citation, untrusted marker, and fixed host extraction schema.
 - `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, and safe low-cardinality OpenTelemetry projection.
 - `supervisor-a2a.ts` — bounded allow-listed local child delegation plus an offline A2A 1.0 handler/client round trip.
 - `ai-sdk-provider.ts` — optional AI SDK `LanguageModelV4` adapter demo with a fake in-memory model.

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-base",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Base Prism profile: core runtime, compaction strategies, and JSON Schema tool validation.",
   "license": "MIT",
   "scripts": {
@@ -11,9 +11,9 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism": "0.0.7",
-    "@arnilo/prism-compaction": "0.0.7",
-    "@arnilo/prism-tool-validator-json-schema": "0.0.7"
+    "@arnilo/prism": "0.0.8",
+    "@arnilo/prism-compaction": "0.0.8",
+    "@arnilo/prism-tool-validator-json-schema": "0.0.8"
   },
   "engines": {
     "node": ">=20"

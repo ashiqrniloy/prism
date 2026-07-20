@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-evals",
-  "version": "0.0.7",
-  "description": "Optional deterministic scorers, datasets, and bounded batch experiments over Prism AgentRunResult.",
+  "version": "0.0.8",
+  "description": "Bounded deterministic, trace, model-judge, pairwise, and CI evaluations for Prism runs.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.7"
+    "@arnilo/prism": "0.0.8"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

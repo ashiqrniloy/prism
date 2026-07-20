@@ -8,6 +8,7 @@ import type {
   ArtifactContext,
   ArtifactParser,
   ArtifactRepairer,
+  ArtifactValidation,
   ArtifactValidator,
   LoopContext,
   Message,
@@ -146,12 +147,16 @@ export function generateValidateReviseLoop(opts: {
           ? await opts.parser(text, artifactCtx)
           : { ok: true as const, value: text };
 
-        // Parse failure ends the loop silently (terminal parse errors stay on `error`).
-        if (!parsed.ok || parsed.value === undefined) return usage;
+        // Parse failure consumes revision budget like a validation failure; the
+        // repairer receives `undefined` value plus a synthetic parse issue.
+        const parseFailure: ArtifactValidation | undefined =
+          !parsed.ok || parsed.value === undefined
+            ? { ok: false, errors: [{ path: "$", message: parsed.error ?? "artifact parse failed" }], metadata: { reason: "parse_error" } }
+            : undefined;
 
         const attempt = ++attempts;
         ctx.emit({ type: "artifact_validation_started", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt });
-        const result = await opts.validator(parsed.value, artifactCtx);
+        const result = parseFailure ?? await opts.validator(parsed.value!, artifactCtx);
         ctx.emit({ type: "artifact_validation_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
         if (result.ok) {
           ctx.emit({ type: "artifact_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
@@ -162,7 +167,7 @@ export function generateValidateReviseLoop(opts: {
           return usage;
         }
         ctx.emit({ type: "artifact_revision_started", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, failure: result });
-        const repair = await repairer(parsed.value, result, artifactCtx);
+        const repair = await repairer(parseFailure ? undefined : parsed.value, result, artifactCtx);
         const repairMessages = inputMessages(repair).map((m: Message) => ({ ...m, id: randomId("msg") }));
         for (const message of repairMessages) await ctx.appendMessage(message);
         pendingHistory = repairMessages;

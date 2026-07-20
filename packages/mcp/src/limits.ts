@@ -23,6 +23,14 @@ export const HARD_CALL_TIMEOUT_MS = 30 * 60_000;
 export const HARD_LIST_CACHE_TTL_MS = 24 * 60 * 60_000;
 export const DEFAULT_MAX_HTTP_RESPONSE_BYTES = 16 * 1024 * 1024;
 export const HARD_MAX_HTTP_RESPONSE_BYTES = 64 * 1024 * 1024;
+export const DEFAULT_MAX_CAPABILITY_BYTES = 1024 * 1024;
+export const HARD_MAX_CAPABILITY_BYTES = 8 * 1024 * 1024;
+export const DEFAULT_MAX_CAPABILITY_ITEMS = 500;
+export const HARD_MAX_CAPABILITY_ITEMS = 5_000;
+export const DEFAULT_MAX_CAPABILITY_PAGES = 20;
+export const HARD_MAX_CAPABILITY_PAGES = 100;
+export const DEFAULT_MAX_SESSIONS = 32;
+export const HARD_MAX_SESSIONS = 512;
 
 export interface McpClientLimitsInput {
   readonly maxListPages?: number;

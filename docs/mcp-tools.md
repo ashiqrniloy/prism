@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-mcp` has two explicit directions. Its client bridge connects hosts to remote [Model Context Protocol](https://modelcontextprotocol.io) servers and maps discovered tools to ordinary `ToolDefinition`s. Its server API registers selected Prism `ToolDefinition` and `CommandDefinition` values on the official SDK `McpServer`, with required authorization and a bounded optional Web-standard Streamable HTTP handler. The package wraps `@modelcontextprotocol/sdk` v1.29+ and adds no MCP branch to core Prism.
+`@arnilo/prism-mcp` has two explicit directions. Its client bridge connects hosts to remote [Model Context Protocol](https://modelcontextprotocol.io) servers and maps discovered tools to ordinary `ToolDefinition`s. Its server API registers selected Prism `ToolDefinition` and `CommandDefinition` values on the official SDK `McpServer`, with required authorization and a bounded optional Web-standard Streamable HTTP handler. The package pins `@modelcontextprotocol/sdk` **1.29.0** (MCP protocol negotiation remains SDK-owned) and adds no MCP branch to core Prism.
 
 Primary API:
 
@@ -19,7 +19,21 @@ await bridge.refresh(); // re-list after notifications or TTL expiry
 await bridge.close();   // close client + transport
 ```
 
-Advanced hosts that manage their own `Client` + `Transport` can call `attachMcpToolBridge(client, transport, options)` after `client.connect(transport)`.
+Advanced hosts that manage their own `Client` + `Transport` can call `attachMcpToolBridge()` or `attachMcpCapabilities()` after connect. `connectMcpCapabilities()` keeps resources/prompts as host-facing facades rather than converting them into model tools, and declares roots/sampling/elicitation only when callbacks are supplied.
+
+```ts
+const bridge = await connectMcpCapabilities({
+  serverId: "research",
+  transport: { type: "streamable-http", url, allowedOrigins: [origin] },
+  roots: () => [{ uri: "file:///workspace", name: "workspace" }],
+  sampling: hostSampling,       // host selects model/provider/credentials
+  elicitation: hostElicitation, // URL mode returns approval; Prism never opens/fetches URL
+});
+await bridge.listResources();
+await bridge.getPrompt("review", { topic: "security" });
+```
+
+Server capability matrix for SDK 1.29.0: tools/resources/prompts and their list-change notifications are supported through official registrations; roots/sampling/form+URL elicitation are supported as explicit client callbacks. Missing server resources/prompts throw `McpUnsupportedCapabilityError` with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`. Resource/prompt results and sampling/elicitation inputs/results are bounded JSON. Accepted form/URL elicitation requires host-only `humanInteraction: true`; bridge strips marker before protocol output and fails closed when absent. Automatic root discovery/consent, model selection, credential resolution, URL navigation, generic command proxying, and custom JSON-RPC are unsupported.
 
 Server direction:
 
@@ -41,10 +55,13 @@ const handleMcp = await createPrismMcpWebHandler(server, {
   resolveAuthInfo: authenticateRequest,
   allowedHosts: ["api.example.test"],
   allowedOrigins: ["https://app.example.test"],
+  // Omit these two for bounded stateless JSON mode.
+  sessionIdGenerator: crypto.randomUUID,
+  resolveIdentity: (_request, auth) => auth ? { id: validatedPrincipalId(auth) } : false,
 });
 ```
 
-`McpServer.connect(transport)` remains available for SDK stdio or in-memory transports. The helper uses SDK `WebStandardStreamableHTTPServerTransport` in bounded stateless JSON-response mode; it does not start a listener.
+`McpServer.connect(transport)` remains available for SDK stdio or in-memory transports. The helper uses SDK `WebStandardStreamableHTTPServerTransport`; it does not start a listener. Default remains bounded stateless JSON-response mode. Supplying `sessionIdGenerator` enables SDK `MCP-Session-Id` POST/GET/DELETE/SSE lifecycle and requires exact `allowedOrigins` plus host `resolveIdentity`. Every request re-authenticates, and a different principal receives non-disclosing 404. SDK owns protocol-version/session headers and SSE semantics. SDK 1.29.0's in-memory event store is not enabled, so `Last-Event-ID` replay is explicitly unsupported; reconnect starts only through SDK-supported active session GET.
 
 ## When to use it
 
@@ -160,6 +177,7 @@ Plaintext is accepted only when `allowLoopbackHttp: true`, the URL hostname is l
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `tools` / `commands` | empty | Explicit allow-list; zero default exposure |
+| `resources` / `prompts` | empty | Static URI/name registrations with bounded host callbacks and per-read/get authorization |
 | `agentRuns` | empty | Explicit `{ [agentId]: { lifecycle } }` map; registers `agent.<id>.status` and `agent.<id>.resume` only |
 | `authorize` | required | Per-call host authz using SDK auth/session metadata |
 | `permission` / `validate` / `redactor` | none | Core tool-dispatch gates and known-secret redaction |
@@ -167,7 +185,7 @@ Plaintext is accepted only when `allowLoopbackHttp: true`, the URL hostname is l
 | `maxConcurrentCalls` | 16 (256 hard) | Bound active tool/command execution |
 | `callTimeoutMs` | 60 s (30 min hard) | Abort and return timed-out calls |
 
-Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 32 concurrent requests (512 hard), and 60 s timeout (30 min hard). It parses bounded JSON before passing `parsedBody` to the SDK transport. `allowedHosts`/`allowedOrigins` activate SDK DNS-rebinding checks only when explicitly configured. Authentication data comes only from host `resolveAuthInfo()`.
+Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 32 concurrent requests (512 hard), 60 s timeout (30 min hard), and 32 sessions (512 hard). Stateful mode is intentionally one official SDK transport/session lineage per handler; use one handler/server instance per independently hosted endpoint when multi-tenant transport isolation is required. It parses bounded JSON before passing `parsedBody` to the SDK transport. `allowedHosts`/`allowedOrigins` activate SDK DNS-rebinding checks only when explicitly configured. Authentication data comes only from host `resolveAuthInfo()`.
 
 ## Security and performance notes
 
@@ -183,7 +201,8 @@ Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 
 | Accidental server exposure | Empty default arrays/maps, duplicate-name rejection, explicit tools/commands/lifecycle only |
 | Agent lifecycle data leak or cross-tenant resume | `agentRuns` requires exact tenant plus account/user ownership; core lifecycle returns public redacted state only and CAS-resumes with current agent/revision |
 | Unbounded MCP HTTP | Bounded pre-parsed JSON, response bytes, concurrent requests, call timeout, SDK web-standard transport |
-| Cross-tenant operation | Authorizer derives ownership from validated auth and passes it to tool dispatch/selected workflow commands; never trust arguments as identity |
+| Cross-tenant operation | Authorizer derives ownership from validated auth and passes it to tool/resource/prompt dispatch; stateful handler binds session to stable validated principal on every request; never trust arguments as identity |
+| Sampling / elicitation authority | Host callbacks alone choose model/provider/credentials or obtain consent; bounded URL elicitation is returned to host UI and never fetched/opened automatically; auth tokens never enter callback params/results |
 
 For durable lifecycle exposure, construct `createAgentRunLifecycle({ checkpoints, resolveAgent })` in core, then pass selected entries as `agentRuns: { support: { lifecycle } }`. MCP registers two tools: `agent.support.status` accepts `{ runId, sessionId? }`; `agent.support.resume` accepts `{ runId, sessionId?, decision, expectedVersion }`. Do not expose an agent without durable checkpoints and a restart-safe `SessionStore`; no lifecycle tool appears by default.
 
@@ -191,9 +210,14 @@ MCP output is untrusted. Register bridge tools through core dispatch with a `Sec
 
 Discovery validation is atomic: cursor/page/tool/name/description/schema failures reject `refresh()` and preserve the previous immutable tool-array reference. The bridge intentionally uses raw SDK `request()` for `tools/list` and `tools/call`; this avoids eager Ajv compilation/validation of untrusted remote output schemas. Host `ToolValidator` remains the argument-validation owner.
 
+## Vendor web MCP prototype boundary
+
+Official Exa/Firecrawl MCP servers may be tested only as explicit hardened prototypes: pin endpoint/origin/auth, inspect declared capabilities, allow-list individual tools/resources, retain all MCP bounds, and never expose generic remote passthrough. Production web research uses direct host-selected `@arnilo/prism-web-tools` adapters so provider choice, credentials, schema, and costs remain outside model control.
+
 ## Related APIs
 
 - [Tools](tools.md): registry, dispatch, validation
+- [Web search, fetch, and extraction](web-tools.md): preferred direct bounded Brave/Exa/Firecrawl production path
 - [Tool execution primitives](tool-execution-primitives.md): Plan 055 design and conformance matrix
 - [Host security guide](host-security.md): permission, trust, validation checklist
 - [Web-standard server handler](server.md): agent/workflow HTTP routes and shared remote-boundary rules

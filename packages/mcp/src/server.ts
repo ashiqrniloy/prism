@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { randomUUID } from "node:crypto";
 import { AgentRunStateError, createRunLimitTracker, createToolRegistry, dispatchToolCall, type JsonObject, type ToolResult } from "@arnilo/prism";
 import * as z from "zod/v4";
 import type {
@@ -9,6 +10,7 @@ import type {
   PrismMcpAuthorization,
   PrismMcpWebHandler,
 } from "./types.js";
+import { measureBoundedJson } from "./json-bounds.js";
 import { McpBridgeError } from "./types.js";
 
 const DEFAULT_MAX_SERVER_RESULT_BYTES = 1024 * 1024;
@@ -25,9 +27,12 @@ const HARD_MAX_HTTP_RESPONSE_BYTES = 16 * 1024 * 1024;
 export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpServer {
   const tools = options.tools ?? [];
   const commands = options.commands ?? [];
+  const resources = options.resources ?? [];
+  const prompts = options.prompts ?? [];
   const agentRuns = options.agentRuns ?? {};
+  if (resources.length > 500 || prompts.length > 500) throw new McpBridgeError("MCP resources/prompts exceed 500 items");
   const names = new Set<string>();
-  for (const capability of [...tools, ...commands]) {
+  for (const capability of [...tools, ...commands, ...resources, ...prompts]) {
     if (!capability.name || names.has(capability.name)) {
       throw new McpBridgeError(`Duplicate or empty MCP capability name: ${capability.name}`);
     }
@@ -45,8 +50,12 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
   const callTimeoutMs = bounded(options.callTimeoutMs, DEFAULT_SERVER_CALL_TIMEOUT_MS, HARD_SERVER_CALL_TIMEOUT_MS, "callTimeoutMs");
   const registry = createToolRegistry(tools, { duplicate: "error" });
   const server = new McpServer(
-    { name: options.name ?? "prism-mcp-server", version: options.version ?? "0.0.7" },
-    { capabilities: { tools: { listChanged: true } } },
+    { name: options.name ?? "prism-mcp-server", version: options.version ?? "0.0.8" },
+    { capabilities: {
+      ...(tools.length || commands.length || Object.keys(agentRuns).length ? { tools: { listChanged: true } } : {}),
+      ...(resources.length ? { resources: { listChanged: true } } : {}),
+      ...(prompts.length ? { prompts: { listChanged: true } } : {}),
+    } },
   );
   let activeCalls = 0;
 
@@ -97,6 +106,31 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
     });
   }
 
+  for (const resource of resources) {
+    assertUtf8("MCP resource name", resource.name, 1024);
+    assertUtf8("MCP resource URI", resource.uri, 16 * 1024);
+    try { new URL(resource.uri); } catch { throw new McpBridgeError(`Invalid MCP resource URI: ${resource.uri}`); }
+    server.registerResource(resource.name, resource.uri, {
+      title: resource.title, description: resource.description, mimeType: resource.mimeType,
+    }, async (uri, extra) => {
+      const authorization = await authorize("resource", resource.name, { uri: uri.href }, extra);
+      const result = await resource.read({ uri: uri.href, authorization, signal: extra.signal });
+      return boundedProtocolResult(result, maxResultBytes, `MCP resource ${resource.name} result`, options.redactor) as never;
+    });
+  }
+
+  for (const prompt of prompts) {
+    assertUtf8("MCP prompt name", prompt.name, 1024);
+    if (Object.keys(prompt.arguments ?? {}).length > 100) throw new McpBridgeError(`MCP prompt ${prompt.name} exceeds 100 arguments`);
+    for (const name of Object.keys(prompt.arguments ?? {})) assertUtf8("MCP prompt argument name", name, 256);
+    const argsSchema = Object.fromEntries(Object.entries(prompt.arguments ?? {}).map(([name, value]) => [name, value.required ? z.string().describe(value.description ?? name) : z.string().optional().describe(value.description ?? name)]));
+    server.registerPrompt(prompt.name, { title: prompt.title, description: prompt.description, argsSchema }, async (args, extra) => {
+      const authorization = await authorize("prompt", prompt.name, jsonObject(args), extra);
+      const result = await prompt.get({ arguments: args as Record<string, string>, authorization, signal: extra.signal });
+      return boundedProtocolResult(result, maxResultBytes, `MCP prompt ${prompt.name} result`, options.redactor) as never;
+    });
+  }
+
   for (const [agentId, exposure] of Object.entries(agentRuns)) {
     register(`agent.${agentId}.status`, "Get redacted durable agent run status", {
       type: "object", properties: { runId: { type: "string" }, sessionId: { type: "string" } }, required: ["runId"], additionalProperties: false,
@@ -130,6 +164,19 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
   }
 
   return server;
+
+  async function authorize(
+    kind: "resource" | "prompt",
+    name: string,
+    args: JsonObject,
+    extra: { readonly authInfo?: import("@modelcontextprotocol/sdk/server/auth/types.js").AuthInfo; readonly sessionId?: string; readonly signal: AbortSignal },
+  ): Promise<PrismMcpAuthorization> {
+    let decision: false | PrismMcpAuthorization;
+    try { decision = await options.authorize({ kind, name, arguments: args, authInfo: extra.authInfo, sessionId: extra.sessionId, signal: extra.signal }); }
+    catch { decision = false; }
+    if (!decision) throw new McpBridgeError("ERR_PRISM_MCP_FORBIDDEN: Forbidden");
+    return decision;
+  }
 
   function register(
     name: string,
@@ -196,8 +243,17 @@ export async function createPrismMcpWebHandler(
   const maxResponseBytes = bounded(options.maxResponseBytes, DEFAULT_MAX_HTTP_RESPONSE_BYTES, HARD_MAX_HTTP_RESPONSE_BYTES, "maxResponseBytes");
   const maxConcurrentRequests = bounded(options.maxConcurrentRequests, 32, 512, "maxConcurrentRequests");
   const requestTimeoutMs = bounded(options.requestTimeoutMs, DEFAULT_SERVER_CALL_TIMEOUT_MS, HARD_SERVER_CALL_TIMEOUT_MS, "requestTimeoutMs");
+  const stateful = options.sessionIdGenerator !== undefined;
+  if (stateful && (!options.resolveIdentity || !options.allowedOrigins?.length)) throw new McpBridgeError("Stateful MCP sessions require resolveIdentity and exact allowedOrigins");
+  const maxSessions = bounded(options.maxSessions, 32, 512, "maxSessions");
+  const sessions = new Map<string, string>();
   const transport = new WebStandardStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
+    sessionIdGenerator: stateful ? () => {
+      if (sessions.size >= maxSessions) throw new McpBridgeError("ERR_PRISM_MCP_SESSION_LIMIT: MCP session limit reached");
+      const id = options.sessionIdGenerator?.() ?? randomUUID();
+      if (!validCapabilityId(id) || sessions.has(id)) throw new McpBridgeError("Invalid or duplicate MCP session id");
+      return id;
+    } : undefined,
     enableJsonResponse: true,
     allowedHosts: options.allowedHosts ? [...options.allowedHosts] : undefined,
     allowedOrigins: options.allowedOrigins ? [...options.allowedOrigins] : undefined,
@@ -212,14 +268,27 @@ export async function createPrismMcpWebHandler(
     const controller = linkedController(request.signal);
     const timeout = setTimeout(() => controller.controller.abort(new Error("MCP HTTP request timed out")), requestTimeoutMs);
     try {
-      const parsedBody = request.method === "POST" ? await readBoundedJson(request, maxRequestBytes, controller.signal) : undefined;
       const authInfo = await awaitWithSignal(Promise.resolve(options.resolveAuthInfo?.(request)), controller.signal);
+      const identity = options.resolveIdentity ? await awaitWithSignal(Promise.resolve(options.resolveIdentity(request, authInfo)), controller.signal) : undefined;
+      if (options.resolveIdentity && !identity) return httpError(401, "Unauthorized");
+      const identityId = identity ? identity.id : undefined;
+      if (identityId !== undefined && (!validCapabilityId(identityId) || Buffer.byteLength(identityId, "utf8") > 256)) return httpError(401, "Unauthorized");
+      const requestedSession = request.headers.get("mcp-session-id") ?? undefined;
+      if (requestedSession && sessions.get(requestedSession) !== identityId) return httpError(404, "MCP session not found");
+      const parsedBody = request.method === "POST" ? await readBoundedJson(request, maxRequestBytes, controller.signal) : undefined;
       const transportRequest = new Request(request.url, {
         method: request.method,
         headers: request.headers,
         signal: controller.signal,
       });
       const response = await awaitWithSignal(transport.handleRequest(transportRequest, { parsedBody, authInfo }), controller.signal);
+      const createdSession = response.headers.get("mcp-session-id") ?? undefined;
+      if (createdSession && identityId) {
+        const existing = sessions.get(createdSession);
+        if (existing && existing !== identityId) return httpError(404, "MCP session not found");
+        sessions.set(createdSession, identityId);
+      }
+      if (request.method === "DELETE" && requestedSession && response.status < 400) sessions.delete(requestedSession);
       return boundResponse(response, maxResponseBytes);
     } catch (error) {
       if (error instanceof McpHttpError) return httpError(error.status, error.message);
@@ -230,6 +299,10 @@ export async function createPrismMcpWebHandler(
       activeRequests -= 1;
     }
   };
+}
+
+function assertUtf8(label: string, value: string, maxBytes: number): void {
+  if (!value || Buffer.byteLength(value, "utf8") > maxBytes) throw new McpBridgeError(`${label} must be non-empty and <= ${maxBytes} bytes`);
 }
 
 function validCapabilityId(value: string): boolean {
@@ -276,6 +349,12 @@ function toolResult(result: ToolResult, maxBytes: number, redactor: CreatePrismM
     isError: Boolean(safe.error),
     content: [{ type: "text", text: truncateUtf8(text, maxBytes) }],
   };
+}
+
+function boundedProtocolResult(value: unknown, maxBytes: number, label: string, redactor: CreatePrismMcpServerOptions["redactor"]): unknown {
+  const safe = redactor?.redact(value) ?? value;
+  measureBoundedJson(safe, { maxBytes, maxDepth: 64, maxProperties: 10_000, label });
+  return safe;
 }
 
 function mcpError(message: string, code: string, maxBytes: number): CallToolResult {

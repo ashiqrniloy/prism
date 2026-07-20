@@ -1,0 +1,89 @@
+name: security
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          deny-licenses: AGPL-3.0, GPL-3.0, LGPL-3.0, SSPL-1.0, BUSL-1.1
+
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+      - uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - name: generate and verify SPDX SBOM
+        run: |
+          mkdir -p security-artifacts
+          npm sbom --sbom-format spdx > security-artifacts/sbom.spdx.json
+          node scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
+      - name: scan tracked source and packed public artifacts
+        run: |
+          git ls-files -z | xargs -0 node scripts/scan-secrets.mjs
+          mkdir -p security-artifacts/tarballs security-artifacts/unpacked
+          npm run build
+          npm pack --json --pack-destination security-artifacts/tarballs >/dev/null
+          npm pack --workspaces --json --pack-destination security-artifacts/tarballs >/dev/null
+          test "$(du -sb security-artifacts/tarballs | cut -f1)" -le 134217728
+          for archive in security-artifacts/tarballs/*.tgz; do
+            dir="security-artifacts/unpacked/$(basename "$archive" .tgz)"
+            mkdir -p "$dir"
+            tar -xzf "$archive" -C "$dir"
+          done
+          node scripts/scan-secrets.mjs security-artifacts/unpacked
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: security-sbom-${{ github.sha }}
+          path: security-artifacts/sbom.spdx.json
+          if-no-files-found: error
+          retention-days: 7

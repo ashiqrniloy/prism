@@ -2,7 +2,17 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { assertAbortIsObserved, assertNoSecretLeak, assertProviderStreamConforms, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
-import { createOpenCodeGoProvider, openCodeGoModels } from "../index.js";
+import { createOpenCodeGoProvider, defineOpenCodeGoModel, openCodeGoModels } from "../index.js";
+
+// Verified JSON Schema structured-output models (mirrors VERIFIED_JSON_SCHEMA_MODELS
+// in ../models.ts). Extend the set only when this probe passes live for a model.
+const VERIFIED_JSON_SCHEMA_MODELS = ["mimo-v2.5", "mimo-v2.5-pro"];
+
+const structuredOutputRequest = (modelId: string): ProviderRequest => ({
+  model: openCodeGoModels.find((m) => m.model === modelId)!,
+  messages: [{ role: "user", content: [{ type: "text", text: "Reply with a JSON object matching the requested schema." }] }],
+  options: { structuredOutput: { name: "probe", schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } } },
+});
 
 // Env-gated live smoke tests for @arnilo/prism-provider-opencode-go.
 //
@@ -67,6 +77,36 @@ describe("@arnilo/prism-provider-opencode-go live tests", () => {
 
   it("live_abort_signal_is_observed_before_first_request", { skip }, async () => {
     await assertAbortIsObserved({ provider: provider(), request: textRequest });
+  });
+
+  // Live evidence gate for `capabilities.structuredOutput: "json_schema"`.
+  // A model enters the verified set only when this probe returns a successful
+  // stream with response_format accepted (HTTP 200) for that exact model.
+  for (const modelId of VERIFIED_JSON_SCHEMA_MODELS) {
+    it(`live_json_schema_structured_output_succeeds_${modelId}`, { skip }, async () => {
+      const events = await assertProviderStreamConforms({ provider: provider(), request: structuredOutputRequest(modelId) });
+      assert.equal(events.at(-1)?.type, "done", `${modelId} rejected response_format — remove it from the verified set`);
+      const text = events.map((e) => e.type === "content_delta" && e.content.type === "text" ? e.content.text : "").join("");
+      assert.ok(text.trim().startsWith("{"), `${modelId} structured output was not JSON: ${text.slice(0, 80)}`);
+      assertNoSecretLeak(events, [API_KEY!]);
+    });
+  }
+
+  // Boundary probe: bug report evidence was HTTP 400 for response_format on
+  // deepseek-v4-pro, and upstream DeepSeek documents only `"text" | "json_object"`
+  // (no json_schema). If this test starts failing, the gateway now accepts
+  // json_schema — extend the verified set and flip this probe.
+  it("live_json_schema_structured_output_rejected_deepseek_v4_pro", { skip }, async () => {
+    // Explicit capability so the probe reaches the gateway instead of failing pre-dispatch.
+    const featured = openCodeGoModels.find((m) => m.model === "deepseek-v4-pro")!;
+    const probed = defineOpenCodeGoModel({
+      model: featured.model,
+      capabilities: { ...featured.capabilities, structuredOutput: "json_schema" },
+      limits: featured.limits,
+    });
+    const events = await collectProviderEvents(provider(), { ...structuredOutputRequest("deepseek-v4-pro"), model: probed });
+    assert.equal(events.at(-1)?.type, "error", "deepseek-v4-pro now accepts json_schema — extend VERIFIED_JSON_SCHEMA_MODELS");
+    assertNoSecretLeak(events, [API_KEY!]);
   });
 
   it("live_error_response_leaks_no_secret", { skip }, async () => {

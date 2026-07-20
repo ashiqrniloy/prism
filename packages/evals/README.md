@@ -67,6 +67,10 @@ void scoreRunLive(result, { scorers: [scorer], store }); // does not change resu
 | `runExperiment` | Bounded concurrency batch runner with stable item order |
 | `createMemoryEvaluationStore` | In-memory `EvaluationStore` with ownership filters |
 | `appendEvaluationFeedback` | Verify same run/trace/ownership and copy only evaluation/scorer IDs into `RunFeedbackStore` |
+| `createPersistenceTraceResolver` | Resolve one exact owned run trace through bounded persistence pages/bytes |
+| `createModelJudge` | Adapt an explicit host judge callback with rubric/version and timeout/attempt/output bounds |
+| `runComparison` | Compare sorted named candidates pairwise; preserve ties and failures |
+| `assertEvaluationThreshold` / `serializeEvaluationReport` | Fail CI regressions and emit bounded redacted JSON |
 
 ## Security
 
@@ -74,5 +78,8 @@ void scoreRunLive(result, { scorers: [scorer], store }); // does not change resu
 - Evaluation records accept `SecretRedactor` / `secrets` before persistence.
 - Queries are ownership-scoped (`tenantId` / `accountId` / `userId`).
 - Concurrency is capped (`HARD_EXPERIMENT_CONCURRENCY_CAP = 32`); sample rate is explicit.
+- Trace resolution requires exact session/run/ownership and caps pages plus aggregate bytes.
+- Model judges receive only rubric/version, target, item, and abort signal—not providers, credentials, tools, or workspace.
+- Candidate, judge, scorer, dataset, and report sizes are finite. Default tests require no model or network.
 
 See [Evaluations](../../docs/evaluations.md).

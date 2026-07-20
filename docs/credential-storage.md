@@ -218,9 +218,18 @@ const providers = createOpenAIProviderPackage({ apiKey });
 - Never log passphrases, derived keys, or decrypted credential payloads.
 - Live keychain tests are opt-in (`PRISM_TEST_KEYCHAIN=1`); default `npm test` stays offline.
 
+## MCP authentication boundary
+
+MCP credentials remain host inputs: resolve them before constructing client `requestInit` or inside server `resolveAuthInfo`. Stateful server `resolveIdentity` receives validated SDK auth metadata only to derive a stable non-secret principal ID. Never copy access/refresh tokens into MCP resource/prompt/sampling/elicitation payloads, telemetry, errors, or session bindings; Prism does not refresh or persist MCP OAuth automatically.
+
+## Web adapter credential boundary
+
+`@arnilo/prism-web-tools` accepts explicit callbacks or `CredentialResolver`. Brave resolves `subscription_token`; Exa and Firecrawl resolve `api_key` immediately before each fixed-origin request. Keys never enter tool arguments/results, URLs, provider metadata, errors, telemetry, or prompts. Use separate least-privilege credentials and do not forward MCP/provider tokens between adapters.
+
 ## Related APIs
 
 - [Credentials and redaction](credentials-and-redaction.md): core resolver helpers and `refreshOAuthCredential()`
+- [Web search, fetch, and extraction](web-tools.md): late-bound Brave/Exa/Firecrawl credentials
 - [Security/auth/trust](settings-auth-trust-security.md): host-owned settings/credentials boundaries
 - [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): Plan 056 threat model and conformance matrix rows 7–10
 - `@arnilo/prism`: `CredentialResolver`, `OAuthCredentialStore`, `createMemoryCredentialStore()`

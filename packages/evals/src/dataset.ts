@@ -1,4 +1,5 @@
 import { EvalDatasetError } from "./errors.js";
+import { HARD_DATASET_ITEMS } from "./limits.js";
 import type { Dataset, DefineDatasetInput } from "./types.js";
 
 /** Create an immutable dataset snapshot. Duplicate item ids fail closed. */
@@ -8,6 +9,7 @@ export function defineDataset<TInput = unknown, TExpected = unknown>(
   const id = input.id.trim();
   if (!id) throw new EvalDatasetError("dataset id is required");
   if (!Array.isArray(input.items)) throw new EvalDatasetError("dataset items must be an array");
+  if (input.items.length > HARD_DATASET_ITEMS) throw new EvalDatasetError(`dataset items exceed ${HARD_DATASET_ITEMS}`);
 
   const seen = new Set<string>();
   const items = input.items.map((item, index) => {

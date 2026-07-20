@@ -84,6 +84,13 @@ export function redactEvaluationRecord(
   };
 }
 
+export function exactOwnershipMatches(
+  expected: OwnershipScope | undefined,
+  actual: OwnershipScope | undefined,
+): boolean {
+  return ownershipMatches(expected, actual) && ownershipMatches(actual, expected);
+}
+
 export function ownershipMatches(
   expected: OwnershipScope | undefined,
   actual: OwnershipScope | undefined,

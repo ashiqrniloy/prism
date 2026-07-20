@@ -138,7 +138,7 @@ describe("prism init", () => {
           stdout: new MemoryWritable(),
           stderr: new MemoryWritable(),
           templatesRoot,
-          packageVersion: "0.0.7",
+          packageVersion: "0.0.8",
           cwd: root,
         },
       );
@@ -154,7 +154,7 @@ describe("prism init", () => {
         devDependencies: Record<string, string>;
       };
       assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["@arnilo/prism"]);
-      assert.equal(pkg.dependencies["@arnilo/prism"], "0.0.7");
+      assert.equal(pkg.dependencies["@arnilo/prism"], "0.0.8");
 
       const packed = runInProject("npm", ["pack", "--pack-destination", packDir], repoRoot);
       assert.equal(packed.status, 0, packed.stderr || packed.stdout);
@@ -211,7 +211,7 @@ describe("prism init", () => {
             stdout: new MemoryWritable(),
             stderr: new MemoryWritable(),
             templatesRoot,
-            packageVersion: "0.0.7",
+            packageVersion: "0.0.8",
             cwd: root,
           },
         );
@@ -249,7 +249,7 @@ describe("prism init", () => {
           stdout: new MemoryWritable(),
           stderr: new MemoryWritable(),
           templatesRoot,
-          packageVersion: "0.0.7",
+          packageVersion: "0.0.8",
           cwd: root,
         },
       );
@@ -279,7 +279,7 @@ describe("prism init", () => {
       const denied = await runInitCommand(["app"], {
         ...io,
         templatesRoot,
-        packageVersion: "0.0.7",
+        packageVersion: "0.0.8",
         cwd: root,
       });
       assert.equal(denied, 2);
@@ -290,7 +290,7 @@ describe("prism init", () => {
         stdout: new MemoryWritable(),
         stderr: new MemoryWritable(),
         templatesRoot,
-        packageVersion: "0.0.7",
+        packageVersion: "0.0.8",
         cwd: root,
       });
       assert.equal(forced, 0);
@@ -318,7 +318,7 @@ describe("prism init", () => {
           stdout: new MemoryWritable(),
           stderr: new MemoryWritable(),
           templatesRoot,
-          packageVersion: "0.0.7",
+          packageVersion: "0.0.8",
           cwd: join(root, "cwd"),
         },
       );
@@ -332,7 +332,7 @@ describe("prism init", () => {
       const code = await runInitCommand(["/"], {
         ...io,
         templatesRoot,
-        packageVersion: "0.0.7",
+        packageVersion: "0.0.8",
         cwd: join(root, "cwd"),
       });
       assert.equal(code, 2);
@@ -359,7 +359,7 @@ describe("prism init", () => {
           stdout: new MemoryWritable(),
           stderr: new MemoryWritable(),
           templatesRoot,
-          packageVersion: "0.0.7",
+          packageVersion: "0.0.8",
           cwd: root,
         },
       );

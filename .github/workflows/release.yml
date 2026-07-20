@@ -14,16 +14,14 @@ jobs:
     name: "verify (SDK readiness: typecheck, test, pack dry-run)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "24"
           cache: "npm"
       - run: npm ci
-      # sdk:ready runs typecheck, network-free tests, and pack dry-run.
-      # npm test budget is < 60s; sdk:ready can exceed it because it adds typecheck + pack.
-      # Timeout is a hang backstop, not the performance budget.
-      # Node 24: docs.test.ts runs examples/*.ts via native type stripping (Node < 22.6 can't).
       - name: verify SDK readiness
         run: |
           set -o pipefail
@@ -37,13 +35,14 @@ jobs:
     name: node20 compat (build + public import smoke)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "20"
           cache: "npm"
       - run: npm ci
-      # Node 20 engine support: avoid docs examples, which need Node >=22.6 native TS stripping.
       - run: |
           npm run build
           node --input-type=module <<'NODE'
@@ -55,8 +54,6 @@ jobs:
           NODE
         timeout-minutes: 3
 
-  # Plan 056 Task 7: live PostgreSQL adapter matrix stays out of the default
-  # network-free suite and runs only against an explicit CI Postgres service.
   postgres-integration:
     name: postgres integration (session-store + memory adapters)
     runs-on: ubuntu-latest
@@ -75,8 +72,10 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "24"
           cache: "npm"
@@ -88,33 +87,93 @@ jobs:
         run: npm run test:postgres
         timeout-minutes: 5
 
+  codeql-release:
+    name: CodeQL release SAST
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+      - uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
+
+  supply-chain:
+    name: supply chain (audit, SPDX, licenses, source secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: |
+          mkdir -p security-artifacts
+          npm sbom --sbom-format spdx > security-artifacts/sbom.spdx.json
+          node scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
+          git ls-files -z | xargs -0 node scripts/scan-secrets.mjs
+
   publish:
     name: publish (deterministic, resumable, provenance)
-    needs: [verify, node20-compat, postgres-integration]
+    needs: [verify, node20-compat, postgres-integration, codeql-release, supply-chain]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v5
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "24"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
       - run: npm run build
-      - name: pack release artifacts and checksums
+      - name: pack release artifacts, checksums, SBOM, and secret scan
         run: |
           mkdir -p release-artifacts
           npm pack --json --pack-destination release-artifacts > release-artifacts/core-pack.json
           npm pack --workspaces --json --pack-destination release-artifacts > release-artifacts/workspace-pack.json
           sha256sum release-artifacts/*.tgz > release-artifacts/SHA256SUMS
+          npm sbom --sbom-format spdx > release-artifacts/sbom.spdx.json
+          node scripts/verify-sbom.mjs release-artifacts/sbom.spdx.json security/license-policy.json
+          test "$(du -sb release-artifacts | cut -f1)" -le 134217728
+          mkdir -p release-artifacts/unpacked
+          for archive in release-artifacts/*.tgz; do
+            dir="release-artifacts/unpacked/$(basename "$archive" .tgz)"
+            mkdir -p "$dir"
+            tar -xzf "$archive" -C "$dir"
+          done
+          node scripts/scan-secrets.mjs release-artifacts/unpacked
+          rm -rf release-artifacts/unpacked
+      - name: attest package artifacts
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: release-artifacts/*.tgz
+      - name: attest SBOM artifact
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: release-artifacts/sbom.spdx.json
       - name: retain release artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-artifacts-${{ github.ref_name }}
           path: release-artifacts
@@ -125,7 +184,7 @@ jobs:
         run: npm run release:publish -- --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
       - name: retain publish report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: publish-report-${{ github.ref_name }}
           path: release-artifacts/publish-report.json

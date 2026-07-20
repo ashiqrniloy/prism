@@ -14,7 +14,7 @@ export interface KimiModelConfig extends Omit<ModelConfig, "provider" | "compat"
     readonly preserveThinking?: boolean;
     /** Official K2.x `thinking` object (`type`, optional `keep`). */
     readonly thinking?: boolean | JsonObject;
-    /** Official K3 `reasoning_effort` (`"max"` on Open Platform; Coding `k3` also `low`/`high`). */
+    /** Official K3 `reasoning_effort` (`"low"`/`"high"`/`"max"`; Open Platform default `"max"`, Coding default `"high"`). */
     readonly reasoning_effort?: string;
   };
 }
@@ -144,7 +144,7 @@ export const kimiCodingModels = [
     model: "kimi-for-coding",
     displayName: "Kimi For Coding (K2.7 Code)",
     capabilities: { input: ["text", "document", "file"] },
-    limits: { contextWindow: 256_000, maxOutputTokens: 64_000 },
+    limits: { contextWindow: 262_144, maxOutputTokens: 64_000 },
     compat: {
       route: "anthropic",
       // Official: thinking always on — omit `thinking` on the wire unless the host sets it.
@@ -156,7 +156,7 @@ export const kimiCodingModels = [
     model: "kimi-for-coding-highspeed",
     displayName: "Kimi For Coding Highspeed",
     capabilities: { input: ["text", "document", "file"] },
-    limits: { contextWindow: 256_000, maxOutputTokens: 64_000 },
+    limits: { contextWindow: 262_144, maxOutputTokens: 64_000 },
     compat: {
       route: "anthropic",
       preserveThinking: true,
@@ -171,8 +171,8 @@ export const kimiCodingModels = [
     compat: {
       route: "anthropic",
       preserveThinking: true,
-      // Coding docs: low / high / max (default max).
-      reasoning_effort: "max",
+      // Official Kimi Code docs: low / high / max; unset effort maps to "high".
+      reasoning_effort: "high",
     },
   }),
 ] as const satisfies readonly ModelConfig[];
@@ -188,11 +188,47 @@ export const moonshotKimiModels = [
     model: "kimi-k2.7-code",
     displayName: "Kimi K2.7 Code",
     capabilities: { input: ["text"] },
-    limits: { contextWindow: 256_000, maxOutputTokens: 64_000 },
+    limits: { contextWindow: 262_144, maxOutputTokens: 64_000 },
     compat: {
       route: "openai",
       // Official: omit `thinking` for K2.7-code; Preserved Thinking still required on replay.
       preserveThinking: true,
+    },
+  }),
+  defineKimiModel({
+    provider: "moonshot",
+    model: "kimi-k2.7-code-highspeed",
+    displayName: "Kimi K2.7 Code Highspeed",
+    capabilities: { input: ["text"] },
+    limits: { contextWindow: 262_144, maxOutputTokens: 64_000 },
+    compat: {
+      route: "openai",
+      // Official: same model as kimi-k2.7-code with identical constraints; only output speed differs.
+      preserveThinking: true,
+    },
+  }),
+  defineKimiModel({
+    provider: "moonshot",
+    model: "kimi-k2.6",
+    displayName: "Kimi K2.6",
+    capabilities: { input: ["text"] },
+    limits: { contextWindow: 262_144, maxOutputTokens: 64_000 },
+    compat: {
+      route: "openai",
+      // Official: thinking `{"type":"enabled"}` default; `keep: "all"` opt-in.
+      thinking: { type: "enabled" },
+    },
+  }),
+  defineKimiModel({
+    provider: "moonshot",
+    model: "kimi-k2.5",
+    displayName: "Kimi K2.5",
+    capabilities: { input: ["text"] },
+    limits: { contextWindow: 262_144, maxOutputTokens: 64_000 },
+    compat: {
+      route: "openai",
+      // Official: thinking `{"type":"enabled"}` default; no Preserved Thinking support.
+      thinking: { type: "enabled" },
     },
   }),
   defineKimiModel({
@@ -204,7 +240,7 @@ export const moonshotKimiModels = [
     compat: {
       route: "openai",
       preserveThinking: true,
-      // Open Platform currently documents only `"max"`.
+      // Official Open Platform: low / high / max (default max).
       reasoning_effort: "max",
     },
   }),

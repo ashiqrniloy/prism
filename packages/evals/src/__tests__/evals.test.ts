@@ -9,16 +9,22 @@ import {
   providerTextDelta,
   providerUsage,
   type AgentRunResult,
+  type ProductionPersistenceStore,
 } from "@arnilo/prism";
 import {
   appendEvaluationFeedback,
+  assertEvaluationThreshold,
   createMemoryEvaluationStore,
+  createModelJudge,
+  createPersistenceTraceResolver,
   defineDataset,
   defineScorer,
   EvalDatasetError,
   EvalError,
+  runComparison,
   runExperiment,
   scoreRun,
+  serializeEvaluationReport,
   scoreRunLive,
 } from "../index.js";
 
@@ -193,6 +199,66 @@ describe("defineDataset / store", () => {
     assert.equal(page.items.length, 1);
     const other = await store.query({ tenantId: "t2" });
     assert.equal(other.items.length, 0);
+  });
+});
+
+describe("bounded trace, judge, comparison, and thresholds", () => {
+  it("resolves an exact owner-scoped trace and supplies it to scorers", async () => {
+    const ownership = { tenantId: "t1" } as const;
+    const run = { id: "run_1", sessionId: "session_1", status: "succeeded" as const, startedAt: "2026-01-01T00:00:00Z", ...ownership };
+    const store = {
+      queryRuns: async () => ({ items: [run] }),
+      queryEvents: async () => ({ items: [{ id: "e1", sessionId: "session_1", runId: "run_1", type: "agent_started", timestamp: run.startedAt, event: { type: "agent_started", agentId: "a", runId: "run_1", sessionId: "session_1", timestamp: run.startedAt }, redacted: true, ...ownership }] }),
+      queryToolCalls: async () => ({ items: [] }),
+      queryUsage: async () => ({ items: [] }),
+    } as unknown as ProductionPersistenceStore;
+    const records = await scoreRun({
+      result: sampleResult(), ownership, traceResolver: createPersistenceTraceResolver(store),
+      scorers: [defineScorer({ id: "trace", score: ({ target }) => ({ score: target?.trace?.events.length === 1 ? 1 : 0 }) })],
+    });
+    assert.equal(records[0]?.score, 1);
+    await assert.rejects(() => createPersistenceTraceResolver(store)({ sessionId: "session_1", runId: "run_1", tenantId: "other" }), /ownership/);
+  });
+
+  it("bounds model judges, attributes rubrics, and records timeout failures", async () => {
+    let attempts = 0;
+    const judge = createModelJudge({
+      id: "quality", rubric: "Score quality", rubricVersion: "v2", maxAttempts: 2,
+      judge: async () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error("retry");
+        return { score: 0.8 };
+      },
+    });
+    const scored = await scoreRun({ result: sampleResult(), scorers: [judge] });
+    assert.equal(scored[0]?.score, 0.8);
+    assert.equal(scored[0]?.metadata?.rubricVersion, "v2");
+    assert.equal(attempts, 2);
+
+    const timeout = createModelJudge({ id: "slow", rubric: "x", rubricVersion: "1", timeoutMs: 1, judge: () => new Promise(() => {}) });
+    const failed = await scoreRun({ result: sampleResult(), scorers: [timeout] });
+    assert.equal(failed[0]?.status, "failed");
+    assert.match(failed[0]?.error?.message ?? "", /timeout/);
+  });
+
+  it("keeps pairwise order deterministic and gates bounded redacted reports", async () => {
+    const dataset = defineDataset({ id: "pair", version: "1", items: [{ id: "i", input: "x" }] });
+    const report = await runComparison({
+      dataset,
+      candidates: { zeta: async () => sampleResult({ text: "z" }), alpha: async () => sampleResult({ text: "a" }) },
+      scorers: [{ id: "prefer-alpha", score: ({ left }) => ({ preference: left.name === "alpha" ? "left" : "right", reason: "SECRET" }) }],
+      secrets: ["SECRET"],
+    });
+    assert.deepEqual(report.candidates, ["alpha", "zeta"]);
+    assert.equal(report.wins.alpha, 1);
+    assert.equal(report.records[0]?.reason, "[REDACTED]");
+    assert.doesNotThrow(() => assertEvaluationThreshold(report, { maximumFailures: 0, minimumCandidateWins: { alpha: 1 } }));
+
+    const experiment = await runExperiment({ agent: mockAgent("ok"), dataset, scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })] });
+    assert.doesNotThrow(() => assertEvaluationThreshold(experiment, { minimumMean: 1, maximumFailures: 0, minimumByScorer: { s: 1 } }));
+    assert.throws(() => assertEvaluationThreshold(experiment, { minimumMean: 1, maximumFailures: 0, minimumByScorer: { missing: 1 } }), /missing mean/);
+    assert.doesNotMatch(serializeEvaluationReport({ reason: "SECRET" }, { secrets: ["SECRET"] }), /SECRET/);
+    assert.throws(() => serializeEvaluationReport(experiment, { maxBytes: 1 }), /byte limit/);
   });
 });
 

@@ -1,0 +1,48 @@
+name: live-canaries
+
+on:
+  schedule:
+    - cron: "43 5 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-canaries
+  cancel-in-progress: true
+
+jobs:
+  canaries:
+    environment: live-canaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "24"
+      - name: run four restricted live protocol canaries
+        timeout-minutes: 3
+        env:
+          PRISM_LIVE_CANARIES: "1"
+          PRISM_CANARY_TIMEOUT_MS: "15000"
+          PRISM_CANARY_REPORT: canary-report.json
+          PRISM_CANARY_PROVIDER_URL: ${{ secrets.PRISM_CANARY_PROVIDER_URL }}
+          PRISM_CANARY_PROVIDER_API_KEY: ${{ secrets.PRISM_CANARY_PROVIDER_API_KEY }}
+          PRISM_CANARY_PROVIDER_MODEL: ${{ vars.PRISM_CANARY_PROVIDER_MODEL }}
+          PRISM_CANARY_MCP_URL: ${{ secrets.PRISM_CANARY_MCP_URL }}
+          PRISM_CANARY_MCP_TOKEN: ${{ secrets.PRISM_CANARY_MCP_TOKEN }}
+          PRISM_CANARY_A2A_URL: ${{ secrets.PRISM_CANARY_A2A_URL }}
+          PRISM_CANARY_A2A_TOKEN: ${{ secrets.PRISM_CANARY_A2A_TOKEN }}
+          PRISM_BRAVE_SEARCH_TOKEN: ${{ secrets.PRISM_BRAVE_SEARCH_TOKEN }}
+        run: node scripts/live-canary.mjs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: live-canary-status-${{ github.run_id }}
+          path: canary-report.json
+          if-no-files-found: warn
+          retention-days: 7

@@ -188,6 +188,25 @@ describe("Prism MCP server", () => {
     release?.();
   });
 
+  it("binds stateful Streamable HTTP sessions to host-validated identity", async () => {
+    const server = createPrismMcpServer({ authorize: () => ({ allowed: true }) });
+    open.push(server);
+    const handler = await createPrismMcpWebHandler(server, {
+      allowedOrigins: ["https://example.test"], sessionIdGenerator: () => "session-1",
+      resolveAuthInfo: (request) => ({ token: request.headers.get("authorization") ?? "", clientId: "client", scopes: [] }),
+      resolveIdentity: (_request, auth) => auth?.token === "Bearer a" ? { id: "principal-a" } : auth?.token === "Bearer b" ? { id: "principal-b" } : false,
+    });
+    const initialized = await handler(new Request("https://example.test/mcp", {
+      method: "POST", headers: { origin: "https://example.test", authorization: "Bearer a", "content-type": "application/json", accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } } }),
+    }));
+    assert.equal(initialized.status, 200);
+    assert.equal(initialized.headers.get("mcp-session-id"), "session-1");
+    const stolen = await handler(new Request("https://example.test/mcp", { method: "GET", headers: { origin: "https://example.test", authorization: "Bearer b", "mcp-session-id": "session-1", accept: "text/event-stream" } }));
+    assert.equal(stolen.status, 404);
+    assert.doesNotMatch(await stolen.text(), /principal|token|Bearer/);
+  });
+
   it("provides a bounded web-standard Streamable HTTP handler", async () => {
     const server = createPrismMcpServer({ authorize: () => ({ allowed: true }) });
     open.push(server);

@@ -80,6 +80,7 @@ await assertRunLedgerConforms({ ledger, readRuns: () => runs, readEvents: () => 
 
 - `read*` callbacks are optional for smoke tests but required for ordering, tenant, and reopen probes.
 - `RunLedger` is write-only from Prism's perspective; replay/query APIs live on `ProductionPersistenceStore` or host-owned reads.
+- Run conformance against the underlying write-through adapter. Test `createBatchedRunLedger()` separately for FIFO, bounds, terminal/manual flush, retained failure, and documented buffered crash loss; batching does not weaken adapter conformance.
 - Redaction is not asserted here — the runtime calls `redactRunLedgerRecord()` before writes when a `SecretRedactor` is active.
 
 ## Security and performance notes

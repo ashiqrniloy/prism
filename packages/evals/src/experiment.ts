@@ -108,6 +108,8 @@ export async function runExperiment<TInput = unknown, TExpected = unknown>(
               itemId: item.id,
               experimentId,
               traceId: options.traceId,
+              traceResolver: options.traceResolver,
+              traceLimits: options.traceLimits,
               metadata: options.metadata,
               random: options.random,
               item,

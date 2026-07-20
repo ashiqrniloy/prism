@@ -7,6 +7,42 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.7 → 0.0.8 release overview
+
+All 31 first-party manifests and exact internal ranges move together to `0.0.8`; mixed first-party versions are unsupported. Core remains dependency-free at runtime and existing low-level agent/session APIs remain compatible. New telemetry, evaluation, MCP, A2A, ledger batching, and web research surfaces are opt-in. Release CI now requires CodeQL, dependency/license/SBOM/secret checks, packed-artifact attestations, PostgreSQL integration, and protected live-canary prerequisites; no tag or publication is automatic from this migration.
+
+## 0.0.7 → 0.0.8 evaluations and ledger operation
+
+`@arnilo/prism-evals` adds owner-scoped trace resolution, optional host model judges, deterministic pairwise reports, and `assertEvaluationThreshold()` without changing stored evaluation schemas. Hosts select all judge/provider credentials and should version rubrics. Core adds optional `createBatchedRunLedger()`; direct ledgers remain write-through. Choose `flush_on_terminal` only after accepting bounded pre-flush crash loss, and call `dispose()` during shutdown. Runtime snapshot caching is session/leaf-local and requires no persistence migration.
+
+## 0.0.7 → 0.0.8 web research tools
+
+Install `@arnilo/prism-web-tools` explicitly (or through `@arnilo/prism-all`) to add web capability; core and existing profiles remain inert. Select Brave or Exa at construction, provide Firecrawl separately for Markdown/schema extraction, and register returned `web_search`/`web_fetch`/`web_extract` tools through normal permission/trust/validation dispatch. Provider selection, credentials, target DNS policy, and extraction schema are host-only. All returned content is marked untrusted; no browser or vendor SDK is added.
+
+## 0.0.7 → 0.0.8 A2A durable tasks
+
+Existing text `createA2AHandler({ exposure })`, `client.send()`, and `client.stream()` remain compatible. Add host `tasks` to enable `GetTask`/`ListTasks`/`CancelTask`/`SubscribeToTask`, rich parts, interrupted states, and replay cursors; no task store or migration is created. Add host `push` for push-config CRUD and matching card capability. Raw/data/URL parts are disabled until selected in `parts`; URL/push endpoints additionally require host URL policy and are never fetched by part parsing. Push delivery/retries/idempotency remain host-owned.
+
+## 0.0.7 → 0.0.8 MCP capabilities and sessions
+
+`@arnilo/prism-mcp` now pins official SDK 1.29.0. Existing `connectMcpTools()` and stateless web handlers remain compatible. Use `connectMcpCapabilities()` for bounded resources/prompts and explicit roots/sampling/elicitation callbacks. Server resources/prompts must be selected explicitly and authorize every operation. Stateful Streamable HTTP additionally requires `sessionIdGenerator`, exact `allowedOrigins`, and host `resolveIdentity`; omission preserves stateless mode. `Last-Event-ID` replay is not enabled. Missing capability calls fail with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`.
+
+## 0.0.7 → 0.0.8 OpenTelemetry adapter
+
+The optional observability package now emits OTel GenAI names and units instead of independent `prism.agent.run` / `prism.provider.turn` / `prism.tool.execute` spans and millisecond metrics. Update dashboards to `invoke_agent prism`, `chat {model}`, `execute_tool {tool}`, `gen_ai.*.duration` (seconds), and `gen_ai.client.token.usage`. Pass `{ context, trace }` as third `wrapOpenTelemetryApi()` argument for native parent context, and use `onTraceReference` or `traceId(runId)` for evaluation linkage. Core APIs and persistence schemas are unchanged.
+
+## 0.0.7 → 0.0.8 Kimi provider alignment
+
+`@arnilo/prism-provider-kimi` now matches the official contracts: featured Coding `k3` defaults to `reasoning_effort: "high"` (Open Platform `kimi-k3` keeps `"max"`); featured context windows use the official `262_144` for 256K-class models; the featured Moonshot catalog adds `kimi-k2.7-code-highspeed`, `kimi-k2.6`, and `kimi-k2.5` (K2.5 intentionally without Preserved Thinking). Provider-owned compat keys (`route`, `preserveThinking`, `preserve_thinking`) are stripped before the opaque compat spread and no longer leak into request bodies. The Coding route additionally sends provider-owned `x-api-key` and `anthropic-version: 2023-06-01` headers per the official third-party setup. Streams emit `done` only on protocol completion evidence (`message_stop` on the Coding route, `[DONE]` + `finish_reason` on the Moonshot route); truncated streams now surface as run failures.
+
+## 0.0.7 → 0.0.8 artifact-loop parse failures
+
+`generateValidateReviseLoop` no longer returns silently on artifact parse failure. A parser returning `{ ok: false }` (or no `value`) now consumes revision budget exactly like a validation failure: the repairer receives `value: undefined` plus a synthetic failure (`metadata.reason: "parse_error"`), and exhaustion ends with terminal `artifact_failed`. Host repairers must already tolerate `value: undefined` per the `ArtifactRepairer` contract; runs that previously ended after one silent parse failure now spend up to `maxRevisions` repair turns first.
+
+## 0.0.7 → 0.0.8 OpenCode Go provider fixes
+
+`@arnilo/prism-provider-opencode-go` no longer infers `structuredOutput: "json_schema"` from OpenAI-compatible routing alone. Only verified models (`mimo-v2.5`, `mimo-v2.5-pro`) advertise it; other OpenAI-route models (for example `deepseek-v4-pro`) now use the artifact-loop parsing/validation path, and requests that still pass `options.structuredOutput` for an unverified model fail before dispatch with `unsupported_model`. Hosts with their own verification evidence can set the capability explicitly through `defineOpenCodeGoModel({ capabilities })`. The Anthropic route additionally sends provider-owned `x-api-key` and `anthropic-version: 2023-06-01` headers alongside Bearer, fixing HTTP 401 on MiniMax/Qwen models; caller headers cannot override them. Streams now emit `done` only on protocol completion evidence (`[DONE]` plus a terminal `finish_reason` on the OpenAI route, `message_stop` on the Anthropic route) with no dangling tool-call accumulators; truncated connections and incomplete tool calls terminate with an `error` event, so hosts may see previously silent truncations surface as run failures.
+
 ## 0.0.6 → 0.0.7 secure run lifecycle
 
 `createAgent()` remains backward-compatible. Version 0.0.7 adds opt-in typed `Guardrails` (`input`, provider `output`, `toolInput`, `toolOutput`) and narrowing-only `RunLimits`. Output guardrails and configured output-token/total-token/cost limits buffer provider output before exposure; blocked content is neither emitted nor persisted. A breach emits one redacted `run_limit_exceeded` event and rejects with `AgentRunError.result.limit`.

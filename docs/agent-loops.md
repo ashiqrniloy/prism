@@ -89,7 +89,7 @@ Host callback contracts (all generic over host `T`):
 
 | Contract | Shape |
 | --- | --- |
-| `ArtifactParser<T>` | `(text: string, ctx: ArtifactContext) => ArtifactParseResult<T> \| Promise<...>` — parse assistant text to a typed value. |
+| `ArtifactParser<T>` | `(text: string, ctx: ArtifactContext) => ArtifactParseResult<T> \| Promise<...>` — parse assistant text to a typed value. A parse failure (`ok: false` or missing `value`) consumes revision budget exactly like a validation failure: the repairer receives `value: undefined` plus a synthetic failure (`errors[0].message` = the parse error, `metadata.reason: "parse_error"`), and budget exhaustion ends with terminal `artifact_failed`. |
 | `ArtifactValidator<T>` | `(value: T, ctx: ArtifactContext) => ArtifactValidation \| Promise<...>` — return `{ ok: true }` or `{ ok: false, errors }`. |
 | `ArtifactRepairer<T>` | `(value: T \| undefined, failure: ArtifactValidation, ctx: ArtifactContext) => AgentInput \| Promise<...>` — build the revision follow-up input. |
 | `ArtifactValidation` | `{ ok: boolean; errors?: readonly { path?: string; message: string }[]; metadata?: ... }`. |

@@ -97,6 +97,10 @@ console.log(bytes.byteLength, manifest.name, prompt);
 - JSON parsing fails closed for invalid JSON or non-object JSON.
 - Do not put resolved credential values, tokens, headers, or executable code in loaded config, manifests, prompts, skills, or metadata.
 
+## MCP resources
+
+`@arnilo/prism-mcp` keeps remote MCP resources outside `ToolDefinition`. `connectMcpCapabilities().listResources()/readResource()` apply finite item/page/JSON bounds and return untrusted protocol output. Server `resources` are explicit fixed URIs with per-read host authorization. MCP roots are host-consented client callbacks; Prism neither discovers filesystem roots nor widens `ResourceLoader` access.
+
 ## Related APIs
 
 - [Multimodal content](multimodal-content.md): bounded `resolveMediaContentBlock()` and SSRF/MIME policy for URL/resource/binary sources.

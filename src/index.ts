@@ -2,6 +2,17 @@ export type * from "./contracts.js";
 export type { RunLimitCounters, RunLimitName, SecureAgentOptions } from "./contracts.js";
 export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError, AgentRunStateError } from "./contracts.js";
 export { createAgent, createAgentSession, resumeAgentRun } from "./agents.js";
+export {
+  createBatchedRunLedger,
+  isFlushableRunLedger,
+  DEFAULT_LEDGER_BATCH_ENTRIES,
+  HARD_LEDGER_BATCH_ENTRIES,
+  DEFAULT_LEDGER_BATCH_BYTES,
+  HARD_LEDGER_BATCH_BYTES,
+  DEFAULT_LEDGER_BATCH_DELAY_MS,
+  HARD_LEDGER_BATCH_DELAY_MS,
+} from "./run-ledger.js";
+export type { BatchedRunLedgerOptions } from "./run-ledger.js";
 export { createSecureAgent } from "./secure-agent.js";
 export {
   createMemoryRunFeedbackStore,
@@ -177,6 +188,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.7";
+export const version = "0.0.8";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

@@ -108,6 +108,7 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - **File ownership.** Create database files on a host-controlled path with restrictive permissions (`0600` default on Unix via `fileMode`).
 - **No path interpolation.** The adapter opens exactly the caller-supplied `filename`; it does not expand environment variables or discover paths.
 - **Redaction upstream.** Event and tool-call payloads may contain secrets; redact before ledger writes. The adapter does not scan or rewrite row contents.
+- **Optional batching.** SQLite remains write-through by default. Hosts may wrap its ledger with core `createBatchedRunLedger()`; `flush_on_terminal` preserves terminal acknowledgement, while `buffered` explicitly risks crash-before-flush loss.
 - **WAL + busy timeout.** WAL is enabled by default; busy timeout defaults to 5 seconds. This meets the Plan 056 local workload target but SQLite still serializes writers — prefer PostgreSQL for high write concurrency.
 - **Indexed operations.** Append, parent validation, idempotency dedup, branch reads, and pagination use the indexes documented in [Database persistence](database-persistence.md); normal paths avoid whole-database scans. Startup validation reads SQLite catalog/PRAGMA metadata only, never application rows.
 - **Tenant isolation.** `tenant_id` / `account_id` / `user_id` columns on run and ownership tables participate in query filters; hosts must still scope writes correctly.

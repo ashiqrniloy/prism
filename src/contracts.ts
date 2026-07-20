@@ -1305,6 +1305,22 @@ export interface RunLedger {
 /** Union of records that may be handed to a {@link RunLedger}. */
 export type RunLedgerRecord = RunRecord | AgentEventRecord | ToolCallRecord | UsageRecord;
 
+export type RunLedgerDurability = "write_through" | "flush_on_terminal" | "buffered";
+
+export interface RunLedgerFlushResult {
+  readonly accepted: number;
+  readonly flushed: number;
+  readonly buffered: number;
+}
+
+/** Optional durability seam implemented by bounded ledger adapters. */
+export interface FlushableRunLedger extends RunLedger {
+  readonly durability: RunLedgerDurability;
+  flush(): Promise<RunLedgerFlushResult>;
+  status(): RunLedgerFlushResult;
+  dispose(options?: { readonly flush?: boolean }): Promise<void>;
+}
+
 /** Immutable human feedback linked to an existing owned run/trace and optional evaluations. */
 export interface RunFeedbackRecord extends OwnershipScope {
   readonly id: string;

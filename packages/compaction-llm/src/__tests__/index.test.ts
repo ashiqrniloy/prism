@@ -16,7 +16,7 @@ test("compaction_llm_live_tests_are_skipped_by_default", async () => {
 test("compaction_llm_package_metadata_is_minimal", async () => {
   const pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
   assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
-  assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.7");
+  assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.8");
   assert.deepEqual(pkg.devDependencies, { "@arnilo/prism": "file:../.." });
   assert.equal(pkg.dependencies, undefined);
   assert.equal(pkg.scripts.postinstall, undefined);

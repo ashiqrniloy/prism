@@ -13,8 +13,8 @@ export function kimiThinking(request: ProviderRequest): JsonObject | undefined {
 }
 
 /**
- * Official K3 top-level `reasoning_effort` (Open Platform currently documents `"max"`;
- * Kimi Code additionally maps `low` / `high` / `max` for model id `k3`).
+ * Official K3 top-level `reasoning_effort`: `"low"` / `"high"` / `"max"`.
+ * Open Platform default is `"max"`; Kimi Code default is `"high"`.
  * Request wins over model default.
  * @see https://platform.kimi.ai/docs/guide/use-thinking-effort
  */
@@ -36,7 +36,10 @@ export function kimiPreserveThinking(request: ProviderRequest): boolean {
   return value === true;
 }
 
-/** Strip thinking-owned keys so opaque compat spread cannot invert explicit resolvers. */
+/**
+ * Strip provider-owned compat keys so the opaque compat spread cannot leak
+ * routing/serialization directives (or inverted thinking values) into wire bodies.
+ */
 export function stripKimiThinkingCompat(compat: JsonObject | undefined): JsonObject {
   if (!compat) return {};
   const {
@@ -44,6 +47,8 @@ export function stripKimiThinkingCompat(compat: JsonObject | undefined): JsonObj
     reasoning_effort: _effort,
     reasoningEffort: _effortCamel,
     preserveThinking: _preserve,
+    preserve_thinking: _preserveSnake,
+    route: _route,
     ...rest
   } = compat as Record<string, unknown>;
   return rest as JsonObject;

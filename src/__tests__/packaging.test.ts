@@ -33,6 +33,7 @@ const packages = [
   { dir: "packages/rag", name: "@arnilo/prism-rag" },
   { dir: "packages/server", name: "@arnilo/prism-server" },
   { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
+  { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
   { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
@@ -167,7 +168,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.7", `${pkg.name} @arnilo/prism peer must be 0.0.7`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.8", `${pkg.name} @arnilo/prism peer must be 0.0.8`);
           assert.ok(
             !manifest.peerDependenciesMeta,
             `${pkg.name} must not mark the @arnilo/prism peer optional (peerDependenciesMeta should be absent)`,
@@ -224,13 +225,14 @@ describe("packaging guard", () => {
               "@arnilo/prism-rag",
               "@arnilo/prism-server",
               "@arnilo/prism-supervisor",
+              "@arnilo/prism-web-tools",
             ],
           };
           const want = expected[pkg.name];
           assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.7", `${pkg.name} dependency must be pinned to 0.0.7`);
+            assert.equal(v, "0.0.8", `${pkg.name} dependency must be pinned to 0.0.8`);
           }
         });
       }
@@ -259,9 +261,9 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.7", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.8", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.7", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.8", "@arnilo/prism-all must hard-depend on provider umbrella");
   });
 
   it("prism-all transitively includes every published first-party package", () => {

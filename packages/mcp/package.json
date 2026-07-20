@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-mcp",
-  "version": "0.0.7",
-  "description": "Optional MCP client bridge and explicit Prism tool/command server exposure.",
+  "version": "0.0.8",
+  "description": "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,11 +25,11 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.7"
+    "@arnilo/prism": "0.0.8"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

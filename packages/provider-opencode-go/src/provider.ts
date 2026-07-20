@@ -34,6 +34,9 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
             ...request.options?.headers,
             ...opencodeOwnedHeaders(request.options),
             ...(token ? { authorization: `Bearer ${token}` } : {}),
+            // Provider-owned Anthropic-route auth: Bearer-only returns HTTP 401 upstream.
+            // Applied last so callers cannot replace credential-bearing headers.
+            ...(route === "anthropic" && token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {}),
           },
           body: JSON.stringify(body),
           signal: request.signal,

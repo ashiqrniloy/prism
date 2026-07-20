@@ -1,4 +1,13 @@
 # Changelog
+
+## Unreleased
+
+## [0.0.8] - 2026-07-20
+
+- Added host-owned durable A2A task start/get/list/cancel/subscribe with bounded cursor replay, interrupted states, ordered rich task events, and non-disclosing task errors.
+- Added opt-in bounded text/raw/URL/data parts; URL policy validates without dereferencing.
+- Added capability-gated push config CRUD/client APIs and explicit bounded `deliverA2APushEvent()` retry/timeout/idempotency-key wrapper; webhook transport/credentials remain host-owned and secrets are omitted from responses.
+
 ## [0.0.7] - 2026-07-19
 
 - Released with the exact 0.0.7 first-party package graph.

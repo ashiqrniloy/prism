@@ -204,6 +204,7 @@ Per-run options may narrow `limits` and append `guardrails`; they cannot replace
 - [Middleware hooks](middleware-hooks.md): hooks that configured assembly/runtime can run.
 - [CLI/RPC](cli-rpc.md): terminal and JSONL adapters over this runtime.
 - [Workflows](workflows.md): optional DAG orchestration that calls `AgentSession.run()` for agent nodes.
+- [A2A interoperability](a2a.md): direct text exposure calls `AgentSession.run()`; durable/rich/reconnect behavior uses host `A2ATaskLifecycle` over existing checkpoints/persistence, never an in-memory runtime cache.
 
 `AgentConfig.loop` and `RunOptions.loop` select a replaceable per-run control loop (`singleShotLoop` default, or `generate-validate-revise` with host callbacks); see [Agent loops](agent-loops.md). `RunOptions.loop` wins over `AgentConfig.loop`. Built-in loops emit the same normal turn/message envelope around provider turns, and both add the first run input to live history once after the first provider turn so later turns see the same transcript shape.
 

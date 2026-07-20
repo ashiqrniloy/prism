@@ -2,7 +2,7 @@
 
 ## What it does
 
-`RunLedger` is the host-implemented, write-only seam Prism uses to durably persist run metadata, agent events, tool calls, and usage during a `session.run()`. `RunFeedbackStore` is the separate post-run seam for immutable ratings, comments, tags, and evaluation links. The runtime calls the adapter as each record becomes available; the adapter decides how to write it (SQL insert, NoSQL put, JSONL append, time-series batch, etc.).
+`RunLedger` is the host-implemented, write-only seam Prism uses to durably persist run metadata, agent events, tool calls, and usage during a `session.run()`. `createBatchedRunLedger()` is an explicit optional wrapper; direct ledger writes remain default. `RunFeedbackStore` is the separate post-run seam for immutable ratings, comments, tags, and evaluation links. The runtime calls the adapter as each record becomes available; the adapter decides how to write it (SQL insert, NoSQL put, JSONL append, time-series batch, etc.).
 
 APIs:
 
@@ -152,7 +152,7 @@ const page = await feedback.query({ runId: result.runId, tenantId: "t1", userId:
 await feedback.delete({ id: "fb_1", tenantId: "t1", userId: "u1" });
 ```
 
-Default/hard bounds: comment 4/16 KiB, tags 16/64, scorer/evaluation IDs 16/64 each, metadata 16/64 KiB, query page 100/500; tags are 64 characters and identifiers 128. The store redacts comment/tags/metadata after run ownership validation and before persistence. IDs are linked, not scorer payloads. `ProductionPersistenceStore.feedback?` exposes this capability; first-party SQLite/PostgreSQL adapters implement it in schema migration `003_run_feedback` and reject missing/cross-owned runs.
+Default/hard bounds: comment 4/16 KiB, tags 16/64, scorer/evaluation IDs 16/64 each, metadata 16/64 KiB, query page 100/500; tags are 64 characters and identifiers 128. `@arnilo/prism-evals` may read `queryRuns/queryEvents/queryToolCalls/queryUsage` only through an explicit owner/session/run-scoped trace resolver with finite cursor pages and aggregate bytes. The store redacts comment/tags/metadata after run ownership validation and before persistence. IDs are linked, not scorer payloads. `ProductionPersistenceStore.feedback?` exposes this capability; first-party SQLite/PostgreSQL adapters implement it in schema migration `003_run_feedback` and reject missing/cross-owned runs.
 
 ## Status transitions
 
@@ -286,6 +286,21 @@ console.log(cacheUsageReport(aggregate?.usage));
 - **Idempotency is host-owned.** The runtime writes the key into `RunRecord.idempotencyKey`; enforcing unique keys and deduplicating retries is the host adapter's responsibility.
 - **Tenant isolation.** `OwnershipScope` fields are copied from the active ownership scope, but the runtime does not enforce tenant isolation for ledger rows. Feedback is stricter: append/query/delete require tenant plus account/user, and first-party stores compare the exact scope to the linked run.
 - **Feedback privacy.** Comments/tags/metadata can contain PII. Configure a feedback redactor, apply retention, and call owned `delete()` for erasure. Never copy comments or tag values into metric labels.
+
+## Optional batching and durability
+
+```ts
+const ledger = createBatchedRunLedger(store, {
+  maxBatchEntries: 128,
+  maxBatchBytes: 512 * 1024,
+  maxDelayMs: 25,
+  durability: "flush_on_terminal",
+});
+```
+
+Modes: `write_through` acknowledges each target write; `flush_on_terminal` buffers but runtime awaits terminal flush; `buffered` acknowledges enqueue only and requires host `flush()` for durability. `status()` distinguishes accepted/flushed/buffered counts. Defaults/hard caps: 128/4,096 batch entries, 512 KiB/8 MiB batch bytes, 25 ms/60 s delay; buffered count/bytes apply backpressure before enqueue. FIFO spans all record kinds. Inputs are already runtime-redacted. Flush errors propagate and retain the failing record for retry. `dispose({ flush: false })` clears memory but deliberately loses unflushed records—same crash-before-flush ceiling as process failure.
+
+Runtime session snapshots cache one leaf/generation for at most one second. Successful append, compaction append, checkout, and durable resume invalidate; failed append does not advance leaf/cache. Cache is session-local and never shared across ownership/session/branch.
 
 ## Related APIs
 

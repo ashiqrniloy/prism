@@ -15,9 +15,10 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "AGENT_RUN_STATE_NAMESPACE", "AGENT_RUN_STATE_SCHEMA_VERSION", "AgentRunError", "AgentRunStateError", "CHECKPOINT_CONFLICT_CODE", "CheckpointConflictError", "DEFAULT_MAX_AGENT_RUN_STATE_BYTES", "DEFAULT_RUN_LIMITS", "GuardrailError", "HARD_MAX_AGENT_RUN_STATE_BYTES", "HARD_MAX_RUN_COST", "HARD_RUN_LIMITS", "LEASE_CONFLICT_CODE", "LeaseConflictError", "MAX_GUARDRAIL_CONCURRENCY", "PermissionDeniedError", "RunLimitError", "RunLimitTracker", "SESSION_APPEND_CONFLICT_CODE", "SESSION_ENTRY_KINDS",
   "SESSION_ENTRY_SCHEMA_VERSION", "SessionAppendConflictError", "RunFeedbackError", "TrustDeniedError",
+  "DEFAULT_LEDGER_BATCH_ENTRIES", "HARD_LEDGER_BATCH_ENTRIES", "DEFAULT_LEDGER_BATCH_BYTES", "HARD_LEDGER_BATCH_BYTES", "DEFAULT_LEDGER_BATCH_DELAY_MS", "HARD_LEDGER_BATCH_DELAY_MS",
   "agentFingerprint", "applyCacheControl", "applyExecutionDecision", "applyThinkingLevel", "assembleProviderInput", "assertDeclaredMediaTypeMatches", "assertExecutionAllowed", "assertGuardrailsAllowed", "assertJsonObject", "assertMediaBlocksWithinBounds", "assertMessagesSupportModelCapabilities", "assertModelSupportsContentBlocks", "assertPermission",
   "assertSsrfAllowedUrl", "assertStructuredOutputRequestSupported", "assertTrusted", "authMethodKey", "cacheHitRate", "cacheSavings", "cacheUsageReport",
-  "checkExecution", "checkPermission", "collectMessageContentBlocks", "composeSystemPrompt", "contentBlockInputModality", "createAgent", "createAgentRunLifecycle", "createAgentSession", "createRunLimitTracker", "createSecureAgent",
+  "checkExecution", "checkPermission", "collectMessageContentBlocks", "composeSystemPrompt", "contentBlockInputModality", "createAgent", "createAgentRunLifecycle", "createAgentSession", "createBatchedRunLedger", "createRunLimitTracker", "createSecureAgent",
   "createChainedCredentialResolver", "createChainedSettingsProvider",
   "createContributionRegistries", "createContributionRegistry",
   "createDefaultCompactionStrategy", "createDefaultInputBuilder",
@@ -33,7 +34,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "definePrismManifest", "defineProviderPackage", "denialToErrorInfo", "description",
   "dispatchToolCall", "dispatchToolCallsInOrder", "errorToErrorInfo", "ExecutionDeniedError", "filterTools", "generateValidateReviseLoop",
   "getSessionBranchEntries", "isAgentLoopOptions", "isCompactionEntryData",
-  "isJsonObject", "isSessionAppendConflict", "isSessionEntryKind", "isTransientErrorInfo",
+  "isFlushableRunLedger", "isJsonObject", "isSessionAppendConflict", "isSessionEntryKind", "isTransientErrorInfo",
   "isTrusted", "isThinkingLevel", "listSessionBranches", "loadBinaryResource", "loadBoundedBinaryResource", "loadConfigLayers", "loadJsonResource",
   "loadAgentRunState", "loadManifestResource", "loadTextResource", "mapCacheRetention", "mergeConfigLayers",
   "mergeProviderRequestOptions", "mergeSystemPromptConfig", "MediaContentError", "MODEL_INPUT_CAPABILITIES", "modelSupportsStructuredOutput", "name", "normalizeThinkingLevel", "parseAgentFile",
@@ -59,7 +60,7 @@ const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
 ];
 
 const FROZEN_TYPE_EXPORTS: readonly string[] = [
-  "AgentInput", "ApplyCacheControlOptions", "AssembleProviderInputOptions", "AudioContent",
+  "AgentInput", "ApplyCacheControlOptions", "AssembleProviderInputOptions", "AudioContent", "BatchedRunLedgerOptions",
   "CacheControlValue", "CacheControlledContentBlock", "CacheControlledMessage",
   "CacheUsageReport", "ComposeSystemPromptOptions", "ConfigLayer", "ConfigLoadContext",
   "ConfigProvider", "ContributionRegistries", "ContributionRegistriesOptions",

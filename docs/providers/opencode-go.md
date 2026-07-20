@@ -57,6 +57,7 @@ createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions): Prov
 | Surface | Behavior |
 | --- | --- |
 | Provider stream | Prism text, thinking, tool-call delta/final, `usage`, `done`, redacted `error`. |
+| Stream completion | `done` is emitted only on completion evidence — OpenAI route: `[DONE]` marker plus a terminal `finish_reason`; Anthropic route: `message_stop`. Truncated or incomplete streams (including dangling tool-call blocks) end with a terminal `error` instead, so partial output never surfaces as `succeeded`. |
 | OpenAI thinking | `delta.reasoning_content` → thinking deltas; replay via `reasoning_content` when `preserveThinking`. |
 | Anthropic thinking | `thinking_delta` → thinking deltas; replay via Anthropic thinking blocks when `preserveThinking`. |
 | Session/cache | `x-opencode-session` + route-specific cache markers. |
@@ -71,6 +72,12 @@ createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions): Prov
   "x-opencode-session": "<ProviderRequest.options.cacheKey ?? sessionId>"
 }
 ```
+
+The Anthropic route (`POST /messages`) additionally sends provider-owned
+`x-api-key: <resolved-key>` and `anthropic-version: 2023-06-01` headers;
+Bearer-only authentication returns HTTP 401 on that route. These headers are
+applied after caller headers and cannot be overridden. The OpenAI route never
+receives Anthropic-only headers.
 
 OpenAI-route body (thinking passthrough + preserved reasoning):
 
@@ -130,6 +137,39 @@ table; Pi secondary metadata is used only for context/output limits when docs om
 | --- | --- | --- |
 | `grok-4.5`, `glm-5.2`, `glm-5.1`, `kimi-k3`, `kimi-k2.7-code`, `kimi-k2.6`, `mimo-v2.5`, `mimo-v2.5-pro`, `deepseek-v4-pro`, `deepseek-v4-flash` | `openai` | `implicit` |
 | `minimax-m3`, `minimax-m2.7`, `minimax-m2.5`, `qwen3.7-max`, `qwen3.7-plus`, `qwen3.6-plus` | `anthropic` | `cache_control` |
+
+### Structured output capability
+
+`capabilities.structuredOutput: "json_schema"` is advertised only for models
+verified against the live gateway to accept JSON Schema `response_format` —
+OpenAI-compatible routing alone never implies support (unverified models such
+as `deepseek-v4-pro` reject it upstream with HTTP 400). Verified models:
+`mimo-v2.5`, `mimo-v2.5-pro`. All other models leave the capability undefined
+and use Prism's artifact-loop parsing/validation path without
+`response_format`; hosts with their own verification evidence can set the
+capability explicitly via `defineOpenCodeGoModel({ capabilities })`.
+
+Extending the verified set requires per-model live evidence. Run the
+credential-gated probe:
+
+```sh
+PRISM_LIVE_PROVIDER_TESTS=1 OPENCODE_API_KEY=... \
+  npm run test --workspace=@arnilo/prism-provider-opencode-go
+```
+
+`live_json_schema_structured_output_succeeds_<model>` must pass for a model
+before it joins the set; `live_json_schema_structured_output_rejected_deepseek_v4_pro`
+documents the current boundary (upstream DeepSeek supports only
+`response_format` `"text" | "json_object"`, not `json_schema`) and fails loudly
+if the gateway ever starts accepting `json_schema`, which is the signal to
+extend the set.
+
+Discovery is capability-aware: when a `/models` entry carries
+`capabilities.structured_output` (`"json_schema"` or `true`),
+`listOpenCodeGoModels()` honors it as gateway-authoritative — including an
+explicit `false`, which overrides the static verified set. Today's sparse
+payload carries no capability fields, so discovery falls back to the static
+verified set with no behavior change.
 
 ## Model discovery
 
@@ -199,8 +239,9 @@ Owned compat keys (`route`, `thinking`, `reasoning`, `reasoning_effort`,
 - API keys are resolved per request from caller-supplied values or resolvers and
   redacted from errors (including discovery failures).
 - Caller-supplied `ProviderRequest.options.headers` can add non-owned headers, but
-  provider-owned headers (`content-type`, `x-opencode-session`, `authorization`)
-  are applied last and cannot be overridden by caller headers.
+  provider-owned headers (`content-type`, `x-opencode-session`, `authorization`,
+  and on the Anthropic route `x-api-key`/`anthropic-version`) are applied last
+  and cannot be overridden by caller headers.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus `OPENCODE_API_KEY`;
   default tests are network-free.
 

@@ -814,6 +814,25 @@ describe("agent session runtime", () => {
     assert.equal(seen[1]?.includes("reply 1"), true);
   });
 
+  it("caches one stable leaf snapshot and invalidates after append and checkout", async () => {
+    const memory = createMemorySessionStore();
+    let reads = 0;
+    const store: SessionStore = {
+      append: memory.append.bind(memory),
+      async list(sessionId) { reads += 1; return memory.list(sessionId); },
+    };
+    const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store, compaction: { thresholdEntries: 100 } }).createSession({ id: "cache" });
+
+    await session.run("first");
+    assert.equal(reads, 2, "auto-compaction and provider assembly share the stable-leaf snapshot");
+    const leaf = session.leafId;
+    await session.checkout(leaf);
+    assert.equal(reads, 3, "checkout invalidates the snapshot");
+    await session.run("second");
+    assert.equal(reads, 4, "successful append invalidates once; stable-leaf reads remain shared");
+  });
+
   it("fork uses same session store and selected leaf", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);

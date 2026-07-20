@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-session-store-postgres",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Optional PostgreSQL SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "pg": "^8.22.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.7"
+    "@arnilo/prism": "0.0.8"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

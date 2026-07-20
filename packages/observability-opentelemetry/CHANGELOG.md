@@ -1,4 +1,10 @@
 # Changelog
+## Unreleased
+
+## [0.0.8] - 2026-07-20
+
+- Added OTel GenAI agent/inference/tool hierarchy, host/native context parenting, guardrail/delegation children, bounded run-to-trace linkage, standard evaluation events, and semantic duration/token metrics with metadata-only defaults.
+
 ## [0.0.7] - 2026-07-19
 
 - Released with the exact 0.0.7 first-party package graph.

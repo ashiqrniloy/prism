@@ -10,11 +10,11 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Agent definitions](agent-definitions.md): resolve declarative `AgentDefinition` values via `resolveAgentDefinition`, and turn app-config `<configRoot>/agents/<name>/AGENT.md` bundles into runnable agents via `discoverAgentBundles` / `resolveAgentBundle` (explicit tool/skill activation by name, fail-closed omitted capabilities, migration-only `activateAllCapabilities`, strict duplicate scope checks, configurable prompt layers, no auto-discovery).
 - [Agent loops](agent-loops.md): replaceable per-run control loops — `singleShotLoop` default and opt-in bounded artifact-loop tool rounds with host-supplied `validator`/`parser`/`repairer` callbacks.
 - [Guardrails](guardrails.md): typed fail-closed input/output/tool checks with buffered provider output and redacted decision records.
-- [Agent events](agent-events.md): the `AgentEvent` stream — agent/turn/message (including live `tool_call_delta` fragments), provider turn timing, tool execution, queue/subscriber overflow, compaction/retry, artifact validation/refinement, and error variants, redacted via `redactAgentEvent`.
-- [Observability](observability.md): metadata-only provider/tool and run-feedback/evaluation projection, terminal span cleanup, low-cardinality metrics, and optional `@arnilo/prism-observability-opentelemetry` adapter.
-- [Evaluations](evaluations.md): optional deterministic scorers/datasets/experiments plus ID-only linkage from evaluation records to immutable owned run feedback.
-- [Runs and usage ledger](runs-and-usage.md): durable run/event/tool/usage persistence plus bounded immutable run/trace feedback, evaluation links, ownership, redaction, query, and deletion semantics.
-- [Performance limits](performance.md): bounded live subscriber queues, branch-read pagination expectations, JSONL/dev-store limits, and production sizing assumptions.
+- [Agent events](agent-events.md): redacted lifecycle stream used by UIs, ledgers, and metadata-only parented telemetry; message/progress deltas never create spans.
+- [Observability](observability.md): OTel GenAI agent/provider/tool hierarchy, host context parenting, bounded trace linkage, safe evaluation events, controlled metrics, and exporter isolation.
+- [Evaluations](evaluations.md): deterministic and bounded trace/model-judge/pairwise scoring, CI thresholds, OTel trace-reference linkage, and ID-only linkage to immutable owned run feedback.
+- [Runs and usage ledger](runs-and-usage.md): durable run/event/tool/usage persistence, optional bounded FIFO durability policies, session snapshot caching, and immutable run/trace feedback.
+- [Performance limits](performance.md): bounded evaluation traces/judges/reports, security scan/live-canary backstops, live subscriber queues, branch-read pagination expectations, JSONL/dev-store limits, and production sizing assumptions.
 - [Structured output](structured-output.md): the `Artifact*` seam plus provider-native `StructuredOutputOptions` / `structuredOutputMode` for capable models.
 
 ## Compaction/session memory
@@ -27,7 +27,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Database persistence](database-persistence.md): production persistence contracts, shared checksummed migration/full-shape catalog primitives (`@arnilo/prism/testing/persistence-schema`), conditional append, indexes, `readBranchPath`, reference relational schema, retention, and NoSQL mapping.
 - [SQLite persistence](sqlite-persistence.md): optional `better-sqlite3` adapter with session/run storage, checkpoints/leases, feedback, and transactionally verified/backfilled migration-v3 metadata.
 - [PostgreSQL persistence](postgres-persistence.md): optional pooled `pg` adapter with session/run/checkpoint/lease/feedback storage, advisory-locked checksummed/full-shape migrations, and opt-in live conformance.
-- [Migration guide](migration.md): 0.0.3 compatibility, 0.0.6 hardening, and 0.0.7 guardrails, RunLimits, durable approval/resume, and secure composition.
+- [Migration guide](migration.md): 0.0.3 compatibility through 0.0.8 telemetry/evaluation, MCP/A2A, web research, ledger batching, and release-security changes.
 - [Node JSONL session store](node-jsonl-session-store.md): development-only JSONL file adapter for single-process Node hosts; no cross-process safety.
 - [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): Plan 056 inventory — session/run-ledger/persistence contracts, credential/OAuth seams, content/resource/model capabilities, package dependency matrix, conformance matrix, and threat model for production adapters.
 
@@ -57,7 +57,8 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Tools](tools.md): register host-owned active tools with replace-or-error duplicate policy, apply exact allow/deny filtering, dispatch normal or opt-in bounded artifact-loop calls, and optionally bound untrusted JSON Schema compilation.
 - [Tool execution primitives](tool-execution-primitives.md): finite JSON Schema LRU validation, exclusive-aware bounded parallel dispatch, MCP bridge mapping, coding execution policy, and image-read bounds.
 - [Tool validator JSON Schema package](../packages/tool-validator-json-schema/README.md): optional `@arnilo/prism-tool-validator-json-schema` adapter for `tool.parameters`.
-- [MCP client bridge and server exposure](mcp-tools.md): optional bounded atomic tool discovery/results, exact-origin DNS-pinned HTTPS/loopback-only HTTP client transport, and explicitly authorized Prism tools/commands/durable agent lifecycle on SDK `McpServer`.
+- [MCP client bridge and server exposure](mcp-tools.md): SDK-1.29.0 bounded tools/resources/prompts, host-owned roots/sampling/elicitation, exact-origin DNS-pinned client transport, and principal-bound opt-in Streamable HTTP sessions.
+- [Web search, fetch, and extraction](web-tools.md): optional host-selected Brave/Exa discovery and Firecrawl Markdown/schema tools with native fetch, stable citations, late credentials, finite limits, and explicit untrusted-content boundaries.
 - [Coding agent tools](coding-agent-tools.md): optional `shell`, `read`, `write`, and `edit` definitions with streamed text pages, bounded image/edit reads and write/edit payloads, finite shell wall/total-output limits, secure host-owned spill cleanup, pluggable bounded operation contracts, per-path mutation serialization, and optional `ExecutionPolicy`. Limits do not sandbox host access—gate with permission/trust policy and `@arnilo/prism-coding-security`.
 - [Coding execution approval and sandboxing](coding-security.md): path/command approval, identity-scoped caching, shell-turn exclusivity, and abort-aware streaming sandbox adapters for coding tools.
 
@@ -77,8 +78,8 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Web-standard server handler](server.md): optional framework-free authorized direct/SSE agent, explicitly selected durable agent lifecycle, and durable workflow routes with explicit bounds and zero default exposure.
 
 ## Multi-agent and interoperability
-- [Supervisor delegation](supervisors.md): optional explicit child allow-list, derived memory scopes, narrowing-only permissions, lifecycle hooks, nested delegation, cancellation, and finite budgets.
-- [A2A interoperability](a2a.md): optional A2A 1.0 cards, ES256 signatures, authorized JSON-RPC/SSE handler, and exact-origin client with fatal streaming UTF-8 plus bounded LF/CRLF/multiline SSE parsing.
+- [Supervisor delegation](supervisors.md): optional explicit child allow-list, derived memory scopes, narrowing-only permissions, lifecycle hooks, nested delegation, cancellation, finite budgets, host-projected delegation telemetry, and separate A2A durable adapter boundary.
+- [A2A interoperability](a2a.md): A2A 1.0 JSON-RPC/HTTPS cards plus host-owned durable task get/list/cancel/subscribe, bounded rich parts/replay, principal-scoped push configs, and exact-origin verified client.
 
 ## CLI/RPC
 - [CLI/RPC](cli-rpc.md): Run print/json modes and LF-delimited RPC over the public AgentSession runtime, including branch-handle results, fixed `forkSession`, and `checkout`. `prism init` scaffolds a tiny TypeScript project with one selected provider and an offline mock test.
@@ -87,7 +88,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [Workflow/TUI scope](workflow-tui-primitives.md): records why 0.0.5 ships workflow APIs/RPC control but no interactive terminal UI.
 
 ## Security and credentials
-- [Host security guide](host-security.md): fail-closed checklist for bounded encrypted vault/KDF/keychain, JSON Schema/vector/cryptographic-ID, MCP discovery/result/transport operations, settings, redaction, trust roots, remote media, exact workflow ownership/revision checks, finite coding I/O and spill ownership, permission/approval policies, persistence, extension loading, and tool validation.
+- [Host security guide](host-security.md): fail-closed checklist for supply-chain/attestation/canary isolation, bounded credentials, JSON/schema/vector/crypto, MCP/A2A/web remote boundaries, untrusted external content, settings, redaction, trust roots, workflow ownership, coding I/O, permissions, persistence, extensions, and tool validation.
 - [Security/auth/trust](settings-auth-trust-security.md): settings providers, credential helpers, trust/permission policies, redaction controls, host-owned settings/credentials wiring outside `AgentConfig`, and security-boundary hardening summary.
 - [Credentials and redaction](credentials-and-redaction.md): compose explicit credential resolver order, use caller-supplied env objects/OAuth refresh helpers, resolve credentials only at the provider edge, and redact known secret values.
 - [Credential storage](credential-storage.md): optional `@arnilo/prism-credentials-node` adapter with strict bounded AES-GCM envelopes, async finite scrypt, restrictive Unix files, and abort-aware bounded system-keychain calls.
@@ -96,14 +97,15 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - Provider test doubles: `createMockProvider()` and provider event helpers are documented on the canonical Provider layer page above.
 - [Provider conformance](provider-conformance.md): run network-free provider adapter assertions (stream order, abort, tool-call reconstruction, cache usage, content coverage, protected header ownership, secret leak) from `@arnilo/prism/testing/provider-conformance`.
 - [Session store conformance](session-store-conformance.md): assert any `SessionStore` adapter satisfies append/idempotency/conflict/branch invariants from `@arnilo/prism/testing/session-store-conformance`.
-- [Run ledger conformance](run-ledger-conformance.md): assert durable run/event/tool/usage writes and reopen survival. Run-feedback stores use `@arnilo/prism/testing/feedback` for append/query/delete/ownership linkage conformance.
+- [Run ledger conformance](run-ledger-conformance.md): assert durable run/event/tool/usage writes and reopen survival; batch-wrapper FIFO/bounds/flush checks remain separate. Run-feedback stores use `@arnilo/prism/testing/feedback` for append/query/delete/ownership linkage conformance.
 - [Compaction conformance](compaction-conformance.md): assert any `CompactionStrategy` returns a non-empty redacted summary and observes abort from `@arnilo/prism/testing/compaction-conformance`.
 - [Tool conformance](tool-conformance.md): assert the tool-dispatch blocked-reason matrix (unknown/denied/invalid/permission/validator) and success path from `@arnilo/prism/testing/tool-conformance`.
 - [Extension conformance](extension-conformance.md): assert an `Extension` setup runs, contributions stay inert, and setup errors are redacted or rethrown from `@arnilo/prism/testing/extension-conformance`.
 - `examples/`: compile-checked typed examples and runnable mock demos (SDK basics, provider registration, auth, tools, cache-aware prompt assembly, NeuralWatt agent run, stores/branching, compaction, observational-memory recall, structured-output/artifact-loop, CLI, RPC, workflow orchestration).
 
 ## Release and install
-- [Release and install](release-and-install.md): 30-package graph and profiles, install/tarball rules, deterministic resumable provenance publication, and offline test budget.
+- [Release and install](release-and-install.md): 31-package graph, install/tarball rules, pinned CodeQL/dependency/SBOM/license/secret/attestation gates, deterministic resumable publication, offline tests, and protected live canaries.
+- [Review coverage (2026-07-19 Phase 3)](review-coverage-2026-07-19-phase-3.md): Plan 070 evidence freeze — exact protocol/vendor references, capability/primitive/limit matrices, supported boundaries, and 0.0.8 release evidence.
 - [Review coverage (2026-07-17 provider validation)](review-coverage-2026-07-17-provider-validation.md): Plan 067 evidence freeze — P0–P2 re-verification owners, seven first-party provider packages mapped to official-doc URLs, Pi secondary refs, cache/thinking/discovery surfaces, credential canaries, and use-case model-binding inventory.
 - [Review coverage (2026-07-15)](review-coverage-2026-07-15.md): frozen 0.0.5 finding/feature ownership, existing-primitive inventory, package decisions, threat boundaries, exclusions, and measured Phase 0 baseline.
 - [Review coverage (2026-07-14)](review-coverage-2026-07-14.md): traceability matrix linking review findings and bug-report fixes to plan tasks, tests, and documentation for release 0.0.4.

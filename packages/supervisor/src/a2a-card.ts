@@ -72,12 +72,14 @@ function canonicalCard(card: A2AAgentCard): string {
 }
 
 function validateCard(card: A2AAgentCard): void {
+  let serialized: string; try { serialized = JSON.stringify(card); } catch { throw new A2AError("Agent card must be JSON", 400, "ERR_PRISM_A2A_CARD"); }
+  if (Buffer.byteLength(serialized) > 1024 * 1024 || card.supportedInterfaces.length > 16 || card.skills.length > 256) throw new A2AError("Agent card exceeds collection/byte limits", 400, "ERR_PRISM_A2A_CARD");
   if (!card.name?.trim() || !card.description?.trim() || !card.version?.trim()) throw new A2AError("Agent card identity is incomplete", 400, "ERR_PRISM_A2A_CARD");
   if (!card.supportedInterfaces.length || !card.supportedInterfaces.every((item) => item.protocolBinding === "JSONRPC" && item.protocolVersion === "1.0" && isHttpsUrl(item.url))) throw new A2AError("Agent card requires an HTTPS JSONRPC 1.0 interface", 400, "ERR_PRISM_A2A_CARD");
   if (!card.defaultInputModes.includes("text/plain") || !card.defaultOutputModes.includes("text/plain")) throw new A2AError("Agent card must support text/plain", 400, "ERR_PRISM_A2A_CARD");
   const ids = new Set<string>();
   for (const skill of card.skills) {
-    if (!skill.id.trim() || !skill.name.trim() || !skill.description.trim() || ids.has(skill.id)) throw new A2AError("Agent card skill is invalid", 400, "ERR_PRISM_A2A_CARD");
+    if (!skill.id.trim() || !skill.name.trim() || !skill.description.trim() || ids.has(skill.id) || skill.tags.length > 64 || [skill.id, skill.name, skill.description, ...skill.tags].some((value) => Buffer.byteLength(value) > 16 * 1024)) throw new A2AError("Agent card skill is invalid", 400, "ERR_PRISM_A2A_CARD");
     ids.add(skill.id);
   }
 }

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-evals` adds optional deterministic scorers, immutable datasets, live post-run scoring, and bounded batch experiments over `AgentRunResult`. Scores are finite numbers in `[0, 1]` with optional reason/metadata and linkage to run/session/trace/experiment IDs.
+`@arnilo/prism-evals` adds optional deterministic scorers, immutable datasets, bounded persistence-trace grading, explicit host model judges, pairwise comparisons, CI thresholds, live post-run scoring, and batch experiments over `AgentRunResult`. Scores are finite numbers in `[0, 1]` with optional reason/metadata and linkage to run/session/trace/experiment IDs.
 
 ## When to use it
 
@@ -18,6 +18,10 @@ Use this package when a host needs offline quality checks or sampled live scorin
 | `runExperiment` | `agent`, dataset, scorers, bounded `concurrency`, optional store/ownership |
 | `createMemoryEvaluationStore` | optional seed records |
 | `appendEvaluationFeedback` | `RunFeedbackStore`, `EvaluationStore`, feedback fields, and 1–64 known evaluation IDs |
+| `createPersistenceTraceResolver` | explicit `ProductionPersistenceStore`, exact session/run/ownership, page/byte bounds |
+| `createModelJudge` | host judge callback, stable rubric/version, timeout/attempt/output bounds |
+| `runComparison` | immutable dataset, 2–8 named candidates by default, pairwise scorers |
+| `assertEvaluationThreshold` / `serializeEvaluationReport` | mean/failure/per-scorer gates and bounded redacted JSON |
 
 ## Outputs / response / events
 
@@ -112,11 +116,30 @@ console.log(report.aggregate.meanScore, linked.evaluationIds);
 - Scorers receive result/item data only. Credentials, tools, and workspace access are not provided unless the host deliberately closes over them.
 - Records pass through `SecretRedactor` / `secrets` before store append.
 - Queries filter by ownership scope. Feedback linkage additionally requires tenant plus account/user and the feedback store re-verifies the run.
-- Experiment concurrency defaults to `1` and is capped at `32`. Scoring can reference run IDs without duplicating unbounded event payloads.
+- Experiment concurrency defaults to `1` and is capped at `32`. Datasets cap at 10,000 items.
+- Trace reads default to 100 rows × 20 pages with a 4 MiB aggregate cap (hard: 1,000 × 100 and 32 MiB). Repeated/missing cursors, identity drift, ownership drift, and overflow fail closed before scoring.
+- Model judges are host callbacks, not providers: Prism passes rubric/version plus bounded target only—never credential resolvers, tools, or workspace. Defaults are one attempt, 30 seconds, and 16 KiB output; failures become redacted evaluation records.
+- Pairwise candidates are sorted by name, executed once per item, compared in stable item/pair/scorer order, and record ties/failures without choosing a winner. Candidate and scorer outputs have byte caps.
+- `assertEvaluationThreshold()` throws `ERR_PRISM_EVAL_THRESHOLD`; an uncaught error gives CI a non-zero exit. Keep model-judge/live gates credential-gated and outside the network-free default suite. `serializeEvaluationReport()` bounds/redacts checked-in artifacts.
+
+## Trace, judge, comparison, and CI example
+
+```ts
+const traceResolver = createPersistenceTraceResolver(persistence);
+const judge = createModelJudge({
+  id: "quality", rubric: "Score factual quality from 0 to 1", rubricVersion: "2026-07-20",
+  judge: hostStructuredJudge,
+});
+const evaluations = await scoreRun({ result, scorers: [judge], traceResolver, ownership });
+const comparison = await runComparison({ dataset, candidates: { baseline, candidate }, scorers: [preference] });
+assertEvaluationThreshold(report, { minimumMean: 0.9, maximumFailures: 0 });
+```
+
+`traceResolver` is explicit; no arbitrary run search occurs. `baseline`/`candidate` are host functions returning `AgentRunResult`. See `examples/evaluation-gate.ts` for a network-free gate.
 
 ## Related APIs
 
 - [Agent/session runtime](agent-session-runtime.md): `AgentRunResult` and `session.run()`
 - [Runs and usage ledger](runs-and-usage.md): run/session identity for score linkage
-- [Observability](observability.md): trace/run metadata hosts may copy into `traceId`
+- [Observability](observability.md): use `onTraceReference` or bounded `traceId(runId)` to supply `ScoreRunOptions.traceId`; evaluation telemetry emits no reason/explanation content
 - [Release and install](release-and-install.md): optional package install

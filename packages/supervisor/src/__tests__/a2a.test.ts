@@ -7,10 +7,14 @@ import {
   createA2AAgentCard,
   createA2AClient,
   createA2AHandler,
+  deliverA2APushEvent,
   signA2AAgentCard,
   verifyA2AAgentCard,
   type A2AAgentCard,
   type A2ALimits,
+  type A2APushConfig,
+  type A2ATask,
+  type A2ATaskLifecycle,
 } from "../index.js";
 
 const endpoint = "https://agent.example/a2a/v1";
@@ -72,6 +76,7 @@ describe("createA2AHandler", () => {
   });
 
   it("fails closed on auth, unsupported parts/methods, and request limits", async () => {
+    assert.throws(() => createA2AHandler({ card: { ...baseCard(), capabilities: { streaming: true, pushNotifications: true } }, exposure: { sessionFactory: () => session() }, authorize: () => ({ ownership }) }), /push capability/);
     const denied = createA2AHandler({ card: baseCard(), exposure: { sessionFactory: () => session() }, authorize: () => false, limits: { maxRequestBytes: 256 } });
     const unauthorized = await denied(new Request(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(rpc()) }));
     assert.equal(unauthorized.status, 403);
@@ -83,6 +88,47 @@ describe("createA2AHandler", () => {
     assert.equal(unknown.status, 200);
     assert.equal((await unknown.json()).error.code, -32601);
     assert.equal((await allowed(new Request(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(rpc("SendMessage", "x".repeat(300))) }))).status, 413);
+  });
+
+  it("supports durable rich tasks, owner-hidden lookup, replay subscriptions, and host-owned push configs", async () => {
+    const tasks = new Map<string, A2ATask>();
+    let replayCursor: string | undefined;
+    const lifecycle: A2ATaskLifecycle = {
+      async start({ message, authorization }) { const task: A2ATask = { id: "durable-1", contextId: message.contextId ?? "ctx-1", status: { state: "TASK_STATE_INPUT_REQUIRED", timestamp: new Date().toISOString() }, artifacts: [{ artifactId: "rich", parts: message.parts }] }; tasks.set(`${authorization.ownership.userId}:${task.id}`, task); return task; },
+      async get({ id, authorization }) { return tasks.get(`${authorization.ownership.userId}:${id}`); },
+      async list({ authorization }) { return { tasks: [...tasks.entries()].filter(([key]) => key.startsWith(`${authorization.ownership.userId}:`)).map(([, task]) => task) }; },
+      async cancel({ id, authorization }) { const task = tasks.get(`${authorization.ownership.userId}:${id}`); return task && { ...task, status: { state: "TASK_STATE_CANCELED", timestamp: new Date().toISOString() } }; },
+      async *subscribe({ id, afterEventId, authorization }) { replayCursor = afterEventId; const task = tasks.get(`${authorization.ownership.userId}:${id}`); if (task) yield { eventId: "event-2", task }; },
+    };
+    const configs = new Map<string, A2APushConfig>();
+    const push = {
+      async create({ config }: any) { configs.set(config.id, config); return config; },
+      async get({ id }: any) { return configs.get(id); },
+      async list() { return { configs: [...configs.values()] }; },
+      async delete({ id }: any) { return configs.delete(id); },
+    };
+    const handler = createA2AHandler({ card: { ...baseCard(), capabilities: { streaming: true, pushNotifications: true } }, exposure: { sessionFactory: () => session() }, authorize: ({ request }) => ({ ownership: { tenantId: "tenant", userId: request.headers.get("x-user") ?? "user" } }), tasks: lifecycle, push, parts: { allowRaw: true, allowData: true, allowUrl: true, validateUrl: (url) => { if (url.hostname !== "files.example") throw new Error("blocked URL"); } } });
+    const call = async (method: string, params: object, user = "user") => handler(new Request(endpoint, { method: "POST", headers: { "content-type": "application/a2a+json", "x-user": user }, body: JSON.stringify({ jsonrpc: "2.0", id: 7, method, params }) }));
+    const created = await (await call("SendMessage", { message: { role: "ROLE_USER", messageId: "m-rich", parts: [{ raw: "aGk=", mediaType: "text/plain" }, { data: { safe: true } }, { url: "https://files.example/report.pdf" }] } })).json();
+    assert.equal(created.result.task.status.state, "TASK_STATE_INPUT_REQUIRED");
+    const malformedRaw = await call("SendMessage", { message: { role: "ROLE_USER", messageId: "bad-raw", parts: [{ raw: "%%%" }] } }); assert.equal(malformedRaw.status, 400);
+    let nested: any = null; for (let i = 0; i < 70; i++) nested = { nested }; const deepData = await call("SendMessage", { message: { role: "ROLE_USER", messageId: "deep", parts: [{ data: nested }] } }); assert.equal(deepData.status, 400);
+    assert.equal((await (await call("GetTask", { id: "durable-1" }, "other")).json()).error.code, -32001);
+    assert.equal((await (await call("ListTasks", { pageSize: 10 })).json()).result.tasks.length, 1);
+    const subscribed = await call("SubscribeToTask", { id: "durable-1", afterEventId: "event-1" });
+    assert.match(await subscribed.text(), /event-2/); assert.equal(replayCursor, "event-1");
+    const pushed = await (await call("CreateTaskPushNotificationConfig", { taskId: "durable-1", config: { id: "push-1", url: "https://files.example/hook", token: "secret", authentication: { scheme: "Bearer", credentials: "secret" } } })).json();
+    assert.equal(pushed.result.id, "push-1"); assert.equal(pushed.result.token, undefined); assert.equal(pushed.result.authentication.credentials, undefined);
+    const deliveries: string[] = []; const delivery = await deliverA2APushEvent({ async deliver(input) { deliveries.push(`${input.idempotencyKey}:${input.attempt}`); if (input.attempt === 1) throw new Error("retry"); } }, configs.get("push-1")!, { eventId: "event-push", task: tasks.get("user:durable-1")! }, { maxAttempts: 2 });
+    assert.equal(delivery.attempts, 2); assert.deepEqual(deliveries, ["event-push:1", "event-push:2"]);
+    const client = createA2AClient({ endpoint, allowedOrigins: ["https://agent.example"], fetch: (input, init) => handler(new Request(input, init)), authorize: () => ({ "x-user": "user" }) });
+    assert.equal((await client.sendMessage({ role: "ROLE_USER", messageId: "client-rich", parts: [{ data: { from: "client" } }] })).status.state, "TASK_STATE_INPUT_REQUIRED");
+    assert.equal((await client.getTask("durable-1")).id, "durable-1");
+    assert.equal((await client.listTasks()).tasks.length, 1);
+    const replay: string[] = []; for await (const event of client.subscribeToTask("durable-1", { afterEventId: "event-1" })) replay.push(event.eventId);
+    assert.deepEqual(replay, ["event-2"]); assert.equal((await client.cancelTask("durable-1")).status.state, "TASK_STATE_CANCELED");
+    assert.equal((await client.getPushConfig("durable-1", "push-1")).id, "push-1"); assert.equal((await client.listPushConfigs("durable-1")).configs.length, 1); await client.deletePushConfig("durable-1", "push-1");
+    assert.equal((await handler(new Request(endpoint, { method: "POST", headers: { "content-type": "application/a2a+json", "a2a-version": "2.0" }, body: JSON.stringify(rpc()) }))).headers.get("a2a-version"), "1.0");
   });
 
   it("streams bounded working and completed task events with redaction", async () => {

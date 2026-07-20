@@ -6,11 +6,13 @@ import {
   createKimiCodingProvider,
   createKimiProviderPackage,
   createMoonshotProvider,
+  kimiAnthropicBody,
   kimiCodingModels,
   listKimiModels,
   mapKimiModel,
   moonshotBody,
   moonshotKimiModels,
+  stripKimiThinkingCompat,
 } from "../index.js";
 
 const request: ProviderRequest = {
@@ -337,6 +339,116 @@ describe("@arnilo/prism-provider-kimi", () => {
     assert.ok(kimiCodingModels.some((model) => model.model === "k3"));
     assert.ok(!kimiCodingModels.some((model) => model.model === "k2p7"));
     assert.ok(!kimiCodingModels.some((model) => model.model === "kimi-k2.7-code"), "Open Platform id belongs on moonshot featured catalog");
+  });
+
+  it("featured_catalogs_match_official_context_windows_and_reasoning_defaults", () => {
+    const coding = (id: string) => kimiCodingModels.find((model) => model.model === id)!;
+    // Official: 256K-class models are 262_144 tokens; Coding k3 default effort is "high".
+    assert.equal(coding("kimi-for-coding").limits?.contextWindow, 262_144);
+    assert.equal(coding("kimi-for-coding-highspeed").limits?.contextWindow, 262_144);
+    assert.equal(coding("k3").limits?.contextWindow, 1_048_576);
+    assert.equal(coding("k3").compat?.reasoning_effort, "high");
+
+    const moonshot = (id: string) => moonshotKimiModels.find((model) => model.model === id)!;
+    // Official Open Platform catalog: k2.7-code (+highspeed), k2.6, k2.5, k3.
+    for (const id of ["kimi-k2.7-code", "kimi-k2.7-code-highspeed", "kimi-k2.6", "kimi-k2.5", "kimi-k3"]) {
+      assert.ok(moonshotKimiModels.some((model) => model.model === id), `missing featured moonshot model ${id}`);
+    }
+    assert.equal(moonshot("kimi-k2.7-code").limits?.contextWindow, 262_144);
+    assert.equal(moonshot("kimi-k2.7-code-highspeed").limits?.contextWindow, 262_144);
+    assert.equal(moonshot("kimi-k2.6").limits?.contextWindow, 262_144);
+    assert.equal(moonshot("kimi-k2.5").limits?.contextWindow, 262_144);
+    // Official Open Platform K3 default effort is "max".
+    assert.equal(moonshot("kimi-k3").compat?.reasoning_effort, "max");
+    // Official: K2.7-code / K3 preserve; K2.5 must not (no Preserved Thinking support).
+    assert.equal(moonshot("kimi-k2.7-code").compat?.preserveThinking, true);
+    assert.equal(moonshot("kimi-k2.7-code-highspeed").compat?.preserveThinking, true);
+    assert.equal(moonshot("kimi-k2.5").compat?.preserveThinking, undefined);
+    // Official: K2.6/K2.5 thinking enabled default.
+    assert.deepEqual(moonshot("kimi-k2.6").compat?.thinking, { type: "enabled" });
+    assert.deepEqual(moonshot("kimi-k2.5").compat?.thinking, { type: "enabled" });
+  });
+
+  it("strip_kimi_thinking_compat_removes_routing_and_serialization_keys", () => {
+    assert.deepEqual(
+      stripKimiThinkingCompat({ route: "anthropic", preserveThinking: true, preserve_thinking: true, thinking: false, reasoning_effort: "max", reasoningEffort: "max", custom: "kept" }),
+      { custom: "kept" },
+    );
+  });
+
+  it("compat_route_and_preserve_thinking_do_not_leak_into_wire_bodies", async () => {
+    const codingBody = await kimiAnthropicBody({ ...request, options: { compat: { route: "anthropic", preserve_thinking: true, custom: "kept" } } });
+    assert.equal(codingBody.route, undefined);
+    assert.equal(codingBody.preserve_thinking, undefined);
+    assert.equal(codingBody.custom, "kept");
+
+    const chatBody = moonshotBody({ ...request, model: moonshotKimiModels[0], options: { compat: { route: "openai", preserve_thinking: true, custom: "kept" } } });
+    assert.equal(chatBody.route, undefined);
+    assert.equal(chatBody.preserve_thinking, undefined);
+    assert.equal(chatBody.custom, "kept");
+  });
+
+  it("kimi_coding_route_sends_provider_owned_anthropic_auth_headers", async () => {
+    let headers = new Headers();
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_url, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request });
+    assert.equal(headers.get("authorization"), "Bearer fake-kimi-key");
+    assert.equal(headers.get("x-api-key"), "fake-kimi-key");
+    assert.equal(headers.get("anthropic-version"), "2023-06-01");
+  });
+
+  it("kimi_coding_route_caller_headers_cannot_override_anthropic_auth", async () => {
+    let headers = new Headers();
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_url, init) => {
+      headers = new Headers(init?.headers);
+      return ok(sse([]));
+    }) as typeof fetch });
+    await assertProviderStreamConforms({ provider, request: {
+      ...request,
+      options: { headers: { authorization: "Bearer attacker", "x-api-key": "attacker-key", "anthropic-version": "1999-01-01", "x-caller": "kept" } },
+    } });
+    assertProviderOwnedHeadersWin(headers, {
+      owned: { authorization: "Bearer fake-kimi-key", "x-api-key": "fake-kimi-key", "anthropic-version": "2023-06-01" },
+      caller: { authorization: "Bearer attacker", "x-api-key": "attacker-key", "anthropic-version": "1999-01-01", "x-caller": "kept" },
+    });
+  });
+
+  it("kimi_anthropic_route_fails_stream_without_message_stop", async () => {
+    const truncated = new ReadableStream<Uint8Array>({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(
+        `data: ${JSON.stringify({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "partial" } })}\n\n`,
+      ));
+      controller.close();
+    } });
+    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: mockFetch(truncated) });
+    const events = await assertProviderStreamConforms({ provider, request });
+    assert.equal(events.at(-1)?.type, "error");
+    assert(!events.some((event) => event.type === "done"));
+  });
+
+  it("moonshot_route_fails_truncated_stream_without_done_or_finish_reason", async () => {
+    const truncated = new ReadableStream<Uint8Array>({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(
+        `data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`,
+      ));
+      controller.close();
+    } });
+    const provider = createMoonshotProvider({ apiKey: "fake-moonshot-key", fetch: mockFetch(truncated) });
+    const events = await assertProviderStreamConforms({ provider, request: { ...request, model: moonshotKimiModels[0] } });
+    assert.equal(events.at(-1)?.type, "error");
+    assert(!events.some((event) => event.type === "done"));
+  });
+
+  it("moonshot_route_succeeds_with_done_marker_and_finish_reason", async () => {
+    const provider = createMoonshotProvider({ apiKey: "fake-moonshot-key", fetch: mockFetch(sse([
+      { choices: [{ delta: { content: "hello" } }] },
+      { choices: [{ finish_reason: "stop", delta: {} }] },
+    ])) });
+    const events = await assertProviderStreamConforms({ provider, request: { ...request, model: moonshotKimiModels[0] } });
+    assert.equal(events.at(-1)?.type, "done");
   });
 });
 

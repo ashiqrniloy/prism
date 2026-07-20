@@ -1,6 +1,6 @@
 # Prism 0.0.6+ Roadmap
 
-Updated: 2026-07-19
+Updated: 2026-07-20
 
 ## Objectives
 
@@ -193,7 +193,7 @@ Updated: 2026-07-19
     - `npm run sdk:ready` passed: 1,785 tests (1,760 pass, 25 explicit live skips, 0 fail), typecheck, offline packed consumer, docs/export/secret/tarball guards, and 30 dry-run packs. Core artifact: 241 files, 466.5 kB packed, 1.7 MB unpacked.
     - Docker Node 20.20.2 build/public-import, `npm audit --audit-level=high` (0 vulnerabilities), `npm ls --all --depth=0`, exact 30-package registry preflight, and 30/30 provenance/public/latest publish dry-run passed. No commit, tag, or publication was created. PostgreSQL/provider/keychain live gates remain explicit release-host/CI prerequisites.
 
-- [ ] Phase 3 — Release 0.0.8: production telemetry, evaluations, protocols, and web research
+- [x] Phase 3 — Release 0.0.8: production telemetry, evaluations, protocols, and web research
   - Acceptance Criteria:
     - Functional: OpenTelemetry spans form real agent → provider/tool/guardrail/delegation hierarchies, propagate context, and use applicable GenAI/MCP semantic conventions without placing prompts, IDs, comments, or secrets in metric labels.
     - Functional: evaluations grade final results and complete traces, support deterministic/function and optional model judges, pairwise comparison, datasets, regression thresholds, and CI release gates.
@@ -266,6 +266,11 @@ Updated: 2026-07-19
       - `docs/observability.md`, `docs/evaluations.md`, `docs/mcp-tools.md`, `docs/a2a.md`, `docs/web-tools.md`, `docs/performance.md`, persistence pages, `docs/release-and-install.md`, `docs/host-security.md`.
     - `docs/index.md` update: yes; update Observability, Evaluations, MCP, A2A, Persistence, and Release entries; add Tools → Web search, fetch, and extraction.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion Evidence (2026-07-20):
+    - Plan 070 completed metadata-safe OTel GenAI hierarchy/trace linkage, bounded trace/model/pairwise evaluations, explicit batched-ledger durability plus session snapshot caching, MCP SDK 1.29.0 capabilities/stateful auth sessions, full A2A 1.0 durable/rich/reconnect/push surfaces, and optional direct Brave/Exa/Firecrawl web tools. Core gained no vendor SDK or protocol/web runtime dependency.
+    - Added pinned CodeQL/dependency-review/audit/SPDX/license/secret/attestation workflows, Dependabot, and protected provider/MCP/A2A/web canaries. All 31 manifests, exact internal ranges, lock records, runtime metadata, changelogs, profile/package/install/export guards, migration docs, and release handoff now target `0.0.8`.
+    - `npm run sdk:ready` passed in 87 seconds: 1,814 tests (1,789 pass, 25 explicit live skips, 0 fail), complete typecheck/build/examples/docs/package/install matrix, and 31 dry-run packs. Docker Node 20.20.1 built/imported all 21 core exports; disposable pgvector PostgreSQL passed 17 persistence plus 14 memory checks; keychain passed 27/27; audit/SBOM/license/dependency/source/tarball-secret gates were clean.
+    - All 31 registry versions were available and deterministic provenance publish dry-run completed 31/31 without publication. Artifacts total 859,670 packed bytes/3,283,647 unpacked bytes/783 files; core is 490,241 bytes/1,735,130 bytes/245 files. Dated local benchmark evidence covers actual batching/OTel/cache paths and provider/PostgreSQL/MCP/A2A/web envelope shapes. No commit, tag, attestation, or package was published; protected CodeQL/dependency review, credentials/endpoints, signed tag, OIDC, and actual canaries/publication remain release-operator gates.
 
 - [ ] Phase 4 — Release 0.0.9: production coding, browser, and Office-work execution
   - Acceptance Criteria:

@@ -39,7 +39,7 @@ export interface McpStreamableHttpTransport {
 export type McpTransportConfig = McpStdioTransport | McpStreamableHttpTransport;
 
 export interface PrismMcpAuthorizationInput {
-  readonly kind: "tool" | "command";
+  readonly kind: "tool" | "command" | "resource" | "prompt";
   readonly name: string;
   readonly arguments: JsonObject;
   readonly authInfo?: AuthInfo;
@@ -62,11 +62,31 @@ export interface PrismMcpAgentRunExposure {
   readonly lifecycle: AgentRunLifecycle;
 }
 
+export interface PrismMcpResource {
+  readonly name: string;
+  readonly uri: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly mimeType?: string;
+  readonly read: (input: { readonly uri: string; readonly authorization: PrismMcpAuthorization; readonly signal: AbortSignal }) => unknown | Promise<unknown>;
+}
+
+export interface PrismMcpPrompt {
+  readonly name: string;
+  readonly title?: string;
+  readonly description?: string;
+  /** Keep schemas shallow: MCP prompt arguments are strings. */
+  readonly arguments?: Readonly<Record<string, { readonly description?: string; readonly required?: boolean }>>;
+  readonly get: (input: { readonly arguments: Readonly<Record<string, string>>; readonly authorization: PrismMcpAuthorization; readonly signal: AbortSignal }) => unknown | Promise<unknown>;
+}
+
 export interface CreatePrismMcpServerOptions {
   readonly name?: string;
   readonly version?: string;
   readonly tools?: readonly ToolDefinition[];
   readonly commands?: readonly CommandDefinition[];
+  readonly resources?: readonly PrismMcpResource[];
+  readonly prompts?: readonly PrismMcpPrompt[];
   /** Explicit durable agent lifecycle capabilities keyed by host-selected agent id. */
   readonly agentRuns?: Readonly<Record<string, PrismMcpAgentRunExposure>>;
   readonly authorize: PrismMcpAuthorizer;
@@ -82,8 +102,18 @@ export interface CreatePrismMcpServerOptions {
   readonly callTimeoutMs?: number;
 }
 
+export interface PrismMcpRequestIdentity {
+  /** Stable non-secret principal identifier derived from validated host auth. */
+  readonly id: string;
+  readonly ownership?: OwnershipScope;
+}
+
 export interface CreatePrismMcpWebHandlerOptions {
   readonly resolveAuthInfo?: (request: Request) => AuthInfo | undefined | Promise<AuthInfo | undefined>;
+  /** Required for stateful sessions; binds every session request to one validated host principal. */
+  readonly resolveIdentity?: (request: Request, authInfo: AuthInfo | undefined) => PrismMcpRequestIdentity | false | Promise<PrismMcpRequestIdentity | false>;
+  readonly sessionIdGenerator?: () => string;
+  readonly maxSessions?: number;
   readonly allowedHosts?: readonly string[];
   readonly allowedOrigins?: readonly string[];
   readonly maxRequestBytes?: number;
@@ -115,10 +145,40 @@ export interface ConnectMcpToolsOptions {
   readonly signal?: AbortSignal;
 }
 
+export interface McpRoot { readonly uri: string; readonly name?: string }
+export interface PrismMcpSamplingRequest { readonly params: unknown; readonly signal: AbortSignal }
+export interface PrismMcpElicitationRequest { readonly params: unknown; readonly signal: AbortSignal }
+/** Host callback may return this marker; accepted elicitation fails closed without it. Marker is removed before protocol output. */
+export interface PrismMcpElicitationResult extends Readonly<Record<string, unknown>> { readonly action: "accept" | "decline" | "cancel"; readonly humanInteraction?: true }
+
+export interface ConnectMcpCapabilitiesOptions extends ConnectMcpToolsOptions {
+  readonly roots?: () => readonly McpRoot[] | Promise<readonly McpRoot[]>;
+  readonly sampling?: (request: PrismMcpSamplingRequest) => unknown | Promise<unknown>;
+  readonly elicitation?: (request: PrismMcpElicitationRequest) => unknown | Promise<unknown>;
+  readonly maxCapabilityBytes?: number;
+}
+
+export interface McpCapabilityBridge extends McpToolBridge {
+  readonly serverVersion?: Readonly<{ name: string; version: string }>;
+  readonly serverCapabilities: Readonly<Record<string, unknown>>;
+  listResources(): Promise<readonly unknown[]>;
+  readResource(uri: string): Promise<unknown>;
+  listPrompts(): Promise<readonly unknown[]>;
+  getPrompt(name: string, args?: Readonly<Record<string, string>>): Promise<unknown>;
+}
+
 export interface McpToolBridge {
   readonly tools: readonly ToolDefinition[];
   refresh(): Promise<void>;
   close(): Promise<void>;
+}
+
+export class McpUnsupportedCapabilityError extends Error {
+  readonly code = "ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY";
+  constructor(readonly capability: string) {
+    super(`Unsupported MCP capability: ${capability}`);
+    this.name = "McpUnsupportedCapabilityError";
+  }
 }
 
 export class McpBridgeError extends Error {

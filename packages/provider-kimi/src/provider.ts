@@ -24,7 +24,7 @@ export interface KimiCodingProviderOptions {
   readonly userAgent?: string;
 }
 
-interface PartialBlock { id?: string; name?: string; argumentsText: string }
+interface PartialBlock { id?: string; name?: string; argumentsText: string; complete?: boolean }
 
 export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}): AIProvider {
   const id = options.id ?? "kimi-coding";
@@ -46,6 +46,9 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
             "content-type": "application/json",
             "user-agent": options.userAgent ?? "KimiCLI/1.5",
             ...(token ? { authorization: `Bearer ${token}` } : {}),
+            // Provider-owned Anthropic-route auth: official third-party setup uses
+            // ANTHROPIC_API_KEY semantics (x-api-key + anthropic-version).
+            ...(token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {}),
           },
           body: JSON.stringify(body),
           signal: request.signal,
@@ -91,10 +94,16 @@ export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonO
 export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const blocks = new Map<number, PartialBlock>();
   let usage: Usage | undefined;
+  let sawMessageStop = false;
   for await (const data of readSseData(body, { signal })) {
     if (data === "[DONE]") break;
     const event = JSON.parse(data) as KimiEvent;
+    if (event.type === "message_stop") sawMessageStop = true;
     if (event.type === "content_block_start" && event.content_block?.type === "tool_use") blocks.set(event.index ?? 0, { id: event.content_block.id, name: event.content_block.name, argumentsText: "" });
+    if (event.type === "content_block_stop") {
+      const current = blocks.get(event.index ?? 0);
+      if (current) current.complete = true;
+    }
     if (event.type === "content_block_delta") {
       const delta = event.delta;
       if (delta?.type === "text_delta" && delta.text) yield providerTextDelta(delta.text);
@@ -110,14 +119,22 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
     usage = toUsage(event.message?.usage ?? event.usage) ?? usage;
     if (event.type === "message_delta" && usage) yield providerUsage(usage);
   }
+  const danglingBlock = [...blocks.values()].some((call) => !call.id || !call.name || !call.complete);
+  if (!sawMessageStop || danglingBlock) {
+    // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
+    yield providerError(new Error(
+      `Kimi messages stream ended without completion evidence `
+      + `(message_stop: ${sawMessageStop ? "received" : "missing"}, `
+      + `content blocks complete: ${danglingBlock ? "no" : "yes"})`,
+    ));
+    return;
+  }
   for (const call of blocks.values()) {
-    if (call.id && call.name) {
-      yield providerToolCall(toolCallContent(
-        call.id,
-        call.name,
-        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-      ));
-    }
+    yield providerToolCall(toolCallContent(
+      call.id!,
+      call.name!,
+      parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
+    ));
   }
   yield providerDone(usage);
 }

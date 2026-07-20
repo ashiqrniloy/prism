@@ -30,7 +30,7 @@ Decisions are `allow`, `block`, `tripwire`, or `interrupt`. Evaluation defaults 
 
 ## Outputs / response / events
 
-Every evaluated guard produces a redacted `guardrail_decision` `AgentEvent` with a bounded `GuardrailRecord`. An input or output terminal decision rejects the run with `GuardrailError`; `tripwire` stops remaining evaluation. A tool-input or tool-output `block` returns a redacted blocked `ToolResult`; a `tripwire` rejects the enclosing run. `interrupt` is reserved for durable runs and currently fails closed with `ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE`.
+Every evaluated guard produces a redacted `guardrail_decision` `AgentEvent` with a bounded `GuardrailRecord`. Optional OpenTelemetry instrumentation records only controlled stage/action on a short run-child span; guardrail name, reason, and metadata are excluded. An input or output terminal decision rejects the run with `GuardrailError`; `tripwire` stops remaining evaluation. A tool-input or tool-output `block` returns a redacted blocked `ToolResult`; a `tripwire` rejects the enclosing run. `interrupt` is reserved for durable runs and currently fails closed with `ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE`.
 
 Ordering is fixed:
 

@@ -112,7 +112,7 @@ Artifact validation/refinement events (emitted only by `generateValidateReviseLo
 | `artifact_validation_finished` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` |
 | `artifact_revision_started` | `sessionId`, `runId`, `turn`, `attempt`, `failure: ArtifactValidation` |
 | `artifact_finished` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` (loop ended successfully) |
-| `artifact_failed` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` (candidate budget exhausted, or `result.metadata.reason === "tool_round_limit"`) |
+| `artifact_failed` | `sessionId`, `runId`, `turn`, `attempt`, `result: ArtifactValidation` (candidate budget exhausted, `result.metadata.reason === "tool_round_limit"`, or `result.metadata.reason === "parse_error"` when the budget was consumed by artifact parse failures) |
 
 ### Artifact event ordering
 
@@ -208,6 +208,6 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 - [Agent loops](agent-loops.md): `singleShotLoop` and `generateValidateReviseLoop` emit the artifact events.
 - [Structured output](structured-output.md): `ArtifactValidation` shape threaded through parser/validator/repairer.
 - [Public contracts](public-contracts.md): full `AgentEvent` union and `ArtifactValidation` contract.
-- [Observability](observability.md): `ProviderTurnMetadata`, OpenTelemetry adapter package.
+- [Observability](observability.md): `ProviderTurnMetadata`; optional adapter builds one parented GenAI span tree from metadata-only lifecycle events and ignores message/progress deltas.
 - [Tools](tools.md): `tool_execution_*` variants.
 - [Compaction and retry policies](compaction-and-retry.md): `compaction_*` and `retry_scheduled` variants.

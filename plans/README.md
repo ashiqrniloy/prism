@@ -74,5 +74,7 @@ Numbered plans are immutable implementation records. Current release status live
 | [067-provider-doc-validation-caching-discovery-and-review-hardening.md](067-provider-doc-validation-caching-discovery-and-review-hardening.md) | Completed provider doc validation, caller-gated discovery, caching/thinking conformance, use-case model selection, and final SDK verification |
 | [068-release-0-0-6-production-blockers.md](068-release-0-0-6-production-blockers.md) | Phase 1 / Release 0.0.6 — close production release blockers |
 | [069-release-0-0-7-secure-run-lifecycle.md](069-release-0-0-7-secure-run-lifecycle.md) | Release 0.0.7 — Secure Run Lifecycle, Guardrails, Budgets, and Durable Interruption |
+| [070-release-0-0-8-production-telemetry-evaluations-protocols-web-research.md](070-release-0-0-8-production-telemetry-evaluations-protocols-web-research.md) | Phase 3 / Release 0.0.8 — Production Telemetry, Evaluations, Protocols, and Web Research |
+| [071-release-0-0-8-opencode-go-route-fixes-and-kimi-alignment.md](071-release-0-0-8-opencode-go-route-fixes-and-kimi-alignment.md) | Release 0.0.8 addendum — OpenCode Go route auth/structured-output/stream/artifact fixes and Kimi provider alignment |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

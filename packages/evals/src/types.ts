@@ -5,6 +5,10 @@ import type {
   PersistencePage,
   PersistenceQuery,
   SecretRedactor,
+  RunRecord,
+  AgentEventRecord,
+  ToolCallRecord,
+  UsageRecord,
 } from "@arnilo/prism";
 
 /** Score payload returned by a scorer. `score` must be finite and within `[0, 1]`. */
@@ -20,6 +24,7 @@ export interface ScorerInput<TInput = unknown, TExpected = unknown> {
   readonly item?: DatasetItem<TInput, TExpected>;
   readonly expected?: TExpected;
   readonly signal?: AbortSignal;
+  readonly target?: EvaluationTarget;
 }
 
 /** Deterministic function scorer. */
@@ -113,6 +118,9 @@ export interface ScoreRunOptions<TInput = unknown, TExpected = unknown> {
   readonly item?: DatasetItem<TInput, TExpected>;
   readonly experimentId?: string;
   readonly traceId?: string;
+  /** Optional explicit resolver; requires ownership, sessionId, and runId. */
+  readonly traceResolver?: TraceResolver;
+  readonly traceLimits?: TraceLimits;
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Injectable RNG for deterministic sampling tests. Returns `[0, 1)`. */
   readonly random?: () => number;
@@ -150,6 +158,113 @@ export interface ExperimentReport<TInput = unknown, TExpected = unknown> {
   readonly error?: ErrorInfo;
 }
 
+export interface TraceLimits {
+  readonly pageSize?: number;
+  readonly maxPages?: number;
+  readonly maxBytes?: number;
+}
+
+export interface EvaluationTrace {
+  readonly run: RunRecord;
+  readonly events: readonly AgentEventRecord[];
+  readonly toolCalls: readonly ToolCallRecord[];
+  readonly usage: readonly UsageRecord[];
+}
+
+export interface EvaluationTarget {
+  readonly result: AgentRunResult;
+  readonly trace?: EvaluationTrace;
+}
+
+export interface TraceResolverInput extends OwnershipScope {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly limits?: TraceLimits;
+  readonly redactor?: SecretRedactor;
+  readonly secrets?: readonly (string | undefined)[];
+  readonly signal?: AbortSignal;
+}
+
+export type TraceResolver = (input: TraceResolverInput) => Promise<EvaluationTrace>;
+
+export interface ModelJudgeRequest<TInput = unknown, TExpected = unknown> {
+  readonly rubric: string;
+  readonly rubricVersion: string;
+  readonly target: EvaluationTarget;
+  readonly item?: DatasetItem<TInput, TExpected>;
+  readonly signal: AbortSignal;
+}
+
+export interface ModelJudgeOptions<TInput = unknown, TExpected = unknown> {
+  readonly id: string;
+  readonly rubric: string;
+  readonly rubricVersion: string;
+  readonly judge: (request: ModelJudgeRequest<TInput, TExpected>) => Promise<ScoreResult>;
+  readonly timeoutMs?: number;
+  readonly maxAttempts?: number;
+  readonly maxOutputBytes?: number;
+  readonly maxInputBytes?: number;
+  readonly maxRubricBytes?: number;
+}
+
+export type PairwisePreference = "left" | "right" | "tie";
+export interface PairwiseScoreResult {
+  readonly preference: PairwisePreference;
+  readonly reason?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+export interface PairwiseScorerInput<TInput = unknown, TExpected = unknown> {
+  readonly left: { readonly name: string; readonly result: AgentRunResult };
+  readonly right: { readonly name: string; readonly result: AgentRunResult };
+  readonly item: DatasetItem<TInput, TExpected>;
+  readonly signal?: AbortSignal;
+}
+export interface PairwiseScorer<TInput = unknown, TExpected = unknown> {
+  readonly id: string;
+  score(input: PairwiseScorerInput<TInput, TExpected>): PairwiseScoreResult | Promise<PairwiseScoreResult>;
+}
+export type ComparisonCandidate<TInput = unknown, TExpected = unknown> = (
+  item: DatasetItem<TInput, TExpected>, signal?: AbortSignal,
+) => Promise<AgentRunResult>;
+export interface ComparisonRecord {
+  readonly itemId: string;
+  readonly scorerId: string;
+  readonly left: string;
+  readonly right: string;
+  readonly preference?: PairwisePreference;
+  readonly status: "scored" | "failed";
+  readonly reason?: string;
+  readonly error?: ErrorInfo;
+}
+export interface ComparisonReport {
+  readonly datasetId: string;
+  readonly datasetVersion?: string;
+  readonly candidates: readonly string[];
+  readonly records: readonly ComparisonRecord[];
+  readonly wins: Readonly<Record<string, number>>;
+  readonly ties: number;
+  readonly failures: number;
+}
+export interface RunComparisonOptions<TInput = unknown, TExpected = unknown> {
+  readonly dataset: Dataset<TInput, TExpected>;
+  readonly candidates: Readonly<Record<string, ComparisonCandidate<TInput, TExpected>>>;
+  readonly scorers: readonly PairwiseScorer<TInput, TExpected>[];
+  readonly concurrency?: number;
+  readonly maxCandidates?: number;
+  readonly maxCandidateBytes?: number;
+  readonly maxScorerOutputBytes?: number;
+  readonly redactor?: SecretRedactor;
+  readonly secrets?: readonly (string | undefined)[];
+  readonly signal?: AbortSignal;
+}
+
+export interface EvaluationThresholds {
+  readonly minimumMean?: number;
+  readonly maximumFailures?: number;
+  readonly minimumByScorer?: Readonly<Record<string, number>>;
+  readonly minimumCandidateWins?: Readonly<Record<string, number>>;
+}
+
 export interface RunExperimentOptions<TInput = unknown, TExpected = unknown> {
   readonly agent: import("@arnilo/prism").Agent;
   readonly dataset: Dataset<TInput, TExpected>;
@@ -163,6 +278,8 @@ export interface RunExperimentOptions<TInput = unknown, TExpected = unknown> {
   readonly signal?: AbortSignal;
   readonly experimentId?: string;
   readonly traceId?: string;
+  readonly traceResolver?: TraceResolver;
+  readonly traceLimits?: TraceLimits;
   readonly runOptions?: import("@arnilo/prism").RunOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly random?: () => number;

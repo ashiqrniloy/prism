@@ -1,75 +1,94 @@
-# A2A interoperability
+# A2A 1.0 interoperability
 
 ## What it does
 
-`@arnilo/prism-supervisor` implements a bounded text-only subset of Agent2Agent (A2A) protocol 1.0: Agent Cards, JSON-RPC `SendMessage`, `SendStreamingMessage`, `GetExtendedAgentCard`, SSE task updates, ES256 JWS card signatures, and an explicit remote client.
+`@arnilo/prism-supervisor` implements bounded A2A 1.0 over the JSON-RPC/HTTPS binding. Supported operations: `SendMessage`, `SendStreamingMessage`, `GetTask`, `ListTasks`, `CancelTask`, `SubscribeToTask`, push-notification-config create/get/list/delete, and `GetExtendedAgentCard`. Agent Cards retain explicit ES256 verification. gRPC, HTTP+JSON, discovery registries, automatic JWK/OAuth fetching, and an internal task worker/store are absent.
 
 ## When to use it
 
-Use it to expose one explicitly selected Prism agent at an A2A endpoint or call a known remote A2A agent. Do not use it as endpoint discovery, a generic proxy, credential forwarding, or a replacement for local workflows.
+Use it to expose a selected Prism agent or host-owned durable agent/workflow lifecycle to known A2A peers. Use direct `exposure` for backward-compatible text invocation. Supply `tasks` for durable/rich/reconnect operations and `push` only when host persistence and webhook delivery policy already exist.
 
 ## Inputs / request
 
-| API/field | Meaning |
-| --- | --- |
-| `createA2AAgentCard(card)` | Validates/freeze a JSONRPC protocol-1.0 HTTPS text card. |
-| `signA2AAgentCard(card, { privateKey, keyId, expiresAt })` | Adds detached-payload ES256 JWS signature using WebCrypto. |
-| `verifyA2AAgentCard(card, { publicKey, keyId?, now?, maxAgeMs? })` | Pins ES256/key/expiry and verifies canonical unsigned card. |
-| `createA2AHandler({ card, exposure, authorize })` | Web-standard card/JSON-RPC/SSE `Request` to `Response` handler. |
-| `createA2AClient({ endpoint, allowedOrigins })` | Explicit HTTPS remote client with optional card verifier/auth callback. |
-| `A2ALimits` | Request 64 KiB, response 1 MiB, event 64 KiB, stream 10 MiB/10k events, concurrency 16, timeout 120s, card 64 KiB defaults; finite hard caps apply. |
-
-## Outputs / response / events
-
-The handler serves `GET /.well-known/agent-card.json` and its configured POST endpoint. JSON-RPC returns `{ result: { task } }` or a bounded error. Streaming returns backpressure-driven SSE task envelopes. Client `send()` maps a terminal remote task to `AgentRunResult`; `stream()` incrementally yields validated/redacted text artifacts. Client SSE accepts LF, CRLF, mixed blank-line separators, comments/unknown fields, and multiline `data:` joined with LF.
-
-## Request/response example
-
-```json
-{"jsonrpc":"2.0","id":1,"method":"SendMessage","params":{"message":{"role":"user","messageId":"m1","parts":[{"text":"Check sources"}]}}}
+```ts
+const handler = createA2AHandler({
+  card,
+  exposure: { sessionFactory }, // text fallback
+  authorize: authenticateEveryOperation,
+  tasks: durableTaskAdapter,    // host-owned start/get/list/cancel/subscribe
+  push: pushConfigAdapter,      // host-owned config persistence/delivery integration
+  parts: {
+    allowRaw: true,
+    allowData: true,
+    allowUrl: true,
+    validateUrl: validatePinnedPublicHttpsUrl, // validation only; never fetched
+  },
+});
 ```
+
+`A2ATaskLifecycle` receives validated messages, exact `A2AAuthorization`, abort signals, bounded pagination, and reconnect cursor. Adapter must map existing durable agent/workflow/checkpoint/persistence operations; Prism creates no worker, queue, task map, or database table. Unknown-owner task/config lookups return `undefined`, producing non-disclosing `TaskNotFoundError` (`-32001`). Missing task/push capability returns `UnsupportedOperationError` (`-32004`).
+
+`A2APart` is an exact one-of:
+
+| Part | Default | Rule |
+| --- | --- | --- |
+| `{ text }` | enabled | bounded UTF-8 text |
+| `{ raw, mediaType?, filename? }` | disabled | strict base64 and decoded-byte cap |
+| `{ data }` | disabled | bounded finite JSON, depth 64/properties 10,000 |
+| `{ url, mediaType?, filename? }` | disabled | credential/fragment-free HTTPS plus required host URL policy; never dereferenced |
+
+Parts, messages, artifacts, histories, metadata, and aggregate responses are untrusted. Rich content remains in A2A task/message/artifact contracts for host mapping; it is never promoted to system instructions or automatically loaded as a Prism resource.
 
 ## Implementation example
 
 ```ts
-import { createA2AClient, createA2AHandler, verifyA2AAgentCard } from "@arnilo/prism-supervisor";
-
-const handler = createA2AHandler({
-  card,
-  exposure: { sessionFactory: ({ ownership }) => agent.createSession({ metadata: ownership }) },
-  authorize: ({ request }) => authenticate(request),
-});
-
 const client = createA2AClient({
   endpoint: "https://agent.example/a2a/v1",
   allowedOrigins: ["https://agent.example"],
-  authorize: () => ({ authorization: `Bearer ${resolveOwnedToken()}` }),
-  verifyCard: (remoteCard) => verifyA2AAgentCard(remoteCard, { publicKey, keyId: "agent-key" }),
+  authorize: ownedAuthHeaders,
+  verifyCard: (card) => verifyA2AAgentCard(card, { publicKey, keyId: "agent-key" }),
 });
+const task = await client.getTask("task-1");
+for await (const event of client.subscribeToTask(task.id, { afterEventId: savedCursor })) persistCursor(event.eventId);
+```
 
-const result = await client.send("Check sources");
+## Outputs / response / events
+
+Streams use ordered SSE frames with `id:` and JSON-RPC `result` containing one `A2ATaskEvent`: full `task`, `statusUpdate`, or `artifactUpdate`. `SubscribeToTask({ id, afterEventId })` passes cursor to durable adapter for authorized bounded replay. Duplicate event IDs are rejected/server-bounded; client de-duplicates repeated IDs. Terminal, `INPUT_REQUIRED`, and `AUTH_REQUIRED` states close streams. String-oriented `client.stream()` reports interrupted states as `ERR_PRISM_A2A_INTERRUPTED`; task APIs preserve status for continuation.
+
+Client APIs:
+
+- `send()` / `stream()` preserve text-to-`AgentRunResult` compatibility.
+- `sendMessage()` returns rich/durable `A2ATask`.
+- `getTask()`, `listTasks()`, `cancelTask()`, `subscribeToTask()` operate on durable tasks.
+- `createPushConfig()`, `getPushConfig()`, `listPushConfigs()`, `deletePushConfig()` expose declared push config operations.
+
+Every protocol request sends/negotiates `A2A-Version: 1.0`. Client endpoint/card URLs require exact allow-listed HTTPS and `redirect: "error"`. Cards are parsed then optionally verified against host-pinned keys; no key URL is fetched.
+
+## Request/response example
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"SubscribeToTask","params":{"id":"task-1","afterEventId":"event-42"}}
 ```
 
 ## Extension and configuration notes
 
-The package owns no listener or credential store. Mount the handler in a host server and resolve authentication/authorization on every request. Client auth executes only after body/card validation and serialization. Injectable `fetch` supports host transports/tests; redirects are disabled.
+Handler requires `card.capabilities.pushNotifications` to exactly match supplied `push`; mismatch fails construction, preserving signed-card integrity and preventing false capability claims. Streaming remains available for direct text invocation. Push adapter owns exact-owner persistence, signing/auth credentials, and network transport. Host explicitly calls `deliverA2APushEvent()` from its durable update path; helper bounds event, timeout (10s default/60s hard), attempts (1 default/3 hard), and passes stable event ID as idempotency key to host `A2APushDelivery`. It starts no hidden sender and performs no network itself. Config handling validates IDs/count/bytes and requires same explicit URL policy used for URL parts. Returned push configs omit token and authentication credentials.
 
-Only `text` parts are accepted. File/data parts, push notifications, task persistence/query/cancel, gRPC, HTTP+JSON binding, automatic JWK fetching, and endpoint discovery are intentionally absent.
+Defaults/hard caps include: request 64 KiB/1 MiB; response 1/8 MiB; event 64 KiB/1 MiB; stream 10/64 MiB and 10k/100k events; replay 1k/10k events; concurrency 16/256; timeout 120s/30m; IDs 256/4096 B; parts 32/256; part/raw 1/8 MiB; data 256 KiB/4 MiB; artifacts 32/256; history/page 100/1000; cursor 4/16 KiB; push configs 10/100. Hosts may narrow limits.
 
 ## Security and performance notes
 
-- Endpoints and card URLs must be HTTPS and exactly origin-allow-listed before fetch; `redirect: "error"` prevents redirect SSRF.
-- Treat every remote card, error, task, status, artifact, and SSE frame as untrusted. Shape/count/byte/time limits apply before mapping. Streaming keeps raw stream bytes, current frame bytes, and event count as separate existing limits.
-- One fatal streaming UTF-8 decoder is reused across every body chunk and flushed once at EOF. Split multibyte code points are preserved; malformed/truncated UTF-8 fails rather than inserting `U+FFFD` into JSON. A small coalesced line buffer keeps one-byte chunk handling incremental.
-- SSE frames require a terminating blank line. A non-whitespace final partial frame, malformed JSON, missing terminal task, failed/canceled task, or any event after a completed task fails with bounded package-owned text. Existing request/response/event/stream/count/timeout hard caps are unchanged.
-- Card verification pins `alg=ES256`, optional key ID, issue/expiry, optional maximum age, and canonical unsigned-card payload. Hosts provision trusted public keys; remote `jku` is never fetched automatically.
-- Card discovery is public; extended-card and invoke methods call host authorization. Use TLS, rate limits, and replay controls at the host edge.
-- Credentials remain in the client auth callback or server authorizer and never enter cards, messages, events, or metrics.
-- Offline conformance is authoritative. Live endpoints are optional operator smoke tests.
+- Authorize every operation; lifecycle/push adapters enforce exact owner again at durable storage boundary. Missing and foreign tasks/configs share `-32001`.
+- URL policy must reject private, loopback, link-local, rebound, redirected, or otherwise disallowed destinations. Package never fetches file URLs. Host push delivery must repeat equivalent checks for every attempt/redirect and process event IDs idempotently.
+- Push token/auth credentials are accepted only into host adapter input and removed from protocol reads/responses. Keep them out of task parts, events, telemetry, ledgers, and errors.
+- Known-secret redaction applies before handler JSON/SSE output. Client redacts mapped text/errors. Raw/data/url content remains explicitly untrusted.
+- Canceled/closed streams abort adapter signal, return iterator, clear timeout, and release concurrency slot. Task/push durability and replay retention belong to host adapter and must remain finite.
+- Default tests use in-memory lifecycle/fake fetch only; no public network.
 
 ## Related APIs
 
-- [Supervisor delegation](supervisors.md): local child boundary.
-- [Web-standard server](server.md): non-A2A Prism routes.
-- [Host security](host-security.md): authentication, SSRF, and untrusted-output policy.
-- [Agent/session runtime](agent-session-runtime.md): mapped local execution/result.
+- [Supervisor delegation](supervisors.md)
+- [Agent/session runtime](agent-session-runtime.md)
+- [Workflows](workflows.md)
+- [Host security](host-security.md)

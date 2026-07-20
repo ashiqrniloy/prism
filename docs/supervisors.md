@@ -21,7 +21,7 @@ Use a supervisor when a host or agent must choose a child dynamically. Use `@arn
 
 ## Outputs / response / events
 
-`delegate()` returns the child's `AgentRunResult` or throws its `AgentRunError`/a supervisor denial or limit error. `subscribe()` emits bounded `delegation_started`, `delegation_finished`, `delegation_rejected`, and `delegation_error` metadata events.
+`delegate()` returns the child's `AgentRunResult` or throws its `AgentRunError`/a supervisor denial or limit error. `subscribe()` emits bounded `delegation_started`, `delegation_finished`, `delegation_rejected`, and `delegation_error` metadata events. Hosts may project those events through observability `handleDelegation()` using the parent Prism run ID; no OpenTelemetry dependency enters this package.
 
 ## Request/response example
 
@@ -65,7 +65,7 @@ Child factories resolve their own providers/credentials and construct context/me
 
 ## Related APIs
 
-- [A2A interoperability](a2a.md): remote protocol boundary.
+- [A2A interoperability](a2a.md): separate remote protocol boundary. `A2ATaskLifecycle` adapts host durable agent/workflow state directly; it does not route A2A execution through local supervisor child planning.
 - [Workflows](workflows.md): preferred deterministic orchestration.
 - [Working and semantic memory](working-and-semantic-memory.md): child scope construction.
 - [Host security](host-security.md): permission and credential boundaries.

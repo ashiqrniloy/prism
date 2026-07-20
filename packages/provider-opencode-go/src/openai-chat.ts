@@ -1,6 +1,6 @@
 import type { ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
 import { assertStructuredOutputRequestSupported } from "@arnilo/prism";
-import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
+import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
 import { parseJsonObjectArguments, readSseData } from "@arnilo/prism/providers/transport";
 import {
@@ -38,13 +38,16 @@ export function openAIChatBody(request: ProviderRequest): JsonObject {
 export async function* openAIChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const tools = new Map<number, ToolAccumulator>();
   let usage: Usage | undefined;
+  let sawDoneMarker = false;
+  let sawFinishReason = false;
   for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") break;
+    if (data === "[DONE]") { sawDoneMarker = true; break; }
     const chunk = JSON.parse(data) as OpenAIChunk;
     usage = mapOpenAIChatUsage(chunk.usage) ?? usage;
     const mapped = mapOpenAIChatUsage(chunk.usage);
     if (mapped) yield providerUsage(mapped);
     for (const choice of chunk.choices ?? []) {
+      if (choice.finish_reason) sawFinishReason = true;
       const delta = choice.delta ?? {};
       if (delta.content) yield providerTextDelta(delta.content);
       if (delta.reasoning_content) yield providerThinkingDelta(delta.reasoning_content);
@@ -59,14 +62,23 @@ export async function* openAIChatEvents(body: ReadableStream<Uint8Array>, signal
       }
     }
   }
+  const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
+  if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
+    // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
+    yield providerError(new Error(
+      `OpenCode Go chat stream ended without completion evidence `
+      + `([DONE]: ${sawDoneMarker ? "received" : "missing"}, `
+      + `finish_reason: ${sawFinishReason ? "received" : "missing"}, `
+      + `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
+    ));
+    return;
+  }
   for (const call of tools.values()) {
-    if (call.id && call.name) {
-      yield providerToolCall(toolCallContent(
-        call.id,
-        call.name,
-        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-      ));
-    }
+    yield providerToolCall(toolCallContent(
+      call.id!,
+      call.name!,
+      parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
+    ));
   }
   yield providerDone(usage);
 }
@@ -150,6 +162,6 @@ function clean(value: Record<string, unknown>): JsonObject {
 }
 
 interface OpenAIChunk {
-  readonly choices?: readonly { readonly delta?: { readonly content?: string; readonly reasoning_content?: string; readonly tool_calls?: readonly { readonly index?: number; readonly id?: string; readonly function?: { readonly name?: string; readonly arguments?: string } }[] } }[];
+  readonly choices?: readonly { readonly finish_reason?: string | null; readonly delta?: { readonly content?: string; readonly reasoning_content?: string; readonly tool_calls?: readonly { readonly index?: number; readonly id?: string; readonly function?: { readonly name?: string; readonly arguments?: string } }[] } }[];
   readonly usage?: unknown;
 }

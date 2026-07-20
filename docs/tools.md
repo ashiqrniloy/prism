@@ -10,6 +10,7 @@ APIs:
 - `filterTools()`
 - `dispatchToolCall()`
 - `ToolFilter`, `ToolFilterInput`, `ToolValidator`, `DispatchToolCallOptions`
+- Optional [Web search, fetch, and extraction](web-tools.md): three narrow host-selected `ToolDefinition`s with untrusted bounded outputs.
 
 ## When to use it
 
@@ -260,7 +261,7 @@ createJsonSchemaToolArgumentValidator({
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.
 - [Observational memory compaction package](compaction-observational-memory.md): optional exact-id recall tool factory.
 - [Tool execution primitives](tool-execution-primitives.md): JSON Schema adapter, parallelism, MCP bridge, and execution-policy designs.
-- [MCP client bridge](mcp-tools.md): optional `@arnilo/prism-mcp` remote tool mapping.
+- [MCP client bridge](mcp-tools.md): optional remote tool mapping plus separate bounded resource/prompt facades; non-tool MCP capabilities never bypass tool dispatch by masquerading as `ToolDefinition`.
 - [Coding agent tools](coding-agent-tools.md): optional first-party `@arnilo/prism-coding-agent` `shell`/`read`/`write`/`edit` tools a host registers into this harness.
 
 `DispatchToolCallOptions.trust` and `.permission` run before validation or `execute()`; denial emits `tool_execution_blocked`. Middleware cannot bypass either guard. `AgentConfig.validator`/`RunOptions.validate` run after these guards; their output is redacted through the active `SecretRedactor`. `createSecureAgent()` requires all three seams plus non-empty schemas and durable pre-tool approval. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

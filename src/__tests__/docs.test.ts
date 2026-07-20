@@ -207,21 +207,21 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 70, "numbered plan count drifted");
+    assert.equal(plans.length, 72, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
-  it("every publishable package ships current README and 0.0.7 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.8 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")));
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 30, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 31, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.7] - 2026-07-19"), `${dir}/CHANGELOG.md missing finalized 0.0.7 section`);
+      assert.ok(changelog.includes("## [0.0.8] - 2026-07-20"), `${dir}/CHANGELOG.md missing finalized 0.0.8 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -662,7 +662,8 @@ describe("docs", () => {
     assert.equal(packageJson.scripts["release:dry-run"], "npm run sdk:ready", "release:dry-run should mirror CI verify");
     assert.ok(packageJson.scripts.typecheck.startsWith("npm run build &&"), "clean typecheck must build cross-workspace declarations first");
     assert.ok(workflow.includes("npm run sdk:ready"), "release workflow verify must run sdk:ready");
-    assert.ok(workflow.includes("actions/checkout@v5") && workflow.includes("actions/setup-node@v5"), "workflow actions must use Node 24 runtimes");
+    assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/, "checkout action must use an immutable revision");
+    assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, "setup-node action must use an immutable revision");
     assert.ok(!workflow.includes("run: npm test\n"), "release workflow verify must not skip typecheck by running npm test directly");
     assert.ok(workflow.includes('node-version: "20"'), "release workflow must include Node 20 compatibility coverage");
     assert.ok(workflow.includes("node20-compat"), "release workflow must name the Node 20 compatibility job");
@@ -671,8 +672,8 @@ describe("docs", () => {
     assert.ok(workflow.includes("PRISM_TEST_POSTGRES_URL"), "postgres-integration must set PRISM_TEST_POSTGRES_URL");
     assert.ok(workflow.includes("npm run test:postgres"), "postgres-integration must run test:postgres");
     assert.ok(
-      workflow.includes("needs: [verify, node20-compat, postgres-integration]"),
-      "publish must wait for Node 20 compatibility and PostgreSQL live coverage",
+      workflow.includes("needs: [verify, node20-compat, postgres-integration, codeql-release, supply-chain]"),
+      "publish must wait for compatibility, PostgreSQL, and supply-chain coverage",
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
@@ -716,19 +717,19 @@ describe("docs", () => {
     for (const phrase of ["topologicalOrder", "package-lock.json", "--provenance", "--access", "public", "--tag", "latest"]) {
       assert.ok(release.includes(phrase), `release script missing ${phrase}`);
     }
-    for (const phrase of ["release:publish", "--resume", "id-token: write", "contents: read", "upload-artifact@v6", "SHA256SUMS", "publish-report.json"]) {
+    for (const phrase of ["release:publish", "--resume", "id-token: write", "contents: read", "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f", "SHA256SUMS", "publish-report.json"]) {
       assert.ok(workflow.includes(phrase), `release workflow missing ${phrase}`);
     }
     assert.ok(workflow.includes("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"), "release workflow missing npm authentication");
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.7 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.8 publish handoff"), docs.indexOf("## Extension and configuration notes"));
     for (const phrase of [
       "Decision: GO",
-      "available` for all 30",
-      "git tag -s v0.0.7",
-      "git push origin v0.0.7",
+      "available` for all 31",
+      "git tag -s v0.0.8",
+      "git push origin v0.0.8",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",
@@ -769,6 +770,8 @@ describe("docs", () => {
       "PRISM_LIVE_PROVIDER_TESTS",
       "PRISM_LIVE_COMPACTION_TESTS",
       "PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS",
+      "PRISM_LIVE_WEB",
+      "PRISM_LIVE_CANARIES",
     ]) {
       assert.ok(docs.includes(gate), `docs/release-and-install.md does not document ${gate}`);
     }
@@ -1338,9 +1341,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, twenty-three first-party capability packages, and six pure-manifest family/profile packages",
+      "one core package, twenty-four first-party capability packages, and six pure-manifest family/profile packages",
       "all seven `@arnilo/prism-provider-*` packages",
-      "All 30 manifests (24 code packages + 6 family/profile packages)",
+      "All 31 manifests (25 code packages + 6 family/profile packages)",
       "six provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -2067,7 +2070,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 30, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 31, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

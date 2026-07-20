@@ -52,8 +52,17 @@ OpenTelemetry adapter:
 import { trace, metrics } from "@opentelemetry/api";
 import { createOpenTelemetryInstrumentation, wrapOpenTelemetryApi } from "@arnilo/prism-observability-opentelemetry";
 
-const { tracer, meter } = wrapOpenTelemetryApi(trace.getTracer("app"), metrics.getMeter("app"));
-const telemetry = createOpenTelemetryInstrumentation({ tracer, meter, onExporterError: console.error });
+const { tracer, meter } = wrapOpenTelemetryApi(
+  trace.getTracer("app"),
+  metrics.getMeter("app"),
+  { context, trace },
+);
+const telemetry = createOpenTelemetryInstrumentation({
+  tracer,
+  meter,
+  onTraceReference: ({ runId, traceId }) => saveRunTrace(runId, traceId),
+  onExporterError: console.error,
+});
 
 const detach = telemetry.attachSession(session);
 // or: for await (const event of session.subscribe()) telemetry.handleAgentEvent(event);
@@ -79,13 +88,13 @@ OpenTelemetry mapping (when enabled):
 
 | Agent event | Span | Metric labels |
 | --- | --- | --- |
-| `agent_started` / `agent_finished` / run `error` | `prism.agent.run` | `prism.run.tokens` on successful aggregate usage |
-| `provider_turn_*` | `prism.provider.turn` | `provider_id`, `outcome` on duration histogram |
-| `tool_execution_*` (terminal) | `prism.tool.execute` when started | `status` on duration histogram |
-| `provider_turn_finished` usage | span attributes | `prism.provider.tokens` (`kind`: input/output/cache_*`) |
-| `agent_finished` aggregate usage | — | `prism.run.tokens` (`kind`: input/output) |
-| `handleRunFeedback` | active-run `prism.run.feedback` event or ended-run span | `prism.run.feedback` (`rating`, `linked_evaluation`) |
-| `handleEvaluation` | active-run `prism.run.evaluation` event or ended-run span | `prism.run.evaluation` (`status`) |
+| `agent_started` / terminal event | `invoke_agent prism` (`INTERNAL`) | `gen_ai.invoke_agent.duration` |
+| `provider_turn_*` | `chat {model}` (`CLIENT`) | `gen_ai.client.operation.duration`, `gen_ai.client.token.usage` |
+| `tool_execution_*` | `execute_tool {tool}` (`INTERNAL`) when started | `gen_ai.execute_tool.duration` |
+| `guardrail_decision` | `prism.guardrail.evaluate` child (`INTERNAL`) | none |
+| `handleDelegation()` | `prism.agent.delegate` child (`INTERNAL`) | none |
+| `handleRunFeedback` | active-run `prism.run.feedback` event or ended-run span | `prism.run.feedback` |
+| `handleEvaluation` | active-run `gen_ai.evaluation.result` event or ended-run span | `prism.run.evaluation` (`status`) |
 
 High-cardinality identifiers (`sessionId`, `runId`, `requestId`, `toolCallId`) are **span attributes only**, never metric labels.
 
@@ -135,11 +144,11 @@ const session = createAgent({
 
 const detach = telemetry.attachSession(session);
 const result = await session.run("hello");
+const traceId = telemetry.traceId(result.runId); // or persist onTraceReference immediately
 detach();
 telemetry.handleRunFeedback({ runId: result.runId, rating: 1, hasComment: true, tagCount: 1, scorerCount: 1, evaluationCount: 1 });
-telemetry.handleEvaluation({ runId: result.runId, status: "scored", score: 0.9, hasReason: true });
-
-console.log(memory.spans.map((span) => span.name));
+telemetry.handleEvaluation({ runId: result.runId, name: "citation", status: "scored", score: 0.9, hasReason: true });
+console.log(traceId, memory.spans.map((span) => span.name));
 ```
 
 ## Extension and configuration notes
@@ -149,14 +158,17 @@ console.log(memory.spans.map((span) => span.name));
 - NeuralWatt `neuralwatt:telemetry` provider events remain package-local; hosts may forward numeric cost/energy into custom metrics.
 - `@arnilo/prism-observability-opentelemetry` is optional and included through `@arnilo/prism-sdk` and `@arnilo/prism-all`; instrumentation remains disabled until a host configures it.
 - Exporter failures are isolated: instrumentation catches tracer/meter errors and invokes `onExporterError` without affecting the run, feedback persistence, or evaluation scoring.
-- Run `error` events close every outstanding span attributable to that run. Detaching a session closes any remaining session spans; repeated terminal events are idempotent and cannot end a span twice.
+- Trace grading uses `createPersistenceTraceResolver()` with explicit session/run/ownership and finite pages/bytes. Judge reasons remain evaluation data; `gen_ai.evaluation.result` receives only name, finite score, controlled status, and reason-presence.
+- Run spans parent provider, tool, guardrail, and explicit delegation spans. Pass `{ context, trace }` to `wrapOpenTelemetryApi()` for native parent context creation; `parentContext` can attach the run to host ambient/remote context.
+- `onTraceReference` receives `{ runId, traceId }` when a run starts. `traceId(runId)` keeps only the newest 1,024 mappings by default (`maxTraceReferences`, hard cap 10,000); durable linkage remains host-owned.
+- Run `error`, suspension, denial, and detach close every attributable span. Repeated terminal events are idempotent and cannot end a span twice.
 - Disabled instrumentation performs no per-delta span work (`enabled: false` or missing tracer/meter).
 
 ## Security and performance notes
 
 - Default events are metadata-only — no prompts, streamed deltas, tool arguments, or credentials.
 - Opt-in content in other event types (`message_delta`, tool `result`) is still subject to `redactAgentEvent`.
-- Metric labels stay low-cardinality (`provider_id`, `outcome`, `status`, token `kind`, feedback rating bucket/link presence); never use `sessionId`/`runId`, comments, tag values, scorer/evaluation IDs, or arbitrary metadata as labels. Provider-turn and run-total tokens use distinct instruments, so one counter cannot double count both scopes.
+- Metric labels stay low-cardinality (`gen_ai.operation.name`, `gen_ai.provider.name`, token type, controlled outcome/status, feedback rating bucket/link presence); never use session/run/request/call IDs, model output, comments, tag values, scorer/evaluation IDs, or arbitrary metadata as labels. Token usage is recorded once at provider operation scope.
 - Target overhead when enabled is under 5% excluding exporter I/O; disabled hooks allocate no spans.
 - Provider transport limits and redaction order are documented in [Provider primitives](provider-primitives.md).
 

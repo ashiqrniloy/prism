@@ -53,6 +53,7 @@ npm install @arnilo/prism-sdk @arnilo/prism-provider-openai  # application profi
 npm install @arnilo/prism-all                               # every first-party package
 npm install @arnilo/prism-server @arnilo/prism-workflows    # optional Web API boundary
 npm install @arnilo/prism-supervisor                         # optional local delegation + A2A 1.0
+npm install @arnilo/prism-web-tools                          # optional bounded Brave/Exa/Firecrawl research
 ```
 
 See [docs/release-and-install.md](docs/release-and-install.md) for install
@@ -157,6 +158,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-mcp` | MCP client/tool bridge |
 | `@arnilo/prism-workflows` | bounded DAG workflows, durable suspend/resume, schedules/background runs, composition/state/replay, and multi-process coordination |
 | `@arnilo/prism-supervisor` | bounded local child delegation and A2A 1.0 interoperability |
+| `@arnilo/prism-web-tools` | host-selected bounded Brave/Exa search and Firecrawl Markdown/schema extraction |
 | `@arnilo/prism-observability-opentelemetry` | optional OpenTelemetry adapter |
 | `@arnilo/prism-credentials-node` | encrypted-file and keychain credentials |
 | `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases/owned run feedback |
@@ -166,7 +168,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | every first-party package, including both persistence adapters |
+| `@arnilo/prism-all` | every first-party package, including both persistence adapters and web tools |
 
 ## Scripts
 
