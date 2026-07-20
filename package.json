@@ -134,8 +134,8 @@
     "sdk:ready": "npm run typecheck && npm test && npm run pack:dry-run"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^7.0.2",
+    "@types/node": "^26.1.1"
   },
   "engines": {
     "node": ">=20"
