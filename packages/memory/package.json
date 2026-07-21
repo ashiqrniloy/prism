@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory",
-  "version": "0.0.9",
+  "version": "0.0.96",
   "description": "Optional working memory and semantic recall primitives with Embedder/VectorStore contracts for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,7 +26,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.9"
+    "@arnilo/prism": "0.0.96"
   },
   "dependencies": {
     "pg": "^8.22.0"

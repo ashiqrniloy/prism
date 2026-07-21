@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-workflows",
-  "version": "0.0.9",
+  "version": "0.0.96",
   "description": "Optional bounded DAG workflows with durable coordination, schedules, composition, state, and replay.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.9"
+    "@arnilo/prism": "0.0.96"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

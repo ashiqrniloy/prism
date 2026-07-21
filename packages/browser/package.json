@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-browser",
-  "version": "0.0.9",
+  "version": "0.0.96",
   "description": "Optional Prism browser tools over a host-supplied Playwright Browser: open, snapshot, act, and close with run-owned contexts, egress policy, and upload/download/screenshot quarantine.",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,7 +26,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.9",
+    "@arnilo/prism": "0.0.96",
     "playwright-core": "1.61.0"
   },
   "peerDependenciesMeta": {

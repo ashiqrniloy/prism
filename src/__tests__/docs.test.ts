@@ -242,7 +242,7 @@ describe("docs", () => {
     }
   });
 
-  it("every publishable package ships current README and 0.0.9 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.96 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")));
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -252,7 +252,7 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.9] - 2026-07-21"), `${dir}/CHANGELOG.md missing finalized 0.0.9 section`);
+      assert.ok(changelog.includes("## [0.0.96] - 2026-07-21"), `${dir}/CHANGELOG.md missing finalized 0.0.96 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -755,12 +755,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.9 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.96 publish handoff"), docs.indexOf("## Extension and configuration notes"));
     for (const phrase of [
       "Decision: GO",
       "available` for all 32",
-      "git tag -s v0.0.9",
-      "git push origin v0.0.9",
+      "git tag -s v0.0.96",
+      "git push origin v0.0.96",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",

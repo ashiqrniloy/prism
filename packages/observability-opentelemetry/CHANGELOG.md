@@ -1,4 +1,10 @@
 # Changelog
+## [0.0.96] - 2026-07-21
+
+### Changed
+
+- Released with exact 0.0.96 graph.
+
 ## Unreleased
 
 ## [0.0.9] - 2026-07-21

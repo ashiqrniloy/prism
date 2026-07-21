@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-code",
-  "version": "0.0.9",
+  "version": "0.0.96",
   "description": "Prism coding-agent profile with base runtime, coding tools, execution security, and MCP.",
   "license": "MIT",
   "scripts": {
@@ -11,10 +11,10 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-base": "0.0.9",
-    "@arnilo/prism-coding-agent": "0.0.9",
-    "@arnilo/prism-coding-security": "0.0.9",
-    "@arnilo/prism-mcp": "0.0.9"
+    "@arnilo/prism-base": "0.0.96",
+    "@arnilo/prism-coding-agent": "0.0.96",
+    "@arnilo/prism-coding-security": "0.0.96",
+    "@arnilo/prism-mcp": "0.0.96"
   },
   "engines": {
     "node": ">=20"

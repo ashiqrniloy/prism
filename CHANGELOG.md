@@ -1,9 +1,15 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+All notable changes to this project will be documented in this file.
+
+## [0.0.96] - 2026-07-21
+
+### Changed
+
+- Package graph and runtime version pins bumped from 0.0.9 to 0.0.96 for a clean publish tag after the mistaken `v0.0.95` tag and TypeScript 7 / workspace-order CI fixes.
 
 ## Unreleased
 

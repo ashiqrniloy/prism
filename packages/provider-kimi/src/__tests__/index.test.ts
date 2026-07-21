@@ -12,7 +12,7 @@ describe("@arnilo/prism-provider-kimi skeleton", () => {
   it("provider_packages_do_not_add_runtime_dependencies", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.deepEqual(pkg.dependencies ?? {}, {});
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.9");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.96");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });
