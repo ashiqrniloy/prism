@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.0.9] - 2026-07-21
+
+- Released with the exact 0.0.9 first-party package graph.
+
 ## [0.0.8] - 2026-07-20
 
 - Released with the exact 0.0.8 first-party package graph.

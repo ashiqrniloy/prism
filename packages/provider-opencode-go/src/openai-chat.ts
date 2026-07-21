@@ -1,15 +1,14 @@
 import type { ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
 import { assertStructuredOutputRequestSupported } from "@arnilo/prism";
-import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
+import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallFromArgumentsText } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
-import { parseJsonObjectArguments, readSseData } from "@arnilo/prism/providers/transport";
+import { readSseData } from "@arnilo/prism/providers/transport";
 import {
   openCodeGoPreserveThinking,
   openCodeGoReasoning,
   openCodeGoReasoningEffort,
   openCodeGoThinking,
-  stripOpenCodeGoOwnedCompat,
-} from "./thinking.js";
+  stripOpenCodeGoOwnedCompat } from "./thinking.js";
 
 interface ToolAccumulator { id?: string; name?: string; argumentsText: string }
 
@@ -29,8 +28,7 @@ export function openAIChatBody(request: ProviderRequest): JsonObject {
     ...compatRest,
     thinking: openCodeGoThinking(request),
     reasoning_effort: openCodeGoReasoningEffort(request),
-    reasoning: openCodeGoReasoning(request),
-  };
+    reasoning: openCodeGoReasoning(request)};
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
@@ -74,11 +72,7 @@ export async function* openAIChatEvents(body: ReadableStream<Uint8Array>, signal
     return;
   }
   for (const call of tools.values()) {
-    yield providerToolCall(toolCallContent(
-      call.id!,
-      call.name!,
-      parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-    ));
+    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
   yield providerDone(usage);
 }
@@ -98,8 +92,7 @@ export function serializeOpenCodeGoChatMessage(
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-    };
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
   }
 
   const thinkingParts = message.content.filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking");
@@ -117,10 +110,8 @@ export function serializeOpenCodeGoChatMessage(
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
-        })),
-        reasoning_content: reasoningContent,
-      });
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) }})),
+        reasoning_content: reasoningContent});
     }
   }
 
@@ -153,8 +144,7 @@ export function serializeOpenCodeGoChatMessage(
   return clean({
     role: message.role,
     content: content.length > 0 ? content : (reasoningContent ? null : ""),
-    reasoning_content: reasoningContent,
-  });
+    reasoning_content: reasoningContent});
 }
 
 function clean(value: Record<string, unknown>): JsonObject {

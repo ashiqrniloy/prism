@@ -66,7 +66,7 @@ export async function attachMcpCapabilities(
 
 export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions): Client {
   const maxBytes = validateMcpLimit("maxCapabilityBytes", options.maxCapabilityBytes ?? DEFAULT_MAX_CAPABILITY_BYTES, HARD_MAX_CAPABILITY_BYTES);
-  const client = new Client({ name: "prism-mcp-bridge", version: "0.0.8" }, { capabilities: {
+  const client = new Client({ name: "prism-mcp-bridge", version: "0.0.9" }, { capabilities: {
     ...(options.roots ? { roots: { listChanged: true } } : {}),
     ...(options.sampling ? { sampling: {} } : {}),
     ...(options.elicitation ? { elicitation: { form: {}, url: {} } } : {}),

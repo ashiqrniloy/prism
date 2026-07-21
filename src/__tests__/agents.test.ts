@@ -315,6 +315,90 @@ describe("agent session runtime", () => {
     assert.equal(persisted.some((entry) => entry.message?.content.some((block) => block.type === "tool_call_delta")), false, "tool deltas are UI events, not persisted transcript blocks");
   });
 
+  it("malformed_streamed_tool_arguments_become_failed_tool_results", async () => {
+    const requests: ProviderRequest[] = [];
+    let executed = 0;
+    const provider: AIProvider = { id: "mock", async *generate(request) {
+      requests.push(request);
+      if (requests.length === 1) {
+        yield providerToolCallDelta({ index: 0, id: "c1", name: "echo", argumentsText: "{invalid" });
+      } else {
+        yield providerTextDelta("recovered");
+      }
+      yield providerDone();
+    } };
+    const echo: ToolDefinition = {
+      name: "echo",
+      execute: (_args, context) => {
+        executed += 1;
+        return { toolCallId: context.toolCallId, name: "echo", value: "should-not-run" };
+      },
+    };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
+    const session = agent.createSession();
+    const reader = collect(session.subscribe());
+
+    const result = await session.run("Hi", { maxToolRounds: 1 });
+    const events = await reader;
+
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.text, "recovered");
+    assert.equal(executed, 0, "tool must not execute on malformed arguments");
+    assert.equal(events.some((event) => event.type === "tool_execution_blocked" && event.reason === "invalid_arguments"), true);
+    assert.equal(events.some((event) => event.type === "error"), false, "must not surface as run-level transport error");
+    const tool = requests[1]?.messages.find((message) => message.role === "tool");
+    assert.ok(tool?.content.some((block) => block.type === "tool_result" && block.toolCallId === "c1" && block.error?.code === "invalid_json_arguments"));
+  });
+
+  it("incomplete_tool_call_deltas_fail_turn_with_typed_incomplete_delta", async () => {
+    let executed = 0;
+    const provider: AIProvider = { id: "mock", async *generate() {
+      yield providerToolCallDelta({ index: 0, id: "c1", argumentsText: "{\"a\":1}" }); // missing name
+      yield providerDone();
+    } };
+    const echo: ToolDefinition = {
+      name: "echo",
+      execute: (_args, context) => {
+        executed += 1;
+        return { toolCallId: context.toolCallId, name: "echo", value: "should-not-run" };
+      },
+    };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] }).createSession();
+
+    await assert.rejects(session.run("Hi"), (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.status, "failed");
+      assert.equal(error.result.error?.code, "incomplete_delta");
+      assert.match(error.result.error?.message ?? "", /Incomplete tool call delta/);
+      return true;
+    });
+    assert.equal(executed, 0);
+  });
+
+  it("mixed_complete_and_incomplete_deltas_fail_closed_without_executing", async () => {
+    let executed = 0;
+    const provider: AIProvider = { id: "mock", async *generate() {
+      yield providerToolCallDelta({ index: 0, id: "ok", name: "echo", argumentsText: "{\"text\":\"hi\"}" });
+      yield providerToolCallDelta({ index: 1, id: "bad", argumentsText: "{}" }); // missing name
+      yield providerDone();
+    } };
+    const echo: ToolDefinition = {
+      name: "echo",
+      execute: (_args, context) => {
+        executed += 1;
+        return { toolCallId: context.toolCallId, name: "echo", value: "nope" };
+      },
+    };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] }).createSession();
+
+    await assert.rejects(session.run("Hi"), (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.error?.code, "incomplete_delta");
+      return true;
+    });
+    assert.equal(executed, 0, "complete sibling must not execute when an incomplete delta fails the turn");
+  });
+
   it("runtime_replays_provider_tool_call_and_tool_result_before_final_response", async () => {
     const requests: ProviderRequest[] = [];
     const provider: AIProvider = { id: "mock", async *generate(request) {

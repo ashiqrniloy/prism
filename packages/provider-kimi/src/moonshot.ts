@@ -7,8 +7,7 @@ import type {
   ModelCapabilities,
   ProviderEvent,
   ProviderRequest,
-  Usage,
-} from "@arnilo/prism";
+  Usage } from "@arnilo/prism";
 import {
   assertStructuredOutputRequestSupported,
   providerDone,
@@ -19,20 +18,17 @@ import {
   providerToolCallDelta,
   providerUsage,
   resolveCredentialValue,
-  toolCallContent,
-} from "@arnilo/prism";
+  toolCallFromArgumentsText } from "@arnilo/prism";
 import {
   applyOpenAIChatStructuredOutput,
   mapOpenAIChatUsage,
-  serializeOpenAITool,
-} from "@arnilo/prism/providers/openai";
-import { parseJsonObjectArguments, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+  serializeOpenAITool } from "@arnilo/prism/providers/openai";
+import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import {
   kimiPreserveThinking,
   kimiReasoningEffort,
   kimiThinking,
-  stripKimiThinkingCompat,
-} from "./thinking.js";
+  stripKimiThinkingCompat } from "./thinking.js";
 
 export interface MoonshotProviderOptions {
   readonly id?: string;
@@ -72,11 +68,9 @@ export function createMoonshotProvider(options: MoonshotProviderOptions = {}): A
           headers: {
             ...request.options?.headers,
             "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-          },
+            ...(token ? { authorization: `Bearer ${token}` } : {})},
           body: JSON.stringify(body),
-          signal: request.signal,
-        });
+          signal: request.signal});
         if (!response.ok) {
           return yield providerError(
             new Error(`Moonshot request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -88,8 +82,7 @@ export function createMoonshotProvider(options: MoonshotProviderOptions = {}): A
       } catch (error) {
         yield providerError(error, secrets);
       }
-    },
-  };
+    }};
 }
 
 export function moonshotBody(request: ProviderRequest): JsonObject {
@@ -107,8 +100,7 @@ export function moonshotBody(request: ProviderRequest): JsonObject {
     ...parameters,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
     ...stripKimiThinkingCompat(request.options?.compat as JsonObject | undefined),
-    ...request.options?.extra,
-  };
+    ...request.options?.extra};
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
@@ -145,8 +137,7 @@ export async function* moonshotEvents(
           index,
           id: tool.id,
           name: tool.function?.name,
-          argumentsText: tool.function?.arguments,
-        });
+          argumentsText: tool.function?.arguments});
       }
     }
   }
@@ -162,11 +153,7 @@ export async function* moonshotEvents(
     return;
   }
   for (const call of tools.values()) {
-    yield providerToolCall(toolCallContent(
-      call.id!,
-      call.name!,
-      parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-    ));
+    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
   yield providerDone(usage);
 }
@@ -186,8 +173,7 @@ export function serializeMoonshotMessage(
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-    };
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
   }
 
   if (message.role === "assistant") {
@@ -198,15 +184,13 @@ export function serializeMoonshotMessage(
     const reasoning = thinkingParts.map((part) => part.text).join("\n");
     const base: Record<string, unknown> = {
       role: "assistant",
-      content: text || (toolCalls.length > 0 ? null : ""),
-    };
+      content: text || (toolCalls.length > 0 ? null : "")};
     if (preserveThinking && reasoning) base.reasoning_content = reasoning;
     if (toolCalls.length > 0) {
       base.tool_calls = toolCalls.map((call) => ({
         id: call.id,
         type: "function",
-        function: { name: call.name, arguments: JSON.stringify(call.arguments) },
-      }));
+        function: { name: call.name, arguments: JSON.stringify(call.arguments) }}));
     }
     return base as JsonObject;
   }

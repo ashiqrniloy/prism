@@ -30,10 +30,18 @@ void describe("provider conformance", () => {
     assert.deepEqual(calls[0]?.arguments, { a: 1 });
   });
 
-  it("conformance_rejects_malformed_tool_call_delta_arguments", () => {
-    assert.throws(() => assertToolCallDeltasReconstruct([
+  it("conformance_marks_malformed_tool_call_delta_arguments_without_throwing", () => {
+    const calls = assertToolCallDeltasReconstruct([
       providerToolCallDelta({ index: 0, id: "call_1", name: "lookup", argumentsText: "not-json" }),
-    ], []), /Invalid tool call arguments at index 0/);
+      providerDone(),
+    ], [{ index: 0, id: "call_1", name: "lookup", arguments: {} }]);
+    assert.equal(calls[0]?.argumentsError?.code, "invalid_json_arguments");
+  });
+
+  it("conformance_rejects_incomplete_tool_call_deltas", () => {
+    assert.throws(() => assertToolCallDeltasReconstruct([
+      providerToolCallDelta({ index: 0, argumentsText: "{\"a\":1}" }),
+    ], []), /incomplete_delta|Incomplete tool call/);
   });
 
   it("conformance_checks_cache_usage_fields", async () => {

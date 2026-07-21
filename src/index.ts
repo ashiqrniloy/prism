@@ -149,6 +149,7 @@ export {
   providerToolCallDelta,
   providerUsage,
   toolCallContent,
+  toolCallFromArgumentsText,
 } from "./provider-events.js";
 export type { ProviderResolver } from "./contracts.js";
 export { createProviderRegistry, createProviderResolver } from "./providers.js";
@@ -188,6 +189,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.8";
+export const version = "0.0.9";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

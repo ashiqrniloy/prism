@@ -67,7 +67,7 @@ Agent / turn / message events:
 | `message_started` / `message_finished` | `sessionId`, `runId`, `message: Message` |
 | `message_delta` | `sessionId`, `runId`, `content: ContentBlock` (`tool_call_delta` fragments may appear here for live UI streaming; stored messages use final `tool_call` blocks) |
 
-`message_delta.content.type === "tool_call_delta"` carries `{ index, id?, name?, argumentsText? }`. Treat it as a streaming fragment. The runtime reconstructs and persists a final `tool_call` before executing tools.
+`message_delta.content.type === "tool_call_delta"` carries `{ index, id?, name?, argumentsText? }`. Treat it as a streaming fragment. The runtime reconstructs and persists a final `tool_call` before executing tools. Deltas missing `id`/`name` at stream end fail the provider turn with `ErrorInfo.code: "incomplete_delta"` (typed `ProviderTransportError`); they never throw a bare `Error`. Malformed JSON with id+name present recovers as a blocked tool result (`invalid_json_arguments`) instead.
 
 Tool execution events:
 
@@ -127,7 +127,8 @@ turn_started → message_started → message_delta* → message_finished → tur
 With opt-in `toolCalls: "bounded"`, a provider turn containing calls emits its normal assistant envelope followed by existing `tool_execution_*` events and matching persisted tool results; it emits no validation event and the next provider turn consumes that transcript. A post-`maxToolRounds` call emits terminal `artifact_failed` directly after `turn_finished` and has no tool execution event.
 
 - `attempt` is 1-indexed per call-free validation candidate. It can differ from provider `turn` when bounded tool calls occur.
-- Single-shot runs emit zero artifact events.
+- Empty/whitespace-only call-free text (including thinking-only content) emits `artifact_validation_*` with `metadata.reason: "parse_error"` before any host parser runs.
+- Single-shot runs emit zero artifact events. Session runs with `generate-validate-revise` require `artifact_finished` to resolve `succeeded`.
 - **Validation failure triggering a revision is recoverable and never an `error`.** Terminal candidate-budget or `tool_round_limit` exhaustion emits `artifact_failed`; real failures remain on the `error` channel.
 
 ## Request/response example

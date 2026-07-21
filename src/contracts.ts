@@ -67,6 +67,8 @@ export interface ToolCallContent {
   readonly id: string;
   readonly name: string;
   readonly arguments: JsonObject;
+  /** Set when streamed arguments failed JSON parse; dispatch blocks without execute(). */
+  readonly argumentsError?: ErrorInfo;
 }
 
 export interface ToolResultContent {

@@ -299,4 +299,5 @@ Use workflows for known, durable, replayable graphs. Use optional supervisor del
 - [PostgreSQL persistence](postgres-persistence.md): durable `persistence.checkpoints`
 - [Observability](observability.md): exporting workflow/agent events
 - [Coding execution approval and sandboxing](coding-security.md): `ExecutionPolicy` for tool nodes
+- [Coding agent tools](coding-agent-tools.md): opt-in `createGitTools()` / `git_pr_handoff` produce bounded host-owned PR payloads; durable coding plans/todos are workspace Markdown plus `state.coding` metadata helpers — workflows may compose them for restart/resume/background branches but Prism never pushes or opens PRs
 - [Release and install](release-and-install.md): atomic and profile installs

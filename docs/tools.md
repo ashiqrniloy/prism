@@ -11,6 +11,7 @@ APIs:
 - `dispatchToolCall()`
 - `ToolFilter`, `ToolFilterInput`, `ToolValidator`, `DispatchToolCallOptions`
 - Optional [Web search, fetch, and extraction](web-tools.md): three narrow host-selected `ToolDefinition`s with untrusted bounded outputs.
+- Optional [Browser automation](browser-automation.md): four exclusive Playwright tools over a host-supplied browser with run-owned contexts and snapshot refs.
 
 ## When to use it
 
@@ -90,6 +91,8 @@ When `options.ledger` is set, `dispatchToolCall()` also appends a `ToolCallRecor
 | `blocked` | On any blocked path | `finishedAt`, `reason`, `result` with `error` |
 
 Blocked reasons are `unknown_tool`, `tool_denied`, `invalid_arguments`, `permission_denied`, and `validation_failed`. Progress snapshots reuse status `started` because the tool call is still in flight.
+
+Malformed streamed tool-call JSON (id+name present, arguments not a JSON object) does not fail the provider turn. Providers emit a tool call with `argumentsError`; `dispatchToolCall` blocks with reason `invalid_arguments` and `error.code: "invalid_json_arguments"`, persists a failed tool result, and never calls `execute()`. The model can self-correct within `maxToolRounds`/`maxTurns`.
 
 ## Request/response example
 

@@ -12,7 +12,7 @@ import {
   providerToolCall,
   providerToolCallDelta,
   providerUsage,
-  toolCallContent,
+  toolCallFromArgumentsText,
 } from "../provider-events.js";
 import {
   assertOpenAIChatMessage,
@@ -22,7 +22,7 @@ import {
   serializeOpenAITool,
 } from "./openai-primitives.js";
 import {
-  parseJsonObjectArguments,
+  ProviderTransportError,
   readBoundedResponseText,
   readSseData,
 } from "./transport.js";
@@ -109,14 +109,16 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
           }
         }
 
+        const incomplete = [...tools.entries()].find(([, call]) => !call.id || !call.name);
+        if (incomplete) {
+          yield providerError(
+            new ProviderTransportError("incomplete_delta", `Incomplete tool call delta at index ${incomplete[0]}`),
+            secrets,
+          );
+          return;
+        }
         for (const call of tools.values()) {
-          if (call.id && call.name) {
-            yield providerToolCall(toolCallContent(
-              call.id,
-              call.name,
-              parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-            ));
-          }
+          yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
         }
         yield providerDone();
       } catch (error) {

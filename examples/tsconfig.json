@@ -20,6 +20,8 @@
       "@arnilo/prism-compaction-llm": ["./packages/compaction-llm/src/index.ts"],
       "@arnilo/prism-compaction-observational-memory": ["./packages/compaction-observational-memory/src/index.ts"],
       "@arnilo/prism-workflows": ["./packages/workflows/src/index.ts"],
+      "@arnilo/prism-coding-agent": ["./packages/coding-agent/src/index.ts"],
+      "@arnilo/prism-browser": ["./packages/browser/src/index.ts"],
       "@arnilo/prism-evals": ["./packages/evals/src/index.ts"],
       "@arnilo/prism-memory": ["./packages/memory/src/index.ts"],
       "@arnilo/prism-rag": ["./packages/rag/src/index.ts"],

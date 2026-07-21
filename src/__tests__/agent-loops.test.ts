@@ -5,8 +5,10 @@ import {
   createMemorySessionStore,
   createMockProvider,
   createSecretRedactor,
+  AgentRunError,
   providerDone,
   providerTextDelta,
+  providerThinkingDelta,
   redactAgentEvent,
   toolCallContent,
   type AgentEvent,
@@ -515,6 +517,35 @@ describe("agent loop strategies", () => {
       assert.equal(events.some((event) => event.type === "artifact_finished"), false);
     });
 
+    it("empty and whitespace-only call-free text are parse_error before parser/validator", async () => {
+      for (const text of ["", "   \n\t  "] as const) {
+        const events: AgentEvent[] = [];
+        const parsedTexts: string[] = [];
+        let repairedValue: unknown = "untouched";
+        const { ctx } = reviseCtx({
+          generateTexts: [text, "ok"],
+          validator: () => ({ ok: true }),
+        });
+        const origEmit = ctx.emit;
+        ctx.emit = (event) => { events.push(event); origEmit(event); };
+        await generateValidateReviseLoop({
+          validator: () => ({ ok: true }),
+          parser: (candidate) => { parsedTexts.push(candidate); return { ok: true, value: candidate }; },
+          repairer: (value) => {
+            repairedValue = value;
+            return { role: "user", content: [{ type: "text", text: "emit text" }] };
+          },
+          maxRevisions: 1,
+        }).run(ctx);
+        assert.deepEqual(parsedTexts, ["ok"], `empty ${JSON.stringify(text)} must short-circuit before parser`);
+        assert.equal(repairedValue, undefined);
+        const finished = events.filter((event) => event.type === "artifact_validation_finished");
+        assert.equal((finished[0] as { result?: { metadata?: { reason?: string }; errors?: { message: string }[] } })?.result?.metadata?.reason, "parse_error");
+        assert.equal((finished[0] as { result?: { errors?: { message: string }[] } })?.result?.errors?.[0]?.message, "no artifact text in model output");
+        assert.equal(events.some((event) => event.type === "artifact_finished"), true);
+      }
+    });
+
     it("default repairer feeds parse error back as the revision message", async () => {
       const { ctx, appendedMessages } = reviseCtx({
         generateTexts: ["bad", "{\"ok\":true}"],
@@ -779,6 +810,39 @@ describe("agent loop strategies", () => {
       assert.deepEqual((await store.list("s-revise")).map((entry) => entry.message?.role), ["user", "assistant", "user", "assistant", "user", "assistant"]);
       assert.equal(events.some((event) => event.type === "agent_finished"), true);
       assert.equal(events.some((event) => event.type === "error"), false);
+    });
+
+    it("thinking-only call-free candidate fails with parse_error and never succeeds empty", async () => {
+      const provider: AIProvider = { id: "mock", async *generate() {
+        yield providerThinkingDelta("planning only");
+        yield providerDone();
+      } };
+      const session = createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+      }).createSession({ id: "s-thinking-only" });
+      const reader = collect(session.subscribe());
+
+      await assert.rejects(session.run("build", {
+        loop: {
+          strategy: "generate-validate-revise",
+          validator: () => ({ ok: true }),
+          maxRevisions: 1,
+        },
+      }), (error: unknown) => {
+        assert.ok(error instanceof AgentRunError);
+        assert.equal(error.result.status, "failed");
+        assert.equal(error.result.text, "");
+        assert.equal(error.result.error?.code, "parse_error");
+        assert.match(error.result.error?.message ?? "", /no artifact text in model output/);
+        return true;
+      });
+
+      const events = await reader;
+      assert.equal(events.some((event) => event.type === "artifact_failed"), true);
+      assert.equal(events.some((event) => event.type === "artifact_finished"), false);
+      assert.equal(events.some((event) => event.type === "artifact_revision_started"), true);
+      assert.equal(events.some((event) => event.type === "agent_finished"), false);
     });
 
     it("uses runtime tool guards and redacts bounded artifact-tool transcripts", async () => {

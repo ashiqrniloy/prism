@@ -110,7 +110,7 @@ export interface SseEvent {
 }
 
 export class ProviderTransportError extends Error {
-  readonly code: "sse_buffer_overflow" | "sse_event_overflow" | "response_body_overflow" | "aborted";
+  readonly code: "sse_buffer_overflow" | "sse_event_overflow" | "response_body_overflow" | "aborted" | "invalid_json_arguments" | "incomplete_delta";
   readonly limitBytes?: number;
 }
 
@@ -131,6 +131,12 @@ export function parseJsonObjectArguments(
   text: string,
   options?: { toolName?: string; maxBytes?: number },
 ): JsonObject;
+
+/** Non-throwing variant for recoverable tool-call recovery; prefer with \`toolCallFromArgumentsText\`. */
+export function tryParseJsonObjectArguments(
+  text: string,
+  options?: { toolName?: string; maxBytes?: number },
+): { ok: true; value: JsonObject } | { ok: false; error: ProviderTransportError };
 ```
 
 **Performance:** Single pass over chunks; retained memory is `O(min(buffer, maxBufferBytes))`, not `O(stream)`. No full-stream accumulation.

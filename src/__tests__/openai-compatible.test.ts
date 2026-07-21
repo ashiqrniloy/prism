@@ -119,6 +119,25 @@ describe("openai-compatible provider", () => {
     ]);
   });
 
+  it("fails truncated incomplete tool calls with incomplete_delta instead of done", async () => {
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      fetch: okFetch([
+        JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { arguments: "{\"a\":" } }] } }] }),
+        "[DONE]",
+      ]),
+    });
+
+    const events = await collect(provider);
+    assert.equal(events.some((event) => event.type === "done"), false);
+    const error = events.find((event) => event.type === "error");
+    assert.equal(error?.type, "error");
+    if (error?.type === "error") {
+      assert.equal(error.error.code, "incomplete_delta");
+      assert.match(error.error.message, /Incomplete tool call delta at index 0/);
+    }
+  });
+
   it("passes abort signal to fetch", async () => {
     const controller = new AbortController();
     let seen: AbortSignal | null | undefined;

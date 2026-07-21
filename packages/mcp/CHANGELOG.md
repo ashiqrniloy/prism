@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [0.0.9] - 2026-07-21
+
+- Released with the exact 0.0.9 first-party package graph.
+
 ## [0.0.8] - 2026-07-20
 
 - Pinned official MCP SDK 1.29.0 and added bounded capability bridge for resources, prompts, roots, sampling, and form/URL elicitation with stable unsupported errors.

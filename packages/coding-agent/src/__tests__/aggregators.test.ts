@@ -13,13 +13,13 @@ async function tmp(): Promise<string> {
   return mkdtemp(join(tmpdir(), "agg-"));
 }
 
-test("createCodingTools returns exactly [shell, read, write, edit] with unique names", async () => {
+test("createCodingTools returns shell/read/write/edit/repo_list/repo_search with unique names", async () => {
   const cwd = await tmp();
   try {
     const tools = createCodingTools(cwd);
     assert.deepEqual(
       tools.map((t) => t.name),
-      ["shell", "read", "write", "edit"],
+      ["shell", "read", "write", "edit", "repo_list", "repo_search"],
     );
     // unique
     assert.equal(new Set(tools.map((t) => t.name)).size, tools.length);
@@ -33,13 +33,13 @@ test("createCodingTools returns exactly [shell, read, write, edit] with unique n
   }
 });
 
-test("createReadOnlyTools returns exactly [read]", async () => {
+test("createReadOnlyTools returns exactly [read, repo_list, repo_search]", async () => {
   const cwd = await tmp();
   try {
     const tools = createReadOnlyTools(cwd);
     assert.deepEqual(
       tools.map((t) => t.name),
-      ["read"],
+      ["read", "repo_list", "repo_search"],
     );
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -87,7 +87,7 @@ test("createAllTools equals createCodingTools surface", async () => {
     const all = createAllTools(cwd);
     assert.deepEqual(
       all.map((t) => t.name),
-      ["shell", "read", "write", "edit"],
+      ["shell", "read", "write", "edit", "repo_list", "repo_search"],
     );
   } finally {
     await rm(cwd, { recursive: true, force: true });

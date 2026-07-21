@@ -7,6 +7,38 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.8 → 0.0.9 release overview
+
+All 32 first-party manifests and exact internal ranges move together to `0.0.9`; mixed first-party versions are unsupported. Core remains dependency-free at runtime and existing low-level agent/session APIs remain compatible. New coding sandbox, repository/Git, durable coding-plan, and browser surfaces are opt-in. `@arnilo/prism-browser` is included by `@arnilo/prism-all` but not by `@arnilo/prism-code` — install it explicitly when interactive browser automation is required. Office execution remains outside Prism packaging (host-selected skills/instructions only). No tag or publication is automatic from this migration.
+
+### Malformed streamed tool-call arguments (recoverable)
+
+Malformed streamed tool-call JSON (id+name present) no longer terminates the run as `ProviderTransportError("invalid_json_arguments")`. First-party providers emit a tool call carrying `argumentsError`; dispatch blocks with `tool_execution_blocked` / `invalid_arguments` (`error.code: "invalid_json_arguments"`), never calls `execute()`, and the model can self-correct within existing turn/tool-round budgets. Prefer `toolCallFromArgumentsText` / `tryParseJsonObjectArguments` in custom providers.
+
+### Incomplete tool-call deltas (typed failure)
+
+Tool-call deltas missing `id` and/or `name` at stream end no longer throw a bare `Error("Incomplete tool call delta...")`. Core reconstruction and the openai-compatible finalizer surface `ProviderTransportError` / `ErrorInfo.code: "incomplete_delta"`, fail the provider turn (no tool execution), and keep OpenCode Go / Kimi dangling fail-closed behavior. Distinguish from Defect 1a: missing identity fails the turn; present identity with bad JSON recovers via failed tool results.
+
+### Empty call-free artifact candidates (parse_error)
+
+`generateValidateReviseLoop` treats empty/whitespace-only call-free assistant text (including thinking-only/reasoning-only turns) as `parse_error` before the host parser/identity default. Session runs succeed only after `artifact_finished`; terminal `artifact_failed` fails the run (`AgentRunError`, typically `error.code: "parse_error"`).
+
+## 0.0.9 coding-security Docker sandbox (additive)
+
+`@arnilo/prism-coding-security` adds `createDockerSandbox()` / `DisposableSandbox` while preserving `SandboxAdapter.exec` and `createSandboxBashOperations()`. Hosts opt in with an absolute Docker executable and digest-pinned image; default network is none, host env is never inherited, and workspace export is an explicit bounded host callback. Existing approval-policy callers need no changes.
+
+## 0.0.9 coding-agent repository list/search (additive behavior change)
+
+`@arnilo/prism-coding-agent` adds native `repo_list` / `repo_search` tools. `createCodingTools()` / `createAllTools()` now return six tools. **`createReadOnlyTools()` deliberately expands from `[read]` to `[read, repo_list, repo_search]`** — update hosts that asserted the previous read-only membership. Prefer `createSandboxCodingTools(cwd, { sandbox, repository })` from `@arnilo/prism-coding-security` when shell must run inside a sandbox adapter while list/search inspect a host workspace path.
+
+Opt-in structured Git/check tools are available via `createGitTools(cwd, { commitIdentity, checks? })` and are **not** added to `createCodingTools()`/`createAllTools()`. Commits require an explicit host `commitIdentity`; PR handoff returns bounded metadata/artifacts only and never pushes.
+
+Durable coding-task composition uses existing workflows plus coding-agent helpers (`writeCodingPlanFile`, `buildCodingCheckpointMetadata`, `assertCodingResumeAllowed`). Plan/todos remain workspace Markdown; checkpoint state keeps only references/hashes/summaries/fingerprints under `state.coding`. No `CodingRun` or todo database is introduced. See `examples/durable-coding-workflow.ts`.
+
+## 0.0.9 browser automation (additive)
+
+Install `@arnilo/prism-browser` explicitly (or through `@arnilo/prism-all`) for interactive browser tools. Hosts supply a pinned Playwright `Browser` (`playwright-core@1.61.0` optional peer); package import launches and downloads nothing. `createBrowserTools()` returns exactly `browser_open`, `browser_snapshot`, `browser_act`, and `browser_close` (all `exclusive: true`). Network policy defaults to require contained-proxy attestation; configure `uploads`/`downloads` for file transfer; `browser_act` adds `upload`/`screenshot`/`download_release`. Use `createBrowserManager().closeRun(runId)` / `close()` on terminal/abort. Align with a disposable sandbox via `createSharedSandboxBrowserOptions()` and `assertBrowserSandboxNetwork()`. CSS/XPath/evaluate/CDP/persistent profiles remain unsupported.
+
 ## 0.0.7 → 0.0.8 release overview
 
 All 31 first-party manifests and exact internal ranges move together to `0.0.8`; mixed first-party versions are unsupported. Core remains dependency-free at runtime and existing low-level agent/session APIs remain compatible. New telemetry, evaluation, MCP, A2A, ledger batching, and web research surfaces are opt-in. Release CI now requires CodeQL, dependency/license/SBOM/secret checks, packed-artifact attestations, PostgreSQL integration, and protected live-canary prerequisites; no tag or publication is automatic from this migration.

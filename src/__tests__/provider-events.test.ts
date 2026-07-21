@@ -10,7 +10,10 @@ import {
   providerToolCallDelta,
   providerUsage,
   toolCallContent,
+  toolCallFromArgumentsText,
 } from "../index.js";
+import { reconstructToolCallDeltas } from "../provider-events.js";
+import { ProviderTransportError } from "../providers/transport.js";
 
 describe("provider event helpers", () => {
   it("creates text thinking and image content deltas", () => {
@@ -40,6 +43,39 @@ describe("provider event helpers", () => {
       argumentsText: "{}",
     });
     assert.deepEqual(providerToolCall(call), { type: "tool_call", call });
+  });
+
+  it("toolCallFromArgumentsText marks malformed JSON without throwing", () => {
+    const ok = toolCallFromArgumentsText("c1", "echo", "{\"a\":1}");
+    assert.deepEqual(ok.arguments, { a: 1 });
+    assert.equal(ok.argumentsError, undefined);
+
+    const bad = toolCallFromArgumentsText("c1", "echo", "{invalid");
+    assert.deepEqual(bad.arguments, {});
+    assert.equal(bad.argumentsError?.code, "invalid_json_arguments");
+    assert.match(bad.argumentsError?.message ?? "", /Invalid tool arguments JSON for tool echo/);
+  });
+
+  it("reconstructToolCallDeltas recovers malformed arguments as argumentsError", () => {
+    const [call] = reconstructToolCallDeltas([
+      providerToolCallDelta({ index: 0, id: "c1", name: "echo", argumentsText: "{invalid" }),
+    ]);
+    assert.equal(call?.id, "c1");
+    assert.equal(call?.argumentsError?.code, "invalid_json_arguments");
+  });
+
+  it("reconstructToolCallDeltas throws typed incomplete_delta when id or name is missing", () => {
+    assert.throws(
+      () => reconstructToolCallDeltas([providerToolCallDelta({ index: 2, id: "c1", argumentsText: "{}" })]),
+      (error: unknown) =>
+        error instanceof ProviderTransportError
+        && error.code === "incomplete_delta"
+        && error.message === "Incomplete tool call delta at index 2",
+    );
+    assert.throws(
+      () => reconstructToolCallDeltas([providerToolCallDelta({ index: 0, name: "echo", argumentsText: "{}" })]),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "incomplete_delta",
+    );
   });
 
   it("creates usage done and redacted error events", () => {

@@ -32,6 +32,7 @@ node examples/custom-tools-skills-context.ts
 node examples/extension-package.ts
 node examples/evals.ts
 node examples/evaluation-gate.ts
+node examples/coding-browser-evaluation.ts
 node examples/web-research.ts
 node examples/run-feedback.ts
 node examples/supervisor-a2a.ts
@@ -45,6 +46,7 @@ node examples/workflow-multimodal-document.ts
 node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL is set
 node examples/workflow-distributed-coordinator.ts
 node examples/workflow-schedules-replay.ts
+node examples/durable-coding-workflow.ts
 node examples/agent-durable-approval.ts
 node examples/secure-agent.ts
 ```
@@ -58,6 +60,7 @@ Each demo prints a single JSON line with its result.
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.
+- `coding-browser-evaluation.ts` — network-free coding/browser adversarial dataset + scorers + CI threshold (no Docker/Playwright binary).
 - `web-research.ts` — network-free host-selected Brave search → Firecrawl Markdown route with fake fetch, stable citation, untrusted marker, and fixed host extraction schema.
 - `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, and safe low-cardinality OpenTelemetry projection.
 - `supervisor-a2a.ts` — bounded allow-listed local child delegation plus an offline A2A 1.0 handler/client round trip.
@@ -115,6 +118,7 @@ Each demo prints a single JSON line with its result.
 - `workflow-rpc-cancel.ts` — **demo**: `cancelWorkflowRun` mid-flight then `resumeWorkflow` — the programmatic surface behind `createWorkflowCommands()`.
 - `workflow-distributed-coordinator.ts` — **demo**: two coordinator instances over independent SQLite handles atomically claim one queued run using durable leases and fencing.
 - `workflow-schedules-replay.ts` — **demo**: ownership-scoped one-time schedule → existing coordinator background run → nested shared-state workflow → immutable-lineage replay.
+- `durable-coding-workflow.ts` — **demo**: durable coding plan/todos as workspace Markdown, workflow `state.coding` checkpoint metadata, approval suspend/resume with fingerprint/hash revalidation, background cancel, and host-owned PR handoff (no network).
 - `tsconfig.json` — typecheck-only config.
 
 **demo** = the file has a runnable `main()`; the others are compile-checked

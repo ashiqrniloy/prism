@@ -1,8 +1,16 @@
 # Changelog
 
+## [0.0.9] - 2026-07-21
+
+- Added `createDockerSandbox()` disposable Docker/OCI reference with digest-pinned images, typed `execFile`, bounded workspace import/export, finite resource caps, and idempotent stop/kill/cleanup. Existing `SandboxAdapter` / `createSandboxBashOperations()` remain compatible.
+- Added `createSandboxCodingTools()` / `createSandboxReadOnlyTools()` to wire shell through a sandbox adapter while sharing repository list/search options with the host workspace.
+- Added `assertBrowserSandboxNetwork()` so custom Docker networks fail closed for browser use without `browserEgress` proxy attestation (`proxyEndpoint` + `denyDirectEgress`).
+- Expanded the protected Docker live matrix (`PRISM_TEST_DOCKER_SANDBOX=1`) to assert non-root execution, workspace writability, host-env non-inheritance, network-none, digest pinning, and idempotent cleanup.
+
 ## [0.0.8] - 2026-07-20
 
 - Released with the exact 0.0.8 first-party package graph.
+
 
 ## [0.0.7] - 2026-07-19
 

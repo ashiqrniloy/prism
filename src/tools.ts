@@ -233,6 +233,7 @@ async function checkCall(call: ToolCallContent, options: DispatchToolCallOptions
   const tool = options.registry.get(call.name);
   if (!tool) return blocked(call, context, "unknown_tool", { message: `Unknown tool: ${call.name}` }, options, startedAt);
   if (filterTools([tool], options.filter).length === 0) return blocked(call, context, "tool_denied", { message: `Tool denied: ${call.name}` }, options, startedAt);
+  if (call.argumentsError) return blocked(call, context, "invalid_arguments", call.argumentsError, options, startedAt);
   if (!isJsonObject(call.arguments)) return blocked(call, context, "invalid_arguments", { message: "Tool arguments must be a JSON object" }, options, startedAt);
   return undefined;
 }

@@ -1,15 +1,14 @@
 import type { AIProvider, AudioContent, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelConfig, ProviderRequest, ProviderRequestOptions, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
+import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallFromArgumentsText } from "@arnilo/prism";
 import {
   bytesToBase64,
   defaultProviderFilename,
   openAIAudioFormat,
   resolveProviderMediaMessages,
   serializeOpenAIResponsesInputAudio,
-  serializeOpenAIResponsesInputFile,
-} from "@arnilo/prism/providers/media";
+  serializeOpenAIResponsesInputFile } from "@arnilo/prism/providers/media";
 import { applyOpenAIResponsesStructuredOutput } from "@arnilo/prism/providers/openai";
-import { parseJsonObjectArguments, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { promptCacheKey, promptCacheRetention } from "./cache.js";
 import { createOpenAIFileUploadManager, type OpenAIFileUploadManager } from "./uploads.js";
 
@@ -49,15 +48,12 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
         scope: {
           sessionId: request.options?.sessionId,
           runId: typeof request.metadata?.runId === "string" ? request.metadata.runId : undefined,
-          tenantId: typeof request.metadata?.tenantId === "string" ? request.metadata.tenantId : undefined,
-        },
-      });
+          tenantId: typeof request.metadata?.tenantId === "string" ? request.metadata.tenantId : undefined}});
       const mediaContext: ResponsesMediaContext = {
         model: request.model,
         fetch: options.fetch,
         signal: request.signal,
-        uploadManager,
-      };
+        uploadManager};
       try {
         const body = await toResponsesRequest(request, mediaContext);
         token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
@@ -68,11 +64,9 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             ...request.options?.headers,
             "content-type": "application/json",
             ...(token ? { authorization: `Bearer ${token}` } : {}),
-            ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {}),
-          },
+            ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {})},
           body: JSON.stringify(body),
-          signal: request.signal,
-        });
+          signal: request.signal});
         if (!response.ok) {
           return yield providerError(
             new Error(`OpenAI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -102,8 +96,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
               index,
               id: current.id,
               name: current.name,
-              argumentsText: typeof item.arguments === "string" && item.arguments.length > 0 ? item.arguments : undefined,
-            });
+              argumentsText: typeof item.arguments === "string" && item.arguments.length > 0 ? item.arguments : undefined});
           } else if (event.type === "response.function_call_arguments.delta" && typeof event.delta === "string") {
             const index = event.output_index ?? 0;
             const current = tools.get(index) ?? { argumentsText: "" };
@@ -135,8 +128,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
               index,
               id: current.id,
               name: current.name,
-              argumentsText: tool.arguments ?? tool.arguments_delta,
-            });
+              argumentsText: tool.arguments ?? tool.arguments_delta});
           }
 
           usage = toUsage(event.response?.usage ?? event.usage) ?? usage;
@@ -144,11 +136,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
         }
         for (const call of tools.values()) {
           if (call.id && call.name) {
-            yield providerToolCall(toolCallContent(
-              call.id,
-              call.name,
-              parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-            ));
+            yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
           }
         }
         yield providerDone(usage);
@@ -157,8 +145,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
       } finally {
         await mediaContext.uploadManager.cleanup(request.signal);
       }
-    },
-  };
+    }};
 }
 
 async function toResponsesRequest(request: ProviderRequest, mediaContext: ResponsesMediaContext): Promise<JsonObject> {
@@ -166,8 +153,7 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const resolvedMedia = await resolveProviderMediaMessages(request.messages, request.model, {
     fetch: mediaContext.fetch,
-    signal: mediaContext.signal,
-  });
+    signal: mediaContext.signal});
   const resolvedContext = { ...mediaContext, resolvedMedia };
   const optionsCompat = { ...(request.options?.compat ?? {}) } as Record<string, unknown>;
   const reasoning = resolveOpenAIReasoning(request.model, request.options);
@@ -184,8 +170,7 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
     max_output_tokens: maxTokens,
     ...optionsCompat,
     ...(reasoning ? { reasoning } : {}),
-    ...(request.options?.extra ?? {}),
-  };
+    ...(request.options?.extra ?? {})};
   applyOpenAIResponsesStructuredOutput(payload, request.options?.structuredOutput);
   return clean(payload);
 }
@@ -207,8 +192,7 @@ async function toResponsesInput(
       items.push(clean({
         type: "function_call_output",
         call_id: result?.toolCallId ?? "",
-        output: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-      }));
+        output: result ? JSON.stringify(result.result ?? result.error ?? null) : ""}));
       continue;
     }
 
@@ -226,8 +210,7 @@ async function toResponsesInput(
             type: "function_call",
             call_id: part.id,
             name: part.name,
-            arguments: JSON.stringify(part.arguments),
-          }));
+            arguments: JSON.stringify(part.arguments)}));
         } else if (part.type === "tool_result") {
           throw new Error("OpenAI Responses tool_result blocks must appear in role=tool messages");
         } else if (part.type === "image" || part.type === "audio" || part.type === "file" || part.type === "document") {
@@ -254,8 +237,7 @@ async function toResponsesInput(
           type: "function_call",
           call_id: part.id,
           name: part.name,
-          arguments: JSON.stringify(part.arguments),
-        }));
+          arguments: JSON.stringify(part.arguments)}));
       } else if (part.type === "tool_result") {
         throw new Error("OpenAI Responses tool_result blocks must appear in role=tool messages");
       }
@@ -289,8 +271,7 @@ async function toResponsesAudio(
   const resolved = mediaContext.resolvedMedia!.get(part)!;
   return serializeOpenAIResponsesInputAudio({
     data: bytesToBase64(resolved.bytes),
-    format: openAIAudioFormat(resolved.mediaType),
-  });
+    format: openAIAudioFormat(resolved.mediaType)});
 }
 
 async function toResponsesFile(
@@ -318,8 +299,7 @@ function toUsage(usage: OpenAIUsage | undefined): Usage | undefined {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
     totalTokens: usage.total_tokens,
-    cacheReadTokens: usage.input_tokens_details?.cached_tokens,
-  };
+    cacheReadTokens: usage.input_tokens_details?.cached_tokens};
 }
 
 function isFunctionCallItem(value: unknown): value is {

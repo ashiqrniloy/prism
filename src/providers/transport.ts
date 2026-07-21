@@ -24,7 +24,8 @@ export type ProviderTransportErrorCode =
   | "sse_event_overflow"
   | "response_body_overflow"
   | "aborted"
-  | "invalid_json_arguments";
+  | "invalid_json_arguments"
+  | "incomplete_delta";
 
 export class ProviderTransportError extends Error {
   readonly code: ProviderTransportErrorCode;
@@ -264,35 +265,58 @@ export async function readBoundedResponseText(
   }
 }
 
+export type ParseJsonObjectArgumentsResult =
+  | { readonly ok: true; readonly value: JsonObject }
+  | { readonly ok: false; readonly error: ProviderTransportError };
+
+/** Parse streamed tool arguments without throwing; prefer this for recoverable tool-call recovery. */
+export function tryParseJsonObjectArguments(
+  text: string,
+  options?: ParseJsonObjectArgumentsOptions,
+): ParseJsonObjectArgumentsResult {
+  const maxBytes = options?.maxBytes ?? DEFAULT_MAX_ARGUMENT_BYTES;
+  const suffix = options?.toolName ? ` for tool ${options.toolName}` : "";
+  if (!text) return { ok: true, value: {} };
+  if (byteLength(text) > maxBytes) {
+    return {
+      ok: false,
+      error: new ProviderTransportError(
+        "invalid_json_arguments",
+        `Tool arguments${suffix} exceeded ${maxBytes} bytes`,
+        maxBytes,
+      ),
+    };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      error: new ProviderTransportError(
+        "invalid_json_arguments",
+        `Invalid tool arguments JSON${suffix}`,
+      ),
+    };
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {
+      ok: false,
+      error: new ProviderTransportError(
+        "invalid_json_arguments",
+        `Tool arguments${suffix} must be a JSON object`,
+      ),
+    };
+  }
+  return { ok: true, value: parsed as JsonObject };
+}
+
 /** Parse streamed tool arguments as a JSON object; throws {@link ProviderTransportError} on invalid input. */
 export function parseJsonObjectArguments(
   text: string,
   options?: ParseJsonObjectArgumentsOptions,
 ): JsonObject {
-  const maxBytes = options?.maxBytes ?? DEFAULT_MAX_ARGUMENT_BYTES;
-  const suffix = options?.toolName ? ` for tool ${options.toolName}` : "";
-  if (!text) return {};
-  if (byteLength(text) > maxBytes) {
-    throw new ProviderTransportError(
-      "invalid_json_arguments",
-      `Tool arguments${suffix} exceeded ${maxBytes} bytes`,
-      maxBytes,
-    );
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch (error) {
-    throw new ProviderTransportError(
-      "invalid_json_arguments",
-      `Invalid tool arguments JSON${suffix}`,
-    );
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new ProviderTransportError(
-      "invalid_json_arguments",
-      `Tool arguments${suffix} must be a JSON object`,
-    );
-  }
-  return parsed as JsonObject;
+  const result = tryParseJsonObjectArguments(text, options);
+  if (!result.ok) throw result.error;
+  return result.value;
 }

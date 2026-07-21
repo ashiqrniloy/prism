@@ -231,9 +231,9 @@ Key cross-seam points:
 - `generate-validate-revise` is selected via `AgentConfig.loop` / `RunOptions.loop` (`RunOptions.loop` wins). See [Agent loops](agent-loops.md). `resolveLoop()` maps the options form to the factory; an unknown `strategy` throws before the first turn; a custom `AgentLoopStrategy` instance bypasses the options form.
 - Native structured output uses provider-neutral `StructuredOutputOptions` on `ProviderRequestOptions` / loop options. Capable OpenAI-family providers map to JSON-schema wire fields; unsupported models fail before fetch unless the host sets `structuredOutputMode: "artifact-loop"` and relies on parser/validator/repairer only.
 - `validateStructuredOutputOptions()` enforces JSON-safe schemas, forbidden prototype-pollution keys, and a 64 KiB schema size cap.
-- The default parser treats assistant text as the value (`{ ok: true, value: text }`); supply a host parser whenever `T` is not `string`.
+- The default parser treats non-empty assistant text as the value (`{ ok: true, value: text }`); empty/whitespace-only call-free text is a `parse_error` before the parser. Supply a host parser whenever `T` is not `string`.
 - The default repairer builds a user message from `validation.errors[].message`; supply a host repairer for schema-specific guidance.
-- `maxRevisions` (default 3) bounds revision turns; budget exhaustion ends the loop and emits `artifact_failed` (it does not throw).
+- `maxRevisions` (default 3) bounds revision turns; budget exhaustion ends the loop and emits `artifact_failed`. Session runs then fail with `AgentRunError` unless `artifact_finished` occurred (direct `loop.run` still returns usage without throwing).
 - Tools are inert in artifact turns unless `loop.toolCalls: "bounded"` is explicit. Bounded mode uses run-global `maxToolRounds`, dispatches calls sequentially through normal runtime guards, skips parser/validator for tool-calling responses, and permits at most `1 + maxRevisions + maxToolRounds` provider turns. An extra tool response yields terminal `artifact_failed` with `result.metadata.reason === "tool_round_limit"` and executes nothing.
 
 ## Security and performance notes

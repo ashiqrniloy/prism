@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.0.9] - 2026-07-21
+
+### Added
+
+- Production coding and browser execution for Release 0.0.9: disposable Docker sandbox, bounded native repository list/search, structured Git/named checks/PR handoff, durable coding-plan/checkpoint composition, and optional `@arnilo/prism-browser` with egress/side-effect/upload/download/screenshot policy.
+- Versioned all 32 first-party manifests and exact internal ranges to 0.0.9 (adds `@arnilo/prism-browser` to the publishable graph; browser stays out of `@arnilo/prism-code` and activates only through explicit install or `@arnilo/prism-all`).
+- Added network-free coding/browser adversarial evaluation fixtures, `scripts/benchmark-0.0.9.mjs`, and protected Docker/Playwright gates via `.github/workflows/sandbox-browser.yml`.
+- Office execution remains outside Prism packaging by product decision (host-selected skills/instructions only).
+- `tryParseJsonObjectArguments` and `toolCallFromArgumentsText` for recoverable streamed tool-call argument parsing.
+
+### Fixed
+
+- Malformed streamed tool-call arguments (id+name present) become failed/`tool_execution_blocked` tool results (`invalid_arguments` / `invalid_json_arguments`) instead of terminal `ProviderTransportError`, so models can self-correct within existing turn budgets.
+- Incomplete tool-call deltas (missing id/name) fail with typed `ProviderTransportError` / `ErrorInfo.code: "incomplete_delta"` instead of a bare `Error("Incomplete tool call delta...")`; openai-compatible streams no longer emit `done` alongside leftover incomplete deltas.
+- Empty/whitespace-only call-free artifact candidates (including thinking-only output) are `parse_error` through the revision budget; `generate-validate-revise` session runs no longer resolve `succeeded` without `artifact_finished`.
+
 ## [0.0.8] - 2026-07-20
 
 ### Added

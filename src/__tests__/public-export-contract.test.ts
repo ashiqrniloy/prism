@@ -46,7 +46,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "renderPromptTemplate", "requireRunFeedbackOwnership", "resolveActiveSkills", "resolveAgentDefinition",
   "resolveContextProviders", "resolveCredentialValue", "resolveInstructionInjectors", "resolveMediaContentBlock", "resolveMediaContentBlocks",
   "resolveLoop", "resolveRunLimits", "resolveRunProviderOptions", "resolveToolConcurrency", "resolveUseCaseModel", "resolveUseCaseModelBinding", "runFeedbackPageLimit", "runGuardrails", "runInstructionInjectors", "sanitizeCacheKey", "singleShotLoop", "sniffMediaMimeType",
-  "StructuredOutputError", "systemPromptContributionKey", "THINKING_LEVELS", "thinkingCompatFor", "thinkingFamilyForModel", "toolCallContent", "UnsupportedModalityError", "useCaseCredentialProviderId", "validateStructuredOutputOptions", "version", "waitForRetry",
+  "StructuredOutputError", "systemPromptContributionKey", "THINKING_LEVELS", "thinkingCompatFor", "thinkingFamilyForModel", "toolCallContent", "toolCallFromArgumentsText", "UnsupportedModalityError", "useCaseCredentialProviderId", "validateStructuredOutputOptions", "version", "waitForRetry",
 ];
 
 const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [

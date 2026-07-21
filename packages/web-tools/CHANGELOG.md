@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [0.0.9] - 2026-07-21
+
+- Released with the exact 0.0.9 first-party package graph.
+
 ## [0.0.8] - 2026-07-20
 
 - Added host-selected Brave and Exa `web_search`, Firecrawl `web_fetch` Markdown, and Firecrawl host-schema `web_extract` adapters over native fetch.

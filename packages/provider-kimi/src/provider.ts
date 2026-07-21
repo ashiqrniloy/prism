@@ -1,20 +1,18 @@
 import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallContent } from "@arnilo/prism";
+import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallFromArgumentsText } from "@arnilo/prism";
 import {
   bytesToBase64,
   isPdfMediaType,
   rejectProviderMediaBlock,
   resolveProviderMediaMessages,
-  serializePdfDocumentWireBlock,
-} from "@arnilo/prism/providers/media";
-import { parseJsonObjectArguments, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+  serializePdfDocumentWireBlock } from "@arnilo/prism/providers/media";
+import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { applyKimiAnthropicCacheControl } from "./cache.js";
 import {
   kimiPreserveThinking,
   kimiReasoningEffort,
   kimiThinking,
-  stripKimiThinkingCompat,
-} from "./thinking.js";
+  stripKimiThinkingCompat } from "./thinking.js";
 
 export interface KimiCodingProviderOptions {
   readonly id?: string;
@@ -48,11 +46,9 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
             ...(token ? { authorization: `Bearer ${token}` } : {}),
             // Provider-owned Anthropic-route auth: official third-party setup uses
             // ANTHROPIC_API_KEY semantics (x-api-key + anthropic-version).
-            ...(token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {}),
-          },
+            ...(token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {})},
           body: JSON.stringify(body),
-          signal: request.signal,
-        });
+          signal: request.signal});
         if (!response.ok) {
           return yield providerError(
             new Error(`Kimi request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -64,8 +60,7 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
       } catch (error) {
         yield providerError(error, secrets);
       }
-    },
-  };
+    }};
 }
 
 export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject> {
@@ -87,8 +82,7 @@ export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonO
     ...parameters,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
     ...stripKimiThinkingCompat(request.options?.compat as JsonObject | undefined),
-    ...request.options?.extra,
-  });
+    ...request.options?.extra});
 }
 
 export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
@@ -130,11 +124,7 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
     return;
   }
   for (const call of blocks.values()) {
-    yield providerToolCall(toolCallContent(
-      call.id!,
-      call.name!,
-      parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-    ));
+    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
   yield providerDone(usage);
 }
@@ -155,9 +145,7 @@ async function toMessage(
         type: "tool_result",
         tool_use_id: result?.toolCallId ?? "",
         content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-        ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {}),
-      }],
-    };
+        ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {})}]};
   }
 
   const content: JsonObject[] = [];
@@ -196,8 +184,7 @@ function toAnthropicDocument(part: DocumentContent, resolvedMedia: ReadonlyMap<M
   return serializePdfDocumentWireBlock({
     mediaType: resolved.mediaType,
     data: bytesToBase64(resolved.bytes),
-    title: resolved.name,
-  });
+    title: resolved.name});
 }
 
 function toAnthropicFile(part: FileContent, resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>): JsonObject {
@@ -208,8 +195,7 @@ function toAnthropicFile(part: FileContent, resolvedMedia: ReadonlyMap<MediaCont
   return serializePdfDocumentWireBlock({
     mediaType: resolved.mediaType,
     data: bytesToBase64(resolved.bytes),
-    title: resolved.name,
-  });
+    title: resolved.name});
 }
 
 function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObject {

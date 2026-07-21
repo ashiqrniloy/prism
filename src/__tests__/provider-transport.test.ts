@@ -8,6 +8,7 @@ import {
   DEFAULT_MAX_RESPONSE_BODY_BYTES,
   ProviderTransportError,
   parseJsonObjectArguments,
+  tryParseJsonObjectArguments,
   readBoundedResponseText,
   readSseData,
   readSseEvents,
@@ -133,6 +134,12 @@ describe("provider transport primitives", () => {
       () => parseJsonObjectArguments("x".repeat(20), { maxBytes: 8 }),
       (error: unknown) => error instanceof ProviderTransportError && error.code === "invalid_json_arguments",
     );
+    const ok = tryParseJsonObjectArguments("{\"a\":1}");
+    assert.equal(ok.ok, true);
+    if (ok.ok) assert.deepEqual(ok.value, { a: 1 });
+    const bad = tryParseJsonObjectArguments("{", { toolName: "echo" });
+    assert.equal(bad.ok, false);
+    if (!bad.ok) assert.equal(bad.error.code, "invalid_json_arguments");
   });
 
   it("exports documented default limits", () => {

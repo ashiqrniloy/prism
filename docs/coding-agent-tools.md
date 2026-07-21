@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-coding-agent` is an optional first-party package that provides host shell/filesystem tools as Prism `ToolDefinition` objects. It ships four tools — `shell`, `read`, `write`, `edit` — plus aggregator factories. The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Behavior is a behavioral port of the pi coding agent's `bash`/`read`/`write`/`edit` tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library).
+`@arnilo/prism-coding-agent` is an optional first-party package that provides host shell/filesystem/repository tools as Prism `ToolDefinition` objects. It ships six default coding tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search` — plus an opt-in structured Git/check set (`createGitTools`) for status/diff/branch/worktree/apply/commit/PR-handoff and named checks. Bounded coding-plan/checkpoint helpers compose ordinary workspace Markdown with workflow checkpoint state (references/hashes/summaries/fingerprints only). The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Behavior for shell/read/write/edit is a behavioral port of the pi coding agent's tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library). List/search/Git are native Prism tools with no glob/ripgrep/Git-library dependency.
 
 | Export | Purpose |
 | --- | --- |
@@ -10,13 +10,23 @@
 | `createReadTool(cwd, options?)` | `read` tool: read a text or image file into `TextContent` / `ImageContent`. |
 | `createWriteTool(cwd, options?)` | `write` tool: create or overwrite a file, creating parent directories. |
 | `createEditTool(cwd, options?)` | `edit` tool: precise exact-then-fuzzy text replacement in an existing file. |
-| `createCodingTools(cwd, options?)` | All four tools (`shell`, `read`, `write`, `edit`). |
-| `createReadOnlyTools(cwd, options?)` | Read-only subset: `read` only. |
-| `createAllTools(cwd, options?)` | Every tool the package provides (currently identical to `createCodingTools`). |
+| `createRepoListTool(cwd, options?)` | `repo_list` tool: bounded deterministic repository listing. |
+| `createRepoSearchTool(cwd, options?)` | `repo_search` tool: bounded literal/regex text search. |
+| `createCodingTools(cwd, options?)` | Default six tools (`shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`). |
+| `createReadOnlyTools(cwd, options?)` | Read-only subset: `read`, `repo_list`, `repo_search`. |
+| `createAllTools(cwd, options?)` | Identical to `createCodingTools` (Git tools remain opt-in via `createGitTools`). |
+| `createGitTools(cwd, options?)` | Opt-in Git tools (`git_status`/`git_diff`/`git_branch`/`git_worktree`/`git_apply`/`git_commit`/`git_pr_handoff`) plus optional `coding_check`. |
+| `createCodingCheckTool(cwd, options)` | Named host-declared checks; model selects only a name. |
+| `createLocalRepositoryOperations(limits?)` | Default streaming Node filesystem backend for list/search. |
+| `createGitOperations(options)` | Typed Git operations backend (argument arrays, safe config, finite output). |
+| `buildCodingCheckpointMetadata` / `validateCodingCheckpointMetadata` / `assertCodingResumeAllowed` | Bounded durable coding-task metadata for workflow `state.coding` (no second runtime). |
+| `writeCodingPlanFile` / `readCodingPlanFile` / `createCodingPlanMarkdown` / `parseCodingPlanTodos` | Workspace plan/todo Markdown helpers with finite byte/todo caps and hash verification. |
+| `fingerprintJson` / `CODING_STATE_KEY` | Stable tool/policy fingerprints and the shared-state key for coding metadata. |
 | `detectSupportedImageMimeType(buf)` / `detectSupportedImageMimeTypeFromFile(path)` | Magic-byte image MIME detection (PNG/JPEG/GIF/WebP/BMP) used by `read`. |
 | `DEFAULT_MAX_IMAGE_BYTES` | Default `read` image size ceiling (10 MB). |
-| `DEFAULT_*` / `HARD_*` coding limit constants | Published text-scan, image, write/edit, shell timeout, display, and total-output ceilings. |
+| `DEFAULT_*` / `HARD_*` coding limit constants | Published text-scan, image, write/edit, shell, repository, Git, check, handoff, and plan/checkpoint ceilings. |
 | `ReadTextOptions` / `ReadTextResult` | Bounded text-page contract required by custom `ReadOperations`. |
+| `RepositoryOperations` / `RepositoryLimitOptions` | Pluggable list/search backend and finite caps. |
 | `TransformImage` / `TransformImageInput` | Types for the optional `read` `transformImage` callback. |
 | `withFileMutationQueue(path, fn)` | Per-path serialization primitive re-exported for hosts. |
 
@@ -55,6 +65,7 @@ const tools = createCodingTools(workspaceRoot, {
 | `read` | `read` |
 | `write` | `write` |
 | `edit` | `edit` |
+| `repo_list` / `repo_search` | _(native; no pi equivalent)_ |
 
 ## Inputs / request
 
@@ -159,6 +170,80 @@ Each `edits[].oldText` must match a unique, non-overlapping region of the origin
 
 `edit` result `metadata`: `{ diff, patch, firstChangedLine }` — a display-oriented diff, a standard unified patch, and the first changed line in the new file. These are host-readable; the model only sees the short confirmation (keeps model context small).
 
+### `repo_list`
+
+List repository entries with deterministic relative paths. Uses Node `opendir`/`lstat` only — no glob dependency. Does not follow symlinks; rejects path escapes outside the workspace root. Hidden names and excluded basenames (default `.git`, `node_modules`, `dist`) are skipped unless `includeHidden` is set / host `exclude` is overridden.
+
+**Inputs:**
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `path` | `string` | Workspace-relative directory or file to list (default root). |
+| `includeHidden` | `boolean` | Include dot names (default false). |
+| `maxDepth` | `number` | Directory depth cap (default 32, hard 128). |
+| `maxResults` | `number` | Page size (default 1,000, hard 10,000). |
+| `offset` | `number` | Entries to skip before retaining (default 0). |
+
+**Outputs:** text lines `kind\trelative/path[\tsize]` plus metadata (`truncated`, `truncatedBy`, `nextOffset`, `entries`, scan counts). Continue with `offset=nextOffset` when truncated by results.
+
+### `repo_search`
+
+Search text files under the workspace. Default mode is literal substring match; `mode: "regex"` enables length-bounded regular expressions. Binary files (NUL in a bounded prefix) and oversize files are skipped. Aggregate scanned bytes, matches, line bytes, pattern bytes, and wall time are finite.
+
+**Inputs:**
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `query` | `string` | Literal or regex pattern (required). |
+| `path` | `string` | Workspace-relative start path. |
+| `mode` | `"literal" \| "regex"` | Default `literal`. |
+| `caseSensitive` | `boolean` | Default false. |
+| `includeHidden` | `boolean` | Default false. |
+| `context` | `number` | Context lines before/after each match (default 5, hard 20). |
+| `maxMatches` | `number` | Match cap (default 1,000, hard 10,000). |
+
+**Outputs:** ripgrep-like lines `path:line:column:text` with optional `path-` / `path+` context, plus metadata (`matches`, `truncated`, scan/skip counts).
+
+### Structured Git tools (`createGitTools`)
+
+Opt-in tools over a host-pinned Git executable (`gitPath`, default `/usr/bin/git`) or sandbox `execFile`. Every invocation uses argument arrays with safe config (`core.hooksPath=/dev/null`, empty credential helper, pager disabled, `GIT_TERMINAL_PROMPT=0`). Shell is never used internally. Git tools are **not** included in `createCodingTools()` / `createAllTools()`.
+
+| Tool | Purpose |
+| --- | --- |
+| `git_status` | `status --porcelain=v2 -z --branch` → structured branch + entries + `dirty`. |
+| `git_diff` | Bounded `--no-ext-diff --no-textconv` diff; oversized output may spill via `artifactWriter`. |
+| `git_branch` | `validate` / `list` / `create` / `switch` with `git check-ref-format --branch`. Switch refuses unrelated dirty trees unless `createCheckpoint=true`. |
+| `git_worktree` | `list` / `add` / `remove` within finite worktree caps. |
+| `git_apply` | `check` / `apply` / `reverse`; always `--check` before mutating apply. Apply requires clean/checkpoint; failures restore. |
+| `git_commit` | Explicit-path `add` + `commit --no-verify -F <tempfile>`; requires host `commitIdentity`. Allows dirty entries that are exactly the requested paths; unrelated dirt requires checkpoint. Never pushes. |
+| `git_pr_handoff` | Bounded `{ base, head, commits, changedPaths, diffstat, checks, artifact? }` for host PR creation. Never authenticates or opens a PR. |
+| `coding_check` | Included when `checks` are declared: model selects only a name; executable/args/env are host-fixed. |
+
+```ts
+import { createGitTools } from "@arnilo/prism-coding-agent";
+
+const gitTools = createGitTools(workspaceRoot, {
+  gitPath: "/usr/bin/git",
+  commitIdentity: { name: "Prism Bot", email: "bot@example.com" },
+  checks: {
+    test: { file: "/usr/bin/npm", args: ["test"] },
+  },
+});
+```
+
+### Durable coding plans and checkpoints
+
+There is no `CodingRun`, todo database, or second approval engine. Persist executable plan/todos as ordinary workspace Markdown (for example `plans/<task>.md`) and store only bounded metadata under workflow `state.coding`:
+
+| Field group | Stored in checkpoint | Not stored |
+| --- | --- | --- |
+| Plan / workspace export / patch artifacts | URI + SHA-256 + byte count | File contents, credentials, raw command output |
+| Branch / worktree / base | Paths and ref names | Full diffs |
+| Named checks | Name + exit code + short summary | Full stdout/stderr |
+| Fingerprints | Workflow revision, definition hash, tool/policy fingerprints, optional image digest | Browser storage state, secrets, env |
+
+Use `writeCodingPlanFile` / `readCodingPlanFile` for the workspace artifact, `buildCodingCheckpointMetadata` before `ctx.updateState({ coding })`, and `assertCodingResumeAllowed` before import/resume. Wrong owner/revision/hash/fingerprint fails closed. See `examples/durable-coding-workflow.ts` for a network-free plan → branch → edit → check → approval → handoff composition over `runWorkflow` / `resumeWorkflow` / `startWorkflowBackground`.
+
 ## Outputs / response / events
 
 Every tool returns a `ToolResult` with `toolCallId`, `name`, `content` (`readonly ContentBlock[]`), optional `error`, and optional `metadata`. `write` and `edit` serialize per realpath through `withFileMutationQueue` so concurrent calls targeting one file do not interleave. `shell` is marked `exclusive`; tool dispatch serializes it at the turn level. The package emits no events of its own; hosts observe tool execution through the normal Prism `AgentEvent` stream via `dispatchToolCall`.
@@ -197,10 +282,10 @@ Minimal drop-in for any Prism app:
 import { createToolRegistry } from "@arnilo/prism";
 import { createCodingTools, createReadOnlyTools } from "@arnilo/prism-coding-agent";
 
-// Full coding set (shell + read + write + edit) against the project root:
+// Full coding set (shell + read + write + edit + repo_list + repo_search) against the project root:
 const tools = createToolRegistry(createCodingTools(process.cwd()));
 
-// Or a read-only set for inspection-only agents:
+// Or a read-only set for inspection-only agents (read + repo_list + repo_search):
 const ro = createToolRegistry(createReadOnlyTools(process.cwd()));
 ```
 
@@ -227,17 +312,18 @@ const remoteWrite = createWriteTool("/repo", {
 
 ## Extension and configuration notes
 
-- **Pluggable operation backends.** Every tool accepts an `operations` seam. Custom `ReadOperations` must implement bounded `readText` plus `statFile`; custom `EditOperations` must implement `statFile`; read/write methods receive caps/signals. `BashOperations` must stream through `onData` and honor `signal`/`timeout`. A hostile custom backend can still violate its host-owned contract, so isolate it separately.
-- **Per-tool options.** `ShellToolOptions` adds `timeout` and `maxTotalOutputBytes`; `ReadToolOptions` adds `maxScanBytes`; `WriteToolOptions` adds `maxInputBytes`; `EditToolOptions` adds `maxFileBytes`, `maxInputBytes`, and `maxEdits`. Invalid/non-finite/unsafe/above-hard-cap values throw during tool construction; request `timeout` errors before spawn.
-- **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override.
+- **Pluggable operation backends.** Every tool accepts an `operations` seam. Custom `ReadOperations` must implement bounded `readText` plus `statFile`; custom `EditOperations` must implement `statFile`; read/write methods receive caps/signals. `BashOperations` must stream through `onData` and honor `signal`/`timeout`. Custom `RepositoryOperations` must honor depth/entry/file/match/scan/time caps and abort. A hostile custom backend can still violate its host-owned contract, so isolate it separately.
+- **Per-tool options.** `ShellToolOptions` adds `timeout` and `maxTotalOutputBytes`; `ReadToolOptions` adds `maxScanBytes`; `WriteToolOptions` adds `maxInputBytes`; `EditToolOptions` adds `maxFileBytes`, `maxInputBytes`, and `maxEdits`; list/search accept `repository` limits and shared aggregator `ToolsOptions.repository`.
+- **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit?, list?, search?, repository? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override. Read-only membership is deliberately `read` + `repo_list` + `repo_search` (0.0.9 behavior change).
+- **Sandbox composition.** Prefer `@arnilo/prism-coding-security` `createSandboxCodingTools(cwd, { sandbox, ... })` to wire shell through a `SandboxAdapter` while sharing repository options. Filesystem tools still use the host `cwd` unless custom operations are supplied; Docker tmpfs workspace mutations stay inside the container until export.
 - **`ToolsOptions`** and the per-tool option types are exported from the package barrel for host configuration.
 - No auto-discovery or manifest registration: import and register explicitly. This package registers no extensions and owns no globals (the mutation queue is a process-wide per-path map — see `ponytail:` note in the source).
 
 ## Security and performance notes
 
-- **Host shell/filesystem access.** These tools run real commands and read/write real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. Shared `executionPolicy` applies to both full and read-only aggregators before filesystem/process side effects. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).
+- **Host shell/filesystem access.** These tools run real commands and read/write/list/search real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. Shared `executionPolicy` applies to both full and read-only aggregators before filesystem/process side effects. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).
 - **Non-zero exit is not an error.** A failing command is a normal `shell` result (exit code in metadata); only timeout/abort/spawn failures are error results. Do not assume `error == undefined` means the command succeeded.
-- **Bounded I/O.** `read` streams one page and bounds scan bytes; image/edit reads use stat plus a shared cap-enforcing reader; write/edit inputs are measured before mutation. `shell` retains only a rolling display tail and synchronously spills accepted raw chunks so stream backpressure cannot grow heap; wall time and total raw output remain finite.
+- **Bounded I/O.** `read` streams one page and bounds scan bytes; image/edit reads use stat plus a shared cap-enforcing reader; write/edit inputs are measured before mutation. `repo_list`/`repo_search` stream walks and charge depth/entry/file/match/scan/time before retention. Structured Git tools use argument arrays with finite output/path/ref/message/patch caps, disable hooks/credential prompts/external diff by default, and never push or open PRs. `shell` retains only a rolling display tail and synchronously spills accepted raw chunks so stream backpressure cannot grow heap; wall time and total raw output remain finite.
 - **Per-path serialization.** Concurrent mutations to the same file serialize; concurrent mutations to different files do not block each other. The queue is a process-wide map — across sessions in one process, same-path writes still serialize (upgrade path: scope per registry if throughput matters).
 - **Bounded image reads.** `read` rejects images over `maxImageBytes` (default 10 MB) by `stat` before read when possible; MIME is detected from magic bytes only. Optional `transformImage` is host-owned — the base package has no image-processing dependency.
 
@@ -252,8 +338,19 @@ const remoteWrite = createWriteTool("/repo", {
 | Edit target / input / count | 8 MiB / 2 MiB / 100 | 64 MiB / 16 MiB / 1,000 | before target read/matching/write |
 | Shell wall time | 600 seconds | 3,600 seconds | process-tree kill |
 | Shell total stdout+stderr | 64 MiB | 1 GiB | process-tree kill; spill removal |
+| Repo depth / entries / files / page | 32 / 10,000 / 10,000 / 1,000 | 128 / 100,000 / 100,000 / 10,000 | before descending/retaining next entry |
+| Search scan / file / matches | 64 MiB / 8 MiB / 1,000 | 1 GiB / 64 MiB / 10,000 | before next file/match retention |
+| Search pattern / line / context / time | 512 B / 50 KiB / 5 / 30 s | 4 KiB / 1 MiB / 20 / 300 s | before regex compile / line retain / deadline |
+| Git paths / refs / message | 1,000 / 1 KiB / 64 KiB | 10,000 / 4 KiB / 256 KiB | before process/temp-file creation |
+| Git output / diff lines / changed files / patch | 4 MiB / 10,000 / 1,000 / 16 MiB | 64 MiB / 100,000 / 10,000 / 64 MiB | stream before retain; artifact spill optional |
+| Worktrees | 4 | 16 | before add |
+| Named checks (names / concurrency / time / lines / output) | 8 / 1 / 10 min / 2,000 / 4 MiB | 32 / 4 / 60 min / 100,000 / 64 MiB | construction / before start / line retention |
+| PR handoff JSON / commits | 256 KiB / 100 | 1 MiB / 1,000 | before result exposure |
+| Plan markdown / todos / todo text | 256 KiB / 1,000 / 512 B | 1 MiB / 10,000 / 4 KiB | before write/parse/checkpoint |
+| Coding checkpoint metadata / artifact refs / artifact bytes | 64 KiB / 16 / 256 MiB | 512 KiB / 64 / 2 GiB | before state save / resume verify |
+| Check summary text | 1 KiB | 8 KiB | before checkpoint retention |
 
-Every configurable value is a positive safe integer; Prism rejects rather than clamps invalid values. Limits control resources, not authority: they do not replace root containment, approval, validation, or a sandbox.
+Every configurable value is a positive safe integer (context may be zero); Prism rejects rather than clamps invalid values. Limits control resources, not authority: they do not replace root containment, approval, validation, or a sandbox.
 
 ## Related APIs
 

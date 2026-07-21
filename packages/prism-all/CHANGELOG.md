@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+## [0.0.9] - 2026-07-21
+
+- Released with the exact 0.0.9 first-party package graph.
+- Includes optional `@arnilo/prism-browser` in the complete umbrella profile (explicit activation; not part of `@arnilo/prism-code`).
+
 ## [0.0.8] - 2026-07-20
 
 - Added optional `@arnilo/prism-web-tools` to complete umbrella profile.
+
 
 ## [0.0.7] - 2026-07-19
 

@@ -349,6 +349,8 @@ class RuntimeAgentSession implements AgentSession {
       };
       // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
       let assembledTurn = false;
+      let artifactFinished = false;
+      let artifactFailedInfo: { message: string; code?: string | number } | undefined;
       const ctx: LoopContext = {
         sessionId: this.id,
         runId,
@@ -446,6 +448,15 @@ class RuntimeAgentSession implements AgentSession {
         appendMessage: (message) => this.appendMessage(message, runId),
         emit: (event) => {
           if (event.type === "turn_started") this.activeLoopTurn = event.turn;
+          if (event.type === "artifact_finished") artifactFinished = true;
+          if (event.type === "artifact_failed") {
+            const first = event.result.errors?.[0];
+            const reason = event.result.metadata?.reason;
+            artifactFailedInfo = {
+              message: first?.message ?? "artifact failed",
+              code: typeof reason === "string" || typeof reason === "number" ? reason : "artifact_failed",
+            };
+          }
           this.emit(event);
         },
       };
@@ -459,6 +470,12 @@ class RuntimeAgentSession implements AgentSession {
         });
       }
       const loopUsage = await loop.run(ctx);
+      if (loop.name === "generate-validate-revise" && !artifactFinished) {
+        throw Object.assign(
+          new Error(artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"),
+          { name: "ArtifactFailed", code: artifactFailedInfo?.code ?? "artifact_failed" },
+        );
+      }
       usage = runUsage.value() ?? loopUsage;
       if (usage && this.activeLedger) {
         const usageRecord: UsageRecord = {
@@ -1108,7 +1125,7 @@ function policyList(policies: ProviderRequestPolicy | readonly ProviderRequestPo
 }
 
 function errorFromInfo(error: ErrorInfo): Error {
-  return Object.assign(new Error(error.message), { name: error.name ?? "Error", cause: error.cause });
+  return Object.assign(new Error(error.message), { name: error.name ?? "Error", cause: error.cause, code: error.code });
 }
 
 class ProviderTurnFailure extends Error {

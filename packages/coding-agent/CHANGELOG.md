@@ -1,17 +1,21 @@
 # Changelog
 
+## [0.0.9] - 2026-07-21
+
+- Added bounded native `repo_list` / `repo_search` tools with streaming walks, literal/regex search, finite depth/entry/match/scan/time caps, and pluggable `RepositoryOperations`.
+- `createCodingTools()` / `createAllTools()` now include list/search; `createReadOnlyTools()` deliberately expands to `read` + `repo_list` + `repo_search`.
+- Added opt-in structured Git tools via `createGitTools()` / `createGitOperations()`: status (porcelain v2), bounded diff, branch validate/create/switch, worktree add/list/remove, patch check/apply/reverse with rollback, explicit-path commit (host `commitIdentity`), and bounded PR handoff artifacts. Named `coding_check` runs host-declared executables only. Git uses argument arrays with hooks/credential prompts/external diff disabled and never pushes.
+- Added bounded durable coding-plan/checkpoint helpers (`writeCodingPlanFile`, `buildCodingCheckpointMetadata`, `assertCodingResumeAllowed`, `fingerprintJson`) so hosts compose plans/todos/background resume from existing workflow primitives without a second runtime.
+- Added network-free adversarial evaluation fixtures (`eval-fixtures.test.ts`) grading safe native list vs shell, Git injection, dirty-tree rollback, named-check failure, PR-handoff artifacts, and prompt-injection file content via `@arnilo/prism-evals`.
+
 ## [0.0.8] - 2026-07-20
 
 - Released with the exact 0.0.8 first-party package graph.
 
+
 ## [0.0.7] - 2026-07-19
 
 - Released with the exact 0.0.7 first-party package graph.
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.0.6] - 2026-07-19
 

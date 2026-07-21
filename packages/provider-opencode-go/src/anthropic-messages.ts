@@ -1,15 +1,14 @@
 import type { CacheControlledMessage, ContentBlock, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallContent } from "@arnilo/prism";
+import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallFromArgumentsText } from "@arnilo/prism";
 import {
   bytesToBase64,
   isPdfMediaType,
   rejectProviderMediaBlock,
   resolveProviderMediaMessages,
-  serializePdfDocumentWireBlock,
-} from "@arnilo/prism/providers/media";
+  serializePdfDocumentWireBlock } from "@arnilo/prism/providers/media";
 import { applyOpencodeAnthropicCacheControl } from "./cache.js";
 import { openCodeGoPreserveThinking, stripOpenCodeGoOwnedCompat } from "./thinking.js";
-import { parseJsonObjectArguments, readSseData } from "@arnilo/prism/providers/transport";
+import { readSseData } from "@arnilo/prism/providers/transport";
 
 interface PartialBlock { id?: string; name?: string; argumentsText: string; complete?: boolean }
 
@@ -29,8 +28,7 @@ export async function anthropicMessagesBody(request: ProviderRequest): Promise<J
     ...parameters,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
     ...compatRest,
-    ...(request.options?.extra ?? {}),
-  });
+    ...(request.options?.extra ?? {})});
 }
 
 export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
@@ -74,11 +72,7 @@ export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>,
     return;
   }
   for (const call of blocks.values()) {
-    yield providerToolCall(toolCallContent(
-      call.id!,
-      call.name!,
-      parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-    ));
+    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
   yield providerDone(usage);
 }
@@ -99,9 +93,7 @@ async function toMessage(
         type: "tool_result",
         tool_use_id: result?.toolCallId ?? "",
         content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-        ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {}),
-      }],
-    };
+        ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {})}]};
   }
 
   const content: JsonObject[] = [];
@@ -140,8 +132,7 @@ function toAnthropicDocument(part: DocumentContent, resolvedMedia: ReadonlyMap<M
   return serializePdfDocumentWireBlock({
     mediaType: resolved.mediaType,
     data: bytesToBase64(resolved.bytes),
-    title: resolved.name,
-  });
+    title: resolved.name});
 }
 
 function toAnthropicFile(part: FileContent, resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>): JsonObject {
@@ -152,8 +143,7 @@ function toAnthropicFile(part: FileContent, resolvedMedia: ReadonlyMap<MediaCont
   return serializePdfDocumentWireBlock({
     mediaType: resolved.mediaType,
     data: bytesToBase64(resolved.bytes),
-    title: resolved.name,
-  });
+    title: resolved.name});
 }
 
 function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObject {

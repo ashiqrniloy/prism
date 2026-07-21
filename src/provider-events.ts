@@ -7,6 +7,7 @@ import type {
   ToolCallDeltaContent,
   Usage,
 } from "./contracts.js";
+import { ProviderTransportError, tryParseJsonObjectArguments } from "./providers/transport.js";
 import { errorToErrorInfo } from "./redaction.js";
 
 export function providerTextDelta(text: string): ProviderEvent {
@@ -49,8 +50,10 @@ export function reconstructToolCallDeltas(events: readonly ProviderEvent[]): rea
     partials.set(event.index, partial);
   }
   return [...partials.entries()].sort(([a], [b]) => a - b).map(([index, partial]) => {
-    if (!partial.id || !partial.name) throw new Error(`Incomplete tool call delta at index ${index}`);
-    return toolCallContent(partial.id, partial.name, parseToolCallArguments(partial.argumentsText, index));
+    if (!partial.id || !partial.name) {
+      throw new ProviderTransportError("incomplete_delta", `Incomplete tool call delta at index ${index}`);
+    }
+    return toolCallFromArgumentsText(partial.id, partial.name, partial.argumentsText);
   });
 }
 
@@ -71,12 +74,19 @@ export function toolCallContent(id: string, name: string, args: JsonObject = {})
   return { type: "tool_call", id, name, arguments: args };
 }
 
-function parseToolCallArguments(text: string, index: number): JsonObject {
-  try {
-    const value = text ? JSON.parse(text) : {};
-    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("not object");
-    return value as JsonObject;
-  } catch (error) {
-    throw new Error(`Invalid tool call arguments at index ${index}: ${error instanceof Error ? error.message : String(error)}`);
-  }
+/** Build a tool call from streamed arguments text; malformed JSON becomes a blocked call (no throw). */
+export function toolCallFromArgumentsText(id: string, name: string, argumentsText: string): ToolCallContent {
+  const parsed = tryParseJsonObjectArguments(argumentsText, { toolName: name });
+  if (parsed.ok) return toolCallContent(id, name, parsed.value);
+  return {
+    type: "tool_call",
+    id,
+    name,
+    arguments: {},
+    argumentsError: {
+      name: parsed.error.name,
+      message: parsed.error.message,
+      code: parsed.error.code,
+    },
+  };
 }

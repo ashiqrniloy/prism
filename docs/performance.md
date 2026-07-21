@@ -6,6 +6,21 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.9 reproducible coding/browser evidence
+
+Run `node scripts/benchmark-0.0.9.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.9.test.mjs`. Default mode is network-free fake/in-process only and emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals for repository list/search, Git status, and browser open/snapshot/action/close. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) and `PRISM_BENCH_PLAYWRIGHT=1` append real local Docker / protected Playwright rows. These are evidence fields, not CI timing gates.
+
+2026-07-21 baseline: Node v24.18.0, Linux x64, 100 iterations/scenario, network=false, credentials=false, docker=false, playwright=false.
+
+| Scenario | mode | ops/s | p95 ms | heap bytes | disk bytes | processes | cost USD | backpressure | resource limits |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| repo-list | fake-in-process | 1,343 | 1.11 | 14,747,560 | 0 | 1 | 0 | 0 | 0 |
+| repo-search | fake-in-process | 380 | 3.72 | 16,093,176 | 0 | 1 | 0 | 0 | 0 |
+| git-status | fake-in-process | 479 | 2.62 | 13,821,688 | 0 | 1 | 0 | 0 | 0 |
+| browser-open-snapshot-action-close | fake-in-process | 17,141 | 0.11 | 18,590,488 | 0 | 1 | 0 | 0 | 0 |
+
+Rows exercise shipped repository/Git helpers and fake Playwright APIs only. Real Docker sandbox and Playwright browser timings remain explicit protected-gate evidence (`PRISM_TEST_DOCKER_SANDBOX=1`, `PRISM_LIVE_PLAYWRIGHT=1` / `PRISM_BENCH_DOCKER=1` / `PRISM_BENCH_PLAYWRIGHT=1`) because this release-candidate host did not enable those gates for the dated baseline. No live claim is inferred from skipped gates.
+
 ## Release 0.0.8 reproducible synthetic evidence
 
 Run `node scripts/benchmark-0.0.8.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000. Script uses no network/credentials and emits environment, throughput, p50/p95 latency, heap, synthetic disk bytes, zero external cost, and backpressure signals. These are evidence fields, not CI timing gates.
@@ -28,6 +43,16 @@ Ledger and OTel rows exercise shipped implementations; cache row isolates the ru
 Security automation is isolated from `npm test`: CodeQL/supply-chain jobs have 10-minute backstops, dependency review and live workflow have 5-minute job backstops, live probe step has 3 minutes, SBOM is capped at 16 MiB/10,000 packages, packed release/security tarballs at 128 MiB aggregate, secret scan at 100,000 files/16 MiB each, and retained security/canary reports expire after 7 days. Live canaries issue four probes plus at most one MCP cleanup, cap responses at 64 KiB and requests at 15 seconds (30 seconds hard), and never enter `sdk:ready`.
 
 Web tools default/hard ceilings are query 4/16 KiB, results 10/20, URLs 5/20, request 256 KiB/1 MiB, response/aggregate 2/16 MiB, Markdown 1/8 MiB, extraction 256 KiB/1 MiB, schema 64/256 KiB, concurrency 4/16, retries 2/4, polling 20/100, and wall time 60 seconds/30 minutes. Bounds charge before request, retention, retry, or polling; overflow fails rather than truncating citation/extraction evidence.
+
+Docker sandbox defaults/hard caps from `@arnilo/prism-coding-security`: startup 30 s/120 s; wall 20 min/30 min; idle 5 min/15 min; CPUs 2/8; memory 2 GiB/16 GiB (swap equal to memory); PIDs 256/1,024; FDs 1,024/8,192; workspace/tmp/download tmpfs 1 GiB/8 GiB, 256 MiB/2 GiB, 64 MiB/512 MiB; commands 100/256 with concurrent execs 1/8; env 64/256 names and 64 KiB/256 KiB values; export 50,000/250,000 entries and 256 MiB/2 GiB bytes with 16/64 retained artifacts; stop grace 5 s/30 s and cleanup 30 s/120 s. Caps validate before `docker create`/exec/export; overflow aborts and cleans the recorded container. Output still streams into the coding-agent `OutputAccumulator` ceilings (64 MiB/1 GiB).
+
+Repository list/search defaults/hard caps from `@arnilo/prism-coding-agent`: depth 32/128; entries/files 10,000/100,000; page/results 1,000/10,000; search scan 64 MiB/1 GiB aggregate and 8 MiB/64 MiB per file; matches 1,000/10,000; pattern 512 B/4 KiB; line 50 KiB/1 MiB; context 5/20; wall 30 s/300 s; concurrency config 8/32. Walks stream via `opendir`/`lstat`, never follow symlink escapes, and stop immediately on aggregate limits or abort.
+
+Structured Git/check/handoff defaults/hard caps: paths 1,000/10,000; refs 1 KiB/4 KiB; commit message 64 KiB/256 KiB; inline Git output 4 MiB/64 MiB; diff lines 10,000/100,000; changed files 1,000/10,000; patch input 16 MiB/64 MiB; worktrees 4/16; named checks 8/32 names, concurrency 1/4, timeout 10 min/60 min, diagnostic lines 2,000/100,000, output 4 MiB/64 MiB; PR handoff JSON 256 KiB/1 MiB with 100/1,000 commits. Git tools use typed argument arrays (never shell), disable hooks/credential prompts/external diff by default, and emit host-owned PR handoff data only — no push/network/PR client.
+
+Durable coding plan/checkpoint defaults/hard caps: plan Markdown 256 KiB/1 MiB; todos 1,000/10,000 with 512 B/4 KiB text; checkpoint metadata 64 KiB/512 KiB; artifact references 16/64 at 256 MiB/2 GiB each; check summaries 1 KiB/8 KiB. Checkpoints store URI/hash/summaries/fingerprints only; resume revalidates workspace root, base branch, plan hash, and tool/policy/image fingerprints before import.
+
+Browser automation defaults/hard caps from `@arnilo/prism-browser`: pages 4/16; actions 100/256; queued actions 16/64; snapshot refs 2,000/10,000; depth 30/100; snapshot bytes 256 KiB/2 MiB; navigation 30 s/120 s; action 10 s/60 s; wait 30 s/120 s; run wall 20 min/30 min; popups 4/16; dialogs 16/64; listeners 64/256; action input 64 KiB/256 KiB; close grace 5 s/30 s; network requests 1,000/10,000 with 10/32 redirects per request and 8/32 WebSockets; screenshots 16/64 with 16/64 megapixels and 10 MiB/32 MiB encoded; uploads 8/32 files, 16 MiB/64 MiB each, 64 MiB/256 MiB aggregate; downloads 8/32 files, 32 MiB/256 MiB each, 64 MiB/512 MiB aggregate. Caps charge before context/page/action/queue/snapshot/network/artifact retention. Host supplies Playwright and egress proxy attestation; package import launches nothing.
 
 Current surfaces:
 

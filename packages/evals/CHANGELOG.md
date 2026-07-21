@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [0.0.9] - 2026-07-21
+
+- Released with the exact 0.0.9 first-party package graph.
+
 ## [0.0.8] - 2026-07-20
 
 - Added bounded owner-scoped trace grading, explicit rubric-versioned model judges, deterministic pairwise comparison reports, and redacted CI threshold/report helpers.

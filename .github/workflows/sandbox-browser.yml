@@ -1,0 +1,75 @@
+name: sandbox-browser
+
+on:
+  schedule:
+    - cron: "17 6 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sandbox-browser
+  cancel-in-progress: true
+
+jobs:
+  protected-matrix:
+    environment: sandbox-browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "24"
+          cache: npm
+      - name: install dependencies
+        run: npm ci
+      - name: build coding/browser packages
+        run: |
+          npm run build -w @arnilo/prism-coding-agent
+          npm run build -w @arnilo/prism-coding-security
+          npm run build -w @arnilo/prism-browser
+          npm run build -w @arnilo/prism-evals
+      - name: network-free adversarial eval fixtures
+        run: |
+          npm test -w @arnilo/prism-coding-agent -- --test-name-pattern "adversarial"
+          npm test -w @arnilo/prism-browser -- --test-name-pattern "adversarial"
+      - name: protected Docker sandbox matrix
+        if: ${{ vars.PRISM_TEST_DOCKER_IMAGE != '' }}
+        timeout-minutes: 5
+        env:
+          PRISM_TEST_DOCKER_SANDBOX: "1"
+          PRISM_TEST_DOCKER_BIN: /usr/bin/docker
+          PRISM_TEST_DOCKER_IMAGE: ${{ vars.PRISM_TEST_DOCKER_IMAGE }}
+          PRISM_TEST_DOCKER_USER: ${{ vars.PRISM_TEST_DOCKER_USER }}
+        run: npm test -w @arnilo/prism-coding-security -- --test-name-pattern "protected Docker"
+      - name: install Playwright chromium (host-pinned)
+        if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
+        run: npx --no-install playwright-core install chromium
+      - name: protected Playwright browser matrix
+        if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
+        timeout-minutes: 5
+        env:
+          PRISM_LIVE_PLAYWRIGHT: "1"
+        run: npm run test:live -w @arnilo/prism-browser
+      - name: benchmark schema (network-free)
+        env:
+          PRISM_BENCH_ITERATIONS: "10"
+        run: node --test scripts/benchmark-0.0.9.test.mjs
+      - name: write redacted aggregate evidence
+        if: always()
+        run: |
+          node -e 'const fs=require("fs"); fs.writeFileSync("sandbox-browser-report.json", JSON.stringify({generatedAt:new Date().toISOString(), docker:Boolean(process.env.PRISM_TEST_DOCKER_IMAGE), playwright:process.env.PRISM_ENABLE_PLAYWRIGHT_GATE==="1", network:false, credentials:false}, null, 2))'
+        env:
+          PRISM_TEST_DOCKER_IMAGE: ${{ vars.PRISM_TEST_DOCKER_IMAGE }}
+          PRISM_ENABLE_PLAYWRIGHT_GATE: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE }}
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: sandbox-browser-status-${{ github.run_id }}
+          path: sandbox-browser-report.json
+          if-no-files-found: warn
+          retention-days: 7

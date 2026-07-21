@@ -15,7 +15,7 @@ npm install @arnilo/prism-all
 - `@arnilo/prism-providers` — all seven first-party provider adapters: OpenAI, OpenCode Go, OpenRouter, Z.AI, Kimi, `@arnilo/prism-provider-neuralwatt`, and `@arnilo/prism-provider-ai-sdk`
 - `@arnilo/prism-session-store-sqlite` and `@arnilo/prism-session-store-postgres`
 - `@arnilo/prism-evals`, `@arnilo/prism-memory`, and `@arnilo/prism-rag`
-- `@arnilo/prism-server`, `@arnilo/prism-supervisor`, and host-selected `@arnilo/prism-web-tools`
+- `@arnilo/prism-server`, `@arnilo/prism-supervisor`, host-selected `@arnilo/prism-web-tools`, and optional `@arnilo/prism-browser`
 
 Shared packages are deduplicated by npm. This is a pure manifest package with no exports; import APIs from their owning packages.
 

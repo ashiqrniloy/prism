@@ -1,7 +1,6 @@
 import type {
   LanguageModelV4StreamPart,
-  LanguageModelV4Usage,
-} from "@ai-sdk/provider";
+  LanguageModelV4Usage } from "@ai-sdk/provider";
 import type { ProviderEvent, Usage } from "@arnilo/prism";
 import {
   providerDone,
@@ -11,9 +10,7 @@ import {
   providerToolCall,
   providerToolCallDelta,
   providerUsage,
-  toolCallContent,
-} from "@arnilo/prism";
-import { parseJsonObjectArguments } from "@arnilo/prism/providers/transport";
+  toolCallFromArgumentsText } from "@arnilo/prism";
 import { AiSdkProviderError } from "./errors.js";
 
 interface ToolAccumulator {
@@ -78,8 +75,7 @@ function mapStreamPart(
         id: part.id,
         name: part.toolName,
         argumentsText: "",
-        index,
-      });
+        index});
       return [providerToolCallDelta({ index, id: part.id, name: part.toolName })];
     }
     case "tool-input-delta": {
@@ -90,8 +86,7 @@ function mapStreamPart(
           id: part.id,
           name: "",
           argumentsText: part.delta,
-          index,
-        });
+          index});
         return [providerToolCallDelta({ index, id: part.id, argumentsText: part.delta })];
       }
       current.argumentsText += part.delta;
@@ -99,8 +94,7 @@ function mapStreamPart(
         index: current.index,
         id: current.id,
         name: current.name || undefined,
-        argumentsText: part.delta,
-      })];
+        argumentsText: part.delta})];
     }
     case "tool-call": {
       if (part.providerExecuted) return [];
@@ -110,21 +104,8 @@ function mapStreamPart(
         id: part.toolCallId,
         name: part.toolName,
         argumentsText: part.input,
-        index,
-      });
-      try {
-        return [providerToolCall(toolCallContent(
-          part.toolCallId,
-          part.toolName,
-          parseJsonObjectArguments(part.input, { toolName: part.toolName }),
-        ))];
-      } catch (error) {
-        throw new AiSdkProviderError(
-          "invalid_tool_arguments",
-          error instanceof Error ? error.message : "Invalid AI SDK tool-call arguments",
-          { cause: error },
-        );
-      }
+        index});
+      return [providerToolCall(toolCallFromArgumentsText(part.toolCallId, part.toolName, part.input))];
     }
     case "finish": {
       const mapped = mapUsage(part.usage);
@@ -155,8 +136,7 @@ export function mapUsage(usage: LanguageModelV4Usage | undefined): Usage | undef
     outputTokens,
     totalTokens,
     cacheReadTokens,
-    cacheWriteTokens,
-  };
+    cacheWriteTokens};
   return Object.values(mapped).some((value) => value !== undefined) ? mapped : undefined;
 }
 
@@ -166,8 +146,7 @@ async function* readStream<T>(
 ): AsyncGenerator<T> {
   if (signal?.aborted) {
     throw new AiSdkProviderError("aborted", "AI SDK provider request aborted", {
-      cause: signal.reason,
-    });
+      cause: signal.reason});
   }
   const reader = stream.getReader();
   const onAbort = () => {
@@ -178,8 +157,7 @@ async function* readStream<T>(
     while (true) {
       if (signal?.aborted) {
         throw new AiSdkProviderError("aborted", "AI SDK provider request aborted", {
-          cause: signal.reason,
-        });
+          cause: signal.reason});
       }
       const { done, value } = await reader.read();
       if (done) break;

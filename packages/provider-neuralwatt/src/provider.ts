@@ -9,11 +9,10 @@ import {
   providerToolCallDelta,
   providerUsage,
   resolveCredentialValue,
-  toolCallContent,
-} from "@arnilo/prism";
+  toolCallFromArgumentsText } from "@arnilo/prism";
 import { serializeOpenAITool, applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
-import { parseJsonObjectArguments, readBoundedResponseText, readSseEvents } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseText, readSseEvents } from "@arnilo/prism/providers/transport";
 import { parseNeuralWattComment, type NeuralWattEvent } from "./telemetry.js";
 import { classifyNeuralWattError, neuralWattHttpError } from "./retry.js";
 import { neuralWattChatTemplateKwargs, neuralWattClearThinking, neuralWattPreserveThinking, neuralWattReasoningEffort, neuralWattThinkingTokenBudget, neuralWattToolChoice, stripNeuralWattOwnedCompat } from "./thinking.js";
@@ -51,11 +50,9 @@ export function createNeuralWattProvider(options: NeuralWattProviderOptions = {}
           headers: {
             ...request.options?.headers,
             "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-          },
+            ...(token ? { authorization: `Bearer ${token}` } : {})},
           body: JSON.stringify(neuralWattBody(request)),
-          signal: request.signal,
-        });
+          signal: request.signal});
         if (!response.ok) {
           const bodyText = await readBoundedResponseText(response, { secrets });
           const decision = classifyNeuralWattError({ status: response.status, headers: response.headers, body: safeJson(bodyText) });
@@ -70,8 +67,7 @@ export function createNeuralWattProvider(options: NeuralWattProviderOptions = {}
       } catch (error) {
         yield providerError(error, secrets);
       }
-    },
-  };
+    }};
 }
 
 function shouldPreserveReasoning(request: ProviderRequest): boolean {
@@ -100,8 +96,7 @@ export function neuralWattBody(request: ProviderRequest): JsonObject {
     tool_choice: neuralWattToolChoice(request),
     reasoning_effort: neuralWattReasoningEffort(request),
     thinking_token_budget: neuralWattThinkingTokenBudget(request),
-    chat_template_kwargs: neuralWattChatTemplateKwargs(request),
-  };
+    chat_template_kwargs: neuralWattChatTemplateKwargs(request)};
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
@@ -165,11 +160,7 @@ async function* neuralWattFramesToEvents(frames: AsyncIterable<NeuralWattSseFram
   }
   for (const call of tools.values()) {
     if (call.id && call.name) {
-      yield providerToolCall(toolCallContent(
-        call.id,
-        call.name,
-        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-      ));
+      yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
     }
   }
   yield providerDone(usage);
@@ -191,8 +182,7 @@ function toMessage(message: Message, model: ModelConfig, preserveReasoning = fal
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-    };
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
   }
   if (message.role === "assistant") {
     const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
@@ -204,10 +194,8 @@ function toMessage(message: Message, model: ModelConfig, preserveReasoning = fal
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
-        })),
-        reasoning_content: reasoningContent,
-      });
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) }})),
+        reasoning_content: reasoningContent});
     }
   }
 
@@ -249,8 +237,7 @@ export function toUsage(usage: NeuralWattUsage | undefined): Usage | undefined {
         inputTokens: usage.prompt_tokens,
         outputTokens: usage.completion_tokens,
         totalTokens: usage.total_tokens,
-        cacheReadTokens: usage.prompt_tokens_details?.cached_tokens,
-      }
+        cacheReadTokens: usage.prompt_tokens_details?.cached_tokens}
     : undefined;
 }
 

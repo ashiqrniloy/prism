@@ -6,8 +6,7 @@ import type {
   ModelConfig,
   ProviderEvent,
   ProviderRequest,
-  Usage,
-} from "@arnilo/prism";
+  Usage } from "@arnilo/prism";
 import {
   assertStructuredOutputRequestSupported,
   providerDone,
@@ -18,25 +17,20 @@ import {
   providerToolCallDelta,
   providerUsage,
   resolveCredentialValue,
-  toolCallContent,
-  type CredentialValueSource,
-} from "@arnilo/prism";
+  toolCallFromArgumentsText,
+  type CredentialValueSource } from "@arnilo/prism";
 import {
   applyOpenAIChatStructuredOutput,
   mapOpenAIChatUsage,
-  serializeOpenAITool,
-} from "@arnilo/prism/providers/openai";
+  serializeOpenAITool } from "@arnilo/prism/providers/openai";
 import {
-  parseJsonObjectArguments,
   readBoundedResponseText,
-  readSseData,
-} from "@arnilo/prism/providers/transport";
+  readSseData } from "@arnilo/prism/providers/transport";
 import {
   zaiPreserveThinking,
   zaiReasoningEffort,
   zaiThinking,
-  zaiToolStream,
-} from "./thinking.js";
+  zaiToolStream } from "./thinking.js";
 
 /** Official international Chat Completions base (China `open.bigmodel.cn` remains overridable). */
 export const ZAI_DEFAULT_BASE_URL = "https://api.z.ai/api/paas/v4";
@@ -65,11 +59,9 @@ export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider 
           headers: {
             ...request.options?.headers,
             "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-          },
+            ...(token ? { authorization: `Bearer ${token}` } : {})},
           body: JSON.stringify(zaiBody(request)),
-          signal: request.signal,
-        });
+          signal: request.signal});
         if (!response.ok) {
           return yield providerError(
             new Error(`Z.AI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -81,8 +73,7 @@ export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider 
       } catch (error) {
         yield providerError(error, secrets);
       }
-    },
-  };
+    }};
 }
 
 export function zaiBody(request: ProviderRequest): JsonObject {
@@ -102,8 +93,7 @@ export function zaiBody(request: ProviderRequest): JsonObject {
     // Resolved official fields win over raw compat/extra escape hatches.
     thinking: zaiThinking(request),
     reasoning_effort: zaiReasoningEffort(request),
-    tool_stream: zaiToolStream(request),
-  };
+    tool_stream: zaiToolStream(request)};
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
@@ -136,18 +126,13 @@ export async function* zaiEvents(body: ReadableStream<Uint8Array>, signal?: Abor
           index,
           id: tool.id,
           name: tool.function?.name,
-          argumentsText: tool.function?.arguments,
-        });
+          argumentsText: tool.function?.arguments});
       }
     }
   }
   for (const call of tools.values()) {
     if (call.id && call.name) {
-      yield providerToolCall(toolCallContent(
-        call.id,
-        call.name,
-        parseJsonObjectArguments(call.argumentsText, { toolName: call.name }),
-      ));
+      yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
     }
   }
   yield providerDone(usage);
@@ -180,8 +165,7 @@ export function toZaiMessage(
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-    };
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
   }
 
   if (message.role === "assistant") {
@@ -198,10 +182,8 @@ export function toZaiMessage(
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
-        })),
-        reasoning_content: reasoningContent,
-      });
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) }})),
+        reasoning_content: reasoningContent});
     }
   }
 

@@ -143,9 +143,13 @@ export function generateValidateReviseLoop(opts: {
           .filter((b): b is TextContent => b.type === "text")
           .map((b) => b.text)
           .join("");
-        const parsed = opts.parser
-          ? await opts.parser(text, artifactCtx)
-          : { ok: true as const, value: text };
+        // Empty/whitespace-only call-free output is a parse failure (thinking-only
+        // models must not succeed with an empty artifact via the identity parser).
+        const parsed = text.trim() === ""
+          ? { ok: false as const, error: "no artifact text in model output" }
+          : opts.parser
+            ? await opts.parser(text, artifactCtx)
+            : { ok: true as const, value: text };
 
         // Parse failure consumes revision budget like a validation failure; the
         // repairer receives `undefined` value plus a synthetic parse issue.

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-mcp",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.8"
+    "@arnilo/prism": "0.0.9"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

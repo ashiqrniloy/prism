@@ -135,11 +135,22 @@ const comparison = await runComparison({ dataset, candidates: { baseline, candid
 assertEvaluationThreshold(report, { minimumMean: 0.9, maximumFailures: 0 });
 ```
 
-`traceResolver` is explicit; no arbitrary run search occurs. `baseline`/`candidate` are host functions returning `AgentRunResult`. See `examples/evaluation-gate.ts` for a network-free gate.
+`traceResolver` is explicit; no arbitrary run search occurs. `baseline`/`candidate` are host functions returning `AgentRunResult`. See `examples/evaluation-gate.ts` for a network-free gate and `examples/coding-browser-evaluation.ts` for coding/browser adversarial fixtures.
+
+## Coding and browser adversarial evaluations (0.0.9)
+
+Release 0.0.9 ships curated network-free adversarial fixtures in package tests:
+
+- `@arnilo/prism-coding-agent` `eval-fixtures.test.ts`: safe native list vs shell, Git path/ref injection, dirty-tree rollback, unknown named-check failure, PR-handoff artifact completeness, and prompt-injection file content under read-only tools.
+- `@arnilo/prism-browser` `eval-fixtures.test.ts`: stale snapshot refs, side-effect approval, private/loopback/file deny, upload/download/screenshot policy, CSS/evaluate target rejection, and hostile accessible-name text.
+
+Fixtures reuse `@arnilo/prism-evals` (`defineDataset` / `defineScorer` / `scoreRun` / `assertEvaluationThreshold` / `serializeEvaluationReport`). Optional SWE-bench-compatible or live-browser harnesses remain host adapters — they are not default dependencies or quality claims. Protected real Docker/Playwright gates stay env-gated (`PRISM_TEST_DOCKER_SANDBOX`, `PRISM_LIVE_PLAYWRIGHT`) and never enter `sdk:ready`.
 
 ## Related APIs
 
 - [Agent/session runtime](agent-session-runtime.md): `AgentRunResult` and `session.run()`
 - [Runs and usage ledger](runs-and-usage.md): run/session identity for score linkage
 - [Observability](observability.md): use `onTraceReference` or bounded `traceId(runId)` to supply `ScoreRunOptions.traceId`; evaluation telemetry emits no reason/explanation content
-- [Release and install](release-and-install.md): optional package install
+- [Coding agent tools](coding-agent-tools.md) / [Browser automation](browser-automation.md) / [Workflows](workflows.md): network-free coding-task composition at `examples/durable-coding-workflow.ts`; adversarial coding/browser eval example at `examples/coding-browser-evaluation.ts`
+- [Performance limits](performance.md): `scripts/benchmark-0.0.9.mjs` coding/browser evidence fields
+- [Release and install](release-and-install.md): optional package install and protected sandbox-browser workflow

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-session-store-sqlite",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Optional SQLite SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
     "better-sqlite3": "^12.11.1"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.8"
+    "@arnilo/prism": "0.0.9"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

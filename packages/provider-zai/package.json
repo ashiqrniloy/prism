@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-provider-zai",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Z.AI provider package for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.8"
+    "@arnilo/prism": "0.0.9"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."
