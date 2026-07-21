@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "@arnilo/prism": ["./dist/index.d.ts"],
       "@arnilo/prism/testing/provider-conformance": ["./dist/testing/provider-conformance.d.ts"],
