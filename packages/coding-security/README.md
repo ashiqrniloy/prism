@@ -8,8 +8,9 @@ Optional execution approval, path containment, and sandbox adapters for `@arnilo
 import {
   createCodingApprovalPolicy,
   createDockerSandbox,
-  createSandboxCodingTools,
+  createSandboxCodingComposition,
 } from "@arnilo/prism-coding-security";
+import { createGitTools } from "@arnilo/prism-coding-agent";
 
 const policy = createCodingApprovalPolicy({
   roots: [workspaceRoot],
@@ -24,14 +25,25 @@ const sandbox = await createDockerSandbox({
   network: { mode: "none" },
 });
 
-const tools = createSandboxCodingTools(workspaceRoot, {
+// Required workspaceMode. Sandbox: shell + FS share one disposable tree.
+const { tools, composition } = createSandboxCodingComposition(workspaceRoot, {
+  workspaceMode: "sandbox",
   sandbox,
   executionPolicy: policy,
   repository: { exclude: [".git", "node_modules", "dist"] },
 });
+
+// Same-tree Git (opt-in):
+createGitTools(composition.workspaceRoot, {
+  execFile: sandbox.execFile.bind(sandbox),
+  commitIdentity: { name: "bot", email: "bot@example.com" },
+});
+
+// Host mode never claims containment:
+createSandboxCodingComposition(hostCwd, { workspaceMode: "host", executionPolicy: policy });
 ```
 
-Approval caching defaults to `none`. Explicit `run`/`session` caches use real `runId`/`sessionId` values supplied by coding-tool execution context; missing identity disables caching rather than sharing globally. Shared policy also applies through `createReadOnlyTools()`. Prefer `createSandboxCodingTools()` to wire shell through a sandbox while sharing repository list/search options; `createSandboxBashOperations()` remains available for manual shell wiring. Sandbox adapters receive the shell tool's `onData` callback and should stream ordered output while honoring abort/timeout. The Docker reference requires a host-pinned image digest, absolute Docker executable, and never pulls images or inherits host environment.
+`workspaceMode` is required (`"host"` | `"sandbox"`). Mixed sandbox-shell + host-FS wiring throws unless `allowMixedWorkspaceWiring: true` (warnings; `containmentClaim: false`). Prefer `createSandboxCodingComposition()` for metadata; `createSandboxCodingTools()` returns tools only. Approval caching defaults to `none`. Docker reference requires a host-pinned image digest, absolute Docker executable, and never pulls images or inherits host environment.
 
 Protected real-Docker checks: `PRISM_TEST_DOCKER_SANDBOX=1 PRISM_TEST_DOCKER_BIN=/usr/bin/docker PRISM_TEST_DOCKER_IMAGE='name@sha256:...' npm test -w @arnilo/prism-coding-security`.
 

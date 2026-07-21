@@ -50,7 +50,7 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
   const callTimeoutMs = bounded(options.callTimeoutMs, DEFAULT_SERVER_CALL_TIMEOUT_MS, HARD_SERVER_CALL_TIMEOUT_MS, "callTimeoutMs");
   const registry = createToolRegistry(tools, { duplicate: "error" });
   const server = new McpServer(
-    { name: options.name ?? "prism-mcp-server", version: options.version ?? "0.0.96" },
+    { name: options.name ?? "prism-mcp-server", version: options.version ?? "0.0.10" },
     { capabilities: {
       ...(tools.length || commands.length || Object.keys(agentRuns).length ? { tools: { listChanged: true } } : {}),
       ...(resources.length ? { resources: { listChanged: true } } : {}),

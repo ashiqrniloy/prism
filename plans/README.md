@@ -77,5 +77,6 @@ Numbered plans are immutable implementation records. Current release status live
 | [070-release-0-0-8-production-telemetry-evaluations-protocols-web-research.md](070-release-0-0-8-production-telemetry-evaluations-protocols-web-research.md) | Phase 3 / Release 0.0.8 — Production Telemetry, Evaluations, Protocols, and Web Research |
 | [071-release-0-0-8-opencode-go-route-fixes-and-kimi-alignment.md](071-release-0-0-8-opencode-go-route-fixes-and-kimi-alignment.md) | Release 0.0.8 addendum — OpenCode Go route auth/structured-output/stream/artifact fixes and Kimi provider alignment |
 | [072-release-0-0-9-production-coding-and-browser-execution.md](072-release-0-0-9-production-coding-and-browser-execution.md) | Phase 4 / Release 0.0.9 — Production Coding and Browser Execution (Office execution excluded) |
+| [073-release-0-0-10-coding-harness-unified-workspace.md](073-release-0-0-10-coding-harness-unified-workspace.md) | Phase 5 / Release 0.0.10 — Coding Harness Correctness and Unified Workspace (P0) |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

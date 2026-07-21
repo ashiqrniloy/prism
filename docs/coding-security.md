@@ -8,8 +8,10 @@
 | --- | --- |
 | `createCodingApprovalPolicy(options)` | Returns an `ExecutionPolicy` with trusted roots, read-only mode, command allow/deny rules, approval caching, and timeout/abort-aware approval waits. |
 | `createSandboxBashOperations(adapter)` | Maps a host-owned `SandboxAdapter` to coding-agent `BashOperations` for delegated shell execution. |
-| `createSandboxCodingTools(cwd, options)` | One construction path: full coding tools with shell wired to `options.sandbox` and shared repository options. |
-| `createSandboxReadOnlyTools(cwd, options)` | Read-only coding tools (`read`/`repo_list`/`repo_search`) with shared repository options. |
+| `createSandboxCodingComposition(cwd, options)` | Authoritative construction: returns `{ tools, composition }` with required `workspaceMode` (`"host"` \| `"sandbox"`), fail-closed mixed wiring, and containment metadata. |
+| `createSandboxReadOnlyComposition(cwd, options)` | Same contract for read-only tools (`read`/`repo_list`/`repo_search`). |
+| `createSandboxCodingTools` / `createSandboxReadOnlyTools` | Thin wrappers that return `tools` only (compat); still require `workspaceMode`. |
+| `createSandboxFilesystemOperations` / `createSandboxRepositoryOperations` | Optional execFile-backed FS/list/search backends for a disposable sandbox tree. |
 | `createDockerSandbox(options)` | Creates one disposable non-root Docker container with read-only root/source, bounded tmpfs workspace, typed `execFile`, import/export, and stop/kill/cleanup. |
 | `assertPathInsideRoots`, `isPathInsideReal` | Symlink-aware path containment helpers. |
 | `evaluateCommandRules`, `hasShellMetacharacters` | Command classification helpers. |
@@ -52,11 +54,25 @@ Use `createDockerSandbox()` when the host wants a production-reference containme
 | `secrets` | `[]` | Canaries redacted from CLI/adapter errors. |
 | `limits` | package defaults | CPU/memory/PID/FD/tmpfs/command/export/time caps validated before create. |
 
+### Workspace mode inputs (`createSandboxCodingComposition`)
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `workspaceMode` | **required** | `"host"` (all tools on host cwd; never claims containment) or `"sandbox"` (shell + FS/list/search share one disposable tree). |
+| `sandbox` | optional in host; required for sandbox unless custom ops supplied | `SandboxAdapter` / `DisposableSandbox`. |
+| `workspaceRoot` | `"/workspace"` in sandbox mode | Tree root used as tool cwd when sandbox backends are bound. |
+| `allowMixedWorkspaceWiring` | `false` | Escape hatch: allow sandbox shell + host FS backends. Records `composition.warnings`; forces `containmentClaim: false`. Missing hatch throws. |
+| `read`/`write`/`edit`/`repository.operations` | auto-wired from `DisposableSandbox` in sandbox mode | Host may supply custom tree backends instead of auto-wire. |
+
+`0.0.9` silent split (sandbox shell + host FS) is **superseded**. Mixed wiring is never the default.
+
 ## Outputs / response / events
 
 `createCodingApprovalPolicy()` returns an `ExecutionPolicy`. Allowed checks return `ExecutionDecision { allowed: true }`; denied checks include a stable reason; shell decisions set `exclusive: true`. Sandbox adapters return coding-agent-compatible `BashOperations`, receive `onData(Buffer)` for ordered stdout/stderr forwarding through the shell tool's existing bounded accumulator, and never grant policy approval themselves.
 
-`createDockerSandbox()` returns a `DisposableSandbox`: typed `execFile(file, args)`, shell-compatible `exec`, `status`, cooperative `stop`, forced `kill`, and idempotent `close`. `close({ export })` can stream a bounded workspace tar plus SHA-256/entry/byte metadata through a host callback; checkpoints should retain only host artifact references/hashes, never whole workspaces.
+`createSandboxCodingComposition()` returns `{ tools, composition }` where `SandboxCodingComposition` carries `workspaceMode`, `containmentClaim`, `mixedWiringAllowed`, `warnings`, `workspaceRoot`, and optional `treeIdentity` (from `importIdentity` / `lastExportIdentity`). `containmentClaim` is `true` only for sandbox mode with tree backends bound and mixed wiring denied. Host mode and escape-hatch mixed wiring always set `containmentClaim: false` — never treat host mode as contained execution.
+
+`createDockerSandbox()` returns a `DisposableSandbox`: typed `execFile(file, args)`, shell-compatible `exec`, `status`, cooperative `stop`, forced `kill`, and idempotent `close`. Import may surface `importIdentity`; successful export updates `lastExportIdentity`. `close({ export })` can stream a bounded workspace tar plus SHA-256/entry/byte metadata through a host callback; checkpoints should retain only host artifact references/hashes, never whole workspaces.
 
 ## Request/response example
 
@@ -73,8 +89,9 @@ Use `createDockerSandbox()` when the host wants a production-reference containme
 import {
   createCodingApprovalPolicy,
   createDockerSandbox,
-  createSandboxCodingTools,
+  createSandboxCodingComposition,
 } from "@arnilo/prism-coding-security";
+import { createGitTools } from "@arnilo/prism-coding-agent";
 
 const policy = createCodingApprovalPolicy({
   roots: [workspaceRoot],
@@ -93,12 +110,24 @@ const sandbox = await createDockerSandbox({
   limits: { cpus: 2, memoryBytes: 2 * 1024 ** 3, maxPids: 256, workspaceBytes: 1024 ** 3 },
 });
 
-// Host cwd is the inspected workspace; shell runs inside the sandbox.
-const tools = createSandboxCodingTools("/srv/jobs/task-1/source", {
+// Sandbox mode: shell/read/write/edit/list/search share one disposable tree.
+const { tools, composition } = createSandboxCodingComposition("/srv/jobs/task-1/source", {
+  workspaceMode: "sandbox",
   sandbox,
   executionPolicy: policy,
   repository: { exclude: [".git", "node_modules", "dist"] },
 });
+// composition.containmentClaim === true when backends are bound
+
+// Same-tree Git/check (opt-in; not folded into coding tools):
+const gitTools = createGitTools(composition.workspaceRoot, {
+  execFile: sandbox.execFile.bind(sandbox),
+  commitIdentity: { name: "bot", email: "bot@example.com" },
+});
+
+// Host mode (explicit non-contained): omit sandbox; never claim containment.
+const host = createSandboxCodingComposition(hostCwd, { workspaceMode: "host", executionPolicy: policy });
+// host.composition.containmentClaim === false
 
 await sandbox.execFile({ file: "npm", args: ["test"], cwd: "/workspace" });
 await sandbox.close({
@@ -108,7 +137,9 @@ await sandbox.close({
 
 ## Extension and configuration notes
 
-Policies are ordinary host values: attach one globally through `createCodingTools()`/`createReadOnlyTools()`/`createSandboxCodingTools()` or per tool. A per-tool policy overrides the shared policy. `SandboxAdapter` / `DisposableSandbox` are replaceable and host-owned; approval policy and sandboxing are separate layers. Custom remote sandboxes can implement `DisposableSandbox` without using Docker. `createSandboxCodingTools()` wires shell through the adapter while list/search/read/write/edit keep the host `cwd` unless custom operations are supplied — Docker tmpfs mutations remain inside the container until export. Opt-in structured Git tools from `@arnilo/prism-coding-agent` (`createGitTools`) can target the same disposable sandbox by passing `execFile: sandbox.execFile` and a host `commitIdentity`; Prism still never pushes or opens PRs. Optional `@arnilo/prism-browser` can share the same disposable boundary: use `assertBrowserSandboxNetwork()` before browse-ready custom networks, and `createSharedSandboxBrowserOptions({ workspaceRoot, downloadsRoot, containedProxyAttestation })` so uploads/downloads align with `/workspace` and `/downloads`. Close the browser context before disposing the sandbox.
+Policies are ordinary host values: attach one globally through `createCodingTools()`/`createReadOnlyTools()`/`createSandboxCodingComposition()` or per tool. A per-tool policy overrides the shared policy. `SandboxAdapter` / `DisposableSandbox` are replaceable and host-owned; approval policy and sandboxing are separate layers. Custom remote sandboxes can implement `DisposableSandbox` without using Docker.
+
+`createSandboxCodingComposition()` requires `workspaceMode`. Sandbox mode auto-wires FS/list/search through `DisposableSandbox.execFile` (or host-supplied custom operations) so mutations stay on the disposable tree until export. Host mode runs every coding tool against the host cwd and never sets `containmentClaim`. Sandbox shell + host FS throws unless `allowMixedWorkspaceWiring: true` (warnings + `containmentClaim: false`). Opt-in structured Git tools (`createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`) share the same tree/cwd; Prism still never pushes or opens PRs. Optional `@arnilo/prism-browser` can share the same disposable boundary: use `assertBrowserSandboxNetwork()` before browse-ready custom networks, and `createSharedSandboxBrowserOptions({ workspaceRoot, downloadsRoot, containedProxyAttestation })` so uploads/downloads align with `/workspace` and `/downloads`. Close the browser context before disposing the sandbox.
 
 The Docker reference adapter starts by recorded container ID/label, uses argument arrays only, mounts source read-only, populates a size-bounded tmpfs `/workspace`, drops all capabilities, enables `no-new-privileges`, runs with `--init`, and never exposes the Docker socket, privileged mode, or host PID/IPC namespaces. Image pull/build/update stays outside Prism. Protected real-Docker checks are opt-in via `PRISM_TEST_DOCKER_SANDBOX=1` with host-supplied `PRISM_TEST_DOCKER_BIN` and digest-pinned `PRISM_TEST_DOCKER_IMAGE`.
 
@@ -118,7 +149,7 @@ Callback approval remains process-local. For approval that must survive restart,
 
 Containment resolves symlinks and rejects paths outside roots. Command rules are not a shell parser; shell metacharacters require approval. Approval waits and subprocess execution honor abort/timeouts. Coding-agent resource ceilings independently bound text scans, image/edit target reads, write/edit payloads, edit counts, repository list/search walks, shell wall time, and retained/spilled output. Those ceilings reduce exhaustion risk but do not grant path/command authority or make an unsandboxed shell safe.
 
-Docker sandbox containment—not command regexes—enforces filesystem/network/process boundaries for the reference adapter. Network defaults to none; a custom Docker network still requires a host firewall/proxy for DNS/egress claims. Import rejects symlink escapes, devices, FIFOs, and sockets; export counts entries/bytes and hashes before host retention. Secrets in `secrets` are redacted from adapter errors and never exported as environment metadata. Durable workflow denial/cancellation is terminal and attributable; approved resume still fails if roots, command rules, read-only mode, or other policy changed while suspended. Cache keys are fixed-size SHA-256 digests of selected identity plus action shape; caches remain process-local, retain at most 1,000 decisions with oldest-entry eviction, and have no default/global mode. Path checks and cache lookup are local; sandbox latency belongs to the supplied adapter and Docker daemon.
+Docker sandbox containment—not command regexes—enforces filesystem/network/process boundaries for the reference adapter. Network defaults to none; a custom Docker network still requires a host firewall/proxy for DNS/egress claims. Import rejects symlink escapes, devices, FIFOs, and sockets; export counts entries/bytes and hashes before host retention. Secrets in `secrets` are redacted from adapter errors and never exported as environment metadata. Unified workspace mode reuses existing sandbox/repo/coding hard caps and does not introduce unbounded host↔container sync loops. Host mode and `allowMixedWorkspaceWiring` never claim disposable containment. Durable workflow denial/cancellation is terminal and attributable; approved resume still fails if roots, command rules, read-only mode, or other policy changed while suspended. Cache keys are fixed-size SHA-256 digests of selected identity plus action shape; caches remain process-local, retain at most 1,000 decisions with oldest-entry eviction, and have no default/global mode. Path checks and cache lookup are local; sandbox latency belongs to the supplied adapter and Docker daemon.
 
 ## Related APIs
 

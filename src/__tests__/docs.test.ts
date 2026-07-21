@@ -208,7 +208,7 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 73, "numbered plan count drifted");
+    assert.equal(plans.length, 74, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
@@ -242,7 +242,90 @@ describe("docs", () => {
     }
   });
 
-  it("every publishable package ships current README and 0.0.96 changelog documentation", () => {
+  it("phase 5 evidence freezes workspace modes, owners, reused limits, and 0.0.11+ exclusions", () => {
+    const evidence = readFileSync("docs/review-coverage-2026-07-21-phase-5.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const phase5 = roadmap.slice(
+      roadmap.indexOf("Phase 5 — Release 0.0.10"),
+      roadmap.indexOf("Phase 6 — Release 0.0.11"),
+    );
+
+    for (const heading of [
+      "## Frozen external revisions",
+      "## Frozen workspace-mode contract",
+      "## Capability traceability matrix",
+      "## Primitive and caller inventory",
+      "## Frozen finite limits and charging points",
+      "## Threat and authority matrix",
+      "## Validation matrix for Task 0",
+    ]) assert.ok(evidence.includes(heading), `Phase 5 evidence missing ${heading}`);
+    for (let task = 1; task <= 7; task += 1) {
+      assert.ok(evidence.includes(`Task ${task}`), `Phase 5 evidence missing Task ${task} owner`);
+    }
+    for (const mode of ['"host"', '"sandbox"', "allowMixedWorkspaceWiring", "SandboxCodingComposition"]) {
+      assert.ok(evidence.includes(mode), `Phase 5 evidence missing mode/contract token ${mode}`);
+    }
+    for (const deferred of [
+      "Session search/index",
+      "Token/context budgeting",
+      "Native Anthropic provider",
+      "Native Google provider",
+      "Goal→verify",
+      "AG-UI/ACP-facing event adapter",
+      "Coding-aware compaction preset",
+    ]) {
+      assert.ok(evidence.includes(deferred), `Phase 5 evidence missing out-of-scope item ${deferred}`);
+      assert.ok(!phase5.includes(deferred), `Phase 5 roadmap implementation scope unexpectedly names ${deferred}`);
+    }
+    assert.ok(evidence.includes("Default / hard cap"), "Phase 5 limits missing default/hard-cap columns");
+    assert.ok(evidence.includes("No new core primitive"), "Phase 5 evidence missing core-primitive ban");
+    assert.ok(
+      index.includes("(review-coverage-2026-07-21-phase-5.md)"),
+      "docs/index.md missing Phase 5 review coverage link",
+    );
+    assert.match(phase5, /workspace mode|unified mode|createSandboxCodingTools/i);
+  });
+
+  it("phase 5 workspace-mode docs replace split-brain defaults and forbid host containment claims", () => {
+    const codingSecurity = readFileSync("docs/coding-security.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const hostSecurity = readFileSync("docs/host-security.md", "utf8");
+    const tools = readFileSync("docs/coding-agent-tools.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+
+    for (const [name, text] of [
+      ["coding-security.md", codingSecurity],
+      ["migration.md", migration],
+      ["coding-agent-tools.md", tools],
+    ] as const) {
+      assert.ok(text.includes("workspaceMode"), `${name} missing workspaceMode`);
+      assert.ok(
+        /superseded|fail-closed|never the default|throws unless/i.test(text),
+        `${name} missing fail-closed / superseded split-brain language`,
+      );
+    }
+    assert.ok(codingSecurity.includes("createSandboxCodingComposition"));
+    assert.ok(codingSecurity.includes("allowMixedWorkspaceWiring"));
+    assert.ok(codingSecurity.includes("containmentClaim"));
+    assert.ok(
+      /never claim containment|never claims containment|Host mode never|never treat host mode as contained/i.test(
+        codingSecurity,
+      ),
+      "coding-security.md missing host-mode non-containment warning",
+    );
+    assert.ok(
+      /Host mode is never contained|never claims containment/i.test(hostSecurity),
+      "host-security.md missing host-mode non-containment warning",
+    );
+    assert.ok(migration.includes("0.0.10"));
+    assert.ok(performance.includes("benchmark-0.0.10.mjs"));
+    assert.ok(index.includes("workspaceMode") || index.includes("workspace modes"));
+    assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
+  });
+
+  it("every publishable package ships current README and 0.0.10 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")));
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -252,7 +335,7 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.96] - 2026-07-21"), `${dir}/CHANGELOG.md missing finalized 0.0.96 section`);
+      assert.ok(changelog.includes("## [0.0.10] - 2026-07-21"), `${dir}/CHANGELOG.md missing finalized 0.0.10 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -755,12 +838,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.96 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.10 publish handoff"), docs.indexOf("## Extension and configuration notes"));
     for (const phrase of [
       "Decision: GO",
       "available` for all 32",
-      "git tag -s v0.0.96",
-      "git push origin v0.0.96",
+      "git tag -s v0.0.10",
+      "git push origin v0.0.10",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",

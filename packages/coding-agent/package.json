@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-coding-agent",
-  "version": "0.0.96",
+  "version": "0.0.10",
   "description": "Optional coding-agent tools (shell, read, write, edit, repo_list, repo_search, opt-in Git/check, and durable plan/checkpoint helpers) package for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
     "diff": "^9.0.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.96"
+    "@arnilo/prism": "0.0.10"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

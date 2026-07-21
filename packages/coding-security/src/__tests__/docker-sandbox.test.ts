@@ -390,12 +390,163 @@ test("export callback receives metadata and close cleans up; aborted export stil
     assert.ok(metadata);
     assert.equal(pass, 2);
     assert.ok(calls.some((c) => c[0] === "rm"));
+    assert.deepEqual(sandbox.lastExportIdentity, metadata);
+    const status = await sandbox.status();
+    assert.deepEqual(status.lastExportIdentity, metadata);
+  });
+});
+
+async function drainStdin(request: DockerCliRequest): Promise<void> {
+  if (!request.stdin || typeof request.stdin === "string" || Buffer.isBuffer(request.stdin)) return;
+  for await (const _ of request.stdin) {
+    // drain so tee/hash completes
+  }
+}
+
+test("import retains tree identity; export hash differs after mutate; composition surfaces import", async () => {
+  const { createSandboxCodingComposition } = await import("../index.js");
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    await writeFile(join(sourceRoot, "seed.txt"), "import-seed\n");
+    // Valid empty ustar for export (differs from imported source tree hash).
+    const emptyTar = Buffer.alloc(1024, 0);
+
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("1\n");
+      if (request.args[0] === "create") return ok("ffffffffffffffffffffffffffffffff\n");
+      if (request.args[0] === "start") return ok();
+      if (request.args[0] === "exec" && request.args.includes("-xf")) {
+        await drainStdin(request);
+        return ok();
+      }
+      if (request.args[0] === "exec" && request.args.includes("-cf")) {
+        request.onStdout?.(emptyTar);
+        return ok();
+      }
+      return ok();
+    });
+
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+    });
+
+    assert.ok(sandbox.importIdentity);
+    assert.equal(sandbox.importIdentity!.format, "tar");
+    assert.equal(sandbox.importIdentity!.sha256.length, 64);
+    assert.ok(sandbox.importIdentity!.entryCount >= 1);
+    const before = await sandbox.status();
+    assert.deepEqual(before.importIdentity, sandbox.importIdentity);
+
+    const { composition } = createSandboxCodingComposition("/host/ignored", {
+      workspaceMode: "sandbox",
+      sandbox,
+      workspaceRoot: "/workspace",
+    });
+    assert.equal(composition.containmentClaim, true);
+    assert.deepEqual(composition.treeIdentity, {
+      sha256: sandbox.importIdentity!.sha256,
+      entryCount: sandbox.importIdentity!.entryCount,
+      byteCount: sandbox.importIdentity!.byteCount,
+    });
+
+    const exported = await sandbox.close({
+      export: async (stream, meta) => {
+        for await (const _ of stream) {
+          // drain
+        }
+        assert.equal(meta.sha256.length, 64);
+      },
+    });
+    assert.ok(exported);
+    assert.notEqual(exported!.sha256, sandbox.importIdentity!.sha256);
+    assert.deepEqual(sandbox.lastExportIdentity, exported);
+  });
+});
+
+test("export hash mismatch between passes fails closed", async () => {
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    let pass = 0;
+    const tarA = Buffer.alloc(1024, 0);
+    const tarB = Buffer.alloc(2048, 0); // still valid zero-block ustar; different byteCount/hash
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("1\n");
+      if (request.args[0] === "create") return ok("11111111111111111111111111111111\n");
+      if (request.args[0] === "start") return ok();
+      if (request.args[0] === "exec" && request.args.includes("-cf")) {
+        pass += 1;
+        request.onStdout?.(pass === 1 ? tarA : tarB);
+        return ok();
+      }
+      if (request.args[0] === "rm" || request.args[0] === "stop" || request.args[0] === "kill") return ok();
+      return ok();
+    });
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+      skipImport: true,
+    });
+    await assert.rejects(
+      () =>
+        sandbox.close({
+          export: async (stream) => {
+            for await (const _ of stream) {
+              // drain
+            }
+          },
+        }),
+      /hash mismatch/,
+    );
+    assert.equal(sandbox.lastExportIdentity, undefined);
+    const status = await sandbox.status();
+    assert.equal(status.state, "removed");
   });
 });
 
 test("secret redactor replaces canaries", () => {
   const redact = createSecretRedactor(["abc", "xyz"]);
   assert.equal(redact("token abc and xyz"), "token [REDACTED] and [REDACTED]");
+});
+
+test("maxConcurrentExecs serializes overlapping execFile calls", async () => {
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    let active = 0;
+    let peak = 0;
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("1\n");
+      if (request.args[0] === "create") return ok("22222222222222222222222222222222\n");
+      if (request.args[0] === "start") return ok();
+      if (request.args[0] === "exec") {
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((r) => setTimeout(r, 30));
+        active -= 1;
+        return ok();
+      }
+      return ok();
+    });
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+      skipImport: true,
+      limits: { maxConcurrentExecs: 1, wallTimeMs: 60_000, idleTimeoutMs: 60_000 },
+    });
+    await Promise.all([
+      sandbox.execFile({ file: "true", args: [] }),
+      sandbox.execFile({ file: "true", args: [] }),
+      sandbox.execFile({ file: "true", args: [] }),
+    ]);
+    assert.equal(peak, 1);
+    await sandbox.close();
+  });
 });
 
 test("protected Docker sandbox matrix", { skip: process.env.PRISM_TEST_DOCKER_SANDBOX !== "1" }, async () => {
@@ -471,6 +622,35 @@ test("protected Docker sandbox matrix", { skip: process.env.PRISM_TEST_DOCKER_SA
 
       const status = await sandbox.status();
       assert.ok(status.id);
+      assert.ok(status.importIdentity);
+      assert.equal(status.importIdentity!.sha256.length, 64);
+
+      // Unified workspace: coding tools write/read same tree as shell (opt-in live gate).
+      const { createSandboxCodingComposition } = await import("../index.js");
+      const { tools, composition } = createSandboxCodingComposition(root, {
+        workspaceMode: "sandbox",
+        sandbox,
+        workspaceRoot: "/workspace",
+      });
+      assert.equal(composition.containmentClaim, true);
+      assert.ok(composition.treeIdentity);
+      const write = tools.find((t) => t.name === "write")!;
+      assert.equal(
+        (await write.execute({ path: "tool-write.txt", content: "unified\n" }, {
+          sessionId: "live",
+          runId: "live",
+          toolCallId: "live-1",
+        })).error,
+        undefined,
+      );
+      const catChunks: Buffer[] = [];
+      const cat = await sandbox.execFile({
+        file: "/bin/sh",
+        args: ["-c", "cat /workspace/tool-write.txt"],
+        onData: (c) => catChunks.push(Buffer.from(c)),
+      });
+      assert.equal(cat.exitCode, 0);
+      assert.equal(Buffer.concat(catChunks).toString("utf8"), "unified\n");
     } finally {
       await sandbox.close();
       // idempotent cleanup

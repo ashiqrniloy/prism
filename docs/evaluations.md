@@ -152,5 +152,5 @@ Fixtures reuse `@arnilo/prism-evals` (`defineDataset` / `defineScorer` / `scoreR
 - [Runs and usage ledger](runs-and-usage.md): run/session identity for score linkage
 - [Observability](observability.md): use `onTraceReference` or bounded `traceId(runId)` to supply `ScoreRunOptions.traceId`; evaluation telemetry emits no reason/explanation content
 - [Coding agent tools](coding-agent-tools.md) / [Browser automation](browser-automation.md) / [Workflows](workflows.md): network-free coding-task composition at `examples/durable-coding-workflow.ts`; adversarial coding/browser eval example at `examples/coding-browser-evaluation.ts`
-- [Performance limits](performance.md): `scripts/benchmark-0.0.9.mjs` coding/browser evidence fields
+- [Performance limits](performance.md): `scripts/benchmark-0.0.10.mjs` workspace-mode evidence and `scripts/benchmark-0.0.9.mjs` coding/browser evidence fields
 - [Release and install](release-and-install.md): optional package install and protected sandbox-browser workflow

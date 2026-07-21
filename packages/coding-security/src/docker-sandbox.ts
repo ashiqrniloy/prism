@@ -281,15 +281,28 @@ async function importSource(input: {
   limits: ResolvedDockerSandboxLimits;
   runner: DockerRunner;
   redact: (text: string) => string;
-}): Promise<void> {
-  const tarStream = createImportTarStream(input.sourceRoot, {
+}): Promise<SandboxExportMetadata> {
+  const bounds = {
     maxEntries: input.limits.maxExportEntries,
     maxBytes: Math.min(input.limits.workspaceBytes, input.limits.maxExportBytes),
-  });
+  };
+  // One FS walk into a capped buffer; hash + docker exec share the same bytes (no second tree walk).
+  // ponytail: full import buffered up to maxExportBytes; stream-tee if peak RSS matters.
+  const chunks: Buffer[] = [];
+  for await (const chunk of createImportTarStream(input.sourceRoot, bounds)) {
+    chunks.push(Buffer.from(chunk));
+  }
+  const buf = Buffer.concat(chunks);
+  const summary = await summarizeTarStream(
+    (async function* () {
+      yield buf;
+    })(),
+    bounds,
+  );
   const result = await input.runner({
     docker: input.docker,
     args: ["exec", "-i", "-u", input.user, "-w", WORKSPACE_MOUNT, input.containerId, "tar", "-xf", "-"],
-    stdin: tarStream,
+    stdin: buf,
     timeoutMs: input.limits.startupTimeoutMs,
     maxOutputBytes: 1 * 1024 * 1024,
     redact: input.redact,
@@ -298,10 +311,18 @@ async function importSource(input: {
     const detail = result.stderr.toString("utf8").trim() || `exit ${result.exitCode}`;
     throw new DockerSandboxError(input.redact(`workspace import failed: ${detail}`));
   }
+  return {
+    sha256: summary.sha256,
+    entryCount: summary.entryCount,
+    byteCount: summary.byteCount,
+    format: "tar",
+  };
 }
 
 class DockerSandboxSession implements DisposableSandbox {
   readonly id: string;
+  readonly importIdentity?: SandboxExportMetadata;
+  private _lastExportIdentity: SandboxExportMetadata | undefined;
   private state: SandboxStatusState = "running";
   private commandCount = 0;
   private retainedArtifacts = 0;
@@ -321,11 +342,17 @@ class DockerSandboxSession implements DisposableSandbox {
       readonly limits: ResolvedDockerSandboxLimits;
       readonly runner: DockerRunner;
       readonly secrets: readonly string[];
+      readonly importIdentity?: SandboxExportMetadata;
     },
   ) {
     this.id = opts.containerId;
+    this.importIdentity = opts.importIdentity;
     this.execLock = new Semaphore(opts.limits.maxConcurrentExecs);
     this.redact = createSecretRedactor(opts.secrets);
+  }
+
+  get lastExportIdentity(): SandboxExportMetadata | undefined {
+    return this._lastExportIdentity;
   }
 
   private touch(): void {
@@ -357,6 +384,8 @@ class DockerSandboxSession implements DisposableSandbox {
       startedAt: this.startedAt,
       commandCount: this.commandCount,
       lastActivityAt: this.lastActivityAt,
+      ...(this.importIdentity ? { importIdentity: this.importIdentity } : {}),
+      ...(this._lastExportIdentity ? { lastExportIdentity: this._lastExportIdentity } : {}),
     };
   }
 
@@ -567,6 +596,7 @@ class DockerSandboxSession implements DisposableSandbox {
         throw new DockerSandboxError("export hash mismatch between passes");
       }
       this.retainedArtifacts += 1;
+      this._lastExportIdentity = metadata;
       this.touch();
       return metadata;
     } catch (error) {
@@ -675,8 +705,9 @@ export async function createDockerSandbox(
       );
     }
 
+    let importIdentity: SandboxExportMetadata | undefined;
     if (!options.skipImport) {
-      await importSource({
+      importIdentity = await importSource({
         docker,
         containerId,
         user,
@@ -696,6 +727,7 @@ export async function createDockerSandbox(
       limits,
       runner,
       secrets,
+      importIdentity,
     });
   } catch (error) {
     if (containerId) {

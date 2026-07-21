@@ -50,7 +50,7 @@ export async function runCanaries({ env = process.env, fetcher = fetch } = {}) {
   const results = [];
   results.push(await request(fetcher, "provider", providerUrl, { method: "POST", headers: { ...json, authorization: `Bearer ${env.PRISM_CANARY_PROVIDER_API_KEY}` }, body: JSON.stringify({ model: env.PRISM_CANARY_PROVIDER_MODEL, messages: [{ role: "user", content: "Reply OK" }], max_tokens: 1 }) }, timeoutMs));
   const mcpHeaders = { ...json, accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-11-25", authorization: `Bearer ${env.PRISM_CANARY_MCP_TOKEN}` };
-  const { captured: sessionId, ...mcpResponse } = await request(fetcher, "mcp", mcpUrl, { method: "POST", headers: mcpHeaders, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "prism-release-canary", version: "0.0.96" } } }) }, timeoutMs, "mcp-session-id");
+  const { captured: sessionId, ...mcpResponse } = await request(fetcher, "mcp", mcpUrl, { method: "POST", headers: mcpHeaders, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "prism-release-canary", version: "0.0.10" } } }) }, timeoutMs, "mcp-session-id");
   results.push(mcpResponse);
   if (sessionId) {
     if (!/^[A-Za-z0-9_-]{1,256}$/.test(sessionId)) throw new Error("mcp canary returned an invalid session id");

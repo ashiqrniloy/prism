@@ -349,7 +349,7 @@ Updated: 2026-07-21
     - Task 13 RC re-verify: `npm run sdk:ready` passed 1,934 tests (1,905 pass, 29 explicit live skips, 0 fail). Supply chain: audit 0 high, SBOM 185 packages/8 licenses, working-tree secrets 0/2,402, tarball secrets 0/847, `git diff --check` clean. Packed artifacts 972,339 bytes / 3,755,038 unpacked / 847 files; core 519,366 / 1,819,939; browser 29,171 / 132,669 with no Playwright binary/image.
     - Public-registry `release:check` found all 32 `@arnilo/*@0.0.9` versions available. `release:publish --dry-run --allow-dirty --allow-untagged` completed 32/32 deterministic public/latest/provenance dry-runs; no commit, tag, or publication was created. Protected Docker/Playwright live gates, Node 20 CI, PostgreSQL/keychain, CodeQL/dependency review, signed tag, OIDC, and actual publication remain operator prerequisites.
 
-- [ ] Phase 5 — Release 0.0.10: coding harness correctness and unified workspace (P0)
+- [x] Phase 5 — Release 0.0.10: coding harness correctness and unified workspace (P0)
   - Acceptance Criteria:
     - Functional: disposable Docker/sandbox coding composition exposes an explicit workspace mode (`host`, `sandbox`, or future equivalents); default sandboxed composition no longer silently pairs container shell with host filesystem mutations.
     - Functional: in `sandbox` mode, `shell`, `read`, `write`, `edit`, `repo_list`, and `repo_search` observe and mutate one shared tree; Git/check runners targeting the sandbox use the same tree and cwd semantics.
@@ -396,6 +396,10 @@ Updated: 2026-07-21
     - Docs pages to create/edit: `docs/coding-security.md`, `docs/coding-agent-tools.md`, `docs/migration.md`, `docs/host-security.md`, package READMEs/changelogs.
     - `docs/index.md` update: yes if Coding security/tools summaries change.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion Evidence (2026-07-21):
+    - Plan 073 Tasks 0–7 complete: required `workspaceMode`, sandbox FS auto-wire, Git same-tree composition, import/export `treeIdentity`, adversarial consistency + `benchmark-0.0.10`, docs/migration, exact `0.0.10` graph (retargeted from post-ship `0.0.96`).
+    - `npm run sdk:ready` passed: 1,963 tests (1,934 pass, 29 explicit live skips, 0 fail). Supply chain: audit 0 high, SBOM 186 packages/8 licenses, working-tree secrets 0/2,418, `git diff --check` clean. Packed artifacts 988,020 / 3,820,326 / 850 files; core 527,333 / 1,848,113 / 248.
+    - Public-registry `release:check` found all 32 `@arnilo/*@0.0.10` versions available. `release:publish --dry-run --allow-dirty --allow-untagged` completed 32/32; no commit, tag, or publication created. Protected Docker/Playwright live gates, Node 20 CI, PostgreSQL/keychain, CodeQL/dependency review, signed tag, OIDC, and actual publication remain operator prerequisites.
 
 - [ ] Phase 6 — Release 0.0.11: coding harness fundamentals (P1)
   - Acceptance Criteria:

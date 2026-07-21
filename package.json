@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.0.96",
+  "version": "0.0.10",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
   "main": "./dist/index.js",

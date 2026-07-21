@@ -5,13 +5,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.10] - 2026-07-21
+
+### Changed
+
+- Coding harness workspace modes (Phase 5): required `workspaceMode` on `@arnilo/prism-coding-security` composition; sandbox mode unifies shell/FS on one disposable tree; host mode never claims containment; fail-closed mixed wiring + `allowMixedWorkspaceWiring` escape hatch; import/export tree identity; `scripts/benchmark-0.0.10.mjs` evidence.
+- Versioned all 32 first-party manifests and exact internal ranges from the post-ship `0.0.96` graph to `0.0.10` for the roadmap Phase 5 release line.
+
 ## [0.0.96] - 2026-07-21
 
 ### Changed
 
 - Package graph and runtime version pins bumped from 0.0.9 to 0.0.96 for a clean publish tag after the mistaken `v0.0.95` tag and TypeScript 7 / workspace-order CI fixes.
-
-## Unreleased
 
 ## [0.0.9] - 2026-07-21
 

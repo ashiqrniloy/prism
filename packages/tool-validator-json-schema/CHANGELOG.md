@@ -1,10 +1,19 @@
 # Changelog
+## [0.0.10] - 2026-07-21
+
+### Changed
+
+- Released with exact 0.0.10 graph.
+
+### Changed
+
+- Released with exact 0.0.10 graph.
+
 ## [0.0.96] - 2026-07-21
 
 ### Changed
 
 - Released with exact 0.0.96 graph.
-
 
 ## [0.0.9] - 2026-07-21
 
@@ -25,7 +34,6 @@
 ## [0.0.5] - 2026-07-16
 
 - Pinned the required `@arnilo/prism` peer and package metadata to 0.0.5; runtime behavior is unchanged.
-
 
 ## [0.0.4] - 2026-07-14
 

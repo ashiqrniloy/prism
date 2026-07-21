@@ -6,6 +6,10 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.10 reproducible workspace-mode evidence
+
+Run `node scripts/benchmark-0.0.10.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.10.test.mjs`. Default mode is network-free: host-composition write/read/list plus sandbox-fake composition write/read/list/search (in-memory `DisposableSandbox`). Emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) appends real local Docker composition rows. Unified workspace mode reuses existing sandbox/repo hard caps and adds no unbounded host↔container sync. These are evidence fields, not CI timing gates.
+
 ## Release 0.0.9 reproducible coding/browser evidence
 
 Run `node scripts/benchmark-0.0.9.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.9.test.mjs`. Default mode is network-free fake/in-process only and emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals for repository list/search, Git status, and browser open/snapshot/action/close. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) and `PRISM_BENCH_PLAYWRIGHT=1` append real local Docker / protected Playwright rows. These are evidence fields, not CI timing gates.

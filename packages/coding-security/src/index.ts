@@ -23,10 +23,29 @@ export type {
   SandboxStatusState,
 } from "./sandbox.js";
 export {
+  createSandboxCodingComposition,
+  createSandboxReadOnlyComposition,
   createSandboxCodingTools,
   createSandboxReadOnlyTools,
+  SandboxCodingCompositionError,
 } from "./sandbox-coding-operations.js";
-export type { SandboxCodingToolsOptions } from "./sandbox-coding-operations.js";
+export type {
+  SandboxCodingToolsOptions,
+  SandboxCodingComposition,
+  SandboxCodingCompositionResult,
+  WorkspaceMode,
+} from "./sandbox-coding-operations.js";
+export {
+  assertSandboxPath,
+  createSandboxFilesystemOperations,
+  createSandboxRepositoryOperations,
+  SandboxFsError,
+  SANDBOX_FS_SCRIPTS,
+} from "./sandbox-fs-operations.js";
+export type {
+  SandboxFsOperationsOptions,
+  SandboxRepositoryOperationsOptions,
+} from "./sandbox-fs-operations.js";
 export {
   createDockerSandbox,
   DockerSandboxError,

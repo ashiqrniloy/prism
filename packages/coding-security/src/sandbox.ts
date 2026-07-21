@@ -30,6 +30,10 @@ export interface SandboxStatus {
   readonly startedAt: number;
   readonly lastActivityAt: number;
   readonly commandCount: number;
+  /** Content identity of the imported workspace tree (when import ran). */
+  readonly importIdentity?: SandboxExportMetadata;
+  /** Content identity of the last successful close export (resume check). */
+  readonly lastExportIdentity?: SandboxExportMetadata;
 }
 
 export interface SandboxExportMetadata {
@@ -61,6 +65,10 @@ export interface SandboxAdapter {
  */
 export interface DisposableSandbox extends SandboxAdapter {
   readonly id: string;
+  /** Present after workspace import; content hash only (no secrets). */
+  readonly importIdentity?: SandboxExportMetadata;
+  /** Present after a successful `close({ export })`; use for resume hash checks. */
+  readonly lastExportIdentity?: SandboxExportMetadata;
   execFile(request: SandboxExecFileRequest): Promise<{ exitCode: number | null }>;
   status(): Promise<SandboxStatus>;
   stop(options?: { graceMs?: number; signal?: AbortSignal }): Promise<void>;

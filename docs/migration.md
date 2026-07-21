@@ -7,6 +7,42 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.9 / 0.0.96 → 0.0.10 coding workspace modes (breaking composition)
+
+`@arnilo/prism-coding-security` composition now requires explicit `workspaceMode: "host" | "sandbox"`. Missing mode throws at construction. The `0.0.9` default that wired sandbox shell while keeping read/write/edit/list/search on the host cwd is **superseded** and fail-closed.
+
+| Before (0.0.9) | After (0.0.10) |
+| --- | --- |
+| `createSandboxCodingTools(cwd, { sandbox })` — shell in sandbox, FS on host | Must pass `workspaceMode`. Prefer `createSandboxCodingComposition(...)`. |
+| Silent split-brain treated as normal | Throws unless `allowMixedWorkspaceWiring: true` (warnings; `containmentClaim: false`). |
+| No containment metadata | `composition.containmentClaim` / `warnings` / optional `treeIdentity`. Host mode never claims containment. |
+
+```ts
+// Contained: one disposable tree
+const { tools, composition } = createSandboxCodingComposition(sourceRoot, {
+  workspaceMode: "sandbox",
+  sandbox, // DisposableSandbox auto-wires FS backends
+});
+
+// Explicit host (non-contained)
+createSandboxCodingTools(cwd, { workspaceMode: "host" });
+
+// Escape hatch (documented split; no containment claim)
+createSandboxCodingTools(cwd, {
+  workspaceMode: "sandbox",
+  sandbox,
+  allowMixedWorkspaceWiring: true,
+});
+
+// Same-tree Git
+createGitTools(composition.workspaceRoot, {
+  execFile: sandbox.execFile.bind(sandbox),
+  commitIdentity: { name: "bot", email: "bot@example.com" },
+});
+```
+
+Docker defaults unchanged: digest-pinned image, non-root user, network none, absolute Docker CLI, no host-env inheritance. Unified mode adds no unbounded sync; caps stay in `sandbox-limits.ts` / coding-agent limits. Benchmark evidence: `scripts/benchmark-0.0.10.mjs`.
+
 ## 0.0.8 → 0.0.9 release overview
 
 All 32 first-party manifests and exact internal ranges move together to `0.0.9`; mixed first-party versions are unsupported. Core remains dependency-free at runtime and existing low-level agent/session APIs remain compatible. New coding sandbox, repository/Git, durable coding-plan, and browser surfaces are opt-in. `@arnilo/prism-browser` is included by `@arnilo/prism-all` but not by `@arnilo/prism-code` — install it explicitly when interactive browser automation is required. Office execution remains outside Prism packaging (host-selected skills/instructions only). No tag or publication is automatic from this migration.
@@ -29,7 +65,7 @@ Tool-call deltas missing `id` and/or `name` at stream end no longer throw a bare
 
 ## 0.0.9 coding-agent repository list/search (additive behavior change)
 
-`@arnilo/prism-coding-agent` adds native `repo_list` / `repo_search` tools. `createCodingTools()` / `createAllTools()` now return six tools. **`createReadOnlyTools()` deliberately expands from `[read]` to `[read, repo_list, repo_search]`** — update hosts that asserted the previous read-only membership. Prefer `createSandboxCodingTools(cwd, { sandbox, repository })` from `@arnilo/prism-coding-security` when shell must run inside a sandbox adapter while list/search inspect a host workspace path.
+`@arnilo/prism-coding-agent` adds native `repo_list` / `repo_search` tools. `createCodingTools()` / `createAllTools()` now return six tools. **`createReadOnlyTools()` deliberately expands from `[read]` to `[read, repo_list, repo_search]`** — update hosts that asserted the previous read-only membership. Prefer `createSandboxCodingComposition(cwd, { workspaceMode, sandbox, repository })` (or the tools-only wrappers) from `@arnilo/prism-coding-security`. Pass required `workspaceMode`; sandbox mode keeps shell and FS/list/search on one disposable tree. The 0.0.9 split (sandbox shell + host FS) is superseded — see **0.0.9 / 0.0.96 → 0.0.10 coding workspace modes** above.
 
 Opt-in structured Git/check tools are available via `createGitTools(cwd, { commitIdentity, checks? })` and are **not** added to `createCodingTools()`/`createAllTools()`. Commits require an explicit host `commitIdentity`; PR handoff returns bounded metadata/artifacts only and never pushes.
 

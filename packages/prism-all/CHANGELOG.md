@@ -1,12 +1,15 @@
 # Changelog
+## [0.0.10] - 2026-07-21
+
+### Changed
+
+- Released with exact 0.0.10 graph.
+
 ## [0.0.96] - 2026-07-21
 
 ### Changed
 
 - Released with exact 0.0.96 graph.
-
-
-## Unreleased
 
 ## [0.0.9] - 2026-07-21
 
@@ -16,7 +19,6 @@
 ## [0.0.8] - 2026-07-20
 
 - Added optional `@arnilo/prism-web-tools` to complete umbrella profile.
-
 
 ## [0.0.7] - 2026-07-19
 
@@ -29,7 +31,6 @@
 ## [0.0.5] - 2026-07-16
 
 - Completed the umbrella graph: installs evals, AI SDK interoperability, memory, RAG, server, and supervisor/A2A alongside existing profiles and persistence adapters; installation remains inert.
-
 
 ## [0.0.4] - 2026-07-14
 

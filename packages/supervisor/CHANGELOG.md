@@ -1,12 +1,15 @@
 # Changelog
+## [0.0.10] - 2026-07-21
+
+### Changed
+
+- Released with exact 0.0.10 graph.
+
 ## [0.0.96] - 2026-07-21
 
 ### Changed
 
 - Released with exact 0.0.96 graph.
-
-
-## Unreleased
 
 ## [0.0.9] - 2026-07-21
 
@@ -29,7 +32,6 @@
 ## [0.0.5] - 2026-07-16
 
 - Added optional bounded child delegation and A2A 1.0 card/server/client interoperability.
-
 
 ## [0.0.4] - 2026-07-14
 
