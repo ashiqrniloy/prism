@@ -128,7 +128,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     const pool = createPool();
     const first = await createPostgresPersistence({ pool, schema });
     const firstMigrations = await first.queryMigrations({});
-    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback"]);
+    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback", "004_session_search"]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
     const secondMigrations = await reopened.queryMigrations({});
@@ -232,7 +232,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     ]);
     const persistence = await createPostgresPersistence({ pool, schema });
     const migrations = await persistence.queryMigrations({});
-    assert.equal(migrations.items.length, 3);
+    assert.equal(migrations.items.length, 4);
     await persistence.close();
   });
 });
