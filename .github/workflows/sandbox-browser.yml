@@ -29,10 +29,12 @@ jobs:
         run: npm ci
       - name: build coding/browser packages
         run: |
+          npm run build:core
+          npm run build -w @arnilo/prism-evals
+          npm run build -w @arnilo/prism-workflows
           npm run build -w @arnilo/prism-coding-agent
           npm run build -w @arnilo/prism-coding-security
           npm run build -w @arnilo/prism-browser
-          npm run build -w @arnilo/prism-evals
       - name: network-free adversarial eval fixtures
         run: |
           npm test -w @arnilo/prism-coding-agent -- --test-name-pattern "adversarial"
