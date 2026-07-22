@@ -128,8 +128,18 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       activeRuns.set(session.id, { requestId: request.id, promise });
       break;
     }
-    case "steer":
-      throw new Error("steer is not supported by the current AgentSession runtime");
+    case "steer": {
+      const input = stringParam(request.params, "input") ?? stringParam(request.params, "prompt");
+      if (!input) throw new Error("steer requires params.input");
+      const softInterrupt = request.params?.softInterrupt === true;
+      state.current.steer(input, softInterrupt ? { softInterrupt: true } : undefined);
+      write(stdout, {
+        id: request.id,
+        ok: true,
+        result: { sessionId: state.current.id },
+      });
+      break;
+    }
     case "abort":
       state.current.abort(stringParam(request.params, "reason"));
       write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id } });

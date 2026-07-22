@@ -4,7 +4,7 @@
 
 The optional `@arnilo/prism-session-store-postgres` package ships a production-oriented PostgreSQL adapter that implements:
 
-- `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath`
+- `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath` / bounded `searchSessions` / bounded `searchSessions`
 - `RunLedger` — durable run, event, tool-call, and usage rows
 - `ProductionPersistenceStore` — cursor-paginated `query*` reads plus generic `checkpoints` and atomic `leases` capabilities
 
@@ -59,7 +59,7 @@ Hosts own TLS (`ssl` in `poolConfig`), credentials, connection limits, and backu
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Ends the pool when the adapter created it from `connectionString`. |
 
-Migrations run automatically on open and are idempotent across reopen. Concurrent setup uses per-schema advisory transaction locks. While holding that lock, startup verifies ordered contract name/version/SHA-256 rows and full schema-v3 `information_schema`/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
+Migrations run automatically on open and are idempotent across reopen. Concurrent setup uses per-schema advisory transaction locks. While holding that lock, startup verifies ordered contract name/version/SHA-256 rows and full schema-v4 `information_schema`/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
 
 ## Request/response example
 
@@ -116,7 +116,7 @@ PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnil
 - The package is optional and workspace-local; `@arnilo/prism` core has no PostgreSQL dependency.
 - Schema names must match `^[a-zA-Z_][a-zA-Z0-9_]*$`; the adapter quotes them and never interpolates user values into identifier positions.
 - `SessionAppendOptions` idempotency rows are durable in `prism_session_append_idempotency` and survive reopen.
-- Schema version **3** applies `001_init`, additive `002_usage_scope`, and `003_run_feedback`. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. SQLite shares the same model with dialect-local DDL.
+- Schema version **4** applies `001_init`, `002_usage_scope`, `003_run_feedback`, and `004_session_search`. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (Postgres `tsvector` FTS table dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. SQLite shares the same model with dialect-local DDL.
 - Pass an existing `pg` `Pool` when your host already manages pooling, TLS, and credential rotation.
 
 ## Security and performance notes

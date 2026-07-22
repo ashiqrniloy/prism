@@ -47,6 +47,7 @@ node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL
 node examples/workflow-distributed-coordinator.ts
 node examples/workflow-schedules-replay.ts
 node examples/durable-coding-workflow.ts
+node examples/coding-goal-verify.ts
 node examples/agent-durable-approval.ts
 node examples/secure-agent.ts
 ```
@@ -119,6 +120,7 @@ Each demo prints a single JSON line with its result.
 - `workflow-distributed-coordinator.ts` — **demo**: two coordinator instances over independent SQLite handles atomically claim one queued run using durable leases and fencing.
 - `workflow-schedules-replay.ts` — **demo**: ownership-scoped one-time schedule → existing coordinator background run → nested shared-state workflow → immutable-lineage replay.
 - `durable-coding-workflow.ts` — **demo**: durable coding plan/todos as workspace Markdown, workflow `state.coding` checkpoint metadata, approval suspend/resume with fingerprint/hash revalidation, background cancel, and host-owned PR handoff (no network).
+- `coding-goal-verify.ts` — **demo**: `runCodingGoalVerify` thin goal→verify helper (failing check → suspend → approve → bounded handoff; no Goal table / network).
 - `tsconfig.json` — typecheck-only config.
 
 **demo** = the file has a runnable `main()`; the others are compile-checked

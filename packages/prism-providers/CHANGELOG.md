@@ -1,4 +1,14 @@
 # Changelog
+## [0.0.11] - 2026-07-22
+
+### Added
+
+- Umbrella now installs `@arnilo/prism-provider-anthropic` and `@arnilo/prism-provider-google` (nine first-party provider packages).
+
+### Changed
+
+- Released with exact 0.0.11 graph.
+
 ## [0.0.10] - 2026-07-21
 
 ### Changed

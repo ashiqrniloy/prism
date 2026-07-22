@@ -2,7 +2,7 @@
 
 ## What it does
 
-Agent loops make the agent's per-run turn-control flow a replaceable strategy without forking the runtime. The runtime owns provider calls, retry, abort, store appends, redaction, and event emission; a loop only orchestrates those shared primitives through a `LoopContext`. The default `singleShotLoop` is the former inline turn loop extracted verbatim — assemble → generate → append assistant message → optional tool dispatch → next turn. `generateValidateReviseLoop` is the first alternative loop: generate → parse → validate → revise up to a budget.
+Agent loops make the agent's per-run turn-control flow a replaceable strategy without forking the runtime. The runtime owns provider calls, retry, abort, store appends, redaction, and event emission; a loop only orchestrates those shared primitives through a `LoopContext`. The default `singleShotLoop` is the former inline turn loop extracted verbatim — optional drain pending steers → assemble → generate → append assistant message → optional tool dispatch → next turn (continue while steers remain even if the provider returned no tool calls). `generateValidateReviseLoop` is the first alternative loop: generate → parse → validate → revise up to a budget.
 
 Loops are opt-in. When no `loop` is configured, the runtime runs `singleShotLoop` and behavior is bit-for-bit with the pre-loop runtime.
 
@@ -58,6 +58,7 @@ await session.run(input, {
     repairer: hostRepairer,  // optional; default stringifies validation.errors[].message
     maxRevisions: 3,         // optional; default 3
     toolCalls: "bounded",    // optional; default "disabled"; uses limits.maxToolRounds
+    structuredOutputTiming: "final-turn-only", // optional; default "every-turn"
   },
 });
 
@@ -82,6 +83,10 @@ type AgentLoopOptions =
       readonly maxRevisions?: number;
       /** Default "disabled". "bounded" dispatches sequentially up to limits.maxToolRounds. */
       readonly toolCalls?: "disabled" | "bounded";
+      readonly structuredOutput?: StructuredOutputOptions;
+      readonly structuredOutputMode?: "native" | "artifact-loop";
+      /** Default "every-turn". "final-turn-only" omits schema while tools may run. */
+      readonly structuredOutputTiming?: "every-turn" | "final-turn-only";
     };
 ```
 
@@ -95,6 +100,8 @@ Host callback contracts (all generic over host `T`):
 | `ArtifactValidation` | `{ ok: boolean; errors?: readonly { path?: string; message: string }[]; metadata?: ... }`. |
 | `ArtifactContext` | `{ sessionId, runId, turn, signal, metadata }` — passed to every callback. |
 | `ArtifactParseResult<T>` | `{ ok: boolean; value?: T; error?: string }`. |
+
+Optional steer hooks on `LoopContext` (0.0.11): `hasPendingSteers?()` / `applyPendingSteers?()`. Hosts/custom loops that omit them keep pre-steer behavior; built-in loops drain at turn start.
 
 `LoopContext` (what the runtime builds for the loop each run):
 

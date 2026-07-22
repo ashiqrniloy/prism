@@ -4,7 +4,7 @@
 
 The optional `@arnilo/prism-session-store-sqlite` package ships a production-oriented SQLite adapter that implements:
 
-- `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath`
+- `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath` / bounded `searchSessions` / bounded `searchSessions`
 - `RunLedger` — durable run, event, tool-call, and usage rows
 - `ProductionPersistenceStore` — cursor-paginated `query*` reads plus generic `checkpoints` and atomic `leases` capabilities
 
@@ -56,7 +56,7 @@ import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Closes the underlying database when the adapter opened it. |
 
-Migrations run automatically on open and are idempotent across reopen. Under the SQLite migration transaction, startup checks ordered contract name/version/SHA-256 rows plus full schema-v3 PRAGMA/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
+Migrations run automatically on open and are idempotent across reopen. Under the SQLite migration transaction, startup checks ordered contract name/version/SHA-256 rows plus full schema-v4 PRAGMA/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
 
 ## Request/response example
 
@@ -99,7 +99,7 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - The package is optional and workspace-local; `@arnilo/prism` core has no SQLite dependency.
 - Hosts choose the database path and own backup, retention enforcement, and filesystem permissions.
 - `SessionAppendOptions` idempotency rows are durable in `prism_session_append_idempotency` and survive reopen.
-- Schema version **3** applies `001_init`, additive `002_usage_scope`, and `003_run_feedback`. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. PostgreSQL shares the same model with dialect-local DDL.
+- Schema version **4** applies `001_init`, `002_usage_scope`, `003_run_feedback`, and `004_session_search`. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (FTS5 virtual table `prism_session_search_fts` dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. PostgreSQL shares the same model with dialect-local DDL.
 - Pass an existing `better-sqlite3` `Database` via `database` when your host already manages connections.
 
 ## Security and performance notes

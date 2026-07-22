@@ -563,6 +563,126 @@ describe("agent session runtime", () => {
     await first;
   });
 
+  it("steer without active run fails closed", () => {
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerDone()]),
+    }).createSession();
+    assert.throws(() => session.steer("later"), /no active run/);
+  });
+
+  it("steer between tool rounds injects user message before next provider turn", async () => {
+    const requests: ProviderRequest[] = [];
+    let toolStarted!: () => void;
+    const toolGate = new Promise<void>((resolve) => { toolStarted = resolve; });
+    let releaseTool!: () => void;
+    const toolHold = new Promise<void>((resolve) => { releaseTool = resolve; });
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        requests.push(request);
+        if (requests.length === 1) {
+          yield { type: "tool_call", call: toolCallContent("call_1", "hold", {}) };
+          yield providerDone();
+          return;
+        }
+        yield providerTextDelta("after-steer");
+        yield providerDone();
+      },
+    };
+    const tools: ToolDefinition[] = [{
+      name: "hold",
+      async execute() {
+        toolStarted();
+        await toolHold;
+        return { toolCallId: "call_1", name: "hold", value: { ok: true } };
+      },
+    }];
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools }).createSession({ id: "steer-turn" });
+    const reader = collect(session.subscribe());
+    const run = session.run("Hi", { maxToolRounds: 2 });
+    await toolGate;
+    session.steer("Prefer SQLite");
+    releaseTool();
+    const result = await run;
+    const events = await reader;
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.runId, events.find((e) => e.type === "agent_started")?.runId);
+    assert.equal(requests.length, 2);
+    const steered = requests[1]!.messages.some((message) =>
+      message.role === "user" && message.content.some((block) => block.type === "text" && block.text.includes("Prefer SQLite")),
+    );
+    assert.equal(steered, true);
+    assert.equal(events.some((e) => e.type === "queue_updated" && e.size >= 1), true);
+    const entries = await session.entries();
+    assert.equal(entries.some((entry) => entry.message?.role === "user" && entry.message.content.some((b) => b.type === "text" && b.text.includes("Prefer SQLite"))), true);
+  });
+
+  it("softInterrupt aborts provider stream then continues same runId", async () => {
+    const requests: ProviderRequest[] = [];
+    let firstSignal!: AbortSignal;
+    let seenFirst!: () => void;
+    const firstReady = new Promise<void>((resolve) => { seenFirst = resolve; });
+    const provider: AIProvider = {
+      id: "blocking",
+      async *generate(request) {
+        requests.push(request);
+        if (requests.length === 1) {
+          firstSignal = request.signal!;
+          yield providerTextDelta("working");
+          seenFirst();
+          while (!request.signal?.aborted) {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+          }
+          throw request.signal!.reason;
+        }
+        yield providerTextDelta("steered-ok");
+        yield providerDone();
+      },
+    };
+    const session = createAgent({ model: { provider: "blocking", model: "demo" }, provider }).createSession({ id: "steer-soft" });
+    const reader = collect(session.subscribe());
+    const run = session.run("Hi");
+    await firstReady;
+    session.steer("Stop editing auth; fix tests first", { softInterrupt: true });
+    const result = await run;
+    const events = await reader;
+    assert.equal(result.status, "succeeded");
+    assert.equal(firstSignal.aborted, true);
+    assert.equal(requests.length, 2);
+    assert.equal(result.runId, events.find((e) => e.type === "agent_started")?.runId);
+    assert.equal(
+      requests[1]!.messages.some((message) =>
+        message.role === "user" && message.content.some((block) => block.type === "text" && block.text.includes("fix tests first")),
+      ),
+      true,
+    );
+    assert.equal(events.some((e) => e.type === "message_delta" && e.content.type === "text" && e.content.text === "steered-ok"), true);
+  });
+
+  it("steer queue overflow fails closed", async () => {
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    let seen!: () => void;
+    const ready = new Promise<void>((resolve) => { seen = resolve; });
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        seen();
+        await blocked;
+        if (request.signal?.aborted) throw request.signal.reason;
+        yield providerDone();
+      },
+    };
+    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession();
+    const run = session.run("one");
+    await ready;
+    for (let i = 0; i < 8; i += 1) session.steer(`msg-${i}`);
+    assert.throws(() => session.steer("overflow"), /max pending messages/);
+    release();
+    await run;
+  });
+
   it("emits error for provider error", async () => {
     const provider: AIProvider = { id: "mock", async *generate() {
       yield { type: "error", error: { name: "ProviderError", message: "provider failed" } };

@@ -5,6 +5,10 @@ import {
   requireRunFeedbackOwnership,
   runFeedbackPageLimit,
   RunFeedbackError,
+  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
+  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  resolveSessionSearchQuery,
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
@@ -26,6 +30,8 @@ import {
   type SessionEntry,
   type SessionEntryQuery,
   type SessionQuery,
+  type SessionSearchHit,
+  type SessionSearchQuery,
   type SessionStore,
   type ToolCallQuery,
   type ToolCallRecord,
@@ -101,6 +107,7 @@ export async function createPostgresPersistence(
   const toolCalls = qualifyTable(schema, "prism_tool_calls");
   const usage = qualifyTable(schema, "prism_usage");
   const feedbackTable = qualifyTable(schema, "prism_run_feedback");
+  const searchTable = qualifyTable(schema, "prism_session_search");
 
   if (!options.skipMigrations) {
     await applyPostgresMigrations(pool, schema);
@@ -255,6 +262,16 @@ export async function createPostgresPersistence(
             row.data,
             row.metadata,
           ],
+        );
+        const search = entrySearchFields(entry);
+        await client.query(
+          `INSERT INTO ${searchTable} (entry_id, session_id, label, summary, body)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (entry_id) DO UPDATE SET
+             label = EXCLUDED.label,
+             summary = EXCLUDED.summary,
+             body = EXCLUDED.body`,
+          [row.id, row.session_id, search.label, search.summary, search.body],
         );
 
         if (appendOptions?.idempotencyKey) {
@@ -455,6 +472,15 @@ export async function createPostgresPersistence(
 
     async querySessions(query: SessionQuery) {
       return queryTable(pool, qualifyTable(schema, "prism_sessions"), query, [], mapSessionRow);
+    },
+
+    async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {
+      return searchPostgresSessions(pool, {
+        sessions,
+        entries,
+        runs,
+        searchTable,
+      }, query);
     },
 
     async queryBranches(query: BranchQuery) {
@@ -725,6 +751,159 @@ async function findLatestLeafId(pool: Pool, entriesTable: string, sessionId: str
     [sessionId],
   );
   return result.rows[0]?.id as string | undefined;
+}
+
+async function searchPostgresSessions(
+  pool: Pool,
+  tables: { sessions: string; entries: string; runs: string; searchTable: string },
+  query: SessionSearchQuery,
+): Promise<PersistencePage<SessionSearchHit>> {
+  const q = resolveSessionSearchQuery(query);
+  q.signal?.throwIfAborted();
+
+  const filters: string[] = [];
+  const params: unknown[] = [];
+  const add = (sql: string, value: unknown) => {
+    params.push(value);
+    filters.push(sql.replace("?", `$${params.length}`));
+  };
+
+  if (q.tenantId) add("s.tenant_id = ?", q.tenantId);
+  if (q.accountId) add("s.account_id = ?", q.accountId);
+  if (q.userId) add("s.user_id = ?", q.userId);
+  if (q.workspaceRoot) {
+    add(`s.metadata::jsonb ->> '${SESSION_SEARCH_WORKSPACE_METADATA_KEY}' = ?`, q.workspaceRoot);
+  }
+  if (q.fromUpdatedAt) add("s.updated_at >= ?", q.fromUpdatedAt);
+  if (q.toUpdatedAt) add("s.updated_at <= ?", q.toUpdatedAt);
+  if (q.label) {
+    add(`EXISTS (SELECT 1 FROM ${tables.entries} e WHERE e.session_id = s.id AND position(? in e.label) > 0)`, q.label);
+  }
+  if (q.summary) {
+    add(`EXISTS (SELECT 1 FROM ${tables.entries} e WHERE e.session_id = s.id AND position(? in e.summary) > 0)`, q.summary);
+  }
+  if (q.provider) {
+    add(`EXISTS (SELECT 1 FROM ${tables.runs} r WHERE r.session_id = s.id AND r.provider = ?)`, q.provider);
+  }
+  if (q.model) {
+    add(`EXISTS (SELECT 1 FROM ${tables.runs} r WHERE r.session_id = s.id AND r.model::jsonb ->> 'model' = ?)`, q.model);
+  }
+  if (q.query) {
+    params.push(q.query);
+    const ftsParam = `$${params.length}`;
+    filters.push(
+      `s.id IN (
+         SELECT session_id FROM ${tables.searchTable}
+         WHERE search_vector @@ plainto_tsquery('english', ${ftsParam})
+         LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
+       )`,
+    );
+  }
+
+  const order = q.order === "asc" ? "ASC" : "DESC";
+  if (q.cursor) {
+    const cursor = decodeEntryCursor(q.cursor);
+    params.push(cursor.timestamp, cursor.timestamp, cursor.id);
+    const a = `$${params.length - 2}`;
+    const b = `$${params.length - 1}`;
+    const c = `$${params.length}`;
+    if (order === "ASC") {
+      filters.push(`(s.updated_at > ${a} OR (s.updated_at = ${b} AND s.id > ${c}))`);
+    } else {
+      filters.push(`(s.updated_at < ${a} OR (s.updated_at = ${b} AND s.id < ${c}))`);
+    }
+  }
+
+  params.push(q.limit + 1);
+  const limitParam = `$${params.length}`;
+  const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+  const result = await pool.query(
+    `SELECT s.id AS session_id, s.updated_at, s.metadata,
+       (
+         SELECT e.label FROM ${tables.entries} e
+         WHERE e.session_id = s.id AND e.label IS NOT NULL
+         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
+       ) AS label,
+       (
+         SELECT e.summary FROM ${tables.entries} e
+         WHERE e.session_id = s.id AND e.summary IS NOT NULL
+         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
+       ) AS summary
+     FROM ${tables.sessions} s
+     ${where}
+     ORDER BY s.updated_at ${order}, s.id ${order}
+     LIMIT ${limitParam}`,
+    params,
+  );
+  q.signal?.throwIfAborted();
+
+  const rows = result.rows as Array<{
+    session_id: string;
+    updated_at: string;
+    metadata: string | null;
+    label: string | null;
+    summary: string | null;
+  }>;
+  const hasMore = rows.length > q.limit;
+  const pageRows = hasMore ? rows.slice(0, q.limit) : rows;
+  const items: SessionSearchHit[] = [];
+  for (const row of pageRows) {
+    items.push({
+      sessionId: row.session_id,
+      leafId: await findLatestLeafId(pool, tables.entries, row.session_id),
+      updatedAt: row.updated_at,
+      label: row.label ?? undefined,
+      summary: row.summary ?? undefined,
+      snippet: clipSearchSnippet(row.label ?? row.summary ?? undefined),
+      metadata: safeSearchMetadata(parseSessionMetadata(row.metadata)),
+    });
+  }
+  const last = pageRows.at(-1);
+  return {
+    items,
+    nextCursor: hasMore && last ? encodeEntryCursor(last.updated_at, last.session_id) : undefined,
+  };
+}
+
+function entrySearchFields(entry: SessionEntry): { label: string; summary: string; body: string } {
+  const texts: string[] = [];
+  for (const block of entry.message?.content ?? []) {
+    if (block.type === "text" && typeof block.text === "string") texts.push(block.text);
+  }
+  // ponytail: 64KiB body cap keeps FTS dual-write bounded; raise if hosts need longer message search.
+  return {
+    label: entry.label ?? "",
+    summary: entry.summary ?? "",
+    body: texts.join("\n").slice(0, 64 * 1024),
+  };
+}
+
+function clipSearchSnippet(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const bytes = new TextEncoder().encode(value);
+  if (bytes.byteLength <= DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES) return value;
+  return new TextDecoder().decode(bytes.slice(0, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES));
+}
+
+function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Readonly<Record<string, unknown>>
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeSearchMetadata(
+  metadata: Readonly<Record<string, unknown>> | undefined,
+): Readonly<Record<string, unknown>> | undefined {
+  if (!metadata) return undefined;
+  const workspaceRoot = metadata[SESSION_SEARCH_WORKSPACE_METADATA_KEY];
+  if (typeof workspaceRoot !== "string") return undefined;
+  return { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot };
 }
 
 function buildOwnershipFilters(

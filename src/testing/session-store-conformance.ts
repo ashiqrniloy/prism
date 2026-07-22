@@ -7,7 +7,12 @@
 // adapter authors do not re-derive them. Throws plain Error; no test runner.
 
 import type { SessionEntry, SessionStore } from "../contracts.js";
-import { isSessionAppendConflict } from "../contracts.js";
+import {
+  HARD_MAX_SESSION_SEARCH_LIMIT,
+  HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
+  isSessionAppendConflict,
+  resolveSessionSearchQuery,
+} from "../contracts.js";
 
 export interface SessionStoreConformanceOptions {
   /** Stable session id used for the conformance run; defaults to "conformance". */
@@ -20,6 +25,12 @@ export interface SessionStoreConformanceOptions {
    * when the store does not implement `readBranchPath`.
    */
   readonly exerciseReadBranchPath?: boolean;
+  /**
+   * When true, exercises optional `searchSessions` (empty page, limit cap,
+   * invalid limit/query rejection via `resolveSessionSearchQuery` semantics).
+   * Skipped when the store does not implement `searchSessions`.
+   */
+  readonly exerciseSearchSessions?: boolean;
   /** When true, appends concurrent children of the same parent (fork allowed). */
   readonly exerciseConcurrentParentAppend?: boolean;
   /**
@@ -111,6 +122,10 @@ export async function assertSessionStoreConforms(
     }
   }
 
+  if (options.exerciseSearchSessions && typeof store.searchSessions === "function") {
+    await assertSessionStoreSearchSessions(store);
+  }
+
   await assertSessionStoreBranchIsolation(store, options);
 
   if (options.exerciseConcurrentParentAppend) {
@@ -163,6 +178,59 @@ export async function runSessionStoreConformance(
     (error: unknown) => isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate === true,
     "Restarted store must still deduplicate an exact idempotency retry",
   );
+}
+
+async function assertSessionStoreSearchSessions(store: SessionStore): Promise<void> {
+  const search = store.searchSessions!;
+
+  await reject(
+    () => search({ limit: 0 }),
+    (error: unknown) => error instanceof TypeError,
+    "searchSessions must reject non-positive limit",
+  );
+  await reject(
+    () => search({ limit: Number.NaN }),
+    (error: unknown) => error instanceof TypeError,
+    "searchSessions must reject NaN limit",
+  );
+  await reject(
+    () => search({ limit: HARD_MAX_SESSION_SEARCH_LIMIT + 1 }),
+    (error: unknown) => error instanceof TypeError,
+    "searchSessions must reject oversize limit",
+  );
+  await reject(
+    () => search({ query: "x".repeat(HARD_MAX_SESSION_SEARCH_QUERY_BYTES + 1) }),
+    (error: unknown) => error instanceof TypeError,
+    "searchSessions must reject oversize query string",
+  );
+
+  const empty = await search(resolveSessionSearchQuery({
+    workspaceRoot: "__prism_conformance_empty__",
+    limit: 5,
+  }));
+  if (!Array.isArray(empty.items)) {
+    throw new Error("searchSessions must return a PersistencePage with an items array");
+  }
+
+  const resolved = resolveSessionSearchQuery({ limit: 1 });
+  const page = await search(resolved);
+  if (page.items.length > resolved.limit) {
+    throw new Error(`searchSessions must honor limit; got ${page.items.length} items for limit ${resolved.limit}`);
+  }
+  for (const hit of page.items) {
+    if (typeof hit.sessionId !== "string" || !hit.sessionId) {
+      throw new Error("searchSessions hits must include a non-empty sessionId");
+    }
+    if ("credential" in hit || "apiKey" in hit || "password" in hit) {
+      throw new Error("searchSessions hits must not include credential fields");
+    }
+  }
+
+  const unscoped = await search({ limit: 100 });
+  const owned = await search({ tenantId: "__missing_tenant__", limit: 100 });
+  if (owned.items.length > unscoped.items.length) {
+    throw new Error("searchSessions ownership filter must not return more hits than an unscoped search");
+  }
 }
 
 async function assertSessionStoreBranchIsolation(

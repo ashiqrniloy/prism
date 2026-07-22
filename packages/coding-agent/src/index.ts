@@ -116,6 +116,44 @@ export type { GitToolsOptions } from "./git-tools.js";
 export { createCodingCheckTool } from "./checks.js";
 export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js";
 
+export {
+  ASK_USER_DECISION_RATIONALE_COUNT,
+  ASK_USER_DECISION_SUSPEND_REASON,
+  ASK_USER_DECISION_TOOL_NAME,
+  DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES,
+  DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES,
+  DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES,
+  DEFAULT_MAX_ASK_USER_DECISION_OPTIONS,
+  DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES,
+  HARD_MAX_ASK_USER_DECISION_BULLET_BYTES,
+  HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES,
+  HARD_MAX_ASK_USER_DECISION_LABEL_BYTES,
+  HARD_MAX_ASK_USER_DECISION_OPTIONS,
+  HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES,
+  askUserDecisionResumeSchema,
+  createAskUserDecisionResumeValidator,
+  createAskUserDecisionTool,
+  parseAskUserDecisionArgs,
+  resolveAskUserDecisionAnswer,
+  resolveAskUserDecisionLimits,
+  suspendAskUserDecision,
+  toAskUserDecisionSuspendData,
+  validateAskUserDecisionAgentResume,
+  validateAskUserDecisionResume,
+} from "./ask-user-decision.js";
+export type {
+  AskUserDecisionAnswer,
+  AskUserDecisionHandler,
+  AskUserDecisionOption,
+  AskUserDecisionRequest,
+  AskUserDecisionSelectionMode,
+  AskUserDecisionSuspendData,
+  AskUserDecisionToolOptions,
+  ResolvedAskUserDecisionAnswer,
+  ResolvedAskUserDecisionLimits,
+  SuspendAskUserDecisionOptions,
+} from "./ask-user-decision.js";
+
 export { createDirectoryArtifactWriter, createTempArtifactWriter, sha256Hex } from "./artifacts.js";
 
 export {
@@ -149,6 +187,19 @@ export type {
   CodingTodoItem,
   ResolvedCodingCheckpointLimits,
 } from "./coding-checkpoint.js";
+
+export {
+  CODING_GOAL_VERIFY_REVISION,
+  CODING_GOAL_VERIFY_SUSPEND_REASON,
+  CODING_GOAL_VERIFY_WORKFLOW_ID,
+  CodingGoalVerifyError,
+  createCodingGoalVerifyWorkflow,
+  runCodingGoalVerify,
+} from "./goal-verify.js";
+export type {
+  CodingGoalVerifyApproval,
+  RunCodingGoalVerifyOptions,
+} from "./goal-verify.js";
 
 // --- generic primitives (re-exported for hosts that want them) ---
 
@@ -303,6 +354,8 @@ function withRepositoryDefaults(
 
 /**
  * Full coding tool set: `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`.
+ * Opt-in tools (`createGitTools`, `createAskUserDecisionTool`, `createCodingCheckTool`)
+ * stay out — hosts register them explicitly.
  */
 export function createCodingTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[] {
   const policy = options?.executionPolicy;

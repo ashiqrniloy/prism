@@ -771,6 +771,90 @@ describe("agent loop strategies", () => {
       await generateValidateReviseLoop({ validator: (value) => ({ ok: value === "" }) }).run(ctx);
       assert.equal(dispatched, 0);
     });
+
+    it("final-turn-only omits schema on tool turns and enforces schema without tools on artifact/revision", async () => {
+      const schema = { type: "object", properties: { title: { type: "string" } }, required: ["title"] };
+      const seen: Array<{ hasSchema: boolean; toolCount: number }> = [];
+      let generated = 0;
+      const ctx = stubCtx({
+        maxToolRounds: 2,
+        inputMessages: [{ role: "user", content: [{ type: "text", text: "build" }] }],
+        assemble: async () =>
+          ({
+            model: { provider: "mock", model: "demo", capabilities: { structuredOutput: "json_schema", tools: true } },
+            messages: [],
+            tools: [{ name: "read", description: "read", parameters: { type: "object" }, execute: async () => ({ toolCallId: "x", name: "read" }) }],
+            options: { structuredOutput: { name: "answer", schema, strict: true } },
+          }) as unknown as ProviderRequest,
+        generate: async (request) => {
+          generated += 1;
+          seen.push({
+            hasSchema: request.options?.structuredOutput !== undefined,
+            toolCount: request.tools?.length ?? 0,
+          });
+          if (generated === 1) {
+            const call = toolCallContent("c1", "read", {});
+            return { content: [call], calls: [call], messageId: "m1", started: true };
+          }
+          if (generated === 2) {
+            // call-free draft during tool phase → loop advances to artifact turn
+            return { content: [{ type: "text", text: "draft" }], calls: [], messageId: "m2", started: true };
+          }
+          if (generated === 3) {
+            return { content: [{ type: "text", text: "bad" }], calls: [], messageId: "m3", started: true };
+          }
+          return { content: [{ type: "text", text: "good" }], calls: [], messageId: "m4", started: true };
+        },
+        dispatchToolCall: async (call) => ({ toolCallId: call.id, name: call.name, value: "ok" }),
+        emit: () => {},
+      });
+      await generateValidateReviseLoop({
+        toolCalls: "bounded",
+        structuredOutputTiming: "final-turn-only",
+        maxRevisions: 1,
+        validator: (value) => ({ ok: value === "good", errors: [{ message: "need good" }] }),
+      }).run(ctx);
+      assert.deepEqual(seen, [
+        { hasSchema: false, toolCount: 1 }, // tool-eligible
+        { hasSchema: false, toolCount: 1 }, // still tool-eligible (call-free → promote)
+        { hasSchema: true, toolCount: 0 }, // artifact
+        { hasSchema: true, toolCount: 0 }, // revision
+      ]);
+      assert.equal(generated, 4);
+    });
+
+    it("every-turn default keeps schema on tool-eligible requests", async () => {
+      const schema = { type: "object", properties: { title: { type: "string" } }, required: ["title"] };
+      const seen: boolean[] = [];
+      let generated = 0;
+      const ctx = stubCtx({
+        maxToolRounds: 1,
+        assemble: async () =>
+          ({
+            model: { provider: "mock", model: "demo" },
+            messages: [],
+            tools: [{ name: "read", description: "read", parameters: { type: "object" }, execute: async () => ({ toolCallId: "x", name: "read" }) }],
+            options: { structuredOutput: { name: "answer", schema } },
+          }) as unknown as ProviderRequest,
+        generate: async (request) => {
+          generated += 1;
+          seen.push(request.options?.structuredOutput !== undefined);
+          if (generated === 1) {
+            const call = toolCallContent("c1", "read", {});
+            return { content: [call], calls: [call], started: true };
+          }
+          return { content: [{ type: "text", text: "done" }], calls: [], started: true };
+        },
+        dispatchToolCall: async (call) => ({ toolCallId: call.id, name: call.name }),
+        emit: () => {},
+      });
+      await generateValidateReviseLoop({
+        toolCalls: "bounded",
+        maxRevisions: 0,
+        validator: () => ({ ok: true }),
+      }).run(ctx);
+      assert.deepEqual(seen, [true, true]);
+    });
   });
 
   describe("generateValidateReviseLoop end-to-end via RuntimeAgentSession", () => {

@@ -151,6 +151,10 @@ Important request shapes:
 | `PersistenceQuery` | Common pagination controls: `cursor?`, `limit?`, `order?: "asc" \| "desc"`. |
 | `OwnershipScope` | Multi-tenant scope: `tenantId?`, `accountId?`, `userId?`. Included in records and queries. |
 | `SessionRecord` / `SessionQuery` | Stored session and query filters (parent, agent definition, retention policy, timestamps, ownership). |
+| `SessionIndex` / `SessionSearchQuery` / `SessionSearchHit` | Bounded optional session search seam (`search` / `SessionStore.searchSessions?`). Filters: workspace (`metadata.workspaceRoot`), time, provider/model, label/summary, optional FTS `query`, ownership. Hits return `sessionId` + optional `leafId` for resume; never credentials. Caps via `resolveSessionSearchQuery` / `DEFAULT_*` / `HARD_MAX_*` session-search constants. |
+| `contextBudget` / `getContextBudgetReport` / `ContextBudgetError` | Opt-in assembler budget on `AssembleProviderInputOptions`; deterministic eviction; omission report in `ProviderRequest.metadata` (kinds/ids/sizes only). |
+| `AgentSession.steer` / `SteerOptions` / pending-steer caps | Mid-run enqueue into active run; optional `softInterrupt`; default 8 msgs / 64 KiB UTF-8. |
+| `SessionSearchUnsupportedError` / `sessionSearchMode` | Memory opt-out + JSONL; typed throw (not empty success). |
 | `BranchRecord` / `BranchQuery` | Branch handle/leaf pointer and query filters (session, name, parent branch, leaf presence). |
 | `SessionEntryQuery` | Paginated entry filters: `sessionId`, `runId`, `parentId`, `leafId`, `kind`, timestamp range, ownership. |
 | `RunRecord` / `RunQuery` | Stored run and filters: session, branch, status, timestamps, ownership. |

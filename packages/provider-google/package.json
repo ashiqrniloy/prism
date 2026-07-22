@@ -1,0 +1,58 @@
+{
+  "name": "@arnilo/prism-provider-google",
+  "version": "0.0.11",
+  "description": "Google Gemini generateContent provider package for Prism.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "0.0.11"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../.."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/provider-google"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-google#readme",
+  "keywords": [
+    "prism",
+    "provider",
+    "google",
+    "gemini",
+    "agent",
+    "llm"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

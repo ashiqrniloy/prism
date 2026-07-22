@@ -5,7 +5,7 @@ import {
   assertAdapterSchemaMatchesModel,
   createPersistenceSchemaModel,
 } from "@arnilo/prism/testing/persistence-schema";
-import { ADAPTER_INDEX_NAMES, ADAPTER_TABLE_NAMES, buildMigration001Ddl, buildMigration002Ddl, buildMigration003Ddl } from "../ddl.js";
+import { ADAPTER_INDEX_NAMES, ADAPTER_TABLE_NAMES, buildMigration001Ddl, buildMigration002Ddl, buildMigration003Ddl, buildMigration004Ddl } from "../ddl.js";
 import {
   MIGRATION_LOCK_NAMESPACE,
   quoteIdentifier,
@@ -40,13 +40,15 @@ describe("postgres identifiers", () => {
 
 describe("postgres ddl", () => {
   it("declares every adapter table and index from the shared schema model", () => {
-    const ddl = buildMigration001Ddl("prism") + buildMigration002Ddl("prism") + buildMigration003Ddl("prism");
+    const ddl = buildMigration001Ddl("prism") + buildMigration002Ddl("prism") + buildMigration003Ddl("prism") + buildMigration004Ddl("prism");
     for (const table of ADAPTER_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"."${table}"`, "m"));
     }
     for (const index of ADAPTER_INDEX_NAMES) {
       assert.match(ddl, new RegExp(`CREATE (UNIQUE )?INDEX IF NOT EXISTS ${index}`, "m"));
     }
+    assert.match(ddl, /CREATE TABLE IF NOT EXISTS "prism"\."prism_session_search"/);
+    assert.match(ddl, /prism_sessions_updated_id_idx/);
     assertAdapterSchemaMatchesModel([...ADAPTER_TABLE_NAMES], [...ADAPTER_INDEX_NAMES], createPersistenceSchemaModel());
   });
 

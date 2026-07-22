@@ -28,7 +28,7 @@ persistence.close();
 
 The same object satisfies session/run/query contracts and exposes `persistence.checkpoints` for versioned durable state and `persistence.leases` for database-clock claims with monotonic fencing. Workflow hosts pass that capability to `createWorkflowCheckpoints({ store })`.
 
-Open validates ordered SHA-256 migration history and full schema-v3 table/column/type/null/default/key/index shape before runtime writes. Existing complete v0.0.5 rows with `checksum = NULL` are verified then backfilled in the same transaction; altered, partial, unknown, or mismatched history fails closed.
+Open validates ordered SHA-256 migration history and full schema-v4 table/column/type/null/default/key/index shape (includes `004_session_search` FTS) before runtime writes. Existing complete v0.0.5 rows with `checksum = NULL` are verified then backfilled in the same transaction; altered, partial, unknown, or mismatched history fails closed.
 
 ## Options
 

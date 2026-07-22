@@ -1,4 +1,12 @@
 # Changelog
+## [Unreleased]
+
+## [0.0.11] - 2026-07-22
+
+### Added
+
+- Bounded `SessionStore.searchSessions` with metadata filters and Postgres `tsvector` FTS (schema migration `004_session_search`).
+
 ## [0.0.10] - 2026-07-21
 
 ### Changed

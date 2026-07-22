@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-coding-agent` is an optional first-party package that provides host shell/filesystem/repository tools as Prism `ToolDefinition` objects. It ships six default coding tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search` — plus an opt-in structured Git/check set (`createGitTools`) for status/diff/branch/worktree/apply/commit/PR-handoff and named checks. Bounded coding-plan/checkpoint helpers compose ordinary workspace Markdown with workflow checkpoint state (references/hashes/summaries/fingerprints only). The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Behavior for shell/read/write/edit is a behavioral port of the pi coding agent's tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library). List/search/Git are native Prism tools with no glob/ripgrep/Git-library dependency.
+`@arnilo/prism-coding-agent` is an optional first-party package that provides host shell/filesystem/repository tools as Prism `ToolDefinition` objects. It ships six default coding tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search` — plus opt-in structured Git/check set (`createGitTools`), opt-in `createAskUserDecisionTool({ ask })`, and bounded coding-plan/checkpoint helpers. The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Hosts may register any subset, omit aggregators entirely, or mix first-party tools with host-owned `ToolDefinition`s. Behavior for shell/read/write/edit is a behavioral port of the pi coding agent's tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library). List/search/Git are native Prism tools with no glob/ripgrep/Git-library dependency.
 
 | Export | Purpose |
 | --- | --- |
@@ -17,6 +17,7 @@
 | `createAllTools(cwd, options?)` | Identical to `createCodingTools` (Git tools remain opt-in via `createGitTools`). |
 | `createGitTools(cwd, options?)` | Opt-in Git tools (`git_status`/`git_diff`/`git_branch`/`git_worktree`/`git_apply`/`git_commit`/`git_pr_handoff`) plus optional `coding_check`. |
 | `createCodingCheckTool(cwd, options)` | Named host-declared checks; model selects only a name. |
+| `createAskUserDecisionTool(options)` | Opt-in user decision tool (`ask_user_decision`); host supplies `ask` callback. Not in default aggregators. |
 | `createLocalRepositoryOperations(limits?)` | Default streaming Node filesystem backend for list/search. |
 | `createGitOperations(options)` | Typed Git operations backend (argument arrays, safe config, finite output). |
 | `buildCodingCheckpointMetadata` / `validateCodingCheckpointMetadata` / `assertCodingResumeAllowed` | Bounded durable coding-task metadata for workflow `state.coding` (no second runtime). |
@@ -228,6 +229,72 @@ const gitTools = createGitTools(workspaceRoot, {
   checks: {
     test: { file: "/usr/bin/npm", args: ["test"] },
   },
+});
+```
+
+### Ask-user decision (`createAskUserDecisionTool`)
+
+Opt-in `ask_user_decision` for ambiguous, high-impact direction choices. Model must pass a question plus 2+ options, each with **exactly 3 pros and 3 cons**. Host supplies `ask` (blocks until the user picks). Not in `createCodingTools` / `createAllTools` / `createReadOnlyTools`.
+
+| Mode | How |
+| --- | --- |
+| Single (default) | `selectionMode: "single"` → host returns `{ selectedId }` (or length-1 `selectedIds`) |
+| Multi | `selectionMode: "multiple"` → `{ selectedIds: [...] }` (non-empty, known ids) |
+| Free-text | `allowCustom: true` → host may return `{ customText }` **XOR** selection (never both) |
+| Blocking tool | `createAskUserDecisionTool({ ask })` — in-process UI callback |
+| Durable workflow | `suspendAskUserDecision(request)` + `createAskUserDecisionResumeValidator()` / `validateAskUserDecisionResume` on `resumeWorkflow` |
+| Agent durable adapter | `validateAskUserDecisionAgentResume({ request, answer })` — same validation; **no** new `AgentRunInterruption` kinds in 0.0.11 |
+
+Custom-text caps match question defaults (2 KiB / hard 8 KiB). Options default max 6 (hard 16).
+
+```ts
+import { createToolRegistry } from "@arnilo/prism";
+import {
+  createAskUserDecisionTool,
+  createCodingTools,
+  suspendAskUserDecision,
+  createAskUserDecisionResumeValidator,
+} from "@arnilo/prism-coding-agent";
+
+const tools = createToolRegistry([
+  ...createCodingTools(workspaceRoot),
+  createAskUserDecisionTool({
+    ask: async ({ question, options, selectionMode, allowCustom }) =>
+      ui.ask({ question, options, selectionMode, allowCustom }),
+  }),
+]);
+
+// Workflow node:
+return suspendAskUserDecision({
+  question: "Ship sqlite or postgres?",
+  options: [/* ≥2 with 3 pros + 3 cons each */],
+  selectionMode: "single",
+  allowCustom: false,
+});
+// resumeWorkflow(..., { validateResume: createAskUserDecisionResumeValidator() })
+```
+
+### Goal → verify helper (`runCodingGoalVerify`)
+
+Thin composition over existing plan Markdown, named checks, workflow `suspend`/`resumeWorkflow`, and bounded PR handoff. **No Goal table / second runtime.** Peer `@arnilo/prism-workflows`. Example: `examples/coding-goal-verify.ts`.
+
+```ts
+import { runCodingGoalVerify } from "@arnilo/prism-coding-agent";
+
+const result = await runCodingGoalVerify({
+  goal: "Fix the flake",
+  cwd: process.cwd(),
+  taskId: "flake-1",
+  baseBranch: "main",
+  branch: "fix/flake",
+  checkNames: ["test"],
+  checkDefinitions: { test: { file: "/usr/bin/npm", args: ["test"] } },
+  runCheck: hostRunCheck,
+  buildHandoff: hostBuildHandoff,
+  approval: { validateResume: hostValidate },
+  checkpoints,
+  ownership,
+  redactor,
 });
 ```
 

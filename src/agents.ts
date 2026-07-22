@@ -36,6 +36,7 @@ import type {
   SessionStore,
   SessionBranchRead,
   Skill,
+  SteerOptions,
   SubscribeOptions,
   TextContent,
   ToolCallContent,
@@ -45,7 +46,12 @@ import type {
   Usage,
   UsageRecord,
 } from "./contracts.js";
-import { AgentRunError, AgentRunStateError } from "./contracts.js";
+import {
+  AgentRunError,
+  AgentRunStateError,
+  DEFAULT_MAX_PENDING_STEER_BYTES,
+  DEFAULT_MAX_PENDING_STEERS,
+} from "./contracts.js";
 import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
 import { createId } from "./ids.js";
 import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "./guardrails.js";
@@ -149,6 +155,11 @@ class RuntimeAgentSession implements AgentSession {
   private currentLeafId?: string;
   private history: Message[] = [];
   private activeRun?: AbortController;
+  private activeRunId?: string;
+  private activeProviderTurnAbort?: AbortController;
+  private pendingSoftInterrupt = false;
+  private pendingSteers: Message[] = [];
+  private pendingSteerBytes = 0;
   private activeRedactor?: SecretRedactor;
   private activeProvider?: AIProvider;
   private activeLedger?: RunLedger;
@@ -185,6 +196,27 @@ class RuntimeAgentSession implements AgentSession {
 
   async run(input: AgentInput, options: RunOptions = {}): Promise<AgentRunResult> {
     return this.runInternal(input, options, randomId("run"));
+  }
+
+  steer(input: AgentInput, options: SteerOptions = {}): void {
+    if (!this.activeRun || !this.activeRunId) throw new Error("Agent session has no active run to steer");
+    const messages = inputToMessages(input).map((message) => this.redact(message));
+    if (messages.length === 0) throw new Error("steer requires non-empty input");
+    let addBytes = 0;
+    for (const message of messages) addBytes += messageTextBytes(message);
+    if (this.pendingSteers.length + messages.length > DEFAULT_MAX_PENDING_STEERS) {
+      throw new Error(`steer queue exceeds max pending messages (${DEFAULT_MAX_PENDING_STEERS})`);
+    }
+    if (this.pendingSteerBytes + addBytes > DEFAULT_MAX_PENDING_STEER_BYTES) {
+      throw new Error(`steer queue exceeds max pending bytes (${DEFAULT_MAX_PENDING_STEER_BYTES})`);
+    }
+    this.pendingSteers.push(...messages);
+    this.pendingSteerBytes += addBytes;
+    this.emit({ type: "queue_updated", sessionId: this.id, runId: this.activeRunId, size: this.pendingSteers.length });
+    if (options.softInterrupt) {
+      if (this.activeProviderTurnAbort) this.activeProviderTurnAbort.abort(new SteerSoftInterrupt());
+      else this.pendingSoftInterrupt = true;
+    }
   }
 
   async resumeDurable(state: StoredAgentRunState, runState: AgentRunStateOptions, ownership?: OwnershipScope): Promise<AgentRunResult> {
@@ -239,6 +271,10 @@ class RuntimeAgentSession implements AgentSession {
     const controller = new AbortController();
     const cleanupSignal = bridgeAbort(options.signal, controller);
     this.activeRun = controller;
+    this.activeRunId = runId;
+    this.pendingSteers = [];
+    this.pendingSteerBytes = 0;
+    this.pendingSoftInterrupt = false;
     this.activeRedactor = options.redactor ?? this.agent.config.redactor;
     this.activeLedger = options.runLedger ?? this.agent.config.runLedger;
     this.activeOwnership = options.ownership ?? this.agent.config.ownership;
@@ -400,15 +436,22 @@ class RuntimeAgentSession implements AgentSession {
           assembledTurn = false;
           const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
           const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
-          return this.generateWithRetry(
-            this.redactProviderRequest(middlewareRequest),
-            runId,
-            options,
-            controller.signal,
-            policyResult.secrets,
-            this.activeLoopTurn,
-            recordProviderUsage,
-          );
+          try {
+            return await this.generateWithRetry(
+              this.redactProviderRequest(middlewareRequest),
+              runId,
+              options,
+              controller.signal,
+              policyResult.secrets,
+              this.activeLoopTurn,
+              recordProviderUsage,
+            );
+          } catch (error) {
+            if (isSteerSoftInterrupt(error)) {
+              return { content: [], calls: [], started: false, usage: undefined };
+            }
+            throw error;
+          }
         },
         isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
         dispatchToolCall: (call) => dispatchToolCall({
@@ -446,6 +489,8 @@ class RuntimeAgentSession implements AgentSession {
           validate,
         }),
         appendMessage: (message) => this.appendMessage(message, runId),
+        hasPendingSteers: () => this.pendingSteers.length > 0,
+        applyPendingSteers: () => this.applyPendingSteers(runId, metadata, controller.signal),
         emit: (event) => {
           if (event.type === "turn_started") this.activeLoopTurn = event.turn;
           if (event.type === "artifact_finished") artifactFinished = true;
@@ -521,6 +566,11 @@ class RuntimeAgentSession implements AgentSession {
       throw new AgentRunError(result, { cause: error });
     } finally {
       if (this.activeRun === controller) this.activeRun = undefined;
+      this.activeRunId = undefined;
+      this.activeProviderTurnAbort = undefined;
+      this.pendingSoftInterrupt = false;
+      this.pendingSteers = [];
+      this.pendingSteerBytes = 0;
       try {
         await this.drainLedger();
         if (this.activeLedger) {
@@ -799,7 +849,7 @@ class RuntimeAgentSession implements AgentSession {
       try {
         return await this.generateProviderTurn(request, runId, signal, secrets, turn, attempt, recordUsage);
       } catch (error) {
-        if (error instanceof GuardrailError) throw error;
+        if (error instanceof GuardrailError || isSteerSoftInterrupt(error)) throw error;
         const failure = error instanceof ProviderTurnFailure ? error : undefined;
         const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
         if (!policy || failure?.observable) throw errorFromInfo(info);
@@ -855,9 +905,18 @@ class RuntimeAgentSession implements AgentSession {
       usageRecorded = true;
       await recordUsage?.(usage, turn, attempt);
     };
+    const turnAbort = new AbortController();
+    const cleanupTurn = bridgeAbort(signal, turnAbort);
+    this.activeProviderTurnAbort = turnAbort;
+    if (this.pendingSoftInterrupt) {
+      this.pendingSoftInterrupt = false;
+      turnAbort.abort(new SteerSoftInterrupt());
+    }
+    const turnRequest = { ...request, signal: turnAbort.signal };
     try {
-      for await (const event of this.activeProvider!.generate(request)) {
-        throwIfAborted(signal);
+      throwIfAborted(turnAbort.signal);
+      for await (const event of this.activeProvider!.generate(turnRequest)) {
+        throwIfAborted(turnAbort.signal);
         this.activeLimits!.charge("maxResponseBytes", jsonBytes(event));
         if (event.type === "error") throw new ProviderTurnFailure(event.error, started);
         if (event.type === "usage") usage = event.usage;
@@ -898,7 +957,7 @@ class RuntimeAgentSession implements AgentSession {
           stage: "output",
           guardrails: this.activeGuardrails,
           value: { content, calls, messageId, started, usage },
-          context: { sessionId: this.id, runId, metadata: this.activeMetadata ?? {}, signal },
+          context: { sessionId: this.id, runId, metadata: this.activeMetadata ?? {}, signal: turnAbort.signal },
           redactor: this.activeRedactor,
           emit: (event) => this.emit(event),
         }));
@@ -915,6 +974,19 @@ class RuntimeAgentSession implements AgentSession {
       });
       return { content, calls, messageId, started, usage };
     } catch (error) {
+      if (isSteerSoftInterrupt(error) || isSteerSoftInterrupt(turnAbort.signal.reason)) {
+        await recordTurnUsage();
+        const latencyMs = Math.round(performance.now() - startedAt);
+        this.emit({
+          type: "provider_turn_finished",
+          sessionId: this.id,
+          runId,
+          turn,
+          metadata: buildMetadata({ latencyMs }),
+          usage,
+        });
+        throw new SteerSoftInterrupt();
+      }
       const latencyMs = Math.round(performance.now() - startedAt);
       const info = error instanceof ProviderTurnFailure ? redactSecrets(error.info, secrets) : errorToErrorInfo(error, secrets);
       await recordTurnUsage();
@@ -929,7 +1001,36 @@ class RuntimeAgentSession implements AgentSession {
       });
       if (error instanceof GuardrailError || error instanceof ProviderTurnFailure) throw error;
       throw new ProviderTurnFailure(info, started);
+    } finally {
+      cleanupTurn();
+      if (this.activeProviderTurnAbort === turnAbort) this.activeProviderTurnAbort = undefined;
     }
+  }
+
+  private async applyPendingSteers(
+    runId: string,
+    metadata: Readonly<Record<string, unknown>>,
+    signal: AbortSignal,
+  ): Promise<boolean> {
+    if (this.pendingSteers.length === 0) return false;
+    const drained = this.pendingSteers.splice(0);
+    this.pendingSteerBytes = 0;
+    this.emit({ type: "queue_updated", sessionId: this.id, runId, size: 0 });
+    for (const message of drained) {
+      throwIfAborted(signal);
+      const inputGuardrails = await runGuardrails({
+        stage: "input",
+        guardrails: this.activeGuardrails,
+        value: [message],
+        context: { sessionId: this.id, runId, metadata, signal },
+        redactor: this.activeRedactor,
+        emit: (event) => this.emit(event),
+      });
+      assertGuardrailsAllowed(inputGuardrails);
+      this.history.push(message);
+      await this.appendMessage(message, runId);
+    }
+    return true;
   }
 
   private async applyProviderRequestPolicies(request: ProviderRequest, runId: string, options: RunOptions, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal) {
@@ -1093,6 +1194,31 @@ function inputToMessages(input: AgentInput): Message[] {
   if (typeof input === "string") return [{ role: "user", content: [{ type: "text", text: input }] }];
   if ("role" in input) return [input];
   return [...input];
+}
+
+const steerTextEncoder = new TextEncoder();
+
+function messageTextBytes(message: Message): number {
+  let total = 0;
+  for (const block of message.content) {
+    if (block.type === "text") total += steerTextEncoder.encode(block.text).byteLength;
+  }
+  return total;
+}
+
+const STEER_SOFT_INTERRUPT_CODE = "steer_soft_interrupt";
+
+class SteerSoftInterrupt extends Error {
+  readonly code = STEER_SOFT_INTERRUPT_CODE;
+  constructor() {
+    super("Provider turn soft-interrupted by steer");
+    this.name = "SteerSoftInterrupt";
+  }
+}
+
+function isSteerSoftInterrupt(error: unknown): boolean {
+  return error instanceof SteerSoftInterrupt
+    || (typeof error === "object" && error !== null && (error as { code?: unknown }).code === STEER_SOFT_INTERRUPT_CODE);
 }
 
 function finalAssistantMessage(history: readonly Message[]): {

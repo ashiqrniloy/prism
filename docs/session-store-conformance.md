@@ -25,6 +25,8 @@ Use this helper when implementing a DB-backed `SessionStore` (for example, the r
 - session ids remain isolated (`assertSessionStoreConforms` always probes a secondary session)
 - optional concurrent fork children of the same parent succeed when `exerciseConcurrentParentAppend: true`
 - optional durable reopen/idempotency survival when `runSessionStoreConformance(..., { exerciseReopen: true })`
+- optional `searchSessions` bounds/ownership/empty-page checks when `exerciseSearchSessions: true` (`assertSessionStoreSearchSessions`)
+- optional `searchSessions` bounds/ownership/empty-page checks when `exerciseSearchSessions: true` (`assertSessionStoreSearchSessions`)
 
 ## Inputs / request
 

@@ -78,7 +78,11 @@ Provider `thinking`/`reasoning` content emitted during a turn is preserved as `t
 
 Missing providers fail closed: `run()` emits `error` and rejects before calling any provider. Provider `error` events emit session `error` and reject unless configured retry handles a transient provider-turn failure before output. Unknown tools fail closed through the tool harness and do not execute. Tool exceptions emit `tool_execution_error`, return an error `ToolResult`, and may still continue to the next provider turn.
 
-Only one `run()` may be active per session. Concurrent `run()` calls emit `error` and reject immediately; Prism does not queue them. Manual `compact()` also rejects while a run is active.
+Only one `run()` may be active per session. Concurrent `run()` / `prompt` / `followUp` calls emit `error` and reject immediately; Prism does not queue second prompts. Manual `compact()` also rejects while a run is active.
+
+### Mid-run steer (0.0.11)
+
+`session.steer(input, options?)` enqueues user text into the **same** active run (fail closed when no run). Default: inject at the next turn boundary (after tool rounds / before next provider assemble). `options.softInterrupt: true` aborts only the current provider stream, then continues the same `runId` with steered text. Pending queue caps: **8** messages / **64 KiB** UTF-8 total (`DEFAULT_MAX_PENDING_STEERS` / `DEFAULT_MAX_PENDING_STEER_BYTES`); overflow throws. Steered messages pass input guardrails + normal session append/redaction. Loops drain via optional `LoopContext.hasPendingSteers` / `applyPendingSteers`.
 
 `session.abort(reason)` aborts the active run. The abort signal is passed to input assembly, provider requests, and tool execution; if a tool/provider path aborts after a tool call, Prism does not start another provider turn.
 

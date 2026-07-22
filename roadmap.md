@@ -401,7 +401,7 @@ Updated: 2026-07-21
     - `npm run sdk:ready` passed: 1,963 tests (1,934 pass, 29 explicit live skips, 0 fail). Supply chain: audit 0 high, SBOM 186 packages/8 licenses, working-tree secrets 0/2,418, `git diff --check` clean. Packed artifacts 988,020 / 3,820,326 / 850 files; core 527,333 / 1,848,113 / 248.
     - Public-registry `release:check` found all 32 `@arnilo/*@0.0.10` versions available. `release:publish --dry-run --allow-dirty --allow-untagged` completed 32/32; no commit, tag, or publication created. Protected Docker/Playwright live gates, Node 20 CI, PostgreSQL/keychain, CodeQL/dependency review, signed tag, OIDC, and actual publication remain operator prerequisites.
 
-- [ ] Phase 6 — Release 0.0.11: coding harness fundamentals (P1)
+- [x] Phase 6 — Release 0.0.11: coding harness fundamentals (P1)
   - Acceptance Criteria:
     - Functional: a bounded `SessionIndex` / search seam lists and filters prior sessions by workspace, time range, model/provider, label/summary text, and optional full-text over message/summary content; results return `sessionId` + optional `leafId` for resume/checkout.
     - Functional: SQLite and PostgreSQL session stores implement the search seam with finite page sizes; memory store may provide a linear fallback or explicit unsupported error.
@@ -460,6 +460,12 @@ Updated: 2026-07-21
     - Docs pages to create/edit: `docs/session-stores.md`, `docs/input-and-prompt-assembly.md`, provider pages, `docs/coding-agent-tools.md`, `docs/agent-loops.md`, `docs/migration.md`, examples README.
     - `docs/index.md` update: yes; Providers, Sessions, Input/context, Coding tools.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+  - Completion Evidence (2026-07-22):
+    - Plan 074 Tasks 0–13 complete: SessionIndex/search (SQLite/Postgres FTS v4; memory linear|unsupported), `contextBudget`, `@arnilo/prism-provider-anthropic` + `@arnilo/prism-provider-google`, mid-run `steer`, coding-agent `runCodingGoalVerify` + opt-in `ask_user_decision` (multi/free-text/suspend), docs/migration, exact `0.0.11` graph (34 manifests), `scripts/benchmark-0.0.11.mjs`.
+    - `npm run sdk:ready` passed: 2,047 tests (2,014 pass, 33 explicit live skips, 0 fail). Supply chain: audit 0 high (2 moderate via MCP/`@hono/node-server`), SBOM 188 packages/8 licenses, tracked-file secrets 0/921, `git diff --check` clean. Packed artifacts 1,041,760 / 4,041,551 / 889 files; core 549,565 / 1,938,287 / 253.
+    - Public-registry `release:check` found all 34 `@arnilo/*@0.0.11` versions available. `release:publish --dry-run --allow-dirty --allow-untagged` completed 34/34; no commit, tag, or publication created. Protected Anthropic/Google live canaries, Docker/Playwright, PostgreSQL/keychain, CodeQL/dependency review, signed tag, OIDC, and actual publication remain operator prerequisites.
+
 
 - [ ] Phase 7 — Release 0.0.12: coding harness interoperability (P2)
   - Acceptance Criteria:

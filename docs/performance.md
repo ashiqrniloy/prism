@@ -6,6 +6,23 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.11 session search / context budget / steer caps
+
+Finite caps (defaults / hard) — full matrix in [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md):
+
+| Resource | Default / hard |
+| --- | --- |
+| Session search page | 20 / 100 |
+| Search query string | 4 KiB / 16 KiB |
+| Search snippet | 512 B / 4 KiB |
+| Memory linear sessions / entries / bytes | 1000/5000 · 10000/50000 · 8 MiB/64 MiB |
+| FTS candidates | 1000 / 5000 |
+| Context budget tokens / bytes | caller-set / hard 2_000_000 tokens · 32 MiB |
+| Context omission rows | 256 / 1024 |
+| Pending steers | 8 messages / 64 KiB |
+
+Run `node scripts/benchmark-0.0.11.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.11.test.mjs`. Default mode is network-free: memory-linear `searchSessions` (label + query) plus assembler `contextBudget` eviction/fit. Emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals. Search never default-scans an unbounded store; budget fails closed on mandatory prefix overflow; steer overflow fails closed. These are evidence fields, not CI timing gates.
+
 ## Release 0.0.10 reproducible workspace-mode evidence
 
 Run `node scripts/benchmark-0.0.10.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.10.test.mjs`. Default mode is network-free: host-composition write/read/list plus sandbox-fake composition write/read/list/search (in-memory `DisposableSandbox`). Emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) appends real local Docker composition rows. Unified workspace mode reuses existing sandbox/repo hard caps and adds no unbounded host↔container sync. These are evidence fields, not CI timing gates.

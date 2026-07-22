@@ -12,11 +12,14 @@ import type {
   ArtifactValidator,
   LoopContext,
   Message,
+  ProviderRequest,
+  StructuredOutputOptions,
   TextContent,
   ToolCallContent,
   ToolResult,
   Usage,
 } from "./contracts.js";
+import { artifactStructuredOutputRequest, withoutStructuredOutput } from "./structured-output.js";
 
 function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
@@ -43,6 +46,7 @@ export const singleShotLoop: AgentLoopStrategy = {
 
     for (let turn = 1; ; turn += 1) {
       throwIfAborted(ctx.signal);
+      await ctx.applyPendingSteers?.();
       ctx.emit({ type: "turn_started", sessionId: ctx.sessionId, runId: ctx.runId, turn });
       const request = await ctx.assemble(nextInput, undefined, turn);
       throwIfAborted(ctx.signal);
@@ -58,7 +62,14 @@ export const singleShotLoop: AgentLoopStrategy = {
       }
       ctx.emit({ type: "turn_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn });
 
-      if (calls.length === 0 || toolRounds >= ctx.maxToolRounds) break;
+      if (calls.length === 0 || toolRounds >= ctx.maxToolRounds) {
+        // Soft-interrupt / late steer: keep same run going when queue still has text.
+        if (await ctx.applyPendingSteers?.()) {
+          nextInput = [];
+          continue;
+        }
+        break;
+      }
       toolRounds += 1;
       await dispatchToolCallsInOrder(calls, ctx);
       nextInput = [];
@@ -87,9 +98,11 @@ export function generateValidateReviseLoop(opts: {
   readonly repairer?: ArtifactRepairer<unknown>;
   readonly maxRevisions?: number;
   readonly toolCalls?: "disabled" | "bounded";
+  readonly structuredOutputTiming?: "every-turn" | "final-turn-only";
 }): AgentLoopStrategy {
   const max = opts.maxRevisions ?? 3;
   const repairer = opts.repairer ?? defaultRepairer<unknown>();
+  const finalOnly = opts.structuredOutputTiming === "final-turn-only" && opts.toolCalls === "bounded";
   return {
     name: "generate-validate-revise",
     async run(ctx: LoopContext): Promise<Usage | undefined> {
@@ -98,11 +111,23 @@ export function generateValidateReviseLoop(opts: {
       let pendingHistory: Message[] = [];
       let toolRounds = 0;
       let attempts = 0;
+      let artifactPhase = !finalOnly;
+      let savedSchema: StructuredOutputOptions | undefined;
 
       for (let turn = 1; attempts <= max; turn += 1) {
         throwIfAborted(ctx.signal);
+        await ctx.applyPendingSteers?.();
         ctx.emit({ type: "turn_started", sessionId: ctx.sessionId, runId: ctx.runId, turn });
-        const request = await ctx.assemble(nextInput, undefined, turn);
+        let request: ProviderRequest = await ctx.assemble(nextInput, undefined, turn);
+        if (request.options?.structuredOutput) savedSchema ??= request.options.structuredOutput;
+        if (finalOnly) {
+          if (!artifactPhase && toolRounds < ctx.maxToolRounds) {
+            request = withoutStructuredOutput(request);
+          } else {
+            artifactPhase = true;
+            request = artifactStructuredOutputRequest(request, savedSchema);
+          }
+        }
         throwIfAborted(ctx.signal);
         const { content, calls, messageId, started, usage: turnUsage } = await ctx.generate(request);
         usage = turnUsage ?? usage;
@@ -128,6 +153,19 @@ export function generateValidateReviseLoop(opts: {
           }
           toolRounds += 1;
           await dispatchToolCallsInOrder(calls, { ...ctx, toolConcurrency: 1 });
+          nextInput = [];
+          continue;
+        }
+
+        // Soft-interrupt / late steer before treating empty/final output as artifact work.
+        if (await ctx.applyPendingSteers?.()) {
+          nextInput = [];
+          continue;
+        }
+
+        // Call-free during tool phase → one more turn with schema on / tools off.
+        if (finalOnly && !artifactPhase) {
+          artifactPhase = true;
           nextInput = [];
           continue;
         }
@@ -250,6 +288,7 @@ export function resolveLoop(options: { loop?: AgentLoopStrategy | AgentLoopOptio
         repairer: loop.repairer,
         maxRevisions: loop.maxRevisions,
         toolCalls: loop.toolCalls,
+        structuredOutputTiming: loop.structuredOutputTiming,
       });
     }
     throw new Error(`Unknown agent loop strategy: ${strategy}`);

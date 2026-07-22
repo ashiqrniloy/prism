@@ -43,6 +43,7 @@ describeIntegration("createPostgresPersistence integration", () => {
         exerciseReadBranchPath: true,
         exerciseConcurrentParentAppend: true,
         exerciseReopen: true,
+        exerciseSearchSessions: true,
       },
     );
   });

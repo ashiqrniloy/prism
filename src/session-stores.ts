@@ -1,6 +1,25 @@
-import { SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError } from "./contracts.js";
+import {
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
+  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  SESSION_APPEND_CONFLICT_CODE,
+  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  SessionAppendConflictError,
+  SessionSearchUnsupportedError,
+  resolveSessionSearchQuery,
+  type CompactionEntryData,
+  type Message,
+  type PersistencePage,
+  type SessionAppendOptions,
+  type SessionBranchRead,
+  type BranchReader,
+  type SessionEntry,
+  type SessionSearchHit,
+  type SessionSearchQuery,
+  type SessionStore,
+} from "./contracts.js";
 import { createId } from "./ids.js";
-import type { CompactionEntryData, Message, SessionAppendOptions, SessionBranchRead, BranchReader, SessionEntry, SessionStore } from "./contracts.js";
 
 export interface CreateSessionEntryOptions extends Omit<SessionEntry, "id" | "timestamp"> {
   readonly id?: string;
@@ -133,17 +152,28 @@ function rebuildSessionContextCore(entries: readonly SessionEntry[], options: Se
   return { leafId: branch.at(-1)?.id, entries: branch, messages, summaries };
 }
 
-export function createMemorySessionStore(initialEntries: readonly SessionEntry[] = []): SessionStore {
+export type MemorySessionSearchMode = "linear" | "unsupported";
+
+export interface CreateMemorySessionStoreOptions {
+  /** Default `"linear"`: capped in-process scan. `"unsupported"`: typed throw. */
+  readonly sessionSearchMode?: MemorySessionSearchMode;
+}
+
+export function createMemorySessionStore(
+  initialEntries: readonly SessionEntry[] = [],
+  options: CreateMemorySessionStoreOptions = {},
+): SessionStore {
   const byId = new Map<string, SessionEntry>();
   const bySession = new Map<string, SessionEntry[]>();
   const leafBySession = new Map<string, string>();
   const idempotencySeen = new Set<string>();
+  const mode = options.sessionSearchMode ?? "linear";
 
   for (const entry of initialEntries) add(entry);
 
   return {
-    async append(entry, options) {
-      add(entry, options);
+    async append(entry, appendOptions) {
+      add(entry, appendOptions);
     },
     async list(sessionId) {
       return (bySession.get(sessionId) ?? []).map(cloneEntry);
@@ -151,6 +181,10 @@ export function createMemorySessionStore(initialEntries: readonly SessionEntry[]
     async get(id) {
       const entry = byId.get(id);
       return entry ? cloneEntry(entry) : undefined;
+    },
+    async searchSessions(query) {
+      if (mode === "unsupported") throw new SessionSearchUnsupportedError();
+      return searchMemorySessionsLinear(bySession, leafBySession, query);
     },
   };
 
@@ -185,6 +219,164 @@ export function createMemorySessionStore(initialEntries: readonly SessionEntry[]
     bySession.set(entry.sessionId, entries);
     leafBySession.set(entry.sessionId, entry.id);
   }
+}
+
+function searchMemorySessionsLinear(
+  bySession: Map<string, SessionEntry[]>,
+  leafBySession: Map<string, string>,
+  query: SessionSearchQuery,
+): PersistencePage<SessionSearchHit> {
+  const q = resolveSessionSearchQuery(query);
+  q.signal?.throwIfAborted();
+
+  let sessionsScanned = 0;
+  let entriesScanned = 0;
+  let bytesScanned = 0;
+  const matches: SessionSearchHit[] = [];
+
+  for (const [sessionId, entries] of bySession) {
+    if (sessionsScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS) break;
+    if (entriesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES) break;
+    if (bytesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES) break;
+    q.signal?.throwIfAborted();
+    sessionsScanned += 1;
+
+    let updatedAt = "";
+    let label: string | undefined;
+    let summary: string | undefined;
+    let workspaceRoot: string | undefined;
+    let tenantId: string | undefined;
+    let accountId: string | undefined;
+    let userId: string | undefined;
+    let matchedLabel = false;
+    let matchedSummary = false;
+    let matchedQuery = false;
+    let matchedProvider = false;
+    let matchedModel = false;
+    let snippetSource: string | undefined;
+
+    for (const entry of entries) {
+      if (entriesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES) break;
+      if (bytesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES) break;
+      entriesScanned += 1;
+      const text = entrySearchText(entry);
+      bytesScanned += utf8Bytes(text) + utf8Bytes(entry.label) + utf8Bytes(entry.summary);
+
+      if (entry.timestamp > updatedAt) updatedAt = entry.timestamp;
+      if (entry.label) label = entry.label;
+      if (entry.summary) summary = entry.summary;
+      const meta = entry.metadata;
+      if (meta) {
+        if (typeof meta[SESSION_SEARCH_WORKSPACE_METADATA_KEY] === "string") {
+          workspaceRoot = meta[SESSION_SEARCH_WORKSPACE_METADATA_KEY] as string;
+        }
+        if (typeof meta.tenantId === "string") tenantId = meta.tenantId;
+        if (typeof meta.accountId === "string") accountId = meta.accountId;
+        if (typeof meta.userId === "string") userId = meta.userId;
+      }
+      if (q.label && entry.label?.includes(q.label)) matchedLabel = true;
+      if (q.summary && entry.summary?.includes(q.summary)) matchedSummary = true;
+      if (q.query) {
+        const hay = `${entry.label ?? ""}\n${entry.summary ?? ""}\n${text}`;
+        if (hay.includes(q.query)) {
+          matchedQuery = true;
+          snippetSource ??= entry.label ?? entry.summary ?? text;
+        }
+      }
+      if (q.provider && (entry.model?.provider === q.provider || metaProvider(entry) === q.provider)) matchedProvider = true;
+      if (q.model && entry.model?.model === q.model) matchedModel = true;
+    }
+
+    if (q.workspaceRoot && workspaceRoot !== q.workspaceRoot) continue;
+    if (q.tenantId && tenantId !== q.tenantId) continue;
+    if (q.accountId && accountId !== q.accountId) continue;
+    if (q.userId && userId !== q.userId) continue;
+    if (q.label && !matchedLabel) continue;
+    if (q.summary && !matchedSummary) continue;
+    if (q.query && !matchedQuery) continue;
+    if (q.provider && !matchedProvider) continue;
+    if (q.model && !matchedModel) continue;
+    if (q.fromUpdatedAt && updatedAt < q.fromUpdatedAt) continue;
+    if (q.toUpdatedAt && updatedAt > q.toUpdatedAt) continue;
+
+    matches.push({
+      sessionId,
+      leafId: leafBySession.get(sessionId),
+      updatedAt: updatedAt || undefined,
+      label,
+      summary,
+      snippet: clipSnippet(snippetSource ?? label ?? summary),
+      metadata: workspaceRoot !== undefined ? { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot } : undefined,
+    });
+  }
+
+  matches.sort((a, b) => compareSearchHit(a, b, q.order));
+  const afterCursor = q.cursor ? decodeSearchCursor(q.cursor) : undefined;
+  const filtered = afterCursor
+    ? matches.filter((hit) => isAfterSearchCursor(hit, afterCursor, q.order))
+    : matches;
+  const page = filtered.slice(0, q.limit);
+  const last = page.at(-1);
+  return {
+    items: page,
+    nextCursor: filtered.length > q.limit && last?.updatedAt
+      ? encodeSearchCursor(last.updatedAt, last.sessionId)
+      : undefined,
+  };
+}
+
+function entrySearchText(entry: SessionEntry): string {
+  if (!entry.message?.content) return "";
+  const parts: string[] = [];
+  for (const block of entry.message.content) {
+    if (block.type === "text" && typeof block.text === "string") parts.push(block.text);
+  }
+  return parts.join("\n");
+}
+
+function metaProvider(entry: SessionEntry): string | undefined {
+  const value = entry.metadata?.provider;
+  return typeof value === "string" ? value : undefined;
+}
+
+function utf8Bytes(value: string | undefined): number {
+  return value ? new TextEncoder().encode(value).byteLength : 0;
+}
+
+function clipSnippet(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const encoded = new TextEncoder().encode(value);
+  if (encoded.byteLength <= DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES) return value;
+  return new TextDecoder().decode(encoded.slice(0, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES));
+}
+
+function encodeSearchCursor(updatedAt: string, sessionId: string): string {
+  return `${updatedAt}\t${sessionId}`;
+}
+
+function decodeSearchCursor(cursor: string): { updatedAt: string; sessionId: string } {
+  const tab = cursor.indexOf("\t");
+  if (tab <= 0 || tab === cursor.length - 1) throw new TypeError("SessionSearchQuery.cursor is invalid");
+  return { updatedAt: cursor.slice(0, tab), sessionId: cursor.slice(tab + 1) };
+}
+
+function compareSearchHit(a: SessionSearchHit, b: SessionSearchHit, order: "asc" | "desc"): number {
+  const aAt = a.updatedAt ?? "";
+  const bAt = b.updatedAt ?? "";
+  const cmp = aAt < bAt ? -1 : aAt > bAt ? 1 : a.sessionId < b.sessionId ? -1 : a.sessionId > b.sessionId ? 1 : 0;
+  return order === "asc" ? cmp : -cmp;
+}
+
+function isAfterSearchCursor(
+  hit: SessionSearchHit,
+  cursor: { updatedAt: string; sessionId: string },
+  order: "asc" | "desc",
+): boolean {
+  const at = hit.updatedAt ?? "";
+  if (order === "asc") {
+    return at > cursor.updatedAt || (at === cursor.updatedAt && hit.sessionId > cursor.sessionId);
+  }
+  return at < cursor.updatedAt || (at === cursor.updatedAt && hit.sessionId < cursor.sessionId);
 }
 
 function cloneEntry<T>(entry: T): T {

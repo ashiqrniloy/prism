@@ -9,7 +9,7 @@ import {
   type AppliedPersistenceMigration,
   type PersistenceSchemaShape,
 } from "@arnilo/prism/testing/persistence-schema";
-import { ADAPTER_INDEX_NAMES, buildMigration001Ddl, buildMigration002Ddl, buildMigration003Ddl } from "./ddl.js";
+import { ADAPTER_INDEX_NAMES, buildMigration001Ddl, buildMigration002Ddl, buildMigration003Ddl, buildMigration004Ddl } from "./ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
 const MIGRATION_CONTRACT = createPersistenceMigrationContract();
@@ -31,6 +31,7 @@ export async function applyPostgresMigrations(pool: Pool, schema: string): Promi
       if (step.name === "001_init") await client.query(buildMigration001Ddl(schema));
       else if (step.name === "002_usage_scope") await client.query(buildMigration002Ddl(schema));
       else if (step.name === "003_run_feedback") await client.query(buildMigration003Ddl(schema));
+      else if (step.name === "004_session_search") await client.query(buildMigration004Ddl(schema));
       else throw new Error(`Unknown migration step: ${step.name}`);
       await client.query(
         `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)

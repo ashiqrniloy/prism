@@ -38,6 +38,7 @@ describe("createSqlitePersistence", () => {
         exerciseReadBranchPath: true,
         exerciseConcurrentParentAppend: true,
         exerciseReopen: true,
+        exerciseSearchSessions: true,
       },
     );
   });
@@ -102,7 +103,7 @@ describe("createSqlitePersistence", () => {
     const filename = tempDbPath("migrate");
     const first = createSqlitePersistence({ filename });
     const firstMigrations = await first.queryMigrations({});
-    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback"]);
+    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback", "004_session_search"]);
     first.close();
 
     const reopened = createSqlitePersistence({ filename });
@@ -133,7 +134,7 @@ describe("createSqlitePersistence", () => {
     db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
     db.exec("DROP INDEX prism_usage_session_scope_recorded_idx");
     assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
-    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 3);
+    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 4);
     db.close();
   });
 
@@ -264,6 +265,74 @@ describe("createSqlitePersistence", () => {
     });
     const relisted = await persistence.list(maliciousSession);
     assert.equal(relisted.length, 2);
+    persistence.close();
+  });
+
+  it("searches sessions by label, FTS message text, workspace, and ownership", async () => {
+    const filename = tempDbPath("search");
+    const persistence = createSqlitePersistence({ filename });
+    await persistence.append({
+      id: "search-root",
+      sessionId: "search-session",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      kind: "message",
+      label: "auth-flake",
+      summary: "flaky login",
+      message: { role: "user", content: [{ type: "text", text: "fix flaky auth test timeout" }] },
+    });
+    await persistence.append({
+      id: "other-root",
+      sessionId: "other-session",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      kind: "label",
+      label: "unrelated",
+    });
+    persistence.appendRun({
+      id: "search-run",
+      sessionId: "search-session",
+      startedAt: "2026-01-01T00:00:00.000Z",
+      provider: "anthropic",
+      model: { provider: "anthropic", model: "claude-sonnet" },
+    });
+
+    const db = new Database(filename);
+    db.prepare(
+      `UPDATE prism_sessions
+       SET tenant_id = ?, metadata = ?
+       WHERE id = ?`,
+    ).run("tenant-a", JSON.stringify({ workspaceRoot: "/repo" }), "search-session");
+    db.close();
+
+    const byLabel = await persistence.searchSessions!({ label: "auth-flake", limit: 10 });
+    assert.equal(byLabel.items.length, 1);
+    assert.equal(byLabel.items[0]?.sessionId, "search-session");
+    assert.equal(byLabel.items[0]?.leafId, "search-root");
+
+    const byFts = await persistence.searchSessions!({ query: "flaky auth", limit: 10 });
+    assert.ok(byFts.items.some((hit) => hit.sessionId === "search-session"));
+
+    const byWorkspace = await persistence.searchSessions!({ workspaceRoot: "/repo", limit: 10 });
+    assert.deepEqual(byWorkspace.items.map((hit) => hit.sessionId), ["search-session"]);
+    assert.equal(byWorkspace.items[0]?.metadata?.workspaceRoot, "/repo");
+
+    const byProvider = await persistence.searchSessions!({ provider: "anthropic", limit: 10 });
+    assert.ok(byProvider.items.some((hit) => hit.sessionId === "search-session"));
+
+    const owned = await persistence.searchSessions!({ tenantId: "tenant-a", limit: 10 });
+    assert.ok(owned.items.every((hit) => hit.sessionId === "search-session"));
+    const missing = await persistence.searchSessions!({ tenantId: "missing", limit: 10 });
+    assert.equal(missing.items.length, 0);
+
+    const page1 = await persistence.searchSessions!({ limit: 1, order: "asc" });
+    assert.equal(page1.items.length, 1);
+    assert.ok(page1.nextCursor);
+    const page2 = await persistence.searchSessions!({ limit: 1, order: "asc", cursor: page1.nextCursor });
+    assert.equal(page2.items.length, 1);
+    assert.notEqual(page2.items[0]?.sessionId, page1.items[0]?.sessionId);
+
+    await assert.rejects(() => persistence.searchSessions!({ limit: 0 }), TypeError);
+    await assert.rejects(() => persistence.searchSessions!({ query: "x".repeat(16 * 1024 + 1) }), TypeError);
+
     persistence.close();
   });
 });

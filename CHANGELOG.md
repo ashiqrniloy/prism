@@ -5,6 +5,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [0.0.11] - 2026-07-22
+
+### Added
+
+- Coding harness fundamentals for 0.0.11 (Plan 074): bounded `SessionIndex`/`searchSessions` (SQLite/Postgres FTS migration 004; memory linear|unsupported; JSONL unsupported), assembler `contextBudget` + omission reports, `@arnilo/prism-provider-anthropic` + `@arnilo/prism-provider-google`, mid-run `AgentSession.steer` / RPC steer, coding-agent `runCodingGoalVerify` and opt-in `ask_user_decision` (multi/free-text/durable suspend glue).
+- Opt-in `structuredOutputTiming: "final-turn-only"` on `generate-validate-revise` (default `"every-turn"`): tool-eligible turns omit native schema so models can call tools; artifact/revision turns attach schema and withdraw tools.
+
+### Changed
+
+- Versioned all 34 first-party manifests and exact internal ranges to `0.0.11` (adds `@arnilo/prism-provider-anthropic` + `@arnilo/prism-provider-google` to the publishable graph and `@arnilo/prism-providers` umbrella).
+- Network-free search/budget evidence: `scripts/benchmark-0.0.11.mjs`.
+
 ## [0.0.10] - 2026-07-21
 
 ### Changed

@@ -2,7 +2,7 @@
 
 ## What it does
 
-The optional `@arnilo/prism/node/session-store-jsonl` subpath stores `SessionEntry` records in a caller-named JSONL file: one JSON object per line.
+The optional `@arnilo/prism/node/session-store-jsonl` subpath stores `SessionEntry` records in a caller-named JSONL file: one JSON object per line. `searchSessions` is unsupported and throws `SessionSearchUnsupportedError` (use memory linear mode or a DB adapter for search).
 
 APIs:
 

@@ -24,13 +24,16 @@ import type { SessionStore, SessionEntry } from "@arnilo/prism";
 | `list(sessionId)` | Return all entries for one session in stored order. Development fallback for branch reads. |
 | `get?(id)` | Return one entry by id, if present. Optional. |
 | `readBranchPath?(query)` | Optional DB-friendly branch read. Return one branch's ancestor chain as a `PersistencePage<SessionEntry>` so the runtime can avoid `list(sessionId)`. |
+| `searchSessions?(query)` | Optional bounded session search (`SessionSearchQuery` → `PersistencePage<SessionSearchHit>`). SQLite/Postgres implement FTS + metadata filters; memory default is linear; JSONL throws `SessionSearchUnsupportedError`. |
 
 Public helpers:
 
 | Helper | Purpose |
 | --- | --- |
 | `createSessionEntry(options)` | Build a `SessionEntry` with generated `id`/`timestamp` when omitted. |
-| `createMemorySessionStore(initialEntries?)` | Built-in in-memory `SessionStore`. |
+| `createMemorySessionStore(initialEntries?, options?)` | Built-in in-memory `SessionStore`. `options.sessionSearchMode`: `"linear"` (default) or `"unsupported"` (throws `SessionSearchUnsupportedError`). |
+| `resolveSessionSearchQuery(query)` | Validate/clamp search limits (page, query bytes, snippet, cursor, linear/FTS caps). |
+| `SessionIndex` | Narrow search seam (`search(query)`); adapters may expose this instead of `SessionStore.searchSessions`. |
 | `getSessionBranchEntries(entries, options)` | Return root-to-leaf entries for a leaf id (sync array path). |
 | `getSessionBranchEntries(reader, query)` | Async overload for a `BranchReader` / `readBranchPath` implementation. |
 | `listSessionBranches(entries)` | List every branch handle as `{ leafId, entries }`. Pair with `sessionId` for a durable `(sessionId, leafId)` branch handle. |
@@ -106,6 +109,42 @@ Recognize it with `isSessionAppendConflict(error)`, not message text. Built-in s
 - `AgentSession` uses `AgentSessionConfig.store` before `AgentConfig.store`; otherwise it falls back to a private memory store.
 - Branch semantics are parent links plus a leaf id. External UIs should keep branch handles as `(sessionId, leafId)`; RPC exposes an additional `handleId` for active handles.
 - Development stores can omit `readBranchPath`; the runtime falls back to `list(sessionId)` and the pure in-memory branch walk. Database-backed stores should implement `readBranchPath` so `entries()`, `clone()`, and context rebuild read only the selected ancestor chain.
+
+## Session search (0.0.11)
+
+Bounded `SessionIndex` / `searchSessions` lists sessions by optional `workspaceRoot` (`metadata.workspaceRoot`), provider/model, label/summary, time range, ownership, and optional text `query` (FTS on SQLite/Postgres; case-sensitive substring on memory linear). Hits require `sessionId` and may include `leafId` for `checkout`; never credentials or whole transcripts.
+
+```ts
+import { createMemorySessionStore, resolveSessionSearchQuery } from "@arnilo/prism";
+
+const store = createMemorySessionStore([], { sessionSearchMode: "linear" });
+const page = await store.searchSessions!({
+  workspaceRoot: "/repo",
+  query: "flake",
+  limit: 20,
+});
+// Opt out: createMemorySessionStore([], { sessionSearchMode: "unsupported" })
+```
+
+Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md).
+
+## Session search (0.0.11)
+
+Bounded `SessionIndex` / `searchSessions` lists sessions by optional `workspaceRoot` (`metadata.workspaceRoot`), provider/model, label/summary, time range, ownership, and optional text `query` (FTS on SQLite/Postgres; case-sensitive substring on memory linear). Hits require `sessionId` and may include `leafId` for `checkout`; never credentials or whole transcripts.
+
+```ts
+import { createMemorySessionStore, resolveSessionSearchQuery } from "@arnilo/prism";
+
+const store = createMemorySessionStore([], { sessionSearchMode: "linear" });
+const page = await store.searchSessions!({
+  workspaceRoot: "/repo",
+  query: "flake",
+  limit: 20,
+});
+// Opt out: createMemorySessionStore([], { sessionSearchMode: "unsupported" })
+```
+
+Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md).
 
 ## Security and performance notes
 

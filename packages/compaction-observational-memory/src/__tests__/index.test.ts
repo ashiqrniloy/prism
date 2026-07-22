@@ -15,7 +15,7 @@ describe("observational memory package skeleton", () => {
     assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
     assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.10");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.11");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

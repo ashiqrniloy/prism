@@ -7,7 +7,7 @@ import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../contra
 // adapter authors implement and test against before shipping dialect-specific DDL.
 
 /** Current shared persistence schema version for production database adapters. */
-export const PERSISTENCE_SCHEMA_VERSION = 3;
+export const PERSISTENCE_SCHEMA_VERSION = 4;
 
 export type PersistenceTableName =
   | "prism_tenants"
@@ -411,7 +411,12 @@ function migrationStep(version: number, name: string, description: string): Pers
       }
     : version === 2
       ? { table: "prism_usage", columns: ["scope", "turn", "attempt"], indexes: ["prism_usage_session_scope_recorded_idx"] }
-      : { tables: ["prism_run_feedback"], indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name) };
+      : version === 3
+        ? { tables: ["prism_run_feedback"], indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name) }
+        : version === 4
+          // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
+          ? { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
+          : (() => { throw new Error(`Unknown migration version ${version}`); })();
   return {
     version,
     name,
@@ -429,6 +434,7 @@ export function createPersistenceMigrationContract(): PersistenceMigrationContra
       migrationStep(1, "001_init", "Create core session, branch, entry, idempotency, run, ledger, and migration tables."),
       migrationStep(2, "002_usage_scope", "Distinguish provider-turn usage from aggregate run totals."),
       migrationStep(3, "003_run_feedback", "Add immutable ownership-scoped run/trace feedback and evaluation links."),
+      migrationStep(4, "004_session_search", "Add bounded session search indexes and adapter-local FTS objects."),
     ],
     lockGuidance:
       "Acquire a dialect-specific migration lock before applying steps (PostgreSQL advisory lock; SQLite exclusive transaction). Only one process should migrate at a time.",

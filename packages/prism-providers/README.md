@@ -4,6 +4,8 @@ Umbrella package that installs all first-party **Prism provider adapters** in on
 
 ## What it installs
 
+- [`@arnilo/prism-provider-anthropic`](https://www.npmjs.com/package/@arnilo/prism-provider-anthropic) — Anthropic Messages provider
+- [`@arnilo/prism-provider-google`](https://www.npmjs.com/package/@arnilo/prism-provider-google) — Google Gemini generateContent provider
 - [`@arnilo/prism-provider-openai`](https://www.npmjs.com/package/@arnilo/prism-provider-openai) — OpenAI Responses + Codex OAuth provider
 - [`@arnilo/prism-provider-opencode-go`](https://www.npmjs.com/package/@arnilo/prism-provider-opencode-go) — OpenCode Go provider
 - [`@arnilo/prism-provider-openrouter`](https://www.npmjs.com/package/@arnilo/prism-provider-openrouter) — OpenRouter provider with per-model cache control

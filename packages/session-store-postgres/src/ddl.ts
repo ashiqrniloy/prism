@@ -295,6 +295,39 @@ CREATE INDEX IF NOT EXISTS prism_run_feedback_trace_created_idx
 `;
 }
 
+/** Adapter-local tsvector search table + session pagination index (schema v4). */
+export function buildMigration004Ddl(schema: string): string {
+  const sessions = qualifyTable(schema, "prism_sessions");
+  const entries = qualifyTable(schema, "prism_session_entries");
+  const search = qualifyTable(schema, "prism_session_search");
+  return `
+CREATE INDEX IF NOT EXISTS prism_sessions_updated_id_idx
+  ON ${sessions} (updated_at, id);
+CREATE TABLE IF NOT EXISTS ${search} (
+  entry_id TEXT NOT NULL PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  label TEXT,
+  summary TEXT,
+  body TEXT,
+  search_vector tsvector GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce(label, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(summary, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(body, '')), 'C')
+  ) STORED,
+  FOREIGN KEY (session_id) REFERENCES ${sessions}(id),
+  FOREIGN KEY (entry_id) REFERENCES ${entries}(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS prism_session_search_vector_idx
+  ON ${search} USING GIN (search_vector);
+CREATE INDEX IF NOT EXISTS prism_session_search_session_idx
+  ON ${search} (session_id);
+INSERT INTO ${search} (entry_id, session_id, label, summary, body)
+SELECT id, session_id, label, summary, message
+FROM ${entries}
+ON CONFLICT (entry_id) DO NOTHING;
+`;
+}
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",

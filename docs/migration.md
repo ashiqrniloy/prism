@@ -7,6 +7,22 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.10 → 0.0.11 coding harness fundamentals (additive)
+
+Release **0.0.11** adds SessionIndex/search, assembler `contextBudget`, native Anthropic + Google provider packages, mid-run `steer`, coding-agent goal→verify + `ask_user_decision` (multi/free-text/suspend glue). Package count: **32 → 34** (adds `@arnilo/prism-provider-anthropic`, `@arnilo/prism-provider-google`). Version bump itself is Task 13 / release gate — treat this section as the behavioral migration map.
+
+| Surface | Before (0.0.10) | After (0.0.11) |
+| --- | --- | --- |
+| Session search | No `searchSessions` / `SessionIndex` | Optional store search; SQLite/Postgres FTS migration `004_session_search` (schema **v4**); memory `sessionSearchMode: "linear" | "unsupported"` (default linear); JSONL throws `SessionSearchUnsupportedError` |
+| Context budget | Assembler has no token/byte eviction | Opt-in `contextBudget` on `assembleProviderInput`; omission report via metadata helper |
+| Providers | OpenCode Go Anthropic *route*; no first-party Google | `@arnilo/prism-provider-anthropic` (`createAnthropicProviderPackage`) + `@arnilo/prism-provider-google` (`createGoogleProviderPackage`); AI SDK remains escape hatch |
+| Mid-run input | RPC `steer` unsupported / no queue | `AgentSession.steer` + RPC `steer` (queue 8 / 64 KiB; optional softInterrupt) |
+| Coding helper | Compose manually from plan/checks/workflows | `runCodingGoalVerify` + `examples/coding-goal-verify.ts` |
+| Ask user | n/a | Opt-in `createAskUserDecisionTool`; durable `suspendAskUserDecision` (no new agent interruption kinds) |
+| Structured output + tools | Native schema attached every GVR provider turn | Opt-in `structuredOutputTiming: "final-turn-only"` (default `"every-turn"`): tool-eligible turns omit schema; artifact/revision turns schema-on / tools-off |
+
+**Host actions:** reopen SQLite/Postgres stores so migration 004 applies; set `metadata.workspaceRoot` when filtering by workspace; wire Anthropic/Google packages explicitly; do not expect JSONL search. Benchmarks: `scripts/benchmark-0.0.11.mjs` (lands with release Task 13). See [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md).
+
 ## 0.0.9 / 0.0.96 → 0.0.10 coding workspace modes (breaking composition)
 
 `@arnilo/prism-coding-security` composition now requires explicit `workspaceMode: "host" | "sandbox"`. Missing mode throws at construction. The `0.0.9` default that wired sandbox shell while keeping read/write/edit/list/search on the host cwd is **superseded** and fail-closed.

@@ -27,6 +27,12 @@ import { assertMessagesSupportModelCapabilities } from "./content.js";
 import { loadTextResource } from "./resources.js";
 import { composeSystemPrompt } from "./system-prompts.js";
 import { runInstructionInjectors } from "./instruction-injection.js";
+import {
+  applyContextBudget,
+  CONTEXT_BUDGET_REPORT_METADATA_KEY,
+  type ContextBudget,
+  type ContextBudgetReport,
+} from "./context-budget.js";
 
 export type AgentInput = string | Message | readonly Message[];
 
@@ -91,26 +97,16 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly skills?: readonly Skill[];
   readonly tools?: readonly ToolDefinition[];
   readonly providerOptions?: ProviderRequestOptions;
+  /** Assembler-time eviction; does not delete session store history. */
+  readonly contextBudget?: ContextBudget;
 }
 
 export function createDefaultInputBuilder(): DefaultInputBuilder {
   return {
     name: "default-input",
     async build(input, context = {}) {
-      const groups = {
-        instructions: [
-          ...instructionMessages(context.systemInstructions, "System instruction"),
-          ...instructionMessages(context.developerInstructions, "Developer instruction"),
-          ...customInstructionMessages(context.instructions),
-        ],
-        summaries: summaryMessages(context.summaries),
-        history: [...(context.history ?? [])],
-        input: inputMessages(input),
-        attachments: await attachmentMessages(context),
-        toolResults: toolResultMessages(context.toolResults),
-      };
+      const groups = await buildDefaultInputMessageGroups(input, context);
       const messages = flattenInputGroups(groups, context.inputLayout ?? "legacy");
-
       return context.middleware ? context.middleware.run("input_assembly", messages) : messages;
     },
   };
@@ -158,7 +154,6 @@ export function renderPromptTemplate(template: string, variables: JsonObject, op
 }
 
 export async function assembleProviderInput(options: AssembleProviderInputOptions): Promise<ProviderRequest> {
-  const inputBuilder = options.inputBuilder ?? createDefaultInputBuilder();
   const baseContext = {
     sessionId: options.sessionId,
     runId: options.runId,
@@ -185,43 +180,102 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     ? composeSystemPrompt(injectorContribs.instructions, { base: options.systemInstructions })
     : options.systemInstructions;
   const buildContext: DefaultInputBuildContext = { ...options, ...baseContext, systemInstructions };
-  const messages = await inputBuilder.build(options.input, buildContext);
-  const context = await resolveContextProviders({
-    providers: options.contextProviders,
-    messages,
-    injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
-    middleware: options.middleware,
-    ...baseContext,
-  });
+  const layout = buildContext.inputLayout ?? "legacy";
+
+  let messages: readonly Message[];
+  let context: readonly ContextBlock[];
+  let skills = options.skills;
+  let tools = options.tools;
+  let budgetReport: ContextBudgetReport | undefined;
+
+  if (options.contextBudget) {
+    // ponytail: budget path always uses default groups so eviction kinds stay deterministic;
+    // custom inputBuilder still honored when contextBudget is absent.
+    const groups = await buildDefaultInputMessageGroups(options.input, buildContext);
+    context = await resolveContextProviders({
+      providers: options.contextProviders,
+      messages: flattenInputGroups(groups, layout),
+      injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
+      middleware: options.middleware,
+      ...baseContext,
+    });
+    const applied = applyContextBudget({
+      groups,
+      context,
+      skills: skills ?? [],
+      tools,
+      budget: options.contextBudget,
+      layout,
+    });
+    messages = flattenInputGroups(applied.groups, layout);
+    if (buildContext.middleware) messages = await buildContext.middleware.run("input_assembly", messages);
+    context = applied.context;
+    skills = applied.skills;
+    tools = applied.tools;
+    if (options.contextBudget.reportOmissions) budgetReport = applied.report;
+  } else {
+    const inputBuilder = options.inputBuilder ?? createDefaultInputBuilder();
+    messages = await inputBuilder.build(options.input, buildContext);
+    context = await resolveContextProviders({
+      providers: options.contextProviders,
+      messages,
+      injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
+      middleware: options.middleware,
+      ...baseContext,
+    });
+  }
+
   const promptBuilder = options.promptBuilder ?? createDefaultPromptBuilder();
   const promptRequest = options.middleware
     ? await options.middleware.run("prompt_build", {
       messages,
       context,
-      skills: options.skills,
-      tools: options.tools,
+      skills,
+      tools,
       metadata: options.metadata,
       signal: options.signal,
     })
     : {
       messages,
       context,
-      skills: options.skills,
-      tools: options.tools,
+      skills,
+      tools,
       metadata: options.metadata,
       signal: options.signal,
     };
-  const providerMessages = await promptBuilder.build({ ...promptRequest, tools: options.tools });
+  const providerMessages = await promptBuilder.build({ ...promptRequest, tools });
   assertMessagesSupportModelCapabilities(options.model, providerMessages);
+
+  const metadata = budgetReport
+    ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport }
+    : options.metadata;
 
   return {
     model: options.model,
     messages: providerMessages,
-    tools: options.tools,
+    tools,
     context,
     options: options.providerOptions,
-    metadata: options.metadata,
+    metadata,
     signal: options.signal,
+  };
+}
+
+async function buildDefaultInputMessageGroups(
+  input: AgentInput,
+  context: DefaultInputBuildContext,
+): Promise<DefaultInputMessageGroups> {
+  return {
+    instructions: [
+      ...instructionMessages(context.systemInstructions, "System instruction"),
+      ...instructionMessages(context.developerInstructions, "Developer instruction"),
+      ...customInstructionMessages(context.instructions),
+    ],
+    summaries: summaryMessages(context.summaries),
+    history: [...(context.history ?? [])],
+    input: inputMessages(input),
+    attachments: await attachmentMessages(context),
+    toolResults: toolResultMessages(context.toolResults),
   };
 }
 

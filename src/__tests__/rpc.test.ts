@@ -36,6 +36,28 @@ function createBlockingSession(id?: string) {
   }).createSession({ id });
 }
 
+function createSoftSteerSession(id?: string) {
+  let calls = 0;
+  return createAgent({
+    model: { provider: "soft-steer", model: "demo" },
+    provider: {
+      id: "soft-steer",
+      async *generate(request: any) {
+        calls += 1;
+        if (calls === 1) {
+          yield providerTextDelta("working");
+          while (!request.signal?.aborted) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          throw request.signal.reason;
+        }
+        yield providerTextDelta("steered");
+        yield providerDone();
+      },
+    },
+  }).createSession({ id });
+}
+
 async function run(input: string, commands: any[] = []) {
   const stdout = new MemoryWritable();
   await runRpcServer({ stdin: Readable.from(input), stdout, createSession, commands });
@@ -201,6 +223,37 @@ describe("rpc", () => {
 
     const abortResponse = lines.find((line: any) => line.id === "abort-1") as any;
     assert.ok(abortResponse && abortResponse.ok === true);
+  });
+
+  it("rpc_steer_during_active_prompt_soft_interrupts_and_followUp_still_rejects", async () => {
+    const stdout = new MemoryWritable();
+    const server = runRpcServer({
+      stdin: Readable.from([
+        JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
+        JSON.stringify({ id: "steer-1", command: "steer", params: { input: "Prefer SQLite", softInterrupt: true } }),
+        JSON.stringify({ id: "run-2", command: "followUp", params: { input: "Again" } }),
+      ].join("\n") + "\n"),
+      stdout,
+      createSession: createSoftSteerSession,
+    });
+    const lines = await server.then(() => stdout.lines());
+
+    const steerResponse = lines.find((line: any) => line.id === "steer-1") as any;
+    assert.ok(steerResponse && steerResponse.ok === true, `expected steer ok, got ${JSON.stringify(steerResponse)}`);
+
+    const followUpResponse = lines.find((line: any) => line.id === "run-2") as any;
+    assert.ok(followUpResponse && followUpResponse.ok === false);
+    assert.ok(followUpResponse?.error?.message.includes("already has an active run"));
+
+    const promptResponse = lines.find((line: any) => line.id === "run-1" && (line.ok === true || line.ok === false)) as any;
+    assert.ok(promptResponse && promptResponse.ok === true, `expected prompt success after soft steer, got ${JSON.stringify(promptResponse)}`);
+  });
+
+  it("rpc_steer_without_active_run_fails_closed", async () => {
+    const lines = await run(`${JSON.stringify({ id: "s1", command: "steer", params: { input: "nope" } })}\n`);
+    const steerResponse = lines.find((line: any) => line.id === "s1") as any;
+    assert.ok(steerResponse && steerResponse.ok === false);
+    assert.ok(steerResponse?.error?.message.includes("no active run"));
   });
 
   it("rpc_events_remain_correlated_to_prompt_request_id_after_abort", async () => {

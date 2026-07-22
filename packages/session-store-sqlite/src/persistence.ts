@@ -7,6 +7,10 @@ import {
   requireRunFeedbackOwnership,
   runFeedbackPageLimit,
   RunFeedbackError,
+  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
+  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  resolveSessionSearchQuery,
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
@@ -28,6 +32,8 @@ import {
   type SessionEntry,
   type SessionEntryQuery,
   type SessionQuery,
+  type SessionSearchHit,
+  type SessionSearchQuery,
   type SessionStore,
   type ToolCallQuery,
   type ToolCallRecord,
@@ -108,6 +114,10 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       id, session_id, parent_id, run_id, timestamp, kind, schema_version,
       message, event, model, previous_model, label, summary, data, metadata
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertSearchFts = db.prepare(
+    `INSERT INTO prism_session_search_fts(session_id, entry_id, label, summary, body)
+     VALUES (?, ?, ?, ?, ?)`,
   );
   const insertIdempotency = db.prepare(
     `INSERT INTO prism_session_append_idempotency (
@@ -274,6 +284,8 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
           row.data,
           row.metadata,
         );
+        const search = entrySearchFields(entry);
+        insertSearchFts.run(row.session_id, row.id, search.label, search.summary, search.body);
 
         if (appendOptions?.idempotencyKey) {
           insertIdempotency.run(
@@ -424,6 +436,10 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
 
     async querySessions(query: SessionQuery): Promise<PersistencePage<ReturnType<typeof rowToSessionRecord>>> {
       return queryTable(db, "prism_sessions", query, [], mapSessionRow);
+    },
+
+    async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {
+      return searchSqliteSessions(db, query);
     },
 
     async queryBranches(query: BranchQuery): Promise<PersistencePage<ReturnType<typeof rowToBranchRecord>>> {
@@ -670,6 +686,152 @@ function findLatestLeafId(db: Database.Database, sessionId: string): string | un
     )
     .get(sessionId) as { id: string } | undefined;
   return row?.id;
+}
+
+function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery): PersistencePage<SessionSearchHit> {
+  const q = resolveSessionSearchQuery(query);
+  q.signal?.throwIfAborted();
+
+  const filters: string[] = [];
+  const params: unknown[] = [];
+  if (q.tenantId) { filters.push("s.tenant_id = ?"); params.push(q.tenantId); }
+  if (q.accountId) { filters.push("s.account_id = ?"); params.push(q.accountId); }
+  if (q.userId) { filters.push("s.user_id = ?"); params.push(q.userId); }
+  if (q.workspaceRoot) {
+    filters.push(`json_extract(s.metadata, '$.${SESSION_SEARCH_WORKSPACE_METADATA_KEY}') = ?`);
+    params.push(q.workspaceRoot);
+  }
+  if (q.fromUpdatedAt) { filters.push("s.updated_at >= ?"); params.push(q.fromUpdatedAt); }
+  if (q.toUpdatedAt) { filters.push("s.updated_at <= ?"); params.push(q.toUpdatedAt); }
+  if (q.label) {
+    filters.push("EXISTS (SELECT 1 FROM prism_session_entries e WHERE e.session_id = s.id AND instr(e.label, ?) > 0)");
+    params.push(q.label);
+  }
+  if (q.summary) {
+    filters.push("EXISTS (SELECT 1 FROM prism_session_entries e WHERE e.session_id = s.id AND instr(e.summary, ?) > 0)");
+    params.push(q.summary);
+  }
+  if (q.provider) {
+    filters.push("EXISTS (SELECT 1 FROM prism_runs r WHERE r.session_id = s.id AND r.provider = ?)");
+    params.push(q.provider);
+  }
+  if (q.model) {
+    filters.push("EXISTS (SELECT 1 FROM prism_runs r WHERE r.session_id = s.id AND json_extract(r.model, '$.model') = ?)");
+    params.push(q.model);
+  }
+  if (q.query) {
+    filters.push(
+      `s.id IN (
+         SELECT session_id FROM prism_session_search_fts
+         WHERE prism_session_search_fts MATCH ?
+         LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
+       )`,
+    );
+    params.push(fts5Phrase(q.query));
+  }
+
+  const order = q.order === "asc" ? "ASC" : "DESC";
+  if (q.cursor) {
+    const cursor = decodeEntryCursor(q.cursor);
+    if (order === "ASC") {
+      filters.push("(s.updated_at > ? OR (s.updated_at = ? AND s.id > ?))");
+    } else {
+      filters.push("(s.updated_at < ? OR (s.updated_at = ? AND s.id < ?))");
+    }
+    params.push(cursor.timestamp, cursor.timestamp, cursor.id);
+  }
+
+  const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+  const rows = db.prepare(
+    `SELECT s.id AS session_id, s.updated_at, s.metadata,
+       (
+         SELECT e.label FROM prism_session_entries e
+         WHERE e.session_id = s.id AND e.label IS NOT NULL
+         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
+       ) AS label,
+       (
+         SELECT e.summary FROM prism_session_entries e
+         WHERE e.session_id = s.id AND e.summary IS NOT NULL
+         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
+       ) AS summary
+     FROM prism_sessions s
+     ${where}
+     ORDER BY s.updated_at ${order}, s.id ${order}
+     LIMIT ?`,
+  ).all(...params, q.limit + 1) as Array<{
+    session_id: string;
+    updated_at: string;
+    metadata: string | null;
+    label: string | null;
+    summary: string | null;
+  }>;
+
+  q.signal?.throwIfAborted();
+  const hasMore = rows.length > q.limit;
+  const pageRows = hasMore ? rows.slice(0, q.limit) : rows;
+  const items: SessionSearchHit[] = pageRows.map((row) => {
+    const metadata = parseSessionMetadata(row.metadata);
+    const hit: SessionSearchHit = {
+      sessionId: row.session_id,
+      leafId: findLatestLeafId(db, row.session_id),
+      updatedAt: row.updated_at,
+      label: row.label ?? undefined,
+      summary: row.summary ?? undefined,
+      snippet: clipSearchSnippet(row.label ?? row.summary ?? undefined),
+      metadata: safeSearchMetadata(metadata),
+    };
+    return hit;
+  });
+  const last = pageRows.at(-1);
+  return {
+    items,
+    nextCursor: hasMore && last ? encodeEntryCursor(last.updated_at, last.session_id) : undefined,
+  };
+}
+
+function entrySearchFields(entry: SessionEntry): { label: string; summary: string; body: string } {
+  const texts: string[] = [];
+  for (const block of entry.message?.content ?? []) {
+    if (block.type === "text" && typeof block.text === "string") texts.push(block.text);
+  }
+  // ponytail: 64KiB body cap keeps FTS dual-write bounded; raise if hosts need longer message search.
+  return {
+    label: entry.label ?? "",
+    summary: entry.summary ?? "",
+    body: texts.join("\n").slice(0, 64 * 1024),
+  };
+}
+
+function fts5Phrase(query: string): string {
+  return `"${query.replaceAll('"', '""')}"`;
+}
+
+function clipSearchSnippet(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const bytes = new TextEncoder().encode(value);
+  if (bytes.byteLength <= DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES) return value;
+  return new TextDecoder().decode(bytes.slice(0, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES));
+}
+
+function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Readonly<Record<string, unknown>>
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeSearchMetadata(
+  metadata: Readonly<Record<string, unknown>> | undefined,
+): Readonly<Record<string, unknown>> | undefined {
+  if (!metadata) return undefined;
+  const workspaceRoot = metadata[SESSION_SEARCH_WORKSPACE_METADATA_KEY];
+  if (typeof workspaceRoot !== "string") return undefined;
+  return { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot };
 }
 
 function buildOwnershipFilters(scope: { tenantId?: string; accountId?: string; userId?: string }): string[] {

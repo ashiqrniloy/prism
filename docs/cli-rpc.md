@@ -106,7 +106,7 @@ Branch-aware session commands return live handle details:
 
 `sessionId` identifies the durable session. `leafId` is the selected branch tip. `handleId` is the RPC map key used by `switchSession`; forks that share the same `sessionId` get stable ids like `session-1#2` so the parent handle is not overwritten.
 
-Invalid CLI flags return exit code `2`. Invalid JSON, missing ids, unknown RPC commands, unsupported `steer`, unknown command contributions, and runtime failures return `ok: false` response envelopes without executing unknown tools or commands.
+Invalid CLI flags return exit code `2`. Invalid JSON, missing ids, unknown RPC commands, unknown command contributions, and runtime failures return `ok: false` response envelopes without executing unknown tools or commands. `steer` with no active run (or overflow) returns `ok: false`.
 
 ## Request/response example
 
@@ -128,6 +128,7 @@ Invalid CLI flags return exit code `2`. Invalid JSON, missing ids, unknown RPC c
 - `state`, `messages`, `setModel`, `switchSession`, `forkSession`, `cloneSession`, `checkout`, and registered `command` requests are processed immediately.
 - `compact` is fail-closed: if the current session has an active run, it returns `ok: false` because the session rejects compaction during a run.
 - A second `prompt` or `followUp` for the same session while it already has an active run returns `ok: false` immediately instead of blocking the input loop.
+- `steer` enqueues mid-run user text for the active session (`params.input`, optional `params.softInterrupt`). Fails closed when no active run or when the pending steer queue overflows (8 messages / 64 KiB). Soft interrupt aborts the current provider stream only; the run continues.
 
 Events streamed during a run keep the original prompt request id, even when an `abort` with a different request id cancels the run. The completion or error response for the prompt also uses the original prompt request id.
 

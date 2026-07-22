@@ -552,6 +552,24 @@ export class AgentRunError extends Error {
   }
 }
 
+/** Mid-run steer queue: default pending message count (fail closed at this cap). */
+export const DEFAULT_MAX_PENDING_STEERS = 8;
+/** Absolute pending steer count ceiling if hosts later expose overrides. */
+export const HARD_MAX_PENDING_STEERS = 32;
+/** Mid-run steer queue: default total UTF-8 byte budget across pending messages. */
+export const DEFAULT_MAX_PENDING_STEER_BYTES = 64 * 1024;
+/** Absolute pending steer byte ceiling if hosts later expose overrides. */
+export const HARD_MAX_PENDING_STEER_BYTES = 256 * 1024;
+
+export interface SteerOptions {
+  /**
+   * When true, abort the in-flight provider stream and continue the same run after
+   * injecting steered user text. Default false: inject before the next provider turn
+   * (after the current tool batch completes).
+   */
+  readonly softInterrupt?: boolean;
+}
+
 export interface AgentSession {
   readonly id: string;
   /** Current branch leaf entry id; advances on every append/run and is re-pointed by `checkout`.
@@ -559,6 +577,12 @@ export interface AgentSession {
   readonly leafId: string | undefined;
   run(input: string | Message | readonly Message[], options?: RunOptions): Promise<AgentRunResult>;
   prompt(input: string, options?: RunOptions): Promise<AgentRunResult>;
+  /**
+   * Enqueue user text into an active run. Default injects before the next provider turn.
+   * `softInterrupt: true` aborts the current provider stream, then continues the same run.
+   * Fails closed when no run is active or the pending queue exceeds caps.
+   */
+  steer(input: string | Message | readonly Message[], options?: SteerOptions): void;
   /** Subscribe first, then start exactly one run and yield only that run's events until it terminates. */
   stream(input: string | Message | readonly Message[], options?: RunOptions & SubscribeOptions): AsyncIterable<AgentEvent>;
   compact(options?: CompactionOptions): Promise<CompactionResult>;
@@ -1007,6 +1031,128 @@ export interface SessionStore {
    *  avoid `list(sessionId)` (full-session scan) + in-memory rebuild. Optional — the
    *  built-in memory/JSONL stores omit it and the runtime falls back to `list()`. */
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
+  /**
+   * Optional bounded session search. Prefer implementing this **or** returning a companion
+   * `SessionIndex` from the adapter factory — hosts must not need both. Call
+   * `resolveSessionSearchQuery` before scan/query. Memory defaults to capped linear
+   * search (`sessionSearchMode: "unsupported"` throws). JSONL throws unsupported.
+   */
+  searchSessions?(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>>;
+}
+
+/** Host-written `SessionRecord.metadata` / session metadata key for workspace filtering. */
+export const SESSION_SEARCH_WORKSPACE_METADATA_KEY = "workspaceRoot" as const;
+
+export const DEFAULT_SESSION_SEARCH_LIMIT = 20;
+export const HARD_MAX_SESSION_SEARCH_LIMIT = 100;
+export const DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES = 4 * 1024;
+export const HARD_MAX_SESSION_SEARCH_QUERY_BYTES = 16 * 1024;
+export const DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES = 512;
+export const HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES = 4 * 1024;
+export const DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES = 1 * 1024;
+export const HARD_MAX_SESSION_SEARCH_CURSOR_BYTES = 4 * 1024;
+export const DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS = 1_000;
+export const HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS = 5_000;
+export const DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES = 10_000;
+export const HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES = 50_000;
+export const DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES = 8 * 1024 * 1024;
+export const HARD_MAX_SESSION_SEARCH_LINEAR_BYTES = 64 * 1024 * 1024;
+export const DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES = 1_000;
+export const HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES = 5_000;
+
+/** Bounded session search filters. Workspace matches host-written `metadata.workspaceRoot`. */
+export interface SessionSearchQuery extends PersistenceQuery, OwnershipScope {
+  readonly workspaceRoot?: string;
+  /** Optional full-text / message+summary query (adapter-defined matching). */
+  readonly query?: string;
+  readonly provider?: string;
+  readonly model?: string;
+  readonly label?: string;
+  readonly summary?: string;
+  readonly fromUpdatedAt?: string;
+  readonly toUpdatedAt?: string;
+  readonly signal?: AbortSignal;
+}
+
+/**
+ * Safe search hit for resume/checkout. Never includes credentials or raw full transcripts.
+ * `leafId` is the branch tip for `session.checkout` when known.
+ */
+export interface SessionSearchHit {
+  readonly sessionId: string;
+  readonly leafId?: string;
+  readonly updatedAt?: string;
+  readonly label?: string;
+  readonly summary?: string;
+  readonly snippet?: string;
+  /** Safe display fields only (e.g. workspaceRoot); never credentials. */
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Narrow search seam; adapters may implement this instead of `SessionStore.searchSessions`. */
+export interface SessionIndex {
+  search(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>>;
+}
+
+/** Validated search query with finite `limit` / `order` filled in. */
+export interface ResolvedSessionSearchQuery extends SessionSearchQuery {
+  readonly limit: number;
+  readonly order: "asc" | "desc";
+}
+
+/**
+ * O(1) validation before any scan/query. Applies default page limit; rejects NaN,
+ * non-positive limits, oversize query/cursor/filter strings, and invalid order.
+ */
+export function resolveSessionSearchQuery(query: SessionSearchQuery): ResolvedSessionSearchQuery {
+  const limit = query.limit === undefined ? DEFAULT_SESSION_SEARCH_LIMIT : query.limit;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_SESSION_SEARCH_LIMIT) {
+    throw new TypeError(`SessionSearchQuery.limit must be a safe integer from 1 to ${HARD_MAX_SESSION_SEARCH_LIMIT}`);
+  }
+  const order = query.order ?? "desc";
+  if (order !== "asc" && order !== "desc") {
+    throw new TypeError('SessionSearchQuery.order must be "asc" or "desc"');
+  }
+  assertSearchStringBytes(query.query, "query", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.cursor, "cursor", HARD_MAX_SESSION_SEARCH_CURSOR_BYTES);
+  assertSearchStringBytes(query.workspaceRoot, "workspaceRoot", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.provider, "provider", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.model, "model", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.label, "label", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.summary, "summary", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.tenantId, "tenantId", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.accountId, "accountId", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.userId, "userId", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.fromUpdatedAt, "fromUpdatedAt", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSearchStringBytes(query.toUpdatedAt, "toUpdatedAt", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  return { ...query, limit, order };
+}
+
+function assertSearchStringBytes(value: string | undefined, name: string, hardMax: number): void {
+  if (value === undefined) return;
+  if (typeof value !== "string") {
+    throw new TypeError(`SessionSearchQuery.${name} must be a string`);
+  }
+  // ponytail: UTF-8 byte length via TextEncoder; upgrade only if a non-Unicode host appears.
+  const bytes = new TextEncoder().encode(value).byteLength;
+  if (bytes > hardMax) {
+    throw new TypeError(`SessionSearchQuery.${name} exceeds ${hardMax} bytes`);
+  }
+}
+
+export const SESSION_SEARCH_UNSUPPORTED_CODE = "session_search_unsupported" as const;
+
+/** Thrown when a store opts out of `searchSessions` (memory `unsupported`, JSONL). */
+export class SessionSearchUnsupportedError extends Error {
+  readonly code = SESSION_SEARCH_UNSUPPORTED_CODE;
+  constructor(message = "session search is unsupported by this store") {
+    super(message);
+    this.name = "SessionSearchUnsupportedError";
+  }
+}
+
+export function isSessionSearchUnsupported(error: unknown): error is SessionSearchUnsupportedError {
+  return error instanceof Error && (error as { code?: unknown }).code === SESSION_SEARCH_UNSUPPORTED_CODE;
 }
 
 /** Query for a single branch's ancestor chain (DB-friendly: one recursive/ancestor query
@@ -1716,6 +1862,10 @@ export interface LoopContext {
   isToolCallExclusive?(call: ToolCallContent): boolean;
   appendMessage(message: Message): Promise<void>;
   emit(event: AgentEvent): void;
+  /** True when mid-run steers are queued for the next provider turn. */
+  hasPendingSteers?(): boolean;
+  /** Drain pending steers into history/session. Returns true when any were applied. */
+  applyPendingSteers?(): Promise<boolean>;
 }
 
 export interface AgentLoopStrategy {
@@ -1741,6 +1891,12 @@ export type AgentLoopOptions =
       readonly structuredOutput?: StructuredOutputOptions;
       /** `native` maps schema to capable providers; `artifact-loop` keeps repair turns only. */
       readonly structuredOutputMode?: "native" | "artifact-loop";
+      /**
+       * When to attach native `structuredOutput` under `toolCalls: "bounded"`.
+       * `every-turn` (default): schema on every provider request (legacy).
+       * `final-turn-only`: tool-eligible turns omit schema; artifact/revision turns send schema and withdraw tools.
+       */
+      readonly structuredOutputTiming?: "every-turn" | "final-turn-only";
     };
 
 export interface ArtifactValidation {

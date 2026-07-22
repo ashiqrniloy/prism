@@ -1,4 +1,14 @@
-import type { AgentConfig, AgentLoopOptions, AgentLoopStrategy, ModelCapabilities, ModelConfig, ProviderRequestOptions, RunOptions, StructuredOutputOptions } from "./contracts.js";
+import type {
+  AgentConfig,
+  AgentLoopOptions,
+  AgentLoopStrategy,
+  ModelCapabilities,
+  ModelConfig,
+  ProviderRequest,
+  ProviderRequestOptions,
+  RunOptions,
+  StructuredOutputOptions,
+} from "./contracts.js";
 import { assertJsonObject } from "./config.js";
 import { mergeProviderRequestOptions } from "./provider-request-policy.js";
 
@@ -79,4 +89,25 @@ export function resolveRunProviderOptions(
   return mergeProviderRequestOptions(merged, {
     structuredOutput: validateStructuredOutputOptions(loop.structuredOutput),
   });
+}
+
+/** Strip native schema so a tool-eligible turn can call tools freely. */
+export function withoutStructuredOutput(request: ProviderRequest): ProviderRequest {
+  if (!request.options?.structuredOutput) return request;
+  const { structuredOutput: _drop, ...options } = request.options;
+  return { ...request, options: Object.keys(options).length > 0 ? options : undefined };
+}
+
+/** Artifact/revision turn: keep/restore schema and withdraw tools. */
+export function artifactStructuredOutputRequest(
+  request: ProviderRequest,
+  schema?: StructuredOutputOptions,
+): ProviderRequest {
+  const structuredOutput = schema ?? request.options?.structuredOutput;
+  if (!structuredOutput) return { ...request, tools: undefined };
+  return {
+    ...request,
+    tools: undefined,
+    options: { ...request.options, structuredOutput },
+  };
 }

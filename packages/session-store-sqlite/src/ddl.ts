@@ -280,6 +280,23 @@ CREATE INDEX IF NOT EXISTS prism_run_feedback_trace_created_idx
   ON prism_run_feedback (trace_id, created_at, id);
 `;
 
+/** Adapter-local FTS + pagination index for SessionIndex search (schema v4). */
+export const MIGRATION_004_SESSION_SEARCH = `
+CREATE INDEX IF NOT EXISTS prism_sessions_updated_id_idx
+  ON prism_sessions (updated_at, id);
+CREATE VIRTUAL TABLE IF NOT EXISTS prism_session_search_fts USING fts5(
+  session_id UNINDEXED,
+  entry_id UNINDEXED,
+  label,
+  summary,
+  body,
+  tokenize = 'porter unicode61'
+);
+INSERT INTO prism_session_search_fts(session_id, entry_id, label, summary, body)
+SELECT session_id, id, IFNULL(label, ''), IFNULL(summary, ''), IFNULL(message, '')
+FROM prism_session_entries;
+`;
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",

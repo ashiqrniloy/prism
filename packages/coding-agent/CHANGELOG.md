@@ -1,4 +1,18 @@
 # Changelog
+## [Unreleased]
+
+## [0.0.11] - 2026-07-22
+
+### Docs
+
+- Documented ask_user_decision multi/free-text/suspend glue + `runCodingGoalVerify` in `docs/coding-agent-tools.md` / README.
+
+### Added
+
+- `runCodingGoalVerify` / `createCodingGoalVerifyWorkflow`: thin goal→verify composition over plan Markdown, named checks, workflow suspend/approve, and bounded PR handoff (peer `@arnilo/prism-workflows`). No Goal table / second runtime.
+- Opt-in `createAskUserDecisionTool({ ask })`: model proposes 2+ options with exactly 3 pros + 3 cons each; host `ask` returns `selectedId` / `selectedIds` / `customText`. Supports `selectionMode: "single" | "multiple"` and `allowCustom` (custom XOR selection; default/hard custom bytes match question caps). Not in `createCodingTools` / `createAllTools` / `createReadOnlyTools`.
+- Durable ask-user helpers: `suspendAskUserDecision`, `createAskUserDecisionResumeValidator`, `validateAskUserDecisionResume`, `validateAskUserDecisionAgentResume` (workflow-first; agent path reuses same validator without new `AgentRunInterruption` kinds).
+
 ## [0.0.10] - 2026-07-21
 
 ### Changed

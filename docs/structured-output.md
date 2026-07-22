@@ -49,14 +49,19 @@ await session.run(input, {
     parser,            // optional; default treats assistant text as the value
     repairer,          // optional; default stringifies validation.errors[].message
     maxRevisions: 3,   // optional; default 3
+    toolCalls: "bounded", // optional; default "disabled"
     structuredOutput: { name: "answer", schema, strict: true }, // optional native mode
     structuredOutputMode: "native", // or "artifact-loop" to skip provider-native schema
+    // Opt-in: schema only on artifact/revision turns (tools free on earlier turns).
+    structuredOutputTiming: "final-turn-only", // default "every-turn"
   },
   providerOptions: {
     structuredOutput: { name: "answer", schema, strict: true }, // direct native request
   },
 });
 ```
+
+`structuredOutputTiming: "final-turn-only"` (with `toolCalls: "bounded"` and native schema) sends tool-eligible turns **without** `response_format` so models can call tools; once the model returns a call-free candidate (or tool rounds are exhausted), the next turn withdraws tools and attaches schema. Revision turns stay schema-on / tools-off. Default `"every-turn"` keeps legacy behavior (schema on every provider request).
 
 ## Outputs / response / events
 
@@ -230,11 +235,12 @@ Key cross-seam points:
 
 - `generate-validate-revise` is selected via `AgentConfig.loop` / `RunOptions.loop` (`RunOptions.loop` wins). See [Agent loops](agent-loops.md). `resolveLoop()` maps the options form to the factory; an unknown `strategy` throws before the first turn; a custom `AgentLoopStrategy` instance bypasses the options form.
 - Native structured output uses provider-neutral `StructuredOutputOptions` on `ProviderRequestOptions` / loop options. Capable OpenAI-family providers map to JSON-schema wire fields; unsupported models fail before fetch unless the host sets `structuredOutputMode: "artifact-loop"` and relies on parser/validator/repairer only.
+- `structuredOutputTiming: "final-turn-only"` (opt-in; default `"every-turn"`) with `toolCalls: "bounded"` omits native schema on tool-eligible turns and attaches schema only on artifact/revision turns (tools withdrawn). Call-free tool-phase output promotes to one schema turn before parse/validate.
 - `validateStructuredOutputOptions()` enforces JSON-safe schemas, forbidden prototype-pollution keys, and a 64 KiB schema size cap.
 - The default parser treats non-empty assistant text as the value (`{ ok: true, value: text }`); empty/whitespace-only call-free text is a `parse_error` before the parser. Supply a host parser whenever `T` is not `string`.
 - The default repairer builds a user message from `validation.errors[].message`; supply a host repairer for schema-specific guidance.
 - `maxRevisions` (default 3) bounds revision turns; budget exhaustion ends the loop and emits `artifact_failed`. Session runs then fail with `AgentRunError` unless `artifact_finished` occurred (direct `loop.run` still returns usage without throwing).
-- Tools are inert in artifact turns unless `loop.toolCalls: "bounded"` is explicit. Bounded mode uses run-global `maxToolRounds`, dispatches calls sequentially through normal runtime guards, skips parser/validator for tool-calling responses, and permits at most `1 + maxRevisions + maxToolRounds` provider turns. An extra tool response yields terminal `artifact_failed` with `result.metadata.reason === "tool_round_limit"` and executes nothing.
+- Tools are inert in artifact turns unless `loop.toolCalls: "bounded"` is explicit. Bounded mode uses run-global `maxToolRounds`, dispatches calls sequentially through normal runtime guards, skips parser/validator for tool-calling responses, and permits at most `1 + maxRevisions + maxToolRounds` provider turns (plus one extra schema turn under `final-turn-only` when a tool-phase call-free draft promotes). An extra tool response yields terminal `artifact_failed` with `result.metadata.reason === "tool_round_limit"` and executes nothing.
 
 ## Security and performance notes
 

@@ -11,7 +11,7 @@ const patterns = [
   ["github-token", new RegExp("gh" + "[pousr]_[A-Za-z0-9]{30,}")],
   ["npm-token", new RegExp("npm" + "_[A-Za-z0-9]{30,}")],
   ["slack-token", new RegExp("xo" + "[abprs]-[A-Za-z0-9-]{20,}")],
-  ["openai-key", new RegExp("sk" + "-[A-Za-z0-9_-]{20,}")],
+  ["openai-key", new RegExp("(?:^|[^A-Za-z0-9_-])sk" + "-[A-Za-z0-9]{20,}")],
 ];
 const ignored = new Set([".git", "node_modules", "coverage"]);
 

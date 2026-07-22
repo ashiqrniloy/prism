@@ -31,7 +31,7 @@ await persistence.close();
 
 The same object satisfies session/run/query contracts and exposes `persistence.checkpoints` for versioned durable state and `persistence.leases` for database-clock claims with monotonic fencing. Workflow hosts pass that capability to `createWorkflowCheckpoints({ store })`.
 
-Open holds its existing per-schema advisory transaction lock while validating ordered SHA-256 migration history and complete schema-v3 catalog shape before runtime writes. Complete legacy v0.0.5 `NULL` checksums are shape-verified then backfilled transactionally; altered, partial, unknown, or mismatched history fails closed.
+Open holds its existing per-schema advisory transaction lock while validating ordered SHA-256 migration history and complete schema-v4 catalog shape (includes `004_session_search` FTS) before runtime writes. Complete legacy v0.0.5 `NULL` checksums are shape-verified then backfilled transactionally; altered, partial, unknown, or mismatched history fails closed.
 
 ## Options
 

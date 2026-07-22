@@ -1,6 +1,6 @@
 # @arnilo/prism-coding-agent
 
-Optional first-party coding tools package for [Prism](https://www.npmjs.com/package/@arnilo/prism). Provides host shell/filesystem/repository tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search` — plus opt-in structured Git/check tools via `createGitTools()` and durable plan/checkpoint helpers for workflow composition — as Prism `ToolDefinition` objects. **Inert until a host imports it and registers the tools into a `ToolRegistry`.**
+Optional first-party coding tools package for [Prism](https://www.npmjs.com/package/@arnilo/prism). Provides host shell/filesystem/repository tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search` — plus opt-in structured Git/check tools via `createGitTools()`, opt-in `createAskUserDecisionTool({ ask })`, and durable plan/checkpoint helpers for workflow composition — as Prism `ToolDefinition` objects. **Inert until a host imports it and registers the tools into a `ToolRegistry`.** No tool is auto-registered; hosts pick factories (or filter aggregator output) and may mix in their own `ToolDefinition`s.
 
 Behavior is a behavioral port of the pi coding agent's `bash`/`read`/`write`/`edit` tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies). List/search/Git are native Prism tools.
 
@@ -12,7 +12,7 @@ Behavior is a behavioral port of the pi coding agent's `bash`/`read`/`write`/`ed
 npm install @arnilo/prism-coding-agent
 ```
 
-`@arnilo/prism` is a peer dependency.
+`@arnilo/prism` is a peer dependency. `runCodingGoalVerify` also peers `@arnilo/prism-workflows`.
 
 ## Usage
 
@@ -38,7 +38,7 @@ Shared `ToolsOptions.executionPolicy` applies to every tool returned by full, al
 Individual tools with options:
 
 ```ts
-import { createShellTool, createWriteTool } from "@arnilo/prism-coding-agent";
+import { createShellTool, createWriteTool, createAskUserDecisionTool } from "@arnilo/prism-coding-agent";
 
 const shell = createShellTool(process.cwd(), {
   shellPath: "/bin/bash",        // force bash; default: SHELL env → /bin/bash → sh
@@ -54,6 +54,14 @@ const remoteWrite = createWriteTool(process.cwd(), {
     mkdir: async (dir) => { /* mkdir -p remotely */ },
   },
 });
+
+// Opt-in: not in createCodingTools(). Host owns the UI.
+const askUser = createAskUserDecisionTool({
+  ask: async ({ question, options }) => {
+    const selectedId = await host.promptChoice(question, options);
+    return { selectedId };
+  },
+});
 ```
 
 ## Tools
@@ -67,6 +75,7 @@ const remoteWrite = createWriteTool(process.cwd(), {
 | `repo_list` | `{ path?, includeHidden?, maxDepth?, maxResults?, offset? }` | Deterministic relative entries; skips hidden/excluded basenames; does not follow symlinks; paginates with `nextOffset`. |
 | `repo_search` | `{ query, path?, mode?, caseSensitive?, includeHidden?, context?, maxMatches? }` | Literal (default) or bounded regex matches with context; skips binary/excluded paths; finite scan/match/time caps. |
 | `git_*` / `coding_check` | via `createGitTools(cwd, { commitIdentity, checks? })` | Opt-in structured Git status/diff/branch/worktree/apply/commit/PR-handoff and named checks. Not in `createCodingTools()`. |
+| `ask_user_decision` | via `createAskUserDecisionTool({ ask })` | Opt-in user choice: question + options (3 pros/3 cons); `selectionMode` single\|multiple; `allowCustom` for XOR free-text; host `ask` returns `selectedId` / `selectedIds` / `customText`. Durable: `suspendAskUserDecision` + resume validators. Not in default aggregators. |
 
 ### pi name mapping
 
@@ -78,9 +87,9 @@ const remoteWrite = createWriteTool(process.cwd(), {
 
 ## Exports
 
-Factories: `createShellTool`, `createReadTool`, `createWriteTool`, `createEditTool`, `createRepoListTool`, `createRepoSearchTool`, `createCodingTools`, `createReadOnlyTools`, `createAllTools`, `createGitTools`, `createCodingCheckTool`, `createLocalBashOperations`, `createLocalRepositoryOperations`, `createGitOperations`.
+Factories: `createShellTool`, `createReadTool`, `createWriteTool`, `createEditTool`, `createRepoListTool`, `createRepoSearchTool`, `createCodingTools`, `createReadOnlyTools`, `createAllTools`, `createGitTools`, `createCodingCheckTool`, `createAskUserDecisionTool`, `createLocalBashOperations`, `createLocalRepositoryOperations`, `createGitOperations`.
 
-Helpers: `detectSupportedImageMimeType`, `detectSupportedImageMimeTypeFromFile`, `getShellConfig`, `killProcessTree`, `waitForChildProcess`, `withFileMutationQueue`, `resolveRepositoryLimits`, `writeCodingPlanFile`, `readCodingPlanFile`, `buildCodingCheckpointMetadata`, `validateCodingCheckpointMetadata`, `assertCodingResumeAllowed`, `fingerprintJson`. Default/hard coding, repository, Git, and plan/checkpoint limit constants are exported for host configuration.
+Helpers: `detectSupportedImageMimeType`, `detectSupportedImageMimeTypeFromFile`, `getShellConfig`, `killProcessTree`, `waitForChildProcess`, `withFileMutationQueue`, `resolveRepositoryLimits`, `writeCodingPlanFile`, `readCodingPlanFile`, `buildCodingCheckpointMetadata`, `validateCodingCheckpointMetadata`, `assertCodingResumeAllowed`, `fingerprintJson`, `runCodingGoalVerify`, `createCodingGoalVerifyWorkflow`, `suspendAskUserDecision`, `createAskUserDecisionResumeValidator`, `validateAskUserDecisionResume`, `validateAskUserDecisionAgentResume`. Default/hard coding, repository, Git, and plan/checkpoint limit constants are exported for host configuration.
 
 Option/operation types: `ToolsOptions`, `ShellToolOptions`/`BashOperations`, `ReadToolOptions`/`ReadOperations`/`ReadTextOptions`/`ReadTextResult`, `WriteToolOptions`/`WriteOperations`, `EditToolOptions`/`EditOperations`/`EditToolDetails`.
 

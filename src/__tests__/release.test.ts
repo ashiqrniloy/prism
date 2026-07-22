@@ -8,7 +8,7 @@ import test from "node:test";
 // @ts-expect-error stdlib-only release CLI intentionally ships as directly runnable JavaScript.
 import { assertGitState, loadRelease, publishArgs, runRelease, validateRelease } from "../../scripts/release.mjs";
 
-const VERSION = "0.0.10";
+const VERSION = "0.0.11";
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "prism-release-"));
@@ -48,7 +48,7 @@ test("release graph validates exact versions and uses deterministic dependency o
   const addon = JSON.parse(readFileSync(addonPath, "utf8"));
   addon.peerDependencies["@arnilo/prism"] = "^0.0.9";
   writeFileSync(addonPath, JSON.stringify(addon));
-  assert.throws(() => validateRelease(loadRelease(root), VERSION), /expected 0\.0\.10/);
+  assert.throws(() => validateRelease(loadRelease(root), VERSION), /expected 0\.0\.11/);
 });
 
 test("registry preflight rejects collisions and resume skips only matching manifests", async () => {
@@ -114,7 +114,7 @@ test("release requires clean tagged git state", () => {
   git("config", "user.name", "Release Test");
   git("add", ".");
   git("commit", "-m", "fixture");
-  assert.throws(() => assertGitState(root, VERSION), /tag v0\.0\.10/);
+  assert.throws(() => assertGitState(root, VERSION), /tag v0\.0\.11/);
   git("tag", `v${VERSION}`);
   assert.doesNotThrow(() => assertGitState(root, VERSION));
   mkdirSync(join(root, "release-artifacts"));

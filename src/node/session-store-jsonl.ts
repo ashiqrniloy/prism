@@ -1,6 +1,17 @@
 import { mkdir, readFile, appendFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError, isSessionEntryKind, SESSION_ENTRY_SCHEMA_VERSION, type Message, type ModelConfig, type SessionAppendOptions, type SessionEntry, type SessionStore } from "../contracts.js";
+import {
+  SESSION_APPEND_CONFLICT_CODE,
+  SessionAppendConflictError,
+  SessionSearchUnsupportedError,
+  isSessionEntryKind,
+  SESSION_ENTRY_SCHEMA_VERSION,
+  type Message,
+  type ModelConfig,
+  type SessionAppendOptions,
+  type SessionEntry,
+  type SessionStore,
+} from "../contracts.js";
 import { isNodeErrorCode } from "./config.js";
 
 export interface JsonlSessionStoreOptions {
@@ -60,6 +71,9 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
     },
     async get(id) {
       return findEntry(path, id);
+    },
+    async searchSessions() {
+      throw new SessionSearchUnsupportedError("JSONL session store does not support searchSessions");
     },
   };
 }
