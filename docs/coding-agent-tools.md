@@ -379,6 +379,7 @@ const remoteWrite = createWriteTool("/repo", {
 
 ## Extension and configuration notes
 
+- **Long coding sessions.** Use `createCodingCompactionStrategy()` from optional `@arnilo/prism-compaction-llm` when history needs a bounded coding handoff. It is selected explicitly through normal `session.compact()` / agent compaction configuration, preserves raw session entries, and prioritizes file paths, patch intent, checks, plan/todo state, blockers, and verification steps. It does not read files, retain full diffs, or create a second coding runtime.
 - **Pluggable operation backends.** Every tool accepts an `operations` seam. Custom `ReadOperations` must implement bounded `readText` plus `statFile`; custom `EditOperations` must implement `statFile`; read/write methods receive caps/signals. `BashOperations` must stream through `onData` and honor `signal`/`timeout`. Custom `RepositoryOperations` must honor depth/entry/file/match/scan/time caps and abort. A hostile custom backend can still violate its host-owned contract, so isolate it separately.
 - **Per-tool options.** `ShellToolOptions` adds `timeout` and `maxTotalOutputBytes`; `ReadToolOptions` adds `maxScanBytes`; `WriteToolOptions` adds `maxInputBytes`; `EditToolOptions` adds `maxFileBytes`, `maxInputBytes`, and `maxEdits`; list/search accept `repository` limits and shared aggregator `ToolsOptions.repository`.
 - **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit?, list?, search?, repository? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override. Read-only membership is deliberately `read` + `repo_list` + `repo_search` (0.0.9 behavior change).
@@ -425,3 +426,4 @@ Every configurable value is a positive safe integer (context may be zero); Prism
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolResult`, `ToolExecutionContext`, `ContentBlock`, and `JsonObject` shapes.
 - [Host security guide](host-security.md): fail-closed checklist for permission policies, tool validation, and trust boundaries that must gate these tools.
 - [Tool conformance](tool-conformance.md): assertions for the tool-dispatch blocked-reason matrix these tools participate in.
+- [LLM compaction package](compaction-llm.md): optional `createCodingCompactionStrategy()` retains bounded paths, patch intent, checks, plan/todo state, blockers, and next verification—not complete diffs or raw command output.

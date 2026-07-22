@@ -274,8 +274,12 @@ describe("@arnilo/prism-provider-openai responses", () => {
       registerAuthMethod: (method: AuthMethod) => registered.push(method),
     } as any);
     assert(registered.some((item: any) => item.id === "openai"));
-    assert(registered.some((item: any) => item.provider === "openai" && item.kind === "api_key"));
-    assert(registered.some((item: any) => item.provider === "openai-codex" && item.kind === "oauth"));
+    const auth = registered.filter((item: any) => item?.kind);
+    assert.deepEqual(auth.map((item: any) => ({ kind: item.kind, provider: item.provider })), [
+      { kind: "api_key", provider: "openai" },
+      { kind: "oauth", provider: "openai-codex" },
+    ]);
+    assert.equal((auth[1] as AuthMethod & { oauth: { id: string } }).oauth.id, "openai-codex");
   });
 
   it("list_openai_models_maps_fixture_and_forwards_auth_abort_baseurl", async () => {

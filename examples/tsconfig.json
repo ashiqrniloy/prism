@@ -26,6 +26,7 @@
       "@arnilo/prism-memory": ["./packages/memory/src/index.ts"],
       "@arnilo/prism-rag": ["./packages/rag/src/index.ts"],
       "@arnilo/prism-server": ["./packages/server/src/index.ts"],
+      "@arnilo/prism-ag-ui": ["./packages/ag-ui/src/index.ts"],
       "@arnilo/prism-supervisor": ["./packages/supervisor/src/index.ts"],
       "@arnilo/prism-mcp": ["./packages/mcp/src/index.ts"]
     }

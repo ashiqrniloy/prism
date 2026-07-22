@@ -8,7 +8,7 @@
 
 Use for native Claude Messages (tools, `cache_control`, thinking/reasoning, media, usage, abort). Prefer this over the AI SDK escape hatch when Anthropic is a primary coding host.
 
-Do **not** use for OpenCode Go Anthropic *route* hosting (`@arnilo/prism-provider-opencode-go`) or automatic credential discovery.
+Do **not** use for OpenCode Go Anthropic *route* hosting (`@arnilo/prism-provider-opencode-go`), automatic credential discovery, Claude Code credential-file/setup-token import, or Claude.ai subscription login/routing. This package is API-key-only.
 
 ## Inputs / request
 
@@ -43,7 +43,7 @@ Featured offline aliases: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-
 | Stream | Prism text, thinking deltas, tool-call delta/final, usage (incl. cache read/create when present), `done`, redacted `error`. |
 | Cache | Featured models use `cache.kind: "cache_control"`; markers on selected breakpoints (`long` → `ttl: "1h"`). |
 | Thinking | Model-family aware (`adaptive` vs `enabled`+`budget_tokens`); helpers `anthropicThinking` / `anthropicEffort` / `anthropicPreserveThinking`. |
-| Auth | `api_key` for provider id; provider-owned `content-type`, `x-api-key`, `anthropic-version` win over caller headers. |
+| Auth | `api_key` for provider id; provider-owned `content-type`, `x-api-key`, `anthropic-version` win over caller headers. No OAuth descriptor or subscription adapter is registered. |
 
 ## Request/response example
 
@@ -75,6 +75,7 @@ api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey, mo
 - Register via `defineProviderPackage` / host registries; no package auto-discovery.
 - AI SDK (`@arnilo/prism-provider-ai-sdk`) remains an escape hatch, not the primary Anthropic path.
 - Live smoke: `PRISM_LIVE_PROVIDER_TESTS=1` + `ANTHROPIC_API_KEY`.
+- Anthropic says OAuth is for purchasers' ordinary Claude Code/native-app use; developers building products must use Claude Console API keys or a supported cloud provider and may not offer Claude.ai login or route Free/Pro/Max credentials ([legal and compliance](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance)). Prism therefore has no Anthropic subscription OAuth API or token-import shortcut.
 
 ## Security and performance notes
 

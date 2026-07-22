@@ -19,6 +19,14 @@ const strategy = createLlmCompactionStrategy({
 await session.compact({ strategy, secrets: [apiKey] });
 ```
 
+For a coding-session focus, use the fixed `coding` preset. It retains the same limits, provider call count, raw history, and redaction behavior while prioritizing paths, patch intent, commands/checks, plan/todos, blockers, and next verification.
+
+```ts
+import { createCodingCompactionStrategy } from "@arnilo/prism-compaction-llm";
+
+await session.compact({ strategy: createCodingCompactionStrategy({ provider: summaryProvider, model: summaryModel }) });
+```
+
 Extension registration is optional and inert until the host selects the contribution:
 
 ```ts

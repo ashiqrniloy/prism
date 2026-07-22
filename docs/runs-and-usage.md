@@ -315,3 +315,4 @@ Runtime session snapshots cache one leaf/generation for at most one second. Succ
 - [Provider caching](provider-caching.md): cache hints and `cacheUsageReport()` diagnostics.
 - [Observability](observability.md): `provider_turn_*` events, tool duration metadata, OpenTelemetry adapter.
 - [Public contracts](public-contracts.md): full contract inventory.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): `AgentEventRecord` pages become redacted, ownership-scoped, at-least-once replay only through an explicit host adapter.

@@ -139,4 +139,5 @@ A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-super
 - [MCP client and server exposure](mcp-tools.md): selected MCP capabilities and web-standard MCP transport.
 - [Host security guide](host-security.md): remote-boundary checklist.
 - [A2A interoperability](a2a.md): separately mounted A2A 1.0 handler/client.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): separately installed authorized AG-UI Web handler; it is not a `@arnilo/prism-server` route.
 - [Release and install](release-and-install.md): optional package installation and profiles.

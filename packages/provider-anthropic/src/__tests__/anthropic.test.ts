@@ -48,7 +48,7 @@ describe("@arnilo/prism-provider-anthropic", () => {
     } as any);
     assert.equal(fetchCalls, 0);
     assert(registered.some((item: any) => item.id === "anthropic"));
-    assert(registered.some((item: any) => item.provider === "anthropic" && item.kind === "api_key"));
+    assert.deepEqual(registered.filter((item: any) => item?.kind), [{ kind: "api_key", provider: "anthropic", credentialName: "apiKey" }]);
     assert(registered.some((item: any) => item.model === "claude-opus-4-8"));
     assert(registered.some((item: any) => item.model === "claude-sonnet-5"));
     assert(registered.some((item: any) => item.model === "claude-haiku-4-5"));

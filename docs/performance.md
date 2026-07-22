@@ -6,6 +6,25 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.12 frontend interoperability caps and evidence
+
+`@arnilo/prism-ag-ui` uses finite handler/projection limits, all defaults / hard: request 64 KiB / 1 MiB; input 128 / 1024 messages and 64 KiB / 1 MiB text; event 64 KiB / 1 MiB; error 8 KiB / 64 KiB; replay cursor 4 / 16 KiB; replay page 100 / 500; subscriber queue 128 / 4096; stream 10,000 / 100,000 events and 10 / 64 MiB; request wall time 120 seconds / 30 minutes. Tool arguments/results/progress, frontend tools, and mutable frontend state default to zero exposure; hosts may only add bounded safe projection.
+
+Reconnect is one ownership-scoped redacted durable page plus an optional bounded live subscriber. It is at-least-once at a page boundary, never a polling loop or terminal-run rerun. ACP uses the same event/byte/queue caps. Coding compaction reuses LLM summary/reserve/error/file-operation bounds (16,384 / 131,072 summary and reserve tokens; 1 / 8 KiB summary errors) and makes no additional provider call.
+
+Run `node scripts/benchmark-0.0.12.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.12.test.mjs`. Default mode is network-free and reports mapper/handler/replay throughput and p50/p95, peak emitted queue rows, event bytes, heap, and coding-preparation overhead. Bounds and hostile-input fixtures—not these host-local timings—are release gates.
+
+2026-07-22 baseline: Node v24.18.0, Linux x64, 100 iterations/scenario, network=false, credentials=false.
+
+| Scenario | mode | ops/s | p95 ms | heap bytes | peak queue events | event bytes | cost USD | backpressure | resource limits |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| AG-UI mapper | in-process | 23,561 | 0.0398 | 12,029,512 | 2 | 166 | 0 | 0 | 0 |
+| AG-UI handler | web-in-process | 1,401 | 2.2651 | 19,545,416 | 5 | 508 | 0 | 0 | 0 |
+| AG-UI replay | memory-page | 6,094 | 0.3047 | 19,098,240 | 2 | 243 | 0 | 0 | 0 |
+| Coding compaction preparation | in-process | 75,515 | 0.0291 | 20,585,408 | 1 | 208 | 0 | 0 | 0 |
+
+No network, credentials, provider summary call, durable database, or live subscriber is involved. These values are dated local comparison evidence, not portable thresholds.
+
 ## Release 0.0.11 session search / context budget / steer caps
 
 Finite caps (defaults / hard) — full matrix in [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md):

@@ -52,7 +52,7 @@ uses official Responses `reasoning: { effort, summary? }` via
 | --- | --- |
 | Provider stream | Prism text, thinking (downgraded to text), `tool_call` deltas/finals, `usage`, `done`, redacted `error` events. |
 | Block preservation | User/system text → `input_text`; assistant text → `output_text`; assistant `tool_call` → top-level `function_call` with `call_id`; `tool_result` → top-level `function_call_output`; images/files/audio when declared on the model. Bare thinking without an encrypted Responses reasoning item is omitted on replay. |
-| Auth methods | `api_key` for `openai`; `oauth` for `openai-codex`. |
+| Auth methods | `api_key` for `openai`; host-invoked subscription `oauth` for `openai-codex`. This is Prism's only first-party subscription OAuth flow in 0.0.12. |
 
 Unsupported block placements or unclaimed images fail before `fetch`.
 
@@ -120,7 +120,7 @@ const challenge = computeS256Challenge(verifier);
 - Hosts/apps control model selection, credential resolution, and cache policy per
   run/model through `RunOptions` and `ModelConfig.compat`.
 - OAuth browser/device-code flows run only when the caller explicitly invokes the
-  OAuth provider.
+  OAuth provider. Login UI and optional durable token storage remain host-owned; no ambient credential discovery or refresh timer is installed.
 - Device-code login polls the token endpoint with server-directed `interval` and
   `expires_in`, honors RFC 8628 `authorization_pending` / `slow_down`, and stops
   on terminal errors or expiry. Pass `signal` on `OAuthLoginCallbacks` to abort

@@ -23,7 +23,8 @@ Exports:
 Security defaults:
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
-- Credentials are resolved per request from caller-supplied values or resolvers.
+- Credentials are resolved per request from caller-supplied values or resolvers; this package registers `api_key` only.
+- No Claude Code/Claude.ai subscription OAuth, setup-token, or credential-file import. Anthropic requires third-party products to use API keys or supported cloud providers: <https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance>.
 - Provider-owned headers (`content-type`, `x-api-key`, `anthropic-version`) win over caller headers.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` + `ANTHROPIC_API_KEY`.
 

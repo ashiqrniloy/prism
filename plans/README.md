@@ -79,5 +79,6 @@ Numbered plans are immutable implementation records. Current release status live
 | [072-release-0-0-9-production-coding-and-browser-execution.md](072-release-0-0-9-production-coding-and-browser-execution.md) | Phase 4 / Release 0.0.9 — Production Coding and Browser Execution (Office execution excluded) |
 | [073-release-0-0-10-coding-harness-unified-workspace.md](073-release-0-0-10-coding-harness-unified-workspace.md) | Phase 5 / Release 0.0.10 — Coding Harness Correctness and Unified Workspace (P0) |
 | [074-release-0-0-11-coding-harness-fundamentals.md](074-release-0-0-11-coding-harness-fundamentals.md) | Phase 6 / Release 0.0.11 — Coding Harness Fundamentals (P1); Tasks 0–13 complete (released graph pending operator tag) |
+| [075-release-0-0-12-coding-harness-interoperability.md](075-release-0-0-12-coding-harness-interoperability.md) | Phase 7 / Release 0.0.12 — Coding Harness Interoperability (P2) |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

@@ -467,7 +467,7 @@ Updated: 2026-07-21
     - Public-registry `release:check` found all 34 `@arnilo/*@0.0.11` versions available. `release:publish --dry-run --allow-dirty --allow-untagged` completed 34/34; no commit, tag, or publication created. Protected Anthropic/Google live canaries, Docker/Playwright, PostgreSQL/keychain, CodeQL/dependency review, signed tag, OIDC, and actual publication remain operator prerequisites.
 
 
-- [ ] Phase 7 — Release 0.0.12: coding harness interoperability (P2)
+- [x] Phase 7 — Release 0.0.12: coding harness interoperability (P2)
   - Acceptance Criteria:
     - Functional: additional subscription OAuth adapters plug into existing `OAuthProvider` / credential-store seams (Anthropic/Claude subscription or equivalent where the provider documents a supported flow; other providers only when protocol + redaction tests exist); login UX remains host-owned.
     - Functional: an AG-UI adapter package maps Prism messages, tool calls, approvals, state, errors, and reconnectable run events to standard bidirectional frontend events without coupling core to a UI framework; ACP-facing mapping is included where it shares the same event/tool/approval contracts or documented as a thin sibling mapper.
@@ -512,6 +512,12 @@ Updated: 2026-07-21
     - Docs pages to create/edit: `docs/ag-ui.md`, provider OAuth pages, `docs/compaction-and-retry.md`, `docs/credential-storage.md`, `docs/migration.md`, `docs/coding-agent-tools.md`.
     - `docs/index.md` update: yes; Frontend interoperability, Credentials, Compaction, Providers.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+  - Completion Evidence (2026-07-22):
+    - Plan 075 Tasks 0–8 complete: optional `@arnilo/prism-ag-ui` root/`./acp` package over redacted AgentEvents, authorized bounded Web run/replay/approval handling, shared core durable-resume stream, coding compaction preset, and provider-authorized OAuth policy (OpenAI Codex only; Anthropic/Google subscription reuse excluded).
+    - Exact 0.0.12 graph has 35 publishable manifests. AG-UI is included only by `@arnilo/prism-all`; `prism-code` and `prism-sdk` remain protocol-free. `scripts/benchmark-0.0.12.mjs` schema and 100-iteration network-free mapper/handler/replay/coding-preparation evidence passed.
+    - `npm run sdk:ready` passed (typecheck, network-free tests, 35-package packs). Node 20.20.2 imported all root exports. Audit reported 0 high findings (2 moderate MCP-transitive advisories); SPDX/license, present-source secret scan, and dependency graph passed. Public `release:check` and 35/35 dependency-ordered `release:publish --dry-run --allow-dirty --allow-untagged` passed; no commit, tag, or publication created.
+    - Signed tag, protected CI/live provider/Docker/Playwright/PostgreSQL/keychain gates, npm/OIDC credentials, and publication remain operator prerequisites. One unrelated deleted tracked markdown remains for the operator to resolve before a clean release checkout.
 
 - [ ] Phase 8 — Release 0.0.13: enterprise identity, policy, provider governance, and work connectors
   - Acceptance Criteria:

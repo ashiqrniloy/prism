@@ -1,7 +1,7 @@
 export type * from "./contracts.js";
 export type { RunLimitCounters, RunLimitName, SecureAgentOptions } from "./contracts.js";
 export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError, AgentRunStateError, SESSION_SEARCH_WORKSPACE_METADATA_KEY, SESSION_SEARCH_UNSUPPORTED_CODE, SessionSearchUnsupportedError, isSessionSearchUnsupported, DEFAULT_SESSION_SEARCH_LIMIT, HARD_MAX_SESSION_SEARCH_LIMIT, DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES, HARD_MAX_SESSION_SEARCH_QUERY_BYTES, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES, HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES, DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES, HARD_MAX_SESSION_SEARCH_CURSOR_BYTES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS, HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS, DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES, HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES, HARD_MAX_SESSION_SEARCH_LINEAR_BYTES, DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES, HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES, resolveSessionSearchQuery, DEFAULT_MAX_PENDING_STEERS, HARD_MAX_PENDING_STEERS, DEFAULT_MAX_PENDING_STEER_BYTES, HARD_MAX_PENDING_STEER_BYTES } from "./contracts.js";
-export { createAgent, createAgentSession, resumeAgentRun } from "./agents.js";
+export { createAgent, createAgentSession, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
 export {
   createBatchedRunLedger,
   isFlushableRunLedger,
@@ -32,7 +32,7 @@ export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpoi
 export { AGENT_RUN_STATE_NAMESPACE, AGENT_RUN_STATE_SCHEMA_VERSION, DEFAULT_MAX_AGENT_RUN_STATE_BYTES, HARD_MAX_AGENT_RUN_STATE_BYTES, agentFingerprint, loadAgentRunState } from "./agent-run-state.js";
 export type { StoredAgentRunState } from "./agent-run-state.js";
 export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
-export type { AgentRunLifecycle, AgentRunLifecycleAgent, AgentRunLifecycleOptions, AgentRunLifecycleRequest } from "./agent-run-lifecycle.js";
+export type { AgentRunLifecycle, AgentRunLifecycleAgent, AgentRunLifecycleOptions, AgentRunLifecycleRequest, AgentRunLifecycleStreamRequest } from "./agent-run-lifecycle.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { LEASE_CONFLICT_CODE, LeaseConflictError, createMemoryLeaseStore } from "./leases.js";
 export { createEventMultiplexer } from "./event-multiplexer.js";
@@ -216,6 +216,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.11";
+export const version = "0.0.12";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

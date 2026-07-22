@@ -677,7 +677,7 @@ export function createAskUserDecisionResumeValidator(
 /**
  * Thin agent-path adapter: same validation as workflow resume, for hosts that
  * persist `AskUserDecisionSuspendData` outside `AgentRunInterruption` (core kinds
- * unchanged in 0.0.11). Call after operator supplies an answer.
+ * unchanged in 0.0.12). Call after operator supplies an answer.
  */
 export function validateAskUserDecisionAgentResume(input: {
   readonly request: AskUserDecisionSuspendData;

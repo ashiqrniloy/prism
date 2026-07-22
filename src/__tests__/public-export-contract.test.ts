@@ -66,7 +66,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "providerContentDelta", "providerDone", "providerError", "providerTextDelta", "providerThinkingDelta",
   "providerToolCall", "providerToolCallDelta", "providerUsage", "readProviderHttpStatus", "rebuildSessionContext",
   "redactAgentEvent", "redactMessage", "redactProviderRequest", "redactRunLedgerRecord", "redactSecrets",
-  "redactSessionEntry", "refreshOAuthCredential", "registerDiscoveredContributions", "resumeAgentRun",
+  "redactSessionEntry", "refreshOAuthCredential", "registerDiscoveredContributions", "resumeAgentRun", "resumeAgentRunStream",
   "renderPromptTemplate", "requireRunFeedbackOwnership", "resolveActiveSkills", "resolveAgentDefinition",
   "resolveContextProviders", "resolveCredentialValue", "resolveInstructionInjectors", "resolveMediaContentBlock",
   "resolveMediaContentBlocks", "resolveLoop", "resolveRunLimits", "resolveRunProviderOptions",
@@ -79,7 +79,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
 
 const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
   "AIProvider", "ProviderRequest", "ProviderEvent", "Message", "ContentBlock", "Usage",
-  "ModelConfig", "Agent", "AgentConfig", "AgentSession", "AgentRunResult", "AgentRunStatus", "AgentRunState", "AgentRunStateOptions", "AgentRunInterruption", "AgentRunResume", "AgentRunResumeOptions", "AgentRunRef", "Guardrail", "GuardrailDecision", "GuardrailRecord", "Guardrails", "RunLimitBreach", "RunLimits", "RunOptions",
+  "ModelConfig", "Agent", "AgentConfig", "AgentSession", "AgentRunResult", "AgentRunStatus", "AgentRunState", "AgentRunStateOptions", "AgentRunInterruption", "AgentRunResume", "AgentRunResumeOptions", "AgentRunResumeStreamOptions", "AgentRunRef", "Guardrail", "GuardrailDecision", "GuardrailRecord", "Guardrails", "RunLimitBreach", "RunLimits", "RunOptions",
   "ToolDefinition", "ToolRegistry", "ToolResult", "ContextProvider", "Skill", "SkillRegistry",
   "Extension", "ExtensionAPI", "ProviderPackage",
   "SessionEntry", "SessionStore", "SessionIndex", "SessionSearchQuery", "SessionSearchHit", "RunLedger", "RunFeedbackStore", "CheckpointStore", "LeaseStore", "ProductionPersistenceStore",
@@ -112,7 +112,7 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "RunFeedbackRunResolver", "SecretRedactor", "SessionBranch", "SessionBranchOptions", "SessionCachePolicyOptions",
   "ResolveUseCaseModelInput", "ResolvedUseCaseModel", "SessionContextSnapshot", "SkillRegistryOptions", "SsrfPolicy",
   "ThinkingCompatFamily", "ThinkingLevel", "ToolArgumentValidationError", "ToolArgumentValidationResult",
-  "AgentRunLifecycle", "AgentRunLifecycleAgent", "AgentRunLifecycleOptions", "AgentRunLifecycleRequest",
+  "AgentRunLifecycle", "AgentRunLifecycleAgent", "AgentRunLifecycleOptions", "AgentRunLifecycleRequest", "AgentRunLifecycleStreamRequest",
   "RunGuardrailsOptions", "RunLimitCounters", "RunLimitName", "RunLimitTrackerOptions", "SecureAgentOptions",
   "StoredAgentRunState", "UseCaseModelBinding", "ToolArgumentValidator", "ToolFilter", "ToolFilterInput",
   "ToolParameterValidatorOptions", "ToolRegistryOptions", "ToolValidator", "TrustDecision", "TrustPolicy",
@@ -156,6 +156,7 @@ const packages = [
   { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
+  { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
 ];
 
 type Manifest = {

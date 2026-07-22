@@ -46,7 +46,7 @@ describe("@arnilo/prism-provider-google", () => {
     } as any);
     assert.equal(fetchCalls, 0);
     assert(registered.some((item: any) => item.id === "google"));
-    assert(registered.some((item: any) => item.provider === "google" && item.kind === "api_key"));
+    assert.deepEqual(registered.filter((item: any) => item?.kind), [{ kind: "api_key", provider: "google", credentialName: "apiKey" }]);
     assert(registered.some((item: any) => item.model === "gemini-2.5-pro"));
     assert(registered.some((item: any) => item.model === "gemini-2.5-flash"));
     assert(registered.some((item: any) => item.model === "gemini-3.5-flash"));

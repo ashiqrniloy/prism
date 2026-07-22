@@ -1,3 +1,5 @@
+export { createCodingCompactionStrategy } from "./coding.js";
+export type { CodingCompactionStrategyOptions } from "./coding.js";
 export { createLlmCompactionExtension } from "./extension.js";
 export type { LlmCompactionExtensionOptions } from "./extension.js";
 export { collectFileOperations, formatFileOperations } from "./file-ops.js";

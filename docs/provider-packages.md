@@ -18,6 +18,16 @@ Use provider packages when a host wants to bundle model metadata, provider adapt
 
 Do not use provider packages as a package manager, credential store, env loader, provider-specific cache implementation, or live integration runner.
 
+### Subscription OAuth support matrix
+
+| Package | 0.0.12 auth registration | Subscription OAuth boundary |
+| --- | --- | --- |
+| `@arnilo/prism-provider-openai` | `api_key` for `openai`; `oauth` for `openai-codex` | Existing host-invoked OpenAI Codex PKCE/device-code flow only. |
+| `@arnilo/prism-provider-anthropic` | `api_key` only | No Claude Code/Claude.ai subscription OAuth, credential-file/setup-token import, or routing. [Anthropic requires product developers to use API keys or supported cloud providers](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance). |
+| `@arnilo/prism-provider-google` | `api_key` only | No Gemini CLI OAuth or credential/token import. [Gemini CLI prohibits third-party OAuth piggybacking](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md); use Google AI Studio or Vertex API keys. |
+
+A future provider-local OAuth package must first have explicit third-party permission and documented authorize/token/refresh flow. Before it registers an OAuth descriptor, it must add bounded request/response, abort, PKCE/state where required, expiry/refresh, secret-redaction, durable-store round-trip, and offline protocol tests. Do not add a generic OAuth framework, CLI credential scanner, automatic refresh timer, or success stub.
+
 ## Inputs / request
 
 ```ts

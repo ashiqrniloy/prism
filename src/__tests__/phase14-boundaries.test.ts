@@ -68,7 +68,7 @@ describe("phase 14 observational memory boundaries", () => {
     assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
     assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.11");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.12");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 

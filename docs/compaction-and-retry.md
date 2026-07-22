@@ -149,7 +149,7 @@ Retry policies are ordinary `RetryPolicy` implementations and can be registered 
 
 Compaction strategies are ordinary `CompactionStrategy` implementations. Extensions can register strategies through the existing compaction strategy contribution registry, but registration is inert until a host explicitly selects and passes a strategy to runtime code. Extensions can also register `compaction` middleware; the runtime calls it only when the agent/session has that middleware registry configured.
 
-The default strategy does not call a provider. Hosts that need model-generated summaries can use the optional [`@arnilo/prism-compaction-llm` package](compaction-llm.md); its `maxOutputTokens`/`maxSummaryTokens` budget is passed through `model.parameters.maxTokens` and first-party providers serialize that to provider output-token fields. Hosts that need prepared source-backed memory without a compaction-time model call can use [`@arnilo/prism-compaction-observational-memory`](compaction-observational-memory.md).
+The default strategy does not call a provider. Hosts that need model-generated summaries can use the optional [`@arnilo/prism-compaction-llm` package](compaction-llm.md); its `maxOutputTokens`/`maxSummaryTokens` budget is passed through `model.parameters.maxTokens` and first-party providers serialize that to provider output-token fields. Coding sessions can select that package's `createCodingCompactionStrategy()` preset for paths, patch intent, checks, plans/todos, blockers, and next verification steps; it remains an ordinary `CompactionStrategy` and does not retain complete diffs or add a coding runtime. Hosts that need prepared source-backed memory without a compaction-time model call can use [`@arnilo/prism-compaction-observational-memory`](compaction-observational-memory.md).
 
 ## Security and performance notes
 
@@ -173,5 +173,6 @@ The default strategy does not call a provider. Hosts that need model-generated s
 - [Configuration and manifests](configuration-and-manifests.md): `compactionStrategy` and `retryPolicy` manifest contribution kinds.
 - [Provider layer](provider-layer.md): safe provider error codes used by retry classification.
 - [Credentials and redaction](credentials-and-redaction.md): exact secret redaction helper used by default compaction and retry error handling.
+- [LLM compaction package](compaction-llm.md): `createCodingCompactionStrategy()` is the thin coding-focused preset; see `examples/coding-compaction.ts` for a network-free mock.
 
 Runtime redaction composes with compaction and retry secret lists: configured redactors apply at session serialization boundaries, while compaction/retry `secrets` still redact their local summaries and errors.

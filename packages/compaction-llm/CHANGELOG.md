@@ -1,4 +1,16 @@
 # Changelog
+## Unreleased
+
+### Added
+
+- Added `createCodingCompactionStrategy()`, a bounded LLM compaction preset for coding-session paths, patch intent, checks, plans/todos, blockers, and verification steps.
+
+## [0.0.12] - 2026-07-22
+
+### Changed
+
+- Released with exact 0.0.12 graph.
+
 ## [0.0.11] - 2026-07-22
 
 ### Changed

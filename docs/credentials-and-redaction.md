@@ -102,6 +102,14 @@ console.log(error.message);
 - Keep resolved credential values local to the request path. Do not put them in registries, model configs, messages, provider events, agent events, session entries, compaction summaries, or logs.
 - Future settings/config loaders may provide credential resolver instances, but core helpers remain storage-free.
 
+### Subscription OAuth eligibility
+
+In 0.0.12, OpenAI Codex is Prism's only first-party subscription OAuth flow. It is explicit and host-invoked through `createOpenAICodexOAuthProvider()`; hosts own login UI and may use `createOAuthCredentialStoreAdapter()` for deliberately selected durable storage.
+
+Anthropic and Google provider packages are API-key-only. Do not scrape or import Claude Code/Gemini CLI credential files, setup tokens, environment values, or browser sessions, and do not route a user's Claude.ai/Gemini subscription through Prism. Anthropic states that developers building products must use Claude Console API keys or a supported cloud provider and may not offer Claude.ai login or route Free/Pro/Max credentials ([legal and compliance](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance)). Gemini CLI states that third-party software using its OAuth to access backend services violates applicable terms; its FAQ names Vertex AI or Google AI Studio API keys as the supported third-party path ([terms](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md), [FAQ](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md)).
+
+A future provider-local OAuth adapter needs published permission for third-party products, documented authorize/token/refresh endpoints and scopes, PKCE/state where required, abort/expiry/bounded-response/redaction/store-round-trip fixtures, and legal review before registration. Until then, absence is intentional.
+
 ## Security and performance notes
 
 - Redaction only removes exact known secret values passed to the helper. It is not a general-purpose secret detector.

@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.0.12] - 2026-07-22
+
+### Changed
+
+- Released with exact 0.0.12 graph.
+
+
+### Changed
+
+- Clarified API-key-only authentication: no Claude Code/Claude.ai subscription OAuth, credential-file, or setup-token import.
+
 ## [0.0.11] - 2026-07-22
 
 ### Added

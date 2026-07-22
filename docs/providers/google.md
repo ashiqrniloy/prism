@@ -8,7 +8,7 @@
 
 Use for first-party Gemini Developer API coding-host semantics (function calling, multimodal `inlineData`, thinking, usage, abort). Prefer this over the AI SDK escape hatch when Gemini is a primary host.
 
-Do **not** use for Vertex enterprise identity (deferred to 0.0.13+) or as a substitute for Anthropic Messages.
+Do **not** use for Vertex enterprise identity (deferred to 0.0.13+), as a substitute for Anthropic Messages, or Gemini CLI OAuth/credential-file/token import. This package is API-key-only.
 
 ## Inputs / request
 
@@ -43,7 +43,7 @@ Featured offline aliases include `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2
 | Stream | Prism text, thinking when present, **complete** `tool_call` events (Gemini does not stream argument deltas), usage, `done`, redacted `error`. |
 | Cache | No Anthropic-style `cache_control`; Gemini implicit caching is not exposed as Prism breakpoints in 0.0.11. |
 | Multimodal | `inlineData` parts with MIME + base64; capability checks fail closed for unsupported modalities. |
-| Auth | `api_key`; provider-owned `content-type` + `x-goog-api-key` win over caller headers. |
+| Auth | `api_key`; provider-owned `content-type` + `x-goog-api-key` win over caller headers. No OAuth descriptor or Gemini CLI subscription adapter is registered. |
 
 ## Request/response example
 
@@ -71,6 +71,7 @@ api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey, model
 - AI SDK remains an escape hatch, not the primary Google path.
 - Live smoke: `PRISM_LIVE_PROVIDER_TESTS=1` + `GOOGLE_API_KEY` or `GEMINI_API_KEY`.
 - Vertex / enterprise identity stays out of 0.0.11.
+- Gemini CLI says third-party software accessing its backend through Gemini CLI OAuth violates applicable terms, and its FAQ directs third-party coding agents to Vertex AI or Google AI Studio API keys ([terms](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md), [FAQ](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md)). Prism therefore has no Gemini CLI OAuth API or token-import shortcut.
 
 ## Security and performance notes
 

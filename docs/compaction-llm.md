@@ -12,6 +12,7 @@ Key exports:
 | Export | Purpose |
 | --- | --- |
 | `createLlmCompactionStrategy(options)` | Returns a provider-backed `CompactionStrategy`. |
+| `createCodingCompactionStrategy(options)` | Fixed `coding` preset over the LLM strategy: prioritizes file paths, patch intent, commands/checks, plan/todos, blockers, and next verification while retaining normal limits and raw history. |
 | `createLlmCompactionExtension(options)` | Registers the strategy into an explicit extension kernel compaction registry. |
 | `prepareLlmCompaction(context, options?)` | Splits branch entries into summary input, kept suffix, optional split-turn prefix, file details, and compaction data. |
 | `findLlmCompactionCutPoint(entries, options?)` | Finds the last entry covered by a summary using approximate token budgets. |
@@ -76,6 +77,23 @@ const strategy = createLlmCompactionStrategy({
 await session.compact({ strategy, secrets: [apiKey] });
 ```
 
+Coding-session example:
+
+```ts
+import { createCodingCompactionStrategy } from "@arnilo/prism-compaction-llm";
+
+const strategy = createCodingCompactionStrategy({
+  provider: summaryProvider,
+  summaryModel: { provider: "openai", model: "gpt-4.1-mini" },
+  keepRecentTokens: 20_000,
+  maxSummaryTokens: 800,
+  customInstructions: "Keep migration blockers prominent.",
+});
+await session.compact({ strategy });
+```
+
+The preset always uses strategy name `coding` and enables existing read/modified-file retention. It adds no provider call, parser, worker, filesystem access, or complete-diff retention beyond `createLlmCompactionStrategy()`.
+
 Credential factory example:
 
 ```ts
@@ -108,7 +126,7 @@ Preparation is O(n) over branch entries and uses only arrays, strings, and JSON 
 
 Provider deltas are redacted while retained and stop at `maxSummaryTokens * 4` UTF-16 code units without splitting a surrogate pair. Provider iteration is closed/aborted on overflow. A derived finite event ceiling also stops endless empty/non-text deltas. Final history/turn/file composition receives the same cap. Provider error events, generator throws, provider-factory failures, and policy failures expose only bounded redacted detail; host abort remains authoritative.
 
-The strategy makes only the needed provider call(s): one history summary plus one split-turn prefix summary when needed. It does not discover credentials, read files, start background jobs, or add provider SDK dependencies. Redaction is exact-string only; pass every known secret that may appear in history or provider output.
+The strategy makes only the needed provider call(s): one history summary plus one split-turn prefix summary when needed. The coding preset makes the same calls and uses the same bounded file-operation preparation. Neither discovers credentials, reads files, starts background jobs, or adds provider SDK dependencies. Redaction is exact-string only; pass every known secret that may appear in history, paths, instructions, or provider output.
 
 ## Related APIs
 
@@ -119,3 +137,4 @@ The strategy makes only the needed provider call(s): one history summary plus on
 - [Agent/session runtime](agent-session-runtime.md): `AgentSession.compact()` and opt-in auto-compaction.
 - [Provider layer](provider-layer.md): mock providers and provider request contracts.
 - [Credentials and redaction](credentials-and-redaction.md): exact known-secret redaction behavior.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): separate optional frontend transport; coding compaction adds no UI protocol dependency.

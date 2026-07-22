@@ -45,6 +45,7 @@ const packages = [
   { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
   { dir: "packages/browser", name: "@arnilo/prism-browser" },
+  { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
   { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
@@ -129,14 +130,18 @@ before(() => {
   }
 
   // 3. Dynamic-import every documented specifier from the fresh install.
-  const specs = [...coreSpecifiers(), ...packages.filter((p) => !p.isCore && !p.isMeta).map((p) => p.name)];
+  const specs = [...coreSpecifiers(), ...packages.filter((p) => !p.isCore && !p.isMeta).map((p) => p.name), "@arnilo/prism-ag-ui/acp"];
   writeFileSync(
     join(consumer, "smoke.mjs"),
     `const specs = ${JSON.stringify(specs)};\n` +
       "for (const s of specs) {\n" +
       "  try { await import(s); }\n" +
       "  catch (e) { console.error('IMPORT FAILED:', s, e.message); process.exit(1); }\n" +
-      "}\nconsole.log('ALL IMPORTS OK');\n",
+      "}\n" +
+      "const prism = await import('@arnilo/prism');\n" +
+      "const compaction = await import('@arnilo/prism-compaction-llm');\n" +
+      "if (typeof prism.resumeAgentRunStream !== 'function' || typeof compaction.createCodingCompactionStrategy !== 'function') process.exit(1);\n" +
+      "console.log('ALL IMPORTS OK');\n",
   );
   const smoke = run("node", ["smoke.mjs"], consumer);
   result.smokeStatus = smoke.status;
@@ -234,7 +239,7 @@ console.log("PACKED INTEGRATION OK");
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Compose every 0.0.11 optional capability family from packed public imports.
+  // 5. Compose every 0.0.12 optional capability family from packed public imports.
   writeFileSync(join(consumer, "composition.mjs"), `
 import assert from "node:assert/strict";
 import {
@@ -341,7 +346,7 @@ const card = { name: "Packed", description: "Packed test agent", supportedInterf
 const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: () => servedAgent().createSession() }, authorize: () => ({ ownership }) });
 const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
 assert.equal((await a2a.send("hello")).text, "served");
-console.log("PACKED 0.0.11 COMPOSITION OK");
+console.log("PACKED 0.0.12 COMPOSITION OK");
 `);
   const composition = run("node", ["composition.mjs"], consumer);
   result.compositionStatus = composition.status;
@@ -383,7 +388,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("packed 0.0.11 optional capabilities compose through public imports", () => {
+  it("packed 0.0.12 optional capabilities compose through public imports", () => {
     assert.equal(result.compositionStatus, 0, result.compositionOut);
   });
 
@@ -393,16 +398,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal((result.integrationOut + result.compositionOut).includes("packed-integration-secret"), false, "canary leaked into packed journey output");
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.11.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.12.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.0.11.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.0.12.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.0.11.tgz"),
-      `expected 'arnilo-prism-0.0.11.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.0.12.tgz"),
+      `expected 'arnilo-prism-0.0.12.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.0.11.tgz", "arnilo-prism-compaction-0.0.11.tgz", "arnilo-prism-all-0.0.11.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.0.12.tgz", "arnilo-prism-compaction-0.0.12.tgz", "arnilo-prism-all-0.0.12.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

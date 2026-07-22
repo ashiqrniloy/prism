@@ -7,6 +7,22 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.11 → 0.0.12 coding harness interoperability (additive, pre-release)
+
+Release **0.0.12** adds optional `@arnilo/prism-ag-ui` (root AG-UI and stable `./acp` sibling), generic `resumeAgentRunStream()` / `AgentRunLifecycle.resumeStream()`, and `createCodingCompactionStrategy()` from `@arnilo/prism-compaction-llm`. It adds no core UI dependency, session/database migration, listener, tool, editor/filesystem bridge, conversation/artifact service, worker, or background reconnect loop.
+
+| Surface | Before (0.0.11) | After (0.0.12) |
+| --- | --- | --- |
+| Durable approval stream | `resumeAgentRun()` returns final result | `resumeAgentRunStream()` and lifecycle `resumeStream()` subscribe before resume and emit selected redacted run events; existing direct resume remains compatible. |
+| Browser/TUI protocol | Host maps events itself | Install optional `@arnilo/prism-ag-ui`; `createAgUiHandler()` is host-authorized Web Request → SSE, while `@arnilo/prism-ag-ui/acp` is stable ACP v1 text/tool/usage/permission glue. |
+| Reconnect | Host-specific ledger query | `createPersistenceAgUiReplay()` adapts ownership-scoped redacted `queryEvents` pages. Replay is at-least-once; client de-duplicates stable event/message/tool IDs and terminal replay never reruns work. |
+| Coding compaction | Generic LLM strategy | `createCodingCompactionStrategy()` keeps existing caps/history semantics while prioritizing paths, patch intent, checks, plan/todos, blockers, and next verification. |
+| Subscription OAuth | Existing Codex OAuth | OpenAI Codex remains the only first-party subscription OAuth flow. Anthropic and Google packages stay API-key-only; do not import/reroute Claude Code or Gemini CLI credentials. |
+
+**Host actions:** install the optional package only when a frontend protocol is needed; keep authorization, session/thread/run mapping, durable correlation, storage, redaction, and projection in the host. Reject frontend tools and state unless an explicit host policy accepts them. For a durable approval, persist protocol-run correlation before exposing the exact `${runId}:${version}` interrupt, then resume through the lifecycle with current ownership/version. Configure a redacted `ProductionPersistenceStore` before enabling replay. Use `createCodingCompactionStrategy()` only when the host already supplies a summary provider/model.
+
+AG-UI defaults/hard caps: request 64 KiB/1 MiB; projected event 64 KiB/1 MiB; replay page 100/500; subscriber queue 128/4096; stream 10k/100k events and 10/64 MiB; wall time 120 seconds/30 minutes. Benchmark results remain a release-gate placeholder: `node scripts/benchmark-0.0.12.mjs` lands in Task 8. See [Frontend interoperability](ag-ui.md), [LLM compaction package](compaction-llm.md), and [Phase 7 evidence](review-coverage-2026-07-22-phase-7.md).
+
 ## 0.0.10 → 0.0.11 coding harness fundamentals (additive)
 
 Release **0.0.11** adds SessionIndex/search, assembler `contextBudget`, native Anthropic + Google provider packages, mid-run `steer`, coding-agent goal→verify + `ask_user_decision` (multi/free-text/suspend glue). Package count: **32 → 34** (adds `@arnilo/prism-provider-anthropic`, `@arnilo/prism-provider-google`). Version bump itself is Task 13 / release gate — treat this section as the behavioral migration map.

@@ -6,6 +6,7 @@ import type {
   AgentRunResult,
   AgentRunResume,
   AgentRunResumeOptions,
+  AgentRunResumeStreamOptions,
   AgentRunState,
   AgentRunStateOptions,
   AgentRunRef,
@@ -91,6 +92,47 @@ export async function resumeAgentRun(
   resume: AgentRunResume,
   options: AgentRunResumeOptions,
 ): Promise<AgentRunResult> {
+  return executePreparedAgentRunResume(await prepareAgentRunResume(agent, ref, resume, options));
+}
+
+/** Subscribe before resuming one durable run. Early consumer return aborts that resumed execution. */
+export async function* resumeAgentRunStream(
+  agent: Agent,
+  ref: AgentRunRef,
+  resume: AgentRunResume,
+  options: AgentRunResumeStreamOptions,
+): AsyncGenerator<AgentEvent> {
+  throwIfAbortedSignal(options.signal);
+  const prepared = await prepareAgentRunResume(agent, ref, resume, options, options.signal);
+  const subscription = prepared.session.subscribe(options);
+  let settled = false;
+  const runPromise = executePreparedAgentRunResume(prepared, options.signal).finally(() => { settled = true; });
+  try {
+    for await (const event of subscription) {
+      if ("runId" in event && event.runId !== ref.runId) continue;
+      yield event;
+    }
+    await runPromise;
+  } finally {
+    if (!settled) {
+      prepared.session.abort(new Error("resume stream consumer closed"));
+      await runPromise.catch(() => undefined);
+    }
+  }
+}
+
+type PreparedAgentRunResume =
+  | { readonly kind: "deny"; readonly session: RuntimeAgentSession; readonly result: AgentRunResult; readonly interruption: import("./contracts.js").AgentRunInterruption; readonly version: number; readonly ownership?: OwnershipScope }
+  | { readonly kind: "approve"; readonly session: RuntimeAgentSession; readonly state: StoredAgentRunState; readonly runState: AgentRunStateOptions; readonly ownership?: OwnershipScope };
+
+async function prepareAgentRunResume(
+  agent: Agent,
+  ref: AgentRunRef,
+  resume: AgentRunResume,
+  options: AgentRunResumeOptions,
+  signal?: AbortSignal,
+): Promise<PreparedAgentRunResume> {
+  throwIfAbortedSignal(signal);
   const { record, state } = await loadAgentRunState(options.checkpoints, ref, options.ownership);
   if (state.definitionRevision !== options.definitionRevision || state.agentId !== (agent.config.id ?? agent.config.name) || state.fingerprint !== agentFingerprint(agent, options.definitionRevision)) {
     throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on resume");
@@ -98,7 +140,9 @@ export async function resumeAgentRun(
   if (record.version !== resume.expectedVersion || state.status !== "suspended") {
     throw new AgentRunStateError("Stale or non-suspended agent run resume");
   }
+  const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
   if (resume.decision === "deny") {
+    throwIfAbortedSignal(signal);
     const denied = await saveAgentRunState({
       checkpoints: options.checkpoints,
       state: { ...state, status: "denied" },
@@ -106,16 +150,30 @@ export async function resumeAgentRun(
       ownership: options.ownership,
       fencingToken: options.fencingToken,
     });
-    const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
-    await session.recordDurableDenial(state.runId, state.interruption!, denied.record.version, options.ownership);
-    const runState = publicState(denied.state);
-    return { sessionId: state.sessionId, runId: state.runId, status: "denied", leafId: state.leafId, text: "", content: [], runState, interruption: state.interruption };
+    return {
+      kind: "deny",
+      session,
+      interruption: state.interruption!,
+      version: denied.record.version,
+      ownership: options.ownership,
+      result: {
+        sessionId: state.sessionId,
+        runId: state.runId,
+        status: "denied",
+        leafId: state.leafId,
+        text: "",
+        content: [],
+        runState: publicState(denied.state),
+        interruption: state.interruption,
+      },
+    };
   }
   if (state.pending?.status === "dispatched") throw new AgentRunStateError("Ambiguous dispatched tool requires operator resolution");
   const configured = agent.config.runState;
   if (configured && (configured.checkpoints !== options.checkpoints || configured.definitionRevision !== options.definitionRevision)) {
     throw new AgentRunStateError("Agent durable run-state configuration mismatch on resume");
   }
+  throwIfAbortedSignal(signal);
   const claimed = await saveAgentRunState({
     checkpoints: options.checkpoints,
     state: { ...state, status: "running", interruption: undefined },
@@ -123,13 +181,26 @@ export async function resumeAgentRun(
     ownership: options.ownership,
     fencingToken: options.fencingToken,
   });
-  const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
-  return session.resumeDurable(claimed.state, configured ?? {
-    checkpoints: options.checkpoints,
-    definitionRevision: options.definitionRevision,
-    interruptBeforeTool: state.interruptBeforeTool,
-    fencingToken: options.fencingToken,
-  }, options.ownership);
+  return {
+    kind: "approve",
+    session,
+    state: claimed.state,
+    ownership: options.ownership,
+    runState: configured ?? {
+      checkpoints: options.checkpoints,
+      definitionRevision: options.definitionRevision,
+      interruptBeforeTool: state.interruptBeforeTool,
+      fencingToken: options.fencingToken,
+    },
+  };
+}
+
+async function executePreparedAgentRunResume(prepared: PreparedAgentRunResume, signal?: AbortSignal): Promise<AgentRunResult> {
+  if (prepared.kind === "deny") {
+    await prepared.session.recordDurableDenial(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
+    return prepared.result;
+  }
+  return prepared.session.resumeDurable(prepared.state, prepared.runState, prepared.ownership, signal);
 }
 
 class AgentRunSuspended extends Error {
@@ -219,8 +290,8 @@ class RuntimeAgentSession implements AgentSession {
     }
   }
 
-  async resumeDurable(state: StoredAgentRunState, runState: AgentRunStateOptions, ownership?: OwnershipScope): Promise<AgentRunResult> {
-    return this.runInternal(state.input ?? [], { runState, ownership }, state.runId, { options: runState, state, version: state.version! });
+  async resumeDurable(state: StoredAgentRunState, runState: AgentRunStateOptions, ownership?: OwnershipScope, signal?: AbortSignal): Promise<AgentRunResult> {
+    return this.runInternal(state.input ?? [], { runState, ownership, signal }, state.runId, { options: runState, state, version: state.version! });
   }
 
   async recordDurableDenial(
@@ -232,11 +303,15 @@ class RuntimeAgentSession implements AgentSession {
     this.activeLedger = this.agent.config.runLedger;
     this.activeOwnership = ownership ?? this.agent.config.ownership;
     this.activeRedactor = this.agent.config.redactor;
-    this.emit({ type: "agent_denied", sessionId: this.id, runId, interruption, version });
-    await this.drainLedger();
-    this.activeLedger = undefined;
-    this.activeOwnership = undefined;
-    this.activeRedactor = undefined;
+    try {
+      this.emit({ type: "agent_denied", sessionId: this.id, runId, interruption, version });
+      await this.drainLedger();
+    } finally {
+      this.activeLedger = undefined;
+      this.activeOwnership = undefined;
+      this.activeRedactor = undefined;
+      this.closeSubscribers();
+    }
   }
 
   private async runInternal(

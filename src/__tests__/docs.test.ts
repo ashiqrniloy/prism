@@ -18,6 +18,7 @@ const apiPages = [
   "docs/server.md",
   "docs/supervisors.md",
   "docs/a2a.md",
+  "docs/ag-ui.md",
   "docs/structured-output.md",
   "docs/session-stores-and-branching.md",
   "docs/session-stores.md",
@@ -208,7 +209,7 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 75, "numbered plan count drifted");
+    assert.equal(plans.length, 76, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
@@ -347,6 +348,118 @@ describe("docs", () => {
     assert.match(phase6, /SessionIndex|contextBudget|provider-anthropic|goal→verify|goal\/verify/i);
   });
 
+  it("phase 7 evidence freezes interoperability scope, protocol revisions, bounds, and OAuth policy", () => {
+    const evidence = readFileSync("docs/review-coverage-2026-07-22-phase-7.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const phase7 = roadmap.slice(
+      roadmap.indexOf("Phase 7 — Release 0.0.12"),
+      roadmap.indexOf("Phase 8 — Release 0.0.13"),
+    );
+
+    for (const heading of [
+      "## Frozen external revisions",
+      "## Frozen package and API contract",
+      "## Capability traceability matrix",
+      "## Primitive and caller inventory",
+      "## Frozen finite limits and charging points",
+      "## OAuth eligibility matrix",
+      "## Threat and authority matrix",
+      "## Validation matrix for Task 0",
+    ]) assert.ok(evidence.includes(heading), `Phase 7 evidence missing ${heading}`);
+    for (let task = 1; task <= 8; task += 1) {
+      assert.ok(evidence.includes(`Task ${task}`), `Phase 7 evidence missing Task ${task} owner`);
+    }
+    for (const token of [
+      "@arnilo/prism-ag-ui",
+      "@arnilo/prism-ag-ui/acp",
+      "@ag-ui/core` **0.0.57**",
+      "@agentclientprotocol/sdk` **1.3.0**",
+      "resumeAgentRunStream()",
+      "AgentRunLifecycle.resumeStream()",
+      "createCodingCompactionStrategy()",
+      "Default deny",
+      "64 KiB / 1 MiB",
+      "10,000 / 100,000",
+      "OpenAI Codex",
+      "Anthropic provider",
+      "Google provider",
+    ]) assert.ok(evidence.includes(token), `Phase 7 evidence missing frozen token ${token}`);
+    for (const deferred of [
+      "Conversation storage/service",
+      "Enterprise identity",
+      "ACP terminal, filesystem, editor, process, diff, or MCP implementation",
+      "Anthropic Claude Code or Google Gemini CLI subscription OAuth/token reuse",
+    ]) {
+      assert.ok(evidence.includes(deferred), `Phase 7 evidence missing out-of-scope item ${deferred}`);
+      assert.ok(!phase7.includes(deferred), `Phase 7 roadmap implementation scope unexpectedly names ${deferred}`);
+    }
+    const providerIndexes = [
+      "packages/provider-anthropic/src/index.ts",
+      "packages/provider-google/src/index.ts",
+    ].map((path) => readFileSync(path, "utf8")).join("\n");
+    for (const forbidden of ["createAnthropicSubscriptionOAuthProvider", "createGeminiCliOAuthProvider", 'kind: "oauth"']) {
+      assert.ok(!providerIndexes.includes(forbidden), `unsupported OAuth registration leaked: ${forbidden}`);
+    }
+    assert.ok(index.includes("(review-coverage-2026-07-22-phase-7.md)"), "docs/index.md missing Phase 7 review coverage link");
+  });
+
+  it("phase 7 OAuth docs lock provider-authorized flows and future gate", () => {
+    const docs = [
+      "docs/credentials-and-redaction.md",
+      "docs/credential-storage.md",
+      "docs/provider-packages.md",
+      "docs/providers/openai.md",
+      "docs/providers/anthropic.md",
+      "docs/providers/google.md",
+      "docs/host-security.md",
+    ].map((path) => readFileSync(path, "utf8")).join("\n");
+    for (const token of [
+      "OpenAI Codex",
+      "https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance",
+      "https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md",
+      "PKCE/state",
+      "durable-store round-trip",
+      "CLI credential scanner",
+    ]) assert.ok(docs.includes(token), `Phase 7 OAuth docs missing ${token}`);
+
+    const providerIndexes = [
+      "packages/provider-anthropic/src/index.ts",
+      "packages/provider-google/src/index.ts",
+    ].map((path) => readFileSync(path, "utf8")).join("\n");
+    for (const forbidden of ["createAnthropicSubscriptionOAuthProvider", "createGeminiCliOAuthProvider", 'kind: "oauth"'])
+      assert.ok(!providerIndexes.includes(forbidden), `unsupported OAuth registration leaked: ${forbidden}`);
+    const openai = readFileSync("packages/provider-openai/src/index.ts", "utf8");
+    assert.ok(openai.includes("createOpenAICodexOAuthProvider") && openai.includes('kind: "oauth"'));
+  });
+
+  it("phase 7 public docs cover AG-UI, ACP, streamed resume, compaction, and migration", () => {
+    const agUi = readFileSync("docs/ag-ui.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const packageReadme = readFileSync("packages/ag-ui/README.md", "utf8");
+    for (const token of [
+      "@arnilo/prism-ag-ui/acp",
+      "@ag-ui/core` **0.0.57**",
+      "@agentclientprotocol/sdk` **1.3.0**",
+      "createAgUiHandler()",
+      "createPersistenceAgUiReplay()",
+      "resumeAgentRunStream()",
+      "AgentRunLifecycle.resumeStream()",
+      "at-least-once",
+      "${runId}:${version}",
+      "default deny",
+      "10,000 / 100,000",
+      "conversation database",
+    ]) assert.ok(agUi.toLowerCase().includes(token.toLowerCase()), `AG-UI docs missing ${token}`);
+    for (const token of ["0.0.11 → 0.0.12", "createCodingCompactionStrategy()", "OpenAI Codex", "Gemini CLI"])
+      assert.ok(migration.includes(token), `migration missing ${token}`);
+    assert.ok(performance.includes("benchmark-0.0.12.mjs"));
+    assert.ok(index.includes("(ag-ui.md)"));
+    assert.ok(packageReadme.includes("Released in 0.0.12") && packageReadme.includes("default-deny"));
+  });
+
   it("phase 6 docs cover SessionIndex, contextBudget, providers, steer, ask_user_decision, and goal/verify", () => {
     const session = readFileSync("docs/session-stores.md", "utf8");
     const input = readFileSync("docs/input-and-prompt-assembly.md", "utf8");
@@ -417,17 +530,18 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.11 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.12 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
-      .filter((dir) => existsSync(join(dir, "package.json")));
+      .filter((dir) => existsSync(join(dir, "package.json")))
+      .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 34, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 35, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.11] - 2026-07-22"), `${dir}/CHANGELOG.md missing finalized 0.0.11 section`);
+      assert.ok(changelog.includes("## [0.0.12] - 2026-07-22"), `${dir}/CHANGELOG.md missing finalized 0.0.12 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -930,12 +1044,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.11 publish handoff"), docs.indexOf("## Extension and configuration notes"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.12 publish handoff"), docs.indexOf("### 0.0.11 publish handoff"));
     for (const phrase of [
       "Decision: GO",
-      "available` for all 34",
-      "git tag -s v0.0.11",
-      "git push origin v0.0.11",
+      "35 manifests",
+      "git tag -s v0.0.12",
+      "git push origin v0.0.12",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",
@@ -943,7 +1057,8 @@ describe("docs", () => {
       "no Office",
     ]) assert.ok(handoff.includes(phrase), `publish handoff missing ${phrase}`);
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
-      .filter((dir) => existsSync(join(dir, "package.json")));
+      .filter((dir) => existsSync(join(dir, "package.json")))
+      .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string };
       assert.ok(handoff.includes(manifest.name), `publish handoff missing ${manifest.name}`);
@@ -1549,9 +1664,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, twenty-seven first-party capability packages, and six pure-manifest family/profile packages",
+      "one core package, twenty-eight first-party capability packages, and six pure-manifest family/profile packages",
       "all nine `@arnilo/prism-provider-*` packages",
-      "All 34 manifests (28 code packages + 6 family/profile packages)",
+      "All 35 manifests (29 code packages + 6 family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -1637,6 +1752,7 @@ describe("docs", () => {
       "examples/cache-aware-prompt-assembly.ts",
       "examples/neuralwatt-agent-run.ts",
       "examples/compaction.ts",
+      "examples/coding-compaction.ts",
       "examples/observational-memory-recall-status-view.ts",
       "examples/cli.ts",
       "examples/rpc.ts",
@@ -2278,7 +2394,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 34, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 35, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

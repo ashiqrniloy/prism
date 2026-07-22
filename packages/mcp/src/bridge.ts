@@ -196,7 +196,7 @@ export function mapMcpToolsToDefinitions(
 }
 
 function createMcpBridgeClient(): Client {
-  return new Client({ name: "prism-mcp-bridge", version: "0.0.11" }, { capabilities: {} });
+  return new Client({ name: "prism-mcp-bridge", version: "0.0.12" }, { capabilities: {} });
 }
 
 function createBridgeState(

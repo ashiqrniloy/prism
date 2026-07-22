@@ -7,7 +7,7 @@ import {
 } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
-/** Official Gemini API base (`v1beta`). Vertex is out of scope for 0.0.11. */
+/** Official Gemini API base (`v1beta`). Vertex is out of scope for 0.0.12. */
 export const GOOGLE_DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 export interface GoogleModelConfig extends Omit<ModelConfig, "provider" | "compat"> {

@@ -19,6 +19,7 @@ The agent/session runtime adds the minimal shared SDK surface for running provid
 - `session.fork(options?)`
 - `session.clone(options?)`
 - `resumeAgentRun(agent, ref, decision, options)`
+- `resumeAgentRunStream(agent, ref, decision, options)` → owned durable-resume `AsyncIterable<AgentEvent>`
 - `createAgentRunLifecycle({ checkpoints, resolveAgent })` for host-selected remote status/resume adapters
 
 The runtime streams provider text/tool-call content into `AgentEvent` values. Complete `tool_call` events are dispatched through the active host `ToolRegistry`, then returned as tool-result messages on the next provider turn. When a store is supplied, user, assistant, tool-result, and model-change entries are appended under the current branch leaf. Abort propagation and run exclusivity use native `AbortController`.
@@ -55,6 +56,8 @@ string | Message | readonly Message[]
 `session.run()` / `session.prompt()` resolve to an `AgentRunResult` with `sessionId`, `runId`, `status`, `text`, `content`, optional `message`/`usage`/`leafId`, and terminal `error`/`abortReason` when applicable. Callers may ignore the return value. Failed and aborted runs still emit their terminal events, then reject with `AgentRunError` whose `.result` carries the same shape.
 
 `session.stream(input, options?)` subscribes first, starts exactly one run, yields only that run's events, and terminates when the run succeeds, fails, or aborts. Early consumer return aborts the owned run and releases the session. `SubscribeOptions.maxQueuedEvents` / `overflow` may be passed alongside `RunOptions`.
+
+`resumeAgentRunStream(agent, ref, resume, options?)` does the same for one existing suspended durable run. It validates checkpoint ownership, revision/fingerprint, and `expectedVersion`, then subscribes before emitting `agent_started` / `agent_resumed` and resumed message/tool/terminal events. `AgentRunResumeStreamOptions` combines existing resume options with `signal`, `maxQueuedEvents`, and `overflow`; early return aborts only resumed execution. It does not replay a claimed/dispatched tool, poll a ledger, or retain a worker. `createAgentRunLifecycle().resumeStream(ref, resume, request?)` adds the same behavior after host agent-capability resolution.
 
 `session.subscribe(options?)` remains available for hosts that want a long-lived subscriber across runs. Subscribe before `run()` to observe that run's events. The consumer loop and `session.run()` must run concurrently (e.g. start the `for await` consumer, then `await Promise.all([consumer, session.run("Hi")])`): events are only emitted during a live run, so awaiting the subscribe loop before calling `run()` deadlocks. Prefer `session.stream()` when you only need one run's events. `SubscribeOptions.maxQueuedEvents` defaults to `1024` (minimum `1`) and caps events queued while the consumer is not awaiting `next()`. `SubscribeOptions.overflow` defaults to `"close"`; it clears queued payload events, delivers one `event_subscriber_overflow` notice to that subscriber, then closes it. `"drop_oldest"` keeps newest events; `"drop_newest"` ignores new events while full.
 
@@ -184,7 +187,7 @@ if (result.status === "suspended") {
 }
 ```
 
-Resume requires exact checkpoint ownership, version, agent fingerprint, and revision. Prism CAS-claims approval before work, rechecks normal guardrail/permission/validation/limit paths, and marks a pending tool dispatched before its side effect. `createAgentRunLifecycle()` wraps the same core path for server/MCP hosts: adapters pass only authorized ownership, status returns only `{ state, version }`, and `resolveAgent()` supplies current agent/revision. Remote restart requires both checkpoint and session stores to be durable. A crash after that mark is ambiguous and is never replayed automatically; use host tool idempotency keyed by `runId`/`toolCallId` or resolve it manually. Checkpoints contain bounded redacted state plus session/leaf references, never provider objects, callbacks, signals, credentials, or raw secrets. Only built-in loop options are durable; custom `AgentLoopStrategy` rejects before provider work.
+Resume requires exact checkpoint ownership, version, agent fingerprint, and revision. Prism CAS-claims approval before work, rechecks normal guardrail/permission/validation/limit paths, and marks a pending tool dispatched before its side effect. `createAgentRunLifecycle()` wraps the same core path for server/MCP hosts: adapters pass only authorized ownership, status returns only `{ state, version }`, and `resolveAgent()` supplies current agent/revision. `resumeStream()` uses that same claim path and bounded subscriber, so adapters do not poll or duplicate resume logic. Remote restart requires both checkpoint and session stores to be durable. A crash after that mark is ambiguous and is never replayed automatically; use host tool idempotency keyed by `runId`/`toolCallId` or resolve it manually. Checkpoints contain bounded redacted state plus session/leaf references, never provider objects, callbacks, signals, credentials, or raw secrets. Only built-in loop options are durable; custom `AgentLoopStrategy` rejects before provider work.
 
 ## Secure composition
 
@@ -209,6 +212,7 @@ Per-run options may narrow `limits` and append `guardrails`; they cannot replace
 - [CLI/RPC](cli-rpc.md): terminal and JSONL adapters over this runtime.
 - [Workflows](workflows.md): optional DAG orchestration that calls `AgentSession.run()` for agent nodes.
 - [A2A interoperability](a2a.md): direct text exposure calls `AgentSession.run()`; durable/rich/reconnect behavior uses host `A2ATaskLifecycle` over existing checkpoints/persistence, never an in-memory runtime cache.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional adapters use `session.stream()` and `resumeAgentRunStream()` / `AgentRunLifecycle.resumeStream()`; protocol/UI state remains outside core.
 
 `AgentConfig.loop` and `RunOptions.loop` select a replaceable per-run control loop (`singleShotLoop` default, or `generate-validate-revise` with host callbacks); see [Agent loops](agent-loops.md). `RunOptions.loop` wins over `AgentConfig.loop`. Built-in loops emit the same normal turn/message envelope around provider turns, and both add the first run input to live history once after the first provider turn so later turns see the same transcript shape.
 

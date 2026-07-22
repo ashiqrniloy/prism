@@ -92,3 +92,4 @@ Defaults/hard caps include: request 64 KiB/1 MiB; response 1/8 MiB; event 64 KiB
 - [Agent/session runtime](agent-session-runtime.md)
 - [Workflows](workflows.md)
 - [Host security](host-security.md)
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): browser/editor protocol adapters over a Prism session; not an A2A card, task lifecycle, or remote-agent transport.

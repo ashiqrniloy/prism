@@ -500,6 +500,11 @@ export interface AgentRunResumeOptions {
   readonly fencingToken?: number;
 }
 
+/** Bounded, abortable options for `resumeAgentRunStream()`. */
+export interface AgentRunResumeStreamOptions extends AgentRunResumeOptions, SubscribeOptions {
+  readonly signal?: AbortSignal;
+}
+
 export interface AgentRunRef {
   readonly runId: string;
   readonly sessionId?: string;

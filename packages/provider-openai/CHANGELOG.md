@@ -1,4 +1,18 @@
 # Changelog
+
+## [Unreleased]
+
+## [0.0.12] - 2026-07-22
+
+### Changed
+
+- Released with exact 0.0.12 graph.
+
+
+### Changed
+
+- Clarified that host-invoked Codex OAuth is Prism's only first-party subscription OAuth flow in 0.0.12.
+
 ## [0.0.11] - 2026-07-22
 
 ### Changed

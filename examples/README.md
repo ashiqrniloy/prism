@@ -17,6 +17,7 @@ once (`npm run build:core`) you can run any demo directly:
 ```bash
 npm run build:core
 node examples/compaction.ts
+node examples/coding-compaction.ts
 node examples/cli.ts
 node examples/rpc.ts
 node examples/provider-registration.ts
@@ -49,6 +50,7 @@ node examples/workflow-schedules-replay.ts
 node examples/durable-coding-workflow.ts
 node examples/coding-goal-verify.ts
 node examples/agent-durable-approval.ts
+node examples/ag-ui-server.ts
 node examples/secure-agent.ts
 ```
 
@@ -59,6 +61,7 @@ Each demo prints a single JSON line with its result.
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
 - `secure-agent.ts` — opt-in fail-closed agent composition with validation, trust/permission, redaction, limits, ownership, and durable approval.
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
+- `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.
 - `coding-browser-evaluation.ts` — network-free coding/browser adversarial dataset + scorers + CI threshold (no Docker/Playwright binary).
@@ -97,6 +100,7 @@ Each demo prints a single JSON line with its result.
 - `instruction-injection.ts` — compile-checked host-selected instruction injector wiring.
 - `jsonl-stores-branching.ts` — in-memory store + branching; JSONL persistence.
 - `compaction.ts` — **demo**: LLM compaction with a mock summarizer provider.
+- `coding-compaction.ts` — **demo**: coding-focused LLM compaction preset with a mock summarizer; raw history remains intact.
 - `observational-memory-recall-status-view.ts` — **demo**: recall tool +
   status/view commands; recall fails closed on invalid ids.
 - `synapta-style-artifact-loop.ts` — **demo**: third-party host mixing first-party

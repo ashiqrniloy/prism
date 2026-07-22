@@ -49,7 +49,7 @@ export function createLlmCompactionStrategy(options: LlmCompactionStrategyOption
       throwIfAborted(context.signal);
       const prep = prepareLlmCompaction(context, options);
       const credential = await resolveCredentialValue(options.credential, options.credentialRequest ?? { provider: options.summaryModel?.provider ?? options.model?.provider ?? "compaction", name: "apiKey" });
-      const secrets = [...(context.secrets ?? options.secrets ?? []), credential];
+      const secrets = [...(context.secrets ?? []), ...(options.secrets ?? []), credential];
       let provider: AIProvider;
       try {
         provider = await resolveSummaryProvider(options, credential);
@@ -64,7 +64,7 @@ export function createLlmCompactionStrategy(options: LlmCompactionStrategyOption
 
       return {
         summary: combined,
-        entries: [createSessionEntry({ sessionId: context.sessionId, parentId, kind: "compaction", summary: combined, data: { ...prep.data, strategy: name } })],
+        entries: [createSessionEntry({ sessionId: context.sessionId, parentId, kind: "compaction", summary: combined, data: redactedCompactionData({ ...prep.data, strategy: name }, secrets) })],
       } satisfies CompactionResult;
     },
   };
@@ -82,7 +82,7 @@ async function summarizeHistory(
   const sections = [
     prep.previousSummary && `<previous-summary>\n${prep.previousSummary}\n</previous-summary>`,
     `<conversation>\n${conversation}\n</conversation>`,
-    options.customInstructions && `Additional focus: ${options.customInstructions}`,
+    options.customInstructions && `Additional focus: ${redactSecrets(options.customInstructions, secrets)}`,
   ].filter(Boolean).join("\n\n");
 
   return runSummaryProvider(context, options, provider, SUMMARIZATION_SYSTEM_PROMPT, sections, 0.8, secrets, limits);
@@ -97,7 +97,7 @@ async function summarizeTurnPrefix(
   limits: ResolvedSummaryLimits,
 ): Promise<string> {
   const conversation = serializeCompactionConversation(prep.turnPrefixEntries, { ...options, secrets });
-  const prompt = [`<conversation>\n${conversation}\n</conversation>`, options.customInstructions && `Additional focus: ${options.customInstructions}`].filter(Boolean).join("\n\n");
+  const prompt = [`<conversation>\n${conversation}\n</conversation>`, options.customInstructions && `Additional focus: ${redactSecrets(options.customInstructions, secrets)}`].filter(Boolean).join("\n\n");
   return runSummaryProvider(context, options, provider, TURN_PREFIX_SYSTEM_PROMPT, prompt, 0.5, secrets, limits);
 }
 
@@ -240,6 +240,14 @@ function resolveSummaryLimits(options: LlmCompactionStrategyOptions): ResolvedSu
     maxSummaryTokens: options.maxSummaryTokens ?? options.maxOutputTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
     reserveTokens: validateCompactionLimit("reserveTokens", options.reserveTokens ?? DEFAULT_RESERVE_TOKENS, HARD_RESERVE_TOKENS),
     maxErrorBytes: validateCompactionLimit("maxErrorBytes", options.maxErrorBytes ?? DEFAULT_MAX_SUMMARY_ERROR_BYTES, HARD_MAX_SUMMARY_ERROR_BYTES),
+  };
+}
+
+function redactedCompactionData(data: LlmCompactionPreparation["data"], secrets: readonly (string | undefined)[]): LlmCompactionPreparation["data"] {
+  return {
+    ...data,
+    readFiles: data.readFiles?.map((path) => redactSecrets(path, secrets)),
+    modifiedFiles: data.modifiedFiles?.map((path) => redactSecrets(path, secrets)),
   };
 }
 

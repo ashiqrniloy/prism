@@ -20,7 +20,7 @@ Exports:
 Security defaults:
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
-- API keys/access tokens are resolved per request from caller-supplied values or resolvers.
+- API keys/access tokens are resolved per request from caller-supplied values or resolvers. `createOpenAICodexOAuthProvider()` is Prism's only first-party subscription OAuth flow in 0.0.12; hosts explicitly invoke login and own optional storage.
 - Discovery errors redact API keys via `readBoundedResponseText` + `redactSecrets`.
 - Codex OAuth device-code login polls with server `interval`/`expires_in`, honors `slow_down`, and accepts `OAuthLoginCallbacks.signal` for abort.
 - Live tests must stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe provider-specific env names.

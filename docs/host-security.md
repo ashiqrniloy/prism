@@ -117,6 +117,7 @@ Wire those values where they matter: provider adapters receive the resolved cred
 - Resolve credentials at the provider/request edge, as late as possible. Do not put resolved credentials in configs, manifests, registries, prompts, messages, events, session entries, run ledgers, idempotency keys, cache keys, or logs.
 - Use `createExplicitCredentialResolver()` to document source order such as runtime override → stored credential → caller-supplied env object → fallback.
 - Use `createEnvCredentialResolver()` only with an object the host passes in. Prism does not read `process.env` for credentials.
+- Do not treat a local vendor CLI credential file, setup token, browser session, or consumer subscription as a Prism credential source. In 0.0.12 only OpenAI Codex has a first-party subscription OAuth flow; Anthropic and Google providers remain API-key-only under their published third-party restrictions. See [Credentials and redaction](credentials-and-redaction.md#subscription-oauth-eligibility).
 - Use `createPathTrustPolicy()` for workspace/resource roots and fail closed on symlink escapes.
 - Use `createContributionRegistries({ duplicate: "error" })` and prefixed names for third-party packages to prevent silent shadowing.
 - Extension contributions are inert until selected. Loading an extension package runs its `setup(api)` code, so hosts should load only trusted packages or isolate untrusted code outside Prism.
@@ -190,6 +191,7 @@ PostgreSQL TLS/network policy, MCP endpoint trust/credentials and egress policy 
 ## Related APIs
 
 - [Web-standard server handler](server.md): remote agent/workflow route, ownership, limits, abort, and deployment boundary.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): authorize every protocol selector/operation; default-deny tool/state/path projection; exact interrupt/version resume; redacted, ownership-scoped replay.
 - [Supervisor delegation](supervisors.md): local child permission/memory/budget boundary.
 - [A2A interoperability](a2a.md): remote card/auth/origin/signature boundary.
 - [Settings, auth, trust, and security controls](settings-auth-trust-security.md): low-level helpers and boundary hardening table.

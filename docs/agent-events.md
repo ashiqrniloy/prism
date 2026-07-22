@@ -191,7 +191,7 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 
 - All events flow through `redactAgentEvent(event, activeRedactor)` before subscribers observe them. Configure `AgentConfig.redactor` / `RunOptions.redactor` via `createSecretRedactor([...knownSecretStrings])` so secret values are redacted in `message` content, `errors[].message`, `metadata`, and artifact `result`/`failure` payloads.
 - The artifact variants are emitted only by `generateValidateReviseLoop`. `singleShotLoop` (the default when no `AgentConfig.loop` / `RunOptions.loop` is set) emits zero artifact events. See [Agent loops](agent-loops.md).
-- Subscribers are in-process; the broadcaster is in-memory and live-only. Multiple `subscribe()` calls receive the same stream.
+- Subscribers are in-process; the broadcaster is in-memory and live-only. Multiple `subscribe()` calls receive the same stream. `resumeAgentRunStream()` and `AgentRunLifecycle.resumeStream()` subscribe before resumed execution and yield only their selected durable `runId`; approval emits the normal `agent_started` then `agent_resumed` envelope, denial emits only `agent_denied`.
 - `session.subscribe(options)` accepts `maxQueuedEvents` (default `1024`, minimum `1`) and `overflow` (default `"close"`). The `close` policy clears queued payload events, queues one `event_subscriber_overflow` notice for that subscriber, then closes it. `drop_oldest` keeps the newest queued events; `drop_newest` ignores new events while full.
 - The union is additive: new variants are appended without renumbering; subscribers should handle unknown `event.type` gracefully.
 
@@ -212,3 +212,4 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 - [Observability](observability.md): `ProviderTurnMetadata`; optional adapter builds one parented GenAI span tree from metadata-only lifecycle events and ignores message/progress deltas.
 - [Tools](tools.md): `tool_execution_*` variants.
 - [Compaction and retry policies](compaction-and-retry.md): `compaction_*` and `retry_scheduled` variants.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional redacted mapping of this stream; durable replay is ledger-backed and at-least-once, never a live-subscriber substitute.

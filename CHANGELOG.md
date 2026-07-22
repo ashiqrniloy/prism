@@ -7,6 +7,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.12] - 2026-07-22
+
+### Added
+
+- Optional `@arnilo/prism-ag-ui` package with bounded AG-UI mapper/authorized handler/replay and stable `./acp` sibling, built over shared durable resume streams.
+- `createCodingCompactionStrategy()` preset for bounded coding-session handoff.
+
+### Changed
+
+- Versioned all 35 first-party manifests and exact internal ranges to `0.0.12`; `@arnilo/prism-all` includes AG-UI while `@arnilo/prism-code` and `@arnilo/prism-sdk` remain free of UI protocol dependencies.
+- Added network-free interoperability/compaction evidence: `scripts/benchmark-0.0.12.mjs`.
+
+
 ## [0.0.11] - 2026-07-22
 
 ### Added

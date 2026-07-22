@@ -132,6 +132,7 @@ Important request shapes:
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
 | `RunOptions` | Per-run overrides: optional abort signal, model, input layout, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
 | `SubscribeOptions` / `SubscriberOverflowPolicy` | Live `AgentEvent` subscriber queue limit and overflow policy: `maxQueuedEvents`, `overflow: "close" \| "drop_oldest" \| "drop_newest"`. |
+| `resumeAgentRunStream` / `AgentRunResumeStreamOptions` | One durable-run event stream: existing checkpoint/resume options plus `signal` and bounded subscriber options. `AgentRunLifecycle.resumeStream()` adds host capability resolution; no protocol types enter core. |
 | `AgentConfig.loop` / `RunOptions.loop` | Replaceable per-run control loop: `singleShotLoop` default, `generate-validate-revise` options, or a custom `AgentLoopStrategy`. `RunOptions.loop` wins. See [Agent loops](agent-loops.md). |
 | `AgentLoopStrategy` | `{ name; run(ctx: LoopContext): Promise<Usage \| undefined> }` — orchestrates shared runtime primitives via `LoopContext`. |
 | `LoopContext` | Loop-facing surface: run ids, signal, live `history`, `input`/`inputMessages`/`maxToolRounds`, and bound `assemble`/`generate`/`dispatchToolCall`/`appendMessage`/`emit` primitives. |
@@ -447,6 +448,7 @@ void credentials;
 - [Agent/session runtime](agent-session-runtime.md): `createAgent()` / `createAgentSession()` runtime, `AgentSession.compact()`, and auto-compaction config built on these contracts.
 - [Agent loops](agent-loops.md): `singleShotLoop` default, `generateValidateReviseLoop`, `resolveLoop`, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts.
 - [Agent events](agent-events.md): the `AgentEvent` union including `artifact_*` variants and event ordering.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional protocol package consuming `AgentEvent`, `AgentRunLifecycle`, `OwnershipScope`, and `AgentEventRecord`; AG-UI/ACP protocol types do not enter root contracts.
 - [Structured output](structured-output.md): the `ArtifactParser<T>`/`ArtifactValidator<T>`/`ArtifactRepairer<T>` seam — the only typed-output path from a loop.
 - [Session stores](session-stores.md): `SessionStore` contract, branch-aware `SessionEntry` helpers, context rebuild, and store responsibilities.
 - [Database persistence](database-persistence.md): production persistence contracts, paginated query shapes, reference schema, indexes, retention, migrations, and NoSQL mapping.
