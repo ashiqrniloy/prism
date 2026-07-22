@@ -10,15 +10,19 @@ export function verifySbom(sbom, policy) {
   if (sbom.packages.length < 1 || sbom.packages.length > MAX_PACKAGES) throw new Error("SBOM package count is outside policy");
   const allowed = new Set(Array.isArray(policy?.allowed) ? policy.allowed : []);
   const denied = Array.isArray(policy?.deniedFragments) ? policy.deniedFragments : [];
+  const overrides = policy?.overrides && typeof policy.overrides === "object" ? policy.overrides : {};
   if (!allowed.size) throw new Error("License allow-list is empty");
   const violations = [];
+  const licenses = new Set();
   for (const pkg of sbom.packages) {
     const name = typeof pkg?.name === "string" ? pkg.name : "<unnamed>";
-    const license = typeof pkg?.licenseDeclared === "string" ? pkg.licenseDeclared : "NOASSERTION";
-    if (!allowed.has(license) || denied.some((fragment) => license.includes(fragment))) violations.push(`${name}: ${license}`);
+    const declared = typeof pkg?.licenseDeclared === "string" ? pkg.licenseDeclared : "NOASSERTION";
+    const license = overrides[`${name}@${pkg?.versionInfo}`] ?? declared;
+    licenses.add(license);
+    if (!allowed.has(license) || denied.some((fragment) => license.includes(fragment))) violations.push(`${name}: ${declared}`);
   }
   if (violations.length) throw new Error(`SBOM license policy rejected ${violations.slice(0, 20).join(", ")}`);
-  return { packages: sbom.packages.length, licenses: new Set(sbom.packages.map((pkg) => pkg.licenseDeclared)).size };
+  return { packages: sbom.packages.length, licenses: licenses.size };
 }
 
 export async function verifySbomFiles(sbomPath, policyPath) {

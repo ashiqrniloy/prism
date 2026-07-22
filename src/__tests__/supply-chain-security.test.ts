@@ -28,6 +28,8 @@ test("SPDX policy allows frozen licenses and rejects prohibited or missing licen
   assert.deepEqual(verifySbom(sbom(), policy), { packages: 1, licenses: 1 });
   assert.throws(() => verifySbom(sbom("GPL-3.0"), policy), /license policy rejected/);
   assert.throws(() => verifySbom({ spdxVersion: "SPDX-2.3", packages: [{ name: "x" }] }, policy), /NOASSERTION/);
+  assert.deepEqual(verifySbom({ spdxVersion: "SPDX-2.3", packages: [{ name: "@ag-ui/core", versionInfo: "0.0.57", licenseDeclared: "NOASSERTION" }] }, policy), { packages: 1, licenses: 1 });
+  assert.throws(() => verifySbom({ spdxVersion: "SPDX-2.3", packages: [{ name: "@ag-ui/core", versionInfo: "0.0.58", licenseDeclared: "NOASSERTION" }] }, policy), /NOASSERTION/);
 });
 
 test("source/artifact scanner detects representative credentials without echoing them", async () => {

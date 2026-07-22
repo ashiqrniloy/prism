@@ -9,5 +9,8 @@
     "(BSD-2-Clause OR MIT OR Apache-2.0)",
     "(MIT OR WTFPL)"
   ],
+  "overrides": {
+    "@ag-ui/core@0.0.57": "MIT"
+  },
   "deniedFragments": ["AGPL", "GPL", "LGPL", "SSPL", "BUSL", "Commons-Clause"]
 }
