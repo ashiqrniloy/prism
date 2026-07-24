@@ -82,6 +82,7 @@ api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey, model
 
 ## Related APIs
 
+- [Google Vertex AI](vertex.md): enterprise ADC/workload-identity package (separate from this consumer API-key package).
 - [Provider packages](../provider-packages.md): package setup + discovery contract.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable thinking helpers.
 - [Provider conformance](../provider-conformance.md): network-free assertions.

@@ -455,6 +455,25 @@ Timings are one local Node v24.18.0 run over mock agents and an in-process fetch
 
 No performance ceiling was raised. Core grew from Phase 0's 346.0 kB packed baseline to ~403.7 kB after documented APIs/templates, while the full package set remains ~690.6 kB packed. Follow-up review includes all six Phase 4-13 capability packages through `prism-all` and AI SDK interoperability through `prism-providers`; focused base/code/SDK profiles remain unchanged and no capability auto-activates. Manifest tarballs remain tiny: providers 1.4 kB and all 1.6 kB packed.
 
+### 0.0.13 Phase 8 server deployment seams (2026-07-23)
+
+Optional health/drain/rate-limit/replay/deployment-lease helpers on `@arnilo/prism-server`. No listener, queue adapter, or concurrency hard-cap raise.
+
+| Surface | Result |
+| --- | --- |
+| Focused server suite | existing handler tests + 4 deployment seam tests pass |
+| Health body | default 4 KiB / hard 64 KiB; detail requires authorize |
+| Drain admit cutoff | default 30 s / hard 5 min; admits reject immediately on `beginDrain` |
+| Replay page / cursor | 100 / 4 KiB default; 500 / 16 KiB hard |
+| Concurrent runs | unchanged 16 / 256 |
+| Queues | absent; use `createWorkflowCoordinator` polling until measured need |
+
+### 0.0.13 Phase 8 identity, policy, router, and work connectors (2026-07-24)
+
+Enterprise governance and connector caps (defaults / hard). Timings: `node scripts/benchmark-0.0.13.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.13.test.mjs`. Default mode is network-free and reports identity/policy/router/work-connector/deployment throughput and p50/p95 with frozen budget refs in the report JSON. Bounds and hostile-input fixtures—not these host-local timings—are release gates.
+
+Offline behavior tests (identity propagation, policy export, router deny paths, fake CLI argv) are release gates; live tenant canaries remain operator-gated.
+
 ## Related APIs
 
 - [Agent events](agent-events.md): `SubscribeOptions` and `event_subscriber_overflow` event details.

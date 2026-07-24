@@ -71,6 +71,12 @@ import { createToolRegistry, dispatchToolCall } from "./tools.js";
 import { RunLimitError, RunLimitTracker, resolveRunLimits } from "./run-limits.js";
 import { agentFingerprint, initialAgentRunState, loadAgentRunState, publicState, saveAgentRunState, validateRunStateOptions, type StoredAgentRunState } from "./agent-run-state.js";
 import { resolveActiveSkills } from "./skills.js";
+import {
+  identityTelemetryAttributes,
+  ownershipFromIdentity,
+  resolveRunIdentity,
+  type AgentIdentity,
+} from "./identity.js";
 
 export function createAgent(config: AgentConfig): Agent {
   return {
@@ -235,6 +241,7 @@ class RuntimeAgentSession implements AgentSession {
   private activeProvider?: AIProvider;
   private activeLedger?: RunLedger;
   private activeOwnership?: OwnershipScope;
+  private activeIdentity?: AgentIdentity;
   private activeIdempotencyKey?: string;
   private activeGuardrails?: Guardrails;
   private activeMetadata?: Readonly<Record<string, unknown>>;
@@ -353,6 +360,8 @@ class RuntimeAgentSession implements AgentSession {
     this.activeRedactor = options.redactor ?? this.agent.config.redactor;
     this.activeLedger = options.runLedger ?? this.agent.config.runLedger;
     this.activeOwnership = options.ownership ?? this.agent.config.ownership;
+    this.activeIdentity = resolveRunIdentity(options.identity, this.agent.config.identity, this.activeOwnership);
+    if (this.activeIdentity && !this.activeOwnership) this.activeOwnership = ownershipFromIdentity(this.activeIdentity);
     this.activeIdempotencyKey = options.idempotencyKey ?? this.agent.config.idempotencyKey;
     this.activeGuardrails = mergeGuardrails(this.agent.config.guardrails, options.guardrails);
     this.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
@@ -364,7 +373,12 @@ class RuntimeAgentSession implements AgentSession {
     let runStatus: AgentRunResult["status"] = "succeeded";
     const runUsage = createUsageAccumulator();
     let usage: Usage | undefined;
-    const metadata = { ...this.agent.config.metadata, ...this.metadata, ...options.metadata };
+    const metadata = {
+      ...this.agent.config.metadata,
+      ...this.metadata,
+      ...options.metadata,
+      ...(this.activeIdentity ? identityTelemetryAttributes(this.activeIdentity) : {}),
+    };
     this.activeMetadata = metadata;
     const limits = new RunLimitTracker(resolvedLimits, {
       onExceeded: (breach) => {
@@ -532,7 +546,14 @@ class RuntimeAgentSession implements AgentSession {
         dispatchToolCall: (call) => dispatchToolCall({
           call,
           registry,
-          context: { sessionId: this.id, runId, toolCallId: call.id, signal: controller.signal, metadata },
+          context: {
+            sessionId: this.id,
+            runId,
+            toolCallId: call.id,
+            signal: controller.signal,
+            metadata,
+            identity: this.activeIdentity,
+          },
           middleware: this.agent.config.middleware,
           emit: (event) => this.emit(event),
           permission: this.agent.config.permission,
@@ -540,6 +561,7 @@ class RuntimeAgentSession implements AgentSession {
           redactor: this.activeRedactor,
           ledger: this.activeLedger,
           ownership: this.activeOwnership,
+          identity: this.activeIdentity,
           guardrails: this.activeGuardrails,
           limitTracker: limits,
           beforeExecute: async (mediatedCall) => {
@@ -670,6 +692,7 @@ class RuntimeAgentSession implements AgentSession {
       } finally {
         this.activeLedger = undefined;
         this.activeOwnership = undefined;
+        this.activeIdentity = undefined;
         this.activeIdempotencyKey = undefined;
         this.activeGuardrails = undefined;
         this.activeMetadata = undefined;

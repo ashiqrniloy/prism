@@ -26,6 +26,27 @@ const response = await handler(new Request("https://api.example.test/prism/agent
 
 Routes: direct/SSE agent run, explicitly selected durable agent status/resume through `agentRuns`, direct/SSE workflow run, durable workflow enqueue/status/cancel/resume/replay, and optional ownership-scoped schedule create/list/pause/resume/trigger/delete. `agentRuns` uses core `createAgentRunLifecycle()`; no lifecycle route exists by default. All bodies, responses, events, queues, concurrency, and timeouts are bounded.
 
-Nothing is exposed by default. Authorization is required; ownership comes only from its result. No listener, framework, auth provider, user database, credential discovery, or hidden package activation ships.
+Optional deployment helpers (compose beside the API handler — no embedded listener):
+
+```ts
+import {
+  createPrismDrainController,
+  createPrismHealthHandler,
+  createMemoryRateLimiter,
+  createPrismDeploymentLease,
+} from "@arnilo/prism-server";
+
+const drain = createPrismDrainController();
+const handler = createPrismHandler({
+  agents: { support: agent },
+  authorize,
+  drain,
+  rateLimit: createMemoryRateLimiter({ maxRequests: 60, windowMs: 60_000 }),
+});
+const health = createPrismHealthHandler({ drain, ready: () => store.ping() });
+// Workers: createWorkflowCoordinator(...). Coordinators: createPrismDeploymentLease({ key: "coordinator", ... }).
+```
+
+Nothing is exposed by default. Authorization is required; ownership comes only from its result. No listener, framework, auth provider, user database, credential discovery, queue adapter, or hidden package activation ships.
 
 Full API, route, limits, security, and deployment notes: [`docs/server.md`](../../docs/server.md).

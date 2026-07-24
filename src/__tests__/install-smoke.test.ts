@@ -27,6 +27,12 @@ const packages = [
   { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
   { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
   { dir: "packages/provider-ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
+  { dir: "packages/provider-azure", name: "@arnilo/prism-provider-azure" },
+  { dir: "packages/provider-bedrock", name: "@arnilo/prism-provider-bedrock" },
+  { dir: "packages/provider-vertex", name: "@arnilo/prism-provider-vertex" },
+  { dir: "packages/policy", name: "@arnilo/prism-policy" },
+  { dir: "packages/model-router", name: "@arnilo/prism-model-router" },
+  { dir: "packages/work-tools", name: "@arnilo/prism-work-tools" },
   { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
@@ -239,7 +245,7 @@ console.log("PACKED INTEGRATION OK");
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Compose every 0.0.12 optional capability family from packed public imports.
+  // 5. Compose every 0.0.13 optional capability family from packed public imports.
   writeFileSync(join(consumer, "composition.mjs"), `
 import assert from "node:assert/strict";
 import {
@@ -346,7 +352,7 @@ const card = { name: "Packed", description: "Packed test agent", supportedInterf
 const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: () => servedAgent().createSession() }, authorize: () => ({ ownership }) });
 const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
 assert.equal((await a2a.send("hello")).text, "served");
-console.log("PACKED 0.0.12 COMPOSITION OK");
+console.log("PACKED 0.0.13 COMPOSITION OK");
 `);
   const composition = run("node", ["composition.mjs"], consumer);
   result.compositionStatus = composition.status;
@@ -388,7 +394,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("packed 0.0.12 optional capabilities compose through public imports", () => {
+  it("packed 0.0.13 optional capabilities compose through public imports", () => {
     assert.equal(result.compositionStatus, 0, result.compositionOut);
   });
 
@@ -398,16 +404,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal((result.integrationOut + result.compositionOut).includes("packed-integration-secret"), false, "canary leaked into packed journey output");
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.12.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.13.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.0.12.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.0.13.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.0.12.tgz"),
-      `expected 'arnilo-prism-0.0.12.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.0.13.tgz"),
+      `expected 'arnilo-prism-0.0.13.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.0.12.tgz", "arnilo-prism-compaction-0.0.12.tgz", "arnilo-prism-all-0.0.12.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.0.13.tgz", "arnilo-prism-compaction-0.0.13.tgz", "arnilo-prism-all-0.0.13.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

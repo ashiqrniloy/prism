@@ -478,6 +478,8 @@ export interface RunWorkflowOptions {
   readonly tools?: Readonly<Record<string, ToolDefinition>> | ((name: string) => ToolDefinition | undefined);
   readonly runLedger?: RunLedger;
   readonly ownership?: OwnershipScope;
+  /** Host-verified identity propagated into agent nodes without silent widening. */
+  readonly identity?: import("@arnilo/prism").AgentIdentity;
   readonly redactor?: SecretRedactor;
   /** Passed to every agent node; child agent config can only be narrowed. */
   readonly limits?: RunLimits;

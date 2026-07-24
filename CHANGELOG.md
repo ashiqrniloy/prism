@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.13] - 2026-07-24
+
+### Added
+
+- Enterprise identity (`Principal` / `AgentIdentity`), optional `@arnilo/prism-policy`, `@arnilo/prism-model-router`, enterprise cloud providers (Azure/Bedrock/Vertex), server deployment seams, persistence schema v5 lifecycle hooks, and `@arnilo/prism-work-tools` (M365 + GWS).
+
+### Changed
+
+- Versioned all **41** first-party manifests and exact internal ranges to `0.0.13`; Phase 8 optional packages enroll in `@arnilo/prism-all` only.
+- Network-free enterprise evidence: `scripts/benchmark-0.0.13.mjs`.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 

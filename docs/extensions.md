@@ -122,6 +122,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - Do not put resolved credential values in extension events, registry metadata, docs, logs, prompts, or session stores.
 - Event and middleware dispatch are ordered and dependency-free. They use no timers, background workers, filesystem discovery, network calls, provider calls, or tool execution.
 - Extension middleware cannot bypass host tool permissions: tool dispatch re-checks active registry lookup, filters, and object arguments after `tool_call` middleware. Skills that reference `toolNames` are checked against host-active tools by `resolveActiveSkills()`.
+- Optional `loadPolicy: { allowList?, verifySignature? }` on `createExtensionKernel` runs before `setup`. Unallowlisted or unsigned (when `verifySignature` is set) extensions fail closed. Put host-attested digests on `Extension.signature`.
 
 ## Related APIs
 

@@ -320,6 +320,8 @@ export interface RunOptions {
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
   readonly ownership?: OwnershipScope;
+  /** Host-verified identity; when set, must project onto `ownership` without widening. */
+  readonly identity?: import("./identity.js").AgentIdentity;
   readonly idempotencyKey?: string;
   readonly validate?: ToolValidator;
   readonly activeSkills?: readonly string[];
@@ -388,6 +390,8 @@ export interface AgentConfig {
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
   readonly ownership?: OwnershipScope;
+  /** Host-verified identity default for sessions created from this agent. */
+  readonly identity?: import("./identity.js").AgentIdentity;
   readonly idempotencyKey?: string;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
@@ -406,7 +410,7 @@ export interface AgentConfig {
 }
 
 /** Opt-in fail-closed composition over the normal explicit AgentConfig API. */
-export interface SecureAgentOptions extends Omit<AgentConfig, "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "limits" | "runState" | "secure"> {
+export interface SecureAgentOptions extends Omit<AgentConfig, "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "runState" | "secure"> {
   readonly id: string;
   readonly tools: readonly ToolDefinition[];
   readonly toolArgumentValidator: import("./tools.js").ToolArgumentValidator;
@@ -414,6 +418,8 @@ export interface SecureAgentOptions extends Omit<AgentConfig, "tools" | "validat
   readonly permission: PermissionPolicy;
   readonly trust: TrustPolicy;
   readonly ownership: OwnershipScope;
+  /** Optional host-verified identity; when set must match `ownership`. */
+  readonly identity?: import("./identity.js").AgentIdentity;
   readonly limits: RunLimits;
   readonly definitionRevision: string;
   readonly runState: Omit<AgentRunStateOptions, "definitionRevision" | "interruptBeforeTool">;
@@ -669,6 +675,8 @@ export interface ToolExecutionContext {
   readonly toolCallId: string;
   readonly signal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /** Host-verified identity for this tool invocation, when enterprise identity is active. */
+  readonly identity?: import("./identity.js").AgentIdentity;
   progress?(progress?: unknown, metadata?: Readonly<Record<string, unknown>>): void | Promise<void>;
 }
 
@@ -852,6 +860,9 @@ export interface ExtensionEvent {
 export interface Extension {
   readonly name: string;
   setup(api: ExtensionAPI): void | Promise<void>;
+  /** Host-attested signature/digest for `ExtensionLoadPolicy.verifySignature`. */
+  readonly signature?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 export interface ProviderPackage {
@@ -1703,6 +1714,11 @@ export interface ProductionPersistenceStore {
   /** DB-friendly branch read (mirrors `SessionStore.readBranchPath`): one ancestor-chain
    *  query instead of `queryEntries({ sessionId })` + in-memory walk. Optional. */
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
+  /**
+   * Optional Phase 8 retention / legal-hold / export / tenant-quota lifecycle.
+   * Prefer attaching `createMemoryPersistenceLifecycle()` or adapter-native methods.
+   */
+  readonly lifecycle?: import("./persistence-lifecycle.js").PersistenceLifecycleStore;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -1939,3 +1955,13 @@ export type ArtifactRepairer<T> = (
   failure: ArtifactValidation,
   ctx: ArtifactContext,
 ) => AgentInput | Promise<AgentInput>;
+
+
+/** Alias re-exports so `dist/contracts.d.ts` exposes implementer contract names. */
+export type AgentIdentity = import("./identity.js").AgentIdentity;
+export type Principal = import("./identity.js").Principal;
+export type IdentityVerifier = import("./identity.js").IdentityVerifier;
+export type PersistenceLifecycleStore = import("./persistence-lifecycle.js").PersistenceLifecycleStore;
+export type LegalHoldRecord = import("./persistence-lifecycle.js").LegalHoldRecord;
+export type TenantQuota = import("./persistence-lifecycle.js").TenantQuota;
+export type PersistenceResourceKind = import("./persistence-lifecycle.js").PersistenceResourceKind;

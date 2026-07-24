@@ -1,0 +1,68 @@
+{
+  "name": "@arnilo/prism-work-tools",
+  "version": "0.0.13",
+  "description": "Optional identity-scoped Microsoft 365 and Google Workspace work connector tools for Prism.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./microsoft365": {
+      "types": "./dist/microsoft365.d.ts",
+      "default": "./dist/microsoft365.js"
+    },
+    "./google-workspace": {
+      "types": "./dist/google-workspace.d.ts",
+      "default": "./dist/google-workspace.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/work-tools.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "0.0.13"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@types/node": "^22.15.29"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/work-tools"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/work-tools#readme",
+  "keywords": [
+    "prism",
+    "microsoft365",
+    "m365",
+    "google-workspace",
+    "gws",
+    "work-tools",
+    "connectors"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

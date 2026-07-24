@@ -61,10 +61,12 @@ Child factories resolve their own providers/credentials and construct context/me
 - Tool budget is checked before side effects. Token usage is enforced on terminal aggregate usage and can exceed by at most one provider turn because providers report tokens after generation.
 - Abort and timeout cover hooks, child creation, nested delegation, and the run. Host child code must cooperate with `AbortSignal`.
 - Redaction applies before hook input, run metadata/results, completion hooks, and events. Child credentials are never supplied in delegation context.
+- When forwarding verified identity into children or A2A, use `narrowIdentity` / `assertIdentityPropagation` so scopes and tenant cannot widen across the boundary.
 - Static workflows remain smaller and more reproducible for known graphs.
 
 ## Related APIs
 
+- [Agent identity](agent-identity.md): host-verified identity and narrow delegation.
 - [A2A interoperability](a2a.md): separate remote protocol boundary. `A2ATaskLifecycle` adapts host durable agent/workflow state directly; it does not route A2A execution through local supervisor child planning.
 - [Workflows](workflows.md): preferred deterministic orchestration.
 - [Working and semantic memory](working-and-semantic-memory.md): child scope construction.

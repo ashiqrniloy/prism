@@ -11,7 +11,7 @@ import {
   type PersistenceSchemaShape,
   type PersistenceSchemaShapeForeignKey,
 } from "@arnilo/prism/testing/persistence-schema";
-import { ADAPTER_INDEX_NAMES, MIGRATION_001_INIT, MIGRATION_002_USAGE_SCOPE, MIGRATION_003_RUN_FEEDBACK, MIGRATION_004_SESSION_SEARCH } from "./ddl.js";
+import { ADAPTER_INDEX_NAMES, MIGRATION_001_INIT, MIGRATION_002_USAGE_SCOPE, MIGRATION_003_RUN_FEEDBACK, MIGRATION_004_SESSION_SEARCH, MIGRATION_005_LIFECYCLE_HOLD_QUOTA } from "./ddl.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
 
@@ -37,6 +37,7 @@ export function applySqliteMigrations(db: Database.Database): readonly AppliedPe
       else if (step.name === "002_usage_scope") db.exec(MIGRATION_002_USAGE_SCOPE);
       else if (step.name === "003_run_feedback") db.exec(MIGRATION_003_RUN_FEEDBACK);
       else if (step.name === "004_session_search") db.exec(MIGRATION_004_SESSION_SEARCH);
+      else if (step.name === "005_lifecycle_hold_quota") db.exec(MIGRATION_005_LIFECYCLE_HOLD_QUOTA);
       else throw new Error(`Unknown migration step: ${step.name}`);
       db.prepare(
         `INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum)

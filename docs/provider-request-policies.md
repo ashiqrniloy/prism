@@ -104,9 +104,11 @@ Policy output should stay generic: use `ProviderRequestOptions.cache`, `headers`
 - Cache keys must never be credentials.
 - Policy chains are O(number of policies) plus option merge cost.
 - Policies should be pure and synchronous unless the host explicitly accepts async work.
+- Optional `@arnilo/prism-model-router` returns a `ProviderRequestPolicy` that strips `openRouterRouting` unless governance allows it — chain it with other policies.
 
 ## Related APIs
 
+- [Model routing](model-routing.md): governance facade that emits a chainable OpenRouter routing gate policy.
 - [Provider caching](provider-caching.md): structured cache hints and helpers.
 - [Provider packages](provider-packages.md): registering policies from extension packages.
 - [Provider layer](provider-layer.md): provider request flow and `AIProvider.generate()`.

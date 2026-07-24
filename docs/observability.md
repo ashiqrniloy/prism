@@ -167,12 +167,14 @@ console.log(traceId, memory.spans.map((span) => span.name));
 ## Security and performance notes
 
 - Default events are metadata-only — no prompts, streamed deltas, tool arguments, or credentials.
+- Use `identityTelemetryAttributes(identity)` when attaching enterprise identity to run metadata or OTel attributes; it emits `prism.identity.*` refs only (tenant/principal/scope counts), never credential secrets or raw tokens.
 - Opt-in content in other event types (`message_delta`, tool `result`) is still subject to `redactAgentEvent`.
 - Metric labels stay low-cardinality (`gen_ai.operation.name`, `gen_ai.provider.name`, token type, controlled outcome/status, feedback rating bucket/link presence); never use session/run/request/call IDs, model output, comments, tag values, scorer/evaluation IDs, or arbitrary metadata as labels. Token usage is recorded once at provider operation scope.
 - Target overhead when enabled is under 5% excluding exporter I/O; disabled hooks allocate no spans.
 - Provider transport limits and redaction order are documented in [Provider primitives](provider-primitives.md).
 
 ## Related APIs
+- [Agent identity](agent-identity.md): redacted identity attribute helper for telemetry.
 - [Evaluations](evaluations.md): optional scorers can link scores to run/session/trace IDs from agent events.
 
 - [Agent events](agent-events.md): full `AgentEvent` union and subscriber semantics.

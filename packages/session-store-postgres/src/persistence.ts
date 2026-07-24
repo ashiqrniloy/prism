@@ -40,6 +40,7 @@ import {
 } from "@arnilo/prism";
 import { createPostgresCheckpointStore } from "./checkpoints.js";
 import { createPostgresLeaseStore } from "./leases.js";
+import { createPostgresPersistenceLifecycle } from "./lifecycle.js";
 import { qualifyTable } from "./identifiers.js";
 import {
   applyPostgresMigrations,
@@ -74,6 +75,7 @@ export interface PostgresPersistence extends SessionStore, RunLedger, Production
   readonly checkpoints: CheckpointStore;
   readonly leases: LeaseStore;
   readonly feedback: RunFeedbackStore;
+  readonly lifecycle: import("@arnilo/prism").PersistenceLifecycleStore;
   readonly metadata: Readonly<{
     readonly kind: "postgres";
     readonly multiProcess: true;
@@ -191,6 +193,7 @@ export async function createPostgresPersistence(
     checkpoints: createPostgresCheckpointStore(pool, schema),
     leases: createPostgresLeaseStore(pool, schema),
     feedback,
+    lifecycle: createPostgresPersistenceLifecycle(pool, schema),
     metadata: { kind: "postgres", multiProcess: true, driver: "pg", schema },
 
     async append(entry: SessionEntry, appendOptions?: SessionAppendOptions): Promise<void> {

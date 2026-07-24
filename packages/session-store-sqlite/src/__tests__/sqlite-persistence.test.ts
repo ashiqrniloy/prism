@@ -103,7 +103,7 @@ describe("createSqlitePersistence", () => {
     const filename = tempDbPath("migrate");
     const first = createSqlitePersistence({ filename });
     const firstMigrations = await first.queryMigrations({});
-    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback", "004_session_search"]);
+    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback", "004_session_search", "005_lifecycle_hold_quota"]);
     first.close();
 
     const reopened = createSqlitePersistence({ filename });
@@ -134,7 +134,7 @@ describe("createSqlitePersistence", () => {
     db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
     db.exec("DROP INDEX prism_usage_session_scope_recorded_idx");
     assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
-    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 4);
+    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 5);
     db.close();
   });
 

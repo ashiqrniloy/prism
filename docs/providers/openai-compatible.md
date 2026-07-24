@@ -27,9 +27,11 @@ Options:
 | Field | Type | Purpose |
 | --- | --- | --- |
 | `id` | `string` | Optional provider id. Defaults to `openai-compatible`. |
-| `baseUrl` | `string` | Base API URL; `/chat/completions` is appended. |
+| `baseUrl` | `string` | Base API URL; `/chat/completions` is appended unless `chatCompletionsUrl` is set. |
 | `apiKey` | `CredentialValueSource` | Optional direct/callback/resolver credential source. |
 | `fetch` | `typeof fetch` | Optional fetch implementation for tests or custom hosts. |
+| `chatCompletionsUrl` | `string \| ((request) => string)` | Optional full chat-completions URL override (Azure deployment paths). |
+| `authStyle` | `"bearer" \| "api-key" \| "none"` | Auth header style. Default `bearer`. |
 
 Provider requests use the standard `ProviderRequest` shape: `model`, `messages`, optional `tools`, `metadata`, and `signal`.
 

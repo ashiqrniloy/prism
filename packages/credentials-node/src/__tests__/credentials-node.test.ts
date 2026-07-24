@@ -18,6 +18,9 @@ import {
   createStoredCredentialResolver,
   decryptBytes,
   encryptBytes,
+  encryptWithHostKms,
+  decryptWithHostKms,
+  createMemoryHostKms,
   openEncryptedCredentialStore,
   resolveScryptParameters,
   rotateEncryptedCredentialStorePassphrase,
@@ -370,5 +373,15 @@ describe("keychain credential store", () => {
     assert.equal((await store.getOAuth("demo", "acct"))?.access, "oauth-access");
     assert.equal(await store.delete({ name: "apiKey", provider: "demo" }), true);
     assert.equal(await store.deleteOAuth("demo", "acct"), true);
+  });
+});
+
+describe("host KMS envelope", () => {
+  it("round-trips with host wrap/unwrap and rejects wrong KMS", async () => {
+    const kms = createMemoryHostKms("alpha");
+    const envelope = await encryptWithHostKms(Buffer.from("secret-payload"), kms);
+    const plain = await decryptWithHostKms(envelope, kms);
+    assert.equal(plain.toString("utf8"), "secret-payload");
+    await assert.rejects(decryptWithHostKms(envelope, createMemoryHostKms("other")), CredentialDecryptError);
   });
 });

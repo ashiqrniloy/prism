@@ -35,6 +35,30 @@ export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
 export type { AgentRunLifecycle, AgentRunLifecycleAgent, AgentRunLifecycleOptions, AgentRunLifecycleRequest, AgentRunLifecycleStreamRequest } from "./agent-run-lifecycle.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { LEASE_CONFLICT_CODE, LeaseConflictError, createMemoryLeaseStore } from "./leases.js";
+export {
+  createMemoryPersistenceLifecycle,
+  isResourceHeld,
+  PersistenceLifecycleError,
+  DEFAULT_LIFECYCLE_PAGE_SIZE,
+  HARD_LIFECYCLE_PAGE_SIZE,
+  DEFAULT_MAX_HOLD_REASON_BYTES,
+  HARD_MAX_HOLD_REASON_BYTES,
+} from "./persistence-lifecycle.js";
+export type {
+  PersistenceResourceKind,
+  LegalHoldRecord,
+  PutLegalHoldInput,
+  ReleaseLegalHoldInput,
+  LegalHoldQuery,
+  ApplyRetentionInput,
+  ApplyRetentionResult,
+  LegalHoldExportItem,
+  ExportUnderHoldInput,
+  TenantQuota,
+  SetTenantQuotaInput,
+  ConsumeTenantQuotaInput,
+  PersistenceLifecycleStore,
+} from "./persistence-lifecycle.js";
 export { createEventMultiplexer } from "./event-multiplexer.js";
 export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
 export { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "./cache-helpers.js";
@@ -51,7 +75,7 @@ export { createContributionRegistries, createContributionRegistry, registerDisco
 export type { ContributionRegistries, ContributionRegistriesOptions, ContributionRegistry, ContributionRegistryOptions } from "./contributions.js";
 export { createChainedCredentialResolver, createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore, refreshOAuthCredential, resolveCredentialValue } from "./credentials.js";
 export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
-export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions } from "./extensions.js";
+export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy } from "./extensions.js";
 export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore } from "./credentials.js";
 export { createModelRegistry } from "./models.js";
 export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
@@ -185,6 +209,28 @@ export { createSecretRedactor, errorToErrorInfo, redactAgentEvent, redactMessage
 export type { SecretRedactor } from "./redaction.js";
 export { assertPermission, assertTrusted, checkPermission, createStaticPermissionPolicy, createStaticTrustPolicy, denialToErrorInfo, isTrusted, PermissionDeniedError, TrustDeniedError } from "./security.js";
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
+export {
+  assertIdentityActive,
+  assertIdentityMatchesOwnership,
+  assertIdentityPropagation,
+  DEFAULT_IDENTITY_LIMITS,
+  HARD_IDENTITY_LIMITS,
+  IdentityError,
+  identityTelemetryAttributes,
+  narrowIdentity,
+  ownershipFromIdentity,
+  resolveIdentityLimits,
+  resolveRunIdentity,
+} from "./identity.js";
+export type {
+  AgentIdentity,
+  AssertIdentityActiveOptions,
+  IdentityLimits,
+  IdentityVerifier,
+  NarrowIdentityOptions,
+  Principal,
+  ResolvedIdentityLimits,
+} from "./identity.js";
 export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
 export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
 export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
@@ -216,6 +262,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.12";
+export const version = "0.0.13";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

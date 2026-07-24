@@ -33,6 +33,10 @@ export interface OpenAICompatibleProviderOptions {
   readonly baseUrl: string;
   readonly apiKey?: CredentialValueSource;
   readonly fetch?: typeof fetch;
+  /** Override chat-completions URL (default `${baseUrl}/chat/completions`). */
+  readonly chatCompletionsUrl?: string | ((request: ProviderRequest) => string);
+  /** Default `bearer`. Azure resource keys use `api-key`; host-signed fetches may use `none`. */
+  readonly authStyle?: "bearer" | "api-key" | "none";
 }
 
 interface ToolAccumulator {
@@ -56,13 +60,23 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
       const tools = new Map<number, ToolAccumulator>();
 
       try {
-        const response = await fetchImpl(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        const url =
+          typeof options.chatCompletionsUrl === "function"
+            ? options.chatCompletionsUrl(request)
+            : options.chatCompletionsUrl
+              ?? `${options.baseUrl.replace(/\/$/, "")}/chat/completions`;
+        const authStyle = options.authStyle ?? "bearer";
+        const headers: Record<string, string> = {
+          ...Object.fromEntries(
+            Object.entries(request.options?.headers ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+          ),
+          "content-type": "application/json",
+        };
+        if (apiKey && authStyle === "api-key") headers["api-key"] = apiKey;
+        if (apiKey && authStyle === "bearer") headers.authorization = `Bearer ${apiKey}`;
+        const response = await fetchImpl(url, {
           method: "POST",
-          headers: {
-            ...request.options?.headers,
-            "content-type": "application/json",
-            ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
-          },
+          headers,
           body: JSON.stringify(toOpenAIRequest(request)),
           signal: request.signal,
         });

@@ -1,4 +1,4 @@
-import { AgentRunStateError, type Agent, type AgentEvent, type AgentSession, type JsonObject, type Message } from "@arnilo/prism";
+import { AgentRunStateError, assertIdentityActive, assertIdentityMatchesOwnership, type Agent, type AgentEvent, type AgentSession, type JsonObject, type Message } from "@arnilo/prism";
 import {
   cancelWorkflowRun,
   createWorkflowEventBus,
@@ -11,6 +11,7 @@ import {
   type WorkflowResumeRequest,
   type WorkflowScheduleStatus,
 } from "@arnilo/prism-workflows";
+import { isAdmitOperation } from "./drain.js";
 import { resolvePrismServerLimits, type ResolvedPrismServerLimits } from "./limits.js";
 import type {
   CreatePrismHandlerOptions,
@@ -60,6 +61,29 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
 
       const authorization = await authorize(options, request, route.operation, route.capabilityId, limits.requestTimeoutMs);
       if (!authorization) throw new PrismServerError("Forbidden", 403, "ERR_PRISM_SERVER_FORBIDDEN");
+
+      if (options.rateLimit) {
+        const decision = await options.rateLimit({
+          request,
+          operation: route.operation,
+          capabilityId: route.capabilityId,
+          authorization,
+          signal: request.signal,
+        });
+        if (decision !== true) {
+          const headers: Record<string, string> = {};
+          if (decision.retryAfterMs !== undefined && Number.isSafeInteger(decision.retryAfterMs) && decision.retryAfterMs > 0) {
+            headers["retry-after"] = String(Math.ceil(decision.retryAfterMs / 1000));
+          }
+          throw new PrismServerError(
+            decision.message ?? "Rate limit exceeded",
+            429,
+            decision.code ?? "ERR_PRISM_SERVER_RATE_LIMIT",
+            Object.keys(headers).length ? headers : undefined,
+          );
+        }
+      }
+      if (options.drain && isAdmitOperation(route.operation)) options.drain.assertAdmit();
 
       if (route.kind.startsWith("schedule-")) {
         const selectedSchedules = options.schedules;
@@ -157,6 +181,7 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
           const runConfig = {
             ...runOptions,
             ownership: authorization.ownership,
+            identity: authorization.identity,
             metadata: { ...runOptions?.metadata, ...authorization.metadata },
             redactor: options.redactor,
             signal: owned.signal,
@@ -437,6 +462,14 @@ async function authorize(
     request.signal.removeEventListener("abort", abort);
   }
   if (!result || !hasOwnership(result.ownership)) return false;
+  if (result.identity) {
+    try {
+      assertIdentityActive(result.identity);
+      assertIdentityMatchesOwnership(result.identity, result.ownership);
+    } catch {
+      return false;
+    }
+  }
   return result;
 }
 
@@ -708,7 +741,9 @@ function errorResponse(error: unknown, limits: ResolvedPrismServerLimits, option
   const code = mapped?.code ?? (agentState ? "ERR_PRISM_SERVER_NOT_FOUND" : known ? error.code : status === 499 ? "ERR_PRISM_SERVER_ABORTED" : "ERR_PRISM_SERVER_INTERNAL");
   const message = mapped?.message ?? (agentState ? "Not found" : known ? error.message : status === 499 ? "Request aborted" : "Internal server error");
   try {
-    return json({ error: { code, message } }, status, limits, options);
+    const response = json({ error: { code, message } }, status, limits, options);
+    if (known && error.headers) return addHeaders(response, error.headers);
+    return response;
   } catch {
     return new Response(null, { status });
   }

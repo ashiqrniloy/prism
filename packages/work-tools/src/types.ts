@@ -1,0 +1,209 @@
+import type { AgentIdentity, JsonObject, ToolDefinition } from "@arnilo/prism";
+
+export type WorkProvider = "microsoft365" | "google-workspace";
+
+export type Microsoft365Capability =
+  | "mail"
+  | "calendar"
+  | "files"
+  | "tasks"
+  | "todo"
+  | "planner"
+  | "teams";
+
+export type Microsoft365Op =
+  | "version"
+  | "mail.list"
+  | "mail.get"
+  | "mail.send"
+  | "calendar.list"
+  | "calendar.add"
+  | "file.list"
+  | "file.add"
+  | "file.copy"
+  | "file.share"
+  | "todo.list"
+  | "todo.add"
+  | "todo.complete"
+  | "planner.list"
+  | "planner.add"
+  | "planner.complete";
+
+export type GoogleWorkspaceCapability =
+  | "mail"
+  | "calendar"
+  | "files"
+  | "tasks"
+  | "docs"
+  | "sheets"
+  | "slides";
+
+export type GoogleWorkspaceOp =
+  | "version"
+  | "mail.list"
+  | "mail.get"
+  | "mail.send"
+  | "calendar.list"
+  | "calendar.add"
+  | "file.list"
+  | "file.add"
+  | "file.share"
+  | "task.list"
+  | "task.add"
+  | "task.complete"
+  | "docs.create"
+  | "sheets.create"
+  | "slides.create";
+
+export interface WorkLimits {
+  readonly maxPaginationPages?: number;
+  readonly maxItemsPerPage?: number;
+  readonly maxAggregateItems?: number;
+  readonly maxRequestBytes?: number;
+  readonly maxResponseBytes?: number;
+  readonly maxAttachmentBytes?: number;
+  readonly maxFileBytes?: number;
+  readonly maxStdoutBytes?: number;
+  readonly maxStderrBytes?: number;
+  readonly timeoutMs?: number;
+  readonly maxConcurrency?: number;
+  readonly maxRetries?: number;
+  readonly maxIdempotencyKeyBytes?: number;
+  readonly maxJsonDepth?: number;
+  readonly maxJsonProperties?: number;
+}
+export type ResolvedWorkLimits = Required<WorkLimits>;
+
+export interface WorkCitation {
+  readonly citationId: string;
+  readonly provider: WorkProvider;
+  readonly resourceId?: string;
+  readonly url?: string;
+}
+
+export interface WorkMailMessage extends WorkCitation {
+  readonly subject?: string;
+  readonly preview?: string;
+  readonly from?: string;
+  readonly to?: readonly string[];
+  readonly receivedAt?: string;
+  readonly isDraft?: boolean;
+  readonly changeKey?: string;
+  readonly untrusted: true;
+}
+
+export interface WorkCalendarEvent extends WorkCitation {
+  readonly subject?: string;
+  readonly start?: string;
+  readonly end?: string;
+  readonly changeKey?: string;
+  readonly untrusted: true;
+}
+
+export interface WorkFileItem extends WorkCitation {
+  readonly name?: string;
+  readonly size?: number;
+  readonly eTag?: string;
+  readonly mimeType?: string;
+  readonly untrusted: true;
+}
+
+export interface WorkTaskItem extends WorkCitation {
+  readonly title?: string;
+  readonly status?: string;
+  readonly changeKey?: string;
+  readonly untrusted: true;
+}
+
+export interface WorkPage<T> {
+  readonly items: readonly T[];
+  readonly nextCursor?: string;
+  readonly truncated?: boolean;
+  readonly untrusted: true;
+}
+
+export interface WorkDraft {
+  readonly draftId: string;
+  readonly provider: WorkProvider;
+  readonly op: string;
+  readonly identityKey: string;
+  readonly payload: JsonObject;
+  readonly createdAt: string;
+  readonly status: "pending" | "approved" | "executed" | "rejected";
+  readonly concurrencyToken?: string;
+}
+
+export interface WorkMutationResult {
+  readonly draftId: string;
+  readonly status: "pending_approval" | "executed" | "duplicate";
+  readonly resourceId?: string;
+  readonly untrusted: true;
+}
+
+export interface IdempotencyRecord {
+  readonly key: string;
+  readonly identityKey: string;
+  readonly op: string;
+  readonly result: unknown;
+  readonly concurrencyToken?: string;
+  readonly createdAt: string;
+}
+
+export interface IdempotencyStore {
+  get(input: { identityKey: string; key: string }): Promise<IdempotencyRecord | undefined>;
+  put(record: IdempotencyRecord): Promise<IdempotencyRecord>;
+}
+
+export interface WorkApprovalGate {
+  /** Return true when host already authorized this draft/mutation. */
+  isApproved(input: { draftId: string; op: string; identity: AgentIdentity }): Promise<boolean> | boolean;
+}
+
+export interface ExternalRecipientPolicy {
+  /** Return true when address/domain may receive external share/mail. Default deny. */
+  allow(address: string): boolean;
+}
+
+export interface WorkCliExecResult {
+  readonly exitCode: number | null;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+export interface WorkCliRunner {
+  exec(argv: readonly string[], options?: { signal?: AbortSignal }): Promise<WorkCliExecResult>;
+}
+
+export interface Microsoft365Adapter {
+  readonly provider: "microsoft365";
+  readonly identity: AgentIdentity;
+  readonly allowedOps: ReadonlySet<Microsoft365Op>;
+  ensureReady(signal?: AbortSignal): Promise<string>;
+  runOp(op: Microsoft365Op, args: JsonObject, signal?: AbortSignal): Promise<unknown>;
+  createDraft(op: Microsoft365Op, payload: JsonObject): WorkDraft;
+  getDraft(draftId: string): WorkDraft | undefined;
+  markDraft(draftId: string, status: WorkDraft["status"], concurrencyToken?: string): WorkDraft;
+}
+
+export interface GoogleWorkspaceAdapter {
+  readonly provider: "google-workspace";
+  readonly identity: AgentIdentity;
+  readonly allowedOps: ReadonlySet<GoogleWorkspaceOp>;
+  ensureReady(signal?: AbortSignal): Promise<string>;
+  runOp(op: GoogleWorkspaceOp, args: JsonObject, signal?: AbortSignal): Promise<unknown>;
+  createDraft(op: GoogleWorkspaceOp, payload: JsonObject): WorkDraft;
+  getDraft(draftId: string): WorkDraft | undefined;
+  markDraft(draftId: string, status: WorkDraft["status"], concurrencyToken?: string): WorkDraft;
+}
+
+export interface WorkToolsOptions {
+  readonly microsoft365?: Microsoft365Adapter;
+  readonly googleWorkspace?: GoogleWorkspaceAdapter;
+  readonly approval?: WorkApprovalGate;
+  readonly idempotencyStore?: IdempotencyStore;
+  readonly externalRecipients?: ExternalRecipientPolicy;
+  /** Optional attachment/file scan before inbound use. Required for inbound attachment bytes. */
+  readonly scanAttachment?: (input: { bytes: number; name?: string }) => Promise<void> | void;
+}
+
+export type WorkToolSet = readonly ToolDefinition[];

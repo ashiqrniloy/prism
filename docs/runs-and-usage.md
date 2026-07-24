@@ -286,6 +286,7 @@ console.log(cacheUsageReport(aggregate?.usage));
 - **Idempotency is host-owned.** The runtime writes the key into `RunRecord.idempotencyKey`; enforcing unique keys and deduplicating retries is the host adapter's responsibility.
 - **Tenant isolation.** `OwnershipScope` fields are copied from the active ownership scope, but the runtime does not enforce tenant isolation for ledger rows. Feedback is stricter: append/query/delete require tenant plus account/user, and first-party stores compare the exact scope to the linked run.
 - **Feedback privacy.** Comments/tags/metadata can contain PII. Configure a feedback redactor, apply retention, and call owned `delete()` for erasure. Never copy comments or tag values into metric labels.
+- **Policy audit is separate.** Enterprise allow/deny/modify/approval rows with evidence refs live in optional `@arnilo/prism-policy`, not `RunLedger`. See [Policy and audit](policy-and-audit.md).
 
 ## Optional batching and durability
 
@@ -304,6 +305,7 @@ Runtime session snapshots cache one leaf/generation for at most one second. Succ
 
 ## Related APIs
 
+- [Policy and audit](policy-and-audit.md): optional enterprise decision ledger (separate from run usage rows).
 - [Performance limits](performance.md): batching, cursor keys, and production sizing assumptions.
 - [Agent/session runtime](agent-session-runtime.md): `session.run()` and runtime event emission.
 - [Agent events](agent-events.md): `AgentEvent` union and `session.subscribe()`.

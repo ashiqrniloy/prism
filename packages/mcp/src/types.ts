@@ -1,4 +1,5 @@
 import type {
+  AgentIdentity,
   AgentRunLifecycle,
   CommandDefinition,
   Guardrails,
@@ -50,6 +51,8 @@ export interface PrismMcpAuthorizationInput {
 export interface PrismMcpAuthorization {
   readonly allowed: true;
   readonly ownership?: OwnershipScope;
+  /** Host-verified identity; when set must project onto ownership without widening. */
+  readonly identity?: AgentIdentity;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 

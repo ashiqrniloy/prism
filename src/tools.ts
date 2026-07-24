@@ -2,6 +2,7 @@ import type { AgentEvent, ErrorInfo, Guardrails, JsonObject, OwnershipScope, Run
 import { isJsonObject } from "./config.js";
 import { createId } from "./ids.js";
 import { GuardrailError, runGuardrails } from "./guardrails.js";
+import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
 import type { RunLimitTracker } from "./run-limits.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
@@ -73,6 +74,8 @@ export interface DispatchToolCallOptions {
   readonly redactor?: SecretRedactor;
   readonly ledger?: RunLedger;
   readonly ownership?: OwnershipScope;
+  /** Host-verified identity; asserted active before tool side effects when present. */
+  readonly identity?: import("./identity.js").AgentIdentity;
   /** Tool stages run after middleware normalization and before side effects/exposure. */
   readonly guardrails?: Guardrails;
   /** Shared run tracker; direct hosts may supply one for their call scope. */
@@ -149,6 +152,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   const context: ToolExecutionContext = {
     ...options.context,
     toolCallId: mediatedCall.id,
+    identity: options.identity ?? options.context.identity,
     progress: async (progress, metadata) => {
       await options.context.progress?.(progress, metadata);
       await options.emit?.({
@@ -169,6 +173,10 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   };
 
   try {
+    if (context.identity) {
+      assertIdentityActive(context.identity);
+      assertIdentityMatchesOwnership(context.identity, options.ownership);
+    }
     await assertTrusted(options.trust, { kind: "tool", target: mediatedCall.name, capability: "execute", metadata: options.context.metadata });
     await assertPermission(options.permission, { kind: "tool", action: "execute", target: mediatedCall.name, metadata: options.context.metadata });
   } catch (error) {

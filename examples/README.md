@@ -52,6 +52,10 @@ node examples/coding-goal-verify.ts
 node examples/agent-durable-approval.ts
 node examples/ag-ui-server.ts
 node examples/secure-agent.ts
+node examples/enterprise-identity.ts
+node examples/enterprise-policy-audit.ts
+node examples/enterprise-work-connectors.ts
+node examples/server-deployment-seams.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -60,6 +64,10 @@ Each demo prints a single JSON line with its result.
 
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
 - `secure-agent.ts` — opt-in fail-closed agent composition with validation, trust/permission, redaction, limits, ownership, and durable approval.
+- `enterprise-identity.ts` — **demo**: verified `AgentIdentity`, `narrowIdentity`, and propagation guards (network-free).
+- `enterprise-policy-audit.ts` — **demo**: `@arnilo/prism-policy` evaluate → append → cursor export with fake identity.
+- `enterprise-work-connectors.ts` — **demo**: fake M365/GWS CLI adapters, shared mail normalizers, and draft-gated work tools.
+- `server-deployment-seams.ts` — **demo**: health, drain, rate-limit, and deployment lease on `@arnilo/prism-server` (network-free).
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.

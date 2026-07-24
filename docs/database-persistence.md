@@ -334,19 +334,30 @@ Use `cursor`/`limit` when an adapter pages very long branches. Do not implement 
 
 ## Retention policies
 
-A retention policy is a host-managed rule attached to sessions via `retention_policy_id`. Enforcement is host-owned and typically runs as a background job:
+A retention policy is a host-managed rule attached to sessions via `retention_policy_id`. Phase 8 adds optional `ProductionPersistenceStore.lifecycle` (`createMemoryPersistenceLifecycle`, SQLite/Postgres `persistence.lifecycle`) for bounded apply/hold/export/quota:
+
+```ts
+await store.lifecycle.putLegalHold({ tenantId, userId, resourceKind: "session", resourceId, reason });
+await store.lifecycle.applyRetention({ tenantId, userId, policy, candidates }); // hold wins over delete
+await store.lifecycle.exportUnderHold({ tenantId, userId, cursor, limit }); // redacted
+await store.lifecycle.setTenantQuota({ tenantId, userId, resourceKind: "run", limit: 100 });
+await store.lifecycle.consumeTenantQuota({ tenantId, userId, resourceKind: "run" }); // fails closed when exhausted
+```
+
+Schema **v5** migration `005_lifecycle_hold_quota` adds `prism_legal_holds` and `prism_tenant_quotas`. Legal hold always blocks delete for the held resource id. Export pages are redacted refs only (no prompts/bodies/secrets).
+
+Host background jobs may still:
 
 1. Select policies whose `max_age_days`, `max_entries_per_session`, or `max_total_bytes` thresholds are exceeded.
-2. For each affected session, delete or archive entries older than the policy age, beyond the entry count, or over the byte budget.
-3. Respect `applied_kinds` — only delete kinds listed in the policy (null means all kinds).
-4. Compact or soft-delete sessions whose `expires_at` has passed.
-5. Write audit metadata to the migration or host audit log; do not delete the policy row unless explicitly requested.
+2. Pass candidate session ids into `applyRetention` (or let SQL adapters discover expired sessions).
+3. Respect `applied_kinds` when selecting candidates.
+4. Never silently purge under hold.
 
-Retention jobs should not run inside the agent/session runtime. They are a host concern.
+Retention jobs should not run inside the agent/session runtime.
 
 ## Migrations
 
-Hosts own schema migrations. Prism publishes only the TypeScript contracts; no DDL is generated or executed by the core library. First-party SQLite/PostgreSQL adapters automatically verify their checked-in schema-v3 history and catalog at open, before runtime writes. Their catalog reads are bounded metadata queries/PRAGMAs, not table-data scans.
+Hosts own schema migrations. Prism publishes only the TypeScript contracts; no DDL is generated or executed by the core library. First-party SQLite/PostgreSQL adapters automatically verify their checked-in schema-v5 history and catalog at open, before runtime writes. Their catalog reads are bounded metadata queries/PRAGMAs, not table-data scans.
 
 Each new adapter-owned migration row records the contract SHA-256 checksum. A complete known v0.0.5 history whose checksum values are all `NULL` is a one-time compatibility case: under the SQLite transaction or PostgreSQL advisory transaction lock, the adapter verifies the full current shape, backfills all checksums, and continues. Unknown/duplicate/out-of-order/name-version/checksum mismatch, mixed/partial legacy values, or any missing/renamed/wrong-type/null/default/key/index artifact fails closed. Restore or apply a reviewed host migration; never edit checksums to silence drift.
 

@@ -80,6 +80,7 @@ Defaults/hard caps include: request 64 KiB/1 MiB; response 1/8 MiB; event 64 KiB
 ## Security and performance notes
 
 - Authorize every operation; lifecycle/push adapters enforce exact owner again at durable storage boundary. Missing and foreign tasks/configs share `-32001`.
+- Optional `A2AAuthorization.identity` is host-verified; the handler asserts activity/ownership match and forwards identity into `session.run`. Cross-tenant or widened scopes fail closed.
 - URL policy must reject private, loopback, link-local, rebound, redirected, or otherwise disallowed destinations. Package never fetches file URLs. Host push delivery must repeat equivalent checks for every attempt/redirect and process event IDs idempotently.
 - Push token/auth credentials are accepted only into host adapter input and removed from protocol reads/responses. Keep them out of task parts, events, telemetry, ledgers, and errors.
 - Known-secret redaction applies before handler JSON/SSE output. Client redacts mapped text/errors. Raw/data/url content remains explicitly untrusted.
@@ -88,6 +89,7 @@ Defaults/hard caps include: request 64 KiB/1 MiB; response 1/8 MiB; event 64 KiB
 
 ## Related APIs
 
+- [Agent identity](agent-identity.md)
 - [Supervisor delegation](supervisors.md)
 - [Agent/session runtime](agent-session-runtime.md)
 - [Workflows](workflows.md)

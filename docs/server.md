@@ -2,9 +2,9 @@
 
 ## What it does
 
-`@arnilo/prism-server` exposes explicitly selected agents and workflows through one framework-free `(Request) => Promise<Response>` handler. It supports direct agent results, bounded agent/workflow SSE, opt-in durable agent status/resume, durable workflow start/enqueue/status/cancel/resume/replay, ownership-scoped schedules, host authorization, ownership propagation, redaction, and resource ceilings.
+`@arnilo/prism-server` exposes explicitly selected agents and workflows through one framework-free `(Request) => Promise<Response>` handler. It supports direct agent results, bounded agent/workflow SSE, opt-in durable agent status/resume, durable workflow start/enqueue/status/cancel/resume/replay, ownership-scoped schedules, host authorization, ownership propagation, redaction, resource ceilings, and optional deployment seams (health/readiness, drain, host rate-limit adapter, ownership-scoped event replay, worker/coordinator lease election).
 
-No listener starts on import. Empty `agents`/`workflows` maps expose nothing. Authentication, authorization, route selection, durable stores, TLS, rate limiting, and framework/serverless adaptation remain host-owned.
+No listener starts on import. Empty `agents`/`workflows` maps expose nothing. Authentication, authorization, route selection, durable stores, TLS, distributed rate limiting, queues, and framework/serverless adaptation remain host-owned.
 
 ## When to use it
 
@@ -15,6 +15,7 @@ Use `AgentSession` or workflow APIs directly for in-process applications. Do not
 ## Inputs / request
 
 ```ts
+const drain = createPrismDrainController({ deadlineMs: 30_000 });
 const handler = createPrismHandler({
   agents?: Record<string, Agent | PrismAgentExposure>,
   agentRuns?: Record<string, PrismAgentRunExposure>, // explicit durable status/resume only
@@ -22,8 +23,11 @@ const handler = createPrismHandler({
   schedules?: WorkflowSchedules | ((authorization, signal) => WorkflowSchedules),
   authorize: async ({ request, operation, capabilityId }) => false | {
     ownership: { tenantId?: string; accountId?: string; userId?: string },
+    identity?: AgentIdentity, // optional host-verified; must match ownership
     metadata?: Record<string, unknown>,
   },
+  drain?, // blocks admit ops with 503 while draining
+  rateLimit?, // host adapter after authorize, before session/run create
   basePath?: "/prism",
   allowedHosts?: string[],
   allowedOrigins?: string[],
@@ -31,6 +35,7 @@ const handler = createPrismHandler({
   limits?: PrismServerLimits,
   disconnectAborts?: boolean,
 });
+const health = createPrismHealthHandler({ ready: () => store.ping(), drain });
 ```
 
 At least one non-empty ownership field must come from `authorize()`. Request JSON never chooses ownership.
@@ -117,14 +122,36 @@ Default/hard ceilings:
 | concurrent runs | 16 | 256 |
 | subscriber queue | 128 | 4,096 |
 | request/run timeout | 120 s | 30 min |
+| health response | 4 KiB | 64 KiB |
+| drain admit cutoff | 30 s | 5 min |
+| replay page / cursor | 100 / 4 KiB | 500 / 16 KiB |
+
+## Deployment seams (optional)
+
+Compose beside `createPrismHandler` — Prism starts no listener, container orchestrator, or queue worker.
+
+| Helper | Role |
+| --- | --- |
+| `createPrismHealthHandler` | `GET /health`, `/livez`, `/readyz`. Minimal JSON; `?detail=1` requires `authorizeDetail`. No secrets/tenant payloads by default. Ready fails while draining. |
+| `createPrismDrainController` | `beginDrain()` rejects admit ops (`agent.run`/`stream`/`resume`, workflow run/stream/enqueue/resume/replay, schedule create/trigger) with `503 ERR_PRISM_SERVER_DRAINING`. Status/cancel/list stay open. |
+| `rateLimit` on handler | Host adapter after authorize, before session create. Return denial `{ retryAfterMs, code, message }` → `429` + optional `Retry-After`. `createMemoryRateLimiter` is single-process only. |
+| `createPrismEventReplay` / `createPrismReplayHandler` | Ownership-scoped `queryEvents` pages (`redacted: true`). Does not re-run work. Unauthorized replay denies. |
+| `createPrismDeploymentLease` | Lease election under `prism.server.deployment`. Coordinator replica holds `key: "coordinator"` before schedule ticks; workers run `@arnilo/prism-workflows` `createWorkflowCoordinator` for queued runs (fencing tokens). |
+
+**Queues:** Redis/SQS/other adapters are absent. Postgres checkpoint polling via `createWorkflowCoordinator` remains the default background path until a measured polling/load justification is recorded.
+
+Network-free demo: [`examples/server-deployment-seams.ts`](../examples/server-deployment-seams.ts).
 
 ## Security and performance notes
 
 - `authorize()` is required and runs for every matched operation before capability lookup or body execution. Return `false` on missing/invalid credentials. Do not trust caller ownership fields.
+- Optional `authorization.identity` must be host-verified (`AgentIdentity.verified`); the handler asserts activity and ownership match, then forwards identity into agent runs. Caller-asserted identity without a host verifier is rejected.
 - Use authorization metadata only for non-secret audit context. Never put credentials in metadata, input, route IDs, run IDs, checkpoints, events, or responses.
 - Configure `SecretRedactor` before runs. Redaction matches known secrets; it is not DLP.
 - Agent tools and workflow tool nodes still need their own `PermissionPolicy`, `ToolValidator`, and `ExecutionPolicy`. HTTP authorization does not replace side-effect policy.
-- Host and origin allow-lists are exact string matches. Configure reverse-proxy normalization, TLS, rate limiting, IP policy, CSRF/cookie policy, and authentication outside Prism.
+- Host and origin allow-lists are exact string matches. Configure reverse-proxy normalization, TLS, IP policy, CSRF/cookie policy, and authentication outside Prism. Optional `rateLimit` is an attributable short-circuit only — not a WAF.
+- Health endpoints reveal process/liveness only by default; detail flags require host authorize and must omit secrets/tenant dumps.
+- Drain and event replay require the same ownership/authorize boundary as other routes; replay never invokes providers or tools.
 - SSE uses bounded upstream subscriber queues. Consumer cancellation aborts owned work by default and releases concurrency; set `disconnectAborts: false` only when the host deliberately owns background completion.
 - Source inputs/resource URLs remain host responsibilities and use existing resource/media SSRF policies. Server package does not fetch URLs.
 - Schedule routes never accept ownership from JSON. Services carry mandatory ownership and explicit workflow/calculator registries; route authorization cannot broaden either. Replay applies workflow ownership/hash/approval checks.
@@ -134,8 +161,10 @@ A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-super
 
 ## Related APIs
 
+- [Agent identity](agent-identity.md): optional verified identity on authorize results.
+- [Performance](performance.md): capacity notes for concurrent runs and deployment probes.
 - [Agent/session runtime](agent-session-runtime.md): direct result and event stream semantics.
-- [Workflows](workflows.md): durable checkpoints, status, cancellation, and exact-once resume.
+- [Workflows](workflows.md): durable checkpoints, status, cancellation, exact-once resume, and `createWorkflowCoordinator` workers.
 - [MCP client and server exposure](mcp-tools.md): selected MCP capabilities and web-standard MCP transport.
 - [Host security guide](host-security.md): remote-boundary checklist.
 - [A2A interoperability](a2a.md): separately mounted A2A 1.0 handler/client.

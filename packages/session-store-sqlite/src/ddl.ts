@@ -297,6 +297,39 @@ SELECT session_id, id, IFNULL(label, ''), IFNULL(summary, ''), IFNULL(message, '
 FROM prism_session_entries;
 `;
 
+/** Legal holds + tenant quotas (schema v5). */
+export const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = `
+CREATE TABLE IF NOT EXISTS prism_legal_holds (
+  id TEXT NOT NULL PRIMARY KEY,
+  tenant_id TEXT,
+  account_id TEXT,
+  user_id TEXT,
+  resource_kind TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  created_by TEXT,
+  metadata TEXT
+);
+CREATE INDEX IF NOT EXISTS prism_legal_holds_owner_resource_idx
+  ON prism_legal_holds (tenant_id, account_id, user_id, resource_kind, resource_id);
+CREATE INDEX IF NOT EXISTS prism_legal_holds_created_id_idx
+  ON prism_legal_holds (created_at, id);
+CREATE TABLE IF NOT EXISTS prism_tenant_quotas (
+  id TEXT NOT NULL PRIMARY KEY,
+  tenant_id TEXT,
+  account_id TEXT,
+  user_id TEXT,
+  resource_kind TEXT NOT NULL,
+  limit_count INTEGER NOT NULL,
+  used_count INTEGER NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (tenant_id, account_id, user_id, resource_kind)
+);
+CREATE INDEX IF NOT EXISTS prism_tenant_quotas_owner_kind_idx
+  ON prism_tenant_quotas (tenant_id, account_id, user_id, resource_kind);
+`;
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",
@@ -312,6 +345,8 @@ export const ADAPTER_TABLE_NAMES = [
   "prism_usage",
   "prism_run_feedback",
   "prism_retention_policies",
+  "prism_legal_holds",
+  "prism_tenant_quotas",
   "prism_migrations",
 ] as const;
 
@@ -340,5 +375,8 @@ export const ADAPTER_INDEX_NAMES = [
   "prism_run_feedback_run_created_idx",
   "prism_run_feedback_trace_created_idx",
   "prism_agent_definitions_name_version_idx",
+  "prism_legal_holds_owner_resource_idx",
+  "prism_legal_holds_created_id_idx",
+  "prism_tenant_quotas_owner_kind_idx",
   "prism_migrations_name_version_idx",
 ] as const;

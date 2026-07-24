@@ -1,4 +1,17 @@
 # Changelog
+
+## [0.0.13] - 2026-07-24
+
+### Changed
+
+- Released with exact 0.0.13 graph.
+
+## [0.0.12] - 2026-07-23
+
+### Added
+
+- Optional deployment seams: `createPrismHealthHandler`, `createPrismDrainController`, host `rateLimit` adapter (+ `createMemoryRateLimiter`), ownership-scoped `createPrismEventReplay` / `createPrismReplayHandler`, and `createPrismDeploymentLease` for worker/coordinator election over existing leases. No queue adapter (deferred pending measured Postgres polling need).
+
 ## [0.0.12] - 2026-07-22
 
 ### Changed

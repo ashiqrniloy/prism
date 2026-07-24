@@ -28,7 +28,10 @@
       "@arnilo/prism-server": ["./packages/server/src/index.ts"],
       "@arnilo/prism-ag-ui": ["./packages/ag-ui/src/index.ts"],
       "@arnilo/prism-supervisor": ["./packages/supervisor/src/index.ts"],
-      "@arnilo/prism-mcp": ["./packages/mcp/src/index.ts"]
+      "@arnilo/prism-mcp": ["./packages/mcp/src/index.ts"],
+      "@arnilo/prism-policy": ["./packages/policy/src/index.ts"],
+      "@arnilo/prism-model-router": ["./packages/model-router/src/index.ts"],
+      "@arnilo/prism-work-tools": ["./packages/work-tools/src/index.ts"]
     }
   },
   "include": ["**/*.ts"]

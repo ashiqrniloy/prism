@@ -34,6 +34,8 @@ Start from explicit host inputs. Do not let runtime code discover security state
 | Durable interruption | host checkpoint + session stores, exact ownership | `RunOptions.runState`, `resumeAgentRun()`, `createAgentRunLifecycle()`, `createSecureAgent()` |
 | Extensions | explicit package imports only | `createExtensionKernel`, `ExtensionAPI` |
 | Remote agent/workflow API | host authentication + ownership mapping | `@arnilo/prism-server`, `createPrismHandler()` |
+| Authenticated identity | host `IdentityVerifier` → verified `AgentIdentity` | [Agent identity](agent-identity.md), `assertIdentityActive`, `narrowIdentity` |
+| Policy decision audit | optional redacted ledger + host WORM sink | [Policy and audit](policy-and-audit.md), `@arnilo/prism-policy` |
 | MCP server exposure | host MCP auth + selected capability list | `createPrismMcpServer()`, `createPrismMcpWebHandler()` |
 
 ## Outputs / response / events
@@ -144,7 +146,8 @@ Wire those values where they matter: provider adapters receive the resolved cred
 - LLM compaction always sends finite summary `maxTokens`, retains bounded deltas/events, and bounds/redacts provider/factory/policy error detail. Observational-memory workers cap turns, calls, arguments, results, transcript, and surfaced errors; unknown tools fail before execution, while invalid results can only be rejected after a host tool returns and may therefore follow side effects. Pass all known provider/credential/tool secrets into compaction/runtime options; exact replacement is not secret discovery.
 - Default remote-media loading resolves every DNS answer, rejects the hostname if any address is non-public, and pins one validated address through the request. Explicit `allowedHostnames` can trust private destinations. A host-supplied `fetch` owns DNS/rebinding/proxy/redirect safety; a custom `requestUrl` must connect to its supplied validated address.
 - Permission checks happen before tool validation and before `tool.execute()`. Middleware cannot grant permission by renaming a tool.
-- Session stores and ledgers receive redacted values when a redactor is active, but durable storage remains host-owned. Enforce tenant/account/user ownership and retention in the database layer.
+- Session stores and ledgers receive redacted values when a redactor is active, but durable storage remains host-owned. Enforce tenant/account/user ownership, retention, legal hold, and quotas via `ProductionPersistenceStore.lifecycle` (or host-equivalent DB controls). Hold always blocks delete.
+- Prefer `createExtensionKernel({ loadPolicy })` allow-list/signature checks before loading third-party extension packages.
 - Provider-owned auth/content/session/cache/security headers win over caller headers in adapters that merge headers.
 - Security checks are bounded explicit calls on the active path. Prism adds no hidden global middleware, background workers, watchers, network calls, or filesystem scans.
 
@@ -172,6 +175,7 @@ PostgreSQL TLS/network policy, MCP endpoint trust/credentials and egress policy 
 ## Web research boundaries
 
 - Construct `@arnilo/prism-web-tools` with one host-selected Brave or Exa adapter; never expose adapter/provider/credential/schema selection to model arguments.
+- Construct `@arnilo/prism-work-tools` with host-pinned CLI binary + isolated `configDir` + verified `AgentIdentity` (M365 and/or GWS). Never pass model-built command strings, `login`/`setup`/`auth`/`schema`/`--debug`, or credentials in argv. Mutations require draft approval; external recipients and anonymous/`anyone` shares fail closed.
 - Provider API origins are fixed exact HTTPS origins and redirects fail. Credentials resolve immediately before I/O; remote bodies and secrets are excluded from errors/results/telemetry.
 - Firecrawl targets reject userinfo, non-HTTP(S), private literals, and policy-denied hosts. Supply `validateUrl` for host DNS/rebinding/egress checks. Firecrawl performs remote retrieval, so Prism cannot pin target DNS after handoff.
 - Treat every snippet, highlight, Markdown byte, metadata field, and extracted JSON value as prompt-injection-capable untrusted data. Never elevate it into system instructions or let it modify tools, permissions, trust, credentials, routing, or extraction schema.

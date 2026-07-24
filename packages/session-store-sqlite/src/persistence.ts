@@ -70,6 +70,7 @@ import {
 } from "./row-mappers.js";
 import { createSqliteCheckpointStore } from "./checkpoints.js";
 import { createSqliteLeaseStore } from "./leases.js";
+import { createSqlitePersistenceLifecycle } from "./lifecycle.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
 
@@ -78,6 +79,7 @@ export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPe
   readonly checkpoints: CheckpointStore;
   readonly leases: LeaseStore;
   readonly feedback: RunFeedbackStore;
+  readonly lifecycle: import("@arnilo/prism").PersistenceLifecycleStore;
   readonly metadata: Readonly<{
     readonly kind: "sqlite";
     readonly multiProcess: true;
@@ -231,6 +233,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     checkpoints: createSqliteCheckpointStore(db),
     leases: createSqliteLeaseStore(db),
     feedback,
+    lifecycle: createSqlitePersistenceLifecycle(db),
     metadata: { kind: "sqlite", multiProcess: true, driver: "better-sqlite3" },
 
     async append(entry: SessionEntry, appendOptions?: SessionAppendOptions): Promise<void> {

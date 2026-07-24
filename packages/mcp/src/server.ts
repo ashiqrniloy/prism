@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "node:crypto";
-import { AgentRunStateError, createRunLimitTracker, createToolRegistry, dispatchToolCall, type JsonObject, type ToolResult } from "@arnilo/prism";
+import { AgentRunStateError, assertIdentityActive, assertIdentityMatchesOwnership, createRunLimitTracker, createToolRegistry, dispatchToolCall, type JsonObject, type ToolResult } from "@arnilo/prism";
 import * as z from "zod/v4";
 import type {
   CreatePrismMcpServerOptions,
@@ -72,11 +72,13 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
           toolCallId: requestId,
           signal,
           metadata: authorization.metadata,
+          identity: authorization.identity,
         },
         validate: options.validate,
         permission: options.permission,
         redactor: options.redactor,
         ownership: authorization.ownership,
+        identity: authorization.identity,
         guardrails: options.guardrails,
         limitTracker: limits,
       });
@@ -175,7 +177,7 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
     try { decision = await options.authorize({ kind, name, arguments: args, authInfo: extra.authInfo, sessionId: extra.sessionId, signal: extra.signal }); }
     catch { decision = false; }
     if (!decision) throw new McpBridgeError("ERR_PRISM_MCP_FORBIDDEN: Forbidden");
-    return decision;
+    return assertAuthorizedIdentity(decision);
   }
 
   function register(
@@ -218,6 +220,11 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
           authorization = false;
         }
         if (!authorization) return mcpError("Forbidden", "ERR_PRISM_MCP_FORBIDDEN", maxResultBytes);
+        try {
+          authorization = assertAuthorizedIdentity(authorization);
+        } catch {
+          return mcpError("Forbidden", "ERR_PRISM_MCP_FORBIDDEN", maxResultBytes);
+        }
         controller.signal.throwIfAborted();
         return execute(args, authorization, controller.signal, requestId, extra.sessionId);
       })();
@@ -233,6 +240,13 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
       }
     });
   }
+}
+
+function assertAuthorizedIdentity(authorization: PrismMcpAuthorization): PrismMcpAuthorization {
+  if (!authorization.identity) return authorization;
+  assertIdentityActive(authorization.identity);
+  assertIdentityMatchesOwnership(authorization.identity, authorization.ownership);
+  return authorization;
 }
 
 export async function createPrismMcpWebHandler(

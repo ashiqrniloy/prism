@@ -206,6 +206,7 @@ const providers = createOpenAIProviderPackage({ apiKey });
 - Keychain `list()` / `listOAuth()` are intentionally unsupported — enumerate credentials through host configuration instead of scanning the OS store.
 - Combine with `createExplicitCredentialResolver()` so runtime overrides still win over stored values.
 - Wire `createOAuthCredentialStoreAdapter(store)` into `refreshOAuthCredential()` only for an OAuth flow explicitly selected by the host and authorized by that provider. In 0.0.12 that means OpenAI Codex; Anthropic and Google packages accept API keys only. Never import or migrate Claude Code/Gemini CLI credential files, setup tokens, browser sessions, or CLI OAuth rows into this store.
+- Enterprise cloud providers (`azure` / `bedrock` / `vertex`) expect host workload-identity callbacks (Entra / IAM / ADC), not this local encrypted/keychain store as a cloud token minting service. Store may hold opaque refresh material only when the host already owns the cloud auth flow.
 
 ## Security and performance notes
 
@@ -216,6 +217,7 @@ const providers = createOpenAIProviderPackage({ apiKey });
 - Keychain operations use `@napi-rs/keyring`'s abort-aware `AsyncEntry`, so native work runs outside the JavaScript event loop. A main-loop timer aborts and rejects at `timeoutMs`; native cancellation remains OS/backend-dependent and may briefly retain one libuv worker after rejection.
 - Keychain payloads are bytes rather than password strings and are zeroed after parse/write. Unknown native errors are mapped to sanitized typed errors; no native message or secret value is echoed.
 - Never log passphrases, derived keys, or decrypted credential payloads.
+- Optional host KMS: `encryptWithHostKms` / `decryptWithHostKms` wrap a random AES-256-GCM DEK via host `HostKms.wrapKey`/`unwrapKey` (timeout ≤ 60 s). Envelope sizes reuse vault/file caps. Keys are never logged. `createMemoryHostKms` is for tests only.
 - Storage is not OAuth eligibility. A durable store may persist credentials for a provider only after the host selects a provider-authorized flow; it must not be used to piggyback on a vendor CLI or consumer subscription.
 - Live keychain tests are opt-in (`PRISM_TEST_KEYCHAIN=1`); default `npm test` stays offline.
 
@@ -230,6 +232,7 @@ MCP credentials remain host inputs: resolve them before constructing client `req
 ## Related APIs
 
 - [Credentials and redaction](credentials-and-redaction.md): core resolver helpers and `refreshOAuthCredential()`
+- [Azure OpenAI / Foundry](providers/azure.md) / [Amazon Bedrock](providers/bedrock.md) / [Google Vertex AI](providers/vertex.md): enterprise workload-identity credential callbacks
 - [Web search, fetch, and extraction](web-tools.md): late-bound Brave/Exa/Firecrawl credentials
 - [Security/auth/trust](settings-auth-trust-security.md): host-owned settings/credentials boundaries
 - [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): Plan 056 threat model and conformance matrix rows 7–10

@@ -1,6 +1,7 @@
 import type { Agent, AgentConfig, Guardrails, SecureAgentOptions } from "./contracts.js";
 import { createAgent } from "./agents.js";
 import { validateRunStateOptions } from "./agent-run-state.js";
+import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
 import { resolveRunLimits } from "./run-limits.js";
 import { createToolParameterValidator, createToolRegistry } from "./tools.js";
 
@@ -19,6 +20,10 @@ export function createSecureAgent(options: SecureAgentOptions): Agent {
     if (!tool.parameters || Object.keys(tool.parameters).length === 0) throw new TypeError(`Secure agent tool ${tool.name} requires a non-empty parameters schema`);
   }
   resolveRunLimits(options.limits);
+  if (options.identity) {
+    assertIdentityActive(options.identity);
+    assertIdentityMatchesOwnership(options.identity, options.ownership);
+  }
   const runState = Object.freeze({ ...options.runState, definitionRevision: options.definitionRevision, interruptBeforeTool: true });
   validateRunStateOptions(runState);
   const config: AgentConfig = Object.freeze({
@@ -30,6 +35,7 @@ export function createSecureAgent(options: SecureAgentOptions): Agent {
     permission: options.permission,
     trust: options.trust,
     ownership: Object.freeze({ ...options.ownership }),
+    ...(options.identity ? { identity: Object.freeze({ ...options.identity, scopes: Object.freeze([...options.identity.scopes]) }) } : {}),
     limits: Object.freeze({ ...options.limits }),
     guardrails: freezeGuardrails(options.guardrails),
     runState,
@@ -38,8 +44,21 @@ export function createSecureAgent(options: SecureAgentOptions): Agent {
   return createAgent(config);
 }
 
-function withoutSecureFields(options: SecureAgentOptions): Omit<AgentConfig, "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "limits" | "guardrails" | "runState" | "secure"> {
-  const { tools: _tools, toolArgumentValidator: _validator, redactor: _redactor, permission: _permission, trust: _trust, ownership: _ownership, limits: _limits, guardrails: _guardrails, definitionRevision: _revision, runState: _runState, ...config } = options;
+function withoutSecureFields(options: SecureAgentOptions): Omit<AgentConfig, "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "guardrails" | "runState" | "secure"> {
+  const {
+    tools: _tools,
+    toolArgumentValidator: _validator,
+    redactor: _redactor,
+    permission: _permission,
+    trust: _trust,
+    ownership: _ownership,
+    identity: _identity,
+    limits: _limits,
+    guardrails: _guardrails,
+    definitionRevision: _revision,
+    runState: _runState,
+    ...config
+  } = options;
   return config;
 }
 

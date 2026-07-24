@@ -24,7 +24,10 @@ Do not use provider packages as a package manager, credential store, env loader,
 | --- | --- | --- |
 | `@arnilo/prism-provider-openai` | `api_key` for `openai`; `oauth` for `openai-codex` | Existing host-invoked OpenAI Codex PKCE/device-code flow only. |
 | `@arnilo/prism-provider-anthropic` | `api_key` only | No Claude Code/Claude.ai subscription OAuth, credential-file/setup-token import, or routing. [Anthropic requires product developers to use API keys or supported cloud providers](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance). |
-| `@arnilo/prism-provider-google` | `api_key` only | No Gemini CLI OAuth or credential/token import. [Gemini CLI prohibits third-party OAuth piggybacking](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md); use Google AI Studio or Vertex API keys. |
+| `@arnilo/prism-provider-google` | `api_key` only | No Gemini CLI OAuth or credential/token import. [Gemini CLI prohibits third-party OAuth piggybacking](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md); use Google AI Studio API keys. Vertex/ADC uses separate [`@arnilo/prism-provider-vertex`](providers/vertex.md). |
+| `@arnilo/prism-provider-azure` | host Entra token or Azure resource key | Workload identity via `credential` callback; endpoint host preserved ([docs](providers/azure.md)). |
+| `@arnilo/prism-provider-bedrock` | host IAM/IRSA credentials | SigV4 over OpenAI-compatible Bedrock Runtime; region/PrivateLink preserved ([docs](providers/bedrock.md)). |
+| `@arnilo/prism-provider-vertex` | host ADC / workload token | OpenAPI-compatible Vertex endpoint; separate from consumer Google package ([docs](providers/vertex.md)). |
 
 A future provider-local OAuth package must first have explicit third-party permission and documented authorize/token/refresh flow. Before it registers an OAuth descriptor, it must add bounded request/response, abort, PKCE/state where required, expiry/refresh, secret-redaction, durable-store round-trip, and offline protocol tests. Do not add a generic OAuth framework, CLI credential scanner, automatic refresh timer, or success stub.
 
@@ -268,6 +271,8 @@ await kernel.load([pkg]);
 - Provider-specific behavior belongs in provider packages, not Prism core.
 - Adapter serializers should preserve Prism content blocks (text, thinking, tool_call, tool_result, and image when the model declares image input) in provider-native request shape, or fail explicitly when a block is unsupported.
 - Adapter header merging must put caller-supplied `ProviderRequest.options.headers` first and provider-owned headers last. Caller headers may add non-owned headers, but cannot replace resolved credentials, content type, session/cache/security headers, or provider attribution headers.
+- For allow-list/residency/budget/circuit selection before resolve, use optional `@arnilo/prism-model-router` over `createProviderResolver` — do not fork provider packages for governance.
+- Enterprise cloud adapters (`azure` / `bedrock` / `vertex`) stay separate from consumer Anthropic/Google packages and authenticate only through host credential callbacks.
 
 ## Manifest declarations
 
@@ -291,6 +296,8 @@ Manifest declarations are inert. The host must later resolve them through regist
 
 ## Related APIs
 
+- [Model routing](model-routing.md): optional governance router over `ProviderResolver`.
+- [Azure OpenAI / Foundry](providers/azure.md) / [Amazon Bedrock](providers/bedrock.md) / [Google Vertex AI](providers/vertex.md): enterprise workload-identity packages.
 - [Provider layer](provider-layer.md): provider/model registries and provider events.
 - [Provider conformance](provider-conformance.md): reusable network-free checks for provider adapters.
 - [Contribution registries](contribution-registries.md): registry bundle and extension contribution points.

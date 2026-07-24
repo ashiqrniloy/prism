@@ -32,12 +32,24 @@ import { assertPermission, type PermissionPolicy } from "./security.js";
 export type ExtensionEventHandler = (event: ExtensionEvent) => void | Promise<void>;
 export type ExtensionErrorPolicy = "event" | "throw";
 
+export interface ExtensionLoadPolicy {
+  /** When set, only listed extension names may load. */
+  readonly allowList?: readonly string[];
+  /**
+   * Host signature / attestation check. Return false or throw to deny.
+   * Unsigned extensions fail closed when this callback is provided.
+   */
+  readonly verifySignature?: (extension: Extension) => boolean | Promise<boolean>;
+}
+
 export interface ExtensionKernelOptions {
   readonly registries?: ContributionRegistries;
   readonly middleware?: MiddlewareRegistry;
   readonly errorPolicy?: ExtensionErrorPolicy;
   readonly secrets?: readonly (string | undefined)[];
   readonly permission?: PermissionPolicy;
+  /** Optional allow-list / signature policy evaluated before `setup`. */
+  readonly loadPolicy?: ExtensionLoadPolicy;
 }
 
 export interface ExtensionEventBus {
@@ -170,6 +182,7 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
       for (const extension of extensions) {
         try {
           await assertPermission(options.permission, { kind: "extension", action: "setup", target: extension.name });
+          await assertExtensionLoadPolicy(options.loadPolicy, extension);
           await extension.setup(api);
         } catch (error) {
           if (errorPolicy === "throw") throw error;
@@ -178,4 +191,19 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
       }
     },
   };
+}
+
+async function assertExtensionLoadPolicy(
+  policy: ExtensionLoadPolicy | undefined,
+  extension: Extension,
+): Promise<void> {
+  if (!policy) return;
+  if (policy.allowList && !policy.allowList.includes(extension.name)) {
+    throw new Error(`Extension "${extension.name}" is not allow-listed`);
+  }
+  if (policy.verifySignature) {
+    if (!extension.signature) throw new Error(`Extension "${extension.name}" is unsigned`);
+    const ok = await policy.verifySignature(extension);
+    if (!ok) throw new Error(`Extension "${extension.name}" failed signature verification`);
+  }
 }

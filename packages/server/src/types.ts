@@ -1,5 +1,6 @@
 import type {
   Agent,
+  AgentIdentity,
   AgentRunLifecycle,
   AgentSession,
   OwnershipScope,
@@ -12,7 +13,9 @@ import type {
   WorkflowDefinition,
   WorkflowSchedules,
 } from "@arnilo/prism-workflows";
+import type { PrismDrainController } from "./drain.js";
 import type { PrismServerLimits } from "./limits.js";
+import type { PrismServerRateLimiter } from "./rate-limit.js";
 
 export type PrismServerOperation =
   | "agent.run"
@@ -35,6 +38,8 @@ export type PrismServerOperation =
 
 export interface PrismServerAuthorization {
   readonly ownership: OwnershipScope;
+  /** Host-verified identity; when set must project onto `ownership` without widening. */
+  readonly identity?: AgentIdentity;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -80,6 +85,10 @@ export interface CreatePrismHandlerOptions {
   readonly redactor?: SecretRedactor;
   readonly limits?: PrismServerLimits;
   readonly disconnectAborts?: boolean;
+  /** Optional graceful drain; blocks admit operations with 503 while draining. */
+  readonly drain?: PrismDrainController;
+  /** Optional host rate-limit adapter; runs after authorize, before admit/session create. */
+  readonly rateLimit?: PrismServerRateLimiter;
 }
 
 export type PrismRequestHandler = (request: Request) => Promise<Response>;
@@ -89,6 +98,7 @@ export class PrismServerError extends Error {
     message: string,
     readonly status = 500,
     readonly code = "ERR_PRISM_SERVER",
+    readonly headers?: Readonly<Record<string, string>>,
   ) {
     super(message);
     this.name = "PrismServerError";

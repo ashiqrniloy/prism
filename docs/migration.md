@@ -7,6 +7,33 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.12 → 0.0.13 enterprise identity, policy, routing, and work connectors (additive, pre-release)
+
+Release **0.0.13** adds host-verified `Principal` / `AgentIdentity` on runs, tools, server/MCP/A2A/workflow seams. Hosts must supply an `IdentityVerifier` (`verify()` → `AgentIdentity` with `verified: true`); caller-asserted identity without host verification fails closed. See [Agent identity](agent-identity.md).
+
+Optional `@arnilo/prism-policy` records allow/deny/modify/approval decisions with evidence refs only (no prompt/body/secret keys). Optional `@arnilo/prism-model-router` wraps `ProviderResolver` with allow-list, residency, token/cost budgets, rate limits, circuit breaking, and bounded fallbacks (`allowOpenRouterRouting` default false). See [Policy and audit](policy-and-audit.md) and [Model routing](model-routing.md).
+
+| Surface | Before (0.0.12) | After (0.0.13) |
+| --- | --- | --- |
+| Run/tool identity | Ownership strings only | Optional verified `AgentIdentity`; `narrowIdentity` / propagation guards on delegation |
+| Policy audit | Host-only logs | Optional append-only ledger + cursor export via `@arnilo/prism-policy` |
+| Model governance | Host wraps resolver ad hoc | Optional `@arnilo/prism-model-router` before provider I/O |
+| Work connectors | n/a | Optional `@arnilo/prism-work-tools` M365 + GWS; draft-then-approve; hard-coded CLI argv |
+
+**Deferred to 0.0.14+:** conversation storage/service, Studio/control plane, internal auth DB, Redis/SQS queue adapters, local Office binaries. See [Phase 8 evidence](review-coverage-2026-07-23-phase-8.md).
+
+Benchmark placeholder: `node scripts/benchmark-0.0.13.mjs` (release Task 10). Caps documented in [Performance limits](performance.md).
+
+## 0.0.12 → 0.0.13 enterprise cloud providers (additive, pre-release)
+
+Release **0.0.13** adds optional `@arnilo/prism-provider-azure`, `@arnilo/prism-provider-bedrock`, and `@arnilo/prism-provider-vertex` for workload-identity enterprise endpoints. Consumer `@arnilo/prism-provider-anthropic` / `@arnilo/prism-provider-google` stay unchanged (API-key). Install enterprise packages explicitly; pass host Entra/IAM/ADC credential callbacks; preserve region/private-endpoint URLs. No database migration.
+
+Release **0.0.13** also extends `@arnilo/prism-server` with optional `createPrismHealthHandler`, `createPrismDrainController`, handler `rateLimit` / `drain` options, `createPrismEventReplay`, and `createPrismDeploymentLease`. Existing routes stay compatible. Queue adapters remain absent (Postgres coordinator polling stays default).
+
+Persistence schema **v5** adds `005_lifecycle_hold_quota` (`prism_legal_holds`, `prism_tenant_quotas`) plus `ProductionPersistenceStore.lifecycle` / `createMemoryPersistenceLifecycle`. Extension kernels accept optional `loadPolicy` allow-list/signature checks. Credentials-node adds optional `encryptWithHostKms` / `decryptWithHostKms`.
+
+Optional `@arnilo/prism-work-tools` (+ `./microsoft365`, `./google-workspace`) adds identity-scoped Outlook/Gmail/calendar/file/task tools over host-pinned `@pnp/cli-microsoft365` and `@googleworkspace/cli` with hard-coded argv templates, draft-then-approve mutations, package-local `IdempotencyStore`, and shared result normalizers.
+
 ## 0.0.11 → 0.0.12 coding harness interoperability (additive, pre-release)
 
 Release **0.0.12** adds optional `@arnilo/prism-ag-ui` (root AG-UI and stable `./acp` sibling), generic `resumeAgentRunStream()` / `AgentRunLifecycle.resumeStream()`, and `createCodingCompactionStrategy()` from `@arnilo/prism-compaction-llm`. It adds no core UI dependency, session/database migration, listener, tool, editor/filesystem bridge, conversation/artifact service, worker, or background reconnect loop.

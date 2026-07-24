@@ -1,4 +1,4 @@
-import type { AgentRunResult } from "@arnilo/prism";
+import { assertIdentityActive, assertIdentityMatchesOwnership, type AgentRunResult } from "@arnilo/prism";
 import { createA2AAgentCard } from "./a2a-card.js";
 import { bounded, optionalCursor, parseA2AMessage, record, requireId, resolveA2ALimits, validateA2ATask, type ResolvedA2ALimits } from "./a2a-parts.js";
 import { A2AError } from "./errors.js";
@@ -34,6 +34,14 @@ export function createA2AHandler(options: CreateA2AHandlerOptions): (request: Re
         const rpc = parseRpc(await readJson(request, limits.maxRequestBytes, owned.signal));
         const authorization = await abortable(Promise.resolve(options.authorize({ request, method: rpc.method, signal: owned.signal })), owned.signal);
         if (!authorization) return errorResponse(403, "Forbidden", rpc.id);
+        if (authorization.identity) {
+          try {
+            assertIdentityActive(authorization.identity);
+            assertIdentityMatchesOwnership(authorization.identity, authorization.ownership);
+          } catch {
+            return errorResponse(403, "Forbidden", rpc.id);
+          }
+        }
         if (rpc.method === "GetExtendedAgentCard") return card.capabilities.extendedAgentCard ? json(rpc.id, card, limits, options) : rpcError(rpc.id, -32004, "Extended Agent Card unavailable");
 
         if (rpc.method === "SendMessage" || rpc.method === "SendStreamingMessage") {
@@ -50,9 +58,16 @@ export function createA2AHandler(options: CreateA2AHandlerOptions): (request: Re
           const input = message.parts.map((part) => part.text).join("\n");
           const session = await abortable(Promise.resolve(options.exposure.sessionFactory(authorization)), owned.signal);
           const taskId = `task-${crypto.randomUUID()}`, contextId = message.contextId ?? `context-${crypto.randomUUID()}`;
-          if (rpc.method === "SendMessage") return json(rpc.id, { task: toTask(taskId, contextId, await abortable(session.run(input, { ownership: authorization.ownership, metadata: authorization.metadata, signal: owned.signal, redactor: options.redactor }), owned.signal), options) }, limits, options);
+          const runOptions = {
+            ownership: authorization.ownership,
+            identity: authorization.identity,
+            metadata: authorization.metadata,
+            signal: owned.signal,
+            redactor: options.redactor,
+          };
+          if (rpc.method === "SendMessage") return json(rpc.id, { task: toTask(taskId, contextId, await abortable(session.run(input, runOptions), owned.signal), options) }, limits, options);
           transferred = true;
-          const events = runEvents(taskId, contextId, () => session.run(input, { ownership: authorization.ownership, metadata: authorization.metadata, signal: owned.signal, redactor: options.redactor }), options);
+          const events = runEvents(taskId, contextId, () => session.run(input, runOptions), options);
           return streamResponse(rpc.id, events, owned, limits, options, () => { active -= 1; });
         }
 

@@ -55,3 +55,12 @@ export type {
 } from "./types.js";
 
 export { encryptBytes, decryptBytes, resolveScryptParameters, assertScryptParameters } from "./envelope.js";
+
+export {
+  encryptWithHostKms,
+  decryptWithHostKms,
+  createMemoryHostKms,
+  kmsBuffersEqual,
+  KMS_ENVELOPE_VERSION,
+} from "./kms.js";
+export type { HostKms, KmsEnvelope, HostKmsCryptoOptions } from "./kms.js";

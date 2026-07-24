@@ -1,4 +1,4 @@
-import type { AgentRunResult, AgentSession, OwnershipScope, SecretRedactor } from "@arnilo/prism";
+import type { AgentIdentity, AgentRunResult, AgentSession, OwnershipScope, SecretRedactor } from "@arnilo/prism";
 
 export const A2A_PROTOCOL_VERSION = "1.0";
 export interface A2AAgentInterface { readonly url: string; readonly protocolBinding: "JSONRPC"; readonly protocolVersion: "1.0" }
@@ -30,7 +30,12 @@ export type A2ATaskEvent =
 export type A2ARequestId = string | number | null;
 export interface A2AJsonRpcRequest { readonly jsonrpc: "2.0"; readonly id: A2ARequestId; readonly method: string; readonly params?: Readonly<Record<string, unknown>> }
 export interface A2AJsonRpcResponse { readonly jsonrpc: "2.0"; readonly id: A2ARequestId; readonly result?: unknown; readonly error?: { readonly code: number; readonly message: string; readonly data?: unknown } }
-export interface A2AAuthorization { readonly ownership: OwnershipScope; readonly metadata?: Readonly<Record<string, unknown>> }
+export interface A2AAuthorization {
+  readonly ownership: OwnershipScope;
+  /** Host-verified identity; when set must project onto ownership without widening. */
+  readonly identity?: AgentIdentity;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
 export type A2AAuthorizer = (input: { readonly request: Request; readonly method: string; readonly signal: AbortSignal }) => false | A2AAuthorization | Promise<false | A2AAuthorization>;
 export interface A2AAgentExposure { readonly sessionFactory: (authorization: A2AAuthorization) => AgentSession | Promise<AgentSession> }
 

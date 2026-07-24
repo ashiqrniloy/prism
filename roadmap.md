@@ -519,7 +519,7 @@ Updated: 2026-07-21
     - `npm run sdk:ready` passed (typecheck, network-free tests, 35-package packs). Node 20.20.2 imported all root exports. Audit reported 0 high findings (2 moderate MCP-transitive advisories); SPDX/license, present-source secret scan, and dependency graph passed. Public `release:check` and 35/35 dependency-ordered `release:publish --dry-run --allow-dirty --allow-untagged` passed; no commit, tag, or publication created.
     - Signed tag, protected CI/live provider/Docker/Playwright/PostgreSQL/keychain gates, npm/OIDC credentials, and publication remain operator prerequisites. One unrelated deleted tracked markdown remains for the operator to resolve before a clean release checkout.
 
-- [ ] Phase 8 — Release 0.0.13: enterprise identity, policy, provider governance, and work connectors
+- [x] Phase 8 — Release 0.0.13: enterprise identity, policy, provider governance, and work connectors
   - Acceptance Criteria:
     - Functional: authenticated `Principal` and `AgentIdentity` contexts support tenant, sponsor/owner, delegated actor, scopes, credential references, issued/expiry times, revocation, and immutable propagation through runs, tools, workflows, MCP, A2A, persistence, and telemetry.
     - Functional: a policy-decision ledger records allow/deny/modify/approval decisions, policy version, actor, target, reason, expiry, and evidence references; hosts can export to append-only/WORM storage without storing unrestricted payloads.
@@ -586,6 +586,11 @@ Updated: 2026-07-21
       - `docs/agent-identity.md`, `docs/policy-and-audit.md`, `docs/model-routing.md`, `docs/work-tools.md`, `docs/work-connectors.md`, `docs/host-security.md`, `docs/credential-storage.md`, `docs/server.md`, provider/cloud pages, persistence/retention pages, `docs/migration.md`.
     - `docs/index.md` update: yes; add Identity/governance, Model routing, and Work connectors entries; update Security, Providers, Server, Persistence, Credentials, and Observability.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+  - Completion Evidence (2026-07-24):
+    - Plan 076 Tasks 0–10 complete: `AgentIdentity`/`IdentityVerifier`, `@arnilo/prism-policy`, `@arnilo/prism-model-router`, Azure/Bedrock/Vertex providers, server deployment seams, persistence schema v5 lifecycle, `@arnilo/prism-work-tools` (M365 + GWS + shared normalizers).
+    - Exact **0.0.13** graph: **41** publishable manifests; Phase 8 packages in `@arnilo/prism-all` only. `scripts/benchmark-0.0.13.mjs` schema + network-free identity/policy/router/work/server evidence passed.
+    - `npm run sdk:ready`, `release:check` / `release:publish --dry-run` for 0.0.13, supply-chain checks per plan Task 10; signed tag and npm publication remain operator prerequisites.
 
 - [ ] Phase 9 — Release 0.0.14: personal/work-agent conversations, co-work review, and channel/device expansion
   - Acceptance Criteria:

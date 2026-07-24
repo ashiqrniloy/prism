@@ -7,7 +7,7 @@ import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../contra
 // adapter authors implement and test against before shipping dialect-specific DDL.
 
 /** Current shared persistence schema version for production database adapters. */
-export const PERSISTENCE_SCHEMA_VERSION = 4;
+export const PERSISTENCE_SCHEMA_VERSION = 5;
 
 export type PersistenceTableName =
   | "prism_tenants"
@@ -24,6 +24,8 @@ export type PersistenceTableName =
   | "prism_usage"
   | "prism_run_feedback"
   | "prism_retention_policies"
+  | "prism_legal_holds"
+  | "prism_tenant_quotas"
   | "prism_migrations";
 
 export type PersistenceColumnType = "text" | "integer" | "number" | "boolean" | "json" | "timestamp";
@@ -354,6 +356,33 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
         ],
       },
       {
+        name: "prism_legal_holds",
+        primaryKey: ["id"],
+        columns: [
+          { name: "id", type: "text" },
+          ...TENANT_COLUMNS,
+          { name: "resource_kind", type: "text" },
+          { name: "resource_id", type: "text" },
+          { name: "reason", type: "text" },
+          { name: "created_at", type: "timestamp" },
+          { name: "created_by", type: "text", nullable: true },
+          { name: "metadata", type: "json", nullable: true },
+        ],
+      },
+      {
+        name: "prism_tenant_quotas",
+        primaryKey: ["id"],
+        columns: [
+          { name: "id", type: "text" },
+          ...TENANT_COLUMNS,
+          { name: "resource_kind", type: "text" },
+          { name: "limit_count", type: "integer" },
+          { name: "used_count", type: "integer" },
+          { name: "updated_at", type: "timestamp" },
+        ],
+        uniqueKeys: [["tenant_id", "account_id", "user_id", "resource_kind"]],
+      },
+      {
         name: "prism_migrations",
         primaryKey: ["id"],
         columns: [
@@ -393,6 +422,9 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
       { name: "prism_run_feedback_run_created_idx", table: "prism_run_feedback", columns: ["run_id", "created_at", "id"], purpose: "run feedback lookup" },
       { name: "prism_run_feedback_trace_created_idx", table: "prism_run_feedback", columns: ["trace_id", "created_at", "id"], purpose: "trace feedback lookup" },
       { name: "prism_agent_definitions_name_version_idx", table: "prism_agent_definitions", columns: ["name", "version"], purpose: "definition lookup" },
+      { name: "prism_legal_holds_owner_resource_idx", table: "prism_legal_holds", columns: ["tenant_id", "account_id", "user_id", "resource_kind", "resource_id"], purpose: "hold lookup by owned resource" },
+      { name: "prism_legal_holds_created_id_idx", table: "prism_legal_holds", columns: ["created_at", "id"], purpose: "hold export pagination" },
+      { name: "prism_tenant_quotas_owner_kind_idx", table: "prism_tenant_quotas", columns: ["tenant_id", "account_id", "user_id", "resource_kind"], purpose: "tenant quota lookup" },
       { name: "prism_migrations_name_version_idx", table: "prism_migrations", columns: ["name", "version"], purpose: "applied-migration lookup (table constraint enforces uniqueness)" },
     ],
   };
@@ -416,7 +448,9 @@ function migrationStep(version: number, name: string, description: string): Pers
         : version === 4
           // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
           ? { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
-          : (() => { throw new Error(`Unknown migration version ${version}`); })();
+          : version === 5
+            ? { tables: ["prism_legal_holds", "prism_tenant_quotas"], indexes: ["prism_legal_holds_owner_resource_idx", "prism_legal_holds_created_id_idx", "prism_tenant_quotas_owner_kind_idx"] }
+            : (() => { throw new Error(`Unknown migration version ${version}`); })();
   return {
     version,
     name,
@@ -435,6 +469,7 @@ export function createPersistenceMigrationContract(): PersistenceMigrationContra
       migrationStep(2, "002_usage_scope", "Distinguish provider-turn usage from aggregate run totals."),
       migrationStep(3, "003_run_feedback", "Add immutable ownership-scoped run/trace feedback and evaluation links."),
       migrationStep(4, "004_session_search", "Add bounded session search indexes and adapter-local FTS objects."),
+      migrationStep(5, "005_lifecycle_hold_quota", "Add legal-hold and tenant-quota tables for retention lifecycle."),
     ],
     lockGuidance:
       "Acquire a dialect-specific migration lock before applying steps (PostgreSQL advisory lock; SQLite exclusive transaction). Only one process should migrate at a time.",

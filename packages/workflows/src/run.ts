@@ -919,6 +919,7 @@ async function executeNode(
           signal: ctx.signal,
           limits: options.limits,
           ownership: options.ownership,
+          identity: options.identity,
           redactor: options.redactor,
           runLedger: options.runLedger,
           metadata: {

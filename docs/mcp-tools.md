@@ -198,6 +198,7 @@ Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 
 | Oversized/deep/wide server output | One aggregate byte/depth/property walk covers content, structured content, compatibility `toolResult`, and bounded remote errors before `ToolResult` |
 | Unvalidated arguments | Register tools with `createJsonSchemaToolArgumentValidator()` at dispatch |
 | Missing permission gate | Client direction: `PermissionPolicy` on `tool:mcp:<serverId>:<name>:execute`; server direction: required MCP `authorize` plus optional core `PermissionPolicy` |
+| Unverified / widened identity | Optional `PrismMcpAuthorization.identity` must be host-verified and match ownership; invalid identity is forbidden before tool dispatch |
 | Accidental server exposure | Empty default arrays/maps, duplicate-name rejection, explicit tools/commands/lifecycle only |
 | Agent lifecycle data leak or cross-tenant resume | `agentRuns` requires exact tenant plus account/user ownership; core lifecycle returns public redacted state only and CAS-resumes with current agent/revision |
 | Unbounded MCP HTTP | Bounded pre-parsed JSON, response bytes, concurrent requests, call timeout, SDK web-standard transport |
@@ -216,6 +217,7 @@ Official Exa/Firecrawl MCP servers may be tested only as explicit hardened proto
 
 ## Related APIs
 
+- [Agent identity](agent-identity.md): optional verified identity on MCP authorize results
 - [Tools](tools.md): registry, dispatch, validation
 - [Web search, fetch, and extraction](web-tools.md): preferred direct bounded Brave/Exa/Firecrawl production path
 - [Tool execution primitives](tool-execution-primitives.md): Plan 055 design and conformance matrix

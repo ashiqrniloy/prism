@@ -7,6 +7,9 @@ import assert from "node:assert/strict";
 const docsDir = "docs";
 const apiPages = [
   "docs/public-contracts.md",
+  "docs/agent-identity.md",
+  "docs/policy-and-audit.md",
+  "docs/model-routing.md",
   "docs/agent-session-runtime.md",
   "docs/agent-definitions.md",
   "docs/agent-loops.md",
@@ -77,6 +80,9 @@ const providerPackagePages: ReadonlyArray<[string, string]> = [
   ["docs/providers/kimi.md", "packages/provider-kimi/src/index.ts"],
   ["docs/providers/neuralwatt.md", "packages/provider-neuralwatt/src/index.ts"],
   ["docs/providers/ai-sdk.md", "packages/provider-ai-sdk/src/index.ts"],
+  ["docs/providers/azure.md", "packages/provider-azure/src/index.ts"],
+  ["docs/providers/bedrock.md", "packages/provider-bedrock/src/index.ts"],
+  ["docs/providers/vertex.md", "packages/provider-vertex/src/index.ts"],
 ];
 
 function exportedIdentifiers(packageIndex: string): string[] {
@@ -209,7 +215,7 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 76, "numbered plan count drifted");
+    assert.equal(plans.length, 77, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
@@ -404,6 +410,102 @@ describe("docs", () => {
     assert.ok(index.includes("(review-coverage-2026-07-22-phase-7.md)"), "docs/index.md missing Phase 7 review coverage link");
   });
 
+  it("phase 8 evidence freezes enterprise identity, packages, limits, and 0.0.14+/0.1.x exclusions", () => {
+    const evidence = readFileSync("docs/review-coverage-2026-07-23-phase-8.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const phase8 = roadmap.slice(
+      roadmap.indexOf("Phase 8 — Release 0.0.13"),
+      roadmap.indexOf("Phase 9 — Release 0.0.14"),
+    );
+
+    for (const heading of [
+      "## Frozen external revisions",
+      "## Frozen package and API contract",
+      "## Capability traceability matrix",
+      "## Primitive and caller inventory",
+      "## Frozen finite limits and charging points",
+      "## Work-connector capability freeze",
+      "## Threat and authority matrix",
+      "## Validation matrix for Task 0",
+    ]) assert.ok(evidence.includes(heading), `Phase 8 evidence missing ${heading}`);
+    for (let task = 1; task <= 10; task += 1) {
+      assert.ok(evidence.includes(`Task ${task}`), `Phase 8 evidence missing Task ${task} owner`);
+    }
+    for (const token of [
+      "@arnilo/prism-policy",
+      "@arnilo/prism-model-router",
+      "@arnilo/prism-provider-azure",
+      "@arnilo/prism-provider-bedrock",
+      "@arnilo/prism-provider-vertex",
+      "@arnilo/prism-work-tools",
+      "@arnilo/prism-work-tools/microsoft365",
+      "@arnilo/prism-work-tools/google-workspace",
+      "Principal",
+      "AgentIdentity",
+      "IdentityVerifier",
+      "IdempotencyStore",
+      "35 → 41",
+      "64 / 256",
+      "3 / 8",
+      "5 MiB / 25 MiB",
+      "hard-coded",
+      "Caller-asserted",
+    ]) assert.ok(evidence.includes(token), `Phase 8 evidence missing frozen token ${token}`);
+    for (const deferred of [
+      "Conversation storage/service",
+      "Studio, hosted cloud, managed observability",
+      "Local Office",
+      "User authentication database",
+      "Model-controlled M365/GWS command strings",
+      "Redis/SQS/other queue adapters by default",
+    ]) {
+      assert.ok(evidence.includes(deferred), `Phase 8 evidence missing out-of-scope item ${deferred}`);
+    }
+    assert.ok(phase8.includes("Principal") && phase8.includes("microsoft365"), "Phase 8 roadmap missing core criteria");
+    assert.ok(!phase8.includes("Studio/control plane"), "Phase 8 roadmap unexpectedly names Studio/control plane as in-scope");
+    const anthropic = readFileSync("packages/provider-anthropic/package.json", "utf8");
+    const google = readFileSync("packages/provider-google/package.json", "utf8");
+    assert.ok(!anthropic.includes("provider-azure") && !google.includes("provider-vertex"), "consumer providers must stay separate from enterprise cloud packages");
+    assert.ok(existsSync("packages/work-tools"), "work-tools package must exist after Task 7");
+    assert.ok(existsSync("packages/provider-azure"), "provider-azure must exist after Task 4");
+    assert.ok(existsSync("packages/provider-bedrock"), "provider-bedrock must exist after Task 4");
+    assert.ok(existsSync("packages/provider-vertex"), "provider-vertex must exist after Task 4");
+    assert.ok(index.includes("(review-coverage-2026-07-23-phase-8.md)"), "docs/index.md missing Phase 8 review coverage link");
+    assert.ok(index.includes("providers/azure.md") && index.includes("providers/bedrock.md") && index.includes("providers/vertex.md"), "docs/index.md missing enterprise provider links");
+    assert.ok(index.includes("(work-tools.md)") && index.includes("(work-connectors.md)"), "docs/index.md missing work-tools navigation");
+    assert.ok(existsSync("packages/work-tools/src/microsoft365.ts"), "microsoft365 adapter source missing");
+    assert.ok(existsSync("packages/work-tools/src/google-workspace.ts"), "google-workspace adapter must exist after Task 8");
+    assert.ok(existsSync("packages/work-tools/src/normalize.ts"), "shared work-tools normalizers missing");
+  });
+
+  it("phase 8 task 9 docs cover migration, performance benchmark placeholder, and enterprise examples", () => {
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const token of [
+      "IdentityVerifier",
+      "@arnilo/prism-policy",
+      "@arnilo/prism-model-router",
+      "0.0.14",
+    ]) {
+      assert.ok(migration.includes(token), `migration.md missing Task 9 token ${token}`);
+    }
+    assert.ok(performance.includes("benchmark-0.0.13.mjs"), "performance.md missing 0.0.13 benchmark placeholder");
+    assert.ok(release.includes("@arnilo/prism-work-tools"), "release-and-install.md missing work-tools");
+    assert.ok(release.includes("41"), "release-and-install.md missing 41-package count");
+    for (const example of [
+      "enterprise-identity.ts",
+      "enterprise-policy-audit.ts",
+      "enterprise-work-connectors.ts",
+      "server-deployment-seams.ts",
+    ]) {
+      assert.ok(existsSync(join("examples", example)), `missing examples/${example}`);
+      assert.ok(index.includes(example), `docs/index.md missing examples/${example}`);
+    }
+  });
+
   it("phase 7 OAuth docs lock provider-authorized flows and future gate", () => {
     const docs = [
       "docs/credentials-and-redaction.md",
@@ -482,8 +584,8 @@ describe("docs", () => {
       ["migration.md", migration, ["0.0.10 → 0.0.11", "004_session_search", "createAnthropicProviderPackage", "createGoogleProviderPackage"]],
       ["providers/anthropic.md", anthropic, ["createAnthropicProviderPackage", "listAnthropicModels", "cache_control"]],
       ["providers/google.md", google, ["createGoogleProviderPackage", "listGoogleModels", "generateContent"]],
-      ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **4**", "004_session_search"]],
-      ["postgres-persistence.md", postgres, ["searchSessions", "Schema version **4**", "004_session_search"]],
+      ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **5**", "005_lifecycle_hold_quota"]],
+      ["postgres-persistence.md", postgres, ["searchSessions", "Schema version **5**", "005_lifecycle_hold_quota"]],
       ["index.md", index, ["providers/anthropic.md", "providers/google.md", "searchSessions", "contextBudget", "steer"]],
     ] as const) {
       for (const token of tokens) {
@@ -530,18 +632,18 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.12 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.13 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 35, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 41, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.12] - 2026-07-22"), `${dir}/CHANGELOG.md missing finalized 0.0.12 section`);
+      assert.ok(changelog.includes("## [0.0.13] - 2026-07-24"), `${dir}/CHANGELOG.md missing finalized 0.0.13 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -1044,12 +1146,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.12 publish handoff"), docs.indexOf("### 0.0.11 publish handoff"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.13 publish handoff"), docs.indexOf("### 0.0.12 publish handoff"));
     for (const phrase of [
       "Decision: GO",
-      "35 manifests",
-      "git tag -s v0.0.12",
-      "git push origin v0.0.12",
+      "41 manifests",
+      "git tag -s v0.0.13",
+      "git push origin v0.0.13",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",
@@ -1664,9 +1766,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, twenty-eight first-party capability packages, and six pure-manifest family/profile packages",
+      "one core package, thirty-four first-party capability packages, and six pure-manifest family/profile packages",
       "all nine `@arnilo/prism-provider-*` packages",
-      "All 35 manifests (29 code packages + 6 family/profile packages)",
+      "All 41 manifests (35 code packages + 6 family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -1680,6 +1782,8 @@ describe("docs", () => {
       "dist/index.d.ts",
       "@arnilo/prism-providers must hard-depend on NeuralWatt",
       "@arnilo/prism-all must hard-depend on provider umbrella",
+      "@arnilo/prism-all must hard-depend on work-tools",
+      "@arnilo/prism-all must hard-depend on policy",
     ]) {
       assert.ok(packaging.includes(phrase), `packaging.test.ts missing ${phrase}`);
     }
@@ -2394,7 +2498,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 35, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 41, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

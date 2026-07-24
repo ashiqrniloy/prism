@@ -19,6 +19,12 @@ const packages = [
   { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
   { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
   { dir: "packages/provider-ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
+  { dir: "packages/provider-azure", name: "@arnilo/prism-provider-azure" },
+  { dir: "packages/provider-bedrock", name: "@arnilo/prism-provider-bedrock" },
+  { dir: "packages/provider-vertex", name: "@arnilo/prism-provider-vertex" },
+  { dir: "packages/policy", name: "@arnilo/prism-policy" },
+  { dir: "packages/model-router", name: "@arnilo/prism-model-router" },
+  { dir: "packages/work-tools", name: "@arnilo/prism-work-tools" },
   { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
@@ -172,7 +178,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.12", `${pkg.name} @arnilo/prism peer must be 0.0.12`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.13", `${pkg.name} @arnilo/prism peer must be 0.0.13`);
           const meta = manifest.peerDependenciesMeta as
             | Readonly<Record<string, { readonly optional?: boolean }>>
             | undefined;
@@ -237,13 +243,19 @@ describe("packaging guard", () => {
               "@arnilo/prism-web-tools",
               "@arnilo/prism-browser",
               "@arnilo/prism-ag-ui",
+              "@arnilo/prism-policy",
+              "@arnilo/prism-model-router",
+              "@arnilo/prism-provider-azure",
+              "@arnilo/prism-provider-bedrock",
+              "@arnilo/prism-provider-vertex",
+              "@arnilo/prism-work-tools",
             ],
           };
           const want = expected[pkg.name];
           assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.12", `${pkg.name} dependency must be pinned to 0.0.12`);
+            assert.equal(v, "0.0.13", `${pkg.name} dependency must be pinned to 0.0.13`);
           }
         });
       }
@@ -272,12 +284,17 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.12", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.13", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.12", "@arnilo/prism-all must hard-depend on provider umbrella");
-    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.0.12", "@arnilo/prism-all must hard-depend on AG-UI only");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.13", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.0.13", "@arnilo/prism-all must hard-depend on AG-UI only");
+    assert.equal(all?.["@arnilo/prism-work-tools"], "0.0.13", "@arnilo/prism-all must hard-depend on work-tools");
+    assert.equal(all?.["@arnilo/prism-policy"], "0.0.13", "@arnilo/prism-all must hard-depend on policy");
     for (const profile of ["packages/prism-code", "packages/prism-sdk"]) {
-      assert.equal((readPkg(profile).dependencies as Record<string, string>)["@arnilo/prism-ag-ui"], undefined, `${profile} must not include AG-UI`);
+      const deps = readPkg(profile).dependencies as Record<string, string>;
+      assert.equal(deps["@arnilo/prism-ag-ui"], undefined, `${profile} must not include AG-UI`);
+      assert.equal(deps["@arnilo/prism-work-tools"], undefined, `${profile} must not include work-tools`);
+      assert.equal(deps["@arnilo/prism-policy"], undefined, `${profile} must not include policy`);
     }
   });
 
