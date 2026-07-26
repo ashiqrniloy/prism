@@ -93,6 +93,8 @@ Every first-party provider package hardens prompt-cache behavior so it cannot em
 - **Z.AI** (`kind: implicit`): GLM context caching is automatic; no explicit cache payload sent regardless of cache options. `prompt_tokens_details.cached_tokens`/`cache_write_tokens` map to cache usage.
 - **NeuralWatt** (`kind: implicit`): NeuralWatt prefix caching is automatic; sends no explicit cache payload regardless of cache options. `cacheRetention: "none"` disables Prism cache-control hints only (not the implicit backend prefix cache). `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`; NeuralWatt does not report a cache-write token so `Usage.cacheWriteTokens` is never fabricated.
 - **Kimi**: default catalog models use implicit caching (no `cache_control`); hosts opt in via `ModelConfig.cache.kind: cache_control` on the Anthropic `/messages` route, then markers apply only to selected breakpoints (`long` → `ttl: 1h`); the Moonshot OpenAI route sends none. `cache_read_input_tokens`/`cache_creation_input_tokens` map to cache usage.
+- **Alibaba Cloud** (implicit by default, optional `cache_control`): DashScope implicit prefix caching is automatic; hosts opt in via `ModelConfig.cache.kind: cache_control`, then `cache_control: {"type":"ephemeral"}` markers apply only to selected breakpoints, capped at 4. `prompt_tokens_details.cached_tokens`/`cache_creation_input_tokens` map to cache usage. Caller-gated `listAlibabaModels`.
+- **Ollama** (`kind: implicit`): Ollama KV/prefix caching is automatic with no request knob; sends no explicit cache payload. Ollama reports no cached-token count, so `Usage.cacheReadTokens` stays `undefined`. Caller-gated `listOllamaModels`.
 
 See [Provider caching](provider-caching.md) for the `PromptCacheHints` surface and shared helpers, and [Provider conformance](provider-conformance.md) for the `assertUsageAccounting` and `assertProviderOwnedHeadersWin` checks every first-party package exercises.
 
@@ -160,7 +162,8 @@ provider packages: an `Extension` whose `setup(api)` calls
 `api.registerProvider(provider)` for each provider it owns. First-party
 provider packages (`@arnilo/prism-provider-openai`, `@arnilo/prism-provider-openrouter`,
 `@arnilo/prism-provider-kimi`, `@arnilo/prism-provider-zai`,
-`@arnilo/prism-provider-opencode-go`) are **opt-in and individually installable**;
+`@arnilo/prism-provider-opencode-go`, `@arnilo/prism-provider-alibaba`,
+`@arnilo/prism-provider-ollama`) are **opt-in and individually installable**;
 `@arnilo/prism` core runs without any first-party provider package (mock-only).
 
 A host mixes first-party packages and third-party providers in one resolver.

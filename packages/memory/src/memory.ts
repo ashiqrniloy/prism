@@ -1,7 +1,12 @@
 import type { ContextProvider, JsonObject, Message } from "@arnilo/prism";
 import { embedBatched } from "./embedder.js";
 import { MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
-import { estimateTokens, resolveMemoryLimits } from "./limits.js";
+import {
+  DEFAULT_MEMORY_RETENTION_BATCH,
+  HARD_MEMORY_RETENTION_BATCH_CAP,
+  estimateTokens,
+  resolveMemoryLimits,
+} from "./limits.js";
 import { validateAgainstJsonSchema } from "./schema.js";
 import {
   assertNotAborted,
@@ -19,8 +24,12 @@ import { createMemoryWorkingStore, validateWorkingValue } from "./working-memory
 import type {
   CreateMemoryOptions,
   Memory,
+  MemoryConsent,
+  MemoryConsentInput,
   MemoryContextProviderOptions,
   MemoryEntryInput,
+  MemoryRetentionResult,
+  MemoryRetentionPolicy,
   MemoryScope,
   MemoryVectorHit,
   MemoryVectorRecord,
@@ -109,6 +118,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       const sequence = entry.sequence ?? ++sequenceCounter;
       if (entry.sequence !== undefined) sequenceCounter = Math.max(sequenceCounter, entry.sequence);
       const metadata = entry.metadata ? redactJson(entry.metadata, redactor) : undefined;
+      const createdAt = entry.createdAt ?? new Date().toISOString();
       const record: MemoryVectorRecord = {
         id: entry.id,
         tenantId: threadScope.tenantId,
@@ -117,7 +127,8 @@ export function createMemory(options: CreateMemoryOptions): Memory {
         text: texts[index]!,
         embedding: vectors[index]!,
         sequence,
-        createdAt: entry.createdAt ?? new Date().toISOString(),
+        createdAt,
+        consent: normalizeConsent(entry.consent, undefined, createdAt),
         ...(metadata ? { metadata } : {}),
       };
       const payloadBytes = Buffer.byteLength(JSON.stringify(record), "utf8");
@@ -173,10 +184,117 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       adjacent = selectAdjacentRecords(threadRecords, hits, boundedRange);
     }
 
+    const strict = recallOptions.requireConsent ?? options.requireConsent ?? false;
+    const visibleHits = hits.filter((hit) => isInjectable(hit, strict));
+    const visibleAdjacent = adjacent.filter((record) => isInjectable(record, strict));
+
     return {
-      hits: hits.map((hit) => redactJson(hit, redactor)),
-      adjacent: adjacent.map((record) => redactJson(record, redactor)),
+      hits: visibleHits.map((hit) => redactJson(hit, redactor)),
+      adjacent: visibleAdjacent.map((record) => redactJson(record, redactor)),
     };
+  }
+
+  async function findEntry(threadScope: Required<MemoryScope>, id: string): Promise<MemoryVectorRecord | undefined> {
+    if (!vectorStore.getByThread) {
+      throw new MemoryScopeError("operation requires a getByThread-capable vector store");
+    }
+    const records = await vectorStore.getByThread(threadScope);
+    return records.find((record) => record.id === id);
+  }
+
+  async function setConsent(
+    entryId: string,
+    consentInput: MemoryConsentInput,
+    consentOptions: { signal?: AbortSignal } = {},
+  ): Promise<MemoryVectorRecord> {
+    const threadScope = threadScopeOrThrow();
+    assertNotAborted(consentOptions.signal);
+    const id = requireNonEmptyString(entryId, "entryId");
+    const existing = await findEntry(threadScope, id);
+    if (!existing) throw new MemoryValidationError(`memory entry ${id} not found`);
+    const updated: MemoryVectorRecord = {
+      ...existing,
+      consent: normalizeConsent(consentInput, existing.consent, new Date().toISOString()),
+    };
+    await vectorStore.upsert([updated], { signal: consentOptions.signal });
+    return redactJson(updated, redactor);
+  }
+
+  async function correct(
+    entryId: string,
+    text: string,
+    correctOptions: { signal?: AbortSignal } = {},
+  ): Promise<MemoryVectorRecord> {
+    const threadScope = threadScopeOrThrow();
+    assertNotAborted(correctOptions.signal);
+    const id = requireNonEmptyString(entryId, "entryId");
+    const nextText = requireNonEmptyString(text, "text");
+    assertTextLimit(nextText, limits.maxEntryTextChars, "entry.text");
+    const existing = await findEntry(threadScope, id);
+    if (!existing) throw new MemoryValidationError(`memory entry ${id} not found`);
+    const redactedText = redactJson(nextText, redactor);
+    const [embedding] = await embedBatched(embedder, [redactedText], limits.embedBatchSize, {
+      signal: correctOptions.signal,
+      maxDimensions: limits.maxVectorDimensions,
+    });
+    const updated: MemoryVectorRecord = { ...existing, text: redactedText, embedding: embedding! };
+    const payloadBytes = Buffer.byteLength(JSON.stringify(updated), "utf8");
+    if (payloadBytes > limits.maxPayloadBytes) {
+      throw new MemoryLimitError(`memory entry ${id} exceeds payload byte limit`);
+    }
+    await vectorStore.upsert([updated], { signal: correctOptions.signal });
+    return redactJson(updated, redactor);
+  }
+
+  async function forget(
+    filter: { ids?: readonly string[] } = {},
+    forgetOptions: { signal?: AbortSignal } = {},
+  ): Promise<number> {
+    const threadScope = threadScopeOrThrow();
+    assertNotAborted(forgetOptions.signal);
+    return vectorStore.delete(
+      { ...threadScope, ...(filter.ids && filter.ids.length > 0 ? { ids: filter.ids } : {}) },
+      { signal: forgetOptions.signal },
+    );
+  }
+
+  async function applyRetention(
+    policy: MemoryRetentionPolicy,
+    retentionOptions: { signal?: AbortSignal } = {},
+  ): Promise<MemoryRetentionResult> {
+    const threadScope = threadScopeOrThrow();
+    assertNotAborted(retentionOptions.signal);
+    if (!vectorStore.getByThread) {
+      throw new MemoryScopeError("retention requires a getByThread-capable vector store");
+    }
+    if (policy.maxAgeDays === undefined && policy.maxEntries === undefined) {
+      throw new MemoryValidationError("retention policy requires maxAgeDays or maxEntries");
+    }
+    if (policy.maxAgeDays !== undefined && (!Number.isFinite(policy.maxAgeDays) || policy.maxAgeDays < 0)) {
+      throw new MemoryValidationError("maxAgeDays must be a non-negative number");
+    }
+    if (policy.maxEntries !== undefined && (!Number.isInteger(policy.maxEntries) || policy.maxEntries < 0)) {
+      throw new MemoryValidationError("maxEntries must be a non-negative integer");
+    }
+    const batchSize = clampRetentionBatch(policy.batchSize);
+    // ponytail: per-thread scan only; shard by resource/thread if a single thread grows unbounded.
+    const records = await vectorStore.getByThread(threadScope);
+    const now = Date.now();
+    const cutoff = policy.maxAgeDays !== undefined ? now - policy.maxAgeDays * 86_400_000 : Number.NEGATIVE_INFINITY;
+    const expired = new Set<string>();
+    for (const record of records) {
+      if (Date.parse(record.createdAt) < cutoff) expired.add(record.id);
+    }
+    if (policy.maxEntries !== undefined) {
+      const survivors = records.filter((record) => !expired.has(record.id));
+      const overflow = survivors.length - policy.maxEntries;
+      for (let i = 0; i < overflow; i += 1) expired.add(survivors[i]!.id); // oldest by sequence
+    }
+    const ids = [...expired].slice(0, batchSize);
+    const deleted = ids.length > 0
+      ? await vectorStore.delete({ ...threadScope, ids }, { signal: retentionOptions.signal })
+      : 0;
+    return { deleted, scanned: records.length };
   }
 
   function createContextProvider(providerOptions: MemoryContextProviderOptions = {}): ContextProvider {
@@ -253,6 +371,10 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     renderWorking,
     remember,
     recall,
+    setConsent,
+    correct,
+    forget,
+    applyRetention,
     createContextProvider,
     createWorkingMemoryProcessor,
   };
@@ -261,8 +383,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
 function resolveQuery(
   providerOptions: MemoryContextProviderOptions,
   messages: readonly Message[],
-): string | undefined {
-  if (typeof providerOptions.query === "string") return providerOptions.query;
+): string | undefined {  if (typeof providerOptions.query === "string") return providerOptions.query;
   if (typeof providerOptions.query === "function") return providerOptions.query({ messages });
   return latestUserText(messages);
 }
@@ -289,4 +410,45 @@ function formatRecall(
     remaining -= tokens;
   }
   return lines.length > 0 ? lines.join("\n") : undefined;
+}
+
+const CONSENT_SOURCES = new Set(["user", "agent", "system"]);
+const CONSENT_SCOPES = new Set(["thread", "profile", "user"]);
+
+/** Merge a consent grant/update over prior consent, stamping grant/revoke times. */
+function normalizeConsent(
+  input: MemoryConsentInput | undefined,
+  prior: MemoryConsent | undefined,
+  now: string,
+): MemoryConsent {
+  const source = input?.source ?? prior?.source ?? "user";
+  const scope = input?.scope ?? prior?.scope ?? "thread";
+  if (!CONSENT_SOURCES.has(source)) throw new MemoryValidationError(`consent.source must be one of user|agent|system`);
+  if (!CONSENT_SCOPES.has(scope)) throw new MemoryValidationError(`consent.scope must be one of thread|profile|user`);
+  const visible = input?.visible ?? prior?.visible ?? true;
+  return {
+    source,
+    scope,
+    visible,
+    grantedAt: visible ? (prior?.grantedAt ?? now) : prior?.grantedAt,
+    revokedAt: visible ? undefined : now,
+  };
+}
+
+/** Injection gate: revoked/invisible entries never enter prompts; strict mode also drops consent-less entries. */
+function isInjectable(record: MemoryVectorRecord, requireConsent: boolean): boolean {
+  const consent = record.consent;
+  if (!consent) return !requireConsent;
+  return consent.visible !== false;
+}
+
+function clampRetentionBatch(value: number | undefined): number {
+  const resolved = value ?? DEFAULT_MEMORY_RETENTION_BATCH;
+  if (!Number.isInteger(resolved) || resolved < 1) {
+    throw new MemoryValidationError("retention batchSize must be a positive integer");
+  }
+  if (resolved > HARD_MEMORY_RETENTION_BATCH_CAP) {
+    throw new MemoryLimitError(`retention batchSize exceeds hard cap ${HARD_MEMORY_RETENTION_BATCH_CAP}`);
+  }
+  return resolved;
 }

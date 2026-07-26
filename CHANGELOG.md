@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Phase 9 personal/work-agent surfaces: durable conversation service (`createConversationService`), durable artifact service with review/approval/authorized delivery (`createArtifactService`), memory consent + lifecycle (`setConsent`/`correct`/`forget`/`applyRetention`), AG-UI co-work events (`mapCoWork` + ACP parity), scoped M365/GWS OAuth connectors (`revokeOAuthCredential`, `createOAuthWorkTokenProvider`), a browser verified-state checkpoint ledger, and a deny-by-default device adapter contract (`resolveDevicePolicy`/`assertDeviceAdmit`).
+- New optional provider packages `@arnilo/prism-provider-alibaba` (Model Studio / DashScope + Coding Plan) and `@arnilo/prism-provider-ollama` (cloud/local), both with dynamic model discovery; enrolled via `@arnilo/prism-providers`.
+
+### Changed
+
+- Versioned all **43** first-party manifests and exact internal ranges to `0.0.14` (41 → 43; only the two provider packages are new).
+- Network-free Phase 9 evidence: `scripts/benchmark-0.0.14.mjs`.
+
 ## [0.0.13] - 2026-07-24
 
 ### Added

@@ -19,6 +19,13 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
   const quotas = qualifyTable(schema, "prism_tenant_quotas");
   const sessions = qualifyTable(schema, "prism_sessions");
   const entries = qualifyTable(schema, "prism_session_entries");
+  const idempotency = qualifyTable(schema, "prism_session_append_idempotency");
+  const events = qualifyTable(schema, "prism_agent_events");
+  const toolCalls = qualifyTable(schema, "prism_tool_calls");
+  const usage = qualifyTable(schema, "prism_usage");
+  const runs = qualifyTable(schema, "prism_runs");
+  const branches = qualifyTable(schema, "prism_branches");
+  const search = qualifyTable(schema, "prism_session_search");
 
   return {
     async putLegalHold(input) {
@@ -90,6 +97,15 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
           skippedHeld.push(id);
           continue;
         }
+        // Whole-session purge: clear ledger children before the session row (FK order).
+        // prism_run_feedback cascades from prism_runs; search rows are best-effort cleanup.
+        await pool.query(`DELETE FROM ${idempotency} WHERE session_id = $1`, [id]);
+        await pool.query(`DELETE FROM ${events} WHERE session_id = $1`, [id]);
+        await pool.query(`DELETE FROM ${toolCalls} WHERE session_id = $1`, [id]);
+        await pool.query(`DELETE FROM ${usage} WHERE session_id = $1`, [id]);
+        await pool.query(`DELETE FROM ${runs} WHERE session_id = $1`, [id]);
+        await pool.query(`DELETE FROM ${branches} WHERE session_id = $1`, [id]);
+        await pool.query(`DELETE FROM ${search} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${entries} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${sessions} WHERE id = $1`, [id]);
         deleted.push(id);

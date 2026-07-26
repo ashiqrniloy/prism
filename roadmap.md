@@ -592,7 +592,7 @@ Updated: 2026-07-21
     - Exact **0.0.13** graph: **41** publishable manifests; Phase 8 packages in `@arnilo/prism-all` only. `scripts/benchmark-0.0.13.mjs` schema + network-free identity/policy/router/work/server evidence passed.
     - `npm run sdk:ready`, `release:check` / `release:publish --dry-run` for 0.0.13, supply-chain checks per plan Task 10; signed tag and npm publication remain operator prerequisites.
 
-- [ ] Phase 9 — Release 0.0.14: personal/work-agent conversations, co-work review, and channel/device expansion
+- [x] Phase 9 — Release 0.0.14: personal/work-agent conversations, co-work review, and channel/device expansion
   - Acceptance Criteria:
     - Functional: a durable conversation service creates, lists, continues, branches, archives, exports, and deletes user-scoped threads; clients reconnect and replay bounded ordered events without rerunning completed work.
     - Functional: personal memory exposes consent, source, visibility, correction, retention, deletion, and per-user/profile/thread controls; proactive schedules/events require explicit user enablement and revocable capabilities.
@@ -647,6 +647,11 @@ Updated: 2026-07-21
       - `docs/conversations.md`, `docs/ag-ui.md`, `docs/work-artifacts-and-review.md`, `docs/work-tools.md`, `docs/browser-automation.md`, `docs/working-and-semantic-memory.md`, `docs/credential-storage.md`, `docs/server.md`, `docs/workflows.md`, `docs/host-security.md`, optional connector/device pages, `docs/migration.md`.
     - `docs/index.md` update: yes; add Conversations, Work artifacts/review; update Tools, Memory, Credentials, Server, and Security.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+  - Completion Evidence (2026-07-26):
+    - Plan 077 Tasks 0–12 complete: durable conversation service (`createConversationService`), memory consent/lifecycle (`setConsent`/`correct`/`forget`/`applyRetention`) + proactive schedule capabilities, durable artifact service (`createArtifactService`: review/approval/authorized delivery), AG-UI co-work events (`mapCoWork` + ACP parity), scoped M365/GWS OAuth connectors (`createOAuth2Provider`, `createOAuthWorkTokenProvider`, `revokeOAuthCredential`), browser verified-state checkpoint ledger, deny-by-default device adapter contract, and two new optional provider packages (`@arnilo/prism-provider-alibaba`, `@arnilo/prism-provider-ollama`).
+    - Exact **0.0.14** graph: **43** publishable manifests (41 → 43; only the two provider packages are new, enrolled via `@arnilo/prism-providers`). `scripts/benchmark-0.0.14.mjs` schema + network-free conversation-replay / memory-consent / artifact-delivery / co-work-map / connector-refresh evidence passed.
+    - `npm run sdk:ready` (typecheck + full test + pack:dry-run), `release:check` and `release:publish --dry-run` for 0.0.14 (43/43 available), `npm audit --audit-level=high`, SBOM/license verify, `git diff --check`, public-import smoke, and secret scans on tracked files + packed tarballs (0 findings) all passed. Signed tag, npm publication, and restricted live canaries (M365/GWS OAuth, Playwright, PostgreSQL/keychain) remain operator prerequisites.
 
 - [ ] Phase 10 — Release 0.0.15: provider, memory, and RAG ecosystem parity
   - Acceptance Criteria:

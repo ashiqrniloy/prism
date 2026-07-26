@@ -108,6 +108,51 @@ export async function runMemoryConformance(
   const foreignRecall = await foreign.recall("concise answers", { topK: 5 });
   assert.equal(foreignRecall.hits.length, 0);
 
+  // Consent + lifecycle: invisible entries never inject; grant/correct/forget/retention are real.
+  await memory.remember(
+    { entries: [{ id: "c1", text: "hidden preference do not inject", consent: { source: "user", scope: "thread", visible: false } }] },
+    { wait: true },
+  );
+  const hidden = await memory.recall("hidden preference do not inject", { topK: 8 });
+  assert.ok(hidden.hits.every((hit) => hit.id !== "c1"), "invisible memory must not inject");
+
+  const granted = await memory.setConsent("c1", { visible: true });
+  assert.equal(granted.consent?.visible, true);
+  assert.ok(granted.consent?.grantedAt);
+  const visible = await memory.recall("hidden preference do not inject", { topK: 8 });
+  assert.ok(visible.hits.some((hit) => hit.id === "c1"), "granted memory must inject");
+
+  const revoked = await memory.setConsent("c1", { visible: false });
+  assert.equal(revoked.consent?.visible, false);
+  assert.ok(revoked.consent?.revokedAt);
+  const revokedRecall = await memory.recall("hidden preference do not inject", { topK: 8 });
+  assert.ok(revokedRecall.hits.every((hit) => hit.id !== "c1"), "revoked memory must not inject");
+
+  await memory.setConsent("c1", { visible: true });
+  const corrected = await memory.correct("c1", "preferred snack is almonds");
+  assert.match(corrected.text, /almonds/);
+  assert.equal(corrected.consent?.visible, true);
+
+  const forgotten = await memory.forget({ ids: ["c1"] });
+  assert.equal(forgotten, 1);
+  const afterForget = await memory.recall("almonds", { topK: 8 });
+  assert.ok(afterForget.hits.every((hit) => hit.id !== "c1"), "forgotten memory must be gone");
+
+  await memory.remember(
+    {
+      entries: [
+        { id: "r1", text: "retention one", sequence: 101, createdAt: "2020-01-01T00:00:00.000Z" },
+        { id: "r2", text: "retention two", sequence: 102, createdAt: "2020-01-02T00:00:00.000Z" },
+        { id: "r3", text: "retention three", sequence: 103, createdAt: new Date().toISOString() },
+      ],
+    },
+    { wait: true },
+  );
+  const swept = await memory.applyRetention({ maxAgeDays: 30, batchSize: 10 });
+  assert.ok(swept.deleted >= 2, "aged entries must be real-deleted");
+  const afterSweep = await memory.recall("retention", { topK: 8 });
+  assert.ok(afterSweep.hits.every((hit) => hit.id !== "r1" && hit.id !== "r2"));
+
   const noThread = createMemory({
     tenantId: "tenant-a",
     resourceId: "resource-a",

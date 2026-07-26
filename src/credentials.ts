@@ -74,6 +74,25 @@ export async function refreshOAuthCredential(options: {
   return refreshed;
 }
 
+/** A credential store that can also remove entries (revocation fails closed on the delete). */
+export interface RevocableOAuthCredentialStore extends OAuthCredentialStore {
+  delete(provider: string, accountId?: string): Promise<boolean> | boolean;
+}
+
+/**
+ * Revokes an OAuth credential: best-effort upstream revocation, then a mandatory local
+ * store delete so subsequent connector calls fail closed. The local delete is the trust
+ * boundary — an upstream revoke failure never leaves a stored token usable.
+ */
+export async function revokeOAuthCredential(options: {
+  readonly provider: OAuthProvider;
+  readonly credentials: OAuthCredentials;
+  readonly store?: RevocableOAuthCredentialStore;
+}): Promise<void> {
+  await options.provider.revoke?.(options.credentials);
+  await options.store?.delete(options.provider.id, options.credentials.accountId);
+}
+
 function credentialMapKey(name: string, provider?: string): string {
   return provider ? `${provider}:${name}` : name;
 }

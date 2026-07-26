@@ -1,7 +1,8 @@
 import type { SessionUpdate, ToolCallContent, ToolKind } from "@agentclientprotocol/sdk";
 import type { AgentEvent, ErrorInfo, SecretRedactor, ToolCallContent as PrismToolCall, ToolResult, Usage } from "@arnilo/prism";
 import { resolveAgUiLimits, type AgUiLimitOptions } from "../limits.js";
-import type { AgUiProjection } from "../projection.js";
+import { projectCoWorkEvent, type AgUiProjection } from "../projection.js";
+import type { CoWorkEvent } from "../types.js";
 
 export interface AcpEventMapperOptions {
   readonly redactor?: SecretRedactor;
@@ -12,6 +13,8 @@ export interface AcpEventMapperOptions {
 
 export interface AcpEventMapper {
   map(event: AgentEvent): readonly SessionUpdate[];
+  /** Projects one co-work event to a safe ACP session update; malformed input yields none. */
+  mapCoWork(event: CoWorkEvent): readonly SessionUpdate[];
 }
 
 /** Maps redacted Prism lifecycle events to stable ACP v1 session updates. */
@@ -51,6 +54,11 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
   };
 
   return {
+    mapCoWork(input) {
+      const payload = projectCoWorkEvent(input, { redactor: options.redactor, projection: options.projection, maxBytes: limits.maxTextBytes });
+      if (payload === undefined) return [];
+      return [message(`prism:cowork:${input.kind}`, truncate(JSON.stringify(payload), limits.maxTextBytes))];
+    },
     map(input) {
       const event = options.redactor?.redact(input) ?? input;
       switch (event.type) {

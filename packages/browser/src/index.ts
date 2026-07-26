@@ -1,5 +1,22 @@
 export { BrowserError, type BrowserErrorCode } from "./errors.js";
 export {
+  DEFAULT_MAX_CHECKPOINT_URL_BYTES,
+  HARD_MAX_CHECKPOINT_URL_BYTES,
+  DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES,
+  HARD_MAX_DOMAIN_STATE_HASH_BYTES,
+  DEFAULT_MAX_HOST_DATA_REF_BYTES,
+  HARD_MAX_HOST_DATA_REF_BYTES,
+  DEFAULT_MAX_CHECKPOINTS_PER_RUN,
+  HARD_MAX_CHECKPOINTS_PER_RUN,
+  createBrowserCheckpointLedger,
+  resolveBrowserCheckpointLimits,
+  type BrowserCheckpoint,
+  type BrowserCheckpointInput,
+  type BrowserCheckpointLedger,
+  type BrowserCheckpointLimitOptions,
+  type BrowserCheckpointLimits,
+} from "./checkpoint.js";
+export {
   DEFAULT_BROWSER_LIMITS,
   HARD_BROWSER_LIMITS,
   DEFAULT_MAX_PAGES,

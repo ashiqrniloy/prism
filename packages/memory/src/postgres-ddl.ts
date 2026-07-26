@@ -31,5 +31,6 @@ CREATE TABLE IF NOT EXISTS ${q}.semantic_memory (
 );
 CREATE INDEX IF NOT EXISTS semantic_memory_scope_seq_idx
   ON ${q}.semantic_memory (tenant_id, resource_id, thread_id, sequence);
+ALTER TABLE ${q}.semantic_memory ADD COLUMN IF NOT EXISTS consent JSONB;
 `;
 }

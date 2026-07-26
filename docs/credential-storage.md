@@ -146,6 +146,33 @@ await refreshOAuthCredential({
 });
 ```
 
+Workload OAuth providers (0.0.14) — Microsoft 365 / Google Workspace over the shared OAuth2 seam (PKCE + device code + refresh + revoke), least-privilege scopes per read/mutation bundle:
+
+```ts
+import { revokeOAuthCredential } from "@arnilo/prism";
+import {
+  createMicrosoft365OAuthProvider,
+  createGoogleWorkspaceOAuthProvider,
+  createOAuthWorkTokenProvider,
+  createOAuthCredentialStoreAdapter,
+} from "@arnilo/prism-credentials-node";
+
+// Read-only mail/calendar (no mutation scopes requested).
+const m365 = createMicrosoft365OAuthProvider({ clientId: "<app-id>", capabilities: ["mail", "calendar"], access: "read" });
+const creds = await m365.login({ onDeviceCode: ({ userCode, verificationUri }) => host.showCode(userCode, verificationUri) });
+await createOAuthCredentialStoreAdapter(store).set("microsoft365", creds);
+
+// Late-bound, per-identity token for a work-tools connector (env var, never argv/model context).
+const tokenProvider = createOAuthWorkTokenProvider({
+  provider: m365,
+  store: createOAuthCredentialStoreAdapter(store),
+  envVar: "M365_ACCESSTOKEN",
+});
+
+// Revocation: best-effort upstream (GWS supports RFC 7009; M365 does not) + mandatory local delete.
+await revokeOAuthCredential({ provider: m365, credentials: creds, store: createOAuthCredentialStoreAdapter(store) });
+```
+
 Passphrase rotation:
 
 ```ts
@@ -205,7 +232,7 @@ const providers = createOpenAIProviderPackage({ apiKey });
 - Use distinct `namespace` or vault paths per tenant/environment.
 - Keychain `list()` / `listOAuth()` are intentionally unsupported — enumerate credentials through host configuration instead of scanning the OS store.
 - Combine with `createExplicitCredentialResolver()` so runtime overrides still win over stored values.
-- Wire `createOAuthCredentialStoreAdapter(store)` into `refreshOAuthCredential()` only for an OAuth flow explicitly selected by the host and authorized by that provider. In 0.0.12 that means OpenAI Codex; Anthropic and Google packages accept API keys only. Never import or migrate Claude Code/Gemini CLI credential files, setup tokens, browser sessions, or CLI OAuth rows into this store.
+- Wire `createOAuthCredentialStoreAdapter(store)` into `refreshOAuthCredential()` only for an OAuth flow explicitly selected by the host and authorized by that provider. In 0.0.12 that means OpenAI Codex; in 0.0.14 the Microsoft 365 / Google Workspace workload providers (`createMicrosoft365OAuthProvider` / `createGoogleWorkspaceOAuthProvider`) are added over the same seam with least-privilege read/mutation scope bundles. Anthropic and Google *model* packages still accept API keys only. Never import or migrate Claude Code/Gemini CLI credential files, setup tokens, browser sessions, or CLI OAuth rows into this store.
 - Enterprise cloud providers (`azure` / `bedrock` / `vertex`) expect host workload-identity callbacks (Entra / IAM / ADC), not this local encrypted/keychain store as a cloud token minting service. Store may hold opaque refresh material only when the host already owns the cloud auth flow.
 
 ## Security and performance notes

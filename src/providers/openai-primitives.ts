@@ -135,6 +135,7 @@ export function mapOpenAIChatUsage(usage: unknown): Usage | undefined {
     && wire.prompt_cache_hit_tokens === undefined
     && wire.prompt_tokens_details?.cached_tokens === undefined
     && wire.prompt_tokens_details?.cache_write_tokens === undefined
+    && wire.prompt_tokens_details?.cache_creation_input_tokens === undefined
   ) {
     return undefined;
   }
@@ -143,7 +144,9 @@ export function mapOpenAIChatUsage(usage: unknown): Usage | undefined {
     outputTokens: wire.completion_tokens,
     totalTokens: wire.total_tokens,
     cacheReadTokens: wire.prompt_tokens_details?.cached_tokens ?? wire.prompt_cache_hit_tokens,
-    cacheWriteTokens: wire.prompt_tokens_details?.cache_write_tokens,
+    // Some OpenAI-compatible vendors report cache writes as `cache_write_tokens`,
+    // others as the `cache_creation_input_tokens` variant; accept both.
+    cacheWriteTokens: wire.prompt_tokens_details?.cache_write_tokens ?? wire.prompt_tokens_details?.cache_creation_input_tokens,
   };
 }
 
@@ -155,5 +158,6 @@ interface OpenAIWireUsage {
   readonly prompt_tokens_details?: {
     readonly cached_tokens?: number;
     readonly cache_write_tokens?: number;
+    readonly cache_creation_input_tokens?: number;
   };
 }

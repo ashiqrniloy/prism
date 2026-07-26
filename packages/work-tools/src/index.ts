@@ -51,5 +51,6 @@ export type {
   WorkTaskItem,
   WorkToolSet,
   WorkToolsOptions,
+  WorkTokenProvider,
 } from "./types.js";
 export const packageName = "@arnilo/prism-work-tools";

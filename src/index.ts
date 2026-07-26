@@ -1,6 +1,6 @@
 export type * from "./contracts.js";
 export type { RunLimitCounters, RunLimitName, SecureAgentOptions } from "./contracts.js";
-export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError, AgentRunStateError, SESSION_SEARCH_WORKSPACE_METADATA_KEY, SESSION_SEARCH_UNSUPPORTED_CODE, SessionSearchUnsupportedError, isSessionSearchUnsupported, DEFAULT_SESSION_SEARCH_LIMIT, HARD_MAX_SESSION_SEARCH_LIMIT, DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES, HARD_MAX_SESSION_SEARCH_QUERY_BYTES, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES, HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES, DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES, HARD_MAX_SESSION_SEARCH_CURSOR_BYTES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS, HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS, DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES, HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES, HARD_MAX_SESSION_SEARCH_LINEAR_BYTES, DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES, HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES, resolveSessionSearchQuery, DEFAULT_MAX_PENDING_STEERS, HARD_MAX_PENDING_STEERS, DEFAULT_MAX_PENDING_STEER_BYTES, HARD_MAX_PENDING_STEER_BYTES } from "./contracts.js";
+export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError, AgentRunStateError, assertSessionMetadataKey, SESSION_SEARCH_WORKSPACE_METADATA_KEY, SESSION_SEARCH_UNSUPPORTED_CODE, SessionSearchUnsupportedError, isSessionSearchUnsupported, DEFAULT_SESSION_SEARCH_LIMIT, HARD_MAX_SESSION_SEARCH_LIMIT, DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES, HARD_MAX_SESSION_SEARCH_QUERY_BYTES, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES, HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES, DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES, HARD_MAX_SESSION_SEARCH_CURSOR_BYTES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS, HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS, DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES, HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES, HARD_MAX_SESSION_SEARCH_LINEAR_BYTES, DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES, HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES, resolveSessionSearchQuery, DEFAULT_MAX_PENDING_STEERS, HARD_MAX_PENDING_STEERS, DEFAULT_MAX_PENDING_STEER_BYTES, HARD_MAX_PENDING_STEER_BYTES } from "./contracts.js";
 export { createAgent, createAgentSession, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
 export {
   createBatchedRunLedger,
@@ -73,10 +73,10 @@ export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./
 export type { DefaultRetryPolicyOptions } from "./retry.js";
 export { createContributionRegistries, createContributionRegistry, registerDiscoveredContributions } from "./contributions.js";
 export type { ContributionRegistries, ContributionRegistriesOptions, ContributionRegistry, ContributionRegistryOptions } from "./contributions.js";
-export { createChainedCredentialResolver, createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore, refreshOAuthCredential, resolveCredentialValue } from "./credentials.js";
+export { createChainedCredentialResolver, createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore, refreshOAuthCredential, revokeOAuthCredential, resolveCredentialValue } from "./credentials.js";
 export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
 export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy } from "./extensions.js";
-export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore } from "./credentials.js";
+export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js";
 export { createModelRegistry } from "./models.js";
 export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
 export {
@@ -188,6 +188,60 @@ export type {
 export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuilder, DefaultInputBuildContext, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions } from "./input.js";
 export { createMockProvider } from "./mock-provider.js";
 export { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, listSessionBranches, rebuildSessionContext } from "./session-stores.js";
+export {
+  CONVERSATION_METADATA_KEY,
+  DEFAULT_MAX_CONVERSATION_CURSOR_BYTES,
+  HARD_MAX_CONVERSATION_CURSOR_BYTES,
+  ConversationError,
+  conversationMarkerMetadata,
+  conversationThreadFromRecord,
+  decodeConversationReplayCursor,
+  encodeConversationReplayCursor,
+} from "./conversations.js";
+export type {
+  ConversationBranchRef,
+  ConversationReplayCursor,
+  ConversationThread,
+  ConversationThreadState,
+} from "./conversations.js";
+export {
+  ARTIFACT_CHECKPOINT_NAMESPACE,
+  ArtifactError,
+  artifactApprovalState,
+  artifactCheckpointKey,
+} from "./artifacts.js";
+export type {
+  ArtifactApproval,
+  ArtifactApprovalState,
+  ArtifactCitation,
+  ArtifactDecisionState,
+  ArtifactDeliveryToken,
+  ArtifactRecord,
+  ArtifactRevision,
+} from "./artifacts.js";
+export {
+  DEFAULT_DEVICE_MAX_CHUNK_BYTES,
+  DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
+  HARD_DEVICE_MAX_CHUNK_BYTES,
+  HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
+  DevicePolicyError,
+  acceptDeviceChunk,
+  assertDeviceAdmit,
+  redactDeviceTelemetry,
+  resolveDevicePolicy,
+  runDevicePolicyConformance,
+} from "./devices.js";
+export type {
+  DeviceAdapter,
+  DeviceAdmitRequest,
+  DeviceChunkResult,
+  DeviceConformanceResult,
+  DeviceKind,
+  DevicePolicyErrorCode,
+  DevicePolicyOptions,
+  DeviceStreamLimits,
+  ResolvedDevicePolicy,
+} from "./devices.js";
 export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot } from "./session-stores.js";
 export type { MockProviderOptions } from "./mock-provider.js";
 export {
@@ -262,6 +316,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.13";
+export const version = "0.0.14";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

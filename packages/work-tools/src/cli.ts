@@ -108,7 +108,9 @@ export function createCliRunner(options: {
       try {
         const timeout = AbortSignal.timeout(limits.timeoutMs);
         const signal = runOpts?.signal ? AbortSignal.any([runOpts.signal, timeout]) : timeout;
-        return await execImpl(argv, { env, signal, limits });
+        // Late-bound per-identity token env merges over the base env; never touches argv.
+        const execEnv = runOpts?.env ? { ...env, ...runOpts.env } : env;
+        return await execImpl(argv, { env: execEnv, signal, limits });
       } finally {
         active--;
       }

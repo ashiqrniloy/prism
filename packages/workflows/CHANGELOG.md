@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Proactive schedule capabilities: `createProactiveScheduleCapabilities` with fail-closed `enable`/`revoke`/`assertActive` and policy auditing (Plan 077 Task 2).
+
 ## [0.0.13] - 2026-07-24
 
 ### Changed

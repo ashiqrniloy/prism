@@ -56,6 +56,8 @@ node examples/enterprise-identity.ts
 node examples/enterprise-policy-audit.ts
 node examples/enterprise-work-connectors.ts
 node examples/server-deployment-seams.ts
+node examples/conversation-durable-replay.ts
+node examples/artifact-review-delivery.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -68,6 +70,8 @@ Each demo prints a single JSON line with its result.
 - `enterprise-policy-audit.ts` — **demo**: `@arnilo/prism-policy` evaluate → append → cursor export with fake identity.
 - `enterprise-work-connectors.ts` — **demo**: fake M365/GWS CLI adapters, shared mail normalizers, and draft-gated work tools.
 - `server-deployment-seams.ts` — **demo**: health, drain, rate-limit, and deployment lease on `@arnilo/prism-server` (network-free).
+- `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
+- `artifact-review-delivery.ts` — **demo**: artifact attach/revise/approve review + expiring authorized delivery link over an in-memory checkpoint store.
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.

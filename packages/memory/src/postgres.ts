@@ -14,6 +14,7 @@ import {
   requireScope,
 } from "./util.js";
 import type {
+  MemoryConsent,
   MemoryVectorHit,
   MemoryVectorRecord,
   VectorDeleteFilter,
@@ -197,11 +198,11 @@ export async function createPostgresMemoryStores(
           assertFiniteVector(record.embedding, "embedding", dimensions);
           await client.query(
             `INSERT INTO ${semanticTable}
-              (tenant_id, resource_id, thread_id, id, text, embedding, sequence, metadata, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6::vector, $7, $8::jsonb, $9::timestamptz)
+              (tenant_id, resource_id, thread_id, id, text, embedding, sequence, metadata, consent, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6::vector, $7, $8::jsonb, $9::jsonb, $10::timestamptz)
              ON CONFLICT (tenant_id, resource_id, thread_id, id)
              DO UPDATE SET text = EXCLUDED.text, embedding = EXCLUDED.embedding, sequence = EXCLUDED.sequence,
-                           metadata = EXCLUDED.metadata, created_at = EXCLUDED.created_at`,
+                           metadata = EXCLUDED.metadata, consent = EXCLUDED.consent, created_at = EXCLUDED.created_at`,
             [
               record.tenantId,
               record.resourceId,
@@ -211,6 +212,7 @@ export async function createPostgresMemoryStores(
               toVectorLiteral(record.embedding),
               record.sequence,
               record.metadata ? JSON.stringify(record.metadata) : null,
+              record.consent ? JSON.stringify(record.consent) : null,
               record.createdAt,
             ],
           );
@@ -229,7 +231,7 @@ export async function createPostgresMemoryStores(
       const scope = requireScope(query, true) as Required<WorkingMemoryKey> & { threadId: string };
       assertFiniteVector(query.embedding, "query embedding", dimensions);
       const result = await pool.query(
-        `SELECT tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, created_at,
+        `SELECT tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, consent, created_at,
                 1 - (embedding <=> $4::vector) AS score
          FROM ${semanticTable}
          WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3
@@ -260,7 +262,7 @@ export async function createPostgresMemoryStores(
     async getByThread(scope) {
       const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
       const result = await pool.query(
-        `SELECT tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, created_at
+        `SELECT tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, consent, created_at
          FROM ${semanticTable}
          WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3
          ORDER BY sequence ASC, id ASC`,
@@ -301,6 +303,10 @@ function mapVectorRow(row: Record<string, unknown>, score?: number): MemoryVecto
     row.metadata == null
       ? undefined
       : (typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata) as JsonObject;
+  const consent =
+    row.consent == null
+      ? undefined
+      : (typeof row.consent === "string" ? JSON.parse(row.consent) : row.consent) as MemoryConsent;
   const base: MemoryVectorRecord = {
     tenantId: String(row.tenant_id),
     resourceId: String(row.resource_id),
@@ -311,6 +317,7 @@ function mapVectorRow(row: Record<string, unknown>, score?: number): MemoryVecto
     sequence: Number(row.sequence),
     createdAt: new Date(String(row.created_at)).toISOString(),
     ...(metadata ? { metadata } : {}),
+    ...(consent ? { consent } : {}),
   };
   return score === undefined ? base : { ...base, score };
 }

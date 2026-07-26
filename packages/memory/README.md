@@ -65,6 +65,7 @@ const agent = createAgent({
 | `createPostgresMemoryStores` | PostgreSQL/pgvector production path |
 | `runMemoryConformance` | Shared network-free conformance helper |
 | `createContextProvider` / `createWorkingMemoryProcessor` | Existing context seam + opt-in update helper |
+| `setConsent` / `correct` / `forget` / `applyRetention` | 0.0.14 consent + lifecycle: grant/revoke visibility, re-embed corrections, real deletes, bounded retention batches |
 
 ## Security
 
@@ -72,6 +73,7 @@ const agent = createAgent({
 - Memory text/metadata are redacted when `secrets` / `redactor` are configured.
 - Injected context is inert text only — no tools or permissions.
 - Cross-tenant and cross-thread recall is denied.
+- Consent (0.0.14): records carry `consent { source, scope, visible }`; `recall()` drops revoked/invisible entries at assembly time (direct recall and `createContextProvider` injection), and `requireConsent` strict mode also drops consent-less entries.
 - Embedder output, in-memory upserts/queries, and PostgreSQL/pgvector parameters accept only non-empty finite number vectors; NaN, ±Infinity, non-numbers, and wrong configured dimensions fail before scoring or SQL.
 
 See [Working and semantic memory](../../docs/working-and-semantic-memory.md).

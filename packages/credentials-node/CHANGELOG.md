@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Generic `createOAuth2Provider` (PKCE/device-code/refresh/revoke) with thin Microsoft 365 + Google Workspace adapters, least-privilege workload scope bundles, and `createOAuthWorkTokenProvider` for per-identity late-bound token env injection (Plan 077 Task 5).
+
 ## [0.0.13] - 2026-07-24
 
 ### Changed

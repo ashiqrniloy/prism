@@ -18,6 +18,7 @@ Primary exports:
 | `createWorkflowCommands` | Optional `CommandDefinition[]` for direct/background/replay/status/list/cancel/resume and, when selected, schedule control |
 | `enqueueWorkflow` / `startWorkflowBackground` / `createWorkflowCoordinator` | Persist queued work and atomically claim/renew/execute it across processes using `LeaseStore` |
 | `createWorkflowSchedules` | Explicit ownership-scoped one-time/interval/host-calculated schedules over existing checkpoint/lease stores |
+| `createProactiveScheduleCapabilities` | Scoped, expiring, revocable capability tokens that enable proactive schedules; revocation stops firing fail-closed |
 
 Included through `@arnilo/prism-sdk` and `@arnilo/prism-all`; installing either profile does not start workflows. Interactive TUI is out of scope (C-012 deferred).
 
@@ -81,6 +82,8 @@ Every node receives bounded `ctx.state`, `ctx.stateVersion`, and async `ctx.upda
 `createWorkflowCoordinator({ coordinatorId, workflows, checkpoints, leases, ... })` polls queued/running checkpoints with bounded pages, atomically claims each run, renews its lease, and aborts/fences work after lease loss. Key controls: `leaseTtlMs` (default 30s), `renewalIntervalMs` (default TTL/3), `pollIntervalMs` (default 1s), `maxConcurrentRuns` (default 4), and `pageSize` (default 100, maximum 500).
 
 `createWorkflowSchedules({ store, leases, checkpoints, workflows, ownership, ownerId, calculators? })` is inert until its host calls `pollOnce()` or `run({ signal })`. Ownership requires `tenantId` plus `accountId` or `userId`. Methods are `create`, `get`, `list`, `pause`, `resume`, `trigger`, `delete`, `pollOnce`, and `run`. A record has one required `nextRunAt`, optional fixed `intervalMs` or registered `calculatorId` (never both), bounded input/metadata, status, version, and last-fire attribution. Manual trigger requires an idempotency key. Scheduled run IDs derive from schedule ID plus fire timestamp, so retry after enqueue-before-advance finds the same queued checkpoint instead of duplicating it. Defaults: page 100/hard 500, due claims 16/hard 256, input 256 KiB/hard 1 MiB, poll 1s, fire lease 30s.
+
+`createProactiveScheduleCapabilities({ schedules, store, ownership, ownerId, defaultTtlMs?, maxTtlMs?, onCapability? })` wraps a `WorkflowSchedules` facade in explicit user enablement. `enable({ workflowId, scope, actor, nextRunAt, intervalMs?|calculatorId?, input?, ttlMs? })` creates the schedule plus a scoped, expiring `ScheduleCapabilityToken` (default TTL 24h / hard 31d, record ≤ 16 KiB) stamped with redacted actor refs. `revoke(tokenId, actor)` marks the token revoked and pauses the underlying schedule so `pollOnce()` never fires it (fail-closed). `assertActive(tokenId)` is a fail-closed guard for manual trigger paths — it throws on missing/revoked/expired tokens. `onCapability` emits `capability_enabled` / `capability_revoked` / `capability_denied` events (redacted refs only) that hosts bridge to `@arnilo/prism-policy` for an auditable ledger. Tokens are ownership-scoped checkpoint records; no cron expression or secret is persisted.
 
 ## Outputs / response / events
 
@@ -280,6 +283,7 @@ runRpcServer({
 - Nested workflows inherit host registries/policies and cannot inject broader tools, agents, ownership, or credentials. Nested depth is inherited; child suspension bubbles to the parent review cursor.
 - Replay source ownership/hash/status/node eligibility are checked before a new checkpoint is created. Source records are immutable, lineage is bounded, and copied approval-bearing paths are rejected.
 - Schedule services are ownership-scoped and explicitly started. Per-fire leases plus deterministic run IDs/CAS prevent duplicate enqueue across coordinators and crash retry. Host calculator IDs resolve only from the supplied map; no callback or cron expression is persisted.
+- Proactive schedules require an explicit capability grant. Revocation pauses the schedule (never fired by `pollOnce`) and `assertActive` fails closed on missing/revoked/expired tokens; enable/revoke/deny events carry redacted actor refs for the host policy ledger. Capability TTL is capped (default 24h / hard 31d) and the token record is byte-bounded (≤ 16 KiB); tokens are ownership-scoped, so foreign access fails closed rather than leaking existence.
 - Scheduler stores O(nodes + active outputs + bounded state history); ready-node work uses indegree maps, not repeated full scans.
 - Lease acquisition is atomic; opaque tokens protect renew/release; monotonically increasing fencing tokens plus checkpoint compare-and-swap prevent expired workers from committing after takeover. Node functions must honor `ctx.signal` for prompt cooperative cancellation.
 

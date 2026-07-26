@@ -171,7 +171,19 @@ export interface WorkCliExecResult {
 }
 
 export interface WorkCliRunner {
-  exec(argv: readonly string[], options?: { signal?: AbortSignal }): Promise<WorkCliExecResult>;
+  exec(argv: readonly string[], options?: { signal?: AbortSignal; env?: Readonly<Record<string, string>> }): Promise<WorkCliExecResult>;
+}
+
+/**
+ * Late-bound, per-identity connector token source. Returns env vars to inject (e.g.
+ * `{ M365_ACCESSTOKEN: "…" }`) or undefined when the credential is missing/expired/revoked,
+ * which fails the call closed. Tokens never appear in argv or model context.
+ */
+export interface WorkTokenProvider {
+  tokenEnv(
+    identity: AgentIdentity,
+    signal?: AbortSignal,
+  ): Promise<Readonly<Record<string, string>> | undefined> | Readonly<Record<string, string>> | undefined;
 }
 
 export interface Microsoft365Adapter {

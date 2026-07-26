@@ -8,6 +8,7 @@ Prism provides small helpers for host-owned credentials and known-secret redacti
 - `createExplicitCredentialResolver()`: tries named resolver sources in caller-provided order, such as runtime override → stored → env object → fallback.
 - `createEnvCredentialResolver()`: reads only a caller-supplied env-like object and map.
 - `refreshOAuthCredential()`: calls a provider OAuth refresh function and writes the result to a caller-owned store when supplied.
+- `revokeOAuthCredential()`: best-effort upstream revocation (`OAuthProvider.revoke?`) followed by a mandatory caller-owned store delete, so a revoked token fails closed locally even if the provider has no revocation endpoint.
 - `CredentialValueSource`: the accepted source type for `resolveCredentialValue()`.
 - `redactSecrets()`: replaces known secret string values inside strings, arrays, and plain objects.
 - `errorToErrorInfo()`: converts unknown errors into `ErrorInfo` and redacts known secret values from error text.
@@ -41,6 +42,7 @@ resolveCredentialValue(
 createExplicitCredentialResolver(sources: readonly CredentialResolverSource[]): CredentialResolver
 createEnvCredentialResolver(env: Readonly<Record<string, string | undefined>>, map: Readonly<Record<string, string>>): CredentialResolver
 refreshOAuthCredential(options: { provider: OAuthProvider; credentials: OAuthCredentials; store?: OAuthCredentialStore }): Promise<OAuthCredentials>
+revokeOAuthCredential(options: { provider: OAuthProvider; credentials: OAuthCredentials; store?: RevocableOAuthCredentialStore }): Promise<void>
 redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T
 errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): ErrorInfo
 ```

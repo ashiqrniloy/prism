@@ -57,6 +57,31 @@ export type {
 export { encryptBytes, decryptBytes, resolveScryptParameters, assertScryptParameters } from "./envelope.js";
 
 export {
+  createOAuth2Provider,
+  createOAuth2PkceVerifier,
+  computeOAuth2S256Challenge,
+  type OAuth2ProviderConfig,
+} from "./oauth2.js";
+export { resolveWorkloadScopes, type WorkloadScopeBundle, type WorkloadScopeAccess } from "./scopes.js";
+export {
+  createMicrosoft365OAuthProvider,
+  resolveMicrosoft365Scopes,
+  MICROSOFT365_SCOPE_BUNDLES,
+  MICROSOFT365_BASE_SCOPES,
+  type Microsoft365Capability,
+  type Microsoft365OAuthOptions,
+} from "./microsoft365-oauth.js";
+export {
+  createGoogleWorkspaceOAuthProvider,
+  resolveGoogleWorkspaceScopes,
+  GOOGLE_WORKSPACE_SCOPE_BUNDLES,
+  GOOGLE_WORKSPACE_BASE_SCOPES,
+  type GoogleWorkspaceCapability,
+  type GoogleWorkspaceOAuthOptions,
+} from "./google-workspace-oauth.js";
+export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider } from "./work-token.js";
+
+export {
   encryptWithHostKms,
   decryptWithHostKms,
   createMemoryHostKms,

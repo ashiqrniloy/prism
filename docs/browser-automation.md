@@ -106,6 +106,7 @@ await browser.close();
 - Observation (`snapshot`, `wait`, open-without-url, `close`) vs mutation/high-impact (`navigate`, click/form, dialog accept, upload, download release, popup select) is classified for `ExecutionPolicy` / `beforeSideEffect`.
 - `createSharedSandboxBrowserOptions()` aligns browser uploads/downloads with Task 1 sandbox `/workspace` and `/downloads`. `assertBrowserSandboxNetwork()` in `@arnilo/prism-coding-security` fails closed for custom Docker networks without browser egress attestation.
 - Raw CSS is absent from production defaults. Ref resolution uses Playwright’s built-in `aria-ref=` selector with a package-owned snapshot ref table for staleness checks.
+- Verified-state checkpoints (0.0.14): `createBrowserCheckpointLedger()` records navigation state — URL, a domain-state hash, and host-owned data refs — never serialized browser internals (cookies/storage/contexts), which are fragile and secret-bearing. Frozen caps: URL 8 KiB/16 KiB, domain-state hash 256 B/1 KiB, host-data ref 2 KiB/8 KiB (refs only, never bodies), 16/64 checkpoints per run (oldest evicted). After any resume/interruption `markResumed(runId)` marks state stale; `assertVerifiedBeforeSideEffect(runId)` fails closed until the host reloads + `verify()`s, so side effects never replay on stale state. Checkpoints are run-scoped: a conversation thread composes through the run it owns, reusing the manager's sandbox/egress/approval/limit policy above.
 
 ## Security and performance notes
 
@@ -121,4 +122,6 @@ Default tests use fake Playwright APIs only. Protected live gate: `PRISM_LIVE_PL
 - [Host security](host-security.md): browser endpoint, approval, egress proxy, and artifact trust boundaries.
 - [Performance and resource limits](performance.md): browser ceilings and charging points.
 - [Coding execution approval and sandboxing](coding-security.md): optional shared disposable sandbox for coding+browser.
+- [Conversations](conversations.md): durable threads that own the runs browser checkpoints scope to.
+- [Device adapters](device-adapters.md): deny-by-default voice/desktop-control contracts (no vendor package in 0.0.14).
 - [Migration](migration.md): additive optional package activation.

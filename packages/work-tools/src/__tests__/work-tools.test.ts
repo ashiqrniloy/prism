@@ -301,3 +301,60 @@ describe("shared result parity", () => {
     assert.throws(() => parseCliNdjson("1\n2\n3\n", limits), /pagination/);
   });
 });
+
+describe("connector token wiring (per-identity, fail-closed)", () => {
+  function capturingRunner(captured: { argv: readonly string[]; env?: Readonly<Record<string, string>> }[]) {
+    return {
+      async exec(argv: readonly string[], options?: { env?: Readonly<Record<string, string>> }) {
+        captured.push({ argv, env: options?.env });
+        return { exitCode: 0, stdout: JSON.stringify({ value: ["ok"] }), stderr: "" };
+      },
+    };
+  }
+
+  it("injects the per-identity token into env, never argv", async () => {
+    const captured: { argv: readonly string[]; env?: Readonly<Record<string, string>> }[] = [];
+    let seenIdentity: AgentIdentity | undefined;
+    const adapter = createMicrosoft365CliAdapter({
+      binary: "/usr/bin/m365",
+      identity,
+      configDir: "/tmp/cfg",
+      runner: capturingRunner(captured),
+      tokenProvider: {
+        tokenEnv(id) { seenIdentity = id; return { M365_ACCESSTOKEN: "secret-token" }; },
+      },
+    });
+    await adapter.runOp("mail.list", { folderName: "inbox" });
+    assert.equal(seenIdentity?.userId, "user-1");
+    const opCall = captured.at(-1)!;
+    assert.equal(opCall.env?.M365_ACCESSTOKEN, "secret-token");
+    // Token must never appear in argv (nor model context).
+    assert.ok(captured.every(({ argv }) => !argv.includes("secret-token")));
+  });
+
+  it("fails closed when the token is revoked/unavailable, before any exec", async () => {
+    const captured: { argv: readonly string[]; env?: Readonly<Record<string, string>> }[] = [];
+    const adapter = createMicrosoft365CliAdapter({
+      binary: "/usr/bin/m365",
+      identity,
+      configDir: "/tmp/cfg",
+      runner: capturingRunner(captured),
+      tokenProvider: { tokenEnv: () => undefined },
+    });
+    await assert.rejects(() => adapter.runOp("mail.list", {}), (error: WorkToolError) => error.code === "ERR_PRISM_WORK_CREDENTIAL");
+    assert.equal(captured.length, 0);
+  });
+
+  it("runs without a token provider when the host uses another auth seam", async () => {
+    const captured: { argv: readonly string[]; env?: Readonly<Record<string, string>> }[] = [];
+    const adapter = createGoogleWorkspaceCliAdapter({
+      binary: "/usr/bin/gws",
+      identity,
+      configDir: "/tmp/cfg",
+      runner: capturingRunner(captured),
+    });
+    await adapter.runOp("mail.list", {});
+    assert.ok(captured.length > 0);
+    assert.equal(captured.at(-1)!.env, undefined);
+  });
+});

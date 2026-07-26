@@ -2,7 +2,8 @@ import { EventSchemas, EventType, type AGUIEvent } from "@ag-ui/core";
 import type { AgentEvent, ErrorInfo, SecretRedactor, ToolCallContent, ToolResult, Usage } from "@arnilo/prism";
 import { AgUiError } from "./errors.js";
 import { resolveAgUiLimits, type AgUiLimitOptions, type ResolvedAgUiLimits } from "./limits.js";
-import type { AgUiProjection } from "./projection.js";
+import { projectCoWorkEvent, type AgUiProjection } from "./projection.js";
+import type { CoWorkEvent } from "./types.js";
 
 export interface AgUiEventMapperOptions {
   readonly redactor?: SecretRedactor;
@@ -18,6 +19,8 @@ export interface AgUiEventMapperOptions {
 
 export interface AgUiEventMapper {
   map(event: AgentEvent): readonly AGUIEvent[];
+  /** Projects one co-work event to safe AG-UI CUSTOM events; malformed input yields none. */
+  mapCoWork(event: CoWorkEvent): readonly AGUIEvent[];
 }
 
 interface ActiveTool {
@@ -133,6 +136,13 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
   };
 
   return {
+    mapCoWork(input) {
+      const events: AGUIEvent[] = [];
+      const payload = projectCoWorkEvent(input, { redactor: options.redactor, projection: options.projection, maxBytes: limits.maxTextBytes });
+      if (payload === undefined) return events;
+      emit(events, { type: EventType.CUSTOM, name: `prism.cowork.${input.kind}`, value: payload });
+      return events;
+    },
     map(input) {
       if (terminal) return [];
       const event = options.redactor?.redact(input) ?? input;

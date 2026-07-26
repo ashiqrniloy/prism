@@ -54,6 +54,10 @@ Encrypted files use AES-256-GCM with asynchronous scrypt (default `N=32768`, `r=
 
 Keychain entries are namespaced by `service`, optional `namespace`, provider, and account id. Abort-aware native async operations default to a 5-second timeout (60-second hard cap), and payloads default to 3 MiB (12 MiB hard). There is **no silent fallback** to plaintext file storage when the keychain is unavailable.
 
+## Workload OAuth providers (0.0.14)
+
+`createMicrosoft365OAuthProvider()` / `createGoogleWorkspaceOAuthProvider()` wrap a shared `createOAuth2Provider()` (PKCE auth-code + device-code + refresh + revoke) over the core `OAuthProvider` seam. Least-privilege scope bundles per capability (`resolveMicrosoft365Scopes` / `resolveGoogleWorkspaceScopes`, read vs mutation; unknown capability fails closed). `createOAuthWorkTokenProvider()` bridges stored credentials to a per-identity connector env var (late-bound single-flight refresh; missing/expired/revoked/cross-identity/wrong-tenant fail closed). Revocation: `revokeOAuthCredential()` does best-effort upstream revoke (GWS RFC 7009; M365 has no public endpoint) then mandatory local store delete. Tokens never go in argv or model context.
+
 ## Security
 
 - Wrong passphrase, malformed/tampered envelope, excessive KDF work, oversized payload, or permissive Unix mode fails before unsafe work.

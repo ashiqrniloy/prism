@@ -1,8 +1,20 @@
 export { createAgUiEventMapper, type AgUiEventMapper, type AgUiEventMapperOptions } from "./ag-ui-mapper.js";
 export { AgUiError, type AgUiErrorCode } from "./errors.js";
 export { createAgUiHandler, type AgUiAuthorizationInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions } from "./handler.js";
-export { createPersistenceAgUiReplay, type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type PersistenceAgUiReplayOptions } from "./replay.js";
-export type { AgUiAuthorization, AgUiRunReference } from "./types.js";
+export {
+  createPersistenceAgUiReplay,
+  createCoWorkReplay,
+  type AgUiReplay,
+  type AgUiReplayPage,
+  type AgUiReplayRequest,
+  type PersistenceAgUiReplayOptions,
+  type CoWorkReplay,
+  type CoWorkReplayPage,
+  type CoWorkReplayRequest,
+  type CoWorkReplayOptions,
+  type CoWorkSource,
+} from "./replay.js";
+export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js";
 export {
   DEFAULT_AG_UI_LIMITS,
   HARD_AG_UI_LIMITS,
@@ -35,5 +47,6 @@ export {
   type ResolvedAgUiLimits,
 } from "./limits.js";
 export type { AgUiProjection } from "./projection.js";
+export { projectCoWorkEvent, type CoWorkProjectionOptions } from "./projection.js";
 
 export const packageName = "@arnilo/prism-ag-ui";

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Co-work events: `mapCoWork` (AG-UI + ACP parity), co-work projection/replay, and handler co-work context threading for artifact progress/approval/download-link, connector drafts, and redacted browser snapshots (Plan 077 Task 4).
+
 ## [0.0.13] - 2026-07-24
 
 ### Changed

@@ -111,6 +111,15 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
       const page = candidates.slice(0, limit);
       const deleted: string[] = [];
       const skippedHeld: string[] = [];
+      // Whole-session purge: clear ledger children before the session row (FK order).
+      // prism_run_feedback cascades from prism_runs; search rows are best-effort cleanup.
+      const delIdempotency = db.prepare("DELETE FROM prism_session_append_idempotency WHERE session_id = ?");
+      const delEvents = db.prepare("DELETE FROM prism_agent_events WHERE session_id = ?");
+      const delToolCalls = db.prepare("DELETE FROM prism_tool_calls WHERE session_id = ?");
+      const delUsage = db.prepare("DELETE FROM prism_usage WHERE session_id = ?");
+      const delRuns = db.prepare("DELETE FROM prism_runs WHERE session_id = ?");
+      const delBranches = db.prepare("DELETE FROM prism_branches WHERE session_id = ?");
+      const delSearch = db.prepare("DELETE FROM prism_session_search_fts WHERE session_id = ?");
       const delEntries = db.prepare("DELETE FROM prism_session_entries WHERE session_id = ?");
       const delSession = db.prepare("DELETE FROM prism_sessions WHERE id = ?");
       for (const id of page) {
@@ -118,6 +127,13 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
           skippedHeld.push(id);
           continue;
         }
+        delIdempotency.run(id);
+        delEvents.run(id);
+        delToolCalls.run(id);
+        delUsage.run(id);
+        delRuns.run(id);
+        delBranches.run(id);
+        delSearch.run(id);
         delEntries.run(id);
         delSession.run(id);
         deleted.push(id);

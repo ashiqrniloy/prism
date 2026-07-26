@@ -276,4 +276,60 @@ describe("@arnilo/prism-memory", () => {
       MemoryLimitError,
     );
   });
+
+  it("keeps revoked/invisible memories out of prompt injection and honors strict consent", async () => {
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th1",
+      embedder: createHashEmbedder(),
+    });
+    await memory.remember(
+      {
+        entries: [
+          { id: "open", text: "favorite color is teal" },
+          { id: "secret", text: "favorite color is teal", consent: { visible: false } },
+        ],
+      },
+      { wait: true },
+    );
+
+    const blocks = await resolveContextProviders({
+      providers: [memory.createContextProvider({ includeWorking: false, includeSemantic: true })],
+      messages: [{ role: "user", content: [{ type: "text", text: "favorite color is teal" }] }],
+    });
+    const injected = blocks.map((block) => String(block.content)).join("\n");
+    const recalled = await memory.recall("favorite color is teal", { topK: 8 });
+    assert.ok(recalled.hits.some((hit) => hit.id === "open"));
+    assert.ok(recalled.hits.every((hit) => hit.id !== "secret"), "invisible memory must not be recalled");
+    assert.ok(!injected.includes("secret"));
+
+    // Re-grant makes it injectable again.
+    await memory.setConsent("secret", { visible: true });
+    const regranted = await memory.recall("favorite color is teal", { topK: 8 });
+    assert.ok(regranted.hits.some((hit) => hit.id === "secret"));
+
+    // Strict mode drops consent-less entries; default mode keeps them.
+    const vectorStore = createMemoryVectorStore();
+    await vectorStore.upsert([
+      { tenantId: "t1", resourceId: "u1", threadId: "th-strict", id: "legacy", text: "legacy note", embedding: [1, 0], sequence: 1, createdAt: new Date().toISOString() },
+    ]);
+    const strictMemory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-strict",
+      embedder: createHashEmbedder({ dimensions: 2 }),
+      vectorStore,
+      requireConsent: true,
+    });
+    const lenientMemory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-strict",
+      embedder: createHashEmbedder({ dimensions: 2 }),
+      vectorStore,
+    });
+    assert.equal((await strictMemory.recall("legacy note", { topK: 4 })).hits.length, 0);
+    assert.equal((await lenientMemory.recall("legacy note", { topK: 4 })).hits.length, 1);
+  });
 });

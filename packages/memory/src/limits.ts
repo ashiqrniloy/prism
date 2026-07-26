@@ -26,6 +26,10 @@ export const HARD_MAX_ENTRY_TEXT_CHARS_CAP = 64_384;
 export const DEFAULT_MAX_WORKING_MEMORY_BYTES = 32 * 1024;
 export const HARD_MAX_WORKING_MEMORY_BYTES_CAP = 256 * 1024;
 
+/** Retention sweeps delete in bounded batches (no full-corpus scan per run). */
+export const DEFAULT_MEMORY_RETENTION_BATCH = 500;
+export const HARD_MEMORY_RETENTION_BATCH_CAP = 5_000;
+
 export interface MemoryLimits {
   readonly topK: number;
   readonly messageRange: number;

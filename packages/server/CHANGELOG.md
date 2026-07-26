@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Durable user-scoped conversation service (`createConversationService`/`createConversationHandler`) and durable artifact service with review/approval/authorized delivery links (`createArtifactService`/`createArtifactHandler`) (Plan 077 Tasks 1, 3).
+
 ## [0.0.13] - 2026-07-24
 
 ### Changed

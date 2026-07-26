@@ -35,4 +35,6 @@ Defaults / hard: request and event 64 KiB / 1 MiB; replay 100 / 500 records; que
 
 Authorize every AG-UI or ACP operation. Bind untrusted protocol selectors to host ownership; persist run correlation before exposing interruption; keep secret redaction active; default-deny sensitive projection. This package is not A2A, a TUI, a desktop app, or a credential provider.
 
+0.0.14 co-work events: `mapCoWork()` (+ ACP `mapCoWork()` parity) projects artifact progress/approval/download-link, connector drafts, and redacted browser snapshots into named `CUSTOM` events over the existing durable-resume stream; `projectCoWorkEvent()` validates/host-projects/redacts/byte-caps each event (malformed/oversized fail closed to nothing). No local paths, raw tool args/results, or secrets are exposed.
+
 Full contract and runnable offline example: [`docs/ag-ui.md`](../../docs/ag-ui.md), [`examples/ag-ui-server.ts`](../../examples/ag-ui-server.ts).

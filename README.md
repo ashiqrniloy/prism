@@ -17,7 +17,7 @@ packages. Prism defines contracts, not apps.
   OpenAI/OpenRouter use best-effort explicit cache hints, NeuralWatt uses
   best-effort implicit prefix caching, and other providers have route/model-specific
   or no cache-control support; see [docs/provider-caching.md](docs/provider-caching.md).
-- **First-party packages**: six provider adapters, two compaction strategies,
+- **First-party packages**: fourteen provider adapters, two compaction strategies,
   coding tools/security, JSON Schema validation, MCP, workflows, OpenTelemetry,
   encrypted credentials, SQLite/PostgreSQL persistence, and manifest-only install profiles.
 - **Tools, context, skills**: host-owned tool registry with allow/deny filtering
@@ -34,6 +34,10 @@ packages. Prism defines contracts, not apps.
 - **Config, settings, security**: layered config merge, settings providers,
   credential resolvers, trust/permission policies, and secret redaction.
 - **CLI/RPC/server**: `prism --mode print|json|rpc`, `prism init`, optional framework-free authorized Web agent/workflow routes, and explicit MCP server exposure.
+- **Co-work contracts (0.0.14)**: conversation thread and artifact/review types, a
+  deny-by-default device-adapter contract (`resolveDevicePolicy`/`assertDeviceAdmit`),
+  and OAuth refresh/revoke helpers; services ship in `@arnilo/prism-server` and
+  `@arnilo/prism-credentials-node`.
 
 ## Install
 
@@ -150,6 +154,8 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-provider-zai` | ZAI GLM provider |
 | `@arnilo/prism-provider-kimi` | Kimi For Coding provider |
 | `@arnilo/prism-provider-neuralwatt` | NeuralWatt provider with implicit vLLM prefix caching |
+| `@arnilo/prism-provider-alibaba` | Alibaba Cloud (Model Studio / DashScope + Coding Plan) provider with dynamic discovery and explicit/implicit caching |
+| `@arnilo/prism-provider-ollama` | Ollama Cloud / local provider with dynamic discovery and implicit-only caching |
 | `@arnilo/prism-compaction-llm` | provider-backed compaction strategy |
 | `@arnilo/prism-compaction-observational-memory` | source-backed memory + recall tool |
 | `@arnilo/prism-coding-agent` | bounded shell/read/write/edit tools |
@@ -163,7 +169,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-credentials-node` | encrypted-file and keychain credentials |
 | `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases/owned run feedback |
 | `@arnilo/prism-session-store-postgres` | PostgreSQL persistence/checkpoints/leases/owned run feedback |
-| `@arnilo/prism-providers` | family: all 7 provider adapters, including AI SDK interoperability |
+| `@arnilo/prism-providers` | family: all 11 provider adapters, including AI SDK interoperability |
 | `@arnilo/prism-compaction` | family: both compaction strategies |
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |

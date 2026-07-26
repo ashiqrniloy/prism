@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Verified-state checkpoint ledger (`createBrowserCheckpointLedger`) with reload/verify-before-side-effect and frozen per-run caps (Plan 077 Task 6).
+
 ## [0.0.13] - 2026-07-24
 
 ### Changed

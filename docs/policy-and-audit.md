@@ -123,5 +123,6 @@ Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permi
 - [Agent identity](agent-identity.md)
 - [Guardrails](guardrails.md)
 - [Runs and usage ledger](runs-and-usage.md)
+- [Workflows](workflows.md): proactive schedule capability enable/revoke events bridge here via `onCapability`.
 - [Host security](host-security.md)
 - Package README: [`@arnilo/prism-policy`](../packages/policy/README.md)

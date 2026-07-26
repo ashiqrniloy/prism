@@ -137,6 +137,8 @@ Compose beside `createPrismHandler` — Prism starts no listener, container orch
 | `rateLimit` on handler | Host adapter after authorize, before session create. Return denial `{ retryAfterMs, code, message }` → `429` + optional `Retry-After`. `createMemoryRateLimiter` is single-process only. |
 | `createPrismEventReplay` / `createPrismReplayHandler` | Ownership-scoped `queryEvents` pages (`redacted: true`). Does not re-run work. Unauthorized replay denies. |
 | `createPrismDeploymentLease` | Lease election under `prism.server.deployment`. Coordinator replica holds `key: "coordinator"` before schedule ticks; workers run `@arnilo/prism-workflows` `createWorkflowCoordinator` for queued runs (fencing tokens). |
+| `createConversationService` / `createConversationHandler` | Durable user-scoped conversation threads (create/list/continue/branch/archive/export/delete) over session + event-ledger seams, with thread-bound reconnectable replay. Mounts beside the handler; see [Conversations](conversations.md). |
+| `createArtifactService` / `createArtifactHandler` | Durable artifact co-work review (attach/revise/compare/approve/reject/last-validated/delivery-link + authorized download) over the versioned checkpoint store; records persist metadata/revisions/approvals only, never file bodies. Mounts beside the handler; see [Work artifacts and review](work-artifacts-and-review.md). |
 
 **Queues:** Redis/SQS/other adapters are absent. Postgres checkpoint polling via `createWorkflowCoordinator` remains the default background path until a measured polling/load justification is recorded.
 
@@ -168,5 +170,7 @@ A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-super
 - [MCP client and server exposure](mcp-tools.md): selected MCP capabilities and web-standard MCP transport.
 - [Host security guide](host-security.md): remote-boundary checklist.
 - [A2A interoperability](a2a.md): separately mounted A2A 1.0 handler/client.
+- [Conversations](conversations.md): durable user-scoped conversation service, replay, branches, export, deletion.
+- [Work artifacts and review](work-artifacts-and-review.md): durable artifact review service, revisions, approvals, authorized expiring delivery links.
 - [Frontend interoperability (AG-UI and ACP)](ag-ui.md): separately installed authorized AG-UI Web handler; it is not a `@arnilo/prism-server` route.
 - [Release and install](release-and-install.md): optional package installation and profiles.

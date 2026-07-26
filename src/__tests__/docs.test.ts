@@ -57,6 +57,7 @@ const apiPages = [
   "docs/coding-agent-tools.md",
   "docs/coding-security.md",
   "docs/browser-automation.md",
+  "docs/device-adapters.md",
   "docs/mcp-tools.md",
   "docs/node-filesystem-config.md",
   "docs/node-jsonl-session-store.md",
@@ -67,6 +68,7 @@ const apiPages = [
   "docs/host-security.md",
   "docs/cli-rpc.md",
   "docs/workflows.md",
+  "docs/work-artifacts-and-review.md",
   "docs/release-and-install.md",
   "docs/performance.md",
   "docs/migration.md",
@@ -78,6 +80,8 @@ const providerPackagePages: ReadonlyArray<[string, string]> = [
   ["docs/providers/openrouter.md", "packages/provider-openrouter/src/index.ts"],
   ["docs/providers/zai.md", "packages/provider-zai/src/index.ts"],
   ["docs/providers/kimi.md", "packages/provider-kimi/src/index.ts"],
+  ["docs/providers/alibaba.md", "packages/provider-alibaba/src/index.ts"],
+  ["docs/providers/ollama.md", "packages/provider-ollama/src/index.ts"],
   ["docs/providers/neuralwatt.md", "packages/provider-neuralwatt/src/index.ts"],
   ["docs/providers/ai-sdk.md", "packages/provider-ai-sdk/src/index.ts"],
   ["docs/providers/azure.md", "packages/provider-azure/src/index.ts"],
@@ -215,7 +219,7 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 77, "numbered plan count drifted");
+    assert.equal(plans.length, 78, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
@@ -479,6 +483,137 @@ describe("docs", () => {
     assert.ok(existsSync("packages/work-tools/src/normalize.ts"), "shared work-tools normalizers missing");
   });
 
+  it("phase 9 evidence freezes conversations, artifacts, consent, co-work, device gating, and 0.1.x exclusions", () => {
+    const evidence = readFileSync("docs/review-coverage-2026-07-25-phase-9.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const phase9 = roadmap.slice(
+      roadmap.indexOf("Phase 9 — Release 0.0.14"),
+      roadmap.indexOf("Phase 10 — Release 0.0.15"),
+    );
+
+    for (const heading of [
+      "## Frozen external revisions",
+      "## Frozen package and API contract",
+      "## Capability traceability matrix",
+      "## Primitive and caller inventory",
+      "## Frozen finite limits and charging points",
+      "## Channel and device capability freeze",
+      "## Threat and authority matrix",
+      "## Validation matrix for Task 0",
+    ]) assert.ok(evidence.includes(heading), `Phase 9 evidence missing ${heading}`);
+    for (let task = 1; task <= 8; task += 1) {
+      assert.ok(evidence.includes(`Task ${task}`), `Phase 9 evidence missing Task ${task} owner`);
+    }
+    for (const token of [
+      "@arnilo/prism-server",
+      "@arnilo/prism-memory",
+      "@arnilo/prism-ag-ui",
+      "@arnilo/prism-credentials-node",
+      "@arnilo/prism-work-tools",
+      "@arnilo/prism-browser",
+      "MemoryScope",
+      "AgentIdentity",
+      "IdempotencyStore",
+      "resumeAgentRunStream",
+      "queryEvents",
+      "tool_approval",
+      "EventSchemas",
+      "41 → 43",
+      "disabled by default",
+      "expiring",
+      "Verify before side effect",
+      "gate 8",
+    ]) assert.ok(evidence.includes(token), `Phase 9 evidence missing frozen token ${token}`);
+    for (const deferred of [
+      "Studio",
+      "Slack/Teams",
+      "Local Office",
+      "WorkAgent",
+      "second memory runtime",
+      "serialized browser internals",
+    ]) {
+      assert.ok(evidence.includes(deferred), `Phase 9 evidence missing out-of-scope item ${deferred}`);
+    }
+    assert.ok(phase9.includes("durable conversation service") && phase9.includes("artifact service"), "Phase 9 roadmap missing core criteria");
+    assert.ok(phase9.includes("disabled by default"), "Phase 9 roadmap missing device gating criterion");
+    // Scope guard: no new channel/device/conversation/artifact packages may exist in 0.0.14 (41 → 43 freeze; only provider packages alibaba/ollama authorized).
+    for (const forbidden of [
+      "packages/conversations",
+      "packages/artifacts",
+      "packages/voice",
+      "packages/desktop",
+      "packages/slack",
+      "packages/teams",
+    ]) {
+      assert.ok(!existsSync(forbidden), `Phase 9 scope guard violated: ${forbidden} must not exist`);
+    }
+    for (const seam of [
+      "packages/ag-ui/src/handler.ts",
+      "packages/memory/src/memory.ts",
+      "packages/browser/src/policy.ts",
+      "packages/work-tools/src/idempotency.ts",
+      "packages/credentials-node/src/resolver.ts",
+      "packages/server/src/replay.ts",
+    ]) {
+      assert.ok(existsSync(seam), `Phase 9 must extend existing seam: ${seam}`);
+    }
+    assert.ok(index.includes("(review-coverage-2026-07-25-phase-9.md)"), "docs/index.md missing Phase 9 review coverage link");
+  });
+
+  it("task 5 scope guard: no Slack/Teams chat-channel packages, exports, or docs pages (demand-gated)", () => {
+    // Chat-channel adapters are deferred until web/AG-UI demand is measured. (The M365
+    // `teams` capability op is a separate, gated workload op and is not a channel adapter.)
+    for (const dir of ["packages/slack", "packages/teams", "docs/slack.md", "docs/teams.md"]) {
+      assert.ok(!existsSync(dir), `Slack/Teams channel surface must not ship in 0.0.14: ${dir}`);
+    }
+    for (const barrel of ["packages/credentials-node/src/index.ts", "packages/work-tools/src/index.ts"]) {
+      const text = readFileSync(barrel, "utf8").toLowerCase();
+      assert.ok(!text.includes("slack"), `${barrel} must not export a Slack channel adapter`);
+      assert.ok(!/teams(?!.*capability)/i.test(readFileSync(barrel, "utf8")), `${barrel} must not export a Teams channel adapter`);
+    }
+    const index = readFileSync("docs/index.md", "utf8").toLowerCase();
+    assert.ok(!index.includes("(slack.md)") && !index.includes("(teams.md)"), "docs/index.md must not link a Slack/Teams channel page");
+  });
+
+  it("task 6 scope guard: device contracts + browser checkpoint ship; voice/desktop vendor packages deferred", () => {
+    // Contracts + deny-by-default policy only; vendor implementations demand-gated to 0.1.x.
+    assert.ok(existsSync("src/devices.ts"), "device adapter contract must ship");
+    assert.ok(existsSync("packages/browser/src/checkpoint.ts"), "browser verified-state checkpoint seam must ship");
+    const devices = readFileSync("src/devices.ts", "utf8");
+    assert.ok(devices.includes("deny-by-default") || devices.includes("disabled by default"), "device contract must be deny-by-default");
+    for (const dir of ["packages/voice", "packages/desktop", "packages/device"]) {
+      assert.ok(!existsSync(dir), `voice/desktop vendor package must not ship in 0.0.14: ${dir}`);
+    }
+  });
+
+  it("phase 9 task 7 docs cover migration, performance placeholder, examples, and explicit deferrals", () => {
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const token of [
+      "0.0.13 → 0.0.14",
+      "createConversationService",
+      "createArtifactService",
+      "revokeOAuthCredential",
+      "createBrowserCheckpointLedger",
+      "resolveDevicePolicy",
+      "gate 8",
+      "IdentityVerifier",
+    ]) {
+      assert.ok(migration.includes(token), `migration.md missing Task 7 token ${token}`);
+    }
+    // Explicit 0.0.15/0.1.x deferrals.
+    for (const deferred of ["Slack/Teams", "desktop-control vendor", "memory production conformance"]) {
+      assert.ok(migration.includes(deferred), `migration.md missing deferral ${deferred}`);
+    }
+    assert.ok(performance.includes("benchmark-0.0.14.mjs"), "performance.md missing 0.0.14 benchmark placeholder");
+    for (const example of ["conversation-durable-replay.ts", "artifact-review-delivery.ts"]) {
+      assert.ok(existsSync(join("examples", example)), `missing examples/${example}`);
+      assert.ok(index.includes(example), `docs/index.md missing examples/${example}`);
+    }
+  });
+
   it("phase 8 task 9 docs cover migration, performance benchmark placeholder, and enterprise examples", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     const performance = readFileSync("docs/performance.md", "utf8");
@@ -494,7 +629,7 @@ describe("docs", () => {
     }
     assert.ok(performance.includes("benchmark-0.0.13.mjs"), "performance.md missing 0.0.13 benchmark placeholder");
     assert.ok(release.includes("@arnilo/prism-work-tools"), "release-and-install.md missing work-tools");
-    assert.ok(release.includes("41"), "release-and-install.md missing 41-package count");
+    assert.ok(release.includes("43"), "release-and-install.md missing 43-package count");
     for (const example of [
       "enterprise-identity.ts",
       "enterprise-policy-audit.ts",
@@ -637,7 +772,7 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 41, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 43, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -1146,12 +1281,12 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.13 publish handoff"), docs.indexOf("### 0.0.12 publish handoff"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.14 publish handoff"), docs.indexOf("### 0.0.13 publish handoff"));
     for (const phrase of [
       "Decision: GO",
-      "41 manifests",
-      "git tag -s v0.0.13",
-      "git push origin v0.0.13",
+      "43 manifests",
+      "git tag -s v0.0.14",
+      "git push origin v0.0.14",
       "Re-run failed jobs",
       "npm audit signatures --json --include-attestations",
       "Rollback limitations",
@@ -1605,10 +1740,12 @@ describe("docs", () => {
       "@arnilo/prism-provider-zai",
       "@arnilo/prism-provider-kimi",
       "@arnilo/prism-provider-neuralwatt",
+      "@arnilo/prism-provider-alibaba",
+      "@arnilo/prism-provider-ollama",
     ]) {
       assert.ok(readme.includes(pkg), `README.md does not mention ${pkg}`);
     }
-    for (const phrase of ["docs/provider-caching.md", "best-effort explicit cache hints", "best-effort implicit prefix caching", "all 7 provider adapters"]) {
+    for (const phrase of ["docs/provider-caching.md", "best-effort explicit cache hints", "best-effort implicit prefix caching", "all 11 provider adapters"]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
     assert.equal(/guaranteed cache hit|will always cache|cache will hit/i.test(readme), false, "README.md promises cache hits");
@@ -1766,9 +1903,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, thirty-four first-party capability packages, and six pure-manifest family/profile packages",
-      "all nine `@arnilo/prism-provider-*` packages",
-      "All 41 manifests (35 code packages + 6 family/profile packages)",
+      "one core package, thirty-six first-party capability packages, and six pure-manifest family/profile packages",
+      "all eleven `@arnilo/prism-provider-*` packages",
+      "All 43 manifests (37 code packages + 6 family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -2310,6 +2447,8 @@ describe("docs", () => {
       "@arnilo/prism-provider-kimi",
       "@arnilo/prism-provider-neuralwatt",
       "@arnilo/prism-provider-ai-sdk",
+      "@arnilo/prism-provider-alibaba",
+      "@arnilo/prism-provider-ollama",
     ]) {
       assert.ok(caching.includes(pkg), `provider-caching.md matrix missing ${pkg}`);
     }
@@ -2498,7 +2637,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 41, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 43, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

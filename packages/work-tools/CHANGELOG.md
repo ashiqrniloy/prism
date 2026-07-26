@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Optional per-identity `tokenProvider` on the M365/GWS CLI adapters: tokens resolved late-bound and injected via env (never argv), fail-closed on missing/expired/revoked/cross-identity/wrong-tenant credentials (Plan 077 Task 5).
+
 ## [0.0.13] - 2026-07-24
 
 ### Changed

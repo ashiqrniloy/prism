@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.14] - 2026-07-26
+
+### Added
+
+- Memory consent + lifecycle: consent stamping on index, a `recall()` consent filter, and `setConsent`/`correct`/`forget`/`applyRetention` (Plan 077 Task 2).
+
 ## [0.0.13] - 2026-07-24
 
 ### Changed

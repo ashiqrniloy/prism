@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import {
   SessionAppendConflictError,
+  assertSessionMetadataKey,
   prepareRunFeedback,
   requireRunFeedbackOwnership,
   runFeedbackPageLimit,
@@ -32,6 +33,7 @@ import {
   type SessionEntry,
   type SessionEntryQuery,
   type SessionQuery,
+  type SessionRecord,
   type SessionSearchHit,
   type SessionSearchQuery,
   type SessionStore,
@@ -102,6 +104,16 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     `INSERT INTO prism_sessions (id, created_at, updated_at)
      VALUES (?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at`,
+  );
+  const upsertSessionRecord = db.prepare(
+    `INSERT INTO prism_sessions (
+      id, tenant_id, account_id, user_id, parent_session_id,
+      agent_definition_id, agent_definition_version, created_at, updated_at,
+      expires_at, retention_policy_id, metadata
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      updated_at = excluded.updated_at,
+      metadata = excluded.metadata`,
   );
   const selectParent = db.prepare(
     `SELECT 1 FROM prism_session_entries WHERE id = ? AND session_id = ? LIMIT 1`,
@@ -438,7 +450,34 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     async querySessions(query: SessionQuery): Promise<PersistencePage<ReturnType<typeof rowToSessionRecord>>> {
-      return queryTable(db, "prism_sessions", query, [], mapSessionRow);
+      const filters: string[] = [];
+      const params: unknown[] = [];
+      if (query.id) {
+        filters.push("id = ?");
+        params.push(query.id);
+      }
+      if (query.metadataKey !== undefined) {
+        filters.push("json_extract(metadata, ?) IS NOT NULL");
+        params.push(`$.${assertSessionMetadataKey(query.metadataKey)}`);
+      }
+      return queryTable(db, "prism_sessions", query, filters, mapSessionRow, params);
+    },
+
+    async appendSession(record: SessionRecord): Promise<void> {
+      upsertSessionRecord.run(
+        record.id,
+        record.tenantId ?? null,
+        record.accountId ?? null,
+        record.userId ?? null,
+        record.parentSessionId ?? null,
+        record.agentDefinitionId ?? null,
+        record.agentDefinitionVersion ?? null,
+        record.createdAt,
+        record.updatedAt,
+        record.expiresAt ?? null,
+        record.retentionPolicyId ?? null,
+        record.metadata === undefined ? null : JSON.stringify(record.metadata),
+      );
     },
 
     async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {

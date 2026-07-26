@@ -72,5 +72,27 @@
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createNeuralWattProvider,\n  defineNeuralWattModel,\n} from \"@arnilo/prism-provider-neuralwatt\";",
     "providerExpression": "createNeuralWattProvider({\n    apiKey: () => process.env.NEURALWATT_API_KEY,\n  })",
     "modelExpression": "defineNeuralWattModel({\n    model: \"glm-5.2\",\n    cache: { kind: \"implicit\" },\n  })"
+  },
+  "alibaba": {
+    "id": "alibaba",
+    "packageName": "@arnilo/prism-provider-alibaba",
+    "envKey": "DASHSCOPE_API_KEY",
+    "envPlaceholder": "sk-...",
+    "modelProvider": "alibaba",
+    "modelName": "qwen-plus",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createAlibabaProvider,\n  defineAlibabaModel,\n} from \"@arnilo/prism-provider-alibaba\";",
+    "providerExpression": "createAlibabaProvider({\n    apiKey: () => process.env.DASHSCOPE_API_KEY,\n  })",
+    "modelExpression": "defineAlibabaModel({ model: \"qwen-plus\" })"
+  },
+  "ollama": {
+    "id": "ollama",
+    "packageName": "@arnilo/prism-provider-ollama",
+    "envKey": "OLLAMA_API_KEY",
+    "envPlaceholder": "your-ollama-api-key",
+    "modelProvider": "ollama",
+    "modelName": "gpt-oss:20b",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createOllamaProvider,\n  defineOllamaModel,\n} from \"@arnilo/prism-provider-ollama\";",
+    "providerExpression": "createOllamaProvider({\n    apiKey: () => process.env.OLLAMA_API_KEY,\n  })",
+    "modelExpression": "defineOllamaModel({ model: \"gpt-oss:20b\" })"
   }
 }

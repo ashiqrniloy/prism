@@ -6,7 +6,8 @@ import { parseAgUiInput, type ParsedAgUiInput } from "./input.js";
 import { resolveAgUiLimits, type AgUiLimitOptions, type ResolvedAgUiLimits } from "./limits.js";
 import type { AgUiProjection } from "./projection.js";
 import type { AgUiReplay, AgUiReplayRequest } from "./replay.js";
-import type { AgUiAuthorization, AgUiRunReference } from "./types.js";
+import type { CoWorkReplay } from "./replay.js";
+import type { AgUiAuthorization, AgUiRunReference, CoWorkContext } from "./types.js";
 
 const SSE_HEADERS = { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-transform", connection: "keep-alive" };
 
@@ -34,6 +35,10 @@ export interface CreateAgUiHandlerOptions<Authorization extends AgUiAuthorizatio
   readonly redactor?: SecretRedactor;
   readonly projection?: AgUiProjection;
   readonly limits?: AgUiLimitOptions;
+  /** Resolves thread/artifact/identity co-work context from an authorized request. */
+  readonly coWorkContext?: (input: ParsedAgUiInput, authorization: Authorization) => CoWorkContext | undefined;
+  /** Optional durable co-work source; one bounded page is projected after the run stream. */
+  readonly coWork?: CoWorkReplay<Authorization>;
 }
 
 /** Framework-free, host-authorized AG-UI Web handler. */
@@ -48,14 +53,14 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
       const authorization = await options.authorize({ request, threadId: input.threadId, runId: input.parentRunId ?? input.runId, signal: owned.signal });
       if (!authorization) return complete(owned, failure(403, "ERR_PRISM_AG_UI_FORBIDDEN", "Forbidden"));
 
-      if (input.resume.length > 0) return sse(await resumeSource(input, authorization, options, limits, owned.signal), owned, limits);
+      if (input.resume.length > 0) return sse(withCoWork(await resumeSource(input, authorization, options, limits, owned.signal), input, authorization, options, limits, owned.signal), owned, limits);
       const cursor = new URL(request.url).searchParams.get("cursor") ?? undefined;
       if (cursor !== undefined) {
         if (!options.replay) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay is not configured");
-        return sse(replaySource(input, cursor, authorization, options, limits, owned.signal), owned, limits);
+        return sse(withCoWork(replaySource(input, cursor, authorization, options, limits, owned.signal), input, authorization, options, limits, owned.signal), owned, limits);
       }
       if (input.userText === undefined) throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "A user message is required");
-      return sse(startSource(input, authorization, options, limits, owned.signal), owned, limits);
+      return sse(withCoWork(startSource(input, authorization, options, limits, owned.signal), input, authorization, options, limits, owned.signal), owned, limits);
     } catch (error) {
       owned.dispose();
       return errorResponse(error);
@@ -161,6 +166,26 @@ function mapperFor<Authorization extends AgUiAuthorization>(input: ParsedAgUiInp
     runId: () => input.runId,
   };
   return createAgUiEventMapper(mapperOptions);
+}
+
+/**
+ * Appends one bounded, redacted co-work page after the run stream. Pure read + map, so
+ * resume/replay projects co-work state without duplicate side effects.
+ */
+async function* withCoWork<Authorization extends AgUiAuthorization>(
+  base: AsyncIterable<AGUIEvent>,
+  input: ParsedAgUiInput,
+  authorization: Authorization,
+  options: CreateAgUiHandlerOptions<Authorization>,
+  limits: ResolvedAgUiLimits,
+  signal: AbortSignal,
+): AsyncGenerator<AGUIEvent> {
+  yield* base;
+  if (!options.coWork) return;
+  const context = options.coWorkContext?.(input, authorization) ?? { threadId: input.threadId };
+  const mapper = mapperFor(input, options, limits);
+  const page = await options.coWork.page({ context, authorization, signal });
+  for (const event of page.events) yield* mapper.mapCoWork(event);
 }
 
 async function* filterRun(source: AsyncIterable<AgentEvent>, runId: string): AsyncGenerator<AgentEvent> {

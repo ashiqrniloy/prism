@@ -10,6 +10,7 @@ import type {
   WorkCliRunner,
   WorkDraft,
   WorkLimits,
+  WorkTokenProvider,
 } from "./types.js";
 
 /** Default ops enabled without Docs/Sheets/Slides capability gates. */
@@ -219,6 +220,8 @@ export interface GoogleWorkspaceCliAdapterOptions {
   readonly runner?: WorkCliRunner;
   readonly env?: Readonly<Record<string, string>>;
   readonly minVersion?: string;
+  /** Late-bound per-identity token source; undefined token fails the call closed. */
+  readonly tokenProvider?: WorkTokenProvider;
 }
 
 export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapterOptions): GoogleWorkspaceAdapter {
@@ -241,6 +244,15 @@ export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapt
     if (!allowedOps.has(op)) throw new WorkToolError("ERR_PRISM_WORK_CAPABILITY", `Operation ${op} not allowed for this identity`);
   };
 
+  // Resolve the per-identity token env; a configured provider returning undefined means the
+  // credential is missing/expired/revoked, so the call fails closed before any side effect.
+  const tokenEnv = async (signal?: AbortSignal): Promise<Readonly<Record<string, string>> | undefined> => {
+    if (!options.tokenProvider) return undefined;
+    const envVars = await options.tokenProvider.tokenEnv(options.identity, signal);
+    if (!envVars) throw new WorkToolError("ERR_PRISM_WORK_CREDENTIAL", "Connector credential unavailable, expired, or revoked");
+    return envVars;
+  };
+
   return {
     provider: "google-workspace",
     identity: options.identity,
@@ -250,7 +262,7 @@ export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapt
       assertAllowed("version");
       const argv = buildGoogleWorkspaceArgv("version", {});
       assertSafeArgv(argv);
-      const result = await runner.exec(argv, { signal });
+      const result = await runner.exec(argv, { signal, env: await tokenEnv(signal) });
       if (result.exitCode !== 0) throw new WorkToolError("ERR_PRISM_WORK_CLI", `gws version failed: ${result.stderr.slice(0, 200)}`);
       const version = result.stdout.trim() || String(parseCliJson(result.stdout, limits) ?? "");
       if (options.minVersion && version.replace(/^v/, "") < options.minVersion.replace(/^v/, "")) {
@@ -268,7 +280,7 @@ export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapt
       if (Buffer.byteLength(body) > limits.maxRequestBytes) {
         throw new WorkToolError("ERR_PRISM_WORK_LIMIT", "Request body exceeds byte limit");
       }
-      const result = await runner.exec(argv, { signal });
+      const result = await runner.exec(argv, { signal, env: await tokenEnv(signal) });
       if (result.exitCode !== 0) {
         throw new WorkToolError("ERR_PRISM_WORK_CLI", `gws ${op} failed (exit ${result.exitCode})`);
       }

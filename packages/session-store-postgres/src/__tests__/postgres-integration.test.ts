@@ -235,4 +235,58 @@ describeIntegration("createPostgresPersistence integration", () => {
     assert.equal(migrations.items.length, 5);
     await persistence.close();
   });
+
+  it("upserts session records and filters querySessions by id and metadata key under ownership", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    const now = new Date().toISOString();
+
+    await persistence.appendSession!({
+      id: "conv-1",
+      tenantId: "tenant-a",
+      userId: "user-1",
+      createdAt: now,
+      updatedAt: now,
+      metadata: { prismConversation: { state: "active", title: "first" } },
+    });
+    await persistence.appendSession!({
+      id: "conv-2",
+      tenantId: "tenant-a",
+      userId: "user-1",
+      createdAt: now,
+      updatedAt: now,
+      metadata: { prismConversation: { state: "active" } },
+    });
+    await persistence.appendSession!({ id: "plain-1", tenantId: "tenant-a", userId: "user-1", createdAt: now, updatedAt: now });
+
+    // Upsert updates metadata/updatedAt but never ownership columns.
+    await persistence.appendSession!({
+      id: "conv-1",
+      tenantId: "tenant-evil",
+      userId: "user-evil",
+      createdAt: now,
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      metadata: { prismConversation: { state: "archived", title: "updated" } },
+    });
+    const byId = await persistence.querySessions({ id: "conv-1", tenantId: "tenant-a", userId: "user-1" });
+    assert.equal(byId.items.length, 1);
+    assert.equal(byId.items[0]?.tenantId, "tenant-a");
+    assert.equal(byId.items[0]?.userId, "user-1");
+    assert.equal(byId.items[0]?.updatedAt, "2026-01-01T00:00:00.000Z");
+    assert.deepEqual(byId.items[0]?.metadata, { prismConversation: { state: "archived", title: "updated" } });
+
+    const marked = await persistence.querySessions({ tenantId: "tenant-a", userId: "user-1", metadataKey: "prismConversation" });
+    assert.deepEqual(marked.items.map((item) => item.id).sort(), ["conv-1", "conv-2"]);
+
+    const foreign = await persistence.querySessions({ tenantId: "tenant-a", userId: "user-2", metadataKey: "prismConversation" });
+    assert.equal(foreign.items.length, 0);
+
+    await assert.rejects(
+      () => persistence.querySessions({ tenantId: "tenant-a", metadataKey: "bad\"'; DROP TABLE prism_sessions;--" }),
+      RangeError,
+    );
+
+    await persistence.close();
+  });
 });

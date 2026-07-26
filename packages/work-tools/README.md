@@ -47,7 +47,7 @@ Hard-coded GWS ops (docs-verified): Gmail list/get/+send, Calendar list/insert, 
 
 Shared normalizers map both providers onto `WorkMailMessage` / `WorkCalendarEvent` / `WorkFileItem` / `WorkTaskItem`.
 
-Mutations create drafts first; CLI side effects run only after `approval.isApproved`. Credentials never appear in argv.
+Mutations create drafts first; CLI side effects run only after `approval.isApproved`. Credentials never appear in argv. Optionally pass a `tokenProvider` (0.0.14, e.g. `createOAuthWorkTokenProvider()` from `@arnilo/prism-credentials-node`) to inject a late-bound per-identity token via env var per call — never argv/model context; a missing/expired/revoked/cross-identity token fails the call closed before any exec.
 
 ## Limits
 

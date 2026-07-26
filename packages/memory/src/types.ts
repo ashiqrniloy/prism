@@ -8,6 +8,43 @@ export interface MemoryScope {
   readonly threadId?: string;
 }
 
+/** Who created a memory entry. */
+export type MemoryConsentSource = "user" | "agent" | "system";
+
+/** Visibility/control granularity: per-thread, per-profile (resource), or per-user. */
+export type MemoryConsentScope = "thread" | "profile" | "user";
+
+/**
+ * Consent/source/visibility controls carried on every entry and enforced at
+ * recall/injection time. `visible: false` (or a revoked grant) keeps the entry
+ * out of prompts, events, exports, and telemetry.
+ */
+export interface MemoryConsent {
+  readonly source: MemoryConsentSource;
+  readonly scope: MemoryConsentScope;
+  readonly visible: boolean;
+  readonly grantedAt?: string;
+  readonly revokedAt?: string;
+}
+
+/** Partial consent for grant/update; unset fields keep prior values or defaults. */
+export interface MemoryConsentInput {
+  readonly source?: MemoryConsentSource;
+  readonly scope?: MemoryConsentScope;
+  readonly visible?: boolean;
+}
+
+export interface MemoryRetentionPolicy {
+  readonly maxAgeDays?: number;
+  readonly maxEntries?: number;
+  readonly batchSize?: number;
+}
+
+export interface MemoryRetentionResult {
+  readonly deleted: number;
+  readonly scanned: number;
+}
+
 export interface Embedder {
   readonly dimensions: number;
   embed(
@@ -25,6 +62,7 @@ export interface MemoryVectorRecord {
   readonly embedding: readonly number[];
   readonly sequence: number;
   readonly metadata?: JsonObject;
+  readonly consent?: MemoryConsent;
   readonly createdAt: string;
 }
 
@@ -82,6 +120,7 @@ export interface MemoryEntryInput {
   readonly id: string;
   readonly text: string;
   readonly metadata?: JsonObject;
+  readonly consent?: MemoryConsentInput;
   readonly sequence?: number;
   readonly createdAt?: string;
 }
@@ -105,6 +144,8 @@ export interface RememberResult {
 export interface RecallOptions {
   readonly topK?: number;
   readonly messageRange?: number;
+  /** When true, entries without explicit consent are excluded (strict mode). */
+  readonly requireConsent?: boolean;
   readonly signal?: AbortSignal;
 }
 
@@ -125,6 +166,8 @@ export interface CreateMemoryOptions extends MemoryScope {
   readonly workingMemoryTemplate?: string;
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
+  /** Strict mode: recall/injection excludes entries lacking explicit consent. */
+  readonly requireConsent?: boolean;
 }
 
 export interface MemoryContextProviderOptions {
@@ -153,6 +196,14 @@ export interface Memory {
   renderWorking(template?: string): Promise<string | undefined>;
   remember(input: RememberInput, options?: RememberOptions): Promise<RememberResult>;
   recall(query: string, options?: RecallOptions): Promise<RecallResult>;
+  /** Grant/update consent on an existing entry (no re-embed). */
+  setConsent(entryId: string, consent: MemoryConsentInput, options?: { readonly signal?: AbortSignal }): Promise<MemoryVectorRecord>;
+  /** Correct an entry's text (re-embeds, preserves id/sequence/metadata/consent). */
+  correct(entryId: string, text: string, options?: { readonly signal?: AbortSignal }): Promise<MemoryVectorRecord>;
+  /** Real delete of entries (all in thread when no ids given). Returns removed count. */
+  forget(filter?: { readonly ids?: readonly string[] }, options?: { readonly signal?: AbortSignal }): Promise<number>;
+  /** Bounded retention sweep: real-deletes oldest entries past age/count caps. */
+  applyRetention(policy: MemoryRetentionPolicy, options?: { readonly signal?: AbortSignal }): Promise<MemoryRetentionResult>;
   createContextProvider(options?: MemoryContextProviderOptions): import("@arnilo/prism").ContextProvider;
   createWorkingMemoryProcessor(options: WorkingMemoryProcessorOptions): {
     process(messages: readonly Message[], options?: { readonly signal?: AbortSignal }): Promise<WorkingMemoryRecord | undefined>;

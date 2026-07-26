@@ -81,5 +81,6 @@ Numbered plans are immutable implementation records. Current release status live
 | [074-release-0-0-11-coding-harness-fundamentals.md](074-release-0-0-11-coding-harness-fundamentals.md) | Phase 6 / Release 0.0.11 — Coding Harness Fundamentals (P1); Tasks 0–13 complete (released graph pending operator tag) |
 | [075-release-0-0-12-coding-harness-interoperability.md](075-release-0-0-12-coding-harness-interoperability.md) | Phase 7 / Release 0.0.12 — Coding Harness Interoperability (P2) |
 | [076-release-0-0-13-enterprise-identity-policy-governance-work-connectors.md](076-release-0-0-13-enterprise-identity-policy-governance-work-connectors.md) | Phase 8 / Release 0.0.13 — Enterprise identity, policy, provider governance, and work connectors |
+| [077-release-0-0-14-personal-work-agent-conversations-co-work-review-channels.md](077-release-0-0-14-personal-work-agent-conversations-co-work-review-channels.md) | Phase 9 / Release 0.0.14 — Personal/work-agent conversations, co-work review, and channel/device expansion |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

@@ -72,6 +72,10 @@ Important shapes:
 | `RetentionPolicy` | Policy with `maxAgeDays`, `maxEntriesPerSession`, `maxTotalBytes`, `archiveStore`, and `appliedKinds`. |
 | `MigrationRecord` | Applied migration with name, version, timestamp, checksum, and applied-by. |
 
+Optional session-record write seam (0.0.14): `appendSession?(record: SessionRecord)` upserts a session row — ownership columns are set on create only, `metadata`/`updatedAt` on update — so hosts (e.g. the [conversation service](conversations.md)) can durably mark and title sessions without entry writes. `SessionQuery` gained two bounded filters for the same seam: `id` (exact session lookup) and `metadataKey` (sessions whose `metadata` object contains a top-level key, validated by `assertSessionMetadataKey`). SQLite implements it with `json_extract`, PostgreSQL with a `jsonb` existence check; both keep ownership filtering intact.
+
+Artifact co-work review (0.0.14) reuses the generic `CheckpointStore` rather than adding a dedicated table: the [artifact service](work-artifacts-and-review.md) stores each artifact as a versioned checkpoint value (namespace `prism.artifact`, key `threadId:artifactId`, category `artifact`). The checkpoint `version` is the compare-and-swap counter that resolves concurrent reviewers; revision numbers, approvals, and `lastValidatedVersion` live inside the JSON value. SQLite/Postgres already persist checkpoints durably, so there is no separate artifact schema or migration, and records carry metadata/hashes/refs only — never file bodies.
+
 ## Outputs / response / events
 
 Each `query*` method returns a `PersistencePage<T>`:
@@ -338,7 +342,7 @@ A retention policy is a host-managed rule attached to sessions via `retention_po
 
 ```ts
 await store.lifecycle.putLegalHold({ tenantId, userId, resourceKind: "session", resourceId, reason });
-await store.lifecycle.applyRetention({ tenantId, userId, policy, candidates }); // hold wins over delete
+await store.lifecycle.applyRetention({ tenantId, userId, policy, candidates }); // hold wins over delete; SQL adapters purge the whole session ledger (entries, runs, events, tool calls, usage, branches, search rows) in FK order
 await store.lifecycle.exportUnderHold({ tenantId, userId, cursor, limit }); // redacted
 await store.lifecycle.setTenantQuota({ tenantId, userId, resourceKind: "run", limit: 100 });
 await store.lifecycle.consumeTenantQuota({ tenantId, userId, resourceKind: "run" }); // fails closed when exhausted

@@ -921,6 +921,8 @@ export interface OAuthProvider {
   readonly id: string;
   login(callbacks?: OAuthLoginCallbacks): Promise<OAuthCredentials> | OAuthCredentials;
   refresh?(credentials: OAuthCredentials): Promise<OAuthCredentials> | OAuthCredentials;
+  /** Best-effort upstream revocation; the store delete is what fails closed locally. */
+  revoke?(credentials: OAuthCredentials): Promise<void> | void;
   getCredential?(credentials: OAuthCredentials): Promise<Credential | undefined> | Credential | undefined;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -1581,15 +1583,28 @@ export interface MigrationRecord {
 
 /** Query for sessions. */
 export interface SessionQuery extends PersistenceQuery, OwnershipScope {
+  readonly id?: string;
   readonly parentSessionId?: string;
   readonly agentDefinitionId?: string;
   readonly agentDefinitionVersion?: string;
   readonly retentionPolicyId?: string;
+  /** Match sessions whose `metadata` object contains this top-level key (e.g. conversation marker). */
+  readonly metadataKey?: string;
   readonly fromCreatedAt?: string;
   readonly toCreatedAt?: string;
   readonly fromUpdatedAt?: string;
   readonly toUpdatedAt?: string;
   readonly hasExpired?: boolean;
+}
+
+const SESSION_METADATA_KEY_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
+
+/** Validate a top-level `SessionRecord.metadata` key used by `SessionQuery.metadataKey` filters. */
+export function assertSessionMetadataKey(key: string): string {
+  if (typeof key !== "string" || !SESSION_METADATA_KEY_PATTERN.test(key)) {
+    throw new RangeError("metadataKey must match /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/");
+  }
+  return key;
 }
 
 /** Query for session entries. */
@@ -1711,6 +1726,9 @@ export interface ProductionPersistenceStore {
   queryAgentDefinitions(query: AgentDefinitionQuery): Promise<PersistencePage<AgentDefinitionRecord>>;
   queryRetentionPolicies(query: RetentionPolicyQuery): Promise<PersistencePage<RetentionPolicy>>;
   queryMigrations(query: MigrationQuery): Promise<PersistencePage<MigrationRecord>>;
+  /** Optional session-record write capability (conversation threads, host-managed sessions).
+   *  Upserts by id; ownership columns are set on create, `metadata`/`updatedAt` on update. */
+  appendSession?(record: SessionRecord): Promise<void>;
   /** DB-friendly branch read (mirrors `SessionStore.readBranchPath`): one ancestor-chain
    *  query instead of `queryEntries({ sessionId })` + in-memory walk. Optional. */
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;

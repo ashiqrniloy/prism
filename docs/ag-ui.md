@@ -47,6 +47,8 @@ A Prism durable `agent_suspended` returns `RUN_FINISHED` with interrupt id `${ru
 
 ACP maps assistant text to `agent_message_chunk`, safe tool lifecycle to `tool_call`/`tool_call_update`, provider usage to `usage_update`, and durable suspension to `session/request_permission`. Only `allow_once` approves; reject, cancellation, unknown outcomes, and request failure deny. It advertises only close-session capability—no terminal, filesystem, MCP, editor state, location, diff, or raw input/output capability.
 
+Co-work review (0.0.14) projects durable collaboration state over the same stream as named `CUSTOM` events, one per kind: `prism.cowork.artifact.progress`, `prism.cowork.artifact.approval.requested`, `prism.cowork.draft.connector.pending`, `prism.cowork.browser.snapshot`, and `prism.cowork.artifact.download.link`. `AgUiEventMapper.mapCoWork()` (and ACP `mapCoWork()` parity) validate, host-project (`AgUiProjection.coWork`), redact, and byte-cap each event; malformed or oversized events fail closed to nothing rather than leak. The handler accepts optional `coWorkContext` (thread/artifact/identity) and a durable `coWork` source (`createCoWorkReplay()`); one bounded, redacted page is appended after the run stream. Because projection is a pure read + map, disconnect/resume from a cursor replays co-work state without duplicate side effects. Download-link events carry an authorized, expiring token only — hosts fetch the body and never receive local paths, raw credentials, injected browser secrets, or tool-argument dumps.
+
 ## Request/response example
 
 ```json
@@ -105,6 +107,8 @@ All identity, authorization, session/thread mapping, durable checkpoint lookup, 
 
 `AgUiProjection` is an allow-list. Without a callback, raw tool arguments/results/progress, paths, arbitrary state, raw Prism events, ACP locations/diffs/terminals/raw I/O, and frontend-supplied tools remain absent. Use a projector that returns a redacted display value, not a host filesystem path or tool payload.
 
+Co-work projection reuses the same allow-list: `AgUiProjection.coWork(event)` may return a curated, JSON-serializable payload for a co-work event; absent it, the redacted event fields are exposed. Wire `coWorkContext` to derive thread/artifact/identity from the authorized request (never client JSON) and `coWork` to a `createCoWorkReplay()` over your durable artifact/draft/snapshot stores. The handler projects one bounded page after the run; mount a dedicated cursor-paged co-work endpoint when full pagination is needed.
+
 ## Security and performance notes
 
 Authorize every start, replay, resume, ACP new/prompt/cancel/close request. Treat thread IDs, run IDs, cursors, client messages, resume payloads, and protocol output as untrusted. Persist run ↔ protocol correlation before exposing an interrupt. Keep `SecretRedactor` active for streaming and ledger writes.
@@ -121,3 +125,4 @@ Benchmark command/result placeholder: Task 8 adds `node scripts/benchmark-0.0.12
 - [Web-standard server handler](server.md): generic Prism HTTP API, separate from AG-UI.
 - [A2A interoperability](a2a.md): remote agent-to-agent tasks, not frontend protocol mapping.
 - [Host security guide](host-security.md): authorization, ownership, redaction, and credential boundaries.
+- [Work artifacts and review](work-artifacts-and-review.md): durable artifact service that produces the co-work approval/progress/download-link events projected here.

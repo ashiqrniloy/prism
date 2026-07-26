@@ -54,6 +54,7 @@ await manager.close();         // dispose every run
 - Egress defaults to require contained-proxy attestation; private/loopback/file/data/blob/devtools denied. Playwright routing is defense in depth.
 - Uploads are realpath-contained; downloads quarantine until host `approveRelease`; screenshots return bounded `ImageContent`.
 - Observation vs mutation/high-impact actions map to `ExecutionPolicy` / `beforeSideEffect`.
+- Verified-state checkpoints (0.0.14, `createBrowserCheckpointLedger()`): store URL + domain-state hash + host data refs only — never serialized browser internals. After resume/interruption, `assertVerifiedBeforeSideEffect()` fails closed until reload + `verify()`, so side effects never replay on stale state.
 - `playwright-core@1.61.0` is an optional peer; construction fails clearly when no browser/manager is supplied.
 - Default tests use fakes only, including network-free adversarial eval fixtures. Protected live gate: `PRISM_LIVE_PLAYWRIGHT=1` (or `PRISM_TEST_PLAYWRIGHT=1`) `npm run test:live`.
 

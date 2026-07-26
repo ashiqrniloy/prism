@@ -23,6 +23,10 @@ See [Work tools](work-tools.md). Adapter: `createGoogleWorkspaceCliAdapter` / su
 
 Uses [`@googleworkspace/cli` (`gws`)](https://github.com/googleworkspace/cli): `gmail users messages list|get`, `gmail +send`, `calendar events list|insert`, `drive files list|create`, `drive permissions create`, `tasks tasks *`. Docs/Sheets/Slides create remain capability-gated. Discovery `schema` and `auth`/`login`/`setup` are forbidden from Prism argv.
 
+## Scoped OAuth establishment (0.0.14)
+
+Hosts establish, refresh, and revoke scoped OAuth credentials for these workloads through the existing `OAuthProvider` / credential-store seams (`@arnilo/prism-credentials-node`): `createMicrosoft365OAuthProvider` / `createGoogleWorkspaceOAuthProvider` (PKCE + device code), least-privilege scope bundles per capability (`resolveMicrosoft365Scopes` / `resolveGoogleWorkspaceScopes`, read vs mutation). Connectors consume a per-identity token via a late-bound `tokenProvider` injected as an env var — never argv, never model context; revocation fails closed. See [Credential storage](credential-storage.md) and [Work tools](work-tools.md).
+
 ## Out of scope
 
-Local Office binaries, model-controlled CLI, generic Graph/Discovery free-form calls, tenant-admin/login/debug from Prism.
+Local Office binaries, model-controlled CLI, generic Graph/Discovery free-form calls, tenant-admin/login/debug from Prism. **Slack/Teams chat-channel adapters are not shipped** (demand-gated until web/AG-UI usage is measured); the M365 `teams` capability op is a separate gated workload op, not a channel adapter.

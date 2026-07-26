@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import {
   SessionAppendConflictError,
+  assertSessionMetadataKey,
   prepareRunFeedback,
   requireRunFeedbackOwnership,
   runFeedbackPageLimit,
@@ -30,6 +31,7 @@ import {
   type SessionEntry,
   type SessionEntryQuery,
   type SessionQuery,
+  type SessionRecord,
   type SessionSearchHit,
   type SessionSearchQuery,
   type SessionStore,
@@ -474,7 +476,44 @@ export async function createPostgresPersistence(
     },
 
     async querySessions(query: SessionQuery) {
-      return queryTable(pool, qualifyTable(schema, "prism_sessions"), query, [], mapSessionRow);
+      const filters: string[] = [];
+      const params: unknown[] = [];
+      if (query.id) {
+        filters.push(`id = $${params.length + 1}`);
+        params.push(query.id);
+      }
+      if (query.metadataKey !== undefined) {
+        filters.push(`(metadata IS NOT NULL AND (metadata::jsonb) ? $${params.length + 1})`);
+        params.push(assertSessionMetadataKey(query.metadataKey));
+      }
+      return queryTable(pool, qualifyTable(schema, "prism_sessions"), query, filters, mapSessionRow, params);
+    },
+
+    async appendSession(record: SessionRecord): Promise<void> {
+      await pool.query(
+        `INSERT INTO ${sessions} (
+          id, tenant_id, account_id, user_id, parent_session_id,
+          agent_definition_id, agent_definition_version, created_at, updated_at,
+          expires_at, retention_policy_id, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT(id) DO UPDATE SET
+          updated_at = EXCLUDED.updated_at,
+          metadata = EXCLUDED.metadata`,
+        [
+          record.id,
+          record.tenantId ?? null,
+          record.accountId ?? null,
+          record.userId ?? null,
+          record.parentSessionId ?? null,
+          record.agentDefinitionId ?? null,
+          record.agentDefinitionVersion ?? null,
+          record.createdAt,
+          record.updatedAt,
+          record.expiresAt ?? null,
+          record.retentionPolicyId ?? null,
+          record.metadata === undefined ? null : JSON.stringify(record.metadata),
+        ],
+      );
     },
 
     async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {

@@ -112,6 +112,37 @@ describe("prism init", () => {
     assert.throws(() => parseInitArgs(["app", "extra"]), /Unexpected argument/);
   });
 
+  it("ships alibaba and ollama init entries that reference env keys only", () => {
+    assert.ok(INIT_PROVIDERS.includes("alibaba"), "INIT_PROVIDERS missing alibaba");
+    assert.ok(INIT_PROVIDERS.includes("ollama"), "INIT_PROVIDERS missing ollama");
+    const catalog = JSON.parse(readFileSync(join(templatesRoot, "providers.json"), "utf8")) as Record<string, {
+      envKey?: string;
+      envPlaceholder?: string;
+      imports: string;
+      providerExpression: string;
+      modelExpression: string;
+      packageName?: string;
+    }>;
+    const expected: Record<string, { envKey: string; pkg: string; provider: string }> = {
+      alibaba: { envKey: "DASHSCOPE_API_KEY", pkg: "@arnilo/prism-provider-alibaba", provider: "createAlibabaProvider" },
+      ollama: { envKey: "OLLAMA_API_KEY", pkg: "@arnilo/prism-provider-ollama", provider: "createOllamaProvider" },
+    };
+    for (const [id, want] of Object.entries(expected)) {
+      const entry = catalog[id];
+      assert.ok(entry, `providers.json missing ${id}`);
+      assert.equal(entry.envKey, want.envKey);
+      assert.equal(entry.packageName, want.pkg);
+      assert.ok(entry.imports.includes(want.pkg), `${id} imports missing package`);
+      assert.ok(entry.providerExpression.includes(want.provider), `${id} providerExpression missing ${want.provider}`);
+      assert.ok(entry.providerExpression.includes(`process.env.${want.envKey}`), `${id} must read token from ${want.envKey}`);
+      // Env-key references only — no literal secrets in the generated expressions.
+      for (const field of [entry.imports, entry.providerExpression, entry.modelExpression, entry.envPlaceholder ?? ""]) {
+        assert.doesNotMatch(field, /sk-[A-Za-z0-9]{8,}/, `${id} contains a literal secret`);
+        assert.doesNotMatch(field, /Bearer\s+[A-Za-z0-9._-]{16,}/, `${id} contains a literal bearer token`);
+      }
+    }
+  });
+
   it("runCli dispatches init and prints help", async () => {
     const io = streams();
     const code = await runCli(["init", "--help"], io);

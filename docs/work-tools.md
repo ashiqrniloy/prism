@@ -30,6 +30,8 @@ const microsoft365 = createMicrosoft365CliAdapter({
   binary: process.env.M365_BIN!,
   configDir: `/var/prism/m365/${tenant}/${user}`,
   identity,
+  // Optional late-bound per-identity token (0.0.14): env var only, never argv/model context.
+  // tokenProvider: createOAuthWorkTokenProvider({ provider: m365OAuth, store, envVar: "M365_ACCESSTOKEN" }),
 });
 
 const googleWorkspace = createGoogleWorkspaceCliAdapter({
@@ -102,6 +104,7 @@ Mutation tools (`*_mail_draft_send`, `*_draft_*`) create an in-adapter draft and
 ## Security
 
 - Require host-verified `AgentIdentity`; no cross-identity configDir reuse.
+- Connector tokens (0.0.14): an optional `tokenProvider` resolves a per-identity access token into an env var per call — never argv, never model context. A missing/expired/revoked/cross-identity/wrong-tenant token fails the call closed before any exec. Refresh is late-bound and single-flighted per account (no refresh storm under reconnect). Build one with `createOAuthWorkTokenProvider()` from `@arnilo/prism-credentials-node`.
 - External mail recipients fail closed unless `externalRecipients.allow` returns true.
 - Anonymous / `anyone` sharing denied.
 - CLI stdout/stderr capped; NDJSON page streams strictly parsed and page-capped; process killed on timeout/abort/overflow.

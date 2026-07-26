@@ -25,17 +25,27 @@ Ordinary Prism sessions do not require this package or any vector backend.
 | `workingMemoryTemplate` | no | `{{path}}` template for context injection |
 | `limits` | no | top-K, adjacent range, batch, payload, injected-token caps |
 | `redactor` / `secrets` | no | Redact text/metadata before persist/inject |
+| `requireConsent` | no | Strict mode: recall/injection excludes entries lacking explicit consent |
 
-Semantic indexing:
+Semantic indexing (entries carry consent/source/visibility; unset defaults to `{ source: "user", scope: "thread", visible: true }`):
 
 ```ts
-await memory.remember({ entries: [{ id, text, metadata?, sequence? }] }, { wait?: boolean })
+await memory.remember({ entries: [{ id, text, metadata?, consent?, sequence? }] }, { wait?: boolean })
 ```
 
-Semantic recall:
+Semantic recall (honors consent/visibility at assembly time):
 
 ```ts
-await memory.recall(query, { topK?, messageRange?, signal? })
+await memory.recall(query, { topK?, messageRange?, requireConsent?, signal? })
+```
+
+Consent + lifecycle (real grant/correct/delete/retention on stored entries):
+
+```ts
+await memory.setConsent(entryId, { visible?: boolean, source?, scope? }) // grant/revoke; no re-embed
+await memory.correct(entryId, text)                                       // re-embeds, preserves consent
+await memory.forget({ ids? })                                             // real delete (whole thread if no ids)
+await memory.applyRetention({ maxAgeDays?, maxEntries?, batchSize? })     // bounded real-delete sweep
 ```
 
 ## Outputs / response / events
@@ -44,7 +54,10 @@ await memory.recall(query, { topK?, messageRange?, signal? })
 | --- | --- |
 | `updateWorking` / `getWorking` | Versioned `WorkingMemoryRecord` |
 | `remember` | `{ accepted, pending, done }` — default `wait: false` indexes asynchronously |
-| `recall` | `{ hits, adjacent }` tenant/thread scoped |
+| `recall` | `{ hits, adjacent }` tenant/thread scoped; invisible/revoked entries excluded |
+| `setConsent` / `correct` | Updated `MemoryVectorRecord` with stamped grant/revoke times |
+| `forget` | Removed count (real delete) |
+| `applyRetention` | `{ deleted, scanned }` bounded real-delete sweep |
 | `createContextProvider()` | Inert `ContextProvider` blocks for working and/or semantic text |
 | `createWorkingMemoryProcessor({ extract })` | Explicit host-invoked updater; never auto-runs |
 
@@ -131,6 +144,7 @@ const memory = createMemory({
 - The working-memory processor is opt-in and host-invoked; middleware is not required.
 - `createHashEmbedder()` is for tests/demos only; production hosts supply a real `Embedder`.
 - Observational memory (`@arnilo/prism-compaction-observational-memory`) remains unchanged and composable.
+- Consent is enforced at the single `recall()` gate, so both direct recall and `createContextProvider()` injection honor it; `visible: false` (or a revoked grant) keeps an entry out of prompts, events, exports, and telemetry. `setConsent`/`correct` re-upsert in place (consent change does not re-embed); `forget`/`applyRetention` are real deletes, not tombstones. Retention sweeps scan one thread and delete in bounded batches (default 500 / hard 5000) — no full-corpus scan per run. The PostgreSQL adapter persists consent in a `consent JSONB` column added by `buildMemoryDdl`.
 - Profile bundles do not include this package yet.
 
 Shared conformance:
@@ -149,6 +163,7 @@ await runMemoryConformance(() => ({
 
 - Every write/query/delete requires `tenantId` + `resourceId`; semantic paths also require `threadId`.
 - Cross-tenant and cross-thread access is denied.
+- Revoked/invisible/non-consented memories never enter prompts, events, exports, or telemetry; `requireConsent: true` additionally drops consent-less (legacy) entries. Consent checks are O(hits) at recall, within the existing injected-token cap.
 - Configure `secrets` / `redactor` so memory text and metadata cannot persist or inject raw canaries.
 - Injected context is inert text — it cannot grant tools or permissions.
 - Hard caps: top-K ≤ 32, messageRange ≤ 4, embed batch ≤ 128, injected tokens ≤ 8000, payload/working-memory byte limits enforced.

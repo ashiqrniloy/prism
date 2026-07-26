@@ -7,6 +7,27 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.13 → 0.0.14 personal/work-agent conversations, co-work review, and channel/device gates (additive, pre-release)
+
+Release **0.0.14** is strictly additive: every surface extends a shipped package and reuses the AG-UI adapter shipped in 0.0.12. The only new packages are two optional provider adapters (41 → 43 manifests): `@arnilo/prism-provider-alibaba` and `@arnilo/prism-provider-ollama`, both enrolled via the `@arnilo/prism-providers` family. No permission broadening — channel/device/co-work features cannot widen consent, memory, network, file, browser, connector, or tool permissions (roadmap gate 8). See [Phase 9 evidence](review-coverage-2026-07-25-phase-9.md).
+
+| Surface | Before (0.0.13) | After (0.0.14) |
+| --- | --- | --- |
+| Conversations | n/a | `@arnilo/prism-server` `createConversationService` / `createConversationHandler`: durable user-scoped threads, reconnectable redacted replay, branch/archive caps |
+| Memory consent/lifecycle | Scope only | `consent { source, scope, visible }` on records; `recall()` injection filter; `setConsent` / `correct` / `forget` / `applyRetention` |
+| Artifacts / review | n/a | `createArtifactService` / `createArtifactHandler` over the existing checkpoint store: revisions, approve/reject, `lastValidated`, expiring authorized delivery links |
+| AG-UI co-work events | Run events only | `mapCoWork()` (+ ACP parity) for artifact progress/approval/download-link, connector drafts, redacted browser snapshots |
+| OAuth connectors | Codex only | `createMicrosoft365OAuthProvider` / `createGoogleWorkspaceOAuthProvider` (PKCE/device-code), least-privilege scope bundles, `revokeOAuthCredential`, per-identity `createOAuthWorkTokenProvider` |
+| Browser composition | Run policy only | `createBrowserCheckpointLedger`: verified-state checkpoints + reload/verify-before-side-effect |
+| Device adapters | n/a | Core `DeviceAdapter` contract + deny-by-default `resolveDevicePolicy` / `assertDeviceAdmit` + conformance (no vendor package) |
+| Providers | 9 HTTP adapters in `@arnilo/prism-providers` | Optional `@arnilo/prism-provider-alibaba` (Model Studio / DashScope + Coding Plan, dynamic `listAlibabaModels`, explicit + implicit cache) and `@arnilo/prism-provider-ollama` (cloud/local, dynamic `listOllamaModels`, implicit-only cache); both join the `@arnilo/prism-providers` family (11 adapters) |
+
+**Identity requirement:** every new conversation/artifact/memory/connector/browser/device surface starts from a host-verified `AgentIdentity` (0.0.13 `IdentityVerifier`); ownership is rechecked on resume and at schedule fire time. Caller-asserted identity fails closed.
+
+**Deferred to 0.0.15 / 0.1.x (demand-gated):** Slack/Teams chat-channel packages, realtime-voice and desktop-control vendor packages (contract + conformance only in 0.0.14), Studio/control plane, local Office runtime, a second memory/event runtime, and memory production conformance canaries. PostgreSQL/pgvector memory and M365/GWS OAuth / Playwright / keychain live canaries remain explicit operator gates.
+
+Benchmark placeholder: `node scripts/benchmark-0.0.14.mjs` (release Task 12). Caps documented in [Performance limits](performance.md).
+
 ## 0.0.12 → 0.0.13 enterprise identity, policy, routing, and work connectors (additive, pre-release)
 
 Release **0.0.13** adds host-verified `Principal` / `AgentIdentity` on runs, tools, server/MCP/A2A/workflow seams. Hosts must supply an `IdentityVerifier` (`verify()` → `AgentIdentity` with `verified: true`); caller-asserted identity without host verification fails closed. See [Agent identity](agent-identity.md).

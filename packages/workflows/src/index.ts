@@ -46,6 +46,15 @@ export {
   type WorkflowSchedules,
 } from "./schedules.js";
 export {
+  createProactiveScheduleCapabilities,
+  type CapabilityActorRef,
+  type ScheduleCapabilityToken,
+  type ScheduleCapabilityEvent,
+  type EnableCapabilityInput,
+  type ProactiveScheduleCapabilitiesOptions,
+  type ProactiveScheduleCapabilities,
+} from "./schedule-capabilities.js";
+export {
   getWorkflowRun,
   listWorkflowRuns,
   cancelWorkflowRun,
@@ -105,6 +114,9 @@ export {
   DEFAULT_SCHEDULE_LEASE_TTL_MS,
   DEFAULT_MAX_SCHEDULE_INPUT_BYTES,
   HARD_MAX_SCHEDULE_INPUT_BYTES,
+  DEFAULT_CAPABILITY_TTL_MS,
+  HARD_CAPABILITY_TTL_MS,
+  HARD_CAPABILITY_TOKEN_BYTES,
 } from "./limits.js";
 
 export type {

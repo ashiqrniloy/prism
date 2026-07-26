@@ -1,7 +1,7 @@
 import type { AgentEventRecord, ProductionPersistenceStore } from "@arnilo/prism";
 import { AgUiError } from "./errors.js";
 import type { ResolvedAgUiLimits } from "./limits.js";
-import type { AgUiRunReference } from "./types.js";
+import type { AgUiRunReference, CoWorkContext, CoWorkEvent } from "./types.js";
 
 export interface AgUiReplayRequest<Authorization> {
   readonly threadId: string;
@@ -62,4 +62,55 @@ export function createPersistenceAgUiReplay<Authorization>(
 
 function terminal(record: AgentEventRecord): boolean {
   return record.event.type === "agent_finished" || record.event.type === "agent_denied" || record.event.type === "error";
+}
+
+export interface CoWorkReplayRequest<Authorization> {
+  readonly context: CoWorkContext;
+  readonly cursor?: string;
+  readonly authorization: Authorization;
+  readonly signal?: AbortSignal;
+}
+
+export interface CoWorkReplayPage {
+  readonly events: readonly CoWorkEvent[];
+  readonly nextCursor?: string;
+}
+
+/** Host-owned, ownership-scoped durable co-work state (artifacts/drafts/snapshots). */
+export interface CoWorkSource<Authorization> {
+  page(input: CoWorkReplayRequest<Authorization>): Promise<CoWorkReplayPage>;
+}
+
+export interface CoWorkReplay<Authorization> {
+  page(input: CoWorkReplayRequest<Authorization>): Promise<CoWorkReplayPage>;
+}
+
+export interface CoWorkReplayOptions<Authorization> {
+  readonly source: CoWorkSource<Authorization>;
+  readonly limits?: Pick<ResolvedAgUiLimits, "maxCursorBytes" | "maxReplayEvents">;
+}
+
+/**
+ * Bounds one durable co-work page behind the frozen cursor/event caps. Pure read + map by
+ * the caller's mapper, so disconnect/resume from a cursor replays state without duplicate
+ * side effects. Oversized cursors and over-limit pages fail closed.
+ */
+export function createCoWorkReplay<Authorization>(options: CoWorkReplayOptions<Authorization>): CoWorkReplay<Authorization> {
+  const limits = options.limits ?? { maxCursorBytes: 4 * 1024, maxReplayEvents: 100 };
+  return {
+    async page(input) {
+      input.signal?.throwIfAborted();
+      if (input.cursor && Buffer.byteLength(input.cursor, "utf8") > limits.maxCursorBytes) {
+        throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Co-work replay cursor exceeds maxCursorBytes");
+      }
+      const page = await options.source.page(input);
+      if (page.events.length > limits.maxReplayEvents) {
+        throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Co-work replay page is unavailable");
+      }
+      if (page.nextCursor && Buffer.byteLength(page.nextCursor, "utf8") > limits.maxCursorBytes) {
+        throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Co-work replay cursor is invalid");
+      }
+      return page;
+    },
+  };
 }

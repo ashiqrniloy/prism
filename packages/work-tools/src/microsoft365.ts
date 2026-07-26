@@ -10,6 +10,7 @@ import type {
   WorkCliRunner,
   WorkDraft,
   WorkLimits,
+  WorkTokenProvider,
 } from "./types.js";
 
 /** Default ops enabled without capability gates. Teams/Planner/To Do stay opt-in. */
@@ -233,6 +234,8 @@ export interface Microsoft365CliAdapterOptions {
   readonly runner?: WorkCliRunner;
   readonly env?: Readonly<Record<string, string>>;
   readonly minVersion?: string;
+  /** Late-bound per-identity token source; undefined token fails the call closed. */
+  readonly tokenProvider?: WorkTokenProvider;
 }
 
 export function createMicrosoft365CliAdapter(options: Microsoft365CliAdapterOptions): Microsoft365Adapter {
@@ -255,6 +258,15 @@ export function createMicrosoft365CliAdapter(options: Microsoft365CliAdapterOpti
     if (!allowedOps.has(op)) throw new WorkToolError("ERR_PRISM_WORK_CAPABILITY", `Operation ${op} not allowed for this identity`);
   };
 
+  // Resolve the per-identity token env; a configured provider returning undefined means the
+  // credential is missing/expired/revoked, so the call fails closed before any side effect.
+  const tokenEnv = async (signal?: AbortSignal): Promise<Readonly<Record<string, string>> | undefined> => {
+    if (!options.tokenProvider) return undefined;
+    const envVars = await options.tokenProvider.tokenEnv(options.identity, signal);
+    if (!envVars) throw new WorkToolError("ERR_PRISM_WORK_CREDENTIAL", "Connector credential unavailable, expired, or revoked");
+    return envVars;
+  };
+
   return {
     provider: "microsoft365",
     identity: options.identity,
@@ -264,7 +276,7 @@ export function createMicrosoft365CliAdapter(options: Microsoft365CliAdapterOpti
       assertAllowed("version");
       const argv = buildMicrosoft365Argv("version", {});
       assertSafeArgv(argv);
-      const result = await runner.exec(argv, { signal });
+      const result = await runner.exec(argv, { signal, env: await tokenEnv(signal) });
       if (result.exitCode !== 0) throw new WorkToolError("ERR_PRISM_WORK_CLI", `m365 version failed: ${result.stderr.slice(0, 200)}`);
       const parsed = parseCliJson(result.stdout, limits);
       const version = typeof parsed === "string" ? parsed : typeof (parsed as { version?: string })?.version === "string" ? (parsed as { version: string }).version : String(parsed);
@@ -284,7 +296,7 @@ export function createMicrosoft365CliAdapter(options: Microsoft365CliAdapterOpti
       if (Buffer.byteLength(body) > limits.maxRequestBytes) {
         throw new WorkToolError("ERR_PRISM_WORK_LIMIT", "Request body exceeds byte limit");
       }
-      const result = await runner.exec(argv, { signal });
+      const result = await runner.exec(argv, { signal, env: await tokenEnv(signal) });
       if (result.exitCode !== 0) {
         throw new WorkToolError("ERR_PRISM_WORK_CLI", `m365 ${op} failed (exit ${result.exitCode})`);
       }
