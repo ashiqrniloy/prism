@@ -6,6 +6,40 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.15 provider, RAG, and memory evidence
+
+Run `node scripts/benchmark-0.0.15.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.15.test.mjs`. Default mode is network-free: fake Responses SSE/WebSocket transports, a fake AI SDK v4 model, zero-fetch provider-package registration, hash embeddings, in-memory RAG replacement/reranking/retrieval/status, and in-memory memory retention/export/rebuild.
+
+Scenarios: `openai-hosted-continuation`, `openai-realtime-envelope`, `ai-sdk-v4-stream-mapping`, `provider-package-metadata`, `rag-parse-replace-rerank-retrieve`, and `memory-retention-export-rebuild`.
+
+Every row reports throughput, p50/p95 latency, heap, disk, queue/backpressure, and safety signals. `resourceLimitSignals` must be zero: hosted calls remain provider-owned, continuation stops after its finite path, Realtime credentials are absent from events, provider setup does not resolve credentials, retrieved RAG content stays inert, and memory export redacts the fixture secret. These are behavior/bound gates; host-local timings are comparison evidence, not portable release thresholds.
+
+| Resource | Default / hard |
+| --- | --- |
+| OpenAI continuation hops | 8 |
+| Realtime audio events / bytes per second | 64 / 256 · 1 MiB / 8 MiB |
+| RAG document bytes | 1 MiB / 8 MiB |
+| RAG rerank input / time / active calls | 64 KiB / 256 KiB · 2 s / 10 s · 2 / 8 |
+| RAG ingestion-status page | 50 / 200 |
+| Memory retention batch | 500 / 5,000 |
+| Memory export | 100 / 200 entries · 4 MiB / 32 MiB · 10 s / 60 s |
+| Memory rebuild | 32 / 128 entries · 10 s / 60 s |
+
+This task adds no package or runtime dependency: package/install delta is zero and the frozen graph remains 43 publishable manifests. Credentialed protocol checks are documented in the [0.0.15 protected live-canary matrix](release-and-install.md#015-protected-live-canary-matrix); they never run in this benchmark, `npm test`, or `sdk:ready`.
+
+2026-07-26 baseline: Node v24.18.0, Linux x64, 100 iterations/scenario, network=false, credentials=false.
+
+| Scenario | ops/s | p95 ms | heap bytes | backpressure | resource limits |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| OpenAI hosted continuation | 4,885 | 0.2924 | 15,475,920 | 0 | 0 |
+| OpenAI Realtime envelope | 858 | 1.3130 | 12,092,232 | 0 | 0 |
+| AI SDK v4 mapping | 27,580 | 0.0573 | 14,848,288 | 0 | 0 |
+| Provider package metadata | 79,823 | 0.0288 | 16,077,080 | 0 | 0 |
+| RAG lifecycle/reranking | 5,324 | 0.3586 | 13,894,576 | 0 | 0 |
+| Memory lifecycle | 12,892 | 0.1608 | 13,923,936 | 0 | 0 |
+
+These values are dated local comparison evidence, not portable thresholds.
+
 ## Release 0.0.12 frontend interoperability caps and evidence
 
 `@arnilo/prism-ag-ui` uses finite handler/projection limits, all defaults / hard: request 64 KiB / 1 MiB; input 128 / 1024 messages and 64 KiB / 1 MiB text; event 64 KiB / 1 MiB; error 8 KiB / 64 KiB; replay cursor 4 / 16 KiB; replay page 100 / 500; subscriber queue 128 / 4096; stream 10,000 / 100,000 events and 10 / 64 MiB; request wall time 120 seconds / 30 minutes. Tool arguments/results/progress, frontend tools, and mutable frontend state default to zero exposure; hosts may only add bounded safe projection.

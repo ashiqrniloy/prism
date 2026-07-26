@@ -35,6 +35,12 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
 export { createOpenAIResponsesProvider, resolveOpenAIReasoning, type OpenAIResponsesProviderOptions } from "./responses.js";
 export { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js";
 export {
+  createOpenAIRealtimeSession,
+  type OpenAIRealtimeSessionOptions,
+  type RealtimeTransport,
+  type RealtimeTransportOptions,
+} from "./realtime.js";
+export {
   defineOpenAIModel,
   listOpenAIModels,
   mapOpenAIModel,

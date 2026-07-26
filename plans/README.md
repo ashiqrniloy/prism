@@ -82,5 +82,6 @@ Numbered plans are immutable implementation records. Current release status live
 | [075-release-0-0-12-coding-harness-interoperability.md](075-release-0-0-12-coding-harness-interoperability.md) | Phase 7 / Release 0.0.12 — Coding Harness Interoperability (P2) |
 | [076-release-0-0-13-enterprise-identity-policy-governance-work-connectors.md](076-release-0-0-13-enterprise-identity-policy-governance-work-connectors.md) | Phase 8 / Release 0.0.13 — Enterprise identity, policy, provider governance, and work connectors |
 | [077-release-0-0-14-personal-work-agent-conversations-co-work-review-channels.md](077-release-0-0-14-personal-work-agent-conversations-co-work-review-channels.md) | Phase 9 / Release 0.0.14 — Personal/work-agent conversations, co-work review, and channel/device expansion |
+| [078-release-0-0-15-provider-memory-rag-ecosystem-parity.md](078-release-0-0-15-provider-memory-rag-ecosystem-parity.md) | Phase 10 / Release 0.0.15 — Provider, memory, and RAG ecosystem parity |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

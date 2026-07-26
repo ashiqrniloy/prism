@@ -30,6 +30,18 @@ export const HARD_MAX_WORKING_MEMORY_BYTES_CAP = 256 * 1024;
 export const DEFAULT_MEMORY_RETENTION_BATCH = 500;
 export const HARD_MEMORY_RETENTION_BATCH_CAP = 5_000;
 
+export const DEFAULT_MEMORY_EXPORT_PAGE_SIZE = 100;
+export const HARD_MEMORY_EXPORT_PAGE_SIZE_CAP = 200;
+export const DEFAULT_MAX_MEMORY_EXPORT_BYTES = 4 * 1024 * 1024;
+export const HARD_MAX_MEMORY_EXPORT_BYTES_CAP = 32 * 1024 * 1024;
+export const DEFAULT_MEMORY_EXPORT_MS = 10_000;
+export const HARD_MEMORY_EXPORT_MS_CAP = 60_000;
+
+export const DEFAULT_MEMORY_REBUILD_BATCH = 32;
+export const HARD_MEMORY_REBUILD_BATCH_CAP = 128;
+export const DEFAULT_MEMORY_REBUILD_MS = 10_000;
+export const HARD_MEMORY_REBUILD_MS_CAP = 60_000;
+
 export interface MemoryLimits {
   readonly topK: number;
   readonly messageRange: number;
@@ -39,6 +51,11 @@ export interface MemoryLimits {
   readonly maxVectorDimensions: number;
   readonly maxEntryTextChars: number;
   readonly maxWorkingMemoryBytes: number;
+  readonly exportPageSize: number;
+  readonly maxExportBytes: number;
+  readonly exportMs: number;
+  readonly rebuildBatchSize: number;
+  readonly rebuildMs: number;
 }
 
 export interface MemoryLimitsInput {
@@ -50,6 +67,11 @@ export interface MemoryLimitsInput {
   readonly maxVectorDimensions?: number;
   readonly maxEntryTextChars?: number;
   readonly maxWorkingMemoryBytes?: number;
+  readonly exportPageSize?: number;
+  readonly maxExportBytes?: number;
+  readonly exportMs?: number;
+  readonly rebuildBatchSize?: number;
+  readonly rebuildMs?: number;
 }
 
 function clampPositiveInt(value: number | undefined, fallback: number, hardCap: number, label: string): number {
@@ -88,6 +110,26 @@ export function resolveMemoryLimits(input: MemoryLimitsInput = {}): MemoryLimits
       HARD_MAX_WORKING_MEMORY_BYTES_CAP,
       "maxWorkingMemoryBytes",
     ),
+    exportPageSize: clampPositiveInt(
+      input.exportPageSize,
+      DEFAULT_MEMORY_EXPORT_PAGE_SIZE,
+      HARD_MEMORY_EXPORT_PAGE_SIZE_CAP,
+      "exportPageSize",
+    ),
+    maxExportBytes: clampPositiveInt(
+      input.maxExportBytes,
+      DEFAULT_MAX_MEMORY_EXPORT_BYTES,
+      HARD_MAX_MEMORY_EXPORT_BYTES_CAP,
+      "maxExportBytes",
+    ),
+    exportMs: clampPositiveInt(input.exportMs, DEFAULT_MEMORY_EXPORT_MS, HARD_MEMORY_EXPORT_MS_CAP, "exportMs"),
+    rebuildBatchSize: clampPositiveInt(
+      input.rebuildBatchSize,
+      DEFAULT_MEMORY_REBUILD_BATCH,
+      HARD_MEMORY_REBUILD_BATCH_CAP,
+      "rebuildBatchSize",
+    ),
+    rebuildMs: clampPositiveInt(input.rebuildMs, DEFAULT_MEMORY_REBUILD_MS, HARD_MEMORY_REBUILD_MS_CAP, "rebuildMs"),
   };
 }
 

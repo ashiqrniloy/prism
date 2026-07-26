@@ -65,7 +65,9 @@ const agent = createAgent({
 | `createPostgresMemoryStores` | PostgreSQL/pgvector production path |
 | `runMemoryConformance` | Shared network-free conformance helper |
 | `createContextProvider` / `createWorkingMemoryProcessor` | Existing context seam + opt-in update helper |
-| `setConsent` / `correct` / `forget` / `applyRetention` | 0.0.14 consent + lifecycle: grant/revoke visibility, re-embed corrections, real deletes, bounded retention batches |
+| `setConsent` / `correct` / `forget` / `applyRetention` | Consent lifecycle: grant/revoke visibility, re-embed corrections, real deletes, bounded retention batches |
+| `exportMemory` / `rebuildIndex` | Exact-identity, redacted consented export pages; abortable/resumable bounded re-embedding |
+| `listByThread` / `countByThread` | Optional bounded-store methods required for export/rebuild and retention respectively |
 
 ## Security
 
@@ -74,6 +76,7 @@ const agent = createAgent({
 - Injected context is inert text only — no tools or permissions.
 - Cross-tenant and cross-thread recall is denied.
 - Consent (0.0.14): records carry `consent { source, scope, visible }`; `recall()` drops revoked/invisible entries at assembly time (direct recall and `createContextProvider` injection), and `requireConsent` strict mode also drops consent-less entries.
-- Embedder output, in-memory upserts/queries, and PostgreSQL/pgvector parameters accept only non-empty finite number vectors; NaN, ±Infinity, non-numbers, and wrong configured dimensions fail before scoring or SQL.
+- `exportMemory({ identity, cursor? })` requires exact tenant/resource/thread identity and emits only explicitly consented visible records, redacted and capped at 100 entries / 4 MiB / 10 seconds by default (200 / 32 MiB / 60 seconds hard). `rebuildIndex({ cursor? })` re-embeds one stable page (32 default / 128 hard) and returns `nextCursor` for host-owned resume.
+- Embedder output, in-memory upserts/queries, PostgreSQL/pgvector parameters, and export/rebuild pages accept only non-empty finite number vectors; NaN, ±Infinity, non-numbers, and wrong configured dimensions fail before scoring, SQL, response, or re-indexing.
 
 See [Working and semantic memory](../../docs/working-and-semantic-memory.md).

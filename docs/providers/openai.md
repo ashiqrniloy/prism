@@ -50,11 +50,13 @@ uses official Responses `reasoning: { effort, summary? }` via
 
 | Surface | Behavior |
 | --- | --- |
-| Provider stream | Prism text, thinking (downgraded to text), `tool_call` deltas/finals, `usage`, `done`, redacted `error` events. |
-| Block preservation | User/system text → `input_text`; assistant text → `output_text`; assistant `tool_call` → top-level `function_call` with `call_id`; `tool_result` → top-level `function_call_output`; images/files/audio when declared on the model. Bare thinking without an encrypted Responses reasoning item is omitted on replay. |
+| Provider stream | Prism text, thinking (downgraded to text), host `tool_call` deltas/finals, provider-hosted `tool_call` events (`authority: "provider-hosted"`), `continuation_required`, `usage`, `done`, and redacted `error` events. |
+| Continuation | An incomplete Responses stream self-resumes at most eight HTTP hops using opaque `previous_response_id`; a cursor is at most 4 KiB, is never replayed, and is observable as `continuation_required`. |
+| Realtime | `createOpenAIRealtimeSession()` exposes server-session creation, audio in/out, transcript deltas, provider-hosted calls, interrupt, and idempotent close through the neutral `RealtimeSession` seam. |
+| Block preservation | User/system text → `input_text`; assistant text → `output_text`; assistant host `tool_call` → top-level `function_call` with `call_id`; provider-hosted calls are not replayed; `tool_result` → top-level `function_call_output`; images/files/audio when declared on the model. Bare thinking without an encrypted Responses reasoning item is omitted on replay. |
 | Auth methods | `api_key` for `openai`; host-invoked subscription `oauth` for `openai-codex`. This is Prism's only first-party subscription OAuth flow in 0.0.12. |
 
-Unsupported block placements or unclaimed images fail before `fetch`.
+Unsupported block placements or unclaimed images fail before `fetch`. Provider-hosted calls are telemetry only: Prism never dispatches them as host tools or sends a `tool_result`.
 
 ## Request/response example
 
@@ -73,6 +75,21 @@ Responses request body (Codex subscription shape, abbreviated):
   "prompt_cache_key": "session-1",
   "stream": true,
   "store": false
+}
+```
+
+Realtime session (OpenAI session creation, abbreviated):
+
+```ts
+import { createOpenAIRealtimeSession } from "@arnilo/prism-provider-openai";
+
+const session = createOpenAIRealtimeSession({
+  model: { provider: "openai", model: "gpt-realtime-2.1" },
+  ownerId: "hashed-host-user-id",
+  apiKey,
+});
+for await (const event of session.events()) {
+  if (event.type === "audio_delta") play(event.audio);
 }
 ```
 
@@ -125,6 +142,7 @@ const challenge = computeS256Challenge(verifier);
   `expires_in`, honors RFC 8628 `authorization_pending` / `slow_down`, and stops
   on terminal errors or expiry. Pass `signal` on `OAuthLoginCallbacks` to abort
   polling promptly.
+- `createOpenAIRealtimeSession` requires a stable host `ownerId`; it sends that value as OpenAI's safety identifier and binds the stream to the server `session.created` id. An injected `webSocket(url, { headers })` factory supports Node 22 hosts whose global WebSocket does not expose header options.
 
 ### Cache behavior
 
@@ -189,6 +207,7 @@ Official: [Reasoning models](https://developers.openai.com/api/docs/guides/reaso
   access/refresh tokens echoed in token-endpoint failures.
 - The PKCE verifier is exchanged at the token endpoint, never sent on the authorize
   URL.
+- Realtime uses the documented WebSocket `Authorization` header, never a credential query parameter. API keys are redacted from transcript/error events; audio/transcript input is untrusted, realtime queues are bounded, and disconnect, abort, malformed session identity, or audio/byte/wall-time cap breach closes the session.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe
   provider-specific env names; default `npm test` is network-free.
 

@@ -6,7 +6,7 @@ import type {
   LanguageModelV4StreamPart,
   LanguageModelV4Usage,
 } from "@ai-sdk/provider";
-import type { ModelConfig, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import { createSecretRedactor, type ModelConfig, type ProviderRequest, type ToolDefinition } from "@arnilo/prism";
 import {
   assertToolCallDeltasReconstruct,
   collectProviderEvents,
@@ -16,6 +16,7 @@ import { createAiSdkProvider } from "../provider.js";
 import { AiSdkProviderError } from "../errors.js";
 import { toAiSdkCallOptions } from "../prompt.js";
 import { mapUsage } from "../stream.js";
+import { assertSupportedAiSdkVersion, SUPPORTED_AI_SDK_VERSION_MATRIX } from "../types.js";
 
 const MODEL: ModelConfig = {
   provider: "ai-sdk",
@@ -128,6 +129,7 @@ describe("createAiSdkProvider", () => {
     }));
 
     assert.deepEqual(callOrder, ["stream"]);
+    assert.equal(events.some((event) => event.type === "message_start" && event.messageId === "resp_1"), true);
     assert.equal(events.filter((event) => event.type === "content_delta" && event.content.type === "text").length, 2);
     assert.equal(events.some((event) => event.type === "content_delta" && event.content.type === "thinking" && event.content.text === "think"), true);
     const toolCalls = assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "echo", arguments: { x: 1 } }]);
@@ -184,6 +186,12 @@ describe("createAiSdkProvider", () => {
     assert.equal(rejected.length, 1);
     assert.equal(rejected[0]?.type, "error");
     assert.match(rejected[0]?.type === "error" ? rejected[0].error.message : "", /audio/);
+
+    const strict = await collectProviderEvents(provider, request({
+      options: { structuredOutput: { name: "Answer", schema: { type: "object" }, strict: true } },
+    }));
+    assert.equal(calls, 1, "model must not be invoked for unmappable strict output");
+    assert.match(strict[0]?.type === "error" ? strict[0].error.message : "", /strict/);
   });
 
   it("replays multi-turn Prism tool transcripts through AI SDK prompt messages", () => {
@@ -279,6 +287,16 @@ describe("createAiSdkProvider", () => {
     );
   });
 
+  it("pins and validates every supported AI SDK provider version", () => {
+    for (const version of SUPPORTED_AI_SDK_VERSION_MATRIX) {
+      assert.doesNotThrow(() => assertSupportedAiSdkVersion(version.providerVersion));
+    }
+    assert.throws(
+      () => assertSupportedAiSdkVersion("4.0.4"),
+      (error: unknown) => error instanceof AiSdkProviderError && error.code === "unsupported_version",
+    );
+  });
+
   it("mapUsage maps LanguageModelV4Usage cacheRead and cacheWrite to Prism Usage", () => {
     assert.deepEqual(mapUsage(usage(12, 5, 4, 2)), {
       inputTokens: 12,
@@ -336,7 +354,7 @@ describe("createAiSdkProvider", () => {
     assert.deepEqual(assistant.content[1], { type: "text", text: "answer" });
   });
 
-  it("ignores provider-executed tool calls in the stream", async () => {
+  it("attributes provider-executed tools and fails closed on unmappable stream parts", async () => {
     const provider = createAiSdkProvider({
       model: createFakeModel({
         parts: [
@@ -347,13 +365,31 @@ describe("createAiSdkProvider", () => {
             input: "{\"ok\":true}",
             providerExecuted: true,
           },
+          { type: "tool-result", toolCallId: "call_server", toolName: "lookup", result: { ok: true } },
           { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: usage(1, 1) },
         ],
       }),
     });
     const events = await collectProviderEvents(provider, request());
-    assert.equal(events.some((event) => event.type === "tool_call"), false);
-    assert.equal(events.some((event) => event.type === "tool_call_delta"), false);
+    const call = events.find((event) => event.type === "tool_call");
+    assert.equal(call?.type === "tool_call" ? call.call.authority : undefined, "provider-hosted");
     assert.equal(events.at(-1)?.type, "done");
+
+    const unsupported = createAiSdkProvider({
+      model: createFakeModel({ parts: [{ type: "source", sourceType: "url", id: "s", url: "https://example.invalid" }] }),
+    });
+    const failed = await collectProviderEvents(unsupported, request());
+    assert.equal(failed[0]?.type, "error");
+    assert.equal(failed[0]?.type === "error" ? failed[0].error.code : undefined, "unsupported_mapping");
+  });
+
+  it("redacts direct provider errors", async () => {
+    const secret = "ai-sdk-secret";
+    const provider = createAiSdkProvider({
+      redactor: createSecretRedactor([secret]),
+      model: createFakeModel({ fail: new Error(`upstream ${secret}`) }),
+    });
+    const events = await collectProviderEvents(provider, request());
+    assert.equal(JSON.stringify(events).includes(secret), false);
   });
 });

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.15] - 2026-07-26
+
+### Changed
+
+- Released with exact 0.0.15 graph.
+
 ## [0.0.14] - 2026-07-26
 
 ### Added

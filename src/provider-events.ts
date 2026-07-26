@@ -39,6 +39,10 @@ export function providerToolCallDeltaContent(delta: Omit<ToolCallDeltaContent, "
   return { type: "tool_call_delta", ...delta };
 }
 
+export function providerContinuationRequired(cursor: string, reason?: string): ProviderEvent {
+  return { type: "continuation_required", cursor, reason };
+}
+
 export function reconstructToolCallDeltas(events: readonly ProviderEvent[]): readonly ToolCallContent[] {
   const partials = new Map<number, { id?: string; name?: string; argumentsText: string }>();
   for (const event of events) {

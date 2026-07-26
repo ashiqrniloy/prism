@@ -60,7 +60,12 @@ export interface ToolCallDeltaContent {
   readonly id?: string;
   readonly name?: string;
   readonly argumentsText?: string;
+  /** Who executes the call. `"provider-hosted"` = the provider runs it server-side;
+   *  the host must NOT dispatch it or send a `tool_result`. Defaults to `"host"`. */
+  readonly authority?: ToolCallAuthority;
 }
+
+export type ToolCallAuthority = "host" | "provider-hosted";
 
 export interface ToolCallContent {
   readonly type: "tool_call";
@@ -69,6 +74,10 @@ export interface ToolCallContent {
   readonly arguments: JsonObject;
   /** Set when streamed arguments failed JSON parse; dispatch blocks without execute(). */
   readonly argumentsError?: ErrorInfo;
+  /** Who executes the call. `"provider-hosted"` = the provider already ran it
+   *  server-side; the host must NOT dispatch it or append a `tool_result`. The
+   *  assistant response text already incorporates the call's effect. */
+  readonly authority?: ToolCallAuthority;
 }
 
 export interface ToolResultContent {
@@ -273,6 +282,9 @@ export interface ProviderRequestOptions {
   readonly extra?: JsonObject;
   /** Provider-neutral JSON-schema structured output request. Requires model `capabilities.structuredOutput`. */
   readonly structuredOutput?: StructuredOutputOptions;
+  /** Opaque provider continuation cursor (e.g. OpenAI `previous_response_id`). When set,
+   *  the provider resumes from this cursor instead of re-sending full history. */
+  readonly continuation?: { readonly cursor: string };
 }
 
 export interface ProviderRequest {
@@ -288,9 +300,10 @@ export interface ProviderRequest {
 export type ProviderEvent =
   | { readonly type: "message_start"; readonly messageId?: string }
   | { readonly type: "content_delta"; readonly content: ContentBlock }
-  | { readonly type: "tool_call_delta"; readonly index: number; readonly id?: string; readonly name?: string; readonly argumentsText?: string }
+  | { readonly type: "tool_call_delta"; readonly index: number; readonly id?: string; readonly name?: string; readonly argumentsText?: string; readonly authority?: ToolCallAuthority }
   | { readonly type: "tool_call"; readonly call: ToolCallContent }
   | { readonly type: "usage"; readonly usage: Usage }
+  | { readonly type: "continuation_required"; readonly cursor: string; readonly reason?: string }
   | { readonly type: "done"; readonly usage?: Usage }
   | { readonly type: "error"; readonly error: ErrorInfo };
 
@@ -300,6 +313,49 @@ export interface AIProvider {
 }
 
 export type ProviderResolver = (model: ModelConfig) => AIProvider | undefined;
+
+/** Realtime audio/session event. Realtime is a bidirectional session, not a request/response
+ *  stream, so it is a separate neutral seam from `AIProvider.generate()`. Credentials are
+ *  bound to the session handshake only and never appear in events. */
+export type RealtimeEvent =
+  | { readonly type: "session_started"; readonly sessionId?: string }
+  | { readonly type: "audio_delta"; readonly audio: Uint8Array }
+  | { readonly type: "transcript_delta"; readonly text: string; readonly role: "user" | "assistant" }
+  | { readonly type: "tool_call"; readonly call: ToolCallContent }
+  | { readonly type: "interrupted" }
+  | { readonly type: "session_closed"; readonly reason?: string }
+  | { readonly type: "error"; readonly error: ErrorInfo };
+
+/** Neutral bidirectional realtime session seam. The provider owns the transport
+ *  (e.g. WebSocket); the host owns audio capture/playback and session lifecycle. */
+export interface RealtimeSession {
+  readonly id: string;
+  readonly provider: string;
+  /** Send an audio chunk (PCM/Opus; provider-specific format set at creation). */
+  sendAudio(chunk: Uint8Array, options?: { readonly signal?: AbortSignal }): Promise<void>;
+  /** Inbound events (audio out, transcripts, hosted tool calls, interruption, close, error). */
+  events(): AsyncIterable<RealtimeEvent>;
+  /** Request the provider stop the current response mid-stream. */
+  interrupt(options?: { readonly signal?: AbortSignal }): Promise<void>;
+  /** Close the session and release the transport. Idempotent. */
+  close(reason?: string, options?: { readonly signal?: AbortSignal }): Promise<void>;
+}
+
+/** Factory a provider exposes for realtime sessions; not part of `AIProvider`. */
+export type RealtimeSessionFactory = (options: RealtimeSessionOptions) => RealtimeSession;
+
+export interface RealtimeSessionOptions {
+  readonly model: ModelConfig;
+  readonly signal?: AbortSignal;
+  /** Provider-specific caps override; providers enforce finite defaults. */
+  readonly caps?: RealtimeCaps;
+}
+
+export interface RealtimeCaps {
+  readonly maxAudioEventsPerSecond?: number;
+  readonly maxBytesPerSecond?: number;
+  readonly maxWallMs?: number;
+}
 
 export type InputAssemblyLayout = "legacy" | "cache_aware";
 

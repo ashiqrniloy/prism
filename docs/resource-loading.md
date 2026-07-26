@@ -87,6 +87,8 @@ console.log(bytes.byteLength, manifest.name, prompt);
 - Helpers do not choose a loader by URI scheme. Hosts can use contribution registries or their own routing when they need that.
 - Helpers do not execute loaded text or imported modules. Package activation remains a host decision.
 - `loadManifestResource()` only validates manifest data; it does not register manifest contributions.
+- `@arnilo/prism-rag` `createResourceDocumentLoader({ loader, context? })` is the RAG bridge for an already-authorized artifact. It calls the supplied `ResourceLoader` once for a caller-selected URI, preserves text/binary media type, and adds no URI routing, local-file discovery, or network fallback. Pair it with a bounded RAG `Parser`; `replaceDocument()` then chunks and atomically replaces one exact RAG source.
+- For public web documents, use `createWebFetchDocumentLoader({ fetcher })` with a host-configured `@arnilo/prism-web-tools` fetch adapter instead of adding web I/O to a `ResourceLoader`. It reuses normalized citation/trust data; the web adapter retains DNS/SSRF policy ownership.
 
 ## Security and performance notes
 
@@ -96,6 +98,7 @@ console.log(bytes.byteLength, manifest.name, prompt);
 - Helpers call `loader.load()` once per helper call and do not cache, scan, list, watch, poll, or discover packages.
 - JSON parsing fails closed for invalid JSON or non-object JSON.
 - Do not put resolved credential values, tokens, headers, or executable code in loaded config, manifests, prompts, skills, or metadata.
+- A RAG resource loader is not permission escalation: pass the same host-owned trust/permission context used for any resource load. HTML/PDF parser output and web content are untrusted inert text; compressed/scanned PDFs require a host parser rather than partial fallback.
 
 ## MCP resources
 

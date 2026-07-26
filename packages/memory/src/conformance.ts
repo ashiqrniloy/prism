@@ -5,7 +5,7 @@ import { MemoryConflictError, MemoryScopeError, MemoryValidationError } from "./
 
 export interface MemoryConformanceStores {
   readonly embedder: Embedder;
-  readonly vectorStore: VectorStore;
+  readonly vectorStore: VectorStore & Required<Pick<VectorStore, "listByThread" | "countByThread">>;
   readonly workingStore: WorkingMemoryStore;
 }
 
@@ -152,6 +152,26 @@ export async function runMemoryConformance(
   assert.ok(swept.deleted >= 2, "aged entries must be real-deleted");
   const afterSweep = await memory.recall("retention", { topK: 8 });
   assert.ok(afterSweep.hits.every((hit) => hit.id !== "r1" && hit.id !== "r2"));
+
+  const exported = await memory.exportMemory({
+    identity: { tenantId: "tenant-a", resourceId: "resource-a", threadId: "thread-a" },
+    limit: 1,
+  });
+  assert.ok(exported.entries.length <= 1);
+  assert.ok(exported.entries.every((entry) => entry.consent?.visible === true));
+  await assert.rejects(
+    memory.exportMemory({ identity: { tenantId: "tenant-b", resourceId: "resource-a", threadId: "thread-a" } }),
+    MemoryScopeError,
+  );
+
+  let cursor: string | undefined;
+  let rebuilt = 0;
+  do {
+    const page = await memory.rebuildIndex({ cursor, batchSize: 1 });
+    rebuilt += page.rebuilt;
+    cursor = page.nextCursor;
+  } while (cursor);
+  assert.ok(rebuilt >= 1, "bounded rebuild must re-embed at least one retained entry");
 
   const noThread = createMemory({
     tenantId: "tenant-a",

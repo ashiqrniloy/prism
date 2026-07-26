@@ -203,6 +203,12 @@ export function toAiSdkTool(tool: ToolDefinition): LanguageModelV4FunctionTool {
 function toResponseFormat(options: ProviderRequestOptions | undefined): LanguageModelV4CallOptions["responseFormat"] {
   const structured = options?.structuredOutput;
   if (!structured) return undefined;
+  if (structured.strict !== undefined) {
+    throw new AiSdkProviderError(
+      "unsupported_mapping",
+      "AI SDK LanguageModelV4 responseFormat does not support Prism structuredOutput.strict",
+    );
+  }
   return {
     type: "json",
     name: structured.name,

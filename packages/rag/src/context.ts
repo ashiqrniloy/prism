@@ -18,7 +18,7 @@ export function createRagContextProvider(options: RagContextProviderOptions): Co
         id: `${options.name ?? "rag"}:context`,
         title: options.title ?? "Retrieved context",
         content: result.text,
-        metadata: { citations: result.citations, inert: true },
+        metadata: { citations: result.citations, trust: result.trust, inert: true, untrusted: true, injectionCapable: true },
       }];
     },
   };

@@ -66,6 +66,21 @@ describe("agent loop strategies", () => {
       assert.equal(ctx.history[0]?.role, "assistant");
     });
 
+    it("does not dispatch provider-hosted tool calls", async () => {
+      let dispatched = 0;
+      const ctx = stubCtx({
+        generate: async () => ({
+          content: [{ type: "text", text: "provider handled it" }],
+          calls: [{ ...toolCallContent("hosted_1", "web_search_call"), authority: "provider-hosted" }],
+          started: true,
+        }),
+        dispatchToolCall: async () => { dispatched += 1; throw new Error("must not dispatch"); },
+      });
+      await singleShotLoop.run(ctx);
+      assert.equal(dispatched, 0);
+      assert.equal(ctx.history.some((message) => message.role === "tool"), false);
+    });
+
     it("respects maxToolRounds and dispatches tools, then stops", async () => {
       const events: AgentEvent[] = [];
       const toolResults: { toolCallId: string; name: string; value?: unknown }[] = [];

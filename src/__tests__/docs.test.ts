@@ -219,7 +219,7 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 78, "numbered plan count drifted");
+    assert.equal(plans.length, 79, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
@@ -559,6 +559,172 @@ describe("docs", () => {
       assert.ok(existsSync(seam), `Phase 9 must extend existing seam: ${seam}`);
     }
     assert.ok(index.includes("(review-coverage-2026-07-25-phase-9.md)"), "docs/index.md missing Phase 9 review coverage link");
+  });
+
+  it("phase 10 evidence freezes provider/memory/RAG parity, 43->43 manifests, neutral provider seams, and 0.1.x exclusions", () => {
+    const evidence = readFileSync("docs/review-coverage-2026-07-26-phase-10.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    const phase10 = roadmap.slice(
+      roadmap.indexOf("Phase 10 — Release 0.0.15"),
+      roadmap.indexOf("Phase 11 — Release 0.0.16"),
+    );
+
+    for (const heading of [
+      "## 1. Capability traceability (every Phase 10 roadmap criterion → Task owner)",
+      "## 2. Package ownership and manifest count",
+      "## 3. Primitive inventory (reused, not duplicated)",
+      "## 4. Frozen finite limits (Phase 10)",
+      "## 5. Threat / authority matrix",
+      "## 6. Task 0 validation matrix (scope guards)",
+      "## 7. Frozen decisions (binding on Tasks 1–9)",
+    ]) assert.ok(evidence.includes(heading), `Phase 10 evidence missing ${heading}`);
+    for (let task = 1; task <= 9; task += 1) {
+      assert.ok(evidence.includes(`Task ${task}`), `Phase 10 evidence missing Task ${task} owner`);
+    }
+    for (const token of [
+      "@arnilo/prism-provider-openai",
+      "@arnilo/prism-provider-ai-sdk",
+      "provider-{anthropic,google}",
+      "@arnilo/prism-rag",
+      "@arnilo/prism-memory",
+      "@arnilo/prism-web-tools",
+      "ProviderEvent",
+      "ToolCallContent",
+      "provider-hosted",
+      "ResourceLoader",
+      "DocumentLoader",
+      "Reranker",
+      "replaceSource",
+      "deleteSource",
+      "exportMemory",
+      "rebuildIndex",
+      "assertFiniteVector",
+      "MemoryConsent",
+      "43 → 43",
+      "gate 9",
+    ]) assert.ok(evidence.includes(token), `Phase 10 evidence missing frozen token ${token}`);
+    for (const deferred of [
+      "Studio",
+      "remote-browser vendors",
+      "Office runtime",
+      "additional vector-store",
+      "Slack/Teams/voice/desktop vendor",
+      "GraphRAG",
+    ]) {
+      assert.ok(evidence.includes(deferred), `Phase 10 evidence missing out-of-scope item ${deferred}`);
+    }
+    assert.ok(phase10.includes("hosted tools") && phase10.includes("realtime APIs"), "Phase 10 roadmap missing core criteria");
+    assert.ok(phase10.includes("atomic source replacement"), "Phase 10 roadmap missing RAG lifecycle criterion");
+    assert.ok(phase10.includes("additional vector stores are demand-gated"), "Phase 10 roadmap missing vector-store demand gate");
+    // Scope guard: no new provider/runtime/document/vector-store packages may exist in 0.0.15 (43 -> 43 freeze).
+    for (const forbidden of [
+      "packages/realtime",
+      "packages/document-loaders",
+      "packages/reranker",
+      "packages/provider-vector",
+      "packages/studio",
+      "packages/voice",
+      "packages/desktop",
+    ]) {
+      assert.ok(!existsSync(forbidden), `Phase 10 scope guard violated: ${forbidden} must not exist`);
+    }
+    for (const seam of [
+      "src/contracts.ts",
+      "src/resources.ts",
+      "packages/rag/src/indexing.ts",
+      "packages/rag/src/retrieve.ts",
+      "packages/memory/src/memory.ts",
+      "packages/memory/src/conformance.ts",
+      "packages/web-tools/src/normalize.ts",
+      "packages/provider-openai/src/responses.ts",
+      "packages/provider-ai-sdk/src/provider.ts",
+    ]) {
+      assert.ok(existsSync(seam), `Phase 10 must extend existing seam: ${seam}`);
+    }
+  });
+
+  it("phase 10 RAG lifecycle docs cover atomic source ownership and bounded document adapters", () => {
+    const rag = readFileSync("docs/rag.md", "utf8");
+    const resources = readFileSync("docs/resource-loading.md", "utf8");
+    const security = readFileSync("docs/host-security.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const token of ["replaceSource", "deleteSource", "replaceDocument", "DocumentLoader", "textParser", "htmlParser", "pdfParser", "getBySource", "transaction", "untrusted: true"]) {
+      assert.ok(rag.includes(token), `RAG lifecycle docs missing ${token}`);
+    }
+    assert.ok(resources.includes("createResourceDocumentLoader"), "resource docs missing RAG document-loader bridge");
+    assert.ok(security.includes("createWebFetchDocumentLoader"), "security docs missing RAG web-loader boundary");
+    assert.ok(migration.includes("RAG source lifecycle"), "migration missing RAG lifecycle entry");
+    assert.ok(index.includes("bounded source lifecycle"), "docs index missing RAG lifecycle summary");
+  });
+
+  it("phase 10 RAG reranking docs cover provenance, trust, and capped ingestion status", () => {
+    const rag = readFileSync("docs/rag.md", "utf8");
+    const security = readFileSync("docs/host-security.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const token of ["Reranker", "maxRerankBytes", "retrievalRank", "injectionCapable", "IngestionStatusStore", "listIngestionStatus", "pending/indexed/failed/partial"]) {
+      assert.ok(rag.includes(token), `RAG reranking docs missing ${token}`);
+    }
+    assert.ok(security.includes("cannot overwrite provenance/trust"), "security docs missing reranker canonical-output boundary");
+    assert.ok(migration.includes("RAG retrieval now optionally accepts host-owned `Reranker`"), "migration missing RAG reranker entry");
+    assert.ok(index.includes("host reranking, ingestion status"), "docs index missing RAG reranker/status summary");
+  });
+
+  it("phase 10 memory docs cover identity-bound export, resumable rebuild, and production adapter limits", () => {
+    const memory = readFileSync("docs/working-and-semantic-memory.md", "utf8");
+    const security = readFileSync("docs/host-security.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const token of ["exportMemory", "rebuildIndex", "listByThread", "countByThread", "100/200", "4/32 MiB", "32/128-record", "PostgreSQL/pgvector"]) {
+      assert.ok(memory.includes(token), `memory docs missing ${token}`);
+    }
+    assert.ok(security.includes("exact host identity"), "security docs missing memory export identity boundary");
+    assert.ok(migration.includes("memory export and rebuild"), "migration missing memory lifecycle entry");
+    assert.ok(index.includes("identity-bound redacted export"), "docs index missing memory export summary");
+  });
+
+  it("phase 10 benchmark and protected live-canary docs cover provider, RAG, and memory gates", () => {
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const token of ["benchmark-0.0.15.mjs", "openai-hosted-continuation", "rag-parse-replace-rerank-retrieve", "memory-retention-export-rebuild", "resourceLimitSignals", "43 publishable manifests"]) {
+      assert.ok(performance.includes(token), `performance docs missing ${token}`);
+    }
+    for (const token of ["0.0.15 protected live-canary matrix", "OpenAI hosted tools + Realtime", "AI SDK adapter", "Alibaba DashScope", "Ollama Cloud/local", "Memory PostgreSQL/pgvector", "PRISM_TEST_POSTGRES_URL"]) {
+      assert.ok(release.includes(token), `release docs missing ${token}`);
+    }
+    assert.ok(index.includes("0.0.15 network-free provider/RAG/memory benchmark"), "docs index missing Phase 10 benchmark summary");
+    assert.ok(index.includes("0.0.15 provider/AI-SDK/RAG/memory protected live-canary matrix"), "docs index missing Phase 10 canary summary");
+  });
+
+  it("phase 10 docs reconcile provider compatibility and RAG/memory trust surfaces", () => {
+    const providerConformance = readFileSync("docs/provider-conformance.md", "utf8");
+    const providerPackages = readFileSync("docs/provider-packages.md", "utf8");
+    const providerCaching = readFileSync("docs/provider-caching.md", "utf8");
+    const multimodal = readFileSync("docs/multimodal-content.md", "utf8");
+    const rag = readFileSync("docs/rag.md", "utf8");
+    const memory = readFileSync("docs/working-and-semantic-memory.md", "utf8");
+    const resources = readFileSync("docs/resource-loading.md", "utf8");
+    const security = readFileSync("docs/host-security.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const provider of ["OpenAI", "AI SDK", "Anthropic", "Google", "Kimi", "Z.AI", "OpenRouter", "OpenCode Go", "Alibaba", "Ollama", "NeuralWatt", "Azure", "Bedrock", "Vertex"]) {
+      assert.ok(providerConformance.includes(`| ${provider} |`), `conformance matrix missing ${provider}`);
+      assert.ok(providerPackages.includes(`| ${provider} |`), `package matrix missing ${provider}`);
+    }
+    for (const token of ["@arnilo/prism-provider-anthropic", "@arnilo/prism-provider-google", "@arnilo/prism-provider-alibaba", "@arnilo/prism-provider-ollama", "@arnilo/prism-provider-vertex"]) {
+      assert.ok(providerCaching.includes(token), `cache matrix missing ${token}`);
+    }
+    for (const token of ["OpenAI Realtime", "OpenCode Go OpenAI route", "AI SDK adapter", "unsupported_mapping"]) {
+      assert.ok(multimodal.includes(token), `multimodal mapping missing ${token}`);
+    }
+    for (const token of ["replaceSource()", "Reranker", "IngestionStatusStore", "injectionCapable"]) assert.ok(rag.includes(token), `RAG docs missing ${token}`);
+    for (const token of ["exportMemory()", "rebuildIndex()", "MemoryConsent", "assertFiniteVector"]) assert.ok(memory.includes(token), `memory docs missing ${token}`);
+    for (const token of ["createResourceDocumentLoader", "createWebFetchDocumentLoader", "untrusted inert text"]) assert.ok(resources.includes(token), `resource docs missing ${token}`);
+    for (const token of ["RAG retrieval always emits", "rebuildIndex()", "getBySource()"] ) assert.ok(security.includes(token), `security docs missing ${token}`);
+    for (const token of ["0.0.14 → 0.0.15", "@ai-sdk/provider@4.0.3", "RAG source lifecycle", "memory export and rebuild"]) assert.ok(migration.includes(token), `migration missing ${token}`);
+    for (const token of ["Phase 10 first-party compatibility matrix", "first-party content-type mapping", "OpenAI hosted tools/continuation/Realtime"]) assert.ok(index.includes(token), `index missing ${token}`);
   });
 
   it("task 5 scope guard: no Slack/Teams chat-channel packages, exports, or docs pages (demand-gated)", () => {
@@ -2581,11 +2747,16 @@ describe("docs", () => {
       "host-model-owned",
       "providerOptions.prism",
       "reasoning-delta",
+      "4.0.3",
+      "unsupported_version",
+      "unsupported_mapping",
+      "provider-hosted",
     ]) {
       assert.ok(page.includes(phrase), `docs/providers/ai-sdk.md missing ${phrase}`);
     }
     assert.ok(caching.includes("@arnilo/prism-provider-ai-sdk"), "provider-caching.md missing AI SDK adapter row");
     assert.ok(conformance.includes("## AI SDK adapter checklist"), "provider-conformance.md missing AI SDK checklist");
+    assert.ok(conformance.includes("Version + specification gate"), "provider-conformance.md missing AI SDK matrix gate");
     assert.ok(packages.includes("No Prism-side catalog by design"), "provider-packages.md missing AI SDK no-catalog note");
     assert.ok(index.includes("no Prism catalog"), "docs/index.md missing AI SDK host-owned catalog blurb");
     assert.ok(coverage.includes("host-owned catalog/cache/reasoning validated"), "provider validation matrix missing AI SDK fixed status");

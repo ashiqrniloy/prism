@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-rag",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Optional bounded text and Markdown RAG primitives for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,6 +9,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./loaders": {
+      "types": "./dist/loaders.d.ts",
+      "default": "./dist/loaders.js"
+    },
+    "./parsers": {
+      "types": "./dist/parsers.d.ts",
+      "default": "./dist/parsers.js"
     }
   },
   "files": [
@@ -25,8 +33,8 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.14",
-    "@arnilo/prism-memory": "0.0.14"
+    "@arnilo/prism": "0.0.15",
+    "@arnilo/prism-memory": "0.0.15"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

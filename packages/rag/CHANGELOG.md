@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.15] - 2026-07-26
+
+### Added
+
+- Added atomic scoped `replaceSource()` / `deleteSource()` and `replaceDocument()` over source-aware transactional vector storage; the in-memory reference store implements `getBySource()` plus transactions.
+- Added bounded `DocumentLoader` / `Parser` seams, reference text/Markdown/HTML/PDF parsers, and host resource/web-tools document loaders with citation/trust preservation.
+- Added host-owned bounded reranking, canonical citation provenance/content-trust metadata, and scoped capped ingestion-status storage/querying with a process-local reference adapter.
+
 ## [0.0.14] - 2026-07-26
 
 ### Changed

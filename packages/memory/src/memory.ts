@@ -1,6 +1,6 @@
 import type { ContextProvider, JsonObject, Message } from "@arnilo/prism";
 import { embedBatched } from "./embedder.js";
-import { MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
+import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
 import {
   DEFAULT_MEMORY_RETENTION_BATCH,
   HARD_MEMORY_RETENTION_BATCH_CAP,
@@ -9,8 +9,11 @@ import {
 } from "./limits.js";
 import { validateAgainstJsonSchema } from "./schema.js";
 import {
+  assertFiniteVector,
   assertNotAborted,
+  assertSameScope,
   assertTextLimit,
+  byteLengthOfJson,
   latestUserText,
   mergeJsonObjects,
   redactJson,
@@ -23,7 +26,9 @@ import { createMemoryVectorStore, selectAdjacentRecords } from "./vector-memory.
 import { createMemoryWorkingStore, validateWorkingValue } from "./working-memory.js";
 import type {
   CreateMemoryOptions,
+  ExportMemoryOptions,
   Memory,
+  MemoryExportResult,
   MemoryConsent,
   MemoryConsentInput,
   MemoryContextProviderOptions,
@@ -35,6 +40,8 @@ import type {
   MemoryVectorRecord,
   RecallOptions,
   RecallResult,
+  RebuildIndexOptions,
+  RebuildIndexResult,
   RememberInput,
   RememberOptions,
   RememberResult,
@@ -264,8 +271,10 @@ export function createMemory(options: CreateMemoryOptions): Memory {
   ): Promise<MemoryRetentionResult> {
     const threadScope = threadScopeOrThrow();
     assertNotAborted(retentionOptions.signal);
-    if (!vectorStore.getByThread) {
-      throw new MemoryScopeError("retention requires a getByThread-capable vector store");
+    const listByThread = vectorStore.listByThread;
+    const countByThread = vectorStore.countByThread;
+    if (!listByThread || !countByThread) {
+      throw new MemoryScopeError("retention requires listByThread- and countByThread-capable vector storage");
     }
     if (policy.maxAgeDays === undefined && policy.maxEntries === undefined) {
       throw new MemoryValidationError("retention policy requires maxAgeDays or maxEntries");
@@ -277,24 +286,95 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       throw new MemoryValidationError("maxEntries must be a non-negative integer");
     }
     const batchSize = clampRetentionBatch(policy.batchSize);
-    // ponytail: per-thread scan only; shard by resource/thread if a single thread grows unbounded.
-    const records = await vectorStore.getByThread(threadScope);
-    const now = Date.now();
-    const cutoff = policy.maxAgeDays !== undefined ? now - policy.maxAgeDays * 86_400_000 : Number.NEGATIVE_INFINITY;
     const expired = new Set<string>();
-    for (const record of records) {
-      if (Date.parse(record.createdAt) < cutoff) expired.add(record.id);
+    let scanned = 0;
+    if (policy.maxAgeDays !== undefined) {
+      const page = await listByThread({ ...threadScope, limit: batchSize, order: "createdAt", signal: retentionOptions.signal });
+      scanned += page.records.length;
+      const cutoff = Date.now() - policy.maxAgeDays * 86_400_000;
+      for (const record of page.records) {
+        if (Date.parse(record.createdAt) < cutoff) expired.add(record.id);
+        else break; // oldest-first page makes later rows ineligible for this sweep.
+      }
     }
-    if (policy.maxEntries !== undefined) {
-      const survivors = records.filter((record) => !expired.has(record.id));
-      const overflow = survivors.length - policy.maxEntries;
-      for (let i = 0; i < overflow; i += 1) expired.add(survivors[i]!.id); // oldest by sequence
+    if (policy.maxEntries !== undefined && expired.size < batchSize) {
+      const overflow = (await countByThread(threadScope, { signal: retentionOptions.signal })) - policy.maxEntries;
+      if (overflow > 0) {
+        const page = await listByThread({
+          ...threadScope,
+          limit: Math.min(batchSize - expired.size, overflow),
+          order: "sequence",
+          signal: retentionOptions.signal,
+        });
+        scanned += page.records.length;
+        for (const record of page.records) expired.add(record.id);
+      }
     }
-    const ids = [...expired].slice(0, batchSize);
-    const deleted = ids.length > 0
-      ? await vectorStore.delete({ ...threadScope, ids }, { signal: retentionOptions.signal })
-      : 0;
-    return { deleted, scanned: records.length };
+    const ids = [...expired];
+    const deleted = ids.length > 0 ? await vectorStore.delete({ ...threadScope, ids }, { signal: retentionOptions.signal }) : 0;
+    return { deleted, scanned };
+  }
+
+  async function exportMemory(exportOptions: ExportMemoryOptions): Promise<MemoryExportResult> {
+    const threadScope = threadScopeOrThrow();
+    assertNotAborted(exportOptions.signal);
+    const identity = requireScope(exportOptions.identity, true) as Required<MemoryScope>;
+    assertSameScope(threadScope, identity, "memory export identity");
+    if (!vectorStore.listByThread) throw new MemoryScopeError("export requires a listByThread-capable vector store");
+    const exportLimits = resolveMemoryLimits({
+      exportPageSize: exportOptions.limit ?? limits.exportPageSize,
+      maxExportBytes: exportOptions.maxBytes ?? limits.maxExportBytes,
+      exportMs: exportOptions.maxMs ?? limits.exportMs,
+    });
+    if (exportLimits.exportPageSize < 1 || exportLimits.maxExportBytes < 1 || exportLimits.exportMs < 1) {
+      throw new MemoryValidationError("memory export limits must be positive");
+    }
+    const page = await withinDeadline(
+      (signal) => vectorStore.listByThread!({ ...threadScope, cursor: exportOptions.cursor, limit: exportLimits.exportPageSize, signal }),
+      exportLimits.exportMs,
+      exportOptions.signal,
+      "memory export",
+    );
+    // Exports require explicit visible consent even when recall runs in legacy-compatible mode.
+    const entries = page.records
+      .filter((record) => record.consent?.visible === true)
+      .map((record) => {
+        assertFiniteVector(record.embedding, "stored embedding", embedder.dimensions);
+        return redactJson(record, redactor);
+      });
+    const bytes = byteLengthOfJson(entries);
+    if (bytes > exportLimits.maxExportBytes) throw new MemoryLimitError(`memory export exceeds ${exportLimits.maxExportBytes} bytes`);
+    return { entries, bytes, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
+  }
+
+  async function rebuildIndex(rebuildOptions: RebuildIndexOptions = {}): Promise<RebuildIndexResult> {
+    const threadScope = threadScopeOrThrow();
+    assertNotAborted(rebuildOptions.signal);
+    if (!vectorStore.listByThread) throw new MemoryScopeError("rebuild requires a listByThread-capable vector store");
+    const rebuildLimits = resolveMemoryLimits({
+      rebuildBatchSize: rebuildOptions.batchSize ?? limits.rebuildBatchSize,
+      rebuildMs: rebuildOptions.maxMs ?? limits.rebuildMs,
+    });
+    if (rebuildLimits.rebuildBatchSize < 1 || rebuildLimits.rebuildMs < 1) {
+      throw new MemoryValidationError("memory rebuild limits must be positive");
+    }
+    const result = await withinDeadline(async (signal) => {
+      const page = await vectorStore.listByThread!({
+        ...threadScope,
+        cursor: rebuildOptions.cursor,
+        limit: rebuildLimits.rebuildBatchSize,
+        signal,
+      });
+      if (page.records.length === 0) return { rebuilt: 0, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
+      for (const record of page.records) assertFiniteVector(record.embedding, "stored embedding", embedder.dimensions);
+      const embeddings = await embedBatched(embedder, page.records.map((record) => record.text), limits.embedBatchSize, {
+        signal,
+        maxDimensions: limits.maxVectorDimensions,
+      });
+      await vectorStore.upsert(page.records.map((record, index) => ({ ...record, embedding: embeddings[index]! })), { signal });
+      return { rebuilt: page.records.length, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
+    }, rebuildLimits.rebuildMs, rebuildOptions.signal, "memory rebuild");
+    return result;
   }
 
   function createContextProvider(providerOptions: MemoryContextProviderOptions = {}): ContextProvider {
@@ -375,6 +455,8 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     correct,
     forget,
     applyRetention,
+    exportMemory,
+    rebuildIndex,
     createContextProvider,
     createWorkingMemoryProcessor,
   };
@@ -451,4 +533,34 @@ function clampRetentionBatch(value: number | undefined): number {
     throw new MemoryLimitError(`retention batchSize exceeds hard cap ${HARD_MEMORY_RETENTION_BATCH_CAP}`);
   }
   return resolved;
+}
+
+async function withinDeadline<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  maxMs: number,
+  signal: AbortSignal | undefined,
+  label: string,
+): Promise<T> {
+  assertNotAborted(signal);
+  const controller = new AbortController();
+  let rejectAbort: ((error: Error) => void) | undefined;
+  const abort = () => {
+    controller.abort();
+    rejectAbort?.(new MemoryAbortError());
+  };
+  signal?.addEventListener("abort", abort, { once: true });
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timedOut = new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => {
+        controller.abort();
+        reject(new MemoryLimitError(`${label} exceeded ${maxMs}ms`));
+      }, maxMs);
+    });
+    const aborted = new Promise<never>((_, reject) => { rejectAbort = reject; });
+    return await Promise.race([operation(controller.signal), timedOut, aborted]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    signal?.removeEventListener("abort", abort);
+  }
 }

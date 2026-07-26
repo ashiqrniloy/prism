@@ -7,6 +7,34 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.14 → 0.0.15 OpenAI hosted tools, continuation, and realtime (additive, pre-release)
+
+`@arnilo/prism-provider-openai` now distinguishes server-executed calls with `authority: "provider-hosted"`; host dispatchers must not execute or reply to them. Incomplete Responses streams self-resume with an opaque `previous_response_id` cursor (at most 4 KiB, at most eight hops) and surface `continuation_required`; cap or duplicate-cursor failure now ends with a provider error instead of a silent partial response.
+
+Realtime is opt-in through `createOpenAIRealtimeSession({ model, ownerId, apiKey, ... })`. Supply a stable host-owned `ownerId`; the session uses documented WebSocket headers, waits for `session.created`, exposes audio/transcript/interrupt/close events, and fails closed on disconnect, identity, audio/byte, or wall-time limits. It does not add a vendor package or automatic voice capture/playback.
+
+## 0.0.14 → 0.0.15 AI SDK adapter matrix (additive, pre-release)
+
+`@arnilo/prism-provider-ai-sdk` now pins and verifies `@ai-sdk/provider@4.0.3` at setup rather than accepting any v4 minor. Upgrade the peer package to the documented matrix entry. An unlisted installed version fails with typed `AiSdkProviderError` code `unsupported_version`; add a tested matrix row before changing it.
+
+Stream output now maps `response-metadata.id` to `message_start`, preserves `providerExecuted` tool authority as `"provider-hosted"`, and rejects unsupported output parts or `structuredOutput.strict` with `unsupported_mapping` rather than dropping them. Pass `redactor` when using the adapter directly; agents retain their existing active-redactor behavior.
+
+## 0.0.14 → 0.0.15 RAG source lifecycle and document adapters (additive, pre-release)
+
+`@arnilo/prism-rag` now adds `replaceSource()`, `deleteSource()`, and `replaceDocument()` plus `DocumentLoader` / `Parser` seams. Existing `indexChunks()` behavior is unchanged; use `replaceSource()` when a source can shrink or must retain its old index if re-embedding fails.
+
+Atomic replacement deliberately requires a scoped source-aware transaction (`getBySource()` + `transaction()`). The in-memory reference vector store supplies both; durable custom stores must add equivalent exact tenant/resource/corpus behavior before using replacement. Prism rejects a generic upsert-only store rather than offering a non-atomic fallback.
+
+Reference parsers (`textParser`, `markdownParser`, `htmlParser`, `pdfParser`) are available from root and `@arnilo/prism-rag/parsers`; loaders are available from `@arnilo/prism-rag/loaders`. HTML removes script/style text. The PDF parser only accepts bounded uncompressed text PDFs (8 MiB / 256 pages / 30 s); install no new parser dependency—supply a host `Parser` for compressed or scanned files. `createWebFetchDocumentLoader()` accepts an existing `@arnilo/prism-web-tools` adapter and preserves its citation/untrusted metadata; it does not add a crawler.
+
+RAG retrieval now optionally accepts host-owned `Reranker`; it receives redacted bounded hits and must return their exact IDs once each. Results add `trust`, `provenance`, and `retrievalRank`; context blocks now repeat untrusted/inert/injection-capable metadata. Add `statusStore` to indexing/replacement when hosts need per-source pending/indexed/failed/partial progress, use `listIngestionStatus()` for capped exact-scope pages, and supply durable storage if process restart durability matters. `createMemoryIngestionStatusStore()` is only a reference adapter.
+
+## 0.0.14 → 0.0.15 memory export and rebuild (additive, pre-release)
+
+`@arnilo/prism-memory` adds `exportMemory({ identity, cursor?, ... })` and `rebuildIndex({ cursor?, ... })`. Export is not a generic admin dump: provide the exact host-verified tenant/resource/thread identity used to construct `createMemory()`. It excludes revoked, invisible, and consent-less legacy entries, redacts each returned record, and caps one page at 100 entries / 4 MiB / 10 seconds by default (200 / 32 MiB / 60 seconds hard).
+
+`rebuildIndex()` re-embeds one 32-record page by default (128 hard), validates existing and new finite vectors, and returns `nextCursor`; persist that cursor in host-owned authorized state and call again to resume after an abort/restart. Neither API scans a corpus or starts a background worker. They require a semantic `VectorStore.listByThread()` implementation; `applyRetention()` now also requires `countByThread()` for bounded oldest-first deletion. The shipped in-memory adapter and PostgreSQL/pgvector adapter conform. `@arnilo/prism-session-store-sqlite` remains a session/run persistence package, not a semantic-vector adapter.
+
 ## 0.0.13 → 0.0.14 personal/work-agent conversations, co-work review, and channel/device gates (additive, pre-release)
 
 Release **0.0.14** is strictly additive: every surface extends a shipped package and reuses the AG-UI adapter shipped in 0.0.12. The only new packages are two optional provider adapters (41 → 43 manifests): `@arnilo/prism-provider-alibaba` and `@arnilo/prism-provider-ollama`, both enrolled via the `@arnilo/prism-providers` family. No permission broadening — channel/device/co-work features cannot widen consent, memory, network, file, browser, connector, or tool permissions (roadmap gate 8). See [Phase 9 evidence](review-coverage-2026-07-25-phase-9.md).
@@ -213,7 +241,7 @@ Phase 4 adds optional `@arnilo/prism-evals` for deterministic scorers/datasets/e
 
 Phase 5 adds `prism init <dir>` to the existing CLI. It scaffolds a tiny TypeScript project with one selected provider and an offline mock test. Optional `--with-workflows` / `--with-evals` flags add only those packages; storage and telemetry stay opt-in elsewhere.
 
-Phase 6 adds optional `@arnilo/prism-provider-ai-sdk` for AI SDK `LanguageModelV4` interoperability. Install it with `@ai-sdk/provider@^4`, through `@arnilo/prism-providers`, or through `@arnilo/prism-all`; it is not a core dependency.
+Phase 6 adds optional `@arnilo/prism-provider-ai-sdk` for AI SDK `LanguageModelV4` interoperability. For 0.0.15 install its exact supported peer `@ai-sdk/provider@4.0.3` (not `^4`); an unlisted version fails at setup. Install the adapter directly, through `@arnilo/prism-providers`, or through `@arnilo/prism-all`; it is not a core dependency.
 
 Phase 7 adds optional `@arnilo/prism-memory` for schema/template-backed working memory and embedding-based semantic recall. Install it directly or through `@arnilo/prism-all`; in-memory adapters are default, and PostgreSQL/pgvector is opt-in. It is not a core dependency.
 

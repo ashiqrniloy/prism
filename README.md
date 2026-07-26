@@ -34,10 +34,11 @@ packages. Prism defines contracts, not apps.
 - **Config, settings, security**: layered config merge, settings providers,
   credential resolvers, trust/permission policies, and secret redaction.
 - **CLI/RPC/server**: `prism --mode print|json|rpc`, `prism init`, optional framework-free authorized Web agent/workflow routes, and explicit MCP server exposure.
-- **Co-work contracts (0.0.14)**: conversation thread and artifact/review types, a
-  deny-by-default device-adapter contract (`resolveDevicePolicy`/`assertDeviceAdmit`),
-  and OAuth refresh/revoke helpers; services ship in `@arnilo/prism-server` and
-  `@arnilo/prism-credentials-node`.
+- **Ecosystem parity (0.0.15)**: OpenAI hosted-tool attribution, bounded Responses
+  continuation/Realtime, exact AI SDK V4 mapping, bounded RAG lifecycle/reranking/trust,
+  and consent-bound memory export/rebuild; provider, RAG, and memory packages remain optional.
+- **Co-work contracts (0.0.14)**: conversation/artifact review types, deny-by-default device
+  contracts, and OAuth refresh/revoke helpers; services stay in optional packages.
 
 ## Install
 

@@ -62,7 +62,8 @@ export const singleShotLoop: AgentLoopStrategy = {
       }
       ctx.emit({ type: "turn_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn });
 
-      if (calls.length === 0 || toolRounds >= ctx.maxToolRounds) {
+      const dispatchable = dispatchableToolCalls(calls);
+      if (dispatchable.length === 0 || toolRounds >= ctx.maxToolRounds) {
         // Soft-interrupt / late steer: keep same run going when queue still has text.
         if (await ctx.applyPendingSteers?.()) {
           nextInput = [];
@@ -71,7 +72,7 @@ export const singleShotLoop: AgentLoopStrategy = {
         break;
       }
       toolRounds += 1;
-      await dispatchToolCallsInOrder(calls, ctx);
+      await dispatchToolCallsInOrder(dispatchable, ctx);
       nextInput = [];
     }
     return usage;
@@ -146,13 +147,19 @@ export function generateValidateReviseLoop(opts: {
         ctx.emit({ type: "turn_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn });
 
         if (opts.toolCalls === "bounded" && calls.length > 0) {
+          const dispatchable = dispatchableToolCalls(calls);
+          if (dispatchable.length === 0) {
+            // Only provider-hosted calls; no host tool to run. Continue without charging a round.
+            nextInput = [];
+            continue;
+          }
           if (toolRounds >= ctx.maxToolRounds) {
             const result = { ok: false as const, errors: [{ message: "maximum tool rounds exceeded" }], metadata: { reason: "tool_round_limit" } };
             ctx.emit({ type: "artifact_failed", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt: attempts + 1, result });
             return usage;
           }
           toolRounds += 1;
-          await dispatchToolCallsInOrder(calls, { ...ctx, toolConcurrency: 1 });
+          await dispatchToolCallsInOrder(dispatchable, { ...ctx, toolConcurrency: 1 });
           nextInput = [];
           continue;
         }
@@ -234,6 +241,13 @@ export function resolveToolConcurrency(
   if (value === undefined) return 1;
   if (!Number.isFinite(value) || value < 1) return 1;
   return Math.floor(value);
+}
+
+/** Calls the host must dispatch. Provider-hosted calls (`authority: "provider-hosted"`)
+ *  were already executed server-side; the assistant response text carries their effect, so
+ *  the host neither dispatches them nor appends a `tool_result`. */
+export function dispatchableToolCalls(calls: readonly ToolCallContent[]): readonly ToolCallContent[] {
+  return calls.filter((call) => call.authority !== "provider-hosted");
 }
 
 /** Dispatch tool calls with bounded concurrency; append transcript rows in call order. */

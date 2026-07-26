@@ -49,11 +49,13 @@ Known `ModelCapabilities.input` tags are exported as `MODEL_INPUT_CAPABILITIES`:
 
 | Tag | Block type | First-party mapping (declared capability required) |
 | --- | --- | --- |
-| `text` | `text` (default) | All providers |
-| `image` | `image` | OpenAI Responses, OpenRouter, OpenCode Go Anthropic route, Kimi, NeuralWatt |
-| `audio` | `audio` | OpenAI Responses (`input_audio`) |
-| `file` | `file` | OpenAI Responses (`input_file`); Anthropic routes map PDF only |
-| `document` | `document` | OpenAI Responses (`input_file`); OpenCode Go Anthropic route; Kimi |
+| `text` | `text` (default) | All first-party providers; Azure/Bedrock/Vertex use their host-selected OpenAI-compatible endpoint/model. |
+| `image` | `image` | OpenAI Responses; Anthropic; Google; Kimi; Z.AI; OpenRouter; OpenCode Go OpenAI route; Alibaba; Ollama; NeuralWatt. Enterprise OpenAI-compatible packages require the host model/endpoint to declare and accept image input. |
+| `audio` | `audio` | OpenAI Responses (`input_audio`) and Google `generateContent` inline data. OpenAI Realtime instead receives `RealtimeSession.sendAudio()` chunks, not an `audio` `ContentBlock`. |
+| `file` | `file` | OpenAI Responses (`input_file`); Anthropic/Kimi/OpenCode Go Anthropic route accept PDF file/document forms; Google maps inline file data. |
+| `document` | `document` | OpenAI Responses (`input_file`); Anthropic/Kimi/OpenCode Go Anthropic route map PDF; Google maps inline document data. |
+
+The AI SDK adapter maps declared user text/image/audio/file/document blocks (and assistant text/image/file/document) to AI SDK file parts; `resourceUri` remains host-resolved before `doStream`. Its output `file`, `reasoning-file`, and `source` parts are deliberately rejected as `unsupported_mapping`, not converted to trusted Prism content. Provider capability metadata is the gate—this matrix never upgrades a model that does not declare the matching input tag.
 
 ## Outputs / response / events
 
@@ -136,6 +138,7 @@ try {
 - Local filesystem paths should use trust policies such as `createPathTrustPolicy()` before exposing URIs to loaders.
 - Provider upload/create/delete lifecycles are provider-package-local. `@arnilo/prism-provider-openai` inlines files under 4 MiB as `data:<mediaType>;base64,...` `file_data`, otherwise uses a bounded per-run upload cache and best-effort `DELETE /v1/files` cleanup after each stream.
 - Shared wire helpers live in `@arnilo/prism/providers/media` (`resolveProviderMediaMessages`, `serializeOpenAIResponsesInputFile`, `serializePdfDocumentWireBlock`, `createBoundedUploadCache`). OpenAI Responses, Kimi, and OpenCode Go Anthropic routes resolve their complete media collection once before serialization or upload.
+- OpenAI Realtime audio is a bidirectional `RealtimeSession` stream, not a `ContentBlock`: provide host-captured `Uint8Array` chunks with `sendAudio()` and consume untrusted `audio_delta` / transcript events. It has a fixed 256 events/s, 1 MiB/s, and 600 s default ceiling.
 
 ## Security and performance notes
 

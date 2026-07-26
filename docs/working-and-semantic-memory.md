@@ -23,11 +23,18 @@ Ordinary Prism sessions do not require this package or any vector backend.
 | `vectorStore` / `workingStore` | no | Defaults to in-memory adapters |
 | `schema` / `validateWorkingMemory` | no | Working-memory shape checks (JSON Schema subset or host hook) |
 | `workingMemoryTemplate` | no | `{{path}}` template for context injection |
-| `limits` | no | top-K, adjacent range, batch, payload, injected-token caps |
+| `limits` | no | top-K, adjacent range, batch, payload, injected-token, export, and rebuild caps |
 | `redactor` / `secrets` | no | Redact text/metadata before persist/inject |
 | `requireConsent` | no | Strict mode: recall/injection excludes entries lacking explicit consent |
 
-Semantic indexing (entries carry consent/source/visibility; unset defaults to `{ source: "user", scope: "thread", visible: true }`):
+Semantic indexing (entries carry `MemoryConsent` source/visibility; unset defaults to `{ source: "user", scope: "thread", visible: true }`):
+
+| `MemoryConsent` field | Meaning |
+| --- | --- |
+| `source` | `"user"`, `"agent"`, or `"system"` provenance. |
+| `scope` | `"thread"`, `"profile"`, or `"user"` control scope. |
+| `visible` | `false` immediately excludes the record from recall, injection, export, and telemetry. |
+| `grantedAt` / `revokedAt` | Optional host/audit timestamps; a revocation excludes the record. |
 
 ```ts
 await memory.remember({ entries: [{ id, text, metadata?, consent?, sequence? }] }, { wait?: boolean })
@@ -46,6 +53,14 @@ await memory.setConsent(entryId, { visible?: boolean, source?, scope? }) // gran
 await memory.correct(entryId, text)                                       // re-embeds, preserves consent
 await memory.forget({ ids? })                                             // real delete (whole thread if no ids)
 await memory.applyRetention({ maxAgeDays?, maxEntries?, batchSize? })     // bounded real-delete sweep
+
+const page = await memory.exportMemory({
+  identity: { tenantId, resourceId, threadId }, // exact host-verified owner
+  cursor?, limit?, maxBytes?, maxMs?, signal?,
+}); // visible, explicitly consented, redacted records only
+
+const rebuilt = await memory.rebuildIndex({ cursor?, batchSize?, maxMs?, signal? });
+// re-embeds one page; save rebuilt.nextCursor and call again to resume
 ```
 
 ## Outputs / response / events
@@ -58,6 +73,8 @@ await memory.applyRetention({ maxAgeDays?, maxEntries?, batchSize? })     // bou
 | `setConsent` / `correct` | Updated `MemoryVectorRecord` with stamped grant/revoke times |
 | `forget` | Removed count (real delete) |
 | `applyRetention` | `{ deleted, scanned }` bounded real-delete sweep |
+| `exportMemory` | `{ entries, bytes, nextCursor? }` redacted, explicitly consented, identity-bound page |
+| `rebuildIndex` | `{ rebuilt, nextCursor? }` re-embedded bounded page; caller owns resume scheduling |
 | `createContextProvider()` | Inert `ContextProvider` blocks for working and/or semantic text |
 | `createWorkingMemoryProcessor({ extract })` | Explicit host-invoked updater; never auto-runs |
 
@@ -144,7 +161,8 @@ const memory = createMemory({
 - The working-memory processor is opt-in and host-invoked; middleware is not required.
 - `createHashEmbedder()` is for tests/demos only; production hosts supply a real `Embedder`.
 - Observational memory (`@arnilo/prism-compaction-observational-memory`) remains unchanged and composable.
-- Consent is enforced at the single `recall()` gate, so both direct recall and `createContextProvider()` injection honor it; `visible: false` (or a revoked grant) keeps an entry out of prompts, events, exports, and telemetry. `setConsent`/`correct` re-upsert in place (consent change does not re-embed); `forget`/`applyRetention` are real deletes, not tombstones. Retention sweeps scan one thread and delete in bounded batches (default 500 / hard 5000) — no full-corpus scan per run. The PostgreSQL adapter persists consent in a `consent JSONB` column added by `buildMemoryDdl`.
+- Consent is enforced at the single `recall()` gate, so both direct recall and `createContextProvider()` injection honor it; `visible: false` (or a revoked grant) keeps an entry out of prompts, events, exports, and telemetry. `setConsent`/`correct` re-upsert in place (consent change does not re-embed); `forget`/`applyRetention` are real deletes, not tombstones. Retention uses indexed oldest-first pages plus a scoped count, deleting one default-500/hard-5000 batch without reading a corpus into memory. The PostgreSQL adapter persists consent in a `consent JSONB` column added by `buildMemoryDdl`.
+- `exportMemory()` requires an exact `{ tenantId, resourceId, threadId }` identity equal to its `createMemory()` scope. It excludes legacy consent-less, invisible, and revoked records even when normal recall allows legacy entries. It returns a stable sequence cursor page, redacted before response, with defaults/hard caps of 100/200 entries, 4/32 MiB, and 10/60 seconds. `rebuildIndex()` uses the same stable cursor shape to re-embed one 32/128-record page under a 10/60-second cap; save the cursor durably to resume. Both APIs require a store implementing bounded `listByThread()`; retention also requires `countByThread()`. PostgreSQL/pgvector and the in-memory reference adapter conform; SQLite persistence stores sessions, not semantic vectors.
 - Profile bundles do not include this package yet.
 
 Shared conformance:
@@ -167,7 +185,7 @@ await runMemoryConformance(() => ({
 - Configure `secrets` / `redactor` so memory text and metadata cannot persist or inject raw canaries.
 - Injected context is inert text — it cannot grant tools or permissions.
 - Hard caps: top-K ≤ 32, messageRange ≤ 4, embed batch ≤ 128, injected tokens ≤ 8000, payload/working-memory byte limits enforced.
-- Every embedding is a non-empty finite number vector. `embedBatched()`, in-memory `VectorStore` upserts/queries, and PostgreSQL/pgvector parameters reject NaN, ±Infinity, non-numbers, and wrong configured dimensions before similarity scoring or SQL. Custom adapters can call `assertFiniteVector(vector, label, expectedLength?)` at their trust boundary.
+- Every embedding is a non-empty finite number vector. `embedBatched()`, in-memory `VectorStore` upserts/queries, PostgreSQL/pgvector parameters, and export/rebuild page boundaries reject NaN, ±Infinity, non-numbers, and wrong configured dimensions before similarity scoring, SQL, response, or re-indexing. Custom adapters can call `assertFiniteVector(vector, label, expectedLength?)` at their trust boundary.
 - Default `remember()` does not block agent completion; pass `{ wait: true }` when indexing must finish first.
 - PostgreSQL live suite is gated by `PRISM_TEST_POSTGRES_URL` and requires the `vector` extension.
 

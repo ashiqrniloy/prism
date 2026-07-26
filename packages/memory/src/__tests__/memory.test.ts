@@ -277,6 +277,70 @@ describe("@arnilo/prism-memory", () => {
     );
   });
 
+  it("exports only redacted, consented entries and rebuilds one resumable page", async () => {
+    const canary = "MEMORY_EXPORT_SECRET";
+    const base = createHashEmbedder({ dimensions: 8 });
+    let rebuildCalls = 0;
+    const embedder = {
+      dimensions: base.dimensions,
+      async embed(texts: readonly string[], options?: { readonly signal?: AbortSignal }) {
+        rebuildCalls += 1;
+        return base.embed(texts, options);
+      },
+    };
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th1",
+      embedder,
+      secrets: [canary],
+      redactor: createSecretRedactor([canary]),
+    });
+    await memory.remember({
+      entries: [
+        { id: "one", text: `visible ${canary}`, consent: { source: "user", scope: "thread", visible: true } },
+        { id: "two", text: "hidden", consent: { visible: false } },
+      ],
+    }, { wait: true });
+    rebuildCalls = 0;
+
+    const exported = await memory.exportMemory({
+      identity: { tenantId: "t1", resourceId: "u1", threadId: "th1" },
+      limit: 1,
+    });
+    assert.equal(exported.entries.length, 1);
+    assert.equal(exported.entries[0]?.id, "one");
+    assert.equal(JSON.stringify(exported).includes(canary), false);
+    await assert.rejects(
+      memory.exportMemory({ identity: { tenantId: "other", resourceId: "u1", threadId: "th1" } }),
+      /boundary/i,
+    );
+
+    const first = await memory.rebuildIndex({ batchSize: 1 });
+    assert.equal(first.rebuilt, 1);
+    assert.ok(first.nextCursor);
+    assert.equal(rebuildCalls, 1);
+    const controller = new AbortController();
+    controller.abort();
+    await assert.rejects(memory.rebuildIndex({ cursor: first.nextCursor, signal: controller.signal }), /aborted/i);
+    const second = await memory.rebuildIndex({ cursor: first.nextCursor, batchSize: 1 });
+    assert.equal(second.rebuilt, 1);
+
+    const backing = createMemoryVectorStore();
+    const legacyStore = {
+      upsert: backing.upsert,
+      query: backing.query,
+      delete: backing.delete,
+      getByThread: backing.getByThread,
+    };
+    const noPaging = createMemory({ tenantId: "t1", resourceId: "u1", threadId: "legacy", embedder, vectorStore: legacyStore });
+    await assert.rejects(
+      noPaging.exportMemory({ identity: { tenantId: "t1", resourceId: "u1", threadId: "legacy" } }),
+      /listByThread/i,
+    );
+    await assert.rejects(noPaging.applyRetention({ maxEntries: 1 }), /countByThread/i);
+  });
+
   it("keeps revoked/invisible memories out of prompt injection and honors strict consent", async () => {
     const memory = createMemory({
       tenantId: "t1",

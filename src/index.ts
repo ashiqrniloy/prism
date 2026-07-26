@@ -1,5 +1,15 @@
 export type * from "./contracts.js";
-export type { RunLimitCounters, RunLimitName, SecureAgentOptions } from "./contracts.js";
+export type {
+  RealtimeCaps,
+  RealtimeEvent,
+  RealtimeSession,
+  RealtimeSessionFactory,
+  RealtimeSessionOptions,
+  RunLimitCounters,
+  RunLimitName,
+  SecureAgentOptions,
+  ToolCallAuthority,
+} from "./contracts.js";
 export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError, AgentRunStateError, assertSessionMetadataKey, SESSION_SEARCH_WORKSPACE_METADATA_KEY, SESSION_SEARCH_UNSUPPORTED_CODE, SessionSearchUnsupportedError, isSessionSearchUnsupported, DEFAULT_SESSION_SEARCH_LIMIT, HARD_MAX_SESSION_SEARCH_LIMIT, DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES, HARD_MAX_SESSION_SEARCH_QUERY_BYTES, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES, HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES, DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES, HARD_MAX_SESSION_SEARCH_CURSOR_BYTES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS, HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS, DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES, HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES, HARD_MAX_SESSION_SEARCH_LINEAR_BYTES, DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES, HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES, resolveSessionSearchQuery, DEFAULT_MAX_PENDING_STEERS, HARD_MAX_PENDING_STEERS, DEFAULT_MAX_PENDING_STEER_BYTES, HARD_MAX_PENDING_STEER_BYTES } from "./contracts.js";
 export { createAgent, createAgentSession, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
 export {
@@ -246,6 +256,7 @@ export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, Memory
 export type { MockProviderOptions } from "./mock-provider.js";
 export {
   providerContentDelta,
+  providerContinuationRequired,
   providerDone,
   providerError,
   providerTextDelta,
@@ -316,6 +327,6 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 
 export const name = "prism";
-export const version = "0.0.14";
+export const version = "0.0.15";
 export const description =
   "Agent harness for AI providers, agents, sessions, and tools.";

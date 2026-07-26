@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.15] - 2026-07-26
+
+### Changed
+
+- Released with exact 0.0.15 graph.
+
 ## [0.0.14] - 2026-07-26
 
 ### Changed
@@ -44,7 +50,6 @@
 
 - Malformed streamed tool-call arguments yield recoverable tool calls via `toolCallFromArgumentsText` instead of throwing `ProviderTransportError` / terminal stream errors.
 
-
 ## [0.0.8] - 2026-07-20
 
 - Released with the exact 0.0.8 first-party package graph.
@@ -76,7 +81,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.5] - 2026-07-16
 
 - Pinned the required `@arnilo/prism` peer and package metadata to 0.0.5; runtime behavior is unchanged.
-
 
 ## [0.0.4] - 2026-07-14
 

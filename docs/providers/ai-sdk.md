@@ -4,7 +4,15 @@
 
 `@arnilo/prism-provider-ai-sdk` adapts a host-supplied AI SDK `LanguageModelV4` into a Prism `AIProvider`. It maps Prism messages, tools, and structured-output options into `doStream` call options, then translates stream parts into Prism provider events incrementally.
 
-Supported specification: `@ai-sdk/provider` **v4** (`specificationVersion: "v4"`). Core `@arnilo/prism` does not depend on the AI SDK.
+Core `@arnilo/prism` does not depend on the AI SDK.
+
+### Supported-version matrix
+
+| `@ai-sdk/provider` | `LanguageModel` ABI | Status |
+| --- | --- | --- |
+| `4.0.3` | `LanguageModelV4`, `specificationVersion: "v4"` | Supported and offline-tested |
+
+The peer dependency is intentionally exact. `createAiSdkProvider()` reads its resolved `@ai-sdk/provider/package.json` version during setup and throws typed `AiSdkProviderError { code: "unsupported_version" }` for an unlisted version; it does not infer compatibility from a matching `"v4"` string.
 
 ## When to use it
 
@@ -19,6 +27,7 @@ import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
 
 createAiSdkProvider(options: {
   model: LanguageModelV4;
+  redactor?: SecretRedactor;
   id?: string;
 }): AIProvider
 ```
@@ -26,6 +35,7 @@ createAiSdkProvider(options: {
 | Field | Type | Purpose |
 | --- | --- | --- |
 | `model` | `LanguageModelV4` | Host-owned AI SDK language model. |
+| `redactor` | `SecretRedactor` | Optional direct-provider error redactor; agent runs use their active redactor. |
 | `id` | `string` | Prism provider id. Defaults to `ai-sdk:<model.provider>` or `ai-sdk`. |
 
 Mapped request surfaces:
@@ -34,7 +44,7 @@ Mapped request surfaces:
 | --- | --- |
 | `messages` | `LanguageModelV4Prompt` |
 | `tools` | `LanguageModelV4FunctionTool[]` with JSON Schema `inputSchema` |
-| `options.structuredOutput` | `responseFormat: { type: "json", name, schema }` |
+| `options.structuredOutput` | `responseFormat: { type: "json", name, schema }`; `strict` fails explicitly (V4 has no equivalent) |
 | `model.parameters` | `maxOutputTokens`, `temperature`, `topP`, `topK`, penalties, `seed`, `stopSequences` |
 | `request.signal` | `abortSignal` (always wins over adapter options) |
 | `options.headers` | extension headers only; model owns auth |
@@ -45,16 +55,22 @@ Unsupported content fails before `doStream` (for example unresolved `resourceUri
 
 | AI SDK stream part | Prism event |
 | --- | --- |
+| `response-metadata.id` | `message_start.messageId` |
 | `text-delta` | `content_delta` text |
 | `reasoning-delta` | `content_delta` thinking |
 | `tool-input-start` / `tool-input-delta` | `tool_call_delta` |
-| `tool-call` (client-executed) | `tool_call` |
+| `tool-call` | `tool_call`; `providerExecuted` becomes `authority: "provider-hosted"` |
 | `finish` usage | `usage` then `done` |
 | `error` / thrown / abort | redacted `error` |
+| `stream-start`, boundaries, raw diagnostics | intentionally not emitted: no normalized safe payload |
+| provider-executed `tool-result` | remains provider-side; no host result or dispatch |
+| file / reasoning-file / source / custom / approval request | typed `unsupported_mapping` error |
+
+`response-metadata.modelId`/timestamp and opaque `providerMetadata` have no normalized Prism counterpart and are not emitted, preventing provider-private metadata from entering prompt, event, or telemetry paths.
 
 `finish.usage.inputTokens.cacheRead` / `cacheWrite` map to Prism `Usage.cacheReadTokens` / `cacheWriteTokens`. The adapter does not invent cache request fields; prompt caching is owned by the host `LanguageModelV4` and its upstream provider.
 
-Provider-executed tool calls, files/sources/custom parts, warnings, and raw chunks are ignored rather than silently converted into unsupported Prism content.
+No AI SDK stream part is silently coerced into Prism content: the table above maps safe normalized semantics, deliberately withholds provider-private diagnostics/results, and fails unsupported output types explicitly.
 
 ## Request/response example
 
@@ -127,7 +143,7 @@ Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/provi
 
 ## Extension and configuration notes
 
-- Peer dependency: `@ai-sdk/provider@^4.0.0`. Upgrade policy tracks one specification major at a time.
+- Peer dependency: `@ai-sdk/provider@4.0.3`. Upgrade policy adds a matrix row and offline conformance fixture before accepting any new version.
 - First-party HTTP providers remain independent; this adapter is available directly, through `@arnilo/prism-providers`, or through `@arnilo/prism-all`. Installation does not select a model or invoke AI SDK.
 - `options.compat` / `options.extra` pass through as AI SDK `providerOptions.prism`.
 - Export helpers `toAiSdkCallOptions`, `toAiSdkPrompt`, and `mapAiSdkStream` for tests and custom hosts.
@@ -137,8 +153,8 @@ Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/provi
 - Host credentials stay inside the supplied AI SDK model. The adapter never reads env keys or credential stores.
 - Abort and resource limits come from Prism `request.signal`; adapter options cannot replace that bound.
 - Stream parts are translated incrementally with no full-response buffering and no duplicate model call.
-- Unsupported content fails closed before model invocation. Errors use Prism `providerError` redaction.
-- Provider metadata/warnings are not emitted as prompt or tool content.
+- Unsupported content and stream parts fail closed before/at mapping; `structuredOutput.strict` is rejected because V4 cannot carry it.
+- Pass `redactor` for direct use; agent runs apply their active redactor. Provider metadata/warnings never become prompt, tool, event, or telemetry content.
 
 ## Related APIs
 

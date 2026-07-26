@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.15] - 2026-07-26
+
+### Changed
+
+- Pinned `@ai-sdk/provider` support to offline-tested `4.0.3`, with setup-time version-skew failure, typed stream mapping, provider-hosted tool attribution, response-id mapping, and direct-error redaction.
+
 ## [0.0.14] - 2026-07-26
 
 ### Changed
@@ -44,7 +50,6 @@
 
 - Malformed streamed tool-call arguments yield recoverable tool calls via `toolCallFromArgumentsText` instead of throwing `ProviderTransportError` / terminal stream errors.
 
-
 ## [0.0.8] - 2026-07-20
 
 - Released with the exact 0.0.8 first-party package graph.
@@ -59,7 +64,6 @@
 ## [0.0.5] - 2026-07-16
 
 - Added the optional AI SDK LanguageModelV4-to-Prism provider adapter.
-
 
 ## [0.0.4] - 2026-07-14
 

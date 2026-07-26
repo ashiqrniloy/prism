@@ -3,6 +3,7 @@ import type { Pool, PoolClient, PoolConfig } from "pg";
 import { MemoryConflictError, MemoryLimitError, MemoryValidationError } from "./errors.js";
 import { buildMemoryDdl, DEFAULT_MEMORY_SCHEMA } from "./postgres-ddl.js";
 import { qualifyTable, validateIdentifier } from "./postgres-identifiers.js";
+import { decodeMemoryCursor, encodeMemoryCursor } from "./pagination.js";
 import {
   assertByteLimit,
   assertFiniteVector,
@@ -17,6 +18,7 @@ import type {
   MemoryConsent,
   MemoryVectorHit,
   MemoryVectorRecord,
+  MemoryVectorOrder,
   VectorDeleteFilter,
   VectorQuery,
   VectorStore,
@@ -42,6 +44,8 @@ export interface PostgresMemoryStores {
   readonly workingStore: WorkingMemoryStore;
   readonly vectorStore: VectorStore & {
     getByThread(scope: { tenantId: string; resourceId: string; threadId: string }): Promise<readonly MemoryVectorRecord[]>;
+    listByThread: NonNullable<VectorStore["listByThread"]>;
+    countByThread: NonNullable<VectorStore["countByThread"]>;
   };
   readonly pool: Pool;
   readonly schema: string;
@@ -184,6 +188,8 @@ export async function createPostgresMemoryStores(
 
   const vectorStore: VectorStore & {
     getByThread(scope: { tenantId: string; resourceId: string; threadId: string }): Promise<readonly MemoryVectorRecord[]>;
+    listByThread: NonNullable<VectorStore["listByThread"]>;
+    countByThread: NonNullable<VectorStore["countByThread"]>;
   } = {
     async upsert(records, upsertOptions = {}) {
       assertNotAborted(upsertOptions.signal);
@@ -269,6 +275,47 @@ export async function createPostgresMemoryStores(
         [required.tenantId, required.resourceId, required.threadId],
       );
       return result.rows.map((row) => mapVectorRow(row));
+    },
+
+    async listByThread(query) {
+      assertNotAborted(query.signal);
+      const required = requireScope(query, true) as Required<MemoryVectorRecord>;
+      if (!Number.isInteger(query.limit) || query.limit < 1) throw new MemoryValidationError("memory page limit must be a positive integer");
+      const order: MemoryVectorOrder = query.order ?? "sequence";
+      const cursor = decodeMemoryCursor(query.cursor, order);
+      const params: unknown[] = [required.tenantId, required.resourceId, required.threadId];
+      const columns = "tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, consent, created_at";
+      let where = "tenant_id = $1 AND resource_id = $2 AND thread_id = $3";
+      let ordering = "sequence ASC, id ASC";
+      if (cursor && order === "sequence") {
+        params.push(cursor.value, cursor.id);
+        where += ` AND (sequence, id) > ($${params.length - 1}, $${params.length})`;
+      } else if (cursor) {
+        params.push(new Date(cursor.value).toISOString(), cursor.sequence, cursor.id);
+        where += ` AND (created_at, sequence, id) > ($${params.length - 2}::timestamptz, $${params.length - 1}, $${params.length})`;
+      }
+      if (order === "createdAt") ordering = "created_at ASC, sequence ASC, id ASC";
+      params.push(query.limit + 1);
+      const result = await pool.query(
+        `SELECT ${columns} FROM ${semanticTable} WHERE ${where} ORDER BY ${ordering} LIMIT $${params.length}`,
+        params,
+      );
+      const records = result.rows.slice(0, query.limit).map((row) => mapVectorRow(row) as MemoryVectorRecord);
+      const last = records.at(-1);
+      return {
+        records,
+        ...(last && result.rows.length > records.length ? { nextCursor: encodeMemoryCursor(last, order) } : {}),
+      };
+    },
+
+    async countByThread(scope, countOptions = {}) {
+      assertNotAborted(countOptions.signal);
+      const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
+      const result = await pool.query(
+        `SELECT count(*)::integer AS count FROM ${semanticTable} WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3`,
+        [required.tenantId, required.resourceId, required.threadId],
+      );
+      return Number(result.rows[0]?.count ?? 0);
     },
   };
 

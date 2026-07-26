@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-work-tools",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Optional identity-scoped Microsoft 365 and Google Workspace work connector tools for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,7 +33,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.14"
+    "@arnilo/prism": "0.0.15"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

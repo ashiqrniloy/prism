@@ -12,6 +12,7 @@ api.registerProviderPackage(createOpenAIProviderPackage({ apiKey: "fake-openai-k
 Exports:
 - `createOpenAIProviderPackage({ models?, codexModels?, ... })`
 - `createOpenAIResponsesProvider()`
+- `createOpenAIRealtimeSession({ model, ownerId, apiKey?, webSocket?, caps?, redactor?, signal? })`
 - `createOpenAICodexProvider()`
 - `listOpenAIModels()`, `mapOpenAIModel()`, `defineOpenAIModel()`
 - `openAIModels`, `openAICodexModels`
@@ -32,3 +33,5 @@ Cache / reasoning / discovery:
 - `reasoning` merges model + per-turn `compat.reasoning` (official Responses shape).
 - `listOpenAIModels` is caller-gated; setup never fetches.
 - Provider-owned headers (`content-type`, `authorization`, `x-client-request-id`) win over caller headers.
+- Responses provider-hosted tools emit `tool_call` with `authority: "provider-hosted"`; Prism records but never dispatches/replays them. Incomplete Responses streams self-resume with an opaque ≤4 KiB `previous_response_id` cursor for at most 8 hops.
+- Realtime sessions require a stable `ownerId`, use WebSocket `Authorization` / `OpenAI-Safety-Identifier` headers (never query credentials), bind to `session.created`, and fail closed on disconnect or audio/byte/wall-time caps.

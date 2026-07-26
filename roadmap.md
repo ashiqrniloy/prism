@@ -653,10 +653,10 @@ Updated: 2026-07-21
     - Exact **0.0.14** graph: **43** publishable manifests (41 → 43; only the two provider packages are new, enrolled via `@arnilo/prism-providers`). `scripts/benchmark-0.0.14.mjs` schema + network-free conversation-replay / memory-consent / artifact-delivery / co-work-map / connector-refresh evidence passed.
     - `npm run sdk:ready` (typecheck + full test + pack:dry-run), `release:check` and `release:publish --dry-run` for 0.0.14 (43/43 available), `npm audit --audit-level=high`, SBOM/license verify, `git diff --check`, public-import smoke, and secret scans on tracked files + packed tarballs (0 findings) all passed. Signed tag, npm publication, and restricted live canaries (M365/GWS OAuth, Playwright, PostgreSQL/keychain) remain operator prerequisites.
 
-- [ ] Phase 10 — Release 0.0.15: provider, memory, and RAG ecosystem parity
+- [x] Phase 10 — Release 0.0.15: provider, memory, and RAG ecosystem parity
   - Acceptance Criteria:
     - Functional: OpenAI supports justified hosted tools, response continuation, and realtime APIs without forcing hosted-tool semantics into core; AI SDK adapter has a tested supported-version matrix and complete supported content/tool/metadata mapping.
-    - Functional: Kimi, ZAI, OpenRouter, OpenCode Go, and NeuralWatt expose attributable model discovery/cache/reasoning/routing metadata and share serializers only where wire semantics are truly identical; Anthropic/Google native packages from 0.0.11 remain under shared offline conformance and restricted live canaries.
+    - Functional: Kimi, ZAI, OpenRouter, OpenCode Go, Alibaba, Ollama-cloud and NeuralWatt expose attributable model discovery/cache/reasoning/routing metadata and share serializers only where wire semantics are truly identical; Anthropic/Google native packages from 0.0.11 remain under shared offline conformance and restricted live canaries.
     - Functional: RAG supports atomic source replacement, deletion, document-loader/parser seams with focused text/Markdown/HTML/PDF reference adapters, reranking, citation provenance, ingestion status, and prompt-injection/content-trust metadata; public web ingestion reuses bounded `@arnilo/prism-web-tools` fetch results/citations rather than creating a second crawler.
     - Functional: memory supports finite-vector validation, retention/deletion/export, source/consent metadata, index rebuild, and production adapter conformance; additional vector stores are demand-gated.
     - Performance: provider streams, hosted tools, realtime sessions, document parsing, chunking, embedding, reranking, retrieval, and index rebuilds have finite byte/token/time/concurrency limits with published benchmarks.
@@ -697,6 +697,11 @@ Updated: 2026-07-21
       - Provider pages and compatibility matrix, `docs/provider-conformance.md`, `docs/multimodal-content.md`, `docs/rag.md`, `docs/working-and-semantic-memory.md`, `docs/resource-loading.md`, `docs/host-security.md`, `docs/migration.md`.
     - `docs/index.md` update: yes; update Provider/model connection, Input/context/RAG, Memory, and Security entries.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion Evidence (2026-07-26):
+    - Plan 078 Tasks 0–9 complete: provider parity (OpenAI hosted tools/continuation/Realtime; exact AI SDK V4 adapter matrix; attributable first-party provider metadata), RAG source lifecycle/loaders/parsers/reranking/provenance/trust/status, and memory export/rebuild/store conformance. The Task 0 freeze held: **43 → 43** publishable manifests; no Studio, Office, remote-browser vendor, extra vector store, channel, voice/desktop, auth DB, or queue package entered the graph.
+    - Exact 0.0.15 graph passed `validateRelease`: all 43 manifest versions, internal dependency/peer ranges, lockfile workspace entries, package changelogs, profile composition, packed fresh-install/import checks, and public exports agree. Node 20.20.2 imported all 21 root public targets.
+    - Network-free release gates passed: `npm run sdk:ready`; Phase 10 benchmark/schema (six 100-iteration scenarios, zero resource-limit and backpressure signals); `npm audit --audit-level=high` (zero high/critical; two existing moderate MCP-transitive advisories); SPDX/license verify (202 packages / 8 licenses); tracked-plus-untracked source secret scan (1,153 files / zero findings); and `git diff --check`.
+    - Registry preflight reported 43/43 `available`; dependency-ordered `release:publish --dry-run` completed 43/43 with no publication. Protected OpenAI-hosted/Realtime, host AI SDK, provider, PostgreSQL/pgvector, and keychain canaries remain operator-gated and were not represented as local release evidence. Signed tag, OIDC attestation, and real publication remain operator/workflow prerequisites.
 
 - [ ] Phase 11 — Release 0.0.16: simplify the package and establish 1.0 readiness
   - Acceptance Criteria:

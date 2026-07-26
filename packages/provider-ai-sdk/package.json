@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-provider-ai-sdk",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Optional AI SDK LanguageModelV4 adapter for Prism AIProvider streams.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,8 +25,8 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@ai-sdk/provider": "^4.0.0",
-    "@arnilo/prism": "0.0.14"
+    "@ai-sdk/provider": "4.0.3",
+    "@arnilo/prism": "0.0.15"
   },
   "devDependencies": {
     "@ai-sdk/provider": "4.0.3",

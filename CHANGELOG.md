@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.15] - 2026-07-26
+
+### Added
+
+- Phase 10 provider, memory, and RAG parity: OpenAI hosted-tool attribution, bounded Responses continuation and Realtime seam; exact AI SDK V4 mapping; bounded RAG source lifecycle, document adapters, reranking, citation provenance, content trust, and ingestion status; memory export/rebuild with production-store conformance.
+
+### Changed
+
+- Versioned all **43** publishable manifests, exact internal ranges, and lockfile entries to `0.0.15`; no package was added.
+- Added network-free Phase 10 evidence: `scripts/benchmark-0.0.15.mjs`.
+
 ## [0.0.14] - 2026-07-26
 
 ### Added
@@ -27,8 +38,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 All notable changes to this project will be documented in this file.
-
-## [Unreleased]
 
 ## [0.0.12] - 2026-07-22
 

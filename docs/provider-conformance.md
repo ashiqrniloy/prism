@@ -21,7 +21,28 @@ Use these helpers in provider package tests to check event order, terminal event
 
 Do not use them as a live integration runner, provider simulator, retry framework, credential loader, or test framework replacement.
 
-For real network smoke tests, each first-party provider package ships an env-gated `src/__tests__/live.test.ts` that exercises the live API when `PRISM_LIVE_PROVIDER_TESTS=1` and a provider-specific API key are set. These live tests reuse the same conformance helpers (`assertProviderStreamConforms`, `assertAbortIsObserved`, `assertNoSecretLeak`) against the real provider, so offline and live assertions stay consistent. The default `npm test` never sets these gates and stays network-free; see [Release and install](release-and-install.md) for the full env-var list.
+Offline conformance is mandatory for every package; credentialed probes are not uniform. Packages with a checked-in `live.test.ts` use `PRISM_LIVE_PROVIDER_TESTS=1` plus their provider key. Realtime, hosted tools, AI SDK host models, Alibaba/Ollama account or daemon paths, and enterprise workload identities need host-owned protected probes instead of a generic fixture. The default `npm test` never sets these gates and stays network-free; see [Release and install](release-and-install.md#015-protected-live-canary-matrix) for the exact environment/key boundary.
+
+## Phase 10 provider conformance matrix
+
+| Package | Required offline evidence | Restricted live evidence |
+| --- | --- | --- |
+| OpenAI | Responses serialization/stream ordering, provider-hosted authority, continuation cap/cursor, Realtime fake WebSocket caps | Standard API-key smoke; separate protected hosted-tool/Realtime entitlement probe |
+| AI SDK | Exact 4.0.3/V4 gate; every mapped stream part; authority, cache usage, redaction, unsupported mapping | Host-created V4 model only; no Prism credential fixture |
+| Anthropic | Messages serialization, cache/thinking/tools, header/redaction/abort assertions | Protected `ANTHROPIC_API_KEY` smoke |
+| Google | `generateContent` serialization, complete tool calls, media/abort/redaction assertions | Protected `GOOGLE_API_KEY` or `GEMINI_API_KEY` smoke |
+| Kimi | Coding/Moonshot route fixtures, thinking/tool reconstruction, headers/redaction | Protected `KIMI_API_KEY` smoke |
+| Z.AI | GLM thinking/tool-stream fixtures, implicit-cache usage, headers/redaction | Protected `ZAI_API_KEY` smoke |
+| OpenRouter | routing/reasoning/cache-control fixture, stream/tool reconstruction, headers/redaction | Protected `OPENROUTER_API_KEY` smoke |
+| OpenCode Go | OpenAI/Anthropic route fixture, completion proof, PDF/media boundary, headers/redaction | Protected `OPENCODE_API_KEY` smoke |
+| Alibaba | DashScope presets, Qwen thinking, image rejection/mapping, cache/usage fixture | Protected account/region host probe; no generic key fixture |
+| Ollama | cloud/local preset, reasoning/image mapping, implicit-cache fixture | Protected cloud or host-local authenticated daemon probe; no daemon starts in tests |
+| NeuralWatt | stream/retry/quota/telemetry fixtures, implicit-cache usage, headers/redaction | Protected `NEURALWATT_API_KEY` smoke |
+| Azure | endpoint preservation, Entra/resource-key header and OpenAI-compatible stream fixture | Protected host workload-identity probe |
+| Bedrock | SigV4/region/PrivateLink and OpenAI-compatible stream fixture | Protected host IAM/IRSA probe |
+| Vertex | location/endpoint preservation, ADC header and OpenAI-compatible stream fixture | Protected host ADC/WIF probe |
+
+All rows must retain bounded request/response fixtures, abort propagation, provider-owned-header precedence, and fake-secret leak assertions where the package surfaces those values. A successful fake transport proves Prism mapping, not account entitlement or vendor availability.
 
 ## Inputs / request
 
@@ -50,6 +71,7 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`,
 - `assertSerializedRequestCoversContent()` scans a serialized provider request body for primitive canaries from each Prism content block and fails if any supported block type is silently dropped. Provider-valid transcripts place assistant `tool_call` messages before matching role `tool` `tool_result` messages; runtime, cache-aware input layout, and observational-memory worker loops preserve that order before serialization.
 - `assertProviderOwnedHeadersWin()` compares captured request headers against the provider's authoritative owned header values and a caller-supplied header bag; it fails if any owned header (`authorization`, `content-type`, session/security headers) was overridden by caller headers, and also fails if a non-owned caller header was dropped. This is the provider-neutral check that caller `ProviderRequest.options.headers` cannot hijack provider credentials or sessions; every first-party provider package exercises it.
 - `assertNoSecretLeak()` stringifies all collected events and fails if any known secret string is present.
+- Provider-hosted calls must surface as `tool_call` with `authority: "provider-hosted"`; loops record them but never dispatch them or append a host `tool_result`. Bounded continuations must emit an opaque cursor event and end in `done` or redacted `error`, never silent truncation.
 
 ## Request/response example
 
@@ -164,10 +186,12 @@ Canonical contract: [Thinking and reasoning](thinking-and-reasoning.md).
 `@arnilo/prism-provider-ai-sdk` is a host-owned `LanguageModelV4` bridge. It does not participate in the discovery or thinking/reasoning checklists above. Cover instead:
 
 1. **No catalog / no setup fetch** — package exports no `list*Models()`; `createAiSdkProvider` wraps a host model only.
-2. **Specification gate** — rejects non-v4 models (`specificationVersion !== "v4"` or missing `doStream`).
-3. **Cache usage mapping** — `finish.usage.inputTokens.cacheRead`/`cacheWrite` map to `Usage.cacheReadTokens`/`cacheWriteTokens`; adapter does not emit cache request fields.
-4. **Reasoning stream mapping** — `reasoning-delta` → thinking deltas; assistant `thinking` blocks replay as AI SDK `reasoning` prompt parts.
-5. **Host-owned controls** — `options.compat` / `options.extra` forward as `providerOptions.prism`; reasoning effort stays on the host model.
+2. **Version + specification gate** — exact `@ai-sdk/provider` matrix version is verified at setup; rejects version skew, non-v4 models (`specificationVersion !== "v4"`), or missing `doStream`.
+3. **Mapping table** — fixture covers every supported matrix row: response metadata id, text/reasoning/tool deltas, client/provider-hosted tool authority, structured output, cache usage, finish/error/abort; unmappable stream parts and `structuredOutput.strict` fail typed instead of dropping.
+4. **Cache usage mapping** — `finish.usage.inputTokens.cacheRead`/`cacheWrite` map to `Usage.cacheReadTokens`/`cacheWriteTokens`; adapter does not emit cache request fields.
+5. **Reasoning stream mapping** — `reasoning-delta` → thinking deltas; assistant `thinking` blocks replay as AI SDK `reasoning` prompt parts.
+6. **Redaction** — direct adapter errors use its supplied `SecretRedactor`; agent runs use their active redactor; opaque provider metadata is never emitted.
+7. **Host-owned controls** — `options.compat` / `options.extra` forward as `providerOptions.prism`; reasoning effort stays on the host model.
 
 Canonical contract: [AI SDK provider adapter](providers/ai-sdk.md).
 

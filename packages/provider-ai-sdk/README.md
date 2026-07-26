@@ -7,10 +7,16 @@ Install explicitly. This package is not included in profile bundles until a size
 ## Install
 
 ```bash
-npm install @arnilo/prism-provider-ai-sdk @arnilo/prism @ai-sdk/provider
+npm install @arnilo/prism-provider-ai-sdk @arnilo/prism @ai-sdk/provider@4.0.3
 ```
 
-Supported specification: AI SDK `@ai-sdk/provider` **v4** (`LanguageModelV4`, `specificationVersion: "v4"`).
+## Supported version matrix
+
+| `@ai-sdk/provider` | Specification | Status |
+| --- | --- | --- |
+| `4.0.3` | `LanguageModelV4` (`"v4"`) | Supported and offline-tested |
+
+The peer dependency is exact and `createAiSdkProvider()` reads the resolved package version at setup. An unlisted version fails with `AiSdkProviderError` code `unsupported_version`; it never guesses ABI compatibility.
 
 ## Usage
 
@@ -32,7 +38,7 @@ const agent = createAgent({
 });
 ```
 
-The host owns credentials inside the supplied AI SDK model. The adapter maps Prism messages/tools/structured-output options to `doStream` call options and translates stream parts into Prism provider events incrementally.
+The host owns credentials inside the supplied AI SDK model. The adapter maps Prism messages/tools/structured-output options to `doStream` call options and translates stream parts into Prism provider events incrementally. `structuredOutput.strict` has no V4 equivalent and fails explicitly instead of being dropped.
 
 ## Model catalog
 
@@ -55,7 +61,11 @@ Reasoning effort and provider-specific thinking controls are **host-model-owned*
 
 - `createAiSdkProvider`
 - `AiSdkProviderError`
-- `SUPPORTED_AI_SDK_SPECIFICATION`
+- `SUPPORTED_AI_SDK_SPECIFICATION`, `SUPPORTED_AI_SDK_VERSION_MATRIX`
 - `toAiSdkCallOptions`, `toAiSdkPrompt`, `toAiSdkTool`, `mapAiSdkStream`, `mapUsage`
+
+Server stream mapping: text/reasoning/tool deltas, client and provider-hosted tool calls, `response-metadata.id`, usage/cache accounting, finish, errors, and abort normalize to Prism events. Provider-private warnings/raw metadata and provider-executed results remain internal; generated files, sources, custom parts, and approval requests fail with `unsupported_mapping` rather than being coerced.
+
+Pass `redactor` when consuming this provider directly; normal Prism agents apply their active run redactor to provider events.
 
 Official references: [Custom providers](https://ai-sdk.dev/providers/community-providers/custom-providers); [Language Model V4 spec](https://github.com/vercel/ai/tree/main/packages/provider/src/language-model/v4).

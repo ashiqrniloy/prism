@@ -82,11 +82,28 @@ export interface VectorDeleteFilter extends MemoryScope {
   readonly threadId?: string;
 }
 
+export type MemoryVectorOrder = "sequence" | "createdAt";
+
+/** Bounded, stable page over one exact semantic-memory thread. */
+export interface MemoryVectorListQuery extends Required<MemoryScope> {
+  readonly limit: number;
+  readonly cursor?: string;
+  readonly order?: MemoryVectorOrder;
+  readonly signal?: AbortSignal;
+}
+
+export interface MemoryVectorPage {
+  readonly records: readonly MemoryVectorRecord[];
+  readonly nextCursor?: string;
+}
+
 export interface VectorStore {
   upsert(records: readonly MemoryVectorRecord[], options?: { readonly signal?: AbortSignal }): Promise<void>;
   query(query: VectorQuery): Promise<readonly MemoryVectorHit[]>;
   delete(filter: VectorDeleteFilter, options?: { readonly signal?: AbortSignal }): Promise<number>;
   getByThread?(scope: Required<MemoryScope>): Promise<readonly MemoryVectorRecord[]>;
+  listByThread?(query: MemoryVectorListQuery): Promise<MemoryVectorPage>;
+  countByThread?(scope: Required<MemoryScope>, options?: { readonly signal?: AbortSignal }): Promise<number>;
 }
 
 export interface WorkingMemoryKey extends MemoryScope {}
@@ -154,6 +171,36 @@ export interface RecallResult {
   readonly adjacent: readonly MemoryVectorRecord[];
 }
 
+/** Exact host-verified owner required before semantic-memory export. */
+export interface MemoryExportIdentity extends Required<MemoryScope> {}
+
+export interface ExportMemoryOptions {
+  readonly identity: MemoryExportIdentity;
+  readonly cursor?: string;
+  readonly limit?: number;
+  readonly maxBytes?: number;
+  readonly maxMs?: number;
+  readonly signal?: AbortSignal;
+}
+
+export interface MemoryExportResult {
+  readonly entries: readonly MemoryVectorRecord[];
+  readonly nextCursor?: string;
+  readonly bytes: number;
+}
+
+export interface RebuildIndexOptions {
+  readonly cursor?: string;
+  readonly batchSize?: number;
+  readonly maxMs?: number;
+  readonly signal?: AbortSignal;
+}
+
+export interface RebuildIndexResult {
+  readonly rebuilt: number;
+  readonly nextCursor?: string;
+}
+
 export interface CreateMemoryOptions extends MemoryScope {
   readonly embedder: Embedder;
   readonly vectorStore?: VectorStore;
@@ -204,6 +251,10 @@ export interface Memory {
   forget(filter?: { readonly ids?: readonly string[] }, options?: { readonly signal?: AbortSignal }): Promise<number>;
   /** Bounded retention sweep: real-deletes oldest entries past age/count caps. */
   applyRetention(policy: MemoryRetentionPolicy, options?: { readonly signal?: AbortSignal }): Promise<MemoryRetentionResult>;
+  /** Returns one redacted, consented page after exact host identity binding. */
+  exportMemory(options: ExportMemoryOptions): Promise<MemoryExportResult>;
+  /** Re-embeds one bounded page; return `nextCursor` to resume. */
+  rebuildIndex(options?: RebuildIndexOptions): Promise<RebuildIndexResult>;
   createContextProvider(options?: MemoryContextProviderOptions): import("@arnilo/prism").ContextProvider;
   createWorkingMemoryProcessor(options: WorkingMemoryProcessorOptions): {
     process(messages: readonly Message[], options?: { readonly signal?: AbortSignal }): Promise<WorkingMemoryRecord | undefined>;

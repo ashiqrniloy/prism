@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.15] - 2026-07-26
+
+### Added
+
+- Bounded, exact-identity `exportMemory()` and resumable `rebuildIndex()` pages; exports require explicit visible consent and redact returned records.
+- `listByThread()` / `countByThread()` store capabilities, PostgreSQL/pgvector parity, finite-vector checks at export/rebuild boundaries, and expanded shared conformance.
+
 ## [0.0.14] - 2026-07-26
 
 ### Added

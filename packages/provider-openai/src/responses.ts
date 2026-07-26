@@ -1,5 +1,5 @@
 import type { AIProvider, AudioContent, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelConfig, ProviderRequest, ProviderRequestOptions, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallFromArgumentsText } from "@arnilo/prism";
+import { assertStructuredOutputRequestSupported, providerContinuationRequired, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallFromArgumentsText } from "@arnilo/prism";
 import {
   bytesToBase64,
   defaultProviderFilename,
@@ -22,6 +22,9 @@ export interface OpenAIResponsesProviderOptions {
 
 interface ToolAccumulator { id?: string; name?: string; argumentsText: string }
 
+const MAX_CONTINUATION_HOPS = 8;
+const MAX_CONTINUATION_CURSOR_BYTES = 4 * 1024;
+
 interface ResponsesMediaContext {
   readonly model: ModelConfig;
   readonly fetch?: typeof fetch;
@@ -38,7 +41,6 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
       if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
       let token: string | undefined;
       const secrets: (string | undefined)[] = [];
-      const tools = new Map<number, ToolAccumulator>();
       let usage: Usage | undefined;
       const uploadManager = options.uploadManager ?? createOpenAIFileUploadManager({
         providerId: id,
@@ -54,37 +56,63 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
         fetch: options.fetch,
         signal: request.signal,
         uploadManager};
+      // ponytail: continuation auto-resumes internally up to 8 hops; the host sees a
+      // `continuation_required` event for telemetry/AG-UI but never drives resume. Explicit
+      // `options.continuation.cursor` seeds the first hop (e.g. resume an incomplete response).
+      let cursor: string | undefined;
+      const seenCursors = new Set<string>();
+      let completed = false;
       try {
-        const body = await toResponsesRequest(request, mediaContext);
-        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-        secrets.push(token);
-        const response = await (options.fetch ?? fetch)(`${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/responses`, {
-          method: "POST",
-          headers: {
-            ...request.options?.headers,
-            "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-            ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {})},
-          body: JSON.stringify(body),
-          signal: request.signal});
-        if (!response.ok) {
-          return yield providerError(
-            new Error(`OpenAI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
-            secrets,
-          );
-        }
-        if (!response.body) return yield providerError(new Error("OpenAI response had no body"), secrets);
+        cursor = continuationCursor(request.options?.continuation?.cursor);
+        if (cursor) seenCursors.add(cursor);
+        for (let hop = 0; hop < MAX_CONTINUATION_HOPS; hop += 1) {
+          if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
+          const tools = new Map<number, ToolAccumulator>();
+          const body = await toResponsesRequest(request, mediaContext, cursor);
+          if (!token) {
+            token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
+            secrets.push(token);
+          }
+          const response = await (options.fetch ?? fetch)(`${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/responses`, {
+            method: "POST",
+            headers: {
+              ...request.options?.headers,
+              "content-type": "application/json",
+              ...(token ? { authorization: `Bearer ${token}` } : {}),
+              ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {})},
+            body: JSON.stringify(body),
+            signal: request.signal});
+          if (!response.ok) {
+            return yield providerError(
+              new Error(`OpenAI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
+              secrets,
+            );
+          }
+          if (!response.body) return yield providerError(new Error("OpenAI response had no body"), secrets);
 
-        for await (const data of readSseData(response.body, { signal: request.signal })) {
-          if (data === "[DONE]") break;
-          const event = JSON.parse(data) as OpenAIResponseEvent;
-          if (typeof event.delta === "string" && event.type?.includes("output_text")) yield providerTextDelta(event.delta);
-          if (typeof event.delta === "string" && event.type?.includes("reasoning")) yield providerThinkingDelta(event.delta);
+          let responseId: string | undefined;
+          let incomplete = false;
+          for await (const data of readSseData(response.body, { signal: request.signal })) {
+            if (data === "[DONE]") break;
+            const event = JSON.parse(data) as OpenAIResponseEvent;
+            if (event.response?.id) responseId = event.response.id;
+            if (event.response?.status === "incomplete") incomplete = true;
+            if (typeof event.delta === "string" && event.type?.includes("output_text")) yield providerTextDelta(event.delta);
+            if (typeof event.delta === "string" && event.type?.includes("reasoning")) yield providerThinkingDelta(event.delta);
 
           // Official streaming: https://developers.openai.com/api/reference/resources/responses/streaming-events/
           // response.output_item.added carries the function_call item (call_id, name);
-          // response.function_call_arguments.delta carries a raw string `delta`.
-          if (event.type === "response.output_item.added" && isFunctionCallItem(event.item)) {
+          // response.function_call_arguments.delta carries a raw string delta.
+          if (event.type === "response.output_item.added" && isHostedCallItem(event.item)) {
+            // Provider-hosted tools (web_search_call, file_search_call, code_interpreter_call,
+            // computer_call, mcp_call) are executed server-side; the assistant text that
+            // follows already incorporates their effect. Recorded as provider-hosted
+            // tool_calls so the transcript/telemetry shows the invocation, but the host never
+            // dispatches them or sends a tool_result (see agent-loops.dispatchableToolCalls).
+            const hosted = event.item as { id?: string; type?: string };
+            const hostedId = hosted.id ?? "hosted:" + (event.output_index ?? 0);
+            yield providerToolCall({ type: "tool_call", id: hostedId, name: hosted.type ?? "hosted", arguments: {}, authority: "provider-hosted" });
+          } else if (event.type === "response.output_item.added" && isFunctionCallItem(event.item)) {
             const index = event.output_index ?? 0;
             const item = event.item;
             const current = tools.get(index) ?? { argumentsText: "" };
@@ -139,7 +167,30 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
           }
         }
+        if (incomplete) {
+          if (!responseId) {
+            yield providerError(new Error("OpenAI incomplete response had no continuation cursor"), secrets);
+            completed = true;
+            break;
+          }
+          const nextCursor = continuationCursor(responseId)!;
+          if (seenCursors.has(nextCursor)) {
+            yield providerError(new Error("OpenAI returned a duplicate continuation cursor"), secrets);
+            completed = true;
+            break;
+          }
+          seenCursors.add(nextCursor);
+          // Long response truncated by max_output_tokens: emit the opaque cursor and
+          // self-continue with previous_response_id. The bounded loop fails closed below.
+          yield providerContinuationRequired(nextCursor, "incomplete");
+          cursor = nextCursor;
+          continue;
+        }
         yield providerDone(usage);
+        completed = true;
+        break;
+      }
+        if (!completed) yield providerError(new Error("OpenAI continuation hop cap exceeded"), secrets);
       } catch (error) {
         yield providerError(error, secrets);
       } finally {
@@ -148,7 +199,15 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
     }};
 }
 
-async function toResponsesRequest(request: ProviderRequest, mediaContext: ResponsesMediaContext): Promise<JsonObject> {
+function continuationCursor(cursor: string | undefined): string | undefined {
+  if (cursor === undefined) return undefined;
+  if (!cursor || Buffer.byteLength(cursor) > MAX_CONTINUATION_CURSOR_BYTES) {
+    throw new Error("OpenAI continuation cursor must be a non-empty string at most 4 KiB");
+  }
+  return cursor;
+}
+
+async function toResponsesRequest(request: ProviderRequest, mediaContext: ResponsesMediaContext, cursor?: string): Promise<JsonObject> {
   assertStructuredOutputRequestSupported(request.model, request.options);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const resolvedMedia = await resolveProviderMediaMessages(request.messages, request.model, {
@@ -160,7 +219,9 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
   delete optionsCompat.reasoning;
   const payload: Record<string, unknown> = {
     model: request.model.model,
-    input: await toResponsesInput(request.messages, resolvedContext),
+    // `previous_response_id` carries prior context. Replaying history here would
+    // duplicate prompt tokens and undermine cursor resumption.
+    input: cursor ? [] : await toResponsesInput(request.messages, resolvedContext),
     tools: request.tools?.map(toTool),
     stream: true,
     store: false,
@@ -170,7 +231,8 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
     max_output_tokens: maxTokens,
     ...optionsCompat,
     ...(reasoning ? { reasoning } : {}),
-    ...(request.options?.extra ?? {})};
+    ...(request.options?.extra ?? {}),
+    ...(cursor ? { previous_response_id: cursor } : {})};
   applyOpenAIResponsesStructuredOutput(payload, request.options?.structuredOutput);
   return clean(payload);
 }
@@ -206,6 +268,9 @@ async function toResponsesInput(
           // Bare thinking text cannot round-trip without an encrypted Responses reasoning item.
           continue;
         } else if (part.type === "tool_call") {
+          // Provider-hosted calls (web_search_call, etc.) were executed server-side; resending
+          // them as function_call would ask OpenAI to re-run them. Skip when serializing.
+          if (part.authority === "provider-hosted") continue;
           functionCalls.push(clean({
             type: "function_call",
             call_id: part.id,
@@ -233,6 +298,7 @@ async function toResponsesInput(
       } else if (part.type === "file" || part.type === "document") {
         contentParts.push(await toResponsesFile(part, mediaContext));
       } else if (part.type === "tool_call") {
+        if (part.authority === "provider-hosted") continue;
         items.push(clean({
           type: "function_call",
           call_id: part.id,
@@ -302,6 +368,13 @@ function toUsage(usage: OpenAIUsage | undefined): Usage | undefined {
     cacheReadTokens: usage.input_tokens_details?.cached_tokens};
 }
 
+function isHostedCallItem(value: unknown): value is { readonly id?: string; readonly type?: string } {
+  if (!value || typeof value !== "object") return false;
+  const type = (value as { type?: string }).type;
+  // Provider-hosted tool items end with _call but are not the host-dispatched function_call.
+  return typeof type === "string" && type.endsWith("_call") && type !== "function_call";
+}
+
 function isFunctionCallItem(value: unknown): value is {
   readonly type?: string;
   readonly id?: string;
@@ -336,7 +409,7 @@ interface OpenAIResponseEvent {
   readonly arguments?: unknown;
   readonly item?: unknown;
   readonly output_index?: number;
-  readonly response?: { readonly usage?: OpenAIUsage };
+  readonly response?: { readonly id?: string; readonly status?: string; readonly usage?: OpenAIUsage };
   readonly usage?: OpenAIUsage;
 }
 

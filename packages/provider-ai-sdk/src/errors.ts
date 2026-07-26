@@ -1,6 +1,8 @@
 export class AiSdkProviderError extends Error {
   readonly code:
     | "unsupported_specification"
+    | "unsupported_version"
+    | "unsupported_mapping"
     | "unsupported_content"
     | "invalid_tool_arguments"
     | "aborted"
