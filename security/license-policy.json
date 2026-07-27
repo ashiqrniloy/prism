@@ -1,6 +1,7 @@
 {
   "allowed": [
     "MIT",
+    "MIT OR Apache-2.0",
     "ISC",
     "Apache-2.0",
     "BSD-2-Clause",

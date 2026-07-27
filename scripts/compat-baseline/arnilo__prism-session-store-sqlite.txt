@@ -8,7 +8,6 @@ MIGRATION_004_SESSION_SEARCH	export declare const MIGRATION_004_SESSION_SEARCH =
 MIGRATION_005_LIFECYCLE_HOLD_QUOTA	export declare const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = "\nCREATE TABLE IF NOT EXISTS prism_legal_holds (\n id TEXT NOT NULL PRIMARY KEY,\n tenant_id TEXT,\n account_id TEXT,\n user_id TEXT,\n resource_kind TEXT NOT NULL,\n resource_id TEXT NOT NULL,\n reason TEXT NOT NULL,\n created_at TEXT NOT NULL,\n created_by TEXT,\n metadata TEXT\n)
 SqlitePersistence	export type { SqlitePersistence } from "./persistence.js"
 SqlitePersistenceOptions	export type { SqlitePersistenceOptions } from "./types.js"
-agentEventRecordToRow	export declare function agentEventRecordToRow(record: AgentEventRecord, sequence: number): AgentEventRow
 applySqliteMigrations	export declare function applySqliteMigrations(db: Database.Database): readonly AppliedPersistenceMigration[]
 assertSqliteSchemaReady	export declare function assertSqliteSchemaReady(db: Database.Database): void
 configureSqliteDatabase	export declare function configureSqliteDatabase(db: Database.Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void
@@ -16,23 +15,6 @@ createSqliteCheckpointStore	export declare function createSqliteCheckpointStore(
 createSqliteLeaseStore	export declare function createSqliteLeaseStore(database: Database.Database): LeaseStore
 createSqlitePersistence	export declare function createSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence
 createSqlitePersistenceLifecycle	export declare function createSqlitePersistenceLifecycle(db: Database.Database): PersistenceLifecycleStore
-decodeEntryCursor	export declare function decodeEntryCursor(cursor: string):
-encodeEntryCursor	export declare function encodeEntryCursor(timestamp: string, id: string): string
 maybeRestrictFileMode	export declare function maybeRestrictFileMode(filename: string, fileMode: number | undefined): void
-parentKey	export declare function parentKey(parentId: string | undefined): string
 reopenSqlitePersistence	export declare function reopenSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence
-rowToAgentDefinitionRecord	export declare function rowToAgentDefinitionRecord(row: Record<string, unknown>): AgentDefinitionRecord
-rowToAgentEventRecord	export declare function rowToAgentEventRecord(row: AgentEventRow): AgentEventRecord
-rowToBranchRecord	export declare function rowToBranchRecord(row: Record<string, unknown>): BranchRecord
-rowToMigrationRecord	export declare function rowToMigrationRecord(row: Record<string, unknown>): MigrationRecord
-rowToRetentionPolicy	export declare function rowToRetentionPolicy(row: Record<string, unknown>): RetentionPolicy
-rowToRunRecord	export declare function rowToRunRecord(row: RunRow): RunRecord
-rowToSessionEntry	export declare function rowToSessionEntry(row: SessionEntryRow): SessionEntry
-rowToSessionRecord	export declare function rowToSessionRecord(row: Record<string, unknown>): SessionRecord
-rowToToolCallRecord	export declare function rowToToolCallRecord(row: ToolCallRow): ToolCallRecord
-rowToUsageRecord	export declare function rowToUsageRecord(row: UsageRow): UsageRecord
-runRecordToRow	export declare function runRecordToRow(record: RunRecord): RunRow
-sessionEntryToRow	export declare function sessionEntryToRow(entry: SessionEntry): SessionEntryRow
-toolCallRecordToRow	export declare function toolCallRecordToRow(record: ToolCallRecord): ToolCallRow
-usageRecordToRow	export declare function usageRecordToRow(record: UsageRecord): UsageRow
 verifyMigrationIdempotency	export declare function verifyMigrationIdempotency(db: Database.Database): void

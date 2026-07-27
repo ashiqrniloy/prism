@@ -5,7 +5,6 @@ DEFAULT_SCHEMA	export declare const DEFAULT_SCHEMA = "prism"
 MIGRATION_LOCK_NAMESPACE	export declare const MIGRATION_LOCK_NAMESPACE = 1886546291
 PostgresPersistence	export type { PostgresPersistence } from "./persistence.js"
 PostgresPersistenceOptions	export type { PostgresPersistenceOptions } from "./types.js"
-agentEventRecordToRow	export declare function agentEventRecordToRow(record: AgentEventRecord, sequence: number): AgentEventRow
 applyPostgresMigrations	export declare function applyPostgresMigrations(pool: Pool, schema: string): Promise<readonly AppliedPersistenceMigration[]>
 assertPostgresSchemaReady	export declare function assertPostgresSchemaReady(source: Queryable, schema: string): Promise<void>
 buildMigration001Ddl	export declare function buildMigration001Ddl(schema: string): string
@@ -17,26 +16,9 @@ createPostgresCheckpointStore	export declare function createPostgresCheckpointSt
 createPostgresLeaseStore	export declare function createPostgresLeaseStore(pool: Pool, schema?: string): LeaseStore
 createPostgresPersistence	export declare function createPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence>
 createPostgresPersistenceLifecycle	export declare function createPostgresPersistenceLifecycle(pool: Pool, schema: string): PersistenceLifecycleStore
-decodeEntryCursor	export declare function decodeEntryCursor(cursor: string):
-encodeEntryCursor	export declare function encodeEntryCursor(timestamp: string, id: string): string
-parentKey	export declare function parentKey(parentId: string | undefined): string
 qualifyTable	export declare function qualifyTable(schema: string, table: string): string
 quoteIdentifier	export declare function quoteIdentifier(name: string): string
 reopenPostgresPersistence	export declare function reopenPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence>
-rowToAgentDefinitionRecord	export declare function rowToAgentDefinitionRecord(row: Record<string, unknown>): AgentDefinitionRecord
-rowToAgentEventRecord	export declare function rowToAgentEventRecord(row: AgentEventRow): AgentEventRecord
-rowToBranchRecord	export declare function rowToBranchRecord(row: Record<string, unknown>): BranchRecord
-rowToMigrationRecord	export declare function rowToMigrationRecord(row: Record<string, unknown>): MigrationRecord
-rowToRetentionPolicy	export declare function rowToRetentionPolicy(row: Record<string, unknown>): RetentionPolicy
-rowToRunRecord	export declare function rowToRunRecord(row: RunRow): RunRecord
-rowToSessionEntry	export declare function rowToSessionEntry(row: SessionEntryRow): SessionEntry
-rowToSessionRecord	export declare function rowToSessionRecord(row: Record<string, unknown>): SessionRecord
-rowToToolCallRecord	export declare function rowToToolCallRecord(row: ToolCallRow): ToolCallRecord
-rowToUsageRecord	export declare function rowToUsageRecord(row: UsageRow): UsageRecord
-runRecordToRow	export declare function runRecordToRow(record: RunRecord): RunRow
 schemaAdvisoryLockKey	export declare function schemaAdvisoryLockKey(schema: string): number
-sessionEntryToRow	export declare function sessionEntryToRow(entry: SessionEntry): SessionEntryRow
-toolCallRecordToRow	export declare function toolCallRecordToRow(record: ToolCallRecord): ToolCallRow
-usageRecordToRow	export declare function usageRecordToRow(record: UsageRecord): UsageRow
 validateIdentifier	export declare function validateIdentifier(name: string): void
 verifyMigrationIdempotency	export declare function verifyMigrationIdempotency(pool: Pool, schema: string): Promise<void>
