@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { lstat, readFile, readdir } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
+import { lstat, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_FILES = 100_000;
@@ -18,7 +18,10 @@ const ignored = new Set([".git", "node_modules", "coverage"]);
 async function* files(path) {
   const stat = await lstat(path);
   if (stat.isSymbolicLink()) return;
-  if (stat.isFile()) { yield path; return; }
+  if (stat.isFile()) {
+    yield path;
+    return;
+  }
   if (!stat.isDirectory()) return;
   for (const entry of await readdir(path)) if (!ignored.has(entry)) yield* files(join(path, entry));
 }
@@ -26,15 +29,16 @@ async function* files(path) {
 export async function scanSecrets(paths) {
   let scanned = 0;
   const findings = [];
-  for (const root of paths) for await (const path of files(root)) {
-    if (++scanned > MAX_FILES) throw new Error("Secret scan file count exceeds policy");
-    const stat = await lstat(path);
-    if (stat.size > MAX_FILE_BYTES) throw new Error(`Secret scan file exceeds 16 MiB: ${path}`);
-    const bytes = await readFile(path);
-    if (bytes.includes(0)) continue;
-    const text = bytes.toString("utf8");
-    for (const [name, pattern] of patterns) if (pattern.test(text)) findings.push(`${path}: ${name}`);
-  }
+  for (const root of paths)
+    for await (const path of files(root)) {
+      if (++scanned > MAX_FILES) throw new Error("Secret scan file count exceeds policy");
+      const stat = await lstat(path);
+      if (stat.size > MAX_FILE_BYTES) throw new Error(`Secret scan file exceeds 16 MiB: ${path}`);
+      const bytes = await readFile(path);
+      if (bytes.includes(0)) continue;
+      const text = bytes.toString("utf8");
+      for (const [name, pattern] of patterns) if (pattern.test(text)) findings.push(`${path}: ${name}`);
+    }
   if (findings.length) throw new Error(`Secret scan rejected ${findings.slice(0, 50).join(", ")}`);
   return { files: scanned, findings: 0 };
 }

@@ -1,12 +1,12 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, readFile, realpath } from "node:fs/promises";
+import { realpathSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { realpathSync } from "node:fs";
+import { test } from "node:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { createShellTool } from "../shell.js";
 import type { BashOperations, BashSpawnContext } from "../shell.js";
+import { createShellTool } from "../shell.js";
 
 let counter = 0;
 function ctx(signal?: AbortSignal): ToolExecutionContext {
@@ -72,7 +72,7 @@ test("long output beyond maxLines → tail returned + full output spilled to tem
     const fullOutputPath = r.metadata?.fullOutputPath as string | undefined;
     assert.ok(fullOutputPath, "expected a spilled full-output temp file");
     const full = await readFile(fullOutputPath!, "utf-8");
-    assert.equal(full, Array.from({ length: 100 }, (_, i) => String(i + 1)).join("\n") + "\n");
+    assert.equal(full, `${Array.from({ length: 100 }, (_, i) => String(i + 1)).join("\n")}\n`);
     // tail content is the last 2 lines (truncateTail drops the trailing newline)
     assert.equal(textOf(r).split("\n\n[")[0], "99\n100");
     await rm(fullOutputPath!, { force: true });
@@ -143,7 +143,7 @@ test("commandPrefix is prepended to every command", async () => {
   try {
     // prefix exports a marker var the command reads
     const tool = createShellTool(cwd, { commandPrefix: "export MARKER=prefix-ran" });
-    const r = await tool.execute({ command: "echo \"got:$MARKER\"" }, ctx());
+    const r = await tool.execute({ command: 'echo "got:$MARKER"' }, ctx());
     assert.equal(r.metadata?.exitCode, 0);
     assert.match(textOf(r), /got:prefix-ran/);
   } finally {

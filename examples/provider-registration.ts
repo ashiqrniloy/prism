@@ -1,10 +1,4 @@
-import {
-  createExtensionKernel,
-  createProviderRegistry,
-  createModelRegistry,
-  createMockProvider,
-  providerDone,
-} from "@arnilo/prism";
+import { createExtensionKernel, createMockProvider, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
 import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
 
 // Register a provider package through the extension kernel and resolve

@@ -1,6 +1,6 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { createZaiProvider, type ZaiProviderOptions } from "./provider.js";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
 import { zaiModels } from "./models.js";
+import { createZaiProvider } from "./provider.js";
 
 export interface ZaiProviderPackageOptions {
   readonly apiKey?: CredentialValueSource;
@@ -26,20 +26,20 @@ export function createZaiProviderPackage(options: ZaiProviderPackageOptions = {}
 
 export {
   defineZaiModel,
+  type ListZaiModelsOptions,
   listZaiModels,
   mapZaiModel,
-  zaiModels,
-  type ListZaiModelsOptions,
   type ZaiModelConfig,
   type ZaiModelEntry,
+  zaiModels,
 } from "./models.js";
 export {
   createZaiProvider,
   toZaiMessage,
-  zaiBody,
-  zaiEvents,
   ZAI_DEFAULT_BASE_URL,
   type ZaiProviderOptions,
+  zaiBody,
+  zaiEvents,
 } from "./provider.js";
 export {
   zaiClearThinking,

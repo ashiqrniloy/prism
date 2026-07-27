@@ -1,8 +1,12 @@
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createA2AClient, createA2AHandler, createSupervisor, type A2AAgentCard } from "@arnilo/prism-supervisor";
+import { type A2AAgentCard, createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-supervisor";
 
 const ownership = { tenantId: "example", userId: "operator" };
-const child = () => createAgent({ model: { provider: "mock", model: "research" }, provider: createMockProvider([providerTextDelta("verified"), providerDone()]) });
+const child = () =>
+  createAgent({
+    model: { provider: "mock", model: "research" },
+    provider: createMockProvider([providerTextDelta("verified"), providerDone()]),
+  });
 const supervisor = createSupervisor({ ownership, children: { research: { createAgent: child } } });
 const local = await supervisor.delegate({ childId: "research", input: "Check sources" });
 
@@ -18,7 +22,11 @@ const card: A2AAgentCard = {
   skills: [{ id: "research", name: "Research", description: "Checks sources", tags: ["research"] }],
 };
 const handler = createA2AHandler({ card, exposure: { sessionFactory: () => child().createSession() }, authorize: () => ({ ownership }) });
-const client = createA2AClient({ endpoint, allowedOrigins: ["https://agent.example"], fetch: (input, init) => handler(new Request(input, init)) });
+const client = createA2AClient({
+  endpoint,
+  allowedOrigins: ["https://agent.example"],
+  fetch: (input, init) => handler(new Request(input, init)),
+});
 const remote = await client.send("Check sources");
 
 console.log(JSON.stringify({ local: local.text, remote: remote.text }));

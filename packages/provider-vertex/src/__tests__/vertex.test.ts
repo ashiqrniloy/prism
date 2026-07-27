@@ -13,7 +13,7 @@ describe("@arnilo/prism-provider-vertex", () => {
       fetch: async (input, init) => {
         seen.url = String(input);
         seen.auth = new Headers(init?.headers).get("authorization") ?? undefined;
-        return new Response("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n", {
+        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
@@ -23,7 +23,8 @@ describe("@arnilo/prism-provider-vertex", () => {
     for await (const event of provider.generate({
       model: { provider: "vertex", model: "google/gemini-2.0-flash-001" },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-    })) events.push(event);
+    }))
+      events.push(event);
     assert.equal(
       seen.url,
       "https://europe-west1-aiplatform.googleapis.com/v1/projects/proj-1/locations/europe-west1/endpoints/openapi/chat/completions",
@@ -45,7 +46,8 @@ describe("@arnilo/prism-provider-vertex", () => {
     for await (const event of missing.generate({
       model: { provider: "vertex", model: "m" },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-    })) events.push(event);
+    }))
+      events.push(event);
     assert.equal(events[0]?.type, "error");
 
     let url = "";
@@ -62,7 +64,9 @@ describe("@arnilo/prism-provider-vertex", () => {
     for await (const _ of custom.generate({
       model: { provider: "vertex", model: "m" },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-    })) { /* drain */ }
+    })) {
+      /* drain */
+    }
     assert.equal(url, "https://vertex.private.example/v1/openai/chat/completions");
     assert.equal(
       vertexOpenApiBaseUrl({ projectId: "p", location: "us-central1" }),

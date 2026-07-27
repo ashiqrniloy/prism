@@ -1,9 +1,9 @@
+export { qualifyTable, quoteIdentifier, validateIdentifier } from "./identifiers.js";
+export type { PostgresPersistence } from "./persistence.js";
 export {
   createPostgresPersistence,
-  reopenPostgresPersistence,
   DEFAULT_POOL_MAX,
   DEFAULT_SCHEMA,
+  reopenPostgresPersistence,
 } from "./persistence.js";
-export type { PostgresPersistence } from "./persistence.js";
 export type { PostgresPersistenceOptions } from "./types.js";
-export { validateIdentifier, quoteIdentifier, qualifyTable } from "./identifiers.js";

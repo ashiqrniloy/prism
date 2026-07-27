@@ -51,15 +51,23 @@ const SPECS = {
 } as const;
 
 export function resolveSupervisorLimits(input: SupervisorLimits = {}): ResolvedSupervisorLimits {
-  return Object.fromEntries(Object.entries(SPECS).map(([key, [fallback, hard]]) => {
-    const value = input[key as keyof SupervisorLimits] ?? fallback;
-    if (!Number.isSafeInteger(value) || value < 1 || value > hard) throw new SupervisorValidationError(`${key} must be a positive integer at most ${hard}`);
-    return [key, value];
-  })) as unknown as ResolvedSupervisorLimits;
+  return Object.fromEntries(
+    Object.entries(SPECS).map(([key, [fallback, hard]]) => {
+      const value = input[key as keyof SupervisorLimits] ?? fallback;
+      if (!Number.isSafeInteger(value) || value < 1 || value > hard)
+        throw new SupervisorValidationError(`${key} must be a positive integer at most ${hard}`);
+      return [key, value];
+    }),
+  ) as unknown as ResolvedSupervisorLimits;
 }
 
 export function narrowSupervisorLimits(parent: ResolvedSupervisorLimits, input?: SupervisorLimits): ResolvedSupervisorLimits {
   if (!input) return parent;
   const requested = resolveSupervisorLimits({ ...parent, ...input });
-  return Object.fromEntries(Object.keys(SPECS).map((key) => [key, Math.min(parent[key as keyof ResolvedSupervisorLimits], requested[key as keyof ResolvedSupervisorLimits])])) as unknown as ResolvedSupervisorLimits;
+  return Object.fromEntries(
+    Object.keys(SPECS).map((key) => [
+      key,
+      Math.min(parent[key as keyof ResolvedSupervisorLimits], requested[key as keyof ResolvedSupervisorLimits]),
+    ]),
+  ) as unknown as ResolvedSupervisorLimits;
 }

@@ -1,0 +1,28 @@
+OPENCODE_GO_DEFAULT_BASE_URL	export declare const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
+OPENCODE_SESSION_ID_MAX_LENGTH	export declare const OPENCODE_SESSION_ID_MAX_LENGTH = 128
+anthropicMessagesBody	export declare function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject>
+anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+applyOpencodeAnthropicCacheControl	export declare function applyOpencodeAnthropicCacheControl(request: ProviderRequest): readonly Message[]
+createOpenCodeGoProvider	export declare function createOpenCodeGoProvider(options?: OpenCodeGoProviderOptions): AIProvider
+createOpenCodeGoProviderPackage	export declare function createOpenCodeGoProviderPackage(options?: OpenCodeGoProviderPackageOptions): ProviderPackage
+defineOpenCodeGoModel	export declare function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig
+listOpenCodeGoModels	export declare function listOpenCodeGoModels(options?: ListOpenCodeGoModelsOptions): Promise<ModelConfig[]>
+mapOpenCodeGoModel	export declare function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options?:
+openAIChatBody	export declare function openAIChatBody(request: ProviderRequest): JsonObject
+openAIChatEvents	export declare function openAIChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+openCodeGoModels	export declare const openCodeGoModels: readonly ModelConfig[]
+openCodeGoPreserveThinking	export declare function openCodeGoPreserveThinking(request: ProviderRequest): boolean
+openCodeGoReasoning	export declare function openCodeGoReasoning(request: ProviderRequest): JsonObject | undefined
+openCodeGoReasoningEffort	export declare function openCodeGoReasoningEffort(request: ProviderRequest): string | undefined
+openCodeGoThinking	export declare function openCodeGoThinking(request: ProviderRequest): JsonObject | boolean | undefined
+opencodeAnthropicCacheEnabled	export declare function opencodeAnthropicCacheEnabled(request: ProviderRequest): boolean
+opencodeOwnedHeaders	export declare function opencodeOwnedHeaders(options: ProviderRequestOptions | undefined): Record<string, string>
+opencodeSessionId	export declare function opencodeSessionId(options: ProviderRequestOptions | undefined): string | undefined
+routeForOpenCodeGoModel	export declare function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute
+serializeOpenCodeGoChatMessage	export declare function serializeOpenCodeGoChatMessage(message: Message, capabilities: ModelCapabilities, preserveThinking: boolean): JsonObject
+stripOpenCodeGoOwnedCompat	export declare function stripOpenCodeGoOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
+type ListOpenCodeGoModelsOptions	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, routeForOpenCodeGoModel, } from "./models.js"
+type OpenCodeGoModelConfig	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, routeForOpenCodeGoModel, } from "./models.js"
+type OpenCodeGoModelEntry	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, routeForOpenCodeGoModel, } from "./models.js"
+type OpenCodeGoProviderOptions	export { createOpenCodeGoProvider, type OpenCodeGoProviderOptions } from "./provider.js"
+type OpenCodeGoRoute	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, routeForOpenCodeGoModel, } from "./models.js"

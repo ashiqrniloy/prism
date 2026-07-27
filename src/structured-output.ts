@@ -1,3 +1,4 @@
+import { assertJsonObject } from "./config.js";
 import type {
   AgentConfig,
   AgentLoopOptions,
@@ -9,7 +10,6 @@ import type {
   RunOptions,
   StructuredOutputOptions,
 } from "./contracts.js";
-import { assertJsonObject } from "./config.js";
 import { mergeProviderRequestOptions } from "./provider-request-policy.js";
 
 export const DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES = 65_536;
@@ -57,17 +57,14 @@ export function validateStructuredOutputOptions(options: StructuredOutputOptions
   return { ...options, name, schema: options.schema };
 }
 
-export function assertStructuredOutputRequestSupported(
-  model: ModelConfig,
-  options?: ProviderRequestOptions,
-): void {
+export function assertStructuredOutputRequestSupported(model: ModelConfig, options?: ProviderRequestOptions): void {
   if (!options?.structuredOutput) return;
   validateStructuredOutputOptions(options.structuredOutput);
   if (!modelSupportsStructuredOutput(model.capabilities)) {
     throw new StructuredOutputError(
       "unsupported_model",
-      `Model ${model.provider}/${model.model} does not declare structuredOutput capability; `
-      + `set loop.structuredOutputMode to "artifact-loop" or choose a capable model`,
+      `Model ${model.provider}/${model.model} does not declare structuredOutput capability; ` +
+        `set loop.structuredOutputMode to "artifact-loop" or choose a capable model`,
     );
   }
 }
@@ -99,10 +96,7 @@ export function withoutStructuredOutput(request: ProviderRequest): ProviderReque
 }
 
 /** Artifact/revision turn: keep/restore schema and withdraw tools. */
-export function artifactStructuredOutputRequest(
-  request: ProviderRequest,
-  schema?: StructuredOutputOptions,
-): ProviderRequest {
+export function artifactStructuredOutputRequest(request: ProviderRequest, schema?: StructuredOutputOptions): ProviderRequest {
   const structuredOutput = schema ?? request.options?.structuredOutput;
   if (!structuredOutput) return { ...request, tools: undefined };
   return {

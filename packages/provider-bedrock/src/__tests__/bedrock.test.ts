@@ -19,7 +19,7 @@ describe("@arnilo/prism-provider-bedrock", () => {
         seen.auth = new Headers(init?.headers).get("authorization") ?? undefined;
         seen.body = String(init?.body ?? "");
         assert.ok(new Headers(init?.headers).get("x-amz-security-token"));
-        return new Response("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n", {
+        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
@@ -29,13 +29,11 @@ describe("@arnilo/prism-provider-bedrock", () => {
     for await (const event of provider.generate({
       model: { provider: "bedrock", model: "anthropic.claude-3-haiku-20240307-v1:0" },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-    })) events.push(event);
-    assert.equal(
-      seen.url,
-      "https://vpce-123.bedrock-runtime.eu-west-1.vpce.amazonaws.com/openai/v1/chat/completions",
-    );
+    }))
+      events.push(event);
+    assert.equal(seen.url, "https://vpce-123.bedrock-runtime.eu-west-1.vpce.amazonaws.com/openai/v1/chat/completions");
     assert.match(seen.auth ?? "", /^AWS4-HMAC-SHA256 Credential=AKIATEST\/.+\/eu-west-1\/bedrock\/aws4_request/);
-    assert.ok(seen.body?.includes("\"stream\":true"));
+    assert.ok(seen.body?.includes('"stream":true'));
     assert.ok(events.some((event) => event.type === "done"));
   });
 
@@ -52,7 +50,8 @@ describe("@arnilo/prism-provider-bedrock", () => {
     for await (const event of provider.generate({
       model: { provider: "bedrock", model: "m" },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-    })) events.push(event);
+    }))
+      events.push(event);
     assert.equal(events[0]?.type, "error");
   });
 

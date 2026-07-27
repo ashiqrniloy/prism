@@ -1,13 +1,33 @@
-import type { ContextProvider, JsonObject, Message } from "@arnilo/prism";
+import { type ContextProvider, type JsonObject, type Message, resolveRedactor } from "@arnilo/prism";
 import { embedBatched } from "./embedder.js";
 import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
-import {
-  DEFAULT_MEMORY_RETENTION_BATCH,
-  HARD_MEMORY_RETENTION_BATCH_CAP,
-  estimateTokens,
-  resolveMemoryLimits,
-} from "./limits.js";
+import { DEFAULT_MEMORY_RETENTION_BATCH, estimateTokens, HARD_MEMORY_RETENTION_BATCH_CAP, resolveMemoryLimits } from "./limits.js";
 import { validateAgainstJsonSchema } from "./schema.js";
+import type {
+  CreateMemoryOptions,
+  ExportMemoryOptions,
+  Memory,
+  MemoryConsent,
+  MemoryConsentInput,
+  MemoryContextProviderOptions,
+  MemoryEntryInput,
+  MemoryExportResult,
+  MemoryRetentionPolicy,
+  MemoryRetentionResult,
+  MemoryScope,
+  MemoryVectorHit,
+  MemoryVectorRecord,
+  RebuildIndexOptions,
+  RebuildIndexResult,
+  RecallOptions,
+  RecallResult,
+  RememberInput,
+  RememberOptions,
+  RememberResult,
+  WorkingMemoryProcessorOptions,
+  WorkingMemoryRecord,
+  WorkingMemoryUpdateOptions,
+} from "./types.js";
 import {
   assertFiniteVector,
   assertNotAborted,
@@ -20,43 +40,16 @@ import {
   renderTemplate,
   requireNonEmptyString,
   requireScope,
-  resolveRedactor,
 } from "./util.js";
 import { createMemoryVectorStore, selectAdjacentRecords } from "./vector-memory.js";
 import { createMemoryWorkingStore, validateWorkingValue } from "./working-memory.js";
-import type {
-  CreateMemoryOptions,
-  ExportMemoryOptions,
-  Memory,
-  MemoryExportResult,
-  MemoryConsent,
-  MemoryConsentInput,
-  MemoryContextProviderOptions,
-  MemoryEntryInput,
-  MemoryRetentionResult,
-  MemoryRetentionPolicy,
-  MemoryScope,
-  MemoryVectorHit,
-  MemoryVectorRecord,
-  RecallOptions,
-  RecallResult,
-  RebuildIndexOptions,
-  RebuildIndexResult,
-  RememberInput,
-  RememberOptions,
-  RememberResult,
-  WorkingMemoryProcessorOptions,
-  WorkingMemoryRecord,
-  WorkingMemoryUpdateOptions,
-} from "./types.js";
 
 export function createMemory(options: CreateMemoryOptions): Memory {
   const scope = requireScope(options);
   const limits = resolveMemoryLimits(options.limits);
   const redactor = resolveRedactor(options.redactor, options.secrets);
   const vectorStore = options.vectorStore ?? createMemoryVectorStore({ maxEntryTextChars: limits.maxEntryTextChars });
-  const workingStore =
-    options.workingStore ?? createMemoryWorkingStore({ maxWorkingMemoryBytes: limits.maxWorkingMemoryBytes });
+  const workingStore = options.workingStore ?? createMemoryWorkingStore({ maxWorkingMemoryBytes: limits.maxWorkingMemoryBytes });
   const embedder = options.embedder;
   if (embedder.dimensions > limits.maxVectorDimensions) {
     throw new MemoryLimitError(`embedder dimensions exceed cap ${limits.maxVectorDimensions}`);
@@ -74,16 +67,12 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     return record ? redactJson(record, redactor) : undefined;
   }
 
-  async function updateWorking(
-    patch: JsonObject,
-    updateOptions: WorkingMemoryUpdateOptions = {},
-  ): Promise<WorkingMemoryRecord> {
+  async function updateWorking(patch: JsonObject, updateOptions: WorkingMemoryUpdateOptions = {}): Promise<WorkingMemoryRecord> {
     assertNotAborted(updateOptions.signal);
     const redactedPatch = redactJson(patch, redactor);
     const mode = updateOptions.mode ?? "merge";
     const existing = await workingStore.get(scope, { signal: updateOptions.signal });
-    const previewValue =
-      mode === "replace" ? redactedPatch : mergeJsonObjects(existing?.value ?? {}, redactedPatch);
+    const previewValue = mode === "replace" ? redactedPatch : mergeJsonObjects(existing?.value ?? {}, redactedPatch);
     await validateWorkingValue(previewValue, {
       schema: options.schema,
       validateWorkingMemory: options.validateWorkingMemory,
@@ -185,9 +174,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
 
     let adjacent: MemoryVectorRecord[] = [];
     if (boundedRange > 0) {
-      const threadRecords = vectorStore.getByThread
-        ? await vectorStore.getByThread(threadScope)
-        : hits;
+      const threadRecords = vectorStore.getByThread ? await vectorStore.getByThread(threadScope) : hits;
       adjacent = selectAdjacentRecords(threadRecords, hits, boundedRange);
     }
 
@@ -227,11 +214,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     return redactJson(updated, redactor);
   }
 
-  async function correct(
-    entryId: string,
-    text: string,
-    correctOptions: { signal?: AbortSignal } = {},
-  ): Promise<MemoryVectorRecord> {
+  async function correct(entryId: string, text: string, correctOptions: { signal?: AbortSignal } = {}): Promise<MemoryVectorRecord> {
     const threadScope = threadScopeOrThrow();
     assertNotAborted(correctOptions.signal);
     const id = requireNonEmptyString(entryId, "entryId");
@@ -253,10 +236,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     return redactJson(updated, redactor);
   }
 
-  async function forget(
-    filter: { ids?: readonly string[] } = {},
-    forgetOptions: { signal?: AbortSignal } = {},
-  ): Promise<number> {
+  async function forget(filter: { ids?: readonly string[] } = {}, forgetOptions: { signal?: AbortSignal } = {}): Promise<number> {
     const threadScope = threadScopeOrThrow();
     assertNotAborted(forgetOptions.signal);
     return vectorStore.delete(
@@ -358,22 +338,35 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     if (rebuildLimits.rebuildBatchSize < 1 || rebuildLimits.rebuildMs < 1) {
       throw new MemoryValidationError("memory rebuild limits must be positive");
     }
-    const result = await withinDeadline(async (signal) => {
-      const page = await vectorStore.listByThread!({
-        ...threadScope,
-        cursor: rebuildOptions.cursor,
-        limit: rebuildLimits.rebuildBatchSize,
-        signal,
-      });
-      if (page.records.length === 0) return { rebuilt: 0, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
-      for (const record of page.records) assertFiniteVector(record.embedding, "stored embedding", embedder.dimensions);
-      const embeddings = await embedBatched(embedder, page.records.map((record) => record.text), limits.embedBatchSize, {
-        signal,
-        maxDimensions: limits.maxVectorDimensions,
-      });
-      await vectorStore.upsert(page.records.map((record, index) => ({ ...record, embedding: embeddings[index]! })), { signal });
-      return { rebuilt: page.records.length, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
-    }, rebuildLimits.rebuildMs, rebuildOptions.signal, "memory rebuild");
+    const result = await withinDeadline(
+      async (signal) => {
+        const page = await vectorStore.listByThread!({
+          ...threadScope,
+          cursor: rebuildOptions.cursor,
+          limit: rebuildLimits.rebuildBatchSize,
+          signal,
+        });
+        if (page.records.length === 0) return { rebuilt: 0, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
+        for (const record of page.records) assertFiniteVector(record.embedding, "stored embedding", embedder.dimensions);
+        const embeddings = await embedBatched(
+          embedder,
+          page.records.map((record) => record.text),
+          limits.embedBatchSize,
+          {
+            signal,
+            maxDimensions: limits.maxVectorDimensions,
+          },
+        );
+        await vectorStore.upsert(
+          page.records.map((record, index) => ({ ...record, embedding: embeddings[index]! })),
+          { signal },
+        );
+        return { rebuilt: page.records.length, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
+      },
+      rebuildLimits.rebuildMs,
+      rebuildOptions.signal,
+      "memory rebuild",
+    );
     return result;
   }
 
@@ -462,19 +455,13 @@ export function createMemory(options: CreateMemoryOptions): Memory {
   };
 }
 
-function resolveQuery(
-  providerOptions: MemoryContextProviderOptions,
-  messages: readonly Message[],
-): string | undefined {  if (typeof providerOptions.query === "string") return providerOptions.query;
+function resolveQuery(providerOptions: MemoryContextProviderOptions, messages: readonly Message[]): string | undefined {
+  if (typeof providerOptions.query === "string") return providerOptions.query;
   if (typeof providerOptions.query === "function") return providerOptions.query({ messages });
   return latestUserText(messages);
 }
 
-function formatRecall(
-  hits: readonly MemoryVectorHit[],
-  adjacent: readonly MemoryVectorRecord[],
-  tokenBudget: number,
-): string | undefined {
+function formatRecall(hits: readonly MemoryVectorHit[], adjacent: readonly MemoryVectorRecord[], tokenBudget: number): string | undefined {
   const lines: string[] = [];
   let remaining = tokenBudget;
   const ordered = [
@@ -482,10 +469,7 @@ function formatRecall(
     ...adjacent.map((record) => ({ text: record.text, kind: "adjacent" as const, score: undefined as number | undefined })),
   ];
   for (const item of ordered) {
-    const line =
-      item.kind === "hit"
-        ? `- (${item.score.toFixed(3)}) ${item.text}`
-        : `- (adjacent) ${item.text}`;
+    const line = item.kind === "hit" ? `- (${item.score.toFixed(3)}) ${item.text}` : `- (adjacent) ${item.text}`;
     const tokens = estimateTokens(line);
     if (tokens > remaining) break;
     lines.push(line);
@@ -498,11 +482,7 @@ const CONSENT_SOURCES = new Set(["user", "agent", "system"]);
 const CONSENT_SCOPES = new Set(["thread", "profile", "user"]);
 
 /** Merge a consent grant/update over prior consent, stamping grant/revoke times. */
-function normalizeConsent(
-  input: MemoryConsentInput | undefined,
-  prior: MemoryConsent | undefined,
-  now: string,
-): MemoryConsent {
+function normalizeConsent(input: MemoryConsentInput | undefined, prior: MemoryConsent | undefined, now: string): MemoryConsent {
   const source = input?.source ?? prior?.source ?? "user";
   const scope = input?.scope ?? prior?.scope ?? "thread";
   if (!CONSENT_SOURCES.has(source)) throw new MemoryValidationError(`consent.source must be one of user|agent|system`);
@@ -557,7 +537,9 @@ async function withinDeadline<T>(
         reject(new MemoryLimitError(`${label} exceeded ${maxMs}ms`));
       }, maxMs);
     });
-    const aborted = new Promise<never>((_, reject) => { rejectAbort = reject; });
+    const aborted = new Promise<never>((_, reject) => {
+      rejectAbort = reject;
+    });
     return await Promise.race([operation(controller.signal), timedOut, aborted]);
   } finally {
     if (timeout) clearTimeout(timeout);

@@ -5,20 +5,14 @@
  * Missing browser binary fails closed when the gate is enabled.
  */
 import assert from "node:assert/strict";
-import http from "node:http";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import {
-  BrowserError,
-  createBrowserManager,
-  normalizeTarget,
-  type PlaywrightBrowser,
-} from "../index.js";
+import { BrowserError, createBrowserManager, normalizeTarget, type PlaywrightBrowser } from "../index.js";
 
-const enabled =
-  process.env.PRISM_LIVE_PLAYWRIGHT === "1" || process.env.PRISM_TEST_PLAYWRIGHT === "1";
+const enabled = process.env.PRISM_LIVE_PLAYWRIGHT === "1" || process.env.PRISM_TEST_PLAYWRIGHT === "1";
 
 const HOSTILE_HTML = `<!doctype html>
 <html lang="en">
@@ -132,8 +126,7 @@ describe("protected Playwright browser matrix", { skip: !enabled }, () => {
 
       assert.throws(
         () => normalizeTarget({ css: "button.go" }),
-        (error: unknown) =>
-          error instanceof BrowserError && /CSS\/XPath\/selector\/evaluate/.test(error.message),
+        (error: unknown) => error instanceof BrowserError && /CSS\/XPath\/selector\/evaluate/.test(error.message),
       );
     } finally {
       await manager.closeRun("live-1");
@@ -149,14 +142,12 @@ describe("protected Playwright browser matrix", { skip: !enabled }, () => {
     try {
       await assert.rejects(
         () => deny.open("deny-1", { url: "https://example.com/" }),
-        (error: unknown) =>
-          error instanceof BrowserError && error.code === "ERR_PRISM_BROWSER_NETWORK",
+        (error: unknown) => error instanceof BrowserError && error.code === "ERR_PRISM_BROWSER_NETWORK",
       );
       await assert.rejects(
         () => deny.open("deny-2", { url: "file:///etc/passwd" }),
         (error: unknown) =>
-          error instanceof BrowserError &&
-          (error.code === "ERR_PRISM_BROWSER_NETWORK" || error.code === "ERR_PRISM_BROWSER_INPUT"),
+          error instanceof BrowserError && (error.code === "ERR_PRISM_BROWSER_NETWORK" || error.code === "ERR_PRISM_BROWSER_INPUT"),
       );
     } finally {
       await deny.close();

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
+import { join } from "node:path";
 /**
  * Release 0.0.15 network-free provider, RAG, and memory evidence.
  * Bounds/fixtures are release gates; host-local timings are not.
  */
 import { performance } from "node:perf_hooks";
-import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const iterations = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
@@ -13,9 +13,20 @@ if (!Number.isInteger(iterations) || iterations < 10 || iterations > 100_000) {
 }
 
 const REQUIRED_RESULT_FIELDS = Object.freeze([
-  "scenario", "mode", "iterations", "throughputPerSecond", "p50Ms", "p95Ms",
-  "memoryBytes", "peakQueueEvents", "eventBytes", "diskBytes", "processCount",
-  "estimatedCostUsd", "backpressureSignals", "resourceLimitSignals",
+  "scenario",
+  "mode",
+  "iterations",
+  "throughputPerSecond",
+  "p50Ms",
+  "p95Ms",
+  "memoryBytes",
+  "peakQueueEvents",
+  "eventBytes",
+  "diskBytes",
+  "processCount",
+  "estimatedCostUsd",
+  "backpressureSignals",
+  "resourceLimitSignals",
 ]);
 const results = [];
 const percentile = (values, ratio) => [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
@@ -43,26 +54,41 @@ async function measure(scenario, mode, operation) {
   }
   const durationMs = performance.now() - started;
   const row = {
-    scenario, mode, iterations,
+    scenario,
+    mode,
+    iterations,
     throughputPerSecond: Number((iterations / (durationMs / 1000)).toFixed(2)),
     p50Ms: Number(percentile(latencies, 0.5).toFixed(4)),
     p95Ms: Number(percentile(latencies, 0.95).toFixed(4)),
     memoryBytes: process.memoryUsage().heapUsed,
-    peakQueueEvents, eventBytes,
-    diskBytes: 0, processCount: 1, estimatedCostUsd: 0, backpressureSignals: 0, resourceLimitSignals,
+    peakQueueEvents,
+    eventBytes,
+    diskBytes: 0,
+    processCount: 1,
+    estimatedCostUsd: 0,
+    backpressureSignals: 0,
+    resourceLimitSignals,
   };
   assertResultSchema(row);
   results.push(row);
 }
 
 async function workspace(specifier, fallback) {
-  try { return await import(specifier); }
-  catch { return import(pathToFileURL(join(process.cwd(), fallback)).href); }
+  try {
+    return await import(specifier);
+  } catch {
+    return import(pathToFileURL(join(process.cwd(), fallback)).href);
+  }
 }
 
 function sse(events) {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
-  return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }
 
 async function collect(provider, request) {
@@ -77,14 +103,25 @@ function fakeRealtimeTransport() {
   let state = 1;
   return {
     transport: {
-      get readyState() { return state; },
-      send(data) { sent.push(data); },
-      close() { state = 3; for (const handler of handlers.get("close") ?? []) handler({}); },
-      addEventListener(type, handler) { (handlers.get(type) ?? handlers.set(type, []).get(type)).push(handler); },
+      get readyState() {
+        return state;
+      },
+      send(data) {
+        sent.push(data);
+      },
+      close() {
+        state = 3;
+        for (const handler of handlers.get("close") ?? []) handler({});
+      },
+      addEventListener(type, handler) {
+        (handlers.get(type) ?? handlers.set(type, []).get(type)).push(handler);
+      },
       removeEventListener() {},
     },
     sent,
-    emit(type, data) { for (const handler of handlers.get(type) ?? []) handler({ data }); },
+    emit(type, data) {
+      for (const handler of handlers.get(type) ?? []) handler({ data });
+    },
   };
 }
 
@@ -109,17 +146,30 @@ await measure("openai-hosted-continuation", "fake-responses-sse", async () => {
   let credentialResolutions = 0;
   let hop = 0;
   const provider = openai.createOpenAIResponsesProvider({
-    apiKey: () => { credentialResolutions += 1; return secret; },
+    apiKey: () => {
+      credentialResolutions += 1;
+      return secret;
+    },
     fetch: async () => {
       hop += 1;
-      return new Response(sse(hop === 1 ? [
-        { type: "response.output_item.added", output_index: 0, item: { type: "web_search_call", id: "search_1" } },
-        { type: "response.output_text.delta", delta: "partial " },
-        { type: "response.completed", response: { id: "response_1", status: "incomplete" } },
-      ] : [
-        { type: "response.output_text.delta", delta: "complete" },
-        { type: "response.completed", response: { id: "response_2", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } },
-      ]), { status: 200 });
+      return new Response(
+        sse(
+          hop === 1
+            ? [
+                { type: "response.output_item.added", output_index: 0, item: { type: "web_search_call", id: "search_1" } },
+                { type: "response.output_text.delta", delta: "partial " },
+                { type: "response.completed", response: { id: "response_1", status: "incomplete" } },
+              ]
+            : [
+                { type: "response.output_text.delta", delta: "complete" },
+                {
+                  type: "response.completed",
+                  response: { id: "response_2", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } },
+                },
+              ],
+        ),
+        { status: 200 },
+      );
     },
   });
   const events = await collect(provider, request);
@@ -128,7 +178,13 @@ await measure("openai-hosted-continuation", "fake-responses-sse", async () => {
   return {
     queueEvents: events.length,
     eventBytes: Buffer.byteLength(json, "utf8"),
-    limit: credentialResolutions === 0 || hop !== 2 || !hosted || !events.some((event) => event.type === "continuation_required") || !events.some((event) => event.type === "done") || json.includes(secret),
+    limit:
+      credentialResolutions === 0 ||
+      hop !== 2 ||
+      !hosted ||
+      !events.some((event) => event.type === "continuation_required") ||
+      !events.some((event) => event.type === "done") ||
+      json.includes(secret),
   };
 });
 
@@ -157,7 +213,11 @@ await measure("openai-realtime-envelope", "fake-websocket", async (index) => {
   return {
     queueEvents: values.length,
     eventBytes: Buffer.byteLength(json, "utf8"),
-    limit: values.some((event) => !event) || !values.some((event) => event.type === "audio_delta") || !fake.sent.some((item) => item.includes("response.cancel")) || json.includes(secret),
+    limit:
+      values.some((event) => !event) ||
+      !values.some((event) => event.type === "audio_delta") ||
+      !fake.sent.some((item) => item.includes("response.cancel")) ||
+      json.includes(secret),
   };
 });
 
@@ -167,7 +227,9 @@ function aiSdkModel() {
     provider: "benchmark",
     modelId: "benchmark-model",
     supportedUrls: {},
-    async doGenerate() { throw new Error("stream only"); },
+    async doGenerate() {
+      throw new Error("stream only");
+    },
     async doStream() {
       return {
         stream: new ReadableStream({
@@ -176,7 +238,11 @@ function aiSdkModel() {
             controller.enqueue({ type: "text-start", id: "text" });
             controller.enqueue({ type: "text-delta", id: "text", delta: "mapped" });
             controller.enqueue({ type: "text-end", id: "text" });
-            controller.enqueue({ type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: { inputTokens: { total: 1, noCache: 1 }, outputTokens: { total: 1, text: 1 } } });
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: "stop", raw: "stop" },
+              usage: { inputTokens: { total: 1, noCache: 1 }, outputTokens: { total: 1, text: 1 } },
+            });
             controller.close();
           },
         }),
@@ -195,7 +261,11 @@ await measure("ai-sdk-v4-stream-mapping", "fake-language-model", async () => {
   return {
     queueEvents: events.length,
     eventBytes: Buffer.byteLength(json, "utf8"),
-    limit: !events.some((event) => event.type === "message_start") || !events.some((event) => event.type === "usage") || !events.some((event) => event.type === "done") || json.includes(secret),
+    limit:
+      !events.some((event) => event.type === "message_start") ||
+      !events.some((event) => event.type === "usage") ||
+      !events.some((event) => event.type === "done") ||
+      json.includes(secret),
   };
 });
 
@@ -203,11 +273,20 @@ await measure("provider-package-metadata", "zero-fetch-setup", async () => {
   let credentialResolutions = 0;
   const registered = { providers: 0, models: 0, auth: 0 };
   const api = {
-    registerProvider() { registered.providers += 1; },
-    registerModel() { registered.models += 1; },
-    registerAuthMethod() { registered.auth += 1; },
+    registerProvider() {
+      registered.providers += 1;
+    },
+    registerModel() {
+      registered.models += 1;
+    },
+    registerAuthMethod() {
+      registered.auth += 1;
+    },
   };
-  const resolver = () => { credentialResolutions += 1; return secret; };
+  const resolver = () => {
+    credentialResolutions += 1;
+    return secret;
+  };
   const packages = [
     kimi.createKimiProviderPackage({ kimiApiKey: resolver }),
     zai.createZaiProviderPackage({ apiKey: resolver }),
@@ -233,7 +312,13 @@ await measure("rag-parse-replace-rerank-retrieve", "memory-vector-store", async 
   await rag.replaceDocument({
     uri: "package://benchmark-policy",
     sourceId: "benchmark-policy",
-    loader: { load: async (uri) => ({ uri, mediaType: "text/markdown", text: "# Policy\n\nApproval requires current authorization.\n\n# Escalation\n\nDocument every decision." }) },
+    loader: {
+      load: async (uri) => ({
+        uri,
+        mediaType: "text/markdown",
+        text: "# Policy\n\nApproval requires current authorization.\n\n# Escalation\n\nDocument every decision.",
+      }),
+    },
     parser: rag.markdownParser,
     chunk: { size: 36, overlap: 0 },
     embedder,
@@ -254,7 +339,11 @@ await measure("rag-parse-replace-rerank-retrieve", "memory-vector-store", async 
   return {
     queueEvents: context.hits.length + status.entries.length,
     eventBytes: Buffer.byteLength(json, "utf8"),
-    limit: context.hits.length === 0 || status.entries[0]?.state !== "indexed" || !context.hits.every((hit) => hit.trust.inert && hit.provenance.sourceId === "benchmark-policy") || json.includes(secret),
+    limit:
+      context.hits.length === 0 ||
+      status.entries[0]?.state !== "indexed" ||
+      !context.hits.every((hit) => hit.trust.inert && hit.provenance.sourceId === "benchmark-policy") ||
+      json.includes(secret),
   };
 });
 
@@ -266,13 +355,20 @@ await measure("memory-retention-export-rebuild", "memory-vector-store", async ()
     embedder: memory.createHashEmbedder({ dimensions: 16 }),
     redactor: core.createSecretRedactor([secret]),
   });
-  await semantic.remember({ entries: [
-    { id: "one", text: `old ${secret}`, sequence: 1, consent: { visible: true } },
-    { id: "two", text: "retained preference", sequence: 2, consent: { visible: true } },
-    { id: "three", text: "current preference", sequence: 3, consent: { visible: true } },
-  ] }, { wait: true });
+  await semantic.remember(
+    {
+      entries: [
+        { id: "one", text: `old ${secret}`, sequence: 1, consent: { visible: true } },
+        { id: "two", text: "retained preference", sequence: 2, consent: { visible: true } },
+        { id: "three", text: "current preference", sequence: 3, consent: { visible: true } },
+      ],
+    },
+    { wait: true },
+  );
   const retained = await semantic.applyRetention({ maxEntries: 2 });
-  const exported = await semantic.exportMemory({ identity: { tenantId: "bench-tenant", resourceId: "bench-resource", threadId: "bench-thread" } });
+  const exported = await semantic.exportMemory({
+    identity: { tenantId: "bench-tenant", resourceId: "bench-resource", threadId: "bench-thread" },
+  });
   const rebuilt = await semantic.rebuildIndex({ batchSize: 2 });
   const json = JSON.stringify({ retained, exported, rebuilt });
   return {

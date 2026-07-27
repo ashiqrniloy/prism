@@ -15,9 +15,14 @@ import {
   type WorkflowRunResult,
 } from "@arnilo/prism-workflows";
 import {
-  CODING_STATE_KEY,
   assertCodingResumeAllowed,
   buildCodingCheckpointMetadata,
+  CODING_STATE_KEY,
+  type CodingCheckpointMetadata,
+  type CodingCheckSummary,
+  type CodingFingerprints,
+  type CodingHandoffSummary,
+  type CodingTodoItem,
   codingCheckpointStatePatch,
   codingPlanPathForTask,
   createCodingPlanMarkdown,
@@ -26,11 +31,6 @@ import {
   readCodingCheckpointFromState,
   readCodingPlanFile,
   writeCodingPlanFile,
-  type CodingCheckSummary,
-  type CodingCheckpointMetadata,
-  type CodingFingerprints,
-  type CodingHandoffSummary,
-  type CodingTodoItem,
 } from "./coding-checkpoint.js";
 import { DEFAULT_MAX_CHECK_SUMMARY_BYTES, DEFAULT_MAX_PR_HANDOFF_BYTES } from "./limits.js";
 
@@ -106,9 +106,7 @@ function normalizeChecks(checks: readonly CodingCheckSummary[]): CodingCheckSumm
 function assertHandoffBounded(handoff: CodingHandoffSummary): void {
   const encoded = Buffer.byteLength(JSON.stringify(handoff), "utf8");
   if (encoded > DEFAULT_MAX_PR_HANDOFF_BYTES) {
-    throw new CodingGoalVerifyError(
-      `handoff exceeds ${DEFAULT_MAX_PR_HANDOFF_BYTES} byte limit (${encoded} bytes)`,
-    );
+    throw new CodingGoalVerifyError(`handoff exceeds ${DEFAULT_MAX_PR_HANDOFF_BYTES} byte limit (${encoded} bytes)`);
   }
 }
 
@@ -128,10 +126,7 @@ function defaultTodos(checkNames: readonly string[]): CodingTodoItem[] {
   ];
 }
 
-function markTodos(
-  todos: readonly CodingTodoItem[],
-  doneIds: ReadonlySet<string>,
-): CodingTodoItem[] {
+function markTodos(todos: readonly CodingTodoItem[], doneIds: ReadonlySet<string>): CodingTodoItem[] {
   return todos.map((todo) => (doneIds.has(todo.id) ? { ...todo, done: true } : todo));
 }
 
@@ -185,14 +180,9 @@ export function createCodingGoalVerifyWorkflow(options: {
   const verifyNode = functionNode({
     execute: async (ctx) => {
       const coding = requireCoding(ctx.state);
-      const checks = normalizeChecks(
-        await Promise.all(options.checks.map((name) => options.runCheck(name))),
-      );
+      const checks = normalizeChecks(await Promise.all(options.checks.map((name) => options.runCheck(name))));
       const failed = checks.some((check) => check.exitCode !== 0);
-      const done = new Set<string>([
-        "plan",
-        ...options.checks.map((name) => `check-${name}`),
-      ]);
+      const done = new Set<string>(["plan", ...options.checks.map((name) => `check-${name}`)]);
       const todos = markTodos(coding.todos.length ? coding.todos : defaultTodos(options.checks), done);
       const markdown = createCodingPlanMarkdown({
         title: options.title,
@@ -241,8 +231,7 @@ export function createCodingGoalVerifyWorkflow(options: {
           },
         });
       }
-      const reviewer =
-        (ctx.resume.input as { reviewer?: string } | undefined)?.reviewer ?? "unknown";
+      const reviewer = (ctx.resume.input as { reviewer?: string } | undefined)?.reviewer ?? "unknown";
       return { approved: true, reviewer, planSha256: coding.plan.sha256 };
     },
   });
@@ -318,9 +307,7 @@ export function createCodingGoalVerifyWorkflow(options: {
  * Run (or resume) a thin goal→verify coding composition.
  * Fails closed when `approval` / `approval.validateResume` is missing.
  */
-export async function runCodingGoalVerify(
-  options: RunCodingGoalVerifyOptions,
-): Promise<WorkflowRunResult> {
+export async function runCodingGoalVerify(options: RunCodingGoalVerifyOptions): Promise<WorkflowRunResult> {
   if (!options.approval?.validateResume) {
     throw new CodingGoalVerifyError("approval.validateResume is required");
   }

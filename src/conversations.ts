@@ -40,7 +40,10 @@ export interface ConversationReplayCursor {
 
 export class ConversationError extends Error {
   readonly code = "ERR_PRISM_CONVERSATION";
-  constructor(message: string, readonly reason: string) {
+  constructor(
+    message: string,
+    readonly reason: string,
+  ) {
     super(message);
     this.name = "ConversationError";
   }
@@ -96,7 +99,8 @@ export function conversationThreadFromRecord(record: SessionRecord): Conversatio
   if (Array.isArray(value.branches)) {
     for (const item of value.branches) {
       if (
-        item && typeof item === "object" &&
+        item &&
+        typeof item === "object" &&
         typeof (item as Record<string, unknown>).leafId === "string" &&
         typeof (item as Record<string, unknown>).createdAt === "string"
       ) {
@@ -107,9 +111,10 @@ export function conversationThreadFromRecord(record: SessionRecord): Conversatio
       }
     }
   }
-  const metadata = value.metadata && typeof value.metadata === "object" && !Array.isArray(value.metadata)
-    ? value.metadata as Readonly<Record<string, unknown>>
-    : undefined;
+  const metadata =
+    value.metadata && typeof value.metadata === "object" && !Array.isArray(value.metadata)
+      ? (value.metadata as Readonly<Record<string, unknown>>)
+      : undefined;
   return {
     id: record.id,
     ...(record.tenantId !== undefined ? { tenantId: record.tenantId } : {}),

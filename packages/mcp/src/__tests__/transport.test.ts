@@ -1,6 +1,6 @@
-import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { afterEach, describe, it } from "node:test";
 import { createMcpTransport, createSecureMcpFetch } from "../transport.js";
 
 const servers: Server[] = [];
@@ -10,32 +10,50 @@ afterEach(async () => {
 
 describe("secure MCP Streamable HTTP transport", () => {
   it("requires an exact HTTPS origin and rejects credentials, fragments, and public HTTP", () => {
-    assert.doesNotThrow(() => createMcpTransport({
-      type: "streamable-http",
-      url: "https://mcp.example.test/mcp",
-      allowedOrigins: ["https://mcp.example.test"],
-    }));
-    assert.throws(() => createMcpTransport({
-      type: "streamable-http",
-      url: "https://mcp.example.test/mcp",
-      allowedOrigins: ["https://mcp.example.test/"],
-    }), /exact/);
-    assert.throws(() => createMcpTransport({
-      type: "streamable-http",
-      url: "https://user:pass@mcp.example.test/mcp",
-      allowedOrigins: ["https://mcp.example.test"],
-    }), /credentials/);
-    assert.throws(() => createMcpTransport({
-      type: "streamable-http",
-      url: "https://mcp.example.test/mcp#fragment",
-      allowedOrigins: ["https://mcp.example.test"],
-    }), /fragment/);
-    assert.throws(() => createMcpTransport({
-      type: "streamable-http",
-      url: "http://mcp.example.test/mcp",
-      allowedOrigins: ["http://mcp.example.test"],
-      allowLoopbackHttp: true,
-    }), /HTTPS|loopback/);
+    assert.doesNotThrow(() =>
+      createMcpTransport({
+        type: "streamable-http",
+        url: "https://mcp.example.test/mcp",
+        allowedOrigins: ["https://mcp.example.test"],
+      }),
+    );
+    assert.throws(
+      () =>
+        createMcpTransport({
+          type: "streamable-http",
+          url: "https://mcp.example.test/mcp",
+          allowedOrigins: ["https://mcp.example.test/"],
+        }),
+      /exact/,
+    );
+    assert.throws(
+      () =>
+        createMcpTransport({
+          type: "streamable-http",
+          url: "https://user:pass@mcp.example.test/mcp",
+          allowedOrigins: ["https://mcp.example.test"],
+        }),
+      /credentials/,
+    );
+    assert.throws(
+      () =>
+        createMcpTransport({
+          type: "streamable-http",
+          url: "https://mcp.example.test/mcp#fragment",
+          allowedOrigins: ["https://mcp.example.test"],
+        }),
+      /fragment/,
+    );
+    assert.throws(
+      () =>
+        createMcpTransport({
+          type: "streamable-http",
+          url: "http://mcp.example.test/mcp",
+          allowedOrigins: ["http://mcp.example.test"],
+          allowLoopbackHttp: true,
+        }),
+      /HTTPS|loopback/,
+    );
   });
 
   it("blocks private IPv4/IPv6 and mixed DNS answers before requests", async () => {
@@ -56,11 +74,15 @@ describe("secure MCP Streamable HTTP transport", () => {
 
   it("allows plaintext loopback only with explicit opt-in and rejects rebinding", async () => {
     const { origin } = await listen((_request, response) => response.end("ok"));
-    assert.throws(() => createSecureMcpFetch({
-      type: "streamable-http",
-      url: `${origin}/mcp`,
-      allowedOrigins: [origin],
-    }), /HTTPS/);
+    assert.throws(
+      () =>
+        createSecureMcpFetch({
+          type: "streamable-http",
+          url: `${origin}/mcp`,
+          allowedOrigins: [origin],
+        }),
+      /HTTPS/,
+    );
     const fetch = createSecureMcpFetch({
       type: "streamable-http",
       url: `${origin.replace("127.0.0.1", "localhost")}/mcp`,
@@ -68,9 +90,7 @@ describe("secure MCP Streamable HTTP transport", () => {
       allowLoopbackHttp: true,
       resolveHostname: (() => {
         let calls = 0;
-        return async () => calls++ === 0
-          ? [{ address: "127.0.0.1", family: 4 as const }]
-          : [{ address: "10.0.0.1", family: 4 as const }];
+        return async () => (calls++ === 0 ? [{ address: "127.0.0.1", family: 4 as const }] : [{ address: "10.0.0.1", family: 4 as const }]);
       })(),
     });
     assert.equal(await (await fetch(`${origin.replace("127.0.0.1", "localhost")}/mcp`)).text(), "ok");
@@ -123,12 +143,14 @@ describe("secure MCP Streamable HTTP transport", () => {
 
   it("validates the HTTP response limit before transport creation", () => {
     for (const value of [0, NaN, Infinity, 64 * 1024 * 1024 + 1]) {
-      assert.throws(() => createMcpTransport({
-        type: "streamable-http",
-        url: "https://mcp.example.test/mcp",
-        allowedOrigins: ["https://mcp.example.test"],
-        maxResponseBytes: value,
-      }));
+      assert.throws(() =>
+        createMcpTransport({
+          type: "streamable-http",
+          url: "https://mcp.example.test/mcp",
+          allowedOrigins: ["https://mcp.example.test"],
+          maxResponseBytes: value,
+        }),
+      );
     }
   });
 });

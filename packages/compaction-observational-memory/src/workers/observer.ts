@@ -1,6 +1,6 @@
 import type { AIProvider, ModelConfig, ProviderRequestOptions, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
-import { resolveMemoryWorkerLimits, type MemoryWorkerLimitOptions } from "../limits.js";
+import { type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "../limits.js";
 import { serializeSourceEntries } from "../serialize.js";
 import { estimateTextTokens } from "../tokens.js";
 import { isMemoryObservation, type MemoryObservation } from "../types.js";
@@ -26,14 +26,30 @@ export async function runObserver(options: RunObserverOptions): Promise<readonly
     parameters: { type: "object" },
     execute(args, context) {
       const content = typeof args.content === "string" ? args.content.replace(/\s+/g, " ").trim() : "";
-      const sourceEntryIds = Array.isArray(args.sourceEntryIds) ? args.sourceEntryIds.filter((id): id is string => typeof id === "string" && allowed.has(id)) : [];
-      const relevance = ["low", "medium", "high", "critical"].includes(String(args.relevance)) ? args.relevance as MemoryObservation["relevance"] : "medium";
-      const observation = { id: createMemoryId(content, sourceEntryIds), content, timestamp: new Date().toISOString(), relevance, sourceEntryIds, tokenCount: estimateTextTokens(content) };
+      const sourceEntryIds = Array.isArray(args.sourceEntryIds)
+        ? args.sourceEntryIds.filter((id): id is string => typeof id === "string" && allowed.has(id))
+        : [];
+      const relevance = ["low", "medium", "high", "critical"].includes(String(args.relevance))
+        ? (args.relevance as MemoryObservation["relevance"])
+        : "medium";
+      const observation = {
+        id: createMemoryId(content, sourceEntryIds),
+        content,
+        timestamp: new Date().toISOString(),
+        relevance,
+        sourceEntryIds,
+        tokenCount: estimateTextTokens(content),
+      };
       if (sourceEntryIds.length && isMemoryObservation(observation)) observations.push(observation);
       return { toolCallId: context.toolCallId, name: "record_observation", value: { ok: true } };
     },
   };
   const limits = resolveMemoryWorkerLimits(options);
-  await runMemoryWorkerLoop({ ...options, system: "Find durable source-backed facts from this coding session. Call record_observation for each useful fact.", prompt: serializeSourceEntries(options.entries, options.secrets, limits.maxMessageBytes), tools: [tool] });
+  await runMemoryWorkerLoop({
+    ...options,
+    system: "Find durable source-backed facts from this coding session. Call record_observation for each useful fact.",
+    prompt: serializeSourceEntries(options.entries, options.secrets, limits.maxMessageBytes),
+    tools: [tool],
+  });
   return observations;
 }

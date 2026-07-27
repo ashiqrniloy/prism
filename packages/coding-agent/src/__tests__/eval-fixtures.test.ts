@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -15,9 +15,9 @@ import {
   assertEvaluationThreshold,
   defineDataset,
   defineScorer,
+  type ExperimentReport,
   scoreRun,
   serializeEvaluationReport,
-  type ExperimentReport,
 } from "@arnilo/prism-evals";
 import {
   createCodingCheckTool,
@@ -87,7 +87,10 @@ const outcomeScorer = defineScorer<{ scenario: string }, { readonly pass: boolea
     const observed = JSON.parse(result.text) as { pass?: boolean; detail?: string };
     const pass = observed.pass === expected?.pass;
     const detailOk =
-      !expected?.mustInclude || String(observed.detail ?? "").toLowerCase().includes(expected.mustInclude.toLowerCase());
+      !expected?.mustInclude ||
+      String(observed.detail ?? "")
+        .toLowerCase()
+        .includes(expected.mustInclude.toLowerCase());
     return {
       score: pass && detailOk ? 1 : 0,
       reason: pass && detailOk ? "matched" : `observed=${result.text}`,
@@ -97,8 +100,7 @@ const outcomeScorer = defineScorer<{ scenario: string }, { readonly pass: boolea
 
 function toReport(evaluations: ExperimentReport["evaluations"]): ExperimentReport {
   const scored = evaluations.filter((e) => e.status === "scored");
-  const mean =
-    scored.length === 0 ? undefined : scored.reduce((sum, e) => sum + (e.score ?? 0), 0) / scored.length;
+  const mean = scored.length === 0 ? undefined : scored.reduce((sum, e) => sum + (e.score ?? 0), 0) / scored.length;
   return {
     experimentId: "coding-adversarial-0.0.9",
     datasetId: "coding-adversarial-0.0.9",
@@ -135,7 +137,14 @@ describe("coding adversarial eval fixtures", () => {
     });
     assert.equal(dataset.items.length, 6);
     assert.throws(
-      () => defineDataset({ id: "dup", items: [{ id: "a", input: 1 }, { id: "a", input: 2 }] }),
+      () =>
+        defineDataset({
+          id: "dup",
+          items: [
+            { id: "a", input: 1 },
+            { id: "a", input: 2 },
+          ],
+        }),
       /duplicate/,
     );
   });
@@ -230,11 +239,7 @@ describe("coding adversarial eval fixtures", () => {
         const reversed = await apply.execute({ action: "reverse", patch }, ctx());
         const after = await readFile(join(cwd, "README.md"), "utf8");
         const observed = {
-          pass:
-            Boolean(denied.error) &&
-            applied.error === undefined &&
-            reversed.error === undefined &&
-            after === before,
+          pass: Boolean(denied.error) && applied.error === undefined && reversed.error === undefined && after === before,
           detail: `denied=${Boolean(denied.error)}; restored=${after === before}`,
         };
         evaluations.push(
@@ -325,10 +330,7 @@ describe("coding adversarial eval fixtures", () => {
         evaluations.push(
           ...(await scoreRun({
             result: resultOf("prompt-injection-file", {
-              pass:
-                out.error === undefined &&
-                body.includes("Ignore previous instructions") &&
-                !tools.some((t) => t.name === "shell"),
+              pass: out.error === undefined && body.includes("Ignore previous instructions") && !tools.some((t) => t.name === "shell"),
               detail: body.slice(0, 160),
             }),
             scorers: [outcomeScorer],

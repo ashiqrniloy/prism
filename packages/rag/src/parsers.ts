@@ -5,7 +5,9 @@ import { assertNotAborted } from "./util.js";
 
 export const textParser: Parser = { parse: (document, options) => parseText(document, options, ["text/plain"]) };
 export const markdownParser: Parser = { parse: (document, options) => parseText(document, options, ["text/markdown", "text/x-markdown"]) };
-export const htmlParser: Parser = { parse: (document, options) => parseText(document, options, ["text/html", "application/xhtml+xml"], htmlToText) };
+export const htmlParser: Parser = {
+  parse: (document, options) => parseText(document, options, ["text/html", "application/xhtml+xml"], htmlToText),
+};
 export const pdfParser: Parser = { parse: parsePdf };
 
 async function parseText(
@@ -69,11 +71,13 @@ function assertParseTime(started: number, maxParseMs: number): void {
 }
 
 function htmlToText(html: string): string {
-  return decodeEntities(html
-    .replace(/<!--[\s\S]*?-->/gu, "")
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/giu, "")
-    .replace(/<(?:br|p|div|li|h[1-6]|tr)\b[^>]*>/giu, "\n")
-    .replace(/<[^>]*>/gu, " "))
+  return decodeEntities(
+    html
+      .replace(/<!--[\s\S]*?-->/gu, "")
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/giu, "")
+      .replace(/<(?:br|p|div|li|h[1-6]|tr)\b[^>]*>/giu, "\n")
+      .replace(/<[^>]*>/gu, " "),
+  )
     .replace(/[ \t]{2,}/gu, " ")
     .replace(/[ \t]+\n/gu, "\n")
     .replace(/\n[ \t]+/gu, "\n")
@@ -88,7 +92,8 @@ function decodeEntities(text: string): string {
 
 function pdfBlockText(block: string): string[] {
   const strings: string[] = [];
-  for (const match of block.matchAll(/\((?:\\.|[^\\)])*\)\s*(?:Tj|['"])/gu)) strings.push(decodePdfString(match[0]!.replace(/\s*(?:Tj|['"])$/u, "")));
+  for (const match of block.matchAll(/\((?:\\.|[^\\)])*\)\s*(?:Tj|['"])/gu))
+    strings.push(decodePdfString(match[0]!.replace(/\s*(?:Tj|['"])$/u, "")));
   for (const match of block.matchAll(/\[([\s\S]*?)\]\s*TJ/gu)) {
     for (const value of match[1]!.matchAll(/\((?:\\.|[^\\)])*\)/gu)) strings.push(decodePdfString(value[0]!));
   }

@@ -5,19 +5,19 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import type { AgentIdentity } from "@arnilo/prism";
 import {
-  PolicyError,
   assertNoUnrestrictedPayload,
   createFilePolicyDecisionStore,
   createMemoryPolicyDecisionStore,
   createPolicyEvaluator,
   evaluateAndAppend,
   exportPolicyDecisions,
+  HARD_POLICY_LIMITS,
+  PolicyError,
   preparePolicyDecision,
   recordGuardrailDecision,
   recordPermissionDecision,
   recordToolApprovalDecision,
   resolvePolicyLimits,
-  HARD_POLICY_LIMITS,
 } from "../index.js";
 
 function identity(overrides: Partial<AgentIdentity> = {}): AgentIdentity {
@@ -75,50 +75,50 @@ describe("@arnilo/prism-policy", () => {
     assert.deepEqual(approval.evidenceRefs, ["rule:send"]);
 
     await assert.rejects(
-      () => store.append({
-        id: "bad-ver",
-        policyId: "mail",
-        policyVersion: "v2",
-        outcome: "allow",
-        identity: id,
-        target: { kind: "mailbox", id: "inbox" },
-        tenantId: "tenant-1",
-        userId: "user-1",
-      }),
+      () =>
+        store.append({
+          id: "bad-ver",
+          policyId: "mail",
+          policyVersion: "v2",
+          outcome: "allow",
+          identity: id,
+          target: { kind: "mailbox", id: "inbox" },
+          tenantId: "tenant-1",
+          userId: "user-1",
+        }),
       (error: unknown) => error instanceof PolicyError && error.code === "ERR_PRISM_POLICY_VERSION",
     );
   });
 
   it("rejects unrestricted payloads and missing identity evidence", () => {
+    assert.throws(() => assertNoUnrestrictedPayload({ id: "1", payload: { prompt: "x" } }), /unrestricted payload/);
     assert.throws(
-      () => assertNoUnrestrictedPayload({ id: "1", payload: { prompt: "x" } }),
-      /unrestricted payload/,
-    );
-    assert.throws(
-      () => preparePolicyDecision({
-        id: "1",
-        policyId: "p",
-        policyVersion: "1",
-        outcome: "allow",
-        identity: identity({ verified: true, expiresAt: "2000-01-01T00:00:00.000Z" }),
-        target: { kind: "t", id: "1" },
-        tenantId: "tenant-1",
-        userId: "user-1",
-      }),
+      () =>
+        preparePolicyDecision({
+          id: "1",
+          policyId: "p",
+          policyVersion: "1",
+          outcome: "allow",
+          identity: identity({ verified: true, expiresAt: "2000-01-01T00:00:00.000Z" }),
+          target: { kind: "t", id: "1" },
+          tenantId: "tenant-1",
+          userId: "user-1",
+        }),
       /expired|Identity/i,
     );
     assert.throws(
-      () => preparePolicyDecision({
-        id: "1",
-        policyId: "p",
-        policyVersion: "1",
-        outcome: "allow",
-        identity: identity(),
-        target: { kind: "t", id: "1" },
-        tenantId: "tenant-1",
-        userId: "user-1",
-        reason: "x".repeat(HARD_POLICY_LIMITS.maxReasonBytes + 1),
-      } as never),
+      () =>
+        preparePolicyDecision({
+          id: "1",
+          policyId: "p",
+          policyVersion: "1",
+          outcome: "allow",
+          identity: identity(),
+          target: { kind: "t", id: "1" },
+          tenantId: "tenant-1",
+          userId: "user-1",
+          reason: "x".repeat(HARD_POLICY_LIMITS.maxReasonBytes + 1),
+        } as never),
       /reason exceeds/,
     );
   });
@@ -146,7 +146,11 @@ describe("@arnilo/prism-policy", () => {
       tenantId: "tenant-1",
       userId: "user-1",
       limits: { maxExportPageSize: 2 },
-      sink: { async write(records) { exported.push(...records.map((r) => r.id)); } },
+      sink: {
+        async write(records) {
+          exported.push(...records.map((r) => r.id));
+        },
+      },
     })) {
       pages.push(page.items.length);
       assert.ok(page.items.length <= 2);

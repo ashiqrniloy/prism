@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import type { DiscoveredContribution, Skill } from "../contracts.js";
 import { createContributionRegistries, registerDiscoveredContributions } from "../index.js";
 
@@ -33,10 +33,7 @@ describe("registerDiscoveredContributions", () => {
 
     const tool = registries.tools.resolve("t");
     assert.equal(tool.name, "t");
-    assert.throws(
-      () => tool.execute({}, { sessionId: "s", runId: "r", toolCallId: "c" }),
-      /requires host execution/,
-    );
+    assert.throws(() => tool.execute({}, { sessionId: "s", runId: "r", toolCallId: "c" }), /requires host execution/);
   });
 
   it("registers a context provider descriptor whose resolve() throws", async () => {
@@ -79,12 +76,8 @@ describe("registerDiscoveredContributions", () => {
 
   it("last-write-wins when registering the same (kind, name) twice", () => {
     const registries = createContributionRegistries();
-    registerDiscoveredContributions(registries, [
-      skillContribution("dup", { name: "dup", description: "first" }),
-    ]);
-    registerDiscoveredContributions(registries, [
-      skillContribution("dup", { name: "dup", description: "second" }),
-    ]);
+    registerDiscoveredContributions(registries, [skillContribution("dup", { name: "dup", description: "first" })]);
+    registerDiscoveredContributions(registries, [skillContribution("dup", { name: "dup", description: "second" })]);
 
     assert.equal(registries.skills.resolve("dup").description, "second");
     assert.equal(registries.skills.list().length, 1);

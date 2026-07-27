@@ -3,20 +3,20 @@ import {
   createAgentSession,
   createMockProvider,
   createSecretRedactor,
+  type ExecutionAction,
+  type ExecutionPolicy,
   providerDone,
   providerTextDelta,
   providerUsage,
-  type ExecutionAction,
-  type ExecutionPolicy,
 } from "@arnilo/prism";
 import { mapMcpToolsToDefinitions } from "@arnilo/prism-mcp";
 import {
   agentNode,
-  defineWorkflow,
-  toolNode,
   createMemoryWorkflowCheckpoints,
+  defineWorkflow,
   resumeWorkflow,
   runWorkflow,
+  toolNode,
   type WorkflowEvent,
 } from "@arnilo/prism-workflows";
 
@@ -33,15 +33,17 @@ const provider = createMockProvider([
 
 const echoContent = "file content here";
 const scanTool = mapMcpToolsToDefinitions(
-  [{
-    name: "scan",
-    description: "Read a file from the workspace.",
-    inputSchema: {
-      type: "object",
-      properties: { path: { type: "string" } },
-      required: ["path"],
+  [
+    {
+      name: "scan",
+      description: "Read a file from the workspace.",
+      inputSchema: {
+        type: "object",
+        properties: { path: { type: "string" } },
+        required: ["path"],
+      },
     },
-  }],
+  ],
   {
     serverId: "offline-demo",
     namePrefix: "mcp:offline-demo:",
@@ -84,7 +86,7 @@ const researchNode = agentNode({
 
 const scanNode = toolNode({
   tool: scanTool,
-  args: (ctx) => ({ path: "src/index.ts" }),
+  args: (_ctx) => ({ path: "src/index.ts" }),
   approval: {
     reason: "scan workspace file",
     data: (_ctx, args) => ({ path: args.path }),
@@ -119,8 +121,7 @@ export async function demo() {
     workflow,
     { repo: "my-project" },
     {
-      agentFactory: () =>
-        createAgentSession({ agent: researchAgent }),
+      agentFactory: () => createAgentSession({ agent: researchAgent }),
       checkpoints,
       redactor,
       executionPolicy: policy,
@@ -130,16 +131,21 @@ export async function demo() {
     },
   );
 
-  const result = suspended.status === "suspended"
-    ? await resumeWorkflow(workflow, { runId: suspended.runId }, {
-        checkpoints,
-        redactor,
-        executionPolicy: policy,
-        ownership: { tenantId: "demo" },
-        resume: { decision: "approve", expectedVersion: suspended.version },
-        onEvent: (e) => events.push(e),
-      })
-    : suspended;
+  const result =
+    suspended.status === "suspended"
+      ? await resumeWorkflow(
+          workflow,
+          { runId: suspended.runId },
+          {
+            checkpoints,
+            redactor,
+            executionPolicy: policy,
+            ownership: { tenantId: "demo" },
+            resume: { decision: "approve", expectedVersion: suspended.version },
+            onEvent: (e) => events.push(e),
+          },
+        )
+      : suspended;
 
   const failEvents = events.filter((e) => e.type === "node_failed");
   const toolOutput = result.outputs.scan as { content?: string } | undefined;

@@ -13,8 +13,8 @@ import {
   parseCliNdjson,
   WorkToolError,
 } from "../index.js";
-import type { WorkCliExecResult } from "../types.js";
 import { resolveWorkLimits } from "../limits.js";
+import type { WorkCliExecResult } from "../types.js";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-1",
@@ -40,30 +40,59 @@ function fakeRunner(handler: (argv: readonly string[]) => WorkCliExecResult | Pr
 describe("microsoft365 argv templates", () => {
   it("builds verified CLI command shapes and rejects forbidden tokens", () => {
     assert.deepEqual(buildMicrosoft365Argv("version", {}), ["version", "--output", "json"]);
-    assert.deepEqual(
-      buildMicrosoft365Argv("mail.list", { folderName: "inbox" }),
-      ["outlook", "message", "list", "--output", "json", "--folderName", "inbox"],
-    );
-    assert.deepEqual(
-      buildMicrosoft365Argv("mail.get", { id: "msg-1" }),
-      ["outlook", "message", "get", "--output", "json", "--id", "msg-1"],
-    );
-    assert.deepEqual(
-      buildMicrosoft365Argv("mail.send", { to: "a@contoso.com", subject: "Hi", bodyContents: "Body" }),
-      ["outlook", "mail", "send", "--output", "json", "--to", "a@contoso.com", "--subject", "Hi", "--bodyContents", "Body"],
-    );
-    assert.deepEqual(
-      buildMicrosoft365Argv("file.list", { webUrl: "https://contoso.sharepoint.com", folderUrl: "Shared Documents" }),
-      ["file", "list", "--output", "json", "--webUrl", "https://contoso.sharepoint.com", "--folderUrl", "Shared Documents"],
-    );
+    assert.deepEqual(buildMicrosoft365Argv("mail.list", { folderName: "inbox" }), [
+      "outlook",
+      "message",
+      "list",
+      "--output",
+      "json",
+      "--folderName",
+      "inbox",
+    ]);
+    assert.deepEqual(buildMicrosoft365Argv("mail.get", { id: "msg-1" }), [
+      "outlook",
+      "message",
+      "get",
+      "--output",
+      "json",
+      "--id",
+      "msg-1",
+    ]);
+    assert.deepEqual(buildMicrosoft365Argv("mail.send", { to: "a@contoso.com", subject: "Hi", bodyContents: "Body" }), [
+      "outlook",
+      "mail",
+      "send",
+      "--output",
+      "json",
+      "--to",
+      "a@contoso.com",
+      "--subject",
+      "Hi",
+      "--bodyContents",
+      "Body",
+    ]);
+    assert.deepEqual(buildMicrosoft365Argv("file.list", { webUrl: "https://contoso.sharepoint.com", folderUrl: "Shared Documents" }), [
+      "file",
+      "list",
+      "--output",
+      "json",
+      "--webUrl",
+      "https://contoso.sharepoint.com",
+      "--folderUrl",
+      "Shared Documents",
+    ]);
     assert.throws(() => assertSafeArgv(["login"]), /Forbidden/);
     assert.throws(() => assertSafeArgv(["outlook", "mail", "send", "--debug"]), /Forbidden/);
-    assert.throws(() => buildMicrosoft365Argv("file.share", {
-      webUrl: "https://contoso.sharepoint.com",
-      fileId: "id",
-      type: "view",
-      scope: "anonymous",
-    }), /Anonymous/);
+    assert.throws(
+      () =>
+        buildMicrosoft365Argv("file.share", {
+          webUrl: "https://contoso.sharepoint.com",
+          fileId: "id",
+          type: "view",
+          scope: "anonymous",
+        }),
+      /Anonymous/,
+    );
   });
 });
 
@@ -128,29 +157,38 @@ describe("createWorkTools", () => {
       externalRecipients: { allow: (address) => address.endsWith("@contoso.com") },
     });
     const send = tools.find((tool) => tool.name === "m365_mail_draft_send")!;
-    const pending = await send.execute({
-      to: "a@contoso.com",
-      subject: "Hi",
-      bodyContents: "Body",
-      idempotencyKey: "op-1",
-    }, ctx());
+    const pending = await send.execute(
+      {
+        to: "a@contoso.com",
+        subject: "Hi",
+        bodyContents: "Body",
+        idempotencyKey: "op-1",
+      },
+      ctx(),
+    );
     assert.equal((pending.value as { status: string }).status, "pending_approval");
     assert.equal(sent.filter((c) => c.includes("send")).length, 0);
 
     approved = true;
-    const first = await send.execute({
-      to: "a@contoso.com",
-      subject: "Hi",
-      bodyContents: "Body",
-      idempotencyKey: "op-1",
-    }, ctx());
+    const first = await send.execute(
+      {
+        to: "a@contoso.com",
+        subject: "Hi",
+        bodyContents: "Body",
+        idempotencyKey: "op-1",
+      },
+      ctx(),
+    );
     assert.equal((first.value as { status: string }).status, "executed");
-    const second = await send.execute({
-      to: "a@contoso.com",
-      subject: "Hi",
-      bodyContents: "Body",
-      idempotencyKey: "op-1",
-    }, ctx());
+    const second = await send.execute(
+      {
+        to: "a@contoso.com",
+        subject: "Hi",
+        bodyContents: "Body",
+        idempotencyKey: "op-1",
+      },
+      ctx(),
+    );
     assert.equal((second.value as { status: string }).status, "duplicate");
     assert.equal(sent.filter((c) => c[1] === "mail" && c[2] === "send").length, 1);
 
@@ -175,18 +213,26 @@ describe("createWorkTools", () => {
 describe("google-workspace argv templates", () => {
   it("builds verified gws command shapes and rejects auth/schema/anyone", () => {
     assert.deepEqual(buildGoogleWorkspaceArgv("version", {}), ["--version"]);
-    assert.deepEqual(
-      buildGoogleWorkspaceArgv("mail.list", { q: "is:unread" }),
-      [
-        "gmail", "users", "messages", "list",
-        "--params", '{"userId":"me","q":"is:unread"}',
-        "--fields", "messages(id,threadId,snippet)",
-      ],
-    );
-    assert.deepEqual(
-      buildGoogleWorkspaceArgv("mail.send", { to: "a@example.com", subject: "Hi", body: "Body" }),
-      ["gmail", "+send", "--to", "a@example.com", "--subject", "Hi", "--body", "Body"],
-    );
+    assert.deepEqual(buildGoogleWorkspaceArgv("mail.list", { q: "is:unread" }), [
+      "gmail",
+      "users",
+      "messages",
+      "list",
+      "--params",
+      '{"userId":"me","q":"is:unread"}',
+      "--fields",
+      "messages(id,threadId,snippet)",
+    ]);
+    assert.deepEqual(buildGoogleWorkspaceArgv("mail.send", { to: "a@example.com", subject: "Hi", body: "Body" }), [
+      "gmail",
+      "+send",
+      "--to",
+      "a@example.com",
+      "--subject",
+      "Hi",
+      "--body",
+      "Body",
+    ]);
     assert.deepEqual(
       buildGoogleWorkspaceArgv("calendar.add", {
         summary: "Standup",
@@ -194,18 +240,26 @@ describe("google-workspace argv templates", () => {
         end: "2026-06-17T09:30:00Z",
       }),
       [
-        "calendar", "events", "insert",
-        "--params", '{"calendarId":"primary"}',
-        "--json", '{"summary":"Standup","start":{"dateTime":"2026-06-17T09:00:00Z"},"end":{"dateTime":"2026-06-17T09:30:00Z"}}',
+        "calendar",
+        "events",
+        "insert",
+        "--params",
+        '{"calendarId":"primary"}',
+        "--json",
+        '{"summary":"Standup","start":{"dateTime":"2026-06-17T09:00:00Z"},"end":{"dateTime":"2026-06-17T09:30:00Z"}}',
       ],
     );
     assert.ok(buildGoogleWorkspaceArgv("file.list", { pageAll: "true" }).includes("--page-all"));
     assert.throws(() => assertSafeArgv(["auth", "login"]), /Forbidden/);
     assert.throws(() => assertSafeArgv(["schema", "drive.files.list"]), /Forbidden/);
-    assert.throws(() => buildGoogleWorkspaceArgv("file.share", {
-      fileId: "f1",
-      type: "anyone",
-    }), /Anonymous/);
+    assert.throws(
+      () =>
+        buildGoogleWorkspaceArgv("file.share", {
+          fileId: "f1",
+          type: "anyone",
+        }),
+      /Anonymous/,
+    );
   });
 });
 
@@ -271,27 +325,36 @@ describe("shared result parity", () => {
       externalRecipients: { allow: (address) => address.endsWith("@example.com") },
     });
     const send = tools.find((tool) => tool.name === "gws_mail_draft_send")!;
-    const pending = await send.execute({
-      to: "a@example.com",
-      subject: "Hi",
-      body: "Body",
-      idempotencyKey: "gws-1",
-    }, ctx());
+    const pending = await send.execute(
+      {
+        to: "a@example.com",
+        subject: "Hi",
+        body: "Body",
+        idempotencyKey: "gws-1",
+      },
+      ctx(),
+    );
     assert.equal((pending.value as { status: string }).status, "pending_approval");
     approved = true;
-    const first = await send.execute({
-      to: "a@example.com",
-      subject: "Hi",
-      body: "Body",
-      idempotencyKey: "gws-1",
-    }, ctx());
+    const first = await send.execute(
+      {
+        to: "a@example.com",
+        subject: "Hi",
+        body: "Body",
+        idempotencyKey: "gws-1",
+      },
+      ctx(),
+    );
     assert.equal((first.value as { status: string }).status, "executed");
-    const second = await send.execute({
-      to: "a@example.com",
-      subject: "Hi",
-      body: "Body",
-      idempotencyKey: "gws-1",
-    }, ctx());
+    const second = await send.execute(
+      {
+        to: "a@example.com",
+        subject: "Hi",
+        body: "Body",
+        idempotencyKey: "gws-1",
+      },
+      ctx(),
+    );
     assert.equal((second.value as { status: string }).status, "duplicate");
     assert.equal(sent.filter((c) => c[1] === "+send").length, 1);
   });
@@ -321,7 +384,10 @@ describe("connector token wiring (per-identity, fail-closed)", () => {
       configDir: "/tmp/cfg",
       runner: capturingRunner(captured),
       tokenProvider: {
-        tokenEnv(id) { seenIdentity = id; return { M365_ACCESSTOKEN: "secret-token" }; },
+        tokenEnv(id) {
+          seenIdentity = id;
+          return { M365_ACCESSTOKEN: "secret-token" };
+        },
       },
     });
     await adapter.runOp("mail.list", { folderName: "inbox" });
@@ -341,7 +407,10 @@ describe("connector token wiring (per-identity, fail-closed)", () => {
       runner: capturingRunner(captured),
       tokenProvider: { tokenEnv: () => undefined },
     });
-    await assert.rejects(() => adapter.runOp("mail.list", {}), (error: WorkToolError) => error.code === "ERR_PRISM_WORK_CREDENTIAL");
+    await assert.rejects(
+      () => adapter.runOp("mail.list", {}),
+      (error: WorkToolError) => error.code === "ERR_PRISM_WORK_CREDENTIAL",
+    );
     assert.equal(captured.length, 0);
   });
 

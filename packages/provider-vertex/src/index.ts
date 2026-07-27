@@ -1,7 +1,7 @@
 export {
   createVertexProvider,
   createVertexProviderPackage,
-  vertexOpenApiBaseUrl,
   type VertexProviderOptions,
   type VertexProviderPackageOptions,
+  vertexOpenApiBaseUrl,
 } from "./provider.js";

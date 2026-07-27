@@ -1,8 +1,4 @@
-import type { AgentInput } from "./input.js";
-import { inputMessages } from "./input.js";
-import { createId } from "./ids.js";
 import type {
-  AgentEvent,
   AgentLoopOptions,
   AgentLoopStrategy,
   ArtifactContext,
@@ -19,6 +15,9 @@ import type {
   ToolResult,
   Usage,
 } from "./contracts.js";
+import { createId } from "./ids.js";
+import type { AgentInput } from "./input.js";
+import { inputMessages } from "./input.js";
 import { artifactStructuredOutputRequest, withoutStructuredOutput } from "./structured-output.js";
 
 function throwIfAborted(signal: AbortSignal): void {
@@ -28,7 +27,10 @@ function throwIfAborted(signal: AbortSignal): void {
 function toolResultMessage(result: ToolResult): Message {
   return {
     role: "tool",
-    content: [{ type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error }, ...(result.content ?? [])],
+    content: [
+      { type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error },
+      ...(result.content ?? []),
+    ],
     metadata: result.metadata,
   };
 }
@@ -154,7 +156,11 @@ export function generateValidateReviseLoop(opts: {
             continue;
           }
           if (toolRounds >= ctx.maxToolRounds) {
-            const result = { ok: false as const, errors: [{ message: "maximum tool rounds exceeded" }], metadata: { reason: "tool_round_limit" } };
+            const result = {
+              ok: false as const,
+              errors: [{ message: "maximum tool rounds exceeded" }],
+              metadata: { reason: "tool_round_limit" },
+            };
             ctx.emit({ type: "artifact_failed", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt: attempts + 1, result });
             return usage;
           }
@@ -190,11 +196,12 @@ export function generateValidateReviseLoop(opts: {
           .join("");
         // Empty/whitespace-only call-free output is a parse failure (thinking-only
         // models must not succeed with an empty artifact via the identity parser).
-        const parsed = text.trim() === ""
-          ? { ok: false as const, error: "no artifact text in model output" }
-          : opts.parser
-            ? await opts.parser(text, artifactCtx)
-            : { ok: true as const, value: text };
+        const parsed =
+          text.trim() === ""
+            ? { ok: false as const, error: "no artifact text in model output" }
+            : opts.parser
+              ? await opts.parser(text, artifactCtx)
+              : { ok: true as const, value: text };
 
         // Parse failure consumes revision budget like a validation failure; the
         // repairer receives `undefined` value plus a synthetic parse issue.
@@ -205,7 +212,7 @@ export function generateValidateReviseLoop(opts: {
 
         const attempt = ++attempts;
         ctx.emit({ type: "artifact_validation_started", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt });
-        const result = parseFailure ?? await opts.validator(parsed.value!, artifactCtx);
+        const result = parseFailure ?? (await opts.validator(parsed.value!, artifactCtx));
         ctx.emit({ type: "artifact_validation_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
         if (result.ok) {
           ctx.emit({ type: "artifact_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
@@ -254,9 +261,7 @@ export function dispatchableToolCalls(calls: readonly ToolCallContent[]): readon
 export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[], ctx: LoopContext): Promise<void> {
   if (calls.length === 0) return;
   ctx.chargeToolRound?.(calls);
-  const concurrency = calls.some((call) => ctx.isToolCallExclusive?.(call))
-    ? 1
-    : Math.max(1, Math.min(ctx.toolConcurrency, calls.length));
+  const concurrency = calls.some((call) => ctx.isToolCallExclusive?.(call)) ? 1 : Math.max(1, Math.min(ctx.toolConcurrency, calls.length));
   if (concurrency === 1) {
     for (const call of calls) {
       const result = await ctx.dispatchToolCall(call);
@@ -289,7 +294,10 @@ async function appendToolResultMessage(result: ToolResult, ctx: LoopContext): Pr
   await ctx.appendMessage(message);
 }
 
-export function resolveLoop(options: { loop?: AgentLoopStrategy | AgentLoopOptions }, config: { loop?: AgentLoopStrategy | AgentLoopOptions }): AgentLoopStrategy {
+export function resolveLoop(
+  options: { loop?: AgentLoopStrategy | AgentLoopOptions },
+  config: { loop?: AgentLoopStrategy | AgentLoopOptions },
+): AgentLoopStrategy {
   const loop = options.loop ?? config.loop;
   if (!loop) return singleShotLoop;
   if (isAgentLoopOptions(loop)) {

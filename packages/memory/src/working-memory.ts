@@ -1,19 +1,7 @@
 import type { JsonObject } from "@arnilo/prism";
 import { MemoryConflictError, MemoryValidationError } from "./errors.js";
-import {
-  assertByteLimit,
-  assertNotAborted,
-  cloneJsonObject,
-  mergeJsonObjects,
-  requireScope,
-  scopeKey,
-} from "./util.js";
-import type {
-  WorkingMemoryKey,
-  WorkingMemoryRecord,
-  WorkingMemoryStore,
-  WorkingMemoryUpdateOptions,
-} from "./types.js";
+import type { WorkingMemoryRecord, WorkingMemoryStore, WorkingMemoryUpdateOptions } from "./types.js";
+import { assertByteLimit, assertNotAborted, cloneJsonObject, mergeJsonObjects, requireScope, scopeKey } from "./util.js";
 
 export interface MemoryWorkingStoreOptions {
   readonly maxWorkingMemoryBytes?: number;
@@ -37,12 +25,15 @@ export function createMemoryWorkingStore(options: MemoryWorkingStoreOptions = {}
         throw new MemoryValidationError("version must be an integer >= 1");
       }
       assertByteLimit(record.value, maxWorkingMemoryBytes, "working memory");
-      records.set(scopeKey(scope), Object.freeze({
-        ...scope,
-        value: cloneJsonObject(record.value),
-        version: record.version,
-        updatedAt: record.updatedAt,
-      }));
+      records.set(
+        scopeKey(scope),
+        Object.freeze({
+          ...scope,
+          value: cloneJsonObject(record.value),
+          version: record.version,
+          updatedAt: record.updatedAt,
+        }),
+      );
     },
 
     async update(key, patch, updateOptions: WorkingMemoryUpdateOptions = {}) {
@@ -59,10 +50,7 @@ export function createMemoryWorkingStore(options: MemoryWorkingStoreOptions = {}
         }
       }
       const mode = updateOptions.mode ?? "merge";
-      const nextValue =
-        mode === "replace"
-          ? cloneJsonObject(patch)
-          : mergeJsonObjects(existing?.value ?? {}, patch);
+      const nextValue = mode === "replace" ? cloneJsonObject(patch) : mergeJsonObjects(existing?.value ?? {}, patch);
       assertByteLimit(nextValue, maxWorkingMemoryBytes, "working memory");
       const next: WorkingMemoryRecord = Object.freeze({
         ...scope,
@@ -86,9 +74,7 @@ export async function validateWorkingValue(
   value: JsonObject,
   options: {
     readonly schema?: JsonObject;
-    readonly validateWorkingMemory?: (
-      value: JsonObject,
-    ) => void | string | Error | Promise<void | string | Error>;
+    readonly validateWorkingMemory?: (value: JsonObject) => undefined | string | Error | Promise<undefined | string | Error>;
     readonly validateAgainstJsonSchema: (value: unknown, schema: JsonObject) => void;
   },
 ): Promise<void> {

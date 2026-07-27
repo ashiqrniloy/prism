@@ -18,11 +18,11 @@ export function anthropicThinking(request: ProviderRequest): JsonObject | undefi
  */
 export function anthropicEffort(request: ProviderRequest): string | undefined {
   const effort =
-    request.options?.compat?.effort
-    ?? request.options?.compat?.reasoning_effort
-    ?? request.options?.compat?.reasoningEffort
-    ?? request.model.compat?.effort
-    ?? request.model.compat?.reasoning_effort;
+    request.options?.compat?.effort ??
+    request.options?.compat?.reasoning_effort ??
+    request.options?.compat?.reasoningEffort ??
+    request.model.compat?.effort ??
+    request.model.compat?.reasoning_effort;
   return typeof effort === "string" ? effort : undefined;
 }
 
@@ -32,10 +32,10 @@ export function anthropicEffort(request: ProviderRequest): string | undefined {
  */
 export function anthropicPreserveThinking(request: ProviderRequest): boolean {
   const value =
-    request.options?.compat?.preserveThinking
-    ?? request.options?.compat?.preserve_thinking
-    ?? request.model.compat?.preserveThinking
-    ?? request.model.compat?.preserve_thinking;
+    request.options?.compat?.preserveThinking ??
+    request.options?.compat?.preserve_thinking ??
+    request.model.compat?.preserveThinking ??
+    request.model.compat?.preserve_thinking;
   if (value === false) return false;
   if (value === true) return true;
   return request.model.capabilities?.reasoning === true;

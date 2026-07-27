@@ -6,13 +6,7 @@
  */
 import { GitError } from "./git-exec.js";
 
-export type GitStatusEntryKind =
-  | "ordinary"
-  | "rename"
-  | "copy"
-  | "unmerged"
-  | "untracked"
-  | "ignored";
+export type GitStatusEntryKind = "ordinary" | "rename" | "copy" | "unmerged" | "untracked" | "ignored";
 
 export interface GitStatusBranch {
   readonly oid: string | null;
@@ -59,10 +53,7 @@ function parseAheadBehind(token: string | undefined): { ahead: number | null; be
  * Parse porcelain v2 NUL-delimited status. `maxEntries` truncates retained
  * entries without failing; callers surface truncation in tool metadata.
  */
-export function parsePorcelainV2(
-  stdout: Buffer,
-  options?: { maxEntries?: number },
-): GitStatusResult {
+export function parsePorcelainV2(stdout: Buffer, options?: { maxEntries?: number }): GitStatusResult {
   const records = splitNulRecords(stdout);
   const branch: {
     oid: string | null;

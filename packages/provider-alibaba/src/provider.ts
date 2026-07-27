@@ -21,14 +21,10 @@ import {
   resolveCredentialValue,
   toolCallFromArgumentsText,
 } from "@arnilo/prism";
-import {
-  applyOpenAIChatStructuredOutput,
-  mapOpenAIChatUsage,
-  serializeOpenAITool,
-} from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
 import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
-import { alibabaBaseUrl, type AlibabaBasePreset } from "./models.js";
 import { applyAlibabaCacheControl, withAlibabaCacheMarker } from "./cache.js";
+import { type AlibabaBasePreset, alibabaBaseUrl } from "./models.js";
 
 export interface AlibabaProviderOptions {
   readonly id?: string;
@@ -111,16 +107,16 @@ export function alibabaBody(request: ProviderRequest): JsonObject {
   return clean(body);
 }
 
-export async function* alibabaEvents(
-  body: ReadableStream<Uint8Array>,
-  signal?: AbortSignal,
-): AsyncIterable<ProviderEvent> {
+export async function* alibabaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const tools = new Map<number, ToolAccumulator>();
   let usage: Usage | undefined;
   let sawDoneMarker = false;
   let sawFinishReason = false;
   for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") { sawDoneMarker = true; break; }
+    if (data === "[DONE]") {
+      sawDoneMarker = true;
+      break;
+    }
     const chunk = JSON.parse(data) as AlibabaChunk;
     usage = mapOpenAIChatUsage(chunk.usage) ?? usage;
     if (chunk.usage) {
@@ -151,12 +147,14 @@ export async function* alibabaEvents(
   const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
   if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(new Error(
-      `Alibaba chat stream ended without completion evidence `
-      + `([DONE]: ${sawDoneMarker ? "received" : "missing"}, `
-      + `finish_reason: ${sawFinishReason ? "received" : "missing"}, `
-      + `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
-    ));
+    yield providerError(
+      new Error(
+        `Alibaba chat stream ended without completion evidence ` +
+          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
+          `finish_reason: ${sawFinishReason ? "received" : "missing"}, ` +
+          `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
+      ),
+    );
     return;
   }
   for (const call of tools.values()) {

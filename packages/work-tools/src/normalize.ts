@@ -1,16 +1,7 @@
-import type {
-  WorkCalendarEvent,
-  WorkFileItem,
-  WorkMailMessage,
-  WorkPage,
-  WorkProvider,
-  WorkTaskItem,
-} from "./types.js";
+import type { WorkCalendarEvent, WorkFileItem, WorkMailMessage, WorkPage, WorkProvider, WorkTaskItem } from "./types.js";
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
 function str(value: unknown): string | undefined {
@@ -114,22 +105,16 @@ export function normalizeMailPage(provider: WorkProvider, raw: unknown, nextCurs
 }
 
 export function normalizeCalendarPage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkCalendarEvent> {
-  const items = extractArray(raw, ["items", "value"]).map((item, i) =>
-    normalizeCalendarEvent(provider, item, `${provider}:event:${i}`),
-  );
+  const items = extractArray(raw, ["items", "value"]).map((item, i) => normalizeCalendarEvent(provider, item, `${provider}:event:${i}`));
   return { items, nextCursor, untrusted: true };
 }
 
 export function normalizeFilePage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkFileItem> {
-  const items = extractArray(raw, ["files", "value", "items"]).map((item, i) =>
-    normalizeFileItem(provider, item, `${provider}:file:${i}`),
-  );
+  const items = extractArray(raw, ["files", "value", "items"]).map((item, i) => normalizeFileItem(provider, item, `${provider}:file:${i}`));
   return { items, nextCursor, untrusted: true };
 }
 
 export function normalizeTaskPage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkTaskItem> {
-  const items = extractArray(raw, ["items", "value"]).map((item, i) =>
-    normalizeTaskItem(provider, item, `${provider}:task:${i}`),
-  );
+  const items = extractArray(raw, ["items", "value"]).map((item, i) => normalizeTaskItem(provider, item, `${provider}:task:${i}`));
   return { items, nextCursor, untrusted: true };
 }

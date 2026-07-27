@@ -36,7 +36,10 @@ export interface PermissionPolicy {
 
 export class TrustDeniedError extends Error {
   readonly code = "ERR_PRISM_UNTRUSTED";
-  constructor(readonly request: TrustRequest, readonly decision: TrustDecision) {
+  constructor(
+    readonly request: TrustRequest,
+    readonly decision: TrustDecision,
+  ) {
     super(decision.reason ?? `Untrusted ${request.kind}: ${request.target}`);
     this.name = "TrustDeniedError";
   }
@@ -44,7 +47,10 @@ export class TrustDeniedError extends Error {
 
 export class PermissionDeniedError extends Error {
   readonly code = "ERR_PRISM_PERMISSION_DENIED";
-  constructor(readonly request: PermissionRequest, readonly decision: PermissionDecision) {
+  constructor(
+    readonly request: PermissionRequest,
+    readonly decision: PermissionDecision,
+  ) {
     super(decision.reason ?? `Permission denied for ${request.kind}:${request.target}:${request.action}`);
     this.name = "PermissionDeniedError";
   }
@@ -73,7 +79,9 @@ export async function assertPermission(policy: PermissionPolicy | undefined, req
   if (!decision.allowed) throw new PermissionDeniedError(request, decision);
 }
 
-export function createStaticPermissionPolicy(options: { readonly allow?: readonly string[]; readonly deny?: readonly string[] } | boolean): PermissionPolicy {
+export function createStaticPermissionPolicy(
+  options: { readonly allow?: readonly string[]; readonly deny?: readonly string[] } | boolean,
+): PermissionPolicy {
   if (typeof options === "boolean") return { check: () => ({ allowed: options }) };
   const allow = new Set(options.allow ?? []);
   const deny = new Set(options.deny ?? []);
@@ -81,11 +89,16 @@ export function createStaticPermissionPolicy(options: { readonly allow?: readonl
     check(request) {
       const key = `${request.kind}:${request.target}:${request.action}`;
       if (deny.has(key)) return { allowed: false, reason: `Permission denied: ${key}` };
-      return { allowed: allow.size === 0 || allow.has(key), reason: allow.size && !allow.has(key) ? `Permission not allowed: ${key}` : undefined };
+      return {
+        allowed: allow.size === 0 || allow.has(key),
+        reason: allow.size && !allow.has(key) ? `Permission not allowed: ${key}` : undefined,
+      };
     },
   };
 }
 
 export function denialToErrorInfo(error: unknown): ErrorInfo {
-  return error instanceof Error ? { name: error.name, message: error.message, code: (error as { code?: string }).code } : { message: String(error) };
+  return error instanceof Error
+    ? { name: error.name, message: error.message, code: (error as { code?: string }).code }
+    : { message: String(error) };
 }

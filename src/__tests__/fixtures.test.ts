@@ -1,9 +1,9 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
-import { createJsonlSessionStore, readJsonlSessionEntries } from "../node/session-store-jsonl.js";
-import { rebuildSessionContext, getSessionBranchEntries, listSessionBranches } from "../session-stores.js";
+import { readdirSync, readFileSync } from "node:fs";
+import { test } from "node:test";
 import type { SessionEntry } from "../contracts.js";
+import { createJsonlSessionStore, readJsonlSessionEntries } from "../node/session-store-jsonl.js";
+import { getSessionBranchEntries, listSessionBranches, rebuildSessionContext } from "../session-stores.js";
 
 const fixturesDir = "examples/fixtures";
 
@@ -12,10 +12,7 @@ test("branching_fixture_yields_two_branches_from_a_shared_root", async () => {
   assert.equal(entries.length, 3);
   const branches = listSessionBranches(entries);
   assert.equal(branches.length, 2);
-  assert.deepEqual(
-    branches.map((b) => b.leafId).sort(),
-    ["b2", "b3"],
-  );
+  assert.deepEqual(branches.map((b) => b.leafId).sort(), ["b2", "b3"]);
   // Both leaves share the root as their parent.
   for (const leaf of ["b2", "b3"]) {
     const leafEntry = entries.find((e) => e.id === leaf);

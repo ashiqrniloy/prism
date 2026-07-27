@@ -1,15 +1,10 @@
-export {
-  createInMemoryTelemetry,
-  createOpenTelemetryInstrumentation,
-  wrapOpenTelemetryApi,
-} from "./instrumentation.js";
 export type {
   DelegationTelemetry,
   EvaluationTelemetry,
   InMemoryTelemetry,
+  OpenTelemetryContextApi,
   OpenTelemetryInstrumentation,
   OpenTelemetryInstrumentationOptions,
-  OpenTelemetryContextApi,
   OpenTelemetryTraceApi,
   PrismContext,
   PrismCounter,
@@ -19,10 +14,15 @@ export type {
   PrismSpanKind,
   PrismSpanStatus,
   PrismTracer,
-  TraceReference,
-  RunFeedbackTelemetry,
   RecordedMetric,
   RecordedSpan,
+  RunFeedbackTelemetry,
+  TraceReference,
+} from "./instrumentation.js";
+export {
+  createInMemoryTelemetry,
+  createOpenTelemetryInstrumentation,
+  wrapOpenTelemetryApi,
 } from "./instrumentation.js";
 
 export const packageName = "@arnilo/prism-observability-opentelemetry";

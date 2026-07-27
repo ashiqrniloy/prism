@@ -22,7 +22,10 @@ export interface CacheUsageReport {
 }
 
 export function sanitizeCacheKey(value: string | undefined, maxLength: number): string | undefined {
-  const key = value?.replace(/[^A-Za-z0-9_.:-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, Math.max(0, maxLength));
+  const key = value
+    ?.replace(/[^A-Za-z0-9_.:-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, Math.max(0, maxLength));
   return key || undefined;
 }
 
@@ -47,7 +50,9 @@ export function applyCacheControl(
   const cache_control: CacheControlValue = options.ttl ? { type: "ephemeral", ttl: options.ttl } : { type: "ephemeral" };
   return messages.map((message, index) => {
     if (!selected.has(index) || !message.content.length) return message as CacheControlledMessage;
-    const content = message.content.map((block, blockIndex) => blockIndex === message.content.length - 1 ? { ...block, cache_control } : block);
+    const content = message.content.map((block, blockIndex) =>
+      blockIndex === message.content.length - 1 ? { ...block, cache_control } : block,
+    );
     return { ...message, content };
   });
 }
@@ -63,7 +68,7 @@ export function cacheSavings(usage: Usage | undefined, model: ModelConfig): numb
   const input = model.cost?.input;
   const cacheRead = model.cost?.cacheRead;
   if (read === undefined || input === undefined || cacheRead === undefined) return undefined;
-  return read * Math.max(0, input - cacheRead) / costUnitDivisor(model.cost?.unit);
+  return (read * Math.max(0, input - cacheRead)) / costUnitDivisor(model.cost?.unit);
 }
 
 export function cacheUsageReport(usage: Usage | undefined, model?: ModelConfig): CacheUsageReport | undefined {
@@ -74,18 +79,26 @@ export function cacheUsageReport(usage: Usage | undefined, model?: ModelConfig):
     cacheWriteTokens: usage.cacheWriteTokens ?? 0,
     hitRate: cacheHitRate(usage),
     estimatedSavings,
-    currency: estimatedSavings === undefined ? usage.currency : model?.cost?.currency ?? usage.currency,
+    currency: estimatedSavings === undefined ? usage.currency : (model?.cost?.currency ?? usage.currency),
   };
 }
 
 function resolveBreakpoint(messages: readonly Message[], breakpoint: PromptCacheBreakpoint): number {
   switch (breakpoint.location) {
-    case "system_prompt": return messages.findIndex((message) => message.role === "system");
-    case "tools": return messages.findIndex((message) => message.role === "tool" || message.content.some((block) => block.type === "tool_call" || block.type === "tool_result"));
-    case "stable_context": return messages.findIndex((message) => message.role !== "system");
-    case "last_stable_message": return messages.length > 1 ? messages.length - 2 : messages.length - 1;
-    case "last_user_message": return findLastIndex(messages, (message) => message.role === "user");
-    case "message_id": return messages.findIndex((message) => message.id === breakpoint.messageId);
+    case "system_prompt":
+      return messages.findIndex((message) => message.role === "system");
+    case "tools":
+      return messages.findIndex(
+        (message) => message.role === "tool" || message.content.some((block) => block.type === "tool_call" || block.type === "tool_result"),
+      );
+    case "stable_context":
+      return messages.findIndex((message) => message.role !== "system");
+    case "last_stable_message":
+      return messages.length > 1 ? messages.length - 2 : messages.length - 1;
+    case "last_user_message":
+      return findLastIndex(messages, (message) => message.role === "user");
+    case "message_id":
+      return messages.findIndex((message) => message.id === breakpoint.messageId);
   }
 }
 

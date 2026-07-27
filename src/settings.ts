@@ -1,5 +1,5 @@
-import type { JsonObject, SettingsProvider } from "./contracts.js";
 import { assertJsonObject } from "./config.js";
+import type { JsonObject, SettingsProvider } from "./contracts.js";
 
 export function createStaticSettingsProvider(settings: JsonObject): SettingsProvider {
   assertJsonObject(settings, "settings");

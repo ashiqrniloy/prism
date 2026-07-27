@@ -24,7 +24,7 @@ import type {
   ToolCallQuery,
   UsageQuery,
 } from "../index.js";
-import { SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError, getSessionBranchEntries, rebuildSessionContext } from "../index.js";
+import { getSessionBranchEntries, rebuildSessionContext, SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError } from "../index.js";
 
 // ponytail: compile-only type test — no runtime assertions. Verifies Phase 34
 // production persistence contracts are implementable without DB/ORM/network/app
@@ -177,10 +177,18 @@ describe("production persistence contracts (compile only)", () => {
 
   it("accepts a host write-side RunLedger adapter", () => {
     const ledger: RunLedger = {
-      async appendRun(record) { void record.id; },
-      async appendEvent(record) { void record.event; },
-      async appendToolCall(record) { void record.name; },
-      async appendUsage(record) { void record.usage; },
+      async appendRun(record) {
+        void record.id;
+      },
+      async appendEvent(record) {
+        void record.event;
+      },
+      async appendToolCall(record) {
+        void record.name;
+      },
+      async appendUsage(record) {
+        void record.usage;
+      },
     };
     const record: RunLedgerRecord = {
       id: "run_1",
@@ -226,8 +234,13 @@ describe("atomic append contracts (compile only)", () => {
     // A function with fewer parameters is assignable to one with an optional extra param,
     // so existing host adapters that ignore `options` keep compiling unchanged.
     const legacy: SessionStore = {
-      async append(entry: SessionEntry) { void entry.id; },
-      async list(sessionId: string) { void sessionId; return []; },
+      async append(entry: SessionEntry) {
+        void entry.id;
+      },
+      async list(sessionId: string) {
+        void sessionId;
+        return [];
+      },
     };
     void legacy;
   });
@@ -245,35 +258,69 @@ describe("atomic append contracts (compile only)", () => {
     const error = new SessionAppendConflictError(conflict);
     // `code` is the stable literal, not an arbitrary string.
     const code: "session_append_conflict" = error.code;
-    void options; void emptyOptions; void handle; void conflict; void error; void code;
+    void options;
+    void emptyOptions;
+    void handle;
+    void conflict;
+    void error;
+    void code;
   });
 
   it("readBranchPath is optional on SessionStore and ProductionPersistenceStore", () => {
     // store WITHOUT readBranchPath stays assignable (built-in memory/JSONL stores)
     const withoutReader: SessionStore = {
-      async append(entry: SessionEntry) { void entry.id; },
-      async list(sessionId: string) { void sessionId; return []; },
+      async append(entry: SessionEntry) {
+        void entry.id;
+      },
+      async list(sessionId: string) {
+        void sessionId;
+        return [];
+      },
     };
     // store WITH readBranchPath is also assignable (DB adapter)
     const withReader: SessionStore = {
       ...withoutReader,
-      async readBranchPath(query: SessionBranchRead) { void query; return { items: [] as readonly SessionEntry[] }; },
+      async readBranchPath(query: SessionBranchRead) {
+        void query;
+        return { items: [] as readonly SessionEntry[] };
+      },
     };
     // DB persistence adapter: readBranchPath optional there too
     const persistence: ProductionPersistenceStore = {
       ...withoutReader,
-      async queryEntries() { return { items: [] as readonly SessionEntry[] }; },
-      async querySessions() { return { items: [] }; },
-      async queryBranches() { return { items: [] }; },
-      async queryRuns() { return { items: [] }; },
-      async queryEvents() { return { items: [] }; },
-      async queryToolCalls() { return { items: [] }; },
-      async queryUsage() { return { items: [] }; },
-      async queryAgentDefinitions() { return { items: [] }; },
-      async queryRetentionPolicies() { return { items: [] }; },
-      async queryMigrations() { return { items: [] }; },
+      async queryEntries() {
+        return { items: [] as readonly SessionEntry[] };
+      },
+      async querySessions() {
+        return { items: [] };
+      },
+      async queryBranches() {
+        return { items: [] };
+      },
+      async queryRuns() {
+        return { items: [] };
+      },
+      async queryEvents() {
+        return { items: [] };
+      },
+      async queryToolCalls() {
+        return { items: [] };
+      },
+      async queryUsage() {
+        return { items: [] };
+      },
+      async queryAgentDefinitions() {
+        return { items: [] };
+      },
+      async queryRetentionPolicies() {
+        return { items: [] };
+      },
+      async queryMigrations() {
+        return { items: [] };
+      },
     } as unknown as ProductionPersistenceStore;
-    void withReader; void persistence;
+    void withReader;
+    void persistence;
   });
 
   it("branch helpers keep the sync array signature and add an async reader overload", async () => {
@@ -283,6 +330,9 @@ describe("atomic append contracts (compile only)", () => {
     const viaArray: readonly SessionEntry[] = getSessionBranchEntries([], {});
     const ctxViaReader: Promise<SessionContextSnapshot> = rebuildSessionContext(reader, { sessionId: "s1" });
     const ctxViaArray: SessionContextSnapshot = rebuildSessionContext([], {});
-    void (await viaReader); void viaArray; void (await ctxViaReader); void ctxViaArray;
+    void (await viaReader);
+    void viaArray;
+    void (await ctxViaReader);
+    void ctxViaArray;
   });
 });

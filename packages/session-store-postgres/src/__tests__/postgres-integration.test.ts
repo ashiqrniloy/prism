@@ -1,16 +1,13 @@
-import { randomUUID } from "node:crypto";
-import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
-import { Pool } from "pg";
-import {
-  assertPersistenceQueryPaginationConforms,
-  assertTenantScopedQueryIsolation,
-} from "@arnilo/prism/testing/persistence-schema";
+import { randomUUID } from "node:crypto";
+import { after, describe, it } from "node:test";
 import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
+import { assertPersistenceQueryPaginationConforms, assertTenantScopedQueryIsolation } from "@arnilo/prism/testing/persistence-schema";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
-import { createPostgresPersistence } from "../persistence.js";
+import { Pool } from "pg";
 import { qualifyTable, quoteIdentifier } from "../identifiers.js";
+import { createPostgresPersistence } from "../persistence.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
 const describeIntegration = postgresUrl ? describe : describe.skip;
@@ -37,15 +34,12 @@ describeIntegration("createPostgresPersistence integration", () => {
   it("passes full session-store conformance with reopen and branch reads", async () => {
     const schema = uniqueSchema();
     const pool = createPool();
-    await runSessionStoreConformance(
-      async () => createPostgresPersistence({ pool, schema }),
-      {
-        exerciseReadBranchPath: true,
-        exerciseConcurrentParentAppend: true,
-        exerciseReopen: true,
-        exerciseSearchSessions: true,
-      },
-    );
+    await runSessionStoreConformance(async () => createPostgresPersistence({ pool, schema }), {
+      exerciseReadBranchPath: true,
+      exerciseConcurrentParentAppend: true,
+      exerciseReopen: true,
+      exerciseSearchSessions: true,
+    });
   });
 
   it("passes run-ledger conformance with reopen and tenant isolation", async () => {
@@ -94,17 +88,32 @@ describeIntegration("createPostgresPersistence integration", () => {
       tenantId: "tenant-a",
     });
     const reopened = await createPostgresPersistence({ pool, schema });
-    assert.deepEqual(
-      (await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.value,
-      { status: "running" },
-    );
+    assert.deepEqual((await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.value, {
+      status: "running",
+    });
     await assert.rejects(
       reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-b" }),
       /ownership mismatch/,
     );
-    await reopened.checkpoints.saveCheckpoint({ namespace: "workflow", key: "wf/run", version: 2, expectedVersion: 1, fencingToken: 2, value: { status: "claimed" }, tenantId: "tenant-a" });
+    await reopened.checkpoints.saveCheckpoint({
+      namespace: "workflow",
+      key: "wf/run",
+      version: 2,
+      expectedVersion: 1,
+      fencingToken: 2,
+      value: { status: "claimed" },
+      tenantId: "tenant-a",
+    });
     await assert.rejects(
-      reopened.checkpoints.saveCheckpoint({ namespace: "workflow", key: "wf/run", version: 3, expectedVersion: 2, fencingToken: 1, value: null, tenantId: "tenant-a" }),
+      reopened.checkpoints.saveCheckpoint({
+        namespace: "workflow",
+        key: "wf/run",
+        version: 3,
+        expectedVersion: 2,
+        fencingToken: 1,
+        value: null,
+        tenantId: "tenant-a",
+      }),
       /fencing token/,
     );
   });
@@ -114,11 +123,26 @@ describeIntegration("createPostgresPersistence integration", () => {
     const pool = createPool();
     const first = await createPostgresPersistence({ pool, schema });
     const second = await createPostgresPersistence({ pool, schema });
-    const claim1 = await first.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-a", ttlMs: 20, tenantId: "tenant-a" });
+    const claim1 = await first.leases.tryAcquireLease({
+      namespace: "workflow",
+      key: "wf/run",
+      ownerId: "worker-a",
+      ttlMs: 20,
+      tenantId: "tenant-a",
+    });
     assert.ok(claim1);
-    assert.equal(await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 20, tenantId: "tenant-a" }), null);
+    assert.equal(
+      await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 20, tenantId: "tenant-a" }),
+      null,
+    );
     await new Promise((resolve) => setTimeout(resolve, 30));
-    const claim2 = await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 100, tenantId: "tenant-a" });
+    const claim2 = await second.leases.tryAcquireLease({
+      namespace: "workflow",
+      key: "wf/run",
+      ownerId: "worker-b",
+      ttlMs: 100,
+      tenantId: "tenant-a",
+    });
     assert.ok(claim2);
     assert.equal(claim2.fencingToken, claim1.fencingToken + 1);
   });
@@ -128,7 +152,13 @@ describeIntegration("createPostgresPersistence integration", () => {
     const pool = createPool();
     const first = await createPostgresPersistence({ pool, schema });
     const firstMigrations = await first.queryMigrations({});
-    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback", "004_session_search", "005_lifecycle_hold_quota"]);
+    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), [
+      "001_init",
+      "002_usage_scope",
+      "003_run_feedback",
+      "004_session_search",
+      "005_lifecycle_hold_quota",
+    ]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
     const secondMigrations = await reopened.queryMigrations({});
@@ -145,7 +175,10 @@ describeIntegration("createPostgresPersistence integration", () => {
     await createPostgresPersistence({ pool, schema });
     await pool.query(`UPDATE ${qualifyTable(schema, "prism_migrations")} SET checksum = NULL`);
     const backfilled = await createPostgresPersistence({ pool, schema });
-    assert.equal((await backfilled.queryMigrations({})).items.every((row) => typeof row.checksum === "string" && row.checksum.length === 64), true);
+    assert.equal(
+      (await backfilled.queryMigrations({})).items.every((row) => typeof row.checksum === "string" && row.checksum.length === 64),
+      true,
+    );
     await pool.query(`DROP INDEX ${quoteIdentifier(schema)}.${quoteIdentifier("prism_usage_session_scope_recorded_idx")}`);
     await assert.rejects(createPostgresPersistence({ pool, schema }), /missing required index/);
   });

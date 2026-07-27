@@ -23,7 +23,7 @@ import type {
   SystemPromptContribution,
   ToolDefinition,
 } from "./contracts.js";
-import { createContributionRegistries, type ContributionRegistries } from "./contributions.js";
+import { type ContributionRegistries, createContributionRegistries } from "./contributions.js";
 import { createMiddlewareRegistry, type MiddlewareRegistry } from "./middleware.js";
 import { authMethodKey, systemPromptContributionKey } from "./provider-packages.js";
 import { errorToErrorInfo } from "./redaction.js";
@@ -193,10 +193,7 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
   };
 }
 
-async function assertExtensionLoadPolicy(
-  policy: ExtensionLoadPolicy | undefined,
-  extension: Extension,
-): Promise<void> {
+async function assertExtensionLoadPolicy(policy: ExtensionLoadPolicy | undefined, extension: Extension): Promise<void> {
   if (!policy) return;
   if (policy.allowList && !policy.allowList.includes(extension.name)) {
     throw new Error(`Extension "${extension.name}" is not allow-listed`);

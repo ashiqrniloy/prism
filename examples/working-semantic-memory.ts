@@ -1,10 +1,4 @@
-import {
-  createAgent,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  resolveContextProviders,
-} from "@arnilo/prism";
+import { createAgent, createMockProvider, providerDone, providerTextDelta, resolveContextProviders } from "@arnilo/prism";
 import { createHashEmbedder, createMemory } from "@arnilo/prism-memory";
 
 const memory = createMemory({
@@ -53,7 +47,10 @@ const blocks = await resolveContextProviders({
   providers: [memory.createContextProvider()],
   messages: [{ role: "user", content: [{ type: "text", text: "What format should replies use?" }] }],
 });
-console.log("context blocks", blocks.map((block) => block.title));
+console.log(
+  "context blocks",
+  blocks.map((block) => block.title),
+);
 
 const processor = memory.createWorkingMemoryProcessor({
   extract: () => ({ preferences: { format: "bullets" } }),

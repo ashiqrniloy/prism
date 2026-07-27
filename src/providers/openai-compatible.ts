@@ -1,9 +1,5 @@
-import type {
-  AIProvider,
-  JsonObject,
-  ProviderRequest,
-} from "../contracts.js";
-import { resolveCredentialValue, type CredentialValueSource } from "../credentials.js";
+import type { AIProvider, JsonObject, ProviderRequest } from "../contracts.js";
+import { type CredentialValueSource, resolveCredentialValue } from "../credentials.js";
 import {
   providerDone,
   providerError,
@@ -14,19 +10,15 @@ import {
   providerUsage,
   toolCallFromArgumentsText,
 } from "../provider-events.js";
+import { assertStructuredOutputRequestSupported } from "../structured-output.js";
 import {
-  assertOpenAIChatMessage,
   applyOpenAIChatStructuredOutput,
+  assertOpenAIChatMessage,
   mapOpenAIChatUsage,
   serializeOpenAIChatMessage,
   serializeOpenAITool,
 } from "./openai-primitives.js";
-import {
-  ProviderTransportError,
-  readBoundedResponseText,
-  readSseData,
-} from "./transport.js";
-import { assertStructuredOutputRequestSupported } from "../structured-output.js";
+import { ProviderTransportError, readBoundedResponseText, readSseData } from "./transport.js";
 
 export interface OpenAICompatibleProviderOptions {
   readonly id?: string;
@@ -63,8 +55,7 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
         const url =
           typeof options.chatCompletionsUrl === "function"
             ? options.chatCompletionsUrl(request)
-            : options.chatCompletionsUrl
-              ?? `${options.baseUrl.replace(/\/$/, "")}/chat/completions`;
+            : (options.chatCompletionsUrl ?? `${options.baseUrl.replace(/\/$/, "")}/chat/completions`);
         const authStyle = options.authStyle ?? "bearer";
         const headers: Record<string, string> = {
           ...Object.fromEntries(

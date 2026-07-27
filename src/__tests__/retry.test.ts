@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { createDefaultRetryPolicy, isTransientErrorInfo, providerError, type RetryContext } from "../index.js";
 import { errorToErrorInfo } from "../redaction.js";
 
@@ -16,8 +16,14 @@ describe("retry policy", () => {
   it("default retry policy does not retry abort or non transient errors", async () => {
     const policy = createDefaultRetryPolicy({ maxAttempts: 3 });
 
-    assert.equal((await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: { name: "AbortError", message: "aborted" } })).retry, false);
-    assert.equal((await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: { message: "bad request", code: 400 } })).retry, false);
+    assert.equal(
+      (await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: { name: "AbortError", message: "aborted" } })).retry,
+      false,
+    );
+    assert.equal(
+      (await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: { message: "bad request", code: 400 } })).retry,
+      false,
+    );
     assert.equal(isTransientErrorInfo({ message: "temporary unavailable" }), true);
   });
 

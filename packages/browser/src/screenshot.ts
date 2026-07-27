@@ -37,9 +37,7 @@ function assertFinitePositive(name: string, value: number): void {
   }
 }
 
-export async function captureBoundedScreenshot(
-  options: CaptureScreenshotOptions,
-): Promise<ScreenshotResult> {
+export async function captureBoundedScreenshot(options: CaptureScreenshotOptions): Promise<ScreenshotResult> {
   const { page, limits, budget } = options;
   if (budget.count >= limits.maxScreenshots) {
     throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `maxScreenshots ${limits.maxScreenshots} exceeded`);
@@ -74,37 +72,22 @@ export async function captureBoundedScreenshot(
     buffer = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
   } catch (error) {
     if (error instanceof BrowserError) throw error;
-    throw new BrowserError(
-      "ERR_PRISM_BROWSER_ARTIFACT",
-      `screenshot failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", `screenshot failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   if (buffer.byteLength > limits.maxScreenshotBytes) {
-    throw new BrowserError(
-      "ERR_PRISM_BROWSER_LIMIT",
-      `screenshot exceeds maxScreenshotBytes ${limits.maxScreenshotBytes}`,
-    );
+    throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `screenshot exceeds maxScreenshotBytes ${limits.maxScreenshotBytes}`);
   }
   // PNG IHDR width/height at bytes 16..24
   let width: number | undefined;
   let height: number | undefined;
   let megapixels: number | undefined;
-  if (
-    buffer.byteLength >= 24 &&
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4e &&
-    buffer[3] === 0x47
-  ) {
+  if (buffer.byteLength >= 24 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
     width = buffer.readUInt32BE(16);
     height = buffer.readUInt32BE(20);
     megapixels = (width * height) / 1_000_000;
     if (megapixels > limits.maxScreenshotMegapixels) {
-      throw new BrowserError(
-        "ERR_PRISM_BROWSER_LIMIT",
-        `screenshot exceeds maxScreenshotMegapixels ${limits.maxScreenshotMegapixels}`,
-      );
+      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `screenshot exceeds maxScreenshotMegapixels ${limits.maxScreenshotMegapixels}`);
     }
   }
 

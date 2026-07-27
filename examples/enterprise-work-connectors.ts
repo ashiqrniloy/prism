@@ -25,9 +25,7 @@ export async function demo(): Promise<Record<string, unknown>> {
       }
       return {
         exitCode: 0,
-        stdout: argv.includes("messages") || argv.includes("message")
-          ? '{"messages":[{"id":"m1","snippet":"hi"}]}'
-          : "[]",
+        stdout: argv.includes("messages") || argv.includes("message") ? '{"messages":[{"id":"m1","snippet":"hi"}]}' : "[]",
         stderr: "",
       };
     },

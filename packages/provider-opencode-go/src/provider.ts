@@ -48,7 +48,9 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
           );
         }
         if (!response.body) return yield providerError(new Error("OpenCode Go response had no body"), secrets);
-        yield* route === "anthropic" ? anthropicMessagesEvents(response.body, request.signal) : openAIChatEvents(response.body, request.signal);
+        yield* route === "anthropic"
+          ? anthropicMessagesEvents(response.body, request.signal)
+          : openAIChatEvents(response.body, request.signal);
       } catch (error) {
         yield providerError(error, secrets);
       }

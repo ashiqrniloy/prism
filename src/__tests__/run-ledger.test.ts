@@ -1,15 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  createAgent,
-  createSecretRedactor,
-  createToolRegistry,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  redactRunLedgerRecord,
-} from "../index.js";
-import { createMockProvider } from "../index.js";
+import { describe, it } from "node:test";
 import type {
   AgentConfig,
   AgentEvent,
@@ -20,6 +10,16 @@ import type {
   ToolCallRecord,
   ToolDefinition,
   UsageRecord,
+} from "../index.js";
+import {
+  createAgent,
+  createMockProvider,
+  createSecretRedactor,
+  createToolRegistry,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  redactRunLedgerRecord,
 } from "../index.js";
 
 type InMemoryLedger = {
@@ -34,10 +34,18 @@ function createMemoryLedger(): InMemoryLedger & { ledger: RunLedger } {
   return {
     ...ledger,
     ledger: {
-      appendRun: async (record) => { ledger.runs.push(record); },
-      appendEvent: async (record) => { ledger.events.push(record); },
-      appendToolCall: async (record) => { ledger.toolCalls.push(record); },
-      appendUsage: async (record) => { ledger.usage.push(record); },
+      appendRun: async (record) => {
+        ledger.runs.push(record);
+      },
+      appendEvent: async (record) => {
+        ledger.events.push(record);
+      },
+      appendToolCall: async (record) => {
+        ledger.toolCalls.push(record);
+      },
+      appendUsage: async (record) => {
+        ledger.usage.push(record);
+      },
     },
   };
 }
@@ -255,9 +263,9 @@ describe("RunLedger runtime wiring", () => {
           calls += 1;
           if (calls === 1) yield providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: {} });
           else yield providerTextDelta("done");
-          yield providerDone(calls === 1
-            ? { inputTokens: 10, outputTokens: 1, totalTokens: 11 }
-            : { inputTokens: 20, outputTokens: 2, totalTokens: 22 });
+          yield providerDone(
+            calls === 1 ? { inputTokens: 10, outputTokens: 1, totalTokens: 11 } : { inputTokens: 20, outputTokens: 2, totalTokens: 22 },
+          );
         },
       },
       tools: createToolRegistry([{ name: "echo", execute: () => ({ toolCallId: "call_1", name: "echo" }) }]),
@@ -267,11 +275,14 @@ describe("RunLedger runtime wiring", () => {
 
     await session.run("count tokens", { maxToolRounds: 1 });
 
-    assert.deepEqual(usage.map(({ scope, turn, attempt, usage }) => ({ scope, turn, attempt, total: usage.totalTokens })), [
-      { scope: "provider_turn", turn: 1, attempt: 1, total: 11 },
-      { scope: "provider_turn", turn: 2, attempt: 1, total: 22 },
-      { scope: "run_total", turn: undefined, attempt: undefined, total: 33 },
-    ]);
+    assert.deepEqual(
+      usage.map(({ scope, turn, attempt, usage }) => ({ scope, turn, attempt, total: usage.totalTokens })),
+      [
+        { scope: "provider_turn", turn: 1, attempt: 1, total: 11 },
+        { scope: "provider_turn", turn: 2, attempt: 1, total: 22 },
+        { scope: "run_total", turn: undefined, attempt: undefined, total: 33 },
+      ],
+    );
   });
 
   it("redacts secrets in ledger event and tool-call records", async () => {
@@ -319,7 +330,9 @@ describe("RunLedger runtime wiring", () => {
 
     const live: AgentEvent[] = [];
     const sub = session.subscribe();
-    const collecting = (async () => { for await (const e of sub) live.push(e); })();
+    const collecting = (async () => {
+      for await (const e of sub) live.push(e);
+    })();
     await session.run("say one thing");
     await collecting;
     const runId = live.find((e) => e.type === "agent_started")!.runId;
@@ -411,7 +424,10 @@ describe("RunLedger runtime wiring", () => {
 
     assert.equal(maxActive, 1);
     assert.ok(memory.events.length >= 50, "expected streamed events in ledger");
-    assert.deepEqual(seen, deltas.map((_, index) => `chunk-${index}`));
+    assert.deepEqual(
+      seen,
+      deltas.map((_, index) => `chunk-${index}`),
+    );
   });
 
   it("propagates ledger append failures when draining the run", async () => {
@@ -431,9 +447,6 @@ describe("RunLedger runtime wiring", () => {
       runLedger: ledger,
     });
 
-    await assert.rejects(
-      agent.createSession({ id: "s-ledger-fail" }).run("stream and fail"),
-      /ledger write failed/,
-    );
+    await assert.rejects(agent.createSession({ id: "s-ledger-fail" }).run("stream and fail"), /ledger write failed/);
   });
 });

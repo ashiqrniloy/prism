@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createModelRegistry, createProviderRegistry } from "../index.js";
+import { describe, it } from "node:test";
 import type { AIProvider, ModelRegistry, ProviderRegistry } from "../index.js";
+import { createModelRegistry, createProviderRegistry } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -31,7 +31,12 @@ describe("provider registry", () => {
   });
 
   it("replaces duplicate providers by default", () => {
-    const replacement: AIProvider = { ...provider, generate: async function* () { yield { type: "done" }; } };
+    const replacement: AIProvider = {
+      ...provider,
+      generate: async function* () {
+        yield { type: "done" };
+      },
+    };
     const registry = createProviderRegistry([provider, replacement]);
 
     assert.equal(registry.resolve("mock"), replacement);

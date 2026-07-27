@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import {
-  createModelRouter,
-  HARD_MODEL_ROUTER_LIMITS,
-  ModelRouterError,
-  resolveModelRouterLimits,
-} from "../index.js";
+import { createModelRouter, HARD_MODEL_ROUTER_LIMITS, ModelRouterError, resolveModelRouterLimits } from "../index.js";
 
 function provider(id: string): AIProvider {
-  return { id, async *generate() { /* unused */ } };
+  return {
+    id,
+    async *generate() {
+      /* unused */
+    },
+  };
 }
 
 function model(providerId: string, modelId: string, compat?: ModelConfig["compat"]): ModelConfig {
@@ -57,11 +57,12 @@ describe("@arnilo/prism-model-router", () => {
     assert.equal(result.diagnostics.selectedProvider, "b");
 
     await assert.rejects(
-      () => createModelRouter({
-        resolver: () => undefined,
-        fallbacks: [model("a", "1"), model("b", "2"), model("c", "3"), model("d", "4")],
-        limits: { maxAttempts: 3 },
-      }).resolve({ model: model("z", "0") }),
+      () =>
+        createModelRouter({
+          resolver: () => undefined,
+          fallbacks: [model("a", "1"), model("b", "2"), model("c", "3"), model("d", "4")],
+          limits: { maxAttempts: 3 },
+        }).resolve({ model: model("z", "0") }),
       (error: unknown) => error instanceof ModelRouterError && (error.diagnostics?.attempts as unknown[])?.length === 3,
     );
   });
@@ -95,7 +96,9 @@ describe("@arnilo/prism-model-router", () => {
     const router = createModelRouter({
       resolver: () => provider("openrouter"),
       allowOpenRouterRouting: false,
-      onDiagnostics: (d) => { seen.push(d); },
+      onDiagnostics: (d) => {
+        seen.push(d);
+      },
     });
     const withRouting = model("openrouter", "auto", {
       openRouterRouting: { order: ["anthropic"], data_collection: "deny" },

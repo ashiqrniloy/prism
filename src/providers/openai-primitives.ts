@@ -1,12 +1,4 @@
-import type {
-  ContentBlock,
-  JsonObject,
-  Message,
-  ModelCapabilities,
-  StructuredOutputOptions,
-  ToolDefinition,
-  Usage,
-} from "../contracts.js";
+import type { ContentBlock, JsonObject, Message, ModelCapabilities, StructuredOutputOptions, ToolDefinition, Usage } from "../contracts.js";
 
 export function assertOpenAIChatMessage(message: unknown, path: string): asserts message is Message {
   if (!message || typeof message !== "object") {
@@ -43,18 +35,12 @@ export function serializeOpenAIResponsesStructuredOutput(options: StructuredOutp
   };
 }
 
-export function applyOpenAIChatStructuredOutput(
-  body: Record<string, unknown>,
-  structuredOutput?: StructuredOutputOptions,
-): void {
+export function applyOpenAIChatStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void {
   if (!structuredOutput) return;
   body.response_format = serializeOpenAIChatStructuredOutput(structuredOutput);
 }
 
-export function applyOpenAIResponsesStructuredOutput(
-  body: Record<string, unknown>,
-  structuredOutput?: StructuredOutputOptions,
-): void {
+export function applyOpenAIResponsesStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void {
   if (!structuredOutput) return;
   body.text = serializeOpenAIResponsesStructuredOutput(structuredOutput);
 }
@@ -129,13 +115,13 @@ export function mapOpenAIChatUsage(usage: unknown): Usage | undefined {
   if (!usage || typeof usage !== "object" || Array.isArray(usage)) return undefined;
   const wire = usage as OpenAIWireUsage;
   if (
-    wire.prompt_tokens === undefined
-    && wire.completion_tokens === undefined
-    && wire.total_tokens === undefined
-    && wire.prompt_cache_hit_tokens === undefined
-    && wire.prompt_tokens_details?.cached_tokens === undefined
-    && wire.prompt_tokens_details?.cache_write_tokens === undefined
-    && wire.prompt_tokens_details?.cache_creation_input_tokens === undefined
+    wire.prompt_tokens === undefined &&
+    wire.completion_tokens === undefined &&
+    wire.total_tokens === undefined &&
+    wire.prompt_cache_hit_tokens === undefined &&
+    wire.prompt_tokens_details?.cached_tokens === undefined &&
+    wire.prompt_tokens_details?.cache_write_tokens === undefined &&
+    wire.prompt_tokens_details?.cache_creation_input_tokens === undefined
   ) {
     return undefined;
   }

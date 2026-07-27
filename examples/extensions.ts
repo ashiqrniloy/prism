@@ -1,5 +1,5 @@
-import { createExtensionKernel, createMockProvider, providerDone } from "@arnilo/prism";
 import type { Extension } from "@arnilo/prism";
+import { createExtensionKernel, createMockProvider, providerDone } from "@arnilo/prism";
 
 // Extension kernel + event bus: load host-provided extensions in order,
 // register contributions, and emit lifecycle events. Extension errors become

@@ -14,25 +14,9 @@ import type {
 } from "@arnilo/prism";
 import type { WORKFLOW_CHECKPOINT_SCHEMA_VERSION } from "./limits.js";
 
-export type WorkflowRunStatus =
-  | "queued"
-  | "running"
-  | "suspended"
-  | "succeeded"
-  | "failed"
-  | "denied"
-  | "aborted";
+export type WorkflowRunStatus = "queued" | "running" | "suspended" | "succeeded" | "failed" | "denied" | "aborted";
 
-export type WorkflowNodeStatus =
-  | "pending"
-  | "ready"
-  | "running"
-  | "suspended"
-  | "succeeded"
-  | "failed"
-  | "denied"
-  | "skipped"
-  | "aborted";
+export type WorkflowNodeStatus = "pending" | "ready" | "running" | "suspended" | "succeeded" | "failed" | "denied" | "skipped" | "aborted";
 
 export interface WorkflowSuspensionDescriptor {
   readonly nodeId: string;
@@ -74,18 +58,9 @@ export interface WorkflowResumeValidationInput {
   readonly suspension: WorkflowSuspensionDescriptor;
 }
 
-export type WorkflowResumeValidator = (
-  input: WorkflowResumeValidationInput,
-) => void | Promise<void>;
+export type WorkflowResumeValidator = (input: WorkflowResumeValidationInput) => void | Promise<void>;
 
-export type WorkflowNodeKind =
-  | "agent"
-  | "function"
-  | "tool"
-  | "conditional"
-  | "fan_out"
-  | "join"
-  | "workflow";
+export type WorkflowNodeKind = "agent" | "function" | "tool" | "conditional" | "fan_out" | "join" | "workflow";
 
 export interface WorkflowStateUpdateOptions {
   readonly mode?: "merge" | "replace";
@@ -97,9 +72,7 @@ export interface WorkflowStateValidationInput {
   readonly signal?: AbortSignal;
 }
 
-export type WorkflowStateValidator = (
-  input: WorkflowStateValidationInput,
-) => void | Promise<void>;
+export type WorkflowStateValidator = (input: WorkflowStateValidationInput) => void | Promise<void>;
 
 export interface WorkflowStateConfig {
   readonly initial?: JsonObject;
@@ -133,9 +106,7 @@ export interface AgentNodeDefinition extends WorkflowNodeBase {
   readonly kind: "agent";
   readonly agent: string;
   readonly input?: (ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
-  readonly output?: (
-    ctx: WorkflowNodeContext & { readonly session: AgentSession },
-  ) => unknown | Promise<unknown>;
+  readonly output?: (ctx: WorkflowNodeContext & { readonly session: AgentSession }) => unknown | Promise<unknown>;
 }
 
 export interface FunctionNodeDefinition extends WorkflowNodeBase {
@@ -145,10 +116,7 @@ export interface FunctionNodeDefinition extends WorkflowNodeBase {
 
 export interface WorkflowToolApproval {
   readonly reason: string;
-  readonly data?: (
-    ctx: WorkflowNodeContext,
-    args: JsonObject,
-  ) => unknown | Promise<unknown>;
+  readonly data?: (ctx: WorkflowNodeContext, args: JsonObject) => unknown | Promise<unknown>;
   readonly resumeSchema?: JsonObject;
 }
 
@@ -156,10 +124,7 @@ export interface ToolNodeDefinition extends WorkflowNodeBase {
   readonly kind: "tool";
   readonly tool: ToolDefinition | string;
   readonly args: (ctx: WorkflowNodeContext) => JsonObject | Promise<JsonObject>;
-  readonly action?: (
-    ctx: WorkflowNodeContext,
-    args: JsonObject,
-  ) => ExecutionAction | Promise<ExecutionAction>;
+  readonly action?: (ctx: WorkflowNodeContext, args: JsonObject) => ExecutionAction | Promise<ExecutionAction>;
   /** Opt-in durable approval gate evaluated before any tool side effect. */
   readonly approval?: WorkflowToolApproval;
 }
@@ -176,11 +141,7 @@ export interface ConditionalNodeDefinition extends WorkflowNodeBase {
 export interface FanOutNodeDefinition extends WorkflowNodeBase {
   readonly kind: "fan_out";
   readonly items: (ctx: WorkflowNodeContext) => readonly unknown[] | Promise<readonly unknown[]>;
-  readonly map: (
-    item: unknown,
-    index: number,
-    ctx: WorkflowNodeContext,
-  ) => unknown | Promise<unknown>;
+  readonly map: (item: unknown, index: number, ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
   readonly maxFanOut?: number;
 }
 
@@ -188,20 +149,14 @@ export interface JoinNodeDefinition extends WorkflowNodeBase {
   readonly kind: "join";
   /** Upstream fan-out (or array-producing) node id; defaults to sole predecessor. */
   readonly from?: string;
-  readonly reduce?: (
-    items: readonly unknown[],
-    ctx: WorkflowNodeContext,
-  ) => unknown | Promise<unknown>;
+  readonly reduce?: (items: readonly unknown[], ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
 }
 
 export interface NestedWorkflowNodeDefinition extends WorkflowNodeBase {
   readonly kind: "workflow";
   readonly workflow: WorkflowDefinition;
   readonly input?: (ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
-  readonly output?: (
-    result: WorkflowRunResult,
-    ctx: WorkflowNodeContext,
-  ) => unknown | Promise<unknown>;
+  readonly output?: (result: WorkflowRunResult, ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
 }
 
 export type WorkflowNodeDefinition =
@@ -448,10 +403,7 @@ export interface WorkflowEventMergeOptions {
 export interface WorkflowEventBus {
   emit(event: WorkflowEventInput): void;
   subscribe(): AsyncIterable<WorkflowEvent>;
-  observeAgentNode(input: {
-    readonly nodeId: string;
-    readonly session: AgentSession;
-  }): () => void;
+  observeAgentNode(input: { readonly nodeId: string; readonly session: AgentSession }): () => void;
   close(): void;
   readonly sequence: number;
 }

@@ -1,8 +1,8 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, it } from "node:test";
 import type { AIProvider, ProviderRequest, Skill, ToolDefinition, ToolRegistry, TrustPolicy } from "../index.js";
 import { createContributionRegistries } from "../index.js";
 import { discoverAgentBundles, resolveAgentBundle } from "../node/agent-definitions.js";
@@ -188,14 +188,7 @@ describe("resolveAgentBundle", () => {
   it("excluding agentPrompt removes the per-agent AGENT.md prompt layer", async () => {
     const configRoot = await makeConfigDir({
       "agents/SYSTEM.md": "App global system prompt.",
-      "agents/coding/AGENT.md": [
-        "---",
-        "name: coding",
-        "model: mock/demo",
-        "---",
-        "",
-        "Per-agent custom prompt.",
-      ].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "---", "", "Per-agent custom prompt."].join("\n"),
     });
     const workspaceRoot = await makeWorkspaceDir({
       "AGENTS.md": "Repo project prompt.",
@@ -221,7 +214,10 @@ describe("resolveAgentBundle", () => {
 
     await agent.createSession().run("Hi");
 
-    const text = request.messages.flatMap((m) => m.content).map((b) => (b.type === "text" ? b.text : "")).join("\n");
+    const text = request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
     assert.ok(text.includes("App global system prompt."), "SYSTEM.md layer missing");
     assert.ok(text.includes("Repo project prompt."), "AGENTS.md layer missing");
     assert.ok(!text.includes("Per-agent custom prompt."), "AGENT.md prompt layer should be excluded");
@@ -230,14 +226,7 @@ describe("resolveAgentBundle", () => {
   async function buildThreePromptBundle() {
     const configRoot = await makeConfigDir({
       "agents/SYSTEM.md": "GLOBAL_SYSTEM_LAYER",
-      "agents/coding/AGENT.md": [
-        "---",
-        "name: coding",
-        "model: mock/demo",
-        "---",
-        "",
-        "AGENT_BODY_LAYER",
-      ].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "---", "", "AGENT_BODY_LAYER"].join("\n"),
     });
     const workspaceRoot = await makeWorkspaceDir({
       "AGENTS.md": "REPO_PROJECT_LAYER",
@@ -266,7 +255,10 @@ describe("resolveAgentBundle", () => {
     });
 
     await agent.createSession().run("Hi");
-    return request.messages.flatMap((m) => m.content).map((b) => (b.type === "text" ? b.text : "")).join("\n");
+    return request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
   }
 
   it("appends all three prompt sources in SYSTEM.md -> AGENT.md -> AGENTS.md order", async () => {
@@ -312,10 +304,7 @@ describe("resolveAgentBundle", () => {
 
     // Deny the workspace AGENTS.md only; SYSTEM.md (config root) still loads.
     const denyRepoTrust: TrustPolicy = {
-      check: (req) =>
-        req.target === join(workspaceRoot, "AGENTS.md")
-          ? { trusted: false, reason: "repo denied" }
-          : { trusted: true },
+      check: (req) => (req.target === join(workspaceRoot, "AGENTS.md") ? { trusted: false, reason: "repo denied" } : { trusted: true }),
     };
     const deniedRepo = await resolveAgentBundle(bundle!, {
       ...ctx,
@@ -323,16 +312,16 @@ describe("resolveAgentBundle", () => {
       trust: denyRepoTrust,
     });
     await deniedRepo.createSession().run("Hi");
-    const deniedRepoText = request.messages.flatMap((m) => m.content).map((b) => (b.type === "text" ? b.text : "")).join("\n");
+    const deniedRepoText = request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
     assert.ok(deniedRepoText.includes("GLOBAL_SYSTEM_LAYER"), "SYSTEM.md should still load when only repo is denied");
     assert.ok(!deniedRepoText.includes("REPO_PROJECT_LAYER"), "AGENTS.md should be skipped when untrusted");
 
     // Deny the SYSTEM.md (config root) only; AGENTS.md (workspace) still loads.
     const denySystemTrust: TrustPolicy = {
-      check: (req) =>
-        req.target === bundle!.systemPromptPath
-          ? { trusted: false, reason: "system denied" }
-          : { trusted: true },
+      check: (req) => (req.target === bundle!.systemPromptPath ? { trusted: false, reason: "system denied" } : { trusted: true }),
     };
     const deniedSystem = await resolveAgentBundle(bundle!, {
       ...ctx,
@@ -340,7 +329,10 @@ describe("resolveAgentBundle", () => {
       trust: denySystemTrust,
     });
     await deniedSystem.createSession().run("Hi");
-    const deniedSystemText = request.messages.flatMap((m) => m.content).map((b) => (b.type === "text" ? b.text : "")).join("\n");
+    const deniedSystemText = request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
     assert.ok(!deniedSystemText.includes("GLOBAL_SYSTEM_LAYER"), "SYSTEM.md should be skipped when untrusted");
     assert.ok(deniedSystemText.includes("REPO_PROJECT_LAYER"), "AGENTS.md should still load when only system is denied");
   });
@@ -348,12 +340,8 @@ describe("resolveAgentBundle", () => {
   it("app-config global skills are available to every agent bundle", async () => {
     const configRoot = await makeConfigDir({
       "agents/skills/shared/SKILL.md": ["---", "name: shared", "---", ""].join("\n"),
-      "agents/coding/AGENT.md": [
-        "---", "name: coding", "model: mock/demo", "skills:", "  - shared", "---", "",
-      ].join("\n"),
-      "agents/office/AGENT.md": [
-        "---", "name: office", "model: mock/demo", "skills:", "  - shared", "---", "",
-      ].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "skills:", "  - shared", "---", ""].join("\n"),
+      "agents/office/AGENT.md": ["---", "name: office", "model: mock/demo", "skills:", "  - shared", "---", ""].join("\n"),
     });
 
     const bundles = await discoverAgentBundles({ configRoot });
@@ -366,13 +354,9 @@ describe("resolveAgentBundle", () => {
 
   it("per-agent skills are scoped to that agent's bundle (absent from a sibling)", async () => {
     const configRoot = await makeConfigDir({
-      "agents/coding/AGENT.md": [
-        "---", "name: coding", "model: mock/demo", "skills:", "  - code-style", "---", "",
-      ].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "skills:", "  - code-style", "---", ""].join("\n"),
       "agents/coding/skills/code-style/SKILL.md": ["---", "name: code-style", "---", ""].join("\n"),
-      "agents/office/AGENT.md": [
-        "---", "name: office", "model: mock/demo", "skills:", "  - shared", "---", "",
-      ].join("\n"),
+      "agents/office/AGENT.md": ["---", "name: office", "model: mock/demo", "skills:", "  - shared", "---", ""].join("\n"),
       "agents/office/skills/shared/SKILL.md": ["---", "name: shared", "---", ""].join("\n"),
     });
 
@@ -380,23 +364,17 @@ describe("resolveAgentBundle", () => {
     const coding = bundles.find((b) => b.name === "coding")!;
     const office = bundles.find((b) => b.name === "office")!;
     // code-style lives only under coding/; office does not see it.
-    assert.ok(coding.agentSkills.some((p) => p.includes("code-style")), "coding bundle has its per-agent skill");
+    assert.ok(
+      coding.agentSkills.some((p) => p.includes("code-style")),
+      "coding bundle has its per-agent skill",
+    );
     assert.ok(!office.agentSkills.some((p) => p.includes("code-style")), "office bundle does not carry coding's per-agent skill");
   });
 
   it("tool access is controlled by the agent's tools list resolved against the app-global + per-agent union", async () => {
     const configRoot = await makeConfigDir({
       "agents/tools/read/manifest.json": JSON.stringify({ name: "read" }),
-      "agents/coding/AGENT.md": [
-        "---",
-        "name: coding",
-        "model: mock/demo",
-        "tools:",
-        "  - read",
-        "  - run-tests",
-        "---",
-        "",
-      ].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "tools:", "  - read", "  - run-tests", "---", ""].join("\n"),
       "agents/coding/tools/run-tests/manifest.json": JSON.stringify({ name: "run-tests" }),
       // Declared in the agent directory but NOT in the agent's tools list → must not be active.
       "agents/coding/tools/lint/manifest.json": JSON.stringify({ name: "lint" }),
@@ -411,15 +389,7 @@ describe("resolveAgentBundle", () => {
   it("excluding agentTools removes the per-agent tools from the agent", async () => {
     const configRoot = await makeConfigDir({
       "agents/tools/read/manifest.json": JSON.stringify({ name: "read" }),
-      "agents/coding/AGENT.md": [
-        "---",
-        "name: coding",
-        "model: mock/demo",
-        "tools:",
-        "  - read",
-        "---",
-        "",
-      ].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "tools:", "  - read", "---", ""].join("\n"),
       "agents/coding/tools/run-tests/manifest.json": JSON.stringify({ name: "run-tests" }),
     });
 
@@ -480,15 +450,7 @@ describe("resolveAgentBundle", () => {
   it("missing tool fails closed", async () => {
     const configRoot = await makeConfigDir({
       "agents/SYSTEM.md": "# System",
-      "agents/coding/AGENT.md": [
-        "---",
-        "name: coding",
-        "model: mock/demo",
-        "tools:",
-        "  - missing",
-        "---",
-        "",
-      ].join("\n"),
+      "agents/coding/AGENT.md": ["---", "name: coding", "model: mock/demo", "tools:", "  - missing", "---", ""].join("\n"),
     });
 
     const [bundle] = await discoverAgentBundles({ configRoot });
@@ -509,5 +471,5 @@ describe("resolveAgentBundle", () => {
 
 function parentDirName(path: string): string {
   const parts = path.split(/[/\\]+/).filter(Boolean);
-  return parts.length >= 2 ? parts[parts.length - 2] : parts[parts.length - 1] ?? "";
+  return parts.length >= 2 ? parts[parts.length - 2] : (parts[parts.length - 1] ?? "");
 }

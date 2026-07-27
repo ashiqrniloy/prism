@@ -1,10 +1,4 @@
-import {
-  redactSecrets,
-  resolveCredentialValue,
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /**
@@ -143,13 +137,7 @@ export function mapAlibabaModel(entry: AlibabaModelEntry): ModelConfig {
 
 function looksLikeReasoningModel(modelId: string): boolean {
   const id = modelId.toLowerCase();
-  return (
-    id.startsWith("qwq")
-    || id.startsWith("qvq")
-    || id.includes("qwen3")
-    || id.includes("-thinking")
-    || id.includes("reasoning")
-  );
+  return id.startsWith("qwq") || id.startsWith("qvq") || id.includes("qwen3") || id.includes("-thinking") || id.includes("reasoning");
 }
 
 function looksLikeVisionModel(modelId: string): boolean {

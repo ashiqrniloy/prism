@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.16] - 2026-07-26
+
+### Changed
+- Sourced `resolveRedactor` from `@arnilo/prism` core and deleted the private duplicate; no public API change.
+
 ## [0.0.15] - 2026-07-26
 
 ### Changed

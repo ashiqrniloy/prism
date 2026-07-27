@@ -1,19 +1,8 @@
 import { AgentRunError, type AgentRunResult, type Message } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
 import { defaultToAgentInput, scoreRun } from "./score.js";
-import type {
-  EvaluationRecord,
-  ExperimentAggregate,
-  ExperimentItemResult,
-  ExperimentReport,
-  RunExperimentOptions,
-} from "./types.js";
-import {
-  mapPool,
-  normalizeConcurrency,
-  randomId,
-  toErrorInfo,
-} from "./util.js";
+import type { EvaluationRecord, ExperimentAggregate, ExperimentItemResult, ExperimentReport, RunExperimentOptions } from "./types.js";
+import { mapPool, normalizeConcurrency, randomId, toErrorInfo } from "./util.js";
 
 function aggregateEvaluations(evaluations: readonly EvaluationRecord[]): ExperimentAggregate {
   const scored = evaluations.filter((record) => record.status === "scored" && record.score !== undefined);
@@ -25,9 +14,7 @@ function aggregateEvaluations(evaluations: readonly EvaluationRecord[]): Experim
     scoresByScorer[record.scorerId] = bucket;
   }
 
-  const meanScore = scored.length
-    ? scored.reduce((sum, record) => sum + (record.score ?? 0), 0) / scored.length
-    : undefined;
+  const meanScore = scored.length ? scored.reduce((sum, record) => sum + (record.score ?? 0), 0) / scored.length : undefined;
 
   return {
     itemCount: 0,
@@ -143,11 +130,12 @@ export async function runExperiment<TInput = unknown, TExpected = unknown>(
     itemCount: items.length,
   };
 
-  const status = aborted || options.signal?.aborted
-    ? "aborted"
-    : fatal || itemResults.some((item) => item.error && !item.result)
-      ? "failed"
-      : "succeeded";
+  const status =
+    aborted || options.signal?.aborted
+      ? "aborted"
+      : fatal || itemResults.some((item) => item.error && !item.result)
+        ? "failed"
+        : "succeeded";
 
   return {
     experimentId,

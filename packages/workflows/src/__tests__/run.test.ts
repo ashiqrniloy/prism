@@ -4,15 +4,15 @@ import {
   createAgent,
   createMockProvider,
   createSecretRedactor,
+  type ExecutionAction,
   providerDone,
   providerTextDelta,
-  type ExecutionAction,
   type ToolDefinition,
 } from "@arnilo/prism";
 import {
   agentNode,
-  conditionalNode,
   cancelWorkflowRun,
+  conditionalNode,
   createMemoryWorkflowCheckpoints,
   defineWorkflow,
   fanOutNode,
@@ -26,8 +26,8 @@ import {
   toolNode,
   WorkflowAbortError,
   WorkflowCheckpointError,
-  WorkflowRuntimeError,
   type WorkflowEvent,
+  WorkflowRuntimeError,
 } from "../index.js";
 
 describe("runWorkflow", () => {
@@ -42,7 +42,10 @@ describe("runWorkflow", () => {
       revision: "1",
       id: "diamond",
       nodes: { left, right, join },
-      edges: [["left", "join"], ["right", "join"]],
+      edges: [
+        ["left", "join"],
+        ["right", "join"],
+      ],
       limits: { maxConcurrency: 2 },
     });
     const result = await runWorkflow(workflow, null, {
@@ -52,7 +55,10 @@ describe("runWorkflow", () => {
     assert.equal(result.status, "succeeded");
     assert.equal(result.outputs.join, "L:R");
     const sequences = events.map((event) => event.sequence);
-    assert.deepEqual(sequences, [...sequences].sort((a, b) => a - b));
+    assert.deepEqual(
+      sequences,
+      [...sequences].sort((a, b) => a - b),
+    );
     assert.ok(events.some((event) => event.type === "workflow_started"));
     assert.ok(events.some((event) => event.type === "workflow_finished"));
   });
@@ -68,7 +74,10 @@ describe("runWorkflow", () => {
       revision: "1",
       id: "cond",
       nodes: { gate, expensive, fallback },
-      edges: [["gate", "expensive"], ["gate", "fallback"]],
+      edges: [
+        ["gate", "expensive"],
+        ["gate", "fallback"],
+      ],
     });
     const result = await runWorkflow(workflow, null);
     assert.equal(result.status, "succeeded");
@@ -156,10 +165,14 @@ describe("runWorkflow", () => {
       execute: async (ctx) => {
         await new Promise<void>((resolve, reject) => {
           const timer = setTimeout(resolve, 500);
-          ctx.signal?.addEventListener("abort", () => {
-            clearTimeout(timer);
-            reject(new DOMException("Aborted", "AbortError"));
-          }, { once: true });
+          ctx.signal?.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
         });
         return "late";
       },
@@ -175,10 +188,14 @@ describe("runWorkflow", () => {
         ac.abort();
         await new Promise<void>((resolve, reject) => {
           const timer = setTimeout(resolve, 200);
-          ctx.signal?.addEventListener("abort", () => {
-            clearTimeout(timer);
-            reject(new DOMException("Aborted", "AbortError"));
-          }, { once: true });
+          ctx.signal?.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
         });
         return "done";
       },
@@ -247,9 +264,10 @@ describe("runWorkflow", () => {
       nodes: { node: toolNode({ tool, args: async () => ({}) }) },
     });
     await assert.rejects(
-      () => runWorkflow(workflow, null, {
-        guardrails: { toolInput: [{ name: "deny", stage: "tool_input", evaluate: () => ({ action: "block" }) }] },
-      }),
+      () =>
+        runWorkflow(workflow, null, {
+          guardrails: { toolInput: [{ name: "deny", stage: "tool_input", evaluate: () => ({ action: "block" }) }] },
+        }),
       /Tool call blocked by guardrail/,
     );
     assert.equal(executed, false);
@@ -280,17 +298,31 @@ describe("runWorkflow", () => {
     const suspended = await runWorkflow(workflow, null, {
       checkpoints,
       runId: "tool-approval-1",
-      executionPolicy: { check: () => { policyChecks += 1; return { allowed: true }; } },
+      executionPolicy: {
+        check: () => {
+          policyChecks += 1;
+          return { allowed: true };
+        },
+      },
     });
     assert.equal(suspended.status, "suspended");
     assert.equal(executions, 0);
     assert.equal(policyChecks, 0);
 
-    const resumed = await resumeWorkflow(workflow, { runId: suspended.runId }, {
-      checkpoints,
-      resume: { decision: "approve", expectedVersion: suspended.version },
-      executionPolicy: { check: () => { policyChecks += 1; return { allowed: true }; } },
-    });
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId: suspended.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: suspended.version },
+        executionPolicy: {
+          check: () => {
+            policyChecks += 1;
+            return { allowed: true };
+          },
+        },
+      },
+    );
     assert.equal(resumed.status, "succeeded");
     assert.equal(executions, 1);
     assert.equal(policyChecks, 1);
@@ -300,11 +332,16 @@ describe("runWorkflow", () => {
       runId: "tool-policy-deny",
     });
     await assert.rejects(
-      () => resumeWorkflow(workflow, { runId: deniedPolicyStart.runId }, {
-        checkpoints,
-        resume: { decision: "approve", expectedVersion: deniedPolicyStart.version },
-        executionPolicy: { check: () => ({ allowed: false, reason: "policy changed" }) },
-      }),
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: deniedPolicyStart.runId },
+          {
+            checkpoints,
+            resume: { decision: "approve", expectedVersion: deniedPolicyStart.version },
+            executionPolicy: { check: () => ({ allowed: false, reason: "policy changed" }) },
+          },
+        ),
       /policy changed/,
     );
     assert.equal(executions, 1);
@@ -326,10 +363,7 @@ describe("runWorkflow", () => {
       nodes: { first, second },
       edges: [["first", "second"]],
     });
-    await assert.rejects(
-      () => runWorkflow(workflow, null, { checkpoints, runId: "run-resume" }),
-      /boom/,
-    );
+    await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "run-resume" }), /boom/);
     const saved = await getWorkflowRun(checkpoints, { workflowId: "resume", runId: "run-resume" });
     assert.equal(saved?.value.nodes.first?.status, "succeeded");
     assert.equal(saved?.value.nodes.second?.status, "failed");
@@ -403,13 +437,14 @@ describe("runWorkflow", () => {
   it("serializes concurrent suspension requests without losing a node", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const reviewed = new Set<string>();
-    const reviewNode = (id: string) => functionNode({
-      execute: async (ctx) => {
-        if (!ctx.resume) return suspend({ reason: `review-${id}` });
-        reviewed.add(id);
-        return id;
-      },
-    });
+    const reviewNode = (id: string) =>
+      functionNode({
+        execute: async (ctx) => {
+          if (!ctx.resume) return suspend({ reason: `review-${id}` });
+          reviewed.add(id);
+          return id;
+        },
+      });
     const workflow = defineWorkflow({
       revision: "1",
       id: "two-reviews",
@@ -419,15 +454,23 @@ describe("runWorkflow", () => {
     });
     let result = await runWorkflow(workflow, null, { checkpoints, runId: "two-reviews-1" });
     assert.equal(result.status, "suspended");
-    result = await resumeWorkflow(workflow, { runId: result.runId }, {
-      checkpoints,
-      resume: { decision: "approve", expectedVersion: result.version },
-    });
+    result = await resumeWorkflow(
+      workflow,
+      { runId: result.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: result.version },
+      },
+    );
     assert.equal(result.status, "suspended");
-    result = await resumeWorkflow(workflow, { runId: result.runId }, {
-      checkpoints,
-      resume: { decision: "approve", expectedVersion: result.version },
-    });
+    result = await resumeWorkflow(
+      workflow,
+      { runId: result.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: result.version },
+      },
+    );
     assert.equal(result.status, "succeeded");
     assert.deepEqual([...reviewed].sort(), ["a", "b"]);
   });
@@ -444,18 +487,27 @@ describe("runWorkflow", () => {
     });
     const workflow = defineWorkflow({ revision: "1", id: "human-deny", nodes: { node } });
     const deniedStart = await runWorkflow(workflow, null, { checkpoints, runId: "deny-1" });
-    const denied = await resumeWorkflow(workflow, { runId: deniedStart.runId }, {
-      checkpoints,
-      resume: { decision: "deny", input: { reason: "unsafe" }, expectedVersion: deniedStart.version },
-    });
+    const denied = await resumeWorkflow(
+      workflow,
+      { runId: deniedStart.runId },
+      {
+        checkpoints,
+        resume: { decision: "deny", input: { reason: "unsafe" }, expectedVersion: deniedStart.version },
+      },
+    );
     assert.equal(denied.status, "denied");
     assert.equal(denied.resume?.decision, "deny");
     assert.equal(invoked, 0);
     await assert.rejects(
-      () => resumeWorkflow(workflow, { runId: deniedStart.runId }, {
-        checkpoints,
-        resume: { decision: "approve", expectedVersion: denied.version },
-      }),
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: deniedStart.runId },
+          {
+            checkpoints,
+            resume: { decision: "approve", expectedVersion: denied.version },
+          },
+        ),
       /already denied/i,
     );
 
@@ -474,17 +526,21 @@ describe("runWorkflow", () => {
     const workflow = defineWorkflow({
       revision: "1",
       id: "fenced-human",
-      nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review" }) }) },
+      nodes: { node: functionNode({ execute: async (ctx) => (ctx.resume ? "ok" : suspend({ reason: "review" })) }) },
     });
     const resumable = await runWorkflow(workflow, null, {
       checkpoints,
       runId: "fenced-resume",
       fencingToken: 3,
     });
-    const resumed = await resumeWorkflow(workflow, { runId: resumable.runId }, {
-      checkpoints,
-      resume: { decision: "approve", expectedVersion: resumable.version },
-    });
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId: resumable.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: resumable.version },
+      },
+    );
     assert.equal(resumed.status, "succeeded");
 
     const cancellable = await runWorkflow(workflow, null, {
@@ -506,7 +562,11 @@ describe("runWorkflow", () => {
     const workflow = defineWorkflow({
       revision: "1",
       id: "validate-resume",
-      nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review", resumeSchema: { type: "object" } }) }) },
+      nodes: {
+        node: functionNode({
+          execute: async (ctx) => (ctx.resume ? "ok" : suspend({ reason: "review", resumeSchema: { type: "object" } })),
+        }),
+      },
     });
     const result = await runWorkflow(workflow, null, {
       checkpoints,
@@ -514,29 +574,44 @@ describe("runWorkflow", () => {
       ownership: { tenantId: "t1" },
     });
     await assert.rejects(
-      () => resumeWorkflow(workflow, { runId: result.runId }, {
-        checkpoints,
-        ownership: { tenantId: "t1" },
-        resume: { decision: "approve", expectedVersion: result.version },
-      }),
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: result.runId },
+          {
+            checkpoints,
+            ownership: { tenantId: "t1" },
+            resume: { decision: "approve", expectedVersion: result.version },
+          },
+        ),
       /validateResume/,
     );
     await assert.rejects(
-      () => resumeWorkflow(workflow, { runId: result.runId }, {
-        checkpoints,
-        ownership: { tenantId: "t2" },
-        resume: { decision: "approve", expectedVersion: result.version },
-        validateResume: () => undefined,
-      }),
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: result.runId },
+          {
+            checkpoints,
+            ownership: { tenantId: "t2" },
+            resume: { decision: "approve", expectedVersion: result.version },
+            validateResume: () => undefined,
+          },
+        ),
       /ownership|tenant/i,
     );
     await assert.rejects(
-      () => resumeWorkflow(workflow, { runId: result.runId }, {
-        checkpoints,
-        ownership: { tenantId: "t1" },
-        resume: { decision: "approve", expectedVersion: result.version - 1 },
-        validateResume: () => undefined,
-      }),
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: result.runId },
+          {
+            checkpoints,
+            ownership: { tenantId: "t1" },
+            resume: { decision: "approve", expectedVersion: result.version - 1 },
+            validateResume: () => undefined,
+          },
+        ),
       (error: unknown) => error instanceof WorkflowCheckpointError && /Stale resume version/.test(error.message),
     );
   });
@@ -546,18 +621,24 @@ describe("runWorkflow", () => {
     const workflow = defineWorkflow({
       revision: "1",
       id: "redact-suspend",
-      nodes: { node: functionNode({ execute: async (ctx) => ctx.resume ? "ok" : suspend({ reason: "review", data: { token: "sekrit" } }) }) },
+      nodes: {
+        node: functionNode({ execute: async (ctx) => (ctx.resume ? "ok" : suspend({ reason: "review", data: { token: "sekrit" } })) }),
+      },
     });
     const suspended = await runWorkflow(workflow, null, {
       checkpoints,
       runId: "redact-suspend-1",
       redactor: createSecretRedactor(["sekrit"]),
     });
-    const resumed = await resumeWorkflow(workflow, { runId: suspended.runId }, {
-      checkpoints,
-      redactor: createSecretRedactor(["sekrit"]),
-      resume: { decision: "approve", input: { token: "sekrit" }, expectedVersion: suspended.version },
-    });
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId: suspended.runId },
+      {
+        checkpoints,
+        redactor: createSecretRedactor(["sekrit"]),
+        resume: { decision: "approve", input: { token: "sekrit" }, expectedVersion: suspended.version },
+      },
+    );
     const saved = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: resumed.runId });
     assert.doesNotMatch(JSON.stringify(suspended), /sekrit/);
     assert.doesNotMatch(JSON.stringify(resumed), /sekrit/);
@@ -587,10 +668,15 @@ describe("runWorkflow", () => {
       ownership: { tenantId: "t1" },
     });
     await assert.rejects(
-      () => resumeWorkflow(workflow, { runId: "r-tenant" }, {
-        checkpoints,
-        ownership: { tenantId: "t2" },
-      }),
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: "r-tenant" },
+          {
+            checkpoints,
+            ownership: { tenantId: "t2" },
+          },
+        ),
       /ownership|tenant/i,
     );
   });

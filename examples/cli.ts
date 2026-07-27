@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // CLI public surface is the `prism` bin (print/json/rpc), an adapter over the
 // AgentSession API. Uses the built-in `mock` provider — network-free.
@@ -8,7 +8,9 @@ const bin = join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "cli.js"
 
 export function demo() {
   const print = spawnSync(process.execPath, [bin, "--provider", "mock", "--model", "demo", "-p", "Hi"], { encoding: "utf8" });
-  const json = spawnSync(process.execPath, [bin, "--provider", "mock", "--model", "demo", "--mode", "json", "-p", "Hi"], { encoding: "utf8" });
+  const json = spawnSync(process.execPath, [bin, "--provider", "mock", "--model", "demo", "--mode", "json", "-p", "Hi"], {
+    encoding: "utf8",
+  });
 
   return {
     printOk: print.status === 0,

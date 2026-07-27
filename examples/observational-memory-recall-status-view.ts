@@ -1,11 +1,11 @@
+import { createExtensionKernel } from "@arnilo/prism";
 import {
-  createObservationalMemoryExtension,
   createMemoryStatusCommand,
   createMemoryViewCommand,
+  createObservationalMemoryExtension,
   createRecallMemoryTool,
   recallObservationalMemory,
 } from "@arnilo/prism-compaction-observational-memory";
-import { createExtensionKernel } from "@arnilo/prism";
 
 // Observational memory: extension + recall tool + status/view commands.
 // Compaction renders prepared memory (no model call during compaction). Recall

@@ -110,10 +110,7 @@ function applyReplacements(content: string, replacements: TextReplacement[], off
   for (let i = replacements.length - 1; i >= 0; i--) {
     const replacement = replacements[i];
     const matchIndex = replacement.matchIndex - offset;
-    result =
-      result.substring(0, matchIndex) +
-      replacement.newText +
-      result.substring(matchIndex + replacement.matchLength);
+    result = result.substring(0, matchIndex) + replacement.newText + result.substring(matchIndex + replacement.matchLength);
   }
   return result;
 }
@@ -156,11 +153,7 @@ export function applyReplacementsPreservingUnchangedLines(
     result += originalLines.slice(originalLineIndex, group.startLine).join("");
     const groupStartOffset = baseLines[group.startLine].start;
     const groupEndOffset = baseLines[group.endLine - 1].end;
-    result += applyReplacements(
-      baseContent.slice(groupStartOffset, groupEndOffset),
-      group.replacements,
-      groupStartOffset,
-    );
+    result += applyReplacements(baseContent.slice(groupStartOffset, groupEndOffset), group.replacements, groupStartOffset);
     originalLineIndex = group.endLine;
   }
   result += originalLines.slice(originalLineIndex).join("");
@@ -235,9 +228,7 @@ function countOccurrences(content: string, oldText: string): number {
 
 function getNotFoundError(path: string, editIndex: number, totalEdits: number): Error {
   if (totalEdits === 1) {
-    return new Error(
-      `Could not find the exact text in ${path}. The old text must match exactly including all whitespace and newlines.`,
-    );
+    return new Error(`Could not find the exact text in ${path}. The old text must match exactly including all whitespace and newlines.`);
   }
   return new Error(`Could not find edits[${editIndex}] in ${path}. The oldText must match exactly including all whitespace and newlines.`);
 }
@@ -290,11 +281,7 @@ export interface AppliedEditsResult {
  * overlays those line-level changes onto the original content so unchanged line
  * blocks keep their original bytes.
  */
-export function applyEditsToNormalizedContent(
-  normalizedContent: string,
-  edits: Edit[],
-  path: string,
-): AppliedEditsResult {
+export function applyEditsToNormalizedContent(normalizedContent: string, edits: Edit[], path: string): AppliedEditsResult {
   const normalizedEdits = edits.map((edit) => ({
     oldText: normalizeToLF(edit.oldText),
     newText: normalizeToLF(edit.newText),
@@ -346,12 +333,7 @@ export function applyEditsToNormalizedContent(
 }
 
 /** Generate a standard unified patch. */
-export function generateUnifiedPatch(
-  path: string,
-  oldContent: string,
-  newContent: string,
-  contextLines = 4,
-): string {
+export function generateUnifiedPatch(path: string, oldContent: string, newContent: string, contextLines = 4): string {
   return Diff.createTwoFilesPatch(path, path, oldContent, newContent, undefined, undefined, {
     context: contextLines,
     headerOptions: Diff.FILE_HEADERS_ONLY,
@@ -373,11 +355,7 @@ export interface EditDiffResult {
  * Generate a display-oriented diff string with line numbers and context.
  * Returns both the diff string and the first changed line number (in the new file).
  */
-export function generateDiffString(
-  oldContent: string,
-  newContent: string,
-  contextLines = 4,
-): EditDiffResult {
+export function generateDiffString(oldContent: string, newContent: string, contextLines = 4): EditDiffResult {
   const parts = Diff.diffLines(oldContent, newContent) as DiffPart[];
   const output: string[] = [];
   const oldLines = oldContent.split("\n");

@@ -1,11 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { OwnershipScope, SecretRedactor } from "@arnilo/prism";
 import { WorkflowCheckpointError } from "./errors.js";
-import {
-  DEFAULT_MAX_CHECKPOINT_BYTES,
-  DEFAULT_MAX_NODE_OUTPUT_BYTES,
-  validateWorkflowLimits,
-} from "./limits.js";
+import { DEFAULT_MAX_CHECKPOINT_BYTES, DEFAULT_MAX_NODE_OUTPUT_BYTES, validateWorkflowLimits } from "./limits.js";
 import type { WorkflowDefinition, WorkflowNodeDefinition } from "./types.js";
 
 export function utf8ByteLength(value: string): number {
@@ -72,28 +68,19 @@ export function redactValue<T>(value: T, redactor?: SecretRedactor): T {
   return redactor ? redactor.redact(value) : value;
 }
 
-export function boundNodeOutput(
-  output: unknown,
-  options: { maxNodeOutputBytes?: number; redactor?: SecretRedactor } = {},
-): unknown {
+export function boundNodeOutput(output: unknown, options: { maxNodeOutputBytes?: number; redactor?: SecretRedactor } = {}): unknown {
   const redacted = redactValue(output, options.redactor);
   assertWithinBytes(redacted, options.maxNodeOutputBytes ?? DEFAULT_MAX_NODE_OUTPUT_BYTES, "Node output");
   return redacted;
 }
 
-export function boundCheckpointValue(
-  value: unknown,
-  options: { maxCheckpointBytes?: number; redactor?: SecretRedactor } = {},
-): unknown {
+export function boundCheckpointValue(value: unknown, options: { maxCheckpointBytes?: number; redactor?: SecretRedactor } = {}): unknown {
   const redacted = redactValue(value, options.redactor);
   assertWithinBytes(redacted, options.maxCheckpointBytes ?? DEFAULT_MAX_CHECKPOINT_BYTES, "Checkpoint");
   return redacted;
 }
 
-export function ownershipMatches(
-  expected: OwnershipScope | undefined,
-  actual: OwnershipScope | undefined,
-): boolean {
+export function ownershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean {
   if (!expected) return true;
   if (expected.tenantId !== undefined && expected.tenantId !== actual?.tenantId) return false;
   if (expected.accountId !== undefined && expected.accountId !== actual?.accountId) return false;
@@ -101,22 +88,13 @@ export function ownershipMatches(
   return true;
 }
 
-export function ownershipExactlyMatches(
-  expected: OwnershipScope | undefined,
-  actual: OwnershipScope | undefined,
-): boolean {
-  return expected?.tenantId === actual?.tenantId
-    && expected?.accountId === actual?.accountId
-    && expected?.userId === actual?.userId;
+export function ownershipExactlyMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean {
+  return expected?.tenantId === actual?.tenantId && expected?.accountId === actual?.accountId && expected?.userId === actual?.userId;
 }
 
 export function exactOwnershipKey(ownership?: OwnershipScope): string {
-  const field = (value: unknown) => value === undefined ? [0] : [1, value];
-  return JSON.stringify([
-    field(ownership?.tenantId),
-    field(ownership?.accountId),
-    field(ownership?.userId),
-  ]);
+  const field = (value: unknown) => (value === undefined ? [0] : [1, value]);
+  return JSON.stringify([field(ownership?.tenantId), field(ownership?.accountId), field(ownership?.userId)]);
 }
 
 export function nodeKindOf(node: WorkflowNodeDefinition): string {

@@ -1,7 +1,7 @@
-import type { JsonObject } from "@arnilo/prism";
+import { type JsonObject, resolveRedactor } from "@arnilo/prism";
 import type { MemoryVectorHit } from "@arnilo/prism-memory";
-import { HARD_CHUNK_SIZE_CAP, resolveRagLimits } from "./limits.js";
 import { RagScopeError, RagValidationError } from "./errors.js";
+import { HARD_CHUNK_SIZE_CAP, resolveRagLimits } from "./limits.js";
 import { rerankHits } from "./rerank.js";
 import type { RagCitation, RagContentTrust, RagContextResult, RagHit, RagProvenance, RetrieveContextOptions } from "./types.js";
 import {
@@ -14,7 +14,6 @@ import {
   nonEmpty,
   requireScope,
   requireSourceId,
-  resolveRedactor,
   truncateUtf8,
 } from "./util.js";
 
@@ -35,7 +34,11 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     maxRerankMs: options.maxRerankMs,
     rerankConcurrency: options.rerankConcurrency,
   });
-  if (!Number.isInteger(options.embedder.dimensions) || options.embedder.dimensions <= 0 || options.embedder.dimensions > limits.maxVectorDimensions) {
+  if (
+    !Number.isInteger(options.embedder.dimensions) ||
+    options.embedder.dimensions <= 0 ||
+    options.embedder.dimensions > limits.maxVectorDimensions
+  ) {
     throw new RagValidationError(`embedder dimensions must be an integer in 1..${limits.maxVectorDimensions}`);
   }
   if (options.filter) assertBytes(options.filter, limits.maxMetadataBytes, "metadata filter");
@@ -44,7 +47,12 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
   assertNotAborted(options.signal);
   const vectors = await options.embedder.embed([safeQuery], { signal: options.signal });
   const embedding = vectors[0];
-  if (vectors.length !== 1 || !embedding || embedding.length !== options.embedder.dimensions || embedding.some((value) => !Number.isFinite(value))) {
+  if (
+    vectors.length !== 1 ||
+    !embedding ||
+    embedding.length !== options.embedder.dimensions ||
+    embedding.some((value) => !Number.isFinite(value))
+  ) {
     throw new RagValidationError("embedder returned invalid query vector");
   }
   const candidates = await options.store.query({
@@ -67,14 +75,14 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
   }
   const ranked = options.reranker
     ? await rerankHits(safeQuery, retrieved, {
-      reranker: options.reranker,
-      maxBytes: limits.maxRerankBytes,
-      maxMs: limits.maxRerankMs,
-      concurrency: limits.rerankConcurrency,
-      signal: options.signal,
-      redactor: options.redactor,
-      secrets: options.secrets,
-    })
+        reranker: options.reranker,
+        maxBytes: limits.maxRerankBytes,
+        maxMs: limits.maxRerankMs,
+        concurrency: limits.rerankConcurrency,
+        signal: options.signal,
+        redactor: options.redactor,
+        secrets: options.secrets,
+      })
     : retrieved;
 
   const hits: RagHit[] = [];
@@ -134,10 +142,19 @@ function parseHit(hit: MemoryVectorHit, retrievalRank: number, retrievedAt: stri
   if (!isJsonObject(rag)) throw new RagScopeError("vector hit is missing RAG source metadata");
   const sourceId = requireSourceId(rag.sourceId);
   const citationId = nonEmpty(rag.citationId, "metadata._rag.citationId");
-  if (!Number.isInteger(rag.chunkIndex) || Number(rag.chunkIndex) < 0 || !Number.isInteger(rag.start) || Number(rag.start) < 0 || !Number.isInteger(rag.end) || Number(rag.end) < Number(rag.start) || !Number.isFinite(hit.score)) {
+  if (
+    !Number.isInteger(rag.chunkIndex) ||
+    Number(rag.chunkIndex) < 0 ||
+    !Number.isInteger(rag.start) ||
+    Number(rag.start) < 0 ||
+    !Number.isInteger(rag.end) ||
+    Number(rag.end) < Number(rag.start) ||
+    !Number.isFinite(hit.score)
+  ) {
     throw new RagValidationError("vector hit has invalid RAG offsets");
   }
-  if (hit.id !== citationId || !citationId.startsWith(`${sourceId}#`)) throw new RagValidationError("vector hit has inconsistent citation identity");
+  if (hit.id !== citationId || !citationId.startsWith(`${sourceId}#`))
+    throw new RagValidationError("vector hit has inconsistent citation identity");
   const userMetadata: Record<string, JsonObject[string]> = {};
   for (const [key, value] of Object.entries(metadata ?? {})) if (key !== "_rag") userMetadata[key] = value;
   const web = isJsonObject(userMetadata.web) ? userMetadata.web : undefined;

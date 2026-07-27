@@ -5,9 +5,9 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const script = join(here, "benchmark-0.0.10.mjs");

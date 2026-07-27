@@ -1,6 +1,6 @@
-import { dirname, join } from "node:path";
-import { readFile } from "node:fs/promises";
-import { readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
+import { resolveAgentDefinition } from "../agent-definitions.js";
 import type {
   Agent,
   AgentDefinition,
@@ -12,16 +12,14 @@ import type {
   SystemPromptContribution,
   ToolDefinition,
 } from "../contracts.js";
-import type { ManifestContributionDeclaration } from "../manifests.js";
 import { parseSkillFile, splitFrontmatter } from "../contribution-parsing.js";
-import { resolveAgentDefinition } from "../agent-definitions.js";
-import { assertPermission, isTrusted } from "../security.js";
+import type { ManifestContributionDeclaration } from "../manifests.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
-import { isPathInsideReal } from "./trust.js";
-import { readOptionalFile } from "./contribution-discovery.js";
+import { assertPermission, isTrusted } from "../security.js";
 import { createSkillRegistry } from "../skills.js";
-import { isJsonObject } from "../config.js";
 import { isNodeErrorCode } from "./config.js";
+import { readOptionalFile } from "./contribution-discovery.js";
+import { isPathInsideReal } from "./trust.js";
 
 /** Options for {@link resolveAgentBundle}. */
 export interface ResolveAgentBundleOptions {
@@ -113,9 +111,7 @@ export interface DiscoverAgentBundlesOptions {
  *  {@link resolveAgentBundle}. Trust/permission policies apply to `configRoot`
  *  and its subdirectories; symlinks escaping `configRoot/agents` are excluded.
  */
-export async function discoverAgentBundles(
-  options: DiscoverAgentBundlesOptions,
-): Promise<readonly AgentBundle[]> {
+export async function discoverAgentBundles(options: DiscoverAgentBundlesOptions): Promise<readonly AgentBundle[]> {
   const { configRoot, trust, permission, signal } = options;
   if (signal?.aborted) throw signal.reason;
 
@@ -160,11 +156,7 @@ async function findSystemPromptPath(agentsDir: string): Promise<string | undefin
   return (await readOptionalFile(path)) !== undefined ? path : undefined;
 }
 
-async function scanSkillPaths(
-  dir: string,
-  agentsDir: string,
-  permission: PermissionPolicy | undefined,
-): Promise<readonly string[]> {
+async function scanSkillPaths(dir: string, agentsDir: string, permission: PermissionPolicy | undefined): Promise<readonly string[]> {
   const out: string[] = [];
   for (const name of await listSubdirs(dir)) {
     const path = join(dir, name, "SKILL.md");
@@ -176,11 +168,7 @@ async function scanSkillPaths(
   return out;
 }
 
-async function scanToolPaths(
-  dir: string,
-  agentsDir: string,
-  permission: PermissionPolicy | undefined,
-): Promise<readonly string[]> {
+async function scanToolPaths(dir: string, agentsDir: string, permission: PermissionPolicy | undefined): Promise<readonly string[]> {
   const out: string[] = [];
   for (const name of await listSubdirs(dir)) {
     const path = join(dir, name, "manifest.json");
@@ -205,10 +193,7 @@ async function scanToolPaths(
  *  dependencies fail closed at resolution time. Each prompt file is read at
  *  most once per call; resolution is one-shot, so no cross-call cache is kept
  *  (ponytail: add memoization only if a host resolves the same bundle repeatedly). */
-export async function resolveAgentBundle(
-  bundle: AgentBundle,
-  options: ResolveAgentBundleOptions,
-): Promise<Agent> {
+export async function resolveAgentBundle(bundle: AgentBundle, options: ResolveAgentBundleOptions): Promise<Agent> {
   const read = options.readFile ?? ((path: string) => readFile(path, "utf8"));
   const text = await read(bundle.path);
   const { front } = splitFrontmatter(text, bundle.path);
@@ -289,7 +274,10 @@ function buildToolSources(
   }
   if (include.repoTools && options.repoContributions) {
     const tools = options.repoContributions
-      .filter((c): c is DiscoveredContribution & { kind: "tool"; declaration: ManifestContributionDeclaration } => c.kind === "tool" && c.declaration !== undefined)
+      .filter(
+        (c): c is DiscoveredContribution & { kind: "tool"; declaration: ManifestContributionDeclaration } =>
+          c.kind === "tool" && c.declaration !== undefined,
+      )
       .map((c) => toolDescriptorFromDeclaration(c.declaration));
     out.push({ scope: "repo", tools });
   }
@@ -419,7 +407,15 @@ function resolveSkillContexts(skills: readonly Skill[], contextProviders: { reso
 function collectMetadata(front: ReadonlyMap<string, unknown>): Record<string, unknown> | undefined {
   const metadata: Record<string, unknown> = {};
   for (const [key, value] of front) {
-    if (key !== "name" && key !== "description" && key !== "model" && key !== "tools" && key !== "skills" && key !== "context" && key !== "instructions") {
+    if (
+      key !== "name" &&
+      key !== "description" &&
+      key !== "model" &&
+      key !== "tools" &&
+      key !== "skills" &&
+      key !== "context" &&
+      key !== "instructions"
+    ) {
       metadata[key] = value;
     }
   }
@@ -435,7 +431,11 @@ function getString(front: ReadonlyMap<string, unknown>, key: string): string | u
 function getStringList(front: ReadonlyMap<string, unknown>, key: string): readonly string[] | undefined {
   const value = front.get(key);
   if (Array.isArray(value)) return value.map(String);
-  if (typeof value === "string") return value.split(",").map((s) => s.trim()).filter(Boolean);
+  if (typeof value === "string")
+    return value
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   return undefined;
 }
 
@@ -477,7 +477,7 @@ const NAME_RE = /^[A-Za-z0-9 _-]+$/;
 
 function parentDirName(path: string): string {
   const parts = path.split(/[/\\]+/).filter(Boolean);
-  return parts.length >= 2 ? parts[parts.length - 2] : parts[parts.length - 1] ?? "";
+  return parts.length >= 2 ? parts[parts.length - 2] : (parts[parts.length - 1] ?? "");
 }
 
 /** Parse a `CONTEXT.md` into a static {@link ContextProvider}. The markdown

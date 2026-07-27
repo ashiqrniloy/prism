@@ -1,8 +1,7 @@
-import type { Credential, OAuthCredentials } from "@arnilo/prism";
-import type { CredentialRecord } from "@arnilo/prism";
+import type { Credential, CredentialRecord, OAuthCredentials } from "@arnilo/prism";
+import { DEFAULT_MAX_VAULT_BYTES } from "./limits.js";
 import type { CredentialVault, VaultCredentialEntry, VaultEntry, VaultOAuthEntry } from "./types.js";
 import { VAULT_VERSION } from "./types.js";
-import { DEFAULT_MAX_VAULT_BYTES } from "./limits.js";
 
 const KEY_SEPARATOR = "\u0000";
 
@@ -57,7 +56,11 @@ export function upsertCredentialEntry(vault: CredentialVault, record: Credential
   };
 }
 
-export function deleteCredentialEntry(vault: CredentialVault, name: string, provider?: string): { vault: CredentialVault; deleted: boolean } {
+export function deleteCredentialEntry(
+  vault: CredentialVault,
+  name: string,
+  provider?: string,
+): { vault: CredentialVault; deleted: boolean } {
   const key = credentialKey(name, provider);
   if (!(key in vault.entries)) return { vault, deleted: false };
   const entries = { ...vault.entries };
@@ -99,7 +102,11 @@ export function getOAuthEntry(vault: CredentialVault, provider: string, accountI
   return fallback?.kind === "oauth" ? fallback.credentials : undefined;
 }
 
-export function deleteOAuthEntry(vault: CredentialVault, provider: string, accountId?: string): { vault: CredentialVault; deleted: boolean } {
+export function deleteOAuthEntry(
+  vault: CredentialVault,
+  provider: string,
+  accountId?: string,
+): { vault: CredentialVault; deleted: boolean } {
   const key = oauthKey(provider, accountId);
   if (!(key in vault.entries)) return { vault, deleted: false };
   const entries = { ...vault.entries };
@@ -118,15 +125,18 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[])
 export function parseVault(bytes: Buffer, maxBytes = DEFAULT_MAX_VAULT_BYTES): CredentialVault {
   if (bytes.length > maxBytes) throw new Error("Credential vault exceeds byte limit");
   const parsed: unknown = JSON.parse(bytes.toString("utf8"));
-  if (!isObject(parsed) || !hasOnlyKeys(parsed, ["version", "entries"]) || Object.keys(parsed).length !== 2 ||
-      parsed.version !== VAULT_VERSION || !isObject(parsed.entries)) {
+  if (
+    !isObject(parsed) ||
+    !hasOnlyKeys(parsed, ["version", "entries"]) ||
+    Object.keys(parsed).length !== 2 ||
+    parsed.version !== VAULT_VERSION ||
+    !isObject(parsed.entries)
+  ) {
     throw new Error("Invalid credential vault payload");
   }
   for (const [key, value] of Object.entries(parsed.entries)) {
     assertVaultEntry(value);
-    const expected = value.kind === "credential"
-      ? credentialKey(value.name, value.provider)
-      : oauthKey(value.provider, value.accountId);
+    const expected = value.kind === "credential" ? credentialKey(value.name, value.provider) : oauthKey(value.provider, value.accountId);
     if (key !== expected) throw new Error("Invalid credential vault entry key");
   }
   return parsed as unknown as CredentialVault;
@@ -144,29 +154,40 @@ export function serializeVault(vault: CredentialVault, maxBytes = DEFAULT_MAX_VA
 export function assertVaultEntry(entry: unknown): asserts entry is VaultEntry {
   if (!isObject(entry) || typeof entry.kind !== "string") throw new Error("Invalid credential vault entry");
   if (entry.kind === "credential") {
-    if (!hasOnlyKeys(entry, ["kind", "name", "provider", "credential", "updatedAt"]) ||
-        typeof entry.name !== "string" || entry.name.length === 0 ||
-        (entry.provider !== undefined && typeof entry.provider !== "string") ||
-        typeof entry.updatedAt !== "string" || !isObject(entry.credential) ||
-        !hasOnlyKeys(entry.credential, ["type", "value", "metadata"]) ||
-        !["bearer", "api_key", "basic", "custom"].includes(String(entry.credential.type)) ||
-        typeof entry.credential.value !== "string" || entry.credential.value.length === 0 ||
-        (entry.credential.metadata !== undefined && !isObject(entry.credential.metadata))) {
+    if (
+      !hasOnlyKeys(entry, ["kind", "name", "provider", "credential", "updatedAt"]) ||
+      typeof entry.name !== "string" ||
+      entry.name.length === 0 ||
+      (entry.provider !== undefined && typeof entry.provider !== "string") ||
+      typeof entry.updatedAt !== "string" ||
+      !isObject(entry.credential) ||
+      !hasOnlyKeys(entry.credential, ["type", "value", "metadata"]) ||
+      !["bearer", "api_key", "basic", "custom"].includes(String(entry.credential.type)) ||
+      typeof entry.credential.value !== "string" ||
+      entry.credential.value.length === 0 ||
+      (entry.credential.metadata !== undefined && !isObject(entry.credential.metadata))
+    ) {
       throw new Error("Invalid credential vault entry");
     }
     return;
   }
   if (entry.kind === "oauth") {
-    if (!hasOnlyKeys(entry, ["kind", "provider", "accountId", "credentials", "updatedAt"]) ||
-        typeof entry.provider !== "string" || entry.provider.length === 0 ||
-        (entry.accountId !== undefined && typeof entry.accountId !== "string") ||
-        typeof entry.updatedAt !== "string" || !isObject(entry.credentials) ||
-        !hasOnlyKeys(entry.credentials, ["access", "refresh", "expires", "accountId", "metadata"]) ||
-        (entry.credentials.access !== undefined && typeof entry.credentials.access !== "string") ||
-        (entry.credentials.refresh !== undefined && typeof entry.credentials.refresh !== "string") ||
-        (entry.credentials.expires !== undefined && typeof entry.credentials.expires !== "string" && typeof entry.credentials.expires !== "number") ||
-        (entry.credentials.accountId !== undefined && typeof entry.credentials.accountId !== "string") ||
-        (entry.credentials.metadata !== undefined && !isObject(entry.credentials.metadata))) {
+    if (
+      !hasOnlyKeys(entry, ["kind", "provider", "accountId", "credentials", "updatedAt"]) ||
+      typeof entry.provider !== "string" ||
+      entry.provider.length === 0 ||
+      (entry.accountId !== undefined && typeof entry.accountId !== "string") ||
+      typeof entry.updatedAt !== "string" ||
+      !isObject(entry.credentials) ||
+      !hasOnlyKeys(entry.credentials, ["access", "refresh", "expires", "accountId", "metadata"]) ||
+      (entry.credentials.access !== undefined && typeof entry.credentials.access !== "string") ||
+      (entry.credentials.refresh !== undefined && typeof entry.credentials.refresh !== "string") ||
+      (entry.credentials.expires !== undefined &&
+        typeof entry.credentials.expires !== "string" &&
+        typeof entry.credentials.expires !== "number") ||
+      (entry.credentials.accountId !== undefined && typeof entry.credentials.accountId !== "string") ||
+      (entry.credentials.metadata !== undefined && !isObject(entry.credentials.metadata))
+    ) {
       throw new Error("Invalid oauth vault entry");
     }
     return;

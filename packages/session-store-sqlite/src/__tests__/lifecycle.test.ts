@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
-import Database from "better-sqlite3";
 import { PersistenceLifecycleError } from "@arnilo/prism";
+import Database from "better-sqlite3";
 import { createSqlitePersistence } from "../index.js";
 
 const dirs: string[] = [];

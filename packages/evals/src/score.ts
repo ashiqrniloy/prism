@@ -1,21 +1,7 @@
 import type { AgentRunResult, Message } from "@arnilo/prism";
 import { EvalScoreError } from "./errors.js";
-import type {
-  DatasetItem,
-  EvaluationRecord,
-  EvaluationTarget,
-  LiveScoreOptions,
-  ScoreRunOptions,
-  Scorer,
-} from "./types.js";
-import {
-  normalizeSampleRate,
-  randomId,
-  redactEvaluationRecord,
-  shouldSample,
-  toErrorInfo,
-  validateScoreResult,
-} from "./util.js";
+import type { DatasetItem, EvaluationRecord, EvaluationTarget, LiveScoreOptions, ScoreRunOptions, Scorer } from "./types.js";
+import { normalizeSampleRate, randomId, redactEvaluationRecord, shouldSample, toErrorInfo, validateScoreResult } from "./util.js";
 
 async function scoreOne<TInput, TExpected>(
   scorer: Scorer<TInput, TExpected>,
@@ -40,11 +26,7 @@ async function scoreOne<TInput, TExpected>(
   } satisfies Omit<EvaluationRecord, "status" | "score" | "reason" | "error">;
 
   if (!sampled) {
-    return redactEvaluationRecord(
-      { ...base, status: "skipped" },
-      options.redactor,
-      options.secrets,
-    );
+    return redactEvaluationRecord({ ...base, status: "skipped" }, options.redactor, options.secrets);
   }
 
   try {
@@ -93,17 +75,18 @@ export async function scoreRun<TInput = unknown, TExpected = unknown>(
   const sampleRate = normalizeSampleRate(options.sampleRate);
   const sampled = shouldSample(sampleRate, options.random);
   const records: EvaluationRecord[] = [];
-  const trace = sampled && options.traceResolver
-    ? await options.traceResolver({
-        ...options.ownership,
-        sessionId: options.result.sessionId,
-        runId: options.result.runId,
-        limits: options.traceLimits,
-        redactor: options.redactor,
-        secrets: options.secrets,
-        signal: options.signal,
-      })
-    : undefined;
+  const trace =
+    sampled && options.traceResolver
+      ? await options.traceResolver({
+          ...options.ownership,
+          sessionId: options.result.sessionId,
+          runId: options.result.runId,
+          limits: options.traceLimits,
+          redactor: options.redactor,
+          secrets: options.secrets,
+          signal: options.signal,
+        })
+      : undefined;
   const target = trace ? { result: options.result, trace } : { result: options.result };
 
   for (const scorer of options.scorers) {
@@ -136,11 +119,5 @@ export function defaultToAgentInput(input: unknown): string | Message | readonly
 }
 
 function isMessage(value: unknown): value is Message {
-  return Boolean(
-    value
-    && typeof value === "object"
-    && "role" in value
-    && "content" in value
-    && Array.isArray((value as Message).content),
-  );
+  return Boolean(value && typeof value === "object" && "role" in value && "content" in value && Array.isArray((value as Message).content));
 }

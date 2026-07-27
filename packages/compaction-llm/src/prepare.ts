@@ -43,7 +43,8 @@ export function prepareLlmCompaction(
   const turnPrefixEntries = isSplitTurn ? context.entries.slice(turnStartIndex, firstKeptIndex) : [];
   const entriesToKeep = context.entries.slice(firstKeptIndex);
   const summarizedForFiles = [...entriesToSummarize, ...turnPrefixEntries];
-  const fileOperations = options.trackFileOperations === false ? { readFiles: [], modifiedFiles: [] } : collectFileOperations(messages(summarizedForFiles));
+  const fileOperations =
+    options.trackFileOperations === false ? { readFiles: [], modifiedFiles: [] } : collectFileOperations(messages(summarizedForFiles));
   const estimatedTokensBefore = sumTokens(context.entries.slice(startIndex));
   const estimatedTokensAfter = sumTokens(entriesToKeep);
   const data: LlmCompactionEntryData = {
@@ -107,7 +108,7 @@ function isToolResultEntry(entry: SessionEntry | undefined): boolean {
 }
 
 function messages(entries: readonly SessionEntry[]): readonly Message[] {
-  return entries.flatMap((entry) => entry.kind === "message" && entry.message ? [entry.message] : []);
+  return entries.flatMap((entry) => (entry.kind === "message" && entry.message ? [entry.message] : []));
 }
 
 function sumTokens(entries: readonly SessionEntry[]): number {

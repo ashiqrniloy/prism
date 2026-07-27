@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createMemoryCheckpointStore } from "@arnilo/prism";
-import {
-  createMemoryWorkflowCheckpoints,
-  createWorkflowCheckpoints,
-} from "../index.js";
+import { createMemoryWorkflowCheckpoints, createWorkflowCheckpoints } from "../index.js";
 import { runCheckpointAdapterConformance, sampleValue } from "./checkpoint-conformance.js";
 
 describe("createMemoryWorkflowCheckpoints", () => {
@@ -13,24 +10,27 @@ describe("createMemoryWorkflowCheckpoints", () => {
   });
 
   it("adapts the generic core CheckpointStore", async () => {
-    await runCheckpointAdapterConformance("core", () => createWorkflowCheckpoints({
-      store: createMemoryCheckpointStore(),
-    }));
+    await runCheckpointAdapterConformance("core", () =>
+      createWorkflowCheckpoints({
+        store: createMemoryCheckpointStore(),
+      }),
+    );
   });
 
   it("bounds checkpoint payload size", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints({ maxCheckpointBytes: 64 });
     await assert.rejects(
-      () => checkpoints.save({
-        workflowId: "wf",
-        runId: "run1",
-        version: 1,
-        value: sampleValue({
-          nodes: {
-            a: { nodeId: "a", status: "succeeded", output: "x".repeat(200) },
-          },
+      () =>
+        checkpoints.save({
+          workflowId: "wf",
+          runId: "run1",
+          version: 1,
+          value: sampleValue({
+            nodes: {
+              a: { nodeId: "a", status: "succeeded", output: "x".repeat(200) },
+            },
+          }),
         }),
-      }),
       /max bytes/i,
     );
   });

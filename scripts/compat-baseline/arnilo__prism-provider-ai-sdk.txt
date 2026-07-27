@@ -1,0 +1,12 @@
+AI_SDK_STREAM_PART_MAPPINGS	export declare const AI_SDK_STREAM_PART_MAPPINGS:
+AiSdkProviderError	export declare class AiSdkProviderError extends Error
+AiSdkProviderOptions	export type { AiSdkProviderOptions } from "./types.js"
+SUPPORTED_AI_SDK_SPECIFICATION	export declare const SUPPORTED_AI_SDK_SPECIFICATION: "v4"
+SUPPORTED_AI_SDK_VERSION_MATRIX	export declare const SUPPORTED_AI_SDK_VERSION_MATRIX: readonly [
+assertSupportedAiSdkVersion	export declare function assertSupportedAiSdkVersion(version: string): void
+createAiSdkProvider	export declare function createAiSdkProvider(options: AiSdkProviderOptions): AIProvider
+mapAiSdkStream	export declare function mapAiSdkStream(stream: ReadableStream<LanguageModelV4StreamPart>, signal?: AbortSignal, redactor?: SecretRedactor): AsyncIterable<ProviderEvent>
+mapUsage	export declare function mapUsage(usage: LanguageModelV4Usage | undefined): Usage | undefined
+toAiSdkCallOptions	export declare function toAiSdkCallOptions(request: ProviderRequest): LanguageModelV4CallOptions
+toAiSdkPrompt	export declare function toAiSdkPrompt(messages: readonly Message[], model: ModelConfig): LanguageModelV4Prompt
+toAiSdkTool	export declare function toAiSdkTool(tool: ToolDefinition): LanguageModelV4FunctionTool

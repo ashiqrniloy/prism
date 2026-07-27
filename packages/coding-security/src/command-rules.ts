@@ -36,10 +36,7 @@ export function evaluateCommandRules(
   const configured = rules ?? [];
   for (const rule of configured) {
     const pattern = rule.pattern;
-    const matches =
-      typeof pattern === "string"
-        ? command.includes(pattern)
-        : pattern.test(command);
+    const matches = typeof pattern === "string" ? command.includes(pattern) : pattern.test(command);
     if (matches) {
       return { action: rule.action, reason: rule.reason };
     }

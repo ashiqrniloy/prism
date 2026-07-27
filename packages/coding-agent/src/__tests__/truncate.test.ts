@@ -1,13 +1,6 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  formatSize,
-  truncateHead,
-  truncateLine,
-  truncateTail,
-} from "../truncate.js";
+import { test } from "node:test";
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, truncateHead, truncateLine, truncateTail } from "../truncate.js";
 
 test("formatSize: B / KB / MB boundaries", () => {
   assert.equal(formatSize(0), "0B");
@@ -119,7 +112,7 @@ test("truncateLine: under cap unchanged; over cap gets suffix", () => {
   assert.deepEqual(truncateLine("short", 10), { text: "short", wasTruncated: false });
   const out = truncateLine("a".repeat(20), 10);
   assert.equal(out.wasTruncated, true);
-  assert.equal(out.text, "a".repeat(10) + "... [truncated]");
+  assert.equal(out.text, `${"a".repeat(10)}... [truncated]`);
 });
 
 test("truncateLine: default cap is 500", () => {

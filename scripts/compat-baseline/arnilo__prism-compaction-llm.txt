@@ -1,0 +1,32 @@
+CodingCompactionStrategyOptions	export type { CodingCompactionStrategyOptions } from "./coding.js"
+DEFAULT_MAX_SUMMARY_ERROR_BYTES	export declare const DEFAULT_MAX_SUMMARY_ERROR_BYTES = 1024
+DEFAULT_MAX_SUMMARY_TOKENS	export declare const DEFAULT_MAX_SUMMARY_TOKENS = 16384
+DEFAULT_RESERVE_TOKENS	export declare const DEFAULT_RESERVE_TOKENS = 16384
+FileOperationDetails	export type { FileOperationDetails } from "./file-ops.js"
+HARD_MAX_SUMMARY_ERROR_BYTES	export declare const HARD_MAX_SUMMARY_ERROR_BYTES: number
+HARD_MAX_SUMMARY_TOKENS	export declare const HARD_MAX_SUMMARY_TOKENS = 131072
+HARD_RESERVE_TOKENS	export declare const HARD_RESERVE_TOKENS = 131072
+HISTORY_SUMMARIZATION_PROMPT	export declare const HISTORY_SUMMARIZATION_PROMPT = "Summarize the conversation inside <conversation>."
+LlmCompactionEntryData	export type { LlmCompactionEntryData, LlmCompactionPreparation, PrepareLlmCompactionOptions } from "./prepare.js"
+LlmCompactionExtensionOptions	export type { LlmCompactionExtensionOptions } from "./extension.js"
+LlmCompactionPreparation	export type { LlmCompactionEntryData, LlmCompactionPreparation, PrepareLlmCompactionOptions } from "./prepare.js"
+LlmCompactionStrategyOptions	export type { LlmCompactionStrategyOptions } from "./strategy.js"
+PrepareLlmCompactionOptions	export type { LlmCompactionEntryData, LlmCompactionPreparation, PrepareLlmCompactionOptions } from "./prepare.js"
+SUMMARIZATION_SYSTEM_PROMPT	export declare const SUMMARIZATION_SYSTEM_PROMPT = "You summarize Prism agent history for future context.\nWrite concise structured markdown with these sections:\n## Goal\n## Constraints & Preferences\n## Progress\n### Done\n### In Progress\n### Blocked\n## Key Decisions\n## Next Steps\n## Critical Context\nPreserve exact file paths, commands, errors, IDs, decisions, and user constraints. Do not continue the conversation."
+SerializeCompactionConversationOptions	export type { SerializeCompactionConversationOptions } from "./serialize.js"
+TURN_PREFIX_SYSTEM_PROMPT	export declare const TURN_PREFIX_SYSTEM_PROMPT = "You summarize the early part of one oversized current turn.\nWrite concise structured markdown with these sections:\n## Original Request\n## Early Progress\n## Context for Suffix\nPreserve exact file paths, commands, errors, IDs, decisions, and constraints. Do not continue the conversation."
+UPDATE_SUMMARIZATION_PROMPT	export declare const UPDATE_SUMMARIZATION_PROMPT = "Update <previous-summary> using only the new conversation inside <conversation>."
+collectFileOperations	export declare function collectFileOperations(messages: readonly Message[]): FileOperationDetails
+createCodingCompactionStrategy	export declare function createCodingCompactionStrategy(options: CodingCompactionStrategyOptions): CompactionStrategy
+createLlmCompactionExtension	export declare function createLlmCompactionExtension(options: LlmCompactionExtensionOptions): Extension
+createLlmCompactionStrategy	export declare function createLlmCompactionStrategy(options: LlmCompactionStrategyOptions): CompactionStrategy
+estimateEntryTokens	export declare function estimateEntryTokens(entry: SessionEntry): number
+estimateMessageTokens	export declare function estimateMessageTokens(message: Message): number
+estimateTextTokens	export declare function estimateTextTokens(text: string): number
+findLlmCompactionCutPoint	export declare function findLlmCompactionCutPoint(entries: readonly SessionEntry[], options?:
+formatFileOperations	export declare function formatFileOperations(details: FileOperationDetails): string
+packageName	export declare const packageName = "@arnilo/prism-compaction-llm"
+prepareLlmCompaction	export declare function prepareLlmCompaction(context: Pick<CompactionContext, "entries" | "trigger">, options?: PrepareLlmCompactionOptions): LlmCompactionPreparation
+serializeCompactionConversation	export declare function serializeCompactionConversation(entries: readonly SessionEntry[], options?: SerializeCompactionConversationOptions): string
+truncateUtf8	export declare function truncateUtf8(text: string, maxBytes: number): string
+validateCompactionLimit	export declare function validateCompactionLimit(name: string, value: number, hardCap: number): number

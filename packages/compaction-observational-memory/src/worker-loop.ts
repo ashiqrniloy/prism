@@ -1,6 +1,15 @@
-import type { AIProvider, JsonObject, Message, ModelConfig, ProviderRequestOptions, ToolCallContent, ToolDefinition, ToolResult } from "@arnilo/prism";
+import type {
+  AIProvider,
+  JsonObject,
+  Message,
+  ModelConfig,
+  ProviderRequestOptions,
+  ToolCallContent,
+  ToolDefinition,
+  ToolResult,
+} from "@arnilo/prism";
 import { applyThinkingLevel, redactSecrets, thinkingFamilyForModel } from "@arnilo/prism";
-import { measureWorkerJson, resolveMemoryWorkerLimits, truncateWorkerText, type MemoryWorkerLimitOptions } from "./limits.js";
+import { type MemoryWorkerLimitOptions, measureWorkerJson, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
 
 export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
   readonly provider: AIProvider;
@@ -58,11 +67,16 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
         throwIfAborted(options.signal);
         if (event.type === "error") throw new Error(safeWorkerError(event.error, secrets, limits.maxErrorBytes));
         if (event.type !== "tool_call") continue;
-        if (calls.length >= limits.maxToolCallsPerTurn) throw new Error(`Observational memory worker exceeds ${limits.maxToolCallsPerTurn} tool calls per turn`);
+        if (calls.length >= limits.maxToolCallsPerTurn)
+          throw new Error(`Observational memory worker exceeds ${limits.maxToolCallsPerTurn} tool calls per turn`);
         totalCalls += 1;
-        if (totalCalls > limits.maxToolCalls) throw new Error(`Observational memory worker exceeds ${limits.maxToolCalls} total tool calls`);
+        if (totalCalls > limits.maxToolCalls)
+          throw new Error(`Observational memory worker exceeds ${limits.maxToolCalls} total tool calls`);
         const tool = tools.get(event.call.name);
-        if (!tool) throw new Error(`Unknown observational memory tool: ${truncateWorkerText(redactSecrets(event.call.name, secrets), limits.maxErrorBytes)}`);
+        if (!tool)
+          throw new Error(
+            `Unknown observational memory tool: ${truncateWorkerText(redactSecrets(event.call.name, secrets), limits.maxErrorBytes)}`,
+          );
         measureWorkerJson(event.call, limits.maxMessageBytes, "Observational memory tool call");
         measureWorkerJson(event.call.arguments, limits.maxArgumentBytes, "Observational memory tool arguments");
         const safe = redactSecrets(event.call, secrets);
@@ -82,7 +96,12 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
       const tool = tools.get(call.raw.name)!;
       let result: ToolResult;
       try {
-        result = await tool.execute(call.raw.arguments as JsonObject, { sessionId: "observational-memory", runId: "observational-memory", toolCallId: call.raw.id, signal: options.signal });
+        result = await tool.execute(call.raw.arguments as JsonObject, {
+          sessionId: "observational-memory",
+          runId: "observational-memory",
+          toolCallId: call.raw.id,
+          signal: options.signal,
+        });
       } catch (error) {
         throwIfAborted(options.signal);
         throw new Error(safeWorkerError(error, secrets, limits.maxErrorBytes));
@@ -98,7 +117,10 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
 }
 
 function toolResultMessage(call: ToolCallContent, payload: { readonly result?: unknown; readonly error?: ToolResult["error"] }): Message {
-  return { role: "tool", content: [{ type: "tool_result", toolCallId: call.id, name: call.name, result: payload.result, error: payload.error }] };
+  return {
+    role: "tool",
+    content: [{ type: "tool_result", toolCallId: call.id, name: call.name, result: payload.result, error: payload.error }],
+  };
 }
 
 function safeWorkerError(error: unknown, secrets: readonly (string | undefined)[], maxBytes: number): string {

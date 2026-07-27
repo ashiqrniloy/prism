@@ -1,8 +1,8 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createContributionRegistry, createAgent, resolveInstructionInjectors } from "../index.js";
-import { createMockProvider } from "../mock-provider.js";
+import { describe, it } from "node:test";
 import type { ContributionRegistry, InstructionInjector } from "../index.js";
+import { createAgent, createContributionRegistry, resolveInstructionInjectors } from "../index.js";
+import { createMockProvider } from "../mock-provider.js";
 
 const jsonInjector: InstructionInjector = {
   name: "json",
@@ -33,10 +33,7 @@ describe("resolveInstructionInjectors", () => {
 
   it("throws Unknown instruction injector for a missing name", () => {
     const registry = createContributionRegistry<InstructionInjector>({ label: "instruction injector" });
-    assert.throws(
-      () => resolveInstructionInjectors({ registry, names: ["missing"] }),
-      /Unknown instruction injector: missing/,
-    );
+    assert.throws(() => resolveInstructionInjectors({ registry, names: ["missing"] }), /Unknown instruction injector: missing/);
   });
 
   it("returns empty when neither configured nor a names+registry pair is supplied", () => {

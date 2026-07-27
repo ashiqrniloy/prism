@@ -1,5 +1,5 @@
-import { resolveContextProviders } from "@arnilo/prism";
 import type { ContextProvider, Message } from "@arnilo/prism";
+import { resolveContextProviders } from "@arnilo/prism";
 
 // Ordered context provider pipeline: each provider contributes context blocks
 // resolved in order. Host-owned — providers cannot grant tools or permissions.

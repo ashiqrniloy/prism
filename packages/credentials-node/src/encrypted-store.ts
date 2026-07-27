@@ -1,15 +1,10 @@
-import type { Credential, CredentialRequest, OAuthCredentials } from "@arnilo/prism";
-import type { CredentialRecord } from "@arnilo/prism";
-import type {
-  EncryptedCredentialStoreOptions,
-  EncryptedEnvelope,
-  RotateEncryptedCredentialStoreOptions,
-} from "./types.js";
-import { DEFAULT_FILE_MODE } from "./types.js";
-import { CredentialDecryptError, CredentialStoreError, WeakKdfParametersError } from "./errors.js";
+import type { Credential, CredentialRecord, CredentialRequest, OAuthCredentials } from "@arnilo/prism";
 import { decryptBytes, encryptBytes, parseEncryptedEnvelope, resolveScryptParameters } from "./envelope.js";
-import { atomicWriteFile, assertCredentialFileMode, readFileIfExists } from "./file-io.js";
-import { resolveEncryptedCredentialStoreLimits, type ResolvedEncryptedCredentialStoreLimits } from "./limits.js";
+import { CredentialDecryptError, CredentialStoreError, WeakKdfParametersError } from "./errors.js";
+import { assertCredentialFileMode, atomicWriteFile, readFileIfExists } from "./file-io.js";
+import { type ResolvedEncryptedCredentialStoreLimits, resolveEncryptedCredentialStoreLimits } from "./limits.js";
+import type { EncryptedCredentialStoreOptions, EncryptedEnvelope, RotateEncryptedCredentialStoreOptions } from "./types.js";
+import { DEFAULT_FILE_MODE } from "./types.js";
 import {
   createEmptyVault,
   deleteCredentialEntry,
@@ -33,7 +28,9 @@ export interface StoredCredentialStore {
   getOAuth(provider: string, accountId?: string): OAuthCredentials | undefined | Promise<OAuthCredentials | undefined>;
   deleteOAuth(provider: string, accountId?: string): boolean | Promise<boolean>;
   list(): CredentialRecord[] | Promise<CredentialRecord[]>;
-  listOAuth(): Array<{ provider: string; accountId?: string; credentials: OAuthCredentials }> | Promise<Array<{ provider: string; accountId?: string; credentials: OAuthCredentials }>>;
+  listOAuth():
+    | Array<{ provider: string; accountId?: string; credentials: OAuthCredentials }>
+    | Promise<Array<{ provider: string; accountId?: string; credentials: OAuthCredentials }>>;
 }
 
 export interface EncryptedCredentialStore extends StoredCredentialStore {
@@ -63,12 +60,7 @@ function readEnvelope(path: string, limits: ResolvedEncryptedCredentialStoreLimi
   }
 }
 
-function writeEnvelope(
-  path: string,
-  envelope: EncryptedEnvelope,
-  fileMode: number,
-  maxFileBytes: number,
-): void {
+function writeEnvelope(path: string, envelope: EncryptedEnvelope, fileMode: number, maxFileBytes: number): void {
   const bytes = Buffer.from(JSON.stringify(envelope), "utf8");
   if (bytes.length > maxFileBytes) throw new RangeError(`Credential envelope exceeds ${maxFileBytes} byte limit`);
   atomicWriteFile(path, bytes, fileMode);
@@ -158,9 +150,7 @@ export async function openEncryptedCredentialStore(options: EncryptedCredentialS
   return store;
 }
 
-export async function rotateEncryptedCredentialStorePassphrase(
-  options: RotateEncryptedCredentialStoreOptions,
-): Promise<void> {
+export async function rotateEncryptedCredentialStorePassphrase(options: RotateEncryptedCredentialStoreOptions): Promise<void> {
   const fileMode = options.fileMode ?? DEFAULT_FILE_MODE;
   assertCredentialFileMode(fileMode);
   const limits = resolveEncryptedCredentialStoreLimits(options.limits);

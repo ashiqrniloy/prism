@@ -1,0 +1,15 @@
+DEFAULT_OLLAMA_BASE_URL	export declare const DEFAULT_OLLAMA_BASE_URL: string
+createOllamaProvider	export declare function createOllamaProvider(options?: OllamaProviderOptions): AIProvider
+createOllamaProviderPackage	export declare function createOllamaProviderPackage(options?: OllamaProviderPackageOptions): ProviderPackage
+defineOllamaModel	export declare function defineOllamaModel(config: OllamaModelConfig): ModelConfig
+listOllamaModels	export declare function listOllamaModels(options?: ListOllamaModelsOptions): Promise<ModelConfig[]>
+mapOllamaModel	export declare function mapOllamaModel(entry: OllamaModelEntry): ModelConfig
+ollamaBaseUrl	export declare function ollamaBaseUrl(options?:
+ollamaBody	export declare function ollamaBody(request: ProviderRequest): JsonObject
+ollamaEvents	export declare function ollamaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+ollamaReasoningEffort	export declare function ollamaReasoningEffort(request: ProviderRequest): string | undefined
+type ListOllamaModelsOptions	export { DEFAULT_OLLAMA_BASE_URL, defineOllamaModel, type ListOllamaModelsOptions, listOllamaModels, mapOllamaModel, type OllamaBasePreset, type OllamaModelConfig, type OllamaModelEntry, ollamaBaseUrl, } from "./models.js"
+type OllamaBasePreset	export { DEFAULT_OLLAMA_BASE_URL, defineOllamaModel, type ListOllamaModelsOptions, listOllamaModels, mapOllamaModel, type OllamaBasePreset, type OllamaModelConfig, type OllamaModelEntry, ollamaBaseUrl, } from "./models.js"
+type OllamaModelConfig	export { DEFAULT_OLLAMA_BASE_URL, defineOllamaModel, type ListOllamaModelsOptions, listOllamaModels, mapOllamaModel, type OllamaBasePreset, type OllamaModelConfig, type OllamaModelEntry, ollamaBaseUrl, } from "./models.js"
+type OllamaModelEntry	export { DEFAULT_OLLAMA_BASE_URL, defineOllamaModel, type ListOllamaModelsOptions, listOllamaModels, mapOllamaModel, type OllamaBasePreset, type OllamaModelConfig, type OllamaModelEntry, ollamaBaseUrl, } from "./models.js"
+type OllamaProviderOptions	export { createOllamaProvider, type OllamaProviderOptions, ollamaBody, ollamaEvents, ollamaReasoningEffort, } from "./provider.js"

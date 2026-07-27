@@ -1,10 +1,4 @@
-import {
-  redactSecrets,
-  resolveCredentialValue,
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** Official Claude API Messages base. */
@@ -109,10 +103,7 @@ export async function listAnthropicModels(options: ListAnthropicModelsOptions = 
  * Map a sparse official `/models` entry to Prism `ModelConfig`.
  * Capabilities/limits are heuristic when the payload omits them.
  */
-export function mapAnthropicModel(
-  entry: AnthropicModelEntry,
-  options: { readonly provider?: string } = {},
-): ModelConfig {
+export function mapAnthropicModel(entry: AnthropicModelEntry, options: { readonly provider?: string } = {}): ModelConfig {
   if (!entry || typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error("Anthropic model entry missing id");
   }
@@ -188,13 +179,7 @@ function thinkingDefaultsForModel(modelId: string): JsonObject {
   if (id.includes("haiku-4-5") || id.includes("haiku-4.5")) {
     return { thinking: { type: "enabled", budget_tokens: 10_000 } };
   }
-  if (
-    id.includes("opus-4-8")
-    || id.includes("opus-4-7")
-    || id.includes("sonnet-5")
-    || id.includes("fable-5")
-    || id.includes("mythos")
-  ) {
+  if (id.includes("opus-4-8") || id.includes("opus-4-7") || id.includes("sonnet-5") || id.includes("fable-5") || id.includes("mythos")) {
     return { thinking: { type: "adaptive" }, effort: "high" };
   }
   return {};
@@ -202,7 +187,7 @@ function thinkingDefaultsForModel(modelId: string): JsonObject {
 
 function cleanLimits(value: Record<string, unknown>): ModelConfig["limits"] | undefined {
   const entries = Object.entries(value).filter(([, item]) => typeof item === "number");
-  return entries.length > 0 ? Object.fromEntries(entries) as ModelConfig["limits"] : undefined;
+  return entries.length > 0 ? (Object.fromEntries(entries) as ModelConfig["limits"]) : undefined;
 }
 
 function cleanJson(value: Record<string, unknown>): JsonObject {

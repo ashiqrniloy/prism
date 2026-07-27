@@ -1,0 +1,43 @@
+A2AError	export declare class A2AError extends SupervisorError
+A2A_DEFAULT_LIMITS	export declare const A2A_DEFAULT_LIMITS:
+A2A_HARD_LIMITS	export declare const A2A_HARD_LIMITS:
+A2A_PROTOCOL_VERSION	export declare const A2A_PROTOCOL_VERSION = "1.0"
+DEFAULT_DELEGATION_TIMEOUT_MS	export declare const DEFAULT_DELEGATION_TIMEOUT_MS = 60000
+DEFAULT_MAX_ACTIVE_CHILDREN	export declare const DEFAULT_MAX_ACTIVE_CHILDREN = 4
+DEFAULT_MAX_DELEGATION_BYTES	export declare const DEFAULT_MAX_DELEGATION_BYTES: number
+DEFAULT_MAX_DELEGATION_DEPTH	export declare const DEFAULT_MAX_DELEGATION_DEPTH = 4
+DEFAULT_MAX_DELEGATION_STEPS	export declare const DEFAULT_MAX_DELEGATION_STEPS = 8
+DEFAULT_MAX_DELEGATION_TOKENS	export declare const DEFAULT_MAX_DELEGATION_TOKENS = 20000
+DEFAULT_MAX_DELEGATION_TOOL_CALLS	export declare const DEFAULT_MAX_DELEGATION_TOOL_CALLS = 32
+DEFAULT_MAX_SUPERVISOR_QUEUED_EVENTS	export declare const DEFAULT_MAX_SUPERVISOR_QUEUED_EVENTS = 128
+HARD_DELEGATION_TIMEOUT_MS	export declare const HARD_DELEGATION_TIMEOUT_MS: number
+HARD_MAX_ACTIVE_CHILDREN	export declare const HARD_MAX_ACTIVE_CHILDREN = 32
+HARD_MAX_DELEGATION_BYTES	export declare const HARD_MAX_DELEGATION_BYTES: number
+HARD_MAX_DELEGATION_DEPTH	export declare const HARD_MAX_DELEGATION_DEPTH = 16
+HARD_MAX_DELEGATION_STEPS	export declare const HARD_MAX_DELEGATION_STEPS = 64
+HARD_MAX_DELEGATION_TOKENS	export declare const HARD_MAX_DELEGATION_TOKENS = 1000000
+HARD_MAX_DELEGATION_TOOL_CALLS	export declare const HARD_MAX_DELEGATION_TOOL_CALLS = 256
+HARD_MAX_SUPERVISOR_QUEUED_EVENTS	export declare const HARD_MAX_SUPERVISOR_QUEUED_EVENTS = 4096
+SupervisorDeniedError	export declare class SupervisorDeniedError extends SupervisorError
+SupervisorError	export declare class SupervisorError extends Error
+SupervisorLimitError	export declare class SupervisorLimitError extends SupervisorError
+SupervisorValidationError	export declare class SupervisorValidationError extends SupervisorError
+bounded	export declare function bounded<T>(value: T, maxBytes: number, label: string): T
+canonicalizeA2AAgentCard	export declare function canonicalizeA2AAgentCard(card: A2AAgentCard): string
+createA2AAgentCard	export declare function createA2AAgentCard(card: A2AAgentCard): A2AAgentCard
+createA2AClient	export declare function createA2AClient(options: A2AClientOptions): A2AClient
+createA2AHandler	export declare function createA2AHandler(options: CreateA2AHandlerOptions): (request: Request) => Promise<Response>
+createSupervisor	export declare function createSupervisor(options: CreateSupervisorOptions): Supervisor
+deliverA2APushEvent	export declare function deliverA2APushEvent(delivery: A2APushDelivery, config: A2APushConfig, event: A2ATaskEvent, options?: DeliverA2APushEventOptions): Promise<
+narrowSupervisorLimits	export declare function narrowSupervisorLimits(parent: ResolvedSupervisorLimits, input?: SupervisorLimits): ResolvedSupervisorLimits
+optionalCursor	export declare function optionalCursor(value: unknown, limits: ResolvedA2ALimits): string | undefined
+packageName	export declare const packageName = "@arnilo/prism-supervisor"
+parseA2AMessage	export declare function parseA2AMessage(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2AMessage>
+parseA2APart	export declare function parseA2APart(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2APart>
+record	export declare function record(value: unknown): value is Record<string, unknown>
+requireId	export declare function requireId(value: unknown, limits: ResolvedA2ALimits, label?: string): string
+resolveA2ALimits	export declare function resolveA2ALimits(input?: A2ALimits): ResolvedA2ALimits
+resolveSupervisorLimits	export declare function resolveSupervisorLimits(input?: SupervisorLimits): ResolvedSupervisorLimits
+signA2AAgentCard	export declare function signA2AAgentCard(card: A2AAgentCard, options: SignA2AAgentCardOptions): Promise<A2AAgentCard>
+validateA2ATask	export declare function validateA2ATask(task: A2ATask, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2ATask>
+verifyA2AAgentCard	export declare function verifyA2AAgentCard(card: A2AAgentCard, options: VerifyA2AAgentCardOptions): Promise<void>

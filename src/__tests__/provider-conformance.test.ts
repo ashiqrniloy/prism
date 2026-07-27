@@ -2,9 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { createMockProvider, providerDone, providerTextDelta, providerToolCallDelta, providerUsage } from "../index.js";
-import { assertAbortIsObserved, assertNoSecretLeak, assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct, assertUsageAccounting, collectProviderEvents } from "../testing/provider-conformance.js";
+import {
+  assertAbortIsObserved,
+  assertNoSecretLeak,
+  assertProviderOwnedHeadersWin,
+  assertProviderStreamConforms,
+  assertSerializedRequestCoversContent,
+  assertToolCallDeltasReconstruct,
+  assertUsageAccounting,
+  collectProviderEvents,
+} from "../testing/provider-conformance.js";
 
-const request = { model: { provider: "mock", model: "demo" }, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] } as const;
+const request = {
+  model: { provider: "mock", model: "demo" },
+  messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+} as const;
 
 void describe("provider conformance", () => {
   it("conformance_collects_events_in_order", async () => {
@@ -21,32 +33,40 @@ void describe("provider conformance", () => {
   });
 
   it("conformance_reconstructs_tool_call_deltas", () => {
-    const calls = assertToolCallDeltasReconstruct([
-      providerToolCallDelta({ index: 0, id: "call_1", name: "lookup", argumentsText: "{\"a\":" }),
-      providerToolCallDelta({ index: 0, argumentsText: "1}" }),
-      providerDone(),
-    ], [{ index: 0, id: "call_1", name: "lookup", arguments: { a: 1 } }]);
+    const calls = assertToolCallDeltasReconstruct(
+      [
+        providerToolCallDelta({ index: 0, id: "call_1", name: "lookup", argumentsText: '{"a":' }),
+        providerToolCallDelta({ index: 0, argumentsText: "1}" }),
+        providerDone(),
+      ],
+      [{ index: 0, id: "call_1", name: "lookup", arguments: { a: 1 } }],
+    );
 
     assert.deepEqual(calls[0]?.arguments, { a: 1 });
   });
 
   it("conformance_marks_malformed_tool_call_delta_arguments_without_throwing", () => {
-    const calls = assertToolCallDeltasReconstruct([
-      providerToolCallDelta({ index: 0, id: "call_1", name: "lookup", argumentsText: "not-json" }),
-      providerDone(),
-    ], [{ index: 0, id: "call_1", name: "lookup", arguments: {} }]);
+    const calls = assertToolCallDeltasReconstruct(
+      [providerToolCallDelta({ index: 0, id: "call_1", name: "lookup", argumentsText: "not-json" }), providerDone()],
+      [{ index: 0, id: "call_1", name: "lookup", arguments: {} }],
+    );
     assert.equal(calls[0]?.argumentsError?.code, "invalid_json_arguments");
   });
 
   it("conformance_rejects_incomplete_tool_call_deltas", () => {
-    assert.throws(() => assertToolCallDeltasReconstruct([
-      providerToolCallDelta({ index: 0, argumentsText: "{\"a\":1}" }),
-    ], []), /incomplete_delta|Incomplete tool call/);
+    assert.throws(
+      () => assertToolCallDeltasReconstruct([providerToolCallDelta({ index: 0, argumentsText: '{"a":1}' })], []),
+      /incomplete_delta|Incomplete tool call/,
+    );
   });
 
   it("conformance_checks_cache_usage_fields", async () => {
     const events = await assertProviderStreamConforms({
-      provider: createMockProvider([providerTextDelta("Hi"), providerUsage({ inputTokens: 3, cacheReadTokens: 2, cacheWriteTokens: 1 }), providerDone()]),
+      provider: createMockProvider([
+        providerTextDelta("Hi"),
+        providerUsage({ inputTokens: 3, cacheReadTokens: 2, cacheWriteTokens: 1 }),
+        providerDone(),
+      ]),
       request,
       expect: { text: "Hi", usage: { cacheReadTokens: 2, cacheWriteTokens: 1 } },
     });
@@ -87,7 +107,10 @@ void describe("provider conformance", () => {
               { type: "tool_result", tool_call_id: "call_1", name: "lookup", content: JSON.stringify({ id: "42" }) },
             ],
           },
-          { role: "assistant", tool_calls: [{ id: "call_2", type: "function", function: { name: "sum", arguments: JSON.stringify({ a: 1, b: 2 }) } }] },
+          {
+            role: "assistant",
+            tool_calls: [{ id: "call_2", type: "function", function: { name: "sum", arguments: JSON.stringify({ a: 1, b: 2 }) } }],
+          },
         ],
       },
     );
@@ -99,7 +122,15 @@ void describe("provider conformance", () => {
         assertSerializedRequestCoversContent(
           {
             model: { provider: "mock", model: "demo" },
-            messages: [{ role: "user", content: [{ type: "text", text: "hi" }, { type: "image", url: "https://example.invalid/img.png" }] }],
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: "hi" },
+                  { type: "image", url: "https://example.invalid/img.png" },
+                ],
+              },
+            ],
           },
           { messages: [{ role: "user", content: "hi" }] },
         ),
@@ -111,7 +142,15 @@ void describe("provider conformance", () => {
     assertSerializedRequestCoversContent(
       {
         model: { provider: "mock", model: "demo" },
-        messages: [{ role: "user", content: [{ type: "text", text: "hi" }, { type: "image", url: "https://example.invalid/img.png" }] }],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "hi" },
+              { type: "image", url: "https://example.invalid/img.png" },
+            ],
+          },
+        ],
       },
       { messages: [{ role: "user", content: "hi" }] },
       { unsupported: ["image"] },
@@ -119,10 +158,7 @@ void describe("provider conformance", () => {
   });
 
   it("conformance_no_secret_leak_fails_on_known_secret", () => {
-    assert.throws(
-      () => assertNoSecretLeak([providerTextDelta("error: sk-fake-123")], ["sk-fake-123"]),
-      /Secret leaked/,
-    );
+    assert.throws(() => assertNoSecretLeak([providerTextDelta("error: sk-fake-123")], ["sk-fake-123"]), /Secret leaked/);
   });
 
   it("conformance_owned_headers_win_passes_when_provider_keeps_owned_and_preserves_caller", () => {
@@ -140,10 +176,11 @@ void describe("provider conformance", () => {
   it("conformance_owned_headers_win_fails_when_caller_overrides_owned", () => {
     const captured = new Headers({ authorization: "Bearer attacker" });
     assert.throws(
-      () => assertProviderOwnedHeadersWin(captured, {
-        owned: { authorization: "Bearer provider-key" },
-        caller: { authorization: "Bearer attacker" },
-      }),
+      () =>
+        assertProviderOwnedHeadersWin(captured, {
+          owned: { authorization: "Bearer provider-key" },
+          caller: { authorization: "Bearer attacker" },
+        }),
       /overrode provider-owned/,
     );
   });
@@ -151,10 +188,11 @@ void describe("provider conformance", () => {
   it("conformance_owned_headers_win_fails_when_non_owned_caller_header_is_dropped", () => {
     const captured = new Headers({ authorization: "Bearer provider-key" });
     assert.throws(
-      () => assertProviderOwnedHeadersWin(captured, {
-        owned: { authorization: "Bearer provider-key" },
-        caller: { "x-caller": "kept" },
-      }),
+      () =>
+        assertProviderOwnedHeadersWin(captured, {
+          owned: { authorization: "Bearer provider-key" },
+          caller: { "x-caller": "kept" },
+        }),
       /dropped non-owned caller header/,
     );
   });

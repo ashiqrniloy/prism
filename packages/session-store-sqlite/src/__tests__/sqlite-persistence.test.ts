@@ -1,19 +1,16 @@
+import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
-import Database from "better-sqlite3";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it, afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { afterEach, describe, it } from "node:test";
 import { createSecretRedactor } from "@arnilo/prism";
-import {
-  assertPersistenceQueryPaginationConforms,
-  assertTenantScopedQueryIsolation,
-} from "@arnilo/prism/testing/persistence-schema";
 import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
+import { assertPersistenceQueryPaginationConforms, assertTenantScopedQueryIsolation } from "@arnilo/prism/testing/persistence-schema";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
-import { createSqlitePersistence } from "../persistence.js";
+import Database from "better-sqlite3";
 import { applySqliteMigrations } from "../migrations.js";
+import { createSqlitePersistence } from "../persistence.js";
 
 const tempDirs: string[] = [];
 
@@ -32,15 +29,12 @@ function tempDbPath(name: string): string {
 describe("createSqlitePersistence", () => {
   it("passes full session-store conformance with reopen and branch reads", async () => {
     const filename = tempDbPath("session");
-    await runSessionStoreConformance(
-      () => createSqlitePersistence({ filename }),
-      {
-        exerciseReadBranchPath: true,
-        exerciseConcurrentParentAppend: true,
-        exerciseReopen: true,
-        exerciseSearchSessions: true,
-      },
-    );
+    await runSessionStoreConformance(() => createSqlitePersistence({ filename }), {
+      exerciseReadBranchPath: true,
+      exerciseConcurrentParentAppend: true,
+      exerciseReopen: true,
+      exerciseSearchSessions: true,
+    });
   });
 
   it("passes run-ledger conformance with reopen and tenant isolation", async () => {
@@ -71,16 +65,40 @@ describe("createSqlitePersistence", () => {
       userId: "feedback-user",
     });
     await runFeedbackConformance(() => persistence.feedback);
-    persistence.appendRun({ id: "feedback-run-account", sessionId: "feedback-session", startedAt: "2026-01-01T00:00:00Z", tenantId: "feedback-tenant", accountId: "other-account", userId: "feedback-user" });
-    await persistence.feedback.append({ id: "account-feedback", runId: "feedback-run-account", rating: 1, tenantId: "feedback-tenant", accountId: "other-account", userId: "feedback-user" });
+    persistence.appendRun({
+      id: "feedback-run-account",
+      sessionId: "feedback-session",
+      startedAt: "2026-01-01T00:00:00Z",
+      tenantId: "feedback-tenant",
+      accountId: "other-account",
+      userId: "feedback-user",
+    });
+    await persistence.feedback.append({
+      id: "account-feedback",
+      runId: "feedback-run-account",
+      rating: 1,
+      tenantId: "feedback-tenant",
+      accountId: "other-account",
+      userId: "feedback-user",
+    });
     persistence.close();
     const reopened = createSqlitePersistence({ filename, feedbackRedactor: createSecretRedactor(["feedback-canary"]) });
-    await reopened.feedback.append({ id: "redacted", runId: "feedback-run-a", comment: "feedback-canary", tags: ["feedback-canary"], tenantId: "feedback-tenant", userId: "feedback-user" });
+    await reopened.feedback.append({
+      id: "redacted",
+      runId: "feedback-run-a",
+      comment: "feedback-canary",
+      tags: ["feedback-canary"],
+      tenantId: "feedback-tenant",
+      userId: "feedback-user",
+    });
     const stored = await reopened.feedback.query({ tenantId: "feedback-tenant", userId: "feedback-user" });
     assert.equal(stored.items.length, 2);
     assert.doesNotMatch(JSON.stringify(stored), /feedback-canary/);
     assert.equal((await reopened.feedback.query({ tenantId: "feedback-tenant", userId: "other" })).items.length, 0);
-    await assert.rejects(reopened.feedback.append({ id: "missing", runId: "missing", rating: 1, tenantId: "feedback-tenant", userId: "feedback-user" }), /Run not found/);
+    await assert.rejects(
+      reopened.feedback.append({ id: "missing", runId: "missing", rating: 1, tenantId: "feedback-tenant", userId: "feedback-user" }),
+      /Run not found/,
+    );
     reopened.close();
   });
 
@@ -94,8 +112,14 @@ describe("createSqlitePersistence", () => {
     } as const;
     await persistence.appendUsage({ ...base, id: "turn", scope: "provider_turn", turn: 1, attempt: 1 });
     await persistence.appendUsage({ ...base, id: "total", scope: "run_total" });
-    assert.deepEqual((await persistence.queryUsage({ scope: "provider_turn" })).items.map((row) => row.id), ["turn"]);
-    assert.deepEqual((await persistence.queryUsage({ scope: "run_total" })).items.map((row) => row.id), ["total"]);
+    assert.deepEqual(
+      (await persistence.queryUsage({ scope: "provider_turn" })).items.map((row) => row.id),
+      ["turn"],
+    );
+    assert.deepEqual(
+      (await persistence.queryUsage({ scope: "run_total" })).items.map((row) => row.id),
+      ["total"],
+    );
     persistence.close();
   });
 
@@ -103,7 +127,13 @@ describe("createSqlitePersistence", () => {
     const filename = tempDbPath("migrate");
     const first = createSqlitePersistence({ filename });
     const firstMigrations = await first.queryMigrations({});
-    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), ["001_init", "002_usage_scope", "003_run_feedback", "004_session_search", "005_lifecycle_hold_quota"]);
+    assert.deepEqual(firstMigrations.items.map((row) => row.name).sort(), [
+      "001_init",
+      "002_usage_scope",
+      "003_run_feedback",
+      "004_session_search",
+      "005_lifecycle_hold_quota",
+    ]);
     first.close();
 
     const reopened = createSqlitePersistence({ filename });
@@ -121,7 +151,10 @@ describe("createSqlitePersistence", () => {
     applySqliteMigrations(db);
     db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
     const persistence = createSqlitePersistence({ filename, database: db });
-    assert.equal((await persistence.queryMigrations({})).items.every((row) => typeof row.checksum === "string" && row.checksum.length === 64), true);
+    assert.equal(
+      (await persistence.queryMigrations({})).items.every((row) => typeof row.checksum === "string" && row.checksum.length === 64),
+      true,
+    );
     db.close();
   });
 
@@ -209,17 +242,32 @@ describe("createSqlitePersistence", () => {
     first.close();
 
     const reopened = createSqlitePersistence({ filename });
-    assert.deepEqual(
-      (await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.value,
-      { status: "running" },
-    );
+    assert.deepEqual((await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.value, {
+      status: "running",
+    });
     await assert.rejects(
       reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-b" }),
       /ownership mismatch/,
     );
-    await reopened.checkpoints.saveCheckpoint({ namespace: "workflow", key: "wf/run", version: 2, expectedVersion: 1, fencingToken: 2, value: { status: "claimed" }, tenantId: "tenant-a" });
+    await reopened.checkpoints.saveCheckpoint({
+      namespace: "workflow",
+      key: "wf/run",
+      version: 2,
+      expectedVersion: 1,
+      fencingToken: 2,
+      value: { status: "claimed" },
+      tenantId: "tenant-a",
+    });
     await assert.rejects(
-      reopened.checkpoints.saveCheckpoint({ namespace: "workflow", key: "wf/run", version: 3, expectedVersion: 2, fencingToken: 1, value: null, tenantId: "tenant-a" }),
+      reopened.checkpoints.saveCheckpoint({
+        namespace: "workflow",
+        key: "wf/run",
+        version: 3,
+        expectedVersion: 2,
+        fencingToken: 1,
+        value: null,
+        tenantId: "tenant-a",
+      }),
       /fencing token/,
     );
     reopened.close();
@@ -229,14 +277,38 @@ describe("createSqlitePersistence", () => {
     const filename = tempDbPath("leases");
     const first = createSqlitePersistence({ filename });
     const second = createSqlitePersistence({ filename });
-    const claim1 = await first.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-a", ttlMs: 15, tenantId: "tenant-a" });
+    const claim1 = await first.leases.tryAcquireLease({
+      namespace: "workflow",
+      key: "wf/run",
+      ownerId: "worker-a",
+      ttlMs: 15,
+      tenantId: "tenant-a",
+    });
     assert.ok(claim1);
-    assert.equal(await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 15, tenantId: "tenant-a" }), null);
+    assert.equal(
+      await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 15, tenantId: "tenant-a" }),
+      null,
+    );
     await new Promise((resolve) => setTimeout(resolve, 25));
-    const claim2 = await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 50, tenantId: "tenant-a" });
+    const claim2 = await second.leases.tryAcquireLease({
+      namespace: "workflow",
+      key: "wf/run",
+      ownerId: "worker-b",
+      ttlMs: 50,
+      tenantId: "tenant-a",
+    });
     assert.ok(claim2);
     assert.equal(claim2.fencingToken, claim1.fencingToken + 1);
-    assert.equal(await first.leases.releaseLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-a", token: claim1.token, tenantId: "tenant-a" }), false);
+    assert.equal(
+      await first.leases.releaseLease({
+        namespace: "workflow",
+        key: "wf/run",
+        ownerId: "worker-a",
+        token: claim1.token,
+        tenantId: "tenant-a",
+      }),
+      false,
+    );
     first.close();
     second.close();
   });
@@ -246,22 +318,28 @@ describe("createSqlitePersistence", () => {
     const persistence = createSqlitePersistence({ filename });
     const maliciousSession = `sess'; DROP TABLE prism_session_entries; --`;
     const maliciousKey = `' OR '1'='1`;
-    await persistence.append({
-      id: "inj-root",
-      sessionId: maliciousSession,
-      timestamp: "2026-01-01T00:00:00.000Z",
-      kind: "label",
-      label: "safe",
-    }, { idempotencyKey: maliciousKey });
-    await assert.doesNotReject(async () => {
-      await persistence.append({
-        id: "inj-child",
-        parentId: "inj-root",
+    await persistence.append(
+      {
+        id: "inj-root",
         sessionId: maliciousSession,
-        timestamp: "2026-01-01T00:00:01.000Z",
+        timestamp: "2026-01-01T00:00:00.000Z",
         kind: "label",
-        label: "still-safe",
-      }, { expectedParentId: "inj-root", idempotencyKey: maliciousKey });
+        label: "safe",
+      },
+      { idempotencyKey: maliciousKey },
+    );
+    await assert.doesNotReject(async () => {
+      await persistence.append(
+        {
+          id: "inj-child",
+          parentId: "inj-root",
+          sessionId: maliciousSession,
+          timestamp: "2026-01-01T00:00:01.000Z",
+          kind: "label",
+          label: "still-safe",
+        },
+        { expectedParentId: "inj-root", idempotencyKey: maliciousKey },
+      );
     });
     const relisted = await persistence.list(maliciousSession);
     assert.equal(relisted.length, 2);
@@ -312,7 +390,10 @@ describe("createSqlitePersistence", () => {
     assert.ok(byFts.items.some((hit) => hit.sessionId === "search-session"));
 
     const byWorkspace = await persistence.searchSessions!({ workspaceRoot: "/repo", limit: 10 });
-    assert.deepEqual(byWorkspace.items.map((hit) => hit.sessionId), ["search-session"]);
+    assert.deepEqual(
+      byWorkspace.items.map((hit) => hit.sessionId),
+      ["search-session"],
+    );
     assert.equal(byWorkspace.items[0]?.metadata?.workspaceRoot, "/repo");
 
     const byProvider = await persistence.searchSessions!({ provider: "anthropic", limit: 10 });

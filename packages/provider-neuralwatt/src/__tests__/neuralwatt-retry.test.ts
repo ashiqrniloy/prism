@@ -12,7 +12,14 @@ function textResponse(status: number, body: string, headers: Record<string, stri
 }
 
 function errorBody(code: string, retryAfter?: number, retryStrategy?: object): object {
-  return { error: { code, message: `error ${code}`, ...(retryAfter !== undefined ? { retry_after: retryAfter } : {}), ...(retryStrategy ? { retry_strategy: retryStrategy } : {}) } };
+  return {
+    error: {
+      code,
+      message: `error ${code}`,
+      ...(retryAfter !== undefined ? { retry_after: retryAfter } : {}),
+      ...(retryStrategy ? { retry_strategy: retryStrategy } : {}),
+    },
+  };
 }
 
 describe("@arnilo/prism-provider-neuralwatt (retry)", () => {
@@ -81,10 +88,17 @@ describe("@arnilo/prism-provider-neuralwatt (retry)", () => {
     const provider = createNeuralWattProvider({
       apiKey: "secret-neuralwatt-token",
       fetch: (async () =>
-        textResponse(429, `{"error":{"code":"concurrent_budget_exceeded","message":"slow down secret-neuralwatt-token","retry_after":1}}`, { "retry-after": "1" })) as typeof fetch,
+        textResponse(429, `{"error":{"code":"concurrent_budget_exceeded","message":"slow down secret-neuralwatt-token","retry_after":1}}`, {
+          "retry-after": "1",
+        })) as typeof fetch,
     });
     const request: ProviderRequest = {
-      model: { provider: "neuralwatt", model: "glm-5.2", capabilities: { input: ["text"], output: ["text"], streaming: true }, limits: { contextWindow: 1024 } },
+      model: {
+        provider: "neuralwatt",
+        model: "glm-5.2",
+        capabilities: { input: ["text"], output: ["text"], streaming: true },
+        limits: { contextWindow: 1024 },
+      },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
     };
     const events = [] as { type: string; error?: { code?: number | string; message?: string } }[];
@@ -102,7 +116,12 @@ describe("@arnilo/prism-provider-neuralwatt (retry)", () => {
       fetch: (async () => jsonResponse(500, errorBody("server_error"))) as typeof fetch,
     });
     const request: ProviderRequest = {
-      model: { provider: "neuralwatt", model: "glm-5.2", capabilities: { input: ["text"], output: ["text"], streaming: true }, limits: { contextWindow: 1024 } },
+      model: {
+        provider: "neuralwatt",
+        model: "glm-5.2",
+        capabilities: { input: ["text"], output: ["text"], streaming: true },
+        limits: { contextWindow: 1024 },
+      },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
     };
     const events = [] as { type: string; error?: { code?: number | string } }[];

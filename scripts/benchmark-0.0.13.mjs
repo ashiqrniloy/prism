@@ -1,10 +1,10 @@
 #!/usr/bin/env node
+import { join } from "node:path";
 /**
  * Release 0.0.13 network-free enterprise identity/policy/router/connector/deployment evidence.
  * Evidence fields only — bounds/fixtures, not timings, gate release.
  */
 import { performance } from "node:perf_hooks";
-import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const iterations = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
@@ -13,9 +13,20 @@ if (!Number.isInteger(iterations) || iterations < 10 || iterations > 100_000) {
 }
 
 const REQUIRED_RESULT_FIELDS = Object.freeze([
-  "scenario", "mode", "iterations", "throughputPerSecond", "p50Ms", "p95Ms",
-  "memoryBytes", "peakQueueEvents", "eventBytes", "diskBytes", "processCount",
-  "estimatedCostUsd", "backpressureSignals", "resourceLimitSignals",
+  "scenario",
+  "mode",
+  "iterations",
+  "throughputPerSecond",
+  "p50Ms",
+  "p95Ms",
+  "memoryBytes",
+  "peakQueueEvents",
+  "eventBytes",
+  "diskBytes",
+  "processCount",
+  "estimatedCostUsd",
+  "backpressureSignals",
+  "resourceLimitSignals",
 ]);
 const percentile = (values, ratio) => [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
 const results = [];
@@ -43,21 +54,31 @@ async function measure(scenario, mode, operation) {
   }
   const durationMs = performance.now() - started;
   const row = {
-    scenario, mode, iterations,
+    scenario,
+    mode,
+    iterations,
     throughputPerSecond: Number((iterations / (durationMs / 1000)).toFixed(2)),
     p50Ms: Number(percentile(latencies, 0.5).toFixed(4)),
     p95Ms: Number(percentile(latencies, 0.95).toFixed(4)),
     memoryBytes: process.memoryUsage().heapUsed,
-    peakQueueEvents, eventBytes,
-    diskBytes: 0, processCount: 1, estimatedCostUsd: 0, backpressureSignals: 0, resourceLimitSignals,
+    peakQueueEvents,
+    eventBytes,
+    diskBytes: 0,
+    processCount: 1,
+    estimatedCostUsd: 0,
+    backpressureSignals: 0,
+    resourceLimitSignals,
   };
   assertResultSchema(row);
   results.push(row);
 }
 
 async function workspace(specifier, fallback) {
-  try { return await import(specifier); }
-  catch { return import(pathToFileURL(join(process.cwd(), fallback)).href); }
+  try {
+    return await import(specifier);
+  } catch {
+    return import(pathToFileURL(join(process.cwd(), fallback)).href);
+  }
 }
 
 const core = await workspace("@arnilo/prism", "dist/index.js");
@@ -97,7 +118,12 @@ await measure("policy-evaluate-append", "memory-store", async (index) => {
 });
 
 const modelRouter = router.createModelRouter({
-  resolver: (m) => ({ id: m.provider, async *generate() { /* bench */ } }),
+  resolver: (m) => ({
+    id: m.provider,
+    async *generate() {
+      /* bench */
+    },
+  }),
   allowList: { providers: ["mock"], models: ["bench"] },
 });
 await measure("model-router-resolve", "in-process", async () => {
@@ -125,7 +151,8 @@ await measure("server-drain-health", "in-process", async () => {
 });
 
 const report = {
-  generatedAt: new Date().toISOString(), release: "0.0.13",
+  generatedAt: new Date().toISOString(),
+  release: "0.0.13",
   environment: { node: process.version, platform: process.platform, arch: process.arch, network: false, credentials: false },
   schema: { requiredResultFields: REQUIRED_RESULT_FIELDS },
   frozenBudgets: {

@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  type AgentConfig,
   createAgent,
   createMemorySessionStore,
   createMockProvider,
   createSecretRedactor,
+  type ProviderRequestOptions,
   providerDone,
   providerTextDelta,
-  type AgentConfig,
-  type ProviderRequestOptions,
 } from "../index.js";
 
 // Compile + runtime fixture for documented 0.0.3 construction, with additive 0.0.4 options.

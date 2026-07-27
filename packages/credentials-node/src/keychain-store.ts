@@ -1,34 +1,28 @@
 import { AsyncEntry } from "@napi-rs/keyring";
-import type { Credential, CredentialRequest, OAuthCredentials } from "@arnilo/prism";
-import type { CredentialRecord } from "@arnilo/prism";
-import type { KeychainCredentialStoreOptions } from "./types.js";
-import { DEFAULT_KEYCHAIN_TIMEOUT_MS } from "./types.js";
-import {
-  CredentialStoreLockedError,
-  CredentialStoreTimeoutError,
-  CredentialStoreUnavailableError,
-} from "./errors.js";
+import type { StoredCredentialStore } from "./encrypted-store.js";
+import { CredentialStoreLockedError, CredentialStoreTimeoutError, CredentialStoreUnavailableError } from "./errors.js";
 import {
   DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES,
   HARD_KEYCHAIN_TIMEOUT_MS,
   HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
   validateCredentialLimit,
 } from "./limits.js";
+import type { KeychainCredentialStoreOptions } from "./types.js";
+import { DEFAULT_KEYCHAIN_TIMEOUT_MS } from "./types.js";
 import {
+  createEmptyVault,
   credentialKey,
+  deleteCredentialEntry,
+  deleteOAuthEntry,
+  getCredentialEntry,
+  getOAuthEntry,
   keychainAccountName,
   oauthKey,
   parseVault,
   serializeVault,
   upsertCredentialEntry,
-  deleteCredentialEntry,
   upsertOAuthEntry,
-  deleteOAuthEntry,
-  getCredentialEntry,
-  getOAuthEntry,
-  createEmptyVault,
 } from "./vault.js";
-import type { StoredCredentialStore } from "./encrypted-store.js";
 
 function mapKeychainError(error: unknown): never {
   if (error instanceof CredentialStoreTimeoutError) throw error;
@@ -41,10 +35,7 @@ function mapKeychainError(error: unknown): never {
 
 /** Run one native async keychain operation with a main-loop timer and cancellation signal. */
 // ponytail: AsyncEntry already isolates native work; use a child process only if a backend ignores abort and exhausts libuv workers.
-export async function runKeychainOperation<T>(
-  operation: (signal: AbortSignal) => Promise<T>,
-  timeoutMs: number,
-): Promise<T> {
+export async function runKeychainOperation<T>(operation: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
   const controller = new AbortController();
   let timer: NodeJS.Timeout | undefined;
   let timedOut = false;
@@ -73,11 +64,7 @@ export interface KeychainCredentialStore extends StoredCredentialStore {
 }
 
 export function createKeychainCredentialStore(options: KeychainCredentialStoreOptions): KeychainCredentialStore {
-  const timeoutMs = validateCredentialLimit(
-    "timeoutMs",
-    options.timeoutMs ?? DEFAULT_KEYCHAIN_TIMEOUT_MS,
-    HARD_KEYCHAIN_TIMEOUT_MS,
-  );
+  const timeoutMs = validateCredentialLimit("timeoutMs", options.timeoutMs ?? DEFAULT_KEYCHAIN_TIMEOUT_MS, HARD_KEYCHAIN_TIMEOUT_MS);
   const maxPayloadBytes = validateCredentialLimit(
     "maxPayloadBytes",
     options.maxPayloadBytes ?? DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES,
@@ -105,20 +92,14 @@ export function createKeychainCredentialStore(options: KeychainCredentialStoreOp
 
   const writeVaultForKey = async (key: string, vaultBytes: Buffer) => {
     try {
-      await runKeychainOperation(
-        (signal) => new AsyncEntry(options.service, accountForKey(key)).setSecret(vaultBytes, signal),
-        timeoutMs,
-      );
+      await runKeychainOperation((signal) => new AsyncEntry(options.service, accountForKey(key)).setSecret(vaultBytes, signal), timeoutMs);
     } finally {
       vaultBytes.fill(0);
     }
   };
 
   const deleteKey = async (key: string) => {
-    await runKeychainOperation(
-      (signal) => new AsyncEntry(options.service, accountForKey(key)).deleteCredential(signal),
-      timeoutMs,
-    );
+    await runKeychainOperation((signal) => new AsyncEntry(options.service, accountForKey(key)).deleteCredential(signal), timeoutMs);
   };
 
   const store: KeychainCredentialStore = {

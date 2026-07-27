@@ -1,0 +1,19 @@
+ZAI_DEFAULT_BASE_URL	export declare const ZAI_DEFAULT_BASE_URL = "https://api.z.ai/api/paas/v4"
+createZaiProvider	export declare function createZaiProvider(options?: ZaiProviderOptions): AIProvider
+createZaiProviderPackage	export declare function createZaiProviderPackage(options?: ZaiProviderPackageOptions): ProviderPackage
+defineZaiModel	export declare function defineZaiModel(config: ZaiModelConfig): ModelConfig
+listZaiModels	export declare function listZaiModels(options?: ListZaiModelsOptions): Promise<ModelConfig[]>
+mapZaiModel	export declare function mapZaiModel(entry: ZaiModelEntry, options?:
+toZaiMessage	export declare function toZaiMessage(message: Message, model: ModelConfig, preserveThinking?: boolean): JsonObject
+type ListZaiModelsOptions	export { defineZaiModel, type ListZaiModelsOptions, listZaiModels, mapZaiModel, type ZaiModelConfig, type ZaiModelEntry, zaiModels, } from "./models.js"
+type ZaiModelConfig	export { defineZaiModel, type ListZaiModelsOptions, listZaiModels, mapZaiModel, type ZaiModelConfig, type ZaiModelEntry, zaiModels, } from "./models.js"
+type ZaiModelEntry	export { defineZaiModel, type ListZaiModelsOptions, listZaiModels, mapZaiModel, type ZaiModelConfig, type ZaiModelEntry, zaiModels, } from "./models.js"
+type ZaiProviderOptions	export { createZaiProvider, toZaiMessage, ZAI_DEFAULT_BASE_URL, type ZaiProviderOptions, zaiBody, zaiEvents, } from "./provider.js"
+zaiBody	export declare function zaiBody(request: ProviderRequest): JsonObject
+zaiClearThinking	export declare function zaiClearThinking(request: ProviderRequest): boolean | undefined
+zaiEvents	export declare function zaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+zaiModels	export declare const zaiModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig, ModelConfig, ModelConfig, ModelConfig]
+zaiPreserveThinking	export declare function zaiPreserveThinking(request: ProviderRequest): boolean
+zaiReasoningEffort	export declare function zaiReasoningEffort(request: ProviderRequest): string | undefined
+zaiThinking	export declare function zaiThinking(request: ProviderRequest): JsonObject | undefined
+zaiToolStream	export declare function zaiToolStream(request: ProviderRequest): boolean | undefined

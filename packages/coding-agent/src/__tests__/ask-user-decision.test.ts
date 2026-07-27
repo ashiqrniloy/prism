@@ -1,13 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { createMemoryCheckpointStore } from "@arnilo/prism";
-import {
-  createWorkflowCheckpoints,
-  defineWorkflow,
-  functionNode,
-  resumeWorkflow,
-  runWorkflow,
-} from "@arnilo/prism-workflows";
+import { createWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-workflows";
 import {
   ASK_USER_DECISION_SUSPEND_REASON,
   ASK_USER_DECISION_TOOL_NAME,
@@ -22,7 +16,7 @@ import {
   validateAskUserDecisionAgentResume,
   validateAskUserDecisionResume,
 } from "../ask-user-decision.js";
-import { createCodingTools, createAllTools, createReadOnlyTools } from "../index.js";
+import { createAllTools, createCodingTools, createReadOnlyTools } from "../index.js";
 
 const validArgs = {
   question: "Which persistence backend should we ship first?",
@@ -66,10 +60,7 @@ const decisionRequest = {
 };
 
 test("createAskUserDecisionTool requires ask callback", () => {
-  assert.throws(
-    () => createAskUserDecisionTool({ ask: undefined as never }),
-    /requires options\.ask/,
-  );
+  assert.throws(() => createAskUserDecisionTool({ ask: undefined as never }), /requires options\.ask/);
 });
 
 test("parseAskUserDecisionArgs requires exactly 3 pros and 3 cons", () => {
@@ -213,10 +204,7 @@ test("allowCustom true accepts capped customText", async () => {
       return { customText: "  Ship FTS later; SQLite metadata-only now  " };
     },
   });
-  const result = await tool.execute(
-    { ...validArgs, allowCustom: true },
-    { toolCallId: "call-custom-ok", sessionId: "s1", runId: "r1" },
-  );
+  const result = await tool.execute({ ...validArgs, allowCustom: true }, { toolCallId: "call-custom-ok", sessionId: "s1", runId: "r1" });
   assert.equal(result.error, undefined);
   assert.equal(result.metadata?.customText, "Ship FTS later; SQLite metadata-only now");
   assert.equal(result.metadata?.selectedId, undefined);
@@ -230,22 +218,15 @@ test("allowCustom true rejects oversize customText", async () => {
     ask: async () => ({ customText: "x".repeat(3_000) }),
     maxCustomTextBytes: 64,
   });
-  const result = await tool.execute(
-    { ...validArgs, allowCustom: true },
-    { toolCallId: "call-custom-big", sessionId: "s1", runId: "r1" },
-  );
+  const result = await tool.execute({ ...validArgs, allowCustom: true }, { toolCallId: "call-custom-big", sessionId: "s1", runId: "r1" });
   assert.match(result.error?.message ?? "", /customText must be 1\.\./);
 });
 
 test("customText XOR selection enforced", async () => {
   const tool = createAskUserDecisionTool({
-    ask: async () =>
-      ({ selectedId: "sqlite", customText: "also this" }) as never,
+    ask: async () => ({ selectedId: "sqlite", customText: "also this" }) as never,
   });
-  const result = await tool.execute(
-    { ...validArgs, allowCustom: true },
-    { toolCallId: "call-xor", sessionId: "s1", runId: "r1" },
-  );
+  const result = await tool.execute({ ...validArgs, allowCustom: true }, { toolCallId: "call-xor", sessionId: "s1", runId: "r1" });
   assert.match(result.error?.message ?? "", /mutually exclusive/);
 });
 
@@ -292,36 +273,17 @@ test("suspendAskUserDecision builds workflow_suspend with request data", () => {
   const suspension = suspendAskUserDecision(decisionRequest);
   assert.equal(suspension.type, "workflow_suspend");
   assert.equal(suspension.reason, ASK_USER_DECISION_SUSPEND_REASON);
-  assert.deepEqual(
-    (suspension.data as { question: string }).question,
-    decisionRequest.question,
-  );
+  assert.deepEqual((suspension.data as { question: string }).question, decisionRequest.question);
   assert.ok(suspension.resumeSchema);
   assert.equal(askUserDecisionResumeSchema(decisionRequest).type, "object");
 });
 
 test("validateAskUserDecisionResume accepts selection and custom", () => {
   const data = toAskUserDecisionSuspendData(decisionRequest);
-  assert.equal(
-    validateAskUserDecisionResume(data, { selectedId: "postgres" }).kind,
-    "selection",
-  );
-  assert.equal(
-    validateAskUserDecisionResume(data, { customText: "Ship metadata-only now" }).kind,
-    "custom",
-  );
-  assert.throws(
-    () => validateAskUserDecisionResume(data, { selectedId: "nope" }),
-    /unknown selectedId/,
-  );
-  assert.throws(
-    () =>
-      validateAskUserDecisionResume(
-        { ...data, allowCustom: false },
-        { customText: "nope" },
-      ),
-    /allowCustom=false/,
-  );
+  assert.equal(validateAskUserDecisionResume(data, { selectedId: "postgres" }).kind, "selection");
+  assert.equal(validateAskUserDecisionResume(data, { customText: "Ship metadata-only now" }).kind, "custom");
+  assert.throws(() => validateAskUserDecisionResume(data, { selectedId: "nope" }), /unknown selectedId/);
+  assert.throws(() => validateAskUserDecisionResume({ ...data, allowCustom: false }, { customText: "nope" }), /allowCustom=false/);
 });
 
 test("createAskUserDecisionResumeValidator reads suspension.data", async () => {
@@ -347,22 +309,19 @@ test("createAskUserDecisionResumeValidator reads suspension.data", async () => {
       requestedAt: new Date().toISOString(),
     },
   });
-  await assert.rejects(
-    async () => {
-      await Promise.resolve(
-        validate({
-          value: { selectedId: "nope" },
-          suspension: {
-            nodeId: "ask",
-            reason: ASK_USER_DECISION_SUSPEND_REASON,
-            data,
-            requestedAt: new Date().toISOString(),
-          },
-        }),
-      );
-    },
-    /unknown selectedId/,
-  );
+  await assert.rejects(async () => {
+    await Promise.resolve(
+      validate({
+        value: { selectedId: "nope" },
+        suspension: {
+          nodeId: "ask",
+          reason: ASK_USER_DECISION_SUSPEND_REASON,
+          data,
+          requestedAt: new Date().toISOString(),
+        },
+      }),
+    );
+  }, /unknown selectedId/);
 });
 
 test("validateAskUserDecisionAgentResume mirrors workflow validator", () => {
@@ -402,10 +361,14 @@ test("workflow suspend → approve resume validates answer (network-free)", asyn
     limits: { maxConcurrency: 1, maxStateBytes: 64 * 1024 },
   });
 
-  const first = await runWorkflow(workflow, {}, {
-    checkpoints,
-    validateResume: createAskUserDecisionResumeValidator(),
-  });
+  const first = await runWorkflow(
+    workflow,
+    {},
+    {
+      checkpoints,
+      validateResume: createAskUserDecisionResumeValidator(),
+    },
+  );
   assert.equal(first.status, "suspended");
   assert.equal(first.suspension?.reason, ASK_USER_DECISION_SUSPEND_REASON);
 

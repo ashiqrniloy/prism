@@ -1,4 +1,4 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
 import { createOllamaProvider, type OllamaProviderOptions } from "./provider.js";
 
 export interface OllamaProviderPackageOptions extends OllamaProviderOptions {
@@ -18,13 +18,15 @@ export function createOllamaProviderPackage(options: OllamaProviderPackageOption
     description: "Ollama Cloud / local provider package for Prism (OpenAI-compatible).",
     docs: { links: ["docs/providers/ollama.md"] },
     setup(api) {
-      api.registerProvider(createOllamaProvider({
-        id: providerId,
-        apiKey: options.apiKey,
-        fetch: options.fetch,
-        baseUrl: options.baseUrl,
-        preset: options.preset,
-      }));
+      api.registerProvider(
+        createOllamaProvider({
+          id: providerId,
+          apiKey: options.apiKey,
+          fetch: options.fetch,
+          baseUrl: options.baseUrl,
+          preset: options.preset,
+        }),
+      );
       for (const model of options.models ?? []) {
         api.registerModel({ ...model, provider: providerId });
       }
@@ -37,18 +39,18 @@ export function createOllamaProviderPackage(options: OllamaProviderPackageOption
 export {
   DEFAULT_OLLAMA_BASE_URL,
   defineOllamaModel,
+  type ListOllamaModelsOptions,
   listOllamaModels,
   mapOllamaModel,
-  ollamaBaseUrl,
-  type ListOllamaModelsOptions,
   type OllamaBasePreset,
   type OllamaModelConfig,
   type OllamaModelEntry,
+  ollamaBaseUrl,
 } from "./models.js";
 export {
   createOllamaProvider,
+  type OllamaProviderOptions,
   ollamaBody,
   ollamaEvents,
   ollamaReasoningEffort,
-  type OllamaProviderOptions,
 } from "./provider.js";

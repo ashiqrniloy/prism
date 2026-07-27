@@ -5,10 +5,7 @@ import type { JsonObject, ModelConfig, ProviderRequest, ProviderRequestOptions }
  * Request `options.compat.reasoning` wins key-by-key (Task 4 `openai_reasoning` family).
  * @see https://openrouter.ai/docs/guides/best-practices/reasoning-tokens
  */
-export function resolveOpenRouterReasoning(
-  model: ModelConfig,
-  options: ProviderRequestOptions | undefined,
-): JsonObject | undefined {
+export function resolveOpenRouterReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined {
   const fromModel = asReasoningObject(model.compat?.reasoning);
   const fromOptions = asReasoningObject(options?.compat?.reasoning);
   if (!fromModel && !fromOptions) return undefined;

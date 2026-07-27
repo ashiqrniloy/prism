@@ -3,9 +3,9 @@ import {
   createAgentSession,
   createExtensionKernel,
   createMockProvider,
+  type Extension,
   providerDone,
   providerTextDelta,
-  type Extension,
 } from "@arnilo/prism";
 
 // Extension package: a host bundles a tool, a skill, and a context provider
@@ -44,7 +44,12 @@ const notesExtension: Extension = {
   },
 };
 
-export async function demo(): Promise<{ registeredTools: number; registeredSkills: number; registeredContext: number; eventTypes: readonly string[] }> {
+export async function demo(): Promise<{
+  registeredTools: number;
+  registeredSkills: number;
+  registeredContext: number;
+  eventTypes: readonly string[];
+}> {
   const kernel = createExtensionKernel();
   await kernel.load([notesExtension]);
 

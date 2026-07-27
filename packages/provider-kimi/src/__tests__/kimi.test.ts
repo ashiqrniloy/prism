@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertProviderOwnedHeadersWin,
+  assertProviderStreamConforms,
+  assertSerializedRequestCoversContent,
+  assertToolCallDeltasReconstruct,
+} from "@arnilo/prism/testing/provider-conformance";
 import {
   createKimiCodingProvider,
   createKimiProviderPackage,
@@ -59,24 +64,42 @@ describe("@arnilo/prism-provider-kimi", () => {
   });
 
   it("kimi_anthropic_stream_maps_text_thinking_tool_calls_usage", async () => {
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: mockFetch(sse([
-      { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "hello" } },
-      { type: "content_block_delta", index: 1, delta: { type: "thinking_delta", thinking: "think" } },
-      { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "tool_1", name: "lookup" } },
-      { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{\"q\":\"x\"}" } },
-      { type: "message_delta", usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 } },
-    ])) });
-    const events = await assertProviderStreamConforms({ provider, request, expect: { text: "hello", usage: { inputTokens: 4, outputTokens: 3, cacheReadTokens: 1, cacheWriteTokens: 2 } } });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: mockFetch(
+        sse([
+          { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "hello" } },
+          { type: "content_block_delta", index: 1, delta: { type: "thinking_delta", thinking: "think" } },
+          { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "tool_1", name: "lookup" } },
+          { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"q":"x"}' } },
+          {
+            type: "message_delta",
+            usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 },
+          },
+        ]),
+      ),
+    });
+    const events = await assertProviderStreamConforms({
+      provider,
+      request,
+      expect: { text: "hello", usage: { inputTokens: 4, outputTokens: 3, cacheReadTokens: 1, cacheWriteTokens: 2 } },
+    });
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "tool_1", name: "lookup", arguments: { q: "x" } }]);
   });
 
   it("kimi_preserves_reasoning_for_tool_replay_and_maps_max_tokens", async () => {
     let body: any;
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request: { ...request, model: { ...request.model, parameters: { maxTokens: 444, temperature: 0.5 } } } });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: { ...request, model: { ...request.model, parameters: { maxTokens: 444, temperature: 0.5 } } },
+    });
     assert.equal(body.system, "instructions");
     assert.deepEqual(body.messages[0].content, [{ type: "thinking", thinking: "prior reasoning" }]);
     assert.equal(body.max_tokens, 444);
@@ -88,10 +111,13 @@ describe("@arnilo/prism-provider-kimi", () => {
 
   it("kimi_per_turn_thinking_and_reasoning_effort_override_model_defaults", async () => {
     let body: any;
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     const model: ModelConfig = {
       ...kimiCodingModels.find((item) => item.model === "k3")!,
       compat: { route: "anthropic", preserveThinking: true, reasoning_effort: "max" },
@@ -131,46 +157,78 @@ describe("@arnilo/prism-provider-kimi", () => {
     const replay: ProviderRequest = {
       model: kimiCodingModels[0],
       messages: [
-        { role: "assistant", content: [{ type: "tool_call", id: "tool_1", name: "lookup", arguments: { q: "x" } }, { type: "thinking", text: "plan" }] },
+        {
+          role: "assistant",
+          content: [
+            { type: "tool_call", id: "tool_1", name: "lookup", arguments: { q: "x" } },
+            { type: "thinking", text: "plan" },
+          ],
+        },
         { role: "tool", content: [{ type: "tool_result", toolCallId: "tool_1", name: "lookup", result: { ok: true } }] },
       ],
     };
     let body: unknown;
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_url, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     await assertProviderStreamConforms({ provider, request: replay });
     assertSerializedRequestCoversContent(replay, body);
   });
 
   it("kimi_default_model_emits_no_cache_control_for_implicit_caching", async () => {
     let body: any;
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request: { ...request, options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } } } });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        options: {
+          cacheKey: "sess",
+          cacheRetention: "long" as const,
+          cache: { breakpoints: [{ location: "last_stable_message" as const }] },
+        },
+      },
+    });
     assert.ok(!JSON.stringify(body).includes("cache_control"), "default Kimi body must not contain cache_control");
   });
 
   it("kimi_opted_in_cache_control_applies_only_to_selected_breakpoints", async () => {
     let body: any;
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     const messages: Message[] = [
       { role: "user", content: [{ type: "text", text: "preamble" }] },
       { role: "assistant", content: [{ type: "text", text: "stable" }] },
       { role: "user", content: [{ type: "text", text: "current" }] },
     ];
-    await assertProviderStreamConforms({ provider, request: {
-      ...request,
-      model: { ...request.model, cache: { kind: "cache_control" as const, longRetention: true } },
-      messages,
-      options: { cacheKey: "sess", cacheRetention: "long" as const, cache: { breakpoints: [{ location: "last_stable_message" as const }] } },
-    } });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model: { ...request.model, cache: { kind: "cache_control" as const, longRetention: true } },
+        messages,
+        options: {
+          cacheKey: "sess",
+          cacheRetention: "long" as const,
+          cache: { breakpoints: [{ location: "last_stable_message" as const }] },
+        },
+      },
+    });
     assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
     const others = body.messages.filter((m: any) => m.role !== "assistant");
     for (const m of others) for (const block of m.content) assert.equal(block.cache_control, undefined);
@@ -202,7 +260,13 @@ describe("@arnilo/prism-provider-kimi", () => {
       request: {
         model: moonshotKimiModels[0],
         messages: [
-          { role: "assistant", content: [{ type: "thinking", text: "plan" }, { type: "text", text: "done" }] },
+          {
+            role: "assistant",
+            content: [
+              { type: "thinking", text: "plan" },
+              { type: "text", text: "done" },
+            ],
+          },
           { role: "user", content: [{ type: "text", text: "continue" }] },
         ],
       },
@@ -216,11 +280,13 @@ describe("@arnilo/prism-provider-kimi", () => {
   it("moonshot_stream_maps_reasoning_content_and_usage", async () => {
     const provider = createMoonshotProvider({
       apiKey: "fake-moonshot-key",
-      fetch: mockFetch(chatSse([
-        { choices: [{ delta: { reasoning_content: "think" } }] },
-        { choices: [{ delta: { content: "hello" } }] },
-        { usage: { prompt_tokens: 2, completion_tokens: 3, prompt_tokens_details: { cached_tokens: 1 } } },
-      ])),
+      fetch: mockFetch(
+        chatSse([
+          { choices: [{ delta: { reasoning_content: "think" } }] },
+          { choices: [{ delta: { content: "hello" } }] },
+          { usage: { prompt_tokens: 2, completion_tokens: 3, prompt_tokens_details: { cached_tokens: 1 } } },
+        ]),
+      ),
     });
     await assertProviderStreamConforms({
       provider,
@@ -242,39 +308,42 @@ describe("@arnilo/prism-provider-kimi", () => {
         url = String(input);
         headers = new Headers(init?.headers);
         signal = init?.signal;
-        return new Response(JSON.stringify({
-          object: "list",
-          data: [
-            {
-              id: "kimi-k3",
-              object: "model",
-              created: 1,
-              owned_by: "moonshot",
-              context_length: 1_048_576,
-              supports_image_in: true,
-              supports_video_in: false,
-              supports_reasoning: true,
-            },
-            {
-              id: "kimi-k2.7-code",
-              object: "model",
-              created: 2,
-              owned_by: "moonshot",
-              context_length: 256_000,
-              supports_image_in: false,
-              supports_reasoning: true,
-            },
-            {
-              id: "moonshot-v1-8k",
-              object: "model",
-              created: 3,
-              owned_by: "moonshot",
-              context_length: 8192,
-              supports_image_in: false,
-              supports_reasoning: false,
-            },
-          ],
-        }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            object: "list",
+            data: [
+              {
+                id: "kimi-k3",
+                object: "model",
+                created: 1,
+                owned_by: "moonshot",
+                context_length: 1_048_576,
+                supports_image_in: true,
+                supports_video_in: false,
+                supports_reasoning: true,
+              },
+              {
+                id: "kimi-k2.7-code",
+                object: "model",
+                created: 2,
+                owned_by: "moonshot",
+                context_length: 256_000,
+                supports_image_in: false,
+                supports_reasoning: true,
+              },
+              {
+                id: "moonshot-v1-8k",
+                object: "model",
+                created: 3,
+                owned_by: "moonshot",
+                context_length: 8192,
+                supports_image_in: false,
+                supports_reasoning: false,
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       }) as typeof fetch,
     });
     assert.equal(url, "https://example.test/v1/models");
@@ -295,10 +364,11 @@ describe("@arnilo/prism-provider-kimi", () => {
 
   it("list_kimi_models_redacts_token_in_errors", async () => {
     await assert.rejects(
-      () => listKimiModels({
-        apiKey: "sk-leaked-moonshot",
-        fetch: (async () => new Response("unauthorized sk-leaked-moonshot", { status: 401 })) as typeof fetch,
-      }),
+      () =>
+        listKimiModels({
+          apiKey: "sk-leaked-moonshot",
+          fetch: (async () => new Response("unauthorized sk-leaked-moonshot", { status: 401 })) as typeof fetch,
+        }),
       (error: unknown) => {
         const message = String(error);
         assert.match(message, /Kimi model discovery failed: 401/);
@@ -315,11 +385,24 @@ describe("@arnilo/prism-provider-kimi", () => {
 
   it("kimi_keeps_provider_owned_headers_after_caller_headers", async () => {
     let headers = new Headers();
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", userAgent: "MyApp/2.0", fetch: (async (_url, init) => {
-      headers = new Headers(init?.headers);
-      return ok(sse([]));
-    }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request: { ...request, options: { ...request.options, headers: { authorization: "Bearer attacker", "content-type": "text/plain", "user-agent": "attacker-ua", "x-caller": "kept" } } } });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      userAgent: "MyApp/2.0",
+      fetch: (async (_url, init) => {
+        headers = new Headers(init?.headers);
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        options: {
+          ...request.options,
+          headers: { authorization: "Bearer attacker", "content-type": "text/plain", "user-agent": "attacker-ua", "x-caller": "kept" },
+        },
+      },
+    });
     assertProviderOwnedHeadersWin(headers, {
       owned: { authorization: "Bearer fake-kimi-key", "content-type": "application/json", "user-agent": "MyApp/2.0" },
       caller: { authorization: "Bearer attacker", "content-type": "text/plain", "user-agent": "attacker-ua", "x-caller": "kept" },
@@ -327,7 +410,10 @@ describe("@arnilo/prism-provider-kimi", () => {
   });
 
   it("kimi_redacts_subscription_or_api_key_errors", async () => {
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async () => new Response("bad fake-kimi-key", { status: 500 })) as typeof fetch });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async () => new Response("bad fake-kimi-key", { status: 500 })) as typeof fetch,
+    });
     const events = await assertProviderStreamConforms({ provider, request });
     assert.equal(events.at(-1)?.type, "error");
     assert(!JSON.stringify(events).includes("fake-kimi-key"));
@@ -352,7 +438,10 @@ describe("@arnilo/prism-provider-kimi", () => {
     const moonshot = (id: string) => moonshotKimiModels.find((model) => model.model === id)!;
     // Official Open Platform catalog: k2.7-code (+highspeed), k2.6, k2.5, k3.
     for (const id of ["kimi-k2.7-code", "kimi-k2.7-code-highspeed", "kimi-k2.6", "kimi-k2.5", "kimi-k3"]) {
-      assert.ok(moonshotKimiModels.some((model) => model.model === id), `missing featured moonshot model ${id}`);
+      assert.ok(
+        moonshotKimiModels.some((model) => model.model === id),
+        `missing featured moonshot model ${id}`,
+      );
     }
     assert.equal(moonshot("kimi-k2.7-code").limits?.contextWindow, 262_144);
     assert.equal(moonshot("kimi-k2.7-code-highspeed").limits?.contextWindow, 262_144);
@@ -371,18 +460,33 @@ describe("@arnilo/prism-provider-kimi", () => {
 
   it("strip_kimi_thinking_compat_removes_routing_and_serialization_keys", () => {
     assert.deepEqual(
-      stripKimiThinkingCompat({ route: "anthropic", preserveThinking: true, preserve_thinking: true, thinking: false, reasoning_effort: "max", reasoningEffort: "max", custom: "kept" }),
+      stripKimiThinkingCompat({
+        route: "anthropic",
+        preserveThinking: true,
+        preserve_thinking: true,
+        thinking: false,
+        reasoning_effort: "max",
+        reasoningEffort: "max",
+        custom: "kept",
+      }),
       { custom: "kept" },
     );
   });
 
   it("compat_route_and_preserve_thinking_do_not_leak_into_wire_bodies", async () => {
-    const codingBody = await kimiAnthropicBody({ ...request, options: { compat: { route: "anthropic", preserve_thinking: true, custom: "kept" } } });
+    const codingBody = await kimiAnthropicBody({
+      ...request,
+      options: { compat: { route: "anthropic", preserve_thinking: true, custom: "kept" } },
+    });
     assert.equal(codingBody.route, undefined);
     assert.equal(codingBody.preserve_thinking, undefined);
     assert.equal(codingBody.custom, "kept");
 
-    const chatBody = moonshotBody({ ...request, model: moonshotKimiModels[0], options: { compat: { route: "openai", preserve_thinking: true, custom: "kept" } } });
+    const chatBody = moonshotBody({
+      ...request,
+      model: moonshotKimiModels[0],
+      options: { compat: { route: "openai", preserve_thinking: true, custom: "kept" } },
+    });
     assert.equal(chatBody.route, undefined);
     assert.equal(chatBody.preserve_thinking, undefined);
     assert.equal(chatBody.custom, "kept");
@@ -390,10 +494,13 @@ describe("@arnilo/prism-provider-kimi", () => {
 
   it("kimi_coding_route_sends_provider_owned_anthropic_auth_headers", async () => {
     let headers = new Headers();
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_url, init) => {
-      headers = new Headers(init?.headers);
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_url, init) => {
+        headers = new Headers(init?.headers);
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     await assertProviderStreamConforms({ provider, request });
     assert.equal(headers.get("authorization"), "Bearer fake-kimi-key");
     assert.equal(headers.get("x-api-key"), "fake-kimi-key");
@@ -402,14 +509,22 @@ describe("@arnilo/prism-provider-kimi", () => {
 
   it("kimi_coding_route_caller_headers_cannot_override_anthropic_auth", async () => {
     let headers = new Headers();
-    const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: (async (_url, init) => {
-      headers = new Headers(init?.headers);
-      return ok(sse([]));
-    }) as typeof fetch });
-    await assertProviderStreamConforms({ provider, request: {
-      ...request,
-      options: { headers: { authorization: "Bearer attacker", "x-api-key": "attacker-key", "anthropic-version": "1999-01-01", "x-caller": "kept" } },
-    } });
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_url, init) => {
+        headers = new Headers(init?.headers);
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        options: {
+          headers: { authorization: "Bearer attacker", "x-api-key": "attacker-key", "anthropic-version": "1999-01-01", "x-caller": "kept" },
+        },
+      },
+    });
     assertProviderOwnedHeadersWin(headers, {
       owned: { authorization: "Bearer fake-kimi-key", "x-api-key": "fake-kimi-key", "anthropic-version": "2023-06-01" },
       caller: { authorization: "Bearer attacker", "x-api-key": "attacker-key", "anthropic-version": "1999-01-01", "x-caller": "kept" },
@@ -417,12 +532,16 @@ describe("@arnilo/prism-provider-kimi", () => {
   });
 
   it("kimi_anthropic_route_fails_stream_without_message_stop", async () => {
-    const truncated = new ReadableStream<Uint8Array>({ start(controller) {
-      controller.enqueue(new TextEncoder().encode(
-        `data: ${JSON.stringify({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "partial" } })}\n\n`,
-      ));
-      controller.close();
-    } });
+    const truncated = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `data: ${JSON.stringify({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "partial" } })}\n\n`,
+          ),
+        );
+        controller.close();
+      },
+    });
     const provider = createKimiCodingProvider({ apiKey: "fake-kimi-key", fetch: mockFetch(truncated) });
     const events = await assertProviderStreamConforms({ provider, request });
     assert.equal(events.at(-1)?.type, "error");
@@ -430,12 +549,12 @@ describe("@arnilo/prism-provider-kimi", () => {
   });
 
   it("moonshot_route_fails_truncated_stream_without_done_or_finish_reason", async () => {
-    const truncated = new ReadableStream<Uint8Array>({ start(controller) {
-      controller.enqueue(new TextEncoder().encode(
-        `data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`,
-      ));
-      controller.close();
-    } });
+    const truncated = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`));
+        controller.close();
+      },
+    });
     const provider = createMoonshotProvider({ apiKey: "fake-moonshot-key", fetch: mockFetch(truncated) });
     const events = await assertProviderStreamConforms({ provider, request: { ...request, model: moonshotKimiModels[0] } });
     assert.equal(events.at(-1)?.type, "error");
@@ -443,10 +562,10 @@ describe("@arnilo/prism-provider-kimi", () => {
   });
 
   it("moonshot_route_succeeds_with_done_marker_and_finish_reason", async () => {
-    const provider = createMoonshotProvider({ apiKey: "fake-moonshot-key", fetch: mockFetch(sse([
-      { choices: [{ delta: { content: "hello" } }] },
-      { choices: [{ finish_reason: "stop", delta: {} }] },
-    ])) });
+    const provider = createMoonshotProvider({
+      apiKey: "fake-moonshot-key",
+      fetch: mockFetch(sse([{ choices: [{ delta: { content: "hello" } }] }, { choices: [{ finish_reason: "stop", delta: {} }] }])),
+    });
     const events = await assertProviderStreamConforms({ provider, request: { ...request, model: moonshotKimiModels[0] } });
     assert.equal(events.at(-1)?.type, "done");
   });
@@ -461,8 +580,13 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
-  return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }
 
 function chatSse(events: readonly object[]): ReadableStream<Uint8Array> {

@@ -61,57 +61,69 @@ export function isMemoryId(value: unknown): value is MemoryId {
 
 export function isMemoryObservation(value: unknown): value is MemoryObservation {
   if (!isRecord(value)) return false;
-  return isMemoryId(value.id)
-    && typeof value.content === "string"
-    && value.content.length > 0
-    && !value.content.includes("\n")
-    && typeof value.timestamp === "string"
-    && isRelevance(value.relevance)
-    && isStringArray(value.sourceEntryIds)
-    && isNonNegativeNumber(value.tokenCount);
+  return (
+    isMemoryId(value.id) &&
+    typeof value.content === "string" &&
+    value.content.length > 0 &&
+    !value.content.includes("\n") &&
+    typeof value.timestamp === "string" &&
+    isRelevance(value.relevance) &&
+    isStringArray(value.sourceEntryIds) &&
+    isNonNegativeNumber(value.tokenCount)
+  );
 }
 
 export function isMemoryReflection(value: unknown): value is MemoryReflection {
   if (!isRecord(value)) return false;
-  return isMemoryId(value.id)
-    && typeof value.content === "string"
-    && value.content.length > 0
-    && !value.content.includes("\n")
-    && isStringArray(value.supportingObservationIds)
-    && value.supportingObservationIds.every(isMemoryId)
-    && isNonNegativeNumber(value.tokenCount);
+  return (
+    isMemoryId(value.id) &&
+    typeof value.content === "string" &&
+    value.content.length > 0 &&
+    !value.content.includes("\n") &&
+    isStringArray(value.supportingObservationIds) &&
+    value.supportingObservationIds.every(isMemoryId) &&
+    isNonNegativeNumber(value.tokenCount)
+  );
 }
 
 export function isObservationsRecordedData(value: unknown): value is ObservationsRecordedData {
-  return isRecord(value)
-    && value.type === OBSERVATIONS_RECORDED
-    && Array.isArray(value.observations)
-    && (value.coversUpToId === undefined || typeof value.coversUpToId === "string");
+  return (
+    isRecord(value) &&
+    value.type === OBSERVATIONS_RECORDED &&
+    Array.isArray(value.observations) &&
+    (value.coversUpToId === undefined || typeof value.coversUpToId === "string")
+  );
 }
 
 export function isReflectionsRecordedData(value: unknown): value is ReflectionsRecordedData {
-  return isRecord(value)
-    && value.type === REFLECTIONS_RECORDED
-    && Array.isArray(value.reflections)
-    && (value.coversUpToId === undefined || typeof value.coversUpToId === "string");
+  return (
+    isRecord(value) &&
+    value.type === REFLECTIONS_RECORDED &&
+    Array.isArray(value.reflections) &&
+    (value.coversUpToId === undefined || typeof value.coversUpToId === "string")
+  );
 }
 
 export function isObservationsDroppedData(value: unknown): value is ObservationsDroppedData {
-  return isRecord(value)
-    && value.type === OBSERVATIONS_DROPPED
-    && isStringArray(value.observationIds)
-    && value.observationIds.every(isMemoryId)
-    && (value.coversUpToId === undefined || typeof value.coversUpToId === "string");
+  return (
+    isRecord(value) &&
+    value.type === OBSERVATIONS_DROPPED &&
+    isStringArray(value.observationIds) &&
+    value.observationIds.every(isMemoryId) &&
+    (value.coversUpToId === undefined || typeof value.coversUpToId === "string")
+  );
 }
 
 export function isFoldedMemoryDetails(value: unknown): value is FoldedMemoryDetails {
-  return isRecord(value)
-    && value.type === FOLDED_MEMORY
-    && value.version === 1
-    && typeof value.fullFold === "boolean"
-    && Array.isArray(value.observations)
-    && Array.isArray(value.reflections)
-    && (value.droppedObservationIds === undefined || isStringArray(value.droppedObservationIds));
+  return (
+    isRecord(value) &&
+    value.type === FOLDED_MEMORY &&
+    value.version === 1 &&
+    typeof value.fullFold === "boolean" &&
+    Array.isArray(value.observations) &&
+    Array.isArray(value.reflections) &&
+    (value.droppedObservationIds === undefined || isStringArray(value.droppedObservationIds))
+  );
 }
 
 export function foldedMemoryFromEntry(entry: SessionEntry): FoldedMemoryDetails | undefined {

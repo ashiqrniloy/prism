@@ -1,17 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { chmodSync, existsSync } from "node:fs";
-import type Database from "better-sqlite3";
 import {
+  type AppliedPersistenceMigration,
   assertAppliedPersistenceMigrations,
   assertMigrationUpAndReopen,
   assertPersistenceSchemaShape,
   createPersistenceMigrationContract,
   createPersistenceSchemaModel,
-  type AppliedPersistenceMigration,
   type PersistenceSchemaShape,
   type PersistenceSchemaShapeForeignKey,
 } from "@arnilo/prism/testing/persistence-schema";
-import { ADAPTER_INDEX_NAMES, MIGRATION_001_INIT, MIGRATION_002_USAGE_SCOPE, MIGRATION_003_RUN_FEEDBACK, MIGRATION_004_SESSION_SEARCH, MIGRATION_005_LIFECYCLE_HOLD_QUOTA } from "./ddl.js";
+import type Database from "better-sqlite3";
+import {
+  ADAPTER_INDEX_NAMES,
+  MIGRATION_001_INIT,
+  MIGRATION_002_USAGE_SCOPE,
+  MIGRATION_003_RUN_FEEDBACK,
+  MIGRATION_004_SESSION_SEARCH,
+  MIGRATION_005_LIFECYCLE_HOLD_QUOTA,
+} from "./ddl.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
 
@@ -42,7 +49,14 @@ export function applySqliteMigrations(db: Database.Database): readonly AppliedPe
       db.prepare(
         `INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum)
          VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(randomUUID(), step.name, String(step.version), new Date(Date.now() + step.version).toISOString(), "prism-session-store-sqlite", step.checksum);
+      ).run(
+        randomUUID(),
+        step.name,
+        String(step.version),
+        new Date(Date.now() + step.version).toISOString(),
+        "prism-session-store-sqlite",
+        step.checksum,
+      );
     }
     assertSqliteSchemaReady(db);
     applied = listAppliedMigrations(db);
@@ -64,7 +78,9 @@ export function verifyMigrationIdempotency(db: Database.Database): void {
 function listAppliedMigrations(db: Database.Database): AppliedPersistenceMigration[] {
   const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'prism_migrations'").get();
   if (!hasTable) return [];
-  return db.prepare("SELECT name, version, checksum FROM prism_migrations ORDER BY applied_at ASC, rowid ASC").all() as AppliedPersistenceMigration[];
+  return db
+    .prepare("SELECT name, version, checksum FROM prism_migrations ORDER BY applied_at ASC, rowid ASC")
+    .all() as AppliedPersistenceMigration[];
 }
 
 function backfillLegacyChecksums(db: Database.Database): void {
@@ -75,14 +91,27 @@ function backfillLegacyChecksums(db: Database.Database): void {
 function readSqliteSchemaShape(db: Database.Database): PersistenceSchemaShape {
   const model = createPersistenceSchemaModel();
   const tables = model.tables.map((table) => {
-    const columns = db.prepare(`PRAGMA table_info(${quote(table.name)})`).all() as { name: string; type: string; notnull: number; dflt_value: string | null; pk: number }[];
+    const columns = db.prepare(`PRAGMA table_info(${quote(table.name)})`).all() as {
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }[];
     const indexRows = db.prepare(`PRAGMA index_list(${quote(table.name)})`).all() as { name: string; unique: number; origin: string }[];
-    const primaryKey = columns.filter((column) => column.pk > 0).sort((a, b) => a.pk - b.pk).map((column) => column.name);
-    const uniqueKeys = indexRows
-      .filter((index) => index.unique === 1 && index.origin !== "p")
-      .map((index) => indexColumns(db, index.name));
+    const primaryKey = columns
+      .filter((column) => column.pk > 0)
+      .sort((a, b) => a.pk - b.pk)
+      .map((column) => column.name);
+    const uniqueKeys = indexRows.filter((index) => index.unique === 1 && index.origin !== "p").map((index) => indexColumns(db, index.name));
     const foreignKeys = new Map<number, PersistenceSchemaShapeForeignKey>();
-    for (const row of db.prepare(`PRAGMA foreign_key_list(${quote(table.name)})`).all() as { id: number; seq: number; table: string; from: string; to: string }[]) {
+    for (const row of db.prepare(`PRAGMA foreign_key_list(${quote(table.name)})`).all() as {
+      id: number;
+      seq: number;
+      table: string;
+      from: string;
+      to: string;
+    }[]) {
       const current = foreignKeys.get(row.id) ?? { columns: [], referencesTable: row.table, referencesColumns: [] };
       (current.columns as string[])[row.seq] = row.from;
       (current.referencesColumns as string[])[row.seq] = row.to;
@@ -90,21 +119,32 @@ function readSqliteSchemaShape(db: Database.Database): PersistenceSchemaShape {
     }
     return {
       name: table.name,
-      columns: columns.map((column) => ({ name: column.name, type: column.type, nullable: column.notnull === 0, defaultValue: column.dflt_value ?? undefined })),
+      columns: columns.map((column) => ({
+        name: column.name,
+        type: column.type,
+        nullable: column.notnull === 0,
+        defaultValue: column.dflt_value ?? undefined,
+      })),
       primaryKey,
       uniqueKeys,
       foreignKeys: [...foreignKeys.values()],
     };
   });
   const indexes = (
-    db.prepare("SELECT name, tbl_name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'").all() as { name: string; tbl_name: string }[]
+    db.prepare("SELECT name, tbl_name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'").all() as {
+      name: string;
+      tbl_name: string;
+    }[]
   )
     .filter((index) => ADAPTER_INDEX_NAMES.includes(index.name as (typeof ADAPTER_INDEX_NAMES)[number]))
     .map((index) => ({
       name: index.name,
       table: index.tbl_name,
       columns: indexColumns(db, index.name),
-      unique: ((db.prepare(`PRAGMA index_list(${quote(index.tbl_name)})`).all() as { name: string; unique: number }[]).find((row) => row.name === index.name)?.unique ?? 0) === 1,
+      unique:
+        ((db.prepare(`PRAGMA index_list(${quote(index.tbl_name)})`).all() as { name: string; unique: number }[]).find(
+          (row) => row.name === index.name,
+        )?.unique ?? 0) === 1,
     }));
   return { tables, indexes };
 }

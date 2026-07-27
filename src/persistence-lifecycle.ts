@@ -1,9 +1,4 @@
-import type {
-  OwnershipScope,
-  PersistencePage,
-  PersistenceQuery,
-  RetentionPolicy,
-} from "./contracts.js";
+import type { OwnershipScope, PersistencePage, PersistenceQuery, RetentionPolicy } from "./contracts.js";
 
 /** Resource classes covered by holds, quotas, and retention sweeps. */
 export type PersistenceResourceKind =
@@ -127,7 +122,9 @@ export interface PersistenceLifecycleStore {
   applyRetention(input: ApplyRetentionInput): Promise<ApplyRetentionResult>;
   exportUnderHold(input: ExportUnderHoldInput): Promise<PersistencePage<LegalHoldExportItem>>;
   setTenantQuota(input: SetTenantQuotaInput): Promise<TenantQuota>;
-  getTenantQuota(input: OwnershipScope & { readonly resourceKind: PersistenceResourceKind; readonly signal?: AbortSignal }): Promise<TenantQuota | null>;
+  getTenantQuota(
+    input: OwnershipScope & { readonly resourceKind: PersistenceResourceKind; readonly signal?: AbortSignal },
+  ): Promise<TenantQuota | null>;
   /** Fails closed when used + delta would exceed limit. */
   consumeTenantQuota(input: ConsumeTenantQuotaInput): Promise<TenantQuota>;
 }
@@ -190,9 +187,7 @@ export function createMemoryPersistenceLifecycle(): PersistenceLifecycleStore {
       throwIfAborted(input.signal);
       assertOwnership(input);
       const held = new Set(
-        [...holds.values()]
-          .filter((hold) => sameOwnership(input, hold) && hold.resourceKind === "session")
-          .map((hold) => hold.resourceId),
+        [...holds.values()].filter((hold) => sameOwnership(input, hold) && hold.resourceKind === "session").map((hold) => hold.resourceId),
       );
       const candidates = input.candidates ?? [];
       const deletedIds: string[] = [];
@@ -273,10 +268,7 @@ export function createMemoryPersistenceLifecycle(): PersistenceLifecycleStore {
         throw new PersistenceLifecycleError("tenant quota not configured", "ERR_PRISM_LIFECYCLE_QUOTA");
       }
       if (current.used + delta > current.limit) {
-        throw new PersistenceLifecycleError(
-          `tenant quota exhausted for ${input.resourceKind}`,
-          "ERR_PRISM_LIFECYCLE_QUOTA_EXHAUSTED",
-        );
+        throw new PersistenceLifecycleError(`tenant quota exhausted for ${input.resourceKind}`, "ERR_PRISM_LIFECYCLE_QUOTA_EXHAUSTED");
       }
       const next: TenantQuota = {
         ...current,

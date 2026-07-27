@@ -1,11 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  createSecretRedactor,
-  errorToErrorInfo,
-  redactSecrets,
-  type OwnershipScope,
-  type SecretRedactor,
-} from "@arnilo/prism";
+import { errorToErrorInfo, type OwnershipScope, redactSecrets, resolveRedactor, type SecretRedactor } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
 import {
   DEFAULT_EVALUATION_PAGE_SIZE,
@@ -59,15 +53,6 @@ export function shouldSample(sampleRate: number, random: () => number = Math.ran
   return random() < sampleRate;
 }
 
-export function resolveRedactor(
-  redactor?: SecretRedactor,
-  secrets?: readonly (string | undefined)[],
-): SecretRedactor | undefined {
-  if (redactor) return redactor;
-  if (!secrets || secrets.length === 0) return undefined;
-  return createSecretRedactor(secrets);
-}
-
 export function redactEvaluationRecord(
   record: EvaluationRecord,
   redactor?: SecretRedactor,
@@ -84,17 +69,11 @@ export function redactEvaluationRecord(
   };
 }
 
-export function exactOwnershipMatches(
-  expected: OwnershipScope | undefined,
-  actual: OwnershipScope | undefined,
-): boolean {
+export function exactOwnershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean {
   return ownershipMatches(expected, actual) && ownershipMatches(actual, expected);
 }
 
-export function ownershipMatches(
-  expected: OwnershipScope | undefined,
-  actual: OwnershipScope | undefined,
-): boolean {
+export function ownershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean {
   if (!expected) return true;
   if (!actual) return false;
   if (expected.tenantId !== undefined && expected.tenantId !== actual.tenantId) return false;
@@ -103,10 +82,7 @@ export function ownershipMatches(
   return true;
 }
 
-export function statusMatches(
-  expected: EvaluationStatus | readonly EvaluationStatus[] | undefined,
-  actual: EvaluationStatus,
-): boolean {
+export function statusMatches(expected: EvaluationStatus | readonly EvaluationStatus[] | undefined, actual: EvaluationStatus): boolean {
   if (!expected) return true;
   return Array.isArray(expected) ? expected.includes(actual) : expected === actual;
 }

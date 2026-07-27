@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.16] - 2026-07-26
+
+### Changed
+- Row codecs moved to the shared `@arnilo/prism-session-store-codecs` package (`createSessionRowMappers` with an INTEGER `redacted` codec); no public API change.
+
 ## [0.0.15] - 2026-07-26
 
 ## [0.0.14] - 2026-07-26

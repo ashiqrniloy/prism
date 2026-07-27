@@ -1,26 +1,12 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import {
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { Readable, Writable } from "node:stream";
-import {
-  INIT_PROVIDERS,
-  createInitProject,
-  defaultTemplatesRoot,
-  parseInitArgs,
-  runInitCommand,
-} from "../cli-init.js";
+import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
+import { createInitProject, defaultTemplatesRoot, INIT_PROVIDERS, parseInitArgs, runInitCommand } from "../cli-init.js";
 import { runCli } from "../cli-runner.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -74,7 +60,7 @@ function secretScan(dir: string): string[] {
     /sk-[A-Za-z0-9]{10,}/,
     /sk-or-[A-Za-z0-9]{10,}/,
     /BEGIN (RSA |OPENSSH )?PRIVATE KEY/,
-    /api[_-]?key\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{16,}/i,
+    /api[_-]?key\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}/i,
   ];
   const hits: string[] = [];
   for (const path of walkFiles(dir)) {
@@ -90,14 +76,7 @@ function secretScan(dir: string): string[] {
 
 describe("prism init", () => {
   it("parses provider and optional feature flags", () => {
-    const parsed = parseInitArgs([
-      "my-agent",
-      "--provider",
-      "openai",
-      "--with-workflows",
-      "--with-evals",
-      "--force",
-    ]);
+    const parsed = parseInitArgs(["my-agent", "--provider", "openai", "--with-workflows", "--with-evals", "--force"]);
     assert.equal(parsed.directory, "my-agent");
     assert.equal(parsed.provider, "openai");
     assert.equal(parsed.withWorkflows, true);
@@ -115,14 +94,17 @@ describe("prism init", () => {
   it("ships alibaba and ollama init entries that reference env keys only", () => {
     assert.ok(INIT_PROVIDERS.includes("alibaba"), "INIT_PROVIDERS missing alibaba");
     assert.ok(INIT_PROVIDERS.includes("ollama"), "INIT_PROVIDERS missing ollama");
-    const catalog = JSON.parse(readFileSync(join(templatesRoot, "providers.json"), "utf8")) as Record<string, {
-      envKey?: string;
-      envPlaceholder?: string;
-      imports: string;
-      providerExpression: string;
-      modelExpression: string;
-      packageName?: string;
-    }>;
+    const catalog = JSON.parse(readFileSync(join(templatesRoot, "providers.json"), "utf8")) as Record<
+      string,
+      {
+        envKey?: string;
+        envPlaceholder?: string;
+        imports: string;
+        providerExpression: string;
+        modelExpression: string;
+        packageName?: string;
+      }
+    >;
     const expected: Record<string, { envKey: string; pkg: string; provider: string }> = {
       alibaba: { envKey: "DASHSCOPE_API_KEY", pkg: "@arnilo/prism-provider-alibaba", provider: "createAlibabaProvider" },
       ollama: { envKey: "OLLAMA_API_KEY", pkg: "@arnilo/prism-provider-ollama", provider: "createOllamaProvider" },
@@ -208,10 +190,7 @@ describe("prism init", () => {
       // Default install must stay tiny versus Mastra's 439 MB scaffold.
       const nm = join(target, "node_modules");
       const installBytes = totalBytes(nm);
-      assert.ok(
-        installBytes < 50 * 1024 * 1024,
-        `default generated install too large: ${installBytes} bytes`,
-      );
+      assert.ok(installBytes < 50 * 1024 * 1024, `default generated install too large: ${installBytes} bytes`);
 
       const hits = secretScan(target);
       assert.deepEqual(

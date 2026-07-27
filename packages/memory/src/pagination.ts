@@ -22,23 +22,20 @@ export function decodeMemoryCursor(cursor: string | undefined, order: MemoryVect
   try {
     const value = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Partial<MemoryCursor>;
     if (
-      value.order !== order
-      || !Number.isFinite(value.value)
-      || !Number.isInteger(value.sequence)
-      || typeof value.id !== "string"
-      || value.id.length === 0
-    ) throw new Error("invalid cursor");
+      value.order !== order ||
+      !Number.isFinite(value.value) ||
+      !Number.isInteger(value.sequence) ||
+      typeof value.id !== "string" ||
+      value.id.length === 0
+    )
+      throw new Error("invalid cursor");
     return value as MemoryCursor;
   } catch {
     throw new MemoryValidationError("memory cursor is invalid");
   }
 }
 
-export function compareMemoryRecord(
-  record: MemoryVectorRecord,
-  cursor: MemoryCursor | undefined,
-  order: MemoryVectorOrder,
-): number {
+export function compareMemoryRecord(record: MemoryVectorRecord, cursor: MemoryCursor | undefined, order: MemoryVectorOrder): number {
   const value = memoryOrderValue(record, order);
   if (!cursor) return 1;
   return value - cursor.value || record.sequence - cursor.sequence || record.id.localeCompare(cursor.id);

@@ -1,16 +1,13 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createMemoryCheckpointStore, createMemoryLeaseStore, createSecretRedactor, type JsonObject } from "@arnilo/prism";
 import {
-  createMemoryCheckpointStore,
-  createMemoryLeaseStore,
-  createSecretRedactor,
-  type JsonObject,
-} from "@arnilo/prism";
-import {
-  CODING_STATE_KEY,
   assertCodingResumeAllowed,
   buildCodingCheckpointMetadata,
+  CODING_STATE_KEY,
+  type CodingCheckpointMetadata,
+  type CodingFingerprints,
   codingCheckpointStatePatch,
   codingPlanPathForTask,
   createCodingPlanMarkdown,
@@ -19,8 +16,6 @@ import {
   readCodingCheckpointFromState,
   readCodingPlanFile,
   writeCodingPlanFile,
-  type CodingCheckpointMetadata,
-  type CodingFingerprints,
 } from "@arnilo/prism-coding-agent";
 import {
   cancelWorkflowRun,
@@ -112,9 +107,7 @@ export function createCodingTaskWorkflow(workspaceRoot: string) {
         title: "Fix parser",
         taskId: "parser-fix",
         status: "editing",
-        todos: coding.todos.map((todo) =>
-          todo.id === "branch" ? { ...todo, done: true } : todo,
-        ),
+        todos: coding.todos.map((todo) => (todo.id === "branch" ? { ...todo, done: true } : todo)),
       });
       const plan = await writeCodingPlanFile({ workspaceRoot, planPath, markdown });
       const next = buildCodingCheckpointMetadata({
@@ -141,9 +134,7 @@ export function createCodingTaskWorkflow(workspaceRoot: string) {
         title: "Fix parser",
         taskId: "parser-fix",
         status: "checking",
-        todos: coding.todos.map((todo) =>
-          todo.id === "branch" || todo.id === "edit" ? { ...todo, done: true } : todo,
-        ),
+        todos: coding.todos.map((todo) => (todo.id === "branch" || todo.id === "edit" ? { ...todo, done: true } : todo)),
       });
       const plan = await writeCodingPlanFile({ workspaceRoot, planPath, markdown });
       const next = buildCodingCheckpointMetadata({
@@ -168,9 +159,7 @@ export function createCodingTaskWorkflow(workspaceRoot: string) {
         taskId: "parser-fix",
         status: "awaiting_approval",
         todos: coding.todos.map((todo) =>
-          todo.id === "check" || todo.id === "branch" || todo.id === "edit"
-            ? { ...todo, done: true }
-            : todo,
+          todo.id === "check" || todo.id === "branch" || todo.id === "edit" ? { ...todo, done: true } : todo,
         ),
       });
       const plan = await writeCodingPlanFile({ workspaceRoot, planPath, markdown });
@@ -291,11 +280,7 @@ export async function demo() {
   const events: WorkflowEvent[] = [];
   try {
     await mkdir(join(workspaceRoot, "src"), { recursive: true });
-    await writeFile(
-      join(workspaceRoot, "src", "parser.ts"),
-      "export const parse = (s: string) => s;\n",
-      { mode: 0o600 },
-    );
+    await writeFile(join(workspaceRoot, "src", "parser.ts"), "export const parse = (s: string) => s;\n", { mode: 0o600 });
 
     const workflow = createCodingTaskWorkflow(workspaceRoot);
     const redactor = createSecretRedactor([]);
@@ -400,11 +385,7 @@ export async function demo() {
       },
       edges: [],
     });
-    const queued = await startWorkflowBackground(
-      backgroundWorkflow,
-      { title: "bg" },
-      { checkpoints: backgroundCheckpoints, ownership },
-    );
+    const queued = await startWorkflowBackground(backgroundWorkflow, { title: "bg" }, { checkpoints: backgroundCheckpoints, ownership });
     await cancelWorkflowRun({
       workflowId: backgroundWorkflow.id,
       runId: queued.runId,
@@ -423,9 +404,7 @@ export async function demo() {
     const claims = await coordinator.pollOnce();
     const cancelled = await getWorkflowRun(backgroundCheckpoints, { ...queued, ownership });
 
-    const handoff = completed.outputs.handoff as
-      | { handoff?: { changedPaths?: string[] }; codingStatus?: string }
-      | undefined;
+    const handoff = completed.outputs.handoff as { handoff?: { changedPaths?: string[] }; codingStatus?: string } | undefined;
     const finalPlan = await readCodingPlanFile({
       workspaceRoot,
       planPath: coding.planPath,

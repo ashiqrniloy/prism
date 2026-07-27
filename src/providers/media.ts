@@ -1,4 +1,16 @@
 import { createHash } from "node:crypto";
+import {
+  assertMessagesSupportModelCapabilities,
+  contentBlockInputModality,
+  DEFAULT_MAX_MEDIA_ITEM_BYTES,
+  type MediaContentBlock,
+  type ModelInputCapability,
+  type ResolvedMediaContent,
+  type ResolveMediaContentOptions,
+  resolveMediaContentBlock,
+  resolveMediaContentBlocks,
+  UnsupportedModalityError,
+} from "../content.js";
 import type {
   AudioContent,
   ContentBlock,
@@ -9,18 +21,6 @@ import type {
   ModelCapabilities,
   ModelConfig,
 } from "../contracts.js";
-import {
-  assertMessagesSupportModelCapabilities,
-  contentBlockInputModality,
-  DEFAULT_MAX_MEDIA_ITEM_BYTES,
-  resolveMediaContentBlock,
-  resolveMediaContentBlocks,
-  type MediaContentBlock,
-  type ModelInputCapability,
-  type ResolveMediaContentOptions,
-  type ResolvedMediaContent,
-  UnsupportedModalityError,
-} from "../content.js";
 
 /** Default upload-cache entry cap per provider media session. */
 export const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32;
@@ -40,22 +40,14 @@ export interface BoundedUploadCache<T> {
   clear(): void;
 }
 
-export function assertProviderMediaCapability(
-  modality: ModelInputCapability,
-  capabilities: ModelCapabilities,
-  model: ModelConfig,
-): void {
+export function assertProviderMediaCapability(modality: ModelInputCapability, capabilities: ModelCapabilities, model: ModelConfig): void {
   const supported = capabilities.input;
   if (supported?.length && !supported.includes(modality)) {
     throw new UnsupportedModalityError(modality, model);
   }
 }
 
-export function rejectProviderMediaBlock(
-  part: ContentBlock,
-  capabilities: ModelCapabilities,
-  model: ModelConfig,
-): never {
+export function rejectProviderMediaBlock(part: ContentBlock, capabilities: ModelCapabilities, model: ModelConfig): never {
   const modality = contentBlockInputModality(part);
   if (modality) assertProviderMediaCapability(modality, capabilities, model);
   throw new Error(`Provider ${model.provider} does not support ${part.type} content blocks`);

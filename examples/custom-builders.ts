@@ -1,15 +1,15 @@
 import {
+  type ContextBlock,
   createAgent,
   createAgentSession,
   createMockProvider,
-  providerDone,
-  providerTextDelta,
-  type ContextBlock,
-  type InputBuilder,
   type InputBuildContext,
+  type InputBuilder,
   type Message,
   type PromptBuilder,
   type PromptBuildRequest,
+  providerDone,
+  providerTextDelta,
 } from "@arnilo/prism";
 
 // Custom input + prompt builders: a host replaces the default assembly seams
@@ -32,10 +32,7 @@ const customInputBuilder: InputBuilder = {
   name: "host-input",
   async build(input: string | Message | readonly Message[], _context?: InputBuildContext): Promise<readonly Message[]> {
     const userText = typeof input === "string" ? input : "<structured input>";
-    return [
-      preambleMessage,
-      { role: "user", content: [{ type: "text", text: userText }] },
-    ];
+    return [preambleMessage, { role: "user", content: [{ type: "text", text: userText }] }];
   },
 };
 
@@ -65,9 +62,7 @@ export async function demo(): Promise<readonly string[]> {
     provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
     inputBuilder: customInputBuilder,
     promptBuilder: customPromptBuilder,
-    context: [
-      { name: "workspace", resolve: () => [{ title: "Workspace", content: "demo repo" }] },
-    ],
+    context: [{ name: "workspace", resolve: () => [{ title: "Workspace", content: "demo repo" }] }],
   });
 
   const session = createAgentSession({ agent });

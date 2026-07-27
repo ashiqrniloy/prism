@@ -38,7 +38,8 @@ export function createPersistenceAgUiReplay<Authorization>(
   return {
     async page(input) {
       input.signal?.throwIfAborted();
-      if (input.cursor && Buffer.byteLength(input.cursor, "utf8") > limits.maxCursorBytes) throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Replay cursor exceeds maxCursorBytes");
+      if (input.cursor && Buffer.byteLength(input.cursor, "utf8") > limits.maxCursorBytes)
+        throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Replay cursor exceeds maxCursorBytes");
       const run = await options.resolveRun(input);
       if (!run) throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "Run is unavailable");
       const page = await store.queryEvents({

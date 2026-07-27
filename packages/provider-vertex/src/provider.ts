@@ -24,11 +24,7 @@ export interface VertexProviderPackageOptions extends VertexProviderOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function vertexOpenApiBaseUrl(input: {
-  readonly projectId: string;
-  readonly location: string;
-  readonly endpoint?: string;
-}): string {
+export function vertexOpenApiBaseUrl(input: { readonly projectId: string; readonly location: string; readonly endpoint?: string }): string {
   if (input.endpoint !== undefined) {
     if (!input.endpoint.trim()) throw new Error("Vertex endpoint must be non-empty when provided");
     try {

@@ -1,13 +1,9 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createCodingTools,
-  createReadOnlyTools,
-  createAllTools,
-} from "../index.js";
+import { test } from "node:test";
+import { createAllTools, createCodingTools, createReadOnlyTools } from "../index.js";
 
 async function tmp(): Promise<string> {
   return mkdtemp(join(tmpdir(), "agg-"));
@@ -62,18 +58,25 @@ test("createReadOnlyTools applies shared executionPolicy before filesystem acces
       },
       read: {
         operations: {
-          access: async () => { accesses++; },
+          access: async () => {
+            accesses++;
+          },
           readFile: async () => Buffer.from("must not read"),
-          readText: async () => { throw new Error("must not read"); },
+          readText: async () => {
+            throw new Error("must not read");
+          },
           statFile: async () => ({ size: 0 }),
         },
       },
     });
-    const result = await read!.execute({ path }, {
-      toolCallId: "call-1",
-      sessionId: "session-1",
-      runId: "run-1",
-    });
+    const result = await read!.execute(
+      { path },
+      {
+        toolCallId: "call-1",
+        sessionId: "session-1",
+        runId: "run-1",
+      },
+    );
     assert.equal(result.error?.message, "denied");
     assert.equal(accesses, 0);
   } finally {

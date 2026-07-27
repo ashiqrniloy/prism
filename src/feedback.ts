@@ -2,7 +2,6 @@ import type {
   AppendRunFeedbackInput,
   DeleteRunFeedbackInput,
   OwnershipScope,
-  PersistencePage,
   RunFeedbackQuery,
   RunFeedbackRecord,
   RunFeedbackStore,
@@ -59,10 +58,7 @@ export interface MemoryRunFeedbackStoreOptions extends PrepareRunFeedbackOptions
 }
 
 /** Validate, ownership-check, redact, bound, and freeze one feedback record. */
-export async function prepareRunFeedback(
-  input: AppendRunFeedbackInput,
-  options: PrepareRunFeedbackOptions,
-): Promise<RunFeedbackRecord> {
+export async function prepareRunFeedback(input: AppendRunFeedbackInput, options: PrepareRunFeedbackOptions): Promise<RunFeedbackRecord> {
   input.signal?.throwIfAborted();
   const ownership = requireOwnership(input);
   const id = requireId(input.id, "feedback id");
@@ -84,24 +80,41 @@ export async function prepareRunFeedback(
   if (input.rating !== undefined && (!Number.isFinite(input.rating) || input.rating < -1 || input.rating > 1)) {
     throw new RunFeedbackError("rating must be a finite number in [-1, 1]", "ERR_PRISM_RUN_FEEDBACK_BOUNDS");
   }
-  const maxCommentBytes = boundedLimit(options.maxCommentBytes, DEFAULT_MAX_FEEDBACK_COMMENT_BYTES, HARD_MAX_FEEDBACK_COMMENT_BYTES, "maxCommentBytes");
+  const maxCommentBytes = boundedLimit(
+    options.maxCommentBytes,
+    DEFAULT_MAX_FEEDBACK_COMMENT_BYTES,
+    HARD_MAX_FEEDBACK_COMMENT_BYTES,
+    "maxCommentBytes",
+  );
   const maxTags = boundedLimit(options.maxTags, DEFAULT_MAX_FEEDBACK_TAGS, HARD_MAX_FEEDBACK_TAGS, "maxTags");
   const maxLinks = boundedLimit(options.maxLinks, DEFAULT_MAX_FEEDBACK_LINKS, HARD_MAX_FEEDBACK_LINKS, "maxLinks");
-  const maxMetadataBytes = boundedLimit(options.maxMetadataBytes, DEFAULT_MAX_FEEDBACK_METADATA_BYTES, HARD_MAX_FEEDBACK_METADATA_BYTES, "maxMetadataBytes");
+  const maxMetadataBytes = boundedLimit(
+    options.maxMetadataBytes,
+    DEFAULT_MAX_FEEDBACK_METADATA_BYTES,
+    HARD_MAX_FEEDBACK_METADATA_BYTES,
+    "maxMetadataBytes",
+  );
   const tags = normalizeList(input.tags, maxTags, MAX_FEEDBACK_TAG_LENGTH, "tag");
   const scorerIds = normalizeList(input.scorerIds, maxLinks, MAX_FEEDBACK_ID_LENGTH, "scorer id", true);
   const evaluationIds = normalizeList(input.evaluationIds, maxLinks, MAX_FEEDBACK_ID_LENGTH, "evaluation id", true);
-  if (input.rating === undefined && input.comment === undefined && tags.length === 0 && scorerIds.length === 0 && evaluationIds.length === 0) {
+  if (
+    input.rating === undefined &&
+    input.comment === undefined &&
+    tags.length === 0 &&
+    scorerIds.length === 0 &&
+    evaluationIds.length === 0
+  ) {
     throw new RunFeedbackError("feedback requires rating, comment, tag, scorer, or evaluation", "ERR_PRISM_RUN_FEEDBACK_EMPTY");
   }
-  const redact = <T>(value: T): T => options.redactor ? options.redactor.redact(value) : value;
+  const redact = <T>(value: T): T => (options.redactor ? options.redactor.redact(value) : value);
   const comment = input.comment === undefined ? undefined : redact(input.comment);
   const safeTags = Object.freeze(normalizeList(redact(tags), maxTags, MAX_FEEDBACK_TAG_LENGTH, "tag"));
   const metadata = input.metadata === undefined ? undefined : redact(input.metadata);
   assertBytes(comment, maxCommentBytes, "comment");
   assertBytes(metadata, maxMetadataBytes, "metadata");
   const createdAt = input.createdAt ?? new Date().toISOString();
-  if (!Number.isFinite(Date.parse(createdAt))) throw new RunFeedbackError("createdAt must be an ISO timestamp", "ERR_PRISM_RUN_FEEDBACK_VALIDATION");
+  if (!Number.isFinite(Date.parse(createdAt)))
+    throw new RunFeedbackError("createdAt must be an ISO timestamp", "ERR_PRISM_RUN_FEEDBACK_VALIDATION");
   return Object.freeze({
     id,
     runId,
@@ -163,19 +176,19 @@ export function runFeedbackPageLimit(limit: number | undefined, maximum = HARD_F
 }
 
 function requireOwnership(input: OwnershipScope): Required<Pick<OwnershipScope, "tenantId">> & OwnershipScope {
-  if (!input.tenantId?.trim()
-    || (input.accountId !== undefined && !input.accountId.trim())
-    || (input.userId !== undefined && !input.userId.trim())
-    || (!input.accountId && !input.userId)) {
+  if (
+    !input.tenantId?.trim() ||
+    (input.accountId !== undefined && !input.accountId.trim()) ||
+    (input.userId !== undefined && !input.userId.trim()) ||
+    (!input.accountId && !input.userId)
+  ) {
     throw new RunFeedbackError("tenantId and non-empty accountId or userId are required", "ERR_PRISM_RUN_FEEDBACK_OWNERSHIP");
   }
   return { tenantId: input.tenantId, accountId: input.accountId, userId: input.userId };
 }
 
 function sameOwnership(expected: OwnershipScope, actual: OwnershipScope): boolean {
-  return expected.tenantId === actual.tenantId
-    && expected.accountId === actual.accountId
-    && expected.userId === actual.userId;
+  return expected.tenantId === actual.tenantId && expected.accountId === actual.accountId && expected.userId === actual.userId;
 }
 
 function requireId(value: string, label: string): string {
@@ -208,15 +221,19 @@ function boundedLimit(value: number | undefined, fallback: number, hard: number,
 
 function pageLimit(value: number | undefined, maximum: number): number {
   if (value === undefined) return Math.min(DEFAULT_FEEDBACK_PAGE_SIZE, maximum);
-  if (!Number.isSafeInteger(value) || value < 1) throw new RunFeedbackError("limit must be a positive integer", "ERR_PRISM_RUN_FEEDBACK_BOUNDS");
+  if (!Number.isSafeInteger(value) || value < 1)
+    throw new RunFeedbackError("limit must be a positive integer", "ERR_PRISM_RUN_FEEDBACK_BOUNDS");
   return Math.min(value, maximum);
 }
 
 function assertBytes(value: unknown, maximum: number, label: string): void {
   if (value === undefined) return;
   let encoded: string;
-  try { encoded = typeof value === "string" ? value : JSON.stringify(value); }
-  catch { throw new RunFeedbackError(`${label} must be JSON serializable`, "ERR_PRISM_RUN_FEEDBACK_VALIDATION"); }
+  try {
+    encoded = typeof value === "string" ? value : JSON.stringify(value);
+  } catch {
+    throw new RunFeedbackError(`${label} must be JSON serializable`, "ERR_PRISM_RUN_FEEDBACK_VALIDATION");
+  }
   if (new TextEncoder().encode(encoded).byteLength > maximum) {
     throw new RunFeedbackError(`${label} exceeds ${maximum} bytes`, "ERR_PRISM_RUN_FEEDBACK_BOUNDS");
   }

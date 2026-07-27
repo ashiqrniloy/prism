@@ -1,4 +1,4 @@
-import { createSecretRedactor, type SecretRedactor } from "@arnilo/prism";
+import { type SecretRedactor } from "@arnilo/prism";
 import { WorkflowCheckpointError } from "./errors.js";
 import {
   DEFAULT_LIST_PAGE_SIZE,
@@ -17,22 +17,7 @@ import type {
   WorkflowCheckpointValue,
   WorkflowRunStatus,
 } from "./types.js";
-import {
-  assertWithinBytes,
-  boundCheckpointValue,
-  nowIso,
-  ownershipMatches,
-} from "./util.js";
-
-export function resolveRedactor(
-  options: WorkflowCheckpointAdapterOptions = {},
-): SecretRedactor | undefined {
-  if (options.redactor) return options.redactor;
-  if (options.secrets?.some((secret) => Boolean(secret))) {
-    return createSecretRedactor(options.secrets);
-  }
-  return undefined;
-}
+import { assertWithinBytes, boundCheckpointValue, nowIso, ownershipMatches } from "./util.js";
 
 export function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
@@ -69,10 +54,7 @@ export function assertOwnershipForLoad(
   }
 }
 
-export function assertOwnershipForSave(
-  existing: WorkflowCheckpointRecord | null | undefined,
-  input: WorkflowCheckpointSaveInput,
-): void {
+export function assertOwnershipForSave(existing: WorkflowCheckpointRecord | null | undefined, input: WorkflowCheckpointSaveInput): void {
   if (existing?.ownership && input.ownership) {
     if (!ownershipMatches(existing.ownership, input.ownership)) {
       throw new WorkflowCheckpointError("Checkpoint ownership mismatch on save");
@@ -80,14 +62,9 @@ export function assertOwnershipForSave(
   }
 }
 
-export function assertVersionAdvance(
-  existing: WorkflowCheckpointRecord | null | undefined,
-  version: number,
-): void {
+export function assertVersionAdvance(existing: WorkflowCheckpointRecord | null | undefined, version: number): void {
   if (existing && version <= existing.version) {
-    throw new WorkflowCheckpointError(
-      `Stale checkpoint version ${version} (current ${existing.version})`,
-    );
+    throw new WorkflowCheckpointError(`Stale checkpoint version ${version} (current ${existing.version})`);
   }
 }
 
@@ -101,9 +78,7 @@ export function prepareCheckpointRecord(
 ): WorkflowCheckpointRecord {
   throwIfAborted(input.signal);
   if (input.value.schemaVersion !== WORKFLOW_CHECKPOINT_SCHEMA_VERSION) {
-    throw new WorkflowCheckpointError(
-      `Unsupported checkpoint schemaVersion ${input.value.schemaVersion}`,
-    );
+    throw new WorkflowCheckpointError(`Unsupported checkpoint schemaVersion ${input.value.schemaVersion}`);
   }
   for (const node of Object.values(input.value.nodes)) {
     if (node.output !== undefined) {

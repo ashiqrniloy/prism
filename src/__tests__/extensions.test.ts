@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createExtensionEventBus, createExtensionKernel, defineProviderPackage } from "../index.js";
+import { describe, it } from "node:test";
 import type { AIProvider, Extension, ExtensionEvent, ToolDefinition } from "../index.js";
+import { createExtensionEventBus, createExtensionKernel, defineProviderPackage } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -27,7 +27,15 @@ function allContributionsExtension(): Extension {
       api.registerContextProvider({ name: "context", resolve: () => [{ content: "context" }] });
       api.registerSkill({ name: "brief" });
       api.registerCommand({ name: "say", execute: () => ({ name: "say", value: "ok" }) });
-      api.registerAgent({ name: "agent", create: () => ({ config: { model: { provider: "mock", model: "demo" }, provider }, createSession: () => { throw new Error("not implemented"); } }) });
+      api.registerAgent({
+        name: "agent",
+        create: () => ({
+          config: { model: { provider: "mock", model: "demo" }, provider },
+          createSession: () => {
+            throw new Error("not implemented");
+          },
+        }),
+      });
       api.registerInputBuilder({ name: "input", build: () => [] });
       api.registerPromptBuilder({ name: "prompt", build: (request) => request.messages });
       api.registerCompactionStrategy({ name: "compact", compact: () => ({ summary: "summary" }) });
@@ -40,7 +48,11 @@ function allContributionsExtension(): Extension {
       api.registerAuthMethod({ provider: "mock", kind: "api_key", credentialName: "apiKey" });
       api.registerProviderRequestPolicy({ name: "cache", apply: ({ request }) => request });
       api.registerSystemPromptContribution({ id: "demo-prompt", source: "package", mode: "append", text: "Be brief." });
-      api.registerInstructionInjector({ name: "json", description: "force JSON", apply: () => ({ instructions: "Always answer in JSON", when: "every_turn" }) });
+      api.registerInstructionInjector({
+        name: "json",
+        description: "force JSON",
+        apply: () => ({ instructions: "Always answer in JSON", when: "every_turn" }),
+      });
     },
   };
 }
@@ -50,8 +62,12 @@ describe("extension event bus", () => {
     const bus = createExtensionEventBus();
     const seen: number[] = [];
 
-    bus.on("turn", () => { seen.push(1); });
-    bus.on("turn", () => { seen.push(2); });
+    bus.on("turn", () => {
+      seen.push(1);
+    });
+    bus.on("turn", () => {
+      seen.push(2);
+    });
 
     await bus.emit({ type: "turn" });
 
@@ -62,9 +78,15 @@ describe("extension event bus", () => {
     const bus = createExtensionEventBus({ secrets: ["token-123"] });
     const events: ExtensionEvent[] = [];
 
-    bus.on("extension_error", (event) => { events.push(event); });
-    bus.on("turn", () => { throw new Error("bad token-123"); });
-    bus.on("turn", () => { events.push({ type: "turn" }); });
+    bus.on("extension_error", (event) => {
+      events.push(event);
+    });
+    bus.on("turn", () => {
+      throw new Error("bad token-123");
+    });
+    bus.on("turn", () => {
+      events.push({ type: "turn" });
+    });
 
     await bus.emit({ type: "turn", extension: "demo" });
 
@@ -81,8 +103,18 @@ describe("extension kernel", () => {
     const kernel = createExtensionKernel();
 
     await kernel.load([
-      { name: "one", setup: () => { order.push("one"); } },
-      { name: "two", setup: () => { order.push("two"); } },
+      {
+        name: "one",
+        setup: () => {
+          order.push("one");
+        },
+      },
+      {
+        name: "two",
+        setup: () => {
+          order.push("two");
+        },
+      },
     ]);
 
     assert.deepEqual(order, ["one", "two"]);
@@ -105,14 +137,26 @@ describe("extension kernel", () => {
     assert.equal(kernel.registries.compactionStrategies.resolve("compact").name, "compact");
     assert.equal(kernel.registries.retryPolicies.resolve("retry").name, "retry");
     assert.equal(kernel.registries.storeFactories.resolve("memory").name, "memory");
-    assert.equal(await kernel.registries.resourceLoaders.resolve("memory").load("memory:x").then((item) => item.text), "resource");
+    assert.equal(
+      await kernel.registries.resourceLoaders
+        .resolve("memory")
+        .load("memory:x")
+        .then((item) => item.text),
+      "resource",
+    );
     assert.equal(kernel.registries.settingsProviders.resolve("settings").get("x"), undefined);
     assert.equal(kernel.registries.credentialResolvers.resolve("credentials").resolve({ name: "apiKey" }), undefined);
     assert.equal(kernel.registries.providerPackages.resolve("demo-provider").name, "demo-provider");
     assert.equal(kernel.registries.authMethods.resolve("mock\0api_key").provider, "mock");
     assert.equal(kernel.registries.providerRequestPolicies.resolve("cache").name, "cache");
     assert.equal(kernel.registries.systemPromptContributions.resolve("demo-prompt").text, "Be brief.");
-    assert.equal(kernel.registries.instructionInjectors.resolve("json").apply({ sessionId: "", runId: "", turn: 1, input: [], history: [], metadata: {}, signal: new AbortController().signal }).instructions, "Always answer in JSON");
+    assert.equal(
+      kernel.registries.instructionInjectors
+        .resolve("json")
+        .apply({ sessionId: "", runId: "", turn: 1, input: [], history: [], metadata: {}, signal: new AbortController().signal })
+        .instructions,
+      "Always answer in JSON",
+    );
   });
 
   it("keeps instruction injector registration isolated from other registries", async () => {
@@ -127,15 +171,33 @@ describe("extension kernel", () => {
     const kernel2 = createExtensionKernel();
     await kernel2.load([
       allContributionsExtension(),
-      { name: "override", setup: (api) => { api.registerInstructionInjector({ name: "json", apply: () => ({ instructions: "v2", when: "every_turn" }) }); } },
+      {
+        name: "override",
+        setup: (api) => {
+          api.registerInstructionInjector({ name: "json", apply: () => ({ instructions: "v2", when: "every_turn" }) });
+        },
+      },
     ]);
-    assert.equal(kernel2.registries.instructionInjectors.resolve("json").apply({ sessionId: "", runId: "", turn: 1, input: [], history: [], metadata: {}, signal: new AbortController().signal }).instructions, "v2");
+    assert.equal(
+      kernel2.registries.instructionInjectors
+        .resolve("json")
+        .apply({ sessionId: "", runId: "", turn: 1, input: [], history: [], metadata: {}, signal: new AbortController().signal })
+        .instructions,
+      "v2",
+    );
   });
 
   it("lets extensions register middleware", async () => {
     const kernel = createExtensionKernel();
 
-    await kernel.load([{ name: "mw", setup: (api) => { api.use<{ value: number }>("provider_request", (value) => ({ value: value.value + 1 })); } }]);
+    await kernel.load([
+      {
+        name: "mw",
+        setup: (api) => {
+          api.use<{ value: number }>("provider_request", (value) => ({ value: value.value + 1 }));
+        },
+      },
+    ]);
 
     assert.deepEqual(await kernel.middleware.run("provider_request", { value: 1 }), { value: 2 });
   });
@@ -144,8 +206,17 @@ describe("extension kernel", () => {
     const kernel = createExtensionKernel({ secrets: ["token-123"] });
     const errors: ExtensionEvent[] = [];
 
-    kernel.events.on("extension_error", (event) => { errors.push(event); });
-    await kernel.load([{ name: "bad", setup: () => { throw new Error("bad token-123"); } }]);
+    kernel.events.on("extension_error", (event) => {
+      errors.push(event);
+    });
+    await kernel.load([
+      {
+        name: "bad",
+        setup: () => {
+          throw new Error("bad token-123");
+        },
+      },
+    ]);
 
     assert.equal(errors.length, 1);
     assert.equal(errors[0]?.extension, "bad");
@@ -155,6 +226,17 @@ describe("extension kernel", () => {
   it("throws setup errors when host opts in", async () => {
     const kernel = createExtensionKernel({ errorPolicy: "throw" });
 
-    await assert.rejects(() => kernel.load([{ name: "bad", setup: () => { throw new Error("boom"); } }]), /boom/);
+    await assert.rejects(
+      () =>
+        kernel.load([
+          {
+            name: "bad",
+            setup: () => {
+              throw new Error("boom");
+            },
+          },
+        ]),
+      /boom/,
+    );
   });
 });

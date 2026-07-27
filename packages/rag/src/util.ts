@@ -1,4 +1,4 @@
-import { createSecretRedactor, type JsonObject, type JsonValue, type Message, type SecretRedactor } from "@arnilo/prism";
+import { type JsonObject, type JsonValue, type Message } from "@arnilo/prism";
 import { RagAbortError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
 import type { RagScope } from "./types.js";
 
@@ -28,20 +28,9 @@ export function requireScope(scope: RagScope): RagScope {
 }
 
 export function assertScope(expected: RagScope, actual: { tenantId: string; resourceId: string; threadId: string }): void {
-  if (
-    actual.tenantId !== expected.tenantId
-    || actual.resourceId !== expected.resourceId
-    || actual.threadId !== expected.corpusId
-  ) {
+  if (actual.tenantId !== expected.tenantId || actual.resourceId !== expected.resourceId || actual.threadId !== expected.corpusId) {
     throw new RagScopeError("vector hit crossed tenant/resource/corpus boundary");
   }
-}
-
-export function resolveRedactor(
-  redactor?: SecretRedactor,
-  secrets?: readonly (string | undefined)[],
-): SecretRedactor | undefined {
-  return redactor ?? (secrets?.length ? createSecretRedactor(secrets) : undefined);
 }
 
 export function byteLength(value: unknown): number {

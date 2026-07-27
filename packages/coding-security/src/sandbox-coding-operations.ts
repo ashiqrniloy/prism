@@ -18,24 +18,16 @@ import {
   type ListToolOptions,
   type ReadOperations,
   type ReadToolOptions,
+  type RepositoryLimitOptions,
+  type RepositoryOperations,
   type SearchToolOptions,
   type ShellToolOptions,
   type ToolsOptions,
   type WriteOperations,
   type WriteToolOptions,
-  type RepositoryLimitOptions,
-  type RepositoryOperations,
 } from "@arnilo/prism-coding-agent";
-import {
-  createSandboxBashOperations,
-  type DisposableSandbox,
-  type SandboxAdapter,
-  type SandboxExportMetadata,
-} from "./sandbox.js";
-import {
-  createSandboxFilesystemOperations,
-  createSandboxRepositoryOperations,
-} from "./sandbox-fs-operations.js";
+import { createSandboxBashOperations, type DisposableSandbox, type SandboxAdapter, type SandboxExportMetadata } from "./sandbox.js";
+import { createSandboxFilesystemOperations, createSandboxRepositoryOperations } from "./sandbox-fs-operations.js";
 
 export type WorkspaceMode = "host" | "sandbox";
 
@@ -83,8 +75,7 @@ export class SandboxCodingCompositionError extends Error {
 }
 
 const DEFAULT_SANDBOX_WORKSPACE_ROOT = "/workspace";
-const MIXED_WIRING_WARNING =
-  "mixed workspace wiring: sandbox shell with host filesystem backends; containment not claimed";
+const MIXED_WIRING_WARNING = "mixed workspace wiring: sandbox shell with host filesystem backends; containment not claimed";
 
 function isDisposableSandbox(sandbox: SandboxAdapter): sandbox is DisposableSandbox {
   const candidate = sandbox as DisposableSandbox;
@@ -100,20 +91,12 @@ function treeIdentityFromSandbox(
   return { sha256: id.sha256, entryCount: id.entryCount, byteCount: id.byteCount };
 }
 
-function hasCustomOperations(
-  options: SandboxCodingToolsOptions,
-  kind: "full" | "readonly",
-): boolean {
+function hasCustomOperations(options: SandboxCodingToolsOptions, kind: "full" | "readonly"): boolean {
   const repoOps = options.repository?.operations ?? options.list?.operations ?? options.search?.operations;
   const readOk = options.read?.operations !== undefined;
   const repoOk = repoOps !== undefined;
   if (kind === "readonly") return readOk && repoOk;
-  return (
-    readOk &&
-    options.write?.operations !== undefined &&
-    options.edit?.operations !== undefined &&
-    repoOk
-  );
+  return readOk && options.write?.operations !== undefined && options.edit?.operations !== undefined && repoOk;
 }
 
 /**
@@ -145,9 +128,7 @@ function tryAutoWireSandboxTreeOperations(
 function requireWorkspaceMode(options: SandboxCodingToolsOptions): WorkspaceMode {
   const mode = options.workspaceMode;
   if (mode !== "host" && mode !== "sandbox") {
-    throw new SandboxCodingCompositionError(
-      'workspaceMode is required and must be "host" or "sandbox"',
-    );
+    throw new SandboxCodingCompositionError('workspaceMode is required and must be "host" or "sandbox"');
   }
   return mode;
 }
@@ -176,9 +157,7 @@ function resolveComposition(
     const toolsOptions: ToolsOptions = {
       executionPolicy: options.executionPolicy,
       repository: options.repository,
-      shell: sandboxShell
-        ? { ...options.shell, operations: createSandboxBashOperations(sandbox) }
-        : options.shell,
+      shell: sandboxShell ? { ...options.shell, operations: createSandboxBashOperations(sandbox) } : options.shell,
       read: options.read,
       write: options.write,
       edit: options.edit,
@@ -267,10 +246,7 @@ function resolveComposition(
 }
 
 /** Authoritative construction path: tools plus composition metadata. */
-export function createSandboxCodingComposition(
-  cwd: string,
-  options: SandboxCodingToolsOptions,
-): SandboxCodingCompositionResult {
+export function createSandboxCodingComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult {
   const { toolsOptions, composition, toolCwd } = resolveComposition(cwd, options, "full");
   return {
     tools: createCodingTools(toolCwd, toolsOptions),
@@ -279,10 +255,7 @@ export function createSandboxCodingComposition(
 }
 
 /** Read-only construction path with the same workspace-mode contract. */
-export function createSandboxReadOnlyComposition(
-  cwd: string,
-  options: SandboxCodingToolsOptions,
-): SandboxCodingCompositionResult {
+export function createSandboxReadOnlyComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult {
   const { toolsOptions, composition, toolCwd } = resolveComposition(cwd, options, "readonly");
   return {
     tools: createReadOnlyTools(toolCwd, toolsOptions),
@@ -291,17 +264,11 @@ export function createSandboxReadOnlyComposition(
 }
 
 /** Full coding set; returns tools only (compat wrapper). */
-export function createSandboxCodingTools(
-  cwd: string,
-  options: SandboxCodingToolsOptions,
-): readonly ToolDefinition[] {
+export function createSandboxCodingTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[] {
   return createSandboxCodingComposition(cwd, options).tools;
 }
 
 /** Read-only coding set; returns tools only (compat wrapper). */
-export function createSandboxReadOnlyTools(
-  cwd: string,
-  options: SandboxCodingToolsOptions,
-): readonly ToolDefinition[] {
+export function createSandboxReadOnlyTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[] {
   return createSandboxReadOnlyComposition(cwd, options).tools;
 }

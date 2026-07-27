@@ -3,7 +3,9 @@ import { resolveRagLimits } from "./limits.js";
 import type { IngestionStatus, IngestionStatusQuery, IngestionStatusStore, RagScope } from "./types.js";
 import { assertNotAborted, byteLength, requireScope, requireSourceId } from "./util.js";
 
-export async function listIngestionStatus(options: IngestionStatusQuery): Promise<{ readonly entries: readonly IngestionStatus[]; readonly nextCursor?: string }> {
+export async function listIngestionStatus(
+  options: IngestionStatusQuery,
+): Promise<{ readonly entries: readonly IngestionStatus[]; readonly nextCursor?: string }> {
   const scope = requireScope(options.scope);
   const limit = resolveRagLimits({ ingestionStatusPageSize: options.limit }).ingestionStatusPageSize;
   if (options.cursor !== undefined) requireSourceId(options.cursor);
@@ -71,10 +73,15 @@ export function ingestionStatus(
 
 function assertStatus(status: IngestionStatus, scope: RagScope): void {
   requireSourceId(status.sourceId);
-  if (status.scope.tenantId !== scope.tenantId || status.scope.resourceId !== scope.resourceId || status.scope.corpusId !== scope.corpusId) {
+  if (
+    status.scope.tenantId !== scope.tenantId ||
+    status.scope.resourceId !== scope.resourceId ||
+    status.scope.corpusId !== scope.corpusId
+  ) {
     throw new RagScopeError("ingestion status crossed tenant/resource/corpus boundary");
   }
-  if (!(["pending", "indexed", "failed", "partial"] as const).includes(status.state)) throw new RagValidationError("ingestion status state is invalid");
+  if (!(["pending", "indexed", "failed", "partial"] as const).includes(status.state))
+    throw new RagValidationError("ingestion status state is invalid");
   if (!Number.isSafeInteger(status.bytes) || status.bytes < 0 || !Number.isSafeInteger(status.chunks) || status.chunks < 0) {
     throw new RagValidationError("ingestion status bytes and chunks must be non-negative safe integers");
   }

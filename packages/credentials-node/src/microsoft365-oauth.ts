@@ -17,10 +17,7 @@ export const MICROSOFT365_BASE_SCOPES = ["openid", "profile", "offline_access", 
 export type Microsoft365Capability = "mail" | "calendar" | "files" | "todo" | "planner";
 
 /** Least-privilege Microsoft Graph scopes for a capability bundle. */
-export function resolveMicrosoft365Scopes(
-  capabilities: readonly Microsoft365Capability[],
-  access: WorkloadScopeAccess = "read",
-): string[] {
+export function resolveMicrosoft365Scopes(capabilities: readonly Microsoft365Capability[], access: WorkloadScopeAccess = "read"): string[] {
   return resolveWorkloadScopes(MICROSOFT365_SCOPE_BUNDLES, MICROSOFT365_BASE_SCOPES, capabilities, access);
 }
 

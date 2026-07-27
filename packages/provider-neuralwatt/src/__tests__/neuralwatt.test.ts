@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { applyThinkingLevel, cacheSavings } from "@arnilo/prism";
-import { assertProviderOwnedHeadersWin, assertProviderStreamConforms, assertSerializedRequestCoversContent, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertProviderOwnedHeadersWin,
+  assertProviderStreamConforms,
+  assertSerializedRequestCoversContent,
+  assertToolCallDeltasReconstruct,
+} from "@arnilo/prism/testing/provider-conformance";
 import {
   createNeuralWattProvider,
   createNeuralWattProviderPackage,
@@ -60,7 +65,10 @@ describe("@arnilo/prism-provider-neuralwatt (provider shell)", () => {
         return ok(sse([]));
       }) as typeof fetch,
     });
-    await collect(provider, { ...request, options: { headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" } } });
+    await collect(provider, {
+      ...request,
+      options: { headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" } },
+    });
     assertProviderOwnedHeadersWin(headers, {
       owned: { authorization: "Bearer fake-neuralwatt-key", "content-type": "application/json" },
       caller: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" },
@@ -129,10 +137,22 @@ describe("@arnilo/prism-provider-neuralwatt (model registry)", () => {
       registerModel: (m: ModelConfig) => registered.push(m),
       registerAuthMethod: (method: AuthMethod) => registered.push(method),
     } as never);
-    assert.ok(registered.some((item) => (item as AIProvider).id === "neuralwatt"), "provider registered");
-    assert.ok(registered.some((item) => (item as ModelConfig).provider === "neuralwatt" && (item as ModelConfig).model === "glm-5.2"), "glm-5.2 model registered");
-    assert.ok(registered.some((item) => (item as ModelConfig).provider === "neuralwatt" && (item as ModelConfig).model === "kimi-k2.6"), "kimi-k2.6 model registered");
-    assert.ok(registered.some((item) => (item as AuthMethod).provider === "neuralwatt" && (item as AuthMethod).kind === "api_key"), "api_key auth method registered");
+    assert.ok(
+      registered.some((item) => (item as AIProvider).id === "neuralwatt"),
+      "provider registered",
+    );
+    assert.ok(
+      registered.some((item) => (item as ModelConfig).provider === "neuralwatt" && (item as ModelConfig).model === "glm-5.2"),
+      "glm-5.2 model registered",
+    );
+    assert.ok(
+      registered.some((item) => (item as ModelConfig).provider === "neuralwatt" && (item as ModelConfig).model === "kimi-k2.6"),
+      "kimi-k2.6 model registered",
+    );
+    assert.ok(
+      registered.some((item) => (item as AuthMethod).provider === "neuralwatt" && (item as AuthMethod).kind === "api_key"),
+      "api_key auth method registered",
+    );
   });
 
   it("neuralwatt_models_include_featured_aliases", () => {
@@ -271,15 +291,21 @@ describe("@arnilo/prism-provider-neuralwatt (model discovery)", () => {
 
   it("list_neuralwatt_models_preserves_aliases_and_rejects_malformed_payloads", async () => {
     const fixture = modelsFixture() as { data: object[] };
-    const models = await listNeuralWattModels({ fetch: mockJsonFetch(200, { data: [...fixture.data, { ...fixture.data[0], id: "alias/glm-fast" }] }) });
-    assert.deepEqual(models.map((m) => m.model), ["alias/glm", "alias/glm-fast"]);
+    const models = await listNeuralWattModels({
+      fetch: mockJsonFetch(200, { data: [...fixture.data, { ...fixture.data[0], id: "alias/glm-fast" }] }),
+    });
+    assert.deepEqual(
+      models.map((m) => m.model),
+      ["alias/glm", "alias/glm-fast"],
+    );
     await assert.rejects(() => listNeuralWattModels({ fetch: mockJsonFetch(200, { object: "list" }) }), /missing data array/);
   });
 
   it("list_neuralwatt_models_redacts_token_in_errors", async () => {
     await assert.rejects(
       () => listNeuralWattModels({ apiKey: "secret-neuralwatt-token", fetch: mockTextFetch(503, "bad secret-neuralwatt-token") }),
-      (error: unknown) => error instanceof Error && /\[REDACTED\]/.test(error.message) && !error.message.includes("secret-neuralwatt-token"),
+      (error: unknown) =>
+        error instanceof Error && /\[REDACTED\]/.test(error.message) && !error.message.includes("secret-neuralwatt-token"),
     );
   });
 
@@ -510,7 +536,10 @@ describe("@arnilo/prism-provider-neuralwatt (reasoning preservation)", () => {
     ],
   };
   const reasoningModel: ModelConfig = { ...model, capabilities: { ...model.capabilities!, reasoning: true } };
-  const nonReasoningModel: ModelConfig = { ...model, capabilities: { input: ["text"], output: ["text"], streaming: true, tools: true, reasoning: false } };
+  const nonReasoningModel: ModelConfig = {
+    ...model,
+    capabilities: { input: ["text"], output: ["text"], streaming: true, tools: true, reasoning: false },
+  };
 
   it("neuralwatt_preserves_prior_reasoning_for_reasoning_model", () => {
     const req: ProviderRequest = {
@@ -525,7 +554,11 @@ describe("@arnilo/prism-provider-neuralwatt (reasoning preservation)", () => {
     const body = neuralWattBody(req);
     const messages = body.messages as readonly { reasoning_content?: string; content?: unknown }[];
     const assistant = messages[1]!;
-    assert.equal(assistant.reasoning_content, "step 1: 2+2=4", "reasoning-capable model must preserve prior thinking under reasoning_content");
+    assert.equal(
+      assistant.reasoning_content,
+      "step 1: 2+2=4",
+      "reasoning-capable model must preserve prior thinking under reasoning_content",
+    );
     // Thinking must NOT be flattened into text content.
     assert.equal(assistant.content, "The answer is 4.");
   });
@@ -641,9 +674,10 @@ describe("@arnilo/prism-provider-neuralwatt (usage mapping)", () => {
   it("neuralwatt_usage_via_stream_carries_cache_read", async () => {
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
-      fetch: (async () => ok(rawSse([
-        { usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 3 } } },
-      ]))) as typeof fetch,
+      fetch: (async () =>
+        ok(
+          rawSse([{ usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 3 } } }]),
+        )) as typeof fetch,
     });
     await assertProviderStreamConforms({
       provider,
@@ -705,10 +739,12 @@ describe("@arnilo/prism-provider-neuralwatt (implicit vLLM prefix caching)", () 
     // Turn 1 cold (no cached_tokens), turn 2 warm (cached_tokens present).
     const responses = [
       ok(rawSse([{ usage: { prompt_tokens: 1000, completion_tokens: 10, total_tokens: 1010 } }])),
-      ok(rawSse([
-        { choices: [{ delta: { content: "6" } }] },
-        { usage: { prompt_tokens: 1020, completion_tokens: 5, total_tokens: 1025, prompt_tokens_details: { cached_tokens: 950 } } },
-      ])),
+      ok(
+        rawSse([
+          { choices: [{ delta: { content: "6" } }] },
+          { usage: { prompt_tokens: 1020, completion_tokens: 5, total_tokens: 1025, prompt_tokens_details: { cached_tokens: 950 } } },
+        ]),
+      ),
     ];
     let call = 0;
     const provider = createNeuralWattProvider({
@@ -739,7 +775,7 @@ describe("@arnilo/prism-provider-neuralwatt (implicit vLLM prefix caching)", () 
     // savings = cached_tokens * (input - cacheRead) / unit_divisor.
     const usage = { inputTokens: 1020, cacheReadTokens: 950 } as const;
     const savings = cacheSavings(usage, m);
-    assert.equal(savings, 950 * (0.35 - 0.0875) / 1_000_000);
+    assert.equal(savings, (950 * (0.35 - 0.0875)) / 1_000_000);
   });
 });
 
@@ -749,10 +785,7 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
       apiKey: "fake-neuralwatt-key",
       fetch: (async (_input, init) => {
         void init;
-        return ok(rawSse([
-          { choices: [{ delta: { content: "hel" } }] },
-          { choices: [{ delta: { content: "lo" } }] },
-        ]));
+        return ok(rawSse([{ choices: [{ delta: { content: "hel" } }] }, { choices: [{ delta: { content: "lo" } }] }]));
       }) as typeof fetch,
     });
     await assertProviderStreamConforms({ provider, request, expect: { text: "hello" } });
@@ -773,7 +806,7 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
         choices: [
           {
             delta: {
-              tool_calls: [{ index: 0, function: { arguments: "{\"q\":" } }],
+              tool_calls: [{ index: 0, function: { arguments: '{"q":' } }],
             },
           },
         ],
@@ -782,7 +815,7 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
         choices: [
           {
             delta: {
-              tool_calls: [{ index: 0, function: { arguments: "\"x\"}" } }],
+              tool_calls: [{ index: 0, function: { arguments: '"x"}' } }],
             },
           },
         ],
@@ -799,10 +832,10 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
   it("neuralwatt_reasoning_delta_emits_thinking", async () => {
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
-      fetch: (async () => ok(rawSse([
-        { choices: [{ delta: { reasoning_content: "thinking-A" } }] },
-        { choices: [{ delta: { reasoning_content: "-B" } }] },
-      ]))) as typeof fetch,
+      fetch: (async () =>
+        ok(
+          rawSse([{ choices: [{ delta: { reasoning_content: "thinking-A" } }] }, { choices: [{ delta: { reasoning_content: "-B" } }] }]),
+        )) as typeof fetch,
     });
     const events = await assertProviderStreamConforms({ provider, request });
     let thinking = "";
@@ -815,9 +848,7 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
   it("neuralwatt_done_terminates_stream", async () => {
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
-      fetch: (async () => ok(rawSse([
-        { choices: [{ delta: { content: "pre" } }] },
-      ]))) as typeof fetch,
+      fetch: (async () => ok(rawSse([{ choices: [{ delta: { content: "pre" } }] }]))) as typeof fetch,
     });
     const events = await assertProviderStreamConforms({ provider, request });
     assert.equal(events.at(-1)?.type, "done");
@@ -827,17 +858,23 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
   it("neuralwatt_usage_chunk_emitted", async () => {
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
-      fetch: (async () => ok(rawSse([
-        { choices: [{ delta: { content: "x" } }] },
-        { usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 3 } } },
-      ]))) as typeof fetch,
+      fetch: (async () =>
+        ok(
+          rawSse([
+            { choices: [{ delta: { content: "x" } }] },
+            { usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 3 } } },
+          ]),
+        )) as typeof fetch,
     });
     const events = await assertProviderStreamConforms({
       provider,
       request,
       expect: { usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15, cacheReadTokens: 3 } },
     });
-    assert.ok(events.some((event) => event.type === "usage"), "usage event emitted");
+    assert.ok(
+      events.some((event) => event.type === "usage"),
+      "usage event emitted",
+    );
   });
 
   it("neuralwatt_ignores_energy_cost_comments", async () => {
@@ -848,9 +885,9 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
       start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(": energy 1.2\n\n"));
-        controller.enqueue(encoder.encode("data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n"));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'));
         controller.enqueue(encoder.encode(": cost 0.0004\n\n"));
-        controller.enqueue(encoder.encode("data: {\"usage\":{\"prompt_tokens\":2,\"completion_tokens\":1,\"total_tokens\":3}}\n\n"));
+        controller.enqueue(encoder.encode('data: {"usage":{"prompt_tokens":2,"completion_tokens":1,"total_tokens":3}}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -860,7 +897,10 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
     // Only: text_delta, usage, done — no error event from comment lines.
     assert.equal(events.at(-1)?.type, "done");
     assert.ok(!events.some((event) => event.type === "error"), "comments must not produce errors");
-    assert.ok(!events.some((event) => (event as { type: string }).type === "neuralwatt:telemetry"), "standard stream does not emit telemetry");
+    assert.ok(
+      !events.some((event) => (event as { type: string }).type === "neuralwatt:telemetry"),
+      "standard stream does not emit telemetry",
+    );
   });
 
   it("neuralwatt_malformed_data_emits_error_then_done", async () => {
@@ -874,7 +914,10 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
       },
     });
     for await (const event of neuralWattEvents(stream)) events.push(event);
-    assert.ok(events.some((event) => event.type === "error"), "malformed data yields error event");
+    assert.ok(
+      events.some((event) => event.type === "error"),
+      "malformed data yields error event",
+    );
     assert.equal(events.at(-1)?.type, "error", "error is terminal; stream does not crash the generator");
     assert.ok(!events.some((event) => event.type === "done"), "no trailing done after fatal parse error");
   });
@@ -896,7 +939,14 @@ describe("@arnilo/prism-provider-neuralwatt (tool-call loop)", () => {
     };
     const body = neuralWattBody(req);
     assert.deepEqual(body.tools, [
-      { type: "function", function: { name: "lookup", description: "Look up a value by query.", parameters: { type: "object", properties: { q: { type: "string" } }, required: ["q"] } } },
+      {
+        type: "function",
+        function: {
+          name: "lookup",
+          description: "Look up a value by query.",
+          parameters: { type: "object", properties: { q: { type: "string" } }, required: ["q"] },
+        },
+      },
     ]);
     assert.equal(body.tool_choice, "auto");
   });
@@ -917,8 +967,8 @@ describe("@arnilo/prism-provider-neuralwatt (tool-call loop)", () => {
     // --- Turn 1: model emits a tool call via streaming deltas ---
     const turn1Chunks = [
       { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup" } }] } }] },
-      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: "{\"q\":" } }] } }] },
-      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: "\"x\"}" } }] } }] },
+      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"q":' } }] } }] },
+      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '"x"}' } }] } }] },
     ];
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
@@ -956,7 +1006,14 @@ describe("@arnilo/prism-provider-neuralwatt (tool-call loop)", () => {
     // (c) follow-up turn body carries tools, assistant tool_calls, and role=tool in OpenAI order.
     const body2 = neuralWattBody(turn2Req);
     assert.deepEqual(body2.tools, [
-      { type: "function", function: { name: "lookup", description: "Look up a value by query.", parameters: { type: "object", properties: { q: { type: "string" } }, required: ["q"] } } },
+      {
+        type: "function",
+        function: {
+          name: "lookup",
+          description: "Look up a value by query.",
+          parameters: { type: "object", properties: { q: { type: "string" } }, required: ["q"] },
+        },
+      },
     ]);
     const messages2 = body2.messages as unknown as readonly {
       role: string;
@@ -996,7 +1053,7 @@ describe("@arnilo/prism-provider-neuralwatt (tool-call loop)", () => {
     const chunks = [
       { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_a", function: { name: "lookup" } }] } }] },
       { choices: [{ delta: { tool_calls: [{ index: 1, id: "call_b", function: { name: "ping" } }] } }] },
-      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: "{\"q\":\"a\"}" } }] } }] },
+      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"q":"a"}' } }] } }] },
       { choices: [{ delta: { tool_calls: [{ index: 1, function: { arguments: "{}" } }] } }] },
     ];
     const provider = createNeuralWattProvider({
@@ -1019,19 +1076,28 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
     const stream = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
-        controller.enqueue(encoder.encode(
-          ": energy {\"energy_joules\":1280.5,\"energy_kwh\":0.0003557,\"avg_power_watts\":42.7,\"duration_seconds\":30,\"attribution_method\":\"prefix-cache\",\"attribution_ratio\":0.62,\"ratio_was_capped\":false}\n\n",
-        ));
-        controller.enqueue(encoder.encode("data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n"));
-        controller.enqueue(encoder.encode(
-          ": cost {\"request_cost_usd\":0.00041,\"cache_savings_usd\":0.0021,\"allowance_remaining_usd\":12.5,\"budget_remaining_usd\":87.4}\n\n",
-        ));
-        controller.enqueue(encoder.encode("data: {\"usage\":{\"prompt_tokens\":2,\"completion_tokens\":1,\"total_tokens\":3}}\n\n"));
+        controller.enqueue(
+          encoder.encode(
+            ': energy {"energy_joules":1280.5,"energy_kwh":0.0003557,"avg_power_watts":42.7,"duration_seconds":30,"attribution_method":"prefix-cache","attribution_ratio":0.62,"ratio_was_capped":false}\n\n',
+          ),
+        );
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'));
+        controller.enqueue(
+          encoder.encode(
+            ': cost {"request_cost_usd":0.00041,"cache_savings_usd":0.0021,"allowance_remaining_usd":12.5,"budget_remaining_usd":87.4}\n\n',
+          ),
+        );
+        controller.enqueue(encoder.encode('data: {"usage":{"prompt_tokens":2,"completion_tokens":1,"total_tokens":3}}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
     });
-    const events = [] as { type: string; energy?: { energy_joules?: number }; cost?: { request_cost_usd?: number }; content?: { text?: string } }[];
+    const events = [] as {
+      type: string;
+      energy?: { energy_joules?: number };
+      cost?: { request_cost_usd?: number };
+      content?: { text?: string };
+    }[];
     for await (const event of neuralWattEventsWithTelemetry(stream)) events.push(event as never);
     const telemetry = events.filter((event) => event.type === "neuralwatt:telemetry");
     assert.equal(telemetry.length, 2, "both energy and cost comments parsed");
@@ -1061,8 +1127,8 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
     const stream = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
-        controller.enqueue(encoder.encode(": cost {\"request_cost_usd\":0.0009}\n\n"));
-        controller.enqueue(encoder.encode("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"));
+        controller.enqueue(encoder.encode(': cost {"request_cost_usd":0.0009}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1095,8 +1161,8 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(": energy {not valid json\n\n"));
         controller.enqueue(encoder.encode(": cost\n\n"));
-        controller.enqueue(encoder.encode(": unknown {\"x\":1}\n\n"));
-        controller.enqueue(encoder.encode("data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n"));
+        controller.enqueue(encoder.encode(': unknown {"x":1}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1104,7 +1170,11 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
     const events = [] as { type: string; content?: { text?: string } }[];
     for await (const event of neuralWattEventsWithTelemetry(stream)) events.push(event as never);
     assert.ok(!events.some((event) => event.type === "error"), "malformed comments must not crash the stream");
-    assert.equal(events.some((event) => event.type === "neuralwatt:telemetry"), false, "malformed/unknown comments yield no telemetry");
+    assert.equal(
+      events.some((event) => event.type === "neuralwatt:telemetry"),
+      false,
+      "malformed/unknown comments yield no telemetry",
+    );
     assert.equal(events.at(-1)?.type, "done");
     // The standard provider stream also stays defensible through malformed comments.
     assert.equal(parseNeuralWattComment("energy {bad"), undefined);
@@ -1112,7 +1182,10 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
   });
 });
 
-async function collect(provider: { generate(req: ProviderRequest): AsyncIterable<ProviderEvent> }, req: ProviderRequest): Promise<ProviderEvent[]> {
+async function collect(
+  provider: { generate(req: ProviderRequest): AsyncIterable<ProviderEvent> },
+  req: ProviderRequest,
+): Promise<ProviderEvent[]> {
   const events: ProviderEvent[] = [];
   for await (const event of provider.generate(req)) events.push(event);
   return events;
@@ -1176,7 +1249,7 @@ function modelsFixture(): object {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));

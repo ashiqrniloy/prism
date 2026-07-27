@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  type ModelConfig,
   resolveUseCaseModel,
   resolveUseCaseModelBinding,
-  useCaseCredentialProviderId,
-  type ModelConfig,
   type UseCaseModelBinding,
+  useCaseCredentialProviderId,
 } from "../index.js";
 
 const sessionModel: ModelConfig = { provider: "session-provider", model: "session-model" };
@@ -27,10 +27,7 @@ describe("resolveUseCaseModel", () => {
 
   it("requireExplicitModel_skips_session_fallback", () => {
     assert.equal(resolveUseCaseModel({ sessionModel, requireExplicitModel: true }), undefined);
-    assert.deepEqual(
-      resolveUseCaseModel({ configured: workerModel, sessionModel, requireExplicitModel: true })?.model,
-      workerModel,
-    );
+    assert.deepEqual(resolveUseCaseModel({ configured: workerModel, sessionModel, requireExplicitModel: true })?.model, workerModel);
   });
 
   it("returns_undefined_when_both_missing", () => {

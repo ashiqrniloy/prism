@@ -1,5 +1,5 @@
-import type { PolicyLimits, ResolvedPolicyLimits } from "./types.js";
 import { PolicyError } from "./errors.js";
+import type { PolicyLimits, ResolvedPolicyLimits } from "./types.js";
 
 /** Phase 8 freeze: decision 8 KiB / 64 KiB; reason/evidence 1 KiB / 8 KiB; export page 100 / 500. */
 export const DEFAULT_POLICY_LIMITS: ResolvedPolicyLimits = {

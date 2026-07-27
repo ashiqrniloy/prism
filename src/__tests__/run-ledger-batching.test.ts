@@ -1,9 +1,23 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createAgent, createBatchedRunLedger, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, redactRunLedgerRecord, type FlushableRunLedger, type RunLedger, type RunRecord } from "../index.js";
+import {
+  createAgent,
+  createBatchedRunLedger,
+  createMockProvider,
+  createSecretRedactor,
+  type FlushableRunLedger,
+  providerDone,
+  providerTextDelta,
+  type RunLedger,
+  type RunRecord,
+  redactRunLedgerRecord,
+} from "../index.js";
 
 const run = (status: RunRecord["status"], id = "run_1"): RunRecord => ({
-  id, sessionId: "session_1", status, startedAt: "2026-01-01T00:00:00Z",
+  id,
+  sessionId: "session_1",
+  status,
+  startedAt: "2026-01-01T00:00:00Z",
 });
 
 function target(output: string[], failAt = -1): RunLedger {
@@ -26,7 +40,15 @@ describe("createBatchedRunLedger", () => {
     const writes: string[] = [];
     const ledger = createBatchedRunLedger(target(writes), { durability: "flush_on_terminal", maxBatchEntries: 8, maxDelayMs: 60_000 });
     await ledger.appendRun(run("running"));
-    await ledger.appendEvent({ id: "event_1", sessionId: "session_1", runId: "run_1", type: "agent_started", timestamp: "2026-01-01T00:00:00Z", event: { type: "agent_started", sessionId: "session_1", runId: "run_1" }, redacted: true });
+    await ledger.appendEvent({
+      id: "event_1",
+      sessionId: "session_1",
+      runId: "run_1",
+      type: "agent_started",
+      timestamp: "2026-01-01T00:00:00Z",
+      event: { type: "agent_started", sessionId: "session_1", runId: "run_1" },
+      redacted: true,
+    });
     assert.deepEqual(ledger.status(), { accepted: 2, flushed: 0, buffered: 2 });
     await ledger.appendRun(run("succeeded"));
     assert.deepEqual(writes, ["run:run_1:running", "event:event_1", "run:run_1:succeeded"]);
@@ -36,7 +58,14 @@ describe("createBatchedRunLedger", () => {
 
   it("applies backpressure, rejects oversized records, and propagates flush failure", async () => {
     const writes: string[] = [];
-    const ledger = createBatchedRunLedger(target(writes, 2), { durability: "buffered", maxBatchEntries: 2, maxBufferedEntries: 2, maxBatchBytes: 1024, maxBufferedBytes: 1024, maxDelayMs: 60_000 });
+    const ledger = createBatchedRunLedger(target(writes, 2), {
+      durability: "buffered",
+      maxBatchEntries: 2,
+      maxBufferedEntries: 2,
+      maxBatchBytes: 1024,
+      maxBufferedBytes: 1024,
+      maxDelayMs: 60_000,
+    });
     await ledger.appendRun(run("running", "a"));
     await assert.rejects(async () => ledger.appendRun(run("running", "b")), /store failed/);
     assert.equal(ledger.status().buffered, 1, "failed write remains buffered for retry");
@@ -48,13 +77,23 @@ describe("createBatchedRunLedger", () => {
   it("runtime explicitly acknowledges a flush-on-terminal ledger", async () => {
     let flushes = 0;
     const ledger: FlushableRunLedger = {
-      ...target([]), durability: "flush_on_terminal",
+      ...target([]),
+      durability: "flush_on_terminal",
       flush: async () => ({ accepted: 0, flushed: 0, buffered: 0 }),
       status: () => ({ accepted: 0, flushed: 0, buffered: 0 }),
       dispose: async () => undefined,
     };
-    ledger.flush = async () => { flushes += 1; return ledger.status(); };
-    await createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), runLedger: ledger }).createSession().run("hi");
+    ledger.flush = async () => {
+      flushes += 1;
+      return ledger.status();
+    };
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+      runLedger: ledger,
+    })
+      .createSession()
+      .run("hi");
     assert.equal(flushes, 1);
   });
 

@@ -1,16 +1,11 @@
-import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { afterEach, describe, it } from "node:test";
+import { createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
-import { createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
-import {
-  attachMcpToolBridge,
-  connectMcpTools,
-  listAllMcpTools,
-  mapMcpToolsToDefinitions,
-} from "../bridge.js";
+import { attachMcpToolBridge, connectMcpTools, listAllMcpTools, mapMcpToolsToDefinitions } from "../bridge.js";
 import {
   HARD_CALL_TIMEOUT_MS,
   HARD_LIST_CACHE_TTL_MS,
@@ -30,15 +25,20 @@ import { McpBridgeClosedError, McpBridgeError, McpToolNameCollisionError } from 
 
 const executionContext = { sessionId: "s1", runId: "r1", toolCallId: "call_1" };
 
-async function createFixture(tools: Array<{
-  name: string;
-  description?: string;
-  handler: (args: Record<string, unknown>) => Promise<unknown>;
-}>) {
+async function createFixture(
+  tools: Array<{
+    name: string;
+    description?: string;
+    handler: (args: Record<string, unknown>) => Promise<unknown>;
+  }>,
+) {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const server = new McpServer({ name: "test-server", version: "0.0.1" }, {
-    capabilities: { tools: { listChanged: true } },
-  });
+  const server = new McpServer(
+    { name: "test-server", version: "0.0.1" },
+    {
+      capabilities: { tools: { listChanged: true } },
+    },
+  );
 
   for (const tool of tools) {
     server.registerTool(
@@ -111,17 +111,16 @@ describe("attachMcpToolBridge", () => {
 
   it("returns tool errors from MCP isError responses", async () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-    const server = new McpServer({ name: "test-server", version: "0.0.1" }, {
-      capabilities: { tools: { listChanged: true } },
-    });
-    server.registerTool(
-      "fail",
-      { inputSchema: { reason: z.string().optional() } },
-      async () => ({
-        isError: true,
-        content: [{ type: "text", text: "nope" }],
-      }),
+    const server = new McpServer(
+      { name: "test-server", version: "0.0.1" },
+      {
+        capabilities: { tools: { listChanged: true } },
+      },
     );
+    server.registerTool("fail", { inputSchema: { reason: z.string().optional() } }, async () => ({
+      isError: true,
+      content: [{ type: "text", text: "nope" }],
+    }));
     await server.connect(serverTransport);
     const client = new Client({ name: "test-client", version: "0.0.1" }, { capabilities: {} });
     await client.connect(clientTransport);
@@ -145,13 +144,15 @@ describe("attachMcpToolBridge", () => {
   });
 
   it("returns an attributable error when a remote call exceeds callTimeoutMs", async () => {
-    const fixture = await createFixture([{
-      name: "hang",
-      handler: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        return "late";
+    const fixture = await createFixture([
+      {
+        name: "hang",
+        handler: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          return "late";
+        },
       },
-    }]);
+    ]);
     fixtures.push(fixture);
     const bridge = await attachMcpToolBridge(fixture.client, fixture.clientTransport, {
       serverId: "hung",
@@ -182,11 +183,9 @@ describe("attachMcpToolBridge", () => {
     });
     assert.equal(bridge.tools.length, 1);
 
-    fixture.server.registerTool(
-      "two",
-      { inputSchema: { value: z.string().optional() } },
-      async () => ({ content: [{ type: "text", text: "2" }] }),
-    );
+    fixture.server.registerTool("two", { inputSchema: { value: z.string().optional() } }, async () => ({
+      content: [{ type: "text", text: "2" }],
+    }));
     await fixture.server.sendToolListChanged();
 
     await bridge.refresh();
@@ -275,7 +274,9 @@ describe("attachMcpToolBridge", () => {
       maxResultBytes: 128,
     });
     const secret = "mcp-client-secret-canary";
-    setClientRequest(fixture.client, async () => { throw new Error(`${secret}-${"x".repeat(1_000)}`); });
+    setClientRequest(fixture.client, async () => {
+      throw new Error(`${secret}-${"x".repeat(1_000)}`);
+    });
     const registry = createToolRegistry(bridge.tools);
     const result = await dispatchToolCall({
       registry,
@@ -375,23 +376,32 @@ describe("listAllMcpTools", () => {
       { tools: [{ name: "b", inputSchema: { type: "object" } }] },
     ]);
     const listed = await listAllMcpTools(client);
-    assert.deepEqual(listed.map((tool) => tool.name), ["a", "b"]);
+    assert.deepEqual(
+      listed.map((tool) => tool.name),
+      ["a", "b"],
+    );
   });
 
   it("rejects repeated cursors, page overflow, and tool overflow", async () => {
     await assert.rejects(
-      listAllMcpTools(fakeListClient([
-        { tools: [], nextCursor: "a" },
-        { tools: [], nextCursor: "b" },
-        { tools: [], nextCursor: "a" },
-      ])),
+      listAllMcpTools(
+        fakeListClient([
+          { tools: [], nextCursor: "a" },
+          { tools: [], nextCursor: "b" },
+          { tools: [], nextCursor: "a" },
+        ]),
+      ),
       /repeated.*cursor/i,
     );
     await assert.rejects(
-      listAllMcpTools(fakeListClient([
-        { tools: [], nextCursor: "a" },
-        { tools: [], nextCursor: "b" },
-      ]), undefined, { maxListPages: 2 }),
+      listAllMcpTools(
+        fakeListClient([
+          { tools: [], nextCursor: "a" },
+          { tools: [], nextCursor: "b" },
+        ]),
+        undefined,
+        { maxListPages: 2 },
+      ),
       /exceeds 2 pages/,
     );
     await assert.rejects(
@@ -417,16 +427,22 @@ describe("listAllMcpTools", () => {
 
   it("rejects every invalid finite client limit before requesting", async () => {
     const names = [
-      "maxListPages", "maxTools", "maxCursorBytes", "maxToolNameBytes", "maxToolDescriptionBytes",
-      "maxToolSchemaBytes", "maxTotalToolSchemaBytes", "maxJsonDepth", "maxJsonProperties",
-      "maxResultBytes", "callTimeoutMs", "listCacheTtlMs",
+      "maxListPages",
+      "maxTools",
+      "maxCursorBytes",
+      "maxToolNameBytes",
+      "maxToolDescriptionBytes",
+      "maxToolSchemaBytes",
+      "maxTotalToolSchemaBytes",
+      "maxJsonDepth",
+      "maxJsonProperties",
+      "maxResultBytes",
+      "callTimeoutMs",
+      "listCacheTtlMs",
     ];
     for (const name of names) {
       for (const value of [0, -1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
-        await assert.rejects(
-          listAllMcpTools(fakeListClient([]), undefined, { [name]: value }),
-          McpBridgeError,
-        );
+        await assert.rejects(listAllMcpTools(fakeListClient([]), undefined, { [name]: value }), McpBridgeError);
       }
     }
   });
@@ -463,10 +479,7 @@ function tool(name: string) {
   return { name, inputSchema: { type: "object" } };
 }
 
-function setClientRequest(
-  client: Client,
-  request: (request: { method: string }) => Promise<unknown>,
-): void {
+function setClientRequest(client: Client, request: (request: { method: string }) => Promise<unknown>): void {
   Object.defineProperty(client, "request", { configurable: true, value: request });
 }
 

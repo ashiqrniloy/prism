@@ -1,7 +1,7 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
+import { access } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 
 export class DockerCliError extends Error {
@@ -206,10 +206,7 @@ export async function runDockerCli(request: DockerCliRequest): Promise<DockerCli
   });
 }
 
-export async function dockerOutputText(
-  runner: DockerRunner,
-  request: Omit<DockerCliRequest, "collectStdout">,
-): Promise<string> {
+export async function dockerOutputText(runner: DockerRunner, request: Omit<DockerCliRequest, "collectStdout">): Promise<string> {
   const result = await runner({ ...request, collectStdout: true });
   if (result.exitCode !== 0) {
     const detail = result.stderr.toString("utf8").trim() || result.stdout.toString("utf8").trim() || `exit ${result.exitCode}`;

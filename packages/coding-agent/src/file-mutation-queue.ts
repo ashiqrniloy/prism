@@ -22,8 +22,7 @@ function isMissingPathError(error: unknown): boolean {
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    ((error as NodeJS.ErrnoException).code === "ENOENT" ||
-      (error as NodeJS.ErrnoException).code === "ENOTDIR")
+    ((error as NodeJS.ErrnoException).code === "ENOENT" || (error as NodeJS.ErrnoException).code === "ENOTDIR")
   );
 }
 
@@ -44,10 +43,7 @@ async function getMutationQueueKey(filePath: string): Promise<string> {
  * (or the same realpath) run one after another; calls for different paths run
  * in parallel. Resolves/rejects with `fn`'s result and always releases the slot.
  */
-export async function withFileMutationQueue<T>(
-  filePath: string,
-  fn: () => Promise<T>,
-): Promise<T> {
+export async function withFileMutationQueue<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
   const registration = registrationQueue.then(async () => {
     const key = await getMutationQueueKey(filePath);
     const currentQueue: Promise<void> = fileMutationQueues.get(key) ?? Promise.resolve();

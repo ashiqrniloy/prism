@@ -48,7 +48,7 @@ export async function replayWorkflow(
     throw new WorkflowCheckpointError("Only succeeded workflow runs are replayable");
   }
   const selected = source.value.nodes[input.fromNodeId];
-  if (!selected || selected.status !== "succeeded") {
+  if (selected?.status !== "succeeded") {
     throw new WorkflowCheckpointError(`Replay node ${input.fromNodeId} must be succeeded`);
   }
 
@@ -57,9 +57,7 @@ export async function replayWorkflow(
   const copied = Object.keys(workflow.nodes).filter((nodeId) => !rerun.has(nodeId));
   for (const nodeId of copied) {
     if (containsApproval(workflow.nodes[nodeId]!)) {
-      throw new WorkflowCheckpointError(
-        `Replay would reuse durable approval at ${nodeId}; replay from that node or earlier`,
-      );
+      throw new WorkflowCheckpointError(`Replay would reuse durable approval at ${nodeId}; replay from that node or earlier`);
     }
   }
 
@@ -122,17 +120,18 @@ export async function replayWorkflow(
     },
   });
 
-  return resumeWorkflow(workflow, { workflowId: workflow.id, runId }, {
-    ...options,
-    checkpoints: options.checkpoints,
-    runId,
-  });
+  return resumeWorkflow(
+    workflow,
+    { workflowId: workflow.id, runId },
+    {
+      ...options,
+      checkpoints: options.checkpoints,
+      runId,
+    },
+  );
 }
 
-function descendants(
-  nodeId: string,
-  successors: ReadonlyMap<string, readonly string[]>,
-): Set<string> {
+function descendants(nodeId: string, successors: ReadonlyMap<string, readonly string[]>): Set<string> {
   const found = new Set([nodeId]);
   const queue = [nodeId];
   while (queue.length > 0) {

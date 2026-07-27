@@ -91,7 +91,12 @@ export function resolveMemoryLimits(input: MemoryLimitsInput = {}): MemoryLimits
     messageRange: clampPositiveInt(input.messageRange, DEFAULT_MESSAGE_RANGE, HARD_MESSAGE_RANGE_CAP, "messageRange"),
     embedBatchSize: clampPositiveInt(input.embedBatchSize, DEFAULT_EMBED_BATCH_SIZE, HARD_EMBED_BATCH_CAP, "embedBatchSize"),
     maxPayloadBytes: clampPositiveInt(input.maxPayloadBytes, DEFAULT_MAX_PAYLOAD_BYTES, HARD_MAX_PAYLOAD_BYTES_CAP, "maxPayloadBytes"),
-    maxInjectedTokens: clampPositiveInt(input.maxInjectedTokens, DEFAULT_MAX_INJECTED_TOKENS, HARD_MAX_INJECTED_TOKENS_CAP, "maxInjectedTokens"),
+    maxInjectedTokens: clampPositiveInt(
+      input.maxInjectedTokens,
+      DEFAULT_MAX_INJECTED_TOKENS,
+      HARD_MAX_INJECTED_TOKENS_CAP,
+      "maxInjectedTokens",
+    ),
     maxVectorDimensions: clampPositiveInt(
       input.maxVectorDimensions,
       DEFAULT_MAX_VECTOR_DIMENSIONS,

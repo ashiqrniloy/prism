@@ -7,7 +7,8 @@ import type {
   ModelCapabilities,
   ProviderEvent,
   ProviderRequest,
-  Usage } from "@arnilo/prism";
+  Usage,
+} from "@arnilo/prism";
 import {
   assertStructuredOutputRequestSupported,
   providerDone,
@@ -18,17 +19,11 @@ import {
   providerToolCallDelta,
   providerUsage,
   resolveCredentialValue,
-  toolCallFromArgumentsText } from "@arnilo/prism";
-import {
-  applyOpenAIChatStructuredOutput,
-  mapOpenAIChatUsage,
-  serializeOpenAITool } from "@arnilo/prism/providers/openai";
+  toolCallFromArgumentsText,
+} from "@arnilo/prism";
+import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
 import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
-import {
-  kimiPreserveThinking,
-  kimiReasoningEffort,
-  kimiThinking,
-  stripKimiThinkingCompat } from "./thinking.js";
+import { kimiPreserveThinking, kimiReasoningEffort, kimiThinking, stripKimiThinkingCompat } from "./thinking.js";
 
 export interface MoonshotProviderOptions {
   readonly id?: string;
@@ -68,9 +63,11 @@ export function createMoonshotProvider(options: MoonshotProviderOptions = {}): A
           headers: {
             ...request.options?.headers,
             "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {})},
+            ...(token ? { authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify(body),
-          signal: request.signal});
+          signal: request.signal,
+        });
         if (!response.ok) {
           return yield providerError(
             new Error(`Moonshot request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -82,7 +79,8 @@ export function createMoonshotProvider(options: MoonshotProviderOptions = {}): A
       } catch (error) {
         yield providerError(error, secrets);
       }
-    }};
+    },
+  };
 }
 
 export function moonshotBody(request: ProviderRequest): JsonObject {
@@ -100,21 +98,22 @@ export function moonshotBody(request: ProviderRequest): JsonObject {
     ...parameters,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
     ...stripKimiThinkingCompat(request.options?.compat as JsonObject | undefined),
-    ...request.options?.extra};
+    ...request.options?.extra,
+  };
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
 
-export async function* moonshotEvents(
-  body: ReadableStream<Uint8Array>,
-  signal?: AbortSignal,
-): AsyncIterable<ProviderEvent> {
+export async function* moonshotEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const tools = new Map<number, ToolAccumulator>();
   let usage: Usage | undefined;
   let sawDoneMarker = false;
   let sawFinishReason = false;
   for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") { sawDoneMarker = true; break; }
+    if (data === "[DONE]") {
+      sawDoneMarker = true;
+      break;
+    }
     const chunk = JSON.parse(data) as MoonshotChunk;
     usage = mapOpenAIChatUsage(chunk.usage) ?? usage;
     if (chunk.usage) {
@@ -137,19 +136,22 @@ export async function* moonshotEvents(
           index,
           id: tool.id,
           name: tool.function?.name,
-          argumentsText: tool.function?.arguments});
+          argumentsText: tool.function?.arguments,
+        });
       }
     }
   }
   const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
   if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(new Error(
-      `Moonshot chat stream ended without completion evidence `
-      + `([DONE]: ${sawDoneMarker ? "received" : "missing"}, `
-      + `finish_reason: ${sawFinishReason ? "received" : "missing"}, `
-      + `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
-    ));
+    yield providerError(
+      new Error(
+        `Moonshot chat stream ended without completion evidence ` +
+          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
+          `finish_reason: ${sawFinishReason ? "received" : "missing"}, ` +
+          `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
+      ),
+    );
     return;
   }
   for (const call of tools.values()) {
@@ -163,17 +165,14 @@ export async function* moonshotEvents(
  * blocks become top-level `reasoning_content` (official Preserved Thinking contract).
  * Anthropic `cache_control` is never emitted on this route.
  */
-export function serializeMoonshotMessage(
-  message: Message,
-  capabilities: ModelCapabilities = {},
-  preserveThinking = false,
-): JsonObject {
+export function serializeMoonshotMessage(message: Message, capabilities: ModelCapabilities = {}, preserveThinking = false): JsonObject {
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+    };
   }
 
   if (message.role === "assistant") {
@@ -184,13 +183,15 @@ export function serializeMoonshotMessage(
     const reasoning = thinkingParts.map((part) => part.text).join("\n");
     const base: Record<string, unknown> = {
       role: "assistant",
-      content: text || (toolCalls.length > 0 ? null : "")};
+      content: text || (toolCalls.length > 0 ? null : ""),
+    };
     if (preserveThinking && reasoning) base.reasoning_content = reasoning;
     if (toolCalls.length > 0) {
       base.tool_calls = toolCalls.map((call) => ({
         id: call.id,
         type: "function",
-        function: { name: call.name, arguments: JSON.stringify(call.arguments) }}));
+        function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+      }));
     }
     return base as JsonObject;
   }
@@ -240,4 +241,3 @@ interface MoonshotChunk {
   }[];
   readonly usage?: unknown;
 }
-

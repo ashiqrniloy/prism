@@ -1,0 +1,280 @@
+ASK_USER_DECISION_RATIONALE_COUNT	export declare const ASK_USER_DECISION_RATIONALE_COUNT: 3
+ASK_USER_DECISION_SUSPEND_REASON	export declare const ASK_USER_DECISION_SUSPEND_REASON: "ask_user_decision"
+ASK_USER_DECISION_TOOL_NAME	export declare const ASK_USER_DECISION_TOOL_NAME: "ask_user_decision"
+ArtifactReference	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+ArtifactWriter	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+AskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionHandler	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionOption	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionRequest	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionSelectionMode	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionSuspendData	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionToolOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+BashExecOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BashOperations	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BashSpawnContext	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BashSpawnHook	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BoundGitRunner	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+CODING_CHECKPOINT_SCHEMA_VERSION	export declare const CODING_CHECKPOINT_SCHEMA_VERSION: 1
+CODING_GOAL_VERIFY_REVISION	export declare const CODING_GOAL_VERIFY_REVISION: "1"
+CODING_GOAL_VERIFY_SUSPEND_REASON	export declare const CODING_GOAL_VERIFY_SUSPEND_REASON: "approve-coding-goal-verify"
+CODING_GOAL_VERIFY_WORKFLOW_ID	export declare const CODING_GOAL_VERIFY_WORKFLOW_ID: "coding-goal-verify"
+CODING_STATE_KEY	export declare const CODING_STATE_KEY = "coding"
+CodingArtifactKind	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingArtifactRef	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingCheckSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingCheckToolOptions	export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js"
+CodingCheckpointError	export declare class CodingCheckpointError extends Error
+CodingCheckpointLimitOptions	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingCheckpointMetadata	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingFingerprints	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingGoalVerifyApproval	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
+CodingGoalVerifyError	export declare class CodingGoalVerifyError extends Error
+CodingHandoffSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingTaskStatus	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingTodoItem	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CreateGitOperationsOptions	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+CreateGitRunnerOptions	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+DEFAULT_BINARY_SNIFF_BYTES	export declare const DEFAULT_BINARY_SNIFF_BYTES = 8192
+DEFAULT_CHECK_TIMEOUT_MS	export declare const DEFAULT_CHECK_TIMEOUT_MS: number
+DEFAULT_GIT_TIMEOUT_MS	export declare const DEFAULT_GIT_TIMEOUT_MS = 120000
+DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES = 512
+DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES = 2048
+DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES = 512
+DEFAULT_MAX_ASK_USER_DECISION_OPTIONS	export declare const DEFAULT_MAX_ASK_USER_DECISION_OPTIONS = 6
+DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES = 2048
+DEFAULT_MAX_BYTES	export declare const DEFAULT_MAX_BYTES: number
+DEFAULT_MAX_CHECK_CONCURRENCY	export declare const DEFAULT_MAX_CHECK_CONCURRENCY = 1
+DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES	export declare const DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES = 2000
+DEFAULT_MAX_CHECK_NAMES	export declare const DEFAULT_MAX_CHECK_NAMES = 8
+DEFAULT_MAX_CHECK_OUTPUT_BYTES	export declare const DEFAULT_MAX_CHECK_OUTPUT_BYTES: number
+DEFAULT_MAX_CHECK_SUMMARY_BYTES	export declare const DEFAULT_MAX_CHECK_SUMMARY_BYTES = 1024
+DEFAULT_MAX_CODING_ARTIFACTS	export declare const DEFAULT_MAX_CODING_ARTIFACTS = 16
+DEFAULT_MAX_CODING_ARTIFACT_BYTES	export declare const DEFAULT_MAX_CODING_ARTIFACT_BYTES: number
+DEFAULT_MAX_CODING_CHECKPOINT_BYTES	export declare const DEFAULT_MAX_CODING_CHECKPOINT_BYTES: number
+DEFAULT_MAX_EDITS	export declare const DEFAULT_MAX_EDITS = 100
+DEFAULT_MAX_EDIT_FILE_BYTES	export declare const DEFAULT_MAX_EDIT_FILE_BYTES: number
+DEFAULT_MAX_EDIT_INPUT_BYTES	export declare const DEFAULT_MAX_EDIT_INPUT_BYTES: number
+DEFAULT_MAX_GIT_CHANGED_FILES	export declare const DEFAULT_MAX_GIT_CHANGED_FILES = 1000
+DEFAULT_MAX_GIT_DIFF_LINES	export declare const DEFAULT_MAX_GIT_DIFF_LINES = 10000
+DEFAULT_MAX_GIT_MESSAGE_BYTES	export declare const DEFAULT_MAX_GIT_MESSAGE_BYTES: number
+DEFAULT_MAX_GIT_OUTPUT_BYTES	export declare const DEFAULT_MAX_GIT_OUTPUT_BYTES: number
+DEFAULT_MAX_GIT_PATCH_BYTES	export declare const DEFAULT_MAX_GIT_PATCH_BYTES: number
+DEFAULT_MAX_GIT_PATHS	export declare const DEFAULT_MAX_GIT_PATHS = 1000
+DEFAULT_MAX_GIT_REF_BYTES	export declare const DEFAULT_MAX_GIT_REF_BYTES = 1024
+DEFAULT_MAX_GIT_WORKTREES	export declare const DEFAULT_MAX_GIT_WORKTREES = 4
+DEFAULT_MAX_IMAGE_BYTES	export declare const DEFAULT_MAX_IMAGE_BYTES = 10000000
+DEFAULT_MAX_LINES	export declare const DEFAULT_MAX_LINES = 2000
+DEFAULT_MAX_PLAN_BYTES	export declare const DEFAULT_MAX_PLAN_BYTES: number
+DEFAULT_MAX_PR_COMMITS	export declare const DEFAULT_MAX_PR_COMMITS = 100
+DEFAULT_MAX_PR_HANDOFF_BYTES	export declare const DEFAULT_MAX_PR_HANDOFF_BYTES: number
+DEFAULT_MAX_REPO_CONCURRENCY	export declare const DEFAULT_MAX_REPO_CONCURRENCY = 8
+DEFAULT_MAX_REPO_DEPTH	export declare const DEFAULT_MAX_REPO_DEPTH = 32
+DEFAULT_MAX_REPO_ENTRIES	export declare const DEFAULT_MAX_REPO_ENTRIES = 10000
+DEFAULT_MAX_REPO_FILES	export declare const DEFAULT_MAX_REPO_FILES = 10000
+DEFAULT_MAX_REPO_RESULTS	export declare const DEFAULT_MAX_REPO_RESULTS = 1000
+DEFAULT_MAX_SEARCH_CONTEXT_LINES	export declare const DEFAULT_MAX_SEARCH_CONTEXT_LINES = 5
+DEFAULT_MAX_SEARCH_FILE_BYTES	export declare const DEFAULT_MAX_SEARCH_FILE_BYTES: number
+DEFAULT_MAX_SEARCH_LINE_BYTES	export declare const DEFAULT_MAX_SEARCH_LINE_BYTES: number
+DEFAULT_MAX_SEARCH_MATCHES	export declare const DEFAULT_MAX_SEARCH_MATCHES = 1000
+DEFAULT_MAX_SEARCH_PATTERN_BYTES	export declare const DEFAULT_MAX_SEARCH_PATTERN_BYTES = 512
+DEFAULT_MAX_SEARCH_SCAN_BYTES	export declare const DEFAULT_MAX_SEARCH_SCAN_BYTES: number
+DEFAULT_MAX_SEARCH_TIME_MS	export declare const DEFAULT_MAX_SEARCH_TIME_MS = 30000
+DEFAULT_MAX_TEXT_SCAN_BYTES	export declare const DEFAULT_MAX_TEXT_SCAN_BYTES: number
+DEFAULT_MAX_TODOS	export declare const DEFAULT_MAX_TODOS = 1000
+DEFAULT_MAX_TODO_TEXT_BYTES	export declare const DEFAULT_MAX_TODO_TEXT_BYTES = 512
+DEFAULT_MAX_TOTAL_OUTPUT_BYTES	export declare const DEFAULT_MAX_TOTAL_OUTPUT_BYTES: number
+DEFAULT_MAX_WRITE_BYTES	export declare const DEFAULT_MAX_WRITE_BYTES: number
+DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[]
+DEFAULT_SHELL_TIMEOUT_SECONDS	export declare const DEFAULT_SHELL_TIMEOUT_SECONDS = 600
+Edit	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+EditOperations	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+EditToolDetails	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+EditToolOptions	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+GitError	export declare class GitError extends Error
+GitExecRequest	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+GitExecResult	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+GitLimitOptions	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+GitOperations	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+GitRunner	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+GitStatusBranch	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitStatusEntry	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitStatusEntryKind	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitStatusResult	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitToolsOptions	export type { GitToolsOptions } from "./git-tools.js"
+HARD_CHECK_TIMEOUT_MS	export declare const HARD_CHECK_TIMEOUT_MS: number
+HARD_GIT_TIMEOUT_MS	export declare const HARD_GIT_TIMEOUT_MS = 600000
+HARD_MAX_ASK_USER_DECISION_BULLET_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_BULLET_BYTES = 2048
+HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES = 8192
+HARD_MAX_ASK_USER_DECISION_LABEL_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_LABEL_BYTES = 2048
+HARD_MAX_ASK_USER_DECISION_OPTIONS	export declare const HARD_MAX_ASK_USER_DECISION_OPTIONS = 16
+HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES = 8192
+HARD_MAX_BYTES	export declare const HARD_MAX_BYTES: number
+HARD_MAX_CHECK_CONCURRENCY	export declare const HARD_MAX_CHECK_CONCURRENCY = 4
+HARD_MAX_CHECK_DIAGNOSTIC_LINES	export declare const HARD_MAX_CHECK_DIAGNOSTIC_LINES = 100000
+HARD_MAX_CHECK_NAMES	export declare const HARD_MAX_CHECK_NAMES = 32
+HARD_MAX_CHECK_OUTPUT_BYTES	export declare const HARD_MAX_CHECK_OUTPUT_BYTES: number
+HARD_MAX_CHECK_SUMMARY_BYTES	export declare const HARD_MAX_CHECK_SUMMARY_BYTES = 8192
+HARD_MAX_CODING_ARTIFACTS	export declare const HARD_MAX_CODING_ARTIFACTS = 64
+HARD_MAX_CODING_ARTIFACT_BYTES	export declare const HARD_MAX_CODING_ARTIFACT_BYTES: number
+HARD_MAX_CODING_CHECKPOINT_BYTES	export declare const HARD_MAX_CODING_CHECKPOINT_BYTES: number
+HARD_MAX_EDITS	export declare const HARD_MAX_EDITS = 1000
+HARD_MAX_EDIT_FILE_BYTES	export declare const HARD_MAX_EDIT_FILE_BYTES: number
+HARD_MAX_EDIT_INPUT_BYTES	export declare const HARD_MAX_EDIT_INPUT_BYTES: number
+HARD_MAX_GIT_CHANGED_FILES	export declare const HARD_MAX_GIT_CHANGED_FILES = 10000
+HARD_MAX_GIT_DIFF_LINES	export declare const HARD_MAX_GIT_DIFF_LINES = 100000
+HARD_MAX_GIT_MESSAGE_BYTES	export declare const HARD_MAX_GIT_MESSAGE_BYTES: number
+HARD_MAX_GIT_OUTPUT_BYTES	export declare const HARD_MAX_GIT_OUTPUT_BYTES: number
+HARD_MAX_GIT_PATCH_BYTES	export declare const HARD_MAX_GIT_PATCH_BYTES: number
+HARD_MAX_GIT_PATHS	export declare const HARD_MAX_GIT_PATHS = 10000
+HARD_MAX_GIT_REF_BYTES	export declare const HARD_MAX_GIT_REF_BYTES = 4096
+HARD_MAX_GIT_WORKTREES	export declare const HARD_MAX_GIT_WORKTREES = 16
+HARD_MAX_IMAGE_BYTES	export declare const HARD_MAX_IMAGE_BYTES: number
+HARD_MAX_LINES	export declare const HARD_MAX_LINES = 100000
+HARD_MAX_PLAN_BYTES	export declare const HARD_MAX_PLAN_BYTES: number
+HARD_MAX_PR_COMMITS	export declare const HARD_MAX_PR_COMMITS = 1000
+HARD_MAX_PR_HANDOFF_BYTES	export declare const HARD_MAX_PR_HANDOFF_BYTES: number
+HARD_MAX_REPO_CONCURRENCY	export declare const HARD_MAX_REPO_CONCURRENCY = 32
+HARD_MAX_REPO_DEPTH	export declare const HARD_MAX_REPO_DEPTH = 128
+HARD_MAX_REPO_ENTRIES	export declare const HARD_MAX_REPO_ENTRIES = 100000
+HARD_MAX_REPO_FILES	export declare const HARD_MAX_REPO_FILES = 100000
+HARD_MAX_REPO_RESULTS	export declare const HARD_MAX_REPO_RESULTS = 10000
+HARD_MAX_SEARCH_CONTEXT_LINES	export declare const HARD_MAX_SEARCH_CONTEXT_LINES = 20
+HARD_MAX_SEARCH_FILE_BYTES	export declare const HARD_MAX_SEARCH_FILE_BYTES: number
+HARD_MAX_SEARCH_LINE_BYTES	export declare const HARD_MAX_SEARCH_LINE_BYTES: number
+HARD_MAX_SEARCH_MATCHES	export declare const HARD_MAX_SEARCH_MATCHES = 10000
+HARD_MAX_SEARCH_PATTERN_BYTES	export declare const HARD_MAX_SEARCH_PATTERN_BYTES = 4096
+HARD_MAX_SEARCH_SCAN_BYTES	export declare const HARD_MAX_SEARCH_SCAN_BYTES: number
+HARD_MAX_SEARCH_TIME_MS	export declare const HARD_MAX_SEARCH_TIME_MS = 300000
+HARD_MAX_TEXT_SCAN_BYTES	export declare const HARD_MAX_TEXT_SCAN_BYTES: number
+HARD_MAX_TODOS	export declare const HARD_MAX_TODOS = 10000
+HARD_MAX_TODO_TEXT_BYTES	export declare const HARD_MAX_TODO_TEXT_BYTES = 4096
+HARD_MAX_TOTAL_OUTPUT_BYTES	export declare const HARD_MAX_TOTAL_OUTPUT_BYTES: number
+HARD_MAX_WRITE_BYTES	export declare const HARD_MAX_WRITE_BYTES: number
+HARD_SHELL_TIMEOUT_SECONDS	export declare const HARD_SHELL_TIMEOUT_SECONDS = 3600
+ListToolOptions	export type { ListToolOptions } from "./list.js"
+NamedCheckDefinition	export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js"
+OutputAccumulator	export declare class OutputAccumulator
+PrHandoff	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+ReadOperations	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadTextOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadTextResult	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadToolOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+RepoEntryKind	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepoListEntry	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryError	export declare class RepositoryError extends Error
+RepositoryLimitOptions	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryListRequest	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryListResult	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryOperations	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositorySearchMatch	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositorySearchRequest	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositorySearchResult	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+ResolvedAskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+ResolvedAskUserDecisionLimits	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+ResolvedCodingCheckpointLimits	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+ResolvedGitLimits	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+ResolvedRepositoryLimits	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RunCodingGoalVerifyOptions	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
+SAFE_GIT_CONFIG_ARGS	export declare const SAFE_GIT_CONFIG_ARGS: readonly ["-c", "core.hooksPath=/dev/null", "-c", "core.pager=cat", "-c", "sequence.editor=true", "-c", "credential.helper=", "-c", "advice.detachedHead=false"]
+SAFE_GIT_ENV	export declare const SAFE_GIT_ENV: Readonly<Record<string, string>>
+SearchToolOptions	export type { SearchToolOptions } from "./search.js"
+ShellConfig	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+TransformImage	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+TransformImageInput	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+WriteOperations	export type { WriteOperations, WriteToolOptions } from "./write.js"
+WriteToolOptions	export type { WriteOperations, WriteToolOptions } from "./write.js"
+applyEditsToNormalizedContent	export declare function applyEditsToNormalizedContent(normalizedContent: string, edits: Edit[], path: string): AppliedEditsResult
+applyReplacementsPreservingUnchangedLines	export declare function applyReplacementsPreservingUnchangedLines(originalContent: string, baseContent: string, replacements: TextReplacement[]): string
+askUserDecisionResumeSchema	export declare function askUserDecisionResumeSchema(request: Pick<AskUserDecisionSuspendData, "selectionMode" | "allowCustom" | "options">): JsonObject
+assertAbsoluteGit	export declare function assertAbsoluteGit(path: string): Promise<string>
+assertCodingResumeAllowed	export declare function assertCodingResumeAllowed(input:
+buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetadata(input:
+codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
+codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
+codingSha256Hex	export declare function codingSha256Hex(data: Buffer | string): string
+compileSearchPattern	export declare function compileSearchPattern(query: string, mode: "literal" | "regex", caseSensitive: boolean, maxPatternBytes: number):
+createAllTools	export declare function createAllTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createAskUserDecisionResumeValidator	export declare function createAskUserDecisionResumeValidator(limits?: Pick<ResolvedAskUserDecisionLimits, "maxCustomTextBytes">): WorkflowResumeValidator
+createAskUserDecisionTool	export declare function createAskUserDecisionTool(options: AskUserDecisionToolOptions): ToolDefinition
+createBoundGitRunner	export declare function createBoundGitRunner(options?: CreateGitRunnerOptions): Promise<BoundGitRunner>
+createCodingArtifactRef	export declare function createCodingArtifactRef(input:
+createCodingCheckTool	export declare function createCodingCheckTool(cwd: string, options: CodingCheckToolOptions): ToolDefinition
+createCodingGoalVerifyWorkflow	export declare function createCodingGoalVerifyWorkflow(options:
+createCodingPlanMarkdown	export declare function createCodingPlanMarkdown(input:
+createCodingTools	export declare function createCodingTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createDirectoryArtifactWriter	export declare function createDirectoryArtifactWriter(rootDir: string): ArtifactWriter
+createEditTool	export declare function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition
+createGitApplyTool	export declare function createGitApplyTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitBranchTool	export declare function createGitBranchTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitCommitTool	export declare function createGitCommitTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitDiffTool	export declare function createGitDiffTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitOperations	export declare function createGitOperations(options: CreateGitOperationsOptions): Promise<GitOperations>
+createGitPrHandoffTool	export declare function createGitPrHandoffTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitStatusTool	export declare function createGitStatusTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitTools	export declare function createGitTools(cwd: string, options?: GitToolsOptions): readonly ToolDefinition[]
+createGitWorktreeTool	export declare function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createLocalBashOperations	export declare function createLocalBashOperations(options?:
+createLocalRepositoryOperations	export declare function createLocalRepositoryOperations(limits?: RepositoryLimitOptions): RepositoryOperations
+createReadOnlyTools	export declare function createReadOnlyTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createReadTool	export declare function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition
+createRepoListTool	export declare function createRepoListTool(cwd: string, options?: ListToolOptions): ToolDefinition
+createRepoSearchTool	export declare function createRepoSearchTool(cwd: string, options?: SearchToolOptions): ToolDefinition
+createShellTool	export declare function createShellTool(cwd: string, options?: ShellToolOptions): ToolDefinition
+createTempArtifactWriter	export declare function createTempArtifactWriter(prefix?: string): ArtifactWriter
+createWriteTool	export declare function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition
+detectLineEnding	export declare function detectLineEnding(content: string): "\r\n" | "\n"
+detectSupportedImageMimeType	export declare function detectSupportedImageMimeType(buffer: Buffer): string | null
+detectSupportedImageMimeTypeFromFile	export declare function detectSupportedImageMimeTypeFromFile(filePath: string): Promise<string | null>
+enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string): Promise<
+expandPath	export declare function expandPath(filePath: string): string
+fingerprintJson	export declare function fingerprintJson(value: unknown): string
+formatSize	export declare function formatSize(bytes: number): string
+fuzzyFindText	export declare function fuzzyFindText(content: string, oldText: string): FuzzyMatchResult
+generateDiffString	export declare function generateDiffString(oldContent: string, newContent: string, contextLines?: number): EditDiffResult
+generateUnifiedPatch	export declare function generateUnifiedPatch(path: string, oldContent: string, newContent: string, contextLines?: number): string
+getShellConfig	export declare function getShellConfig(customShellPath?: string): ShellConfig
+gitRequireOk	export declare function gitRequireOk(runner: BoundGitRunner, request: GitExecRequest, label: string): Promise<GitExecResult>
+gitText	export declare function gitText(result: GitExecResult, stream?: "stdout" | "stderr"): string
+isBinaryBuffer	export declare function isBinaryBuffer(buffer: Buffer): boolean
+killProcessTree	export declare function killProcessTree(pid: number): void
+normalizeForFuzzyMatch	export declare function normalizeForFuzzyMatch(text: string): string
+normalizeToLF	export declare function normalizeToLF(text: string): string
+parseAskUserDecisionArgs	export declare function parseAskUserDecisionArgs(args: Record<string, unknown>, limits: ResolvedAskUserDecisionLimits):
+parseCodingPlanTodos	export declare function parseCodingPlanTodos(markdown: string, limits?: CodingCheckpointLimitOptions): CodingTodoItem[]
+parsePorcelainV2	export declare function parsePorcelainV2(stdout: Buffer, options?:
+pathExists	export declare function pathExists(filePath: string): Promise<boolean>
+readCodingCheckpointFromState	export declare function readCodingCheckpointFromState(state: Readonly<Record<string, unknown>>, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata | undefined
+readCodingPlanFile	export declare function readCodingPlanFile(input:
+readFileBounded	export declare function readFileBounded(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer>
+resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
+resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits
+resolveCodingCheckpointLimits	export declare function resolveCodingCheckpointLimits(options?: CodingCheckpointLimitOptions): ResolvedCodingCheckpointLimits
+resolveGitLimits	export declare function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits
+resolveReadPath	export declare function resolveReadPath(filePath: string, cwd: string): string
+resolveReadPathAsync	export declare function resolveReadPathAsync(filePath: string, cwd: string): Promise<string>
+resolveRepoPath	export declare function resolveRepoPath(root: string, inputPath: string | undefined): Promise<
+resolveRepositoryLimits	export declare function resolveRepositoryLimits(options?: RepositoryLimitOptions): ResolvedRepositoryLimits
+resolveToCwd	export declare function resolveToCwd(filePath: string, cwd: string): string
+restoreLineEndings	export declare function restoreLineEndings(text: string, ending: "\r\n" | "\n"): string
+runCodingGoalVerify	export declare function runCodingGoalVerify(options: RunCodingGoalVerifyOptions): Promise<WorkflowRunResult>
+runGitCli	export declare function runGitCli(request: GitExecRequest &
+sha256Hex	export declare function sha256Hex(data: Buffer): string
+stripBom	export declare function stripBom(content: string):
+suspendAskUserDecision	export declare function suspendAskUserDecision(request: AskUserDecisionSuspendData | Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "allowCustom" | "toolCallId" | "sessionId" | "runId">, options?: SuspendAskUserDecisionOptions): WorkflowSuspension<AskUserDecisionAnswer>
+toAskUserDecisionSuspendData	export declare function toAskUserDecisionSuspendData(request:
+toRepoRelative	export declare function toRepoRelative(root: string, absolutePath: string): string
+truncateHead	export declare function truncateHead(content: string, options?: TruncationOptions): TruncationResult
+truncateLine	export declare function truncateLine(line: string, maxChars?: number):
+truncateTail	export declare function truncateTail(content: string, options?: TruncationOptions): TruncationResult
+validateAskUserDecisionAgentResume	export declare function validateAskUserDecisionAgentResume(input:
+validateAskUserDecisionResume	export declare function validateAskUserDecisionResume(request: AskUserDecisionSuspendData, value: unknown, limits?: Pick<ResolvedAskUserDecisionLimits, "maxCustomTextBytes">): ResolvedAskUserDecisionAnswer
+validateCodingCheckpointMetadata	export declare function validateCodingCheckpointMetadata(value: unknown, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata
+validateCodingLimit	export declare function validateCodingLimit(name: string, value: number, hardCap: number): number
+validateCodingLimitAllowZero	export declare function validateCodingLimitAllowZero(name: string, value: number, hardCap: number): number
+verifyCodingArtifactBytes	export declare function verifyCodingArtifactBytes(ref: CodingArtifactRef, bytes: Buffer, limits?: CodingCheckpointLimitOptions): void
+waitForChildProcess	export declare function waitForChildProcess(child: ChildProcess): Promise<number | null>
+withFileMutationQueue	export declare function withFileMutationQueue<T>(filePath: string, fn: () => Promise<T>): Promise<T>
+writeCodingPlanFile	export declare function writeCodingPlanFile(input:

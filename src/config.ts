@@ -24,10 +24,7 @@ export function assertJsonObject(value: unknown, label = "value"): asserts value
   assertSafeJsonValue(value, label);
 }
 
-export async function loadConfigLayers(
-  providers: readonly ConfigProvider[],
-  context?: ConfigLoadContext,
-): Promise<ConfigLayer[]> {
+export async function loadConfigLayers(providers: readonly ConfigProvider[], context?: ConfigLoadContext): Promise<ConfigLayer[]> {
   const layers: ConfigLayer[] = [];
   for (const provider of providers) {
     const config = await provider.load(context);
@@ -54,9 +51,10 @@ function mergeObjects(base: JsonObject, override: JsonObject, path = "config"): 
     const childPath = `${path}.${key}`;
     assertSafeJsonKey(key, childPath);
     const current = result[key];
-    result[key] = isPlainObject(current) && isPlainObject(value)
-      ? mergeObjects(current as JsonObject, value as JsonObject, childPath)
-      : cloneJsonValue(value, childPath);
+    result[key] =
+      isPlainObject(current) && isPlainObject(value)
+        ? mergeObjects(current as JsonObject, value as JsonObject, childPath)
+        : cloneJsonValue(value, childPath);
   }
   return result;
 }
@@ -97,7 +95,9 @@ function isSafeJsonValue(value: JsonValue): boolean {
 
 function assertSafeJsonValue(value: JsonValue, path: string): void {
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => assertSafeJsonValue(entry, `${path}[${index}]`));
+    value.forEach((entry, index) => {
+      assertSafeJsonValue(entry, `${path}[${index}]`);
+    });
     return;
   }
   if (!isPlainObject(value)) return;

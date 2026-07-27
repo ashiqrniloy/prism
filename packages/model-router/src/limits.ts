@@ -22,7 +22,10 @@ export function resolveModelRouterLimits(input: ModelRouterLimits = {}): Resolve
   for (const key of Object.keys(DEFAULT_MODEL_ROUTER_LIMITS) as (keyof ResolvedModelRouterLimits)[]) {
     const value = input[key] ?? DEFAULT_MODEL_ROUTER_LIMITS[key];
     if (!Number.isSafeInteger(value) || value < 1 || value > HARD_MODEL_ROUTER_LIMITS[key]) {
-      throw new ModelRouterError(`${key} must be a positive safe integer ≤ ${HARD_MODEL_ROUTER_LIMITS[key]}`, "ERR_PRISM_MODEL_ROUTER_LIMITS");
+      throw new ModelRouterError(
+        `${key} must be a positive safe integer ≤ ${HARD_MODEL_ROUTER_LIMITS[key]}`,
+        "ERR_PRISM_MODEL_ROUTER_LIMITS",
+      );
     }
     out[key] = value;
   }

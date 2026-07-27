@@ -1,7 +1,7 @@
 import type { ResourceLoadContext, ResourceLoader } from "@arnilo/prism";
 import { RagLimitError, RagValidationError } from "./errors.js";
 import { resolveRagLimits } from "./limits.js";
-import type { DocumentLoader, DocumentLoadOptions, LoadedDocument } from "./types.js";
+import type { DocumentLoader, LoadedDocument } from "./types.js";
 import { nonEmpty } from "./util.js";
 
 export interface ResourceDocumentLoaderOptions {

@@ -6,7 +6,7 @@
  *   PRISM_BENCH_DOCKER=1 + PRISM_TEST_DOCKER_* — real Docker sandbox timings
  * Evidence fields only — never a flaky default CI timing gate.
  */
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, posix } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -32,8 +32,7 @@ const REQUIRED_RESULT_FIELDS = Object.freeze([
   "resourceLimitSignals",
 ]);
 
-const percentile = (values, ratio) =>
-  [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
+const percentile = (values, ratio) => [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
 
 const results = [];
 const root = await mkdtemp(join(tmpdir(), "prism-bench-010-"));
@@ -88,7 +87,7 @@ async function importWorkspace(specifier, relativeFromRoot) {
 }
 
 /** Minimal memory DisposableSandbox for sandbox-mode composition benches. */
-function createMemorySandbox(scripts, workspaceRoot = "/workspace") {
+function createMemorySandbox(scripts, _workspaceRoot = "/workspace") {
   const files = new Map();
   return {
     id: "bench-mem",
@@ -170,10 +169,7 @@ function createMemorySandbox(scripts, workspaceRoot = "/workspace") {
 }
 
 try {
-  const codingSecurity = await importWorkspace(
-    "@arnilo/prism-coding-security",
-    "packages/coding-security/dist/index.js",
-  );
+  const codingSecurity = await importWorkspace("@arnilo/prism-coding-security", "packages/coding-security/dist/index.js");
   const ctx = (id) => ({ sessionId: "bench", runId: "bench", toolCallId: `t-${id}` });
 
   const hostRoot = join(root, "host");

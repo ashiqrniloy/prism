@@ -1,6 +1,6 @@
-import type { Agent, AgentConfig, Guardrails, SecureAgentOptions } from "./contracts.js";
-import { createAgent } from "./agents.js";
 import { validateRunStateOptions } from "./agent-run-state.js";
+import { createAgent } from "./agents.js";
+import type { Agent, AgentConfig, Guardrails, SecureAgentOptions } from "./contracts.js";
 import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
 import { resolveRunLimits } from "./run-limits.js";
 import { createToolParameterValidator, createToolRegistry } from "./tools.js";
@@ -10,14 +10,18 @@ export function createSecureAgent(options: SecureAgentOptions): Agent {
   if (!options.id.trim()) throw new TypeError("Secure agent requires a non-empty id");
   if (!options.definitionRevision.trim()) throw new TypeError("Secure agent requires a non-empty definitionRevision");
   if (!options.redactor || typeof options.redactor.redact !== "function") throw new TypeError("Secure agent requires a redactor");
-  if (!options.permission || typeof options.permission.check !== "function") throw new TypeError("Secure agent requires a permission policy");
+  if (!options.permission || typeof options.permission.check !== "function")
+    throw new TypeError("Secure agent requires a permission policy");
   if (!options.trust || typeof options.trust.check !== "function") throw new TypeError("Secure agent requires a trust policy");
-  if (!options.toolArgumentValidator || typeof options.toolArgumentValidator.validate !== "function") throw new TypeError("Secure agent requires a tool argument validator");
+  if (!options.toolArgumentValidator || typeof options.toolArgumentValidator.validate !== "function")
+    throw new TypeError("Secure agent requires a tool argument validator");
   if (!options.limits || Object.keys(options.limits).length === 0) throw new TypeError("Secure agent requires explicit limits");
-  if (!options.ownership || !Object.values(options.ownership).some((value) => typeof value === "string" && value.trim())) throw new TypeError("Secure agent requires non-empty ownership");
+  if (!options.ownership || !Object.values(options.ownership).some((value) => typeof value === "string" && value.trim()))
+    throw new TypeError("Secure agent requires non-empty ownership");
   for (const tool of options.tools) {
     if (!tool.name.trim()) throw new TypeError("Secure agent tool names must be non-empty");
-    if (!tool.parameters || Object.keys(tool.parameters).length === 0) throw new TypeError(`Secure agent tool ${tool.name} requires a non-empty parameters schema`);
+    if (!tool.parameters || Object.keys(tool.parameters).length === 0)
+      throw new TypeError(`Secure agent tool ${tool.name} requires a non-empty parameters schema`);
   }
   resolveRunLimits(options.limits);
   if (options.identity) {
@@ -44,7 +48,12 @@ export function createSecureAgent(options: SecureAgentOptions): Agent {
   return createAgent(config);
 }
 
-function withoutSecureFields(options: SecureAgentOptions): Omit<AgentConfig, "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "guardrails" | "runState" | "secure"> {
+function withoutSecureFields(
+  options: SecureAgentOptions,
+): Omit<
+  AgentConfig,
+  "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "guardrails" | "runState" | "secure"
+> {
   const {
     tools: _tools,
     toolArgumentValidator: _validator,

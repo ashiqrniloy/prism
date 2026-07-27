@@ -1,7 +1,13 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  type AgentEvent,
+  type AIProvider,
+  type ArtifactParser,
+  type ArtifactRepairer,
+  type ArtifactValidator,
+  type ContextProvider,
   createAgent,
   createMockProvider,
   createProviderResolver,
@@ -11,12 +17,6 @@ import {
   providerDone,
   providerTextDelta,
   providerToolCall,
-  type AgentEvent,
-  type AIProvider,
-  type ArtifactParser,
-  type ArtifactRepairer,
-  type ArtifactValidator,
-  type ContextProvider,
   type Skill,
   type ToolDefinition,
   type ToolResult,
@@ -180,9 +180,7 @@ async function runToolDispatchDemo(
   await session.run("Call the tools.", { activeSkills: ["schema-skill"] });
   const events = await reader;
 
-  const toolResults = events
-    .filter((e) => e.type === "tool_execution_finished")
-    .map((e) => String(e.result.value ?? ""));
+  const toolResults = events.filter((e) => e.type === "tool_execution_finished").map((e) => String(e.result.value ?? ""));
 
   const redacted = captured.some((text) => text.includes("[REDACTED]") && !text.includes(FAKE_SECRET));
   return { toolResults, redacted };

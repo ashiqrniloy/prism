@@ -1,12 +1,12 @@
 import type {
+  AgentEventRecord,
   AgentRunResult,
   ErrorInfo,
   OwnershipScope,
   PersistencePage,
   PersistenceQuery,
-  SecretRedactor,
   RunRecord,
-  AgentEventRecord,
+  SecretRedactor,
   ToolCallRecord,
   UsageRecord,
 } from "@arnilo/prism";
@@ -126,8 +126,7 @@ export interface ScoreRunOptions<TInput = unknown, TExpected = unknown> {
   readonly random?: () => number;
 }
 
-export interface LiveScoreOptions<TInput = unknown, TExpected = unknown>
-  extends Omit<ScoreRunOptions<TInput, TExpected>, "result"> {
+export interface LiveScoreOptions<TInput = unknown, TExpected = unknown> extends Omit<ScoreRunOptions<TInput, TExpected>, "result"> {
   readonly onError?: (error: unknown) => void;
 }
 
@@ -224,7 +223,8 @@ export interface PairwiseScorer<TInput = unknown, TExpected = unknown> {
   score(input: PairwiseScorerInput<TInput, TExpected>): PairwiseScoreResult | Promise<PairwiseScoreResult>;
 }
 export type ComparisonCandidate<TInput = unknown, TExpected = unknown> = (
-  item: DatasetItem<TInput, TExpected>, signal?: AbortSignal,
+  item: DatasetItem<TInput, TExpected>,
+  signal?: AbortSignal,
 ) => Promise<AgentRunResult>;
 export interface ComparisonRecord {
   readonly itemId: string;
@@ -285,7 +285,5 @@ export interface RunExperimentOptions<TInput = unknown, TExpected = unknown> {
   readonly random?: () => number;
   readonly onItem?: (item: ExperimentItemResult<TInput, TExpected>) => void | Promise<void>;
   /** Convert dataset input into agent input. Defaults to string/Message passthrough or JSON.stringify. */
-  readonly toAgentInput?: (
-    input: TInput,
-  ) => string | import("@arnilo/prism").Message | readonly import("@arnilo/prism").Message[];
+  readonly toAgentInput?: (input: TInput) => string | import("@arnilo/prism").Message | readonly import("@arnilo/prism").Message[];
 }

@@ -1,5 +1,5 @@
-import type Database from "better-sqlite3";
 import type { SecretRedactor } from "@arnilo/prism";
+import type Database from "better-sqlite3";
 
 /** Default busy timeout in milliseconds (SQLite `busy_timeout` pragma). */
 export const DEFAULT_BUSY_TIMEOUT_MS = 5000;

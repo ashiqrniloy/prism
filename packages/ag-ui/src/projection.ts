@@ -61,7 +61,12 @@ function isCoWorkEvent(value: unknown): value is CoWorkEvent {
     case "artifact.progress":
       return string("artifactId") && number("version") && string("status") && (record.progress === undefined || number("progress"));
     case "artifact.approval.requested":
-      return string("artifactId") && number("version") && (record.reviewer === undefined || string("reviewer")) && (record.reason === undefined || string("reason"));
+      return (
+        string("artifactId") &&
+        number("version") &&
+        (record.reviewer === undefined || string("reviewer")) &&
+        (record.reason === undefined || string("reason"))
+      );
     case "draft.connector.pending":
       return string("connectorId") && string("scope") && string("status");
     case "browser.snapshot":

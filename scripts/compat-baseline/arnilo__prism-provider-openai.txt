@@ -1,0 +1,27 @@
+OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH	export declare const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH = 64
+computeS256Challenge	export declare function computeS256Challenge(verifier: string): string
+createOpenAICodexOAuthProvider	export declare function createOpenAICodexOAuthProvider(options?: OpenAICodexOAuthOptions): OAuthProvider
+createOpenAICodexProvider	export declare function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): AIProvider
+createOpenAIFileUploadManager	export declare function createOpenAIFileUploadManager(options?: OpenAIFileUploadManagerOptions):
+createOpenAIProviderPackage	export declare function createOpenAIProviderPackage(options?: OpenAIProviderPackageOptions): ProviderPackage
+createOpenAIRealtimeSession	export declare function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOptions): RealtimeSession
+createOpenAIResponsesProvider	export declare function createOpenAIResponsesProvider(options?: OpenAIResponsesProviderOptions): AIProvider
+createPkceVerifier	export declare function createPkceVerifier(bytes?: number): string
+defineOpenAIModel	export declare function defineOpenAIModel(config: OpenAIModelConfig): ModelConfig
+listOpenAIModels	export declare function listOpenAIModels(options?: ListOpenAIModelsOptions): Promise<ModelConfig[]>
+mapOpenAIModel	export declare function mapOpenAIModel(entry: OpenAIModelEntry, options?:
+openAICodexModels	export declare const openAICodexModels: readonly [
+openAICodexOAuthProvider	export declare const openAICodexOAuthProvider: OAuthProvider
+openAIModels	export declare const openAIModels: readonly [ModelConfig]
+promptCacheKey	export declare function promptCacheKey(options: ProviderRequestOptions | undefined): string | undefined
+promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
+resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
+type ListOpenAIModelsOptions	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIModels, } from "./models.js"
+type OpenAICodexOAuthOptions	export { computeS256Challenge, createOpenAICodexOAuthProvider, createPkceVerifier, type OpenAICodexOAuthOptions, openAICodexOAuthProvider, } from "./oauth.js"
+type OpenAICodexProviderOptions	export { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js"
+type OpenAIModelConfig	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIModels, } from "./models.js"
+type OpenAIModelEntry	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIModels, } from "./models.js"
+type OpenAIRealtimeSessionOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type OpenAIResponsesProviderOptions	export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "./responses.js"
+type RealtimeTransport	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type RealtimeTransportOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"

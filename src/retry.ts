@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import type { ErrorInfo, RetryContext, RetryDecision, RetryPolicy } from "./contracts.js";
+import type { ErrorInfo, RetryDecision, RetryPolicy } from "./contracts.js";
 
 export interface DefaultRetryPolicyOptions {
   readonly name?: string;
@@ -37,7 +37,8 @@ export function createDefaultRetryPolicy(options: DefaultRetryPolicyOptions = {}
   return {
     name: options.name ?? "default-retry",
     decide(context) {
-      if (context.signal?.aborted || context.attempt >= maxAttempts || !isTransientErrorInfo(context.error, transientCodes)) return { retry: false };
+      if (context.signal?.aborted || context.attempt >= maxAttempts || !isTransientErrorInfo(context.error, transientCodes))
+        return { retry: false };
       return { retry: true, delayMs: Math.min(maxDelayMs, baseDelayMs * 2 ** Math.max(0, context.attempt - 1)) };
     },
   };

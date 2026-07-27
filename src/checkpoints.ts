@@ -1,11 +1,4 @@
-import type {
-  CheckpointKey,
-  CheckpointQuery,
-  CheckpointRecord,
-  CheckpointSaveInput,
-  CheckpointStore,
-  OwnershipScope,
-} from "./contracts.js";
+import type { CheckpointKey, CheckpointQuery, CheckpointRecord, CheckpointStore, OwnershipScope } from "./contracts.js";
 
 export const CHECKPOINT_CONFLICT_CODE = "ERR_PRISM_CHECKPOINT_CONFLICT";
 
@@ -23,9 +16,7 @@ export interface MemoryCheckpointStoreOptions {
 }
 
 /** In-process reference implementation of the generic checkpoint contract. */
-export function createMemoryCheckpointStore(
-  options: MemoryCheckpointStoreOptions = {},
-): CheckpointStore {
+export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOptions = {}): CheckpointStore {
   const records = new Map<string, CheckpointRecord>();
   const maxPageSize = Math.max(1, options.maxPageSize ?? 500);
 
@@ -40,17 +31,22 @@ export function createMemoryCheckpointStore(
       const existing = records.get(id);
       if (existing) assertOwnership(input, existing);
       if (input.expectedVersion !== undefined && input.expectedVersion !== (existing?.version ?? 0)) {
-        throw new CheckpointConflictError(`Checkpoint compare-and-swap failed (expected ${input.expectedVersion}, current ${existing?.version ?? 0})`);
+        throw new CheckpointConflictError(
+          `Checkpoint compare-and-swap failed (expected ${input.expectedVersion}, current ${existing?.version ?? 0})`,
+        );
       }
       if (existing && input.version <= existing.version) {
         throw new CheckpointConflictError(`Stale checkpoint version ${input.version} (current ${existing.version})`);
       }
       if (existing?.fencingToken !== undefined && (input.fencingToken === undefined || input.fencingToken < existing.fencingToken)) {
-        throw new CheckpointConflictError(`Stale checkpoint fencing token ${input.fencingToken ?? "missing"} (current ${existing.fencingToken})`);
+        throw new CheckpointConflictError(
+          `Stale checkpoint fencing token ${input.fencingToken ?? "missing"} (current ${existing.fencingToken})`,
+        );
       }
       const now = new Date().toISOString();
       const value = cloneJson(input.value, "Checkpoint value");
-      const metadata = input.metadata === undefined ? undefined : cloneJson(input.metadata, "Checkpoint metadata") as Readonly<Record<string, unknown>>;
+      const metadata =
+        input.metadata === undefined ? undefined : (cloneJson(input.metadata, "Checkpoint metadata") as Readonly<Record<string, unknown>>);
       const record: CheckpointRecord = {
         namespace: input.namespace,
         key: input.key,
@@ -80,9 +76,8 @@ export function createMemoryCheckpointStore(
       throwIfAborted(query.signal);
       const offset = decodeCursor(query.cursor);
       const limit = Math.min(Math.max(1, query.limit ?? 100), maxPageSize);
-      const categories = query.category === undefined
-        ? undefined
-        : new Set(Array.isArray(query.category) ? query.category : [query.category]);
+      const categories =
+        query.category === undefined ? undefined : new Set(Array.isArray(query.category) ? query.category : [query.category]);
       const items = [...records.values()]
         .filter((record) => query.namespace === undefined || record.namespace === query.namespace)
         .filter((record) => query.keyPrefix === undefined || record.key.startsWith(query.keyPrefix))
@@ -126,15 +121,15 @@ function ownership(input: OwnershipScope): OwnershipScope {
 }
 
 function ownershipMatches(expected: OwnershipScope, actual: OwnershipScope): boolean {
-  return expected.tenantId === actual.tenantId
-    && expected.accountId === actual.accountId
-    && expected.userId === actual.userId;
+  return expected.tenantId === actual.tenantId && expected.accountId === actual.accountId && expected.userId === actual.userId;
 }
 
 function ownershipFilterMatches(expected: OwnershipScope, actual: OwnershipScope): boolean {
-  return (expected.tenantId === undefined || expected.tenantId === actual.tenantId)
-    && (expected.accountId === undefined || expected.accountId === actual.accountId)
-    && (expected.userId === undefined || expected.userId === actual.userId);
+  return (
+    (expected.tenantId === undefined || expected.tenantId === actual.tenantId) &&
+    (expected.accountId === undefined || expected.accountId === actual.accountId) &&
+    (expected.userId === undefined || expected.userId === actual.userId)
+  );
 }
 
 function assertOwnership(expected: OwnershipScope, actual: OwnershipScope): void {

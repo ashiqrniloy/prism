@@ -1,13 +1,17 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import type { Agent, AgentConfig, AgentDefinition, AgentDefinitionResolutionContext, AIProvider, ContextProvider, Skill, SkillRegistry, ToolDefinition, ToolRegistry } from "../index.js";
-import {
-  createAgent,
-  createContributionRegistries,
-  createSkillRegistry,
-  createToolRegistry,
-  resolveAgentDefinition,
+import { describe, it } from "node:test";
+import type {
+  Agent,
+  AgentDefinition,
+  AgentDefinitionResolutionContext,
+  AIProvider,
+  ContextProvider,
+  Skill,
+  SkillRegistry,
+  ToolDefinition,
+  ToolRegistry,
 } from "../index.js";
+import { createAgent, createContributionRegistries, createSkillRegistry, createToolRegistry, resolveAgentDefinition } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -244,10 +248,7 @@ describe("resolveAgentDefinition", () => {
       skills: ["schema"],
     };
 
-    assert.throws(
-      () => resolveAgentDefinition(def, { registries }),
-      /Skill schema requires inactive tool: echo/,
-    );
+    assert.throws(() => resolveAgentDefinition(def, { registries }), /Skill schema requires inactive tool: echo/);
   });
 
   it("host tool registry limits scope for declarative tool names", async () => {
@@ -315,8 +316,20 @@ describe("resolveAgentDefinition", () => {
     const baseSkills = createSkillRegistry([briefSkill]);
     let toolListCalls = 0;
     let skillListCalls = 0;
-    const trackedTools: ToolRegistry = { ...baseTools, list: () => { toolListCalls += 1; return baseTools.list(); } };
-    const trackedSkills: SkillRegistry = { ...baseSkills, list: () => { skillListCalls += 1; return baseSkills.list(); } };
+    const trackedTools: ToolRegistry = {
+      ...baseTools,
+      list: () => {
+        toolListCalls += 1;
+        return baseTools.list();
+      },
+    };
+    const trackedSkills: SkillRegistry = {
+      ...baseSkills,
+      list: () => {
+        skillListCalls += 1;
+        return baseSkills.list();
+      },
+    };
 
     await resolve({ name: "safe", model: "mock/demo" }, { tools: trackedTools, skillsRegistry: trackedSkills });
 

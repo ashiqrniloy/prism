@@ -1,6 +1,6 @@
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
 import type {
   AgentConfig,
   AgentDefinition,
@@ -9,6 +9,7 @@ import type {
   AgentSessionCloneOptions,
   AgentSessionForkOptions,
   AIProvider,
+  AssembleProviderInputOptions,
   AuthMethod,
   CacheUsageReport,
   CommandDefinition,
@@ -18,19 +19,19 @@ import type {
   ConfigProvider,
   ContextProvider,
   CredentialResolver,
-  OAuthLoginCallbacks,
-  OAuthProvider,
-  AssembleProviderInputOptions,
   DefaultInputBuildContext,
+  DispatchToolCallOptions,
   Extension,
   InputAssemblyLayout,
   InputBuilder,
   ManifestContributionDeclaration,
   ManifestResourceDeclaration,
+  ModelCacheCapabilities,
+  OAuthLoginCallbacks,
+  OAuthProvider,
   PrismManifest,
   PromptBuilder,
   PromptCacheHints,
-  ModelCacheCapabilities,
   PromptCacheKind,
   PromptTemplateOptions,
   ProviderPackage,
@@ -38,21 +39,52 @@ import type {
   ProviderRequestPolicy,
   ResourceLoader,
   RetryOptions,
-  RunOptions,
   RetryPolicy,
-  SettingsProvider,
-  Skill,
+  RunOptions,
+  SessionContextSnapshot,
   SessionEntry,
   SessionStore,
+  SettingsProvider,
+  Skill,
   SkillRegistry,
   StoreFactory,
   SystemPromptConfig,
   SystemPromptContribution,
   SystemPromptMode,
   ToolDefinition,
+  ToolFilter,
+  ToolValidator,
 } from "../index.js";
-import { assembleProviderInput, cacheUsageReport, composeSystemPrompt, createAgent, createAgentSession, createContributionRegistries, createDefaultCompactionStrategy, createDefaultInputBuilder, createDefaultPromptBuilder, createDefaultRetryPolicy, createEnvCredentialResolver, createExplicitCredentialResolver, createExtensionKernel, createMemorySessionStore, createProviderRequestPolicyChain, createSessionCachePolicy, createSessionEntry, createSkillRegistry, createToolRegistry, defineProviderPackage, dispatchToolCall, filterTools, mergeProviderRequestOptions, rebuildSessionContext, renderPromptTemplate, resolveActiveSkills, resolveAgentDefinition, resolveContextProviders } from "../index.js";
-import type { DispatchToolCallOptions, SessionContextSnapshot, ToolFilter, ToolValidator } from "../index.js";
+import {
+  assembleProviderInput,
+  cacheUsageReport,
+  composeSystemPrompt,
+  createAgent,
+  createAgentSession,
+  createContributionRegistries,
+  createDefaultCompactionStrategy,
+  createDefaultInputBuilder,
+  createDefaultPromptBuilder,
+  createDefaultRetryPolicy,
+  createEnvCredentialResolver,
+  createExplicitCredentialResolver,
+  createExtensionKernel,
+  createMemorySessionStore,
+  createProviderRequestPolicyChain,
+  createSessionCachePolicy,
+  createSessionEntry,
+  createSkillRegistry,
+  createToolRegistry,
+  defineProviderPackage,
+  dispatchToolCall,
+  filterTools,
+  mergeProviderRequestOptions,
+  rebuildSessionContext,
+  renderPromptTemplate,
+  resolveActiveSkills,
+  resolveAgentDefinition,
+  resolveContextProviders,
+} from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -137,7 +169,12 @@ describe("public contracts", () => {
   it("host can type phase 11 provider package and model metadata contracts", async () => {
     const auth: AuthMethod = { provider: "mock", kind: "api_key", credentialName: "apiKey" };
     const requestPolicy: ProviderRequestPolicy = { name: "cache", apply: ({ request }) => request };
-    const promptContribution: SystemPromptContribution = { id: "package-prompt", source: "package", mode: "append", text: "Use package rules." };
+    const promptContribution: SystemPromptContribution = {
+      id: "package-prompt",
+      source: "package",
+      mode: "append",
+      text: "Use package rules.",
+    };
     const providerPackage: ProviderPackage = defineProviderPackage({
       name: "demo-provider",
       docs: { description: "Demo provider package." },
@@ -160,10 +197,15 @@ describe("public contracts", () => {
       },
     });
     const kernel = createExtensionKernel();
-    await kernel.load([{ name: "package-loader", setup: (api) => {
-      api.registerProviderPackage(providerPackage);
-      return providerPackage.setup(api);
-    } }]);
+    await kernel.load([
+      {
+        name: "package-loader",
+        setup: (api) => {
+          api.registerProviderPackage(providerPackage);
+          return providerPackage.setup(api);
+        },
+      },
+    ]);
 
     const registeredModel = kernel.registries.models.resolve("mock", "demo-metadata");
     assert.equal(kernel.registries.providerPackages.resolve("demo-provider"), providerPackage);
@@ -181,7 +223,7 @@ describe("public contracts", () => {
       id: "mock-oauth",
       login: () => ({ access: "access-token", refresh: "refresh-token" }),
       refresh: (credentials) => ({ ...credentials, access: "refreshed-token" }),
-      getCredential: (credentials) => credentials.access ? { type: "bearer", value: credentials.access } : undefined,
+      getCredential: (credentials) => (credentials.access ? { type: "bearer", value: credentials.access } : undefined),
     };
     const auth: AuthMethod = { provider: "mock", kind: "oauth", oauth };
     const resolver = createExplicitCredentialResolver([
@@ -198,7 +240,13 @@ describe("public contracts", () => {
     const mode: SystemPromptMode = "append";
     const config: SystemPromptConfig = [{ id: "app", source: "app", mode, text: "App rules." }];
     const runOptions: RunOptions = { inputLayout: "legacy" };
-    const agentConfig: AgentConfig = { model: { provider: "mock", model: "demo" }, provider, instructions: "Base", systemPrompt: config, inputLayout: runOptions.inputLayout };
+    const agentConfig: AgentConfig = {
+      model: { provider: "mock", model: "demo" },
+      provider,
+      instructions: "Base",
+      systemPrompt: config,
+      inputLayout: runOptions.inputLayout,
+    };
     const prompt = composeSystemPrompt(agentConfig.systemPrompt, { base: agentConfig.instructions });
 
     assert.equal(prompt, "Base\n\nApp rules.");
@@ -208,7 +256,7 @@ describe("public contracts", () => {
     const kind: PromptCacheKind = "openai_key";
     const cache: ModelCacheCapabilities = { kind, maxKeyLength: 64, maxBreakpoints: 0, minCacheableTokens: 1024, longRetention: true };
     const model = { provider: "mock", model: "cached", cache };
-    const seen: typeof model[] = [];
+    const seen: (typeof model)[] = [];
     const passiveProvider: AIProvider = {
       id: "passive",
       async *generate(request) {
@@ -266,7 +314,10 @@ describe("public contracts", () => {
     assert.equal(merged?.cacheRetention, "long");
     assert.equal(merged?.cache?.key, "patch");
     assert.equal(merged?.cache?.retention, "long");
-    assert.deepEqual(merged?.cache?.breakpoints?.map((item) => item.location), ["system_prompt", "last_user_message"]);
+    assert.deepEqual(
+      merged?.cache?.breakpoints?.map((item) => item.location),
+      ["system_prompt", "last_user_message"],
+    );
   });
 
   it("host can type phase 2 contribution contracts", async () => {
@@ -330,10 +381,17 @@ describe("public contracts", () => {
   it("host can type phase 4 tool registry filters dispatch and contributions", async () => {
     const contributions = createContributionRegistries();
     const kernel = createExtensionKernel({ registries: contributions });
-    await kernel.load([{ name: "tools", setup: (api) => { api.registerTool(tool); } }]);
+    await kernel.load([
+      {
+        name: "tools",
+        setup: (api) => {
+          api.registerTool(tool);
+        },
+      },
+    ]);
     const registry = createToolRegistry([contributions.tools.resolve("echo")]);
     const filter: ToolFilter = { allow: ["echo"] };
-    const validate: ToolValidator = (_tool, args) => typeof args.text === "string" ? undefined : "text is required";
+    const validate: ToolValidator = (_tool, args) => (typeof args.text === "string" ? undefined : "text is required");
     const options: DispatchToolCallOptions = {
       call: { type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } },
       registry,
@@ -397,12 +455,15 @@ describe("public contracts", () => {
   });
 
   it("host can type phase 5 extension contribution wiring", async () => {
-    const extension: Extension = { name: "phase5", setup(api) {
-      api.registerInputBuilder({ name: "input", build: () => [{ role: "user", content: [{ type: "text", text: "from extension" }] }] });
-      api.registerPromptBuilder({ name: "prompt", build: (request) => request.messages });
-      api.registerContextProvider(context);
-      api.registerSkill(skill);
-    } };
+    const extension: Extension = {
+      name: "phase5",
+      setup(api) {
+        api.registerInputBuilder({ name: "input", build: () => [{ role: "user", content: [{ type: "text", text: "from extension" }] }] });
+        api.registerPromptBuilder({ name: "prompt", build: (request) => request.messages });
+        api.registerContextProvider(context);
+        api.registerSkill(skill);
+      },
+    };
     const kernel = createExtensionKernel();
     await kernel.load([extension]);
     const skillRegistry = createSkillRegistry([kernel.registries.skills.resolve("brief")]);
@@ -471,7 +532,14 @@ describe("public contracts", () => {
       kind: "message",
       message: { role: "user", content: [{ type: "text", text: "Hi" }] },
     });
-    const label: SessionEntry = createSessionEntry({ id: "entry_2", parentId: root.id, sessionId: "s1", timestamp: root.timestamp, kind: "label", label: "demo" });
+    const label: SessionEntry = createSessionEntry({
+      id: "entry_2",
+      parentId: root.id,
+      sessionId: "s1",
+      timestamp: root.timestamp,
+      kind: "label",
+      label: "demo",
+    });
     const snapshot: SessionContextSnapshot = rebuildSessionContext([root, label], { leafId: label.id });
 
     assert.equal(snapshot.leafId, "entry_2");
@@ -481,7 +549,12 @@ describe("public contracts", () => {
   it("public contracts cover default compaction strategy", async () => {
     const strategy: CompactionStrategy = createDefaultCompactionStrategy({ keepRecentEntries: 1 });
     const options: CompactionOptions = { strategy, thresholdEntries: 10, keepRecentEntries: 1 };
-    const root = createSessionEntry({ id: "entry_1", sessionId: "s1", kind: "message", message: { role: "user", content: [{ type: "text", text: "Hi" }] } });
+    const root = createSessionEntry({
+      id: "entry_1",
+      sessionId: "s1",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "Hi" }] },
+    });
     const result = await strategy.compact({ sessionId: "s1", entries: [root], trigger: "manual" });
     const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, compaction: options });
     const session = createAgentSession({ agent, id: "compact-contract" });
@@ -530,20 +603,8 @@ describe("public contracts", () => {
   });
 
   it("public contracts do not mention app-specific tool categories", () => {
-    const files = [
-      "src/index.ts",
-      "src/contracts.ts",
-      "dist/index.d.ts",
-      "dist/contracts.d.ts",
-    ];
-    const banned = [
-      /safe.?tool/i,
-      /dangerous/i,
-      /synapta/i,
-      /shell/i,
-      /filesystem/i,
-      /browser/i,
-    ];
+    const files = ["src/index.ts", "src/contracts.ts", "dist/index.d.ts", "dist/contracts.d.ts"];
+    const banned = [/safe.?tool/i, /dangerous/i, /synapta/i, /shell/i, /filesystem/i, /browser/i];
 
     for (const file of files) {
       const text = readFileSync(file, "utf8");

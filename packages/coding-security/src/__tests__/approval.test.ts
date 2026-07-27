@@ -1,20 +1,20 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { realpathSync } from "node:fs";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { realpathSync } from "node:fs";
+import { test } from "node:test";
 import type { ExecutionAction } from "@arnilo/prism";
 import { createCodingApprovalPolicy } from "../approval.js";
-import { assertPathInsideRoots } from "../path-containment.js";
 import { evaluateCommandRules, hasShellMetacharacters } from "../command-rules.js";
+import { assertPathInsideRoots } from "../path-containment.js";
 import { createSandboxBashOperations, SandboxExecutionError } from "../sandbox.js";
 
 test("path outside roots is denied", async () => {
   const root = await mkdtemp(join(tmpdir(), "coding-sec-root-"));
   try {
     const policy = createCodingApprovalPolicy({ roots: [root] });
-    const outside = join(tmpdir(), "outside-" + Date.now());
+    const outside = join(tmpdir(), `outside-${Date.now()}`);
     const decision = await policy.check({
       kind: "read",
       operation: "read",
@@ -105,7 +105,13 @@ test("approval cache defaults to none and isolates explicit run/session identiti
   });
   try {
     let calls = 0;
-    const uncached = createCodingApprovalPolicy({ roots: [root], approve: () => { calls++; return false; } });
+    const uncached = createCodingApprovalPolicy({
+      roots: [root],
+      approve: () => {
+        calls++;
+        return false;
+      },
+    });
     await uncached.check(action("session-1", "run-1"));
     await uncached.check(action("session-1", "run-1"));
     assert.equal(calls, 2);
@@ -114,21 +120,24 @@ test("approval cache defaults to none and isolates explicit run/session identiti
     const perRun = createCodingApprovalPolicy({
       roots: [root],
       approvalCacheScope: "run",
-      approve: () => { calls++; return false; },
+      approve: () => {
+        calls++;
+        return false;
+      },
     });
     await perRun.check(action("session-1", "run-1"));
     await perRun.check(action("session-1", "run-1"));
-    await Promise.all([
-      perRun.check(action("session-1", "run-2")),
-      perRun.check(action("session-1", "run-3")),
-    ]);
+    await Promise.all([perRun.check(action("session-1", "run-2")), perRun.check(action("session-1", "run-3"))]);
     assert.equal(calls, 3, "run cache must not cross run identity");
 
     calls = 0;
     const perSession = createCodingApprovalPolicy({
       roots: [root],
       approvalCacheScope: "session",
-      approve: () => { calls++; return false; },
+      approve: () => {
+        calls++;
+        return false;
+      },
     });
     await perSession.check(action("session-1", "run-1"));
     await perSession.check(action("session-1", "run-2"));
@@ -139,7 +148,10 @@ test("approval cache defaults to none and isolates explicit run/session identiti
     const missingIdentity = createCodingApprovalPolicy({
       roots: [root],
       approvalCacheScope: "run",
-      approve: () => { calls++; return false; },
+      approve: () => {
+        calls++;
+        return false;
+      },
     });
     await missingIdentity.check(action());
     await missingIdentity.check(action());
@@ -149,7 +161,10 @@ test("approval cache defaults to none and isolates explicit run/session identiti
     const bounded = createCodingApprovalPolicy({
       roots: [root],
       approvalCacheScope: "run",
-      approve: () => { calls++; return true; },
+      approve: () => {
+        calls++;
+        return true;
+      },
     });
     for (let index = 0; index <= 1_000; index++) {
       await bounded.check({
@@ -254,8 +269,12 @@ test("sandbox adapter streams output and wraps errors", async () => {
   assert.deepEqual(chunks, ["stdout\n", "stderr\n"]);
 
   await assert.rejects(
-    () => createSandboxBashOperations({ exec: async () => { throw new Error("sandbox down"); } })
-      .exec("echo hi", process.cwd(), { onData: () => {} }),
+    () =>
+      createSandboxBashOperations({
+        exec: async () => {
+          throw new Error("sandbox down");
+        },
+      }).exec("echo hi", process.cwd(), { onData: () => {} }),
     SandboxExecutionError,
   );
 });

@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   providerContentDelta,
   providerDone,
@@ -46,7 +46,7 @@ describe("provider event helpers", () => {
   });
 
   it("toolCallFromArgumentsText marks malformed JSON without throwing", () => {
-    const ok = toolCallFromArgumentsText("c1", "echo", "{\"a\":1}");
+    const ok = toolCallFromArgumentsText("c1", "echo", '{"a":1}');
     assert.deepEqual(ok.arguments, { a: 1 });
     assert.equal(ok.argumentsError, undefined);
 
@@ -57,9 +57,7 @@ describe("provider event helpers", () => {
   });
 
   it("reconstructToolCallDeltas recovers malformed arguments as argumentsError", () => {
-    const [call] = reconstructToolCallDeltas([
-      providerToolCallDelta({ index: 0, id: "c1", name: "echo", argumentsText: "{invalid" }),
-    ]);
+    const [call] = reconstructToolCallDeltas([providerToolCallDelta({ index: 0, id: "c1", name: "echo", argumentsText: "{invalid" })]);
     assert.equal(call?.id, "c1");
     assert.equal(call?.argumentsError?.code, "invalid_json_arguments");
   });
@@ -68,9 +66,9 @@ describe("provider event helpers", () => {
     assert.throws(
       () => reconstructToolCallDeltas([providerToolCallDelta({ index: 2, id: "c1", argumentsText: "{}" })]),
       (error: unknown) =>
-        error instanceof ProviderTransportError
-        && error.code === "incomplete_delta"
-        && error.message === "Incomplete tool call delta at index 2",
+        error instanceof ProviderTransportError &&
+        error.code === "incomplete_delta" &&
+        error.message === "Incomplete tool call delta at index 2",
     );
     assert.throws(
       () => reconstructToolCallDeltas([providerToolCallDelta({ index: 0, name: "echo", argumentsText: "{}" })]),

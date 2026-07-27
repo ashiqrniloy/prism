@@ -30,12 +30,15 @@ export function redactRunLedgerRecord<T extends RunLedgerRecord>(record: T, reda
   return redactor?.redact(record) ?? record;
 }
 
+export function resolveRedactor(redactor?: SecretRedactor, secrets?: readonly (string | undefined)[]): SecretRedactor | undefined {
+  return redactor ?? (secrets?.some((secret) => Boolean(secret)) ? createSecretRedactor(secrets) : undefined);
+}
+
 export function redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T {
   const needles = secrets.filter((secret): secret is string => Boolean(secret));
   if (needles.length === 0) return value;
 
-  const redactString = (text: string) =>
-    needles.reduce((current, secret) => current.split(secret).join(REDACTED), text);
+  const redactString = (text: string) => needles.reduce((current, secret) => current.split(secret).join(REDACTED), text);
 
   const redactKey = (key: unknown): string => {
     if (typeof key === "string") return redactString(key);
@@ -43,12 +46,12 @@ export function redactSecrets<T>(value: T, secrets: readonly (string | undefined
   };
 
   const assignKey = (target: Record<string, unknown>, key: string, value: unknown): void => {
-    if (!Object.prototype.hasOwnProperty.call(target, key)) {
+    if (!Object.hasOwn(target, key)) {
       target[key] = value;
       return;
     }
     let suffix = 2;
-    while (Object.prototype.hasOwnProperty.call(target, `${key}__${suffix}`)) suffix += 1;
+    while (Object.hasOwn(target, `${key}__${suffix}`)) suffix += 1;
     target[`${key}__${suffix}`] = value;
   };
 

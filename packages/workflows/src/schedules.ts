@@ -1,12 +1,13 @@
+import { createHash } from "node:crypto";
 import {
-  createSecretRedactor,
   type CheckpointRecord,
   type CheckpointStore,
+  createSecretRedactor,
   type LeaseStore,
   type OwnershipScope,
   type SecretRedactor,
 } from "@arnilo/prism";
-import { createHash } from "node:crypto";
+import { enqueueWorkflow } from "./coordinator.js";
 import { WorkflowCheckpointError, WorkflowRuntimeError } from "./errors.js";
 import {
   DEFAULT_MAX_SCHEDULE_CLAIMS,
@@ -18,12 +19,7 @@ import {
   HARD_MAX_SCHEDULE_INPUT_BYTES,
   HARD_SCHEDULE_PAGE_CAP,
 } from "./limits.js";
-import { enqueueWorkflow } from "./coordinator.js";
-import type {
-  WorkflowCheckpointAdapter,
-  WorkflowDefinition,
-  WorkflowRunHandle,
-} from "./types.js";
+import type { WorkflowCheckpointAdapter, WorkflowDefinition, WorkflowRunHandle } from "./types.js";
 import { assertWithinBytes, nowIso, redactValue, sleep } from "./util.js";
 
 const SCHEDULE_NAMESPACE = "prism.workflow.schedule";
@@ -76,19 +72,31 @@ export interface WorkflowScheduleCalculatorInput {
   readonly signal?: AbortSignal;
 }
 
-export type WorkflowScheduleCalculator = (
-  input: WorkflowScheduleCalculatorInput,
-) => string | Date | null | Promise<string | Date | null>;
+export type WorkflowScheduleCalculator = (input: WorkflowScheduleCalculatorInput) => string | Date | null | Promise<string | Date | null>;
 
 export type WorkflowScheduleEvent =
-  | { readonly type: "schedule_fired"; readonly scheduleId: string; readonly workflowId: string; readonly runId: string; readonly firedAt: string }
-  | { readonly type: "schedule_failed"; readonly scheduleId: string; readonly workflowId: string; readonly error: string; readonly timestamp: string };
+  | {
+      readonly type: "schedule_fired";
+      readonly scheduleId: string;
+      readonly workflowId: string;
+      readonly runId: string;
+      readonly firedAt: string;
+    }
+  | {
+      readonly type: "schedule_failed";
+      readonly scheduleId: string;
+      readonly workflowId: string;
+      readonly error: string;
+      readonly timestamp: string;
+    };
 
 export interface CreateWorkflowSchedulesOptions {
   readonly store: CheckpointStore;
   readonly leases: LeaseStore;
   readonly checkpoints: WorkflowCheckpointAdapter;
-  readonly workflows: Readonly<Record<string, WorkflowDefinition>> | ((workflowId: string) => WorkflowDefinition | undefined | Promise<WorkflowDefinition | undefined>);
+  readonly workflows:
+    | Readonly<Record<string, WorkflowDefinition>>
+    | ((workflowId: string) => WorkflowDefinition | undefined | Promise<WorkflowDefinition | undefined>);
   readonly ownership: OwnershipScope;
   readonly ownerId: string;
   readonly calculators?: Readonly<Record<string, WorkflowScheduleCalculator>>;
@@ -127,9 +135,7 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
   const leaseTtlMs = positive(options.leaseTtlMs ?? DEFAULT_SCHEDULE_LEASE_TTL_MS, "leaseTtlMs");
 
   const resolveWorkflow = async (workflowId: string): Promise<WorkflowDefinition> => {
-    const workflow = typeof options.workflows === "function"
-      ? await options.workflows(workflowId)
-      : options.workflows[workflowId];
+    const workflow = typeof options.workflows === "function" ? await options.workflows(workflowId) : options.workflows[workflowId];
     if (!workflow) throw new WorkflowRuntimeError(`Unknown scheduled workflow ${workflowId}`, "ERR_PRISM_WORKFLOW_NOT_FOUND");
     return workflow;
   };
@@ -161,11 +167,7 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
     return parseRecord(record);
   };
 
-  const withScheduleLease = async <T>(
-    id: string,
-    signal: AbortSignal | undefined,
-    operation: () => Promise<T>,
-  ): Promise<T> => {
+  const withScheduleLease = async <T>(id: string, signal: AbortSignal | undefined, operation: () => Promise<T>): Promise<T> => {
     const lease = await options.leases.tryAcquireLease({
       namespace: SCHEDULE_LEASE_NAMESPACE,
       key: id,
@@ -179,7 +181,11 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
       return await operation();
     } finally {
       await options.leases.releaseLease({
-        namespace: lease.namespace, key: lease.key, ownerId: lease.ownerId, token: lease.token, ...options.ownership,
+        namespace: lease.namespace,
+        key: lease.key,
+        ownerId: lease.ownerId,
+        token: lease.token,
+        ...options.ownership,
       });
     }
   };
@@ -188,17 +194,14 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
     id: string,
     signal: AbortSignal | undefined,
     update: (record: WorkflowScheduleRecord) => Omit<WorkflowScheduleRecord, "version">,
-  ): Promise<WorkflowScheduleRecord> => withScheduleLease(id, signal, async () => {
-    const current = await get(id, signal);
-    if (!current) throw new WorkflowCheckpointError(`Unknown schedule ${id}`);
-    return save(update(current), current.version, signal);
-  });
+  ): Promise<WorkflowScheduleRecord> =>
+    withScheduleLease(id, signal, async () => {
+      const current = await get(id, signal);
+      if (!current) throw new WorkflowCheckpointError(`Unknown schedule ${id}`);
+      return save(update(current), current.version, signal);
+    });
 
-  const enqueueIdempotent = async (
-    schedule: WorkflowScheduleRecord,
-    runId: string,
-    signal?: AbortSignal,
-  ): Promise<WorkflowRunHandle> => {
+  const enqueueIdempotent = async (schedule: WorkflowScheduleRecord, runId: string, signal?: AbortSignal): Promise<WorkflowRunHandle> => {
     const workflow = await resolveWorkflow(schedule.workflowId);
     try {
       const queued = await enqueueWorkflow(workflow, schedule.input, {
@@ -229,19 +232,35 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
     if (!lease) return false;
     try {
       const current = await get(candidate.id, signal);
-      if (!current || current.status !== "active" || current.version !== candidate.version || current.nextRunAt !== fireAt || Date.parse(fireAt) > now.getTime()) return false;
+      if (
+        current?.status !== "active" ||
+        current.version !== candidate.version ||
+        current.nextRunAt !== fireAt ||
+        Date.parse(fireAt) > now.getTime()
+      )
+        return false;
       const runId = scheduledRunId(current.id, fireAt);
       await enqueueIdempotent(current, runId, signal);
       const nextRunAt = await calculateNext(current, now, options.calculators, signal);
-      await save({
-        ...withoutVersion(current),
-        status: nextRunAt ? "active" : "completed",
-        nextRunAt: nextRunAt ?? current.nextRunAt,
-        lastRunAt: now.toISOString(),
-        lastRunId: runId,
-        updatedAt: nowIso(),
-      }, current.version, signal);
-      options.onEvent?.({ type: "schedule_fired", scheduleId: current.id, workflowId: current.workflowId, runId, firedAt: now.toISOString() });
+      await save(
+        {
+          ...withoutVersion(current),
+          status: nextRunAt ? "active" : "completed",
+          nextRunAt: nextRunAt ?? current.nextRunAt,
+          lastRunAt: now.toISOString(),
+          lastRunId: runId,
+          updatedAt: nowIso(),
+        },
+        current.version,
+        signal,
+      );
+      options.onEvent?.({
+        type: "schedule_fired",
+        scheduleId: current.id,
+        workflowId: current.workflowId,
+        runId,
+        firedAt: now.toISOString(),
+      });
       return true;
     } finally {
       await options.leases.releaseLease({
@@ -268,18 +287,22 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
         throw new WorkflowRuntimeError(`Unknown schedule calculator ${input.calculatorId}`, "ERR_PRISM_WORKFLOW_SCHEDULE");
       }
       const timestamp = nowIso();
-      return save({
-        id: input.id,
-        workflowId: input.workflowId,
-        status: input.paused ? "paused" : "active",
-        input: input.input,
-        nextRunAt: toIso(input.nextRunAt, "nextRunAt"),
-        intervalMs: input.intervalMs,
-        calculatorId: input.calculatorId,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        metadata: input.metadata,
-      }, 0, signal);
+      return save(
+        {
+          id: input.id,
+          workflowId: input.workflowId,
+          status: input.paused ? "paused" : "active",
+          input: input.input,
+          nextRunAt: toIso(input.nextRunAt, "nextRunAt"),
+          intervalMs: input.intervalMs,
+          calculatorId: input.calculatorId,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          metadata: input.metadata,
+        },
+        0,
+        signal,
+      );
     },
     get,
     async list(input = {}) {
@@ -296,7 +319,8 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
     },
     pause(id, signal) {
       return mutate(id, signal, (record) => {
-        if (record.status === "completed") throw new WorkflowRuntimeError("Completed schedule cannot be paused", "ERR_PRISM_WORKFLOW_SCHEDULE");
+        if (record.status === "completed")
+          throw new WorkflowRuntimeError("Completed schedule cannot be paused", "ERR_PRISM_WORKFLOW_SCHEDULE");
         return { ...withoutVersion(record), status: "paused", updatedAt: nowIso() };
       });
     },
@@ -323,7 +347,9 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
     },
     async delete(id, signal) {
       requireId(id, "schedule id");
-      return withScheduleLease(id, signal, () => options.store.deleteCheckpoint({ namespace: SCHEDULE_NAMESPACE, key: id, ...options.ownership, signal }));
+      return withScheduleLease(id, signal, () =>
+        options.store.deleteCheckpoint({ namespace: SCHEDULE_NAMESPACE, key: id, ...options.ownership, signal }),
+      );
     },
     async pollOnce(input = {}) {
       const now = input.now ?? new Date();
@@ -336,7 +362,8 @@ export function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions)
         limit: pageSize,
         signal: input.signal,
       });
-      const due = page.items.map(parseRecord)
+      const due = page.items
+        .map(parseRecord)
         .filter((record) => Date.parse(record.nextRunAt) <= now.getTime())
         .sort((a, b) => a.nextRunAt.localeCompare(b.nextRunAt) || a.id.localeCompare(b.id))
         .slice(0, maxClaims);
@@ -408,7 +435,8 @@ async function calculateNext(
     const result = await awaitWithSignal(Promise.resolve(calculator({ schedule, firedAt: now.toISOString(), signal })), signal);
     if (result === null) return null;
     const next = toIso(result, "calculator nextRunAt");
-    if (Date.parse(next) <= now.getTime()) throw new WorkflowRuntimeError("Schedule calculator must return a future time", "ERR_PRISM_WORKFLOW_SCHEDULE");
+    if (Date.parse(next) <= now.getTime())
+      throw new WorkflowRuntimeError("Schedule calculator must return a future time", "ERR_PRISM_WORKFLOW_SCHEDULE");
     return next;
   }
   return null;
@@ -437,7 +465,8 @@ function requireId(value: string, label: string): void {
 }
 
 function positive(value: number, label: string): number {
-  if (!Number.isSafeInteger(value) || value < 1) throw new WorkflowRuntimeError(`${label} must be a positive safe integer`, "ERR_PRISM_WORKFLOW_SCHEDULE");
+  if (!Number.isSafeInteger(value) || value < 1)
+    throw new WorkflowRuntimeError(`${label} must be a positive safe integer`, "ERR_PRISM_WORKFLOW_SCHEDULE");
   return value;
 }
 

@@ -74,13 +74,19 @@ export function createOpenAICodexOAuthProvider(options: OpenAICodexOAuthOptions 
       throwIfAborted(callbacks?.signal);
       const code = await callbacks?.onPrompt?.("OpenAI authorization code");
       if (!code) throw new Error("OpenAI authorization code was not provided");
-      return exchangeToken(fetchImpl, tokenUrl, {
-        grant_type: "authorization_code",
-        client_id: clientId,
-        code,
-        code_verifier: verifier,
-        ...(options.redirectUri ? { redirect_uri: options.redirectUri } : {}),
-      }, [code, verifier], callbacks?.signal);
+      return exchangeToken(
+        fetchImpl,
+        tokenUrl,
+        {
+          grant_type: "authorization_code",
+          client_id: clientId,
+          code,
+          code_verifier: verifier,
+          ...(options.redirectUri ? { redirect_uri: options.redirectUri } : {}),
+        },
+        [code, verifier],
+        callbacks?.signal,
+      );
     },
     refresh(credentials) {
       if (!credentials.refresh) return credentials;
@@ -92,7 +98,9 @@ export function createOpenAICodexOAuthProvider(options: OpenAICodexOAuthOptions 
       );
     },
     getCredential(credentials) {
-      return credentials.access ? { type: "bearer", value: credentials.access, metadata: { accountId: credentials.accountId, expires: credentials.expires } } : undefined;
+      return credentials.access
+        ? { type: "bearer", value: credentials.access, metadata: { accountId: credentials.accountId, expires: credentials.expires } }
+        : undefined;
     },
   };
 }
@@ -139,7 +147,7 @@ async function deviceLogin(options: {
     const detail = await readBoundedResponseText(response);
     throw redactOAuthError(new Error(`OpenAI device code failed: ${response.status} ${detail}`), []);
   }
-  const json = await response.json() as DeviceCodePayload;
+  const json = (await response.json()) as DeviceCodePayload;
   const secrets = [json.device_code, json.user_code];
   const expiresAtMs = options.now() + (json.expires_in ?? 0) * 1_000;
   await options.callbacks.onDeviceCode?.({
@@ -163,7 +171,7 @@ async function deviceLogin(options: {
       signal: options.callbacks.signal,
     });
     if (tokenResponse.ok) {
-      const payload = await tokenResponse.json() as TokenSuccessPayload;
+      const payload = (await tokenResponse.json()) as TokenSuccessPayload;
       return parseTokenCredentials(payload);
     }
     const errorPayload = await readTokenErrorPayload(tokenResponse);
@@ -198,7 +206,7 @@ async function exchangeToken(
     const detail = await readBoundedResponseText(response, { secrets });
     throw redactOAuthError(new Error(`OpenAI token request failed: ${response.status} ${detail}`), secrets);
   }
-  const json = await response.json() as TokenSuccessPayload;
+  const json = (await response.json()) as TokenSuccessPayload;
   return parseTokenCredentials(json);
 }
 
@@ -213,7 +221,7 @@ function parseTokenCredentials(json: TokenSuccessPayload): OAuthCredentials {
 
 async function readTokenErrorPayload(response: Response): Promise<TokenErrorPayload> {
   try {
-    return await response.json() as TokenErrorPayload;
+    return (await response.json()) as TokenErrorPayload;
   } catch {
     const detail = await readBoundedResponseText(response);
     return { error: "invalid_token_response", error_description: detail };

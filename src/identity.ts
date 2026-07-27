@@ -88,7 +88,10 @@ export const HARD_IDENTITY_LIMITS: ResolvedIdentityLimits = {
 
 export class IdentityError extends Error {
   readonly code = "ERR_PRISM_IDENTITY";
-  constructor(message: string, readonly reason: string) {
+  constructor(
+    message: string,
+    readonly reason: string,
+  ) {
     super(message);
     this.name = "IdentityError";
   }
@@ -98,7 +101,12 @@ export function resolveIdentityLimits(input: IdentityLimits = {}): ResolvedIdent
   return {
     maxScopes: bound("maxScopes", input.maxScopes, DEFAULT_IDENTITY_LIMITS.maxScopes, HARD_IDENTITY_LIMITS.maxScopes),
     maxScopeBytes: bound("maxScopeBytes", input.maxScopeBytes, DEFAULT_IDENTITY_LIMITS.maxScopeBytes, HARD_IDENTITY_LIMITS.maxScopeBytes),
-    maxMetadataBytes: bound("maxMetadataBytes", input.maxMetadataBytes, DEFAULT_IDENTITY_LIMITS.maxMetadataBytes, HARD_IDENTITY_LIMITS.maxMetadataBytes),
+    maxMetadataBytes: bound(
+      "maxMetadataBytes",
+      input.maxMetadataBytes,
+      DEFAULT_IDENTITY_LIMITS.maxMetadataBytes,
+      HARD_IDENTITY_LIMITS.maxMetadataBytes,
+    ),
     maxCredentialRefBytes: bound(
       "maxCredentialRefBytes",
       input.maxCredentialRefBytes,
@@ -180,9 +188,17 @@ export function narrowIdentity(parent: AgentIdentity, options: NarrowIdentityOpt
     scopes: Object.freeze([...options.scopes]),
     credentialRefs: Object.freeze([...(options.credentialRefs ?? parent.credentialRefs ?? [])]),
     issuedAt: parent.issuedAt,
-    ...(options.expiresAt !== undefined ? { expiresAt: options.expiresAt } : parent.expiresAt !== undefined ? { expiresAt: parent.expiresAt } : {}),
+    ...(options.expiresAt !== undefined
+      ? { expiresAt: options.expiresAt }
+      : parent.expiresAt !== undefined
+        ? { expiresAt: parent.expiresAt }
+        : {}),
     ...(parent.revokedAt !== undefined ? { revokedAt: parent.revokedAt } : {}),
-    ...(options.metadata !== undefined ? { metadata: options.metadata } : parent.metadata !== undefined ? { metadata: parent.metadata } : {}),
+    ...(options.metadata !== undefined
+      ? { metadata: options.metadata }
+      : parent.metadata !== undefined
+        ? { metadata: parent.metadata }
+        : {}),
     verified: true,
   };
   assertIdentityActive(child, { limits: options.limits });

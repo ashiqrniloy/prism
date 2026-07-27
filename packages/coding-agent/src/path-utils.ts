@@ -107,7 +107,7 @@ export function resolveReadPath(filePath: string, cwd: string): string {
 
 export async function resolveReadPathAsync(filePath: string, cwd: string): Promise<string> {
   const resolved = resolveToCwd(filePath, cwd);
-  if ((await pathExists(resolved))) return resolved;
+  if (await pathExists(resolved)) return resolved;
   const amPmVariant = tryMacOSScreenshotPath(resolved);
   if (amPmVariant !== resolved && (await pathExists(amPmVariant))) return amPmVariant;
   const nfdVariant = tryNFDVariant(resolved);

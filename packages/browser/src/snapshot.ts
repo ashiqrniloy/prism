@@ -20,11 +20,7 @@ export function createSnapshotId(): string {
   return `snap_${randomBytes(8).toString("hex")}`;
 }
 
-export async function captureAriaSnapshot(
-  page: PlaywrightPage,
-  pageId: string,
-  limits: ResolvedBrowserLimits,
-): Promise<LiveSnapshot> {
+export async function captureAriaSnapshot(page: PlaywrightPage, pageId: string, limits: ResolvedBrowserLimits): Promise<LiveSnapshot> {
   let yaml: string;
   try {
     yaml = await page.ariaSnapshot({
@@ -33,10 +29,7 @@ export async function captureAriaSnapshot(
       timeout: limits.actionTimeoutMs,
     });
   } catch (error) {
-    throw new BrowserError(
-      "ERR_PRISM_BROWSER",
-      `ariaSnapshot failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new BrowserError("ERR_PRISM_BROWSER", `ariaSnapshot failed: ${error instanceof Error ? error.message : String(error)}`);
   }
   if (typeof yaml !== "string") {
     throw new BrowserError("ERR_PRISM_BROWSER", "ariaSnapshot returned a non-string value");

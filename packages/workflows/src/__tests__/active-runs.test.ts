@@ -25,20 +25,30 @@ describe("owned active workflow runs", () => {
     const victimController = new AbortController();
     const attackerController = new AbortController();
     registerActiveWorkflowRun({ workflowId: "same", runId: "same", ownership: victim, definitionHash: "v1", controller: victimController });
-    registerActiveWorkflowRun({ workflowId: "same", runId: "same", ownership: attacker, definitionHash: "v1", controller: attackerController });
+    registerActiveWorkflowRun({
+      workflowId: "same",
+      runId: "same",
+      ownership: attacker,
+      definitionHash: "v1",
+      controller: attackerController,
+    });
     try {
       assert.throws(
-        () => registerActiveWorkflowRun({ workflowId: "same", runId: "same", ownership: victim, definitionHash: "v1", controller: new AbortController() }),
+        () =>
+          registerActiveWorkflowRun({
+            workflowId: "same",
+            runId: "same",
+            ownership: victim,
+            definitionHash: "v1",
+            controller: new AbortController(),
+          }),
         (error: unknown) => error instanceof WorkflowRuntimeError && error.code === "ERR_PRISM_WORKFLOW_ALREADY_ACTIVE",
       );
       assert.equal(listActiveWorkflowRuns({ ownership: victim }).length, 1);
       assert.equal(listActiveWorkflowRuns({ ownership: { tenantId: "tenant" } }).length, 0);
       assert.equal(abortActiveWorkflowRun("same", "same", { tenantId: "tenant" }, "v1"), false);
       assert.equal(victimController.signal.aborted, false);
-      assert.throws(
-        () => abortActiveWorkflowRun("same", "same", victim, "changed"),
-        WorkflowCheckpointError,
-      );
+      assert.throws(() => abortActiveWorkflowRun("same", "same", victim, "changed"), WorkflowCheckpointError);
       assert.equal(victimController.signal.aborted, false);
     } finally {
       unregisterActiveWorkflowRun("same", "same", victim);
@@ -50,9 +60,13 @@ describe("owned active workflow runs", () => {
 
   it("authorizes exact owner and revision before active or durable cancellation", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
-    const node = functionNode({ execute: async (ctx) => {
-      await new Promise<void>((_resolve, reject) => ctx.signal?.addEventListener("abort", () => reject(new WorkflowAbortError()), { once: true }));
-    } });
+    const node = functionNode({
+      execute: async (ctx) => {
+        await new Promise<void>((_resolve, reject) =>
+          ctx.signal?.addEventListener("abort", () => reject(new WorkflowAbortError()), { once: true }),
+        );
+      },
+    });
     const workflow = defineWorkflow({ revision: "1", id: "owned", nodes: { node } });
     const changed = defineWorkflow({ revision: "2", id: "owned", nodes: { node } });
     const running = runWorkflow(workflow, null, { checkpoints, ownership: victim, runId: "active" });
@@ -71,7 +85,11 @@ describe("owned active workflow runs", () => {
     await cancelWorkflowRun({ workflowId: "owned", runId: "active", workflow, checkpoints, ownership: victim });
     await assert.rejects(running, WorkflowAbortError);
 
-    const suspendedWorkflow = defineWorkflow({ revision: "1", id: "durable", nodes: { node: functionNode({ execute: () => suspend({ reason: "review" }) }) } });
+    const suspendedWorkflow = defineWorkflow({
+      revision: "1",
+      id: "durable",
+      nodes: { node: functionNode({ execute: () => suspend({ reason: "review" }) }) },
+    });
     const suspended = await runWorkflow(suspendedWorkflow, null, { checkpoints, ownership: victim, runId: "suspended" });
     assert.equal(suspended.status, "suspended");
     await assert.rejects(
@@ -83,7 +101,13 @@ describe("owned active workflow runs", () => {
       cancelWorkflowRun({ workflowId: "durable", runId: "suspended", workflow: changedDurable, checkpoints, ownership: victim }),
       /definition hash mismatch/i,
     );
-    const cancelled = await cancelWorkflowRun({ workflowId: "durable", runId: "suspended", workflow: suspendedWorkflow, checkpoints, ownership: victim });
+    const cancelled = await cancelWorkflowRun({
+      workflowId: "durable",
+      runId: "suspended",
+      workflow: suspendedWorkflow,
+      checkpoints,
+      ownership: victim,
+    });
     assert.equal(cancelled.status, "aborted");
   });
 });

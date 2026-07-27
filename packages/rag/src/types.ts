@@ -70,10 +70,7 @@ export interface SourceVectorStore extends VectorStore {
 }
 
 export interface TransactionalVectorStore extends SourceVectorStore {
-  transaction<T>(
-    operation: (store: SourceVectorStore) => Promise<T>,
-    options?: { readonly signal?: AbortSignal },
-  ): Promise<T>;
+  transaction<T>(operation: (store: SourceVectorStore) => Promise<T>, options?: { readonly signal?: AbortSignal }): Promise<T>;
 }
 
 export type IngestionState = "pending" | "indexed" | "failed" | "partial";
@@ -183,9 +180,7 @@ export interface RagHit extends RagChunk {
 }
 
 export interface Reranker {
-  rerank(
-    input: { readonly query: string; readonly hits: readonly RagHit[]; readonly signal?: AbortSignal },
-  ): Promise<readonly RagHit[]>;
+  rerank(input: { readonly query: string; readonly hits: readonly RagHit[]; readonly signal?: AbortSignal }): Promise<readonly RagHit[]>;
 }
 
 export interface RetrieveContextOptions {

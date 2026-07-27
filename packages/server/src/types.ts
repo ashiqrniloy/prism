@@ -1,18 +1,5 @@
-import type {
-  Agent,
-  AgentIdentity,
-  AgentRunLifecycle,
-  AgentSession,
-  OwnershipScope,
-  RunOptions,
-  SecretRedactor,
-} from "@arnilo/prism";
-import type {
-  RunWorkflowOptions,
-  WorkflowCheckpointAdapter,
-  WorkflowDefinition,
-  WorkflowSchedules,
-} from "@arnilo/prism-workflows";
+import type { Agent, AgentIdentity, AgentRunLifecycle, AgentSession, OwnershipScope, RunOptions, SecretRedactor } from "@arnilo/prism";
+import type { RunWorkflowOptions, WorkflowCheckpointAdapter, WorkflowDefinition, WorkflowSchedules } from "@arnilo/prism-workflows";
 import type { PrismDrainController } from "./drain.js";
 import type { PrismServerLimits } from "./limits.js";
 import type { PrismServerRateLimiter } from "./rate-limit.js";
@@ -70,7 +57,9 @@ export interface PrismWorkflowExposure {
   readonly runOptions?: Omit<RunWorkflowOptions, "checkpoints" | "ownership" | "signal" | "redactor" | "eventBus" | "runId">;
 }
 
-export type PrismScheduleExposure = WorkflowSchedules | ((authorization: PrismServerAuthorization, signal: AbortSignal) => WorkflowSchedules | Promise<WorkflowSchedules>);
+export type PrismScheduleExposure =
+  | WorkflowSchedules
+  | ((authorization: PrismServerAuthorization, signal: AbortSignal) => WorkflowSchedules | Promise<WorkflowSchedules>);
 
 export interface CreatePrismHandlerOptions {
   readonly agents?: Readonly<Record<string, Agent | PrismAgentExposure>>;

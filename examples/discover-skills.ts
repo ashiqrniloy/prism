@@ -1,16 +1,16 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { ProviderRequest } from "@arnilo/prism";
 import {
-  createContributionRegistries,
-  registerDiscoveredContributions,
-  createSkillRegistry,
   createAgent,
+  createContributionRegistries,
   createMockProvider,
+  createSkillRegistry,
   providerDone,
+  registerDiscoveredContributions,
 } from "@arnilo/prism";
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
-import type { ProviderRequest } from "@arnilo/prism";
 
 // Workspace contribution discovery, end-to-end with the mock provider.
 // Scans a committed example workspace for a SKILL.md, registers the realized
@@ -62,10 +62,11 @@ export async function demo(): Promise<{
   }
   await done;
 
-  const input = captured[0]?.messages
-    .flatMap((m) => m.content)
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join("\n") ?? "";
+  const input =
+    captured[0]?.messages
+      .flatMap((m) => m.content)
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("\n") ?? "";
 
   return {
     discoveredSkill: skill?.name,

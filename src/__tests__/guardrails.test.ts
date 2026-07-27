@@ -1,15 +1,15 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
+  type AgentEvent,
   createAgent,
   createMockProvider,
   createToolRegistry,
   dispatchToolCall,
+  type Guardrail,
   providerDone,
   providerTextDelta,
   runGuardrails,
-  type AgentEvent,
-  type Guardrail,
   type ToolDefinition,
 } from "../index.js";
 
@@ -44,7 +44,10 @@ describe("guardrails", () => {
       context,
     });
     assert.equal(peak, 2);
-    assert.deepEqual(result.records.map((record) => record.guardrail), ["first", "second"]);
+    assert.deepEqual(
+      result.records.map((record) => record.guardrail),
+      ["first", "second"],
+    );
   });
 
   it("emits one terminal decision when a parallel sibling is cancelled", async () => {
@@ -54,10 +57,14 @@ describe("guardrails", () => {
         maxConcurrency: 2,
         input: [
           { name: "stop", stage: "input", evaluate: () => ({ action: "tripwire" }) },
-          { name: "sibling", stage: "input", evaluate: async ({ signal }) => {
-            if (!signal.aborted) await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
-            throw new Error("cancelled");
-          } },
+          {
+            name: "sibling",
+            stage: "input",
+            evaluate: async ({ signal }) => {
+              if (!signal.aborted) await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+              throw new Error("cancelled");
+            },
+          },
         ],
       },
       value: [],
@@ -69,7 +76,7 @@ describe("guardrails", () => {
   it("fails closed for malformed decisions without exposing thrown details", async () => {
     const result = await runGuardrails({
       stage: "input",
-      guardrails: { input: [{ name: "bad", stage: "input", evaluate: () => ({ action: "nope" } as never) }] },
+      guardrails: { input: [{ name: "bad", stage: "input", evaluate: () => ({ action: "nope" }) as never }] },
       value: [],
       context,
     });
@@ -81,7 +88,13 @@ describe("guardrails", () => {
     let generated = false;
     const agent = createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: { id: "mock", async *generate() { generated = true; yield providerDone(); } },
+      provider: {
+        id: "mock",
+        async *generate() {
+          generated = true;
+          yield providerDone();
+        },
+      },
       guardrails: { input: [{ name: "deny", stage: "input", evaluate: () => ({ action: "block", reason: "private" }) }] },
     });
     const session = agent.createSession({ id: "guard-input" });
@@ -91,7 +104,10 @@ describe("guardrails", () => {
     assert.equal(generated, false);
     assert.equal((await session.entries()).length, 0);
     const events = await reader;
-    assert.equal(events.some((event) => event.type === "guardrail_decision"), true);
+    assert.equal(
+      events.some((event) => event.type === "guardrail_decision"),
+      true,
+    );
   });
 
   it("buffers blocked provider output before subscribers or session entries see it", async () => {
@@ -105,8 +121,14 @@ describe("guardrails", () => {
 
     await assert.rejects(() => session.run("Hi"), /Guardrail blocked run/);
     const events = await reader;
-    assert.equal(events.some((event) => event.type === "message_delta"), false);
-    assert.equal((await session.entries()).some((entry) => entry.kind === "message" && JSON.stringify(entry).includes("secret output")), false);
+    assert.equal(
+      events.some((event) => event.type === "message_delta"),
+      false,
+    );
+    assert.equal(
+      (await session.entries()).some((entry) => entry.kind === "message" && JSON.stringify(entry).includes("secret output")),
+      false,
+    );
   });
 
   it("runs tool stages around the side effect and never emits blocked raw output", async () => {
@@ -124,11 +146,16 @@ describe("guardrails", () => {
       registry: createToolRegistry([tool]),
       context: { ...context, toolCallId: "c1" },
       guardrails: { toolOutput: [{ name: "deny-output", stage: "tool_output", evaluate: () => ({ action: "block" }) }] },
-      emit: (event) => { events.push(event); },
+      emit: (event) => {
+        events.push(event);
+      },
     });
     assert.equal(executed, true);
     assert.equal(result.error?.message, "Tool result blocked by guardrail");
-    assert.equal(events.some((event) => event.type === "tool_execution_finished"), false);
+    assert.equal(
+      events.some((event) => event.type === "tool_execution_finished"),
+      false,
+    );
     assert.equal(JSON.stringify(events).includes("raw secret"), false);
   });
 });

@@ -25,5 +25,5 @@ const MAX_ERROR_BYTES = 1_024;
 function truncateMessage(message: string): string {
   const buf = Buffer.from(message, "utf8");
   if (buf.byteLength <= MAX_ERROR_BYTES) return message;
-  return buf.subarray(0, MAX_ERROR_BYTES).toString("utf8") + "…";
+  return `${buf.subarray(0, MAX_ERROR_BYTES).toString("utf8")}…`;
 }

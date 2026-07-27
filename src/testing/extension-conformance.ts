@@ -33,10 +33,7 @@ export interface ExtensionConformanceOptions {
  * `expectThrow`. Throws on the first violation; returns the loaded kernel so
  * the caller can inspect registered contributions.
  */
-export async function assertExtensionConforms(
-  extension: Extension,
-  options: ExtensionConformanceOptions = {},
-): Promise<ExtensionKernel> {
+export async function assertExtensionConforms(extension: Extension, options: ExtensionConformanceOptions = {}): Promise<ExtensionKernel> {
   const kernel = createExtensionKernel({ secrets: options.secrets, errorPolicy: options.expectThrow ? "throw" : undefined });
   await kernel.load([extension]);
   // setup ran: the extension loaded without rejecting. Contribution registries
@@ -45,7 +42,12 @@ export async function assertExtensionConforms(
 
   if (options.expectThrow) {
     // A second extension that throws must rethrow under errorPolicy: "throw".
-    const failing: Extension = { name: "conformance-failing", setup: () => { throw new Error("conformance setup failed"); } };
+    const failing: Extension = {
+      name: "conformance-failing",
+      setup: () => {
+        throw new Error("conformance setup failed");
+      },
+    };
     let threw = false;
     try {
       await kernel.load([failing]);
@@ -58,9 +60,16 @@ export async function assertExtensionConforms(
 
   if (options.secrets && options.secrets.length > 0) {
     const secret = options.secrets[0]!;
-    const failing: Extension = { name: "conformance-failing", setup: () => { throw new Error(`boom ${secret}`); } };
+    const failing: Extension = {
+      name: "conformance-failing",
+      setup: () => {
+        throw new Error(`boom ${secret}`);
+      },
+    };
     const errors: { message?: string }[] = [];
-    kernel.events.on("extension_error", (event) => { errors.push(event.error ?? {}); });
+    kernel.events.on("extension_error", (event) => {
+      errors.push(event.error ?? {});
+    });
     await kernel.load([failing]);
     if (errors.length === 0) throw new Error("Failing extension setup did not emit an extension_error event");
     if (errors[0]?.message?.includes(secret)) {

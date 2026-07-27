@@ -1,9 +1,14 @@
-import type { Credential, CredentialResolver, CredentialRequest, CredentialResolverSource, OAuthCredentialStore, OAuthCredentials, OAuthProvider } from "./contracts.js";
+import type {
+  Credential,
+  CredentialRequest,
+  CredentialResolver,
+  CredentialResolverSource,
+  OAuthCredentialStore,
+  OAuthCredentials,
+  OAuthProvider,
+} from "./contracts.js";
 
-export type CredentialValueSource =
-  | string
-  | (() => string | undefined | Promise<string | undefined>)
-  | CredentialResolver;
+export type CredentialValueSource = string | (() => string | undefined | Promise<string | undefined>) | CredentialResolver;
 
 export interface CredentialRecord {
   readonly name: string;
@@ -54,10 +59,16 @@ export function createExplicitCredentialResolver(sources: readonly CredentialRes
   };
 }
 
-export function createEnvCredentialResolver(env: Readonly<Record<string, string | undefined>>, map: Readonly<Record<string, string>>): CredentialResolver {
+export function createEnvCredentialResolver(
+  env: Readonly<Record<string, string | undefined>>,
+  map: Readonly<Record<string, string>>,
+): CredentialResolver {
   return {
     resolve(request) {
-      const envName = map[credentialMapKey(request.name, request.provider)] ?? (request.provider ? map[request.provider] : undefined) ?? map[request.name];
+      const envName =
+        map[credentialMapKey(request.name, request.provider)] ??
+        (request.provider ? map[request.provider] : undefined) ??
+        map[request.name];
       const value = envName ? env[envName] : undefined;
       return value ? { type: "api_key", value, metadata: { source: "env", envName } } : undefined;
     },

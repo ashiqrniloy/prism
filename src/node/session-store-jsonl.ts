@@ -1,15 +1,14 @@
-import { mkdir, readFile, appendFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
-  SESSION_APPEND_CONFLICT_CODE,
-  SessionAppendConflictError,
-  SessionSearchUnsupportedError,
   isSessionEntryKind,
-  SESSION_ENTRY_SCHEMA_VERSION,
   type Message,
   type ModelConfig,
-  type SessionAppendOptions,
+  SESSION_APPEND_CONFLICT_CODE,
+  SESSION_ENTRY_SCHEMA_VERSION,
+  SessionAppendConflictError,
   type SessionEntry,
+  SessionSearchUnsupportedError,
   type SessionStore,
 } from "../contracts.js";
 import { isNodeErrorCode } from "./config.js";
@@ -125,7 +124,10 @@ function validateSessionEntry(
   raw: string,
 ): { ok: true; entry: SessionEntry } | { ok: false; error: SessionEntryParseError } {
   if (!isBasicSessionEntry(value)) {
-    return { ok: false, error: { line: lineNumber, message: "Invalid session entry: expected object with id, sessionId, timestamp, and kind", raw } };
+    return {
+      ok: false,
+      error: { line: lineNumber, message: "Invalid session entry: expected object with id, sessionId, timestamp, and kind", raw },
+    };
   }
   const entry = value as Record<string, unknown>;
   if (entry.parentId !== undefined && typeof entry.parentId !== "string") {
@@ -141,29 +143,38 @@ function validateSessionEntry(
   }
   switch (kind) {
     case "message":
-      if (!isMessage(entry.message)) return { ok: false, error: { line: lineNumber, message: "Invalid message entry: expected Message object", raw } };
+      if (!isMessage(entry.message))
+        return { ok: false, error: { line: lineNumber, message: "Invalid message entry: expected Message object", raw } };
       break;
     case "summary":
-      if (typeof entry.summary !== "string") return { ok: false, error: { line: lineNumber, message: "Invalid summary entry: expected string summary", raw } };
+      if (typeof entry.summary !== "string")
+        return { ok: false, error: { line: lineNumber, message: "Invalid summary entry: expected string summary", raw } };
       break;
     case "model_change":
-      if (!isModelConfig(entry.model)) return { ok: false, error: { line: lineNumber, message: "Invalid model_change entry: expected ModelConfig object", raw } };
+      if (!isModelConfig(entry.model))
+        return { ok: false, error: { line: lineNumber, message: "Invalid model_change entry: expected ModelConfig object", raw } };
       break;
     case "custom":
-      if (!isPlainObject(entry.data)) return { ok: false, error: { line: lineNumber, message: "Invalid custom entry: expected object data", raw } };
+      if (!isPlainObject(entry.data))
+        return { ok: false, error: { line: lineNumber, message: "Invalid custom entry: expected object data", raw } };
       break;
     case "compaction":
-      if (typeof entry.summary !== "string") return { ok: false, error: { line: lineNumber, message: "Invalid compaction entry: expected string summary", raw } };
-      if (!isPlainObject(entry.data)) return { ok: false, error: { line: lineNumber, message: "Invalid compaction entry: expected object data", raw } };
+      if (typeof entry.summary !== "string")
+        return { ok: false, error: { line: lineNumber, message: "Invalid compaction entry: expected string summary", raw } };
+      if (!isPlainObject(entry.data))
+        return { ok: false, error: { line: lineNumber, message: "Invalid compaction entry: expected object data", raw } };
       break;
     case "label":
-      if (typeof entry.label !== "string") return { ok: false, error: { line: lineNumber, message: "Invalid label entry: expected string label", raw } };
+      if (typeof entry.label !== "string")
+        return { ok: false, error: { line: lineNumber, message: "Invalid label entry: expected string label", raw } };
       break;
     case "event":
-      if (!isAgentEvent(entry.event)) return { ok: false, error: { line: lineNumber, message: "Invalid event entry: expected AgentEvent object", raw } };
+      if (!isAgentEvent(entry.event))
+        return { ok: false, error: { line: lineNumber, message: "Invalid event entry: expected AgentEvent object", raw } };
       break;
     case "metadata":
-      if (!isPlainObject(entry.data)) return { ok: false, error: { line: lineNumber, message: "Invalid metadata entry: expected object data", raw } };
+      if (!isPlainObject(entry.data))
+        return { ok: false, error: { line: lineNumber, message: "Invalid metadata entry: expected object data", raw } };
       break;
   }
   return { ok: true, entry: entry as unknown as SessionEntry };
@@ -172,10 +183,12 @@ function validateSessionEntry(
 function isBasicSessionEntry(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const entry = value as Record<string, unknown>;
-  return typeof entry.id === "string"
-    && typeof entry.sessionId === "string"
-    && typeof entry.timestamp === "string"
-    && typeof entry.kind === "string";
+  return (
+    typeof entry.id === "string" &&
+    typeof entry.sessionId === "string" &&
+    typeof entry.timestamp === "string" &&
+    typeof entry.kind === "string"
+  );
 }
 
 function isMessage(value: unknown): value is Message {

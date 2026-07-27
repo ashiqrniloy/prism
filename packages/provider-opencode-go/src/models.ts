@@ -1,10 +1,10 @@
 import {
-  redactSecrets,
-  resolveCredentialValue,
   type CredentialValueSource,
   type JsonObject,
   type ModelConfig,
   type ModelCost,
+  redactSecrets,
+  resolveCredentialValue,
 } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
@@ -62,10 +62,8 @@ interface OpenCodeGoModelsResponse {
 export function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig {
   const route = (config.compat?.route ?? routeForOpenCodeGoModel(config.model)) as OpenCodeGoRoute;
   const cache =
-    config.cache
-    ?? (route === "anthropic"
-      ? { kind: "cache_control" as const, longRetention: true, maxBreakpoints: 4 }
-      : { kind: "implicit" as const });
+    config.cache ??
+    (route === "anthropic" ? { kind: "cache_control" as const, longRetention: true, maxBreakpoints: 4 } : { kind: "implicit" as const });
   return {
     ...config,
     provider: "opencode-go",
@@ -128,10 +126,7 @@ export async function listOpenCodeGoModels(options: ListOpenCodeGoModelsOptions 
  * Official payload is id/created/owned_by only — route/cache/limits are heuristic
  * from the docs endpoint + featured metadata tables.
  */
-export function mapOpenCodeGoModel(
-  entry: OpenCodeGoModelEntry,
-  options: { readonly provider?: string } = {},
-): ModelConfig {
+export function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options: { readonly provider?: string } = {}): ModelConfig {
   if (!entry || typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error("OpenCode Go model entry missing id");
   }
@@ -187,11 +182,7 @@ function defaultStructuredOutput(modelId: string, route: OpenCodeGoRoute): "json
  * (overrides the static verified set). Sparse entries (today's payload) fall
  * back to the live-verified static set.
  */
-function discoveryStructuredOutput(
-  entry: OpenCodeGoModelEntry,
-  modelId: string,
-  route: OpenCodeGoRoute,
-): "json_schema" | undefined {
+function discoveryStructuredOutput(entry: OpenCodeGoModelEntry, modelId: string, route: OpenCodeGoRoute): "json_schema" | undefined {
   if (entry.capabilities && "structured_output" in entry.capabilities) {
     return entry.capabilities.structured_output === "json_schema" || entry.capabilities.structured_output === true
       ? "json_schema"

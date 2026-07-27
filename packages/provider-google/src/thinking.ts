@@ -7,12 +7,8 @@ import type { JsonObject, ProviderRequest } from "@arnilo/prism";
  */
 export function googleThinkingConfig(request: ProviderRequest): JsonObject | undefined {
   const value = request.options?.compat?.thinkingConfig ?? request.model.compat?.thinkingConfig;
-  const budget =
-    request.options?.compat?.thinkingBudget
-    ?? request.model.compat?.thinkingBudget;
-  const level =
-    request.options?.compat?.thinkingLevel
-    ?? request.model.compat?.thinkingLevel;
+  const budget = request.options?.compat?.thinkingBudget ?? request.model.compat?.thinkingBudget;
+  const level = request.options?.compat?.thinkingLevel ?? request.model.compat?.thinkingLevel;
 
   let config: JsonObject | undefined;
   if (value === false) return undefined;
@@ -34,10 +30,10 @@ export function googleThinkingConfig(request: ProviderRequest): JsonObject | und
  */
 export function googlePreserveThinking(request: ProviderRequest): boolean {
   const value =
-    request.options?.compat?.preserveThinking
-    ?? request.options?.compat?.preserve_thinking
-    ?? request.model.compat?.preserveThinking
-    ?? request.model.compat?.preserve_thinking;
+    request.options?.compat?.preserveThinking ??
+    request.options?.compat?.preserve_thinking ??
+    request.model.compat?.preserveThinking ??
+    request.model.compat?.preserve_thinking;
   if (value === false) return false;
   if (value === true) return true;
   return request.model.capabilities?.reasoning === true;

@@ -1,4 +1,4 @@
-import type { ErrorInfo, ModelConfig, ProviderRequest, ProviderTurnMetadata } from "./contracts.js";
+import type { ErrorInfo, ProviderRequest, ProviderTurnMetadata } from "./contracts.js";
 
 export function createProviderTurnMetadata(
   request: ProviderRequest,

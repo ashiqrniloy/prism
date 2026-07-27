@@ -8,44 +8,30 @@ import type {
   ToolNodeDefinition,
 } from "./types.js";
 
-export function agentNode(
-  config: Omit<AgentNodeDefinition, "kind">,
-): AgentNodeDefinition {
+export function agentNode(config: Omit<AgentNodeDefinition, "kind">): AgentNodeDefinition {
   return { ...config, kind: "agent" };
 }
 
-export function functionNode(
-  config: Omit<FunctionNodeDefinition, "kind">,
-): FunctionNodeDefinition {
+export function functionNode(config: Omit<FunctionNodeDefinition, "kind">): FunctionNodeDefinition {
   return { ...config, kind: "function" };
 }
 
-export function toolNode(
-  config: Omit<ToolNodeDefinition, "kind">,
-): ToolNodeDefinition {
+export function toolNode(config: Omit<ToolNodeDefinition, "kind">): ToolNodeDefinition {
   return { ...config, kind: "tool" };
 }
 
-export function conditionalNode(
-  config: Omit<ConditionalNodeDefinition, "kind">,
-): ConditionalNodeDefinition {
+export function conditionalNode(config: Omit<ConditionalNodeDefinition, "kind">): ConditionalNodeDefinition {
   return { ...config, kind: "conditional" };
 }
 
-export function fanOutNode(
-  config: Omit<FanOutNodeDefinition, "kind">,
-): FanOutNodeDefinition {
+export function fanOutNode(config: Omit<FanOutNodeDefinition, "kind">): FanOutNodeDefinition {
   return { ...config, kind: "fan_out" };
 }
 
-export function joinNode(
-  config: Omit<JoinNodeDefinition, "kind"> = {},
-): JoinNodeDefinition {
+export function joinNode(config: Omit<JoinNodeDefinition, "kind"> = {}): JoinNodeDefinition {
   return { ...config, kind: "join" };
 }
 
-export function workflowNode(
-  config: Omit<NestedWorkflowNodeDefinition, "kind">,
-): NestedWorkflowNodeDefinition {
+export function workflowNode(config: Omit<NestedWorkflowNodeDefinition, "kind">): NestedWorkflowNodeDefinition {
   return { ...config, kind: "workflow" };
 }

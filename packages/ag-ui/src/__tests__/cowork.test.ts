@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { EventSchemas, EventType } from "@ag-ui/core";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAcpEventMapper } from "../acp/index.js";
 import {
+  type CoWorkEvent,
+  type CoWorkReplayPage,
   createAgUiEventMapper,
   createAgUiHandler,
   createCoWorkReplay,
   projectCoWorkEvent,
   resolveAgUiLimits,
-  type CoWorkEvent,
-  type CoWorkReplayPage,
 } from "../index.js";
-import { createAcpEventMapper } from "../acp/index.js";
 
 const authorization = { ownership: { userId: "user-1" } };
 
@@ -20,7 +20,13 @@ const events: Record<string, CoWorkEvent> = {
   approval: { kind: "artifact.approval.requested", artifactId: "art-1", version: 2, reviewer: "user:user-1", reason: "needs sign-off" },
   draft: { kind: "draft.connector.pending", connectorId: "conn-1", scope: "mail.read", status: "pending" },
   snapshot: { kind: "browser.snapshot", snapshotId: "snap-1", summary: "Inbox with 3 messages" },
-  link: { kind: "artifact.download.link", artifactId: "art-1", version: 2, link: "https://cdn.example/dl?tok=abc", expiresAt: "2026-07-25T05:00:00.000Z" },
+  link: {
+    kind: "artifact.download.link",
+    artifactId: "art-1",
+    version: 2,
+    link: "https://cdn.example/dl?tok=abc",
+    expiresAt: "2026-07-25T05:00:00.000Z",
+  },
 };
 
 describe("co-work event projection", () => {
@@ -126,27 +132,45 @@ describe("createAgUiHandler co-work context", () => {
       forwardedProps: {},
     });
   }
-  const request = (value: string) => new Request("https://example.test/ag-ui", { method: "POST", headers: { "content-type": "application/json" }, body: value });
-  const parse = async (response: Response) => (await response.text()).trim().split("\n\n").filter(Boolean).map((line) => JSON.parse(line.slice(6)));
+  const request = (value: string) =>
+    new Request("https://example.test/ag-ui", { method: "POST", headers: { "content-type": "application/json" }, body: value });
+  const parse = async (response: Response) =>
+    (await response.text())
+      .trim()
+      .split("\n\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line.slice(6)));
 
   it("threads thread/artifact/identity context and appends redacted co-work events after the run", async () => {
     let seenContext: unknown;
     const agent = createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: { id: "mock", async *generate() { yield providerTextDelta("done"); yield providerDone(); } },
+      provider: {
+        id: "mock",
+        async *generate() {
+          yield providerTextDelta("done");
+          yield providerDone();
+        },
+      },
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
       sessionFactory: () => agent.createSession({ id: "session-1" }),
       redactor: createSecretRedactor(["sekret"]),
-      coWorkContext: (input) => { seenContext = { threadId: input.threadId, artifactId: "art-1", identity: "user:user-1" }; return { threadId: input.threadId, artifactId: "art-1", identity: "user:user-1" }; },
+      coWorkContext: (input) => {
+        seenContext = { threadId: input.threadId, artifactId: "art-1", identity: "user:user-1" };
+        return { threadId: input.threadId, artifactId: "art-1", identity: "user:user-1" };
+      },
       coWork: { page: async () => ({ events: [events.progress, { kind: "browser.snapshot", snapshotId: "s", summary: "sekret view" }] }) },
     });
 
     const output = await parse(await handler(request(body())));
     assert.deepEqual(seenContext, { threadId: "thread-1", artifactId: "art-1", identity: "user:user-1" });
     const cowork = output.filter((item) => item.type === EventType.CUSTOM && String(item.name).startsWith("prism.cowork."));
-    assert.deepEqual(cowork.map((item) => item.name), ["prism.cowork.artifact.progress", "prism.cowork.browser.snapshot"]);
+    assert.deepEqual(
+      cowork.map((item) => item.name),
+      ["prism.cowork.artifact.progress", "prism.cowork.browser.snapshot"],
+    );
     // Co-work events follow the terminal RUN_FINISHED.
     const runFinishedAt = output.map((item) => item.type).lastIndexOf(EventType.RUN_FINISHED);
     const firstCoWorkAt = output.findIndex((item) => item.name === "prism.cowork.artifact.progress");
@@ -157,7 +181,13 @@ describe("createAgUiHandler co-work context", () => {
   it("emits no co-work events when the source yields only malformed entries", async () => {
     const agent = createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: { id: "mock", async *generate() { yield providerTextDelta("done"); yield providerDone(); } },
+      provider: {
+        id: "mock",
+        async *generate() {
+          yield providerTextDelta("done");
+          yield providerDone();
+        },
+      },
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
@@ -165,6 +195,9 @@ describe("createAgUiHandler co-work context", () => {
       coWork: { page: async () => ({ events: [{ kind: "bogus" } as unknown as CoWorkEvent] }) },
     });
     const output = await parse(await handler(request(body())));
-    assert.equal(output.some((item) => String(item.name ?? "").startsWith("prism.cowork.")), false);
+    assert.equal(
+      output.some((item) => String(item.name ?? "").startsWith("prism.cowork.")),
+      false,
+    );
   });
 });

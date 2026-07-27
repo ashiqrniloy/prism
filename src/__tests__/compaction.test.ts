@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createDefaultCompactionStrategy, createSessionEntry, rebuildSessionContext, type CompactionEntryData } from "../index.js";
+import { describe, it } from "node:test";
+import { type CompactionEntryData, createDefaultCompactionStrategy, createSessionEntry, rebuildSessionContext } from "../index.js";
 
 const now = () => new Date("2026-01-01T00:00:00.000Z");
 
@@ -51,9 +51,15 @@ describe("compaction", () => {
 
     const snapshot = rebuildSessionContext([...entries, compacted], { leafId: compacted.id });
 
-    assert.deepEqual(snapshot.entries.map((entry) => entry.id), [...entries.map((entry) => entry.id), compacted.id]);
+    assert.deepEqual(
+      snapshot.entries.map((entry) => entry.id),
+      [...entries.map((entry) => entry.id), compacted.id],
+    );
     assert.deepEqual(snapshot.summaries, [result.summary]);
-    assert.deepEqual(snapshot.messages.map((item) => item.content[0]?.type === "text" ? item.content[0].text : ""), ["recent"]);
+    assert.deepEqual(
+      snapshot.messages.map((item) => (item.content[0]?.type === "text" ? item.content[0].text : "")),
+      ["recent"],
+    );
   });
 
   it("rebuild session context without compaction is unchanged", () => {
@@ -62,6 +68,9 @@ describe("compaction", () => {
     const snapshot = rebuildSessionContext(entries, { leafId: "a2" });
 
     assert.deepEqual(snapshot.summaries, []);
-    assert.deepEqual(snapshot.messages.map((item) => item.content[0]?.type === "text" ? item.content[0].text : ""), ["old", "new"]);
+    assert.deepEqual(
+      snapshot.messages.map((item) => (item.content[0]?.type === "text" ? item.content[0].text : "")),
+      ["old", "new"],
+    );
   });
 });

@@ -7,7 +7,7 @@ function json(status: number, body: object): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
-function mockJsonFetch(status: number, body: object): typeof fetch {
+function _mockJsonFetch(status: number, body: object): typeof fetch {
   return (async () => json(status, body)) as typeof fetch;
 }
 
@@ -65,7 +65,14 @@ describe("@arnilo/prism-provider-neuralwatt (quota)", () => {
     // No API key -> throws before fetch.
     let called = false;
     await assert.rejects(
-      () => getNeuralWattQuota({ apiKey: () => undefined, fetch: (async () => { called = true; return json(200, quotaFixture()); }) as typeof fetch }),
+      () =>
+        getNeuralWattQuota({
+          apiKey: () => undefined,
+          fetch: (async () => {
+            called = true;
+            return json(200, quotaFixture());
+          }) as typeof fetch,
+        }),
       /requires an API key/,
     );
     assert.equal(called, false, "no fetch when api key absent");
@@ -74,7 +81,8 @@ describe("@arnilo/prism-provider-neuralwatt (quota)", () => {
   it("get_neuralwatt_quota_redacts_token_on_error", async () => {
     await assert.rejects(
       () => getNeuralWattQuota({ apiKey: "secret-neuralwatt-token", fetch: mockTextFetch(429, "rate limited secret-neuralwatt-token") }),
-      (error: unknown) => error instanceof Error && /\[REDACTED\]/.test(error.message) && !error.message.includes("secret-neuralwatt-token"),
+      (error: unknown) =>
+        error instanceof Error && /\[REDACTED\]/.test(error.message) && !error.message.includes("secret-neuralwatt-token"),
     );
   });
 
@@ -98,11 +106,23 @@ describe("@arnilo/prism-provider-neuralwatt (quota)", () => {
       apiKey: "fake-neuralwatt-key",
       fetch: (async (input: RequestInfo | URL) => {
         capturedUrl = String(input);
-        return new Response(new ReadableStream({ start(c) { c.close(); } }), { status: 200 });
+        return new Response(
+          new ReadableStream({
+            start(c) {
+              c.close();
+            },
+          }),
+          { status: 200 },
+        );
       }) as typeof fetch,
     });
     const request: ProviderRequest = {
-      model: { provider: "neuralwatt", model: "glm-5.2", capabilities: { input: ["text"], output: ["text"], streaming: true }, limits: { contextWindow: 1024 } },
+      model: {
+        provider: "neuralwatt",
+        model: "glm-5.2",
+        capabilities: { input: ["text"], output: ["text"], streaming: true },
+        limits: { contextWindow: 1024 },
+      },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
     };
     for await (const _event of provider.generate(request)) void _event;

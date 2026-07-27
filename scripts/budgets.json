@@ -1,0 +1,30 @@
+{
+  "$comment": "Release 0.0.16 performance budgets. Baselines are MEASURED values (2026-07-26, Node v24.18.0, Linux x86_64 / Ryzen 9 PRO 7940HS), not aspirational. Pack bytes/file count are deterministic -> tight tolerance. Startup and benchmark medians are machine-dependent -> generous ceiling/tolerance to stay non-flaky. Enforced by scripts/budget-gate.test.mjs (fast, in `npm test`: root pack + startup) and scripts/benchmark-0.0.16.mjs (release evidence: the six scenario medians). A regression beyond tolerance fails the gate.",
+  "root": {
+    "packedBytes": { "baseline": 575680, "tolerance": 0.05 },
+    "unpackedBytes": { "baseline": 2043402, "tolerance": 0.05 },
+    "fileCount": { "baseline": 270, "tolerance": 0.05 }
+  },
+  "aggregate": {
+    "$comment": "Sum of `npm pack --dry-run` sizes across all 44 publishable manifests (root + 43 packages). Recorded reference baseline; not gated in the fast test (43 extra pack calls are too slow for a unit gate).",
+    "packedBytes": { "baseline": 1217694, "tolerance": 0.1 },
+    "unpackedBytes": { "baseline": 4820895, "tolerance": 0.1 }
+  },
+  "startup": {
+    "$comment": "Cold-process `import('./dist/index.js')` wall time. Baseline ~37ms; the ceiling is a non-flaky sanity bound that catches catastrophic startup regression, not a tight per-machine target.",
+    "importMsBaseline": 38,
+    "importMsCeiling": 250
+  },
+  "benchmarkMedians": {
+    "$comment": "Network-free scenario medians from scripts/benchmark-0.0.15.mjs (100 iterations), reused unchanged by benchmark-0.0.16.mjs (0.0.16 added no performance-affecting code). Throughput regression = measured < baseline*(1-tolerance); latency regression = measured > baseline*(1+tolerance).",
+    "tolerance": 0.25,
+    "scenarios": {
+      "openai-hosted-continuation": { "throughputPerSecond": 5386.0, "p50Ms": 0.1317, "p95Ms": 0.2907 },
+      "openai-realtime-envelope": { "throughputPerSecond": 880.3, "p50Ms": 1.1293, "p95Ms": 1.2399 },
+      "ai-sdk-v4-stream-mapping": { "throughputPerSecond": 22403.0, "p50Ms": 0.023, "p95Ms": 0.0734 },
+      "provider-package-metadata": { "throughputPerSecond": 55829.2, "p50Ms": 0.0065, "p95Ms": 0.0394 },
+      "rag-parse-replace-rerank-retrieve": { "throughputPerSecond": 4800.3, "p50Ms": 0.1432, "p95Ms": 0.4064 },
+      "memory-retention-export-rebuild": { "throughputPerSecond": 8763.2, "p50Ms": 0.0686, "p95Ms": 0.1892 }
+    }
+  }
+}

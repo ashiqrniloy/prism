@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createMiddlewareRegistry } from "../index.js";
+import { describe, it } from "node:test";
 import type { ExtensionEvent } from "../index.js";
+import { createMiddlewareRegistry } from "../index.js";
 
 describe("middleware registry", () => {
   it("runs middleware in registration order", async () => {
@@ -26,9 +26,16 @@ describe("middleware registry", () => {
 
   it("emits redacted extension_error and continues by default", async () => {
     const errors: ExtensionEvent[] = [];
-    const middleware = createMiddlewareRegistry({ secrets: ["token-123"], onError: (event) => { errors.push(event); } });
+    const middleware = createMiddlewareRegistry({
+      secrets: ["token-123"],
+      onError: (event) => {
+        errors.push(event);
+      },
+    });
 
-    middleware.use<{ steps: string[] }>("tool_call", () => { throw new Error("bad token-123"); });
+    middleware.use<{ steps: string[] }>("tool_call", () => {
+      throw new Error("bad token-123");
+    });
     middleware.use<{ steps: string[] }>("tool_call", (value) => ({ steps: [...value.steps, "after"] }));
 
     assert.deepEqual(await middleware.run("tool_call", { steps: [] }), { steps: ["after"] });
@@ -39,7 +46,9 @@ describe("middleware registry", () => {
 
   it("throws when host opts in", async () => {
     const middleware = createMiddlewareRegistry({ errorPolicy: "throw" });
-    middleware.use("retry", () => { throw new Error("boom"); });
+    middleware.use("retry", () => {
+      throw new Error("boom");
+    });
 
     await assert.rejects(() => middleware.run("retry", {}), /boom/);
   });

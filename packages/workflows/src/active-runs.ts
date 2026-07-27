@@ -36,19 +36,11 @@ export function registerActiveWorkflowRun(input: {
   });
 }
 
-export function unregisterActiveWorkflowRun(
-  workflowId: string,
-  runId: string,
-  ownership?: OwnershipScope,
-): void {
+export function unregisterActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): void {
   activeRuns.delete(keyOf(workflowId, runId, ownership));
 }
 
-export function getActiveWorkflowRun(
-  workflowId: string,
-  runId: string,
-  ownership?: OwnershipScope,
-): ActiveWorkflowRun | undefined {
+export function getActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): ActiveWorkflowRun | undefined {
   return activeRuns.get(keyOf(workflowId, runId, ownership));
 }
 
@@ -69,11 +61,12 @@ export function abortActiveWorkflowRun(
   return true;
 }
 
-export function listActiveWorkflowRuns(filter: {
-  readonly workflowId?: string;
-  readonly ownership?: OwnershipScope;
-} = {}): readonly ActiveWorkflowRun[] {
-  return [...activeRuns.values()].filter((item) =>
-    exactOwnershipKey(item.ownership) === exactOwnershipKey(filter.ownership)
-    && (filter.workflowId === undefined || item.workflowId === filter.workflowId));
+export function listActiveWorkflowRuns(
+  filter: { readonly workflowId?: string; readonly ownership?: OwnershipScope } = {},
+): readonly ActiveWorkflowRun[] {
+  return [...activeRuns.values()].filter(
+    (item) =>
+      exactOwnershipKey(item.ownership) === exactOwnershipKey(filter.ownership) &&
+      (filter.workflowId === undefined || item.workflowId === filter.workflowId),
+  );
 }

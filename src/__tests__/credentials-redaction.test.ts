@@ -1,5 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { CredentialResolver, OAuthLoginCallbacks, OAuthProvider } from "../index.js";
 import {
   createEnvCredentialResolver,
   createExplicitCredentialResolver,
@@ -9,7 +10,6 @@ import {
   refreshOAuthCredential,
   resolveCredentialValue,
 } from "../index.js";
-import type { CredentialResolver, OAuthLoginCallbacks, OAuthProvider } from "../index.js";
 
 describe("credential boundary", () => {
   it("resolves credentials from direct value callback or resolver", async () => {
@@ -21,10 +21,7 @@ describe("credential boundary", () => {
 
     assert.equal(await resolveCredentialValue("literal", { name: "api" }), "literal");
     assert.equal(await resolveCredentialValue(() => "callback", { name: "api" }), "callback");
-    assert.equal(
-      await resolveCredentialValue(resolver, { name: "api", provider: "mock" }),
-      "mock:token",
-    );
+    assert.equal(await resolveCredentialValue(resolver, { name: "api", provider: "mock" }), "mock:token");
   });
 
   it("provider registry does not accept or store credentials", () => {
@@ -62,13 +59,13 @@ describe("credential boundary", () => {
   it("env credential resolver reads only passed env object", async () => {
     process.env.PRISM_TEST_API_KEY = "real-env-is-ignored";
     try {
-      const resolver = createEnvCredentialResolver(
-        { DEMO_API_KEY: "passed-env-key" },
-        { "mock:apiKey": "DEMO_API_KEY" },
-      );
+      const resolver = createEnvCredentialResolver({ DEMO_API_KEY: "passed-env-key" }, { "mock:apiKey": "DEMO_API_KEY" });
 
       assert.equal(await resolveCredentialValue(resolver, { name: "apiKey", provider: "mock" }), "passed-env-key");
-      assert.equal(await resolveCredentialValue(createEnvCredentialResolver({}, { mock: "PRISM_TEST_API_KEY" }), { name: "apiKey", provider: "mock" }), undefined);
+      assert.equal(
+        await resolveCredentialValue(createEnvCredentialResolver({}, { mock: "PRISM_TEST_API_KEY" }), { name: "apiKey", provider: "mock" }),
+        undefined,
+      );
     } finally {
       delete process.env.PRISM_TEST_API_KEY;
     }
@@ -76,10 +73,18 @@ describe("credential boundary", () => {
 
   it("oauth callbacks typecheck and refresh updates caller store", async () => {
     const callbacks: OAuthLoginCallbacks = {
-      onAuth(url) { assert.equal(url.startsWith("https://"), true); },
-      onDeviceCode(code) { assert.equal(code.userCode, "ABCD"); },
-      onPrompt() { return "browser"; },
-      onSelect() { return "device"; },
+      onAuth(url) {
+        assert.equal(url.startsWith("https://"), true);
+      },
+      onDeviceCode(code) {
+        assert.equal(code.userCode, "ABCD");
+      },
+      onPrompt() {
+        return "browser";
+      },
+      onSelect() {
+        return "device";
+      },
     };
     const provider: OAuthProvider = {
       id: "mock-oauth",
@@ -101,7 +106,11 @@ describe("credential boundary", () => {
     const refreshed = await refreshOAuthCredential({
       provider,
       credentials,
-      store: { set: (providerId, next) => { stored.push([providerId, next.access]); } },
+      store: {
+        set: (providerId, next) => {
+          stored.push([providerId, next.access]);
+        },
+      },
     });
 
     assert.equal(refreshed.access, "new-access");

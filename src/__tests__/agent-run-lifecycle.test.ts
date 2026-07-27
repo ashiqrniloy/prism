@@ -1,11 +1,10 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   createAgent,
   createAgentRunLifecycle,
   createMemoryCheckpointStore,
   createMemorySessionStore,
-  createMockProvider,
   providerDone,
   providerTextDelta,
   toolCallContent,
@@ -49,13 +48,21 @@ describe("agent run lifecycle", () => {
       },
     });
     const events = [];
-    for await (const event of lifecycle.resumeStream({ runId: suspended.runId, sessionId: suspended.sessionId }, {
-      decision: "approve",
-      expectedVersion: suspended.runState!.version!,
-    }, { agentId: "lifecycle-stream-demo", maxQueuedEvents: 64, overflow: "close" })) events.push(event);
+    for await (const event of lifecycle.resumeStream(
+      { runId: suspended.runId, sessionId: suspended.sessionId },
+      {
+        decision: "approve",
+        expectedVersion: suspended.runState!.version!,
+      },
+      { agentId: "lifecycle-stream-demo", maxQueuedEvents: 64, overflow: "close" },
+    ))
+      events.push(event);
 
     assert.equal(calls, 1);
-    assert.equal(events.some((event) => event.type === "agent_resumed"), true);
+    assert.equal(
+      events.some((event) => event.type === "agent_resumed"),
+      true,
+    );
     assert.equal(events.at(-1)?.type, "agent_finished");
   });
 });

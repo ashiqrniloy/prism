@@ -2,14 +2,7 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { request as httpRequest, type IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
-import type {
-  ContentBlock,
-  ImageContent,
-  Message,
-  ModelConfig,
-  ResourceLoadContext,
-  ResourceLoader,
-} from "./contracts.js";
+import type { ContentBlock, ImageContent, Message, ModelConfig, ResourceLoadContext, ResourceLoader } from "./contracts.js";
 import { assertPermission } from "./security.js";
 
 /** Known model input capability tags for `ModelCapabilities.input`. */
@@ -90,10 +83,7 @@ export interface MediaHostAddress {
   readonly family: 4 | 6;
 }
 
-export type MediaHostnameResolver = (
-  hostname: string,
-  signal: AbortSignal,
-) => Promise<readonly MediaHostAddress[]>;
+export type MediaHostnameResolver = (hostname: string, signal: AbortSignal) => Promise<readonly MediaHostAddress[]>;
 
 export interface MediaUrlRequest {
   readonly url: URL;
@@ -184,10 +174,7 @@ export function collectMessageContentBlocks(messages: readonly Message[]): Conte
   return messages.flatMap((message) => [...message.content]);
 }
 
-export function assertModelSupportsContentBlocks(
-  model: ModelConfig,
-  blocks: readonly ContentBlock[],
-): void {
+export function assertModelSupportsContentBlocks(model: ModelConfig, blocks: readonly ContentBlock[]): void {
   const supported = model.capabilities?.input;
   if (!supported?.length) return;
   for (const block of blocks) {
@@ -198,17 +185,11 @@ export function assertModelSupportsContentBlocks(
   }
 }
 
-export function assertMessagesSupportModelCapabilities(
-  model: ModelConfig,
-  messages: readonly Message[],
-): void {
+export function assertMessagesSupportModelCapabilities(model: ModelConfig, messages: readonly Message[]): void {
   assertModelSupportsContentBlocks(model, collectMessageContentBlocks(messages));
 }
 
-export function assertMediaBlocksWithinBounds(
-  blocks: readonly MediaContentBlock[],
-  bounds: MediaContentBounds = {},
-): void {
+export function assertMediaBlocksWithinBounds(blocks: readonly MediaContentBlock[], bounds: MediaContentBounds = {}): void {
   const maxItems = bounds.maxItems ?? DEFAULT_MAX_MEDIA_ITEMS_PER_REQUEST;
   const maxItemBytes = bounds.maxItemBytes ?? DEFAULT_MAX_MEDIA_ITEM_BYTES;
   const maxRequestBytes = bounds.maxRequestBytes ?? DEFAULT_MAX_MEDIA_REQUEST_BYTES;
@@ -229,10 +210,7 @@ export function assertMediaBlocksWithinBounds(
       throw new MediaContentError("request_too_large", `Media request budget exceeded ${maxRequestBytes} bytes`);
     }
     if (block.type === "audio" && block.durationMs !== undefined && block.durationMs > maxAudioDurationMs) {
-      throw new MediaContentError(
-        "audio_too_long",
-        `Audio duration ${block.durationMs}ms exceeded ${maxAudioDurationMs}ms`,
-      );
+      throw new MediaContentError("audio_too_long", `Audio duration ${block.durationMs}ms exceeded ${maxAudioDurationMs}ms`);
     }
   }
 }
@@ -262,12 +240,12 @@ export function assertSsrfAllowedUrl(url: string, policy: SsrfPolicy = {}): void
   if (policy.denyPrivateHosts === false) return;
 
   if (
-    hostname === "localhost"
-    || hostname.endsWith(".localhost")
-    || hostname.endsWith(".local")
-    || hostname === "metadata"
-    || hostname === "metadata.google.internal"
-    || hostname === "instance-data"
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname === "metadata" ||
+    hostname === "metadata.google.internal" ||
+    hostname === "instance-data"
   ) {
     throw new MediaContentError("ssrf_denied", `Media URL host ${hostname} is not allowed`);
   }
@@ -293,19 +271,12 @@ export function sniffMediaMimeType(bytes: Uint8Array): string | undefined {
   return undefined;
 }
 
-export function assertDeclaredMediaTypeMatches(
-  declaredMediaType: string,
-  bytes: Uint8Array,
-  policy: MediaMimePolicy = {},
-): void {
+export function assertDeclaredMediaTypeMatches(declaredMediaType: string, bytes: Uint8Array, policy: MediaMimePolicy = {}): void {
   if (policy.strictMagicValidation === false) return;
   const sniffed = sniffMediaMimeType(bytes);
   if (!sniffed) return;
   if (!mediaTypesCompatible(declaredMediaType, sniffed)) {
-    throw new MediaContentError(
-      "mime_mismatch",
-      `Declared media type ${declaredMediaType} does not match sniffed type ${sniffed}`,
-    );
+    throw new MediaContentError("mime_mismatch", `Declared media type ${declaredMediaType} does not match sniffed type ${sniffed}`);
   }
 }
 
@@ -337,10 +308,7 @@ export async function resolveMediaContentBlocks(
   return resolved;
 }
 
-async function resolveMediaBlock(
-  block: MediaContentBlock,
-  options: ResolveMediaContentOptions,
-): Promise<ResolvedMediaContent> {
+async function resolveMediaBlock(block: MediaContentBlock, options: ResolveMediaContentOptions): Promise<ResolvedMediaContent> {
   const bounds = options.bounds ?? {};
   const maxItemBytes = bounds.maxItemBytes ?? DEFAULT_MAX_MEDIA_ITEM_BYTES;
   const source = mediaSourceKind(block);
@@ -353,26 +321,17 @@ async function resolveMediaBlock(
     if (!options.loader) {
       throw new MediaContentError("resource_required", "ResourceLoader is required to resolve resourceUri media");
     }
-    bytes = await loadBoundedBinaryResource(
-      options.loader,
-      readResourceUri(block)!,
-      options.loadContext,
-      maxItemBytes,
-      options.signal,
-    );
+    bytes = await loadBoundedBinaryResource(options.loader, readResourceUri(block)!, options.loadContext, maxItemBytes, options.signal);
   } else {
-    bytes = await fetchBoundedMediaUrl(
-      readUrlField(block)!,
-      {
-        maxBytes: maxItemBytes,
-        timeoutMs: bounds.fetchTimeoutMs ?? DEFAULT_MEDIA_FETCH_TIMEOUT_MS,
-        ssrf: options.ssrf,
-        fetch: options.fetch,
-        resolveHostname: options.resolveHostname,
-        requestUrl: options.requestUrl,
-        signal: options.signal,
-      },
-    );
+    bytes = await fetchBoundedMediaUrl(readUrlField(block)!, {
+      maxBytes: maxItemBytes,
+      timeoutMs: bounds.fetchTimeoutMs ?? DEFAULT_MEDIA_FETCH_TIMEOUT_MS,
+      ssrf: options.ssrf,
+      fetch: options.fetch,
+      resolveHostname: options.resolveHostname,
+      requestUrl: options.requestUrl,
+      signal: options.signal,
+    });
   }
 
   assertDeclaredMediaTypeMatches(mediaType, bytes, options.mime);
@@ -499,9 +458,7 @@ async function fetchBoundedMediaUrl(url: string, options: FetchBoundedMediaOptio
   assertSsrfAllowedUrl(url, options.ssrf);
   const timeoutController = new AbortController();
   const timeout = setTimeout(() => timeoutController.abort(), options.timeoutMs);
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, timeoutController.signal])
-    : timeoutController.signal;
+  const signal = options.signal ? AbortSignal.any([options.signal, timeoutController.signal]) : timeoutController.signal;
 
   try {
     if (options.fetch) return await readFetchResponse(await options.fetch(url, { signal, redirect: "error" }), options.maxBytes);
@@ -569,8 +526,14 @@ async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T
     };
     signal.addEventListener("abort", onAbort, { once: true });
     promise.then(
-      (value) => { cleanup(); resolve(value); },
-      (error) => { cleanup(); reject(error); },
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
     );
   });
 }
@@ -603,12 +566,16 @@ async function readFetchResponse(response: Response, maxBytes: number): Promise<
 
 function requestPinnedMediaUrl({ url, address, maxBytes, signal }: MediaUrlRequest): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
-    const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(url, {
-      agent: false,
-      family: address.family,
-      signal,
-      lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
-    }, (response) => readIncomingMessage(response, maxBytes).then(resolve, reject));
+    const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(
+      url,
+      {
+        agent: false,
+        family: address.family,
+        signal,
+        lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
+      },
+      (response) => readIncomingMessage(response, maxBytes).then(resolve, reject),
+    );
     request.on("error", reject);
     request.end();
   });
@@ -671,22 +638,24 @@ function isBlockedIp(hostname: string): boolean {
 
 function isBlockedIpv4(address: string): boolean {
   const [a, b] = address.split(".").map(Number) as [number, number, number, number];
-  return a === 0
-    || a === 10
-    || a === 127
-    || (a === 100 && b >= 64 && b <= 127)
-    || (a === 169 && b === 254)
-    || (a === 172 && b >= 16 && b <= 31)
-    || (a === 192 && (b === 0 || b === 168))
-    || (a === 198 && (b === 18 || b === 19 || b === 51))
-    || (a === 203 && b === 0)
-    || a >= 224;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && (b === 0 || b === 168)) ||
+    (a === 198 && (b === 18 || b === 19 || b === 51)) ||
+    (a === 203 && b === 0) ||
+    a >= 224
+  );
 }
 
 function isBlockedIpv6(address: string): boolean {
   const words = parseIpv6Words(address);
   if (!words) return true;
-  if (words.every((word) => word === 0) || words.slice(0, 7).every((word) => word === 0) && words[7] === 1) return true;
+  if (words.every((word) => word === 0) || (words.slice(0, 7).every((word) => word === 0) && words[7] === 1)) return true;
   if ((words[0]! & 0xfe00) === 0xfc00) return true;
   if ((words[0]! & 0xffc0) === 0xfe80 || (words[0]! & 0xffc0) === 0xfec0) return true;
   if ((words[0]! & 0xff00) === 0xff00) return true;
@@ -703,9 +672,7 @@ function parseIpv6Words(address: string): number[] | undefined {
   const missing = 8 - left.length - right.length;
   if (missing < 0 || (parts.length === 1 && missing !== 0)) return undefined;
   const words = [...left, ...Array.from({ length: missing }, () => "0"), ...right].map((part) => Number.parseInt(part, 16));
-  return words.length === 8 && words.every((word) => Number.isInteger(word) && word >= 0 && word <= 0xffff)
-    ? words
-    : undefined;
+  return words.length === 8 && words.every((word) => Number.isInteger(word) && word >= 0 && word <= 0xffff) ? words : undefined;
 }
 
 function startsWith(bytes: Uint8Array, prefix: readonly number[]): boolean {

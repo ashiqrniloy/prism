@@ -1,6 +1,6 @@
-import type { RagChunk, ChunkOptions } from "./types.js";
-import { resolveRagLimits } from "./limits.js";
 import { RagLimitError } from "./errors.js";
+import { resolveRagLimits } from "./limits.js";
+import type { ChunkOptions, RagChunk } from "./types.js";
 import { assertBytes, requireSourceId } from "./util.js";
 
 export function chunkText(text: string, options: ChunkOptions): readonly RagChunk[] {
@@ -36,16 +36,18 @@ function chunkDocument(text: string, options: ChunkOptions, markdown: boolean): 
     if (raw) {
       const index = chunks.length;
       const citationId = `${sourceId}#${String(index + 1).padStart(4, "0")}`;
-      chunks.push(Object.freeze({
-        id: citationId,
-        citationId,
-        sourceId,
-        index,
-        start,
-        end: start + raw.length,
-        text: raw,
-        ...(options.metadata ? { metadata: Object.freeze({ ...options.metadata }) } : {}),
-      }));
+      chunks.push(
+        Object.freeze({
+          id: citationId,
+          citationId,
+          sourceId,
+          index,
+          start,
+          end: start + raw.length,
+          text: raw,
+          ...(options.metadata ? { metadata: Object.freeze({ ...options.metadata }) } : {}),
+        }),
+      );
       if (chunks.length > limits.maxChunks) throw new RagLimitError(`chunk count exceeds ${limits.maxChunks}`);
     }
     if (end >= text.length) break;

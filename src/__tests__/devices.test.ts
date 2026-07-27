@@ -1,19 +1,19 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { DeviceAdapter } from "../index.js";
 import {
+  acceptDeviceChunk,
+  assertDeviceAdmit,
+  createSecretRedactor,
   DEFAULT_DEVICE_MAX_CHUNK_BYTES,
   DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
   DevicePolicyError,
   HARD_DEVICE_MAX_CHUNK_BYTES,
   HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
-  acceptDeviceChunk,
-  assertDeviceAdmit,
   redactDeviceTelemetry,
   resolveDevicePolicy,
   runDevicePolicyConformance,
 } from "../index.js";
-import type { DeviceAdapter } from "../index.js";
-import { createSecretRedactor } from "../index.js";
 
 const runLimits = { maxTurns: 4, maxToolCalls: 10 };
 
@@ -45,14 +45,8 @@ describe("resolveDevicePolicy", () => {
   });
 
   it("rejects unknown device kinds and caps above the hard ceiling", () => {
-    assert.throws(
-      () => resolveDevicePolicy({ ...adapter(), kind: "brain" } as unknown as DeviceAdapter),
-      DevicePolicyError,
-    );
-    assert.throws(
-      () => resolveDevicePolicy(adapter(), { maxChunkBytes: HARD_DEVICE_MAX_CHUNK_BYTES + 1, runLimits }),
-      DevicePolicyError,
-    );
+    assert.throws(() => resolveDevicePolicy({ ...adapter(), kind: "brain" } as unknown as DeviceAdapter), DevicePolicyError);
+    assert.throws(() => resolveDevicePolicy(adapter(), { maxChunkBytes: HARD_DEVICE_MAX_CHUNK_BYTES + 1, runLimits }), DevicePolicyError);
     assert.throws(
       () => resolveDevicePolicy(adapter(), { maxConcurrentSessions: HARD_DEVICE_MAX_CONCURRENT_SESSIONS + 1, runLimits }),
       DevicePolicyError,
@@ -63,10 +57,7 @@ describe("resolveDevicePolicy", () => {
 describe("assertDeviceAdmit (fail-closed gate)", () => {
   it("denies a disabled device even with approval + sandbox", () => {
     const policy = resolveDevicePolicy(adapter({ enabled: false }), { runLimits });
-    assert.throws(
-      () => assertDeviceAdmit(policy, { approved: true, activeSessions: 0 }),
-      /disabled by default/,
-    );
+    assert.throws(() => assertDeviceAdmit(policy, { approved: true, activeSessions: 0 }), /disabled by default/);
   });
 
   it("denies an enabled device without an explicit sandbox", () => {

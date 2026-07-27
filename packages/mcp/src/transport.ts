@@ -2,19 +2,11 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP, type LookupFunction } from "node:net";
-import {
-  assertSsrfAllowedUrl,
-  type MediaHostAddress,
-  type MediaHostnameResolver,
-} from "@arnilo/prism";
+import { assertSsrfAllowedUrl, type MediaHostAddress, type MediaHostnameResolver } from "@arnilo/prism";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import {
-  DEFAULT_MAX_HTTP_RESPONSE_BYTES,
-  HARD_MAX_HTTP_RESPONSE_BYTES,
-  validateMcpLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_HTTP_RESPONSE_BYTES, HARD_MAX_HTTP_RESPONSE_BYTES, validateMcpLimit } from "./limits.js";
 import type { McpStreamableHttpTransport, McpTransportConfig } from "./types.js";
 import { McpBridgeError } from "./types.js";
 
@@ -74,7 +66,9 @@ export function createSecureMcpFetch(config: McpStreamableHttpTransport): typeof
 
 function validateEndpoint(config: McpStreamableHttpTransport): URL {
   let url: URL;
-  try { url = new URL(config.url); } catch (error) {
+  try {
+    url = new URL(config.url);
+  } catch (error) {
     throw new McpBridgeError(`Invalid MCP HTTP URL: ${config.url}`, { cause: error });
   }
   const allowedOrigins = resolveAllowedOrigins(config.allowedOrigins, config.allowLoopbackHttp === true);
@@ -93,7 +87,11 @@ function resolveAllowedOrigins(values: readonly string[], allowLoopbackHttp: boo
   const origins = new Set<string>();
   for (const value of values) {
     let parsed: URL;
-    try { parsed = new URL(value); } catch { throw new McpBridgeError(`Invalid MCP allowed origin: ${value}`); }
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new McpBridgeError(`Invalid MCP allowed origin: ${value}`);
+    }
     if (value !== parsed.origin || parsed.username || parsed.password) {
       throw new McpBridgeError(`MCP allowed origin must be exact (scheme, host, optional port): ${value}`);
     }
@@ -118,7 +116,9 @@ function validateRequestUrl(url: URL, allowedOrigins: ReadonlySet<string>, allow
     }
   }
   if (!(allowLoopbackHttp && isLoopbackHostname(url.hostname))) {
-    try { assertSsrfAllowedUrl(url.href); } catch (error) {
+    try {
+      assertSsrfAllowedUrl(url.href);
+    } catch (error) {
       throw new McpBridgeError("MCP HTTP URL is not public", { cause: error });
     }
   }
@@ -146,7 +146,9 @@ async function resolvePinnedAddress(
       continue;
     }
     const literal = candidate.family === 6 ? `[${normalized}]` : normalized;
-    try { assertSsrfAllowedUrl(`${url.protocol}//${literal}`); } catch (error) {
+    try {
+      assertSsrfAllowedUrl(`${url.protocol}//${literal}`);
+    } catch (error) {
       throw new McpBridgeError("MCP hostname resolved to a private or non-public address", { cause: error });
     }
   }
@@ -166,38 +168,50 @@ async function requestPinned(url: URL, address: MediaHostAddress, init: RequestI
   const request = url.protocol === "https:" ? httpsRequest : httpRequest;
 
   return new Promise<Response>((resolve, reject) => {
-    const nodeRequest = request(url, {
-      method,
-      headers: Object.fromEntries(headers.entries()),
-      signal: init.signal ?? undefined,
-      lookup: ((_hostname, options, callback) => {
-        if (options.all) callback(null, [{ address: address.address, family: address.family }]);
-        else callback(null, address.address, address.family);
-      }) satisfies LookupFunction,
-    }, (incoming) => {
-      const responseHeaders = new Headers();
-      for (const [name, value] of Object.entries(incoming.headers)) {
-        if (Array.isArray(value)) for (const item of value) responseHeaders.append(name, item);
-        else if (value !== undefined) responseHeaders.set(name, value);
-      }
-      const noBody = method === "HEAD" || incoming.statusCode === 204 || incoming.statusCode === 304;
-      const iterator = incoming[Symbol.asyncIterator]();
-      const stream = noBody ? null : new ReadableStream<Uint8Array>({
-        async pull(controller) {
-          try {
-            const next = await iterator.next();
-            if (next.done) controller.close();
-            else controller.enqueue(new Uint8Array(next.value));
-          } catch (error) { controller.error(error); }
-        },
-        cancel(reason) { incoming.destroy(reason instanceof Error ? reason : undefined); },
-      });
-      resolve(new Response(stream, {
-        status: incoming.statusCode ?? 500,
-        statusText: incoming.statusMessage,
-        headers: responseHeaders,
-      }));
-    });
+    const nodeRequest = request(
+      url,
+      {
+        method,
+        headers: Object.fromEntries(headers.entries()),
+        signal: init.signal ?? undefined,
+        lookup: ((_hostname, options, callback) => {
+          if (options.all) callback(null, [{ address: address.address, family: address.family }]);
+          else callback(null, address.address, address.family);
+        }) satisfies LookupFunction,
+      },
+      (incoming) => {
+        const responseHeaders = new Headers();
+        for (const [name, value] of Object.entries(incoming.headers)) {
+          if (Array.isArray(value)) for (const item of value) responseHeaders.append(name, item);
+          else if (value !== undefined) responseHeaders.set(name, value);
+        }
+        const noBody = method === "HEAD" || incoming.statusCode === 204 || incoming.statusCode === 304;
+        const iterator = incoming[Symbol.asyncIterator]();
+        const stream = noBody
+          ? null
+          : new ReadableStream<Uint8Array>({
+              async pull(controller) {
+                try {
+                  const next = await iterator.next();
+                  if (next.done) controller.close();
+                  else controller.enqueue(new Uint8Array(next.value));
+                } catch (error) {
+                  controller.error(error);
+                }
+              },
+              cancel(reason) {
+                incoming.destroy(reason instanceof Error ? reason : undefined);
+              },
+            });
+        resolve(
+          new Response(stream, {
+            status: incoming.statusCode ?? 500,
+            statusText: incoming.statusMessage,
+            headers: responseHeaders,
+          }),
+        );
+      },
+    );
     nodeRequest.on("error", reject);
     if (body) nodeRequest.end(body);
     else nodeRequest.end();
@@ -227,7 +241,11 @@ function boundResponse(response: Response, maxBytes: number): Response {
     async pull(controller) {
       try {
         const next = await reader.read();
-        if (next.done) { reader.releaseLock(); controller.close(); return; }
+        if (next.done) {
+          reader.releaseLock();
+          controller.close();
+          return;
+        }
         bytes += next.value.byteLength;
         if (bytes > maxBytes) {
           await reader.cancel();
@@ -237,13 +255,21 @@ function boundResponse(response: Response, maxBytes: number): Response {
         }
         controller.enqueue(next.value);
       } catch (error) {
-        try { reader.releaseLock(); } catch { /* Already released after EOF/overflow. */ }
+        try {
+          reader.releaseLock();
+        } catch {
+          /* Already released after EOF/overflow. */
+        }
         controller.error(error);
       }
     },
     async cancel(reason) {
       await reader.cancel(reason);
-      try { reader.releaseLock(); } catch { /* Already released after EOF/overflow. */ }
+      try {
+        reader.releaseLock();
+      } catch {
+        /* Already released after EOF/overflow. */
+      }
     },
   });
   return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
@@ -260,7 +286,10 @@ async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | null | un
 }
 
 function normalizeHostname(value: string): string {
-  return value.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  return value
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.$/, "");
 }
 
 function isLoopbackHostname(value: string): boolean {

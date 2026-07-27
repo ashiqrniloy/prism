@@ -1,16 +1,10 @@
+import { createAgent, createMemoryLeaseStore, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import {
-  createAgent,
-  createMemoryLeaseStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
-import {
+  createMemoryRateLimiter,
   createPrismDeploymentLease,
   createPrismDrainController,
   createPrismHandler,
   createPrismHealthHandler,
-  createMemoryRateLimiter,
 } from "@arnilo/prism-server";
 
 /** Network-free deployment seam demo: health + drain + rate-limit + coordinator lease. */
@@ -36,19 +30,23 @@ export async function demo(): Promise<Record<string, unknown>> {
   });
 
   const live = await health(new Request("https://example.test/health/livez"));
-  const run = await api(new Request("https://example.test/prism/agents/support/runs", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ input: "hi" }),
-  }));
+  const run = await api(
+    new Request("https://example.test/prism/agents/support/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input: "hi" }),
+    }),
+  );
   const coordinator = await lease.tryAcquire();
   drain.beginDrain();
   const readyAfterDrain = await health(new Request("https://example.test/health/readyz"));
-  const rejected = await api(new Request("https://example.test/prism/agents/support/runs", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ input: "late" }),
-  }));
+  const rejected = await api(
+    new Request("https://example.test/prism/agents/support/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input: "late" }),
+    }),
+  );
 
   return {
     live: live.status,

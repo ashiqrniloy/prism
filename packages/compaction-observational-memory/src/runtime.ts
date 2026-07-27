@@ -1,8 +1,17 @@
-import type { AgentSession, AIProvider, CredentialRequest, CredentialValueSource, ModelConfig, ProviderRequestOptions, SessionEntry, SettingsProvider } from "@arnilo/prism";
+import type {
+  AgentSession,
+  AIProvider,
+  CredentialRequest,
+  CredentialValueSource,
+  ModelConfig,
+  ProviderRequestOptions,
+  SessionEntry,
+  SettingsProvider,
+} from "@arnilo/prism";
 import { createSessionEntry, redactSecrets, resolveCredentialValue, resolveUseCaseModel, useCaseCredentialProviderId } from "@arnilo/prism";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
-import { resolveMemoryWorkerLimits, truncateWorkerText, type MemoryWorkerLimitOptions, type ResolvedMemoryWorkerLimits } from "./limits.js";
-import { resolveObservationalMemorySettings, type ObservationalMemorySettingsInput } from "./settings.js";
+import { type MemoryWorkerLimitOptions, type ResolvedMemoryWorkerLimits, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
+import { type ObservationalMemorySettingsInput, resolveObservationalMemorySettings } from "./settings.js";
 import { estimateEntryTokens } from "./tokens.js";
 import { OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "./types.js";
 import { runDropper } from "./workers/dropper.js";
@@ -60,7 +69,8 @@ export interface ObservationalMemoryFlushResult {
 }
 
 export function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime {
-  if ("store" in (options as object)) throw new Error("Observational memory runtime requires appendEntry bound to the owning session store, not a separate store option");
+  if ("store" in (options as object))
+    throw new Error("Observational memory runtime requires appendEntry bound to the owning session store, not a separate store option");
   const configuredWorkerLimits = resolveMemoryWorkerLimits(runtimeLimitOptions(options));
   let inFlight = false;
   let lastError: string | undefined;
@@ -76,7 +86,9 @@ export function createObservationalMemoryRuntime(options: ObservationalMemoryRun
         return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Observational memory runtime failed";
-        lastError = truncateWorkerText(redactSecrets(message, options.secrets ?? []), configuredWorkerLimits.maxErrorBytes) || "Observational memory runtime failed";
+        lastError =
+          truncateWorkerText(redactSecrets(message, options.secrets ?? []), configuredWorkerLimits.maxErrorBytes) ||
+          "Observational memory runtime failed";
         options.debug?.("observational-memory:error", lastError);
         return { observations: 0, reflections: 0, dropped: 0, skipped: "error" };
       } finally {
@@ -86,7 +98,10 @@ export function createObservationalMemoryRuntime(options: ObservationalMemoryRun
   };
 }
 
-async function flush(options: ObservationalMemoryRuntimeOptions, configuredWorkerLimits: ResolvedMemoryWorkerLimits): Promise<ObservationalMemoryFlushResult> {
+async function flush(
+  options: ObservationalMemoryRuntimeOptions,
+  configuredWorkerLimits: ResolvedMemoryWorkerLimits,
+): Promise<ObservationalMemoryFlushResult> {
   const settings = await resolveObservationalMemorySettings(options.settings, options.overrides);
   const workerLimits = { ...configuredWorkerLimits, maxTurns: options.maxWorkerTurns ?? settings.agentMaxTurns };
   if (settings.passive) return { observations: 0, reflections: 0, dropped: 0, skipped: "passive" };
@@ -102,12 +117,17 @@ async function flush(options: ObservationalMemoryRuntimeOptions, configuredWorke
   const thinkingLevel = resolved.thinkingLevel;
   const providerOptions = resolved.providerOptions;
   const credentialProviderId = useCaseCredentialProviderId(resolved) ?? model.provider;
-  const credential = await resolveCredentialValue(options.credential, options.credentialRequest ?? { provider: credentialProviderId, name: "apiKey" });
+  const credential = await resolveCredentialValue(
+    options.credential,
+    options.credentialRequest ?? { provider: credentialProviderId, name: "apiKey" },
+  );
   if (options.credentialRequest && !credential) return { observations: 0, reflections: 0, dropped: 0, skipped: "missing_credentials" };
   const secrets = [...(options.secrets ?? []), credential];
   const entries = await options.session.entries();
   const ledger = foldObservationalMemoryLedger(entries);
-  const observationStart = ledger.latestObservationCoverageId ? entries.findIndex((entry) => entry.id === ledger.latestObservationCoverageId) + 1 : 0;
+  const observationStart = ledger.latestObservationCoverageId
+    ? entries.findIndex((entry) => entry.id === ledger.latestObservationCoverageId) + 1
+    : 0;
   const newEntries = entries.slice(Math.max(0, observationStart));
   const newTokenCount = newEntries.reduce((sum, entry) => sum + estimateEntryTokens(entry), 0);
   let observationCount = 0;
@@ -115,9 +135,22 @@ async function flush(options: ObservationalMemoryRuntimeOptions, configuredWorke
   let dropCount = 0;
 
   if (newEntries.length && newTokenCount >= settings.observeAfterTokens) {
-    const observations = await runObserver({ entries: newEntries, provider: options.workerProvider, model, ...workerLimits, providerOptions, thinkingLevel, secrets, signal: options.signal });
+    const observations = await runObserver({
+      entries: newEntries,
+      provider: options.workerProvider,
+      model,
+      ...workerLimits,
+      providerOptions,
+      thinkingLevel,
+      secrets,
+      signal: options.signal,
+    });
     if (observations.length) {
-      await appendCustom(options, { type: OBSERVATIONS_RECORDED, observations: JSON.parse(redactSecrets(JSON.stringify(observations), secrets)), coversUpToId: newEntries.at(-1)?.id });
+      await appendCustom(options, {
+        type: OBSERVATIONS_RECORDED,
+        observations: JSON.parse(redactSecrets(JSON.stringify(observations), secrets)),
+        coversUpToId: newEntries.at(-1)?.id,
+      });
       observationCount = observations.length;
     }
   }
@@ -126,22 +159,54 @@ async function flush(options: ObservationalMemoryRuntimeOptions, configuredWorke
   const active = activeObservations(afterObservations);
   const activeTokens = active.reduce((sum, item) => sum + item.tokenCount, 0);
   if (active.length && activeTokens >= settings.reflectAfterTokens) {
-    const reflections = await runReflector({ observations: active, provider: options.workerProvider, model, ...workerLimits, providerOptions, thinkingLevel, secrets, signal: options.signal });
+    const reflections = await runReflector({
+      observations: active,
+      provider: options.workerProvider,
+      model,
+      ...workerLimits,
+      providerOptions,
+      thinkingLevel,
+      secrets,
+      signal: options.signal,
+    });
     if (reflections.length) {
-      await appendCustom(options, { type: REFLECTIONS_RECORDED, reflections: JSON.parse(redactSecrets(JSON.stringify(reflections), secrets)), coversUpToId: afterObservations.latestObservationCoverageId });
+      await appendCustom(options, {
+        type: REFLECTIONS_RECORDED,
+        reflections: JSON.parse(redactSecrets(JSON.stringify(reflections), secrets)),
+        coversUpToId: afterObservations.latestObservationCoverageId,
+      });
       reflectionCount = reflections.length;
     }
   }
 
   if (reflectionCount && activeTokens > settings.observationsPoolTargetTokens) {
-    const dropped = await runDropper({ observations: active, targetTokens: settings.observationsPoolTargetTokens, provider: options.workerProvider, model, ...workerLimits, providerOptions, thinkingLevel, secrets, signal: options.signal });
+    const dropped = await runDropper({
+      observations: active,
+      targetTokens: settings.observationsPoolTargetTokens,
+      provider: options.workerProvider,
+      model,
+      ...workerLimits,
+      providerOptions,
+      thinkingLevel,
+      secrets,
+      signal: options.signal,
+    });
     if (dropped.length) {
-      await appendCustom(options, { type: OBSERVATIONS_DROPPED, observationIds: dropped, coversUpToId: afterObservations.latestObservationCoverageId });
+      await appendCustom(options, {
+        type: OBSERVATIONS_DROPPED,
+        observationIds: dropped,
+        coversUpToId: afterObservations.latestObservationCoverageId,
+      });
       dropCount = dropped.length;
     }
   }
 
-  options.debug?.("observational-memory:flush", { observations: observationCount, reflections: reflectionCount, dropped: dropCount, modelSource: resolved.source });
+  options.debug?.("observational-memory:flush", {
+    observations: observationCount,
+    reflections: reflectionCount,
+    dropped: dropCount,
+    modelSource: resolved.source,
+  });
   return { observations: observationCount, reflections: reflectionCount, dropped: dropCount };
 }
 

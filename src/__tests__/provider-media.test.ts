@@ -8,9 +8,9 @@ import {
   openAIAudioFormat,
   providerUploadCacheKey,
   rejectProviderMediaBlock,
-  serializePdfDocumentWireBlock,
   serializeOpenAIResponsesInputAudio,
   serializeOpenAIResponsesInputFile,
+  serializePdfDocumentWireBlock,
 } from "../providers/media.js";
 
 describe("provider media primitives", () => {
@@ -31,15 +31,18 @@ describe("provider media primitives", () => {
   });
 
   it("serializes Anthropic PDF documents and rejects non-pdf", () => {
-    assert.deepEqual(serializePdfDocumentWireBlock({
-      mediaType: "application/pdf",
-      data: "abc",
-      title: "report.pdf",
-    }), {
-      type: "document",
-      source: { type: "base64", media_type: "application/pdf", data: "abc" },
-      title: "report.pdf",
-    });
+    assert.deepEqual(
+      serializePdfDocumentWireBlock({
+        mediaType: "application/pdf",
+        data: "abc",
+        title: "report.pdf",
+      }),
+      {
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: "abc" },
+        title: "report.pdf",
+      },
+    );
     assert.throws(() => serializePdfDocumentWireBlock({ mediaType: "text/plain", data: "abc" }), /application\/pdf/);
   });
 

@@ -1,7 +1,8 @@
 import {
-  createMemoryCheckpointStore,
   type CheckpointRecord,
   type CheckpointStore,
+  createMemoryCheckpointStore,
+  resolveRedactor,
   type SecretRedactor,
 } from "@arnilo/prism";
 import {
@@ -10,7 +11,6 @@ import {
   parseCheckpointValue,
   prepareCheckpointRecord,
   resolveListLimit,
-  resolveRedactor,
 } from "./checkpoint-core.js";
 import { WorkflowCheckpointError } from "./errors.js";
 import type {
@@ -31,11 +31,9 @@ export interface GenericWorkflowCheckpointOptions extends WorkflowCheckpointAdap
 }
 
 /** Adapts Prism's generic core CheckpointStore to workflow checkpoint shapes. */
-export function createWorkflowCheckpoints(
-  options: GenericWorkflowCheckpointOptions,
-): WorkflowCheckpointAdapter {
+export function createWorkflowCheckpoints(options: GenericWorkflowCheckpointOptions): WorkflowCheckpointAdapter {
   const limits = adapterByteLimits(options);
-  const redactor = resolveRedactor(options);
+  const redactor = resolveRedactor(options.redactor, options.secrets);
 
   return {
     async save(input): Promise<void> {
@@ -105,18 +103,29 @@ export function createWorkflowCheckpoints(
     async requestCancel(input: WorkflowCheckpointLoadInput): Promise<void> {
       const key = encodeKey(input.workflowId, input.runId);
       try {
-        const current = await options.store.loadCheckpoint({ namespace: WORKFLOW_CANCEL_NAMESPACE, key, ...input.ownership, signal: input.signal });
+        const current = await options.store.loadCheckpoint({
+          namespace: WORKFLOW_CANCEL_NAMESPACE,
+          key,
+          ...input.ownership,
+          signal: input.signal,
+        });
         try {
           await options.store.saveCheckpoint({
-            namespace: WORKFLOW_CANCEL_NAMESPACE, key,
+            namespace: WORKFLOW_CANCEL_NAMESPACE,
+            key,
             version: (current?.version ?? 0) + 1,
             expectedVersion: current?.version ?? 0,
-            value: { requested: true }, category: "requested",
-            ...input.ownership, signal: input.signal,
+            value: { requested: true },
+            category: "requested",
+            ...input.ownership,
+            signal: input.signal,
           });
         } catch (error) {
-          if (!(error instanceof Error && "code" in error && error.code === "ERR_PRISM_CHECKPOINT_CONFLICT")
-            || !(await options.store.loadCheckpoint({ namespace: WORKFLOW_CANCEL_NAMESPACE, key, ...input.ownership, signal: input.signal }))) throw error;
+          if (
+            !(error instanceof Error && "code" in error && error.code === "ERR_PRISM_CHECKPOINT_CONFLICT") ||
+            !(await options.store.loadCheckpoint({ namespace: WORKFLOW_CANCEL_NAMESPACE, key, ...input.ownership, signal: input.signal }))
+          )
+            throw error;
         }
       } catch (error) {
         throw asWorkflowCheckpointError(error);
@@ -125,10 +134,14 @@ export function createWorkflowCheckpoints(
 
     async isCancelRequested(input: WorkflowCheckpointLoadInput): Promise<boolean> {
       try {
-        return Boolean(await options.store.loadCheckpoint({
-          namespace: WORKFLOW_CANCEL_NAMESPACE, key: encodeKey(input.workflowId, input.runId),
-          ...input.ownership, signal: input.signal,
-        }));
+        return Boolean(
+          await options.store.loadCheckpoint({
+            namespace: WORKFLOW_CANCEL_NAMESPACE,
+            key: encodeKey(input.workflowId, input.runId),
+            ...input.ownership,
+            signal: input.signal,
+          }),
+        );
       } catch (error) {
         throw asWorkflowCheckpointError(error);
       }
@@ -137,8 +150,10 @@ export function createWorkflowCheckpoints(
     async clearCancelRequest(input: WorkflowCheckpointLoadInput): Promise<void> {
       try {
         await options.store.deleteCheckpoint({
-          namespace: WORKFLOW_CANCEL_NAMESPACE, key: encodeKey(input.workflowId, input.runId),
-          ...input.ownership, signal: input.signal,
+          namespace: WORKFLOW_CANCEL_NAMESPACE,
+          key: encodeKey(input.workflowId, input.runId),
+          ...input.ownership,
+          signal: input.signal,
         });
       } catch (error) {
         throw asWorkflowCheckpointError(error);
@@ -148,9 +163,7 @@ export function createWorkflowCheckpoints(
 }
 
 /** In-process workflow adapter backed by core's generic reference store. */
-export function createMemoryWorkflowCheckpoints(
-  options: WorkflowCheckpointAdapterOptions = {},
-): WorkflowCheckpointAdapter {
+export function createMemoryWorkflowCheckpoints(options: WorkflowCheckpointAdapterOptions = {}): WorkflowCheckpointAdapter {
   return createWorkflowCheckpoints({ ...options, store: createMemoryCheckpointStore() });
 }
 
@@ -198,16 +211,12 @@ export function redactCheckpointOutputs(
   if (!redactor) return value;
   const nodes: Record<string, (typeof value.nodes)[string]> = {};
   for (const [id, node] of Object.entries(value.nodes)) {
-    nodes[id] = node.output === undefined
-      ? node
-      : { ...node, output: redactValue(node.output, redactor) };
+    nodes[id] = node.output === undefined ? node : { ...node, output: redactValue(node.output, redactor) };
   }
   return {
     ...value,
     nodes,
-    workflowInput: value.workflowInput === undefined
-      ? value.workflowInput
-      : redactValue(value.workflowInput, redactor),
+    workflowInput: value.workflowInput === undefined ? value.workflowInput : redactValue(value.workflowInput, redactor),
     redacted: true,
   };
 }

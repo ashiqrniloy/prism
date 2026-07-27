@@ -4,13 +4,13 @@ import type {
   CommandDefinition,
   Guardrails,
   JsonObject,
-  RunLimits,
+  MediaHostnameResolver,
   OwnershipScope,
   PermissionPolicy,
+  RunLimits,
   SecretRedactor,
   ToolDefinition,
   ToolValidator,
-  MediaHostnameResolver,
 } from "@arnilo/prism";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 
@@ -71,7 +71,11 @@ export interface PrismMcpResource {
   readonly title?: string;
   readonly description?: string;
   readonly mimeType?: string;
-  readonly read: (input: { readonly uri: string; readonly authorization: PrismMcpAuthorization; readonly signal: AbortSignal }) => unknown | Promise<unknown>;
+  readonly read: (input: {
+    readonly uri: string;
+    readonly authorization: PrismMcpAuthorization;
+    readonly signal: AbortSignal;
+  }) => unknown | Promise<unknown>;
 }
 
 export interface PrismMcpPrompt {
@@ -80,7 +84,11 @@ export interface PrismMcpPrompt {
   readonly description?: string;
   /** Keep schemas shallow: MCP prompt arguments are strings. */
   readonly arguments?: Readonly<Record<string, { readonly description?: string; readonly required?: boolean }>>;
-  readonly get: (input: { readonly arguments: Readonly<Record<string, string>>; readonly authorization: PrismMcpAuthorization; readonly signal: AbortSignal }) => unknown | Promise<unknown>;
+  readonly get: (input: {
+    readonly arguments: Readonly<Record<string, string>>;
+    readonly authorization: PrismMcpAuthorization;
+    readonly signal: AbortSignal;
+  }) => unknown | Promise<unknown>;
 }
 
 export interface CreatePrismMcpServerOptions {
@@ -114,7 +122,10 @@ export interface PrismMcpRequestIdentity {
 export interface CreatePrismMcpWebHandlerOptions {
   readonly resolveAuthInfo?: (request: Request) => AuthInfo | undefined | Promise<AuthInfo | undefined>;
   /** Required for stateful sessions; binds every session request to one validated host principal. */
-  readonly resolveIdentity?: (request: Request, authInfo: AuthInfo | undefined) => PrismMcpRequestIdentity | false | Promise<PrismMcpRequestIdentity | false>;
+  readonly resolveIdentity?: (
+    request: Request,
+    authInfo: AuthInfo | undefined,
+  ) => PrismMcpRequestIdentity | false | Promise<PrismMcpRequestIdentity | false>;
   readonly sessionIdGenerator?: () => string;
   readonly maxSessions?: number;
   readonly allowedHosts?: readonly string[];
@@ -148,11 +159,23 @@ export interface ConnectMcpToolsOptions {
   readonly signal?: AbortSignal;
 }
 
-export interface McpRoot { readonly uri: string; readonly name?: string }
-export interface PrismMcpSamplingRequest { readonly params: unknown; readonly signal: AbortSignal }
-export interface PrismMcpElicitationRequest { readonly params: unknown; readonly signal: AbortSignal }
+export interface McpRoot {
+  readonly uri: string;
+  readonly name?: string;
+}
+export interface PrismMcpSamplingRequest {
+  readonly params: unknown;
+  readonly signal: AbortSignal;
+}
+export interface PrismMcpElicitationRequest {
+  readonly params: unknown;
+  readonly signal: AbortSignal;
+}
 /** Host callback may return this marker; accepted elicitation fails closed without it. Marker is removed before protocol output. */
-export interface PrismMcpElicitationResult extends Readonly<Record<string, unknown>> { readonly action: "accept" | "decline" | "cancel"; readonly humanInteraction?: true }
+export interface PrismMcpElicitationResult extends Readonly<Record<string, unknown>> {
+  readonly action: "accept" | "decline" | "cancel";
+  readonly humanInteraction?: true;
+}
 
 export interface ConnectMcpCapabilitiesOptions extends ConnectMcpToolsOptions {
   readonly roots?: () => readonly McpRoot[] | Promise<readonly McpRoot[]>;

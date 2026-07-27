@@ -1,9 +1,9 @@
+import assert from "node:assert/strict";
 import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
-import { createAgent, createMockProvider, providerDone, providerError, providerTextDelta } from "../index.js";
-import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { CliOptions } from "../cli-runner.js";
+import { parseCliArgs, runCli } from "../cli-runner.js";
+import { createAgent, createMockProvider, providerDone, providerError, providerTextDelta } from "../index.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -11,7 +11,9 @@ class MemoryWritable extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
-  text(): string { return this.chunks.join(""); }
+  text(): string {
+    return this.chunks.join("");
+  }
 }
 
 function streams(input = "") {
@@ -27,7 +29,34 @@ function session(text = "Hello") {
 
 describe("cli", () => {
   it("cli_parser_accepts_prompt_mode_and_core_flags", () => {
-    const parsed = parseCliArgs(["-p", "Hi", "--mode", "json", "--provider", "mock", "--model", "demo", "--session", "s1", "--config", "c.json", "--resource", "r", "--extension", "e", "--tool", "t", "--system", "sys", "--context", "ctx", "--compact", "3", "--max-tool-rounds", "2"]);
+    const parsed = parseCliArgs([
+      "-p",
+      "Hi",
+      "--mode",
+      "json",
+      "--provider",
+      "mock",
+      "--model",
+      "demo",
+      "--session",
+      "s1",
+      "--config",
+      "c.json",
+      "--resource",
+      "r",
+      "--extension",
+      "e",
+      "--tool",
+      "t",
+      "--system",
+      "sys",
+      "--context",
+      "ctx",
+      "--compact",
+      "3",
+      "--max-tool-rounds",
+      "2",
+    ]);
     assert.equal(parsed.prompt, "Hi");
     assert.equal(parsed.mode, "json");
     assert.equal(parsed.provider, "mock");
@@ -67,7 +96,11 @@ describe("cli", () => {
     const io = streams();
     const code = await runCli(["--mode", "json", "-p", "Hi"], { ...io, createSession: () => session("Hi") });
     assert.equal(code, 0);
-    const lines = io.stdout.text().trim().split("\n").map((line) => JSON.parse(line));
+    const lines = io.stdout
+      .text()
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
     assert.ok(lines.some((line) => line.type === "event" && line.event.type === "message_delta"));
     assert.ok(lines.every((line) => line.sessionId));
   });

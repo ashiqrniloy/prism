@@ -1,91 +1,85 @@
+export type { EncryptedCredentialStore, StoredCredentialStore } from "./encrypted-store.js";
 export {
   createEncryptedCredentialStore,
   openEncryptedCredentialStore,
   rotateEncryptedCredentialStorePassphrase,
 } from "./encrypted-store.js";
-export type { EncryptedCredentialStore, StoredCredentialStore } from "./encrypted-store.js";
-
-export { createKeychainCredentialStore } from "./keychain-store.js";
-export type { KeychainCredentialStore } from "./keychain-store.js";
-
-export { createStoredCredentialResolver, createOAuthCredentialStoreAdapter } from "./resolver.js";
-export type { ExtendedOAuthCredentialStore } from "./resolver.js";
-
+export { assertScryptParameters, decryptBytes, encryptBytes, resolveScryptParameters } from "./envelope.js";
 export {
-  CredentialStoreError,
   CredentialDecryptError,
-  WeakKdfParametersError,
+  CredentialStoreError,
   CredentialStoreLockedError,
-  CredentialStoreUnavailableError,
   CredentialStoreTimeoutError,
-  isCredentialStoreError,
+  CredentialStoreUnavailableError,
   isCredentialDecryptError,
+  isCredentialStoreError,
   isCredentialStoreUnavailableError,
+  WeakKdfParametersError,
 } from "./errors.js";
-
-export {
-  ENVELOPE_VERSION,
-  VAULT_VERSION,
-  DEFAULT_SCRYPT_N,
-  DEFAULT_SCRYPT_R,
-  DEFAULT_SCRYPT_P,
-  DEFAULT_SCRYPT_KEY_LENGTH,
-  MIN_SCRYPT_N,
-  DEFAULT_FILE_MODE,
-  DEFAULT_KEYCHAIN_TIMEOUT_MS,
-} from "./types.js";
-export {
-  DEFAULT_MAX_ENVELOPE_FILE_BYTES,
-  HARD_MAX_ENVELOPE_FILE_BYTES,
-  DEFAULT_MAX_VAULT_BYTES,
-  HARD_MAX_VAULT_BYTES,
-  DEFAULT_MAX_SCRYPT_MEMORY_BYTES,
-  HARD_MAX_SCRYPT_MEMORY_BYTES,
-  DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES,
-  HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
-  HARD_KEYCHAIN_TIMEOUT_MS,
-} from "./limits.js";
-export type {
-  ScryptParameters,
-  EncryptedCredentialStoreLimits,
-  EncryptedEnvelope,
-  EncryptedCredentialStoreOptions,
-  KeychainCredentialStoreOptions,
-  RotateEncryptedCredentialStoreOptions,
-} from "./types.js";
-
-export { encryptBytes, decryptBytes, resolveScryptParameters, assertScryptParameters } from "./envelope.js";
-
-export {
-  createOAuth2Provider,
-  createOAuth2PkceVerifier,
-  computeOAuth2S256Challenge,
-  type OAuth2ProviderConfig,
-} from "./oauth2.js";
-export { resolveWorkloadScopes, type WorkloadScopeBundle, type WorkloadScopeAccess } from "./scopes.js";
-export {
-  createMicrosoft365OAuthProvider,
-  resolveMicrosoft365Scopes,
-  MICROSOFT365_SCOPE_BUNDLES,
-  MICROSOFT365_BASE_SCOPES,
-  type Microsoft365Capability,
-  type Microsoft365OAuthOptions,
-} from "./microsoft365-oauth.js";
 export {
   createGoogleWorkspaceOAuthProvider,
-  resolveGoogleWorkspaceScopes,
-  GOOGLE_WORKSPACE_SCOPE_BUNDLES,
   GOOGLE_WORKSPACE_BASE_SCOPES,
+  GOOGLE_WORKSPACE_SCOPE_BUNDLES,
   type GoogleWorkspaceCapability,
   type GoogleWorkspaceOAuthOptions,
+  resolveGoogleWorkspaceScopes,
 } from "./google-workspace-oauth.js";
-export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider } from "./work-token.js";
+export type { KeychainCredentialStore } from "./keychain-store.js";
+export { createKeychainCredentialStore } from "./keychain-store.js";
+export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js";
+export {
+  createMemoryHostKms,
+  decryptWithHostKms,
+  encryptWithHostKms,
+  KMS_ENVELOPE_VERSION,
+  kmsBuffersEqual,
+} from "./kms.js";
+export {
+  DEFAULT_MAX_ENVELOPE_FILE_BYTES,
+  DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES,
+  DEFAULT_MAX_SCRYPT_MEMORY_BYTES,
+  DEFAULT_MAX_VAULT_BYTES,
+  HARD_KEYCHAIN_TIMEOUT_MS,
+  HARD_MAX_ENVELOPE_FILE_BYTES,
+  HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
+  HARD_MAX_SCRYPT_MEMORY_BYTES,
+  HARD_MAX_VAULT_BYTES,
+} from "./limits.js";
+export {
+  createMicrosoft365OAuthProvider,
+  MICROSOFT365_BASE_SCOPES,
+  MICROSOFT365_SCOPE_BUNDLES,
+  type Microsoft365Capability,
+  type Microsoft365OAuthOptions,
+  resolveMicrosoft365Scopes,
+} from "./microsoft365-oauth.js";
 
 export {
-  encryptWithHostKms,
-  decryptWithHostKms,
-  createMemoryHostKms,
-  kmsBuffersEqual,
-  KMS_ENVELOPE_VERSION,
-} from "./kms.js";
-export type { HostKms, KmsEnvelope, HostKmsCryptoOptions } from "./kms.js";
+  computeOAuth2S256Challenge,
+  createOAuth2PkceVerifier,
+  createOAuth2Provider,
+  type OAuth2ProviderConfig,
+} from "./oauth2.js";
+export type { ExtendedOAuthCredentialStore } from "./resolver.js";
+export { createOAuthCredentialStoreAdapter, createStoredCredentialResolver } from "./resolver.js";
+export { resolveWorkloadScopes, type WorkloadScopeAccess, type WorkloadScopeBundle } from "./scopes.js";
+export type {
+  EncryptedCredentialStoreLimits,
+  EncryptedCredentialStoreOptions,
+  EncryptedEnvelope,
+  KeychainCredentialStoreOptions,
+  RotateEncryptedCredentialStoreOptions,
+  ScryptParameters,
+} from "./types.js";
+export {
+  DEFAULT_FILE_MODE,
+  DEFAULT_KEYCHAIN_TIMEOUT_MS,
+  DEFAULT_SCRYPT_KEY_LENGTH,
+  DEFAULT_SCRYPT_N,
+  DEFAULT_SCRYPT_P,
+  DEFAULT_SCRYPT_R,
+  ENVELOPE_VERSION,
+  MIN_SCRYPT_N,
+  VAULT_VERSION,
+} from "./types.js";
+export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider } from "./work-token.js";

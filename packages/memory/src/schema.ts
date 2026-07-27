@@ -14,7 +14,9 @@ export function validateAgainstJsonSchema(value: unknown, schema: JsonObject, pa
 
 function assertSafeSchema(value: unknown, path: string): void {
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => assertSafeSchema(entry, `${path}[${index}]`));
+    value.forEach((entry, index) => {
+      assertSafeSchema(entry, `${path}[${index}]`);
+    });
     return;
   }
   if (!isPlainObject(value)) return;
@@ -69,7 +71,9 @@ function validateNode(value: unknown, schema: JsonObject, path: string): void {
       throw new MemoryValidationError(`${path} above maxItems`);
     }
     if (isPlainObject(schema.items)) {
-      value.forEach((entry, index) => validateNode(entry, schema.items as JsonObject, `${path}[${index}]`));
+      value.forEach((entry, index) => {
+        validateNode(entry, schema.items as JsonObject, `${path}[${index}]`);
+      });
     }
   }
 

@@ -1,14 +1,11 @@
 import { createMemoryRunFeedbackStore } from "@arnilo/prism";
 import { appendEvaluationFeedback, createMemoryEvaluationStore, type EvaluationRecord } from "@arnilo/prism-evals";
-import {
-  createInMemoryTelemetry,
-  createOpenTelemetryInstrumentation,
-} from "@arnilo/prism-observability-opentelemetry";
+import { createInMemoryTelemetry, createOpenTelemetryInstrumentation } from "@arnilo/prism-observability-opentelemetry";
 
 const ownership = { tenantId: "example-tenant", userId: "example-user" } as const;
 const run = { runId: "run-1", sessionId: "session-1", traceId: "trace-1", ...ownership };
 const feedback = createMemoryRunFeedbackStore({
-  resolveRun: ({ runId }) => runId === run.runId ? run : false,
+  resolveRun: ({ runId }) => (runId === run.runId ? run : false),
 });
 const evaluation: EvaluationRecord = {
   id: "eval-1",
@@ -49,7 +46,9 @@ telemetry.handleRunFeedback({
 });
 telemetry.handleEvaluation({ runId: run.runId, status: evaluation.status, score: evaluation.score, hasReason: false });
 
-console.log(JSON.stringify({
-  feedback: (await feedback.query({ ...ownership, runId: run.runId })).items,
-  metricLabels: memory.metrics.map((metric) => metric.attributes),
-}));
+console.log(
+  JSON.stringify({
+    feedback: (await feedback.query({ ...ownership, runId: run.runId })).items,
+    metricLabels: memory.metrics.map((metric) => metric.attributes),
+  }),
+);

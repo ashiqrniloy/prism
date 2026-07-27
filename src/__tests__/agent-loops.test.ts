@@ -1,27 +1,26 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { dispatchToolCallsInOrder, generateValidateReviseLoop, resolveToolConcurrency, singleShotLoop } from "../agent-loops.js";
 import {
+  type AgentEvent,
+  AgentRunError,
+  type AIProvider,
+  type ArtifactValidation,
   createAgent,
   createMemorySessionStore,
   createMockProvider,
   createSecretRedactor,
-  AgentRunError,
-  providerDone,
-  providerTextDelta,
-  providerThinkingDelta,
-  redactAgentEvent,
-  toolCallContent,
-  type AgentEvent,
-  type AIProvider,
   type LoopContext,
   type Message,
   type ProviderRequest,
   type ProviderTurnResult,
+  providerDone,
+  providerTextDelta,
+  providerThinkingDelta,
+  redactAgentEvent,
   type ToolDefinition,
-  type Usage,
-  type ArtifactValidation,
+  toolCallContent,
 } from "../index.js";
-import { dispatchToolCallsInOrder, generateValidateReviseLoop, resolveToolConcurrency, singleShotLoop } from "../agent-loops.js";
 import type { AgentInput } from "../input.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
@@ -43,7 +42,9 @@ function stubCtx(overrides: Partial<LoopContext> & { generate: LoopContext["gene
     maxToolRounds: 1,
     toolConcurrency: 1,
     assemble: async () => ({ model: { provider: "mock", model: "demo" }, messages: [] }) as ProviderRequest,
-    dispatchToolCall: async () => { throw new Error("no tools"); },
+    dispatchToolCall: async () => {
+      throw new Error("no tools");
+    },
     appendMessage: async () => {},
     emit: (event) => events.push(event),
     ...overrides,
@@ -56,11 +57,15 @@ describe("agent loop strategies", () => {
       const events: AgentEvent[] = [];
       const ctx = stubCtx({
         input: "Hi",
-        generate: async () => ({ content: [{ type: "text", text: "ok" }], calls: [], messageId: "m1", started: true }) as ProviderTurnResult,
+        generate: async () =>
+          ({ content: [{ type: "text", text: "ok" }], calls: [], messageId: "m1", started: true }) as ProviderTurnResult,
         emit: (event) => events.push(event),
       });
       const usage = await singleShotLoop.run(ctx);
-      assert.deepEqual(events.map((event) => event.type), ["turn_started", "message_finished", "turn_finished"]);
+      assert.deepEqual(
+        events.map((event) => event.type),
+        ["turn_started", "message_finished", "turn_finished"],
+      );
       assert.equal(usage, undefined);
       assert.equal(ctx.history.length, 1);
       assert.equal(ctx.history[0]?.role, "assistant");
@@ -74,11 +79,17 @@ describe("agent loop strategies", () => {
           calls: [{ ...toolCallContent("hosted_1", "web_search_call"), authority: "provider-hosted" }],
           started: true,
         }),
-        dispatchToolCall: async () => { dispatched += 1; throw new Error("must not dispatch"); },
+        dispatchToolCall: async () => {
+          dispatched += 1;
+          throw new Error("must not dispatch");
+        },
       });
       await singleShotLoop.run(ctx);
       assert.equal(dispatched, 0);
-      assert.equal(ctx.history.some((message) => message.role === "tool"), false);
+      assert.equal(
+        ctx.history.some((message) => message.role === "tool"),
+        false,
+      );
     });
 
     it("respects maxToolRounds and dispatches tools, then stops", async () => {
@@ -90,7 +101,13 @@ describe("agent loop strategies", () => {
         maxToolRounds: 1,
         generate: async () => {
           generateCalls += 1;
-          if (generateCalls === 1) return { content: [{ type: "text", text: "calling" }], calls: [toolCallContent("c1", "echo", { text: "hi" })], messageId: "m1", started: true };
+          if (generateCalls === 1)
+            return {
+              content: [{ type: "text", text: "calling" }],
+              calls: [toolCallContent("c1", "echo", { text: "hi" })],
+              messageId: "m1",
+              started: true,
+            };
           return { content: [{ type: "text", text: "done" }], calls: [], messageId: "m2", started: true };
         },
         dispatchToolCall: async (call) => {
@@ -116,12 +133,12 @@ describe("agent loop strategies", () => {
         input: "Hi",
         inputMessages: [{ role: "user", content: [{ type: "text", text: "Hi" }] }],
         maxToolRounds: 2,
-        assemble: async (_nextInput, _toolResults, turn) => {
+        assemble: async (_nextInput, _toolResults, _turn) => {
           assembledRoles.push(ctx.history.map((message) => message.role));
           assembledToolCallIds.push(
             ctx.history
               .filter((message) => message.role === "tool")
-              .map((message) => message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined),
+              .map((message) => (message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined)),
           );
           return { model: { provider: "mock", model: "demo" }, messages: ctx.history } as ProviderRequest;
         },
@@ -130,10 +147,7 @@ describe("agent loop strategies", () => {
           if (generateCalls === 1) {
             return {
               content: [{ type: "text", text: "round1" }],
-              calls: [
-                toolCallContent("c1a", "echo", { text: "one-a" }),
-                toolCallContent("c1b", "echo", { text: "one-b" }),
-              ],
+              calls: [toolCallContent("c1a", "echo", { text: "one-a" }), toolCallContent("c1b", "echo", { text: "one-b" })],
               messageId: "m1",
               started: true,
             };
@@ -141,10 +155,7 @@ describe("agent loop strategies", () => {
           if (generateCalls === 2) {
             return {
               content: [{ type: "text", text: "round2" }],
-              calls: [
-                toolCallContent("c2a", "echo", { text: "two-a" }),
-                toolCallContent("c2b", "echo", { text: "two-b" }),
-              ],
+              calls: [toolCallContent("c2a", "echo", { text: "two-a" }), toolCallContent("c2b", "echo", { text: "two-b" })],
               messageId: "m2",
               started: true,
             };
@@ -156,13 +167,14 @@ describe("agent loop strategies", () => {
       });
       await singleShotLoop.run(ctx);
       assert.equal(generateCalls, 3);
-      assert.deepEqual(ctx.history.map((message) => message.role), [
-        "user", "assistant", "tool", "tool", "assistant", "tool", "tool", "assistant",
-      ]);
+      assert.deepEqual(
+        ctx.history.map((message) => message.role),
+        ["user", "assistant", "tool", "tool", "assistant", "tool", "tool", "assistant"],
+      );
       assert.deepEqual(
         ctx.history
           .filter((message) => message.role === "tool")
-          .map((message) => message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined),
+          .map((message) => (message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined)),
         ["c1a", "c1b", "c2a", "c2b"],
       );
       assert.deepEqual(assembledRoles[2], ["user", "assistant", "tool", "tool", "assistant", "tool", "tool"]);
@@ -190,7 +202,9 @@ describe("agent loop strategies", () => {
       await singleShotLoop.run(ctx);
       assert.deepEqual(order, ["c1", "c2"]);
       assert.deepEqual(
-        ctx.history.filter((message) => message.role === "tool").map((message) => message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined),
+        ctx.history
+          .filter((message) => message.role === "tool")
+          .map((message) => (message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined)),
         ["c1", "c2"],
       );
     });
@@ -220,7 +234,9 @@ describe("agent loop strategies", () => {
       await singleShotLoop.run(ctx);
       assert.equal(maxActive, 2);
       assert.deepEqual(
-        ctx.history.filter((message) => message.role === "tool").map((message) => message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined),
+        ctx.history
+          .filter((message) => message.role === "tool")
+          .map((message) => (message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined)),
         ["c1", "c2"],
       );
     });
@@ -242,10 +258,7 @@ describe("agent loop strategies", () => {
             return { toolCallId: call.id, name: call.name };
           },
         });
-        await dispatchToolCallsInOrder([
-          toolCallContent("c1", exclusiveName ?? "read", {}),
-          toolCallContent("c2", "read", {}),
-        ], ctx);
+        await dispatchToolCallsInOrder([toolCallContent("c1", exclusiveName ?? "read", {}), toolCallContent("c2", "read", {})], ctx);
         return maxActive;
       };
 
@@ -309,7 +322,13 @@ describe("agent loop strategies", () => {
     it("resolveToolConcurrency reads single-shot loop options with RunOptions precedence", () => {
       assert.equal(resolveToolConcurrency({}, {}), 1);
       assert.equal(resolveToolConcurrency({ loop: { strategy: "single-shot", toolConcurrency: 3 } }, {}), 3);
-      assert.equal(resolveToolConcurrency({ loop: { strategy: "single-shot", toolConcurrency: 2 } }, { loop: { strategy: "single-shot", toolConcurrency: 5 } }), 2);
+      assert.equal(
+        resolveToolConcurrency(
+          { loop: { strategy: "single-shot", toolConcurrency: 2 } },
+          { loop: { strategy: "single-shot", toolConcurrency: 5 } },
+        ),
+        2,
+      );
       assert.equal(resolveToolConcurrency({}, { loop: { strategy: "generate-validate-revise", validator: () => ({ ok: true }) } }), 1);
       assert.equal(resolveToolConcurrency({ loop: { strategy: "single-shot", toolConcurrency: 0 } }, {}), 1);
     });
@@ -325,10 +344,20 @@ describe("agent loop strategies", () => {
       const reader = collect(session.subscribe());
       await session.run("Hi");
       const events = await reader;
-      assert.deepEqual(events.map((event) => event.type), [
-        "agent_started", "turn_started", "provider_turn_started", "message_started",
-        "message_delta", "provider_turn_finished", "message_finished", "turn_finished", "agent_finished",
-      ]);
+      assert.deepEqual(
+        events.map((event) => event.type),
+        [
+          "agent_started",
+          "turn_started",
+          "provider_turn_started",
+          "message_started",
+          "message_delta",
+          "provider_turn_finished",
+          "message_finished",
+          "turn_finished",
+          "agent_finished",
+        ],
+      );
     });
 
     it("uses ToolDefinition.exclusive to serialize a runtime turn", async () => {
@@ -356,7 +385,10 @@ describe("agent loop strategies", () => {
       const agent = createAgent({
         model: { provider: "mock", model: "demo" },
         provider,
-        tools: [{ name: "shell", exclusive: true, execute }, { name: "read", execute }],
+        tools: [
+          { name: "shell", exclusive: true, execute },
+          { name: "read", execute },
+        ],
         loop: { strategy: "single-shot", toolConcurrency: 2 },
       });
 
@@ -366,8 +398,18 @@ describe("agent loop strategies", () => {
 
     it("RunOptions.loop overrides AgentConfig.loop", async () => {
       const requests: ProviderRequest[] = [];
-      const provider: AIProvider = { id: "mock", async *generate(request) { requests.push(request); yield providerTextDelta("x"); yield providerDone(); } };
-      const echo: ToolDefinition = { name: "echo", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ignored" }) };
+      const provider: AIProvider = {
+        id: "mock",
+        async *generate(request) {
+          requests.push(request);
+          yield providerTextDelta("x");
+          yield providerDone();
+        },
+      };
+      const echo: ToolDefinition = {
+        name: "echo",
+        execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ignored" }),
+      };
       const agent = createAgent({
         model: { provider: "mock", model: "demo" },
         provider,
@@ -380,7 +422,13 @@ describe("agent loop strategies", () => {
       let ran = "init";
       await session.run("Hi", {
         maxToolRounds: 1,
-        loop: { name: "counter", async run() { ran = "custom"; return undefined; } } as never,
+        loop: {
+          name: "counter",
+          async run() {
+            ran = "custom";
+            return undefined;
+          },
+        } as never,
       });
       await reader;
       assert.equal(ran, "custom");
@@ -395,8 +443,14 @@ describe("agent loop strategies", () => {
       const reader = collect(session.subscribe());
       await session.run("Hi", { loop: { strategy: "single-shot" } });
       const events = await reader;
-      assert.equal(events.some((event) => event.type === "turn_finished"), true);
-      assert.equal(events.some((event) => event.type === "agent_finished"), true);
+      assert.equal(
+        events.some((event) => event.type === "turn_finished"),
+        true,
+      );
+      assert.equal(
+        events.some((event) => event.type === "agent_finished"),
+        true,
+      );
     });
   });
 
@@ -415,14 +469,19 @@ describe("agent loop strategies", () => {
           generateCalls += 1;
           return { content: [{ type: "text", text }], calls: [], messageId: `m${generateCalls}`, started: true };
         },
-        appendMessage: async (message) => { appendedMessages.push(message); },
+        appendMessage: async (message) => {
+          appendedMessages.push(message);
+        },
         emit: () => {},
       });
       // patch generate to record the text it produced
       const orig = ctx.generate;
       ctx.generate = async (request) => {
         const result = await orig(request);
-        const produced = result.content.filter((block) => block.type === "text").map((block) => block.type === "text" ? block.text : "").join("");
+        const produced = result.content
+          .filter((block) => block.type === "text")
+          .map((block) => (block.type === "text" ? block.text : ""))
+          .join("");
         assistantTexts.push(produced);
         return result;
       };
@@ -434,7 +493,7 @@ describe("agent loop strategies", () => {
     it("fails twice then passes: loops 3 turns, appends 2 repair messages, returns final usage", async () => {
       const { ctx, assistantTexts, appendedMessages } = reviseCtx({
         generateTexts: ["draft1", "draft2", "draft3"],
-        validator: (value) => value === "draft3" ? { ok: true } : { ok: false, errors: [{ message: "not draft3" }] },
+        validator: (value) => (value === "draft3" ? { ok: true } : { ok: false, errors: [{ message: "not draft3" }] }),
       });
       const loop = generateValidateReviseLoop({
         validator: (value) => (value === "draft3" ? { ok: true } : { ok: false, errors: [{ message: "not draft3" }] }),
@@ -480,14 +539,17 @@ describe("agent loop strategies", () => {
       let repairedValue: unknown = "untouched";
       let repairedFailure: unknown;
       const { ctx, assistantTexts, appendedMessages } = reviseCtx({
-        generateTexts: ["not-json", "{\"ok\":true}"],
+        generateTexts: ["not-json", '{"ok":true}'],
         validator: () => ({ ok: true }),
       });
       const origEmit = ctx.emit;
-      ctx.emit = (event) => { events.push(event); origEmit(event); };
+      ctx.emit = (event) => {
+        events.push(event);
+        origEmit(event);
+      };
       const loop = generateValidateReviseLoop({
         validator: () => ({ ok: true }),
-        parser: (text) => text.startsWith("{") ? { ok: true, value: text } : { ok: false, error: "invalid JSON" },
+        parser: (text) => (text.startsWith("{") ? { ok: true, value: text } : { ok: false, error: "invalid JSON" }),
         repairer: (value, failure) => {
           repairedValue = value;
           repairedFailure = failure;
@@ -499,15 +561,24 @@ describe("agent loop strategies", () => {
       // Bug report: parse failure previously returned after 1 turn; now consumes budget.
       assert.equal(assistantTexts.length, 2);
       assert.equal(repairedValue, undefined);
-      assert.deepEqual((repairedFailure as { errors?: { message: string }[] }).errors?.map((e) => e.message), ["invalid JSON"]);
+      assert.deepEqual(
+        (repairedFailure as { errors?: { message: string }[] }).errors?.map((e) => e.message),
+        ["invalid JSON"],
+      );
       const repairs = appendedMessages.filter((message) => message.role === "user");
       assert.equal(repairs.length, 1);
       assert.equal(repairs[0]?.content[0]?.type === "text" ? repairs[0].content[0].text : undefined, "emit valid JSON");
       // Parse failure surfaces as a validation failure with parse metadata.
       const finished = events.filter((event) => event.type === "artifact_validation_finished");
       assert.equal((finished[0] as { result?: { metadata?: { reason?: string } } })?.result?.metadata?.reason, "parse_error");
-      assert.equal(events.some((event) => event.type === "artifact_revision_started"), true);
-      assert.equal(events.some((event) => event.type === "artifact_finished"), true);
+      assert.equal(
+        events.some((event) => event.type === "artifact_revision_started"),
+        true,
+      );
+      assert.equal(
+        events.some((event) => event.type === "artifact_finished"),
+        true,
+      );
     });
 
     it("persistent parse failure exhausts budget: terminal artifact_failed after 1 + maxRevisions turns", async () => {
@@ -517,7 +588,10 @@ describe("agent loop strategies", () => {
         validator: () => ({ ok: true }),
       });
       const origEmit = ctx.emit;
-      ctx.emit = (event) => { events.push(event); origEmit(event); };
+      ctx.emit = (event) => {
+        events.push(event);
+        origEmit(event);
+      };
       const loop = generateValidateReviseLoop({
         validator: () => ({ ok: true }),
         parser: () => ({ ok: false, error: "invalid JSON" }),
@@ -529,7 +603,10 @@ describe("agent loop strategies", () => {
       const failed = events.filter((event) => event.type === "artifact_failed");
       assert.equal(failed.length, 1);
       assert.equal((failed[0] as { result?: { metadata?: { reason?: string } } })?.result?.metadata?.reason, "parse_error");
-      assert.equal(events.some((event) => event.type === "artifact_finished"), false);
+      assert.equal(
+        events.some((event) => event.type === "artifact_finished"),
+        false,
+      );
     });
 
     it("empty and whitespace-only call-free text are parse_error before parser/validator", async () => {
@@ -542,10 +619,16 @@ describe("agent loop strategies", () => {
           validator: () => ({ ok: true }),
         });
         const origEmit = ctx.emit;
-        ctx.emit = (event) => { events.push(event); origEmit(event); };
+        ctx.emit = (event) => {
+          events.push(event);
+          origEmit(event);
+        };
         await generateValidateReviseLoop({
           validator: () => ({ ok: true }),
-          parser: (candidate) => { parsedTexts.push(candidate); return { ok: true, value: candidate }; },
+          parser: (candidate) => {
+            parsedTexts.push(candidate);
+            return { ok: true, value: candidate };
+          },
           repairer: (value) => {
             repairedValue = value;
             return { role: "user", content: [{ type: "text", text: "emit text" }] };
@@ -555,20 +638,29 @@ describe("agent loop strategies", () => {
         assert.deepEqual(parsedTexts, ["ok"], `empty ${JSON.stringify(text)} must short-circuit before parser`);
         assert.equal(repairedValue, undefined);
         const finished = events.filter((event) => event.type === "artifact_validation_finished");
-        assert.equal((finished[0] as { result?: { metadata?: { reason?: string }; errors?: { message: string }[] } })?.result?.metadata?.reason, "parse_error");
-        assert.equal((finished[0] as { result?: { errors?: { message: string }[] } })?.result?.errors?.[0]?.message, "no artifact text in model output");
-        assert.equal(events.some((event) => event.type === "artifact_finished"), true);
+        assert.equal(
+          (finished[0] as { result?: { metadata?: { reason?: string }; errors?: { message: string }[] } })?.result?.metadata?.reason,
+          "parse_error",
+        );
+        assert.equal(
+          (finished[0] as { result?: { errors?: { message: string }[] } })?.result?.errors?.[0]?.message,
+          "no artifact text in model output",
+        );
+        assert.equal(
+          events.some((event) => event.type === "artifact_finished"),
+          true,
+        );
       }
     });
 
     it("default repairer feeds parse error back as the revision message", async () => {
       const { ctx, appendedMessages } = reviseCtx({
-        generateTexts: ["bad", "{\"ok\":true}"],
+        generateTexts: ["bad", '{"ok":true}'],
         validator: () => ({ ok: true }),
       });
       const loop = generateValidateReviseLoop({
         validator: () => ({ ok: true }),
-        parser: (text) => text.startsWith("{") ? { ok: true, value: text } : { ok: false, error: "invalid JSON" },
+        parser: (text) => (text.startsWith("{") ? { ok: true, value: text } : { ok: false, error: "invalid JSON" }),
         maxRevisions: 1,
       });
       await loop.run(ctx);
@@ -580,9 +672,17 @@ describe("agent loop strategies", () => {
       let seenValue: unknown = "untouched";
       const { ctx } = reviseCtx({
         generateTexts: ["plaintext"],
-        validator: (value) => { seenValue = value; return { ok: true }; },
+        validator: (value) => {
+          seenValue = value;
+          return { ok: true };
+        },
       });
-      const loop = generateValidateReviseLoop({ validator: (value) => { seenValue = value; return { ok: true }; } });
+      const loop = generateValidateReviseLoop({
+        validator: (value) => {
+          seenValue = value;
+          return { ok: true };
+        },
+      });
       await loop.run(ctx);
       assert.equal(seenValue, "plaintext");
     });
@@ -593,7 +693,7 @@ describe("agent loop strategies", () => {
         validator: () => ({ ok: false, errors: [{ message: "err1" }, { message: "err2" }] }),
       });
       const loop = generateValidateReviseLoop({
-        validator: (value) => value === "y" ? { ok: true } : { ok: false, errors: [{ message: "err1" }, { message: "err2" }] },
+        validator: (value) => (value === "y" ? { ok: true } : { ok: false, errors: [{ message: "err1" }, { message: "err2" }] }),
         maxRevisions: 1,
       });
       await loop.run(ctx);
@@ -609,7 +709,7 @@ describe("agent loop strategies", () => {
         validator: () => ({ ok: false, errors: [{ message: "nope" }] }),
       });
       const loop = generateValidateReviseLoop({
-        validator: (value, _c) => value === "good" ? { ok: true } : { ok: false, errors: [{ message: "nope" }] },
+        validator: (value, _c) => (value === "good" ? { ok: true } : { ok: false, errors: [{ message: "nope" }] }),
         repairer: () => ({ role: "user", content: [{ type: "text", text: "try again with good" }] }),
         maxRevisions: 1,
       });
@@ -624,7 +724,7 @@ describe("agent loop strategies", () => {
       const second = assembledInputs[1];
       assert.ok(Array.isArray(second) && (second as readonly Message[])[0]?.role === "user");
       assert.deepEqual(
-        (second as readonly Message[])[0]?.content.map((block) => block.type === "text" ? block.text : ""),
+        (second as readonly Message[])[0]?.content.map((block) => (block.type === "text" ? block.text : "")),
         ["try again with good"],
       );
       // repair message was appended to history/store
@@ -640,17 +740,31 @@ describe("agent loop strategies", () => {
       (ctx as { inputMessages: readonly Message[] }).inputMessages = [{ role: "user", content: [{ type: "text", text: "build a thing" }] }];
       ctx.emit = (event) => events.push(event);
       const loop = generateValidateReviseLoop({
-        validator: (value) => value === "good" ? { ok: true } : { ok: false, errors: [{ message: "nope" }] },
+        validator: (value) => (value === "good" ? { ok: true } : { ok: false, errors: [{ message: "nope" }] }),
         maxRevisions: 1,
       });
       await loop.run(ctx);
-      assert.deepEqual(events.map((event) => event.type), [
-        "turn_started", "message_finished", "turn_finished",
-        "artifact_validation_started", "artifact_validation_finished", "artifact_revision_started",
-        "turn_started", "message_finished", "turn_finished",
-        "artifact_validation_started", "artifact_validation_finished", "artifact_finished",
-      ]);
-      assert.deepEqual(ctx.history.map((message) => message.role), ["user", "assistant", "user", "assistant"]);
+      assert.deepEqual(
+        events.map((event) => event.type),
+        [
+          "turn_started",
+          "message_finished",
+          "turn_finished",
+          "artifact_validation_started",
+          "artifact_validation_finished",
+          "artifact_revision_started",
+          "turn_started",
+          "message_finished",
+          "turn_finished",
+          "artifact_validation_started",
+          "artifact_validation_finished",
+          "artifact_finished",
+        ],
+      );
+      assert.deepEqual(
+        ctx.history.map((message) => message.role),
+        ["user", "assistant", "user", "assistant"],
+      );
     });
 
     it("validation failure does not emit an error event", async () => {
@@ -661,11 +775,15 @@ describe("agent loop strategies", () => {
       });
       ctx.emit = (event) => events.push(event);
       const loop = generateValidateReviseLoop({
-        validator: (value, _c) => value === "good" ? { ok: true } : { ok: false, errors: [{ message: "nope" }] },
+        validator: (value, _c) => (value === "good" ? { ok: true } : { ok: false, errors: [{ message: "nope" }] }),
         maxRevisions: 1,
       });
       await loop.run(ctx);
-      assert.equal(events.some((event) => event.type === "error"), false, "validation failure raised an error event");
+      assert.equal(
+        events.some((event) => event.type === "error"),
+        false,
+        "validation failure raised an error event",
+      );
     });
 
     it("dispatches bounded initial tool calls before parsing the artifact", async () => {
@@ -702,12 +820,22 @@ describe("agent loop strategies", () => {
         },
         emit: () => {},
       });
-      await generateValidateReviseLoop({ toolCalls: "bounded", maxRevisions: 0, validator: (value) => { seen.push(String(value)); return { ok: true }; } }).run(ctx);
+      await generateValidateReviseLoop({
+        toolCalls: "bounded",
+        maxRevisions: 0,
+        validator: (value) => {
+          seen.push(String(value));
+          return { ok: true };
+        },
+      }).run(ctx);
       assert.deepEqual(seen, ["artifact"]);
       assert.equal(generated, 2);
       assert.equal(maxActive, 1, "artifact tools stay sequential");
       assert.deepEqual(assembled[1], ["user", "assistant", "tool", "tool"]);
-      assert.deepEqual(ctx.history.map((message) => message.role), ["user", "assistant", "tool", "tool", "assistant"]);
+      assert.deepEqual(
+        ctx.history.map((message) => message.role),
+        ["user", "assistant", "tool", "tool", "assistant"],
+      );
     });
 
     it("shares tool-round budget across revisions and preserves candidate budget", async () => {
@@ -719,17 +847,33 @@ describe("agent loop strategies", () => {
         generate: async () => {
           generated += 1;
           if (generated === 1) return { content: [{ type: "text", text: "bad" }], calls: [], started: true };
-          if (generated === 2) return { content: [toolCallContent("repair-lookup", "read", {})], calls: [toolCallContent("repair-lookup", "read", {})], started: true };
-          if (generated === 3) return { content: [toolCallContent("final-lookup", "read", {})], calls: [toolCallContent("final-lookup", "read", {})], started: true };
+          if (generated === 2)
+            return {
+              content: [toolCallContent("repair-lookup", "read", {})],
+              calls: [toolCallContent("repair-lookup", "read", {})],
+              started: true,
+            };
+          if (generated === 3)
+            return {
+              content: [toolCallContent("final-lookup", "read", {})],
+              calls: [toolCallContent("final-lookup", "read", {})],
+              started: true,
+            };
           return { content: [{ type: "text", text: "good" }], calls: [], started: true };
         },
-        dispatchToolCall: async (call) => { calls.push(call.id); return { toolCallId: call.id, name: call.name, value: "ok" }; },
+        dispatchToolCall: async (call) => {
+          calls.push(call.id);
+          return { toolCallId: call.id, name: call.name, value: "ok" };
+        },
         emit: () => {},
       });
       await generateValidateReviseLoop({
         toolCalls: "bounded",
         maxRevisions: 1,
-        validator: (value) => { validated.push(String(value)); return { ok: value === "good", errors: [{ message: "bad" }] }; },
+        validator: (value) => {
+          validated.push(String(value));
+          return { ok: value === "good", errors: [{ message: "bad" }] };
+        },
       }).run(ctx);
       assert.deepEqual(validated, ["bad", "good"]);
       assert.deepEqual(calls, ["repair-lookup", "final-lookup"]);
@@ -748,7 +892,10 @@ describe("agent loop strategies", () => {
           const call = toolCallContent(`c${generated}`, "read", {});
           return { content: [call], calls: [call], started: true };
         },
-        dispatchToolCall: async (call) => { calls.push(call.id); return { toolCallId: call.id, name: call.name }; },
+        dispatchToolCall: async (call) => {
+          calls.push(call.id);
+          return { toolCallId: call.id, name: call.name };
+        },
         emit: (event) => events.push(event),
       });
       await generateValidateReviseLoop({ toolCalls: "bounded", maxRevisions: 0, validator: () => ({ ok: true }) }).run(ctx);
@@ -764,14 +911,20 @@ describe("agent loop strategies", () => {
       const call = toolCallContent("abort", "read", {});
       const ctx = stubCtx({
         signal: controller.signal,
-        generate: async () => { generated += 1; return { content: [call], calls: [call], started: true }; },
+        generate: async () => {
+          generated += 1;
+          return { content: [call], calls: [call], started: true };
+        },
         dispatchToolCall: async () => {
           controller.abort(new Error("stop artifact tools"));
           return { toolCallId: "abort", name: "read" };
         },
         emit: () => {},
       });
-      await assert.rejects(() => generateValidateReviseLoop({ toolCalls: "bounded", validator: () => ({ ok: true }) }).run(ctx), /stop artifact tools/);
+      await assert.rejects(
+        () => generateValidateReviseLoop({ toolCalls: "bounded", validator: () => ({ ok: true }) }).run(ctx),
+        /stop artifact tools/,
+      );
       assert.equal(generated, 1);
     });
 
@@ -780,7 +933,10 @@ describe("agent loop strategies", () => {
       const call = toolCallContent("inert", "read", {});
       const ctx = stubCtx({
         generate: async () => ({ content: [call], calls: [call], started: true }),
-        dispatchToolCall: async () => { dispatched += 1; throw new Error("must stay inert"); },
+        dispatchToolCall: async () => {
+          dispatched += 1;
+          throw new Error("must stay inert");
+        },
         emit: () => {},
       });
       await generateValidateReviseLoop({ validator: (value) => ({ ok: value === "" }) }).run(ctx);
@@ -798,7 +954,14 @@ describe("agent loop strategies", () => {
           ({
             model: { provider: "mock", model: "demo", capabilities: { structuredOutput: "json_schema", tools: true } },
             messages: [],
-            tools: [{ name: "read", description: "read", parameters: { type: "object" }, execute: async () => ({ toolCallId: "x", name: "read" }) }],
+            tools: [
+              {
+                name: "read",
+                description: "read",
+                parameters: { type: "object" },
+                execute: async () => ({ toolCallId: "x", name: "read" }),
+              },
+            ],
             options: { structuredOutput: { name: "answer", schema, strict: true } },
           }) as unknown as ProviderRequest,
         generate: async (request) => {
@@ -848,7 +1011,14 @@ describe("agent loop strategies", () => {
           ({
             model: { provider: "mock", model: "demo" },
             messages: [],
-            tools: [{ name: "read", description: "read", parameters: { type: "object" }, execute: async () => ({ toolCallId: "x", name: "read" }) }],
+            tools: [
+              {
+                name: "read",
+                description: "read",
+                parameters: { type: "object" },
+                execute: async () => ({ toolCallId: "x", name: "read" }),
+              },
+            ],
             options: { structuredOutput: { name: "answer", schema } },
           }) as unknown as ProviderRequest,
         generate: async (request) => {
@@ -876,11 +1046,14 @@ describe("agent loop strategies", () => {
     it("loops generate→validate→revise against a mock provider and ends on success", async () => {
       const texts = ["draft1", "draft2", "draftFINAL"];
       let perRun = 0;
-      const provider: AIProvider = { id: "mock", async *generate() {
-        const text = texts[perRun++] ?? "fallback";
-        yield providerTextDelta(text);
-        yield providerDone();
-      } };
+      const provider: AIProvider = {
+        id: "mock",
+        async *generate() {
+          const text = texts[perRun++] ?? "fallback";
+          yield providerTextDelta(text);
+          yield providerDone();
+        },
+      };
       const store = createMemorySessionStore();
       const agent = createAgent({
         model: { provider: "mock", model: "demo" },
@@ -892,7 +1065,7 @@ describe("agent loop strategies", () => {
       await session.run("build", {
         loop: {
           strategy: "generate-validate-revise",
-          validator: (value: unknown) => value === "draftFINAL" ? { ok: true } : { ok: false, errors: [{ message: "not final" }] },
+          validator: (value: unknown) => (value === "draftFINAL" ? { ok: true } : { ok: false, errors: [{ message: "not final" }] }),
           maxRevisions: 3,
         },
       });
@@ -901,47 +1074,75 @@ describe("agent loop strategies", () => {
       // assistant messages: 3; user repair messages between them: 2 → total assistant+user store messages emit message_finished for assistant only
       const finished = events.filter((event) => event.type === "message_finished");
       assert.equal(finished.length, 3, "expected 3 message_finished events (one per assistant draft)");
-      assert.deepEqual(events.filter((event) => event.type === "turn_started" || event.type === "turn_finished").map((event) => `${event.type}:${event.turn}`), [
-        "turn_started:1", "turn_finished:1",
-        "turn_started:2", "turn_finished:2",
-        "turn_started:3", "turn_finished:3",
-      ]);
-      assert.deepEqual((await store.list("s-revise")).map((entry) => entry.message?.role), ["user", "assistant", "user", "assistant", "user", "assistant"]);
-      assert.equal(events.some((event) => event.type === "agent_finished"), true);
-      assert.equal(events.some((event) => event.type === "error"), false);
+      assert.deepEqual(
+        events
+          .filter((event) => event.type === "turn_started" || event.type === "turn_finished")
+          .map((event) => `${event.type}:${event.turn}`),
+        ["turn_started:1", "turn_finished:1", "turn_started:2", "turn_finished:2", "turn_started:3", "turn_finished:3"],
+      );
+      assert.deepEqual(
+        (await store.list("s-revise")).map((entry) => entry.message?.role),
+        ["user", "assistant", "user", "assistant", "user", "assistant"],
+      );
+      assert.equal(
+        events.some((event) => event.type === "agent_finished"),
+        true,
+      );
+      assert.equal(
+        events.some((event) => event.type === "error"),
+        false,
+      );
     });
 
     it("thinking-only call-free candidate fails with parse_error and never succeeds empty", async () => {
-      const provider: AIProvider = { id: "mock", async *generate() {
-        yield providerThinkingDelta("planning only");
-        yield providerDone();
-      } };
+      const provider: AIProvider = {
+        id: "mock",
+        async *generate() {
+          yield providerThinkingDelta("planning only");
+          yield providerDone();
+        },
+      };
       const session = createAgent({
         model: { provider: "mock", model: "demo" },
         provider,
       }).createSession({ id: "s-thinking-only" });
       const reader = collect(session.subscribe());
 
-      await assert.rejects(session.run("build", {
-        loop: {
-          strategy: "generate-validate-revise",
-          validator: () => ({ ok: true }),
-          maxRevisions: 1,
+      await assert.rejects(
+        session.run("build", {
+          loop: {
+            strategy: "generate-validate-revise",
+            validator: () => ({ ok: true }),
+            maxRevisions: 1,
+          },
+        }),
+        (error: unknown) => {
+          assert.ok(error instanceof AgentRunError);
+          assert.equal(error.result.status, "failed");
+          assert.equal(error.result.text, "");
+          assert.equal(error.result.error?.code, "parse_error");
+          assert.match(error.result.error?.message ?? "", /no artifact text in model output/);
+          return true;
         },
-      }), (error: unknown) => {
-        assert.ok(error instanceof AgentRunError);
-        assert.equal(error.result.status, "failed");
-        assert.equal(error.result.text, "");
-        assert.equal(error.result.error?.code, "parse_error");
-        assert.match(error.result.error?.message ?? "", /no artifact text in model output/);
-        return true;
-      });
+      );
 
       const events = await reader;
-      assert.equal(events.some((event) => event.type === "artifact_failed"), true);
-      assert.equal(events.some((event) => event.type === "artifact_finished"), false);
-      assert.equal(events.some((event) => event.type === "artifact_revision_started"), true);
-      assert.equal(events.some((event) => event.type === "agent_finished"), false);
+      assert.equal(
+        events.some((event) => event.type === "artifact_failed"),
+        true,
+      );
+      assert.equal(
+        events.some((event) => event.type === "artifact_finished"),
+        false,
+      );
+      assert.equal(
+        events.some((event) => event.type === "artifact_revision_started"),
+        true,
+      );
+      assert.equal(
+        events.some((event) => event.type === "agent_finished"),
+        false,
+      );
     });
 
     it("uses runtime tool guards and redacts bounded artifact-tool transcripts", async () => {
@@ -965,16 +1166,30 @@ describe("agent loop strategies", () => {
         provider,
         store,
         redactor: createSecretRedactor([secret]),
-        tools: [{ name: "read", execute: () => { executed += 1; return { toolCallId: "blocked", name: "read" }; } }],
+        tools: [
+          {
+            name: "read",
+            execute: () => {
+              executed += 1;
+              return { toolCallId: "blocked", name: "read" };
+            },
+          },
+        ],
         validator: () => `blocked ${secret}`,
       });
       const session = agent.createSession({ id: "s-bounded-artifact-tools" });
       const reader = collect(session.subscribe());
-      await session.run("build", { maxToolRounds: 1, loop: { strategy: "generate-validate-revise", toolCalls: "bounded", validator: (value) => ({ ok: value === "good" }) } });
+      await session.run("build", {
+        maxToolRounds: 1,
+        loop: { strategy: "generate-validate-revise", toolCalls: "bounded", validator: (value) => ({ ok: value === "good" }) },
+      });
       const events = await reader;
       assert.equal(executed, 0);
       assert.equal(generated, 2);
-      assert.equal(events.some((event) => event.type === "tool_execution_blocked"), true);
+      assert.equal(
+        events.some((event) => event.type === "tool_execution_blocked"),
+        true,
+      );
       assert.equal(JSON.stringify(events).includes(secret), false);
       assert.equal(JSON.stringify(requests[1]).includes(secret), false);
       assert.equal(JSON.stringify(await store.list("s-bounded-artifact-tools")).includes(secret), false);
@@ -1003,7 +1218,7 @@ describe("agent loop strategies", () => {
       await session.run("build", {
         loop: {
           strategy: "generate-validate-revise",
-          validator: (value: unknown) => value === "draft2" ? { ok: true } : { ok: false, errors: [{ message: `fix ${secret}` }] },
+          validator: (value: unknown) => (value === "draft2" ? { ok: true } : { ok: false, errors: [{ message: `fix ${secret}` }] }),
           maxRevisions: 1,
         },
       });
@@ -1011,39 +1226,39 @@ describe("agent loop strategies", () => {
       const revisionRequest = requests[1]!;
       const repairMessages = revisionRequest.messages.filter((message) => message.role === "user");
       assert.equal(repairMessages.length, 2, "expected original user prompt plus one repair message");
-      const repairTexts = repairMessages.map((message) => message.content[0]?.type === "text" ? message.content[0].text : undefined);
+      const repairTexts = repairMessages.map((message) => (message.content[0]?.type === "text" ? message.content[0].text : undefined));
       assert.deepEqual(repairTexts, ["build", "fix [REDACTED]"]);
       assert.equal(JSON.stringify(revisionRequest).includes(secret), false);
       assert.equal(JSON.stringify(revisionRequest).includes("[Circular]"), false);
     });
 
     it("redactAgentEvent redacts ArtifactValidation payloads (nested/cyclic metadata) without crashing", () => {
-    const secret = "SUPERSECRET-api-key";
-    const redactor = createSecretRedactor([secret]);
-    const cyclic: Record<string, unknown> = { leak: secret };
-    cyclic.self = cyclic; // cyclic reference
-    const failure: ArtifactValidation = {
-      ok: false,
-      errors: [{ path: "title", message: `echo ${secret}` }],
-      metadata: { nested: { leak: secret }, list: [secret], cyclic },
-    };
-    const started = { type: "artifact_validation_started", sessionId: "s", runId: "r", turn: 1, attempt: 1 } as const;
-    const events = [
-      started,
-      { type: "artifact_validation_finished", sessionId: "s", runId: "r", turn: 1, attempt: 1, result: failure },
-      { type: "artifact_revision_started", sessionId: "s", runId: "r", turn: 1, attempt: 1, failure },
-      { type: "artifact_finished", sessionId: "s", runId: "r", turn: 2, attempt: 2, result: failure },
-      { type: "artifact_failed", sessionId: "s", runId: "r", turn: 3, attempt: 3, result: failure },
-    ] as const;
-    // ponytail: generic redactSecrets walker already covers nesting + cycles (WeakSet guard).
-    for (const event of events) {
-      const out = redactAgentEvent(event, redactor);
-      assert.equal(JSON.stringify(out).includes(secret), false, `${event.type} leaked secret`);
-    }
-    // cyclic metadata replaced with [Circular], no throw
-    const failedOut = redactAgentEvent(events[4], redactor) as { result: ArtifactValidation };
-    assert.equal(JSON.stringify(failedOut).includes("[Circular]"), true, "cyclic metadata not replaced");
-  });
+      const secret = "SUPERSECRET-api-key";
+      const redactor = createSecretRedactor([secret]);
+      const cyclic: Record<string, unknown> = { leak: secret };
+      cyclic.self = cyclic; // cyclic reference
+      const failure: ArtifactValidation = {
+        ok: false,
+        errors: [{ path: "title", message: `echo ${secret}` }],
+        metadata: { nested: { leak: secret }, list: [secret], cyclic },
+      };
+      const started = { type: "artifact_validation_started", sessionId: "s", runId: "r", turn: 1, attempt: 1 } as const;
+      const events = [
+        started,
+        { type: "artifact_validation_finished", sessionId: "s", runId: "r", turn: 1, attempt: 1, result: failure },
+        { type: "artifact_revision_started", sessionId: "s", runId: "r", turn: 1, attempt: 1, failure },
+        { type: "artifact_finished", sessionId: "s", runId: "r", turn: 2, attempt: 2, result: failure },
+        { type: "artifact_failed", sessionId: "s", runId: "r", turn: 3, attempt: 3, result: failure },
+      ] as const;
+      // ponytail: generic redactSecrets walker already covers nesting + cycles (WeakSet guard).
+      for (const event of events) {
+        const out = redactAgentEvent(event, redactor);
+        assert.equal(JSON.stringify(out).includes(secret), false, `${event.type} leaked secret`);
+      }
+      // cyclic metadata replaced with [Circular], no throw
+      const failedOut = redactAgentEvent(events[4], redactor) as { result: ArtifactValidation };
+      assert.equal(JSON.stringify(failedOut).includes("[Circular]"), true, "cyclic metadata not replaced");
+    });
   });
 
   describe("LoopContext.assemble turn plumbing (Phase 30 Task 4)", () => {
@@ -1059,7 +1274,13 @@ describe("agent loop strategies", () => {
         },
         generate: async () => {
           generateCalls += 1;
-          if (generateCalls === 1) return { content: [{ type: "text", text: "calling" }], calls: [toolCallContent("c1", "echo", { text: "hi" })], messageId: "m1", started: true };
+          if (generateCalls === 1)
+            return {
+              content: [{ type: "text", text: "calling" }],
+              calls: [toolCallContent("c1", "echo", { text: "hi" })],
+              messageId: "m1",
+              started: true,
+            };
           return { content: [{ type: "text", text: "done" }], calls: [], messageId: "m2", started: true };
         },
         dispatchToolCall: async (call) => ({ toolCallId: call.id, name: call.name, value: call.arguments }),
@@ -1088,7 +1309,7 @@ describe("agent loop strategies", () => {
         emit: () => {},
       });
       const loop = generateValidateReviseLoop({
-        validator: (value: unknown) => value === "draft3" ? { ok: true } : { ok: false, errors: [{ message: "not draft3" }] },
+        validator: (value: unknown) => (value === "draft3" ? { ok: true } : { ok: false, errors: [{ message: "not draft3" }] }),
         maxRevisions: 3,
       });
       await loop.run(ctx);

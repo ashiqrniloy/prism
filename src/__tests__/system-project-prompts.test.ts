@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { loadSystemPromptFiles } from "../node/system-project-prompts.js";
-import { composeSystemPrompt } from "../system-prompts.js";
-import { createStaticTrustPolicy } from "../security.js";
 import { createPathTrustPolicy } from "../node/trust.js";
+import { createStaticTrustPolicy } from "../security.js";
+import { composeSystemPrompt } from "../system-prompts.js";
 
 void describe("system/project prompt files loader", () => {
   // ponytail: one self-check — exercises the AGENTS.md read path. Full trust/disable/
@@ -17,9 +17,7 @@ void describe("system/project prompt files loader", () => {
 
     const layers = await loadSystemPromptFiles({ workspaceRoot: dir });
 
-    assert.deepEqual(layers, [
-      { id: "agents-md", source: "app", mode: "append", text: "Project rule." },
-    ]);
+    assert.deepEqual(layers, [{ id: "agents-md", source: "app", mode: "append", text: "Project rule." }]);
   });
 
   it("no roots → empty list and no filesystem access (SDK escape hatch)", async () => {
@@ -56,9 +54,7 @@ void describe("system/project prompt files loader", () => {
 
     const layers = await loadSystemPromptFiles({ workspaceRoot: workspace, globalRoot: global, trust });
 
-    assert.deepEqual(layers, [
-      { id: "system-md", source: "user", mode: "append", text: "GLOBAL" },
-    ]);
+    assert.deepEqual(layers, [{ id: "system-md", source: "user", mode: "append", text: "GLOBAL" }]);
   });
 
   it("trusted workspace loads AGENTS.md (trust gate passes)", async () => {
@@ -68,9 +64,7 @@ void describe("system/project prompt files loader", () => {
 
     const layers = await loadSystemPromptFiles({ workspaceRoot: workspace, trust });
 
-    assert.deepEqual(layers, [
-      { id: "agents-md", source: "app", mode: "append", text: "Trusted project rule." },
-    ]);
+    assert.deepEqual(layers, [{ id: "agents-md", source: "app", mode: "append", text: "Trusted project rule." }]);
   });
 
   it("override paths (--agents-md-file / --system-md-file) load from the named files with same source tags", async () => {

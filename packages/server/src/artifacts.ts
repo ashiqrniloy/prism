@@ -1,17 +1,17 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import {
+  type AgentIdentity,
   ARTIFACT_CHECKPOINT_NAMESPACE,
+  type ArtifactApproval,
+  type ArtifactCitation,
+  type ArtifactDeliveryToken,
   ArtifactError,
+  type ArtifactRecord,
+  type ArtifactRevision,
   artifactCheckpointKey,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
   CheckpointConflictError,
-  type AgentIdentity,
-  type ArtifactApproval,
-  type ArtifactCitation,
-  type ArtifactDeliveryToken,
-  type ArtifactRecord,
-  type ArtifactRevision,
   type CheckpointStore,
   type OwnershipScope,
   type PersistencePage,
@@ -104,8 +104,18 @@ export function resolveArtifactLimits(input: ArtifactLimits = {}): ResolvedArtif
     noteBytes: bounded(input.noteBytes, DEFAULT_ARTIFACT_NOTE_BYTES, HARD_ARTIFACT_NOTE_BYTES, "noteBytes"),
     titleBytes: bounded(input.titleBytes, DEFAULT_ARTIFACT_TITLE_BYTES, HARD_ARTIFACT_TITLE_BYTES, "titleBytes"),
     listPageLimit: bounded(input.listPageLimit, DEFAULT_ARTIFACT_LIST_PAGE_LIMIT, HARD_ARTIFACT_LIST_PAGE_LIMIT, "listPageLimit"),
-    deliveryLinkTtlSeconds: bounded(input.deliveryLinkTtlSeconds, DEFAULT_DELIVERY_LINK_TTL_SECONDS, HARD_DELIVERY_LINK_TTL_SECONDS, "deliveryLinkTtlSeconds"),
-    deliveryLinkTokenBytes: bounded(input.deliveryLinkTokenBytes, DEFAULT_DELIVERY_LINK_TOKEN_BYTES, HARD_DELIVERY_LINK_TOKEN_BYTES, "deliveryLinkTokenBytes"),
+    deliveryLinkTtlSeconds: bounded(
+      input.deliveryLinkTtlSeconds,
+      DEFAULT_DELIVERY_LINK_TTL_SECONDS,
+      HARD_DELIVERY_LINK_TTL_SECONDS,
+      "deliveryLinkTtlSeconds",
+    ),
+    deliveryLinkTokenBytes: bounded(
+      input.deliveryLinkTokenBytes,
+      DEFAULT_DELIVERY_LINK_TOKEN_BYTES,
+      HARD_DELIVERY_LINK_TOKEN_BYTES,
+      "deliveryLinkTokenBytes",
+    ),
     maxRequestBytes: bounded(input.maxRequestBytes, DEFAULT_ARTIFACT_REQUEST_BYTES, HARD_ARTIFACT_REQUEST_BYTES, "maxRequestBytes"),
   };
 }
@@ -189,8 +199,22 @@ export interface ArtifactDeliveryResult {
 }
 
 export type ArtifactDecisionEvent =
-  | { readonly type: "artifact_attached" | "artifact_revised"; readonly artifactId: string; readonly threadId: string; readonly version: number; readonly actor?: string; readonly timestamp: string }
-  | { readonly type: "artifact_approved" | "artifact_rejected"; readonly artifactId: string; readonly threadId: string; readonly version: number; readonly reviewer: string; readonly timestamp: string };
+  | {
+      readonly type: "artifact_attached" | "artifact_revised";
+      readonly artifactId: string;
+      readonly threadId: string;
+      readonly version: number;
+      readonly actor?: string;
+      readonly timestamp: string;
+    }
+  | {
+      readonly type: "artifact_approved" | "artifact_rejected";
+      readonly artifactId: string;
+      readonly threadId: string;
+      readonly version: number;
+      readonly reviewer: string;
+      readonly timestamp: string;
+    };
 
 export interface CreateArtifactServiceOptions {
   /** Required: records are redacted before persist and on every response. */
@@ -225,7 +249,7 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
   function reviewerRef(input: ArtifactServiceInput, explicit?: string): string {
     if (explicit !== undefined && explicit.length > 0) return assertBounded(explicit, limits.noteBytes, "reviewer_too_large");
     const principal = input.identity?.principal;
-    if (principal && principal.id) return `${principal.kind}:${principal.id}`;
+    if (principal?.id) return `${principal.kind}:${principal.id}`;
     throw new ArtifactError("A reviewer identity is required for review decisions", "invalid_input");
   }
 
@@ -252,7 +276,12 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
   // Read-modify-write with checkpoint CAS: concurrent reviewers race on expectedVersion, one
   // wins and the loser surfaces a retryable conflict (no lost approvals). A throw before save
   // persists nothing, so failed updates roll back inherently.
-  async function commit(input: ArtifactServiceInput, threadId: string, record: ArtifactRecord, expectedVersion: number): Promise<ArtifactRecord> {
+  async function commit(
+    input: ArtifactServiceInput,
+    threadId: string,
+    record: ArtifactRecord,
+    expectedVersion: number,
+  ): Promise<ArtifactRecord> {
     const redacted = options.redactor.redact(record) as ArtifactRecord;
     assertRecordBytes(redacted, limits.recordBytes);
     try {
@@ -275,10 +304,18 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
     return redacted;
   }
 
-  function buildRevision(input: {
-    uri: string; mime: string; hash: string; changeNote?: string;
-    producerRunId?: string; citations?: readonly ArtifactCitation[]; preview?: Readonly<Record<string, unknown>>;
-  }, version: number): ArtifactRevision {
+  function buildRevision(
+    input: {
+      uri: string;
+      mime: string;
+      hash: string;
+      changeNote?: string;
+      producerRunId?: string;
+      citations?: readonly ArtifactCitation[];
+      preview?: Readonly<Record<string, unknown>>;
+    },
+    version: number,
+  ): ArtifactRevision {
     const uri = assertSafeUri(input.uri, limits.uriBytes);
     assertBounded(input.mime, limits.mimeBytes, "mime_too_large");
     assertBounded(input.hash, limits.hashBytes, "hash_too_large");
@@ -341,7 +378,14 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
         updatedAt: now,
       };
       const saved = await commit(input, threadId, record, 0);
-      await audit({ type: "artifact_attached", artifactId: id, threadId, version: 1, ...(input.identity ? { actor: `${input.identity.principal.kind}:${input.identity.principal.id}` } : {}), timestamp: now });
+      await audit({
+        type: "artifact_attached",
+        artifactId: id,
+        threadId,
+        version: 1,
+        ...(input.identity ? { actor: `${input.identity.principal.kind}:${input.identity.principal.id}` } : {}),
+        timestamp: now,
+      });
       return saved;
     },
 
@@ -377,7 +421,14 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
       const now = new Date().toISOString();
       const updated: ArtifactRecord = { ...record, revisions: [...record.revisions, revision], updatedAt: now };
       const saved = await commit(input, input.threadId, updated, version);
-      await audit({ type: "artifact_revised", artifactId: record.id, threadId: input.threadId, version: revision.version, ...(input.identity ? { actor: `${input.identity.principal.kind}:${input.identity.principal.id}` } : {}), timestamp: now });
+      await audit({
+        type: "artifact_revised",
+        artifactId: record.id,
+        threadId: input.threadId,
+        version: revision.version,
+        ...(input.identity ? { actor: `${input.identity.principal.kind}:${input.identity.principal.id}` } : {}),
+        timestamp: now,
+      });
       return saved;
     },
 
@@ -468,7 +519,14 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
       updatedAt: now,
     };
     const saved = await commit(input, input.threadId, updated, version);
-    await audit({ type: state === "approved" ? "artifact_approved" : "artifact_rejected", artifactId: record.id, threadId: input.threadId, version: input.version, reviewer, timestamp: now });
+    await audit({
+      type: state === "approved" ? "artifact_approved" : "artifact_rejected",
+      artifactId: record.id,
+      threadId: input.threadId,
+      version: input.version,
+      reviewer,
+      timestamp: now,
+    });
     return saved;
   }
 }
@@ -506,8 +564,13 @@ export function verifyArtifactDeliveryLink(
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new ArtifactError("Delivery link is invalid", "invalid_link");
   const token = parsed as Record<string, unknown>;
-  if (typeof token.artifactId !== "string" || typeof token.threadId !== "string" ||
-    !Number.isSafeInteger(token.version) || typeof token.issuedAt !== "string" || typeof token.expiresAt !== "string") {
+  if (
+    typeof token.artifactId !== "string" ||
+    typeof token.threadId !== "string" ||
+    !Number.isSafeInteger(token.version) ||
+    typeof token.issuedAt !== "string" ||
+    typeof token.expiresAt !== "string"
+  ) {
     throw new ArtifactError("Delivery link is invalid", "invalid_link");
   }
   const expiresAt = Date.parse(token.expiresAt);
@@ -709,7 +772,12 @@ type ArtifactRoute =
   | { readonly kind: "compare"; readonly operation: "artifact.compare"; readonly threadId: string; readonly artifactId: string }
   | { readonly kind: "approve"; readonly operation: "artifact.approve"; readonly threadId: string; readonly artifactId: string }
   | { readonly kind: "reject"; readonly operation: "artifact.reject"; readonly threadId: string; readonly artifactId: string }
-  | { readonly kind: "last-validated"; readonly operation: "artifact.last-validated"; readonly threadId: string; readonly artifactId: string }
+  | {
+      readonly kind: "last-validated";
+      readonly operation: "artifact.last-validated";
+      readonly threadId: string;
+      readonly artifactId: string;
+    }
   | { readonly kind: "delivery-link"; readonly operation: "artifact.delivery-link"; readonly threadId: string; readonly artifactId: string }
   | { readonly kind: "download"; readonly operation: "artifact.download"; readonly threadId?: undefined; readonly artifactId?: undefined };
 
@@ -739,7 +807,8 @@ function parseArtifactRoute(request: Request, base: string): ArtifactRoute | und
     return undefined;
   }
   if (parts.length !== 3) return undefined;
-  if (action === "last-validated" && request.method === "GET") return { kind: "last-validated", operation: "artifact.last-validated", threadId, artifactId };
+  if (action === "last-validated" && request.method === "GET")
+    return { kind: "last-validated", operation: "artifact.last-validated", threadId, artifactId };
   if (request.method !== "POST") return undefined;
   if (action === "revise") return { kind: "revise", operation: "artifact.revise", threadId, artifactId };
   if (action === "compare") return { kind: "compare", operation: "artifact.compare", threadId, artifactId };
@@ -750,9 +819,7 @@ function parseArtifactRoute(request: Request, base: string): ArtifactRoute | und
 }
 
 function ownershipMatches(scope: OwnershipScope, token: ArtifactDeliveryToken): boolean {
-  return scope.tenantId === token.tenantId
-    && scope.accountId === token.accountId
-    && scope.userId === token.userId;
+  return scope.tenantId === token.tenantId && scope.accountId === token.accountId && scope.userId === token.userId;
 }
 
 function json(options: CreateArtifactHandlerOptions, value: unknown, status: number): Response {
@@ -771,13 +838,20 @@ function artifactErrorResponse(error: unknown): Response {
   } else if (error instanceof ArtifactError) {
     code = error.code;
     message = error.message;
-    status = error.reason === "not_found" || error.reason === "not_validated" ? 404
-      : error.reason === "conflict" ? 409
-        : error.reason === "ownership" ? 403
-          : error.reason === "link_expired" ? 410
-            : error.reason === "too_many_artifacts" || error.reason === "too_many_revisions" ? 422
-              : error.reason === "invalid_link" ? 401
-                : 400;
+    status =
+      error.reason === "not_found" || error.reason === "not_validated"
+        ? 404
+        : error.reason === "conflict"
+          ? 409
+          : error.reason === "ownership"
+            ? 403
+            : error.reason === "link_expired"
+              ? 410
+              : error.reason === "too_many_artifacts" || error.reason === "too_many_revisions"
+                ? 422
+                : error.reason === "invalid_link"
+                  ? 401
+                  : 400;
   } else if (error instanceof RangeError) {
     status = 400;
     code = "ERR_PRISM_SERVER_INPUT";
@@ -836,7 +910,10 @@ function assertSafeUri(value: unknown, maxBytes: number): string {
   return value;
 }
 
-function normalizeCitations(citations: readonly ArtifactCitation[] | undefined, limits: ResolvedArtifactLimits): readonly ArtifactCitation[] | undefined {
+function normalizeCitations(
+  citations: readonly ArtifactCitation[] | undefined,
+  limits: ResolvedArtifactLimits,
+): readonly ArtifactCitation[] | undefined {
   if (citations === undefined) return undefined;
   if (!Array.isArray(citations)) throw new ArtifactError("citations must be an array", "invalid_input");
   if (citations.length > limits.citations) throw new ArtifactError(`Too many citations (max ${limits.citations})`, "too_many_citations");
@@ -853,9 +930,13 @@ function normalizeCitations(citations: readonly ArtifactCitation[] | undefined, 
   });
 }
 
-function normalizePreview(preview: Readonly<Record<string, unknown>> | undefined, limits: ResolvedArtifactLimits): Readonly<Record<string, unknown>> | undefined {
+function normalizePreview(
+  preview: Readonly<Record<string, unknown>> | undefined,
+  limits: ResolvedArtifactLimits,
+): Readonly<Record<string, unknown>> | undefined {
   if (preview === undefined) return undefined;
-  if (!preview || typeof preview !== "object" || Array.isArray(preview)) throw new ArtifactError("preview must be an object", "invalid_input");
+  if (!preview || typeof preview !== "object" || Array.isArray(preview))
+    throw new ArtifactError("preview must be an object", "invalid_input");
   if (Buffer.byteLength(JSON.stringify(preview), "utf8") > limits.previewBytes) {
     throw new ArtifactError(`Preview metadata exceeds ${limits.previewBytes} bytes`, "preview_too_large");
   }
@@ -886,12 +967,14 @@ async function readBody(request: Request, maxBytes: number): Promise<Record<stri
 }
 
 function readString(value: unknown, name: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new PrismServerError(`${name} must be a string`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (typeof value !== "string" || value.length === 0)
+    throw new PrismServerError(`${name} must be a string`, 400, "ERR_PRISM_SERVER_INPUT");
   return value;
 }
 
 function readObject(value: unknown, name: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new PrismServerError(`${name} must be an object`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new PrismServerError(`${name} must be an object`, 400, "ERR_PRISM_SERVER_INPUT");
   return value as Record<string, unknown>;
 }
 
@@ -902,6 +985,7 @@ function readCitations(value: unknown): ArtifactCitation[] {
 
 function readPositiveInt(value: string | null, name: string): number {
   const parsed = value === null ? NaN : Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new PrismServerError(`${name} must be a positive safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (!Number.isSafeInteger(parsed) || parsed < 1)
+    throw new PrismServerError(`${name} must be a positive safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
   return parsed;
 }

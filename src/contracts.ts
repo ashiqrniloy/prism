@@ -1,11 +1,11 @@
-import type { AgentInput } from "./input.js";
+import type { AudioContent, DocumentContent, FileContent } from "./content.js";
 import type { ContributionRegistries } from "./contributions.js";
+import type { AgentInput } from "./input.js";
+import type { ManifestContributionDeclaration } from "./manifests.js";
 import type { Middleware, MiddlewareHookName, MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { PermissionPolicy, TrustPolicy } from "./security.js";
-import type { ManifestContributionDeclaration } from "./manifests.js";
 import type { ToolValidator } from "./tools.js";
-import type { AudioContent, DocumentContent, FileContent } from "./content.js";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -183,11 +183,13 @@ export interface RunLimitBreach {
 export type GuardrailStage = "input" | "output" | "tool_input" | "tool_output";
 export type GuardrailAction = "allow" | "block" | "tripwire" | "interrupt";
 
-export type GuardrailValue<S extends GuardrailStage> =
-  S extends "input" ? readonly Message[] :
-  S extends "output" ? ProviderTurnResult :
-  S extends "tool_input" ? ToolCallContent :
-  ToolResult;
+export type GuardrailValue<S extends GuardrailStage> = S extends "input"
+  ? readonly Message[]
+  : S extends "output"
+    ? ProviderTurnResult
+    : S extends "tool_input"
+      ? ToolCallContent
+      : ToolResult;
 
 export interface GuardrailContext<S extends GuardrailStage> {
   readonly stage: S;
@@ -244,7 +246,13 @@ export interface ModelCacheCapabilities {
 }
 
 export type PromptCacheMode = "auto" | "on" | "off";
-export type PromptCacheBreakpointLocation = "system_prompt" | "tools" | "stable_context" | "last_stable_message" | "last_user_message" | "message_id";
+export type PromptCacheBreakpointLocation =
+  | "system_prompt"
+  | "tools"
+  | "stable_context"
+  | "last_stable_message"
+  | "last_user_message"
+  | "message_id";
 export type PromptCacheBreakpointTtl = "short" | "long";
 
 export interface PromptCacheBreakpoint {
@@ -300,7 +308,14 @@ export interface ProviderRequest {
 export type ProviderEvent =
   | { readonly type: "message_start"; readonly messageId?: string }
   | { readonly type: "content_delta"; readonly content: ContentBlock }
-  | { readonly type: "tool_call_delta"; readonly index: number; readonly id?: string; readonly name?: string; readonly argumentsText?: string; readonly authority?: ToolCallAuthority }
+  | {
+      readonly type: "tool_call_delta";
+      readonly index: number;
+      readonly id?: string;
+      readonly name?: string;
+      readonly argumentsText?: string;
+      readonly authority?: ToolCallAuthority;
+    }
   | { readonly type: "tool_call"; readonly call: ToolCallContent }
   | { readonly type: "usage"; readonly usage: Usage }
   | { readonly type: "continuation_required"; readonly cursor: string; readonly reason?: string }
@@ -466,7 +481,11 @@ export interface AgentConfig {
 }
 
 /** Opt-in fail-closed composition over the normal explicit AgentConfig API. */
-export interface SecureAgentOptions extends Omit<AgentConfig, "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "runState" | "secure"> {
+export interface SecureAgentOptions
+  extends Omit<
+    AgentConfig,
+    "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "runState" | "secure"
+  > {
   readonly id: string;
   readonly tools: readonly ToolDefinition[];
   readonly toolArgumentValidator: import("./tools.js").ToolArgumentValidator;
@@ -579,7 +598,10 @@ export interface AgentRunStatusResult {
 
 export class AgentRunStateError extends Error {
   readonly code = "ERR_PRISM_AGENT_RUN_STATE";
-  constructor(message: string) { super(message); this.name = "AgentRunStateError"; }
+  constructor(message: string) {
+    super(message);
+    this.name = "AgentRunStateError";
+  }
 }
 
 /** Terminal result of `session.run()` / `session.prompt()`. Failed and aborted runs throw {@link AgentRunError} with this shape attached. */
@@ -680,34 +702,145 @@ export interface ToolExecutionMetadata {
 export type AgentEvent =
   | { readonly type: "agent_started"; readonly sessionId: string; readonly runId: string }
   | { readonly type: "agent_finished"; readonly sessionId: string; readonly runId: string; readonly usage?: Usage }
-  | { readonly type: "agent_suspended"; readonly sessionId: string; readonly runId: string; readonly interruption: AgentRunInterruption; readonly version: number }
+  | {
+      readonly type: "agent_suspended";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly interruption: AgentRunInterruption;
+      readonly version: number;
+    }
   | { readonly type: "agent_resumed"; readonly sessionId: string; readonly runId: string; readonly version: number }
-  | { readonly type: "agent_denied"; readonly sessionId: string; readonly runId: string; readonly interruption: AgentRunInterruption; readonly version: number }
+  | {
+      readonly type: "agent_denied";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly interruption: AgentRunInterruption;
+      readonly version: number;
+    }
   | { readonly type: "turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number }
   | { readonly type: "turn_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number }
-  | { readonly type: "provider_turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly metadata: ProviderTurnMetadata }
-  | { readonly type: "provider_turn_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly metadata: ProviderTurnMetadata; readonly usage?: Usage; readonly error?: ErrorInfo }
+  | {
+      readonly type: "provider_turn_started";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly metadata: ProviderTurnMetadata;
+    }
+  | {
+      readonly type: "provider_turn_finished";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly metadata: ProviderTurnMetadata;
+      readonly usage?: Usage;
+      readonly error?: ErrorInfo;
+    }
   | { readonly type: "message_started"; readonly sessionId: string; readonly runId: string; readonly message: Message }
   | { readonly type: "message_delta"; readonly sessionId: string; readonly runId: string; readonly content: ContentBlock }
   | { readonly type: "message_finished"; readonly sessionId: string; readonly runId: string; readonly message: Message }
   | { readonly type: "tool_execution_started"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent }
-  | { readonly type: "tool_execution_progress"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly progress?: unknown; readonly metadata?: Readonly<Record<string, unknown>> }
-  | { readonly type: "tool_execution_finished"; readonly sessionId: string; readonly runId: string; readonly result: ToolResult; readonly metadata: ToolExecutionMetadata }
-  | { readonly type: "tool_execution_error"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent; readonly error: ErrorInfo; readonly metadata: ToolExecutionMetadata }
-  | { readonly type: "tool_execution_blocked"; readonly sessionId: string; readonly runId: string; readonly toolCallId: string; readonly name: string; readonly reason: string; readonly error: ErrorInfo; readonly metadata: ToolExecutionMetadata }
-  | { readonly type: "guardrail_decision"; readonly sessionId: string; readonly runId: string; readonly toolCallId?: string; readonly toolName?: string; readonly record: GuardrailRecord }
+  | {
+      readonly type: "tool_execution_progress";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly toolCallId: string;
+      readonly name: string;
+      readonly progress?: unknown;
+      readonly metadata?: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly type: "tool_execution_finished";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly result: ToolResult;
+      readonly metadata: ToolExecutionMetadata;
+    }
+  | {
+      readonly type: "tool_execution_error";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly call: ToolCallContent;
+      readonly error: ErrorInfo;
+      readonly metadata: ToolExecutionMetadata;
+    }
+  | {
+      readonly type: "tool_execution_blocked";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly toolCallId: string;
+      readonly name: string;
+      readonly reason: string;
+      readonly error: ErrorInfo;
+      readonly metadata: ToolExecutionMetadata;
+    }
+  | {
+      readonly type: "guardrail_decision";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly toolCallId?: string;
+      readonly toolName?: string;
+      readonly record: GuardrailRecord;
+    }
   | { readonly type: "run_limit_exceeded"; readonly sessionId: string; readonly runId: string; readonly breach: RunLimitBreach }
   | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
-  | { readonly type: "event_subscriber_overflow"; readonly sessionId: string; readonly runId?: string; readonly droppedEvents: number; readonly maxQueuedEvents: number; readonly overflow: SubscriberOverflowPolicy }
+  | {
+      readonly type: "event_subscriber_overflow";
+      readonly sessionId: string;
+      readonly runId?: string;
+      readonly droppedEvents: number;
+      readonly maxQueuedEvents: number;
+      readonly overflow: SubscriberOverflowPolicy;
+    }
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
   | { readonly type: "compaction_finished"; readonly sessionId: string; readonly runId?: string; readonly summary: string }
-  | { readonly type: "retry_scheduled"; readonly sessionId: string; readonly runId: string; readonly attempt: number; readonly delayMs: number; readonly error: ErrorInfo }
+  | {
+      readonly type: "retry_scheduled";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly attempt: number;
+      readonly delayMs: number;
+      readonly error: ErrorInfo;
+    }
   | { readonly type: "error"; readonly sessionId?: string; readonly runId?: string; readonly error: ErrorInfo }
-  | { readonly type: "artifact_validation_started"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number }
-  | { readonly type: "artifact_validation_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly result: ArtifactValidation }
-  | { readonly type: "artifact_revision_started"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly failure: ArtifactValidation }
-  | { readonly type: "artifact_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly result: ArtifactValidation }
-  | { readonly type: "artifact_failed"; readonly sessionId: string; readonly runId: string; readonly turn: number; readonly attempt: number; readonly result: ArtifactValidation };
+  | {
+      readonly type: "artifact_validation_started";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly attempt: number;
+    }
+  | {
+      readonly type: "artifact_validation_finished";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly attempt: number;
+      readonly result: ArtifactValidation;
+    }
+  | {
+      readonly type: "artifact_revision_started";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly attempt: number;
+      readonly failure: ArtifactValidation;
+    }
+  | {
+      readonly type: "artifact_finished";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly attempt: number;
+      readonly result: ArtifactValidation;
+    }
+  | {
+      readonly type: "artifact_failed";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly attempt: number;
+      readonly result: ArtifactValidation;
+    };
 
 export interface ToolDefinition {
   readonly name: string;
@@ -992,7 +1125,9 @@ export interface CustomAuthMethod {
 
 export interface ProviderRequestPolicy {
   readonly name: string;
-  apply(context: ProviderRequestPolicyContext): Promise<ProviderRequest | ProviderRequestPolicyResult> | ProviderRequest | ProviderRequestPolicyResult;
+  apply(
+    context: ProviderRequestPolicyContext,
+  ): Promise<ProviderRequest | ProviderRequestPolicyResult> | ProviderRequest | ProviderRequestPolicyResult;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -1050,15 +1185,7 @@ export interface ExtensionAPI {
   registerInstructionInjector(injector: InstructionInjector): void;
 }
 
-export type SessionEntryKind =
-  | "message"
-  | "event"
-  | "summary"
-  | "metadata"
-  | "model_change"
-  | "label"
-  | "custom"
-  | "compaction";
+export type SessionEntryKind = "message" | "event" | "summary" | "metadata" | "model_change" | "label" | "custom" | "compaction";
 
 export const SESSION_ENTRY_KINDS: readonly SessionEntryKind[] = [
   "message",
@@ -2014,22 +2141,15 @@ export interface ArtifactParseResult<T> {
   readonly error?: string;
 }
 
-export type ArtifactParser<T> = (
-  text: string,
-  ctx: ArtifactContext,
-) => ArtifactParseResult<T> | Promise<ArtifactParseResult<T>>;
+export type ArtifactParser<T> = (text: string, ctx: ArtifactContext) => ArtifactParseResult<T> | Promise<ArtifactParseResult<T>>;
 
-export type ArtifactValidator<T> = (
-  value: T,
-  ctx: ArtifactContext,
-) => ArtifactValidation | Promise<ArtifactValidation>;
+export type ArtifactValidator<T> = (value: T, ctx: ArtifactContext) => ArtifactValidation | Promise<ArtifactValidation>;
 
 export type ArtifactRepairer<T> = (
   value: T | undefined,
   failure: ArtifactValidation,
   ctx: ArtifactContext,
 ) => AgentInput | Promise<AgentInput>;
-
 
 /** Alias re-exports so `dist/contracts.d.ts` exposes implementer contract names. */
 export type AgentIdentity = import("./identity.js").AgentIdentity;

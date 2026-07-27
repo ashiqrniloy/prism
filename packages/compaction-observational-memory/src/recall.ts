@@ -19,7 +19,11 @@ export interface MemoryRecallResult {
   readonly reason?: "invalid_id" | "not_found";
 }
 
-export function recallObservationalMemory(entries: readonly SessionEntry[], id: string, secrets: readonly (string | undefined)[] = []): MemoryRecallResult {
+export function recallObservationalMemory(
+  entries: readonly SessionEntry[],
+  id: string,
+  secrets: readonly (string | undefined)[] = [],
+): MemoryRecallResult {
   if (!isMemoryId(id)) return { found: false, id, reason: "invalid_id", text: "Invalid memory id; expected 12 lowercase hex characters." };
   const ledger = foldObservationalMemoryLedger(entries);
   const entryById = new Map(entries.map((entry) => [entry.id, entry]));
@@ -34,16 +38,35 @@ export function recallObservationalMemory(entries: readonly SessionEntry[], id: 
     const sourceIds = new Set(supportingObservations.flatMap((item) => item.sourceEntryIds));
     const sourceEntries = [...sourceIds].flatMap((sourceId) => entryById.get(sourceId) ?? []);
     const missingSourceEntryIds = [...sourceIds].filter((sourceId) => !entryById.has(sourceId));
-    const text = [`Reflection [${id}]: ${reflection.content}`, "", "Supporting observations:", ...supportingObservations.map((item) => `- [${item.id}] ${item.content}`), "", "Source evidence:", serializeSourceEntries(sourceEntries, secrets) || "none"].join("\n");
+    const text = [
+      `Reflection [${id}]: ${reflection.content}`,
+      "",
+      "Supporting observations:",
+      ...supportingObservations.map((item) => `- [${item.id}] ${item.content}`),
+      "",
+      "Source evidence:",
+      serializeSourceEntries(sourceEntries, secrets) || "none",
+    ].join("\n");
     return { found: true, id, kind: "reflection", reflection, supportingObservations, sourceEntries, missingSourceEntryIds, text };
   }
 
   return { found: false, id, reason: "not_found", text: `No observation or reflection found for id ${id} on the current branch.` };
 }
 
-function recallObservation(id: string, observation: MemoryObservation, entryById: Map<string, SessionEntry>, dropped: boolean, secrets: readonly (string | undefined)[]): MemoryRecallResult {
+function recallObservation(
+  id: string,
+  observation: MemoryObservation,
+  entryById: Map<string, SessionEntry>,
+  dropped: boolean,
+  secrets: readonly (string | undefined)[],
+): MemoryRecallResult {
   const sourceEntries = observation.sourceEntryIds.flatMap((sourceId) => entryById.get(sourceId) ?? []);
   const missingSourceEntryIds = observation.sourceEntryIds.filter((sourceId) => !entryById.has(sourceId));
-  const text = [`Observation [${id}]${dropped ? " (dropped)" : ""}: ${observation.content}`, "", "Source evidence:", serializeSourceEntries(sourceEntries, secrets) || "none"].join("\n");
+  const text = [
+    `Observation [${id}]${dropped ? " (dropped)" : ""}: ${observation.content}`,
+    "",
+    "Source evidence:",
+    serializeSourceEntries(sourceEntries, secrets) || "none",
+  ].join("\n");
   return { found: true, id, kind: "observation", observation, sourceEntries, missingSourceEntryIds, dropped, text };
 }

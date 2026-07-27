@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import type { WorkflowCheckpointAdapter } from "../index.js";
-import {
-  WorkflowCheckpointError,
-  WORKFLOW_CHECKPOINT_SCHEMA_VERSION,
-  type WorkflowCheckpointValue,
-} from "../index.js";
+import { WORKFLOW_CHECKPOINT_SCHEMA_VERSION, WorkflowCheckpointError, type WorkflowCheckpointValue } from "../index.js";
 
 export function sampleValue(overrides: Partial<WorkflowCheckpointValue> = {}): WorkflowCheckpointValue {
   const now = new Date().toISOString();
@@ -49,23 +45,25 @@ export async function runCheckpointAdapterConformance(
   assert.deepEqual(loaded?.value.nodes.a?.output, { ok: true }, `${label}: output`);
 
   await assert.rejects(
-    () => checkpoints.save({
-      workflowId: "wf",
-      runId: "run1",
-      version: 1,
-      ownership: { tenantId: "t1" },
-      value: sampleValue(),
-    }),
+    () =>
+      checkpoints.save({
+        workflowId: "wf",
+        runId: "run1",
+        version: 1,
+        ownership: { tenantId: "t1" },
+        value: sampleValue(),
+      }),
     WorkflowCheckpointError,
     `${label}: stale version`,
   );
 
   await assert.rejects(
-    () => checkpoints.load({
-      workflowId: "wf",
-      runId: "run1",
-      ownership: { tenantId: "other" },
-    }),
+    () =>
+      checkpoints.load({
+        workflowId: "wf",
+        runId: "run1",
+        ownership: { tenantId: "other" },
+      }),
     /ownership|tenant/i,
     `${label}: tenant mismatch`,
   );

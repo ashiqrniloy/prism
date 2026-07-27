@@ -1,4 +1,4 @@
-import type { CompactionContext, CompactionEntryData, CompactionStrategy, ContentBlock, Message, SessionEntry } from "./contracts.js";
+import type { CompactionEntryData, CompactionStrategy, ContentBlock, Message, SessionEntry } from "./contracts.js";
 import { redactSecrets } from "./redaction.js";
 import { createSessionEntry } from "./session-stores.js";
 
@@ -22,7 +22,10 @@ export function createDefaultCompactionStrategy(options: DefaultCompactionStrate
       const firstKeptIndex = firstKept ? context.entries.findIndex((entry) => entry.id === firstKept) : context.entries.length;
       const oldEntries = context.entries.slice(0, firstKeptIndex < 0 ? context.entries.length : firstKeptIndex);
       const throughEntryId = oldEntries.at(-1)?.id;
-      const summary = truncate(redactSecrets(summarize(oldEntries), [...(options.secrets ?? []), ...(context.secrets ?? [])]), maxSummaryChars);
+      const summary = truncate(
+        redactSecrets(summarize(oldEntries), [...(options.secrets ?? []), ...(context.secrets ?? [])]),
+        maxSummaryChars,
+      );
       const data: CompactionEntryData = { throughEntryId, keepEntryIds, strategy: name, trigger: context.trigger };
       const parentId = context.entries.at(-1)?.id;
 
@@ -37,10 +40,13 @@ export function createDefaultCompactionStrategy(options: DefaultCompactionStrate
 export function isCompactionEntryData(value: unknown): value is CompactionEntryData {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const data = value as Record<string, unknown>;
-  return (data.throughEntryId === undefined || typeof data.throughEntryId === "string")
-    && (data.keepEntryIds === undefined || (Array.isArray(data.keepEntryIds) && data.keepEntryIds.every((item) => typeof item === "string")))
-    && (data.strategy === undefined || typeof data.strategy === "string")
-    && (data.trigger === undefined || typeof data.trigger === "string");
+  return (
+    (data.throughEntryId === undefined || typeof data.throughEntryId === "string") &&
+    (data.keepEntryIds === undefined ||
+      (Array.isArray(data.keepEntryIds) && data.keepEntryIds.every((item) => typeof item === "string"))) &&
+    (data.strategy === undefined || typeof data.strategy === "string") &&
+    (data.trigger === undefined || typeof data.trigger === "string")
+  );
 }
 
 function summarize(entries: readonly SessionEntry[]): string {

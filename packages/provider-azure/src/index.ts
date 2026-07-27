@@ -1,9 +1,9 @@
 export {
   AZURE_OPENAI_DEFAULT_API_VERSION,
-  azureChatCompletionsUrl,
-  createAzureOpenAIProvider,
-  createAzureOpenAIProviderPackage,
   type AzureAuthStyle,
   type AzureOpenAIProviderOptions,
   type AzureOpenAIProviderPackageOptions,
+  azureChatCompletionsUrl,
+  createAzureOpenAIProvider,
+  createAzureOpenAIProviderPackage,
 } from "./provider.js";

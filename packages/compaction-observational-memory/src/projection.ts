@@ -1,6 +1,14 @@
 import type { SessionEntry } from "@arnilo/prism";
 import { activeObservations, foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
-import { FOLDED_MEMORY, foldedMemoryFromEntry, isMemoryObservation, isMemoryReflection, type FoldedMemoryDetails, type MemoryObservation, type MemoryReflection } from "./types.js";
+import {
+  FOLDED_MEMORY,
+  type FoldedMemoryDetails,
+  foldedMemoryFromEntry,
+  isMemoryObservation,
+  isMemoryReflection,
+  type MemoryObservation,
+  type MemoryReflection,
+} from "./types.js";
 
 export interface ObservationalMemoryProjection {
   readonly full: ObservationalMemoryLedger;
@@ -10,7 +18,10 @@ export interface ObservationalMemoryProjection {
   readonly folded?: FoldedMemoryDetails;
 }
 
-export function buildObservationalMemoryProjection(entries: readonly SessionEntry[], firstKeptEntryId?: string): ObservationalMemoryProjection {
+export function buildObservationalMemoryProjection(
+  entries: readonly SessionEntry[],
+  firstKeptEntryId?: string,
+): ObservationalMemoryProjection {
   const boundary = firstKeptEntryId ? entries.findIndex((entry) => entry.id === firstKeptEntryId) : -1;
   const visibleEntries = boundary >= 0 ? entries.slice(0, boundary) : entries;
   const latestFolded = boundary < 0 ? latestFoldedMemory(entries) : undefined;
@@ -25,7 +36,10 @@ export function buildObservationalMemoryProjection(entries: readonly SessionEntr
   };
 }
 
-export function createFoldedMemoryDetails(projection: Pick<ObservationalMemoryProjection, "observations" | "reflections" | "droppedObservationIds">, fullFold = false): FoldedMemoryDetails {
+export function createFoldedMemoryDetails(
+  projection: Pick<ObservationalMemoryProjection, "observations" | "reflections" | "droppedObservationIds">,
+  fullFold = false,
+): FoldedMemoryDetails {
   return {
     type: FOLDED_MEMORY,
     version: 1,

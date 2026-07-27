@@ -1,12 +1,4 @@
-import type {
-  ContentBlock,
-  ErrorInfo,
-  JsonObject,
-  ProviderEvent,
-  ToolCallContent,
-  ToolCallDeltaContent,
-  Usage,
-} from "./contracts.js";
+import type { ContentBlock, ErrorInfo, JsonObject, ProviderEvent, ToolCallContent, ToolCallDeltaContent, Usage } from "./contracts.js";
 import { ProviderTransportError, tryParseJsonObjectArguments } from "./providers/transport.js";
 import { errorToErrorInfo } from "./redaction.js";
 
@@ -53,12 +45,14 @@ export function reconstructToolCallDeltas(events: readonly ProviderEvent[]): rea
     if (event.argumentsText !== undefined) partial.argumentsText += event.argumentsText;
     partials.set(event.index, partial);
   }
-  return [...partials.entries()].sort(([a], [b]) => a - b).map(([index, partial]) => {
-    if (!partial.id || !partial.name) {
-      throw new ProviderTransportError("incomplete_delta", `Incomplete tool call delta at index ${index}`);
-    }
-    return toolCallFromArgumentsText(partial.id, partial.name, partial.argumentsText);
-  });
+  return [...partials.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([index, partial]) => {
+      if (!partial.id || !partial.name) {
+        throw new ProviderTransportError("incomplete_delta", `Incomplete tool call delta at index ${index}`);
+      }
+      return toolCallFromArgumentsText(partial.id, partial.name, partial.argumentsText);
+    });
 }
 
 export function providerUsage(usage: Usage): ProviderEvent {

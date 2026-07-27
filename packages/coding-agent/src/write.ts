@@ -17,21 +17,11 @@
 import { Buffer } from "node:buffer";
 import { mkdir as fsMkdir, writeFile as fsWriteFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import { resolveToCwd } from "./path-utils.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
-import {
-  DEFAULT_MAX_WRITE_BYTES,
-  HARD_MAX_WRITE_BYTES,
-  validateCodingLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
+import { resolveToCwd } from "./path-utils.js";
 
 /**
  * Pluggable operations for the write tool. Override to delegate file writing to remote systems
@@ -39,11 +29,7 @@ import {
  */
 export interface WriteOperations {
   /** Write content to a file (creating or overwriting). */
-  writeFile: (
-    absolutePath: string,
-    content: string,
-    options?: { maxBytes: number; signal?: AbortSignal },
-  ) => Promise<void>;
+  writeFile: (absolutePath: string, content: string, options?: { maxBytes: number; signal?: AbortSignal }) => Promise<void>;
   /** Create a directory recursively. */
   mkdir: (dir: string, options?: { signal?: AbortSignal }) => Promise<void>;
 }
@@ -78,11 +64,7 @@ function countLines(content: string): number {
 
 export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition {
   const ops = options?.operations ?? defaultWriteOperations;
-  const maxInputBytes = validateCodingLimit(
-    "maxInputBytes",
-    options?.maxInputBytes ?? DEFAULT_MAX_WRITE_BYTES,
-    HARD_MAX_WRITE_BYTES,
-  );
+  const maxInputBytes = validateCodingLimit("maxInputBytes", options?.maxInputBytes ?? DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES);
 
   return {
     name: "write",
@@ -140,7 +122,6 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
           await ops.mkdir(dir, { signal: context.signal });
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
           await ops.writeFile(allowedPath, content, { maxBytes: maxInputBytes, signal: context.signal });
-
 
           const lines = countLines(content);
           return {

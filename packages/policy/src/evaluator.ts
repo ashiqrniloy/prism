@@ -1,6 +1,6 @@
 import { assertIdentityActive, ownershipFromIdentity } from "@arnilo/prism";
 import { PolicyError } from "./errors.js";
-import { preparePolicyDecision, type PreparePolicyDecisionOptions } from "./prepare.js";
+import { type PreparePolicyDecisionOptions } from "./prepare.js";
 import type {
   AppendPolicyDecisionInput,
   PolicyDecisionRecord,
@@ -48,10 +48,7 @@ export interface EvaluateAndAppendOptions extends PreparePolicyDecisionOptions {
 }
 
 /** Evaluate then append a redacted decision (common enterprise host path). */
-export async function evaluateAndAppend(
-  request: PolicyEvaluateRequest,
-  options: EvaluateAndAppendOptions,
-): Promise<PolicyDecisionRecord> {
+export async function evaluateAndAppend(request: PolicyEvaluateRequest, options: EvaluateAndAppendOptions): Promise<PolicyDecisionRecord> {
   const result = await options.evaluator.evaluate(request);
   const ownership = ownershipFromIdentity(request.identity);
   const input: AppendPolicyDecisionInput = {

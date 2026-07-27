@@ -7,7 +7,12 @@ export interface ComposeSystemPromptOptions {
 // ponytail: Phase 31 — `source: "user"` is the global base layer; `source: "app"` sits above package.
 // Behavioral change from Phase 14: `source: "user"` is now the global base (rank 0), not a high-priority caller override.
 // Unknown custom sources sort after package but before app/run so they cannot override host/run layers.
-const sourceRank = new Map<string, number>([["user", 0], ["package", 1], ["app", 2], ["run", 3]]);
+const sourceRank = new Map<string, number>([
+  ["user", 0],
+  ["package", 1],
+  ["app", 2],
+  ["run", 3],
+]);
 const unknownSourceRank = 1.5;
 
 export function composeSystemPrompt(contributions: SystemPromptConfig = [], options: ComposeSystemPromptOptions = {}): string | undefined {
@@ -32,7 +37,10 @@ export function composeSystemPrompt(contributions: SystemPromptConfig = [], opti
   return joinPrompt(parts);
 }
 
-export function mergeSystemPromptConfig(config: SystemPromptConfig | undefined, override: SystemPromptConfig | undefined): SystemPromptConfig {
+export function mergeSystemPromptConfig(
+  config: SystemPromptConfig | undefined,
+  override: SystemPromptConfig | undefined,
+): SystemPromptConfig {
   if (override === false) return config ? [] : [];
   return [...asContributions(config), ...asContributions(override)];
 }
@@ -42,12 +50,14 @@ function asContributions(value: SystemPromptConfig | undefined): readonly System
   return isContributionArray(value) ? value : [value];
 }
 
-function isContributionArray(value: SystemPromptContribution | readonly SystemPromptContribution[]): value is readonly SystemPromptContribution[] {
+function isContributionArray(
+  value: SystemPromptContribution | readonly SystemPromptContribution[],
+): value is readonly SystemPromptContribution[] {
   return Array.isArray(value);
 }
 
 function baseParts(base: ComposeSystemPromptOptions["base"]): string[] {
-  return (typeof base === "string" ? [base] : base ?? []).filter((text) => text.length > 0);
+  return (typeof base === "string" ? [base] : (base ?? [])).filter((text) => text.length > 0);
 }
 
 function rank(layer: SystemPromptContribution): number {

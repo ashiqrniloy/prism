@@ -33,7 +33,7 @@ export interface NeuralWattRetryDecision {
 }
 
 /** Non-retryable NeuralWatt client status codes. */
-const NON_RETRYABLE_STATUSES = new Set([400, 401, 402, 403, 404]);
+const _NON_RETRYABLE_STATUSES = new Set([400, 401, 402, 403, 404]);
 /** Retryable NeuralWatt server/rate-limit status codes. */
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503]);
 
@@ -89,7 +89,10 @@ function parseErrorBody(body: unknown): { error?: { code?: unknown; retry_after?
   return undefined;
 }
 
-function readRetryAfterMs(headers: NeuralWattErrorInput["headers"], body: { error?: { retry_after?: unknown } } | undefined): number | undefined {
+function readRetryAfterMs(
+  headers: NeuralWattErrorInput["headers"],
+  body: { error?: { retry_after?: unknown } } | undefined,
+): number | undefined {
   const raw = readHeader(headers, "retry-after") ?? readNumber(body?.error?.retry_after);
   if (raw === undefined) return undefined;
   const seconds = Number(raw);
@@ -109,7 +112,11 @@ function readHeader(headers: NeuralWattErrorInput["headers"], name: string): str
 }
 
 function readNumber(value: unknown): number | undefined {
-  return typeof value === "number" ? value : typeof value === "string" && value.trim() && Number.isFinite(Number(value)) ? Number(value) : undefined;
+  return typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim() && Number.isFinite(Number(value))
+      ? Number(value)
+      : undefined;
 }
 
 function cleanStrategy(value: unknown): NeuralWattRetryStrategy | undefined {

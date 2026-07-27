@@ -1,8 +1,8 @@
-import { EventSchemas, EventType, type AGUIEvent } from "@ag-ui/core";
+import { type AGUIEvent, EventSchemas, EventType } from "@ag-ui/core";
 import type { AgentEvent, ErrorInfo, SecretRedactor, ToolCallContent, ToolResult, Usage } from "@arnilo/prism";
 import { AgUiError } from "./errors.js";
-import { resolveAgUiLimits, type AgUiLimitOptions, type ResolvedAgUiLimits } from "./limits.js";
-import { projectCoWorkEvent, type AgUiProjection } from "./projection.js";
+import { type AgUiLimitOptions, resolveAgUiLimits } from "./limits.js";
+import { type AgUiProjection, projectCoWorkEvent } from "./projection.js";
 import type { CoWorkEvent } from "./types.js";
 
 export interface AgUiEventMapperOptions {
@@ -112,7 +112,11 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
   };
   const error = (events: AGUIEvent[], info: ErrorInfo, code = "PRISM_ERROR"): void => {
     close(events);
-    emit(events, { type: EventType.RUN_ERROR, message: text(info.message, limits.maxErrorBytes), code: text(String(info.code ?? code), limits.maxErrorBytes) });
+    emit(events, {
+      type: EventType.RUN_ERROR,
+      message: text(info.message, limits.maxErrorBytes),
+      code: text(String(info.code ?? code), limits.maxErrorBytes),
+    });
     terminal = true;
   };
   const projected = (callback: () => unknown, maxBytes: number): string | undefined => {
@@ -138,7 +142,11 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
   return {
     mapCoWork(input) {
       const events: AGUIEvent[] = [];
-      const payload = projectCoWorkEvent(input, { redactor: options.redactor, projection: options.projection, maxBytes: limits.maxTextBytes });
+      const payload = projectCoWorkEvent(input, {
+        redactor: options.redactor,
+        projection: options.projection,
+        maxBytes: limits.maxTextBytes,
+      });
       if (payload === undefined) return events;
       emit(events, { type: EventType.CUSTOM, name: `prism.cowork.${input.kind}`, value: payload });
       return events;
@@ -153,7 +161,12 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           break;
         case "agent_finished":
           close(events);
-          emit(events, { type: EventType.RUN_FINISHED, threadId: thread(event.sessionId), runId: run(event.runId, event.sessionId), outcome: { type: "success" } });
+          emit(events, {
+            type: EventType.RUN_FINISHED,
+            threadId: thread(event.sessionId),
+            runId: run(event.runId, event.sessionId),
+            outcome: { type: "success" },
+          });
           terminal = true;
           break;
         case "agent_suspended":
@@ -190,7 +203,8 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           }
           if (!messageHasDelta) {
             for (const block of event.message.content) {
-              if (block.type === "text") emit(events, { type: EventType.TEXT_MESSAGE_CONTENT, messageId: activeMessage, delta: text(block.text) });
+              if (block.type === "text")
+                emit(events, { type: EventType.TEXT_MESSAGE_CONTENT, messageId: activeMessage, delta: text(block.text) });
             }
           }
           emit(events, { type: EventType.TEXT_MESSAGE_END, messageId: activeMessage });
@@ -201,7 +215,11 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           startTool(events, event.call);
           break;
         case "tool_execution_progress":
-          custom(events, "prism.tool_progress", { toolCallId: id(event.toolCallId, "tool"), name: text(event.name), status: "in_progress" });
+          custom(events, "prism.tool_progress", {
+            toolCallId: id(event.toolCallId, "tool"),
+            name: text(event.name),
+            status: "in_progress",
+          });
           break;
         case "tool_execution_finished":
           finishTool(events, event.result.toolCallId, event.result.name, "completed", event.result);
@@ -234,9 +252,10 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
 }
 
 function usage(value: Usage): Record<string, number> {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, amount]) => typeof amount === "number" && Number.isFinite(amount)),
-  ) as Record<string, number>;
+  return Object.fromEntries(Object.entries(value).filter(([, amount]) => typeof amount === "number" && Number.isFinite(amount))) as Record<
+    string,
+    number
+  >;
 }
 
 function truncateUtf8(value: string, maxBytes: number): string {

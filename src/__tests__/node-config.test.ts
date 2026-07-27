@@ -1,8 +1,8 @@
+import assert from "node:assert/strict";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
 import { defaultUserConfigPath, isNodeErrorCode, loadConfigFiles, readConfigFile } from "../node/config.js";
 
 async function tempFile(name: string, text: string): Promise<string> {
@@ -20,9 +20,7 @@ describe("node config loader", () => {
   it("loads config files from explicit paths", async () => {
     const path = await tempFile("config.json", JSON.stringify({ demo: { enabled: true } }));
 
-    assert.deepEqual(await loadConfigFiles([{ name: "user", path }]), [
-      { name: "user", config: { demo: { enabled: true } } },
-    ]);
+    assert.deepEqual(await loadConfigFiles([{ name: "user", path }]), [{ name: "user", config: { demo: { enabled: true } } }]);
   });
 
   it("skips optional missing files", async () => {

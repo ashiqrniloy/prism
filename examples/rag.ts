@@ -6,10 +6,10 @@ const embedder = createHashEmbedder();
 const store = createMemoryVectorStore();
 const scope = { tenantId: "demo", resourceId: "docs", corpusId: "handbook" };
 
-const chunks = chunkMarkdown(
-  "# Durable approval\n\nA resumed tool rechecks current execution policy before side effects.",
-  { sourceId: "security-guide", metadata: { category: "security" } },
-);
+const chunks = chunkMarkdown("# Durable approval\n\nA resumed tool rechecks current execution policy before side effects.", {
+  sourceId: "security-guide",
+  metadata: { category: "security" },
+});
 await indexChunks({ chunks, embedder, store, scope });
 
 const retrieved = await retrieveContext("execution policy approval", {
@@ -21,10 +21,7 @@ const retrieved = await retrieveContext("execution policy approval", {
 
 const agent = createAgent({
   model: { provider: "mock", model: "rag-demo" },
-  provider: createMockProvider([
-    providerTextDelta(`Policy answer ${retrieved.citations[0]?.id ?? "without citation"}`),
-    providerDone(),
-  ]),
+  provider: createMockProvider([providerTextDelta(`Policy answer ${retrieved.citations[0]?.id ?? "without citation"}`), providerDone()]),
   context: [createRagContextProvider({ embedder, store, scope })],
 });
 

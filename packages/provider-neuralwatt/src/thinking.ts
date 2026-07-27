@@ -8,16 +8,12 @@ import type { JsonObject, ProviderRequest } from "@arnilo/prism";
  */
 export function neuralWattReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
-    request.options?.compat?.reasoning_effort
-    ?? request.options?.compat?.reasoningEffort
-    ?? request.model.compat?.reasoning_effort;
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
   return typeof effort === "string" ? effort : undefined;
 }
 
 export function neuralWattThinkingTokenBudget(request: ProviderRequest): number | undefined {
-  const budget =
-    request.options?.compat?.thinking_token_budget
-    ?? request.model.compat?.thinking_token_budget;
+  const budget = request.options?.compat?.thinking_token_budget ?? request.model.compat?.thinking_token_budget;
   return typeof budget === "number" ? budget : undefined;
 }
 
@@ -58,16 +54,16 @@ export function neuralWattToolChoice(request: ProviderRequest): string | JsonObj
  */
 export function neuralWattPreserveThinking(request: ProviderRequest): boolean | undefined {
   const fromKwargs = readBoolean(
-    asObject(request.options?.compat?.chat_template_kwargs)?.preserve_thinking
-    ?? asObject(request.model.compat?.chat_template_kwargs)?.preserve_thinking,
+    asObject(request.options?.compat?.chat_template_kwargs)?.preserve_thinking ??
+      asObject(request.model.compat?.chat_template_kwargs)?.preserve_thinking,
   );
   if (fromKwargs !== undefined) return fromKwargs;
 
   const value =
-    request.options?.compat?.preserve_thinking
-    ?? request.options?.compat?.preserveThinking
-    ?? request.model.compat?.preserve_thinking
-    ?? request.model.compat?.preserveThinking;
+    request.options?.compat?.preserve_thinking ??
+    request.options?.compat?.preserveThinking ??
+    request.model.compat?.preserve_thinking ??
+    request.model.compat?.preserveThinking;
   return typeof value === "boolean" ? value : undefined;
 }
 
@@ -78,16 +74,16 @@ export function neuralWattPreserveThinking(request: ProviderRequest): boolean | 
  */
 export function neuralWattClearThinking(request: ProviderRequest): boolean | undefined {
   const fromKwargs = readBoolean(
-    asObject(request.options?.compat?.chat_template_kwargs)?.clear_thinking
-    ?? asObject(request.model.compat?.chat_template_kwargs)?.clear_thinking,
+    asObject(request.options?.compat?.chat_template_kwargs)?.clear_thinking ??
+      asObject(request.model.compat?.chat_template_kwargs)?.clear_thinking,
   );
   if (fromKwargs !== undefined) return fromKwargs;
 
   const value =
-    request.options?.compat?.clear_thinking
-    ?? request.options?.compat?.clearThinking
-    ?? request.model.compat?.clear_thinking
-    ?? request.model.compat?.clearThinking;
+    request.options?.compat?.clear_thinking ??
+    request.options?.compat?.clearThinking ??
+    request.model.compat?.clear_thinking ??
+    request.model.compat?.clearThinking;
   return typeof value === "boolean" ? value : undefined;
 }
 

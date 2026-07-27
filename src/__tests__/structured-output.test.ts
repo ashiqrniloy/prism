@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  assertStructuredOutputRequestSupported,
   artifactStructuredOutputRequest,
+  assertStructuredOutputRequestSupported,
   modelSupportsStructuredOutput,
   resolveRunProviderOptions,
   StructuredOutputError,
@@ -27,10 +27,11 @@ describe("structured output", () => {
 
   it("rejects unsupported models before provider fetch", () => {
     assert.throws(
-      () => assertStructuredOutputRequestSupported(
-        { provider: "demo", model: "plain", capabilities: { output: ["text"] } },
-        { structuredOutput: { name: "answer", schema } },
-      ),
+      () =>
+        assertStructuredOutputRequestSupported(
+          { provider: "demo", model: "plain", capabilities: { output: ["text"] } },
+          { structuredOutput: { name: "answer", schema } },
+        ),
       (error: Error) => error instanceof StructuredOutputError && error.code === "unsupported_model",
     );
     assert.ok(modelSupportsStructuredOutput({ structuredOutput: "json_schema" }));

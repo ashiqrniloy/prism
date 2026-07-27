@@ -1,14 +1,14 @@
-import { Readable, Writable } from "node:stream";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
-import { createAgent, createMockProvider, providerDone } from "../index.js";
-import { createSkillRegistry } from "../skills.js";
-import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { CliOptions } from "../cli-runner.js";
+import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { AgentSession, ProviderRequest } from "../contracts.js";
+import { createAgent, createMockProvider } from "../index.js";
+import { createSkillRegistry } from "../skills.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -16,7 +16,9 @@ class MemoryWritable extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
-  text(): string { return this.chunks.join(""); }
+  text(): string {
+    return this.chunks.join("");
+  }
 }
 
 function streams(input = "") {
@@ -38,7 +40,9 @@ async function writeFileDeep(path: string, text: string): Promise<void> {
 function capturingSession(captured: ProviderRequest[]): (options: CliOptions) => AgentSession {
   return (options) => {
     const provider = createMockProvider([{ type: "done" }], {
-      onRequest: (req) => { captured.push(req); },
+      onRequest: (req) => {
+        captured.push(req);
+      },
     });
     return createAgent({
       model: { provider: "mock", model: "m" },
@@ -105,10 +109,7 @@ describe("cli discovery flags", () => {
 
   it("--discover activates a workspace skill and its instructions reach the provider input", async () => {
     const root = await makeRoot("ws");
-    await writeFileDeep(
-      `${root}/.agents/skills/greeter/SKILL.md`,
-      "---\nname: greeter\ndescription: g\n---\nsay hi to the user warmly\n",
-    );
+    await writeFileDeep(`${root}/.agents/skills/greeter/SKILL.md`, "---\nname: greeter\ndescription: g\n---\nsay hi to the user warmly\n");
     const captured: ProviderRequest[] = [];
     const io = streams();
 
@@ -188,5 +189,4 @@ describe("cli discovery flags", () => {
     assert.equal(seen[0].discoveredSkills.length, 1);
     assert.equal(seen[0].discoveredSkills[0].name, "greeter");
   });
-
 });

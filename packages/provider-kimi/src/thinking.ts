@@ -20,9 +20,7 @@ export function kimiThinking(request: ProviderRequest): JsonObject | undefined {
  */
 export function kimiReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
-    request.options?.compat?.reasoning_effort
-    ?? request.options?.compat?.reasoningEffort
-    ?? request.model.compat?.reasoning_effort;
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
   return typeof effort === "string" ? effort : undefined;
 }
 

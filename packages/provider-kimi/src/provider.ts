@@ -1,18 +1,42 @@
-import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelCapabilities, ModelConfig, ProviderEvent, ProviderRequest, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallFromArgumentsText } from "@arnilo/prism";
+import type {
+  AIProvider,
+  CacheControlledMessage,
+  ContentBlock,
+  CredentialValueSource,
+  DocumentContent,
+  FileContent,
+  JsonObject,
+  MediaContentBlock,
+  Message,
+  ModelConfig,
+  ProviderEvent,
+  ProviderRequest,
+  ResolvedMediaContent,
+  ToolDefinition,
+  Usage,
+} from "@arnilo/prism";
+import {
+  assertStructuredOutputRequestSupported,
+  providerDone,
+  providerError,
+  providerTextDelta,
+  providerThinkingDelta,
+  providerToolCall,
+  providerToolCallDelta,
+  providerUsage,
+  resolveCredentialValue,
+  toolCallFromArgumentsText,
+} from "@arnilo/prism";
 import {
   bytesToBase64,
   isPdfMediaType,
   rejectProviderMediaBlock,
   resolveProviderMediaMessages,
-  serializePdfDocumentWireBlock } from "@arnilo/prism/providers/media";
+  serializePdfDocumentWireBlock,
+} from "@arnilo/prism/providers/media";
 import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { applyKimiAnthropicCacheControl } from "./cache.js";
-import {
-  kimiPreserveThinking,
-  kimiReasoningEffort,
-  kimiThinking,
-  stripKimiThinkingCompat } from "./thinking.js";
+import { kimiPreserveThinking, kimiReasoningEffort, kimiThinking, stripKimiThinkingCompat } from "./thinking.js";
 
 export interface KimiCodingProviderOptions {
   readonly id?: string;
@@ -22,7 +46,12 @@ export interface KimiCodingProviderOptions {
   readonly userAgent?: string;
 }
 
-interface PartialBlock { id?: string; name?: string; argumentsText: string; complete?: boolean }
+interface PartialBlock {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+  complete?: boolean;
+}
 
 export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}): AIProvider {
   const id = options.id ?? "kimi-coding";
@@ -46,9 +75,11 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
             ...(token ? { authorization: `Bearer ${token}` } : {}),
             // Provider-owned Anthropic-route auth: official third-party setup uses
             // ANTHROPIC_API_KEY semantics (x-api-key + anthropic-version).
-            ...(token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {})},
+            ...(token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {}),
+          },
           body: JSON.stringify(body),
-          signal: request.signal});
+          signal: request.signal,
+        });
         if (!response.ok) {
           return yield providerError(
             new Error(`Kimi request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -60,7 +91,8 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
       } catch (error) {
         yield providerError(error, secrets);
       }
-    }};
+    },
+  };
 }
 
 export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject> {
@@ -73,8 +105,14 @@ export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonO
   // Anthropic `/messages` contract remains under-documented — fields are best-effort passthrough.
   return clean({
     model: request.model.model,
-    messages: await Promise.all(messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia))),
-    system: messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
+    messages: await Promise.all(
+      messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia)),
+    ),
+    system:
+      messages
+        .filter((m) => m.role === "system")
+        .map((m) => text(m, preserveThinking))
+        .join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
     thinking: kimiThinking(request),
@@ -82,7 +120,8 @@ export async function kimiAnthropicBody(request: ProviderRequest): Promise<JsonO
     ...parameters,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
     ...stripKimiThinkingCompat(request.options?.compat as JsonObject | undefined),
-    ...request.options?.extra});
+    ...request.options?.extra,
+  });
 }
 
 export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
@@ -93,7 +132,8 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
     if (data === "[DONE]") break;
     const event = JSON.parse(data) as KimiEvent;
     if (event.type === "message_stop") sawMessageStop = true;
-    if (event.type === "content_block_start" && event.content_block?.type === "tool_use") blocks.set(event.index ?? 0, { id: event.content_block.id, name: event.content_block.name, argumentsText: "" });
+    if (event.type === "content_block_start" && event.content_block?.type === "tool_use")
+      blocks.set(event.index ?? 0, { id: event.content_block.id, name: event.content_block.name, argumentsText: "" });
     if (event.type === "content_block_stop") {
       const current = blocks.get(event.index ?? 0);
       if (current) current.complete = true;
@@ -101,7 +141,8 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
     if (event.type === "content_block_delta") {
       const delta = event.delta;
       if (delta?.type === "text_delta" && delta.text) yield providerTextDelta(delta.text);
-      if ((delta?.type === "thinking_delta" || delta?.type === "reasoning_delta") && (delta.thinking ?? delta.reasoning)) yield providerThinkingDelta(delta.thinking ?? delta.reasoning ?? "");
+      if ((delta?.type === "thinking_delta" || delta?.type === "reasoning_delta") && (delta.thinking ?? delta.reasoning))
+        yield providerThinkingDelta(delta.thinking ?? delta.reasoning ?? "");
       if (delta?.type === "input_json_delta") {
         const index = event.index ?? 0;
         const current = blocks.get(index) ?? { argumentsText: "" };
@@ -116,11 +157,13 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
   const danglingBlock = [...blocks.values()].some((call) => !call.id || !call.name || !call.complete);
   if (!sawMessageStop || danglingBlock) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(new Error(
-      `Kimi messages stream ended without completion evidence `
-      + `(message_stop: ${sawMessageStop ? "received" : "missing"}, `
-      + `content blocks complete: ${danglingBlock ? "no" : "yes"})`,
-    ));
+    yield providerError(
+      new Error(
+        `Kimi messages stream ended without completion evidence ` +
+          `(message_stop: ${sawMessageStop ? "received" : "missing"}, ` +
+          `content blocks complete: ${danglingBlock ? "no" : "yes"})`,
+      ),
+    );
     return;
   }
   for (const call of blocks.values()) {
@@ -141,11 +184,15 @@ async function toMessage(
     const last = message.content[message.content.length - 1];
     return {
       role: "user",
-      content: [{
-        type: "tool_result",
-        tool_use_id: result?.toolCallId ?? "",
-        content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-        ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {})}]};
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: result?.toolCallId ?? "",
+          content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+          ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {}),
+        },
+      ],
+    };
   }
 
   const content: JsonObject[] = [];
@@ -155,7 +202,14 @@ async function toMessage(
       content.push(withMarker({ type: "text", text: part.text }, marker));
     } else if (part.type === "thinking") {
       if (preserveThinking) {
-        content.push(withMarker(part.signature ? { type: "thinking", thinking: part.text, signature: part.signature } : { type: "thinking", thinking: part.text }, marker));
+        content.push(
+          withMarker(
+            part.signature
+              ? { type: "thinking", thinking: part.text, signature: part.signature }
+              : { type: "thinking", thinking: part.text },
+            marker,
+          ),
+        );
       } else {
         content.push(withMarker({ type: "text", text: part.text }, marker));
       }
@@ -176,7 +230,10 @@ async function toMessage(
     }
   }
 
-  return { role: message.role === "assistant" ? "assistant" : "user", content: content.length > 0 ? content : [{ type: "text", text: "" }] };
+  return {
+    role: message.role === "assistant" ? "assistant" : "user",
+    content: content.length > 0 ? content : [{ type: "text", text: "" }],
+  };
 }
 
 function toAnthropicDocument(part: DocumentContent, resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>): JsonObject {
@@ -184,7 +241,8 @@ function toAnthropicDocument(part: DocumentContent, resolvedMedia: ReadonlyMap<M
   return serializePdfDocumentWireBlock({
     mediaType: resolved.mediaType,
     data: bytesToBase64(resolved.bytes),
-    title: resolved.name});
+    title: resolved.name,
+  });
 }
 
 function toAnthropicFile(part: FileContent, resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>): JsonObject {
@@ -195,7 +253,8 @@ function toAnthropicFile(part: FileContent, resolvedMedia: ReadonlyMap<MediaCont
   return serializePdfDocumentWireBlock({
     mediaType: resolved.mediaType,
     data: bytesToBase64(resolved.bytes),
-    title: resolved.name});
+    title: resolved.name,
+  });
 }
 
 function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObject {
@@ -207,27 +266,49 @@ function toTool(tool: ToolDefinition): JsonObject {
 }
 
 function text(message: Message, preserveThinking = false): string {
-  return message.content.map((part) => {
-    if (part.type === "text") return part.text;
-    if (part.type === "thinking") return preserveThinking ? part.text : part.text;
-    return "";
-  }).join("");
+  return message.content
+    .map((part) => {
+      if (part.type === "text") return part.text;
+      if (part.type === "thinking") return preserveThinking ? part.text : part.text;
+      return "";
+    })
+    .join("");
 }
 
 function toUsage(usage: KimiUsage | undefined): Usage | undefined {
-  return usage ? { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens, cacheReadTokens: usage.cache_read_input_tokens, cacheWriteTokens: usage.cache_creation_input_tokens } : undefined;
+  return usage
+    ? {
+        inputTokens: usage.input_tokens,
+        outputTokens: usage.output_tokens,
+        cacheReadTokens: usage.cache_read_input_tokens,
+        cacheWriteTokens: usage.cache_creation_input_tokens,
+      }
+    : undefined;
 }
 
 function clean(value: Record<string, unknown>): JsonObject {
-  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && !(Array.isArray(item) && item.length === 0))) as JsonObject;
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined && !(Array.isArray(item) && item.length === 0)),
+  ) as JsonObject;
 }
 
 interface KimiEvent {
   readonly type?: string;
   readonly index?: number;
   readonly content_block?: { readonly type?: string; readonly id?: string; readonly name?: string };
-  readonly delta?: { readonly type?: string; readonly text?: string; readonly thinking?: string; readonly reasoning?: string; readonly partial_json?: string };
+  readonly delta?: {
+    readonly type?: string;
+    readonly text?: string;
+    readonly thinking?: string;
+    readonly reasoning?: string;
+    readonly partial_json?: string;
+  };
   readonly message?: { readonly usage?: KimiUsage };
   readonly usage?: KimiUsage;
 }
-interface KimiUsage { readonly input_tokens?: number; readonly output_tokens?: number; readonly cache_read_input_tokens?: number; readonly cache_creation_input_tokens?: number }
+interface KimiUsage {
+  readonly input_tokens?: number;
+  readonly output_tokens?: number;
+  readonly cache_read_input_tokens?: number;
+  readonly cache_creation_input_tokens?: number;
+}

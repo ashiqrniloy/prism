@@ -20,7 +20,9 @@ export function openRouterCacheEnabled(request: ProviderRequest): boolean {
   if (request.options?.cacheRetention === "none") return false;
   if (request.options?.cache?.mode === "off") return false;
   if (request.model.cache?.kind === "none") return false;
-  return request.model.cache?.kind === "cache_control" || request.model.compat?.openRouterCache === true || request.options?.cache?.mode === "on";
+  return (
+    request.model.cache?.kind === "cache_control" || request.model.compat?.openRouterCache === true || request.options?.cache?.mode === "on"
+  );
 }
 
 /**
@@ -53,13 +55,11 @@ export function openRouterTopLevelCacheControl(request: ProviderRequest): JsonOb
   // Only emit top-level automatic cache_control for explicit cache_control models
   // (or legacy openRouterCache / cache.mode on). Implicit-cache models do not need it.
   const explicit =
-    request.model.cache?.kind === "cache_control"
-    || request.model.compat?.openRouterCache === true
-    || request.options?.cache?.mode === "on";
+    request.model.cache?.kind === "cache_control" ||
+    request.model.compat?.openRouterCache === true ||
+    request.options?.cache?.mode === "on";
   if (!explicit) return undefined;
-  return openRouterCacheTtl(request)
-    ? { type: "ephemeral", ttl: "1h" }
-    : { type: "ephemeral" };
+  return openRouterCacheTtl(request) ? { type: "ephemeral", ttl: "1h" } : { type: "ephemeral" };
 }
 
 function openRouterCacheTtl(request: ProviderRequest): boolean {
@@ -79,13 +79,15 @@ export function withOpenRouterCacheMarker(contentItem: JsonObject, marker: JsonO
 }
 
 export function openRouterUsage(usage: OpenRouterUsage | undefined): Usage | undefined {
-  return usage ? {
-    inputTokens: usage.prompt_tokens,
-    outputTokens: usage.completion_tokens,
-    totalTokens: usage.total_tokens,
-    cacheReadTokens: usage.prompt_tokens_details?.cached_tokens,
-    cacheWriteTokens: usage.prompt_tokens_details?.cache_write_tokens,
-  } : undefined;
+  return usage
+    ? {
+        inputTokens: usage.prompt_tokens,
+        outputTokens: usage.completion_tokens,
+        totalTokens: usage.total_tokens,
+        cacheReadTokens: usage.prompt_tokens_details?.cached_tokens,
+        cacheWriteTokens: usage.prompt_tokens_details?.cache_write_tokens,
+      }
+    : undefined;
 }
 
 export interface OpenRouterUsage {

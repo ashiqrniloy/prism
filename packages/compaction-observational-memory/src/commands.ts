@@ -2,7 +2,7 @@ import type { CommandDefinition, JsonObject, SessionEntry } from "@arnilo/prism"
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { buildObservationalMemoryProjection } from "./projection.js";
 import { renderObservationalMemory } from "./render.js";
-import { resolveObservationalMemorySettings, type ObservationalMemorySettingsInput } from "./settings.js";
+import { type ObservationalMemorySettingsInput, resolveObservationalMemorySettings } from "./settings.js";
 import { estimateEntryTokens } from "./tokens.js";
 import type { GetMemoryEntries } from "./tool.js";
 
@@ -28,9 +28,19 @@ export function createMemoryStatusCommand(options: MemoryCommandOptions): Comman
       const rawTokens = entries.reduce((sum, entry) => sum + estimateEntryTokens(entry), 0);
       const status = options.runtimeStatus?.();
       const value = {
-        observations: { recorded: ledger.observations.length, dropped: ledger.droppedObservationIds.length, active: active.length, visible: projection.observations.length },
+        observations: {
+          recorded: ledger.observations.length,
+          dropped: ledger.droppedObservationIds.length,
+          active: active.length,
+          visible: projection.observations.length,
+        },
         reflections: { recorded: ledger.reflections.length, visible: projection.reflections.length },
-        tokens: { raw: rawTokens, activeObservationPool: activeTokens, observationsPoolTarget: settings.observationsPoolTargetTokens, observationsPoolMax: settings.observationsPoolMaxTokens },
+        tokens: {
+          raw: rawTokens,
+          activeObservationPool: activeTokens,
+          observationsPoolTarget: settings.observationsPoolTargetTokens,
+          observationsPoolMax: settings.observationsPoolMaxTokens,
+        },
         runtime: status ?? { inFlight: false },
       };
       const text = [
@@ -50,13 +60,22 @@ export function createMemoryViewCommand(options: MemoryCommandOptions): CommandD
     parameters: { type: "object", properties: { mode: { type: "string" } } } as JsonObject,
     async execute(args, context) {
       const mode = typeof args.mode === "string" ? args.mode : undefined;
-      if (mode && mode !== "full") return { name: "om:view", error: { message: "Usage: /om:view [full]" }, content: [{ type: "text", text: "Usage: /om:view [full]" }] };
+      if (mode && mode !== "full")
+        return {
+          name: "om:view",
+          error: { message: "Usage: /om:view [full]" },
+          content: [{ type: "text", text: "Usage: /om:view [full]" }],
+        };
       const entries = await requireEntries(options, context.sessionId);
       const projection = buildObservationalMemoryProjection(entries);
       const observations = mode === "full" ? activeObservations(projection.full) : projection.observations;
       const reflections = mode === "full" ? projection.full.reflections : projection.reflections;
       const text = renderObservationalMemory(reflections, observations, options.secrets);
-      return { name: "om:view", value: { mode: mode ?? "visible", observations: observations.length, reflections: reflections.length, text }, content: [{ type: "text", text }] };
+      return {
+        name: "om:view",
+        value: { mode: mode ?? "visible", observations: observations.length, reflections: reflections.length, text },
+        content: [{ type: "text", text }],
+      };
     },
   };
 }

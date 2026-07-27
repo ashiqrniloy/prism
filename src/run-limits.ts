@@ -60,7 +60,10 @@ export interface RunLimitTrackerOptions {
 }
 
 /** Validate one host-authored layer. Defaults are applied only after inheritance is resolved. */
-export function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">> {
+export function resolveRunLimits(
+  agent?: RunLimits,
+  run?: RunLimits,
+): Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">> {
   const base = agent ? validateLimits(agent) : undefined;
   const override = run ? validateLimits(run) : undefined;
   const resolved: Record<IntegerLimit, number> = { ...DEFAULT_RUN_LIMITS };
@@ -69,10 +72,25 @@ export function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<R
     if (override?.[name] !== undefined) resolved[name] = base ? Math.min(resolved[name], override[name]!) : override[name]!;
   }
   const maxCost = override?.maxCost ?? base?.maxCost;
-  return Object.freeze({ ...resolved, ...(maxCost ? { maxCost: base?.maxCost && override?.maxCost ? { amount: Math.min(base.maxCost.amount, override.maxCost.amount), currency: base.maxCost.currency === override.maxCost.currency ? base.maxCost.currency : failCurrency() } : maxCost } : {}) });
+  return Object.freeze({
+    ...resolved,
+    ...(maxCost
+      ? {
+          maxCost:
+            base?.maxCost && override?.maxCost
+              ? {
+                  amount: Math.min(base.maxCost.amount, override.maxCost.amount),
+                  currency: base.maxCost.currency === override.maxCost.currency ? base.maxCost.currency : failCurrency(),
+                }
+              : maxCost,
+        }
+      : {}),
+  });
 }
 
-function failCurrency(): never { throw new TypeError("Run limit currencies must match when narrowed"); }
+function failCurrency(): never {
+  throw new TypeError("Run limit currencies must match when narrowed");
+}
 
 function validateLimits(input: RunLimits): RunLimits {
   for (const name of LIMIT_NAMES) {
@@ -84,7 +102,8 @@ function validateLimits(input: RunLimits): RunLimits {
   }
   if (input.maxCost) {
     const { amount, currency } = input.maxCost;
-    if (!Number.isFinite(amount) || amount < 0 || amount > HARD_MAX_RUN_COST || !currency.trim()) throw new TypeError(`maxCost requires a finite amount from 0 through ${HARD_MAX_RUN_COST} and currency`);
+    if (!Number.isFinite(amount) || amount < 0 || amount > HARD_MAX_RUN_COST || !currency.trim())
+      throw new TypeError(`maxCost requires a finite amount from 0 through ${HARD_MAX_RUN_COST} and currency`);
   }
   return input;
 }
@@ -93,13 +112,29 @@ export class RunLimitTracker {
   readonly limits: Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">>;
   private readonly startedAt = performance.now();
   readonly deadlineAt: string;
-  private readonly counters: Record<keyof RunLimitCounters, number>; 
+  private readonly counters: Record<keyof RunLimitCounters, number>;
   private timer?: ReturnType<typeof setTimeout>;
   private exceeded?: RunLimitBreach;
 
-  constructor(limits: Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">>, private readonly options: RunLimitTrackerOptions = {}) {
+  constructor(
+    limits: Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">>,
+    private readonly options: RunLimitTrackerOptions = {},
+  ) {
     this.limits = limits;
-    this.counters = { turns: 0, providerAttempts: 0, toolRounds: 0, toolCalls: 0, wallTimeMs: 0, requestBytes: 0, responseBytes: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, cost: 0, ...options.snapshot };
+    this.counters = {
+      turns: 0,
+      providerAttempts: 0,
+      toolRounds: 0,
+      toolCalls: 0,
+      wallTimeMs: 0,
+      requestBytes: 0,
+      responseBytes: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      cost: 0,
+      ...options.snapshot,
+    };
     for (const [key, value] of Object.entries(this.counters)) {
       if (!Number.isFinite(value) || value < 0 || (key !== "cost" && !Number.isSafeInteger(value))) {
         throw new TypeError("Run limit snapshot must contain finite non-negative counters");
@@ -114,9 +149,16 @@ export class RunLimitTracker {
     if (remaining === 0) this.exceed("maxWallTimeMs", limits.maxWallTimeMs);
   }
 
-  get breach(): RunLimitBreach | undefined { return this.exceeded; }
-  snapshot(): RunLimitCounters { return { ...this.counters, wallTimeMs: Math.min(this.limits.maxWallTimeMs, Math.ceil(performance.now() - this.startedAt)) }; }
-  dispose(): void { if (this.timer) clearTimeout(this.timer); this.timer = undefined; }
+  get breach(): RunLimitBreach | undefined {
+    return this.exceeded;
+  }
+  snapshot(): RunLimitCounters {
+    return { ...this.counters, wallTimeMs: Math.min(this.limits.maxWallTimeMs, Math.ceil(performance.now() - this.startedAt)) };
+  }
+  dispose(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = undefined;
+  }
 
   charge(limit: Exclude<RunLimitName, "maxCost">, delta = 1): void {
     if (!Number.isSafeInteger(delta) || delta < 0) throw new TypeError("Run limit delta must be a non-negative safe integer");
@@ -134,14 +176,16 @@ export class RunLimitTracker {
     }
     for (const key of ["inputTokens", "outputTokens", "totalTokens", "cacheReadTokens", "cacheWriteTokens"] as const) {
       const value = usage[key];
-      if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) throw new TypeError(`Provider usage ${key} must be a non-negative safe integer`);
+      if (value !== undefined && (!Number.isSafeInteger(value) || value < 0))
+        throw new TypeError(`Provider usage ${key} must be a non-negative safe integer`);
     }
-    const total = usage.totalTokens ?? ((usage.inputTokens ?? 0) + (usage.outputTokens ?? 0));
+    const total = usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0);
     if (!Number.isSafeInteger(total)) throw new TypeError("Provider usage totalTokens is invalid");
     this.charge("maxInputTokens", usage.inputTokens ?? 0);
     this.charge("maxOutputTokens", usage.outputTokens ?? 0);
     this.charge("maxTotalTokens", total);
-    if (usage.cost !== undefined && (!Number.isFinite(usage.cost) || usage.cost < 0)) throw new TypeError("Provider usage cost must be finite and non-negative");
+    if (usage.cost !== undefined && (!Number.isFinite(usage.cost) || usage.cost < 0))
+      throw new TypeError("Provider usage cost must be finite and non-negative");
     if (!this.limits.maxCost) return;
     if (usage.cost === undefined || usage.currency !== this.limits.maxCost.currency) this.exceed("maxCost", Number.POSITIVE_INFINITY);
     const observed = this.counters.cost + usage.cost!;
@@ -149,10 +193,15 @@ export class RunLimitTracker {
     if (observed > this.limits.maxCost.amount) this.exceed("maxCost", observed);
   }
 
-  private exceed(limit: RunLimitName, observed: number): never | void {
+  private exceed(limit: RunLimitName, observed: number): never | undefined {
     if (!this.exceeded) {
-      const maximum = limit === "maxCost" ? this.limits.maxCost?.amount ?? 0 : this.limits[limit];
-      this.exceeded = { limit, maximum, observed, ...(limit === "maxCost" && this.limits.maxCost ? { currency: this.limits.maxCost.currency } : {}) };
+      const maximum = limit === "maxCost" ? (this.limits.maxCost?.amount ?? 0) : this.limits[limit];
+      this.exceeded = {
+        limit,
+        maximum,
+        observed,
+        ...(limit === "maxCost" && this.limits.maxCost ? { currency: this.limits.maxCost.currency } : {}),
+      };
       this.options.onExceeded?.(this.exceeded);
     }
     if (limit !== "maxWallTimeMs") throw new RunLimitError(this.exceeded);

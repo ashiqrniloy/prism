@@ -4,34 +4,30 @@
  * Task 6: egress routing, side-effect hooks, upload/download/screenshot policy.
  */
 import {
+  type BrowserDownloadOptions,
   cleanupDownloads,
   createDownloadBudget,
+  type DownloadBudget,
   quarantineDownload,
   releaseDownload,
-  type BrowserDownloadOptions,
-  type DownloadBudget,
 } from "./downloads.js";
 import { BrowserError } from "./errors.js";
-import {
-  resolveBrowserLimits,
-  type BrowserLimitOptions,
-  type ResolvedBrowserLimits,
-} from "./limits.js";
+import { type BrowserLimitOptions, type ResolvedBrowserLimits, resolveBrowserLimits } from "./limits.js";
 import {
   assertBrowserUrlAllowed,
+  type BrowserNetworkPolicy,
   createNetworkBudget,
   installNetworkRouting,
-  type BrowserNetworkPolicy,
   type NetworkBudget,
 } from "./network.js";
 import { classifyBrowserOperation, isSideEffectAction } from "./policy.js";
 import { captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget } from "./screenshot.js";
-import { captureAriaSnapshot, toSnapshotResult, type LiveSnapshot } from "./snapshot.js";
+import { captureAriaSnapshot, type LiveSnapshot, toSnapshotResult } from "./snapshot.js";
 import { normalizeTarget, requireUniqueLocator, resolveTargetLocator } from "./targets.js";
 import type {
+  BrowserActionName,
   BrowserActRequest,
   BrowserActResult,
-  BrowserActionName,
   BrowserDownloadInfo,
   BrowserOpenResult,
   BrowserPageInfo,
@@ -43,12 +39,7 @@ import type {
   PlaywrightDownload,
   PlaywrightPage,
 } from "./types.js";
-import {
-  approveUploadPaths,
-  createUploadBudget,
-  type BrowserUploadOptions,
-  type UploadBudget,
-} from "./uploads.js";
+import { approveUploadPaths, type BrowserUploadOptions, createUploadBudget, type UploadBudget } from "./uploads.js";
 
 export interface CreateBrowserManagerOptions {
   readonly browser: PlaywrightBrowser;
@@ -127,19 +118,14 @@ function defaultNetworkPolicy(input?: BrowserNetworkPolicy): BrowserNetworkPolic
     requireContainedProxy: input?.requireContainedProxy ?? true,
     allowLoopback: input?.allowLoopback ?? false,
     allowPrivateHosts: input?.allowPrivateHosts ?? false,
-    ...(input?.containedProxyAttestation
-      ? { containedProxyAttestation: input.containedProxyAttestation }
-      : {}),
+    ...(input?.containedProxyAttestation ? { containedProxyAttestation: input.containedProxyAttestation } : {}),
     ...(input?.validateUrl ? { validateUrl: input.validateUrl } : {}),
   };
 }
 
 export function createBrowserManager(options: CreateBrowserManagerOptions): BrowserManager {
   if (!options?.browser || typeof options.browser.newContext !== "function") {
-    throw new BrowserError(
-      "ERR_PRISM_BROWSER_INPUT",
-      "createBrowserManager requires a host-supplied Playwright Browser with newContext()",
-    );
+    throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "createBrowserManager requires a host-supplied Playwright Browser with newContext()");
   }
   const limits = resolveBrowserLimits(options.limits);
   const networkPolicy = defaultNetworkPolicy(options.networkPolicy);
@@ -254,9 +240,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
       context = await options.browser.newContext({
         serviceWorkers: "block",
         acceptDownloads,
-        ...(networkPolicy.containedProxyAttestation
-          ? { proxy: { server: networkPolicy.containedProxyAttestation.proxyEndpoint } }
-          : {}),
+        ...(networkPolicy.containedProxyAttestation ? { proxy: { server: networkPolicy.containedProxyAttestation.proxyEndpoint } } : {}),
       });
     } catch (error) {
       throw new BrowserError(
@@ -318,12 +302,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
       const onDownload = (download: PlaywrightDownload) => {
         void (async () => {
           try {
-            const meta = await quarantineDownload(
-              download,
-              options.downloads!,
-              limits,
-              session.downloadBudget,
-            );
+            const meta = await quarantineDownload(download, options.downloads!, limits, session.downloadBudget);
             session.lastDownloadId = meta.downloadId;
           } catch {
             /* quarantine errors surface on next download_release / list; do not freeze queue */
@@ -412,11 +391,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
     return managed;
   }
 
-  async function enqueue<T>(
-    session: RunSession,
-    signal: AbortSignal | undefined,
-    work: () => Promise<T>,
-  ): Promise<T> {
+  async function enqueue<T>(session: RunSession, signal: AbortSignal | undefined, work: () => Promise<T>): Promise<T> {
     if (session.queued >= limits.maxQueuedActions) {
       throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `maxQueuedActions ${limits.maxQueuedActions} exceeded`);
     }
@@ -680,31 +655,18 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
     return resultFor(session, action, page);
   }
 
-  async function resolveTargetForAction(
-    session: RunSession,
-    page: PlaywrightPage,
-    target: BrowserTarget,
-    snapshotId: string | undefined,
-  ) {
+  async function resolveTargetForAction(session: RunSession, page: PlaywrightPage, target: BrowserTarget, snapshotId: string | undefined) {
     if ("ref" in target) {
       const live = session.snapshot;
       if (!live || live.snapshotId !== snapshotId) {
-        throw new BrowserError(
-          "ERR_PRISM_BROWSER_TARGET",
-          "Stale snapshotId; call browser_snapshot before using refs",
-        );
+        throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "Stale snapshotId; call browser_snapshot before using refs");
       }
       return resolveTargetLocator(page, target, live.refs, live.snapshotId);
     }
     return resolveTargetLocator(page, target, undefined, undefined);
   }
 
-  async function navigateActive(
-    session: RunSession,
-    url: string,
-    signal: AbortSignal | undefined,
-    pageId?: string,
-  ): Promise<void> {
+  async function navigateActive(session: RunSession, url: string, signal: AbortSignal | undefined, pageId?: string): Promise<void> {
     throwIfAborted(signal);
     await assertBrowserUrlAllowed(url, networkPolicy);
     const page = resolvePage(session, pageId);
@@ -785,10 +747,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
 
   function assertInputBytes(value: string): void {
     if (Buffer.byteLength(value, "utf8") > limits.maxActionInputBytes) {
-      throw new BrowserError(
-        "ERR_PRISM_BROWSER_LIMIT",
-        `action input exceeds maxActionInputBytes ${limits.maxActionInputBytes}`,
-      );
+      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `action input exceeds maxActionInputBytes ${limits.maxActionInputBytes}`);
     }
   }
 

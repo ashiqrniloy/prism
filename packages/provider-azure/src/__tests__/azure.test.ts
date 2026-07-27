@@ -1,14 +1,20 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { AZURE_OPENAI_DEFAULT_API_VERSION, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage } from "../index.js";
+import {
+  AZURE_OPENAI_DEFAULT_API_VERSION,
+  azureChatCompletionsUrl,
+  createAzureOpenAIProvider,
+  createAzureOpenAIProviderPackage,
+} from "../index.js";
 
 async function collect(provider: ReturnType<typeof createAzureOpenAIProvider>) {
   const events = [];
   for await (const event of provider.generate({
     model: { provider: "azure", model: "gpt-4o" },
     messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-  })) events.push(event);
+  }))
+    events.push(event);
   return events;
 }
 
@@ -26,7 +32,7 @@ describe("@arnilo/prism-provider-azure", () => {
         const headers = new Headers(init?.headers);
         seen.auth = headers.get("authorization") ?? undefined;
         seen.apiKey = headers.get("api-key") ?? undefined;
-        return new Response("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n", {
+        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
@@ -78,10 +84,13 @@ describe("@arnilo/prism-provider-azure", () => {
       models: [{ provider: "azure", model: "gpt-4o" }],
     });
     assert.equal(pkg.name, "@arnilo/prism-provider-azure");
-    assert.equal(azureChatCompletionsUrl({
-      endpoint: "https://demo.openai.azure.com",
-      deployment: "x",
-    }).includes(AZURE_OPENAI_DEFAULT_API_VERSION), true);
+    assert.equal(
+      azureChatCompletionsUrl({
+        endpoint: "https://demo.openai.azure.com",
+        deployment: "x",
+      }).includes(AZURE_OPENAI_DEFAULT_API_VERSION),
+      true,
+    );
     const manifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
     assert.deepEqual(manifest.dependencies ?? {}, {});
   });

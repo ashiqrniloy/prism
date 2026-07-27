@@ -1,5 +1,5 @@
-import type { BashOperations } from "@arnilo/prism-coding-agent";
 import type { Readable } from "node:stream";
+import type { BashOperations } from "@arnilo/prism-coding-agent";
 
 export interface SandboxExecRequest {
   readonly command: string;
@@ -48,10 +48,7 @@ export interface SandboxCloseOptions {
    * Host-owned artifact writer. Receives a bounded tar stream plus finalized
    * SHA-256/entry/byte metadata. Partial failures must discard the host artifact.
    */
-  readonly export?: (
-    stream: Readable,
-    metadata: SandboxExportMetadata,
-  ) => Promise<void>;
+  readonly export?: (stream: Readable, metadata: SandboxExportMetadata) => Promise<void>;
   readonly signal?: AbortSignal;
 }
 

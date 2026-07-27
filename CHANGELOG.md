@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.16] - 2026-07-26
+
+### Added
+- Phase 11 simplification/readiness: new public export `resolveRedactor` from `@arnilo/prism` (single survivor of four private copies across evals/memory/rag/workflows) and a new internal `@arnilo/prism-session-store-codecs` package (shared SQLite/Postgres row codecs, not enrolled in any profile family), bringing the exact graph to **44 publishable manifests**.
+- Offline pre-publish release gates: `npm run release:gate` (API-surface `.d.ts` diff vs `scripts/compat-baseline/`, tarball deny-list, exact version ranges), wired into `npm run sdk:ready`.
+- Performance budgets in `scripts/budgets.json`, enforced by `scripts/budget-gate.test.mjs` (in `npm test`) and `scripts/benchmark-0.0.16.mjs`.
+
+### Changed
+- Dropped historical `docs/review-coverage-*.md` from the root tarball (11 files, ~283 KB): packed size 659,478 → ≈575,680 bytes, 281 → 270 files.
+- All six profiles (`prism-all`, `prism-base`, `prism-code`, `prism-compaction`, `prism-providers`, `prism-sdk`) retained on adoption evidence; zero retirements. No runtime behavior changes.
+
 ## [0.0.15] - 2026-07-26
 
 ### Added

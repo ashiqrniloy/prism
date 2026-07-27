@@ -1,22 +1,22 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../index.js";
 import {
-  PERSISTENCE_SCHEMA_VERSION,
   assertAdapterSchemaMatchesModel,
   assertAppliedPersistenceMigrations,
   assertMigrationUpAndReopen,
-  assertPersistenceSchemaShape,
   assertParameterizedQuery,
   assertPersistenceMigrationContract,
   assertPersistenceQueryPaginationConforms,
   assertPersistenceSchemaModel,
+  assertPersistenceSchemaShape,
   assertTenantScopedQueryIsolation,
   createPersistenceMigrationContract,
   createPersistenceSchemaModel,
   getPersistencePaginationCursors,
+  PERSISTENCE_SCHEMA_VERSION,
   tenantScopedUniqueKey,
 } from "../testing/persistence-schema.js";
-import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../index.js";
 
 void describe("persistence schema model", () => {
   it("canonical model validates and includes required tables", () => {
@@ -24,7 +24,11 @@ void describe("persistence schema model", () => {
     assert.equal(model.version, PERSISTENCE_SCHEMA_VERSION);
     assertPersistenceSchemaModel(model);
     assert.ok(model.tables.some((table) => table.name === "prism_session_append_idempotency"));
-    assert.deepEqual(model.tables.find((table) => table.name === "prism_session_append_idempotency")?.primaryKey, ["session_id", "expected_parent_id", "idempotency_key"]);
+    assert.deepEqual(model.tables.find((table) => table.name === "prism_session_append_idempotency")?.primaryKey, [
+      "session_id",
+      "expected_parent_id",
+      "idempotency_key",
+    ]);
   });
 
   it("documents pagination cursors for indexed reads", () => {
@@ -47,10 +51,19 @@ void describe("persistence schema model", () => {
     const contract = createPersistenceMigrationContract();
     const valid = contract.steps.map((step) => ({ name: step.name, version: String(step.version), checksum: step.checksum }));
     assert.deepEqual(assertAppliedPersistenceMigrations(contract, valid), { legacyChecksums: false });
-    assert.deepEqual(assertAppliedPersistenceMigrations(contract, valid.map((step) => ({ ...step, checksum: null }))), { legacyChecksums: true });
+    assert.deepEqual(
+      assertAppliedPersistenceMigrations(
+        contract,
+        valid.map((step) => ({ ...step, checksum: null })),
+      ),
+      { legacyChecksums: true },
+    );
     assert.throws(() => assertAppliedPersistenceMigrations(contract, [{ ...valid[0]!, checksum: "bad" }]), /checksum mismatch/);
     assert.throws(() => assertAppliedPersistenceMigrations(contract, [valid[1]!, valid[0]!]), /does not match/);
-    assert.throws(() => assertAppliedPersistenceMigrations(contract, [...valid.slice(0, 2), { ...valid[2]!, checksum: null }]), /incomplete legacy/);
+    assert.throws(
+      () => assertAppliedPersistenceMigrations(contract, [...valid.slice(0, 2), { ...valid[2]!, checksum: null }]),
+      /incomplete legacy/,
+    );
   });
 
   it("compares complete normalized schema shape", () => {
@@ -68,11 +81,17 @@ void describe("persistence schema model", () => {
         uniqueKeys: table.uniqueKeys ?? [],
         foreignKeys: table.foreignKeys ?? [],
       })),
-      indexes: model.indexes.map((index) => ({ name: index.name, table: index.table, columns: index.columns, unique: index.unique === true })),
+      indexes: model.indexes.map((index) => ({
+        name: index.name,
+        table: index.table,
+        columns: index.columns,
+        unique: index.unique === true,
+      })),
     };
     assert.doesNotThrow(() => assertPersistenceSchemaShape(shape, "sqlite", model));
     const drifted = structuredClone(shape);
-    drifted.tables.find((table) => table.name === "prism_usage")!.columns.find((column) => column.name === "scope")!.defaultValue = "'turn'";
+    drifted.tables.find((table) => table.name === "prism_usage")!.columns.find((column) => column.name === "scope")!.defaultValue =
+      "'turn'";
     assert.throws(() => assertPersistenceSchemaShape(drifted, "sqlite", model), /incompatible default/);
   });
 
@@ -90,10 +109,7 @@ void describe("persistence schema model", () => {
   });
 
   it("rejects interpolated SQL values", () => {
-    assert.throws(
-      () => assertParameterizedQuery("SELECT * FROM t WHERE id = 'abc'", ["abc"]),
-      /interpolate a bound string value/,
-    );
+    assert.throws(() => assertParameterizedQuery("SELECT * FROM t WHERE id = 'abc'", ["abc"]), /interpolate a bound string value/);
     assert.doesNotThrow(() => assertParameterizedQuery("SELECT * FROM t WHERE id = $1", ["abc"]));
   });
 
@@ -121,9 +137,6 @@ void describe("persistence schema model", () => {
       if (tenantId === "tenant-a") return [{ id: "run-a", tenantId: "tenant-a" }];
       return [{ id: "run-b", tenantId: "tenant-b" }];
     });
-    await assert.rejects(
-      () => assertTenantScopedQueryIsolation(async (tenantId) => [{ id: "shared", tenantId }]),
-      /Tenant collision/,
-    );
+    await assert.rejects(() => assertTenantScopedQueryIsolation(async (tenantId) => [{ id: "shared", tenantId }]), /Tenant collision/);
   });
 });

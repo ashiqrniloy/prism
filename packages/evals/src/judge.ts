@@ -1,13 +1,13 @@
 import { EvalError } from "./errors.js";
 import {
   DEFAULT_JUDGE_MAX_ATTEMPTS,
-  DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
   DEFAULT_JUDGE_MAX_INPUT_BYTES,
+  DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
   DEFAULT_JUDGE_MAX_RUBRIC_BYTES,
   DEFAULT_JUDGE_TIMEOUT_MS,
   HARD_JUDGE_MAX_ATTEMPTS,
-  HARD_JUDGE_MAX_OUTPUT_BYTES,
   HARD_JUDGE_MAX_INPUT_BYTES,
+  HARD_JUDGE_MAX_OUTPUT_BYTES,
   HARD_JUDGE_MAX_RUBRIC_BYTES,
   HARD_JUDGE_TIMEOUT_MS,
 } from "./limits.js";
@@ -34,7 +34,8 @@ export function createModelJudge<TInput = unknown, TExpected = unknown>(
   const maxOutputBytes = bounded(options.maxOutputBytes, DEFAULT_JUDGE_MAX_OUTPUT_BYTES, HARD_JUDGE_MAX_OUTPUT_BYTES, "maxOutputBytes");
   const maxInputBytes = bounded(options.maxInputBytes, DEFAULT_JUDGE_MAX_INPUT_BYTES, HARD_JUDGE_MAX_INPUT_BYTES, "maxInputBytes");
   const maxRubricBytes = bounded(options.maxRubricBytes, DEFAULT_JUDGE_MAX_RUBRIC_BYTES, HARD_JUDGE_MAX_RUBRIC_BYTES, "maxRubricBytes");
-  if (Buffer.byteLength(options.rubric) > maxRubricBytes) throw new EvalError("model judge rubric byte limit exceeded", "ERR_PRISM_EVAL_JUDGE_BOUNDS");
+  if (Buffer.byteLength(options.rubric) > maxRubricBytes)
+    throw new EvalError("model judge rubric byte limit exceeded", "ERR_PRISM_EVAL_JUDGE_BOUNDS");
 
   return {
     id: options.id,
@@ -58,11 +59,11 @@ export function createModelJudge<TInput = unknown, TExpected = unknown>(
             item: input.item,
             signal: controller.signal,
           });
-          const aborted = new Promise<never>((_, reject) => controller.signal.addEventListener(
-            "abort",
-            () => reject(controller.signal.reason ?? new Error("model judge aborted")),
-            { once: true },
-          ));
+          const aborted = new Promise<never>((_, reject) =>
+            controller.signal.addEventListener("abort", () => reject(controller.signal.reason ?? new Error("model judge aborted")), {
+              once: true,
+            }),
+          );
           const result = validateScoreResult(await Promise.race([request, aborted]));
           if (Buffer.byteLength(JSON.stringify(result)) > maxOutputBytes) {
             throw new EvalError("model judge output byte limit exceeded", "ERR_PRISM_EVAL_JUDGE_BOUNDS");

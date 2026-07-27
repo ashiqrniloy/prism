@@ -1,9 +1,18 @@
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
-import type { AgentEvent, AgentSession, CommandDefinition, CommandResult, InstructionInjector, JsonObject, ModelConfig, RunOptions } from "./contracts.js";
+import type {
+  AgentEvent,
+  AgentSession,
+  CommandDefinition,
+  CommandResult,
+  InstructionInjector,
+  JsonObject,
+  ModelConfig,
+  RunOptions,
+} from "./contracts.js";
 import type { ContributionRegistry } from "./contributions.js";
-import { errorToErrorInfo } from "./redaction.js";
 import { resolveInstructionInjectors } from "./instruction-injection.js";
+import { errorToErrorInfo } from "./redaction.js";
 
 export type RpcCommandName =
   | "prompt"
@@ -105,7 +114,11 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       const session = state.current;
       const existing = activeRuns.get(session.id);
       if (existing) {
-        write(stdout, { id: request.id, ok: false, error: errorToErrorInfo(new Error(`Session ${session.id} already has an active run for request ${existing.requestId}`)) });
+        write(stdout, {
+          id: request.id,
+          ok: false,
+          error: errorToErrorInfo(new Error(`Session ${session.id} already has an active run for request ${existing.requestId}`)),
+        });
         return;
       }
       // ponytail: Phase 30 — resolve run options (incl. instructionInjectors names) BEFORE opening the
@@ -120,11 +133,13 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
           await events;
         }
         write(stdout, { id: request.id, ok: true, result: { sessionId: session.id } });
-      })().catch((error) => {
-        write(stdout, { id: request.id, ok: false, error: errorToErrorInfo(error) });
-      }).finally(() => {
-        activeRuns.delete(session.id);
-      });
+      })()
+        .catch((error) => {
+          write(stdout, { id: request.id, ok: false, error: errorToErrorInfo(error) });
+        })
+        .finally(() => {
+          activeRuns.delete(session.id);
+        });
       activeRuns.set(session.id, { requestId: request.id, promise });
       break;
     }
@@ -145,16 +160,24 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id } });
       break;
     case "state":
-      write(stdout, { id: request.id, ok: true, result: {
-        sessionId: state.current.id,
-        leafId: state.current.leafId,
-        handleId: state.currentHandleId,
-        // ponytail: `sessions` kept as a backward-compatible handle-id string list (== sessionId
-        // for the initial session and clones); `handles` is the branch-handle detail view.
-        sessions: [...state.sessions.keys()],
-        handles: [...state.sessions.entries()].map(([handleId, session]) => ({ handleId, sessionId: session.id, leafId: session.leafId })),
-        model: state.model,
-      } });
+      write(stdout, {
+        id: request.id,
+        ok: true,
+        result: {
+          sessionId: state.current.id,
+          leafId: state.current.leafId,
+          handleId: state.currentHandleId,
+          // ponytail: `sessions` kept as a backward-compatible handle-id string list (== sessionId
+          // for the initial session and clones); `handles` is the branch-handle detail view.
+          sessions: [...state.sessions.keys()],
+          handles: [...state.sessions.entries()].map(([handleId, session]) => ({
+            handleId,
+            sessionId: session.id,
+            leafId: session.leafId,
+          })),
+          model: state.model,
+        },
+      });
       break;
     case "messages":
       write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id, entries: await state.current.entries() } });
@@ -167,7 +190,8 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       write(stdout, { id: request.id, ok: true, result: await state.current.compact() });
       break;
     case "switchSession": {
-      const handleId = stringParam(request.params, "handleId") ?? stringParam(request.params, "sessionId") ?? stringParam(request.params, "id");
+      const handleId =
+        stringParam(request.params, "handleId") ?? stringParam(request.params, "sessionId") ?? stringParam(request.params, "id");
       if (!handleId) throw new Error("switchSession requires params.handleId (or sessionId)");
       const session = state.sessions.get(handleId) ?? makeSession(state, handleId);
       state.current = session;
@@ -195,7 +219,11 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       const leafId = stringParam(request.params, "leafId");
       if (!leafId) throw new Error("checkout requires params.leafId");
       await state.current.checkout(leafId);
-      write(stdout, { id: request.id, ok: true, result: { sessionId: state.current.id, leafId: state.current.leafId, handleId: state.currentHandleId } });
+      write(stdout, {
+        id: request.id,
+        ok: true,
+        result: { sessionId: state.current.id, leafId: state.current.leafId, handleId: state.currentHandleId },
+      });
       break;
     }
     case "command": {
@@ -278,7 +306,7 @@ function numberParam(params: Record<string, unknown> | undefined, key: string): 
 
 function objectParam(params: Record<string, unknown> | undefined, key: string): Record<string, unknown> | undefined {
   const value = params?.[key];
-  return isObject(value) ? value as Record<string, unknown> : undefined;
+  return isObject(value) ? (value as Record<string, unknown>) : undefined;
 }
 
 function stringArrayParam(params: Record<string, unknown> | undefined, key: string): readonly string[] {
@@ -292,7 +320,24 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function isCommand(value: unknown): value is RpcCommandName {
-  return typeof value === "string" && ["prompt", "steer", "followUp", "abort", "state", "messages", "setModel", "compact", "switchSession", "forkSession", "cloneSession", "checkout", "command"].includes(value);
+  return (
+    typeof value === "string" &&
+    [
+      "prompt",
+      "steer",
+      "followUp",
+      "abort",
+      "state",
+      "messages",
+      "setModel",
+      "compact",
+      "switchSession",
+      "forkSession",
+      "cloneSession",
+      "checkout",
+      "command",
+    ].includes(value)
+  );
 }
 
 function readRequestId(value: unknown): string | number | null {

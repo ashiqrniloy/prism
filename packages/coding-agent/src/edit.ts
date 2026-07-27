@@ -20,22 +20,20 @@
  *    completed, the edit is real and is reported as success rather than a misleading "aborted".
  */
 import { Buffer } from "node:buffer";
-import {
-  access as fsAccess,
-  stat as fsStat,
-  writeFile as fsWriteFile,
-} from "node:fs/promises";
 import { constants } from "node:fs";
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import { access as fsAccess, stat as fsStat, writeFile as fsWriteFile } from "node:fs/promises";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { readFileBounded } from "./bounded-file.js";
+import {
+  applyEditsToNormalizedContent,
+  detectLineEnding,
+  generateDiffString,
+  generateUnifiedPatch,
+  normalizeToLF,
+  restoreLineEndings,
+  stripBom,
+} from "./edit-diff.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import { resolveToCwd } from "./path-utils.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import {
   DEFAULT_MAX_EDIT_FILE_BYTES,
@@ -46,15 +44,7 @@ import {
   HARD_MAX_EDITS,
   validateCodingLimit,
 } from "./limits.js";
-import {
-  applyEditsToNormalizedContent,
-  detectLineEnding,
-  generateDiffString,
-  generateUnifiedPatch,
-  normalizeToLF,
-  restoreLineEndings,
-  stripBom,
-} from "./edit-diff.js";
+import { resolveToCwd } from "./path-utils.js";
 
 export interface Edit {
   oldText: string;
@@ -77,10 +67,7 @@ export interface EditToolDetails {
  */
 export interface EditOperations {
   /** Read bounded file contents as a Buffer. */
-  readFile: (
-    absolutePath: string,
-    options: { maxBytes: number; signal?: AbortSignal },
-  ) => Promise<Buffer>;
+  readFile: (absolutePath: string, options: { maxBytes: number; signal?: AbortSignal }) => Promise<Buffer>;
   /** Write content to a file. */
   writeFile: (absolutePath: string, content: string, options?: { signal?: AbortSignal }) => Promise<void>;
   /** Check the file is readable and writable (throw if not). */
@@ -163,11 +150,7 @@ function validateEdits(edits: unknown, maxEdits: number, maxInputBytes: number):
 
 export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition {
   const ops = options?.operations ?? defaultEditOperations;
-  const maxFileBytes = validateCodingLimit(
-    "maxFileBytes",
-    options?.maxFileBytes ?? DEFAULT_MAX_EDIT_FILE_BYTES,
-    HARD_MAX_EDIT_FILE_BYTES,
-  );
+  const maxFileBytes = validateCodingLimit("maxFileBytes", options?.maxFileBytes ?? DEFAULT_MAX_EDIT_FILE_BYTES, HARD_MAX_EDIT_FILE_BYTES);
   const maxInputBytes = validateCodingLimit(
     "maxInputBytes",
     options?.maxInputBytes ?? DEFAULT_MAX_EDIT_INPUT_BYTES,
@@ -248,8 +231,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
           } catch (error) {
             if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
             const err = error as NodeJS.ErrnoException;
-            const errorMessage =
-              error instanceof Error && "code" in error ? `Error code: ${err.code}` : String(error);
+            const errorMessage = error instanceof Error && "code" in error ? `Error code: ${err.code}` : String(error);
             return errorResult(toolCallId, `Could not edit file: ${prepared.path}. ${errorMessage}.`);
           }
 
@@ -276,11 +258,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
           let baseContent: string;
           let newContent: string;
           try {
-            ({ baseContent, newContent } = applyEditsToNormalizedContent(
-              normalizedContent,
-              edits,
-              prepared.path,
-            ));
+            ({ baseContent, newContent } = applyEditsToNormalizedContent(normalizedContent, edits, prepared.path));
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             return errorResult(toolCallId, message);
@@ -296,9 +274,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
           return {
             toolCallId,
             name: "edit",
-            content: [
-              { type: "text", text: `Successfully replaced ${edits.length} block(s) in ${prepared.path}.` },
-            ],
+            content: [{ type: "text", text: `Successfully replaced ${edits.length} block(s) in ${prepared.path}.` }],
             metadata: {
               diff: diffResult.diff,
               patch,

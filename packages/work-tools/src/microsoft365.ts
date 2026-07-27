@@ -1,17 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { assertIdentityActive, type AgentIdentity, type JsonObject } from "@arnilo/prism";
+import { type AgentIdentity, assertIdentityActive, type JsonObject } from "@arnilo/prism";
 import { assertSafeArgv, createCliRunner, parseCliJson } from "./cli.js";
 import { WorkToolError } from "./errors.js";
 import { identityKey } from "./idempotency.js";
 import { resolveWorkLimits } from "./limits.js";
-import type {
-  Microsoft365Adapter,
-  Microsoft365Op,
-  WorkCliRunner,
-  WorkDraft,
-  WorkLimits,
-  WorkTokenProvider,
-} from "./types.js";
+import type { Microsoft365Adapter, Microsoft365Op, WorkCliRunner, WorkDraft, WorkLimits, WorkTokenProvider } from "./types.js";
 
 /** Default ops enabled without capability gates. Teams/Planner/To Do stay opt-in. */
 export const DEFAULT_M365_OPS: readonly Microsoft365Op[] = [
@@ -89,10 +82,17 @@ export function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): str
     }
     case "mail.send": {
       const argv = [
-        "outlook", "mail", "send", "--output", "json",
-        "--to", reqString(args, "to"),
-        "--subject", reqString(args, "subject"),
-        "--bodyContents", reqString(args, "bodyContents"),
+        "outlook",
+        "mail",
+        "send",
+        "--output",
+        "json",
+        "--to",
+        reqString(args, "to"),
+        "--subject",
+        reqString(args, "subject"),
+        "--bodyContents",
+        reqString(args, "bodyContents"),
       ];
       const cc = optString(args, "cc");
       const bcc = optString(args, "bcc");
@@ -123,10 +123,17 @@ export function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): str
     case "calendar.add": {
       // Docs: m365 outlook event add --subject --start --end (CLI ≥ issue #7123).
       const argv = [
-        "outlook", "event", "add", "--output", "json",
-        "--subject", reqString(args, "subject"),
-        "--start", reqString(args, "start"),
-        "--end", reqString(args, "end"),
+        "outlook",
+        "event",
+        "add",
+        "--output",
+        "json",
+        "--subject",
+        reqString(args, "subject"),
+        "--start",
+        reqString(args, "start"),
+        "--end",
+        reqString(args, "end"),
       ];
       const calendarId = optString(args, "calendarId");
       const calendarName = optString(args, "calendarName");
@@ -136,24 +143,31 @@ export function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): str
       return argv;
     }
     case "file.list":
-      return [
-        "file", "list", "--output", "json",
-        "--webUrl", reqString(args, "webUrl"),
-        "--folderUrl", reqString(args, "folderUrl"),
-      ];
+      return ["file", "list", "--output", "json", "--webUrl", reqString(args, "webUrl"), "--folderUrl", reqString(args, "folderUrl")];
     case "file.add":
       return [
-        "file", "add", "--output", "json",
-        "--folderUrl", reqString(args, "folderUrl"),
-        "--filePath", reqString(args, "filePath"),
+        "file",
+        "add",
+        "--output",
+        "json",
+        "--folderUrl",
+        reqString(args, "folderUrl"),
+        "--filePath",
+        reqString(args, "filePath"),
         ...(optString(args, "siteUrl") ? ["--siteUrl", optString(args, "siteUrl")!] : []),
       ];
     case "file.copy":
       return [
-        "file", "copy", "--output", "json",
-        "--webUrl", reqString(args, "webUrl"),
-        "--sourceUrl", reqString(args, "sourceUrl"),
-        "--targetUrl", reqString(args, "targetUrl"),
+        "file",
+        "copy",
+        "--output",
+        "json",
+        "--webUrl",
+        reqString(args, "webUrl"),
+        "--sourceUrl",
+        reqString(args, "sourceUrl"),
+        "--targetUrl",
+        reqString(args, "targetUrl"),
       ];
     case "file.share": {
       const fileUrl = optString(args, "fileUrl");
@@ -164,13 +178,22 @@ export function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): str
       const type = reqString(args, "type");
       if (type !== "view" && type !== "edit") throw new WorkToolError("ERR_PRISM_WORK_INPUT", "type must be view or edit");
       const scope = optString(args, "scope") ?? "organization";
-      if (scope === "anonymous") throw new WorkToolError("ERR_PRISM_WORK_POLICY", "Anonymous share denied; host must allow explicitly via policy override");
+      if (scope === "anonymous")
+        throw new WorkToolError("ERR_PRISM_WORK_POLICY", "Anonymous share denied; host must allow explicitly via policy override");
       if (scope !== "organization") throw new WorkToolError("ERR_PRISM_WORK_INPUT", "scope must be organization");
       const argv = [
-        "spo", "file", "sharinglink", "add", "--output", "json",
-        "--webUrl", reqString(args, "webUrl"),
-        "--type", type,
-        "--scope", scope,
+        "spo",
+        "file",
+        "sharinglink",
+        "add",
+        "--output",
+        "json",
+        "--webUrl",
+        reqString(args, "webUrl"),
+        "--type",
+        type,
+        "--scope",
+        scope,
       ];
       if (fileUrl) argv.push("--fileUrl", fileUrl);
       if (fileId) argv.push("--fileId", fileId);
@@ -187,8 +210,13 @@ export function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): str
       const listId = optString(args, "listId");
       if ((listName ? 1 : 0) + (listId ? 1 : 0) !== 1) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "Specify listName or listId");
       return [
-        "todo", "task", "add", "--output", "json",
-        "--title", reqString(args, "title"),
+        "todo",
+        "task",
+        "add",
+        "--output",
+        "json",
+        "--title",
+        reqString(args, "title"),
         ...(listName ? ["--listName", listName] : ["--listId", listId!]),
       ];
     }
@@ -197,9 +225,15 @@ export function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): str
       const listId = optString(args, "listId");
       if ((listName ? 1 : 0) + (listId ? 1 : 0) !== 1) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "Specify listName or listId");
       return [
-        "todo", "task", "set", "--output", "json",
-        "--id", reqString(args, "id"),
-        "--status", "completed",
+        "todo",
+        "task",
+        "set",
+        "--output",
+        "json",
+        "--id",
+        reqString(args, "id"),
+        "--status",
+        "completed",
         ...(listName ? ["--listName", listName] : ["--listId", listId!]),
       ];
     }
@@ -207,17 +241,20 @@ export function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): str
       return ["planner", "task", "list", "--output", "json", "--planId", reqString(args, "planId")];
     case "planner.add":
       return [
-        "planner", "task", "add", "--output", "json",
-        "--title", reqString(args, "title"),
-        "--planId", reqString(args, "planId"),
-        "--bucketId", reqString(args, "bucketId"),
+        "planner",
+        "task",
+        "add",
+        "--output",
+        "json",
+        "--title",
+        reqString(args, "title"),
+        "--planId",
+        reqString(args, "planId"),
+        "--bucketId",
+        reqString(args, "bucketId"),
       ];
     case "planner.complete":
-      return [
-        "planner", "task", "set", "--output", "json",
-        "--id", reqString(args, "id"),
-        "--percentComplete", "100",
-      ];
+      return ["planner", "task", "set", "--output", "json", "--id", reqString(args, "id"), "--percentComplete", "100"];
     default: {
       const _exhaustive: never = op;
       throw new WorkToolError("ERR_PRISM_WORK_OP", `Unknown op ${_exhaustive}`);
@@ -279,7 +316,12 @@ export function createMicrosoft365CliAdapter(options: Microsoft365CliAdapterOpti
       const result = await runner.exec(argv, { signal, env: await tokenEnv(signal) });
       if (result.exitCode !== 0) throw new WorkToolError("ERR_PRISM_WORK_CLI", `m365 version failed: ${result.stderr.slice(0, 200)}`);
       const parsed = parseCliJson(result.stdout, limits);
-      const version = typeof parsed === "string" ? parsed : typeof (parsed as { version?: string })?.version === "string" ? (parsed as { version: string }).version : String(parsed);
+      const version =
+        typeof parsed === "string"
+          ? parsed
+          : typeof (parsed as { version?: string })?.version === "string"
+            ? (parsed as { version: string }).version
+            : String(parsed);
       if (options.minVersion && version.replace(/^v/, "") < options.minVersion.replace(/^v/, "")) {
         throw new WorkToolError("ERR_PRISM_WORK_VERSION", `CLI version ${version} below required ${options.minVersion}`);
       }

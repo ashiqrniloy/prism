@@ -1,7 +1,7 @@
 import type { SessionUpdate, ToolCallContent, ToolKind } from "@agentclientprotocol/sdk";
-import type { AgentEvent, ErrorInfo, SecretRedactor, ToolCallContent as PrismToolCall, ToolResult, Usage } from "@arnilo/prism";
-import { resolveAgUiLimits, type AgUiLimitOptions } from "../limits.js";
-import { projectCoWorkEvent, type AgUiProjection } from "../projection.js";
+import type { AgentEvent, ErrorInfo, ToolCallContent as PrismToolCall, SecretRedactor, ToolResult, Usage } from "@arnilo/prism";
+import { type AgUiLimitOptions, resolveAgUiLimits } from "../limits.js";
+import { type AgUiProjection, projectCoWorkEvent } from "../projection.js";
 import type { CoWorkEvent } from "../types.js";
 
 export interface AcpEventMapperOptions {
@@ -23,7 +23,8 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
   let messageId: string | undefined;
   let messageHasDelta = false;
 
-  const text = (value: string, maxBytes = limits.maxTextBytes) => truncate(options.redactor?.redact(value) ?? value, Math.min(maxBytes, limits.maxEventBytes));
+  const text = (value: string, maxBytes = limits.maxTextBytes) =>
+    truncate(options.redactor?.redact(value) ?? value, Math.min(maxBytes, limits.maxEventBytes));
   const tool = (call: PrismToolCall) => {
     const input = projected(() => options.projection?.toolArguments?.(call));
     return {
@@ -55,7 +56,11 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
 
   return {
     mapCoWork(input) {
-      const payload = projectCoWorkEvent(input, { redactor: options.redactor, projection: options.projection, maxBytes: limits.maxTextBytes });
+      const payload = projectCoWorkEvent(input, {
+        redactor: options.redactor,
+        projection: options.projection,
+        maxBytes: limits.maxTextBytes,
+      });
       if (payload === undefined) return [];
       return [message(`prism:cowork:${input.kind}`, truncate(JSON.stringify(payload), limits.maxTextBytes))];
     },
@@ -72,17 +77,22 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
           messageId ??= `${text(event.runId)}:message`;
           messageHasDelta = true;
           return [message(messageId ?? `${text(event.runId)}:message`, text(event.content.text))];
-        case "message_finished":
+        case "message_finished": {
           if (event.message.role !== "assistant") return [];
           const id = messageId ?? text(event.message.id ?? `${event.runId}:message`);
-          const updates = messageHasDelta ? [] : event.message.content.flatMap((block) => block.type === "text" ? [message(id, text(block.text))] : []);
+          const updates = messageHasDelta
+            ? []
+            : event.message.content.flatMap((block) => (block.type === "text" ? [message(id, text(block.text))] : []));
           messageId = undefined;
           messageHasDelta = false;
           return updates;
+        }
         case "tool_execution_started":
           return [{ sessionUpdate: "tool_call", ...tool(event.call) }];
         case "tool_execution_progress":
-          return [{ sessionUpdate: "tool_call_update", toolCallId: text(event.toolCallId), title: text(event.name), status: "in_progress" }];
+          return [
+            { sessionUpdate: "tool_call_update", toolCallId: text(event.toolCallId), title: text(event.name), status: "in_progress" },
+          ];
         case "tool_execution_finished":
           return [finish(event.result.toolCallId, event.result.name, "completed", event.result)];
         case "tool_execution_error":

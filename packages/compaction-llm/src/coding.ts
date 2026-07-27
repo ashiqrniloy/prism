@@ -1,7 +1,8 @@
 import type { CompactionStrategy } from "@arnilo/prism";
 import { createLlmCompactionStrategy, type LlmCompactionStrategyOptions } from "./strategy.js";
 
-export interface CodingCompactionStrategyOptions extends Omit<LlmCompactionStrategyOptions, "name" | "includeFileOperations" | "trackFileOperations" | "customInstructions"> {
+export interface CodingCompactionStrategyOptions
+  extends Omit<LlmCompactionStrategyOptions, "name" | "includeFileOperations" | "trackFileOperations" | "customInstructions"> {
   /** Extra host focus, appended after the coding baseline. */
   readonly customInstructions?: string;
 }

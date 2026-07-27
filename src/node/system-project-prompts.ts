@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import type { SystemPromptContribution } from "../contracts.js";
-import { assertPermission, isTrusted } from "../security.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
+import { assertPermission, isTrusted } from "../security.js";
 import { readOptionalFile } from "./contribution-discovery.js";
 
 export interface SystemPromptFilesOptions {
@@ -32,13 +32,10 @@ export interface SystemPromptFilesOptions {
  *  ponytail: two `readFile` calls max, no `readdir`, no scan, no `import()`. Root-level
  *  singletons don't fit `discoverContributions`' named-subdir scanner, so this is a
  *  sibling loader mirroring `src/node/instruction-injectors.ts`'s per-concern adapter shape. */
-export async function loadSystemPromptFiles(
-  options: SystemPromptFilesOptions,
-): Promise<readonly SystemPromptContribution[]> {
-  const agentsPath = options.agentsMdPath
-    ?? (options.workspaceRoot !== undefined ? join(options.workspaceRoot, "AGENTS.md") : undefined);
-  const systemPath = options.systemMdPath
-    ?? (options.globalRoot !== undefined ? join(options.globalRoot, ".prism", "agent", "SYSTEM.md") : undefined);
+export async function loadSystemPromptFiles(options: SystemPromptFilesOptions): Promise<readonly SystemPromptContribution[]> {
+  const agentsPath = options.agentsMdPath ?? (options.workspaceRoot !== undefined ? join(options.workspaceRoot, "AGENTS.md") : undefined);
+  const systemPath =
+    options.systemMdPath ?? (options.globalRoot !== undefined ? join(options.globalRoot, ".prism", "agent", "SYSTEM.md") : undefined);
   const out: SystemPromptContribution[] = [];
   if (systemPath !== undefined) {
     const layer = await readSystemFile(systemPath, options.permission);
@@ -51,10 +48,7 @@ export async function loadSystemPromptFiles(
   return out;
 }
 
-async function readSystemFile(
-  path: string,
-  permission: PermissionPolicy | undefined,
-): Promise<SystemPromptContribution | undefined> {
+async function readSystemFile(path: string, permission: PermissionPolicy | undefined): Promise<SystemPromptContribution | undefined> {
   await assertPermission(permission, { kind: "resource", action: "load", target: path });
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;

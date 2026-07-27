@@ -1,11 +1,9 @@
 import type { AIProvider, ModelConfig, ProviderPackage } from "@arnilo/prism";
 import { defineProviderPackage } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
-import { signAwsRequest, type AwsCredentials } from "./sigv4.js";
+import { type AwsCredentials, signAwsRequest } from "./sigv4.js";
 
-export type BedrockCredentialSource =
-  | AwsCredentials
-  | (() => AwsCredentials | Promise<AwsCredentials>);
+export type BedrockCredentialSource = AwsCredentials | (() => AwsCredentials | Promise<AwsCredentials>);
 
 export interface BedrockProviderOptions {
   readonly id?: string;
@@ -121,4 +119,4 @@ export function createBedrockProviderPackage(options: BedrockProviderPackageOpti
   });
 }
 
-export { signAwsRequest, type AwsCredentials } from "./sigv4.js";
+export { type AwsCredentials, signAwsRequest } from "./sigv4.js";

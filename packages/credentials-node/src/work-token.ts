@@ -1,4 +1,4 @@
-import { refreshOAuthCredential, type AgentIdentity, type OAuthCredentials, type OAuthProvider } from "@arnilo/prism";
+import { type AgentIdentity, type OAuthCredentials, type OAuthProvider, refreshOAuthCredential } from "@arnilo/prism";
 import type { ExtendedOAuthCredentialStore } from "./resolver.js";
 
 export interface OAuthWorkTokenOptions {
@@ -29,13 +29,14 @@ export function createOAuthWorkTokenProvider(options: OAuthWorkTokenOptions): OA
   const resolve = async (identity: AgentIdentity): Promise<OAuthCredentials | undefined> => {
     const accountKey = identity.accountId ?? "";
     const stored = await options.store.get(options.provider.id, identity.accountId);
-    if (!stored || !stored.access) return undefined;
+    if (!stored?.access) return undefined;
     // Per-identity isolation: never fall back to another account's token.
     if (stored.accountId && identity.accountId && stored.accountId !== identity.accountId) return undefined;
     const tenant = stored.metadata?.tenantId;
     if (typeof tenant === "string" && tenant !== identity.tenantId) return undefined;
 
-    const expiresMs = typeof stored.expires === "number" ? stored.expires : typeof stored.expires === "string" ? Date.parse(stored.expires) : Number.NaN;
+    const expiresMs =
+      typeof stored.expires === "number" ? stored.expires : typeof stored.expires === "string" ? Date.parse(stored.expires) : Number.NaN;
     const needsRefresh = Number.isFinite(expiresMs) && now() >= expiresMs - skew;
     if (!needsRefresh) return stored;
     if (!stored.refresh) return undefined; // expired and cannot refresh -> fail closed

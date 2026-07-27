@@ -1,4 +1,6 @@
 import {
+  type AgentEvent,
+  type ContextProvider,
   createAgent,
   createAgentSession,
   createMockProvider,
@@ -7,8 +9,6 @@ import {
   providerTextDelta,
   providerToolCall,
   providerUsage,
-  type AgentEvent,
-  type ContextProvider,
   type Skill,
   type ToolDefinition,
   type ToolResult,

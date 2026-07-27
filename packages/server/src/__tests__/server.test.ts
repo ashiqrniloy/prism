@@ -1,25 +1,19 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
+  type AIProvider,
   createAgent,
+  createAgentRunLifecycle,
   createMemoryCheckpointStore,
   createMemoryLeaseStore,
   createMemorySessionStore,
-  createAgentRunLifecycle,
   createMockProvider,
   createSecretRedactor,
   providerDone,
   providerTextDelta,
   toolCallContent,
-  type AIProvider,
 } from "@arnilo/prism";
-import {
-  createMemoryWorkflowCheckpoints,
-  createWorkflowSchedules,
-  defineWorkflow,
-  functionNode,
-  suspend,
-} from "@arnilo/prism-workflows";
+import { createMemoryWorkflowCheckpoints, createWorkflowSchedules, defineWorkflow, functionNode, suspend } from "@arnilo/prism-workflows";
 import { createPrismHandler } from "../handler.js";
 
 const authorization = { ownership: { tenantId: "tenant-1", userId: "user-1" } };
@@ -53,7 +47,7 @@ describe("createPrismHandler", () => {
 
     const direct = await handler(jsonRequest("/prism/agents/support/runs", { input: "Hi" }));
     assert.equal(direct.status, 200);
-    const result = await direct.json() as { text: string; status: string };
+    const result = (await direct.json()) as { text: string; status: string };
     assert.equal(result.text, "hello");
     assert.equal(result.status, "succeeded");
 
@@ -102,7 +96,7 @@ describe("createPrismHandler", () => {
       redactor: createSecretRedactor([secret]),
     });
     const suspended = await handler(jsonRequest("/prism/agents/support/runs", { input: "go" }));
-    const started = await suspended.json() as { status: string; runId: string; runState: { version: number } };
+    const started = (await suspended.json()) as { status: string; runId: string; runState: { version: number } };
     assert.equal(started.status, "suspended");
     assert.equal(calls, 0);
 
@@ -116,11 +110,17 @@ describe("createPrismHandler", () => {
     assert.equal((await wrongCapability(new Request(`https://example.test/prism/agents/other/runs/${started.runId}`))).status, 404);
     const version = (JSON.parse(publicState) as { version: number }).version;
 
-    const resumed = await handler(jsonRequest(`/prism/agents/support/runs/${started.runId}/resume`, { decision: "approve", expectedVersion: version }));
+    const resumed = await handler(
+      jsonRequest(`/prism/agents/support/runs/${started.runId}/resume`, { decision: "approve", expectedVersion: version }),
+    );
     assert.equal(resumed.status, 200, await resumed.clone().text());
-    assert.equal((await resumed.json() as { status: string }).status, "succeeded");
+    assert.equal(((await resumed.json()) as { status: string }).status, "succeeded");
     assert.equal(calls, 1);
-    assert.equal((await handler(jsonRequest(`/prism/agents/support/runs/${started.runId}/resume`, { decision: "approve", expectedVersion: version }))).status, 404);
+    assert.equal(
+      (await handler(jsonRequest(`/prism/agents/support/runs/${started.runId}/resume`, { decision: "approve", expectedVersion: version })))
+        .status,
+      404,
+    );
 
     const noExposure = createPrismHandler({ agents: { support: agent }, authorize: () => authorization });
     assert.equal((await noExposure(new Request(`https://example.test/prism/agents/support/runs/${started.runId}`))).status, 404);
@@ -132,9 +132,9 @@ describe("createPrismHandler", () => {
       revision: "1",
       id: "publish",
       nodes: {
-        review: functionNode({ execute: (ctx) => ctx.resume
-          ? { approved: ctx.resume.input }
-          : suspend({ reason: "review", resumeSchema: { type: "object" } }) }),
+        review: functionNode({
+          execute: (ctx) => (ctx.resume ? { approved: ctx.resume.input } : suspend({ reason: "review", resumeSchema: { type: "object" } })),
+        }),
       },
       edges: [],
     });
@@ -145,26 +145,28 @@ describe("createPrismHandler", () => {
 
     const started = await handler(jsonRequest("/prism/workflows/publish/runs", { input: {}, runId: "run-1" }));
     assert.equal(started.status, 200);
-    const suspended = await started.json() as { status: string; version: number };
+    const suspended = (await started.json()) as { status: string; version: number };
     assert.equal(suspended.status, "suspended");
 
     const status = await handler(new Request("https://example.test/prism/workflows/publish/runs/run-1"));
     assert.equal(status.status, 200);
-    const checkpoint = await status.json() as { version: number; value: { status: string } };
+    const checkpoint = (await status.json()) as { version: number; value: { status: string } };
     assert.equal(checkpoint.value.status, "suspended");
 
-    const resumed = await handler(jsonRequest("/prism/workflows/publish/runs/run-1/resume", {
-      decision: "approve",
-      input: { reviewer: "host" },
-      expectedVersion: checkpoint.version,
-    }));
+    const resumed = await handler(
+      jsonRequest("/prism/workflows/publish/runs/run-1/resume", {
+        decision: "approve",
+        input: { reviewer: "host" },
+        expectedVersion: checkpoint.version,
+      }),
+    );
     assert.equal(resumed.status, 200, await resumed.clone().text());
-    assert.equal((await resumed.json() as { status: string }).status, "succeeded");
+    assert.equal(((await resumed.json()) as { status: string }).status, "succeeded");
 
     await handler(jsonRequest("/prism/workflows/publish/runs", { input: {}, runId: "run-2" }));
     const cancelled = await handler(new Request("https://example.test/prism/workflows/publish/runs/run-2", { method: "DELETE" }));
     assert.equal(cancelled.status, 200);
-    assert.equal((await cancelled.json() as { aborted: boolean }).aborted, true);
+    assert.equal(((await cancelled.json()) as { aborted: boolean }).aborted, true);
   });
 
   it("enqueues background runs and creates lineage-linked replays", async () => {
@@ -181,13 +183,15 @@ describe("createPrismHandler", () => {
     });
     const queued = await handler(jsonRequest("/prism/workflows/background/enqueue", { input: {}, runId: "queued-1" }));
     assert.equal(queued.status, 202);
-    assert.equal((await queued.json() as { status: string }).status, "queued");
+    assert.equal(((await queued.json()) as { status: string }).status, "queued");
 
     const sourceResponse = await handler(jsonRequest("/prism/workflows/background/runs", { input: {}, runId: "source-1" }));
     assert.equal(sourceResponse.status, 200);
-    const replayed = await handler(jsonRequest("/prism/workflows/background/runs/source-1/replay", { fromNodeId: "work", runId: "replay-1" }));
+    const replayed = await handler(
+      jsonRequest("/prism/workflows/background/runs/source-1/replay", { fromNodeId: "work", runId: "replay-1" }),
+    );
     assert.equal(replayed.status, 200, await replayed.clone().text());
-    const result = await replayed.json() as { status: string; lineage: { sourceRunId: string } };
+    const result = (await replayed.json()) as { status: string; lineage: { sourceRunId: string } };
     assert.equal(result.status, "succeeded");
     assert.equal(result.lineage.sourceRunId, "source-1");
     assert.equal(calls, 2);
@@ -205,24 +209,33 @@ describe("createPrismHandler", () => {
       ownerId: "server",
     });
     const handler = createPrismHandler({ schedules, authorize: () => authorization });
-    const created = await handler(jsonRequest("/prism/schedules/daily", {
-      workflowId: "scheduled",
-      nextRunAt: "2026-01-01T00:00:00.000Z",
-      intervalMs: 60_000,
-    }));
+    const created = await handler(
+      jsonRequest("/prism/schedules/daily", {
+        workflowId: "scheduled",
+        nextRunAt: "2026-01-01T00:00:00.000Z",
+        intervalMs: 60_000,
+      }),
+    );
     assert.equal(created.status, 201, await created.clone().text());
-    assert.equal((await created.json() as { id: string }).id, "daily");
+    assert.equal(((await created.json()) as { id: string }).id, "daily");
     assert.equal((await handler(jsonRequest("/prism/schedules/daily/pause", {}))).status, 200);
     assert.equal((await handler(jsonRequest("/prism/schedules/daily/resume", { nextRunAt: "2026-01-02T00:00:00.000Z" }))).status, 200);
     assert.equal((await handler(jsonRequest("/prism/schedules/daily/trigger", { idempotencyKey: "manual-1" }))).status, 200);
     const listed = await handler(new Request("https://example.test/prism/schedules?status=active"));
     assert.equal(listed.status, 200);
-    assert.equal((await listed.json() as { items: unknown[] }).items.length, 1);
+    assert.equal(((await listed.json()) as { items: unknown[] }).items.length, 1);
     assert.equal((await handler(new Request("https://example.test/prism/schedules/daily", { method: "DELETE" }))).status, 200);
-    assert.equal((await handler(jsonRequest("/prism/schedules/bad", {
-      workflowId: "scheduled",
-      nextRunAt: "not-a-date",
-    }))).status, 400);
+    assert.equal(
+      (
+        await handler(
+          jsonRequest("/prism/schedules/bad", {
+            workflowId: "scheduled",
+            nextRunAt: "not-a-date",
+          }),
+        )
+      ).status,
+      400,
+    );
 
     const forbidden = createPrismHandler({
       schedules,
@@ -257,18 +270,54 @@ describe("createPrismHandler", () => {
     const handler = createPrismHandler({
       agents: { allowed: mockAgent() },
       workflows: { safe: { definition: workflow, checkpoints } },
-      authorize: ({ request }) => request.headers.get("authorization") === "Bearer ok" ? authorization : false,
+      authorize: ({ request }) => (request.headers.get("authorization") === "Bearer ok" ? authorization : false),
       allowedHosts: ["example.test"],
       allowedOrigins: ["https://app.test"],
       limits: { maxRequestBytes: 64 },
     });
 
     assert.equal((await handler(jsonRequest("/prism/agents/allowed/runs", { input: "x" }))).status, 403);
-    assert.equal((await handler(jsonRequest("/prism/agents/missing/runs", { input: "x" }, { headers: { authorization: "Bearer ok" } }))).status, 404);
-    assert.equal((await handler(new Request("https://example.test/prism/agents/allowed/runs", { method: "POST", body: "{}", headers: { authorization: "Bearer ok" } }))).status, 415);
-    assert.equal((await handler(jsonRequest("/prism/agents/allowed/runs", { input: "x".repeat(100) }, { headers: { authorization: "Bearer ok" } }))).status, 413);
-    assert.equal((await handler(jsonRequest("/prism/agents/allowed/runs", { input: "x" }, { headers: { authorization: "Bearer ok", host: "evil.test" } }))).status, 403);
-    assert.equal((await handler(jsonRequest("/prism/agents/allowed/runs", { input: "x" }, { headers: { authorization: "Bearer ok", origin: "https://evil.test" } }))).status, 403);
+    assert.equal(
+      (await handler(jsonRequest("/prism/agents/missing/runs", { input: "x" }, { headers: { authorization: "Bearer ok" } }))).status,
+      404,
+    );
+    assert.equal(
+      (
+        await handler(
+          new Request("https://example.test/prism/agents/allowed/runs", {
+            method: "POST",
+            body: "{}",
+            headers: { authorization: "Bearer ok" },
+          }),
+        )
+      ).status,
+      415,
+    );
+    assert.equal(
+      (await handler(jsonRequest("/prism/agents/allowed/runs", { input: "x".repeat(100) }, { headers: { authorization: "Bearer ok" } })))
+        .status,
+      413,
+    );
+    assert.equal(
+      (
+        await handler(
+          jsonRequest("/prism/agents/allowed/runs", { input: "x" }, { headers: { authorization: "Bearer ok", host: "evil.test" } }),
+        )
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await handler(
+          jsonRequest(
+            "/prism/agents/allowed/runs",
+            { input: "x" },
+            { headers: { authorization: "Bearer ok", origin: "https://evil.test" } },
+          ),
+        )
+      ).status,
+      403,
+    );
 
     const timed = createPrismHandler({
       agents: { allowed: mockAgent() },
@@ -287,10 +336,14 @@ describe("createPrismHandler", () => {
         if (providerCalls === 1) {
           await new Promise<void>((resolve) => {
             const timer = setTimeout(resolve, 1_000);
-            request.signal?.addEventListener("abort", () => {
-              clearTimeout(timer);
-              resolve();
-            }, { once: true });
+            request.signal?.addEventListener(
+              "abort",
+              () => {
+                clearTimeout(timer);
+                resolve();
+              },
+              { once: true },
+            );
           });
           request.signal?.throwIfAborted();
         }

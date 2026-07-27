@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { parseAgentFile, parseSkillFile } from "../index.js";
 
 describe("parseSkillFile", () => {
@@ -35,17 +35,11 @@ describe("parseSkillFile", () => {
   });
 
   it("throws on unterminated frontmatter fence naming the file", () => {
-    assert.throws(
-      () => parseSkillFile("---\nname: x\nbody", "/p/SKILL.md"),
-      /Malformed frontmatter in \/p\/SKILL\.md: unterminated fence/,
-    );
+    assert.throws(() => parseSkillFile("---\nname: x\nbody", "/p/SKILL.md"), /Malformed frontmatter in \/p\/SKILL\.md: unterminated fence/);
   });
 
   it("throws on invalid name characters naming the file", () => {
-    assert.throws(
-      () => parseSkillFile("---\nname: bad/name\n---\n", "/p/SKILL.md"),
-      /Invalid skill name in \/p\/SKILL\.md/,
-    );
+    assert.throws(() => parseSkillFile("---\nname: bad/name\n---\n", "/p/SKILL.md"), /Invalid skill name in \/p\/SKILL\.md/);
   });
 });
 

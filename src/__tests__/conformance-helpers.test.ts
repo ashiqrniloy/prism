@@ -1,14 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import {
-  createDefaultCompactionStrategy,
-  createExtensionKernel,
-  createMemorySessionStore,
-  createToolRegistry,
-  SESSION_APPEND_CONFLICT_CODE,
-  SessionAppendConflictError,
-} from "../index.js";
+import { describe, it } from "node:test";
 import type {
   AgentEventRecord,
   Extension,
@@ -19,11 +11,18 @@ import type {
   ToolDefinition,
   UsageRecord,
 } from "../index.js";
+import {
+  createDefaultCompactionStrategy,
+  createMemorySessionStore,
+  createToolRegistry,
+  SESSION_APPEND_CONFLICT_CODE,
+  SessionAppendConflictError,
+} from "../index.js";
 import { assertCompactionStrategyConforms } from "../testing/compaction-conformance.js";
 import { assertExtensionConforms } from "../testing/extension-conformance.js";
-import { assertSessionStoreConforms, runSessionStoreConformance } from "../testing/session-store-conformance.js";
 import { assertRunLedgerConforms, runRunLedgerConformance } from "../testing/run-ledger-conformance.js";
-import { assertToolDispatchConforms, assertToolBlocked } from "../testing/tool-conformance.js";
+import { assertSessionStoreConforms, runSessionStoreConformance } from "../testing/session-store-conformance.js";
+import { assertToolBlocked, assertToolDispatchConforms } from "../testing/tool-conformance.js";
 
 void describe("session-store conformance helper", () => {
   it("conforms against the core memory store", async () => {
@@ -35,10 +34,7 @@ void describe("session-store conformance helper", () => {
   });
 
   it("rejects a store that silently accepts duplicate entry ids", async () => {
-    await assert.rejects(
-      () => assertSessionStoreConforms(lenientStore()),
-      /store must reject a duplicate entry id/,
-    );
+    await assert.rejects(() => assertSessionStoreConforms(lenientStore()), /store must reject a duplicate entry id/);
   });
 
   it("rejects a store that ignores a missing expectedParentId", async () => {
@@ -81,11 +77,14 @@ void describe("run-ledger conformance helper", () => {
 
   it("runRunLedgerConformance survives factory reopen against shared state", async () => {
     const state = createMemoryLedger();
-    await runRunLedgerConformance(() => ({
-      ledger: state.ledger,
-      readRuns: () => state.runs,
-      readEvents: () => state.events,
-    }), { exerciseReopen: true, sessionId: "ledger-reopen" });
+    await runRunLedgerConformance(
+      () => ({
+        ledger: state.ledger,
+        readRuns: () => state.runs,
+        readEvents: () => state.events,
+      }),
+      { exerciseReopen: true, sessionId: "ledger-reopen" },
+    );
   });
 
   it("testing/run-ledger-conformance subpath is exported", () => {
@@ -110,10 +109,18 @@ function createMemoryLedger() {
     toolCalls,
     usage,
     ledger: {
-      appendRun: async (record: RunRecord) => { runs.push(record); },
-      appendEvent: async (record: AgentEventRecord) => { events.push(record); },
-      appendToolCall: async (record: ToolCallRecord) => { toolCalls.push(record); },
-      appendUsage: async (record: UsageRecord) => { usage.push(record); },
+      appendRun: async (record: RunRecord) => {
+        runs.push(record);
+      },
+      appendEvent: async (record: AgentEventRecord) => {
+        events.push(record);
+      },
+      appendToolCall: async (record: ToolCallRecord) => {
+        toolCalls.push(record);
+      },
+      appendUsage: async (record: UsageRecord) => {
+        usage.push(record);
+      },
     },
   };
 }
@@ -139,10 +146,7 @@ void describe("compaction conformance helper", () => {
 
   it("rejects a strategy that returns an empty summary", async () => {
     const empty = { name: "empty", compact: () => ({ summary: "" }) };
-    await assert.rejects(
-      () => assertCompactionStrategyConforms(empty),
-      /non-empty string summary/,
-    );
+    await assert.rejects(() => assertCompactionStrategyConforms(empty), /non-empty string summary/);
   });
 
   it("testing/compaction-conformance subpath is exported", () => {
@@ -163,7 +167,11 @@ void describe("tool conformance helper", () => {
 
   it("assertToolBlocked rejects when a call is not blocked", async () => {
     await assert.rejects(
-      () => assertToolBlocked({ call: { type: "tool_call", id: "c", name: "echo", arguments: {} }, registry: createToolRegistry([echo]) }, "unknown_tool"),
+      () =>
+        assertToolBlocked(
+          { call: { type: "tool_call", id: "c", name: "echo", arguments: {} }, registry: createToolRegistry([echo]) },
+          "unknown_tool",
+        ),
       /no blocked event was emitted/,
     );
   });
@@ -173,7 +181,9 @@ void describe("tool conformance helper", () => {
     // result, so the success-path assertion fails.
     const throwing: ToolDefinition = {
       name: "boom",
-      execute: () => { throw new Error("boom"); },
+      execute: () => {
+        throw new Error("boom");
+      },
     };
     await assert.rejects(
       () => assertToolDispatchConforms(createToolRegistry(), { tool: throwing, validArgs: {} }),
@@ -191,7 +201,9 @@ void describe("extension conformance helper", () => {
   it("conforms against an extension that registers an inert skill", async () => {
     const extension: Extension = {
       name: "demo",
-      setup(api) { api.registerSkill({ name: "brief", instructions: "Be brief." }); },
+      setup(api) {
+        api.registerSkill({ name: "brief", instructions: "Be brief." });
+      },
     };
     const kernel = await assertExtensionConforms(extension);
     assert.equal(kernel.registries.skills.get("brief")?.name, "brief");
@@ -231,14 +243,19 @@ function customStore(): SessionStore {
       }
       if (options?.idempotencyKey) {
         const dedup = `${entry.sessionId}\u0000${options.idempotencyKey}\u0000${options.expectedParentId ?? ""}`;
-        if (idempotencySeen.has(dedup)) throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, idempotencyDuplicate: true });
+        if (idempotencySeen.has(dedup))
+          throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, idempotencyDuplicate: true });
         idempotencySeen.add(dedup);
       }
       byId.set(entry.id, entry);
       (bySession.get(entry.sessionId) ?? bySession.set(entry.sessionId, []).get(entry.sessionId)!)!.push(entry);
     },
-    async list(sessionId) { return [...(bySession.get(sessionId) ?? [])]; },
-    async get(id) { return byId.get(id); },
+    async list(sessionId) {
+      return [...(bySession.get(sessionId) ?? [])];
+    },
+    async get(id) {
+      return byId.get(id);
+    },
     async readBranchPath(query) {
       const chain: SessionEntry[] = [];
       let cursor: string | undefined = query.leafId;
@@ -260,7 +277,9 @@ function lenientStore(): SessionStore {
     async append(entry) {
       (bySession.get(entry.sessionId) ?? bySession.set(entry.sessionId, []).get(entry.sessionId)!)!.push(entry);
     },
-    async list(sessionId) { return [...(bySession.get(sessionId) ?? [])]; },
+    async list(sessionId) {
+      return [...(bySession.get(sessionId) ?? [])];
+    },
   };
 }
 
@@ -274,6 +293,8 @@ function noConflictStore(): SessionStore {
       byId.set(entry.id, entry);
       (bySession.get(entry.sessionId) ?? bySession.set(entry.sessionId, []).get(entry.sessionId)!)!.push(entry);
     },
-    async list(sessionId) { return [...(bySession.get(sessionId) ?? [])]; },
+    async list(sessionId) {
+      return [...(bySession.get(sessionId) ?? [])];
+    },
   };
 }

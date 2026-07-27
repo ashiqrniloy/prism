@@ -1,7 +1,7 @@
 import {
-  ownershipFromIdentity,
   type AgentIdentity,
   type GuardrailRecord,
+  ownershipFromIdentity,
   type PermissionDecision,
   type PermissionRequest,
 } from "@arnilo/prism";

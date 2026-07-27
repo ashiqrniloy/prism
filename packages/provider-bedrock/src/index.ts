@@ -1,10 +1,10 @@
 export {
-  bedrockRuntimeEndpoint,
-  createBedrockProvider,
-  createBedrockProviderPackage,
-  signAwsRequest,
   type AwsCredentials,
   type BedrockCredentialSource,
   type BedrockProviderOptions,
   type BedrockProviderPackageOptions,
+  bedrockRuntimeEndpoint,
+  createBedrockProvider,
+  createBedrockProviderPackage,
+  signAwsRequest,
 } from "./provider.js";

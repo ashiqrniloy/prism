@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import type { Embedder, VectorStore, WorkingMemoryStore } from "./types.js";
-import { createMemory } from "./memory.js";
 import { MemoryConflictError, MemoryScopeError, MemoryValidationError } from "./errors.js";
+import { createMemory } from "./memory.js";
+import type { Embedder, VectorStore, WorkingMemoryStore } from "./types.js";
 
 export interface MemoryConformanceStores {
   readonly embedder: Embedder;
@@ -12,9 +12,7 @@ export interface MemoryConformanceStores {
 /**
  * Shared network-free conformance for Embedder + VectorStore + WorkingMemoryStore trios.
  */
-export async function runMemoryConformance(
-  createStores: () => Promise<MemoryConformanceStores> | MemoryConformanceStores,
-): Promise<void> {
+export async function runMemoryConformance(createStores: () => Promise<MemoryConformanceStores> | MemoryConformanceStores): Promise<void> {
   const stores = await createStores();
   const memory = createMemory({
     tenantId: "tenant-a",
@@ -39,10 +37,7 @@ export async function runMemoryConformance(
     },
   });
 
-  await assert.rejects(
-    memory.updateWorking({ preferences: { format: "concise" } }),
-    MemoryValidationError,
-  );
+  await assert.rejects(memory.updateWorking({ preferences: { format: "concise" } }), MemoryValidationError);
 
   const created = await memory.updateWorking({ name: "Ada", preferences: { format: "concise" } });
   assert.equal(created.version, 1);
@@ -53,15 +48,9 @@ export async function runMemoryConformance(
   assert.equal(merged.value.name, "Ada");
   assert.deepEqual(merged.value.preferences, { format: "bullets" });
 
-  await assert.rejects(
-    memory.updateWorking({ name: "Ada", preferences: { format: "x" } }, { expectedVersion: 1 }),
-    MemoryConflictError,
-  );
+  await assert.rejects(memory.updateWorking({ name: "Ada", preferences: { format: "x" } }, { expectedVersion: 1 }), MemoryConflictError);
 
-  const replaced = await memory.updateWorking(
-    { name: "Ada", preferences: { format: "short" } },
-    { mode: "replace", expectedVersion: 2 },
-  );
+  const replaced = await memory.updateWorking({ name: "Ada", preferences: { format: "short" } }, { mode: "replace", expectedVersion: 2 });
   assert.equal(replaced.version, 3);
 
   const otherThread = createMemory({
@@ -114,19 +103,28 @@ export async function runMemoryConformance(
     { wait: true },
   );
   const hidden = await memory.recall("hidden preference do not inject", { topK: 8 });
-  assert.ok(hidden.hits.every((hit) => hit.id !== "c1"), "invisible memory must not inject");
+  assert.ok(
+    hidden.hits.every((hit) => hit.id !== "c1"),
+    "invisible memory must not inject",
+  );
 
   const granted = await memory.setConsent("c1", { visible: true });
   assert.equal(granted.consent?.visible, true);
   assert.ok(granted.consent?.grantedAt);
   const visible = await memory.recall("hidden preference do not inject", { topK: 8 });
-  assert.ok(visible.hits.some((hit) => hit.id === "c1"), "granted memory must inject");
+  assert.ok(
+    visible.hits.some((hit) => hit.id === "c1"),
+    "granted memory must inject",
+  );
 
   const revoked = await memory.setConsent("c1", { visible: false });
   assert.equal(revoked.consent?.visible, false);
   assert.ok(revoked.consent?.revokedAt);
   const revokedRecall = await memory.recall("hidden preference do not inject", { topK: 8 });
-  assert.ok(revokedRecall.hits.every((hit) => hit.id !== "c1"), "revoked memory must not inject");
+  assert.ok(
+    revokedRecall.hits.every((hit) => hit.id !== "c1"),
+    "revoked memory must not inject",
+  );
 
   await memory.setConsent("c1", { visible: true });
   const corrected = await memory.correct("c1", "preferred snack is almonds");
@@ -136,7 +134,10 @@ export async function runMemoryConformance(
   const forgotten = await memory.forget({ ids: ["c1"] });
   assert.equal(forgotten, 1);
   const afterForget = await memory.recall("almonds", { topK: 8 });
-  assert.ok(afterForget.hits.every((hit) => hit.id !== "c1"), "forgotten memory must be gone");
+  assert.ok(
+    afterForget.hits.every((hit) => hit.id !== "c1"),
+    "forgotten memory must be gone",
+  );
 
   await memory.remember(
     {

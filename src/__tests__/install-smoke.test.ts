@@ -1,16 +1,9 @@
-import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import {
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-} from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -41,6 +34,7 @@ const packages = [
   { dir: "packages/observability-opentelemetry", name: "@arnilo/prism-observability-opentelemetry" },
   { dir: "packages/tool-validator-json-schema", name: "@arnilo/prism-tool-validator-json-schema" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
+  { dir: "packages/session-store-codecs", name: "@arnilo/prism-session-store-codecs" },
   { dir: "packages/session-store-sqlite", name: "@arnilo/prism-session-store-sqlite" },
   { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
   { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
@@ -70,7 +64,7 @@ function coreSpecifiers(): string[] {
   const specs = ["@arnilo/prism"];
   for (const key of Object.keys(pkg.exports)) {
     if (key === ".") continue;
-    specs.push("@arnilo/prism" + key.slice(1)); // "./node/config" -> "@arnilo/prism/node/config"
+    specs.push(`@arnilo/prism${key.slice(1)}`); // "./node/config" -> "@arnilo/prism/node/config"
   }
   return specs;
 }
@@ -94,7 +88,18 @@ function run(cmd: string, args: string[], cwd: string) {
 const staging = mkdtempSync(join(tmpdir(), "prism-smoke-stage-"));
 const consumer = mkdtempSync(join(tmpdir(), "prism-smoke-consumer-"));
 
-const result = { installStatus: -1, smokeStatus: -1, integrationStatus: -1, compositionStatus: -1, smokeOut: "", integrationOut: "", compositionOut: "", junk: [] as string[], secretFindings: [] as string[], tarballNames: [] as string[] };
+const result = {
+  installStatus: -1,
+  smokeStatus: -1,
+  integrationStatus: -1,
+  compositionStatus: -1,
+  smokeOut: "",
+  integrationOut: "",
+  compositionOut: "",
+  junk: [] as string[],
+  secretFindings: [] as string[],
+  tarballNames: [] as string[],
+};
 
 before(() => {
   // 1. Pack core + every first-party package into the staging dir.
@@ -109,27 +114,13 @@ before(() => {
 
   // 2. Fresh consumer project; install all tarballs together so the required
   //    `prism` peer is satisfied locally with no registry traffic.
-  writeFileSync(
-    join(consumer, "package.json"),
-    JSON.stringify({ name: "@arnilo-prism-install-smoke", type: "module" }, null, 2),
-  );
-  const installArgs = [
-    "install",
-    ...tarballs,
-    "--offline",
-    "--no-audit",
-    "--no-fund",
-    "--no-update-notifier",
-  ];
+  writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "@arnilo-prism-install-smoke", type: "module" }, null, 2));
+  const installArgs = ["install", ...tarballs, "--offline", "--no-audit", "--no-fund", "--no-update-notifier"];
   let install = run("npm", installArgs, consumer);
   if (install.status !== 0) {
     // Fallback: cold cache or offline-unfriendly environment; no runtime deps
     // means this still makes zero registry fetches.
-    install = run(
-      "npm",
-      ["install", ...tarballs, "--no-audit", "--no-fund", "--no-update-notifier"],
-      consumer,
-    );
+    install = run("npm", ["install", ...tarballs, "--no-audit", "--no-fund", "--no-update-notifier"], consumer);
   }
   result.installStatus = install.status;
   if (install.status !== 0) {
@@ -156,7 +147,9 @@ before(() => {
   result.smokeOut = smoke.stdout + smoke.stderr;
 
   // 4. Exercise validator + parallel local/MCP/coding tools from packed public imports.
-  writeFileSync(join(consumer, "integration.mjs"), `
+  writeFileSync(
+    join(consumer, "integration.mjs"),
+    `
 import assert from "node:assert/strict";
 import {
   createAgent, createSecretRedactor, createToolRegistry, dispatchToolCall,
@@ -242,13 +235,16 @@ const denied = await dispatchToolCall({
 });
 assert.ok(denied.error, "read-only policy allowed write");
 console.log("PACKED INTEGRATION OK");
-`);
+`,
+  );
   const integration = run("node", ["integration.mjs"], consumer);
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Compose every 0.0.15 optional capability family from packed public imports.
-  writeFileSync(join(consumer, "composition.mjs"), `
+  // 5. Compose every 0.0.16 optional capability family from packed public imports.
+  writeFileSync(
+    join(consumer, "composition.mjs"),
+    `
 import assert from "node:assert/strict";
 import {
   createAgent, createMemoryCheckpointStore, createMemoryLeaseStore, createMemoryRunFeedbackStore,
@@ -354,8 +350,9 @@ const card = { name: "Packed", description: "Packed test agent", supportedInterf
 const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: () => servedAgent().createSession() }, authorize: () => ({ ownership }) });
 const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
 assert.equal((await a2a.send("hello")).text, "served");
-console.log("PACKED 0.0.15 COMPOSITION OK");
-`);
+console.log("PACKED 0.0.16 COMPOSITION OK");
+`,
+  );
   const composition = run("node", ["composition.mjs"], consumer);
   result.compositionStatus = composition.status;
   result.compositionOut = composition.stdout + composition.stderr;
@@ -396,26 +393,30 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("packed 0.0.15 optional capabilities compose through public imports", () => {
+  it("packed 0.0.16 optional capabilities compose through public imports", () => {
     assert.equal(result.compositionStatus, 0, result.compositionOut);
   });
 
   it("installed packages contain no test artifacts, source maps, or real-looking secrets", () => {
     assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
     assert.deepEqual(result.secretFindings, [], `secret-like value leaked into installed packages: ${result.secretFindings.join(", ")}`);
-    assert.equal((result.integrationOut + result.compositionOut).includes("packed-integration-secret"), false, "canary leaked into packed journey output");
+    assert.equal(
+      (result.integrationOut + result.compositionOut).includes("packed-integration-secret"),
+      false,
+      "canary leaked into packed journey output",
+    );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.15.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.16.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.0.15.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.0.16.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.0.15.tgz"),
-      `expected 'arnilo-prism-0.0.15.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.0.16.tgz"),
+      `expected 'arnilo-prism-0.0.16.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.0.15.tgz", "arnilo-prism-compaction-0.0.15.tgz", "arnilo-prism-all-0.0.15.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.0.16.tgz", "arnilo-prism-compaction-0.0.16.tgz", "arnilo-prism-all-0.0.16.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

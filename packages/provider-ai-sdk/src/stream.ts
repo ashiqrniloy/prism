@@ -1,7 +1,4 @@
-import type {
-  LanguageModelV4StreamPart,
-  LanguageModelV4Usage,
-} from "@ai-sdk/provider";
+import type { LanguageModelV4StreamPart, LanguageModelV4Usage } from "@ai-sdk/provider";
 import type { ProviderEvent, SecretRedactor, ToolCallAuthority, Usage } from "@arnilo/prism";
 import {
   providerDone,
@@ -38,10 +35,10 @@ type StreamPartMapper<T extends StreamPartType = StreamPartType> = (
 export const AI_SDK_STREAM_PART_MAPPINGS = {
   "stream-start": () => [], // Warnings have no normalized event and may contain provider-private data.
   "text-start": () => [],
-  "text-delta": (part) => part.delta ? [providerTextDelta(part.delta)] : [],
+  "text-delta": (part) => (part.delta ? [providerTextDelta(part.delta)] : []),
   "text-end": () => [],
   "reasoning-start": () => [],
-  "reasoning-delta": (part) => part.delta ? [providerThinkingDelta(part.delta)] : [],
+  "reasoning-delta": (part) => (part.delta ? [providerThinkingDelta(part.delta)] : []),
   "reasoning-end": () => [],
   "tool-input-start": (part, state) => {
     const index = state.nextIndex++;
@@ -57,14 +54,16 @@ export const AI_SDK_STREAM_PART_MAPPINGS = {
       return [{ type: "tool_call_delta", index, id: part.id, argumentsText: part.delta }];
     }
     current.argumentsText += part.delta;
-    return [{
-      type: "tool_call_delta",
-      index: current.index,
-      id: current.id,
-      name: current.name || undefined,
-      argumentsText: part.delta,
-      authority: current.authority,
-    }];
+    return [
+      {
+        type: "tool_call_delta",
+        index: current.index,
+        id: current.id,
+        name: current.name || undefined,
+        argumentsText: part.delta,
+        authority: current.authority,
+      },
+    ];
   },
   "tool-input-end": () => [],
   "tool-call": (part, state) => {
@@ -74,14 +73,14 @@ export const AI_SDK_STREAM_PART_MAPPINGS = {
     return [providerToolCall(authority ? { ...call, authority } : call)];
   },
   "tool-result": () => [], // Provider-executed result stays provider-side; its call is attributable above.
-  "response-metadata": (part) => part.id ? [{ type: "message_start", messageId: part.id }] : [],
-  "finish": (part) => {
+  "response-metadata": (part) => (part.id ? [{ type: "message_start", messageId: part.id }] : []),
+  finish: (part) => {
     const usage = mapUsage(part.usage);
     return usage ? [providerUsage(usage), providerDone(usage)] : [providerDone()];
   },
-  "error": (part, state) => [toErrorEvent(part.error, state.redactor)],
-  "raw": () => [], // Transport diagnostics are neither normalized content nor safe telemetry.
-  "file": (part, state) => unsupportedPart(part.type, state.redactor),
+  error: (part, state) => [toErrorEvent(part.error, state.redactor)],
+  raw: () => [], // Transport diagnostics are neither normalized content nor safe telemetry.
+  file: (part, state) => unsupportedPart(part.type, state.redactor),
   "reasoning-file": (part, state) => unsupportedPart(part.type, state.redactor),
   source: (part, state) => unsupportedPart(part.type, state.redactor),
   custom: (part, state) => unsupportedPart(part.type, state.redactor),
@@ -123,10 +122,7 @@ export function mapUsage(usage: LanguageModelV4Usage | undefined): Usage | undef
   const outputTokens = usage.outputTokens.total;
   const cacheReadTokens = usage.inputTokens.cacheRead;
   const cacheWriteTokens = usage.inputTokens.cacheWrite;
-  const totalTokens =
-    inputTokens !== undefined || outputTokens !== undefined
-      ? (inputTokens ?? 0) + (outputTokens ?? 0)
-      : undefined;
+  const totalTokens = inputTokens !== undefined || outputTokens !== undefined ? (inputTokens ?? 0) + (outputTokens ?? 0) : undefined;
   const mapped: Usage = { inputTokens, outputTokens, totalTokens, cacheReadTokens, cacheWriteTokens };
   return Object.values(mapped).some((value) => value !== undefined) ? mapped : undefined;
 }

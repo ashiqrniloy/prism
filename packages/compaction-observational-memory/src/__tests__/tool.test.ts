@@ -1,17 +1,63 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createSessionEntry } from "@arnilo/prism";
-import { createRecallMemoryTool, OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED, type MemoryObservation, type MemoryReflection } from "../index.js";
+import {
+  createRecallMemoryTool,
+  type MemoryObservation,
+  type MemoryReflection,
+  OBSERVATIONS_DROPPED,
+  OBSERVATIONS_RECORDED,
+  REFLECTIONS_RECORDED,
+} from "../index.js";
 
 const now = "2026-06-20T00:00:00.000Z";
-const source = createSessionEntry({ id: "m1", sessionId: "s1", timestamp: now, kind: "message", message: { role: "user", content: [{ type: "text", text: "secret-value source" }] } });
-const observation: MemoryObservation = { id: "aaaaaaaaaaaa", content: "Remember secret-value", timestamp: now, relevance: "high", sourceEntryIds: ["m1", "missing"], tokenCount: 4 };
-const reflection: MemoryReflection = { id: "bbbbbbbbbbbb", content: "Secret should redact", supportingObservationIds: [observation.id], tokenCount: 4 };
+const source = createSessionEntry({
+  id: "m1",
+  sessionId: "s1",
+  timestamp: now,
+  kind: "message",
+  message: { role: "user", content: [{ type: "text", text: "secret-value source" }] },
+});
+const observation: MemoryObservation = {
+  id: "aaaaaaaaaaaa",
+  content: "Remember secret-value",
+  timestamp: now,
+  relevance: "high",
+  sourceEntryIds: ["m1", "missing"],
+  tokenCount: 4,
+};
+const reflection: MemoryReflection = {
+  id: "bbbbbbbbbbbb",
+  content: "Secret should redact",
+  supportingObservationIds: [observation.id],
+  tokenCount: 4,
+};
 const entries = [
   source,
-  createSessionEntry({ id: "om1", sessionId: "s1", parentId: "m1", timestamp: now, kind: "custom", data: { type: OBSERVATIONS_RECORDED, observations: [observation], coversUpToId: "m1" } }),
-  createSessionEntry({ id: "om2", sessionId: "s1", parentId: "om1", timestamp: now, kind: "custom", data: { type: REFLECTIONS_RECORDED, reflections: [reflection], coversUpToId: "om1" } }),
-  createSessionEntry({ id: "om3", sessionId: "s1", parentId: "om2", timestamp: now, kind: "custom", data: { type: OBSERVATIONS_DROPPED, observationIds: [observation.id], coversUpToId: "om2" } }),
+  createSessionEntry({
+    id: "om1",
+    sessionId: "s1",
+    parentId: "m1",
+    timestamp: now,
+    kind: "custom",
+    data: { type: OBSERVATIONS_RECORDED, observations: [observation], coversUpToId: "m1" },
+  }),
+  createSessionEntry({
+    id: "om2",
+    sessionId: "s1",
+    parentId: "om1",
+    timestamp: now,
+    kind: "custom",
+    data: { type: REFLECTIONS_RECORDED, reflections: [reflection], coversUpToId: "om1" },
+  }),
+  createSessionEntry({
+    id: "om3",
+    sessionId: "s1",
+    parentId: "om2",
+    timestamp: now,
+    kind: "custom",
+    data: { type: OBSERVATIONS_DROPPED, observationIds: [observation.id], coversUpToId: "om2" },
+  }),
 ];
 
 const context = { sessionId: "s1", runId: "r1", toolCallId: "t1" };
@@ -19,7 +65,12 @@ const context = { sessionId: "s1", runId: "r1", toolCallId: "t1" };
 describe("observational memory recall tool", () => {
   it("recall_tool_rejects_invalid_id_without_entry_lookup", async () => {
     let lookedUp = false;
-    const tool = createRecallMemoryTool({ getEntries: () => { lookedUp = true; return entries; } });
+    const tool = createRecallMemoryTool({
+      getEntries: () => {
+        lookedUp = true;
+        return entries;
+      },
+    });
     const result = await tool.execute({ id: "bad" }, context);
     assert.equal(lookedUp, false);
     assert.equal((result.value as any).reason, "invalid_id");

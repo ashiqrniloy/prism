@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { join } from "node:path";
 /**
  * Release 0.0.14 network-free Phase 9 evidence: durable conversation replay,
  * memory consent-filtered injection, artifact revision/delivery, AG-UI co-work
@@ -6,7 +7,6 @@
  * Evidence fields only — bounds/fixtures, not timings, gate release.
  */
 import { performance } from "node:perf_hooks";
-import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const iterations = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
@@ -15,9 +15,20 @@ if (!Number.isInteger(iterations) || iterations < 10 || iterations > 100_000) {
 }
 
 const REQUIRED_RESULT_FIELDS = Object.freeze([
-  "scenario", "mode", "iterations", "throughputPerSecond", "p50Ms", "p95Ms",
-  "memoryBytes", "peakQueueEvents", "eventBytes", "diskBytes", "processCount",
-  "estimatedCostUsd", "backpressureSignals", "resourceLimitSignals",
+  "scenario",
+  "mode",
+  "iterations",
+  "throughputPerSecond",
+  "p50Ms",
+  "p95Ms",
+  "memoryBytes",
+  "peakQueueEvents",
+  "eventBytes",
+  "diskBytes",
+  "processCount",
+  "estimatedCostUsd",
+  "backpressureSignals",
+  "resourceLimitSignals",
 ]);
 const percentile = (values, ratio) => [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
 const results = [];
@@ -45,21 +56,31 @@ async function measure(scenario, mode, operation) {
   }
   const durationMs = performance.now() - started;
   const row = {
-    scenario, mode, iterations,
+    scenario,
+    mode,
+    iterations,
     throughputPerSecond: Number((iterations / (durationMs / 1000)).toFixed(2)),
     p50Ms: Number(percentile(latencies, 0.5).toFixed(4)),
     p95Ms: Number(percentile(latencies, 0.95).toFixed(4)),
     memoryBytes: process.memoryUsage().heapUsed,
-    peakQueueEvents, eventBytes,
-    diskBytes: 0, processCount: 1, estimatedCostUsd: 0, backpressureSignals: 0, resourceLimitSignals,
+    peakQueueEvents,
+    eventBytes,
+    diskBytes: 0,
+    processCount: 1,
+    estimatedCostUsd: 0,
+    backpressureSignals: 0,
+    resourceLimitSignals,
   };
   assertResultSchema(row);
   results.push(row);
 }
 
 async function workspace(specifier, fallback) {
-  try { return await import(specifier); }
-  catch { return import(pathToFileURL(join(process.cwd(), fallback)).href); }
+  try {
+    return await import(specifier);
+  } catch {
+    return import(pathToFileURL(join(process.cwd(), fallback)).href);
+  }
 }
 
 const core = await workspace("@arnilo/prism", "dist/index.js");
@@ -88,8 +109,7 @@ const agent = core.createAgent({
 });
 const conversations = server.createConversationService(persistence, {
   redactor,
-  sessionFactory: ({ thread, leafId }) =>
-    agent.createSession({ id: thread.id, ...(leafId === undefined ? {} : { leafId }) }),
+  sessionFactory: ({ thread, leafId }) => agent.createSession({ id: thread.id, ...(leafId === undefined ? {} : { leafId }) }),
 });
 const thread = await conversations.create({ ownership, title: "bench-thread" });
 await conversations.continue({ ownership, threadId: thread.id, message: "Summarize the launch.", requestId: "req-1" });
@@ -173,9 +193,15 @@ const credentialStore = (() => {
   const map = new Map();
   const key = (provider, accountId) => `${provider}\u0000${accountId ?? ""}`;
   return {
-    async set(provider, credential) { map.set(key(provider, credential.accountId), credential); },
-    async get(provider, accountId) { return map.get(key(provider, accountId)); },
-    async delete(provider, accountId) { return map.delete(key(provider, accountId)); },
+    async set(provider, credential) {
+      map.set(key(provider, credential.accountId), credential);
+    },
+    async get(provider, accountId) {
+      return map.get(key(provider, accountId));
+    },
+    async delete(provider, accountId) {
+      return map.delete(key(provider, accountId));
+    },
   };
 })();
 await credentialStore.set("microsoft365", { access: "expired", refresh: "r", accountId: "acct-1", expires: Date.now() - 1000 });
@@ -206,7 +232,8 @@ await measure("connector-token-refresh", "fake-oauth", async () => {
 });
 
 const report = {
-  generatedAt: new Date().toISOString(), release: "0.0.14",
+  generatedAt: new Date().toISOString(),
+  release: "0.0.14",
   environment: { node: process.version, platform: process.platform, arch: process.arch, network: false, credentials: false },
   schema: { requiredResultFields: REQUIRED_RESULT_FIELDS },
   frozenBudgets: {

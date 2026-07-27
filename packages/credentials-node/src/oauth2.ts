@@ -68,13 +68,20 @@ export function createOAuth2Provider(config: OAuth2ProviderConfig): OAuthProvide
       throwIfAborted(callbacks?.signal);
       const code = await callbacks?.onPrompt?.(`${config.id} authorization code`);
       if (!code) throw new Error(`${config.id} authorization code was not provided`);
-      return exchangeToken(config, clientId, fetchImpl, {
-        grant_type: "authorization_code",
-        client_id: clientId,
-        code,
-        code_verifier: verifier,
-        ...(config.redirectUri ? { redirect_uri: config.redirectUri } : {}),
-      }, [code, verifier], callbacks?.signal);
+      return exchangeToken(
+        config,
+        clientId,
+        fetchImpl,
+        {
+          grant_type: "authorization_code",
+          client_id: clientId,
+          code,
+          code_verifier: verifier,
+          ...(config.redirectUri ? { redirect_uri: config.redirectUri } : {}),
+        },
+        [code, verifier],
+        callbacks?.signal,
+      );
     },
     async refresh(credentials) {
       if (!credentials.refresh) return credentials;
@@ -187,7 +194,7 @@ async function deviceLogin(
 
 async function exchangeToken(
   config: OAuth2ProviderConfig,
-  clientId: string,
+  _clientId: string,
   fetchImpl: typeof fetch,
   body: Record<string, string>,
   secrets: readonly (string | undefined)[] = [],

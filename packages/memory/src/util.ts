@@ -1,4 +1,4 @@
-import { createSecretRedactor, type JsonObject, type JsonValue, type SecretRedactor } from "@arnilo/prism";
+import { type JsonObject, type JsonValue, type SecretRedactor } from "@arnilo/prism";
 import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
 import type { MemoryScope } from "./types.js";
 
@@ -60,10 +60,7 @@ export function mergeJsonObjects(base: JsonObject, patch: JsonObject): JsonObjec
   const result: Record<string, JsonValue> = { ...cloneJsonObject(base) };
   for (const [key, value] of Object.entries(patch)) {
     assertSafeJsonKey(key);
-    if (
-      isPlainObject(value) &&
-      isPlainObject(result[key])
-    ) {
+    if (isPlainObject(value) && isPlainObject(result[key])) {
       result[key] = mergeJsonObjects(result[key] as JsonObject, value as JsonObject);
     } else {
       result[key] = value as JsonValue;
@@ -83,15 +80,6 @@ export function assertByteLimit(value: unknown, maxBytes: number, label: string)
 
 export function assertTextLimit(text: string, maxChars: number, label: string): void {
   if (text.length > maxChars) throw new MemoryLimitError(`${label} exceeds ${maxChars} characters`);
-}
-
-export function resolveRedactor(
-  redactor?: SecretRedactor,
-  secrets?: readonly (string | undefined)[],
-): SecretRedactor | undefined {
-  if (redactor) return redactor;
-  if (!secrets || secrets.length === 0) return undefined;
-  return createSecretRedactor(secrets);
 }
 
 export function redactJson<T>(value: T, redactor?: SecretRedactor): T {

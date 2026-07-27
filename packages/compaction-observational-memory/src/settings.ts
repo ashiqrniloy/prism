@@ -29,8 +29,11 @@ export const defaultObservationalMemorySettings: ObservationalMemorySettings = {
 
 export type ObservationalMemorySettingsInput = Partial<ObservationalMemorySettings>;
 
-export async function resolveObservationalMemorySettings(settings?: SettingsProvider, overrides: ObservationalMemorySettingsInput = {}): Promise<ObservationalMemorySettings> {
-  const fromProvider = await settings?.get<ObservationalMemorySettingsInput>("observational-memory") ?? {};
+export async function resolveObservationalMemorySettings(
+  settings?: SettingsProvider,
+  overrides: ObservationalMemorySettingsInput = {},
+): Promise<ObservationalMemorySettings> {
+  const fromProvider = (await settings?.get<ObservationalMemorySettingsInput>("observational-memory")) ?? {};
   const merged = { ...defaultObservationalMemorySettings, ...fromProvider, ...overrides };
   return {
     ...merged,
@@ -38,7 +41,10 @@ export async function resolveObservationalMemorySettings(settings?: SettingsProv
     reflectAfterTokens: positive(merged.reflectAfterTokens, defaultObservationalMemorySettings.reflectAfterTokens),
     compactAfterTokens: positive(merged.compactAfterTokens, defaultObservationalMemorySettings.compactAfterTokens),
     observationsPoolMaxTokens: positive(merged.observationsPoolMaxTokens, defaultObservationalMemorySettings.observationsPoolMaxTokens),
-    observationsPoolTargetTokens: positive(merged.observationsPoolTargetTokens, defaultObservationalMemorySettings.observationsPoolTargetTokens),
+    observationsPoolTargetTokens: positive(
+      merged.observationsPoolTargetTokens,
+      defaultObservationalMemorySettings.observationsPoolTargetTokens,
+    ),
     agentMaxTurns: workerTurns(merged.agentMaxTurns),
     passive: Boolean(merged.passive),
     debugLog: Boolean(merged.debugLog),

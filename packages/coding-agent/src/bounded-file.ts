@@ -1,11 +1,7 @@
 import { open } from "node:fs/promises";
 
 /** Read one regular-file snapshot no larger than `maxBytes`; always closes its handle. */
-export async function readFileBounded(
-  path: string,
-  maxBytes: number,
-  signal?: AbortSignal,
-): Promise<Buffer> {
+export async function readFileBounded(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer> {
   const handle = await open(path, "r");
   try {
     const size = (await handle.stat()).size;

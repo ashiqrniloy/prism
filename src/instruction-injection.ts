@@ -1,5 +1,11 @@
+import type {
+  ContextBlock,
+  InstructionContext,
+  InstructionContribution,
+  InstructionInjector,
+  SystemPromptContribution,
+} from "./contracts.js";
 import type { ContributionRegistry } from "./contributions.js";
-import type { ContextBlock, InstructionContext, InstructionContribution, InstructionInjector, SystemPromptContribution } from "./contracts.js";
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw new Error("Instruction injector aborted");
@@ -53,9 +59,7 @@ export interface ResolveInstructionInjectorsOptions {
  *
  * ponytail: no toolNames enforcement — injectors grant no tools (unlike skills).
  */
-export function resolveInstructionInjectors(
-  options: ResolveInstructionInjectorsOptions,
-): readonly InstructionInjector[] {
+export function resolveInstructionInjectors(options: ResolveInstructionInjectorsOptions): readonly InstructionInjector[] {
   if (options.configured) return options.configured;
   if (!options.names || !options.registry) return [];
   return options.names.map((name) => {

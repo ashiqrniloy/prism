@@ -14,7 +14,10 @@ export function assertValidRef(ref: string): string {
  * Parse AI-mode aria snapshot YAML into a bounded ref table.
  * Refs are snapshot-scoped; callers invalidate the table after mutations.
  */
-export function parseSnapshotRefs(ariaSnapshot: string, maxRefs: number): {
+export function parseSnapshotRefs(
+  ariaSnapshot: string,
+  maxRefs: number,
+): {
   refs: Map<string, SnapshotRefInfo>;
   truncatedByRefs: boolean;
 } {
@@ -73,10 +76,7 @@ export function normalizeTarget(raw: unknown): BrowserTarget {
   if (typeof obj.text === "string") {
     return { text: obj.text, exact: obj.exact === true };
   }
-  throw new BrowserError(
-    "ERR_PRISM_BROWSER_TARGET",
-    "target must be one of ref, role(+name), label, testId, or text",
-  );
+  throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "target must be one of ref, role(+name), label, testId, or text");
 }
 
 /**
@@ -95,10 +95,7 @@ export async function resolveTargetLocator(
     }
     assertValidRef(target.ref);
     if (!refs.has(target.ref)) {
-      throw new BrowserError(
-        "ERR_PRISM_BROWSER_TARGET",
-        `Stale or unknown ref ${target.ref} for snapshot ${snapshotId}`,
-      );
+      throw new BrowserError("ERR_PRISM_BROWSER_TARGET", `Stale or unknown ref ${target.ref} for snapshot ${snapshotId}`);
     }
     return page.locator(`aria-ref=${target.ref}`);
   }

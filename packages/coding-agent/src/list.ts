@@ -1,23 +1,17 @@
 /**
  * `repo_list` tool: bounded native repository listing.
  */
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { enforceExecutionPolicy } from "./execution-policy.js";
+import { HARD_MAX_REPO_DEPTH, HARD_MAX_REPO_RESULTS, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 import {
   createLocalRepositoryOperations,
-  resolveRepositoryLimits,
   RepositoryError,
   type RepositoryLimitOptions,
   type RepositoryListResult,
   type RepositoryOperations,
+  resolveRepositoryLimits,
 } from "./repository.js";
-import { HARD_MAX_REPO_DEPTH, HARD_MAX_REPO_RESULTS, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 
 export interface ListToolOptions {
   executionPolicy?: ExecutionPolicy;
@@ -39,17 +33,14 @@ function errorResult(toolCallId: string, message: string): ToolResult {
 
 function formatListText(result: RepositoryListResult): string {
   if (result.entries.length === 0) {
-    return result.truncated
-      ? `[truncated by ${result.truncatedBy ?? "limit"} before any entries]`
-      : "(no entries)";
+    return result.truncated ? `[truncated by ${result.truncatedBy ?? "limit"} before any entries]` : "(no entries)";
   }
   const lines = result.entries.map((entry) => {
     const size = entry.size !== undefined ? `\t${entry.size}` : "";
     return `${entry.kind}\t${entry.path}${size}`;
   });
   if (result.truncated) {
-    const next =
-      result.nextOffset !== undefined ? ` Use offset=${result.nextOffset} to continue.` : "";
+    const next = result.nextOffset !== undefined ? ` Use offset=${result.nextOffset} to continue.` : "";
     lines.push(`[truncated by ${result.truncatedBy ?? "limit"}.${next}]`);
   }
   return lines.join("\n");
@@ -166,12 +157,7 @@ export function createRepoListTool(cwd: string, options?: ListToolOptions): Tool
           },
         };
       } catch (error) {
-        const message =
-          error instanceof RepositoryError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : String(error);
+        const message = error instanceof RepositoryError ? error.message : error instanceof Error ? error.message : String(error);
         return errorResult(toolCallId, message);
       }
     },

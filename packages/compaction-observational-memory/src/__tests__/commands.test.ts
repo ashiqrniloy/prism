@@ -1,18 +1,48 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createSessionEntry } from "@arnilo/prism";
-import { createMemoryStatusCommand, createMemoryViewCommand, createObservationalMemoryCommands, OBSERVATIONS_RECORDED, type MemoryObservation } from "../index.js";
+import {
+  createMemoryStatusCommand,
+  createMemoryViewCommand,
+  createObservationalMemoryCommands,
+  type MemoryObservation,
+  OBSERVATIONS_RECORDED,
+} from "../index.js";
 
 const now = "2026-06-20T00:00:00.000Z";
-const observation: MemoryObservation = { id: "aaaaaaaaaaaa", content: "Visible memory", timestamp: now, relevance: "medium", sourceEntryIds: ["m1"], tokenCount: 6 };
+const observation: MemoryObservation = {
+  id: "aaaaaaaaaaaa",
+  content: "Visible memory",
+  timestamp: now,
+  relevance: "medium",
+  sourceEntryIds: ["m1"],
+  tokenCount: 6,
+};
 const entries = [
-  createSessionEntry({ id: "m1", sessionId: "s1", timestamp: now, kind: "message", message: { role: "user", content: [{ type: "text", text: "hello" }] } }),
-  createSessionEntry({ id: "om1", sessionId: "s1", parentId: "m1", timestamp: now, kind: "custom", data: { type: OBSERVATIONS_RECORDED, observations: [observation], coversUpToId: "m1" } }),
+  createSessionEntry({
+    id: "m1",
+    sessionId: "s1",
+    timestamp: now,
+    kind: "message",
+    message: { role: "user", content: [{ type: "text", text: "hello" }] },
+  }),
+  createSessionEntry({
+    id: "om1",
+    sessionId: "s1",
+    parentId: "m1",
+    timestamp: now,
+    kind: "custom",
+    data: { type: OBSERVATIONS_RECORDED, observations: [observation], coversUpToId: "m1" },
+  }),
 ];
 
 describe("observational memory commands", () => {
   it("status_command_reports_counts_progress_visible_full_and_in_flight_state", async () => {
-    const command = createMemoryStatusCommand({ getEntries: () => entries, settings: { observationsPoolTargetTokens: 10, observationsPoolMaxTokens: 20 }, runtimeStatus: () => ({ inFlight: true, lastError: "none" }) });
+    const command = createMemoryStatusCommand({
+      getEntries: () => entries,
+      settings: { observationsPoolTargetTokens: 10, observationsPoolMaxTokens: 20 },
+      runtimeStatus: () => ({ inFlight: true, lastError: "none" }),
+    });
     const result = await command.execute({}, { sessionId: "s1" });
     assert.equal((result.value as any).observations.recorded, 1);
     assert.equal((result.value as any).observations.active, 1);
@@ -36,6 +66,9 @@ describe("observational memory commands", () => {
 
   it("tool_and_commands_are_inert_until_registered_by_host", () => {
     const commands = createObservationalMemoryCommands({ getEntries: () => entries });
-    assert.deepEqual(commands.map((command) => command.name), ["om:status", "om:view"]);
+    assert.deepEqual(
+      commands.map((command) => command.name),
+      ["om:status", "om:view"],
+    );
   });
 });

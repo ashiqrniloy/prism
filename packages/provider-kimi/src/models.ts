@@ -1,10 +1,4 @@
-import {
-  redactSecrets,
-  resolveCredentialValue,
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface KimiModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
@@ -95,10 +89,7 @@ export async function listKimiModels(options: ListKimiModelsOptions = {}): Promi
  * Map an official Moonshot `/v1/models` entry to Prism `ModelConfig`.
  * Open Platform models use Chat Completions (`compat.route: "openai"`).
  */
-export function mapKimiModel(
-  entry: KimiModelEntry,
-  options: { readonly provider?: string } = {},
-): ModelConfig {
+export function mapKimiModel(entry: KimiModelEntry, options: { readonly provider?: string } = {}): ModelConfig {
   if (!entry || typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error("Kimi model entry missing id");
   }
@@ -249,13 +240,13 @@ export const moonshotKimiModels = [
 function looksLikeReasoningModel(modelId: string): boolean {
   const id = modelId.toLowerCase();
   return (
-    id.includes("kimi-k3")
-    || id === "k3"
-    || id.includes("k2.7")
-    || id.includes("k2.6")
-    || id.includes("k2.5")
-    || id.includes("thinking")
-    || id.includes("for-coding")
+    id.includes("kimi-k3") ||
+    id === "k3" ||
+    id.includes("k2.7") ||
+    id.includes("k2.6") ||
+    id.includes("k2.5") ||
+    id.includes("thinking") ||
+    id.includes("for-coding")
   );
 }
 
@@ -279,7 +270,7 @@ function thinkingDefaultsForModel(modelId: string): JsonObject {
 
 function cleanLimits(value: { contextWindow?: number; maxOutputTokens?: number }): ModelConfig["limits"] | undefined {
   const entries = Object.entries(value).filter(([, item]) => item !== undefined);
-  return entries.length > 0 ? Object.fromEntries(entries) as ModelConfig["limits"] : undefined;
+  return entries.length > 0 ? (Object.fromEntries(entries) as ModelConfig["limits"]) : undefined;
 }
 
 function cleanJson(value: Record<string, unknown>): JsonObject {

@@ -1,17 +1,6 @@
-import {
-  chmodSync,
-  closeSync,
-  fstatSync,
-  mkdirSync,
-  openSync,
-  readSync,
-  renameSync,
-  statSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
-import { basename, dirname, join } from "node:path";
 import { randomBytes } from "node:crypto";
+import { chmodSync, closeSync, fstatSync, mkdirSync, openSync, readSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { DEFAULT_FILE_MODE } from "./types.js";
 
 function assertRestrictiveMode(mode: number, path: string): void {
@@ -35,7 +24,11 @@ export function atomicWriteFile(path: string, data: Buffer, mode = DEFAULT_FILE_
     if (process.platform !== "win32") chmodSync(tmp, mode);
     renameSync(tmp, path);
   } catch (error) {
-    try { unlinkSync(tmp); } catch { /* nothing published */ }
+    try {
+      unlinkSync(tmp);
+    } catch {
+      /* nothing published */
+    }
     throw error;
   }
 }

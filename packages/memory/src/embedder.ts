@@ -1,6 +1,6 @@
 import { MemoryLimitError, MemoryValidationError } from "./errors.js";
-import { assertFiniteVector, assertNotAborted, chunkArray } from "./util.js";
 import type { Embedder } from "./types.js";
+import { assertFiniteVector, assertNotAborted, chunkArray } from "./util.js";
 
 export interface HashEmbedderOptions {
   readonly dimensions?: number;
@@ -29,7 +29,7 @@ export async function embedBatched(
   embedder: Embedder,
   texts: readonly string[],
   batchSize: number,
-  options: { readonly signal?: AbortSignal; readonly maxDimensions: number } ,
+  options: { readonly signal?: AbortSignal; readonly maxDimensions: number },
 ): Promise<(readonly number[])[]> {
   if (embedder.dimensions > options.maxDimensions) {
     throw new MemoryLimitError(`embedder dimensions ${embedder.dimensions} exceed cap ${options.maxDimensions}`);
@@ -51,7 +51,10 @@ export async function embedBatched(
 
 function hashEmbed(text: string, dimensions: number): number[] {
   const vector = new Array<number>(dimensions).fill(0);
-  const tokens = text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   if (tokens.length === 0) {
     vector[0] = 1;
     return normalize(vector);

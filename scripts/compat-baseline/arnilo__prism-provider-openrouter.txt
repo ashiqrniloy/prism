@@ -1,0 +1,21 @@
+OPENROUTER_SESSION_ID_MAX_LENGTH	export declare const OPENROUTER_SESSION_ID_MAX_LENGTH = 256
+applyOpenRouterCacheControl	export declare function applyOpenRouterCacheControl(request: ProviderRequest): readonly Message[]
+createOpenRouterProvider	export declare function createOpenRouterProvider(options?: OpenRouterProviderOptions): AIProvider
+createOpenRouterProviderPackage	export declare function createOpenRouterProviderPackage(options?: OpenRouterProviderPackageOptions): ProviderPackage
+defineOpenRouterModel	export declare function defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
+listOpenRouterModels	export declare function listOpenRouterModels(options?: ListOpenRouterModelsOptions): Promise<ModelConfig[]>
+mapOpenRouterModel	export declare function mapOpenRouterModel(entry: OpenRouterModelEntry, options?:
+openRouterBody	export declare function openRouterBody(request: ProviderRequest, sessionId?: string | undefined): JsonObject
+openRouterCacheEnabled	export declare function openRouterCacheEnabled(request: ProviderRequest): boolean
+openRouterEvents	export declare function openRouterEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+openRouterPreserveThinking	export declare function openRouterPreserveThinking(request: ProviderRequest): boolean
+openRouterSessionId	export declare function openRouterSessionId(options: ProviderRequestOptions | undefined): string | undefined
+openRouterTopLevelCacheControl	export declare function openRouterTopLevelCacheControl(request: ProviderRequest): JsonObject | undefined
+openRouterUsage	export declare function openRouterUsage(usage: OpenRouterUsage | undefined): Usage | undefined
+resolveOpenRouterReasoning	export declare function resolveOpenRouterReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
+stripOpenRouterOwnedCompat	export declare function stripOpenRouterOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
+type ListOpenRouterModelsOptions	export { type ListOpenRouterModelsOptions, listOpenRouterModels, mapOpenRouterModel, type OpenRouterModelEntry, } from "./models.js"
+type OpenRouterModelConfig	export { defineOpenRouterModel, type OpenRouterModelConfig } from "./model.js"
+type OpenRouterModelEntry	export { type ListOpenRouterModelsOptions, listOpenRouterModels, mapOpenRouterModel, type OpenRouterModelEntry, } from "./models.js"
+type OpenRouterProviderOptions	export { createOpenRouterProvider, type OpenRouterProviderOptions, openRouterBody, openRouterEvents } from "./provider.js"
+withOpenRouterCacheMarker	export declare function withOpenRouterCacheMarker(contentItem: JsonObject, marker: JsonObject | undefined): JsonObject

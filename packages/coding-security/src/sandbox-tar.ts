@@ -36,13 +36,7 @@ function checksumHeader(header: Buffer): number {
   return sum;
 }
 
-function writeUstarHeader(opts: {
-  name: string;
-  size: number;
-  mode: number;
-  mtimeSec: number;
-  type: "0" | "5";
-}): Buffer {
+function writeUstarHeader(opts: { name: string; size: number; mode: number; mtimeSec: number; type: "0" | "5" }): Buffer {
   if (Buffer.byteLength(opts.name, "utf8") > 100) {
     throw new SandboxTarError(`tar path exceeds 100 UTF-8 bytes: ${opts.name}`);
   }
@@ -175,10 +169,7 @@ function parseOctal(buf: Buffer): number {
  * Consume a ustar stream, enforce entry/byte bounds, and compute SHA-256 of the raw bytes.
  * Rejects absolute paths, `..` segments, and non-file/dir entry types.
  */
-export async function summarizeTarStream(
-  stream: AsyncIterable<Buffer>,
-  bounds: TarBounds,
-): Promise<TarExportSummary> {
+export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: TarBounds): Promise<TarExportSummary> {
   const hash: Hash = createHash("sha256");
   let pending = Buffer.alloc(0);
   let entryCount = 0;

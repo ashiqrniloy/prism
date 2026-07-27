@@ -1,5 +1,5 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { createOpenRouterProvider, type OpenRouterProviderOptions } from "./provider.js";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { createOpenRouterProvider } from "./provider.js";
 
 export interface OpenRouterProviderPackageOptions {
   readonly apiKey?: CredentialValueSource;
@@ -24,24 +24,24 @@ export function createOpenRouterProviderPackage(options: OpenRouterProviderPacka
   });
 }
 
-export { defineOpenRouterModel, type OpenRouterModelConfig } from "./model.js";
 export {
-  listOpenRouterModels,
-  mapOpenRouterModel,
-  type ListOpenRouterModelsOptions,
-  type OpenRouterModelEntry,
-} from "./models.js";
-export {
-  openRouterPreserveThinking,
-  resolveOpenRouterReasoning,
-  stripOpenRouterOwnedCompat,
-} from "./thinking.js";
-export {
-  OPENROUTER_SESSION_ID_MAX_LENGTH,
   applyOpenRouterCacheControl,
+  OPENROUTER_SESSION_ID_MAX_LENGTH,
   openRouterCacheEnabled,
   openRouterSessionId,
   openRouterTopLevelCacheControl,
   openRouterUsage,
 } from "./cache.js";
-export { createOpenRouterProvider, openRouterBody, openRouterEvents, type OpenRouterProviderOptions } from "./provider.js";
+export { defineOpenRouterModel, type OpenRouterModelConfig } from "./model.js";
+export {
+  type ListOpenRouterModelsOptions,
+  listOpenRouterModels,
+  mapOpenRouterModel,
+  type OpenRouterModelEntry,
+} from "./models.js";
+export { createOpenRouterProvider, type OpenRouterProviderOptions, openRouterBody, openRouterEvents } from "./provider.js";
+export {
+  openRouterPreserveThinking,
+  resolveOpenRouterReasoning,
+  stripOpenRouterOwnedCompat,
+} from "./thinking.js";

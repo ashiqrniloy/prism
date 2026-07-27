@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
-import { assertAbortIsObserved, assertNoSecretLeak, assertProviderStreamConforms, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertAbortIsObserved,
+  assertNoSecretLeak,
+  assertProviderStreamConforms,
+  collectProviderEvents,
+} from "@arnilo/prism/testing/provider-conformance";
 import { createOpenCodeGoProvider, defineOpenCodeGoModel, openCodeGoModels } from "../index.js";
 
 // Verified JSON Schema structured-output models (mirrors VERIFIED_JSON_SCHEMA_MODELS
@@ -29,9 +34,8 @@ const structuredOutputRequest = (modelId: string): ProviderRequest => ({
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const API_KEY = process.env.OPENCODE_API_KEY;
-const skip: string | false = !LIVE || !API_KEY
-  ? "set PRISM_LIVE_PROVIDER_TESTS=1 and OPENCODE_API_KEY to run live OpenCode Go smoke tests"
-  : false;
+const skip: string | false =
+  !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and OPENCODE_API_KEY to run live OpenCode Go smoke tests" : false;
 
 const model = openCodeGoModels[0]!;
 const apiKey = (): string | undefined => process.env.OPENCODE_API_KEY;
@@ -61,7 +65,7 @@ const toolRequest: ProviderRequest = {
 describe("@arnilo/prism-provider-opencode-go live tests", () => {
   it("live_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
-    const text = events.map((e) => e.type === "content_delta" && e.content.type === "text" ? e.content.text : "").join("");
+    const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [API_KEY!]);
   });
@@ -86,7 +90,7 @@ describe("@arnilo/prism-provider-opencode-go live tests", () => {
     it(`live_json_schema_structured_output_succeeds_${modelId}`, { skip }, async () => {
       const events = await assertProviderStreamConforms({ provider: provider(), request: structuredOutputRequest(modelId) });
       assert.equal(events.at(-1)?.type, "done", `${modelId} rejected response_format — remove it from the verified set`);
-      const text = events.map((e) => e.type === "content_delta" && e.content.type === "text" ? e.content.text : "").join("");
+      const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
       assert.ok(text.trim().startsWith("{"), `${modelId} structured output was not JSON: ${text.slice(0, 80)}`);
       assertNoSecretLeak(events, [API_KEY!]);
     });

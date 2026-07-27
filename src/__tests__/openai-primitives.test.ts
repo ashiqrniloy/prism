@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import type { Message } from "../contracts.js";
 import {
   applyOpenAIChatStructuredOutput,
@@ -13,14 +13,17 @@ import {
 
 describe("openai provider primitives", () => {
   it("serializes tools with default object parameters", () => {
-    assert.deepEqual(serializeOpenAITool({
-      name: "echo",
-      description: "echo text",
-      execute: () => ({ toolCallId: "c1", name: "echo", value: "ok" }),
-    }), {
-      type: "function",
-      function: { name: "echo", description: "echo text", parameters: { type: "object" } },
-    });
+    assert.deepEqual(
+      serializeOpenAITool({
+        name: "echo",
+        description: "echo text",
+        execute: () => ({ toolCallId: "c1", name: "echo", value: "ok" }),
+      }),
+      {
+        type: "function",
+        function: { name: "echo", description: "echo text", parameters: { type: "object" } },
+      },
+    );
   });
 
   it("serializes user text and assistant tool-call messages", () => {
@@ -37,7 +40,7 @@ describe("openai provider primitives", () => {
     assert.deepEqual(serializeOpenAIChatMessage(assistant), {
       role: "assistant",
       content: "calling",
-      tool_calls: [{ id: "c1", type: "function", function: { name: "echo", arguments: "{\"text\":\"x\"}" } }],
+      tool_calls: [{ id: "c1", type: "function", function: { name: "echo", arguments: '{"text":"x"}' } }],
     });
   });
 
@@ -79,14 +82,8 @@ describe("openai provider primitives", () => {
   });
 
   it("assertOpenAIChatMessage fails with indexed content-free diagnostics", () => {
-    assert.throws(
-      () => assertOpenAIChatMessage("[Circular]", "messages[1]"),
-      /Invalid provider message at messages\[1\]: expected object/,
-    );
-    assert.throws(
-      () => assertOpenAIChatMessage({ role: "user" }, "messages[0]"),
-      /expected content array/,
-    );
+    assert.throws(() => assertOpenAIChatMessage("[Circular]", "messages[1]"), /Invalid provider message at messages\[1\]: expected object/);
+    assert.throws(() => assertOpenAIChatMessage({ role: "user" }, "messages[0]"), /expected content array/);
   });
 
   it("rejects images when capability is missing", () => {
@@ -94,9 +91,6 @@ describe("openai provider primitives", () => {
       role: "user",
       content: [{ type: "image", url: "https://example.test/x.png" }],
     };
-    assert.throws(
-      () => serializeOpenAIChatMessage(message, {}),
-      /does not declare image input capability/,
-    );
+    assert.throws(() => serializeOpenAIChatMessage(message, {}), /does not declare image input capability/);
   });
 });

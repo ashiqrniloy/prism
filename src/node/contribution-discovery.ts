@@ -1,18 +1,13 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { basename, join } from "node:path";
-import type {
-  ContributionFileKind,
-  DiscoveredContribution,
-  JsonObject,
-} from "../contracts.js";
-import type { ManifestContributionDeclaration, ManifestContributionKind } from "../manifests.js";
+import { join } from "node:path";
 import { isJsonObject } from "../config.js";
-import type { PermissionPolicy } from "../security.js";
-import { assertPermission } from "../security.js";
-import type { TrustPolicy } from "../security.js";
-import { isPathInsideReal } from "./trust.js";
+import type { ContributionFileKind, DiscoveredContribution, JsonObject } from "../contracts.js";
 import { parseSkillFile } from "../contribution-parsing.js";
+import type { ManifestContributionDeclaration, ManifestContributionKind } from "../manifests.js";
+import type { PermissionPolicy, TrustPolicy } from "../security.js";
+import { assertPermission } from "../security.js";
 import { isNodeErrorCode } from "./config.js";
+import { isPathInsideReal } from "./trust.js";
 
 export interface DiscoveryOptions {
   readonly kinds: readonly ContributionFileKind[];
@@ -27,9 +22,7 @@ export interface DiscoveryOptions {
  * no global root. One `readdir` per kind-root; no `import()`. Inert output —
  * executable behavior is host-owned.
  */
-export async function discoverContributions(
-  options: DiscoveryOptions,
-): Promise<readonly DiscoveredContribution[]> {
+export async function discoverContributions(options: DiscoveryOptions): Promise<readonly DiscoveredContribution[]> {
   const kinds = options.kinds;
   const merged = new Map<string, DiscoveredContribution>();
 
@@ -102,7 +95,7 @@ async function readEntry(
 
 async function readSkillEntry(
   dir: string,
-  fallbackName: string,
+  _fallbackName: string,
   origin: "global" | "workspace",
 ): Promise<DiscoveredContribution | undefined> {
   const path = join(dir, "SKILL.md");
@@ -198,5 +191,3 @@ function kindDirName(kind: ContributionFileKind): string {
       return "instructions";
   }
 }
-
-

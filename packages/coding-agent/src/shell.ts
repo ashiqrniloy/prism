@@ -20,18 +20,11 @@
  *    lifecycle; the tool kills the tree only on timeout/abort. Drops the stdin command transport
  *    (argv `-c` only). Default spawn env is `process.env` (no pi CLI binDir PATH injection).
  */
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { constants, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import { OutputAccumulator, type OutputSnapshot } from "./output-accumulator.js";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
@@ -43,6 +36,7 @@ import {
   HARD_SHELL_TIMEOUT_SECONDS,
   validateCodingLimit,
 } from "./limits.js";
+import { OutputAccumulator, type OutputSnapshot } from "./output-accumulator.js";
 import { formatSize, type TruncationResult } from "./truncate.js";
 
 const EXIT_STDIO_GRACE_MS = 100;
@@ -69,11 +63,7 @@ export interface BashExecOptions {
 
 export interface BashOperations {
   /** Execute a command and stream combined output. Resolves to the exit code (null if killed). */
-  exec: (
-    command: string,
-    cwd: string,
-    options: BashExecOptions,
-  ) => Promise<{ exitCode: number | null }>;
+  exec: (command: string, cwd: string, options: BashExecOptions) => Promise<{ exitCode: number | null }>;
 }
 
 export interface ShellToolOptions {
@@ -223,11 +213,7 @@ export function waitForChildProcess(child: ChildProcess): Promise<number | null>
 export function createLocalBashOperations(options?: { shellPath?: string }): BashOperations {
   return {
     exec: async (command, cwd, { onData, signal, timeout, env }) => {
-      const timeoutSeconds = validateCodingLimit(
-        "timeout",
-        timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS,
-        HARD_SHELL_TIMEOUT_SECONDS,
-      );
+      const timeoutSeconds = validateCodingLimit("timeout", timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS, HARD_SHELL_TIMEOUT_SECONDS);
       const shellConfig = getShellConfig(options?.shellPath);
       try {
         await fsAccess(cwd, constants.F_OK);
@@ -308,11 +294,7 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
   const spawnHook = options?.spawnHook;
   const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
   const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
-  const defaultTimeout = validateCodingLimit(
-    "timeout",
-    options?.timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS,
-    HARD_SHELL_TIMEOUT_SECONDS,
-  );
+  const defaultTimeout = validateCodingLimit("timeout", options?.timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS, HARD_SHELL_TIMEOUT_SECONDS);
   const maxTotalOutputBytes = validateCodingLimit(
     "maxTotalOutputBytes",
     options?.maxTotalOutputBytes ?? DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
@@ -388,9 +370,7 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
         onLimit: () => outputAbort.abort("output-limit"),
         onStorageError: () => outputAbort.abort("output-storage-error"),
       });
-      const signal = context.signal
-        ? AbortSignal.any([context.signal, outputAbort.signal])
-        : outputAbort.signal;
+      const signal = context.signal ? AbortSignal.any([context.signal, outputAbort.signal]) : outputAbort.signal;
       let acceptingOutput = true;
       const handleData = (data: Buffer) => {
         if (acceptingOutput) output.append(data);
@@ -416,12 +396,14 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
         let exitCode: number | null = null;
         let executionError: unknown;
         try {
-          exitCode = (await ops.exec(spawnContext.command, spawnContext.cwd, {
-            onData: handleData,
-            signal,
-            timeout,
-            env: spawnContext.env,
-          })).exitCode;
+          exitCode = (
+            await ops.exec(spawnContext.command, spawnContext.cwd, {
+              onData: handleData,
+              signal,
+              timeout,
+              env: spawnContext.env,
+            })
+          ).exitCode;
         } catch (error) {
           executionError = error;
         }
@@ -437,10 +419,10 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
             : outputStorageFailed
               ? "Command output spill failed"
               : rawMessage.startsWith("timeout:")
-              ? `Command timed out after ${rawMessage.split(":")[1]} seconds`
-              : context.signal?.aborted
-                ? "Command aborted"
-                : rawMessage || "Command failed";
+                ? `Command timed out after ${rawMessage.split(":")[1]} seconds`
+                : context.signal?.aborted
+                  ? "Command aborted"
+                  : rawMessage || "Command failed";
           return {
             toolCallId,
             name: "shell",
@@ -472,7 +454,11 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
           },
         };
       } catch (err) {
-        try { await output.cleanupTempFile(); } catch { /* retain primary error */ }
+        try {
+          await output.cleanupTempFile();
+        } catch {
+          /* retain primary error */
+        }
         const message = err instanceof Error ? err.message : String(err);
         return { toolCallId, name: "shell", content: [{ type: "text", text: message }], error: { message } };
       }

@@ -5,9 +5,9 @@
  * environment, and finite stdout/stderr retention. Hosts may inject a custom
  * runner (for example a sandbox `execFile` adapter) without changing tool code.
  */
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { access } from "node:fs/promises";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
+import { access } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import {
   DEFAULT_GIT_TIMEOUT_MS,
@@ -92,9 +92,7 @@ function mergeEnv(extra?: Readonly<Record<string, string>>): Record<string, stri
 }
 
 /** Local spawn-based Git runner. Never invokes a shell. */
-export async function runGitCli(
-  request: GitExecRequest & { gitPath: string },
-): Promise<GitExecResult> {
+export async function runGitCli(request: GitExecRequest & { gitPath: string }): Promise<GitExecResult> {
   if (request.signal?.aborted) {
     throw new GitError("Git operation aborted before start");
   }
@@ -109,11 +107,7 @@ export async function runGitCli(
     request.maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES,
     HARD_MAX_GIT_OUTPUT_BYTES,
   );
-  const timeoutMs = validateCodingLimit(
-    "timeoutMs",
-    request.timeoutMs ?? DEFAULT_GIT_TIMEOUT_MS,
-    HARD_GIT_TIMEOUT_MS,
-  );
+  const timeoutMs = validateCodingLimit("timeoutMs", request.timeoutMs ?? DEFAULT_GIT_TIMEOUT_MS, HARD_GIT_TIMEOUT_MS);
 
   return await new Promise<GitExecResult>((resolve, reject) => {
     let settled = false;
@@ -320,11 +314,7 @@ export function gitText(result: GitExecResult, stream: "stdout" | "stderr" = "st
   return (stream === "stdout" ? result.stdout : result.stderr).toString("utf8");
 }
 
-export async function gitRequireOk(
-  runner: BoundGitRunner,
-  request: GitExecRequest,
-  label: string,
-): Promise<GitExecResult> {
+export async function gitRequireOk(runner: BoundGitRunner, request: GitExecRequest, label: string): Promise<GitExecResult> {
   const result = await runner.exec(request);
   if (result.timedOut) throw new GitError(`${label} timed out`, result.exitCode);
   if (result.aborted) throw new GitError(`${label} aborted`, result.exitCode);

@@ -1,6 +1,6 @@
-import { Ajv, type ValidateFunction } from "ajv";
 import type { JsonObject, ToolArgumentValidationResult, ToolArgumentValidator, ToolValidator } from "@arnilo/prism";
 import { createToolParameterValidator } from "@arnilo/prism";
+import { Ajv, type ValidateFunction } from "ajv";
 
 export interface JsonSchemaToolValidatorOptions {
   /** When a tool omits `parameters`. Default `"allow"`. */
@@ -179,9 +179,7 @@ function checkInstanceBounds(value: unknown, bounds: ResolvedBounds, path = "", 
   if (depth > bounds.maxDepth) return `${path || "/"}: exceeds maximum depth ${bounds.maxDepth}`;
   if (value === null || typeof value === "boolean" || typeof value === "number") return undefined;
   if (typeof value === "string") {
-    return value.length > bounds.maxStringLength
-      ? `${path || "/"}: string exceeds maximum length ${bounds.maxStringLength}`
-      : undefined;
+    return value.length > bounds.maxStringLength ? `${path || "/"}: string exceeds maximum length ${bounds.maxStringLength}` : undefined;
   }
   if (Array.isArray(value)) {
     if (value.length > bounds.maxArrayLength) return `${path || "/"}: array exceeds maximum length ${bounds.maxArrayLength}`;
@@ -224,7 +222,10 @@ export function createJsonSchemaArgumentValidator(options?: JsonSchemaToolValida
           compiled.set(cacheKey, cached);
         } else {
           if (compiled.size === bounds.maxCompiledSchemas) {
-            const [evictedKey, evicted] = compiled.entries().next().value as [string, { readonly schema: JsonObject; readonly validate: ValidateFunction }];
+            const [evictedKey, evicted] = compiled.entries().next().value as [
+              string,
+              { readonly schema: JsonObject; readonly validate: ValidateFunction },
+            ];
             compiled.delete(evictedKey);
             ajv.removeSchema(evicted.schema);
           }

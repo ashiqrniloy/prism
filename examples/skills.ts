@@ -1,5 +1,5 @@
-import { createSkillRegistry, resolveActiveSkills } from "@arnilo/prism";
 import type { Skill } from "@arnilo/prism";
+import { createSkillRegistry, resolveActiveSkills } from "@arnilo/prism";
 
 // Skill registry with progressive disclosure: skills activate by name and may
 // declare which tool names they need. Skills cannot register missing tools or

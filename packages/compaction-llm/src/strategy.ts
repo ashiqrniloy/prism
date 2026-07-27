@@ -1,4 +1,23 @@
-import { applyThinkingLevel, createProviderRequestPolicyChain, createSessionEntry, redactSecrets, resolveCredentialValue, resolveUseCaseModel, thinkingFamilyForModel, type AIProvider, type CompactionContext, type CompactionResult, type CompactionStrategy, type CredentialRequest, type CredentialValueSource, type Message, type ModelConfig, type ProviderRequest, type ProviderRequestOptions, type ProviderRequestPolicy } from "@arnilo/prism";
+import {
+  type AIProvider,
+  applyThinkingLevel,
+  type CompactionContext,
+  type CompactionResult,
+  type CompactionStrategy,
+  type CredentialRequest,
+  type CredentialValueSource,
+  createProviderRequestPolicyChain,
+  createSessionEntry,
+  type Message,
+  type ModelConfig,
+  type ProviderRequest,
+  type ProviderRequestOptions,
+  type ProviderRequestPolicy,
+  redactSecrets,
+  resolveCredentialValue,
+  resolveUseCaseModel,
+  thinkingFamilyForModel,
+} from "@arnilo/prism";
 import { formatFileOperations } from "./file-ops.js";
 import {
   DEFAULT_MAX_SUMMARY_ERROR_BYTES,
@@ -10,9 +29,9 @@ import {
   truncateUtf8,
   validateCompactionLimit,
 } from "./limits.js";
-import { prepareLlmCompaction, type LlmCompactionPreparation, type PrepareLlmCompactionOptions } from "./prepare.js";
+import { type LlmCompactionPreparation, type PrepareLlmCompactionOptions, prepareLlmCompaction } from "./prepare.js";
 import { SUMMARIZATION_SYSTEM_PROMPT, TURN_PREFIX_SYSTEM_PROMPT } from "./prompts.js";
-import { serializeCompactionConversation, type SerializeCompactionConversationOptions } from "./serialize.js";
+import { type SerializeCompactionConversationOptions, serializeCompactionConversation } from "./serialize.js";
 
 export interface LlmCompactionStrategyOptions extends PrepareLlmCompactionOptions, SerializeCompactionConversationOptions {
   readonly name?: string;
@@ -48,7 +67,13 @@ export function createLlmCompactionStrategy(options: LlmCompactionStrategyOption
     async compact(context) {
       throwIfAborted(context.signal);
       const prep = prepareLlmCompaction(context, options);
-      const credential = await resolveCredentialValue(options.credential, options.credentialRequest ?? { provider: options.summaryModel?.provider ?? options.model?.provider ?? "compaction", name: "apiKey" });
+      const credential = await resolveCredentialValue(
+        options.credential,
+        options.credentialRequest ?? {
+          provider: options.summaryModel?.provider ?? options.model?.provider ?? "compaction",
+          name: "apiKey",
+        },
+      );
       const secrets = [...(context.secrets ?? []), ...(options.secrets ?? []), credential];
       let provider: AIProvider;
       try {
@@ -59,12 +84,26 @@ export function createLlmCompactionStrategy(options: LlmCompactionStrategyOption
       const summary = await summarizeHistory(context, prep, options, provider, secrets, limits);
       const turnPrefix = prep.turnPrefixEntries.length ? await summarizeTurnPrefix(context, prep, options, provider, secrets, limits) : "";
       const fileOps = options.includeFileOperations === false ? "" : formatFileOperations(prep.fileOperations);
-      const combined = capSummary(redactSecrets([summary, turnPrefix && `**Turn Context (split turn):**\n\n${turnPrefix}`, fileOps].filter(Boolean).join("\n\n"), secrets), limits.maxSummaryTokens);
+      const combined = capSummary(
+        redactSecrets(
+          [summary, turnPrefix && `**Turn Context (split turn):**\n\n${turnPrefix}`, fileOps].filter(Boolean).join("\n\n"),
+          secrets,
+        ),
+        limits.maxSummaryTokens,
+      );
       const parentId = context.entries.at(-1)?.id;
 
       return {
         summary: combined,
-        entries: [createSessionEntry({ sessionId: context.sessionId, parentId, kind: "compaction", summary: combined, data: redactedCompactionData({ ...prep.data, strategy: name }, secrets) })],
+        entries: [
+          createSessionEntry({
+            sessionId: context.sessionId,
+            parentId,
+            kind: "compaction",
+            summary: combined,
+            data: redactedCompactionData({ ...prep.data, strategy: name }, secrets),
+          }),
+        ],
       } satisfies CompactionResult;
     },
   };
@@ -83,7 +122,9 @@ async function summarizeHistory(
     prep.previousSummary && `<previous-summary>\n${prep.previousSummary}\n</previous-summary>`,
     `<conversation>\n${conversation}\n</conversation>`,
     options.customInstructions && `Additional focus: ${redactSecrets(options.customInstructions, secrets)}`,
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   return runSummaryProvider(context, options, provider, SUMMARIZATION_SYSTEM_PROMPT, sections, 0.8, secrets, limits);
 }
@@ -97,7 +138,12 @@ async function summarizeTurnPrefix(
   limits: ResolvedSummaryLimits,
 ): Promise<string> {
   const conversation = serializeCompactionConversation(prep.turnPrefixEntries, { ...options, secrets });
-  const prompt = [`<conversation>\n${conversation}\n</conversation>`, options.customInstructions && `Additional focus: ${redactSecrets(options.customInstructions, secrets)}`].filter(Boolean).join("\n\n");
+  const prompt = [
+    `<conversation>\n${conversation}\n</conversation>`,
+    options.customInstructions && `Additional focus: ${redactSecrets(options.customInstructions, secrets)}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   return runSummaryProvider(context, options, provider, TURN_PREFIX_SYSTEM_PROMPT, prompt, 0.5, secrets, limits);
 }
 
@@ -142,9 +188,14 @@ async function runSummaryProvider(
   const policy = normalizePolicies(options.providerRequestPolicies);
   if (policy) {
     try {
-      const result = await createProviderRequestPolicyChain(policy).apply({ request, sessionId: context.sessionId, metadata: context.metadata, signal: context.signal });
+      const result = await createProviderRequestPolicyChain(policy).apply({
+        request,
+        sessionId: context.sessionId,
+        metadata: context.metadata,
+        signal: context.signal,
+      });
       request = "request" in result ? result.request : result;
-      secrets = [...secrets, ...("request" in result ? result.secrets ?? [] : [])];
+      secrets = [...secrets, ...("request" in result ? (result.secrets ?? []) : [])];
     } catch (error) {
       throw new Error(`Summarization failed: ${safeError(error, secrets, limits.maxErrorBytes)}`);
     }
@@ -193,7 +244,8 @@ function summaryRequestModel(options: LlmCompactionStrategyOptions, reserveRatio
 function outputBudget(options: LlmCompactionStrategyOptions, reserveRatio: number, limits: ResolvedSummaryLimits): number {
   if (options.maxSummaryTokens !== undefined || options.maxOutputTokens !== undefined) return limits.maxSummaryTokens;
   const modelLimit = summaryModel(options).limits?.maxOutputTokens;
-  const finiteModelLimit = Number.isSafeInteger(modelLimit) && (modelLimit as number) > 0 ? modelLimit as number : limits.maxSummaryTokens;
+  const finiteModelLimit =
+    Number.isSafeInteger(modelLimit) && (modelLimit as number) > 0 ? (modelLimit as number) : limits.maxSummaryTokens;
   return Math.min(Math.max(1, Math.floor(limits.reserveTokens * reserveRatio)), finiteModelLimit, limits.maxSummaryTokens);
 }
 
@@ -228,22 +280,32 @@ async function resolveSummaryProvider(options: LlmCompactionStrategyOptions, cre
   return typeof provider === "function" ? provider(credential) : provider;
 }
 
-function normalizePolicies(policy: ProviderRequestPolicy | readonly ProviderRequestPolicy[] | undefined): readonly ProviderRequestPolicy[] | undefined {
+function normalizePolicies(
+  policy: ProviderRequestPolicy | readonly ProviderRequestPolicy[] | undefined,
+): readonly ProviderRequestPolicy[] | undefined {
   if (!policy) return undefined;
   return Array.isArray(policy) ? policy : [policy as ProviderRequestPolicy];
 }
 
 function resolveSummaryLimits(options: LlmCompactionStrategyOptions): ResolvedSummaryLimits {
   if (options.maxOutputTokens !== undefined) validateCompactionLimit("maxOutputTokens", options.maxOutputTokens, HARD_MAX_SUMMARY_TOKENS);
-  if (options.maxSummaryTokens !== undefined) validateCompactionLimit("maxSummaryTokens", options.maxSummaryTokens, HARD_MAX_SUMMARY_TOKENS);
+  if (options.maxSummaryTokens !== undefined)
+    validateCompactionLimit("maxSummaryTokens", options.maxSummaryTokens, HARD_MAX_SUMMARY_TOKENS);
   return {
     maxSummaryTokens: options.maxSummaryTokens ?? options.maxOutputTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
     reserveTokens: validateCompactionLimit("reserveTokens", options.reserveTokens ?? DEFAULT_RESERVE_TOKENS, HARD_RESERVE_TOKENS),
-    maxErrorBytes: validateCompactionLimit("maxErrorBytes", options.maxErrorBytes ?? DEFAULT_MAX_SUMMARY_ERROR_BYTES, HARD_MAX_SUMMARY_ERROR_BYTES),
+    maxErrorBytes: validateCompactionLimit(
+      "maxErrorBytes",
+      options.maxErrorBytes ?? DEFAULT_MAX_SUMMARY_ERROR_BYTES,
+      HARD_MAX_SUMMARY_ERROR_BYTES,
+    ),
   };
 }
 
-function redactedCompactionData(data: LlmCompactionPreparation["data"], secrets: readonly (string | undefined)[]): LlmCompactionPreparation["data"] {
+function redactedCompactionData(
+  data: LlmCompactionPreparation["data"],
+  secrets: readonly (string | undefined)[],
+): LlmCompactionPreparation["data"] {
   return {
     ...data,
     readFiles: data.readFiles?.map((path) => redactSecrets(path, secrets)),
@@ -252,11 +314,12 @@ function redactedCompactionData(data: LlmCompactionPreparation["data"], secrets:
 }
 
 function safeError(error: unknown, secrets: readonly (string | undefined)[], maxBytes: number): string {
-  const message = error instanceof Error
-    ? error.message
-    : error && typeof error === "object" && "message" in error && typeof error.message === "string"
+  const message =
+    error instanceof Error
       ? error.message
-      : "Provider failed";
+      : error && typeof error === "object" && "message" in error && typeof error.message === "string"
+        ? error.message
+        : "Provider failed";
   return truncateUtf8(redactSecrets(message, secrets), maxBytes) || "Provider failed";
 }
 

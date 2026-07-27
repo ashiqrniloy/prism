@@ -9,8 +9,8 @@ import type {
   PlaywrightDownload,
   PlaywrightLocator,
   PlaywrightPage,
-  PlaywrightRoute,
   PlaywrightRequest,
+  PlaywrightRoute,
 } from "../types.js";
 
 type Handler = (...args: never[]) => void;

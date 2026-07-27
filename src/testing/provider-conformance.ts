@@ -49,9 +49,11 @@ export async function assertProviderStreamConforms(options: ProviderStreamConfor
   const events = await collectProviderEvents(options.provider, options.request);
   const terminal = events.at(-1);
   if (!terminal || (terminal.type !== "done" && terminal.type !== "error")) throw new Error("Provider stream must end with done or error");
-  if (events.slice(0, -1).some((event) => event.type === "done" || event.type === "error")) throw new Error("Provider stream terminal event must be last");
+  if (events.slice(0, -1).some((event) => event.type === "done" || event.type === "error"))
+    throw new Error("Provider stream terminal event must be last");
 
-  if (options.expect?.text !== undefined && textFrom(events) !== options.expect.text) throw new Error(`Provider text mismatch: expected ${JSON.stringify(options.expect.text)}`);
+  if (options.expect?.text !== undefined && textFrom(events) !== options.expect.text)
+    throw new Error(`Provider text mismatch: expected ${JSON.stringify(options.expect.text)}`);
   if (options.expect?.usage) assertUsageAccounting(events, options.expect.usage);
   return events;
 }
@@ -68,19 +70,27 @@ export async function assertAbortIsObserved(options: ProviderAbortConformanceOpt
   if (!rejected) throw new Error("Provider did not observe an already-aborted signal");
 }
 
-export function assertToolCallDeltasReconstruct(events: readonly ProviderEvent[], expected: readonly ToolCallDeltaExpectation[]): readonly ToolCallContent[] {
+export function assertToolCallDeltasReconstruct(
+  events: readonly ProviderEvent[],
+  expected: readonly ToolCallDeltaExpectation[],
+): readonly ToolCallContent[] {
   const calls = reconstructToolCallDeltas(events);
   for (const item of expected) {
     const call = calls[item.index];
     if (!call) throw new Error(`Missing tool call at index ${item.index}`);
     if (item.id !== undefined && call.id !== item.id) throw new Error(`Tool call id mismatch at index ${item.index}`);
     if (item.name !== undefined && call.name !== item.name) throw new Error(`Tool call name mismatch at index ${item.index}`);
-    if (item.arguments !== undefined && JSON.stringify(call.arguments) !== JSON.stringify(item.arguments)) throw new Error(`Tool call arguments mismatch at index ${item.index}`);
+    if (item.arguments !== undefined && JSON.stringify(call.arguments) !== JSON.stringify(item.arguments))
+      throw new Error(`Tool call arguments mismatch at index ${item.index}`);
   }
   return calls;
 }
 
-export function assertSerializedRequestCoversContent(request: ProviderRequest, body: unknown, options: SerializedContentCoverageOptions = {}): void {
+export function assertSerializedRequestCoversContent(
+  request: ProviderRequest,
+  body: unknown,
+  options: SerializedContentCoverageOptions = {},
+): void {
   const unsupported = new Set(options.unsupported ?? []);
   const bodyText = JSON.stringify(body);
   for (const message of request.messages) {
@@ -101,12 +111,18 @@ export function assertProviderOwnedHeadersWin(captured: Headers, options: Provid
   for (const [name, expected] of Object.entries(options.owned)) ownedLower[name.toLowerCase()] = expected;
   for (const [name, expected] of Object.entries(ownedLower)) {
     const actual = captured.get(name);
-    if (actual !== expected) throw new Error(`Caller header overrode provider-owned "${name}": expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    if (actual !== expected)
+      throw new Error(
+        `Caller header overrode provider-owned "${name}": expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+      );
   }
   for (const [name, callerValue] of Object.entries(options.caller)) {
-    if (Object.prototype.hasOwnProperty.call(ownedLower, name.toLowerCase())) continue;
+    if (Object.hasOwn(ownedLower, name.toLowerCase())) continue;
     const actual = captured.get(name);
-    if (actual !== callerValue) throw new Error(`Provider dropped non-owned caller header "${name}": expected ${JSON.stringify(callerValue)}, got ${JSON.stringify(actual)}`);
+    if (actual !== callerValue)
+      throw new Error(
+        `Provider dropped non-owned caller header "${name}": expected ${JSON.stringify(callerValue)}, got ${JSON.stringify(actual)}`,
+      );
   }
 }
 
@@ -119,11 +135,14 @@ export function assertNoSecretLeak(events: readonly ProviderEvent[], secrets: re
 }
 
 export function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage {
-  const usage = [...events].reverse().find((event) => event.type === "done" && event.usage || event.type === "usage") as Extract<ProviderEvent, { type: "usage" | "done" }> | undefined;
+  const usage = [...events].reverse().find((event) => (event.type === "done" && event.usage) || event.type === "usage") as
+    | Extract<ProviderEvent, { type: "usage" | "done" }>
+    | undefined;
   const actual = usage?.type === "usage" ? usage.usage : usage?.usage;
   if (!actual) throw new Error("Provider stream did not include usage");
   for (const key of ["inputTokens", "outputTokens", "totalTokens", "cacheReadTokens", "cacheWriteTokens"] as const) {
-    if (expected[key] !== undefined && actual[key] !== expected[key]) throw new Error(`Usage ${key} mismatch: expected ${expected[key]}, got ${actual[key]}`);
+    if (expected[key] !== undefined && actual[key] !== expected[key])
+      throw new Error(`Usage ${key} mismatch: expected ${expected[key]}, got ${actual[key]}`);
   }
   return actual;
 }
@@ -135,16 +154,24 @@ function contentBlockCanaries(block: ContentBlock): string[] {
     case "thinking":
       return block.text ? [block.text] : [];
     case "image":
-      return [block.url, block.resourceUri, block.data, block.mimeType, block.name].filter((value): value is string => typeof value === "string" && value.length > 0);
+      return [block.url, block.resourceUri, block.data, block.mimeType, block.name].filter(
+        (value): value is string => typeof value === "string" && value.length > 0,
+      );
     case "audio":
       // Providers map mediaType to wire format tokens (e.g. audio/wav → "wav") and
       // typically omit display names from input_audio payloads; identity canaries are
       // source bytes/refs plus optional transcript text.
-      return [block.url, block.resourceUri, block.data, block.transcript].filter((value): value is string => typeof value === "string" && value.length > 0);
+      return [block.url, block.resourceUri, block.data, block.transcript].filter(
+        (value): value is string => typeof value === "string" && value.length > 0,
+      );
     case "file":
-      return [block.url, block.resourceUri, block.data, block.mediaType, block.name].filter((value): value is string => typeof value === "string" && value.length > 0);
+      return [block.url, block.resourceUri, block.data, block.mediaType, block.name].filter(
+        (value): value is string => typeof value === "string" && value.length > 0,
+      );
     case "document":
-      return [block.url, block.resourceUri, block.data, block.mediaType, block.name, block.transcript].filter((value): value is string => typeof value === "string" && value.length > 0);
+      return [block.url, block.resourceUri, block.data, block.mediaType, block.name, block.transcript].filter(
+        (value): value is string => typeof value === "string" && value.length > 0,
+      );
     case "tool_call":
       return [block.id, block.name, ...jsonPrimitives(block.arguments)];
     case "tool_result": {
@@ -179,5 +206,5 @@ function jsonPrimitives(value: unknown): string[] {
 }
 
 function textFrom(events: readonly ProviderEvent[]): string {
-  return events.map((event) => event.type === "content_delta" && event.content.type === "text" ? event.content.text : "").join("");
+  return events.map((event) => (event.type === "content_delta" && event.content.type === "text" ? event.content.text : "")).join("");
 }

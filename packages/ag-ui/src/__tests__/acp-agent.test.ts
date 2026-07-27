@@ -1,7 +1,24 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { client, methods, PROTOCOL_VERSION, type RequestPermissionRequest, type RequestPermissionResponse, type SessionNotification } from "@agentclientprotocol/sdk";
-import { createAgent, createAgentRunLifecycle, createMemoryCheckpointStore, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent, type AgentRunLifecycle, type AgentSession } from "@arnilo/prism";
+import {
+  client,
+  methods,
+  PROTOCOL_VERSION,
+  type RequestPermissionRequest,
+  type RequestPermissionResponse,
+  type SessionNotification,
+} from "@agentclientprotocol/sdk";
+import {
+  type AgentRunLifecycle,
+  type AgentSession,
+  createAgent,
+  createAgentRunLifecycle,
+  createMemoryCheckpointStore,
+  createMemorySessionStore,
+  providerDone,
+  providerTextDelta,
+  toolCallContent,
+} from "@arnilo/prism";
 import { createPrismAcpAgent } from "../acp/index.js";
 
 const authorization = { ownership: { userId: "user-1" } };
@@ -34,15 +51,22 @@ describe("createPrismAcpAgent", () => {
           yield providerDone();
         },
       },
-      tools: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
+      tools: [
+        { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) },
+      ],
     });
     const acpAgent = createPrismAcpAgent({
-      authorize: () => { authorizations += 1; return authorization; },
+      authorize: () => {
+        authorizations += 1;
+        return authorization;
+      },
       sessionFactory: () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "approval-agent" }),
       lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }) }),
     });
     const acpClient = client({ name: "test-client" })
-      .onNotification(methods.client.session.update, ({ params }) => { updates.push(params); })
+      .onNotification(methods.client.session.update, ({ params }) => {
+        updates.push(params);
+      })
       .onRequest(methods.client.session.requestPermission, ({ params }) => {
         permissions.push(params);
         return { outcome: { outcome: "selected", optionId: "allow-once" } };
@@ -52,7 +76,10 @@ describe("createPrismAcpAgent", () => {
       const initialized = await connection.request(methods.agent.initialize, { protocolVersion: PROTOCOL_VERSION });
       assert.equal(initialized.agentCapabilities?.sessionCapabilities?.close !== undefined, true);
       const created = await connection.request(methods.agent.session.new, { cwd: "/ignored", mcpServers: [] });
-      const result = await connection.request(methods.agent.session.prompt, { sessionId: created.sessionId, prompt: [{ type: "text", text: "go" }] });
+      const result = await connection.request(methods.agent.session.prompt, {
+        sessionId: created.sessionId,
+        prompt: [{ type: "text", text: "go" }],
+      });
       assert.equal(result.stopReason, "end_turn");
       await connection.request(methods.agent.session.close, { sessionId: created.sessionId });
     });
@@ -60,8 +87,16 @@ describe("createPrismAcpAgent", () => {
     assert.equal(writes, 1);
     assert.equal(authorizations, 3);
     assert.equal(permissions.length, 1);
-    assert.deepEqual(permissions[0]?.options.map((option) => option.kind), ["allow_once", "reject_once"]);
-    assert.ok(updates.some(({ update }) => update.sessionUpdate === "agent_message_chunk" && update.content.type === "text" && update.content.text === "resumed"));
+    assert.deepEqual(
+      permissions[0]?.options.map((option) => option.kind),
+      ["allow_once", "reject_once"],
+    );
+    assert.ok(
+      updates.some(
+        ({ update }) =>
+          update.sessionUpdate === "agent_message_chunk" && update.content.type === "text" && update.content.text === "resumed",
+      ),
+    );
     assert.ok(updates.some(({ update }) => update.sessionUpdate === "tool_call" && update.title === "Approval required"));
     assert.doesNotMatch(JSON.stringify({ updates, permissions }), /\/host|rawInput|rawOutput|locations/);
   });
@@ -84,7 +119,9 @@ describe("createPrismAcpAgent", () => {
     const acpClient = client().onNotification(methods.client.session.update, () => {});
     await acpClient.connectWith(acpAgent, async (connection) => {
       const created = await connection.request(methods.agent.session.new, { cwd: "/ignored", mcpServers: [] });
-      await assert.rejects(connection.request(methods.agent.session.prompt, { sessionId: created.sessionId, prompt: [{ type: "text", text: "go" }] }));
+      await assert.rejects(
+        connection.request(methods.agent.session.prompt, { sessionId: created.sessionId, prompt: [{ type: "text", text: "go" }] }),
+      );
     });
   });
 
@@ -94,7 +131,13 @@ describe("createPrismAcpAgent", () => {
     const lifecycle = {
       async *resumeStream(_ref: unknown, resume: { decision: string }) {
         decisions.push(resume.decision);
-        yield { type: "agent_denied", sessionId: "fake", runId: "run", interruption: { kind: "tool_approval", reason: "approval" }, version: 1 };
+        yield {
+          type: "agent_denied",
+          sessionId: "fake",
+          runId: "run",
+          interruption: { kind: "tool_approval", reason: "approval" },
+          version: 1,
+        };
       },
     } as unknown as AgentRunLifecycle;
     const acpAgent = createPrismAcpAgent({
@@ -102,7 +145,15 @@ describe("createPrismAcpAgent", () => {
       sessionFactory: () => ({
         session: {
           id: `fake-${++sessionNumber}`,
-          async *stream() { yield { type: "agent_suspended", sessionId: `fake-${sessionNumber}`, runId: "run", interruption: { kind: "tool_approval", reason: "approval", toolCallId: "tool" }, version: 1 }; },
+          async *stream() {
+            yield {
+              type: "agent_suspended",
+              sessionId: `fake-${sessionNumber}`,
+              runId: "run",
+              interruption: { kind: "tool_approval", reason: "approval", toolCallId: "tool" },
+              version: 1,
+            };
+          },
         } as unknown as AgentSession,
       }),
       lifecycle,

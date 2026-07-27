@@ -29,7 +29,11 @@ export async function assertCompactionStrategyConforms(
 ): Promise<{ summary: string }> {
   const secrets = options.secrets ?? [];
   const entries: readonly SessionEntry[] = [
-    createSessionEntry({ sessionId: "s", kind: "message", message: { role: "user", content: [{ type: "text", text: `old ${secrets[0] ?? "history"}` }] } }),
+    createSessionEntry({
+      sessionId: "s",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: `old ${secrets[0] ?? "history"}` }] },
+    }),
     createSessionEntry({ sessionId: "s", kind: "message", message: { role: "assistant", content: [{ type: "text", text: "recent" }] } }),
   ];
 

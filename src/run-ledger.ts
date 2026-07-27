@@ -49,8 +49,18 @@ function terminal(record: RunRecord): boolean {
 export function createBatchedRunLedger(target: RunLedger, options: BatchedRunLedgerOptions = {}): FlushableRunLedger {
   const maxBatchEntries = integer(options.maxBatchEntries, DEFAULT_LEDGER_BATCH_ENTRIES, HARD_LEDGER_BATCH_ENTRIES, "maxBatchEntries");
   const maxBatchBytes = integer(options.maxBatchBytes, DEFAULT_LEDGER_BATCH_BYTES, HARD_LEDGER_BATCH_BYTES, "maxBatchBytes");
-  const maxBufferedEntries = integer(options.maxBufferedEntries, Math.min(HARD_LEDGER_BATCH_ENTRIES, maxBatchEntries * 2), HARD_LEDGER_BATCH_ENTRIES, "maxBufferedEntries");
-  const maxBufferedBytes = integer(options.maxBufferedBytes, Math.min(HARD_LEDGER_BATCH_BYTES, maxBatchBytes * 2), HARD_LEDGER_BATCH_BYTES, "maxBufferedBytes");
+  const maxBufferedEntries = integer(
+    options.maxBufferedEntries,
+    Math.min(HARD_LEDGER_BATCH_ENTRIES, maxBatchEntries * 2),
+    HARD_LEDGER_BATCH_ENTRIES,
+    "maxBufferedEntries",
+  );
+  const maxBufferedBytes = integer(
+    options.maxBufferedBytes,
+    Math.min(HARD_LEDGER_BATCH_BYTES, maxBatchBytes * 2),
+    HARD_LEDGER_BATCH_BYTES,
+    "maxBufferedBytes",
+  );
   const maxDelayMs = integer(options.maxDelayMs, DEFAULT_LEDGER_BATCH_DELAY_MS, HARD_LEDGER_BATCH_DELAY_MS, "maxDelayMs");
   const durability = options.durability ?? "flush_on_terminal";
   const queue: Pending[] = [];
@@ -62,10 +72,16 @@ export function createBatchedRunLedger(target: RunLedger, options: BatchedRunLed
   let disposed = false;
 
   const status = (): RunLedgerFlushResult => ({ accepted, flushed, buffered: queue.length });
-  const cancelTimer = () => { if (timer) clearTimeout(timer); timer = undefined; };
+  const cancelTimer = () => {
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+  };
   const schedule = () => {
     if (timer || disposed || queue.length === 0) return;
-    timer = setTimeout(() => { timer = undefined; void flush().catch(() => undefined); }, maxDelayMs);
+    timer = setTimeout(() => {
+      timer = undefined;
+      void flush().catch(() => undefined);
+    }, maxDelayMs);
     timer.unref?.();
   };
   const write = (item: Pending) => {
@@ -81,7 +97,10 @@ export function createBatchedRunLedger(target: RunLedger, options: BatchedRunLed
       let bytes = 0;
       while (queue.length) {
         const item = queue[0]!;
-        if (entries && (entries >= maxBatchEntries || bytes + item.bytes > maxBatchBytes)) { entries = 0; bytes = 0; }
+        if (entries && (entries >= maxBatchEntries || bytes + item.bytes > maxBatchBytes)) {
+          entries = 0;
+          bytes = 0;
+        }
         await write(item);
         queue.shift();
         bufferedBytes -= item.bytes;
@@ -91,7 +110,10 @@ export function createBatchedRunLedger(target: RunLedger, options: BatchedRunLed
       }
       return status();
     });
-    flushChain = operation.then(() => undefined, () => undefined);
+    flushChain = operation.then(
+      () => undefined,
+      () => undefined,
+    );
     return operation;
   };
   const enqueue = async (item: PendingInput): Promise<void> => {
@@ -102,7 +124,13 @@ export function createBatchedRunLedger(target: RunLedger, options: BatchedRunLed
     queue.push({ ...item, bytes } as Pending);
     bufferedBytes += bytes;
     accepted += 1;
-    if (durability === "write_through" || queue.length >= maxBatchEntries || bufferedBytes >= maxBatchBytes || (item.kind === "run" && terminal(item.record) && durability === "flush_on_terminal")) await flush();
+    if (
+      durability === "write_through" ||
+      queue.length >= maxBatchEntries ||
+      bufferedBytes >= maxBatchBytes ||
+      (item.kind === "run" && terminal(item.record) && durability === "flush_on_terminal")
+    )
+      await flush();
     else schedule();
   };
 

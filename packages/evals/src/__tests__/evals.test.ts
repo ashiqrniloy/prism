@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  type AgentRunResult,
   createAgent,
-  createMockProvider,
   createMemoryRunFeedbackStore,
+  createMockProvider,
   createSecretRedactor,
+  type ProductionPersistenceStore,
   providerDone,
   providerTextDelta,
   providerUsage,
-  type AgentRunResult,
-  type ProductionPersistenceStore,
 } from "@arnilo/prism";
 import {
   appendEvaluationFeedback,
@@ -24,8 +24,8 @@ import {
   runComparison,
   runExperiment,
   scoreRun,
-  serializeEvaluationReport,
   scoreRunLive,
+  serializeEvaluationReport,
 } from "../index.js";
 
 function mockAgent(text: string) {
@@ -149,18 +149,24 @@ describe("evaluation feedback linkage", () => {
     assert.deepEqual(record.evaluationIds, ["eval-1"]);
     assert.deepEqual(record.scorerIds, ["quality"]);
     assert.doesNotMatch(JSON.stringify(record), /private scorer reason/);
-    await assert.rejects(appendEvaluationFeedback({
-      feedbackStore: feedback,
-      evaluationStore: createMemoryEvaluationStore([{ ...evaluation, runId: "other" }]),
-      evaluationIds: [evaluation.id],
-      feedback: { id: "feedback-2", runId: "run_1", rating: 1, ...ownership },
-    }), EvalError);
-    await assert.rejects(appendEvaluationFeedback({
-      feedbackStore: feedback,
-      evaluationStore,
-      evaluationIds: ["missing"],
-      feedback: { id: "feedback-3", runId: "run_1", rating: 1, ...ownership },
-    }), /evaluation not found/);
+    await assert.rejects(
+      appendEvaluationFeedback({
+        feedbackStore: feedback,
+        evaluationStore: createMemoryEvaluationStore([{ ...evaluation, runId: "other" }]),
+        evaluationIds: [evaluation.id],
+        feedback: { id: "feedback-2", runId: "run_1", rating: 1, ...ownership },
+      }),
+      EvalError,
+    );
+    await assert.rejects(
+      appendEvaluationFeedback({
+        feedbackStore: feedback,
+        evaluationStore,
+        evaluationIds: ["missing"],
+        feedback: { id: "feedback-3", runId: "run_1", rating: 1, ...ownership },
+      }),
+      /evaluation not found/,
+    );
   });
 });
 
@@ -174,7 +180,14 @@ describe("defineDataset / store", () => {
     assert.ok(Object.isFrozen(dataset));
     assert.ok(Object.isFrozen(dataset.items));
     assert.throws(
-      () => defineDataset({ id: "qa", items: [{ id: "1", input: "a" }, { id: "1", input: "b" }] }),
+      () =>
+        defineDataset({
+          id: "qa",
+          items: [
+            { id: "1", input: "a" },
+            { id: "1", input: "b" },
+          ],
+        }),
       EvalDatasetError,
     );
   });
@@ -208,22 +221,43 @@ describe("bounded trace, judge, comparison, and thresholds", () => {
     const run = { id: "run_1", sessionId: "session_1", status: "succeeded" as const, startedAt: "2026-01-01T00:00:00Z", ...ownership };
     const store = {
       queryRuns: async () => ({ items: [run] }),
-      queryEvents: async () => ({ items: [{ id: "e1", sessionId: "session_1", runId: "run_1", type: "agent_started", timestamp: run.startedAt, event: { type: "agent_started", agentId: "a", runId: "run_1", sessionId: "session_1", timestamp: run.startedAt }, redacted: true, ...ownership }] }),
+      queryEvents: async () => ({
+        items: [
+          {
+            id: "e1",
+            sessionId: "session_1",
+            runId: "run_1",
+            type: "agent_started",
+            timestamp: run.startedAt,
+            event: { type: "agent_started", agentId: "a", runId: "run_1", sessionId: "session_1", timestamp: run.startedAt },
+            redacted: true,
+            ...ownership,
+          },
+        ],
+      }),
       queryToolCalls: async () => ({ items: [] }),
       queryUsage: async () => ({ items: [] }),
     } as unknown as ProductionPersistenceStore;
     const records = await scoreRun({
-      result: sampleResult(), ownership, traceResolver: createPersistenceTraceResolver(store),
+      result: sampleResult(),
+      ownership,
+      traceResolver: createPersistenceTraceResolver(store),
       scorers: [defineScorer({ id: "trace", score: ({ target }) => ({ score: target?.trace?.events.length === 1 ? 1 : 0 }) })],
     });
     assert.equal(records[0]?.score, 1);
-    await assert.rejects(() => createPersistenceTraceResolver(store)({ sessionId: "session_1", runId: "run_1", tenantId: "other" }), /ownership/);
+    await assert.rejects(
+      () => createPersistenceTraceResolver(store)({ sessionId: "session_1", runId: "run_1", tenantId: "other" }),
+      /ownership/,
+    );
   });
 
   it("bounds model judges, attributes rubrics, and records timeout failures", async () => {
     let attempts = 0;
     const judge = createModelJudge({
-      id: "quality", rubric: "Score quality", rubricVersion: "v2", maxAttempts: 2,
+      id: "quality",
+      rubric: "Score quality",
+      rubricVersion: "v2",
+      maxAttempts: 2,
       judge: async () => {
         attempts += 1;
         if (attempts === 1) throw new Error("retry");
@@ -254,9 +288,16 @@ describe("bounded trace, judge, comparison, and thresholds", () => {
     assert.equal(report.records[0]?.reason, "[REDACTED]");
     assert.doesNotThrow(() => assertEvaluationThreshold(report, { maximumFailures: 0, minimumCandidateWins: { alpha: 1 } }));
 
-    const experiment = await runExperiment({ agent: mockAgent("ok"), dataset, scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })] });
+    const experiment = await runExperiment({
+      agent: mockAgent("ok"),
+      dataset,
+      scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })],
+    });
     assert.doesNotThrow(() => assertEvaluationThreshold(experiment, { minimumMean: 1, maximumFailures: 0, minimumByScorer: { s: 1 } }));
-    assert.throws(() => assertEvaluationThreshold(experiment, { minimumMean: 1, maximumFailures: 0, minimumByScorer: { missing: 1 } }), /missing mean/);
+    assert.throws(
+      () => assertEvaluationThreshold(experiment, { minimumMean: 1, maximumFailures: 0, minimumByScorer: { missing: 1 } }),
+      /missing mean/,
+    );
     assert.doesNotMatch(serializeEvaluationReport({ reason: "SECRET" }, { secrets: ["SECRET"] }), /SECRET/);
     assert.throws(() => serializeEvaluationReport(experiment, { maxBytes: 1 }), /byte limit/);
   });
@@ -268,10 +309,7 @@ describe("runExperiment / scoreRunLive", () => {
     let maxActive = 0;
     const agent = createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([
-        providerTextDelta("answer"),
-        providerDone(),
-      ]),
+      provider: createMockProvider([providerTextDelta("answer"), providerDone()]),
     });
     const dataset = defineDataset({
       id: "batch",
@@ -308,7 +346,10 @@ describe("runExperiment / scoreRunLive", () => {
     assert.equal(report.aggregate.scoredCount, 3);
     assert.equal(report.aggregate.meanScore, 1);
     assert.ok(maxActive <= 2);
-    assert.equal(report.evaluations.every((record) => record.experimentId === "exp_1"), true);
+    assert.equal(
+      report.evaluations.every((record) => record.experimentId === "exp_1"),
+      true,
+    );
   });
 
   it("live scoring does not mutate the agent result and isolates failures", async () => {
@@ -340,12 +381,13 @@ describe("runExperiment / scoreRunLive", () => {
 
   it("rejects invalid concurrency", async () => {
     await assert.rejects(
-      () => runExperiment({
-        agent: mockAgent("x"),
-        dataset: defineDataset({ id: "d", items: [{ id: "1", input: "x" }] }),
-        scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })],
-        concurrency: 0,
-      }),
+      () =>
+        runExperiment({
+          agent: mockAgent("x"),
+          dataset: defineDataset({ id: "d", items: [{ id: "1", input: "x" }] }),
+          scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })],
+          concurrency: 0,
+        }),
       EvalError,
     );
   });

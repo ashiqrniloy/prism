@@ -1,0 +1,36 @@
+AppendPolicyDecisionInput	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+CreatePolicyEvaluatorOptions	export type { CreatePolicyEvaluatorOptions, EvaluateAndAppendOptions } from "./evaluator.js"
+DEFAULT_POLICY_LIMITS	export declare const DEFAULT_POLICY_LIMITS: ResolvedPolicyLimits
+EvaluateAndAppendOptions	export type { CreatePolicyEvaluatorOptions, EvaluateAndAppendOptions } from "./evaluator.js"
+ExportPolicyDecisionsOptions	export type { ExportPolicyDecisionsOptions } from "./export.js"
+FilePolicyDecisionStoreOptions	export type { FilePolicyDecisionStoreOptions, MemoryPolicyDecisionStoreOptions } from "./store.js"
+HARD_POLICY_LIMITS	export declare const HARD_POLICY_LIMITS: ResolvedPolicyLimits
+MemoryPolicyDecisionStoreOptions	export type { FilePolicyDecisionStoreOptions, MemoryPolicyDecisionStoreOptions } from "./store.js"
+PolicyActorRef	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyDecisionOutcome	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyDecisionQuery	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyDecisionRecord	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyDecisionStore	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyError	export declare class PolicyError extends Error
+PolicyEvaluateRequest	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyEvaluateResult	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyEvaluator	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyExportOptions	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyExportSink	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyLimits	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PolicyTarget	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+PreparePolicyDecisionOptions	export type { PreparePolicyDecisionOptions } from "./prepare.js"
+ResolvedPolicyLimits	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
+assertNoUnrestrictedPayload	export declare function assertNoUnrestrictedPayload(input: object): void
+createFilePolicyDecisionStore	export declare function createFilePolicyDecisionStore(options: FilePolicyDecisionStoreOptions): PolicyDecisionStore
+createMemoryPolicyDecisionStore	export declare function createMemoryPolicyDecisionStore(options?: MemoryPolicyDecisionStoreOptions): PolicyDecisionStore
+createPolicyEvaluator	export declare function createPolicyEvaluator(options: CreatePolicyEvaluatorOptions): PolicyEvaluator
+evaluateAndAppend	export declare function evaluateAndAppend(request: PolicyEvaluateRequest, options: EvaluateAndAppendOptions): Promise<PolicyDecisionRecord>
+exportPolicyDecisions	export declare function exportPolicyDecisions(options: ExportPolicyDecisionsOptions): AsyncGenerator<PersistencePage<PolicyDecisionRecord>, void, unknown>
+ownershipMatches	export declare function ownershipMatches(query: OwnershipScope, record: OwnershipScope): boolean
+preparePolicyDecision	export declare function preparePolicyDecision(input: AppendPolicyDecisionInput, options?: PreparePolicyDecisionOptions): PolicyDecisionRecord
+recordGuardrailDecision	export declare function recordGuardrailDecision(input:
+recordPermissionDecision	export declare function recordPermissionDecision(input:
+recordToolApprovalDecision	export declare function recordToolApprovalDecision(input:
+requireOwnership	export { assertNoUnrestrictedPayload, ownershipMatches, preparePolicyDecision, requireOwnership, } from "./prepare.js"
+resolvePolicyLimits	export declare function resolvePolicyLimits(input?: PolicyLimits): ResolvedPolicyLimits

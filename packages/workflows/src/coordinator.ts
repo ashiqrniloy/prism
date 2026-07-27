@@ -29,7 +29,10 @@ export async function enqueueWorkflow(
 ): Promise<{ readonly workflowId: string; readonly runId: string; readonly status: "queued" }> {
   const runId = options.runId ?? createRunId();
   const graph = buildGraph(workflow);
-  const readyNodeIds = [...graph.indegree].filter(([, degree]) => degree === 0).map(([id]) => id).sort();
+  const readyNodeIds = [...graph.indegree]
+    .filter(([, degree]) => degree === 0)
+    .map(([id]) => id)
+    .sort();
   const nodes: Record<string, WorkflowNodeCheckpoint> = {};
   for (const nodeId of Object.keys(workflow.nodes)) {
     nodes[nodeId] = { nodeId, status: readyNodeIds.includes(nodeId) ? "ready" : "pending" };
@@ -70,7 +73,9 @@ export const startWorkflowBackground = enqueueWorkflow;
 
 export interface WorkflowCoordinatorOptions {
   readonly coordinatorId: string;
-  readonly workflows: Readonly<Record<string, WorkflowDefinition>> | ((workflowId: string) => WorkflowDefinition | undefined | Promise<WorkflowDefinition | undefined>);
+  readonly workflows:
+    | Readonly<Record<string, WorkflowDefinition>>
+    | ((workflowId: string) => WorkflowDefinition | undefined | Promise<WorkflowDefinition | undefined>);
   readonly checkpoints: WorkflowCheckpointAdapter;
   readonly leases: LeaseStore;
   readonly ownership?: OwnershipScope;
@@ -132,9 +137,7 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
   };
 
   const executeClaim = async (workflowId: string, runId: string, lease: LeaseRecord): Promise<void> => {
-    const workflow = typeof options.workflows === "function"
-      ? await options.workflows(workflowId)
-      : options.workflows[workflowId];
+    const workflow = typeof options.workflows === "function" ? await options.workflows(workflowId) : options.workflows[workflowId];
     if (!workflow) {
       await release(lease);
       options.onError?.(new WorkflowRuntimeError(`Unknown queued workflow ${workflowId}`), { workflowId, runId });
@@ -154,8 +157,12 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
             break;
           }
           const renewed = await options.leases.renewLease({
-            namespace: lease.namespace, key: lease.key, ownerId: lease.ownerId, token: lease.token,
-            ttlMs: leaseTtlMs, ...options.ownership,
+            namespace: lease.namespace,
+            key: lease.key,
+            ownerId: lease.ownerId,
+            token: lease.token,
+            ttlMs: leaseTtlMs,
+            ...options.ownership,
           });
           if (!renewed) {
             ownsLease = false;
@@ -174,14 +181,18 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
       if (await options.checkpoints.isCancelRequested?.({ workflowId, runId, ownership: options.ownership })) {
         controller.abort(new WorkflowAbortError("Workflow cancellation requested"));
       }
-      const result = await resumeWorkflow(workflow, { workflowId, runId }, {
-        ...options.runOptions,
-        checkpoints: options.checkpoints,
-        ownership: options.ownership,
-        fencingToken: lease.fencingToken,
-        checkpointGuard: () => ownsLease,
-        signal: combineSignals([options.runOptions?.signal, controller.signal]),
-      });
+      const result = await resumeWorkflow(
+        workflow,
+        { workflowId, runId },
+        {
+          ...options.runOptions,
+          checkpoints: options.checkpoints,
+          ownership: options.ownership,
+          fencingToken: lease.fencingToken,
+          checkpointGuard: () => ownsLease,
+          signal: combineSignals([options.runOptions?.signal, controller.signal]),
+        },
+      );
       options.onResult?.(result);
     } catch (error) {
       options.onError?.(error, { workflowId, runId });
@@ -196,10 +207,14 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
     }
   };
 
-  const release = (lease: LeaseRecord) => options.leases.releaseLease({
-    namespace: lease.namespace, key: lease.key, ownerId: lease.ownerId, token: lease.token,
-    ...options.ownership,
-  });
+  const release = (lease: LeaseRecord) =>
+    options.leases.releaseLease({
+      namespace: lease.namespace,
+      key: lease.key,
+      ownerId: lease.ownerId,
+      token: lease.token,
+      ...options.ownership,
+    });
 
   return {
     pollOnce,
@@ -210,7 +225,9 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
       }
       await Promise.allSettled(active.values());
     },
-    get activeRuns() { return active.size; },
+    get activeRuns() {
+      return active.size;
+    },
   };
 }
 
@@ -225,7 +242,11 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) return Promise.resolve();
   return new Promise((resolve) => {
     const timer = setTimeout(done, ms);
-    function done() { signal?.removeEventListener("abort", done); clearTimeout(timer); resolve(); }
+    function done() {
+      signal?.removeEventListener("abort", done);
+      clearTimeout(timer);
+      resolve();
+    }
     signal?.addEventListener("abort", done, { once: true });
   });
 }

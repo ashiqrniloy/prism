@@ -1,0 +1,24 @@
+applyKimiAnthropicCacheControl	export declare function applyKimiAnthropicCacheControl(request: ProviderRequest): readonly Message[]
+createKimiCodingProvider	export declare function createKimiCodingProvider(options?: KimiCodingProviderOptions): AIProvider
+createKimiProviderPackage	export declare function createKimiProviderPackage(options?: KimiProviderPackageOptions): ProviderPackage
+createMoonshotProvider	export declare function createMoonshotProvider(options?: MoonshotProviderOptions): AIProvider
+defineKimiModel	export declare function defineKimiModel(config: KimiModelConfig): ModelConfig
+kimiAnthropicBody	export declare function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject>
+kimiAnthropicCacheEnabled	export declare function kimiAnthropicCacheEnabled(request: ProviderRequest): boolean
+kimiAnthropicEvents	export declare function kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+kimiCodingModels	export declare const kimiCodingModels: readonly [ModelConfig, ModelConfig, ModelConfig]
+kimiPreserveThinking	export declare function kimiPreserveThinking(request: ProviderRequest): boolean
+kimiReasoningEffort	export declare function kimiReasoningEffort(request: ProviderRequest): string | undefined
+kimiThinking	export declare function kimiThinking(request: ProviderRequest): JsonObject | undefined
+listKimiModels	export declare function listKimiModels(options?: ListKimiModelsOptions): Promise<ModelConfig[]>
+mapKimiModel	export declare function mapKimiModel(entry: KimiModelEntry, options?:
+moonshotBody	export declare function moonshotBody(request: ProviderRequest): JsonObject
+moonshotEvents	export declare function moonshotEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+moonshotKimiModels	export declare const moonshotKimiModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig, ModelConfig]
+serializeMoonshotMessage	export declare function serializeMoonshotMessage(message: Message, capabilities?: ModelCapabilities, preserveThinking?: boolean): JsonObject
+stripKimiThinkingCompat	export declare function stripKimiThinkingCompat(compat: JsonObject | undefined): JsonObject
+type KimiCodingProviderOptions	export { createKimiCodingProvider, type KimiCodingProviderOptions, kimiAnthropicBody, kimiAnthropicEvents, } from "./provider.js"
+type KimiModelConfig	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
+type KimiModelEntry	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
+type ListKimiModelsOptions	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
+type MoonshotProviderOptions	export { createMoonshotProvider, type MoonshotProviderOptions, moonshotBody, moonshotEvents, serializeMoonshotMessage, } from "./moonshot.js"

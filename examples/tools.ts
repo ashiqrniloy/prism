@@ -1,5 +1,5 @@
-import { createToolRegistry, dispatchToolCall, filterTools } from "@arnilo/prism";
 import type { ToolCallContent, ToolDefinition, ToolResult } from "@arnilo/prism";
+import { createToolRegistry, dispatchToolCall, filterTools } from "@arnilo/prism";
 
 // Host-owned tool registry: allow/deny filtering and dispatch. Unregistered
 // tool calls fail closed and never execute.

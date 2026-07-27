@@ -1,11 +1,4 @@
-import type {
-  AIProvider,
-  CredentialValueSource,
-  JsonObject,
-  ProviderEvent,
-  ProviderRequest,
-  Usage,
-} from "@arnilo/prism";
+import type { AIProvider, CredentialValueSource, JsonObject, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
 import {
   assertStructuredOutputRequestSupported,
   providerDone,
@@ -25,7 +18,7 @@ import {
   serializeOpenAITool,
 } from "@arnilo/prism/providers/openai";
 import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
-import { ollamaBaseUrl, type OllamaBasePreset } from "./models.js";
+import { type OllamaBasePreset, ollamaBaseUrl } from "./models.js";
 
 export interface OllamaProviderOptions {
   readonly id?: string;
@@ -111,20 +104,23 @@ export function ollamaBody(request: ProviderRequest): JsonObject {
   return clean(body);
 }
 
-export async function* ollamaEvents(
-  body: ReadableStream<Uint8Array>,
-  signal?: AbortSignal,
-): AsyncIterable<ProviderEvent> {
+export async function* ollamaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const tools = new Map<number, ToolAccumulator>();
   let usage: Usage | undefined;
   let sawDoneMarker = false;
   let sawFinishReason = false;
   for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") { sawDoneMarker = true; break; }
+    if (data === "[DONE]") {
+      sawDoneMarker = true;
+      break;
+    }
     const chunk = JSON.parse(data) as OllamaChunk;
     if (chunk.usage) {
       const mapped = mapOpenAIChatUsage(chunk.usage);
-      if (mapped) { usage = mapped; yield providerUsage(mapped); }
+      if (mapped) {
+        usage = mapped;
+        yield providerUsage(mapped);
+      }
     }
     for (const choice of chunk.choices ?? []) {
       if (choice.finish_reason) sawFinishReason = true;
@@ -150,12 +146,14 @@ export async function* ollamaEvents(
   const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
   if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(new Error(
-      `Ollama chat stream ended without completion evidence `
-      + `([DONE]: ${sawDoneMarker ? "received" : "missing"}, `
-      + `finish_reason: ${sawFinishReason ? "received" : "missing"}, `
-      + `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
-    ));
+    yield providerError(
+      new Error(
+        `Ollama chat stream ended without completion evidence ` +
+          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
+          `finish_reason: ${sawFinishReason ? "received" : "missing"}, ` +
+          `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
+      ),
+    );
     return;
   }
   for (const call of tools.values()) {

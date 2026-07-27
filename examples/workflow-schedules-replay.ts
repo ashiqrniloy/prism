@@ -35,7 +35,10 @@ const workflow = defineWorkflow({
     enrich: workflowNode({ workflow: child }),
     publish: functionNode({ execute: (ctx) => ({ input: ctx.workflowInput, state: ctx.state }) }),
   },
-  edges: [["prepare", "enrich"], ["enrich", "publish"]],
+  edges: [
+    ["prepare", "enrich"],
+    ["enrich", "publish"],
+  ],
 });
 
 const schedules = createWorkflowSchedules({
@@ -67,13 +70,17 @@ while (coordinator.activeRuns > 0) await new Promise((resolve) => setTimeout(res
 
 const fired = await schedules.get("report-once");
 if (!fired?.lastRunId) throw new Error("schedule did not enqueue a run");
-const replay = await replayWorkflow(workflow, {
-  sourceRunId: fired.lastRunId,
-  fromNodeId: "publish",
-}, {
-  checkpoints,
-  ownership,
-  validateState: () => undefined,
-});
+const replay = await replayWorkflow(
+  workflow,
+  {
+    sourceRunId: fired.lastRunId,
+    fromNodeId: "publish",
+  },
+  {
+    checkpoints,
+    ownership,
+    validateState: () => undefined,
+  },
+);
 
 console.log(JSON.stringify({ scheduledRunId: fired.lastRunId, replayRunId: replay.runId, lineage: replay.lineage, state: replay.state }));

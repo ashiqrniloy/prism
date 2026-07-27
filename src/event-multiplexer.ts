@@ -24,9 +24,7 @@ export interface EventMultiplexer<T> {
 }
 
 /** Bounded single-consumer fan-in for arbitrary async event sources. */
-export function createEventMultiplexer<T>(
-  options: EventMultiplexerOptions<T> = {},
-): EventMultiplexer<T> {
+export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = {}): EventMultiplexer<T> {
   const maxQueuedEvents = Math.max(1, options.maxQueuedEvents ?? 1024);
   const overflow = options.overflow ?? "close";
   const queue: T[] = [];
@@ -54,9 +52,8 @@ export function createEventMultiplexer<T>(
     }
 
     droppedEvents += 1;
-    const notice = !overflowNotified && options.overflowEvent
-      ? options.overflowEvent({ droppedEvents, maxQueuedEvents, policy: overflow })
-      : undefined;
+    const notice =
+      !overflowNotified && options.overflowEvent ? options.overflowEvent({ droppedEvents, maxQueuedEvents, policy: overflow }) : undefined;
     overflowNotified = true;
 
     if (overflow === "close") {
@@ -125,7 +122,7 @@ export function createEventMultiplexer<T>(
     }
   }
 
-  async function *subscribe(): AsyncGenerator<T> {
+  async function* subscribe(): AsyncGenerator<T> {
     while (true) {
       if (queue.length > 0) {
         if (options.compare) queue.sort(options.compare);

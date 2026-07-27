@@ -83,23 +83,13 @@ async function* boundedChunks(
     if (caps.signal?.aborted) {
       throw new BrowserError("ERR_PRISM_BROWSER", "download aborted");
     }
-    const buf = Buffer.isBuffer(chunk)
-      ? chunk
-      : chunk instanceof Uint8Array
-        ? Buffer.from(chunk)
-        : Buffer.from(String(chunk));
+    const buf = Buffer.isBuffer(chunk) ? chunk : chunk instanceof Uint8Array ? Buffer.from(chunk) : Buffer.from(String(chunk));
     bytes += buf.byteLength;
     if (bytes > caps.perFileCap) {
-      throw new BrowserError(
-        "ERR_PRISM_BROWSER_LIMIT",
-        `download exceeds maxDownloadBytes ${caps.perFileCap}`,
-      );
+      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `download exceeds maxDownloadBytes ${caps.perFileCap}`);
     }
     if (caps.aggregateUsed + bytes > caps.aggregateCap) {
-      throw new BrowserError(
-        "ERR_PRISM_BROWSER_LIMIT",
-        `download exceeds maxDownloadAggregateBytes ${caps.aggregateCap}`,
-      );
+      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `download exceeds maxDownloadAggregateBytes ${caps.aggregateCap}`);
     }
     if (!sawHead) {
       caps.onHead(buf.subarray(0, Math.min(buf.byteLength, 16)));
@@ -138,7 +128,7 @@ export async function quarantineDownload(
   const safeName = `${downloadId}_${suggested}`;
   const quarantineRoot = resolve(options.quarantine);
   const quarantinePath = resolve(join(quarantineRoot, safeName));
-  if (!quarantinePath.startsWith(quarantineRoot + "/") && quarantinePath !== quarantineRoot) {
+  if (!quarantinePath.startsWith(`${quarantineRoot}/`) && quarantinePath !== quarantineRoot) {
     throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", "quarantine path escaped root");
   }
 
@@ -154,8 +144,7 @@ export async function quarantineDownload(
   })();
 
   try {
-    const stream =
-      typeof download.createReadStream === "function" ? await download.createReadStream() : null;
+    const stream = typeof download.createReadStream === "function" ? await download.createReadStream() : null;
     if (stream) {
       await pipeline(
         Readable.from(
@@ -242,10 +231,7 @@ export async function releaseDownload(
   }
   if (item.released) return item;
   if (!options.approveRelease) {
-    throw new BrowserError(
-      "ERR_PRISM_BROWSER_ARTIFACT",
-      "download release requires host approveRelease callback",
-    );
+    throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", "download release requires host approveRelease callback");
   }
   const ok = await options.approveRelease(item);
   if (!ok) {

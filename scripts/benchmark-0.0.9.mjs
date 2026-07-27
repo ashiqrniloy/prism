@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 /**
  * Release 0.0.9 reproducible coding/browser benchmark.
  * Default mode is network-free (fake/in-process adapters only).
@@ -7,11 +8,10 @@
  *   PRISM_BENCH_PLAYWRIGHT=1 — real Playwright open/snapshot/action/close
  * Evidence fields only — never a flaky default CI timing gate.
  */
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
-import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 const iterations = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
@@ -34,8 +34,7 @@ const REQUIRED_RESULT_FIELDS = Object.freeze([
   "resourceLimitSignals",
 ]);
 
-const percentile = (values, ratio) =>
-  [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
+const percentile = (values, ratio) => [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
 
 const results = [];
 const root = await mkdtemp(join(tmpdir(), "prism-bench-009-"));
@@ -133,12 +132,12 @@ try {
   });
 
   // Browser open/snapshot/action/close against fake Playwright (default)
-  const { FakeBrowser } = await import(
-    pathToFileURL(join(process.cwd(), "packages/browser/dist/__tests__/fake-playwright.js")).href
-  ).catch(async () => {
-    // Dist tests may be excluded; fall back to a minimal inline fake via public API only.
-    return { FakeBrowser: null };
-  });
+  const { FakeBrowser } = await import(pathToFileURL(join(process.cwd(), "packages/browser/dist/__tests__/fake-playwright.js")).href).catch(
+    async () => {
+      // Dist tests may be excluded; fall back to a minimal inline fake via public API only.
+      return { FakeBrowser: null };
+    },
+  );
 
   if (FakeBrowser) {
     const browser = new FakeBrowser();
@@ -174,10 +173,7 @@ try {
     if (!docker || !image) {
       throw new Error("PRISM_BENCH_DOCKER=1 requires PRISM_TEST_DOCKER_BIN and PRISM_TEST_DOCKER_IMAGE");
     }
-    const codingSecurity = await importWorkspace(
-      "@arnilo/prism-coding-security",
-      "packages/coding-security/dist/index.js",
-    );
+    const codingSecurity = await importWorkspace("@arnilo/prism-coding-security", "packages/coding-security/dist/index.js");
     const source = join(root, "sandbox-src");
     await mkdir(source);
     await writeFile(join(source, "marker.txt"), "m\n");

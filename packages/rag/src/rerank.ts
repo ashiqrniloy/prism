@@ -1,13 +1,22 @@
+import { resolveRedactor } from "@arnilo/prism";
 import { RagAbortError, RagLimitError, RagValidationError } from "./errors.js";
 import type { RagHit, Reranker } from "./types.js";
-import { assertNotAborted, byteLength, resolveRedactor } from "./util.js";
+import { assertNotAborted, byteLength } from "./util.js";
 
 const active = new WeakMap<Reranker, number>();
 
 export async function rerankHits(
   query: string,
   hits: readonly RagHit[],
-  options: { readonly reranker: Reranker; readonly maxBytes: number; readonly maxMs: number; readonly concurrency: number; readonly signal?: AbortSignal; readonly redactor?: Parameters<typeof resolveRedactor>[0]; readonly secrets?: Parameters<typeof resolveRedactor>[1] },
+  options: {
+    readonly reranker: Reranker;
+    readonly maxBytes: number;
+    readonly maxMs: number;
+    readonly concurrency: number;
+    readonly signal?: AbortSignal;
+    readonly redactor?: Parameters<typeof resolveRedactor>[0];
+    readonly secrets?: Parameters<typeof resolveRedactor>[1];
+  },
 ): Promise<readonly RagHit[]> {
   assertNotAborted(options.signal);
   const redactor = resolveRedactor(options.redactor, options.secrets);
@@ -27,7 +36,9 @@ export async function rerankHits(
   try {
     const ordered = await boundedRerank(
       (signal) => options.reranker.rerank({ query: safeQuery, hits: safeHits, signal }),
-      (operation) => { void operation.then(release, release); },
+      (operation) => {
+        void operation.then(release, release);
+      },
       options.maxMs,
       options.signal,
     );
@@ -55,9 +66,15 @@ async function boundedRerank(
   const onAbort = () => controller.abort();
   signal?.addEventListener("abort", onAbort, { once: true });
   const timeout = setTimeout(() => controller.abort(), maxMs);
-  const aborted = new Promise<never>((_, reject) => controller.signal.addEventListener("abort", () => {
-    reject(signal?.aborted ? new RagAbortError() : new RagLimitError(`reranker exceeded ${maxMs}ms`));
-  }, { once: true }));
+  const aborted = new Promise<never>((_, reject) =>
+    controller.signal.addEventListener(
+      "abort",
+      () => {
+        reject(signal?.aborted ? new RagAbortError() : new RagLimitError(`reranker exceeded ${maxMs}ms`));
+      },
+      { once: true },
+    ),
+  );
   const operation = Promise.resolve().then(() => run(controller.signal));
   onStart(operation);
   try {

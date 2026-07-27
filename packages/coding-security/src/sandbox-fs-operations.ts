@@ -8,9 +8,11 @@
 import { posix } from "node:path";
 import {
   compileSearchPattern,
-  isBinaryBuffer,
-  resolveRepositoryLimits,
   type EditOperations,
+  HARD_MAX_EDIT_FILE_BYTES,
+  HARD_MAX_TEXT_SCAN_BYTES,
+  HARD_MAX_WRITE_BYTES,
+  isBinaryBuffer,
   type ReadOperations,
   type ReadTextOptions,
   type ReadTextResult,
@@ -19,10 +21,8 @@ import {
   type RepositoryOperations,
   type RepositorySearchMatch,
   type RepositorySearchResult,
+  resolveRepositoryLimits,
   type WriteOperations,
-  HARD_MAX_WRITE_BYTES,
-  HARD_MAX_EDIT_FILE_BYTES,
-  HARD_MAX_TEXT_SCAN_BYTES,
 } from "@arnilo/prism-coding-agent";
 import type { DisposableSandbox } from "./sandbox.js";
 
@@ -190,10 +190,7 @@ export function createSandboxFilesystemOperations(
 ): { read: ReadOperations; write: WriteOperations; edit: EditOperations } {
   const workspaceRoot = normalizeWorkspaceRoot(options?.workspaceRoot);
 
-  const readFile = async (
-    absolutePath: string,
-    opts: { maxBytes: number; signal?: AbortSignal },
-  ): Promise<Buffer> => {
+  const readFile = async (absolutePath: string, opts: { maxBytes: number; signal?: AbortSignal }): Promise<Buffer> => {
     const path = assertSandboxPath(workspaceRoot, absolutePath);
     const maxBytes = Math.min(Math.max(1, opts.maxBytes), HARD_MAX_TEXT_SCAN_BYTES);
     const { exitCode, stdout } = await sh(sandbox, SANDBOX_FS_SCRIPTS.read, [path, String(maxBytes)], {
@@ -215,10 +212,7 @@ export function createSandboxFilesystemOperations(
     if (exitCode !== 0) throw new SandboxFsError(`ENOENT: ${path}`);
   };
 
-  const statFile = async (
-    absolutePath: string,
-    opts?: { signal?: AbortSignal },
-  ): Promise<{ size: number }> => {
+  const statFile = async (absolutePath: string, opts?: { signal?: AbortSignal }): Promise<{ size: number }> => {
     const path = assertSandboxPath(workspaceRoot, absolutePath);
     const { exitCode, stdout } = await sh(sandbox, SANDBOX_FS_SCRIPTS.stat, [path], {
       cwd: workspaceRoot,
@@ -241,11 +235,7 @@ export function createSandboxFilesystemOperations(
     if (exitCode !== 0) throw new SandboxFsError(`failed to mkdir ${path}`);
   };
 
-  const writeFile = async (
-    absolutePath: string,
-    content: string,
-    opts?: { maxBytes?: number; signal?: AbortSignal },
-  ): Promise<void> => {
+  const writeFile = async (absolutePath: string, content: string, opts?: { maxBytes?: number; signal?: AbortSignal }): Promise<void> => {
     const path = assertSandboxPath(workspaceRoot, absolutePath);
     const maxBytes = Math.min(opts?.maxBytes ?? HARD_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES);
     const buf = Buffer.from(content, "utf8");
@@ -322,11 +312,7 @@ export function createSandboxRepositoryOperations(
     maxOutputBytes,
   });
 
-  async function listAbsPaths(
-    startAbs: string,
-    maxDepth: number,
-    signal?: AbortSignal,
-  ): Promise<string[]> {
+  async function listAbsPaths(startAbs: string, maxDepth: number, signal?: AbortSignal): Promise<string[]> {
     const root = assertSandboxPath(workspaceRoot, startAbs);
     const depth = Math.min(Math.max(1, maxDepth), limits.maxDepth);
     const { stdout } = await sh(sandbox, SANDBOX_FS_SCRIPTS.find, [root, String(depth)], {

@@ -7,6 +7,33 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 1. **`session.run()` / `session.prompt()` return `AgentRunResult`** and `session.stream()` starts one owned run after subscribing. Callers that ignored the previous `Promise<void>` keep working; failed/aborted runs reject with `AgentRunError` (`.result` attached).
 2. **`AgentConfig.extensions` / `settings` / `credentials` are removed.** Wire extensions through `createExtensionKernel()`, read settings in the host, and pass credential resolvers to the provider edge.
 
+## 0.0.15 → 0.0.16 simplification, shared survivors, and release gates (additive, pre-release)
+
+Release **0.0.16** is a simplification/readiness release: no runtime behavior changes, no package retired, and the only public-surface change is one additive export plus one internal package. The published root tarball is smaller and the release now runs offline pre-publish gates. See [Phase 11 evidence](review-coverage-2026-07-26-phase-11.md).
+
+### New shared export: `resolveRedactor` (additive)
+
+`@arnilo/prism` now exports `resolveRedactor(redactor?, secrets?)` from `src/redaction.ts` — the single survivor of four private copies previously duplicated across `evals`, `memory`, `rag`, and `workflows`. Those packages now source it from core; no package previously exported it, so this is purely additive (added to the frozen value-export surface deliberately). Hosts that resolved a redactor by hand can use it directly:
+
+```ts
+import { resolveRedactor } from "@arnilo/prism";
+const redactor = resolveRedactor(undefined, [apiKey, process.env.SECRET]);
+```
+
+Provider JSON cleanup (`cleanJson`) was deliberately **not** consolidated: the nine provider copies are private one-liners with real wire-shape variants (neuralwatt/openrouter also strip `null`), so they remain per-package. Checkpoint codecs were already consolidated in `workflows/src/checkpoint-core.ts`, and the executable `spawn` sites stay per-domain because each encodes distinct security invariants.
+
+### New internal package: `@arnilo/prism-session-store-codecs`
+
+The two 409-line SQLite/Postgres row-mapper files (which differed only in the `redacted` boolean representation) were replaced by a shared `createSessionRowMappers<R>(codec)` factory in the new `@arnilo/prism-session-store-codecs` package (44th manifest). It is an internal implementation detail of the two session stores — not enrolled in `prism-all` or any profile family — so no install recipe or import changes for consumers.
+
+### Profiles: all six retained (no migration)
+
+Adoption evidence (manifest dependents + docs/examples) froze all six profiles — `prism-all`, `prism-base`, `prism-code`, `prism-compaction`, `prism-providers`, `prism-sdk` — as **retain**; zero retirements. Task 0's "compaction/base zero dependents" was a measurement error (profiles are manifest-only and never imported in `src`). The profiles form a layered DAG (`all → {code, sdk, providers}`, `code/sdk → base → compaction`). Install recipes are unchanged except a new standalone `prism-compaction` recipe in [release-and-install.md](release-and-install.md). No profile migration is needed.
+
+### Smaller root tarball + offline release gates (no runtime impact)
+
+The root package no longer ships the historical `docs/review-coverage-*.md` evidence (11 files, ~283 KB): the packed tarball dropped from 659,478 to ≈575,680 bytes (281 → 270 files). `npm run release:gate` now runs offline pre-publish gates (API-surface `.d.ts` diff vs `scripts/compat-baseline/`, tarball deny-list, exact version ranges) and is part of `npm run sdk:ready`. Performance budgets are recorded in `scripts/budgets.json` and enforced by `scripts/budget-gate.test.mjs` (in `npm test`) and `scripts/benchmark-0.0.16.mjs`; see [performance.md](performance.md). None of this changes SDK runtime behavior.
+
 ## 0.0.14 → 0.0.15 OpenAI hosted tools, continuation, and realtime (additive, pre-release)
 
 `@arnilo/prism-provider-openai` now distinguishes server-executed calls with `authority: "provider-hosted"`; host dispatchers must not execute or reply to them. Incomplete Responses streams self-resume with an opaque `previous_response_id` cursor (at most 4 KiB, at most eight hops) and surface `continuation_required`; cap or duplicate-cursor failure now ends with a provider error instead of a silent partial response.

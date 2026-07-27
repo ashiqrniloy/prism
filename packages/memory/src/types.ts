@@ -47,10 +47,7 @@ export interface MemoryRetentionResult {
 
 export interface Embedder {
   readonly dimensions: number;
-  embed(
-    texts: readonly string[],
-    options?: { readonly signal?: AbortSignal },
-  ): Promise<readonly (readonly number[])[]>;
+  embed(texts: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<readonly (readonly number[])[]>;
 }
 
 export interface MemoryVectorRecord {
@@ -125,11 +122,7 @@ export interface WorkingMemoryUpdateOptions {
 export interface WorkingMemoryStore {
   get(key: WorkingMemoryKey, options?: { readonly signal?: AbortSignal }): Promise<WorkingMemoryRecord | undefined>;
   set(record: WorkingMemoryRecord, options?: { readonly signal?: AbortSignal }): Promise<void>;
-  update(
-    key: WorkingMemoryKey,
-    patch: JsonObject,
-    options?: WorkingMemoryUpdateOptions,
-  ): Promise<WorkingMemoryRecord>;
+  update(key: WorkingMemoryKey, patch: JsonObject, options?: WorkingMemoryUpdateOptions): Promise<WorkingMemoryRecord>;
   delete(key: WorkingMemoryKey, options?: { readonly signal?: AbortSignal }): Promise<boolean>;
 }
 
@@ -207,9 +200,7 @@ export interface CreateMemoryOptions extends MemoryScope {
   readonly workingStore?: WorkingMemoryStore;
   readonly limits?: MemoryLimitsInput;
   readonly schema?: JsonObject;
-  readonly validateWorkingMemory?: (
-    value: JsonObject,
-  ) => void | string | Error | Promise<void | string | Error>;
+  readonly validateWorkingMemory?: (value: JsonObject) => undefined | string | Error | Promise<undefined | string | Error>;
   readonly workingMemoryTemplate?: string;
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
@@ -228,9 +219,7 @@ export interface MemoryContextProviderOptions {
 }
 
 export interface WorkingMemoryProcessorOptions {
-  readonly extract: (
-    messages: readonly Message[],
-  ) => JsonObject | undefined | Promise<JsonObject | undefined>;
+  readonly extract: (messages: readonly Message[]) => JsonObject | undefined | Promise<JsonObject | undefined>;
   readonly mode?: WorkingMemoryUpdateMode;
 }
 

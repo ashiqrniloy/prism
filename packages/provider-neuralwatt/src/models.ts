@@ -1,4 +1,11 @@
-import { resolveCredentialValue, redactSecrets, type CredentialValueSource, type JsonObject, type ModelConfig, type ModelCost } from "@arnilo/prism";
+import {
+  type CredentialValueSource,
+  type JsonObject,
+  type ModelConfig,
+  type ModelCost,
+  redactSecrets,
+  resolveCredentialValue,
+} from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface ListNeuralWattModelsOptions {
@@ -77,7 +84,10 @@ export async function listNeuralWattModels(options: ListNeuralWattModelsOptions 
     headers: { ...options.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) },
     signal: options.signal,
   });
-  if (!response.ok) throw new Error(`NeuralWatt model discovery failed: ${response.status} ${redactSecrets(await readBoundedResponseText(response, { secrets: [token] }), [token])}`);
+  if (!response.ok)
+    throw new Error(
+      `NeuralWatt model discovery failed: ${response.status} ${redactSecrets(await readBoundedResponseText(response, { secrets: [token] }), [token])}`,
+    );
   const payload = (await response.json()) as NeuralWattModelsResponse;
   if (!Array.isArray(payload.data)) throw new Error("NeuralWatt model discovery response missing data array");
   return payload.data.map(mapNeuralWattModel);

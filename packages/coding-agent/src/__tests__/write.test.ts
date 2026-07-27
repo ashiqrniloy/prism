@@ -1,11 +1,11 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile, readFile, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test } from "node:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { createWriteTool } from "../write.js";
 import type { WriteOperations } from "../write.js";
+import { createWriteTool } from "../write.js";
 
 let counter = 0;
 function ctx(signal?: AbortSignal): ToolExecutionContext {
@@ -205,12 +205,21 @@ test("oversized UTF-8 write input fails before policy or filesystem mutation", a
   let operationCalls = 0;
   try {
     const operations: WriteOperations = {
-      mkdir: async () => { operationCalls++; },
-      writeFile: async () => { operationCalls++; },
+      mkdir: async () => {
+        operationCalls++;
+      },
+      writeFile: async () => {
+        operationCalls++;
+      },
     };
     const tool = createWriteTool(cwd, {
       maxInputBytes: 3,
-      executionPolicy: { check: () => { policyCalls++; return { allowed: true }; } },
+      executionPolicy: {
+        check: () => {
+          policyCalls++;
+          return { allowed: true };
+        },
+      },
       operations,
     });
     const result = await tool.execute({ path: "no.txt", content: "☃x" }, ctx());

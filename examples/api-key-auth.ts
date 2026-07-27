@@ -1,8 +1,4 @@
-import {
-  createEnvCredentialResolver,
-  createExplicitCredentialResolver,
-  createMemoryCredentialStore,
-} from "@arnilo/prism";
+import { createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore } from "@arnilo/prism";
 
 // Compose an explicit API-key resolver order. Prism never reads process.env on
 // its own; the host supplies the env object and the provider→env-name map.

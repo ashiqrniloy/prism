@@ -1,17 +1,12 @@
 /**
  * Named check tool: host declares fixed executable+args; model selects only a name.
  */
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
-import { spawn, type ChildProcessByStdio } from "node:child_process";
-import type { Readable } from "node:stream";
+
+import { type ChildProcessByStdio, spawn } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { isAbsolute } from "node:path";
+import type { Readable } from "node:stream";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
   DEFAULT_CHECK_TIMEOUT_MS,
@@ -76,9 +71,7 @@ function errorResult(toolCallId: string, message: string): ToolResult {
   };
 }
 
-function validateCheckMap(
-  checks: Readonly<Record<string, NamedCheckDefinition>>,
-): ReadonlyMap<string, NamedCheckDefinition> {
+function validateCheckMap(checks: Readonly<Record<string, NamedCheckDefinition>>): ReadonlyMap<string, NamedCheckDefinition> {
   const names = Object.keys(checks);
   if (names.length < 1) throw new Error("checks must declare at least one named command");
   validateCodingLimit("checkNames", names.length, HARD_MAX_CHECK_NAMES);
@@ -251,17 +244,10 @@ export function createCodingCheckTool(cwd: string, options: CodingCheckToolOptio
       if (!def) return errorResult(toolCallId, `unknown check name: ${name}`);
 
       if (!isAbsolute(def.file) && !(def.env && typeof def.env.PATH === "string")) {
-        return errorResult(
-          toolCallId,
-          `check ${name} file must be absolute unless env.PATH is explicitly provided`,
-        );
+        return errorResult(toolCallId, `check ${name} file must be absolute unless env.PATH is explicitly provided`);
       }
 
-      const timeoutMs = validateCodingLimit(
-        "timeoutMs",
-        def.timeoutMs ?? defaultTimeoutMs,
-        HARD_CHECK_TIMEOUT_MS,
-      );
+      const timeoutMs = validateCodingLimit("timeoutMs", def.timeoutMs ?? defaultTimeoutMs, HARD_CHECK_TIMEOUT_MS);
 
       const policyCheck = await enforceExecutionPolicy(
         options.executionPolicy,

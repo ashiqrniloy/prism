@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
-import { assertAbortIsObserved, assertNoSecretLeak, assertProviderStreamConforms, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertAbortIsObserved,
+  assertNoSecretLeak,
+  assertProviderStreamConforms,
+  collectProviderEvents,
+} from "@arnilo/prism/testing/provider-conformance";
 import { createKimiCodingProvider, kimiCodingModels } from "../index.js";
 
 // Env-gated live smoke tests for @arnilo/prism-provider-kimi.
@@ -19,9 +24,7 @@ import { createKimiCodingProvider, kimiCodingModels } from "../index.js";
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const API_KEY = process.env.KIMI_API_KEY;
-const skip: string | false = !LIVE || !API_KEY
-  ? "set PRISM_LIVE_PROVIDER_TESTS=1 and KIMI_API_KEY to run live Kimi smoke tests"
-  : false;
+const skip: string | false = !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and KIMI_API_KEY to run live Kimi smoke tests" : false;
 
 const model = kimiCodingModels[0]!;
 const apiKey = (): string | undefined => process.env.KIMI_API_KEY;
@@ -51,7 +54,7 @@ const toolRequest: ProviderRequest = {
 describe("@arnilo/prism-provider-kimi live tests", () => {
   it("live_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
-    const text = events.map((e) => e.type === "content_delta" && e.content.type === "text" ? e.content.text : "").join("");
+    const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [API_KEY!]);
   });

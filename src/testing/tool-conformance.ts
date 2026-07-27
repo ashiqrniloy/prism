@@ -8,7 +8,15 @@
 // tool_execution_started / tool_execution_blocked events the runtime emits,
 // not by mutating the caller's tool.
 
-import type { AgentEvent, JsonObject, ToolCallContent, ToolDefinition, ToolExecutionContext, ToolRegistry, ToolResult } from "../contracts.js";
+import type {
+  AgentEvent,
+  JsonObject,
+  ToolCallContent,
+  ToolDefinition,
+  ToolExecutionContext,
+  ToolRegistry,
+  ToolResult,
+} from "../contracts.js";
 import type { PermissionPolicy } from "../security.js";
 import { dispatchToolCall, type ToolFilterInput, type ToolValidator } from "../tools.js";
 
@@ -47,10 +55,7 @@ const alwaysInvalidValidator: ToolValidator = () => "invalid";
  * `tool_execution_started` and returns a result without an error. Throws on
  * the first violation.
  */
-export async function assertToolDispatchConforms(
-  registry: ToolRegistry,
-  options: ToolConformanceOptions,
-): Promise<void> {
+export async function assertToolDispatchConforms(registry: ToolRegistry, options: ToolConformanceOptions): Promise<void> {
   registry.register(options.tool);
   const baseContext: ToolExecutionContext = { sessionId: "conformance", runId: "r", toolCallId: "call" };
   const call = (name: string, args: unknown): ToolCallContent => ({ type: "tool_call", id: "call", name, arguments: args as JsonObject });
@@ -61,7 +66,13 @@ export async function assertToolDispatchConforms(
 
   // 2. denied tool (filter) → blocked "tool_denied".
   await assertToolBlocked(
-    { call: call(options.tool.name, options.validArgs), context: baseContext, ...shared, ...pickPolicy(options), filter: { deny: [options.tool.name] } },
+    {
+      call: call(options.tool.name, options.validArgs),
+      context: baseContext,
+      ...shared,
+      ...pickPolicy(options),
+      filter: { deny: [options.tool.name] },
+    },
     "tool_denied",
   );
 
@@ -73,18 +84,35 @@ export async function assertToolDispatchConforms(
 
   // 4. permission denial → blocked "permission_denied".
   await assertToolBlocked(
-    { call: call(options.tool.name, options.validArgs), context: baseContext, ...shared, ...pickPolicy(options), permission: denyAllPermission },
+    {
+      call: call(options.tool.name, options.validArgs),
+      context: baseContext,
+      ...shared,
+      ...pickPolicy(options),
+      permission: denyAllPermission,
+    },
     "permission_denied",
   );
 
   // 5. validator failure → blocked "validation_failed".
   await assertToolBlocked(
-    { call: call(options.tool.name, options.validArgs), context: baseContext, ...shared, ...pickPolicy(options), validate: alwaysInvalidValidator },
+    {
+      call: call(options.tool.name, options.validArgs),
+      context: baseContext,
+      ...shared,
+      ...pickPolicy(options),
+      validate: alwaysInvalidValidator,
+    },
     "validation_failed",
   );
 
   // 6. valid call → executes (tool_execution_started), no error, no blocked event.
-  const probe = await dispatchAndCollect({ call: call(options.tool.name, options.validArgs), context: baseContext, ...shared, ...pickPolicy(options) });
+  const probe = await dispatchAndCollect({
+    call: call(options.tool.name, options.validArgs),
+    context: baseContext,
+    ...shared,
+    ...pickPolicy(options),
+  });
   if (probe.result.error) throw new Error(`Valid tool call was not executed: ${probe.result.error.message}`);
   if (!probe.events.some((event) => event.type === "tool_execution_started")) {
     throw new Error("Valid tool call did not emit tool_execution_started");
@@ -118,11 +146,17 @@ export async function dispatchAndCollect(probe: ToolDispatchProbeOptions): Promi
     permission: probe.permission,
     validate: probe.validate,
     secrets: probe.secrets,
-    emit: (event) => { events.push(event); },
+    emit: (event) => {
+      events.push(event);
+    },
   });
   return { result, events };
 }
 
-function pickPolicy(options: ToolConformanceOptions): { permission?: PermissionPolicy; validate?: ToolValidator; filter?: ToolFilterInput } {
+function pickPolicy(options: ToolConformanceOptions): {
+  permission?: PermissionPolicy;
+  validate?: ToolValidator;
+  filter?: ToolFilterInput;
+} {
   return { permission: options.permission, validate: options.validate, filter: options.filter };
 }

@@ -1,4 +1,3 @@
-import type Database from "better-sqlite3";
 import {
   CheckpointConflictError,
   type CheckpointKey,
@@ -7,6 +6,7 @@ import {
   type CheckpointStore,
   type OwnershipScope,
 } from "@arnilo/prism";
+import type Database from "better-sqlite3";
 
 interface Row {
   namespace: string;
@@ -44,7 +44,8 @@ CREATE INDEX IF NOT EXISTS prism_checkpoints_list_idx
   ON prism_checkpoints (namespace, category, tenant_id, updated_at DESC, key);
 `);
   const columns = database.prepare("PRAGMA table_info(prism_checkpoints)").all() as { name: string }[];
-  if (!columns.some((column) => column.name === "fencing_token")) database.exec("ALTER TABLE prism_checkpoints ADD COLUMN fencing_token INTEGER");
+  if (!columns.some((column) => column.name === "fencing_token"))
+    database.exec("ALTER TABLE prism_checkpoints ADD COLUMN fencing_token INTEGER");
   const select = database.prepare("SELECT * FROM prism_checkpoints WHERE namespace = ? AND key = ?");
   const remove = database.prepare("DELETE FROM prism_checkpoints WHERE namespace = ? AND key = ?");
   const upsert = database.prepare(`
@@ -73,15 +74,27 @@ WHERE prism_checkpoints.version < excluded.version
       assertInput(input);
       const previous = rowToRecord(select.get(input.namespace, input.key) as Row | undefined);
       if (previous) assertOwnership(input, previous);
-      if (input.expectedVersion !== undefined && input.expectedVersion !== (previous?.version ?? 0)) throw staleExpected(input.expectedVersion, previous?.version ?? 0);
+      if (input.expectedVersion !== undefined && input.expectedVersion !== (previous?.version ?? 0))
+        throw staleExpected(input.expectedVersion, previous?.version ?? 0);
       if (previous && input.version <= previous.version) throw stale(input.version, previous.version);
-      if (previous?.fencingToken !== undefined && (input.fencingToken === undefined || input.fencingToken < previous.fencingToken)) throw staleFence(input.fencingToken, previous.fencingToken);
+      if (previous?.fencingToken !== undefined && (input.fencingToken === undefined || input.fencingToken < previous.fencingToken))
+        throw staleFence(input.fencingToken, previous.fencingToken);
       const now = new Date().toISOString();
       const result = upsert.run(
-        input.namespace, input.key, input.version, input.fencingToken ?? null, input.category ?? null,
-        input.tenantId ?? null, input.accountId ?? null, input.userId ?? null,
-        encodeJson(input.value, "Checkpoint value"), input.metadata === undefined ? null : encodeJson(input.metadata, "Checkpoint metadata"),
-        previous?.createdAt ?? now, now, input.expectedVersion ?? null, input.expectedVersion ?? null,
+        input.namespace,
+        input.key,
+        input.version,
+        input.fencingToken ?? null,
+        input.category ?? null,
+        input.tenantId ?? null,
+        input.accountId ?? null,
+        input.userId ?? null,
+        encodeJson(input.value, "Checkpoint value"),
+        input.metadata === undefined ? null : encodeJson(input.metadata, "Checkpoint metadata"),
+        previous?.createdAt ?? now,
+        now,
+        input.expectedVersion ?? null,
+        input.expectedVersion ?? null,
       );
       if (result.changes === 0) throw stale(input.version, previous?.version);
       return rowToRecord(select.get(input.namespace, input.key) as Row)!;
@@ -99,19 +112,36 @@ WHERE prism_checkpoints.version < excluded.version
       throwIfAborted(query.signal);
       const clauses: string[] = [];
       const params: unknown[] = [];
-      if (query.namespace !== undefined) { clauses.push("namespace = ?"); params.push(query.namespace); }
+      if (query.namespace !== undefined) {
+        clauses.push("namespace = ?");
+        params.push(query.namespace);
+      }
       if (query.keyPrefix !== undefined) {
         clauses.push("key >= ? AND key < ?");
         params.push(query.keyPrefix, `${query.keyPrefix}\uffff`);
       }
-      for (const [column, value] of [["tenant_id", query.tenantId], ["account_id", query.accountId], ["user_id", query.userId]] as const) {
-        if (value !== undefined) { clauses.push(`${column} = ?`); params.push(value); }
+      for (const [column, value] of [
+        ["tenant_id", query.tenantId],
+        ["account_id", query.accountId],
+        ["user_id", query.userId],
+      ] as const) {
+        if (value !== undefined) {
+          clauses.push(`${column} = ?`);
+          params.push(value);
+        }
       }
       const categories = query.category === undefined ? [] : Array.isArray(query.category) ? query.category : [query.category];
-      if (categories.length) { clauses.push(`category IN (${categories.map(() => "?").join(", ")})`); params.push(...categories); }
+      if (categories.length) {
+        clauses.push(`category IN (${categories.map(() => "?").join(", ")})`);
+        params.push(...categories);
+      }
       const offset = decodeCursor(query.cursor);
       const limit = Math.min(Math.max(1, query.limit ?? 100), 500);
-      const rows = database.prepare(`SELECT * FROM prism_checkpoints ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""} ORDER BY updated_at DESC, key ASC LIMIT ? OFFSET ?`).all(...params, limit + 1, offset) as Row[];
+      const rows = database
+        .prepare(
+          `SELECT * FROM prism_checkpoints ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""} ORDER BY updated_at DESC, key ASC LIMIT ? OFFSET ?`,
+        )
+        .all(...params, limit + 1, offset) as Row[];
       const hasMore = rows.length > limit;
       return { items: rows.slice(0, limit).map((row) => rowToRecord(row)!), ...(hasMore ? { nextCursor: String(offset + limit) } : {}) };
     },
@@ -129,23 +159,28 @@ WHERE prism_checkpoints.version < excluded.version
 function rowToRecord(row?: Row): CheckpointRecord | null {
   if (!row) return null;
   return {
-    namespace: row.namespace, key: row.key, version: row.version,
+    namespace: row.namespace,
+    key: row.key,
+    version: row.version,
     ...(row.fencing_token === null ? {} : { fencingToken: row.fencing_token }),
     value: JSON.parse(row.value),
     ...(row.category === null ? {} : { category: row.category }),
     ...(row.tenant_id === null ? {} : { tenantId: row.tenant_id }),
     ...(row.account_id === null ? {} : { accountId: row.account_id }),
     ...(row.user_id === null ? {} : { userId: row.user_id }),
-    createdAt: row.created_at, updatedAt: row.updated_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
     ...(row.metadata === null ? {} : { metadata: JSON.parse(row.metadata) as Record<string, unknown> }),
   };
 }
 
 function assertInput(input: CheckpointKey & { version: number }): void {
-  if (!input.namespace || !input.key || !Number.isSafeInteger(input.version) || input.version < 1) throw new CheckpointConflictError("Invalid checkpoint key or version");
+  if (!input.namespace || !input.key || !Number.isSafeInteger(input.version) || input.version < 1)
+    throw new CheckpointConflictError("Invalid checkpoint key or version");
 }
 function assertOwnership(expected: OwnershipScope, actual: OwnershipScope): void {
-  if (expected.tenantId !== actual.tenantId || expected.accountId !== actual.accountId || expected.userId !== actual.userId) throw new CheckpointConflictError("Checkpoint ownership mismatch");
+  if (expected.tenantId !== actual.tenantId || expected.accountId !== actual.accountId || expected.userId !== actual.userId)
+    throw new CheckpointConflictError("Checkpoint ownership mismatch");
 }
 function stale(version: number, current?: number): CheckpointConflictError {
   return new CheckpointConflictError(`Stale checkpoint version ${version} (current ${current ?? "unknown"})`);

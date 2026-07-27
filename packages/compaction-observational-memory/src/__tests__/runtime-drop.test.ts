@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createAgent, createMemorySessionStore, createMockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent, type AIProvider, type ProviderEvent } from "@arnilo/prism";
+import {
+  type AIProvider,
+  createAgent,
+  createMemorySessionStore,
+  createMockProvider,
+  type ProviderEvent,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  toolCallContent,
+} from "@arnilo/prism";
 import { createObservationalMemoryRuntime, OBSERVATIONS_DROPPED } from "../index.js";
 
 const model = { provider: "mock", model: "demo" };
@@ -8,7 +18,12 @@ const workerModel = { provider: "mock", model: "memory" };
 
 function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIProvider {
   let index = 0;
-  return { id: "memory", async *generate() { yield* (batches[index++] ?? [providerDone()]); } };
+  return {
+    id: "memory",
+    async *generate() {
+      yield* batches[index++] ?? [providerDone()];
+    },
+  };
 }
 
 describe("observational memory runtime dropper", () => {
@@ -19,12 +34,30 @@ describe("observational memory runtime dropper", () => {
     await session.run("hello world");
     const sourceId = (await session.entries())[0]!.id;
     const workerProvider = sequenceProvider([
-      [providerToolCall(toolCallContent("o", "record_observation", { content: "Long observation with many useful words", relevance: "high", sourceEntryIds: [sourceId] })), providerDone()],
+      [
+        providerToolCall(
+          toolCallContent("o", "record_observation", {
+            content: "Long observation with many useful words",
+            relevance: "high",
+            sourceEntryIds: [sourceId],
+          }),
+        ),
+        providerDone(),
+      ],
       [providerToolCall(toolCallContent("r", "record_reflection", { content: "Reflect", supportingObservationIds: [] })), providerDone()],
       [providerToolCall(toolCallContent("d", "drop_observations", { observationIds: [] })), providerDone()],
     ]);
-    const runtime = createObservationalMemoryRuntime({ session, appendEntry: (entry) => store.append(entry), workerProvider, workerModel, overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 1, agentMaxTurns: 1 } });
+    const runtime = createObservationalMemoryRuntime({
+      session,
+      appendEntry: (entry) => store.append(entry),
+      workerProvider,
+      workerModel,
+      overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 1, agentMaxTurns: 1 },
+    });
     await runtime.flush();
-    assert.equal((await session.entries()).some((entry) => entry.kind === "custom" && (entry.data as any).type === OBSERVATIONS_DROPPED), false);
+    assert.equal(
+      (await session.entries()).some((entry) => entry.kind === "custom" && (entry.data as any).type === OBSERVATIONS_DROPPED),
+      false,
+    );
   });
 });

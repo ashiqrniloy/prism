@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   assembleProviderInput,
   createContributionRegistries,
@@ -60,7 +60,14 @@ describe("skill registry and selection", () => {
   it("extension registered skill is inert until host selects it", async () => {
     const contributions = createContributionRegistries();
     const kernel = createExtensionKernel({ registries: contributions });
-    await kernel.load([{ name: "skills", setup: (api) => { api.registerSkill(skill); } }]);
+    await kernel.load([
+      {
+        name: "skills",
+        setup: (api) => {
+          api.registerSkill(skill);
+        },
+      },
+    ]);
     const registry = createSkillRegistry();
 
     assert.deepEqual(registry.list(), []);
@@ -79,7 +86,9 @@ describe("skill registry and selection", () => {
       skills: active,
       tools: [tool],
     });
-    const text = request.messages.map((message) => message.content.map((part) => part.type === "text" ? part.text : "").join("\n")).join("\n");
+    const text = request.messages
+      .map((message) => message.content.map((part) => (part.type === "text" ? part.text : "")).join("\n"))
+      .join("\n");
 
     assert.match(text, /Skill brief:\nAnswer briefly\./);
     assert.doesNotMatch(text, /Do not include/);

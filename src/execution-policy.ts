@@ -23,30 +23,24 @@ export interface ExecutionPolicy {
 
 export class ExecutionDeniedError extends Error {
   readonly code = "ERR_PRISM_EXECUTION_DENIED";
-  constructor(readonly action: ExecutionAction, readonly decision: ExecutionDecision) {
+  constructor(
+    readonly action: ExecutionAction,
+    readonly decision: ExecutionDecision,
+  ) {
     super(decision.reason ?? `Execution denied for ${action.kind}:${action.operation}`);
     this.name = "ExecutionDeniedError";
   }
 }
 
-export async function checkExecution(
-  policy: ExecutionPolicy | undefined,
-  action: ExecutionAction,
-): Promise<ExecutionDecision> {
+export async function checkExecution(policy: ExecutionPolicy | undefined, action: ExecutionAction): Promise<ExecutionDecision> {
   return policy ? await policy.check(action) : { allowed: true };
 }
 
-export function applyExecutionDecision(
-  action: ExecutionAction,
-  decision: ExecutionDecision,
-): ExecutionAction {
+export function applyExecutionDecision(action: ExecutionAction, decision: ExecutionDecision): ExecutionAction {
   return decision.modified ? { ...action, ...decision.modified } : action;
 }
 
-export async function assertExecutionAllowed(
-  policy: ExecutionPolicy | undefined,
-  action: ExecutionAction,
-): Promise<ExecutionAction> {
+export async function assertExecutionAllowed(policy: ExecutionPolicy | undefined, action: ExecutionAction): Promise<ExecutionAction> {
   const decision = await checkExecution(policy, action);
   if (!decision.allowed) throw new ExecutionDeniedError(action, decision);
   return applyExecutionDecision(action, decision);

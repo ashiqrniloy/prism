@@ -1,11 +1,11 @@
 import {
+  type AgentEvent,
   createAgent,
   createAgentSession,
   createMockProvider,
   providerDone,
   providerTextDelta,
   providerUsage,
-  type AgentEvent,
 } from "@arnilo/prism";
 
 // Minimal host-app embed: create an agent + session, stream events while a

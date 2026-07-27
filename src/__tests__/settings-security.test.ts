@@ -1,8 +1,8 @@
-import { mkdtemp, mkdir, symlink, writeFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
 import {
   assertPermission,
   assertTrusted,
@@ -13,10 +13,10 @@ import {
   createStaticPermissionPolicy,
   createStaticSettingsProvider,
   createStaticTrustPolicy,
+  createToolRegistry,
   dispatchToolCall,
   loadTextResource,
   resolveCredentialValue,
-  createToolRegistry,
 } from "../index.js";
 import { loadSettingsFiles } from "../node/settings.js";
 import { createPathTrustPolicy, isPathInside, isPathInsideReal } from "../node/trust.js";
@@ -34,7 +34,10 @@ describe("settings auth trust security", () => {
     const chained = createChainedSettingsProvider([nodeSettings, staticSettings]);
 
     assert.equal(await chained.get("demo.enabled"), true);
-    assert.equal(await loadSettingsFiles([{ name: "missing", path: join(dir, "missing.json"), optional: true }]).then((s) => s.get("x")), undefined);
+    assert.equal(
+      await loadSettingsFiles([{ name: "missing", path: join(dir, "missing.json"), optional: true }]).then((s) => s.get("x")),
+      undefined,
+    );
   });
 
   it("resolves memory credentials and chains resolvers without env lookup", async () => {
@@ -49,11 +52,29 @@ describe("settings auth trust security", () => {
 
   it("denies trust permissions and resource loads before side effects", async () => {
     await assert.rejects(() => assertTrusted(createStaticTrustPolicy(false), { kind: "resource", target: "x" }), /Untrusted/);
-    await assert.rejects(() => assertPermission(createStaticPermissionPolicy({ allow: ["tool:echo:execute"] }), { kind: "tool", target: "other", action: "execute" }), /Permission/);
+    await assert.rejects(
+      () =>
+        assertPermission(createStaticPermissionPolicy({ allow: ["tool:echo:execute"] }), {
+          kind: "tool",
+          target: "other",
+          action: "execute",
+        }),
+      /Permission/,
+    );
 
     let loaded = false;
     await assert.rejects(
-      () => loadTextResource({ load: async (uri) => { loaded = true; return { uri, text: "x" }; } }, "memory:x", { permission: createStaticPermissionPolicy(false) }),
+      () =>
+        loadTextResource(
+          {
+            load: async (uri) => {
+              loaded = true;
+              return { uri, text: "x" };
+            },
+          },
+          "memory:x",
+          { permission: createStaticPermissionPolicy(false) },
+        ),
       /Permission denied/,
     );
     assert.equal(loaded, false);
@@ -110,7 +131,14 @@ describe("settings auth trust security", () => {
     let setup = false;
     const kernel = createExtensionKernel({ permission: createStaticPermissionPolicy(false) });
 
-    await kernel.load([{ name: "demo", setup: () => { setup = true; } }]);
+    await kernel.load([
+      {
+        name: "demo",
+        setup: () => {
+          setup = true;
+        },
+      },
+    ]);
 
     assert.equal(setup, false);
   });
@@ -120,10 +148,20 @@ describe("settings auth trust security", () => {
     let executed = false;
     const result = await dispatchToolCall({
       call: { type: "tool_call", id: "c1", name: "echo", arguments: {} },
-      registry: createToolRegistry([{ name: "echo", execute: () => { executed = true; return { toolCallId: "c1", name: "echo" }; } }]),
+      registry: createToolRegistry([
+        {
+          name: "echo",
+          execute: () => {
+            executed = true;
+            return { toolCallId: "c1", name: "echo" };
+          },
+        },
+      ]),
       context: { sessionId: "s1", runId: "r1", toolCallId: "c1" },
       permission: createStaticPermissionPolicy(false),
-      validate: () => { validated = true; },
+      validate: () => {
+        validated = true;
+      },
     });
 
     assert.equal(result.error?.code, "ERR_PRISM_PERMISSION_DENIED");

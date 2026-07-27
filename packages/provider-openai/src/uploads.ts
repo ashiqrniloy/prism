@@ -1,12 +1,12 @@
-import { resolveCredentialValue, type CredentialValueSource } from "@arnilo/prism";
+import { type CredentialValueSource, resolveCredentialValue } from "@arnilo/prism";
 import {
   bytesToBase64,
   createBoundedUploadCache,
   DEFAULT_OPENAI_INLINE_FILE_BYTES,
   DEFAULT_PROVIDER_MEDIA_ITEM_BYTES,
   mediaFingerprint,
-  providerUploadCacheKey,
   type ProviderMediaScope,
+  providerUploadCacheKey,
 } from "@arnilo/prism/providers/media";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
@@ -76,7 +76,7 @@ export function createOpenAIFileUploadManager(options: OpenAIFileUploadManagerOp
       const secrets = token ? [token] : [];
       throw new Error(`OpenAI file upload failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`);
     }
-    const payload = await response.json() as { id?: string };
+    const payload = (await response.json()) as { id?: string };
     if (!payload.id) throw new Error("OpenAI file upload response missing id");
     cache.set(cacheKey, payload.id);
     uploadedIds.add(payload.id);
@@ -89,20 +89,22 @@ export function createOpenAIFileUploadManager(options: OpenAIFileUploadManagerOp
     const ids = [...uploadedIds];
     uploadedIds.clear();
     cache.clear();
-    await Promise.all(ids.map(async (fileId) => {
-      try {
-        const response = await fetchImpl(`${baseUrl}/files/${encodeURIComponent(fileId)}`, {
-          method: "DELETE",
-          headers: token ? { authorization: `Bearer ${token}` } : undefined,
-          signal,
-        });
-        if (!response.ok) {
-          await readBoundedResponseText(response, { secrets });
+    await Promise.all(
+      ids.map(async (fileId) => {
+        try {
+          const response = await fetchImpl(`${baseUrl}/files/${encodeURIComponent(fileId)}`, {
+            method: "DELETE",
+            headers: token ? { authorization: `Bearer ${token}` } : undefined,
+            signal,
+          });
+          if (!response.ok) {
+            await readBoundedResponseText(response, { secrets });
+          }
+        } catch {
+          // Best-effort cleanup; retention is bounded by remote provider policy.
         }
-      } catch {
-        // Best-effort cleanup; retention is bounded by remote provider policy.
-      }
-    }));
+      }),
+    );
   }
 
   return {

@@ -1,22 +1,22 @@
 import {
+  type BranchReader,
+  type CompactionEntryData,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  type Message,
+  type PersistencePage,
+  resolveSessionSearchQuery,
   SESSION_APPEND_CONFLICT_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SessionAppendConflictError,
-  SessionSearchUnsupportedError,
-  resolveSessionSearchQuery,
-  type CompactionEntryData,
-  type Message,
-  type PersistencePage,
   type SessionAppendOptions,
   type SessionBranchRead,
-  type BranchReader,
   type SessionEntry,
   type SessionSearchHit,
   type SessionSearchQuery,
+  SessionSearchUnsupportedError,
   type SessionStore,
 } from "./contracts.js";
 import { createId } from "./ids.js";
@@ -64,7 +64,9 @@ export function getSessionBranchEntries(
   input: readonly SessionEntry[] | BranchReader,
   options: SessionBranchOptions | SessionBranchRead = {},
 ): readonly SessionEntry[] | Promise<readonly SessionEntry[]> {
-  return typeof input === "function" ? readBranchFromReader(input, options as SessionBranchRead) : getSessionBranchEntriesCore(input, options as SessionBranchOptions);
+  return typeof input === "function"
+    ? readBranchFromReader(input, options as SessionBranchRead)
+    : getSessionBranchEntriesCore(input, options as SessionBranchOptions);
 }
 
 async function readBranchFromReader(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]> {
@@ -88,7 +90,7 @@ function getSessionBranchEntriesCore(entries: readonly SessionEntry[], options: 
   if (!index.byId.has(leafId)) throw new Error(`Unknown session leaf: ${leafId}`);
 
   const branch: SessionEntry[] = [];
-  for (let id: string | undefined = leafId; id;) {
+  for (let id: string | undefined = leafId; id; ) {
     const entry = index.byId.get(id);
     if (!entry) throw new Error(`Missing session parent: ${id}`);
     branch.push(entry);
@@ -125,13 +127,15 @@ async function rebuildSessionContextFromReader(reader: BranchReader, query: Sess
 
 function rebuildSessionContextCore(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): SessionContextSnapshot {
   const branch = getSessionBranchEntriesCore(entries, options);
-  const compaction = [...branch].reverse().find((entry) => entry.kind === "compaction" && entry.summary && isCompactionEntryData(entry.data));
+  const compaction = [...branch]
+    .reverse()
+    .find((entry) => entry.kind === "compaction" && entry.summary && isCompactionEntryData(entry.data));
   if (!compaction || !isCompactionEntryData(compaction.data)) {
     return {
       leafId: branch.at(-1)?.id,
       entries: branch,
-      messages: branch.flatMap((entry) => entry.kind === "message" && entry.message ? [entry.message] : []),
-      summaries: branch.flatMap((entry) => entry.kind === "summary" && entry.summary ? [entry.summary] : []),
+      messages: branch.flatMap((entry) => (entry.kind === "message" && entry.message ? [entry.message] : [])),
+      summaries: branch.flatMap((entry) => (entry.kind === "summary" && entry.summary ? [entry.summary] : [])),
     };
   }
 
@@ -312,16 +316,12 @@ function searchMemorySessionsLinear(
 
   matches.sort((a, b) => compareSearchHit(a, b, q.order));
   const afterCursor = q.cursor ? decodeSearchCursor(q.cursor) : undefined;
-  const filtered = afterCursor
-    ? matches.filter((hit) => isAfterSearchCursor(hit, afterCursor, q.order))
-    : matches;
+  const filtered = afterCursor ? matches.filter((hit) => isAfterSearchCursor(hit, afterCursor, q.order)) : matches;
   const page = filtered.slice(0, q.limit);
   const last = page.at(-1);
   return {
     items: page,
-    nextCursor: filtered.length > q.limit && last?.updatedAt
-      ? encodeSearchCursor(last.updatedAt, last.sessionId)
-      : undefined,
+    nextCursor: filtered.length > q.limit && last?.updatedAt ? encodeSearchCursor(last.updatedAt, last.sessionId) : undefined,
   };
 }
 
@@ -367,11 +367,7 @@ function compareSearchHit(a: SessionSearchHit, b: SessionSearchHit, order: "asc"
   return order === "asc" ? cmp : -cmp;
 }
 
-function isAfterSearchCursor(
-  hit: SessionSearchHit,
-  cursor: { updatedAt: string; sessionId: string },
-  order: "asc" | "desc",
-): boolean {
+function isAfterSearchCursor(hit: SessionSearchHit, cursor: { updatedAt: string; sessionId: string }, order: "asc" | "desc"): boolean {
   const at = hit.updatedAt ?? "";
   if (order === "asc") {
     return at > cursor.updatedAt || (at === cursor.updatedAt && hit.sessionId > cursor.sessionId);
@@ -386,8 +382,10 @@ function cloneEntry<T>(entry: T): T {
 function isCompactionEntryData(value: unknown): value is CompactionEntryData {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const data = value as Record<string, unknown>;
-  return (data.throughEntryId === undefined || typeof data.throughEntryId === "string")
-    && (data.keepEntryIds === undefined || (Array.isArray(data.keepEntryIds) && data.keepEntryIds.every((item) => typeof item === "string")));
+  return (
+    (data.throughEntryId === undefined || typeof data.throughEntryId === "string") &&
+    (data.keepEntryIds === undefined || (Array.isArray(data.keepEntryIds) && data.keepEntryIds.every((item) => typeof item === "string")))
+  );
 }
 
 function indexEntries(entries: readonly SessionEntry[]): { byId: Map<string, SessionEntry>; parentIds: Set<string> } {

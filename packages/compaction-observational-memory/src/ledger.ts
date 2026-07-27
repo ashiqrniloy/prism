@@ -30,16 +30,20 @@ export function foldObservationalMemoryLedger(entries: readonly SessionEntry[]):
   for (const entry of entries) {
     const folded = foldedMemoryFromEntry(entry);
     if (folded) {
-      for (const observation of folded.observations) if (isMemoryObservation(observation) && !observations.has(observation.id)) observations.set(observation.id, observation);
-      for (const reflection of folded.reflections) if (isMemoryReflection(reflection) && !reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
+      for (const observation of folded.observations)
+        if (isMemoryObservation(observation) && !observations.has(observation.id)) observations.set(observation.id, observation);
+      for (const reflection of folded.reflections)
+        if (isMemoryReflection(reflection) && !reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
       for (const id of folded.droppedObservationIds ?? []) dropped.add(id);
     }
     const data = entry.data;
     if (isObservationsRecordedData(data)) {
-      for (const observation of data.observations) if (isMemoryObservation(observation) && !observations.has(observation.id)) observations.set(observation.id, observation);
+      for (const observation of data.observations)
+        if (isMemoryObservation(observation) && !observations.has(observation.id)) observations.set(observation.id, observation);
       latestObservationCoverageId = data.coversUpToId ?? latestObservationCoverageId;
     } else if (isReflectionsRecordedData(data)) {
-      for (const reflection of data.reflections) if (isMemoryReflection(reflection) && !reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
+      for (const reflection of data.reflections)
+        if (isMemoryReflection(reflection) && !reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
       latestReflectionCoverageId = data.coversUpToId ?? latestReflectionCoverageId;
     } else if (isObservationsDroppedData(data)) {
       for (const id of data.observationIds) dropped.add(id);

@@ -1,8 +1,8 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
 
 const docsDir = "docs";
 const apiPages = [
@@ -94,7 +94,11 @@ function exportedIdentifiers(packageIndex: string): string[] {
   const ids = new Set<string>();
   for (const m of text.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}/g)) {
     for (const part of m[1].split(",")) {
-      const id = part.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0].trim();
+      const id = part
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0]
+        .trim();
       if (id) ids.add(id);
     }
   }
@@ -180,7 +184,7 @@ describe("docs", () => {
         ...text.matchAll(/from "prism"(?!\b)/g),
         ...text.matchAll(/from "prism\//g),
         ...text.matchAll(/npm install prism\b(?![-.])/g),
-        ...text.matchAll(/"prism":(?!\"\/cli\.js")/g),
+        ...text.matchAll(/"prism":(?!"\/cli\.js")/g),
       ];
       assert.equal(offenders.length, 0, `${file} has bare 'prism' specifier(s)`);
     }
@@ -219,17 +223,14 @@ describe("docs", () => {
   it("plans index links every immutable numbered plan record", () => {
     const index = readFileSync("plans/README.md", "utf8");
     const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 79, "numbered plan count drifted");
+    assert.equal(plans.length, 80, "numbered plan count drifted");
     for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
   });
 
   it("phase 4 evidence freezes coding/browser scope, owners, limits, and Office exclusion", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-20-phase-4.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
-    const phase4 = roadmap.slice(
-      roadmap.indexOf("Phase 4 — Release 0.0.9"),
-      roadmap.indexOf("Phase 5 — Release 0.0.10"),
-    );
+    const phase4 = roadmap.slice(roadmap.indexOf("Phase 4 — Release 0.0.9"), roadmap.indexOf("Phase 5 — Release 0.0.10"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -238,7 +239,8 @@ describe("docs", () => {
       "## Frozen finite limits and charging points",
       "## Threat and authority matrix",
       "## Validation matrix for Task 0",
-    ]) assert.ok(evidence.includes(heading), `Phase 4 evidence missing ${heading}`);
+    ])
+      assert.ok(evidence.includes(heading), `Phase 4 evidence missing ${heading}`);
     for (let task = 1; task <= 8; task += 1) {
       assert.ok(evidence.includes(`Task ${task}`), `Phase 4 evidence missing Task ${task} owner`);
     }
@@ -257,10 +259,7 @@ describe("docs", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-21-phase-5.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase5 = roadmap.slice(
-      roadmap.indexOf("Phase 5 — Release 0.0.10"),
-      roadmap.indexOf("Phase 6 — Release 0.0.11"),
-    );
+    const phase5 = roadmap.slice(roadmap.indexOf("Phase 5 — Release 0.0.10"), roadmap.indexOf("Phase 6 — Release 0.0.11"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -270,7 +269,8 @@ describe("docs", () => {
       "## Frozen finite limits and charging points",
       "## Threat and authority matrix",
       "## Validation matrix for Task 0",
-    ]) assert.ok(evidence.includes(heading), `Phase 5 evidence missing ${heading}`);
+    ])
+      assert.ok(evidence.includes(heading), `Phase 5 evidence missing ${heading}`);
     for (let task = 1; task <= 7; task += 1) {
       assert.ok(evidence.includes(`Task ${task}`), `Phase 5 evidence missing Task ${task} owner`);
     }
@@ -291,10 +291,7 @@ describe("docs", () => {
     }
     assert.ok(evidence.includes("Default / hard cap"), "Phase 5 limits missing default/hard-cap columns");
     assert.ok(evidence.includes("No new core primitive"), "Phase 5 evidence missing core-primitive ban");
-    assert.ok(
-      index.includes("(review-coverage-2026-07-21-phase-5.md)"),
-      "docs/index.md missing Phase 5 review coverage link",
-    );
+    assert.ok(index.includes("(review-coverage-2026-07-21-phase-5.md)"), "docs/index.md missing Phase 5 review coverage link");
     assert.match(phase5, /workspace mode|unified mode|createSandboxCodingTools/i);
   });
 
@@ -302,10 +299,7 @@ describe("docs", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-22-phase-6.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase6 = roadmap.slice(
-      roadmap.indexOf("Phase 6 — Release 0.0.11"),
-      roadmap.indexOf("Phase 7 — Release 0.0.12"),
-    );
+    const phase6 = roadmap.slice(roadmap.indexOf("Phase 6 — Release 0.0.11"), roadmap.indexOf("Phase 7 — Release 0.0.12"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -315,7 +309,8 @@ describe("docs", () => {
       "## Frozen finite limits and charging points",
       "## Threat and authority matrix",
       "## Validation matrix for Task 0",
-    ]) assert.ok(evidence.includes(heading), `Phase 6 evidence missing ${heading}`);
+    ])
+      assert.ok(evidence.includes(heading), `Phase 6 evidence missing ${heading}`);
     for (let task = 1; task <= 9; task += 1) {
       assert.ok(evidence.includes(`Task ${task}`), `Phase 6 evidence missing Task ${task} owner`);
     }
@@ -351,10 +346,7 @@ describe("docs", () => {
       evidence.includes("system/AGENTS") && evidence.includes("history/tool results"),
       "Phase 6 evidence missing eviction priority order",
     );
-    assert.ok(
-      index.includes("(review-coverage-2026-07-22-phase-6.md)"),
-      "docs/index.md missing Phase 6 review coverage link",
-    );
+    assert.ok(index.includes("(review-coverage-2026-07-22-phase-6.md)"), "docs/index.md missing Phase 6 review coverage link");
     assert.match(phase6, /SessionIndex|contextBudget|provider-anthropic|goal→verify|goal\/verify/i);
   });
 
@@ -362,10 +354,7 @@ describe("docs", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-22-phase-7.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase7 = roadmap.slice(
-      roadmap.indexOf("Phase 7 — Release 0.0.12"),
-      roadmap.indexOf("Phase 8 — Release 0.0.13"),
-    );
+    const phase7 = roadmap.slice(roadmap.indexOf("Phase 7 — Release 0.0.12"), roadmap.indexOf("Phase 8 — Release 0.0.13"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -376,7 +365,8 @@ describe("docs", () => {
       "## OAuth eligibility matrix",
       "## Threat and authority matrix",
       "## Validation matrix for Task 0",
-    ]) assert.ok(evidence.includes(heading), `Phase 7 evidence missing ${heading}`);
+    ])
+      assert.ok(evidence.includes(heading), `Phase 7 evidence missing ${heading}`);
     for (let task = 1; task <= 8; task += 1) {
       assert.ok(evidence.includes(`Task ${task}`), `Phase 7 evidence missing Task ${task} owner`);
     }
@@ -394,7 +384,8 @@ describe("docs", () => {
       "OpenAI Codex",
       "Anthropic provider",
       "Google provider",
-    ]) assert.ok(evidence.includes(token), `Phase 7 evidence missing frozen token ${token}`);
+    ])
+      assert.ok(evidence.includes(token), `Phase 7 evidence missing frozen token ${token}`);
     for (const deferred of [
       "Conversation storage/service",
       "Enterprise identity",
@@ -404,10 +395,9 @@ describe("docs", () => {
       assert.ok(evidence.includes(deferred), `Phase 7 evidence missing out-of-scope item ${deferred}`);
       assert.ok(!phase7.includes(deferred), `Phase 7 roadmap implementation scope unexpectedly names ${deferred}`);
     }
-    const providerIndexes = [
-      "packages/provider-anthropic/src/index.ts",
-      "packages/provider-google/src/index.ts",
-    ].map((path) => readFileSync(path, "utf8")).join("\n");
+    const providerIndexes = ["packages/provider-anthropic/src/index.ts", "packages/provider-google/src/index.ts"]
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
     for (const forbidden of ["createAnthropicSubscriptionOAuthProvider", "createGeminiCliOAuthProvider", 'kind: "oauth"']) {
       assert.ok(!providerIndexes.includes(forbidden), `unsupported OAuth registration leaked: ${forbidden}`);
     }
@@ -418,10 +408,7 @@ describe("docs", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-23-phase-8.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase8 = roadmap.slice(
-      roadmap.indexOf("Phase 8 — Release 0.0.13"),
-      roadmap.indexOf("Phase 9 — Release 0.0.14"),
-    );
+    const phase8 = roadmap.slice(roadmap.indexOf("Phase 8 — Release 0.0.13"), roadmap.indexOf("Phase 9 — Release 0.0.14"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -432,7 +419,8 @@ describe("docs", () => {
       "## Work-connector capability freeze",
       "## Threat and authority matrix",
       "## Validation matrix for Task 0",
-    ]) assert.ok(evidence.includes(heading), `Phase 8 evidence missing ${heading}`);
+    ])
+      assert.ok(evidence.includes(heading), `Phase 8 evidence missing ${heading}`);
     for (let task = 1; task <= 10; task += 1) {
       assert.ok(evidence.includes(`Task ${task}`), `Phase 8 evidence missing Task ${task} owner`);
     }
@@ -455,7 +443,8 @@ describe("docs", () => {
       "5 MiB / 25 MiB",
       "hard-coded",
       "Caller-asserted",
-    ]) assert.ok(evidence.includes(token), `Phase 8 evidence missing frozen token ${token}`);
+    ])
+      assert.ok(evidence.includes(token), `Phase 8 evidence missing frozen token ${token}`);
     for (const deferred of [
       "Conversation storage/service",
       "Studio, hosted cloud, managed observability",
@@ -470,13 +459,19 @@ describe("docs", () => {
     assert.ok(!phase8.includes("Studio/control plane"), "Phase 8 roadmap unexpectedly names Studio/control plane as in-scope");
     const anthropic = readFileSync("packages/provider-anthropic/package.json", "utf8");
     const google = readFileSync("packages/provider-google/package.json", "utf8");
-    assert.ok(!anthropic.includes("provider-azure") && !google.includes("provider-vertex"), "consumer providers must stay separate from enterprise cloud packages");
+    assert.ok(
+      !anthropic.includes("provider-azure") && !google.includes("provider-vertex"),
+      "consumer providers must stay separate from enterprise cloud packages",
+    );
     assert.ok(existsSync("packages/work-tools"), "work-tools package must exist after Task 7");
     assert.ok(existsSync("packages/provider-azure"), "provider-azure must exist after Task 4");
     assert.ok(existsSync("packages/provider-bedrock"), "provider-bedrock must exist after Task 4");
     assert.ok(existsSync("packages/provider-vertex"), "provider-vertex must exist after Task 4");
     assert.ok(index.includes("(review-coverage-2026-07-23-phase-8.md)"), "docs/index.md missing Phase 8 review coverage link");
-    assert.ok(index.includes("providers/azure.md") && index.includes("providers/bedrock.md") && index.includes("providers/vertex.md"), "docs/index.md missing enterprise provider links");
+    assert.ok(
+      index.includes("providers/azure.md") && index.includes("providers/bedrock.md") && index.includes("providers/vertex.md"),
+      "docs/index.md missing enterprise provider links",
+    );
     assert.ok(index.includes("(work-tools.md)") && index.includes("(work-connectors.md)"), "docs/index.md missing work-tools navigation");
     assert.ok(existsSync("packages/work-tools/src/microsoft365.ts"), "microsoft365 adapter source missing");
     assert.ok(existsSync("packages/work-tools/src/google-workspace.ts"), "google-workspace adapter must exist after Task 8");
@@ -487,10 +482,7 @@ describe("docs", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-25-phase-9.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase9 = roadmap.slice(
-      roadmap.indexOf("Phase 9 — Release 0.0.14"),
-      roadmap.indexOf("Phase 10 — Release 0.0.15"),
-    );
+    const phase9 = roadmap.slice(roadmap.indexOf("Phase 9 — Release 0.0.14"), roadmap.indexOf("Phase 10 — Release 0.0.15"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -501,7 +493,8 @@ describe("docs", () => {
       "## Channel and device capability freeze",
       "## Threat and authority matrix",
       "## Validation matrix for Task 0",
-    ]) assert.ok(evidence.includes(heading), `Phase 9 evidence missing ${heading}`);
+    ])
+      assert.ok(evidence.includes(heading), `Phase 9 evidence missing ${heading}`);
     for (let task = 1; task <= 8; task += 1) {
       assert.ok(evidence.includes(`Task ${task}`), `Phase 9 evidence missing Task ${task} owner`);
     }
@@ -524,7 +517,8 @@ describe("docs", () => {
       "expiring",
       "Verify before side effect",
       "gate 8",
-    ]) assert.ok(evidence.includes(token), `Phase 9 evidence missing frozen token ${token}`);
+    ])
+      assert.ok(evidence.includes(token), `Phase 9 evidence missing frozen token ${token}`);
     for (const deferred of [
       "Studio",
       "Slack/Teams",
@@ -535,7 +529,10 @@ describe("docs", () => {
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 9 evidence missing out-of-scope item ${deferred}`);
     }
-    assert.ok(phase9.includes("durable conversation service") && phase9.includes("artifact service"), "Phase 9 roadmap missing core criteria");
+    assert.ok(
+      phase9.includes("durable conversation service") && phase9.includes("artifact service"),
+      "Phase 9 roadmap missing core criteria",
+    );
     assert.ok(phase9.includes("disabled by default"), "Phase 9 roadmap missing device gating criterion");
     // Scope guard: no new channel/device/conversation/artifact packages may exist in 0.0.14 (41 → 43 freeze; only provider packages alibaba/ollama authorized).
     for (const forbidden of [
@@ -564,10 +561,7 @@ describe("docs", () => {
   it("phase 10 evidence freezes provider/memory/RAG parity, 43->43 manifests, neutral provider seams, and 0.1.x exclusions", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-26-phase-10.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
-    const phase10 = roadmap.slice(
-      roadmap.indexOf("Phase 10 — Release 0.0.15"),
-      roadmap.indexOf("Phase 11 — Release 0.0.16"),
-    );
+    const phase10 = roadmap.slice(roadmap.indexOf("Phase 10 — Release 0.0.15"), roadmap.indexOf("Phase 11 — Release 0.0.16"));
 
     for (const heading of [
       "## 1. Capability traceability (every Phase 10 roadmap criterion → Task owner)",
@@ -577,7 +571,8 @@ describe("docs", () => {
       "## 5. Threat / authority matrix",
       "## 6. Task 0 validation matrix (scope guards)",
       "## 7. Frozen decisions (binding on Tasks 1–9)",
-    ]) assert.ok(evidence.includes(heading), `Phase 10 evidence missing ${heading}`);
+    ])
+      assert.ok(evidence.includes(heading), `Phase 10 evidence missing ${heading}`);
     for (let task = 1; task <= 9; task += 1) {
       assert.ok(evidence.includes(`Task ${task}`), `Phase 10 evidence missing Task ${task} owner`);
     }
@@ -602,7 +597,8 @@ describe("docs", () => {
       "MemoryConsent",
       "43 → 43",
       "gate 9",
-    ]) assert.ok(evidence.includes(token), `Phase 10 evidence missing frozen token ${token}`);
+    ])
+      assert.ok(evidence.includes(token), `Phase 10 evidence missing frozen token ${token}`);
     for (const deferred of [
       "Studio",
       "remote-browser vendors",
@@ -649,7 +645,18 @@ describe("docs", () => {
     const security = readFileSync("docs/host-security.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    for (const token of ["replaceSource", "deleteSource", "replaceDocument", "DocumentLoader", "textParser", "htmlParser", "pdfParser", "getBySource", "transaction", "untrusted: true"]) {
+    for (const token of [
+      "replaceSource",
+      "deleteSource",
+      "replaceDocument",
+      "DocumentLoader",
+      "textParser",
+      "htmlParser",
+      "pdfParser",
+      "getBySource",
+      "transaction",
+      "untrusted: true",
+    ]) {
       assert.ok(rag.includes(token), `RAG lifecycle docs missing ${token}`);
     }
     assert.ok(resources.includes("createResourceDocumentLoader"), "resource docs missing RAG document-loader bridge");
@@ -663,7 +670,15 @@ describe("docs", () => {
     const security = readFileSync("docs/host-security.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    for (const token of ["Reranker", "maxRerankBytes", "retrievalRank", "injectionCapable", "IngestionStatusStore", "listIngestionStatus", "pending/indexed/failed/partial"]) {
+    for (const token of [
+      "Reranker",
+      "maxRerankBytes",
+      "retrievalRank",
+      "injectionCapable",
+      "IngestionStatusStore",
+      "listIngestionStatus",
+      "pending/indexed/failed/partial",
+    ]) {
       assert.ok(rag.includes(token), `RAG reranking docs missing ${token}`);
     }
     assert.ok(security.includes("cannot overwrite provenance/trust"), "security docs missing reranker canonical-output boundary");
@@ -676,7 +691,16 @@ describe("docs", () => {
     const security = readFileSync("docs/host-security.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    for (const token of ["exportMemory", "rebuildIndex", "listByThread", "countByThread", "100/200", "4/32 MiB", "32/128-record", "PostgreSQL/pgvector"]) {
+    for (const token of [
+      "exportMemory",
+      "rebuildIndex",
+      "listByThread",
+      "countByThread",
+      "100/200",
+      "4/32 MiB",
+      "32/128-record",
+      "PostgreSQL/pgvector",
+    ]) {
       assert.ok(memory.includes(token), `memory docs missing ${token}`);
     }
     assert.ok(security.includes("exact host identity"), "security docs missing memory export identity boundary");
@@ -688,14 +712,55 @@ describe("docs", () => {
     const performance = readFileSync("docs/performance.md", "utf8");
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    for (const token of ["benchmark-0.0.15.mjs", "openai-hosted-continuation", "rag-parse-replace-rerank-retrieve", "memory-retention-export-rebuild", "resourceLimitSignals", "43 publishable manifests"]) {
+    for (const token of [
+      "benchmark-0.0.15.mjs",
+      "openai-hosted-continuation",
+      "rag-parse-replace-rerank-retrieve",
+      "memory-retention-export-rebuild",
+      "resourceLimitSignals",
+      "43 publishable manifests",
+    ]) {
       assert.ok(performance.includes(token), `performance docs missing ${token}`);
     }
-    for (const token of ["0.0.15 protected live-canary matrix", "OpenAI hosted tools + Realtime", "AI SDK adapter", "Alibaba DashScope", "Ollama Cloud/local", "Memory PostgreSQL/pgvector", "PRISM_TEST_POSTGRES_URL"]) {
+    for (const token of [
+      "0.0.15 protected live-canary matrix",
+      "OpenAI hosted tools + Realtime",
+      "AI SDK adapter",
+      "Alibaba DashScope",
+      "Ollama Cloud/local",
+      "Memory PostgreSQL/pgvector",
+      "PRISM_TEST_POSTGRES_URL",
+    ]) {
       assert.ok(release.includes(token), `release docs missing ${token}`);
     }
     assert.ok(index.includes("0.0.15 network-free provider/RAG/memory benchmark"), "docs index missing Phase 10 benchmark summary");
-    assert.ok(index.includes("0.0.15 provider/AI-SDK/RAG/memory protected live-canary matrix"), "docs index missing Phase 10 canary summary");
+    assert.ok(
+      index.includes("0.0.15 provider/AI-SDK/RAG/memory protected live-canary matrix"),
+      "docs index missing Phase 10 canary summary",
+    );
+  });
+
+  it("release 0.0.16 performance budget gate is documented and wired", () => {
+    const performance = readFileSync("docs/performance.md", "utf8");
+    for (const token of [
+      "Release 0.0.16 performance budgets and artifact diet",
+      "scripts/budgets.json",
+      "scripts/budget-gate.test.mjs",
+      "benchmark-0.0.16.mjs",
+      "575,680",
+    ]) {
+      assert.ok(performance.includes(token), `performance docs missing ${token}`);
+    }
+    for (const file of [
+      "scripts/budgets.json",
+      "scripts/budget-gates.mjs",
+      "scripts/budget-gate.test.mjs",
+      "scripts/benchmark-0.0.16.mjs",
+    ]) {
+      assert.ok(existsSync(file), `missing ${file}`);
+    }
+    const testScript = JSON.parse(readFileSync("package.json", "utf8")).scripts.test as string;
+    assert.ok(testScript.includes("scripts/budget-gate.test.mjs"), "npm test does not run the budget gate");
   });
 
   it("phase 10 docs reconcile provider compatibility and RAG/memory trust surfaces", () => {
@@ -709,22 +774,53 @@ describe("docs", () => {
     const security = readFileSync("docs/host-security.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    for (const provider of ["OpenAI", "AI SDK", "Anthropic", "Google", "Kimi", "Z.AI", "OpenRouter", "OpenCode Go", "Alibaba", "Ollama", "NeuralWatt", "Azure", "Bedrock", "Vertex"]) {
+    for (const provider of [
+      "OpenAI",
+      "AI SDK",
+      "Anthropic",
+      "Google",
+      "Kimi",
+      "Z.AI",
+      "OpenRouter",
+      "OpenCode Go",
+      "Alibaba",
+      "Ollama",
+      "NeuralWatt",
+      "Azure",
+      "Bedrock",
+      "Vertex",
+    ]) {
       assert.ok(providerConformance.includes(`| ${provider} |`), `conformance matrix missing ${provider}`);
       assert.ok(providerPackages.includes(`| ${provider} |`), `package matrix missing ${provider}`);
     }
-    for (const token of ["@arnilo/prism-provider-anthropic", "@arnilo/prism-provider-google", "@arnilo/prism-provider-alibaba", "@arnilo/prism-provider-ollama", "@arnilo/prism-provider-vertex"]) {
+    for (const token of [
+      "@arnilo/prism-provider-anthropic",
+      "@arnilo/prism-provider-google",
+      "@arnilo/prism-provider-alibaba",
+      "@arnilo/prism-provider-ollama",
+      "@arnilo/prism-provider-vertex",
+    ]) {
       assert.ok(providerCaching.includes(token), `cache matrix missing ${token}`);
     }
     for (const token of ["OpenAI Realtime", "OpenCode Go OpenAI route", "AI SDK adapter", "unsupported_mapping"]) {
       assert.ok(multimodal.includes(token), `multimodal mapping missing ${token}`);
     }
-    for (const token of ["replaceSource()", "Reranker", "IngestionStatusStore", "injectionCapable"]) assert.ok(rag.includes(token), `RAG docs missing ${token}`);
-    for (const token of ["exportMemory()", "rebuildIndex()", "MemoryConsent", "assertFiniteVector"]) assert.ok(memory.includes(token), `memory docs missing ${token}`);
-    for (const token of ["createResourceDocumentLoader", "createWebFetchDocumentLoader", "untrusted inert text"]) assert.ok(resources.includes(token), `resource docs missing ${token}`);
-    for (const token of ["RAG retrieval always emits", "rebuildIndex()", "getBySource()"] ) assert.ok(security.includes(token), `security docs missing ${token}`);
-    for (const token of ["0.0.14 → 0.0.15", "@ai-sdk/provider@4.0.3", "RAG source lifecycle", "memory export and rebuild"]) assert.ok(migration.includes(token), `migration missing ${token}`);
-    for (const token of ["Phase 10 first-party compatibility matrix", "first-party content-type mapping", "OpenAI hosted tools/continuation/Realtime"]) assert.ok(index.includes(token), `index missing ${token}`);
+    for (const token of ["replaceSource()", "Reranker", "IngestionStatusStore", "injectionCapable"])
+      assert.ok(rag.includes(token), `RAG docs missing ${token}`);
+    for (const token of ["exportMemory()", "rebuildIndex()", "MemoryConsent", "assertFiniteVector"])
+      assert.ok(memory.includes(token), `memory docs missing ${token}`);
+    for (const token of ["createResourceDocumentLoader", "createWebFetchDocumentLoader", "untrusted inert text"])
+      assert.ok(resources.includes(token), `resource docs missing ${token}`);
+    for (const token of ["RAG retrieval always emits", "rebuildIndex()", "getBySource()"])
+      assert.ok(security.includes(token), `security docs missing ${token}`);
+    for (const token of ["0.0.14 → 0.0.15", "@ai-sdk/provider@4.0.3", "RAG source lifecycle", "memory export and rebuild"])
+      assert.ok(migration.includes(token), `migration missing ${token}`);
+    for (const token of [
+      "Phase 10 first-party compatibility matrix",
+      "first-party content-type mapping",
+      "OpenAI hosted tools/continuation/Realtime",
+    ])
+      assert.ok(index.includes(token), `index missing ${token}`);
   });
 
   it("task 5 scope guard: no Slack/Teams chat-channel packages, exports, or docs pages (demand-gated)", () => {
@@ -785,12 +881,7 @@ describe("docs", () => {
     const performance = readFileSync("docs/performance.md", "utf8");
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    for (const token of [
-      "IdentityVerifier",
-      "@arnilo/prism-policy",
-      "@arnilo/prism-model-router",
-      "0.0.14",
-    ]) {
+    for (const token of ["IdentityVerifier", "@arnilo/prism-policy", "@arnilo/prism-model-router", "0.0.14"]) {
       assert.ok(migration.includes(token), `migration.md missing Task 9 token ${token}`);
     }
     assert.ok(performance.includes("benchmark-0.0.13.mjs"), "performance.md missing 0.0.13 benchmark placeholder");
@@ -816,7 +907,9 @@ describe("docs", () => {
       "docs/providers/anthropic.md",
       "docs/providers/google.md",
       "docs/host-security.md",
-    ].map((path) => readFileSync(path, "utf8")).join("\n");
+    ]
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
     for (const token of [
       "OpenAI Codex",
       "https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance",
@@ -824,12 +917,12 @@ describe("docs", () => {
       "PKCE/state",
       "durable-store round-trip",
       "CLI credential scanner",
-    ]) assert.ok(docs.includes(token), `Phase 7 OAuth docs missing ${token}`);
+    ])
+      assert.ok(docs.includes(token), `Phase 7 OAuth docs missing ${token}`);
 
-    const providerIndexes = [
-      "packages/provider-anthropic/src/index.ts",
-      "packages/provider-google/src/index.ts",
-    ].map((path) => readFileSync(path, "utf8")).join("\n");
+    const providerIndexes = ["packages/provider-anthropic/src/index.ts", "packages/provider-google/src/index.ts"]
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
     for (const forbidden of ["createAnthropicSubscriptionOAuthProvider", "createGeminiCliOAuthProvider", 'kind: "oauth"'])
       assert.ok(!providerIndexes.includes(forbidden), `unsupported OAuth registration leaked: ${forbidden}`);
     const openai = readFileSync("packages/provider-openai/src/index.ts", "utf8");
@@ -855,7 +948,8 @@ describe("docs", () => {
       "default deny",
       "10,000 / 100,000",
       "conversation database",
-    ]) assert.ok(agUi.toLowerCase().includes(token.toLowerCase()), `AG-UI docs missing ${token}`);
+    ])
+      assert.ok(agUi.toLowerCase().includes(token.toLowerCase()), `AG-UI docs missing ${token}`);
     for (const token of ["0.0.11 → 0.0.12", "createCodingCompactionStrategy()", "OpenAI Codex", "Gemini CLI"])
       assert.ok(migration.includes(token), `migration missing ${token}`);
     assert.ok(performance.includes("benchmark-0.0.12.mjs"));
@@ -877,12 +971,24 @@ describe("docs", () => {
     const postgres = readFileSync("docs/postgres-persistence.md", "utf8");
 
     for (const [name, text, tokens] of [
-      ["session-stores.md", session, ["SessionIndex", "searchSessions", "sessionSearchMode", '"linear"', '"unsupported"', "SessionSearchUnsupportedError"]],
+      [
+        "session-stores.md",
+        session,
+        ["SessionIndex", "searchSessions", "sessionSearchMode", '"linear"', '"unsupported"', "SessionSearchUnsupportedError"],
+      ],
       ["input-and-prompt-assembly.md", input, ["contextBudget", "getContextBudgetReport", "ContextBudgetError"]],
       ["agent-session-runtime.md", agent, ["steer", "softInterrupt", "DEFAULT_MAX_PENDING_STEERS"]],
       ["cli-rpc.md", rpc, ["steer", "softInterrupt"]],
-      ["coding-agent-tools.md", tools, ["ask_user_decision", "selectionMode", "allowCustom", "suspendAskUserDecision", "runCodingGoalVerify"]],
-      ["migration.md", migration, ["0.0.10 → 0.0.11", "004_session_search", "createAnthropicProviderPackage", "createGoogleProviderPackage"]],
+      [
+        "coding-agent-tools.md",
+        tools,
+        ["ask_user_decision", "selectionMode", "allowCustom", "suspendAskUserDecision", "runCodingGoalVerify"],
+      ],
+      [
+        "migration.md",
+        migration,
+        ["0.0.10 → 0.0.11", "004_session_search", "createAnthropicProviderPackage", "createGoogleProviderPackage"],
+      ],
       ["providers/anthropic.md", anthropic, ["createAnthropicProviderPackage", "listAnthropicModels", "cache_control"]],
       ["providers/google.md", google, ["createGoogleProviderPackage", "listGoogleModels", "generateContent"]],
       ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **5**", "005_lifecycle_hold_quota"]],
@@ -918,9 +1024,7 @@ describe("docs", () => {
     assert.ok(codingSecurity.includes("allowMixedWorkspaceWiring"));
     assert.ok(codingSecurity.includes("containmentClaim"));
     assert.ok(
-      /never claim containment|never claims containment|Host mode never|never treat host mode as contained/i.test(
-        codingSecurity,
-      ),
+      /never claim containment|never claims containment|Host mode never|never treat host mode as contained/i.test(codingSecurity),
       "coding-security.md missing host-mode non-containment warning",
     );
     assert.ok(
@@ -938,7 +1042,7 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 43, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 44, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -969,10 +1073,16 @@ describe("docs", () => {
       "cacheHitRate",
       "cacheSavings",
       "cacheUsageReport",
-    ]) assert.ok(caching.includes(phrase), `provider-caching.md missing ${phrase}`);
+    ])
+      assert.ok(caching.includes(phrase), `provider-caching.md missing ${phrase}`);
 
     const policies = readFileSync("docs/provider-request-policies.md", "utf8");
-    for (const phrase of ["createSessionCachePolicy", "mergeProviderRequestOptions", "cache.breakpoints", "provider-owned auth/session/security headers"])
+    for (const phrase of [
+      "createSessionCachePolicy",
+      "mergeProviderRequestOptions",
+      "cache.breakpoints",
+      "provider-owned auth/session/security headers",
+    ])
       assert.ok(policies.includes(phrase), `provider-request-policies.md missing ${phrase}`);
 
     const models = readFileSync("docs/model-registry.md", "utf8");
@@ -996,7 +1106,8 @@ describe("docs", () => {
       "stable prefix only while those stable inputs stay byte-stable",
       "does not split tool transcripts",
       "URI attachments/resources load only through the caller-provided `ResourceLoader`",
-    ]) assert.ok(input.includes(phrase), `input-and-prompt-assembly.md missing ${phrase}`);
+    ])
+      assert.ok(input.includes(phrase), `input-and-prompt-assembly.md missing ${phrase}`);
 
     const caching = readFileSync("docs/provider-caching.md", "utf8");
     for (const phrase of [
@@ -1006,7 +1117,8 @@ describe("docs", () => {
       "Cache keys must never be credentials or secrets",
       "cacheUsageReport",
       "do not include prompt text, cache keys, headers, credentials, or provider payloads",
-    ]) assert.ok(caching.includes(phrase), `provider-caching.md missing ${phrase}`);
+    ])
+      assert.ok(caching.includes(phrase), `provider-caching.md missing ${phrase}`);
 
     const usage = readFileSync("docs/runs-and-usage.md", "utf8");
     for (const phrase of [
@@ -1014,7 +1126,8 @@ describe("docs", () => {
       "reports `cacheReadTokens` without `cacheWriteTokens`",
       "Cache diagnostics stay numeric",
       "do not add prompt text, cache keys, headers, credentials, or provider payloads",
-    ]) assert.ok(usage.includes(phrase), `runs-and-usage.md missing ${phrase}`);
+    ])
+      assert.ok(usage.includes(phrase), `runs-and-usage.md missing ${phrase}`);
   });
 
   it("provider docs document a real export from their package", () => {
@@ -1135,11 +1248,9 @@ describe("docs", () => {
   });
 
   it("phase 3 docs state explicit non-goals", () => {
-    const combined = [
-      "docs/configuration-and-manifests.md",
-      "docs/node-filesystem-config.md",
-      "docs/resource-loading.md",
-    ].map((page) => readFileSync(page, "utf8")).join("\n");
+    const combined = ["docs/configuration-and-manifests.md", "docs/node-filesystem-config.md", "docs/resource-loading.md"]
+      .map((page) => readFileSync(page, "utf8"))
+      .join("\n");
 
     for (const phrase of ["package discovery", "dynamic import", "trust policy", "agent/session runtime"]) {
       assert.match(combined, new RegExp(phrase), `phase 3 docs do not mention ${phrase}`);
@@ -1170,11 +1281,22 @@ describe("docs", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown> };
 
     assert.ok(index.includes("(settings-auth-trust-security.md)"));
-    for (const name of ["createStaticSettingsProvider", "createMemoryCredentialStore", "assertTrusted", "assertPermission", "createSecretRedactor"]) {
+    for (const name of [
+      "createStaticSettingsProvider",
+      "createMemoryCredentialStore",
+      "assertTrusted",
+      "assertPermission",
+      "createSecretRedactor",
+    ]) {
       assert.ok(docs.includes(name), `security docs missing ${name}`);
       assert.match(rootExports, new RegExp(`\\b${name}\\b`), `src/index.ts does not export ${name}`);
     }
-    for (const phrase of ["does not sandbox", "does not read environment variables", "no persistent secret store", "auto-load project-local"]) {
+    for (const phrase of [
+      "does not sandbox",
+      "does not read environment variables",
+      "no persistent secret store",
+      "auto-load project-local",
+    ]) {
       assert.ok(docs.includes(phrase), `security docs missing ${phrase}`);
     }
     assert.deepEqual(packageJson.exports["./node/settings"], { types: "./dist/node/settings.d.ts", default: "./dist/node/settings.js" });
@@ -1277,14 +1399,7 @@ describe("docs", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const readme = readFileSync("README.md", "utf8");
     assert.ok(index.includes("prism init"), "docs/index.md missing prism init");
-    for (const phrase of [
-      "prism init <dir>",
-      "--with-workflows",
-      "--with-evals",
-      "--force",
-      "placeholders only",
-      "templates",
-    ]) {
+    for (const phrase of ["prism init <dir>", "--with-workflows", "--with-evals", "--force", "placeholders only", "templates"]) {
       assert.ok(cli.includes(phrase), `docs/cli-rpc.md missing ${phrase}`);
     }
     assert.ok(release.includes("templates/init"), "release-and-install.md missing templates/init");
@@ -1313,7 +1428,7 @@ describe("docs", () => {
       "registerRetryPolicy",
       "registerCommand",
       "createExtensionKernel",
-      "createContributionRegistries({ duplicate: \"error\" })",
+      'createContributionRegistries({ duplicate: "error" })',
       "Contributions stay inert",
       "Host activation",
       "Prism does not sandbox extension code",
@@ -1379,11 +1494,14 @@ describe("docs", () => {
 
     assert.equal(
       packageJson.scripts["sdk:ready"],
-      "npm run typecheck && npm test && npm run pack:dry-run",
-      "sdk:ready should compose existing typecheck/test/pack scripts only",
+      "npm run typecheck && npm run lint && npm run format:check && npm test && npm run test:coverage && npm run pack:dry-run && npm run release:gate",
+      "sdk:ready should compose typecheck/lint/format/test/coverage/pack/gate scripts only",
     );
     assert.equal(packageJson.scripts["release:dry-run"], "npm run sdk:ready", "release:dry-run should mirror CI verify");
-    assert.ok(packageJson.scripts.typecheck.startsWith("npm run build &&"), "clean typecheck must build cross-workspace declarations first");
+    assert.ok(
+      packageJson.scripts.typecheck.startsWith("npm run build &&"),
+      "clean typecheck must build cross-workspace declarations first",
+    );
     assert.ok(workflow.includes("npm run sdk:ready"), "release workflow verify must run sdk:ready");
     assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/, "checkout action must use an immutable revision");
     assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, "setup-node action must use an immutable revision");
@@ -1440,7 +1558,15 @@ describe("docs", () => {
     for (const phrase of ["topologicalOrder", "package-lock.json", "--provenance", "--access", "public", "--tag", "latest"]) {
       assert.ok(release.includes(phrase), `release script missing ${phrase}`);
     }
-    for (const phrase of ["release:publish", "--resume", "id-token: write", "contents: read", "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f", "SHA256SUMS", "publish-report.json"]) {
+    for (const phrase of [
+      "release:publish",
+      "--resume",
+      "id-token: write",
+      "contents: read",
+      "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+      "SHA256SUMS",
+      "publish-report.json",
+    ]) {
       assert.ok(workflow.includes(phrase), `release workflow missing ${phrase}`);
     }
     assert.ok(workflow.includes("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"), "release workflow missing npm authentication");
@@ -1458,7 +1584,8 @@ describe("docs", () => {
       "Rollback limitations",
       "@arnilo/prism-browser",
       "no Office",
-    ]) assert.ok(handoff.includes(phrase), `publish handoff missing ${phrase}`);
+    ])
+      assert.ok(handoff.includes(phrase), `publish handoff missing ${phrase}`);
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
@@ -1472,7 +1599,13 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const docs = readFileSync("docs/release-and-install.md", "utf8");
     assert.ok(index.includes("(release-and-install.md)"), "docs/index.md does not link release-and-install.md");
-    for (const phrase of ["required `@arnilo/prism` peer", "map-retention knob", "offline test budget", "sideEffects", "peerDependencies"]) {
+    for (const phrase of [
+      "required `@arnilo/prism` peer",
+      "map-retention knob",
+      "offline test budget",
+      "sideEffects",
+      "peerDependencies",
+    ]) {
       assert.ok(docs.includes(phrase), `docs/release-and-install.md missing ${phrase}`);
     }
   });
@@ -1543,7 +1676,17 @@ describe("docs", () => {
 
   it("cli_rpc_docs_cover_modes_flags_and_rpc_commands", () => {
     const docs = readFileSync("docs/cli-rpc.md", "utf8");
-    for (const phrase of ["--mode print", "--provider", "--model", "prompt", "abort", "compact", "cloneSession", "No built-in app tools", "No full TUI"]) {
+    for (const phrase of [
+      "--mode print",
+      "--provider",
+      "--model",
+      "prompt",
+      "abort",
+      "compact",
+      "cloneSession",
+      "No built-in app tools",
+      "No full TUI",
+    ]) {
       assert.ok(docs.includes(phrase), `cli/rpc docs missing ${phrase}`);
     }
   });
@@ -1567,7 +1710,13 @@ describe("docs", () => {
 
   it("auth docs cover explicit resolver order and no hidden env", () => {
     const docs = readFileSync("docs/credentials-and-redaction.md", "utf8");
-    for (const phrase of ["createExplicitCredentialResolver", "createEnvCredentialResolver", "refreshOAuthCredential", "runtime override", "Prism does not read `process.env`"]){
+    for (const phrase of [
+      "createExplicitCredentialResolver",
+      "createEnvCredentialResolver",
+      "refreshOAuthCredential",
+      "runtime override",
+      "Prism does not read `process.env`",
+    ]) {
       assert.ok(docs.includes(phrase), `credential docs missing ${phrase}`);
     }
   });
@@ -1580,7 +1729,9 @@ describe("docs", () => {
       "docs/settings-auth-trust-security.md",
       "docs/public-contracts.md",
       "docs/migration.md",
-    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    ]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
     for (const phrase of [
       "AgentConfig` no longer accepts inert `extensions`",
       "host-owned outside `AgentConfig`",
@@ -1595,7 +1746,12 @@ describe("docs", () => {
 
   it("system prompt docs cover layers and secret warning", () => {
     const docs = readFileSync("docs/system-prompts.md", "utf8");
-    for (const phrase of ["composeSystemPrompt", "`user`, `package`, `app`, then `run`", "RunOptions.systemPrompt: false", "Do not put secrets in prompts"]){
+    for (const phrase of [
+      "composeSystemPrompt",
+      "`user`, `package`, `app`, then `run`",
+      "RunOptions.systemPrompt: false",
+      "Do not put secrets in prompts",
+    ]) {
       assert.ok(docs.includes(phrase), `system prompt docs missing ${phrase}`);
     }
   });
@@ -1619,8 +1775,8 @@ describe("docs", () => {
     for (const phrase of [
       "AGENTS.md and SYSTEM.md files",
       "loadSystemPromptFiles",
-      "source: \"user\"",
-      "source: \"app\"",
+      'source: "user"',
+      'source: "app"',
       "`SYSTEM.md` (user) → package → `AGENTS.md` (app) → host `AgentConfig.systemPrompt` → `RunOptions.systemPrompt`",
       "Behavior change (Phase 31)",
       "SDK escape hatch",
@@ -1650,18 +1806,44 @@ describe("docs", () => {
 
   it("provider conformance docs cover testing subpath and no network", () => {
     const docs = readFileSync("docs/provider-conformance.md", "utf8");
-    for (const phrase of ["@arnilo/prism/testing/provider-conformance", "assertAbortIsObserved", "assertToolCallDeltasReconstruct", "No credentials", "network calls"]){
+    for (const phrase of [
+      "@arnilo/prism/testing/provider-conformance",
+      "assertAbortIsObserved",
+      "assertToolCallDeltasReconstruct",
+      "No credentials",
+      "network calls",
+    ]) {
       assert.ok(docs.includes(phrase), `provider conformance docs missing ${phrase}`);
     }
   });
 
   it("adapter conformance docs cover testing subpaths and helpers", () => {
     const pages: ReadonlyArray<[string, string, readonly string[]]> = [
-      ["docs/session-store-conformance.md", "@arnilo/prism/testing/session-store-conformance", ["assertSessionStoreConforms", "runSessionStoreConformance", "SessionAppendConflictError", "idempotencyKey"]],
-      ["docs/run-ledger-conformance.md", "@arnilo/prism/testing/run-ledger-conformance", ["assertRunLedgerConforms", "runRunLedgerConformance", "appendRun", "tenant_id"]],
-      ["docs/compaction-conformance.md", "@arnilo/prism/testing/compaction-conformance", ["assertCompactionStrategyConforms", "secrets", "summary"]],
-      ["docs/tool-conformance.md", "@arnilo/prism/testing/tool-conformance", ["assertToolDispatchConforms", "assertToolBlocked", "unknown_tool", "permission_denied", "validation_failed"]],
-      ["docs/extension-conformance.md", "@arnilo/prism/testing/extension-conformance", ["assertExtensionConforms", "extension_error", "inert"]],
+      [
+        "docs/session-store-conformance.md",
+        "@arnilo/prism/testing/session-store-conformance",
+        ["assertSessionStoreConforms", "runSessionStoreConformance", "SessionAppendConflictError", "idempotencyKey"],
+      ],
+      [
+        "docs/run-ledger-conformance.md",
+        "@arnilo/prism/testing/run-ledger-conformance",
+        ["assertRunLedgerConforms", "runRunLedgerConformance", "appendRun", "tenant_id"],
+      ],
+      [
+        "docs/compaction-conformance.md",
+        "@arnilo/prism/testing/compaction-conformance",
+        ["assertCompactionStrategyConforms", "secrets", "summary"],
+      ],
+      [
+        "docs/tool-conformance.md",
+        "@arnilo/prism/testing/tool-conformance",
+        ["assertToolDispatchConforms", "assertToolBlocked", "unknown_tool", "permission_denied", "validation_failed"],
+      ],
+      [
+        "docs/extension-conformance.md",
+        "@arnilo/prism/testing/extension-conformance",
+        ["assertExtensionConforms", "extension_error", "inert"],
+      ],
     ];
     const index = readFileSync("docs/index.md", "utf8");
     for (const [page, subpath, phrases] of pages) {
@@ -1673,13 +1855,16 @@ describe("docs", () => {
   });
 
   it("provider request policy docs cover runtime timing and cache usage", () => {
-    const combined = [
-      "docs/provider-packages.md",
-      "docs/provider-layer.md",
-      "docs/middleware-hooks.md",
-      "docs/agent-session-runtime.md",
-    ].map((file) => readFileSync(file, "utf8")).join("\n");
-    for (const phrase of ["createSessionCachePolicy", "ProviderRequest.options", "cacheRetention", "provider_request", "cache read/write"]){
+    const combined = ["docs/provider-packages.md", "docs/provider-layer.md", "docs/middleware-hooks.md", "docs/agent-session-runtime.md"]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
+    for (const phrase of [
+      "createSessionCachePolicy",
+      "ProviderRequest.options",
+      "cacheRetention",
+      "provider_request",
+      "cache read/write",
+    ]) {
       assert.ok(combined.includes(phrase), `provider request docs missing ${phrase}`);
     }
   });
@@ -1727,7 +1912,10 @@ describe("docs", () => {
       assert.ok(docs.includes(hook), `docs/middleware-hooks.md missing hook ${hook}`);
     }
     assert.ok(!middlewareTs.includes('"provider_response"'), "src/middleware.ts still contains removed provider_response hook");
-    assert.ok(docs.includes("There is no `provider_response` hook"), "docs/middleware-hooks.md does not state provider_response is removed");
+    assert.ok(
+      docs.includes("There is no `provider_response` hook"),
+      "docs/middleware-hooks.md does not state provider_response is removed",
+    );
   });
 
   it("docs_manifest_kinds_include_current_provider_primitives", () => {
@@ -1735,13 +1923,7 @@ describe("docs", () => {
     const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
 
     assert.match(rootExports, /\bManifestContributionKind\b/, "src/index.ts does not export ManifestContributionKind");
-    for (const kind of [
-      "providerPackage",
-      "authMethod",
-      "providerRequestPolicy",
-      "systemPromptContribution",
-      "instructionInjector",
-    ]) {
+    for (const kind of ["providerPackage", "authMethod", "providerRequestPolicy", "systemPromptContribution", "instructionInjector"]) {
       assert.ok(manifests.includes(kind), `docs/configuration-and-manifests.md does not document ${kind}`);
     }
   });
@@ -1766,7 +1948,9 @@ describe("docs", () => {
   });
 
   it("llm_compaction_max_output_docs_match_provider_wire_fields", () => {
-    const docs = ["docs/compaction-llm.md", "docs/compaction-and-retry.md", "docs/provider-packages.md"].map((file) => readFileSync(file, "utf8")).join("\n");
+    const docs = ["docs/compaction-llm.md", "docs/compaction-and-retry.md", "docs/provider-packages.md"]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
     for (const phrase of ["maxOutputTokens", "maxSummaryTokens", "model.parameters.maxTokens", "max_output_tokens", "max_tokens"]) {
       assert.ok(docs.includes(phrase), `LLM compaction max-output docs missing ${phrase}`);
     }
@@ -1780,9 +1964,19 @@ describe("docs", () => {
       "docs/agent-session-runtime.md",
       "docs/public-contracts.md",
       "docs/index.md",
-    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    ]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
 
-    for (const phrase of ["timeoutMs", "maxRetries", "maxRetryDelayMs", "deprecated", "RunOptions.signal", "RunOptions.retry", "AgentConfig.retry"]) {
+    for (const phrase of [
+      "timeoutMs",
+      "maxRetries",
+      "maxRetryDelayMs",
+      "deprecated",
+      "RunOptions.signal",
+      "RunOptions.retry",
+      "AgentConfig.retry",
+    ]) {
       assert.ok(docs.includes(phrase), `provider timeout/retry migration docs missing ${phrase}`);
     }
     assert.equal(docs.includes("retry/timeouts"), false, "docs still advertise provider-level retry/timeouts as supported");
@@ -1790,7 +1984,9 @@ describe("docs", () => {
 
   it("first_party_providers_do_not_implement_deprecated_provider_timeout_retry_knobs", () => {
     for (const dir of ["provider-openai", "provider-openrouter", "provider-opencode-go", "provider-zai", "provider-kimi"]) {
-      const combined = tsFiles(`packages/${dir}/src`).map((file) => readFileSync(file, "utf8")).join("\n");
+      const combined = tsFiles(`packages/${dir}/src`)
+        .map((file) => readFileSync(file, "utf8"))
+        .join("\n");
       for (const knob of ["timeoutMs", "maxRetries", "maxRetryDelayMs"]) {
         assert.equal(combined.includes(knob), false, `${dir} unexpectedly implements deprecated ${knob}`);
       }
@@ -1807,7 +2003,9 @@ describe("docs", () => {
       "docs/compaction-observational-memory.md",
       "docs/provider-packages.md",
       "docs/index.md",
-    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    ]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
     for (const phrase of [
       "tool_call_delta",
       "turn_started",
@@ -1818,7 +2016,8 @@ describe("docs", () => {
       "appendEntry",
       "tool_call",
       "tool_result",
-    ]) assert.ok(docs.includes(phrase), `phase 39 docs missing ${phrase}`);
+    ])
+      assert.ok(docs.includes(phrase), `phase 39 docs missing ${phrase}`);
 
     const tests = [
       "src/__tests__/agents.test.ts",
@@ -1827,7 +2026,9 @@ describe("docs", () => {
       "packages/compaction-llm/src/__tests__/strategy.test.ts",
       "packages/compaction-observational-memory/src/__tests__/runtime.test.ts",
       "packages/compaction-observational-memory/src/__tests__/workers.test.ts",
-    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    ]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
     for (const name of [
       "runtime_reconstructs_tool_call_delta_executes_persists_and_replays",
       "emits turn events and pushes first input to history once",
@@ -1835,7 +2036,8 @@ describe("docs", () => {
       "llm_compaction_strategy_maps_max_output_tokens_to_request_model",
       "runtime_rejects_legacy_store_option_and_wrong_append_owner",
       "worker_transcript_replays_assistant_tool_call_before_tool_result",
-    ]) assert.ok(tests.includes(name), `phase 39 regression missing ${name}`);
+    ])
+      assert.ok(tests.includes(name), `phase 39 regression missing ${name}`);
   });
 
   it("phase37_security_boundary_docs_cover_hardening_summary", () => {
@@ -1885,7 +2087,7 @@ describe("docs", () => {
       "migration-only `activateAllCapabilities`",
       "replace-or-error duplicate policy",
       "`toolNames` fail closed before provider turns",
-      "`duplicate: \"error\"` strict mode",
+      '`duplicate: "error"` strict mode',
       "host-owned settings/credentials wiring outside `AgentConfig`",
       "resolve credentials only at the provider edge",
       "direct `AgentRunResult`",
@@ -1911,7 +2113,12 @@ describe("docs", () => {
     ]) {
       assert.ok(readme.includes(pkg), `README.md does not mention ${pkg}`);
     }
-    for (const phrase of ["docs/provider-caching.md", "best-effort explicit cache hints", "best-effort implicit prefix caching", "all 11 provider adapters"]) {
+    for (const phrase of [
+      "docs/provider-caching.md",
+      "best-effort explicit cache hints",
+      "best-effort implicit prefix caching",
+      "all 11 provider adapters",
+    ]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
     assert.equal(/guaranteed cache hit|will always cache|cache will hit/i.test(readme), false, "README.md promises cache hits");
@@ -1961,8 +2168,11 @@ describe("docs", () => {
 
     // README lists each new example.
     for (const file of [
-      "minimal-host-app.ts", "custom-builders.ts", "custom-session-store.ts",
-      "custom-tools-skills-context.ts", "extension-package.ts",
+      "minimal-host-app.ts",
+      "custom-builders.ts",
+      "custom-session-store.ts",
+      "custom-tools-skills-context.ts",
+      "extension-package.ts",
     ]) {
       assert.ok(readme.includes(file), `examples/README.md missing ${file}`);
     }
@@ -2000,7 +2210,17 @@ describe("docs", () => {
 
     // No filesystem/shell/browser coding-tool usage in any new example.
     const combined = `${minimal}\n${builders}\n${store}\n${tsc}\n${ext}`;
-    for (const forbidden of ["from \"fs\"", "from \"node:fs\"", "from \"node:child_process\"", "readFileSync", "writeFileSync", "execSync", "spawnSync", "child_process", "glob("]) {
+    for (const forbidden of [
+      'from "fs"',
+      'from "node:fs"',
+      'from "node:child_process"',
+      "readFileSync",
+      "writeFileSync",
+      "execSync",
+      "spawnSync",
+      "child_process",
+      "glob(",
+    ]) {
       assert.ok(!combined.includes(forbidden), `host-app example references coding tool: ${forbidden}`);
     }
   });
@@ -2011,11 +2231,11 @@ describe("docs", () => {
 
     assert.ok(readme.includes("cache-aware-prompt-assembly.ts"), "examples/README.md does not list cache-aware example");
     for (const phrase of [
-      "inputLayout: \"cache_aware\"",
+      'inputLayout: "cache_aware"',
       "defineOpenRouterModel",
       "defineNeuralWattModel",
-      "cache: { kind: \"cache_control\"",
-      "cache: { kind: \"implicit\"",
+      'cache: { kind: "cache_control"',
+      'cache: { kind: "implicit"',
       "cacheUsageReport",
       "cacheHitRate",
       "cacheWriteTokens",
@@ -2069,7 +2289,7 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, thirty-six first-party capability packages, and six pure-manifest family/profile packages",
+      "one core package, thirty-seven first-party capability packages, and six pure-manifest family/profile packages",
       "all eleven `@arnilo/prism-provider-*` packages",
       "All 43 manifests (37 code packages + 6 family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
@@ -2103,49 +2323,38 @@ describe("docs", () => {
     const rc = readFileSync("examples/workflow-rpc-cancel.ts", "utf8");
     const dc = readFileSync("examples/workflow-distributed-coordinator.ts", "utf8");
 
-    for (const phrase of [
-      "defineWorkflow", "agentNode", "runWorkflow", "createMemoryWorkflowCheckpoints", "createSecretRedactor",
-    ]) {
+    for (const phrase of ["defineWorkflow", "agentNode", "runWorkflow", "createMemoryWorkflowCheckpoints", "createSecretRedactor"]) {
       assert.ok(rr.includes(phrase), `workflow-research-and-review missing ${phrase}`);
     }
-    for (const phrase of [
-      "fanOutNode", "joinNode", "functionNode", "maxConcurrency: 3", "findings",
-    ]) {
+    for (const phrase of ["fanOutNode", "joinNode", "functionNode", "maxConcurrency: 3", "findings"]) {
       assert.ok(pr.includes(phrase), `workflow-parallel-research missing ${phrase}`);
     }
-    for (const phrase of [
-      "toolNode", "ExecutionPolicy", "workflowId", "nodeId", "mapMcpToolsToDefinitions",
-    ]) {
+    for (const phrase of ["toolNode", "ExecutionPolicy", "workflowId", "nodeId", "mapMcpToolsToDefinitions"]) {
       assert.ok(ta.includes(phrase), `workflow-tool-approval missing ${phrase}`);
     }
-    for (const phrase of [
-      "type: \"document\"", "createEnvCredentialResolver", "createSecretRedactor", "maxNodeOutputBytes",
-    ]) {
+    for (const phrase of ['type: "document"', "createEnvCredentialResolver", "createSecretRedactor", "maxNodeOutputBytes"]) {
       assert.ok(mm.includes(phrase), `workflow-multimodal-document missing ${phrase}`);
     }
-    for (const phrase of [
-      "createSqlitePersistence", "createWorkflowCheckpoints", "persistence.checkpoints", "resumeWorkflow",
-    ]) {
+    for (const phrase of ["createSqlitePersistence", "createWorkflowCheckpoints", "persistence.checkpoints", "resumeWorkflow"]) {
       assert.ok(sr.includes(phrase), `workflow-sqlite-resume missing ${phrase}`);
     }
     for (const phrase of [
-      "createPostgresPersistence", "createWorkflowCheckpoints", ".checkpoints", "PRISM_TEST_POSTGRES_URL", "resumeWorkflow", "new Pool",
+      "createPostgresPersistence",
+      "createWorkflowCheckpoints",
+      ".checkpoints",
+      "PRISM_TEST_POSTGRES_URL",
+      "resumeWorkflow",
+      "new Pool",
     ]) {
       assert.ok(pg.includes(phrase), `workflow-postgres-resume missing ${phrase}`);
     }
-    for (const phrase of [
-      "createWorkflowEventBus", "onEvent", "conditionalNode", "node_skipped",
-    ]) {
+    for (const phrase of ["createWorkflowEventBus", "onEvent", "conditionalNode", "node_skipped"]) {
       assert.ok(es.includes(phrase), `workflow-event-sink missing ${phrase}`);
     }
-    for (const phrase of [
-      "cancelWorkflowRun", "resumeWorkflow", "AbortController",
-    ]) {
+    for (const phrase of ["cancelWorkflowRun", "resumeWorkflow", "AbortController"]) {
       assert.ok(rc.includes(phrase), `workflow-rpc-cancel missing ${phrase}`);
     }
-    for (const phrase of [
-      "enqueueWorkflow", "createWorkflowCoordinator", ".leases", "pollOnce", "fencingToken",
-    ]) {
+    for (const phrase of ["enqueueWorkflow", "createWorkflowCoordinator", ".leases", "pollOnce", "fencingToken"]) {
       assert.ok(dc.includes(phrase), `workflow-distributed-coordinator missing ${phrase}`);
     }
   });
@@ -2241,7 +2450,10 @@ describe("docs", () => {
 
     const examplesReadme = readFileSync("examples/README.md", "utf8");
     assert.ok(examplesReadme.includes("external-app-db-backed.ts"), "examples/README.md does not list external-app-db-backed.ts");
-    assert.ok(examplesReadme.includes("assertSessionStoreConforms"), "examples/README.md does not mention external-app conformance self-check");
+    assert.ok(
+      examplesReadme.includes("assertSessionStoreConforms"),
+      "examples/README.md does not mention external-app conformance self-check",
+    );
   });
 
   it("readme_has_no_real_looking_secrets", () => {
@@ -2257,9 +2469,15 @@ describe("docs", () => {
     assert.ok(providerLayer.includes("AgentConfig.provider"), "provider-layer.md does not document direct provider precedence");
 
     const packages = readFileSync("docs/provider-packages.md", "utf8");
-    assert.ok(packages.includes("## Third-party provider packaging"), "provider-packages.md missing Third-party provider packaging section");
+    assert.ok(
+      packages.includes("## Third-party provider packaging"),
+      "provider-packages.md missing Third-party provider packaging section",
+    );
     assert.ok(packages.includes("providerSource"), "provider-packages.md does not mention providerSource");
-    assert.ok(packages.includes("opt-in and individually installable"), "provider-packages.md does not state first-party packages are opt-in");
+    assert.ok(
+      packages.includes("opt-in and individually installable"),
+      "provider-packages.md does not state first-party packages are opt-in",
+    );
 
     const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
     assert.ok(runtime.includes("providerSource"), "agent-session-runtime.md does not mention providerSource");
@@ -2358,11 +2576,11 @@ describe("docs", () => {
       "Migration: explicit capability activation",
       "Old Phase 37 behavior",
       "omitted `tools` and omitted `skills` mean no active capabilities",
-      "tools: [\"read\"]",
-      "skills: [\"brief\"]",
+      'tools: ["read"]',
+      'skills: ["brief"]',
       "activateAllCapabilities: true",
       "temporary all-skills/all-tools compatibility opt-in",
-      "createContributionRegistries({ duplicate: \"error\" })",
+      'createContributionRegistries({ duplicate: "error" })',
       "silently shadow a capability name",
     ]) {
       assert.ok(combined.includes(phrase), `explicit capability migration docs missing ${phrase}`);
@@ -2370,14 +2588,11 @@ describe("docs", () => {
   });
 
   it("registry docs cover strict duplicate policy", () => {
-    const combined = [
-      "docs/contribution-registries.md",
-      "docs/provider-layer.md",
-      "docs/tools.md",
-      "docs/context-and-skills.md",
-    ].map((file) => readFileSync(file, "utf8")).join("\n");
+    const combined = ["docs/contribution-registries.md", "docs/provider-layer.md", "docs/tools.md", "docs/context-and-skills.md"]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
     for (const phrase of [
-      "duplicate?: \"replace\" | \"error\"",
+      'duplicate?: "replace" | "error"',
       "Duplicate provider",
       "Duplicate model",
       "Duplicate tool",
@@ -2422,7 +2637,14 @@ describe("docs", () => {
     ]) {
       assert.ok(page.includes(phrase), `docs/agent-loops.md missing ${phrase}`);
     }
-    for (const phrase of ["AgentLoopStrategy", "AgentLoopOptions", "LoopContext", "ProviderTurnResult", "ArtifactValidation", "ArtifactValidator"]) {
+    for (const phrase of [
+      "AgentLoopStrategy",
+      "AgentLoopOptions",
+      "LoopContext",
+      "ProviderTurnResult",
+      "ArtifactValidation",
+      "ArtifactValidator",
+    ]) {
       assert.ok(contracts.includes(phrase), `docs/public-contracts.md missing ${phrase}`);
     }
   });
@@ -2584,7 +2806,16 @@ describe("docs", () => {
     const database = readFileSync("docs/database-persistence.md", "utf8");
     const runs = readFileSync("docs/runs-and-usage.md", "utf8");
 
-    for (const phrase of ["SessionStore.readBranchPath", "`SessionStore.list(sessionId)` is a full-session read", "cursor", "event `sequence`", "JSONL store rereads/parses the file", "page-size caps", "(run_id, sequence)", "(run_id, recorded_at, id)"]) {
+    for (const phrase of [
+      "SessionStore.readBranchPath",
+      "`SessionStore.list(sessionId)` is a full-session read",
+      "cursor",
+      "event `sequence`",
+      "JSONL store rereads/parses the file",
+      "page-size caps",
+      "(run_id, sequence)",
+      "(run_id, recorded_at, id)",
+    ]) {
       assert.ok(performance.includes(phrase), `docs/performance.md missing ${phrase}`);
     }
     for (const phrase of ["production multi-writer storage", "Reads are linear in file size", "no cross-process lock"]) {
@@ -2592,10 +2823,18 @@ describe("docs", () => {
     }
     assert.ok(database.includes("readBranchPath"), "docs/database-persistence.md missing readBranchPath guidance");
     assert.ok(database.includes("cursor"), "docs/database-persistence.md missing cursor guidance");
-    for (const phrase of ["Production ledger adapter checklist", "monotonic event `sequence`", "RunRecord.idempotencyKey", "examples/external-app-db-backed.ts"]) {
+    for (const phrase of [
+      "Production ledger adapter checklist",
+      "monotonic event `sequence`",
+      "RunRecord.idempotencyKey",
+      "examples/external-app-db-backed.ts",
+    ]) {
       assert.ok(runs.includes(phrase), `docs/runs-and-usage.md missing ${phrase}`);
     }
-    assert.ok(runs.includes("preserve per-run order before acknowledging a batch"), "docs/runs-and-usage.md missing batch ordering guidance");
+    assert.ok(
+      runs.includes("preserve per-run order before acknowledging a batch"),
+      "docs/runs-and-usage.md missing batch ordering guidance",
+    );
   });
 
   it("phase48 provider cache matrix covers every first-party provider and caveat", () => {
@@ -2618,7 +2857,13 @@ describe("docs", () => {
     ]) {
       assert.ok(caching.includes(pkg), `provider-caching.md matrix missing ${pkg}`);
     }
-    for (const phrase of ["explicit", "implicit", "No `cache_control`, `cacheKey`, `prompt_cache`, or `cacheRetention` payload", "Full prior history must be resent unchanged", "Best-effort only; does not promise cache hits"]) {
+    for (const phrase of [
+      "explicit",
+      "implicit",
+      "No `cache_control`, `cacheKey`, `prompt_cache`, or `cacheRetention` payload",
+      "Full prior history must be resent unchanged",
+      "Best-effort only; does not promise cache hits",
+    ]) {
       assert.ok(caching.includes(phrase), `provider-caching.md matrix missing ${phrase}`);
     }
     assert.ok(neuralwatt.includes("cross-provider"), "neuralwatt.md does not link the cross-provider cache matrix");
@@ -2706,7 +2951,10 @@ describe("docs", () => {
     assert.ok(coverage.includes("thinking-and-reasoning.md"), "provider validation matrix missing thinking docs link");
     assert.ok(index.includes("(thinking-and-reasoning.md)"), "docs/index.md missing thinking-and-reasoning link");
     assert.ok(compaction.includes("applyThinkingLevel"), "compaction-llm.md missing applyThinkingLevel wiring");
-    assert.ok(compaction.includes("not inert `extra.thinkingLevel`"), "compaction-llm.md must document the move off inert extra.thinkingLevel");
+    assert.ok(
+      compaction.includes("not inert `extra.thinkingLevel`"),
+      "compaction-llm.md must document the move off inert extra.thinkingLevel",
+    );
   });
 
   it("use_case_model_selection_contract_is_documented", () => {
@@ -2721,7 +2969,10 @@ describe("docs", () => {
     assert.ok(page.includes("UseCaseModelBinding"), "use-case-model-selection.md missing UseCaseModelBinding");
     assert.ok(page.includes("requireExplicitModel"), "use-case-model-selection.md missing requireExplicitModel escape hatch");
     assert.ok(page.includes("sessionModel"), "use-case-model-selection.md missing sessionModel");
-    assert.ok(page.includes("source: \"configured\"") || page.includes('source: "configured"'), "use-case-model-selection.md missing configured source");
+    assert.ok(
+      page.includes('source: "configured"') || page.includes('source: "configured"'),
+      "use-case-model-selection.md missing configured source",
+    );
     assert.ok(page.includes("Embedder"), "use-case-model-selection.md must note Embedder as non-chat");
     assert.ok(index.includes("(use-case-model-selection.md)"), "docs/index.md missing use-case-model-selection link");
     assert.ok(coverage.includes("resolveUseCaseModel"), "provider validation matrix missing resolveUseCaseModel");
@@ -2768,7 +3019,8 @@ describe("docs", () => {
     const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
     const useCases = readFileSync("docs/use-case-model-selection.md", "utf8");
     const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
-    const providerMatrix = coverage.split("## Provider package validation matrix\n")[1]?.split("\n## Frozen official evidence sources")[0] ?? "";
+    const providerMatrix =
+      coverage.split("## Provider package validation matrix\n")[1]?.split("\n## Frozen official evidence sources")[0] ?? "";
 
     for (const name of ["openai", "kimi", "zai", "openrouter", "opencode-go", "neuralwatt", "ai-sdk"]) {
       const pkg = `@arnilo/prism-provider-${name}`;
@@ -2780,9 +3032,22 @@ describe("docs", () => {
     }
     for (const kind of ["openai_key", "cache_control", "implicit", "host-owned"])
       assert.ok(caching.includes(kind), `provider-caching.md missing ${kind}`);
-    for (const site of ["Observational memory", "LLM compaction", "RunOptions.model", "Declarative", "Supervisor", "Evals / workflows / RPC / CLI", "Memory / RAG"])
+    for (const site of [
+      "Observational memory",
+      "LLM compaction",
+      "RunOptions.model",
+      "Declarative",
+      "Supervisor",
+      "Evals / workflows / RPC / CLI",
+      "Memory / RAG",
+    ])
       assert.ok(useCases.includes(site), `use-case-model-selection.md missing ${site}`);
-    for (const page of ["provider-caching.md", "thinking-and-reasoning.md", "use-case-model-selection.md", "review-coverage-2026-07-17-provider-validation.md"])
+    for (const page of [
+      "provider-caching.md",
+      "thinking-and-reasoning.md",
+      "use-case-model-selection.md",
+      "review-coverage-2026-07-17-provider-validation.md",
+    ])
       assert.ok(index.includes(`(${page})`), `docs/index.md missing ${page}`);
   });
 
@@ -2800,7 +3065,10 @@ describe("docs", () => {
     const rows = section.split("\n").filter((line) => line.startsWith("| ") && !line.startsWith("| ---"));
     assert.ok(rows.length > 1, "frozen release scope matrix has no data rows");
     for (const row of rows.slice(1)) {
-      const cells = row.split("|").slice(1, -1).map((cell) => cell.trim());
+      const cells = row
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim());
       assert.equal(cells.length, 8, `invalid frozen scope row: ${row}`);
       for (const index of [1, 3, 4, 7]) assert.ok(cells[index], `empty owner/test/docs/status cell: ${row}`);
     }
@@ -2808,7 +3076,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 43, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 44, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {
@@ -2819,7 +3087,7 @@ describe("docs", () => {
 
     const neuralwatt = readFileSync("docs/providers/neuralwatt.md", "utf8");
     // Cache + cache-aware limiter.
-    for (const phrase of ["implicit prefix caching", "Cache-aware limiter behavior", "cached_tokens", "cacheRetention: \"none\""]) {
+    for (const phrase of ["implicit prefix caching", "Cache-aware limiter behavior", "cached_tokens", 'cacheRetention: "none"']) {
       assert.ok(neuralwatt.includes(phrase), `docs/providers/neuralwatt.md missing ${phrase}`);
     }
     // Reasoning controls (all five).

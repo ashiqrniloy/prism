@@ -1,132 +1,75 @@
-export type * from "./contracts.js";
-export type {
-  RealtimeCaps,
-  RealtimeEvent,
-  RealtimeSession,
-  RealtimeSessionFactory,
-  RealtimeSessionOptions,
-  RunLimitCounters,
-  RunLimitName,
-  SecureAgentOptions,
-  ToolCallAuthority,
-} from "./contracts.js";
-export { isSessionEntryKind, SESSION_APPEND_CONFLICT_CODE, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION, SessionAppendConflictError, isSessionAppendConflict, AgentRunError, AgentRunStateError, assertSessionMetadataKey, SESSION_SEARCH_WORKSPACE_METADATA_KEY, SESSION_SEARCH_UNSUPPORTED_CODE, SessionSearchUnsupportedError, isSessionSearchUnsupported, DEFAULT_SESSION_SEARCH_LIMIT, HARD_MAX_SESSION_SEARCH_LIMIT, DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES, HARD_MAX_SESSION_SEARCH_QUERY_BYTES, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES, HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES, DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES, HARD_MAX_SESSION_SEARCH_CURSOR_BYTES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS, HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS, DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES, HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES, DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES, HARD_MAX_SESSION_SEARCH_LINEAR_BYTES, DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES, HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES, resolveSessionSearchQuery, DEFAULT_MAX_PENDING_STEERS, HARD_MAX_PENDING_STEERS, DEFAULT_MAX_PENDING_STEER_BYTES, HARD_MAX_PENDING_STEER_BYTES } from "./contracts.js";
-export { createAgent, createAgentSession, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
-export {
-  createBatchedRunLedger,
-  isFlushableRunLedger,
-  DEFAULT_LEDGER_BATCH_ENTRIES,
-  HARD_LEDGER_BATCH_ENTRIES,
-  DEFAULT_LEDGER_BATCH_BYTES,
-  HARD_LEDGER_BATCH_BYTES,
-  DEFAULT_LEDGER_BATCH_DELAY_MS,
-  HARD_LEDGER_BATCH_DELAY_MS,
-} from "./run-ledger.js";
-export type { BatchedRunLedgerOptions } from "./run-ledger.js";
-export { createSecureAgent } from "./secure-agent.js";
-export {
-  createMemoryRunFeedbackStore,
-  prepareRunFeedback,
-  requireRunFeedbackOwnership,
-  runFeedbackPageLimit,
-  RunFeedbackError,
-} from "./feedback.js";
-export type {
-  MemoryRunFeedbackStoreOptions,
-  PrepareRunFeedbackOptions,
-  RunFeedbackLimits,
-  RunFeedbackRun,
-  RunFeedbackRunResolver,
-} from "./feedback.js";
-export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
-export { AGENT_RUN_STATE_NAMESPACE, AGENT_RUN_STATE_SCHEMA_VERSION, DEFAULT_MAX_AGENT_RUN_STATE_BYTES, HARD_MAX_AGENT_RUN_STATE_BYTES, agentFingerprint, loadAgentRunState } from "./agent-run-state.js";
-export type { StoredAgentRunState } from "./agent-run-state.js";
-export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
-export type { AgentRunLifecycle, AgentRunLifecycleAgent, AgentRunLifecycleOptions, AgentRunLifecycleRequest, AgentRunLifecycleStreamRequest } from "./agent-run-lifecycle.js";
-export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
-export { LEASE_CONFLICT_CODE, LeaseConflictError, createMemoryLeaseStore } from "./leases.js";
-export {
-  createMemoryPersistenceLifecycle,
-  isResourceHeld,
-  PersistenceLifecycleError,
-  DEFAULT_LIFECYCLE_PAGE_SIZE,
-  HARD_LIFECYCLE_PAGE_SIZE,
-  DEFAULT_MAX_HOLD_REASON_BYTES,
-  HARD_MAX_HOLD_REASON_BYTES,
-} from "./persistence-lifecycle.js";
-export type {
-  PersistenceResourceKind,
-  LegalHoldRecord,
-  PutLegalHoldInput,
-  ReleaseLegalHoldInput,
-  LegalHoldQuery,
-  ApplyRetentionInput,
-  ApplyRetentionResult,
-  LegalHoldExportItem,
-  ExportUnderHoldInput,
-  TenantQuota,
-  SetTenantQuotaInput,
-  ConsumeTenantQuotaInput,
-  PersistenceLifecycleStore,
-} from "./persistence-lifecycle.js";
-export { createEventMultiplexer } from "./event-multiplexer.js";
-export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
-export { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "./cache-helpers.js";
-export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport } from "./cache-helpers.js";
 export { resolveAgentDefinition } from "./agent-definitions.js";
-export { parseSkillFile, parseAgentFile } from "./contribution-parsing.js";
-export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
-export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
-export { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
-export type { DefaultCompactionStrategyOptions } from "./compaction.js";
-export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./retry.js";
-export type { DefaultRetryPolicyOptions } from "./retry.js";
-export { createContributionRegistries, createContributionRegistry, registerDiscoveredContributions } from "./contributions.js";
-export type { ContributionRegistries, ContributionRegistriesOptions, ContributionRegistry, ContributionRegistryOptions } from "./contributions.js";
-export { createChainedCredentialResolver, createEnvCredentialResolver, createExplicitCredentialResolver, createMemoryCredentialStore, refreshOAuthCredential, revokeOAuthCredential, resolveCredentialValue } from "./credentials.js";
-export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
-export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy } from "./extensions.js";
-export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js";
-export { createModelRegistry } from "./models.js";
-export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
 export {
-  assertStructuredOutputRequestSupported,
-  artifactStructuredOutputRequest,
-  DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH,
-  DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES,
-  modelSupportsStructuredOutput,
-  resolveRunProviderOptions,
-  StructuredOutputError,
-  validateStructuredOutputOptions,
-  withoutStructuredOutput,
-} from "./structured-output.js";
-export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
-export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProviderRequestOptions } from "./provider-request-policy.js";
-export type { SessionCachePolicyOptions } from "./provider-request-policy.js";
-export {
-  THINKING_LEVELS,
-  applyThinkingLevel,
-  isThinkingLevel,
-  normalizeThinkingLevel,
-  thinkingCompatFor,
-  thinkingFamilyForModel,
-} from "./thinking.js";
-export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js";
-export {
-  resolveUseCaseModel,
-  resolveUseCaseModelBinding,
-  useCaseCredentialProviderId,
-} from "./use-case-model.js";
+  dispatchToolCallsInOrder,
+  generateValidateReviseLoop,
+  isAgentLoopOptions,
+  resolveLoop,
+  resolveToolConcurrency,
+  singleShotLoop,
+} from "./agent-loops.js";
 export type {
-  ResolveUseCaseModelInput,
-  ResolvedUseCaseModel,
-  UseCaseModelBinding,
-} from "./use-case-model.js";
-export { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
-export type { ComposeSystemPromptOptions } from "./system-prompts.js";
-export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
-export { definePrismManifest, parsePrismManifest } from "./manifests.js";
-export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js";
+  AgentRunLifecycle,
+  AgentRunLifecycleAgent,
+  AgentRunLifecycleOptions,
+  AgentRunLifecycleRequest,
+  AgentRunLifecycleStreamRequest,
+} from "./agent-run-lifecycle.js";
+export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
+export type { StoredAgentRunState } from "./agent-run-state.js";
+export {
+  AGENT_RUN_STATE_NAMESPACE,
+  AGENT_RUN_STATE_SCHEMA_VERSION,
+  agentFingerprint,
+  DEFAULT_MAX_AGENT_RUN_STATE_BYTES,
+  HARD_MAX_AGENT_RUN_STATE_BYTES,
+  loadAgentRunState,
+} from "./agent-run-state.js";
+export { createAgent, createAgentSession, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
+export type {
+  ArtifactApproval,
+  ArtifactApprovalState,
+  ArtifactCitation,
+  ArtifactDecisionState,
+  ArtifactDeliveryToken,
+  ArtifactRecord,
+  ArtifactRevision,
+} from "./artifacts.js";
+export {
+  ARTIFACT_CHECKPOINT_NAMESPACE,
+  ArtifactError,
+  artifactApprovalState,
+  artifactCheckpointKey,
+} from "./artifacts.js";
+export type {
+  ApplyCacheControlOptions,
+  CacheControlledContentBlock,
+  CacheControlledMessage,
+  CacheControlValue,
+  CacheUsageReport,
+} from "./cache-helpers.js";
+export { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "./cache-helpers.js";
+export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
+export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
+export type { DefaultCompactionStrategyOptions } from "./compaction.js";
+export { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
+export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
+export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
+export type {
+  AudioContent,
+  DocumentContent,
+  FileContent,
+  MediaContentBlock,
+  MediaContentBounds,
+  MediaHostAddress,
+  MediaHostnameResolver,
+  MediaMimePolicy,
+  MediaUrlRequest,
+  MediaUrlRequester,
+  ModelInputCapability,
+  ResolvedMediaContent,
+  ResolveMediaContentOptions,
+  SsrfPolicy,
+} from "./content.js";
 export {
   assertDeclaredMediaTypeMatches,
   assertMediaBlocksWithinBounds,
@@ -149,27 +92,12 @@ export {
   UnsupportedModalityError,
 } from "./content.js";
 export type {
-  AudioContent,
-  DocumentContent,
-  FileContent,
-  MediaContentBlock,
-  MediaContentBounds,
-  MediaHostAddress,
-  MediaHostnameResolver,
-  MediaMimePolicy,
-  MediaUrlRequest,
-  MediaUrlRequester,
-  ModelInputCapability,
-  ResolvedMediaContent,
-  ResolveMediaContentOptions,
-  SsrfPolicy,
-} from "./content.js";
-export { loadBinaryResource, loadJsonResource, loadManifestResource, loadTextResource } from "./resources.js";
-export type { LoadBinaryResourceOptions } from "./resources.js";
-export { createChainedSettingsProvider, createStaticSettingsProvider } from "./settings.js";
-export { createMiddlewareRegistry } from "./middleware.js";
-export type { Middleware, MiddlewareHookName, MiddlewareNext, MiddlewareRegistry, MiddlewareRegistryOptions } from "./middleware.js";
-export { assembleProviderInput, createDefaultInputBuilder, createDefaultPromptBuilder, renderPromptTemplate, resolveContextProviders } from "./input.js";
+  ContextBudget,
+  ContextBudgetMessageGroups,
+  ContextBudgetOmission,
+  ContextBudgetOmissionKind,
+  ContextBudgetReport,
+} from "./context-budget.js";
 export {
   applyContextBudget,
   CONTEXT_BUDGET_ERROR_CODE,
@@ -188,26 +116,63 @@ export {
   isContextBudgetError,
   resolveContextBudget,
 } from "./context-budget.js";
+export type * from "./contracts.js";
 export type {
-  ContextBudget,
-  ContextBudgetMessageGroups,
-  ContextBudgetOmission,
-  ContextBudgetOmissionKind,
-  ContextBudgetReport,
-} from "./context-budget.js";
-export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuilder, DefaultInputBuildContext, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions } from "./input.js";
-export { createMockProvider } from "./mock-provider.js";
-export { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, listSessionBranches, rebuildSessionContext } from "./session-stores.js";
+  ProviderResolver,
+  RealtimeCaps,
+  RealtimeEvent,
+  RealtimeSession,
+  RealtimeSessionFactory,
+  RealtimeSessionOptions,
+  RunLimitCounters,
+  RunLimitName,
+  SecureAgentOptions,
+  ToolCallAuthority,
+} from "./contracts.js";
 export {
-  CONVERSATION_METADATA_KEY,
-  DEFAULT_MAX_CONVERSATION_CURSOR_BYTES,
-  HARD_MAX_CONVERSATION_CURSOR_BYTES,
-  ConversationError,
-  conversationMarkerMetadata,
-  conversationThreadFromRecord,
-  decodeConversationReplayCursor,
-  encodeConversationReplayCursor,
-} from "./conversations.js";
+  AgentRunError,
+  AgentRunStateError,
+  assertSessionMetadataKey,
+  DEFAULT_MAX_PENDING_STEER_BYTES,
+  DEFAULT_MAX_PENDING_STEERS,
+  DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES,
+  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
+  DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES,
+  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  DEFAULT_SESSION_SEARCH_LIMIT,
+  HARD_MAX_PENDING_STEER_BYTES,
+  HARD_MAX_PENDING_STEERS,
+  HARD_MAX_SESSION_SEARCH_CURSOR_BYTES,
+  HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES,
+  HARD_MAX_SESSION_SEARCH_LIMIT,
+  HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
+  HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
+  HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
+  HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
+  HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  isSessionAppendConflict,
+  isSessionEntryKind,
+  isSessionSearchUnsupported,
+  resolveSessionSearchQuery,
+  SESSION_APPEND_CONFLICT_CODE,
+  SESSION_ENTRY_KINDS,
+  SESSION_ENTRY_SCHEMA_VERSION,
+  SESSION_SEARCH_UNSUPPORTED_CODE,
+  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  SessionAppendConflictError,
+  SessionSearchUnsupportedError,
+} from "./contracts.js";
+export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
+export type {
+  ContributionRegistries,
+  ContributionRegistriesOptions,
+  ContributionRegistry,
+  ContributionRegistryOptions,
+} from "./contributions.js";
+export { createContributionRegistries, createContributionRegistry, registerDiscoveredContributions } from "./contributions.js";
 export type {
   ConversationBranchRef,
   ConversationReplayCursor,
@@ -215,32 +180,25 @@ export type {
   ConversationThreadState,
 } from "./conversations.js";
 export {
-  ARTIFACT_CHECKPOINT_NAMESPACE,
-  ArtifactError,
-  artifactApprovalState,
-  artifactCheckpointKey,
-} from "./artifacts.js";
-export type {
-  ArtifactApproval,
-  ArtifactApprovalState,
-  ArtifactCitation,
-  ArtifactDecisionState,
-  ArtifactDeliveryToken,
-  ArtifactRecord,
-  ArtifactRevision,
-} from "./artifacts.js";
+  CONVERSATION_METADATA_KEY,
+  ConversationError,
+  conversationMarkerMetadata,
+  conversationThreadFromRecord,
+  DEFAULT_MAX_CONVERSATION_CURSOR_BYTES,
+  decodeConversationReplayCursor,
+  encodeConversationReplayCursor,
+  HARD_MAX_CONVERSATION_CURSOR_BYTES,
+} from "./conversations.js";
+export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js";
 export {
-  DEFAULT_DEVICE_MAX_CHUNK_BYTES,
-  DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
-  HARD_DEVICE_MAX_CHUNK_BYTES,
-  HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
-  DevicePolicyError,
-  acceptDeviceChunk,
-  assertDeviceAdmit,
-  redactDeviceTelemetry,
-  resolveDevicePolicy,
-  runDevicePolicyConformance,
-} from "./devices.js";
+  createChainedCredentialResolver,
+  createEnvCredentialResolver,
+  createExplicitCredentialResolver,
+  createMemoryCredentialStore,
+  refreshOAuthCredential,
+  resolveCredentialValue,
+  revokeOAuthCredential,
+} from "./credentials.js";
 export type {
   DeviceAdapter,
   DeviceAdmitRequest,
@@ -252,28 +210,59 @@ export type {
   DeviceStreamLimits,
   ResolvedDevicePolicy,
 } from "./devices.js";
-export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot } from "./session-stores.js";
-export type { MockProviderOptions } from "./mock-provider.js";
 export {
-  providerContentDelta,
-  providerContinuationRequired,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerThinkingDelta,
-  providerToolCall,
-  providerToolCallDelta,
-  providerUsage,
-  toolCallContent,
-  toolCallFromArgumentsText,
-} from "./provider-events.js";
-export type { ProviderResolver } from "./contracts.js";
-export { createProviderRegistry, createProviderResolver } from "./providers.js";
-export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
-export { createSecretRedactor, errorToErrorInfo, redactAgentEvent, redactMessage, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry } from "./redaction.js";
-export type { SecretRedactor } from "./redaction.js";
-export { assertPermission, assertTrusted, checkPermission, createStaticPermissionPolicy, createStaticTrustPolicy, denialToErrorInfo, isTrusted, PermissionDeniedError, TrustDeniedError } from "./security.js";
-export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
+  acceptDeviceChunk,
+  assertDeviceAdmit,
+  DEFAULT_DEVICE_MAX_CHUNK_BYTES,
+  DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
+  DevicePolicyError,
+  HARD_DEVICE_MAX_CHUNK_BYTES,
+  HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
+  redactDeviceTelemetry,
+  resolveDevicePolicy,
+  runDevicePolicyConformance,
+} from "./devices.js";
+export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
+export { createEventMultiplexer } from "./event-multiplexer.js";
+export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
+export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
+export type {
+  ExtensionErrorPolicy,
+  ExtensionEventBus,
+  ExtensionEventHandler,
+  ExtensionKernel,
+  ExtensionKernelOptions,
+  ExtensionLoadPolicy,
+} from "./extensions.js";
+export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
+export type {
+  MemoryRunFeedbackStoreOptions,
+  PrepareRunFeedbackOptions,
+  RunFeedbackLimits,
+  RunFeedbackRun,
+  RunFeedbackRunResolver,
+} from "./feedback.js";
+export {
+  createMemoryRunFeedbackStore,
+  prepareRunFeedback,
+  RunFeedbackError,
+  requireRunFeedbackOwnership,
+  runFeedbackPageLimit,
+} from "./feedback.js";
+export type {
+  GuardrailRunResult,
+  RunGuardrailsOptions,
+} from "./guardrails.js";
+export { assertGuardrailsAllowed, GuardrailError, MAX_GUARDRAIL_CONCURRENCY, runGuardrails } from "./guardrails.js";
+export type {
+  AgentIdentity,
+  AssertIdentityActiveOptions,
+  IdentityLimits,
+  IdentityVerifier,
+  NarrowIdentityOptions,
+  Principal,
+  ResolvedIdentityLimits,
+} from "./identity.js";
 export {
   assertIdentityActive,
   assertIdentityMatchesOwnership,
@@ -288,30 +277,168 @@ export {
   resolveRunIdentity,
 } from "./identity.js";
 export type {
-  AgentIdentity,
-  AssertIdentityActiveOptions,
-  IdentityLimits,
-  IdentityVerifier,
-  NarrowIdentityOptions,
-  Principal,
-  ResolvedIdentityLimits,
-} from "./identity.js";
-export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
-export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
-export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
-export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js";
-export { resolveInstructionInjectors, runInstructionInjectors } from "./instruction-injection.js";
+  AgentInput,
+  AssembleProviderInputOptions,
+  DefaultInputBuildContext,
+  DefaultInputBuilder,
+  DefaultPromptBuilder,
+  InputAttachment,
+  PromptInstruction,
+  PromptTemplateOptions,
+  ResolveContextOptions,
+} from "./input.js";
+export {
+  assembleProviderInput,
+  createDefaultInputBuilder,
+  createDefaultPromptBuilder,
+  renderPromptTemplate,
+  resolveContextProviders,
+} from "./input.js";
 export type { ResolveInstructionInjectorsOptions } from "./instruction-injection.js";
-export { createToolRegistry, dispatchToolCall, filterTools, createToolParameterValidator } from "./tools.js";
-export { assertGuardrailsAllowed, GuardrailError, MAX_GUARDRAIL_CONCURRENCY, runGuardrails } from "./guardrails.js";
-export { createRunLimitTracker, DEFAULT_RUN_LIMITS, HARD_MAX_RUN_COST, HARD_RUN_LIMITS, RunLimitError, RunLimitTracker, resolveRunLimits } from "./run-limits.js";
+export { resolveInstructionInjectors, runInstructionInjectors } from "./instruction-injection.js";
+export { createMemoryLeaseStore, LEASE_CONFLICT_CODE, LeaseConflictError } from "./leases.js";
+export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js";
+export { definePrismManifest, parsePrismManifest } from "./manifests.js";
+export type { Middleware, MiddlewareHookName, MiddlewareNext, MiddlewareRegistry, MiddlewareRegistryOptions } from "./middleware.js";
+export { createMiddlewareRegistry } from "./middleware.js";
+export type { MockProviderOptions } from "./mock-provider.js";
+export { createMockProvider } from "./mock-provider.js";
+export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
+export { createModelRegistry } from "./models.js";
+export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 export type {
-  GuardrailRunResult,
-  RunGuardrailsOptions,
-} from "./guardrails.js";
-export type {
-  RunLimitTrackerOptions,
+  ApplyRetentionInput,
+  ApplyRetentionResult,
+  ConsumeTenantQuotaInput,
+  ExportUnderHoldInput,
+  LegalHoldExportItem,
+  LegalHoldQuery,
+  LegalHoldRecord,
+  PersistenceLifecycleStore,
+  PersistenceResourceKind,
+  PutLegalHoldInput,
+  ReleaseLegalHoldInput,
+  SetTenantQuotaInput,
+  TenantQuota,
+} from "./persistence-lifecycle.js";
+export {
+  createMemoryPersistenceLifecycle,
+  DEFAULT_LIFECYCLE_PAGE_SIZE,
+  DEFAULT_MAX_HOLD_REASON_BYTES,
+  HARD_LIFECYCLE_PAGE_SIZE,
+  HARD_MAX_HOLD_REASON_BYTES,
+  isResourceHeld,
+  PersistenceLifecycleError,
+} from "./persistence-lifecycle.js";
+export {
+  providerContentDelta,
+  providerContinuationRequired,
+  providerDone,
+  providerError,
+  providerTextDelta,
+  providerThinkingDelta,
+  providerToolCall,
+  providerToolCallDelta,
+  providerUsage,
+  toolCallContent,
+  toolCallFromArgumentsText,
+} from "./provider-events.js";
+export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
+export type { SessionCachePolicyOptions } from "./provider-request-policy.js";
+export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProviderRequestOptions } from "./provider-request-policy.js";
+export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
+export { createProviderRegistry, createProviderResolver } from "./providers.js";
+export type { SecretRedactor } from "./redaction.js";
+export {
+  createSecretRedactor,
+  errorToErrorInfo,
+  redactAgentEvent,
+  redactMessage,
+  redactProviderRequest,
+  redactRunLedgerRecord,
+  redactSecrets,
+  redactSessionEntry,
+  resolveRedactor,
+} from "./redaction.js";
+export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js";
+export type { LoadBinaryResourceOptions } from "./resources.js";
+export { loadBinaryResource, loadJsonResource, loadManifestResource, loadTextResource } from "./resources.js";
+export type { DefaultRetryPolicyOptions } from "./retry.js";
+export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./retry.js";
+export type { BatchedRunLedgerOptions } from "./run-ledger.js";
+export {
+  createBatchedRunLedger,
+  DEFAULT_LEDGER_BATCH_BYTES,
+  DEFAULT_LEDGER_BATCH_DELAY_MS,
+  DEFAULT_LEDGER_BATCH_ENTRIES,
+  HARD_LEDGER_BATCH_BYTES,
+  HARD_LEDGER_BATCH_DELAY_MS,
+  HARD_LEDGER_BATCH_ENTRIES,
+  isFlushableRunLedger,
+} from "./run-ledger.js";
+export type { RunLimitTrackerOptions } from "./run-limits.js";
+export {
+  createRunLimitTracker,
+  DEFAULT_RUN_LIMITS,
+  HARD_MAX_RUN_COST,
+  HARD_RUN_LIMITS,
+  RunLimitError,
+  RunLimitTracker,
+  resolveRunLimits,
 } from "./run-limits.js";
+export { createSecureAgent } from "./secure-agent.js";
+export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
+export {
+  assertPermission,
+  assertTrusted,
+  checkPermission,
+  createStaticPermissionPolicy,
+  createStaticTrustPolicy,
+  denialToErrorInfo,
+  isTrusted,
+  PermissionDeniedError,
+  TrustDeniedError,
+} from "./security.js";
+export type {
+  CreateMemorySessionStoreOptions,
+  CreateSessionEntryOptions,
+  MemorySessionSearchMode,
+  SessionBranch,
+  SessionBranchOptions,
+  SessionContextSnapshot,
+} from "./session-stores.js";
+export {
+  createMemorySessionStore,
+  createSessionEntry,
+  getSessionBranchEntries,
+  listSessionBranches,
+  rebuildSessionContext,
+} from "./session-stores.js";
+export { createChainedSettingsProvider, createStaticSettingsProvider } from "./settings.js";
+export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js";
+export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
+export {
+  artifactStructuredOutputRequest,
+  assertStructuredOutputRequestSupported,
+  DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH,
+  DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES,
+  modelSupportsStructuredOutput,
+  resolveRunProviderOptions,
+  StructuredOutputError,
+  validateStructuredOutputOptions,
+  withoutStructuredOutput,
+} from "./structured-output.js";
+export type { ComposeSystemPromptOptions } from "./system-prompts.js";
+export { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
+export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js";
+export {
+  applyThinkingLevel,
+  isThinkingLevel,
+  normalizeThinkingLevel,
+  THINKING_LEVELS,
+  thinkingCompatFor,
+  thinkingFamilyForModel,
+} from "./thinking.js";
 export type {
   DispatchToolCallOptions,
   ToolArgumentValidationError,
@@ -323,10 +450,18 @@ export type {
   ToolRegistryOptions,
   ToolValidator,
 } from "./tools.js";
-export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js";
-export { dispatchToolCallsInOrder, generateValidateReviseLoop, isAgentLoopOptions, resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
+export { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
+export type {
+  ResolvedUseCaseModel,
+  ResolveUseCaseModelInput,
+  UseCaseModelBinding,
+} from "./use-case-model.js";
+export {
+  resolveUseCaseModel,
+  resolveUseCaseModelBinding,
+  useCaseCredentialProviderId,
+} from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.0.15";
-export const description =
-  "Agent harness for AI providers, agents, sessions, and tools.";
+export const version = "0.0.16";
+export const description = "Agent harness for AI providers, agents, sessions, and tools.";

@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createMockProvider, createProviderRegistry, createProviderResolver, providerDone, type ProviderResolver } from "../index.js";
+import { describe, it } from "node:test";
+import { createMockProvider, createProviderRegistry, createProviderResolver, type ProviderResolver, providerDone } from "../index.js";
 
 describe("createProviderResolver", () => {
   it("resolves by model.provider from a ProviderRegistry source", () => {

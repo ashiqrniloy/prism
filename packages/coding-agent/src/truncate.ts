@@ -10,13 +10,7 @@
  * Never returns partial lines (except the documented tail single-line edge case).
  */
 
-import {
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  HARD_MAX_BYTES,
-  HARD_MAX_LINES,
-  validateCodingLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, HARD_MAX_BYTES, HARD_MAX_LINES, validateCodingLimit } from "./limits.js";
 
 export { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "./limits.js";
 
@@ -251,10 +245,7 @@ function truncateStringToBytesFromEnd(str: string, maxBytes: number): string {
  * Truncate a single line to max characters, adding a `[truncated]` suffix.
  * Used for long single-line outputs (e.g. grep match lines).
  */
-export function truncateLine(
-  line: string,
-  maxChars: number = DEFAULT_LINE_CHAR_LIMIT,
-): { text: string; wasTruncated: boolean } {
+export function truncateLine(line: string, maxChars: number = DEFAULT_LINE_CHAR_LIMIT): { text: string; wasTruncated: boolean } {
   if (line.length <= maxChars) return { text: line, wasTruncated: false };
   return { text: `${line.slice(0, maxChars)}... [truncated]`, wasTruncated: true };
 }

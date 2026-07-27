@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { mapMcpContentToBlocks, summarizeMcpContent } from "../content.js";
 import { measureBoundedJson } from "../json-bounds.js";
 
@@ -30,10 +30,7 @@ describe("mapMcpContentToBlocks", () => {
   });
 
   it("truncates when maxResultBytes is exceeded", () => {
-    const mapped = mapMcpContentToBlocks(
-      [{ type: "text", text: "x".repeat(100) }],
-      { maxResultBytes: 10 },
-    );
+    const mapped = mapMcpContentToBlocks([{ type: "text", text: "x".repeat(100) }], { maxResultBytes: 10 });
     assert.equal(mapped.truncated, true);
     assert.ok(mapped.bytesUsed <= 10);
   });
@@ -47,7 +44,7 @@ describe("mapMcpContentToBlocks", () => {
 
 describe("measureBoundedJson", () => {
   it("measures escaped JSON without serializing a second copy", () => {
-    const value = { text: "quote=\" newline=\n lone=\ud800", list: [true, null, 1] };
+    const value = { text: 'quote=" newline=\n lone=\ud800', list: [true, null, 1] };
     const measured = measureBoundedJson(value, { maxBytes: 1_000, maxDepth: 8, maxProperties: 10 });
     assert.equal(measured.bytes, Buffer.byteLength(JSON.stringify(value), "utf8"));
     assert.equal(measured.properties, 5);

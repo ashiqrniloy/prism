@@ -1,24 +1,19 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test } from "node:test";
 import type { ToolExecutionContext } from "@arnilo/prism";
-import type {
-  EditOperations,
-  ReadOperations,
-  RepositoryOperations,
-  WriteOperations,
-} from "@arnilo/prism-coding-agent";
+import type { EditOperations, ReadOperations, RepositoryOperations, WriteOperations } from "@arnilo/prism-coding-agent";
 import {
   createSandboxBashOperations,
   createSandboxCodingComposition,
   createSandboxCodingTools,
   createSandboxReadOnlyComposition,
   createSandboxReadOnlyTools,
-  SandboxCodingCompositionError,
   type DisposableSandbox,
   type SandboxAdapter,
+  SandboxCodingCompositionError,
 } from "../index.js";
 
 let counter = 0;
@@ -39,7 +34,7 @@ function fakeSandbox(): SandboxAdapter {
   };
 }
 
-function fakeDisposable(): DisposableSandbox {
+function _fakeDisposable(): DisposableSandbox {
   return {
     id: "sb-test",
     exec: async () => ({ exitCode: 0 }),
@@ -98,8 +93,7 @@ test("missing workspaceMode throws", () => {
       createSandboxCodingTools("/tmp", {
         sandbox: fakeSandbox(),
       } as never),
-    (err: unknown) =>
-      err instanceof SandboxCodingCompositionError && /workspaceMode is required/.test(err.message),
+    (err: unknown) => err instanceof SandboxCodingCompositionError && /workspaceMode is required/.test(err.message),
   );
 });
 
@@ -121,10 +115,7 @@ test("host mode uses local FS and does not claim containment", async () => {
     const read = tools.find((t) => t.name === "read")!;
     const result = await read.execute({ path: "note.txt" }, ctx());
     assert.equal(result.error, undefined);
-    assert.match(
-      String(result.content?.[0] && result.content[0].type === "text" ? result.content[0].text : ""),
-      /host-local/,
-    );
+    assert.match(String(result.content?.[0] && result.content[0].type === "text" ? result.content[0].text : ""), /host-local/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -137,8 +128,7 @@ test("host mode with sandbox shell throws without escape hatch", () => {
         workspaceMode: "host",
         sandbox: fakeSandbox(),
       }),
-    (err: unknown) =>
-      err instanceof SandboxCodingCompositionError && /mixed wiring/.test(err.message),
+    (err: unknown) => err instanceof SandboxCodingCompositionError && /mixed wiring/.test(err.message),
   );
 });
 
@@ -228,14 +218,7 @@ test("sandbox mode without backends allowed via escape hatch with warnings", asy
 
     const listResult = await list.execute({}, ctx());
     assert.equal(listResult.error, undefined);
-    assert.match(
-      String(
-        listResult.content?.[0] && listResult.content[0].type === "text"
-          ? listResult.content[0].text
-          : "",
-      ),
-      /hit\.ts/,
-    );
+    assert.match(String(listResult.content?.[0] && listResult.content[0].type === "text" ? listResult.content[0].text : ""), /hit\.ts/);
 
     const searchResult = await search.execute({ query: "findMe" }, ctx());
     assert.equal(searchResult.error, undefined);
@@ -244,11 +227,7 @@ test("sandbox mode without backends allowed via escape hatch with warnings", asy
     const readResult = await read.execute({ path: "note.txt" }, ctx());
     assert.equal(readResult.error, undefined);
     assert.match(
-      String(
-        readResult.content?.[0] && readResult.content[0].type === "text"
-          ? readResult.content[0].text
-          : "",
-      ),
+      String(readResult.content?.[0] && readResult.content[0].type === "text" ? readResult.content[0].text : ""),
       /hello from workspace/,
     );
   } finally {

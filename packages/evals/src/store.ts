@@ -4,9 +4,7 @@ import type { EvaluationQuery, EvaluationRecord, EvaluationStore } from "./types
 import { normalizePageLimit, ownershipMatches, statusMatches } from "./util.js";
 
 /** In-memory evaluation store for hosts that do not need a database. */
-export function createMemoryEvaluationStore(
-  initial: readonly EvaluationRecord[] = [],
-): EvaluationStore {
+export function createMemoryEvaluationStore(initial: readonly EvaluationRecord[] = []): EvaluationStore {
   const records: EvaluationRecord[] = [...initial];
 
   return {

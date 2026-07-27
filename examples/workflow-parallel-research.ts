@@ -39,13 +39,14 @@ const fanOut = fanOutNode({
   maxFanOut: 3,
 });
 const topics = joinNode({ from: "fanOut" });
-const research = (index: number) => functionNode({
-  execute: async (ctx) => {
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    const list = ctx.upstream.topics as string[];
-    return `Research result for "${list[index]}"`;
-  },
-});
+const research = (index: number) =>
+  functionNode({
+    execute: async (ctx) => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const list = ctx.upstream.topics as string[];
+      return `Research result for "${list[index]}"`;
+    },
+  });
 const researchA = research(0);
 const researchB = research(1);
 const researchC = research(2);

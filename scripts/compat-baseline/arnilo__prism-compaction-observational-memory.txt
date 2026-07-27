@@ -1,0 +1,88 @@
+CoverageTier	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+DEFAULT_MAX_WORKER_ARGUMENT_BYTES	export declare const DEFAULT_MAX_WORKER_ARGUMENT_BYTES: number
+DEFAULT_MAX_WORKER_ERROR_BYTES	export declare const DEFAULT_MAX_WORKER_ERROR_BYTES = 1024
+DEFAULT_MAX_WORKER_MESSAGE_BYTES	export declare const DEFAULT_MAX_WORKER_MESSAGE_BYTES: number
+DEFAULT_MAX_WORKER_RESULT_BYTES	export declare const DEFAULT_MAX_WORKER_RESULT_BYTES: number
+DEFAULT_MAX_WORKER_TOOL_CALLS	export declare const DEFAULT_MAX_WORKER_TOOL_CALLS = 128
+DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN	export declare const DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN = 32
+DEFAULT_MAX_WORKER_TURNS	export declare const DEFAULT_MAX_WORKER_TURNS = 16
+FOLDED_MEMORY	export declare const FOLDED_MEMORY = "om.folded"
+FoldedMemoryDetails	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+GetMemoryEntries	export type { GetMemoryEntries, RecallMemoryToolOptions } from "./tool.js"
+HARD_MAX_WORKER_ARGUMENT_BYTES	export declare const HARD_MAX_WORKER_ARGUMENT_BYTES: number
+HARD_MAX_WORKER_ERROR_BYTES	export declare const HARD_MAX_WORKER_ERROR_BYTES: number
+HARD_MAX_WORKER_MESSAGE_BYTES	export declare const HARD_MAX_WORKER_MESSAGE_BYTES: number
+HARD_MAX_WORKER_RESULT_BYTES	export declare const HARD_MAX_WORKER_RESULT_BYTES: number
+HARD_MAX_WORKER_TOOL_CALLS	export declare const HARD_MAX_WORKER_TOOL_CALLS = 1024
+HARD_MAX_WORKER_TOOL_CALLS_PER_TURN	export declare const HARD_MAX_WORKER_TOOL_CALLS_PER_TURN = 256
+HARD_MAX_WORKER_TURNS	export declare const HARD_MAX_WORKER_TURNS = 64
+MemoryCommandOptions	export type { MemoryCommandOptions } from "./commands.js"
+MemoryId	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+MemoryObservation	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+MemoryRecallResult	export type { MemoryRecallResult, RecallKind } from "./recall.js"
+MemoryReflection	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+MemoryRelevance	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+MemoryWorkerLimitOptions	export type { MemoryWorkerLimitOptions, ResolvedMemoryWorkerLimits } from "./limits.js"
+OBSERVATIONS_DROPPED	export declare const OBSERVATIONS_DROPPED = "om.observations.dropped"
+OBSERVATIONS_RECORDED	export declare const OBSERVATIONS_RECORDED = "om.observations.recorded"
+ObservationalMemoryCompactionStrategyOptions	export type { ObservationalMemoryCompactionStrategyOptions } from "./strategy.js"
+ObservationalMemoryExtensionOptions	export type { ObservationalMemoryExtensionOptions } from "./extension.js"
+ObservationalMemoryFlushResult	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemoryLedger	export type { ObservationalMemoryLedger } from "./ledger.js"
+ObservationalMemoryProjection	export type { ObservationalMemoryProjection } from "./projection.js"
+ObservationalMemoryRuntime	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemoryRuntimeOptions	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemoryRuntimeStatus	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemorySettings	export type { ObservationalMemorySettings, ObservationalMemorySettingsInput } from "./settings.js"
+ObservationalMemorySettingsInput	export type { ObservationalMemorySettings, ObservationalMemorySettingsInput } from "./settings.js"
+ObservationsDroppedData	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+ObservationsRecordedData	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+REFLECTIONS_RECORDED	export declare const REFLECTIONS_RECORDED = "om.reflections.recorded"
+RecallKind	export type { MemoryRecallResult, RecallKind } from "./recall.js"
+RecallMemoryToolOptions	export type { GetMemoryEntries, RecallMemoryToolOptions } from "./tool.js"
+ReflectionsRecordedData	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+ResolvedMemoryWorkerLimits	export type { MemoryWorkerLimitOptions, ResolvedMemoryWorkerLimits } from "./limits.js"
+RunDropperOptions	export type { RunDropperOptions } from "./workers/dropper.js"
+RunObserverOptions	export type { RunObserverOptions } from "./workers/observer.js"
+RunReflectorOptions	export type { RunReflectorOptions } from "./workers/reflector.js"
+activeObservations	export declare function activeObservations(ledger: ObservationalMemoryLedger): readonly MemoryObservation[]
+buildObservationalMemoryProjection	export declare function buildObservationalMemoryProjection(entries: readonly SessionEntry[], firstKeptEntryId?: string): ObservationalMemoryProjection
+coverageTier	export declare function coverageTier(covered: number, total: number): CoverageTier
+coverageTierValues	export declare const coverageTierValues: readonly ["none", "partial", "full"]
+createFoldedMemoryDetails	export declare function createFoldedMemoryDetails(projection: Pick<ObservationalMemoryProjection, "observations" | "reflections" | "droppedObservationIds">, fullFold?: boolean): FoldedMemoryDetails
+createMemoryId	export declare function createMemoryId(...parts: readonly unknown[]): string
+createMemoryStatusCommand	export declare function createMemoryStatusCommand(options: MemoryCommandOptions): CommandDefinition
+createMemoryViewCommand	export declare function createMemoryViewCommand(options: MemoryCommandOptions): CommandDefinition
+createObservationalMemoryCommands	export declare function createObservationalMemoryCommands(options: MemoryCommandOptions): readonly CommandDefinition[]
+createObservationalMemoryCompactionStrategy	export declare function createObservationalMemoryCompactionStrategy(options?: ObservationalMemoryCompactionStrategyOptions): CompactionStrategy
+createObservationalMemoryExtension	export declare function createObservationalMemoryExtension(options?: ObservationalMemoryExtensionOptions): Extension
+createObservationalMemoryRuntime	export declare function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime
+createRecallMemoryTool	export declare function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDefinition
+defaultObservationalMemorySettings	export declare const defaultObservationalMemorySettings: ObservationalMemorySettings
+estimateEntryTokens	export declare function estimateEntryTokens(entry: SessionEntry): number
+estimateMessageTokens	export declare function estimateMessageTokens(message: Message): number
+estimateTextTokens	export declare function estimateTextTokens(text: string): number
+foldObservationalMemoryLedger	export declare function foldObservationalMemoryLedger(entries: readonly SessionEntry[]): ObservationalMemoryLedger
+foldedMemoryFromEntry	export declare function foldedMemoryFromEntry(entry: SessionEntry): FoldedMemoryDetails | undefined
+isFoldedMemoryDetails	export declare function isFoldedMemoryDetails(value: unknown): value is FoldedMemoryDetails
+isMemoryId	export declare function isMemoryId(value: unknown): value is MemoryId
+isMemoryObservation	export declare function isMemoryObservation(value: unknown): value is MemoryObservation
+isMemoryReflection	export declare function isMemoryReflection(value: unknown): value is MemoryReflection
+isObservationsDroppedData	export declare function isObservationsDroppedData(value: unknown): value is ObservationsDroppedData
+isObservationsRecordedData	export declare function isObservationsRecordedData(value: unknown): value is ObservationsRecordedData
+isReflectionsRecordedData	export declare function isReflectionsRecordedData(value: unknown): value is ReflectionsRecordedData
+joinWorkerText	export declare function joinWorkerText(parts: Iterable<string>, maxBytes: number, label: string): string
+measureWorkerJson	export declare function measureWorkerJson(value: unknown, maxBytes: number, label: string): number
+packageName	export declare const packageName = "@arnilo/prism-compaction-observational-memory"
+recallObservationalMemory	export declare function recallObservationalMemory(entries: readonly SessionEntry[], id: string, secrets?: readonly (string | undefined)[]): MemoryRecallResult
+relevanceValues	export declare const relevanceValues: readonly ["low", "medium", "high", "critical"]
+renderObservationalMemory	export declare function renderObservationalMemory(reflections: readonly MemoryReflection[], observations: readonly MemoryObservation[], secrets?: readonly (string | undefined)[]): string
+resolveMemoryWorkerLimits	export declare function resolveMemoryWorkerLimits(input?: MemoryWorkerLimitOptions): ResolvedMemoryWorkerLimits
+resolveObservationalMemorySettings	export declare function resolveObservationalMemorySettings(settings?: SettingsProvider, overrides?: ObservationalMemorySettingsInput): Promise<ObservationalMemorySettings>
+runDropper	export declare function runDropper(options: RunDropperOptions): Promise<readonly string[]>
+runMemoryWorkerLoop	export declare function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<void>
+runObserver	export declare function runObserver(options: RunObserverOptions): Promise<readonly MemoryObservation[]>
+runReflector	export declare function runReflector(options: RunReflectorOptions): Promise<readonly MemoryReflection[]>
+serializeSessionEntry	export declare function serializeSessionEntry(entry: SessionEntry, secrets?: readonly (string | undefined)[], maxBytes?: number): string
+serializeSourceEntries	export declare function serializeSourceEntries(entries: readonly SessionEntry[], secrets?: readonly (string | undefined)[], maxBytes?: number): string
+truncateWorkerText	export declare function truncateWorkerText(text: string, maxBytes: number): string

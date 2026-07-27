@@ -1,4 +1,10 @@
-import type { CacheRetention, ProviderRequest, ProviderRequestOptions, ProviderRequestPolicy, ProviderRequestPolicyResult } from "./contracts.js";
+import type {
+  CacheRetention,
+  ProviderRequest,
+  ProviderRequestOptions,
+  ProviderRequestPolicy,
+  ProviderRequestPolicyResult,
+} from "./contracts.js";
 
 export interface SessionCachePolicyOptions {
   readonly retention?: CacheRetention;
@@ -59,10 +65,10 @@ export function mergeProviderRequestOptions(
     cache: {
       ...base.cache,
       ...patch.cache,
-      breakpoints: base.cache?.breakpoints || patch.cache?.breakpoints ? [
-        ...(base.cache?.breakpoints ?? []),
-        ...(patch.cache?.breakpoints ?? []),
-      ] : undefined,
+      breakpoints:
+        base.cache?.breakpoints || patch.cache?.breakpoints
+          ? [...(base.cache?.breakpoints ?? []), ...(patch.cache?.breakpoints ?? [])]
+          : undefined,
     },
   };
 }

@@ -1,33 +1,32 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import Database from "better-sqlite3";
 import {
-  SessionAppendConflictError,
-  assertSessionMetadataKey,
-  prepareRunFeedback,
-  requireRunFeedbackOwnership,
-  runFeedbackPageLimit,
-  RunFeedbackError,
-  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
-  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
-  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
-  resolveSessionSearchQuery,
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
+  assertSessionMetadataKey,
   type BranchQuery,
   type CheckpointStore,
+  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
+  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   type LeaseStore,
   type MigrationQuery,
   type PersistencePage,
   type ProductionPersistenceStore,
+  prepareRunFeedback,
   type RetentionPolicyQuery,
+  RunFeedbackError,
   type RunFeedbackQuery,
   type RunFeedbackRecord,
   type RunFeedbackStore,
   type RunLedger,
   type RunQuery,
   type RunRecord,
+  requireRunFeedbackOwnership,
+  resolveSessionSearchQuery,
+  runFeedbackPageLimit,
+  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  SessionAppendConflictError,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
@@ -42,6 +41,8 @@ import {
   type UsageQuery,
   type UsageRecord,
 } from "@arnilo/prism";
+import { createSessionRowMappers, type SessionEntryRow } from "@arnilo/prism-session-store-codecs";
+import Database from "better-sqlite3";
 import {
   applySqliteMigrations,
   assertSqliteSchemaReady,
@@ -49,7 +50,8 @@ import {
   maybeRestrictFileMode,
   verifyMigrationIdempotency,
 } from "./migrations.js";
-import {
+
+const {
   agentEventRecordToRow,
   decodeEntryCursor,
   encodeEntryCursor,
@@ -68,8 +70,11 @@ import {
   sessionEntryToRow,
   toolCallRecordToRow,
   usageRecordToRow,
-  type SessionEntryRow,
-} from "./row-mappers.js";
+} = createSessionRowMappers<number>({
+  encode: (redacted) => (redacted ? 1 : 0),
+  decode: (redacted) => redacted === 1,
+});
+
 import { createSqliteCheckpointStore } from "./checkpoints.js";
 import { createSqliteLeaseStore } from "./leases.js";
 import { createSqlitePersistenceLifecycle } from "./lifecycle.js";
@@ -92,7 +97,7 @@ export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPe
 
 export function createSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence {
   const ownsDatabase = !options.database;
-  let db = options.database ?? openDatabase(options);
+  const db = options.database ?? openDatabase(options);
 
   if (!options.skipMigrations) {
     applySqliteMigrations(db);
@@ -115,9 +120,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       updated_at = excluded.updated_at,
       metadata = excluded.metadata`,
   );
-  const selectParent = db.prepare(
-    `SELECT 1 FROM prism_session_entries WHERE id = ? AND session_id = ? LIMIT 1`,
-  );
+  const selectParent = db.prepare(`SELECT 1 FROM prism_session_entries WHERE id = ? AND session_id = ? LIMIT 1`);
   const selectIdempotency = db.prepare(
     `SELECT entry_id FROM prism_session_append_idempotency
      WHERE session_id = ? AND expected_parent_id = ? AND idempotency_key = ?`,
@@ -138,9 +141,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       session_id, expected_parent_id, idempotency_key, entry_id, created_at
     ) VALUES (?, ?, ?, ?, ?)`,
   );
-  const listEntries = db.prepare(
-    `SELECT * FROM prism_session_entries WHERE session_id = ? ORDER BY rowid ASC`,
-  );
+  const listEntries = db.prepare(`SELECT * FROM prism_session_entries WHERE session_id = ? ORDER BY rowid ASC`);
   const insertFeedback = db.prepare(
     `INSERT INTO prism_run_feedback (
       id, run_id, session_id, trace_id, rating, comment, tags, scorer_ids, evaluation_ids,
@@ -163,9 +164,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       error = excluded.error,
       metadata = excluded.metadata`,
   );
-  const nextEventSequence = db.prepare(
-    `SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence FROM prism_agent_events WHERE run_id = ?`,
-  );
+  const nextEventSequence = db.prepare(`SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence FROM prism_agent_events WHERE run_id = ?`);
   const insertEvent = db.prepare(
     `INSERT INTO prism_agent_events (
       id, session_id, run_id, entry_id, sequence, type, timestamp, event,
@@ -194,22 +193,37 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       const record = await prepareRunFeedback(input, {
         redactor: options.feedbackRedactor,
         resolveRun: ({ runId, ownership }) => {
-          const row = db.prepare(
-            "SELECT id, session_id, tenant_id, account_id, user_id FROM prism_runs WHERE id = ? AND tenant_id = ? AND account_id IS ? AND user_id IS ? LIMIT 1",
-          ).get(runId, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null) as Record<string, unknown> | undefined;
-          return row ? {
-            runId: String(row.id),
-            sessionId: String(row.session_id),
-            tenantId: String(row.tenant_id),
-            accountId: row.account_id === null ? undefined : String(row.account_id),
-            userId: row.user_id === null ? undefined : String(row.user_id),
-          } : false;
+          const row = db
+            .prepare(
+              "SELECT id, session_id, tenant_id, account_id, user_id FROM prism_runs WHERE id = ? AND tenant_id = ? AND account_id IS ? AND user_id IS ? LIMIT 1",
+            )
+            .get(runId, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null) as Record<string, unknown> | undefined;
+          return row
+            ? {
+                runId: String(row.id),
+                sessionId: String(row.session_id),
+                tenantId: String(row.tenant_id),
+                accountId: row.account_id === null ? undefined : String(row.account_id),
+                userId: row.user_id === null ? undefined : String(row.user_id),
+              }
+            : false;
         },
       });
       insertFeedback.run(
-        record.id, record.runId, record.sessionId, record.traceId ?? null, record.rating ?? null,
-        record.comment ?? null, JSON.stringify(record.tags), JSON.stringify(record.scorerIds), JSON.stringify(record.evaluationIds),
-        record.createdAt, record.createdBy ?? null, record.tenantId, record.accountId ?? null, record.userId ?? null,
+        record.id,
+        record.runId,
+        record.sessionId,
+        record.traceId ?? null,
+        record.rating ?? null,
+        record.comment ?? null,
+        JSON.stringify(record.tags),
+        JSON.stringify(record.scorerIds),
+        JSON.stringify(record.evaluationIds),
+        record.createdAt,
+        record.createdBy ?? null,
+        record.tenantId,
+        record.accountId ?? null,
+        record.userId ?? null,
         record.metadata === undefined ? null : JSON.stringify(record.metadata),
       );
       return record;
@@ -221,22 +235,61 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       const params: unknown[] = [];
       if (query.accountId === undefined) filters.push("account_id IS NULL");
       if (query.userId === undefined) filters.push("user_id IS NULL");
-      if (query.runId) { filters.push("run_id = ?"); params.push(query.runId); }
-      if (query.sessionId) { filters.push("session_id = ?"); params.push(query.sessionId); }
-      if (query.traceId) { filters.push("trace_id = ?"); params.push(query.traceId); }
-      if (query.rating !== undefined) { filters.push("rating = ?"); params.push(query.rating); }
-      if (query.scorerId) { filters.push("EXISTS (SELECT 1 FROM json_each(scorer_ids) WHERE value = ?)"); params.push(query.scorerId); }
-      if (query.evaluationId) { filters.push("EXISTS (SELECT 1 FROM json_each(evaluation_ids) WHERE value = ?)"); params.push(query.evaluationId); }
-      if (query.tag) { filters.push("EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)"); params.push(query.tag); }
-      if (query.fromCreatedAt) { filters.push("created_at >= ?"); params.push(query.fromCreatedAt); }
-      if (query.toCreatedAt) { filters.push("created_at <= ?"); params.push(query.toCreatedAt); }
-      return queryTable(db, "prism_run_feedback", { ...query, limit: runFeedbackPageLimit(query.limit) }, filters, mapFeedbackRow, params, "created_at", "id");
+      if (query.runId) {
+        filters.push("run_id = ?");
+        params.push(query.runId);
+      }
+      if (query.sessionId) {
+        filters.push("session_id = ?");
+        params.push(query.sessionId);
+      }
+      if (query.traceId) {
+        filters.push("trace_id = ?");
+        params.push(query.traceId);
+      }
+      if (query.rating !== undefined) {
+        filters.push("rating = ?");
+        params.push(query.rating);
+      }
+      if (query.scorerId) {
+        filters.push("EXISTS (SELECT 1 FROM json_each(scorer_ids) WHERE value = ?)");
+        params.push(query.scorerId);
+      }
+      if (query.evaluationId) {
+        filters.push("EXISTS (SELECT 1 FROM json_each(evaluation_ids) WHERE value = ?)");
+        params.push(query.evaluationId);
+      }
+      if (query.tag) {
+        filters.push("EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)");
+        params.push(query.tag);
+      }
+      if (query.fromCreatedAt) {
+        filters.push("created_at >= ?");
+        params.push(query.fromCreatedAt);
+      }
+      if (query.toCreatedAt) {
+        filters.push("created_at <= ?");
+        params.push(query.toCreatedAt);
+      }
+      return queryTable(
+        db,
+        "prism_run_feedback",
+        { ...query, limit: runFeedbackPageLimit(query.limit) },
+        filters,
+        mapFeedbackRow,
+        params,
+        "created_at",
+        "id",
+      );
     },
     async delete(input) {
       input.signal?.throwIfAborted();
       const ownership = requireRunFeedbackOwnership(input);
-      return db.prepare("DELETE FROM prism_run_feedback WHERE id = ? AND tenant_id = ? AND account_id IS ? AND user_id IS ?")
-        .run(input.id, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null).changes > 0;
+      return (
+        db
+          .prepare("DELETE FROM prism_run_feedback WHERE id = ? AND tenant_id = ? AND account_id IS ? AND user_id IS ?")
+          .run(input.id, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null).changes > 0
+      );
     },
   };
 
@@ -303,13 +356,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         insertSearchFts.run(row.session_id, row.id, search.label, search.summary, search.body);
 
         if (appendOptions?.idempotencyKey) {
-          insertIdempotency.run(
-            entry.sessionId,
-            expectedParent,
-            appendOptions.idempotencyKey,
-            entry.id,
-            now,
-          );
+          insertIdempotency.run(entry.sessionId, expectedParent, appendOptions.idempotencyKey, entry.id, now);
         }
       });
 
@@ -736,15 +783,30 @@ function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery):
 
   const filters: string[] = [];
   const params: unknown[] = [];
-  if (q.tenantId) { filters.push("s.tenant_id = ?"); params.push(q.tenantId); }
-  if (q.accountId) { filters.push("s.account_id = ?"); params.push(q.accountId); }
-  if (q.userId) { filters.push("s.user_id = ?"); params.push(q.userId); }
+  if (q.tenantId) {
+    filters.push("s.tenant_id = ?");
+    params.push(q.tenantId);
+  }
+  if (q.accountId) {
+    filters.push("s.account_id = ?");
+    params.push(q.accountId);
+  }
+  if (q.userId) {
+    filters.push("s.user_id = ?");
+    params.push(q.userId);
+  }
   if (q.workspaceRoot) {
     filters.push(`json_extract(s.metadata, '$.${SESSION_SEARCH_WORKSPACE_METADATA_KEY}') = ?`);
     params.push(q.workspaceRoot);
   }
-  if (q.fromUpdatedAt) { filters.push("s.updated_at >= ?"); params.push(q.fromUpdatedAt); }
-  if (q.toUpdatedAt) { filters.push("s.updated_at <= ?"); params.push(q.toUpdatedAt); }
+  if (q.fromUpdatedAt) {
+    filters.push("s.updated_at >= ?");
+    params.push(q.fromUpdatedAt);
+  }
+  if (q.toUpdatedAt) {
+    filters.push("s.updated_at <= ?");
+    params.push(q.toUpdatedAt);
+  }
   if (q.label) {
     filters.push("EXISTS (SELECT 1 FROM prism_session_entries e WHERE e.session_id = s.id AND instr(e.label, ?) > 0)");
     params.push(q.label);
@@ -784,8 +846,9 @@ function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery):
   }
 
   const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
-  const rows = db.prepare(
-    `SELECT s.id AS session_id, s.updated_at, s.metadata,
+  const rows = db
+    .prepare(
+      `SELECT s.id AS session_id, s.updated_at, s.metadata,
        (
          SELECT e.label FROM prism_session_entries e
          WHERE e.session_id = s.id AND e.label IS NOT NULL
@@ -800,7 +863,8 @@ function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery):
      ${where}
      ORDER BY s.updated_at ${order}, s.id ${order}
      LIMIT ?`,
-  ).all(...params, q.limit + 1) as Array<{
+    )
+    .all(...params, q.limit + 1) as Array<{
     session_id: string;
     updated_at: string;
     metadata: string | null;
@@ -859,17 +923,13 @@ function parseSessionMetadata(raw: string | null): Readonly<Record<string, unkno
   if (!raw) return undefined;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Readonly<Record<string, unknown>>
-      : undefined;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Readonly<Record<string, unknown>>) : undefined;
   } catch {
     return undefined;
   }
 }
 
-function safeSearchMetadata(
-  metadata: Readonly<Record<string, unknown>> | undefined,
-): Readonly<Record<string, unknown>> | undefined {
+function safeSearchMetadata(metadata: Readonly<Record<string, unknown>> | undefined): Readonly<Record<string, unknown>> | undefined {
   if (!metadata) return undefined;
   const workspaceRoot = metadata[SESSION_SEARCH_WORKSPACE_METADATA_KEY];
   if (typeof workspaceRoot !== "string") return undefined;
@@ -930,10 +990,7 @@ function queryTable<T>(
   const last = pageRows.at(-1);
   return {
     items: pageRows.map(mapRow),
-    nextCursor:
-      hasMore && last
-        ? encodeEntryCursor(String(last[sortColumn]), String(last[idColumn]))
-        : undefined,
+    nextCursor: hasMore && last ? encodeEntryCursor(String(last[sortColumn]), String(last[idColumn])) : undefined,
   };
 }
 
@@ -953,23 +1010,24 @@ const mapRunRow = (row: Record<string, unknown>) => rowToRunRecord(row as never)
 const mapEventRow = (row: Record<string, unknown>) => rowToAgentEventRecord(row as never);
 const mapToolCallRow = (row: Record<string, unknown>) => rowToToolCallRecord(row as never);
 const mapUsageRow = (row: Record<string, unknown>) => rowToUsageRecord(row as never);
-const mapFeedbackRow = (row: Record<string, unknown>): RunFeedbackRecord => Object.freeze({
-  id: String(row.id),
-  runId: String(row.run_id),
-  sessionId: String(row.session_id),
-  traceId: row.trace_id === null ? undefined : String(row.trace_id),
-  rating: row.rating === null ? undefined : Number(row.rating),
-  comment: row.comment === null ? undefined : String(row.comment),
-  tags: Object.freeze(parseStringArray(row.tags)),
-  scorerIds: Object.freeze(parseStringArray(row.scorer_ids)),
-  evaluationIds: Object.freeze(parseStringArray(row.evaluation_ids)),
-  createdAt: String(row.created_at),
-  createdBy: row.created_by === null ? undefined : String(row.created_by),
-  tenantId: String(row.tenant_id),
-  accountId: row.account_id === null ? undefined : String(row.account_id),
-  userId: row.user_id === null ? undefined : String(row.user_id),
-  metadata: row.metadata === null ? undefined : deepFreeze(JSON.parse(String(row.metadata)) as Readonly<Record<string, unknown>>),
-});
+const mapFeedbackRow = (row: Record<string, unknown>): RunFeedbackRecord =>
+  Object.freeze({
+    id: String(row.id),
+    runId: String(row.run_id),
+    sessionId: String(row.session_id),
+    traceId: row.trace_id === null ? undefined : String(row.trace_id),
+    rating: row.rating === null ? undefined : Number(row.rating),
+    comment: row.comment === null ? undefined : String(row.comment),
+    tags: Object.freeze(parseStringArray(row.tags)),
+    scorerIds: Object.freeze(parseStringArray(row.scorer_ids)),
+    evaluationIds: Object.freeze(parseStringArray(row.evaluation_ids)),
+    createdAt: String(row.created_at),
+    createdBy: row.created_by === null ? undefined : String(row.created_by),
+    tenantId: String(row.tenant_id),
+    accountId: row.account_id === null ? undefined : String(row.account_id),
+    userId: row.user_id === null ? undefined : String(row.user_id),
+    metadata: row.metadata === null ? undefined : deepFreeze(JSON.parse(String(row.metadata)) as Readonly<Record<string, unknown>>),
+  });
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -981,7 +1039,8 @@ function deepFreeze<T>(value: T): T {
 
 function parseStringArray(value: unknown): string[] {
   const parsed: unknown = JSON.parse(String(value));
-  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) throw new RunFeedbackError("Invalid stored feedback array");
+  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string"))
+    throw new RunFeedbackError("Invalid stored feedback array");
   return parsed;
 }
 const mapAgentDefinitionRow = rowToAgentDefinitionRecord;

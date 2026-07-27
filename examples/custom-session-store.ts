@@ -49,7 +49,9 @@ export async function demo(): Promise<{ appendedKinds: readonly string[]; entryC
 
   const session = createAgentSession({ agent, store });
   async function drain(): Promise<void> {
-    for await (const _event of session.subscribe()) { /* consume */ }
+    for await (const _event of session.subscribe()) {
+      /* consume */
+    }
   }
   await Promise.all([drain(), session.run("Hi")]);
 

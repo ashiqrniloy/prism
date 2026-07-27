@@ -1,18 +1,10 @@
-import { parsePrismManifest, type PrismManifest } from "./manifests.js";
-import type { JsonObject, ResourceLoader, ResourceLoadContext } from "./contracts.js";
 import { assertJsonObject } from "./config.js";
-import {
-  DEFAULT_MAX_MEDIA_ITEM_BYTES,
-  loadBoundedBinaryResource,
-  type MediaContentBounds,
-} from "./content.js";
+import { DEFAULT_MAX_MEDIA_ITEM_BYTES, loadBoundedBinaryResource, type MediaContentBounds } from "./content.js";
+import type { JsonObject, ResourceLoadContext, ResourceLoader } from "./contracts.js";
+import { type PrismManifest, parsePrismManifest } from "./manifests.js";
 import { assertPermission, assertTrusted } from "./security.js";
 
-export async function loadTextResource(
-  loader: ResourceLoader,
-  uri: string,
-  context?: ResourceLoadContext,
-): Promise<string> {
+export async function loadTextResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<string> {
   await assertTrusted(context?.trust, { kind: "resource", target: uri, capability: "load", metadata: context?.metadata });
   await assertPermission(context?.permission, { kind: "resource", action: "load", target: uri, metadata: context?.metadata });
   const resource = await loader.load(uri, context);
@@ -21,11 +13,7 @@ export async function loadTextResource(
   throw new Error(`Resource ${uri} has no text or data`);
 }
 
-export async function loadJsonResource(
-  loader: ResourceLoader,
-  uri: string,
-  context?: ResourceLoadContext,
-): Promise<JsonObject> {
+export async function loadJsonResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<JsonObject> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await loadTextResource(loader, uri, context));
@@ -36,11 +24,7 @@ export async function loadJsonResource(
   return parsed;
 }
 
-export async function loadManifestResource(
-  loader: ResourceLoader,
-  uri: string,
-  context?: ResourceLoadContext,
-): Promise<PrismManifest> {
+export async function loadManifestResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<PrismManifest> {
   return parsePrismManifest(await loadJsonResource(loader, uri, context));
 }
 

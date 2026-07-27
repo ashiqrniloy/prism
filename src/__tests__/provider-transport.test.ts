@@ -1,17 +1,17 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { describe, it } from "node:test";
 import {
   DEFAULT_MAX_BUFFER_BYTES,
   DEFAULT_MAX_EVENT_BYTES,
   DEFAULT_MAX_RESPONSE_BODY_BYTES,
   ProviderTransportError,
   parseJsonObjectArguments,
-  tryParseJsonObjectArguments,
   readBoundedResponseText,
   readSseData,
   readSseEvents,
+  tryParseJsonObjectArguments,
 } from "../providers/transport.js";
 
 function stream(chunks: readonly (string | Uint8Array)[]): ReadableStream<Uint8Array> {
@@ -40,10 +40,7 @@ async function collectData(body: ReadableStream<Uint8Array>, options?: Parameter
 
 describe("provider transport primitives", () => {
   it("parses CRLF and LF delimited events with multiline data", async () => {
-    const body = stream([
-      "data: line1\r\n",
-      "data: line2\r\n\r\ndata: ok\n\n",
-    ]);
+    const body = stream(["data: line1\r\n", "data: line2\r\n\r\ndata: ok\n\n"]);
     const events = await collectEvents(body);
     assert.equal(events.length, 2);
     assert.equal(events[0]!.data, "line1\nline2");
@@ -59,12 +56,12 @@ describe("provider transport primitives", () => {
   });
 
   it("surfaces SSE comment lines on events", async () => {
-    const body = stream([": energy {\"energy_joules\":1}\n\ndata: {\"ok\":true}\n\n"]);
+    const body = stream([': energy {"energy_joules":1}\n\ndata: {"ok":true}\n\n']);
     const events = await collectEvents(body);
     assert.equal(events.length, 2);
-    assert.deepEqual(events[0]!.comments, ["energy {\"energy_joules\":1}"]);
+    assert.deepEqual(events[0]!.comments, ['energy {"energy_joules":1}']);
     assert.equal(events[0]!.data, "");
-    assert.equal(events[1]!.data, "{\"ok\":true}");
+    assert.equal(events[1]!.data, '{"ok":true}');
   });
 
   it("flushes a final partial event without trailing blank line", async () => {
@@ -88,7 +85,7 @@ describe("provider transport primitives", () => {
   });
 
   it("rejects oversized incomplete SSE buffers", async () => {
-    const body = stream(["data: " + "x".repeat(32)]);
+    const body = stream([`data: ${"x".repeat(32)}`]);
     await assert.rejects(
       () => collectEvents(body, { maxBufferBytes: 16 }),
       (error: unknown) => error instanceof ProviderTransportError && error.code === "sse_buffer_overflow",
@@ -121,20 +118,17 @@ describe("provider transport primitives", () => {
 
   it("parses JSON object arguments and rejects invalid shapes", () => {
     assert.deepEqual(parseJsonObjectArguments(""), {});
-    assert.deepEqual(parseJsonObjectArguments("{\"a\":1}"), { a: 1 });
+    assert.deepEqual(parseJsonObjectArguments('{"a":1}'), { a: 1 });
     assert.throws(
       () => parseJsonObjectArguments("[]", { toolName: "echo" }),
       (error: unknown) => error instanceof ProviderTransportError && error.code === "invalid_json_arguments",
     );
-    assert.throws(
-      () => parseJsonObjectArguments("{", { toolName: "echo" }),
-      /Invalid tool arguments JSON for tool echo/,
-    );
+    assert.throws(() => parseJsonObjectArguments("{", { toolName: "echo" }), /Invalid tool arguments JSON for tool echo/);
     assert.throws(
       () => parseJsonObjectArguments("x".repeat(20), { maxBytes: 8 }),
       (error: unknown) => error instanceof ProviderTransportError && error.code === "invalid_json_arguments",
     );
-    const ok = tryParseJsonObjectArguments("{\"a\":1}");
+    const ok = tryParseJsonObjectArguments('{"a":1}');
     assert.equal(ok.ok, true);
     if (ok.ok) assert.deepEqual(ok.value, { a: 1 });
     const bad = tryParseJsonObjectArguments("{", { toolName: "echo" });

@@ -1,22 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { access, realpath } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
+import { access, realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { PassThrough } from "node:stream";
 import {
   assertAbsoluteExecutable,
   createSecretRedactor,
+  DockerCliError,
+  type DockerRunner,
   dockerOutputText,
   runDockerCli,
-  type DockerRunner,
-  DockerCliError,
 } from "./docker-cli.js";
-import {
-  resolveDockerSandboxLimits,
-  type DockerSandboxLimitOptions,
-  type ResolvedDockerSandboxLimits,
-} from "./sandbox-limits.js";
-import { createImportTarStream, summarizeTarStream, SandboxTarError } from "./sandbox-tar.js";
 import type {
   DisposableSandbox,
   SandboxCloseOptions,
@@ -26,6 +20,8 @@ import type {
   SandboxStatus,
   SandboxStatusState,
 } from "./sandbox.js";
+import { type DockerSandboxLimitOptions, type ResolvedDockerSandboxLimits, resolveDockerSandboxLimits } from "./sandbox-limits.js";
+import { createImportTarStream, SandboxTarError, summarizeTarStream } from "./sandbox-tar.js";
 
 const IMAGE_DIGEST_RE = /@sha256:[a-f0-9]{64}$/i;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -58,7 +54,7 @@ export function assertBrowserSandboxNetwork(network: DockerNetworkConfig | undef
   const resolved = network ?? { mode: "none" as const };
   if (resolved.mode === "none") return;
   const attestation = resolved.browserEgress;
-  if (!attestation || attestation.denyDirectEgress !== true || !attestation.proxyEndpoint) {
+  if (attestation?.denyDirectEgress !== true || !attestation.proxyEndpoint) {
     throw new DockerSandboxError(
       "custom sandbox network requires browserEgress attestation (proxyEndpoint + denyDirectEgress) before browser use",
     );
@@ -130,10 +126,7 @@ function validateUser(user: string): string {
   return user;
 }
 
-function validateEnv(
-  env: Readonly<Record<string, string>> | undefined,
-  limits: ResolvedDockerSandboxLimits,
-): Record<string, string> {
+function validateEnv(env: Readonly<Record<string, string>> | undefined, limits: ResolvedDockerSandboxLimits): Record<string, string> {
   const entries = Object.entries(env ?? {});
   if (entries.length > limits.maxEnvNames) {
     throw new DockerSandboxError(`env exceeds maxEnvNames (${limits.maxEnvNames})`);
@@ -259,12 +252,7 @@ class Semaphore {
   }
 }
 
-async function preflightDocker(
-  docker: string,
-  runner: DockerRunner,
-  redact: (text: string) => string,
-  timeoutMs: number,
-): Promise<void> {
+async function preflightDocker(docker: string, runner: DockerRunner, redact: (text: string) => string, timeoutMs: number): Promise<void> {
   await dockerOutputText(runner, {
     docker,
     args: ["version", "--format", "{{.Server.Version}}"],
@@ -427,10 +415,7 @@ class DockerSandboxSession implements DisposableSandbox {
         args.push("-e", `${key}=${value}`);
       }
       args.push(this.opts.containerId, request.file, ...request.args);
-      const timeoutMs =
-        request.timeout !== undefined
-          ? Math.min(request.timeout, this.remainingWallMs())
-          : this.remainingWallMs();
+      const timeoutMs = request.timeout !== undefined ? Math.min(request.timeout, this.remainingWallMs()) : this.remainingWallMs();
       let outputBytes = 0;
       const result = await this.opts.runner({
         docker: this.opts.docker,
@@ -444,9 +429,7 @@ class DockerSandboxSession implements DisposableSandbox {
         onData: (chunk) => {
           outputBytes += chunk.byteLength;
           if (outputBytes > this.opts.limits.maxOutputBytes) {
-            throw new DockerSandboxError(
-              `command output exceeded maxOutputBytes (${this.opts.limits.maxOutputBytes})`,
-            );
+            throw new DockerSandboxError(`command output exceeded maxOutputBytes (${this.opts.limits.maxOutputBytes})`);
           }
           request.onData?.(chunk);
         },
@@ -517,14 +500,9 @@ class DockerSandboxSession implements DisposableSandbox {
     this.state = "removed";
   }
 
-  private async exportTwoPass(
-    write: NonNullable<SandboxCloseOptions["export"]>,
-    signal?: AbortSignal,
-  ): Promise<SandboxExportMetadata> {
+  private async exportTwoPass(write: NonNullable<SandboxCloseOptions["export"]>, signal?: AbortSignal): Promise<SandboxExportMetadata> {
     if (this.retainedArtifacts >= this.opts.limits.maxRetainedArtifacts) {
-      throw new DockerSandboxError(
-        `sandbox exceeded maxRetainedArtifacts (${this.opts.limits.maxRetainedArtifacts})`,
-      );
+      throw new DockerSandboxError(`sandbox exceeded maxRetainedArtifacts (${this.opts.limits.maxRetainedArtifacts})`);
     }
 
     const pass1 = new PassThrough();
@@ -532,23 +510,25 @@ class DockerSandboxSession implements DisposableSandbox {
       maxEntries: this.opts.limits.maxExportEntries,
       maxBytes: this.opts.limits.maxExportBytes,
     });
-    const run1 = this.opts.runner({
-      docker: this.opts.docker,
-      args: ["exec", "-u", this.opts.user, "-w", WORKSPACE_MOUNT, this.opts.containerId, "tar", "-cf", "-", "."],
-      signal,
-      timeoutMs: this.remainingWallMs(),
-      maxOutputBytes: this.opts.limits.maxExportBytes,
-      collectStdout: false,
-      collectStderr: true,
-      redact: this.redact,
-      onStdout: (chunk) => pass1.write(chunk),
-    }).then((result) => {
-      pass1.end();
-      if (result.exitCode !== 0) {
-        const detail = result.stderr.toString("utf8").trim() || `exit ${result.exitCode}`;
-        throw new DockerSandboxError(this.redact(`export failed: ${detail}`));
-      }
-    });
+    const run1 = this.opts
+      .runner({
+        docker: this.opts.docker,
+        args: ["exec", "-u", this.opts.user, "-w", WORKSPACE_MOUNT, this.opts.containerId, "tar", "-cf", "-", "."],
+        signal,
+        timeoutMs: this.remainingWallMs(),
+        maxOutputBytes: this.opts.limits.maxExportBytes,
+        collectStdout: false,
+        collectStderr: true,
+        redact: this.redact,
+        onStdout: (chunk) => pass1.write(chunk),
+      })
+      .then((result) => {
+        pass1.end();
+        if (result.exitCode !== 0) {
+          const detail = result.stderr.toString("utf8").trim() || `exit ${result.exitCode}`;
+          throw new DockerSandboxError(this.redact(`export failed: ${detail}`));
+        }
+      });
     const summary = await summaryPromise;
     await run1;
 
@@ -570,23 +550,25 @@ class DockerSandboxSession implements DisposableSandbox {
     pass2.on("error", (error) => hostStream.destroy(error));
 
     const hostWrite = write(hostStream, metadata);
-    const run2 = this.opts.runner({
-      docker: this.opts.docker,
-      args: ["exec", "-u", this.opts.user, "-w", WORKSPACE_MOUNT, this.opts.containerId, "tar", "-cf", "-", "."],
-      signal,
-      timeoutMs: this.remainingWallMs(),
-      maxOutputBytes: this.opts.limits.maxExportBytes,
-      collectStdout: false,
-      collectStderr: true,
-      redact: this.redact,
-      onStdout: (chunk) => pass2.write(chunk),
-    }).then((result) => {
-      pass2.end();
-      if (result.exitCode !== 0) {
-        const detail = result.stderr.toString("utf8").trim() || `exit ${result.exitCode}`;
-        throw new DockerSandboxError(this.redact(`export failed: ${detail}`));
-      }
-    });
+    const run2 = this.opts
+      .runner({
+        docker: this.opts.docker,
+        args: ["exec", "-u", this.opts.user, "-w", WORKSPACE_MOUNT, this.opts.containerId, "tar", "-cf", "-", "."],
+        signal,
+        timeoutMs: this.remainingWallMs(),
+        maxOutputBytes: this.opts.limits.maxExportBytes,
+        collectStdout: false,
+        collectStderr: true,
+        redact: this.redact,
+        onStdout: (chunk) => pass2.write(chunk),
+      })
+      .then((result) => {
+        pass2.end();
+        if (result.exitCode !== 0) {
+          const detail = result.stderr.toString("utf8").trim() || `exit ${result.exitCode}`;
+          throw new DockerSandboxError(this.redact(`export failed: ${detail}`));
+        }
+      });
 
     try {
       const verify = await verifyPromise;
@@ -637,9 +619,7 @@ class DockerSandboxSession implements DisposableSandbox {
   }
 }
 
-export async function createDockerSandbox(
-  options: CreateDockerSandboxOptions,
-): Promise<DisposableSandbox> {
+export async function createDockerSandbox(options: CreateDockerSandboxOptions): Promise<DisposableSandbox> {
   const docker = await assertAbsoluteExecutable(options.docker, "docker");
   const image = validateImage(options.image);
   const user = validateUser(options.user);
@@ -700,9 +680,7 @@ export async function createDockerSandbox(
       redact,
     });
     if (start.exitCode !== 0) {
-      throw new DockerSandboxError(
-        redact(start.stderr.toString("utf8").trim() || "docker start failed"),
-      );
+      throw new DockerSandboxError(redact(start.stderr.toString("utf8").trim() || "docker start failed"));
     }
 
     let importIdentity: SandboxExportMetadata | undefined;
@@ -738,11 +716,7 @@ export async function createDockerSandbox(
         redact,
       }).catch(() => undefined);
     }
-    if (
-      error instanceof DockerSandboxError ||
-      error instanceof DockerCliError ||
-      error instanceof SandboxTarError
-    ) {
+    if (error instanceof DockerSandboxError || error instanceof DockerCliError || error instanceof SandboxTarError) {
       throw new DockerSandboxError(redact(error.message));
     }
     const message = error instanceof Error ? error.message : String(error);
@@ -751,9 +725,7 @@ export async function createDockerSandbox(
 }
 
 /** @internal test helper: build create argv without starting Docker. */
-export function buildDockerCreateArgsForTest(
-  options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">,
-): string[] {
+export function buildDockerCreateArgsForTest(options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">): string[] {
   const limits = resolveDockerSandboxLimits(options.limits);
   const env = validateEnv(options.env, limits);
   const network = validateNetwork(options.network);

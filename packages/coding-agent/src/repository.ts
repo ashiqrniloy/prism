@@ -5,8 +5,9 @@
  * rejects devices/FIFOs/sockets for descent, and charges finite depth/entry/file
  * limits before retaining the next result. No glob/index/watcher dependency.
  */
-import { open, opendir, lstat, realpath } from "node:fs/promises";
-import type { Dirent } from "node:fs";
+
+import type { Dir, Dirent } from "node:fs";
+import { lstat, open, opendir, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   DEFAULT_BINARY_SNIFF_BYTES,
@@ -69,17 +70,7 @@ export interface RepositorySearchMatch {
 export interface RepositorySearchResult {
   readonly matches: readonly RepositorySearchMatch[];
   readonly truncated: boolean;
-  readonly truncatedBy:
-    | "matches"
-    | "scan"
-    | "file"
-    | "entries"
-    | "files"
-    | "depth"
-    | "time"
-    | "abort"
-    | "pattern"
-    | null;
+  readonly truncatedBy: "matches" | "scan" | "file" | "entries" | "files" | "depth" | "time" | "abort" | "pattern" | null;
   readonly scannedBytes: number;
   readonly scannedFiles: number;
   readonly scannedEntries: number;
@@ -165,57 +156,29 @@ export class RepositoryError extends Error {
 export function resolveRepositoryLimits(options?: RepositoryLimitOptions): ResolvedRepositoryLimits {
   return {
     maxDepth: validateCodingLimit("maxDepth", options?.maxDepth ?? DEFAULT_MAX_REPO_DEPTH, HARD_MAX_REPO_DEPTH),
-    maxEntries: validateCodingLimit(
-      "maxEntries",
-      options?.maxEntries ?? DEFAULT_MAX_REPO_ENTRIES,
-      HARD_MAX_REPO_ENTRIES,
-    ),
+    maxEntries: validateCodingLimit("maxEntries", options?.maxEntries ?? DEFAULT_MAX_REPO_ENTRIES, HARD_MAX_REPO_ENTRIES),
     maxFiles: validateCodingLimit("maxFiles", options?.maxFiles ?? DEFAULT_MAX_REPO_FILES, HARD_MAX_REPO_FILES),
-    maxResults: validateCodingLimit(
-      "maxResults",
-      options?.maxResults ?? DEFAULT_MAX_REPO_RESULTS,
-      HARD_MAX_REPO_RESULTS,
-    ),
+    maxResults: validateCodingLimit("maxResults", options?.maxResults ?? DEFAULT_MAX_REPO_RESULTS, HARD_MAX_REPO_RESULTS),
     maxConcurrency: validateCodingLimit(
       "maxConcurrency",
       options?.maxConcurrency ?? DEFAULT_MAX_REPO_CONCURRENCY,
       HARD_MAX_REPO_CONCURRENCY,
     ),
-    maxScanBytes: validateCodingLimit(
-      "maxScanBytes",
-      options?.maxScanBytes ?? DEFAULT_MAX_SEARCH_SCAN_BYTES,
-      HARD_MAX_SEARCH_SCAN_BYTES,
-    ),
-    maxFileBytes: validateCodingLimit(
-      "maxFileBytes",
-      options?.maxFileBytes ?? DEFAULT_MAX_SEARCH_FILE_BYTES,
-      HARD_MAX_SEARCH_FILE_BYTES,
-    ),
-    maxMatches: validateCodingLimit(
-      "maxMatches",
-      options?.maxMatches ?? DEFAULT_MAX_SEARCH_MATCHES,
-      HARD_MAX_SEARCH_MATCHES,
-    ),
+    maxScanBytes: validateCodingLimit("maxScanBytes", options?.maxScanBytes ?? DEFAULT_MAX_SEARCH_SCAN_BYTES, HARD_MAX_SEARCH_SCAN_BYTES),
+    maxFileBytes: validateCodingLimit("maxFileBytes", options?.maxFileBytes ?? DEFAULT_MAX_SEARCH_FILE_BYTES, HARD_MAX_SEARCH_FILE_BYTES),
+    maxMatches: validateCodingLimit("maxMatches", options?.maxMatches ?? DEFAULT_MAX_SEARCH_MATCHES, HARD_MAX_SEARCH_MATCHES),
     maxPatternBytes: validateCodingLimit(
       "maxPatternBytes",
       options?.maxPatternBytes ?? DEFAULT_MAX_SEARCH_PATTERN_BYTES,
       HARD_MAX_SEARCH_PATTERN_BYTES,
     ),
-    maxLineBytes: validateCodingLimit(
-      "maxLineBytes",
-      options?.maxLineBytes ?? DEFAULT_MAX_SEARCH_LINE_BYTES,
-      HARD_MAX_SEARCH_LINE_BYTES,
-    ),
+    maxLineBytes: validateCodingLimit("maxLineBytes", options?.maxLineBytes ?? DEFAULT_MAX_SEARCH_LINE_BYTES, HARD_MAX_SEARCH_LINE_BYTES),
     maxContextLines: validateCodingLimitAllowZero(
       "maxContextLines",
       options?.maxContextLines ?? DEFAULT_MAX_SEARCH_CONTEXT_LINES,
       HARD_MAX_SEARCH_CONTEXT_LINES,
     ),
-    maxTimeMs: validateCodingLimit(
-      "maxTimeMs",
-      options?.maxTimeMs ?? DEFAULT_MAX_SEARCH_TIME_MS,
-      HARD_MAX_SEARCH_TIME_MS,
-    ),
+    maxTimeMs: validateCodingLimit("maxTimeMs", options?.maxTimeMs ?? DEFAULT_MAX_SEARCH_TIME_MS, HARD_MAX_SEARCH_TIME_MS),
     binarySniffBytes: DEFAULT_BINARY_SNIFF_BYTES,
     exclude: Object.freeze([...(options?.exclude ?? DEFAULT_REPO_EXCLUDE)]),
   };
@@ -240,7 +203,10 @@ function isPathInsideRoot(root: string, target: string): boolean {
  * Resolve a list/search start path under the workspace root.
  * Symlink escapes fail closed after realpath when the path exists.
  */
-export async function resolveRepoPath(root: string, inputPath: string | undefined): Promise<{
+export async function resolveRepoPath(
+  root: string,
+  inputPath: string | undefined,
+): Promise<{
   absolute: string;
   relative: string;
   rootReal: string;
@@ -370,11 +336,7 @@ type WalkEvent =
   | { type: "entry"; entry: RepoListEntry; absolutePath: string; depth: number }
   | { type: "limit"; truncatedBy: "entries" | "files" | "depth" };
 
-async function* walkRepository(
-  rootReal: string,
-  startAbsolute: string,
-  limits: WalkLimits,
-): AsyncGenerator<WalkEvent> {
+async function* walkRepository(rootReal: string, startAbsolute: string, limits: WalkLimits): AsyncGenerator<WalkEvent> {
   const queue: Array<{ absolute: string; relative: string; depth: number }> = [
     {
       absolute: startAbsolute,
@@ -394,7 +356,7 @@ async function* walkRepository(
       return;
     }
 
-    let dir;
+    let dir: Dir;
     try {
       dir = await opendir(current.absolute);
     } catch (error) {
@@ -455,8 +417,7 @@ async function* walkRepository(
         scannedFiles++;
       }
 
-      const relativePath =
-        current.relative === "." ? dirent.name : `${current.relative}/${dirent.name}`;
+      const relativePath = current.relative === "." ? dirent.name : `${current.relative}/${dirent.name}`;
       const entry: RepoListEntry = size === undefined ? { path: relativePath, kind } : { path: relativePath, kind, size };
       yield { type: "entry", entry, absolutePath, depth: current.depth };
 
@@ -474,16 +435,11 @@ async function* walkRepository(
 
 async function listLocal(request: RepositoryListRequest, defaults: ResolvedRepositoryLimits): Promise<RepositoryListResult> {
   const resolved = await resolveRepoPath(request.root, request.path);
-  const maxResults = validateCodingLimit(
-    "maxResults",
-    request.maxResults ?? defaults.maxResults,
-    HARD_MAX_REPO_RESULTS,
-  );
+  const maxResults = validateCodingLimit("maxResults", request.maxResults ?? defaults.maxResults, HARD_MAX_REPO_RESULTS);
   const offset = validateCodingLimitAllowZero("offset", request.offset ?? 0, HARD_MAX_REPO_ENTRIES);
   const maxDepth = validateCodingLimit("maxDepth", request.maxDepth ?? defaults.maxDepth, HARD_MAX_REPO_DEPTH);
   const exclude = new Set(request.exclude ?? defaults.exclude);
-  const deadlineAt =
-    request.deadlineMs !== undefined ? Date.now() + request.deadlineMs : Date.now() + defaults.maxTimeMs;
+  const deadlineAt = request.deadlineMs !== undefined ? Date.now() + request.deadlineMs : Date.now() + defaults.maxTimeMs;
 
   const collected: RepoListEntry[] = [];
   let scannedEntries = 0;
@@ -500,9 +456,7 @@ async function listLocal(request: RepositoryListRequest, defaults: ResolvedRepos
       if (startStat.isSymbolicLink()) kind = "symlink";
       else if (startStat.isFile()) kind = "file";
       const entry: RepoListEntry =
-        kind === "file"
-          ? { path: resolved.relative, kind, size: startStat.size }
-          : { path: resolved.relative, kind };
+        kind === "file" ? { path: resolved.relative, kind, size: startStat.size } : { path: resolved.relative, kind };
       scannedEntries = 1;
       scannedFiles = kind === "file" ? 1 : 0;
       if (offset === 0 && maxResults > 0) collected.push(entry);
@@ -711,36 +665,19 @@ async function searchFileLines(
   }
 }
 
-async function searchLocal(
-  request: RepositorySearchRequest,
-  defaults: ResolvedRepositoryLimits,
-): Promise<RepositorySearchResult> {
+async function searchLocal(request: RepositorySearchRequest, defaults: ResolvedRepositoryLimits): Promise<RepositorySearchResult> {
   const mode = request.mode ?? "literal";
   if (mode !== "literal" && mode !== "regex") {
     throw new RepositoryError(`unsupported search mode: ${String(mode)}`);
   }
   const caseSensitive = request.caseSensitive === true;
-  const { testLine } = compileSearchPattern(
-    request.query,
-    mode,
-    caseSensitive,
-    defaults.maxPatternBytes,
-  );
+  const { testLine } = compileSearchPattern(request.query, mode, caseSensitive, defaults.maxPatternBytes);
 
   const resolved = await resolveRepoPath(request.root, request.path);
-  const maxMatches = validateCodingLimit(
-    "maxMatches",
-    request.maxMatches ?? defaults.maxMatches,
-    HARD_MAX_SEARCH_MATCHES,
-  );
-  const context = validateCodingLimitAllowZero(
-    "context",
-    request.context ?? defaults.maxContextLines,
-    HARD_MAX_SEARCH_CONTEXT_LINES,
-  );
+  const maxMatches = validateCodingLimit("maxMatches", request.maxMatches ?? defaults.maxMatches, HARD_MAX_SEARCH_MATCHES);
+  const context = validateCodingLimitAllowZero("context", request.context ?? defaults.maxContextLines, HARD_MAX_SEARCH_CONTEXT_LINES);
   const exclude = new Set(request.exclude ?? defaults.exclude);
-  const deadlineAt =
-    request.deadlineMs !== undefined ? Date.now() + request.deadlineMs : Date.now() + defaults.maxTimeMs;
+  const deadlineAt = request.deadlineMs !== undefined ? Date.now() + request.deadlineMs : Date.now() + defaults.maxTimeMs;
 
   const matches: RepositorySearchMatch[] = [];
   let scannedBytes = 0;
@@ -866,9 +803,7 @@ async function searchLocal(
 }
 
 /** Local filesystem repository operations (default backend). */
-export function createLocalRepositoryOperations(
-  limits?: RepositoryLimitOptions,
-): RepositoryOperations {
+export function createLocalRepositoryOperations(limits?: RepositoryLimitOptions): RepositoryOperations {
   const resolved = resolveRepositoryLimits(limits);
   return {
     list: (request) => listLocal(request, resolved),

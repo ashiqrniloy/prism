@@ -1,11 +1,4 @@
-import type {
-  LeaseAcquireInput,
-  LeaseClaimInput,
-  LeaseKey,
-  LeaseRecord,
-  LeaseStore,
-  OwnershipScope,
-} from "./contracts.js";
+import type { LeaseAcquireInput, LeaseClaimInput, LeaseKey, LeaseRecord, LeaseStore, OwnershipScope } from "./contracts.js";
 
 export const LEASE_CONFLICT_CODE = "ERR_PRISM_LEASE_CONFLICT";
 
@@ -103,7 +96,8 @@ function validateKey(input: LeaseKey): void {
 }
 function validateAcquire(input: LeaseAcquireInput): void {
   validateKey(input);
-  if (!input.ownerId || !Number.isSafeInteger(input.ttlMs) || input.ttlMs < 1) throw new LeaseConflictError("Lease ownerId and positive ttlMs are required");
+  if (!input.ownerId || !Number.isSafeInteger(input.ttlMs) || input.ttlMs < 1)
+    throw new LeaseConflictError("Lease ownerId and positive ttlMs are required");
 }
 function validateClaim(input: LeaseClaimInput, requireTtl: boolean): void {
   validateKey(input);

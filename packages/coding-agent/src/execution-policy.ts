@@ -1,6 +1,5 @@
-import type { ExecutionAction, ExecutionPolicy } from "@arnilo/prism";
+import type { ExecutionAction, ExecutionPolicy, ToolResult } from "@arnilo/prism";
 import { assertExecutionAllowed, ExecutionDeniedError } from "@arnilo/prism";
-import type { ToolResult } from "@arnilo/prism";
 
 export async function enforceExecutionPolicy(
   policy: ExecutionPolicy | undefined,
@@ -15,7 +14,7 @@ export async function enforceExecutionPolicy(
   } catch (error) {
     const message =
       error instanceof ExecutionDeniedError
-        ? error.decision.reason ?? error.message
+        ? (error.decision.reason ?? error.message)
         : error instanceof Error
           ? error.message
           : String(error);

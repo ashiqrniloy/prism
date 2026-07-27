@@ -1,18 +1,18 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { InstructionInjector, ProviderRequest } from "@arnilo/prism";
 import {
-  createContributionRegistries,
-  registerDiscoveredContributions,
   createAgent,
+  createContributionRegistries,
   createMockProvider,
   createSecretRedactor,
   providerDone,
+  registerDiscoveredContributions,
   resolveInstructionInjectors,
 } from "@arnilo/prism";
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
 import { registerDiscoveredInstructionInjectors } from "@arnilo/prism/node/instruction-injectors";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
-import type { InstructionInjector, ProviderRequest } from "@arnilo/prism";
 
 // Instruction injection, end-to-end with the mock provider.
 //
@@ -37,7 +37,7 @@ const projectContext: InstructionInjector = {
 // An on_input injector: reaction to the user asking for JSON.
 const jsonOnJsonInput: InstructionInjector = {
   name: "json-on-json-input",
-  apply: (ctx) => ({
+  apply: (_ctx) => ({
     instructions: "Reply with JSON because the user asked for JSON.",
     when: "on_input",
     predicate: (c) => c.input.some((m) => /json/i.test(JSON.stringify(m.content))),

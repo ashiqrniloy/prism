@@ -38,15 +38,8 @@ export function estimateUtf8Bytes(value: string): number {
   return Buffer.byteLength(value, "utf8");
 }
 
-export function mapMcpContentToBlocks(
-  content: readonly McpContentBlock[] | undefined,
-  options: MapMcpContentOptions,
-): MapMcpContentResult {
-  const maxResultBytes = validateMcpLimit(
-    "maxResultBytes",
-    options.maxResultBytes,
-    HARD_MAX_RESULT_BYTES,
-  );
+export function mapMcpContentToBlocks(content: readonly McpContentBlock[] | undefined, options: MapMcpContentOptions): MapMcpContentResult {
+  const maxResultBytes = validateMcpLimit("maxResultBytes", options.maxResultBytes, HARD_MAX_RESULT_BYTES);
   if (!content?.length) {
     return { content: [], truncated: false, bytesUsed: 0 };
   }
@@ -104,10 +97,7 @@ export function mapMcpContentToBlocks(
       case "resource": {
         const resource = block.resource;
         const body = resource.text ?? (resource.blob ? `[blob ${resource.mimeType ?? "application/octet-stream"}]` : "");
-        const text = truncateUtf8(
-          `Resource ${resource.uri}${resource.mimeType ? ` (${resource.mimeType})` : ""}: ${body}`,
-          remaining,
-        );
+        const text = truncateUtf8(`Resource ${resource.uri}${resource.mimeType ? ` (${resource.mimeType})` : ""}: ${body}`, remaining);
         if (!text) {
           truncated = true;
           break;
@@ -140,19 +130,13 @@ export function mapMcpContentToBlocks(
   return { content: blocks, truncated, bytesUsed };
 }
 
-export function summarizeMcpContent(
-  content: readonly McpContentBlock[] | undefined,
-  maxBytes = 8 * 1024,
-): string {
+export function summarizeMcpContent(content: readonly McpContentBlock[] | undefined, maxBytes = 8 * 1024): string {
   const limit = validateMcpLimit("maxErrorBytes", maxBytes, HARD_MAX_RESULT_BYTES);
   if (!content?.length) return truncateUtf8("MCP tool returned no content", limit);
   let summary = "";
   for (const block of content) {
-    const part = block.type === "text"
-      ? block.text
-      : block.type === "resource"
-        ? block.resource.text ?? block.resource.uri
-        : `[${block.type}]`;
+    const part =
+      block.type === "text" ? block.text : block.type === "resource" ? (block.resource.text ?? block.resource.uri) : `[${block.type}]`;
     const separator = summary ? "\n" : "";
     const remaining = limit - estimateUtf8Bytes(summary) - estimateUtf8Bytes(separator);
     if (remaining <= 0) break;
@@ -195,14 +179,9 @@ function truncateUtf8(text: string, maxBytes: number): string {
   return text.slice(0, low);
 }
 
-export function assertMcpContentWithinLimit(
-  content: readonly McpContentBlock[] | undefined,
-  maxResultBytes: number,
-): void {
+export function assertMcpContentWithinLimit(content: readonly McpContentBlock[] | undefined, maxResultBytes: number): void {
   const mapped = mapMcpContentToBlocks(content, { maxResultBytes });
   if (mapped.truncated) {
-    throw new McpBridgeError(
-      `MCP tool result exceeds maxResultBytes (${maxResultBytes}); received at least ${mapped.bytesUsed} bytes`,
-    );
+    throw new McpBridgeError(`MCP tool result exceeds maxResultBytes (${maxResultBytes}); received at least ${mapped.bytesUsed} bytes`);
   }
 }

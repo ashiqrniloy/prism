@@ -79,7 +79,10 @@ export const ARTIFACT_CHECKPOINT_NAMESPACE = "prism.artifact";
 
 export class ArtifactError extends Error {
   readonly code = "ERR_PRISM_ARTIFACT";
-  constructor(message: string, readonly reason: string) {
+  constructor(
+    message: string,
+    readonly reason: string,
+  ) {
     super(message);
     this.name = "ArtifactError";
   }

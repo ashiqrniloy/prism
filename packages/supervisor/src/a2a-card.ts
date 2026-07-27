@@ -1,5 +1,5 @@
-import { A2AError } from "./errors.js";
 import type { A2AAgentCard, A2AAgentCardSignature } from "./a2a-types.js";
+import { A2AError } from "./errors.js";
 
 export interface SignA2AAgentCardOptions {
   readonly privateKey: CryptoKey;
@@ -26,10 +26,17 @@ export async function signA2AAgentCard(card: A2AAgentCard, options: SignA2AAgent
   const issuedAt = options.issuedAt ?? new Date().toISOString();
   const issued = Date.parse(issuedAt);
   const expires = Date.parse(options.expiresAt);
-  if (!Number.isFinite(issued) || !Number.isFinite(expires) || expires <= issued) throw new A2AError("Card signature expiry is invalid", 400, "ERR_PRISM_A2A_CARD");
-  const protectedHeader = base64url(new TextEncoder().encode(canonicalJson({ alg: "ES256", typ: "JOSE", kid: options.keyId, iat: issuedAt, exp: options.expiresAt })));
+  if (!Number.isFinite(issued) || !Number.isFinite(expires) || expires <= issued)
+    throw new A2AError("Card signature expiry is invalid", 400, "ERR_PRISM_A2A_CARD");
+  const protectedHeader = base64url(
+    new TextEncoder().encode(canonicalJson({ alg: "ES256", typ: "JOSE", kid: options.keyId, iat: issuedAt, exp: options.expiresAt })),
+  );
   const payload = base64url(new TextEncoder().encode(canonicalCard(card)));
-  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, options.privateKey, new TextEncoder().encode(`${protectedHeader}.${payload}`));
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    options.privateKey,
+    new TextEncoder().encode(`${protectedHeader}.${payload}`),
+  );
   const signed: A2AAgentCardSignature = { protected: protectedHeader, signature: base64url(new Uint8Array(signature)) };
   return deepFreeze({ ...structuredClone(card), signatures: [...(card.signatures ?? []), signed] });
 }
@@ -55,8 +62,11 @@ export async function verifyA2AAgentCard(card: A2AAgentCard, options: VerifyA2AA
         fromBase64url(candidate.signature).buffer as ArrayBuffer,
         new TextEncoder().encode(`${candidate.protected}.${payload}`),
       );
-      if (valid) { matched = true; break; }
-    } catch { continue; }
+      if (valid) {
+        matched = true;
+        break;
+      }
+    } catch {}
   }
   if (!matched) throw new A2AError("Agent card signature is invalid or expired", 403, "ERR_PRISM_A2A_CARD_SIGNATURE");
 }
@@ -72,23 +82,56 @@ function canonicalCard(card: A2AAgentCard): string {
 }
 
 function validateCard(card: A2AAgentCard): void {
-  let serialized: string; try { serialized = JSON.stringify(card); } catch { throw new A2AError("Agent card must be JSON", 400, "ERR_PRISM_A2A_CARD"); }
-  if (Buffer.byteLength(serialized) > 1024 * 1024 || card.supportedInterfaces.length > 16 || card.skills.length > 256) throw new A2AError("Agent card exceeds collection/byte limits", 400, "ERR_PRISM_A2A_CARD");
-  if (!card.name?.trim() || !card.description?.trim() || !card.version?.trim()) throw new A2AError("Agent card identity is incomplete", 400, "ERR_PRISM_A2A_CARD");
-  if (!card.supportedInterfaces.length || !card.supportedInterfaces.every((item) => item.protocolBinding === "JSONRPC" && item.protocolVersion === "1.0" && isHttpsUrl(item.url))) throw new A2AError("Agent card requires an HTTPS JSONRPC 1.0 interface", 400, "ERR_PRISM_A2A_CARD");
-  if (!card.defaultInputModes.includes("text/plain") || !card.defaultOutputModes.includes("text/plain")) throw new A2AError("Agent card must support text/plain", 400, "ERR_PRISM_A2A_CARD");
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(card);
+  } catch {
+    throw new A2AError("Agent card must be JSON", 400, "ERR_PRISM_A2A_CARD");
+  }
+  if (Buffer.byteLength(serialized) > 1024 * 1024 || card.supportedInterfaces.length > 16 || card.skills.length > 256)
+    throw new A2AError("Agent card exceeds collection/byte limits", 400, "ERR_PRISM_A2A_CARD");
+  if (!card.name?.trim() || !card.description?.trim() || !card.version?.trim())
+    throw new A2AError("Agent card identity is incomplete", 400, "ERR_PRISM_A2A_CARD");
+  if (
+    !card.supportedInterfaces.length ||
+    !card.supportedInterfaces.every((item) => item.protocolBinding === "JSONRPC" && item.protocolVersion === "1.0" && isHttpsUrl(item.url))
+  )
+    throw new A2AError("Agent card requires an HTTPS JSONRPC 1.0 interface", 400, "ERR_PRISM_A2A_CARD");
+  if (!card.defaultInputModes.includes("text/plain") || !card.defaultOutputModes.includes("text/plain"))
+    throw new A2AError("Agent card must support text/plain", 400, "ERR_PRISM_A2A_CARD");
   const ids = new Set<string>();
   for (const skill of card.skills) {
-    if (!skill.id.trim() || !skill.name.trim() || !skill.description.trim() || ids.has(skill.id) || skill.tags.length > 64 || [skill.id, skill.name, skill.description, ...skill.tags].some((value) => Buffer.byteLength(value) > 16 * 1024)) throw new A2AError("Agent card skill is invalid", 400, "ERR_PRISM_A2A_CARD");
+    if (
+      !skill.id.trim() ||
+      !skill.name.trim() ||
+      !skill.description.trim() ||
+      ids.has(skill.id) ||
+      skill.tags.length > 64 ||
+      [skill.id, skill.name, skill.description, ...skill.tags].some((value) => Buffer.byteLength(value) > 16 * 1024)
+    )
+      throw new A2AError("Agent card skill is invalid", 400, "ERR_PRISM_A2A_CARD");
     ids.add(skill.id);
   }
 }
 
-function parseProtected(value: string): { readonly alg: string; readonly typ: string; readonly kid: string; readonly iat: string; readonly exp: string } {
+function parseProtected(value: string): {
+  readonly alg: string;
+  readonly typ: string;
+  readonly kid: string;
+  readonly iat: string;
+  readonly exp: string;
+} {
   const parsed: unknown = JSON.parse(new TextDecoder().decode(fromBase64url(value)));
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid protected header");
   const record = parsed as Record<string, unknown>;
-  if (typeof record.alg !== "string" || typeof record.typ !== "string" || typeof record.kid !== "string" || typeof record.iat !== "string" || typeof record.exp !== "string") throw new Error("invalid protected header");
+  if (
+    typeof record.alg !== "string" ||
+    typeof record.typ !== "string" ||
+    typeof record.kid !== "string" ||
+    typeof record.iat !== "string" ||
+    typeof record.exp !== "string"
+  )
+    throw new Error("invalid protected header");
   return { alg: record.alg, typ: record.typ, kid: record.kid, iat: record.iat, exp: record.exp };
 }
 
@@ -101,7 +144,11 @@ function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).filter((key) => record[key] !== undefined).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
+    return `{${Object.keys(record)
+      .filter((key) => record[key] !== undefined)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(",")}}`;
   }
   throw new A2AError("Agent card is not canonical JSON", 400, "ERR_PRISM_A2A_CARD");
 }
@@ -119,7 +166,11 @@ function fromBase64url(value: string): Uint8Array {
 }
 
 function isHttpsUrl(value: string): boolean {
-  try { return new URL(value).protocol === "https:"; } catch { return false; }
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function deepFreeze<T>(value: T): T {

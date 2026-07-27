@@ -1,8 +1,8 @@
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { constants as fsConstants, readFileSync } from "node:fs";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { Writable } from "node:stream";
+import { fileURLToPath } from "node:url";
 
 export class InitUsageError extends Error {}
 
@@ -142,9 +142,7 @@ export function parseInitArgs(argv: readonly string[], templatesRoot?: string): 
       }
       i += 1;
       if (!providers.includes(value)) {
-        throw new InitUsageError(
-          `Unknown provider: ${value}. Expected one of ${providers.join(", ")}`,
-        );
+        throw new InitUsageError(`Unknown provider: ${value}. Expected one of ${providers.join(", ")}`);
       }
       provider = value;
       continue;
@@ -217,10 +215,13 @@ export async function runInitCommand(argv: readonly string[], runtime: InitRunti
   }
 }
 
-export async function createInitProject(options: InitOptions, runtime: InitRuntime = {
-  stdout: process.stdout,
-  stderr: process.stderr,
-}): Promise<InitResult> {
+export async function createInitProject(
+  options: InitOptions,
+  runtime: InitRuntime = {
+    stdout: process.stdout,
+    stderr: process.stderr,
+  },
+): Promise<InitResult> {
   const cwd = runtime.cwd ?? process.cwd();
   const targetDir = resolveInitDirectory(options.directory, cwd);
   const templatesRoot = runtime.templatesRoot ?? defaultTemplatesRoot();
@@ -252,9 +253,7 @@ export async function createInitProject(options: InitOptions, runtime: InitRunti
     for (const file of planned) {
       const dest = join(targetDir, file.relativePath);
       if (await exists(dest)) {
-        throw new InitUsageError(
-          `Refusing to overwrite existing file: ${file.relativePath} (pass --force to overwrite)`,
-        );
+        throw new InitUsageError(`Refusing to overwrite existing file: ${file.relativePath} (pass --force to overwrite)`);
       }
     }
   }
@@ -317,9 +316,7 @@ async function assertDestinationWritable(targetDir: string, force: boolean): Pro
 
   const entries = await readdir(targetDir);
   if (entries.length > 0 && !force) {
-    throw new InitUsageError(
-      `Destination is not empty: ${targetDir} (pass --force to overwrite generated files)`,
-    );
+    throw new InitUsageError(`Destination is not empty: ${targetDir} (pass --force to overwrite generated files)`);
   }
 }
 
@@ -397,12 +394,8 @@ function buildTokens(input: {
     : `2. Run \`npm start\` (mock provider; no network or credentials).`;
 
   const optionalDocs = [
-    ...(input.withWorkflows
-      ? ["- `src/workflows-example.ts` — tiny DAG example using `@arnilo/prism-workflows`."]
-      : []),
-    ...(input.withEvals
-      ? ["- `src/evals-example.ts` — deterministic scorer example using `@arnilo/prism-evals`."]
-      : []),
+    ...(input.withWorkflows ? ["- `src/workflows-example.ts` — tiny DAG example using `@arnilo/prism-workflows`."] : []),
+    ...(input.withEvals ? ["- `src/evals-example.ts` — deterministic scorer example using `@arnilo/prism-evals`."] : []),
   ].join("\n");
 
   return {
@@ -445,7 +438,7 @@ async function readPackageVersion(): Promise<string> {
 function assertPathInside(root: string, candidate: string): void {
   const rel = relative(root, candidate);
   if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) return;
-    throw new InitUsageError(`Refusing to write outside destination: ${candidate}`);
+  throw new InitUsageError(`Refusing to write outside destination: ${candidate}`);
 }
 
 async function exists(path: string): Promise<boolean> {

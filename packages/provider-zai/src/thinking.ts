@@ -35,9 +35,7 @@ export function zaiThinking(request: ProviderRequest): JsonObject | undefined {
  */
 export function zaiReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
-    request.options?.compat?.reasoning_effort
-    ?? request.options?.compat?.reasoningEffort
-    ?? request.model.compat?.reasoning_effort;
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
   return typeof effort === "string" ? effort : undefined;
 }
 
@@ -56,15 +54,10 @@ export function zaiToolStream(request: ProviderRequest): boolean | undefined {
  * @see https://docs.z.ai/guides/capabilities/thinking-mode
  */
 export function zaiClearThinking(request: ProviderRequest): boolean | undefined {
-  const fromThinkingObject = readClearThinkingFromObject(
-    request.options?.compat?.thinking ?? request.model.compat?.thinking,
-  );
+  const fromThinkingObject = readClearThinkingFromObject(request.options?.compat?.thinking ?? request.model.compat?.thinking);
   if (fromThinkingObject !== undefined) return fromThinkingObject;
 
-  const value =
-    request.options?.compat?.clear_thinking
-    ?? request.options?.compat?.clearThinking
-    ?? request.model.compat?.clear_thinking;
+  const value = request.options?.compat?.clear_thinking ?? request.options?.compat?.clearThinking ?? request.model.compat?.clear_thinking;
   return typeof value === "boolean" ? value : undefined;
 }
 
@@ -77,10 +70,10 @@ export function zaiPreserveThinking(request: ProviderRequest): boolean {
   const clear = zaiClearThinking(request);
   if (clear === true) return false;
   const value =
-    request.options?.compat?.preserveThinking
-    ?? request.options?.compat?.preserve_thinking
-    ?? request.model.compat?.preserveThinking
-    ?? request.model.compat?.preserve_thinking;
+    request.options?.compat?.preserveThinking ??
+    request.options?.compat?.preserve_thinking ??
+    request.model.compat?.preserveThinking ??
+    request.model.compat?.preserve_thinking;
   if (typeof value === "boolean") return value;
   // clear_thinking:false implies preserved thinking even without an explicit preserve flag.
   return clear === false;

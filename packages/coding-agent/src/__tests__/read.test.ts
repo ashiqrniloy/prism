@@ -1,17 +1,12 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
-import { mkdtemp, rm, writeFile, mkdir, truncate } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test } from "node:test";
 import type { JsonObject, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import {
-  createReadTool,
-  detectSupportedImageMimeType,
-  detectSupportedImageMimeTypeFromFile,
-  DEFAULT_MAX_IMAGE_BYTES,
-} from "../read.js";
 import type { ReadOperations } from "../read.js";
+import { createReadTool, DEFAULT_MAX_IMAGE_BYTES, detectSupportedImageMimeType, detectSupportedImageMimeTypeFromFile } from "../read.js";
 
 let counter = 0;
 function ctx(signal?: AbortSignal): ToolExecutionContext {
@@ -118,10 +113,7 @@ test("large file beyond maxLines → head truncated with continuation footer", a
     const t = textOf(r);
     assert.equal(trunc(r)?.truncated, true);
     assert.equal(trunc(r)?.truncatedBy, "lines");
-    assert.equal(
-      t,
-      "line1\nline2\nline3\nline4\nline5\n\n[Showing lines 1-5 of 100. Use offset=6 to continue.]",
-    );
+    assert.equal(t, "line1\nline2\nline3\nline4\nline5\n\n[Showing lines 1-5 of 100. Use offset=6 to continue.]");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -309,15 +301,9 @@ test("custom ReadOperations override is used instead of local fs", async () => {
 
 test("detectSupportedImageMimeType classifies signatures", () => {
   assert.equal(detectSupportedImageMimeType(ONE_PX_PNG), "image/png");
-  assert.equal(
-    detectSupportedImageMimeType(Buffer.from([0xff, 0xd8, 0xff, 0xe0])),
-    "image/jpeg",
-  );
+  assert.equal(detectSupportedImageMimeType(Buffer.from([0xff, 0xd8, 0xff, 0xe0])), "image/jpeg");
   // SOI + 0xf7 → not a plain JPEG image
-  assert.equal(
-    detectSupportedImageMimeType(Buffer.from([0xff, 0xd8, 0xff, 0xf7])),
-    null,
-  );
+  assert.equal(detectSupportedImageMimeType(Buffer.from([0xff, 0xd8, 0xff, 0xf7])), null);
   assert.equal(detectSupportedImageMimeType(Buffer.from("GIF89a", "ascii")), "image/gif");
   const webp = Buffer.alloc(12);
   Buffer.from("RIFF").copy(webp, 0);
@@ -391,7 +377,10 @@ test("image over maxImageBytes → error result without image content", async ()
     assert.ok(r.error);
     assert.match(r.error!.message, /exceeds/i);
     assert.equal(imageData(r), undefined);
-    assert.equal(r.content?.find((b) => b.type === "image"), undefined);
+    assert.equal(
+      r.content?.find((b) => b.type === "image"),
+      undefined,
+    );
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -405,7 +394,9 @@ test("stat rejects oversize image before readFile is called", async () => {
       readFileCalled = true;
       return ONE_PX_PNG;
     },
-    readText: async () => { throw new Error("not text"); },
+    readText: async () => {
+      throw new Error("not text");
+    },
     access: async () => {},
     statFile: async () => ({ size: 99_999_999 }),
     detectImageMimeType: async () => "image/png",
@@ -536,10 +527,7 @@ test("text scan limit and custom backend over-return fail bounded", async () => 
   const cwd = await tmp();
   try {
     await writeFile(join(cwd, "long.txt"), "x".repeat(4096));
-    const limited = await createReadTool(cwd, { maxScanBytes: 1024, maxBytes: 100 }).execute(
-      { path: "long.txt", offset: 2 },
-      ctx(),
-    );
+    const limited = await createReadTool(cwd, { maxScanBytes: 1024, maxBytes: 100 }).execute({ path: "long.txt", offset: 2 }, ctx());
     assert.match(limited.error?.message ?? "", /scan limit/);
 
     const operations: ReadOperations = {
@@ -547,7 +535,7 @@ test("text scan limit and custom backend over-return fail bounded", async () => 
       statFile: async () => ({ size: 1 }),
       readFile: async () => Buffer.alloc(0),
       detectImageMimeType: async () => null,
-      readText: async (path, options) => ({
+      readText: async (_path, options) => ({
         content: "x".repeat(options.maxBytes + 1),
         startLine: options.offset,
         outputLines: 1,

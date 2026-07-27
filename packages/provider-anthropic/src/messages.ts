@@ -33,14 +33,14 @@ import {
 } from "@arnilo/prism/providers/media";
 import { readSseData } from "@arnilo/prism/providers/transport";
 import { applyAnthropicCacheControl } from "./cache.js";
-import {
-  anthropicEffort,
-  anthropicPreserveThinking,
-  anthropicThinking,
-  stripAnthropicOwnedCompat,
-} from "./thinking.js";
+import { anthropicEffort, anthropicPreserveThinking, anthropicThinking, stripAnthropicOwnedCompat } from "./thinking.js";
 
-interface PartialBlock { id?: string; name?: string; argumentsText: string; complete?: boolean }
+interface PartialBlock {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+  complete?: boolean;
+}
 
 /** Serialize a Prism `ProviderRequest` to an Anthropic Messages body. */
 export async function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject> {
@@ -52,11 +52,13 @@ export async function anthropicMessagesBody(request: ProviderRequest): Promise<J
   return clean({
     model: request.model.model,
     messages: await Promise.all(
-      messages
-        .filter((m) => m.role !== "system")
-        .map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia)),
+      messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia)),
     ),
-    system: messages.filter((m) => m.role === "system").map((m) => text(m, preserveThinking)).join("\n\n") || undefined,
+    system:
+      messages
+        .filter((m) => m.role === "system")
+        .map((m) => text(m, preserveThinking))
+        .join("\n\n") || undefined,
     tools: request.tools?.map(toTool),
     stream: true,
     ...parameters,
@@ -70,10 +72,7 @@ export async function anthropicMessagesBody(request: ProviderRequest): Promise<J
 }
 
 /** Map Anthropic Messages SSE events to Prism `ProviderEvent`s. */
-export async function* anthropicMessagesEvents(
-  body: ReadableStream<Uint8Array>,
-  signal?: AbortSignal,
-): AsyncIterable<ProviderEvent> {
+export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const blocks = new Map<number, PartialBlock>();
   let usage: Usage | undefined;
   let sawMessageStop = false;
@@ -106,11 +105,13 @@ export async function* anthropicMessagesEvents(
   const danglingBlock = [...blocks.values()].some((call) => !call.id || !call.name || !call.complete);
   if (!sawMessageStop || danglingBlock) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(new Error(
-      `Anthropic messages stream ended without completion evidence `
-      + `(message_stop: ${sawMessageStop ? "received" : "missing"}, `
-      + `content blocks complete: ${danglingBlock ? "no" : "yes"})`,
-    ));
+    yield providerError(
+      new Error(
+        `Anthropic messages stream ended without completion evidence ` +
+          `(message_stop: ${sawMessageStop ? "received" : "missing"}, ` +
+          `content blocks complete: ${danglingBlock ? "no" : "yes"})`,
+      ),
+    );
     return;
   }
   for (const call of blocks.values()) {
@@ -131,12 +132,14 @@ async function toMessage(
     const last = message.content[message.content.length - 1];
     return {
       role: "user",
-      content: [{
-        type: "tool_result",
-        tool_use_id: result?.toolCallId ?? "",
-        content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
-        ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {}),
-      }],
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: result?.toolCallId ?? "",
+          content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+          ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {}),
+        },
+      ],
     };
   }
 
@@ -147,12 +150,14 @@ async function toMessage(
       content.push(withMarker({ type: "text", text: part.text }, marker));
     } else if (part.type === "thinking") {
       if (preserveThinking) {
-        content.push(withMarker(
-          part.signature
-            ? { type: "thinking", thinking: part.text, signature: part.signature }
-            : { type: "thinking", thinking: part.text },
-          marker,
-        ));
+        content.push(
+          withMarker(
+            part.signature
+              ? { type: "thinking", thinking: part.text, signature: part.signature }
+              : { type: "thinking", thinking: part.text },
+            marker,
+          ),
+        );
       } else {
         content.push(withMarker({ type: "text", text: part.text }, marker));
       }
@@ -209,21 +214,23 @@ function toTool(tool: ToolDefinition): JsonObject {
 }
 
 function text(message: Message, preserveThinking = false): string {
-  return message.content.map((part) => {
-    if (part.type === "text") return part.text;
-    if (part.type === "thinking") return preserveThinking ? part.text : "";
-    return "";
-  }).join("");
+  return message.content
+    .map((part) => {
+      if (part.type === "text") return part.text;
+      if (part.type === "thinking") return preserveThinking ? part.text : "";
+      return "";
+    })
+    .join("");
 }
 
 function toUsage(usage: AnthropicUsage | undefined): Usage | undefined {
   return usage
     ? {
-      inputTokens: usage.input_tokens,
-      outputTokens: usage.output_tokens,
-      cacheReadTokens: usage.cache_read_input_tokens,
-      cacheWriteTokens: usage.cache_creation_input_tokens,
-    }
+        inputTokens: usage.input_tokens,
+        outputTokens: usage.output_tokens,
+        cacheReadTokens: usage.cache_read_input_tokens,
+        cacheWriteTokens: usage.cache_creation_input_tokens,
+      }
     : undefined;
 }
 

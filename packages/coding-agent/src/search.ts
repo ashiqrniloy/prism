@@ -1,28 +1,17 @@
 /**
  * `repo_search` tool: bounded native literal/regex repository text search.
  */
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import {
-  HARD_MAX_SEARCH_CONTEXT_LINES,
-  HARD_MAX_SEARCH_MATCHES,
-  validateCodingLimit,
-  validateCodingLimitAllowZero,
-} from "./limits.js";
+import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 import {
   createLocalRepositoryOperations,
-  resolveRepositoryLimits,
   RepositoryError,
   type RepositoryLimitOptions,
   type RepositoryOperations,
   type RepositorySearchMatch,
   type RepositorySearchResult,
+  resolveRepositoryLimits,
 } from "./repository.js";
 import { truncateLine } from "./truncate.js";
 
@@ -61,9 +50,7 @@ function formatMatch(match: RepositorySearchMatch): string {
 
 function formatSearchText(result: RepositorySearchResult): string {
   if (result.matches.length === 0) {
-    return result.truncated
-      ? `[truncated by ${result.truncatedBy ?? "limit"} before any matches]`
-      : "(no matches)";
+    return result.truncated ? `[truncated by ${result.truncatedBy ?? "limit"} before any matches]` : "(no matches)";
   }
   const body = result.matches.map(formatMatch).join("\n");
   if (!result.truncated) return body;
@@ -130,11 +117,7 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
       let maxMatches: number | undefined;
       try {
         if (args.context !== undefined) {
-          contextLines = validateCodingLimitAllowZero(
-            "context",
-            args.context as number,
-            HARD_MAX_SEARCH_CONTEXT_LINES,
-          );
+          contextLines = validateCodingLimitAllowZero("context", args.context as number, HARD_MAX_SEARCH_CONTEXT_LINES);
         }
         if (args.maxMatches !== undefined) {
           maxMatches = validateCodingLimit("maxMatches", args.maxMatches as number, HARD_MAX_SEARCH_MATCHES);
@@ -197,12 +180,7 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
           },
         };
       } catch (error) {
-        const message =
-          error instanceof RepositoryError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : String(error);
+        const message = error instanceof RepositoryError ? error.message : error instanceof Error ? error.message : String(error);
         return errorResult(toolCallId, message);
       }
     },

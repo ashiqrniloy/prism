@@ -1,9 +1,9 @@
-import type { JsonObject } from "@arnilo/prism";
+import { type JsonObject, resolveRedactor } from "@arnilo/prism";
 import type { MemoryVectorRecord } from "@arnilo/prism-memory";
 import { chunkText } from "./chunk.js";
 import { RagScopeError, RagValidationError } from "./errors.js";
-import { ingestionStatus } from "./ingestion-status.js";
 import { indexChunkBatches } from "./indexing.js";
+import { ingestionStatus } from "./ingestion-status.js";
 import type {
   DeleteSourceOptions,
   ReplaceDocumentOptions,
@@ -11,7 +11,7 @@ import type {
   SourceVectorStore,
   TransactionalVectorStore,
 } from "./types.js";
-import { assertNotAborted, byteLength, requireScope, requireSourceId, resolveRedactor } from "./util.js";
+import { assertNotAborted, byteLength, requireScope, requireSourceId } from "./util.js";
 
 export interface SourceMutationResult {
   readonly sourceId: string;
@@ -32,22 +32,39 @@ export async function replaceSource(options: ReplaceSourceOptions): Promise<Sour
   const setStatus = async (state: "pending" | "indexed" | "failed", error?: unknown): Promise<void> => {
     if (!options.statusStore) return;
     const message = error instanceof Error ? error.message : error === undefined ? undefined : "source replacement failed";
-    await options.statusStore.set(ingestionStatus(scope, sourceId, state, state === "indexed" ? totalBytes : 0, state === "indexed" ? options.chunks.length : 0, message ? redactor?.redact(message) ?? message : undefined));
+    await options.statusStore.set(
+      ingestionStatus(
+        scope,
+        sourceId,
+        state,
+        state === "indexed" ? totalBytes : 0,
+        state === "indexed" ? options.chunks.length : 0,
+        message ? (redactor?.redact(message) ?? message) : undefined,
+      ),
+    );
   };
   await setStatus("pending");
   try {
     const staged: MemoryVectorRecord[] = [];
-    const indexed = await indexChunkBatches({ ...options, statusStore: undefined }, async (records) => { staged.push(...records); });
+    const indexed = await indexChunkBatches({ ...options, statusStore: undefined }, async (records) => {
+      staged.push(...records);
+    });
     assertNotAborted(options.signal);
-    const result = await options.store.transaction(async (store) => {
-      const previous = await sourceRecords(store, sourceId, scope, options.signal);
-      assertNotAborted(options.signal);
-      if (previous.length) {
-        await store.delete({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId, ids: previous.map((record) => record.id) }, { signal: options.signal });
-      }
-      if (staged.length) await store.upsert(staged, { signal: options.signal });
-      return Object.freeze({ sourceId, deleted: previous.length, indexed: indexed.indexed });
-    }, { signal: options.signal });
+    const result = await options.store.transaction(
+      async (store) => {
+        const previous = await sourceRecords(store, sourceId, scope, options.signal);
+        assertNotAborted(options.signal);
+        if (previous.length) {
+          await store.delete(
+            { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId, ids: previous.map((record) => record.id) },
+            { signal: options.signal },
+          );
+        }
+        if (staged.length) await store.upsert(staged, { signal: options.signal });
+        return Object.freeze({ sourceId, deleted: previous.length, indexed: indexed.indexed });
+      },
+      { signal: options.signal },
+    );
     await setStatus("indexed");
     return result;
   } catch (error) {
@@ -63,7 +80,10 @@ export async function deleteSource(options: DeleteSourceOptions): Promise<Source
   const records = await sourceRecords(options.store, sourceId, scope, options.signal);
   assertNotAborted(options.signal);
   const deleted = records.length
-    ? await options.store.delete({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId, ids: records.map((record) => record.id) }, { signal: options.signal })
+    ? await options.store.delete(
+        { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId, ids: records.map((record) => record.id) },
+        { signal: options.signal },
+      )
     : 0;
   await options.statusStore?.delete(scope, sourceId);
   return Object.freeze({ sourceId, deleted, indexed: 0 });
@@ -108,11 +128,9 @@ async function sourceRecords(
   signal?: AbortSignal,
 ): Promise<readonly MemoryVectorRecord[]> {
   assertNotAborted(signal);
-  const records = await store.getBySource(
-    { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId },
-    sourceId,
-    { signal },
-  );
+  const records = await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, sourceId, {
+    signal,
+  });
   for (const record of records) {
     if (record.tenantId !== scope.tenantId || record.resourceId !== scope.resourceId || record.threadId !== scope.corpusId) {
       throw new RagScopeError("source lookup crossed tenant/resource/corpus boundary");

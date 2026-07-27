@@ -32,6 +32,9 @@ export async function verifySbomFiles(sbomPath, policyPath) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const result = await verifySbomFiles(process.argv[2] ?? "security-artifacts/sbom.spdx.json", process.argv[3] ?? "security/license-policy.json");
+  const result = await verifySbomFiles(
+    process.argv[2] ?? "security-artifacts/sbom.spdx.json",
+    process.argv[3] ?? "security/license-policy.json",
+  );
   console.log(JSON.stringify(result));
 }

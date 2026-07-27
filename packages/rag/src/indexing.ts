@@ -1,10 +1,10 @@
-import type { JsonObject } from "@arnilo/prism";
+import { type JsonObject, resolveRedactor } from "@arnilo/prism";
 import type { MemoryVectorRecord } from "@arnilo/prism-memory";
 import { RagValidationError } from "./errors.js";
 import { ingestionStatus } from "./ingestion-status.js";
 import { HARD_CHUNK_SIZE_CAP, resolveRagLimits } from "./limits.js";
 import type { IndexChunksOptions, IndexChunksResult } from "./types.js";
-import { assertBytes, assertNotAborted, byteLength, nonEmpty, requireScope, requireSourceId, resolveRedactor } from "./util.js";
+import { assertBytes, assertNotAborted, byteLength, nonEmpty, requireScope, requireSourceId } from "./util.js";
 
 type Progress = { bytes: number; chunks: number };
 
@@ -24,7 +24,11 @@ export async function indexChunkBatches(
     maxVectorDimensions: options.maxVectorDimensions,
     maxMetadataBytes: options.maxMetadataBytes,
   });
-  if (!Number.isInteger(options.embedder.dimensions) || options.embedder.dimensions <= 0 || options.embedder.dimensions > limits.maxVectorDimensions) {
+  if (
+    !Number.isInteger(options.embedder.dimensions) ||
+    options.embedder.dimensions <= 0 ||
+    options.embedder.dimensions > limits.maxVectorDimensions
+  ) {
     throw new RagValidationError(`embedder dimensions must be an integer in 1..${limits.maxVectorDimensions}`);
   }
   if (options.chunks.length > limits.maxChunks) throw new RagValidationError(`chunk count exceeds ${limits.maxChunks}`);
@@ -36,9 +40,17 @@ export async function indexChunkBatches(
   for (const chunk of options.chunks) {
     nonEmpty(chunk.id, "chunk.id");
     requireSourceId(chunk.sourceId);
-    if (chunk.id !== chunk.citationId || !chunk.citationId.startsWith(`${chunk.sourceId}#`)) throw new RagValidationError("chunk has inconsistent citation identity");
+    if (chunk.id !== chunk.citationId || !chunk.citationId.startsWith(`${chunk.sourceId}#`))
+      throw new RagValidationError("chunk has inconsistent citation identity");
     if (chunkIds.has(chunk.id)) throw new RagValidationError(`duplicate chunk id: ${chunk.id}`);
-    if (!Number.isInteger(chunk.index) || chunk.index < 0 || !Number.isInteger(chunk.start) || chunk.start < 0 || !Number.isInteger(chunk.end) || chunk.end < chunk.start) {
+    if (
+      !Number.isInteger(chunk.index) ||
+      chunk.index < 0 ||
+      !Number.isInteger(chunk.start) ||
+      chunk.start < 0 ||
+      !Number.isInteger(chunk.end) ||
+      chunk.end < chunk.start
+    ) {
       throw new RagValidationError("chunk has invalid index or offsets");
     }
     if (chunk.text.length > limits.chunkSize) throw new RagValidationError(`chunk text exceeds ${limits.chunkSize} characters`);
@@ -49,9 +61,9 @@ export async function indexChunkBatches(
   const setStatus = async (state: "pending" | "indexed" | "failed" | "partial", error?: unknown): Promise<void> => {
     if (!options.statusStore) return;
     const message = error instanceof Error ? error.message : error === undefined ? undefined : "indexing failed";
-    const safeError = message ? redactor?.redact(message) ?? message : undefined;
+    const safeError = message ? (redactor?.redact(message) ?? message) : undefined;
     for (const sourceId of sourceIds) {
-      const progress = state === "indexed" ? total.get(sourceId)! : written.get(sourceId) ?? { bytes: 0, chunks: 0 };
+      const progress = state === "indexed" ? total.get(sourceId)! : (written.get(sourceId) ?? { bytes: 0, chunks: 0 });
       await options.statusStore.set(ingestionStatus(scope, sourceId, state, progress.bytes, progress.chunks, safeError));
     }
   };
@@ -68,8 +80,11 @@ export async function indexChunkBatches(
         if (embedding.length !== options.embedder.dimensions || embedding.some((value) => !Number.isFinite(value))) {
           throw new RagValidationError(`embedder returned invalid vector; expected ${options.embedder.dimensions} finite values`);
         }
-        const safeMetadata = redactor?.redact(chunk.metadata ?? {}) ?? (chunk.metadata ?? {});
-        const metadata = { ...safeMetadata, _rag: { sourceId: chunk.sourceId, citationId: chunk.citationId, chunkIndex: chunk.index, start: chunk.start, end: chunk.end } };
+        const safeMetadata = redactor?.redact(chunk.metadata ?? {}) ?? chunk.metadata ?? {};
+        const metadata = {
+          ...safeMetadata,
+          _rag: { sourceId: chunk.sourceId, citationId: chunk.citationId, chunkIndex: chunk.index, start: chunk.start, end: chunk.end },
+        };
         assertBytes(metadata, limits.maxMetadataBytes, "chunk metadata");
         return {
           id: chunk.id,

@@ -1,8 +1,19 @@
-import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { afterEach, describe, it } from "node:test";
+import {
+  type CommandDefinition,
+  createAgent,
+  createAgentRunLifecycle,
+  createMemoryCheckpointStore,
+  createMockProvider,
+  createSecretRedactor,
+  createStaticPermissionPolicy,
+  providerDone,
+  type ToolDefinition,
+  toolCallContent,
+} from "@arnilo/prism";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createAgent, createAgentRunLifecycle, createMemoryCheckpointStore, createMockProvider, createSecretRedactor, createStaticPermissionPolicy, providerDone, toolCallContent, type CommandDefinition, type ToolDefinition } from "@arnilo/prism";
 import { createPrismMcpServer, createPrismMcpWebHandler } from "../server.js";
 import { McpBridgeError } from "../types.js";
 
@@ -87,13 +98,21 @@ describe("Prism MCP server", () => {
       authorize: () => ({ allowed: true, ownership: { tenantId: "tenant-1", userId: "user-1" } }),
     });
     open.push(item);
-    assert.deepEqual((await item.client.listTools()).tools.map((entry) => entry.name).sort(), ["agent.support.resume", "agent.support.status"]);
+    assert.deepEqual((await item.client.listTools()).tools.map((entry) => entry.name).sort(), [
+      "agent.support.resume",
+      "agent.support.status",
+    ]);
     const status = await item.client.callTool({ name: "agent.support.status", arguments: { runId: suspended.runId } });
     assert.equal(status.isError, false);
     assert.match(JSON.stringify(status.content), /suspended/);
-    const denied = await item.client.callTool({ name: "agent.support.resume", arguments: {
-      runId: suspended.runId, decision: "deny", expectedVersion: suspended.runState!.version,
-    } });
+    const denied = await item.client.callTool({
+      name: "agent.support.resume",
+      arguments: {
+        runId: suspended.runId,
+        decision: "deny",
+        expectedVersion: suspended.runState!.version,
+      },
+    });
     assert.equal(denied.isError, false);
     assert.match(JSON.stringify(denied.content), /denied/);
     assert.equal(calls, 0);
@@ -103,7 +122,10 @@ describe("Prism MCP server", () => {
       authorize: () => ({ allowed: true, ownership: { tenantId: "tenant-1", userId: "user-1" } }),
     });
     open.push(empty);
-    assert.equal((await empty.client.listTools()).tools.some((tool) => tool.name.startsWith("agent.")), false);
+    assert.equal(
+      (await empty.client.listTools()).tools.some((tool) => tool.name.startsWith("agent.")),
+      false,
+    );
   });
 
   it("fails closed on authorization, validation, permission, duplicate names, and unknown tools", async () => {
@@ -146,17 +168,23 @@ describe("Prism MCP server", () => {
     assert.equal((await permissionDenied.client.callTool({ name: "danger", arguments: {} })).isError, true);
     assert.equal(executions, 0);
 
-    assert.throws(() => createPrismMcpServer({
-      tools: [tool],
-      commands: [{ name: "danger", execute: () => ({ name: "danger" }) }],
-      authorize: () => ({ allowed: true }),
-    }), McpBridgeError);
+    assert.throws(
+      () =>
+        createPrismMcpServer({
+          tools: [tool],
+          commands: [{ name: "danger", execute: () => ({ name: "danger" }) }],
+          authorize: () => ({ allowed: true }),
+        }),
+      McpBridgeError,
+    );
   });
 
   it("bounds concurrent calls, timeouts, results, and redacts errors", async () => {
     const secret = "mcp-server-canary";
     let release: (() => void) | undefined;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const tool: ToolDefinition = {
       name: "slow",
       execute: async (_args, context) => {
@@ -192,17 +220,37 @@ describe("Prism MCP server", () => {
     const server = createPrismMcpServer({ authorize: () => ({ allowed: true }) });
     open.push(server);
     const handler = await createPrismMcpWebHandler(server, {
-      allowedOrigins: ["https://example.test"], sessionIdGenerator: () => "session-1",
+      allowedOrigins: ["https://example.test"],
+      sessionIdGenerator: () => "session-1",
       resolveAuthInfo: (request) => ({ token: request.headers.get("authorization") ?? "", clientId: "client", scopes: [] }),
-      resolveIdentity: (_request, auth) => auth?.token === "Bearer a" ? { id: "principal-a" } : auth?.token === "Bearer b" ? { id: "principal-b" } : false,
+      resolveIdentity: (_request, auth) =>
+        auth?.token === "Bearer a" ? { id: "principal-a" } : auth?.token === "Bearer b" ? { id: "principal-b" } : false,
     });
-    const initialized = await handler(new Request("https://example.test/mcp", {
-      method: "POST", headers: { origin: "https://example.test", authorization: "Bearer a", "content-type": "application/json", accept: "application/json, text/event-stream" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } } }),
-    }));
+    const initialized = await handler(
+      new Request("https://example.test/mcp", {
+        method: "POST",
+        headers: {
+          origin: "https://example.test",
+          authorization: "Bearer a",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } },
+        }),
+      }),
+    );
     assert.equal(initialized.status, 200);
     assert.equal(initialized.headers.get("mcp-session-id"), "session-1");
-    const stolen = await handler(new Request("https://example.test/mcp", { method: "GET", headers: { origin: "https://example.test", authorization: "Bearer b", "mcp-session-id": "session-1", accept: "text/event-stream" } }));
+    const stolen = await handler(
+      new Request("https://example.test/mcp", {
+        method: "GET",
+        headers: { origin: "https://example.test", authorization: "Bearer b", "mcp-session-id": "session-1", accept: "text/event-stream" },
+      }),
+    );
     assert.equal(stolen.status, 404);
     assert.doesNotMatch(await stolen.text(), /principal|token|Bearer/);
   });
@@ -212,23 +260,27 @@ describe("Prism MCP server", () => {
     open.push(server);
     const handler = await createPrismMcpWebHandler(server, { maxRequestBytes: 256 });
 
-    const tooLarge = await handler(new Request("https://example.test/mcp", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ value: "x".repeat(300) }),
-    }));
+    const tooLarge = await handler(
+      new Request("https://example.test/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ value: "x".repeat(300) }),
+      }),
+    );
     assert.equal(tooLarge.status, 413);
 
-    const initialized = await handler(new Request("https://example.test/mcp", {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } },
+    const initialized = await handler(
+      new Request("https://example.test/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } },
+        }),
       }),
-    }));
+    );
     assert.equal(initialized.status, 200);
     assert.match(await initialized.text(), /prism-mcp-server/);
   });

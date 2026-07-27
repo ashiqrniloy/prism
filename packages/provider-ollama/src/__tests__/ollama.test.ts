@@ -79,7 +79,11 @@ describe("@arnilo/prism-provider-ollama", () => {
     const reasoningModel = defineOllamaModel({ model: "gpt-oss:20b", compat: { reasoning_effort: "low" } });
     const base = ollamaBody({ model: reasoningModel, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
     assert.equal(base.reasoning_effort, "low");
-    const override = ollamaBody({ model: reasoningModel, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }], options: { compat: { reasoning_effort: "high" } } });
+    const override = ollamaBody({
+      model: reasoningModel,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "high" } },
+    });
     assert.equal(override.reasoning_effort, "high");
     // Provider-owned compat keys are stripped from the opaque spread.
     assert.equal((override as any).route, undefined);
@@ -89,13 +93,15 @@ describe("@arnilo/prism-provider-ollama", () => {
   it("stream_maps_text_reasoning_tool_calls_and_usage", async () => {
     const provider = createOllamaProvider({
       apiKey: "ollama-cloud-secret",
-      fetch: mockFetch(chatSse([
-        { choices: [{ delta: { reasoning_content: "think" } }] },
-        { choices: [{ delta: { content: "hello" } }] },
-        { choices: [{ delta: { tool_calls: [{ index: 0, id: "tool_1", function: { name: "lookup", arguments: "{\"q\":" } }] } }] },
-        { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: "\"x\"}" } }] }, finish_reason: "tool_calls" }] },
-        { usage: { prompt_tokens: 4, completion_tokens: 3, total_tokens: 7 } },
-      ])),
+      fetch: mockFetch(
+        chatSse([
+          { choices: [{ delta: { reasoning_content: "think" } }] },
+          { choices: [{ delta: { content: "hello" } }] },
+          { choices: [{ delta: { tool_calls: [{ index: 0, id: "tool_1", function: { name: "lookup", arguments: '{"q":' } }] } }] },
+          { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '"x"}' } }] }, finish_reason: "tool_calls" }] },
+          { usage: { prompt_tokens: 4, completion_tokens: 3, total_tokens: 7 } },
+        ]),
+      ),
     });
     const events = await assertProviderStreamConforms({
       provider,
@@ -108,10 +114,12 @@ describe("@arnilo/prism-provider-ollama", () => {
   it("usage_maps_prompt_and_completion_tokens_and_leaves_cache_read_undefined", async () => {
     const provider = createOllamaProvider({
       apiKey: "ollama-cloud-secret",
-      fetch: mockFetch(chatSse([
-        { choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] },
-        { usage: { prompt_tokens: 100, completion_tokens: 5, total_tokens: 105 } },
-      ])),
+      fetch: mockFetch(
+        chatSse([
+          { choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] },
+          { usage: { prompt_tokens: 100, completion_tokens: 5, total_tokens: 105 } },
+        ]),
+      ),
     });
     const events = await assertProviderStreamConforms({
       provider,
@@ -124,8 +132,13 @@ describe("@arnilo/prism-provider-ollama", () => {
   });
 
   it("truncated_stream_without_done_fails_loudly", async () => {
-    const text = [`data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] }) }\n\n`].join("");
-    const stream = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(new TextEncoder().encode(text)); c.close(); } });
+    const text = [`data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`].join("");
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode(text));
+        c.close();
+      },
+    });
     const provider = createOllamaProvider({ apiKey: "x", fetch: (async () => new Response(stream, { status: 200 })) as typeof fetch });
     const events = await assertProviderStreamConforms({ provider, request });
     assert.equal(events.at(-1)?.type, "error");
@@ -134,7 +147,10 @@ describe("@arnilo/prism-provider-ollama", () => {
   it("http_error_maps_to_provider_error_and_redacts_api_key", async () => {
     const provider = createOllamaProvider({
       apiKey: "ollama-cloud-secret",
-      fetch: (async () => new Response(JSON.stringify({ error: { message: "bad key ollama-cloud-secret", type: "invalid_request_error" } }), { status: 401 })) as typeof fetch,
+      fetch: (async () =>
+        new Response(JSON.stringify({ error: { message: "bad key ollama-cloud-secret", type: "invalid_request_error" } }), {
+          status: 401,
+        })) as typeof fetch,
     });
     const events = await assertProviderStreamConforms({ provider, request });
     const terminal = events.at(-1);
@@ -164,21 +180,28 @@ describe("@arnilo/prism-provider-ollama", () => {
       fetch: (async (input, init) => {
         url = String(input);
         headers = new Headers(init?.headers);
-        return new Response(JSON.stringify({ object: "list", data: [{ id: "gpt-oss:20b", owned_by: "library", created: 1 }, { id: "llama3.2:3b" }] }), { status: 200 });
+        return new Response(
+          JSON.stringify({ object: "list", data: [{ id: "gpt-oss:20b", owned_by: "library", created: 1 }, { id: "llama3.2:3b" }] }),
+          { status: 200 },
+        );
       }) as typeof fetch,
     });
     assert.equal(url, "https://ollama.com/v1/models");
     assert.equal(headers?.get("authorization"), "Bearer ollama-cloud-secret");
-    assert.deepEqual(models.map((m) => m.model), ["gpt-oss:20b", "llama3.2:3b"]);
+    assert.deepEqual(
+      models.map((m) => m.model),
+      ["gpt-oss:20b", "llama3.2:3b"],
+    );
     assert.equal(models[0]?.provider, "ollama");
   });
 
   it("list_ollama_models_redacts_api_key_from_discovery_errors", async () => {
     await assert.rejects(
-      () => listOllamaModels({
-        apiKey: "ollama-cloud-secret",
-        fetch: (async () => new Response("upstream said ollama-cloud-secret is invalid", { status: 401 })) as typeof fetch,
-      }),
+      () =>
+        listOllamaModels({
+          apiKey: "ollama-cloud-secret",
+          fetch: (async () => new Response("upstream said ollama-cloud-secret is invalid", { status: 401 })) as typeof fetch,
+        }),
       (error: Error) => {
         assert.ok(error.message.includes("401"));
         assert.ok(!error.message.includes("ollama-cloud-secret"), `must redact key: ${error.message}`);
@@ -194,7 +217,10 @@ describe("@arnilo/prism-provider-ollama", () => {
     await createOllamaProviderPackage({
       apiKey: "ollama-cloud-secret",
       models: discovered,
-      fetch: (async () => { fetchCalls += 1; return ok(chatSse([])); }) as typeof fetch,
+      fetch: (async () => {
+        fetchCalls += 1;
+        return ok(chatSse([]));
+      }) as typeof fetch,
     }).setup({
       registerProvider: (provider: AIProvider) => registered.push(provider),
       registerModel: (m: ModelConfig) => registered.push(m),
@@ -214,6 +240,11 @@ function ok(body: ReadableStream<Uint8Array>): Response {
   return new Response(body, { status: 200 });
 }
 function chatSse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
-  return new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }

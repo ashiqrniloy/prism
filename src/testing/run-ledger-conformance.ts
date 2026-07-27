@@ -3,13 +3,7 @@
 // to assert durable run/event/tool/usage writes, per-run ordering, tenant
 // isolation, and restart idempotency before shipping dialect-local SQL.
 
-import type {
-  AgentEventRecord,
-  RunLedger,
-  RunRecord,
-  ToolCallRecord,
-  UsageRecord,
-} from "../contracts.js";
+import type { AgentEventRecord, RunLedger, RunRecord, ToolCallRecord, UsageRecord } from "../contracts.js";
 
 export interface RunLedgerConformanceFixture {
   readonly ledger: RunLedger;
@@ -177,7 +171,7 @@ export async function assertRunLedgerConforms(
     await fixture.ledger.appendRun(otherRun);
     const runs = await fixture.readRuns();
     const stored = runs.find((row) => row.id === "run-tenant-b");
-    if (!stored || stored.tenantId !== "tenant-b") {
+    if (stored?.tenantId !== "tenant-b") {
       throw new Error("RunLedger must persist tenant_id on records for tenant-scoped isolation");
     }
     const scoped = runs.filter((row) => row.tenantId === tenantId);

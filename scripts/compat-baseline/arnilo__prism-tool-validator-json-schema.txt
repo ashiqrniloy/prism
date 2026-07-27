@@ -1,0 +1,4 @@
+JsonSchemaToolValidatorOptions	export type { JsonSchemaToolValidatorOptions } from "./json-schema.js"
+createJsonSchemaArgumentValidator	export declare function createJsonSchemaArgumentValidator(options?: JsonSchemaToolValidatorOptions): ToolArgumentValidator
+createJsonSchemaToolArgumentValidator	export declare function createJsonSchemaToolArgumentValidator(options?: JsonSchemaToolValidatorOptions): ToolValidator
+packageName	export declare const packageName = "@arnilo/prism-tool-validator-json-schema"

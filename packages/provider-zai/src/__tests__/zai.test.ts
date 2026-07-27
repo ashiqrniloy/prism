@@ -12,9 +12,9 @@ import {
   createZaiProviderPackage,
   listZaiModels,
   mapZaiModel,
+  ZAI_DEFAULT_BASE_URL,
   zaiBody,
   zaiModels,
-  ZAI_DEFAULT_BASE_URL,
 } from "../index.js";
 
 const request: ProviderRequest = {
@@ -69,10 +69,13 @@ describe("@arnilo/prism-provider-zai", () => {
 
   it("zai_uses_system_role_when_developer_role_is_unsupported", async () => {
     let body: any;
-    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createZaiProvider({
+      apiKey: "fake-zai-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     await assertProviderStreamConforms({ provider, request });
     assert.equal(body.messages[0].role, "system");
     assert.equal(body.messages[0].content, "developer instructions");
@@ -80,10 +83,13 @@ describe("@arnilo/prism-provider-zai", () => {
 
   it("zai_maps_thinking_reasoning_effort_and_max_tokens", async () => {
     let body: any;
-    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createZaiProvider({
+      apiKey: "fake-zai-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     await assertProviderStreamConforms({
       provider,
       request: {
@@ -146,26 +152,33 @@ describe("@arnilo/prism-provider-zai", () => {
 
   it("zai_enables_tool_stream_for_supported_models", async () => {
     let body: any;
-    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([
-        {
-          choices: [{
-            delta: {
-              content: "hi",
-              reasoning_content: "think",
-              tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: "{\"q\":\"x\"}" } }],
+    const provider = createZaiProvider({
+      apiKey: "fake-zai-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(
+          sse([
+            {
+              choices: [
+                {
+                  delta: {
+                    content: "hi",
+                    reasoning_content: "think",
+                    tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: '{"q":"x"}' } }],
+                  },
+                },
+              ],
+              usage: {
+                prompt_tokens: 5,
+                completion_tokens: 2,
+                total_tokens: 7,
+                prompt_tokens_details: { cached_tokens: 1, cache_write_tokens: 2 },
+              },
             },
-          }],
-          usage: {
-            prompt_tokens: 5,
-            completion_tokens: 2,
-            total_tokens: 7,
-            prompt_tokens_details: { cached_tokens: 1, cache_write_tokens: 2 },
-          },
-        },
-      ]));
-    }) as typeof fetch });
+          ]),
+        );
+      }) as typeof fetch,
+    });
     const events = await assertProviderStreamConforms({
       provider,
       request,
@@ -237,20 +250,26 @@ describe("@arnilo/prism-provider-zai", () => {
       ],
     };
     let body: unknown;
-    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createZaiProvider({
+      apiKey: "fake-zai-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     await assertProviderStreamConforms({ provider, request: replay });
     assertSerializedRequestCoversContent(replay, body);
   });
 
   it("zai_emits_no_explicit_cache_payload_for_implicit_caching", async () => {
     let body: any;
-    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
-      body = JSON.parse(String(init?.body));
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createZaiProvider({
+      apiKey: "fake-zai-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     await assertProviderStreamConforms({
       provider,
       request: {
@@ -270,10 +289,13 @@ describe("@arnilo/prism-provider-zai", () => {
 
   it("zai_keeps_provider_owned_headers_after_caller_headers", async () => {
     let headers = new Headers();
-    const provider = createZaiProvider({ apiKey: "fake-zai-key", fetch: (async (_input, init) => {
-      headers = new Headers(init?.headers);
-      return ok(sse([]));
-    }) as typeof fetch });
+    const provider = createZaiProvider({
+      apiKey: "fake-zai-key",
+      fetch: (async (_input, init) => {
+        headers = new Headers(init?.headers);
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
     await assertProviderStreamConforms({
       provider,
       request: {
@@ -326,14 +348,17 @@ describe("@arnilo/prism-provider-zai", () => {
         url = String(input);
         headers = new Headers(init?.headers);
         signal = init?.signal;
-        return new Response(JSON.stringify({
-          object: "list",
-          data: [
-            { id: "glm-5.2", object: "model", created: 1, owned_by: "zai" },
-            { id: "glm-4.5", object: "model", created: 2, owned_by: "zai" },
-            { id: "glm-5v-turbo", object: "model", created: 3, owned_by: "zai" },
-          ],
-        }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            object: "list",
+            data: [
+              { id: "glm-5.2", object: "model", created: 1, owned_by: "zai" },
+              { id: "glm-4.5", object: "model", created: 2, owned_by: "zai" },
+              { id: "glm-5v-turbo", object: "model", created: 3, owned_by: "zai" },
+            ],
+          }),
+          { status: 200 },
+        );
       }) as typeof fetch,
     });
     assert.equal(url, "https://example.test/paas/v4/models");
@@ -352,10 +377,11 @@ describe("@arnilo/prism-provider-zai", () => {
 
   it("list_zai_models_redacts_token_in_errors", async () => {
     await assert.rejects(
-      () => listZaiModels({
-        apiKey: "sk-leaked-zai",
-        fetch: (async () => new Response("unauthorized sk-leaked-zai", { status: 401 })) as typeof fetch,
-      }),
+      () =>
+        listZaiModels({
+          apiKey: "sk-leaked-zai",
+          fetch: (async () => new Response("unauthorized sk-leaked-zai", { status: 401 })) as typeof fetch,
+        }),
       (error: unknown) => {
         const message = String(error);
         assert.match(message, /Z\.AI model discovery failed: 401/);
@@ -391,7 +417,7 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));

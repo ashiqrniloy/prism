@@ -1,12 +1,14 @@
+import { assertMessagesSupportModelCapabilities } from "./content.js";
+import { applyContextBudget, CONTEXT_BUDGET_REPORT_METADATA_KEY, type ContextBudget, type ContextBudgetReport } from "./context-budget.js";
 import type {
   ContentBlock,
   ContextBlock,
   ContextProvider,
   ContextResolutionContext,
   InputAssemblyLayout,
+  InputBuildContext,
   InputBuilder,
   InstructionInjector,
-  InputBuildContext,
   JsonObject,
   JsonValue,
   Message,
@@ -20,19 +22,12 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "./contracts.js";
+import { runInstructionInjectors } from "./instruction-injection.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import { redactMessage } from "./redaction.js";
-import { assertMessagesSupportModelCapabilities } from "./content.js";
 import { loadTextResource } from "./resources.js";
 import { composeSystemPrompt } from "./system-prompts.js";
-import { runInstructionInjectors } from "./instruction-injection.js";
-import {
-  applyContextBudget,
-  CONTEXT_BUDGET_REPORT_METADATA_KEY,
-  type ContextBudget,
-  type ContextBudgetReport,
-} from "./context-budget.js";
 
 export type AgentInput = string | Message | readonly Message[];
 
@@ -116,13 +111,15 @@ export async function resolveContextProviders(options: ResolveContextOptions): P
   const blocks: ContextBlock[] = [];
   for (const provider of options.providers ?? []) {
     throwIfAborted(options.signal);
-    blocks.push(...await provider.resolve({
-      sessionId: options.sessionId,
-      runId: options.runId,
-      messages: options.messages,
-      metadata: options.metadata,
-      signal: options.signal,
-    }));
+    blocks.push(
+      ...(await provider.resolve({
+        sessionId: options.sessionId,
+        runId: options.runId,
+        messages: options.messages,
+        metadata: options.metadata,
+        signal: options.signal,
+      })),
+    );
   }
   // ponytail: injector blocks after host+skill provider blocks (split by origin if per-block ordering matters).
   if (options.injectedBlocks) blocks.push(...options.injectedBlocks);
@@ -133,19 +130,14 @@ export function createDefaultPromptBuilder(): DefaultPromptBuilder {
   return {
     name: "default-prompt",
     async build(request) {
-      return [
-        ...contextMessages(request.context),
-        ...skillMessages(request.skills),
-        ...toolMessages(request.tools),
-        ...request.messages,
-      ];
+      return [...contextMessages(request.context), ...skillMessages(request.skills), ...toolMessages(request.tools), ...request.messages];
     },
   };
 }
 
 export function renderPromptTemplate(template: string, variables: JsonObject, options: PromptTemplateOptions = {}): string {
   return template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, name: string) => {
-    if (!Object.prototype.hasOwnProperty.call(variables, name)) {
+    if (!Object.hasOwn(variables, name)) {
       if (options.missing === "preserve") return match;
       throw new Error(`Missing prompt template variable: ${name}`);
     }
@@ -175,7 +167,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         metadata: options.metadata ?? {},
         signal: options.signal ?? new AbortController().signal,
       })
-    : { instructions: [], contextBlocks: [] } as const;
+    : ({ instructions: [], contextBlocks: [] } as const);
   const systemInstructions = injectorContribs.instructions.length
     ? composeSystemPrompt(injectorContribs.instructions, { base: options.systemInstructions })
     : options.systemInstructions;
@@ -228,27 +220,25 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   const promptBuilder = options.promptBuilder ?? createDefaultPromptBuilder();
   const promptRequest = options.middleware
     ? await options.middleware.run("prompt_build", {
-      messages,
-      context,
-      skills,
-      tools,
-      metadata: options.metadata,
-      signal: options.signal,
-    })
+        messages,
+        context,
+        skills,
+        tools,
+        metadata: options.metadata,
+        signal: options.signal,
+      })
     : {
-      messages,
-      context,
-      skills,
-      tools,
-      metadata: options.metadata,
-      signal: options.signal,
-    };
+        messages,
+        context,
+        skills,
+        tools,
+        metadata: options.metadata,
+        signal: options.signal,
+      };
   const providerMessages = await promptBuilder.build({ ...promptRequest, tools });
   assertMessagesSupportModelCapabilities(options.model, providerMessages);
 
-  const metadata = budgetReport
-    ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport }
-    : options.metadata;
+  const metadata = budgetReport ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport } : options.metadata;
 
   return {
     model: options.model,
@@ -261,10 +251,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   };
 }
 
-async function buildDefaultInputMessageGroups(
-  input: AgentInput,
-  context: DefaultInputBuildContext,
-): Promise<DefaultInputMessageGroups> {
+async function buildDefaultInputMessageGroups(input: AgentInput, context: DefaultInputBuildContext): Promise<DefaultInputMessageGroups> {
   return {
     instructions: [
       ...instructionMessages(context.systemInstructions, "System instruction"),
@@ -291,9 +278,23 @@ interface DefaultInputMessageGroups {
 function flattenInputGroups(groups: DefaultInputMessageGroups, layout: InputAssemblyLayout): Message[] {
   switch (layout) {
     case "cache_aware":
-      return [...groups.instructions, ...groups.attachments, ...groups.summaries, ...groups.history, ...groups.toolResults, ...groups.input];
+      return [
+        ...groups.instructions,
+        ...groups.attachments,
+        ...groups.summaries,
+        ...groups.history,
+        ...groups.toolResults,
+        ...groups.input,
+      ];
     case "legacy":
-      return [...groups.instructions, ...groups.summaries, ...groups.history, ...groups.input, ...groups.attachments, ...groups.toolResults];
+      return [
+        ...groups.instructions,
+        ...groups.summaries,
+        ...groups.history,
+        ...groups.input,
+        ...groups.attachments,
+        ...groups.toolResults,
+      ];
   }
 }
 
@@ -304,7 +305,7 @@ export function inputMessages(input: AgentInput): Message[] {
 }
 
 function instructionMessages(value: string | readonly string[] | undefined, label: string): Message[] {
-  const items = typeof value === "string" ? [value] : value ?? [];
+  const items = typeof value === "string" ? [value] : (value ?? []);
   return items.map((text) => textMessage("system", `${label}:\n${text}`));
 }
 
@@ -331,7 +332,13 @@ async function attachmentMessages(context: DefaultInputBuildContext): Promise<Me
       continue;
     }
     if (attachment.text !== undefined) {
-      messages.push(textMessage("user", attachment.name ? `Attachment ${attachment.name}:\n${attachment.text}` : attachment.text, attachmentMetadata(attachment)));
+      messages.push(
+        textMessage(
+          "user",
+          attachment.name ? `Attachment ${attachment.name}:\n${attachment.text}` : attachment.text,
+          attachmentMetadata(attachment),
+        ),
+      );
       continue;
     }
     if (attachment.uri) messages.push(await resourceMessage(attachment.uri, context, attachment));
@@ -355,13 +362,16 @@ async function resourceMessage(uri: string, context: DefaultInputBuildContext, a
 function toolResultMessages(results: readonly ToolResult[] | undefined): Message[] {
   return (results ?? []).map((result) => ({
     role: "tool" as const,
-    content: [{
-      type: "tool_result" as const,
-      toolCallId: result.toolCallId,
-      name: result.name,
-      result: result.value,
-      error: result.error,
-    }, ...(result.content ?? [])],
+    content: [
+      {
+        type: "tool_result" as const,
+        toolCallId: result.toolCallId,
+        name: result.name,
+        result: result.value,
+        error: result.error,
+      },
+      ...(result.content ?? []),
+    ],
     metadata: result.metadata,
   }));
 }
@@ -371,7 +381,9 @@ function textMessage(role: Message["role"], text: string, metadata?: Readonly<Re
 }
 
 function contextMessages(context: readonly ContextBlock[] | undefined): Message[] {
-  return (context ?? []).map((block) => textMessage("system", `${block.title ? `${block.title}:\n` : "Context:\n"}${blockText(block)}`, block.metadata));
+  return (context ?? []).map((block) =>
+    textMessage("system", `${block.title ? `${block.title}:\n` : "Context:\n"}${blockText(block)}`, block.metadata),
+  );
 }
 
 function skillMessages(skills: readonly Skill[] | undefined): Message[] {
@@ -382,22 +394,29 @@ function skillMessages(skills: readonly Skill[] | undefined): Message[] {
 
 function toolMessages(tools: readonly ToolDefinition[] | undefined): Message[] {
   if (!tools?.length) return [];
-  return [textMessage("system", `Available tools:\n${tools.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ""}`).join("\n")}`)];
+  return [
+    textMessage(
+      "system",
+      `Available tools:\n${tools.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ""}`).join("\n")}`,
+    ),
+  ];
 }
 
 function blockText(block: ContextBlock): string {
   if (typeof block.content === "string") return block.content;
-  return block.content.map((part) => {
-    if (part.type === "text" || part.type === "thinking") return part.text;
-    if (part.type === "tool_result") return JSON.stringify(part.result ?? part.error ?? null);
-    if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
-    if (part.type === "tool_call_delta") return `${part.name ?? "tool"}(${part.argumentsText ?? ""})`;
-    if (part.type === "image") return part.url ?? part.resourceUri ?? part.mimeType ?? "[image]";
-    if (part.type === "audio") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[audio]";
-    if (part.type === "file") return part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[file]";
-    if (part.type === "document") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[document]";
-    return "[content]";
-  }).join("\n");
+  return block.content
+    .map((part) => {
+      if (part.type === "text" || part.type === "thinking") return part.text;
+      if (part.type === "tool_result") return JSON.stringify(part.result ?? part.error ?? null);
+      if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
+      if (part.type === "tool_call_delta") return `${part.name ?? "tool"}(${part.argumentsText ?? ""})`;
+      if (part.type === "image") return part.url ?? part.resourceUri ?? part.mimeType ?? "[image]";
+      if (part.type === "audio") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[audio]";
+      if (part.type === "file") return part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[file]";
+      if (part.type === "document") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[document]";
+      return "[content]";
+    })
+    .join("\n");
 }
 
 function templateValue(value: JsonValue): string {
@@ -409,7 +428,11 @@ function templateValue(value: JsonValue): string {
 function sortJson(value: JsonValue): JsonValue {
   if (!value || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(sortJson);
-  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortJson(value[key]!)]));
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, sortJson(value[key]!)]),
+  );
 }
 
 function throwIfAborted(signal: AbortSignal | undefined): void {

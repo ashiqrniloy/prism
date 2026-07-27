@@ -72,19 +72,18 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
     nodes: Object.freeze({ ...input.nodes }),
     edges: Object.freeze(edges.map(([from, to]) => Object.freeze([from, to] as const))),
     limits: input.limits ? Object.freeze({ ...input.limits }) : undefined,
-    state: input.state ? Object.freeze({
-      ...input.state,
-      initial: input.state.initial ? Object.freeze({ ...input.state.initial }) : undefined,
-      schema: input.state.schema ? Object.freeze({ ...input.state.schema }) : undefined,
-    }) : undefined,
+    state: input.state
+      ? Object.freeze({
+          ...input.state,
+          initial: input.state.initial ? Object.freeze({ ...input.state.initial }) : undefined,
+          schema: input.state.schema ? Object.freeze({ ...input.state.schema }) : undefined,
+        })
+      : undefined,
     metadata: input.metadata ? Object.freeze({ ...input.metadata }) : undefined,
   });
 }
 
-function assertAcyclic(
-  nodeIds: readonly string[],
-  edges: readonly (readonly [string, string])[],
-): void {
+function assertAcyclic(nodeIds: readonly string[], edges: readonly (readonly [string, string])[]): void {
   const successors = new Map<string, string[]>();
   const indegree = new Map<string, number>();
   for (const id of nodeIds) {

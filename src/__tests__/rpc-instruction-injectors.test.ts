@@ -1,9 +1,9 @@
+import assert from "node:assert/strict";
 import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
-import { createAgent, createContributionRegistry, createMockProvider, providerDone, providerTextDelta } from "../index.js";
-import { runRpcServer } from "../rpc.js";
 import type { InstructionInjector, ProviderRequest } from "../contracts.js";
+import { createAgent, createContributionRegistry, createMockProvider } from "../index.js";
+import { runRpcServer } from "../rpc.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -11,7 +11,14 @@ class MemoryWritable extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
-  lines(): unknown[] { return this.chunks.join("").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line)); }
+  lines(): unknown[] {
+    return this.chunks
+      .join("")
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  }
 }
 
 const jsonInjector: InstructionInjector = {
@@ -22,7 +29,11 @@ const jsonInjector: InstructionInjector = {
 function capturingFactory(captured: ProviderRequest[]) {
   return {
     createSession(id?: string) {
-      const provider = createMockProvider([{ type: "done" }], { onRequest: (req) => { captured.push(req); } });
+      const provider = createMockProvider([{ type: "done" }], {
+        onRequest: (req) => {
+          captured.push(req);
+        },
+      });
       return createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id });
     },
   };
@@ -35,7 +46,7 @@ function textOf(request: ProviderRequest): string {
     .join("\n");
 }
 
-async function runRpc(input: string, factory: { createSession(id?: string): any }): Promise<unknown[]> {
+async function _runRpc(input: string, factory: { createSession(id?: string): any }): Promise<unknown[]> {
   const stdout = new MemoryWritable();
   await runRpcServer({ stdin: Readable.from(input), stdout, createSession: factory.createSession });
   return stdout.lines();
@@ -50,14 +61,19 @@ describe("rpc instructionInjectors (Phase 30 Task 8)", () => {
 
     const stdout = new MemoryWritable();
     await runRpcServer({
-      stdin: Readable.from(JSON.stringify({ id: "1", command: "prompt", params: { input: "Hi", instructionInjectors: ["json-always"] } }) + "\n"),
+      stdin: Readable.from(
+        `${JSON.stringify({ id: "1", command: "prompt", params: { input: "Hi", instructionInjectors: ["json-always"] } })}\n`,
+      ),
       stdout,
       createSession: factory.createSession,
       instructionInjectors: registry,
     });
     const lines = stdout.lines();
 
-    assert.ok(lines.some((l: any) => l.id === "1" && l.ok === true), "expected success response");
+    assert.ok(
+      lines.some((l: any) => l.id === "1" && l.ok === true),
+      "expected success response",
+    );
     assert.ok(captured.length >= 1, "provider was called");
     assert.match(textOf(captured[0]), /Always answer in JSON/);
   });
@@ -69,7 +85,9 @@ describe("rpc instructionInjectors (Phase 30 Task 8)", () => {
 
     const stdout = new MemoryWritable();
     await runRpcServer({
-      stdin: Readable.from(JSON.stringify({ id: "2", command: "prompt", params: { input: "Hi", instructionInjectors: ["missing"] } }) + "\n"),
+      stdin: Readable.from(
+        `${JSON.stringify({ id: "2", command: "prompt", params: { input: "Hi", instructionInjectors: ["missing"] } })}\n`,
+      ),
       stdout,
       createSession: factory.createSession,
       instructionInjectors: registry,
@@ -90,7 +108,7 @@ describe("rpc instructionInjectors (Phase 30 Task 8)", () => {
 
     const stdout = new MemoryWritable();
     await runRpcServer({
-      stdin: Readable.from(JSON.stringify({ id: "3", command: "prompt", params: { input: "Hi" } }) + "\n"),
+      stdin: Readable.from(`${JSON.stringify({ id: "3", command: "prompt", params: { input: "Hi" } })}\n`),
       stdout,
       createSession: factory.createSession,
       instructionInjectors: registry,

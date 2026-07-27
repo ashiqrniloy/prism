@@ -1,14 +1,7 @@
-import type {
-  AIProvider,
-  ContentBlock,
-  JsonObject,
-  Message,
-  ModelConfig,
-  ProviderEvent,
-  ProviderRequest,
-  Usage } from "@arnilo/prism";
+import type { AIProvider, ContentBlock, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
 import {
   assertStructuredOutputRequestSupported,
+  type CredentialValueSource,
   providerDone,
   providerError,
   providerTextDelta,
@@ -18,19 +11,10 @@ import {
   providerUsage,
   resolveCredentialValue,
   toolCallFromArgumentsText,
-  type CredentialValueSource } from "@arnilo/prism";
-import {
-  applyOpenAIChatStructuredOutput,
-  mapOpenAIChatUsage,
-  serializeOpenAITool } from "@arnilo/prism/providers/openai";
-import {
-  readBoundedResponseText,
-  readSseData } from "@arnilo/prism/providers/transport";
-import {
-  zaiPreserveThinking,
-  zaiReasoningEffort,
-  zaiThinking,
-  zaiToolStream } from "./thinking.js";
+} from "@arnilo/prism";
+import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
+import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+import { zaiPreserveThinking, zaiReasoningEffort, zaiThinking, zaiToolStream } from "./thinking.js";
 
 /** Official international Chat Completions base (China `open.bigmodel.cn` remains overridable). */
 export const ZAI_DEFAULT_BASE_URL = "https://api.z.ai/api/paas/v4";
@@ -42,7 +26,11 @@ export interface ZaiProviderOptions {
   readonly fetch?: typeof fetch;
 }
 
-interface ToolAccumulator { id?: string; name?: string; argumentsText: string }
+interface ToolAccumulator {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+}
 
 export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider {
   const id = options.id ?? "zai";
@@ -59,9 +47,11 @@ export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider 
           headers: {
             ...request.options?.headers,
             "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {})},
+            ...(token ? { authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify(zaiBody(request)),
-          signal: request.signal});
+          signal: request.signal,
+        });
         if (!response.ok) {
           return yield providerError(
             new Error(`Z.AI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -73,7 +63,8 @@ export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider 
       } catch (error) {
         yield providerError(error, secrets);
       }
-    }};
+    },
+  };
 }
 
 export function zaiBody(request: ProviderRequest): JsonObject {
@@ -93,7 +84,8 @@ export function zaiBody(request: ProviderRequest): JsonObject {
     // Resolved official fields win over raw compat/extra escape hatches.
     thinking: zaiThinking(request),
     reasoning_effort: zaiReasoningEffort(request),
-    tool_stream: zaiToolStream(request)};
+    tool_stream: zaiToolStream(request),
+  };
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
@@ -126,7 +118,8 @@ export async function* zaiEvents(body: ReadableStream<Uint8Array>, signal?: Abor
           index,
           id: tool.id,
           name: tool.function?.name,
-          argumentsText: tool.function?.arguments});
+          argumentsText: tool.function?.arguments,
+        });
       }
     }
   }
@@ -144,37 +137,23 @@ export async function* zaiEvents(body: ReadableStream<Uint8Array>, signal?: Abor
  * otherwise they are dropped (never flattened into visible text).
  * @see https://docs.z.ai/guides/capabilities/thinking-mode
  */
-export function toZaiMessage(
-  message: Message,
-  model: ModelConfig,
-  preserveThinking = false,
-): JsonObject {
+export function toZaiMessage(message: Message, model: ModelConfig, preserveThinking = false): JsonObject {
   const capabilities = model.capabilities ?? {};
-  const thinkingParts = message.content.filter(
-    (part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking",
-  );
-  const reasoningContent =
-    preserveThinking && thinkingParts.length > 0
-      ? thinkingParts.map((part) => part.text).join("\n")
-      : undefined;
+  const thinkingParts = message.content.filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking");
+  const reasoningContent = preserveThinking && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("\n") : undefined;
 
   if (message.role === "tool") {
-    const result = message.content.find(
-      (part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result",
-    );
+    const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+    };
   }
 
   if (message.role === "assistant") {
-    const toolCalls = message.content.filter(
-      (part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call",
-    );
-    const textParts = message.content.filter(
-      (part): part is Extract<ContentBlock, { type: "text" }> => part.type === "text",
-    );
+    const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
+    const textParts = message.content.filter((part): part is Extract<ContentBlock, { type: "text" }> => part.type === "text");
     if (toolCalls.length > 0) {
       return clean({
         role: "assistant",
@@ -182,8 +161,10 @@ export function toZaiMessage(
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) }})),
-        reasoning_content: reasoningContent});
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+        })),
+        reasoning_content: reasoningContent,
+      });
     }
   }
 
@@ -192,8 +173,6 @@ export function toZaiMessage(
     if (part.type === "text") {
       content.push({ type: "text", text: part.text });
     } else if (part.type === "thinking") {
-      // Handled via reasoning_content when preserving; otherwise dropped.
-      continue;
     } else if (part.type === "image") {
       if (!capabilities.input?.includes("image")) {
         throw new Error("Z.AI request includes image but model does not declare image input capability");

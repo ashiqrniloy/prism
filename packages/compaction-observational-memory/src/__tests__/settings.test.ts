@@ -18,6 +18,9 @@ describe("observational memory settings", () => {
     for (const value of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, HARD_MAX_WORKER_TURNS + 1]) {
       await assert.rejects(resolveObservationalMemorySettings(undefined, { agentMaxTurns: value }), /agentMaxTurns/);
     }
-    assert.equal((await resolveObservationalMemorySettings(undefined, { agentMaxTurns: HARD_MAX_WORKER_TURNS })).agentMaxTurns, HARD_MAX_WORKER_TURNS);
+    assert.equal(
+      (await resolveObservationalMemorySettings(undefined, { agentMaxTurns: HARD_MAX_WORKER_TURNS })).agentMaxTurns,
+      HARD_MAX_WORKER_TURNS,
+    );
   });
 });

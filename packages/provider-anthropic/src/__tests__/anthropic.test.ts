@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AuthMethod, AIProvider, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
   assertNoSecretLeak,
@@ -48,7 +48,10 @@ describe("@arnilo/prism-provider-anthropic", () => {
     } as any);
     assert.equal(fetchCalls, 0);
     assert(registered.some((item: any) => item.id === "anthropic"));
-    assert.deepEqual(registered.filter((item: any) => item?.kind), [{ kind: "api_key", provider: "anthropic", credentialName: "apiKey" }]);
+    assert.deepEqual(
+      registered.filter((item: any) => item?.kind),
+      [{ kind: "api_key", provider: "anthropic", credentialName: "apiKey" }],
+    );
     assert(registered.some((item: any) => item.model === "claude-opus-4-8"));
     assert(registered.some((item: any) => item.model === "claude-sonnet-5"));
     assert(registered.some((item: any) => item.model === "claude-haiku-4-5"));
@@ -59,22 +62,31 @@ describe("@arnilo/prism-provider-anthropic", () => {
   it("streams_text_thinking_tool_calls_usage", async () => {
     const provider = createAnthropicMessagesProvider({
       apiKey: "fake-anthropic-key",
-      fetch: mockFetch(sse([
-        { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "tool_1", name: "lookup" } },
-        { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "hello" } },
-        { type: "content_block_delta", index: 2, delta: { type: "thinking_delta", thinking: "plan" } },
-        { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{\"q\":\"y\"}" } },
-        { type: "content_block_stop", index: 0 },
-        { type: "message_delta", usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 } },
-        { type: "message_stop" },
-      ])),
+      fetch: mockFetch(
+        sse([
+          { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "tool_1", name: "lookup" } },
+          { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "hello" } },
+          { type: "content_block_delta", index: 2, delta: { type: "thinking_delta", thinking: "plan" } },
+          { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"q":"y"}' } },
+          { type: "content_block_stop", index: 0 },
+          {
+            type: "message_delta",
+            usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 },
+          },
+          { type: "message_stop" },
+        ]),
+      ),
     });
     const events = await assertProviderStreamConforms({
       provider,
       request,
       expect: { text: "hello", usage: { inputTokens: 4, outputTokens: 3, cacheReadTokens: 1, cacheWriteTokens: 2 } },
     });
-    assert(events.some((event: ProviderEvent) => event.type === "content_delta" && event.content.type === "thinking" && event.content.text === "plan"));
+    assert(
+      events.some(
+        (event: ProviderEvent) => event.type === "content_delta" && event.content.type === "thinking" && event.content.text === "plan",
+      ),
+    );
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "tool_1", name: "lookup", arguments: { q: "y" } }]);
     assert.equal(events.at(-1)?.type, "done");
   });
@@ -147,13 +159,15 @@ describe("@arnilo/prism-provider-anthropic", () => {
     const tinyPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]).toString("base64");
     const replay: ProviderRequest = {
       model,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "document", mediaType: "application/pdf", name: "brief.pdf", data: tinyPdf },
-          { type: "file", mediaType: "application/pdf", name: "report.pdf", data: tinyPdf },
-        ],
-      }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "document", mediaType: "application/pdf", name: "brief.pdf", data: tinyPdf },
+            { type: "file", mediaType: "application/pdf", name: "report.pdf", data: tinyPdf },
+          ],
+        },
+      ],
     };
     let body: unknown;
     const provider = createAnthropicMessagesProvider({
@@ -256,17 +270,21 @@ describe("@arnilo/prism-provider-anthropic", () => {
     assert.equal(models[0]!.model, "claude-sonnet-5");
     assert.equal(models[0]!.displayName, "Claude Sonnet 5");
     assert.equal(models[0]!.limits?.contextWindow, 1_000_000);
-    assert.equal(models[1]!.compat?.thinking && typeof models[1]!.compat?.thinking === "object"
-      ? (models[1]!.compat!.thinking as { type?: string }).type
-      : undefined, "enabled");
+    assert.equal(
+      models[1]!.compat?.thinking && typeof models[1]!.compat?.thinking === "object"
+        ? (models[1]!.compat!.thinking as { type?: string }).type
+        : undefined,
+      "enabled",
+    );
   });
 
   it("list_anthropic_models_redacts_token_in_errors", async () => {
     await assert.rejects(
-      () => listAnthropicModels({
-        apiKey: "fake-anthropic-key",
-        fetch: (async () => new Response("unauthorized fake-anthropic-key", { status: 401 })) as typeof fetch,
-      }),
+      () =>
+        listAnthropicModels({
+          apiKey: "fake-anthropic-key",
+          fetch: (async () => new Response("unauthorized fake-anthropic-key", { status: 401 })) as typeof fetch,
+        }),
       (error: unknown) => {
         const message = String(error);
         assert.ok(!message.includes("fake-anthropic-key"));
@@ -284,9 +302,7 @@ describe("@arnilo/prism-provider-anthropic", () => {
   it("truncated_stream_fails_closed", async () => {
     const provider = createAnthropicMessagesProvider({
       apiKey: "fake-anthropic-key",
-      fetch: mockFetch(sse([
-        { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "partial" } },
-      ])),
+      fetch: mockFetch(sse([{ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "partial" } }])),
     });
     const events = await collectProviderEvents(provider, request);
     assert.equal(events.at(-1)?.type, "error");
@@ -303,7 +319,7 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));

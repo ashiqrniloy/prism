@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ExecutionAction, ExecutionDecision, ExecutionPolicy } from "@arnilo/prism";
+import { type CommandRule, evaluateCommandRules } from "./command-rules.js";
 import { assertPathInsideRoots } from "./path-containment.js";
-import { evaluateCommandRules, type CommandRule } from "./command-rules.js";
 
 export interface CodingApprovalRequest {
   readonly action: ExecutionAction;
@@ -32,14 +32,9 @@ function isMutatingKind(kind: string): boolean {
 function approvalCacheKey(action: ExecutionAction, scope: Exclude<ApprovalCacheScope, "none">): string | undefined {
   const identity = action.metadata?.[scope === "run" ? "runId" : "sessionId"];
   if (typeof identity !== "string" || identity.length === 0) return undefined;
-  return createHash("sha256").update(JSON.stringify([
-    scope,
-    identity,
-    action.kind,
-    action.operation,
-    action.paths ?? [],
-    action.command ?? "",
-  ])).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify([scope, identity, action.kind, action.operation, action.paths ?? [], action.command ?? ""]))
+    .digest("hex");
 }
 
 function cacheApproval(cache: Map<string, boolean>, key: string, approved: boolean): void {
@@ -54,11 +49,7 @@ function readAbortSignal(action: ExecutionAction): AbortSignal | undefined {
   return signal instanceof AbortSignal ? signal : undefined;
 }
 
-async function waitForApproval(
-  approve: CodingApprovalFn,
-  request: CodingApprovalRequest,
-  timeoutMs: number | undefined,
-): Promise<boolean> {
+async function waitForApproval(approve: CodingApprovalFn, request: CodingApprovalRequest, timeoutMs: number | undefined): Promise<boolean> {
   if (request.signal?.aborted) return false;
 
   const approvePromise = Promise.resolve(approve(request));

@@ -1,15 +1,15 @@
 import {
+  type AIProvider,
   assembleProviderInput,
   cacheHitRate,
   cacheSavings,
   cacheUsageReport,
-  type AIProvider,
   type ModelConfig,
   type ProviderRequest,
   type Usage,
 } from "@arnilo/prism";
-import { createOpenRouterProvider, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
 import { createNeuralWattProvider, defineNeuralWattModel } from "@arnilo/prism-provider-neuralwatt";
+import { createOpenRouterProvider, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
 
 const explicitCacheModel = defineOpenRouterModel({
   model: "anthropic/claude-sonnet-4",
@@ -90,17 +90,30 @@ function ok(body: ReadableStream<Uint8Array>) {
 export async function demo() {
   const openrouterProvider = createOpenRouterProvider({
     apiKey: () => "fake-openrouter-key",
-    fetch: () => ok(sse([
-      { choices: [{ delta: { content: "OpenRouter" } }] },
-      { usage: { prompt_tokens: 2000, completion_tokens: 20, total_tokens: 2020, prompt_tokens_details: { cached_tokens: 1500, cache_write_tokens: 400 } } },
-    ])),
+    fetch: () =>
+      ok(
+        sse([
+          { choices: [{ delta: { content: "OpenRouter" } }] },
+          {
+            usage: {
+              prompt_tokens: 2000,
+              completion_tokens: 20,
+              total_tokens: 2020,
+              prompt_tokens_details: { cached_tokens: 1500, cache_write_tokens: 400 },
+            },
+          },
+        ]),
+      ),
   });
   const neuralwattProvider = createNeuralWattProvider({
     apiKey: () => "fake-neuralwatt-key",
-    fetch: () => ok(sse([
-      { choices: [{ delta: { content: "NeuralWatt" } }] },
-      { usage: { prompt_tokens: 2000, completion_tokens: 20, total_tokens: 2020, prompt_tokens_details: { cached_tokens: 1600 } } },
-    ])),
+    fetch: () =>
+      ok(
+        sse([
+          { choices: [{ delta: { content: "NeuralWatt" } }] },
+          { usage: { prompt_tokens: 2000, completion_tokens: 20, total_tokens: 2020, prompt_tokens_details: { cached_tokens: 1600 } } },
+        ]),
+      ),
   });
 
   const openrouter = await assemble(explicitCacheModel);

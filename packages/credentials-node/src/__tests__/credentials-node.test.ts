@@ -1,31 +1,31 @@
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, truncateSync, writeFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
-import assert from "node:assert/strict";
 import { refreshOAuthCredential } from "@arnilo/prism";
+import { assertRestrictiveFileMode } from "../file-io.js";
 import {
   CredentialDecryptError,
   CredentialStoreLockedError,
   CredentialStoreTimeoutError,
   CredentialStoreUnavailableError,
-  HARD_MAX_ENVELOPE_FILE_BYTES,
-  HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
-  HARD_KEYCHAIN_TIMEOUT_MS,
-  WeakKdfParametersError,
   createEncryptedCredentialStore,
+  createMemoryHostKms,
   createOAuthCredentialStoreAdapter,
   createStoredCredentialResolver,
   decryptBytes,
+  decryptWithHostKms,
   encryptBytes,
   encryptWithHostKms,
-  decryptWithHostKms,
-  createMemoryHostKms,
+  HARD_KEYCHAIN_TIMEOUT_MS,
+  HARD_MAX_ENVELOPE_FILE_BYTES,
+  HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
   openEncryptedCredentialStore,
   resolveScryptParameters,
   rotateEncryptedCredentialStorePassphrase,
+  WeakKdfParametersError,
 } from "../index.js";
-import { assertRestrictiveFileMode } from "../file-io.js";
 import { runKeychainOperation } from "../keychain-store.js";
 import { parseVault } from "../vault.js";
 
@@ -67,15 +67,8 @@ describe("encrypted credential envelope", () => {
   });
 
   it("rejects weak or excessive scrypt parameters before work", () => {
-    for (const scrypt of [
-      { N: 1024 },
-      { N: 16_385 },
-      { N: 524_288 },
-      { r: 33 },
-      { p: 17 },
-      { keyLength: 64 },
-      { N: 262_144, r: 8, p: 2 },
-    ]) assert.throws(() => resolveScryptParameters(scrypt), WeakKdfParametersError);
+    for (const scrypt of [{ N: 1024 }, { N: 16_385 }, { N: 524_288 }, { r: 33 }, { p: 17 }, { keyLength: 64 }, { N: 262_144, r: 8, p: 2 }])
+      assert.throws(() => resolveScryptParameters(scrypt), WeakKdfParametersError);
     assert.throws(() => resolveScryptParameters(undefined, Infinity));
     assert.equal(resolveScryptParameters({ N: 262_144, r: 8, p: 1 }).N, 262_144);
   });
@@ -99,15 +92,23 @@ describe("encrypted credential envelope", () => {
   it("bounds and validates decrypted vault JSON", () => {
     assert.throws(() => parseVault(Buffer.alloc(65), 64), /exceeds byte limit/);
     assert.throws(() => parseVault(Buffer.from(JSON.stringify({ version: 1, entries: {}, extra: true }))));
-    assert.throws(() => parseVault(Buffer.from(JSON.stringify({
-      version: 1,
-      entries: { bad: { kind: "credential", name: "api", credential: { type: "api_key", value: "value" }, updatedAt: "now" } },
-    }))));
+    assert.throws(() =>
+      parseVault(
+        Buffer.from(
+          JSON.stringify({
+            version: 1,
+            entries: { bad: { kind: "credential", name: "api", credential: { type: "api_key", value: "value" }, updatedAt: "now" } },
+          }),
+        ),
+      ),
+    );
   });
 
   it("runs scrypt without blocking the event loop", async () => {
     let timerAdvanced = false;
-    const timer = setTimeout(() => { timerAdvanced = true; }, 0);
+    const timer = setTimeout(() => {
+      timerAdvanced = true;
+    }, 0);
     await encryptBytes(Buffer.from("payload"), "pass");
     clearTimeout(timer);
     assert.equal(timerAdvanced, true);
@@ -192,10 +193,7 @@ describe("createEncryptedCredentialStore", () => {
       getNewPassphrase: () => "new-pass",
     });
 
-    await assert.rejects(
-      () => openEncryptedCredentialStore({ path, getPassphrase: () => "old-pass" }),
-      CredentialDecryptError,
-    );
+    await assert.rejects(() => openEncryptedCredentialStore({ path, getPassphrase: () => "old-pass" }), CredentialDecryptError);
     const reopened = await openEncryptedCredentialStore({ path, getPassphrase: () => "new-pass" });
     assert.equal((await reopened.get({ name: "apiKey", provider: "demo" }))?.value, "kept");
   });
@@ -225,20 +223,14 @@ describe("createEncryptedCredentialStore", () => {
     await store.set({ name: "one", provider: "demo", credential: { type: "api_key", value: "first" } });
     await store.set({ name: "two", provider: "demo", credential: { type: "api_key", value: "second" } });
     const reopened = await openEncryptedCredentialStore({ path, getPassphrase: () => "pass" });
-    assert.deepEqual(
-      (await reopened.list()).map((row) => row.name).sort(),
-      ["one", "two"],
-    );
+    assert.deepEqual((await reopened.list()).map((row) => row.name).sort(), ["one", "two"]);
   });
 
   it("rejects reopen with wrong passphrase", async () => {
     const path = tempCredentialPath("wrong-key");
     const store = await openEncryptedCredentialStore({ path, getPassphrase: () => "good" });
     await store.set({ name: "apiKey", provider: "demo", credential: { type: "api_key", value: "secret" } });
-    await assert.rejects(
-      openEncryptedCredentialStore({ path, getPassphrase: () => "bad" }),
-      CredentialDecryptError,
-    );
+    await assert.rejects(openEncryptedCredentialStore({ path, getPassphrase: () => "bad" }), CredentialDecryptError);
   });
 
   it("rejects oversized files before parse or passphrase retrieval", async () => {
@@ -249,7 +241,10 @@ describe("createEncryptedCredentialStore", () => {
     await assert.rejects(
       openEncryptedCredentialStore({
         path,
-        getPassphrase: () => { requested = true; return "pass"; },
+        getPassphrase: () => {
+          requested = true;
+          return "pass";
+        },
         limits: { maxFileBytes: 1024 },
       }),
       /exceeds 1024 byte limit/,
@@ -262,10 +257,16 @@ describe("createEncryptedCredentialStore", () => {
       const path = tempCredentialPath("malformed");
       writeFileSync(path, raw, { mode: 0o600 });
       let requested = false;
-      await assert.rejects(openEncryptedCredentialStore({
-        path,
-        getPassphrase: () => { requested = true; return "pass"; },
-      }), CredentialDecryptError);
+      await assert.rejects(
+        openEncryptedCredentialStore({
+          path,
+          getPassphrase: () => {
+            requested = true;
+            return "pass";
+          },
+        }),
+        CredentialDecryptError,
+      );
       assert.equal(requested, false);
     }
   });
@@ -276,10 +277,16 @@ describe("createEncryptedCredentialStore", () => {
     writeFileSync(path, "{}", { mode: 0o644 });
     chmodSync(path, 0o644);
     let requested = false;
-    await assert.rejects(openEncryptedCredentialStore({
-      path,
-      getPassphrase: () => { requested = true; return "pass"; },
-    }), /permissions are too permissive/);
+    await assert.rejects(
+      openEncryptedCredentialStore({
+        path,
+        getPassphrase: () => {
+          requested = true;
+          return "pass";
+        },
+      }),
+      /permissions are too permissive/,
+    );
     assert.equal(requested, false);
   });
 
@@ -291,13 +298,19 @@ describe("createEncryptedCredentialStore", () => {
       { maxVaultBytes: Infinity },
       { maxScryptMemoryBytes: 0 },
       { maxScryptMemoryBytes: 1 },
-    ]) assert.throws(() => createEncryptedCredentialStore({ path, getPassphrase: () => "pass", limits }));
+    ])
+      assert.throws(() => createEncryptedCredentialStore({ path, getPassphrase: () => "pass", limits }));
     assert.throws(() => createEncryptedCredentialStore({ path, getPassphrase: () => "pass", fileMode: 0o644 }));
   });
 
   it("sanitizes passphrase retrieval failures without mutating state", async () => {
     const path = tempCredentialPath("passphrase-error");
-    const store = createEncryptedCredentialStore({ path, getPassphrase: () => { throw new Error("secret-value"); } });
+    const store = createEncryptedCredentialStore({
+      path,
+      getPassphrase: () => {
+        throw new Error("secret-value");
+      },
+    });
     try {
       await store.set({ name: "api", credential: { type: "api_key", value: "value" } });
       assert.fail("expected passphrase failure");
@@ -314,11 +327,15 @@ describe("createEncryptedCredentialStore", () => {
       getPassphrase: () => "pass",
       limits: { maxVaultBytes: 64 },
     });
-    await assert.rejects(async () => store.set({
-      name: "apiKey",
-      provider: "demo",
-      credential: { type: "api_key", value: "x".repeat(100) },
-    }), /vault exceeds byte limit/i);
+    await assert.rejects(
+      async () =>
+        store.set({
+          name: "apiKey",
+          provider: "demo",
+          credential: { type: "api_key", value: "x".repeat(100) },
+        }),
+      /vault exceeds byte limit/i,
+    );
     assert.deepEqual(await store.list(), []);
     assert.deepEqual(readdirSync(join(path, "..")), []);
   });
@@ -329,9 +346,19 @@ describe("keychain credential store", () => {
     let aborted = false;
     const started = Date.now();
     await assert.rejects(
-      runKeychainOperation((signal) => new Promise<never>(() => {
-        signal.addEventListener("abort", () => { aborted = true; }, { once: true });
-      }), 20),
+      runKeychainOperation(
+        (signal) =>
+          new Promise<never>(() => {
+            signal.addEventListener(
+              "abort",
+              () => {
+                aborted = true;
+              },
+              { once: true },
+            );
+          }),
+        20,
+      ),
       CredentialStoreTimeoutError,
     );
     assert.equal(aborted, true);
@@ -359,7 +386,8 @@ describe("keychain credential store", () => {
       { timeoutMs: HARD_KEYCHAIN_TIMEOUT_MS + 1 },
       { maxPayloadBytes: Infinity },
       { maxPayloadBytes: HARD_MAX_KEYCHAIN_PAYLOAD_BYTES + 1 },
-    ]) assert.throws(() => createKeychainCredentialStore({ service: "test", ...options }));
+    ])
+      assert.throws(() => createKeychainCredentialStore({ service: "test", ...options }));
   });
 
   it("round-trips when PRISM_TEST_KEYCHAIN=1", async () => {

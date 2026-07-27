@@ -31,8 +31,13 @@ export async function demo() {
     runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
   });
   if (suspended.status !== "suspended" || writes !== 0) throw new Error("expected pre-tool suspension");
-  return resumeAgentRun(agent, { runId: suspended.runId, sessionId: suspended.sessionId }, {
-    decision: "approve",
-    expectedVersion: suspended.runState!.version!,
-  }, { checkpoints, definitionRevision: "1" });
+  return resumeAgentRun(
+    agent,
+    { runId: suspended.runId, sessionId: suspended.sessionId },
+    {
+      decision: "approve",
+      expectedVersion: suspended.runState!.version!,
+    },
+    { checkpoints, definitionRevision: "1" },
+  );
 }

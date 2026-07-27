@@ -1,20 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type {
-  LanguageModelV4,
-  LanguageModelV4CallOptions,
-  LanguageModelV4StreamPart,
-  LanguageModelV4Usage,
-} from "@ai-sdk/provider";
+import type { LanguageModelV4, LanguageModelV4CallOptions, LanguageModelV4StreamPart, LanguageModelV4Usage } from "@ai-sdk/provider";
 import { createSecretRedactor, type ModelConfig, type ProviderRequest, type ToolDefinition } from "@arnilo/prism";
-import {
-  assertToolCallDeltasReconstruct,
-  collectProviderEvents,
-} from "@arnilo/prism/testing/provider-conformance";
-import * as aiSdkExports from "../index.js";
-import { createAiSdkProvider } from "../provider.js";
+import { assertToolCallDeltasReconstruct, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
 import { AiSdkProviderError } from "../errors.js";
+import * as aiSdkExports from "../index.js";
 import { toAiSdkCallOptions } from "../prompt.js";
+import { createAiSdkProvider } from "../provider.js";
 import { mapUsage } from "../stream.js";
 import { assertSupportedAiSdkVersion, SUPPORTED_AI_SDK_VERSION_MATRIX } from "../types.js";
 
@@ -68,7 +60,9 @@ function createFakeModel(options: {
       options.onStream?.(call);
       if (options.fail !== undefined) throw options.fail;
       return {
-        stream: options.streamFactory?.(call) ?? streamOf(options.parts ?? [{ type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: emptyUsage() }]),
+        stream:
+          options.streamFactory?.(call) ??
+          streamOf(options.parts ?? [{ type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: emptyUsage() }]),
         warnings: [],
       };
     },
@@ -99,14 +93,14 @@ describe("createAiSdkProvider", () => {
           { type: "reasoning-delta", id: "r1", delta: "think" },
           { type: "reasoning-end", id: "r1" },
           { type: "tool-input-start", id: "call_1", toolName: "echo" },
-          { type: "tool-input-delta", id: "call_1", delta: "{\"x\":" },
+          { type: "tool-input-delta", id: "call_1", delta: '{"x":' },
           { type: "tool-input-delta", id: "call_1", delta: "1}" },
           { type: "tool-input-end", id: "call_1" },
           {
             type: "tool-call",
             toolCallId: "call_1",
             toolName: "echo",
-            input: "{\"x\":1}",
+            input: '{"x":1}',
           },
           {
             type: "finish",
@@ -119,22 +113,36 @@ describe("createAiSdkProvider", () => {
       }),
     });
 
-    const events = await collectProviderEvents(provider, request({
-      tools: [{
-        name: "echo",
-        description: "Echo",
-        parameters: { type: "object", properties: { x: { type: "number" } } },
-        execute: async () => ({ toolCallId: "call_1", name: "echo", value: 1 }),
-      }],
-    }));
+    const events = await collectProviderEvents(
+      provider,
+      request({
+        tools: [
+          {
+            name: "echo",
+            description: "Echo",
+            parameters: { type: "object", properties: { x: { type: "number" } } },
+            execute: async () => ({ toolCallId: "call_1", name: "echo", value: 1 }),
+          },
+        ],
+      }),
+    );
 
     assert.deepEqual(callOrder, ["stream"]);
-    assert.equal(events.some((event) => event.type === "message_start" && event.messageId === "resp_1"), true);
+    assert.equal(
+      events.some((event) => event.type === "message_start" && event.messageId === "resp_1"),
+      true,
+    );
     assert.equal(events.filter((event) => event.type === "content_delta" && event.content.type === "text").length, 2);
-    assert.equal(events.some((event) => event.type === "content_delta" && event.content.type === "thinking" && event.content.text === "think"), true);
+    assert.equal(
+      events.some((event) => event.type === "content_delta" && event.content.type === "thinking" && event.content.text === "think"),
+      true,
+    );
     const toolCalls = assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "echo", arguments: { x: 1 } }]);
     assert.equal(toolCalls.length, 1);
-    assert.equal(events.some((event) => event.type === "tool_call" && event.call.id === "call_1"), true);
+    assert.equal(
+      events.some((event) => event.type === "tool_call" && event.call.id === "call_1"),
+      true,
+    );
     const usageEvent = events.find((event) => event.type === "usage");
     assert.deepEqual(usageEvent?.type === "usage" ? usageEvent.usage : undefined, {
       inputTokens: 10,
@@ -159,37 +167,51 @@ describe("createAiSdkProvider", () => {
           });
         },
         parts: [
-          { type: "text-delta", id: "t", delta: "{\"ok\":true}" },
+          { type: "text-delta", id: "t", delta: '{"ok":true}' },
           { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: usage(1, 1) },
         ],
       }),
     });
 
-    const ok = await collectProviderEvents(provider, request({
-      options: {
-        structuredOutput: {
-          name: "Answer",
-          schema: { type: "object", properties: { ok: { type: "boolean" } } },
+    const ok = await collectProviderEvents(
+      provider,
+      request({
+        options: {
+          structuredOutput: {
+            name: "Answer",
+            schema: { type: "object", properties: { ok: { type: "boolean" } } },
+          },
         },
-      },
-    }));
+      }),
+    );
     assert.equal(calls, 1);
-    assert.equal(ok.some((event) => event.type === "done"), true);
+    assert.equal(
+      ok.some((event) => event.type === "done"),
+      true,
+    );
 
-    const rejected = await collectProviderEvents(provider, request({
-      messages: [{
-        role: "user",
-        content: [{ type: "audio", mediaType: "audio/wav", data: "AAAA" }],
-      }],
-    }));
+    const rejected = await collectProviderEvents(
+      provider,
+      request({
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "audio", mediaType: "audio/wav", data: "AAAA" }],
+          },
+        ],
+      }),
+    );
     assert.equal(calls, 1, "model must not be invoked for unsupported content");
     assert.equal(rejected.length, 1);
     assert.equal(rejected[0]?.type, "error");
     assert.match(rejected[0]?.type === "error" ? rejected[0].error.message : "", /audio/);
 
-    const strict = await collectProviderEvents(provider, request({
-      options: { structuredOutput: { name: "Answer", schema: { type: "object" }, strict: true } },
-    }));
+    const strict = await collectProviderEvents(
+      provider,
+      request({
+        options: { structuredOutput: { name: "Answer", schema: { type: "object" }, strict: true } },
+      }),
+    );
     assert.equal(calls, 1, "model must not be invoked for unmappable strict output");
     assert.match(strict[0]?.type === "error" ? strict[0].error.message : "", /strict/);
   });
@@ -200,23 +222,25 @@ describe("createAiSdkProvider", () => {
       parameters: { type: "object", properties: { q: { type: "string" } } },
       execute: async () => ({ toolCallId: "1", name: "lookup", value: { hit: true } }),
     };
-    const options = toAiSdkCallOptions(request({
-      tools: [tool],
-      messages: [
-        { role: "user", content: [{ type: "text", text: "find it" }] },
-        {
-          role: "assistant",
-          content: [
-            { type: "text", text: "calling" },
-            { type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "prism" } },
-          ],
-        },
-        {
-          role: "tool",
-          content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { hit: true } }],
-        },
-      ],
-    }));
+    const options = toAiSdkCallOptions(
+      request({
+        tools: [tool],
+        messages: [
+          { role: "user", content: [{ type: "text", text: "find it" }] },
+          {
+            role: "assistant",
+            content: [
+              { type: "text", text: "calling" },
+              { type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "prism" } },
+            ],
+          },
+          {
+            role: "tool",
+            content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { hit: true } }],
+          },
+        ],
+      }),
+    );
 
     assert.equal(options.tools?.[0]?.type, "function");
     assert.equal(options.prompt.length, 3);
@@ -256,19 +280,23 @@ describe("createAiSdkProvider", () => {
     const midAbort = new AbortController();
     const midProvider = createAiSdkProvider({
       model: createFakeModel({
-        streamFactory: () => new ReadableStream({
-          start(ctrl) {
-            ctrl.enqueue({ type: "text-delta", id: "t", delta: "partial" });
-          },
-          pull(ctrl) {
-            midAbort.abort(new Error("user-abort"));
-            ctrl.close();
-          },
-        }),
+        streamFactory: () =>
+          new ReadableStream({
+            start(ctrl) {
+              ctrl.enqueue({ type: "text-delta", id: "t", delta: "partial" });
+            },
+            pull(ctrl) {
+              midAbort.abort(new Error("user-abort"));
+              ctrl.close();
+            },
+          }),
       }),
     });
     const mid = await collectProviderEvents(midProvider, request({ signal: midAbort.signal }));
-    assert.equal(mid.some((event) => event.type === "content_delta"), true);
+    assert.equal(
+      mid.some((event) => event.type === "content_delta"),
+      true,
+    );
     assert.equal(mid.at(-1)?.type, "error");
 
     const failing = createAiSdkProvider({
@@ -311,14 +339,19 @@ describe("createAiSdkProvider", () => {
 
   it("does not export model discovery helpers or invent cache request fields", () => {
     const exportNames = Object.keys(aiSdkExports).sort();
-    assert.equal(exportNames.some((name) => /^list[A-Z].*Models$/.test(name)), false);
-    const options = toAiSdkCallOptions(request({
-      options: {
-        cache: { key: "tenant:v1", retention: "long" },
-        cacheKey: "should-not-emit",
-        cacheRetention: "long",
-      },
-    }));
+    assert.equal(
+      exportNames.some((name) => /^list[A-Z].*Models$/.test(name)),
+      false,
+    );
+    const options = toAiSdkCallOptions(
+      request({
+        options: {
+          cache: { key: "tenant:v1", retention: "long" },
+          cacheKey: "should-not-emit",
+          cacheRetention: "long",
+        },
+      }),
+    );
     assert.equal(options.providerOptions?.prism, undefined);
     assert.equal("cacheKey" in options, false);
     assert.equal("cacheRetention" in options, false);
@@ -326,12 +359,14 @@ describe("createAiSdkProvider", () => {
   });
 
   it("passes compat and extra through providerOptions.prism for host models", () => {
-    const options = toAiSdkCallOptions(request({
-      options: {
-        compat: { reasoning: { effort: "low" } },
-        extra: { gateway: { order: ["openai"] } },
-      },
-    }));
+    const options = toAiSdkCallOptions(
+      request({
+        options: {
+          compat: { reasoning: { effort: "low" } },
+          extra: { gateway: { order: ["openai"] } },
+        },
+      }),
+    );
     assert.deepEqual(options.providerOptions?.prism, {
       compat: { reasoning: { effort: "low" } },
       extra: { gateway: { order: ["openai"] } },
@@ -339,15 +374,19 @@ describe("createAiSdkProvider", () => {
   });
 
   it("maps assistant thinking blocks to AI SDK reasoning prompt parts", () => {
-    const options = toAiSdkCallOptions(request({
-      messages: [{
-        role: "assistant",
-        content: [
-          { type: "thinking", text: "step one" },
-          { type: "text", text: "answer" },
+    const options = toAiSdkCallOptions(
+      request({
+        messages: [
+          {
+            role: "assistant",
+            content: [
+              { type: "thinking", text: "step one" },
+              { type: "text", text: "answer" },
+            ],
+          },
         ],
-      }],
-    }));
+      }),
+    );
     const assistant = options.prompt[0];
     assert.ok(assistant && assistant.role === "assistant");
     assert.deepEqual(assistant.content[0], { type: "reasoning", text: "step one" });
@@ -362,7 +401,7 @@ describe("createAiSdkProvider", () => {
             type: "tool-call",
             toolCallId: "call_server",
             toolName: "lookup",
-            input: "{\"ok\":true}",
+            input: '{"ok":true}',
             providerExecuted: true,
           },
           { type: "tool-result", toolCallId: "call_server", toolName: "lookup", result: { ok: true } },

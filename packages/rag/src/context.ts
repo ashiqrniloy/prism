@@ -8,18 +8,21 @@ export function createRagContextProvider(options: RagContextProviderOptions): Co
     name: options.name ?? "rag",
     async resolve(context) {
       context.signal?.throwIfAborted();
-      const query = typeof options.query === "function"
-        ? options.query({ messages: context.messages })
-        : options.query ?? latestUserText(context.messages);
+      const query =
+        typeof options.query === "function"
+          ? options.query({ messages: context.messages })
+          : (options.query ?? latestUserText(context.messages));
       if (!query?.trim()) return [];
       const result = await retrieveContext(query, { ...options, signal: context.signal });
       if (!result.text) return [];
-      return [{
-        id: `${options.name ?? "rag"}:context`,
-        title: options.title ?? "Retrieved context",
-        content: result.text,
-        metadata: { citations: result.citations, trust: result.trust, inert: true, untrusted: true, injectionCapable: true },
-      }];
+      return [
+        {
+          id: `${options.name ?? "rag"}:context`,
+          title: options.title ?? "Retrieved context",
+          content: result.text,
+          metadata: { citations: result.citations, trust: result.trust, inert: true, untrusted: true, injectionCapable: true },
+        },
+      ];
     },
   };
 }

@@ -1,5 +1,5 @@
-import { isAbsolute, relative, resolve, dirname, basename, join } from "node:path";
 import { realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { TrustPolicy } from "../security.js";
 import { isNodeErrorCode } from "./config.js";
 

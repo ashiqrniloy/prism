@@ -1,5 +1,5 @@
-import type { ResolvedWorkLimits, WorkLimits } from "./types.js";
 import { WorkToolError } from "./errors.js";
+import type { ResolvedWorkLimits, WorkLimits } from "./types.js";
 
 export const DEFAULT_WORK_LIMITS: ResolvedWorkLimits = {
   maxPaginationPages: 20,

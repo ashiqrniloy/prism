@@ -1,4 +1,12 @@
 import { createCipheriv, createDecipheriv, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { CredentialDecryptError, WeakKdfParametersError } from "./errors.js";
+import {
+  assertScryptWorkBounds,
+  HARD_MAX_SCRYPT_MEMORY_BYTES,
+  type ResolvedEncryptedCredentialStoreLimits,
+  resolveEncryptedCredentialStoreLimits,
+  validateCredentialLimit,
+} from "./limits.js";
 import type { EncryptedCredentialStoreLimits, EncryptedEnvelope, ScryptParameters } from "./types.js";
 import {
   DEFAULT_SCRYPT_KEY_LENGTH,
@@ -8,14 +16,6 @@ import {
   ENVELOPE_VERSION,
   MIN_SCRYPT_N,
 } from "./types.js";
-import { CredentialDecryptError, WeakKdfParametersError } from "./errors.js";
-import {
-  assertScryptWorkBounds,
-  HARD_MAX_SCRYPT_MEMORY_BYTES,
-  resolveEncryptedCredentialStoreLimits,
-  validateCredentialLimit,
-  type ResolvedEncryptedCredentialStoreLimits,
-} from "./limits.js";
 
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
@@ -51,28 +51,15 @@ export function assertScryptParameters(
   if (params.keyLength !== DEFAULT_SCRYPT_KEY_LENGTH) {
     throw new WeakKdfParametersError(`scrypt keyLength must be exactly ${DEFAULT_SCRYPT_KEY_LENGTH}`);
   }
-  const memoryLimit = validateCredentialLimit(
-    "maxScryptMemoryBytes",
-    maxMemoryBytes,
-    HARD_MAX_SCRYPT_MEMORY_BYTES,
-  );
+  const memoryLimit = validateCredentialLimit("maxScryptMemoryBytes", maxMemoryBytes, HARD_MAX_SCRYPT_MEMORY_BYTES);
   assertScryptWorkBounds(params.N, params.r, params.p, memoryLimit);
 }
 
-export async function deriveKey(
-  passphrase: string,
-  salt: Buffer,
-  params: ScryptParameters,
-  maxMemoryBytes: number,
-): Promise<Buffer> {
+export async function deriveKey(passphrase: string, salt: Buffer, params: ScryptParameters, maxMemoryBytes: number): Promise<Buffer> {
   assertScryptParameters(params, maxMemoryBytes);
   return new Promise((resolve, reject) => {
-    scrypt(
-      passphrase,
-      salt,
-      params.keyLength,
-      { N: params.N, r: params.r, p: params.p, maxmem: maxMemoryBytes },
-      (error, key) => error ? reject(error) : resolve(key),
+    scrypt(passphrase, salt, params.keyLength, { N: params.N, r: params.r, p: params.p, maxmem: maxMemoryBytes }, (error, key) =>
+      error ? reject(error) : resolve(key),
     );
   });
 }
@@ -87,8 +74,12 @@ function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): 
 }
 
 function decodeBase64(value: unknown, name: string, maxBytes: number, exactBytes?: number): Buffer {
-  if (typeof value !== "string" || value.length > Math.ceil(maxBytes / 3) * 4 || value.length % 4 !== 0 ||
-      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+  if (
+    typeof value !== "string" ||
+    value.length > Math.ceil(maxBytes / 3) * 4 ||
+    value.length % 4 !== 0 ||
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)
+  ) {
     throw new CredentialDecryptError(`Invalid ${name}`);
   }
   const decoded = Buffer.from(value, "base64");
@@ -102,11 +93,17 @@ export function parseEncryptedEnvelope(
   value: unknown,
   limits: ResolvedEncryptedCredentialStoreLimits = resolveEncryptedCredentialStoreLimits(),
 ): EncryptedEnvelope {
-  if (!isObject(value) || !hasExactKeys(value, ["version", "kdf", "cipher", "ciphertext"]) ||
-      value.version !== ENVELOPE_VERSION || !isObject(value.kdf) || !isObject(value.cipher) ||
-      !hasExactKeys(value.kdf, ["algorithm", "N", "r", "p", "salt", "keyLength"]) ||
-      !hasExactKeys(value.cipher, ["algorithm", "iv"]) || value.kdf.algorithm !== "scrypt" ||
-      value.cipher.algorithm !== "aes-256-gcm") {
+  if (
+    !isObject(value) ||
+    !hasExactKeys(value, ["version", "kdf", "cipher", "ciphertext"]) ||
+    value.version !== ENVELOPE_VERSION ||
+    !isObject(value.kdf) ||
+    !isObject(value.cipher) ||
+    !hasExactKeys(value.kdf, ["algorithm", "N", "r", "p", "salt", "keyLength"]) ||
+    !hasExactKeys(value.cipher, ["algorithm", "iv"]) ||
+    value.kdf.algorithm !== "scrypt" ||
+    value.cipher.algorithm !== "aes-256-gcm"
+  ) {
     throw new CredentialDecryptError("Invalid encrypted credential envelope");
   }
   const params: ScryptParameters = {

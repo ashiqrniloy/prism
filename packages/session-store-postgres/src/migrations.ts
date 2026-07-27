@@ -1,15 +1,22 @@
 import { randomUUID } from "node:crypto";
-import type { Pool, PoolClient } from "pg";
 import {
+  type AppliedPersistenceMigration,
   assertAppliedPersistenceMigrations,
   assertMigrationUpAndReopen,
   assertPersistenceSchemaShape,
   createPersistenceMigrationContract,
   createPersistenceSchemaModel,
-  type AppliedPersistenceMigration,
   type PersistenceSchemaShape,
 } from "@arnilo/prism/testing/persistence-schema";
-import { ADAPTER_INDEX_NAMES, buildMigration001Ddl, buildMigration002Ddl, buildMigration003Ddl, buildMigration004Ddl, buildMigration005Ddl } from "./ddl.js";
+import type { Pool, PoolClient } from "pg";
+import {
+  ADAPTER_INDEX_NAMES,
+  buildMigration001Ddl,
+  buildMigration002Ddl,
+  buildMigration003Ddl,
+  buildMigration004Ddl,
+  buildMigration005Ddl,
+} from "./ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
 const MIGRATION_CONTRACT = createPersistenceMigrationContract();
@@ -37,7 +44,14 @@ export async function applyPostgresMigrations(pool: Pool, schema: string): Promi
       await client.query(
         `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [randomUUID(), step.name, String(step.version), new Date(Date.now() + step.version).toISOString(), "prism-session-store-postgres", step.checksum],
+        [
+          randomUUID(),
+          step.name,
+          String(step.version),
+          new Date(Date.now() + step.version).toISOString(),
+          "prism-session-store-postgres",
+          step.checksum,
+        ],
       );
     }
     await assertPostgresSchemaReady(client, schema);
@@ -64,10 +78,19 @@ export async function verifyMigrationIdempotency(pool: Pool, schema: string): Pr
 }
 
 async function listAppliedMigrations(source: Queryable, schema: string): Promise<AppliedPersistenceMigration[]> {
-  const hasTable = await source.query("SELECT 1 FROM pg_tables WHERE schemaname = $1 AND tablename = $2 LIMIT 1", [schema, "prism_migrations"]);
+  const hasTable = await source.query("SELECT 1 FROM pg_tables WHERE schemaname = $1 AND tablename = $2 LIMIT 1", [
+    schema,
+    "prism_migrations",
+  ]);
   if (hasTable.rowCount === 0) return [];
-  const result = await source.query(`SELECT name, version, checksum FROM ${qualifyTable(schema, "prism_migrations")} ORDER BY applied_at ASC, id ASC`);
-  return result.rows.map((row) => ({ name: String(row.name), version: String(row.version), checksum: row.checksum === null ? null : String(row.checksum) }));
+  const result = await source.query(
+    `SELECT name, version, checksum FROM ${qualifyTable(schema, "prism_migrations")} ORDER BY applied_at ASC, id ASC`,
+  );
+  return result.rows.map((row) => ({
+    name: String(row.name),
+    version: String(row.version),
+    checksum: row.checksum === null ? null : String(row.checksum),
+  }));
 }
 
 async function backfillLegacyChecksums(source: Queryable, schema: string): Promise<void> {
@@ -122,11 +145,26 @@ async function readPostgresSchemaShape(source: Queryable, schema: string): Promi
       [schema, ADAPTER_INDEX_NAMES],
     ),
   ]);
-  const tableMap = new Map<string, { name: string; columns: { name: string; type: string; nullable: boolean; defaultValue?: string }[]; primaryKey: string[]; uniqueKeys: string[][]; foreignKeys: { columns: string[]; referencesTable: string; referencesColumns: string[] }[] }>();
+  const tableMap = new Map<
+    string,
+    {
+      name: string;
+      columns: { name: string; type: string; nullable: boolean; defaultValue?: string }[];
+      primaryKey: string[];
+      uniqueKeys: string[][];
+      foreignKeys: { columns: string[]; referencesTable: string; referencesColumns: string[] }[];
+    }
+  >();
   for (const table of tableNames) tableMap.set(table, { name: table, columns: [], primaryKey: [], uniqueKeys: [], foreignKeys: [] });
   for (const row of columnsResult.rows) {
     const table = tableMap.get(String(row.table_name));
-    if (table) table.columns.push({ name: String(row.column_name), type: String(row.data_type), nullable: row.is_nullable === "YES", defaultValue: row.column_default === null ? undefined : String(row.column_default) });
+    if (table)
+      table.columns.push({
+        name: String(row.column_name),
+        type: String(row.data_type),
+        nullable: row.is_nullable === "YES",
+        defaultValue: row.column_default === null ? undefined : String(row.column_default),
+      });
   }
   for (const row of constraintsResult.rows) {
     const table = tableMap.get(String(row.table_name));
@@ -134,11 +172,21 @@ async function readPostgresSchemaShape(source: Queryable, schema: string): Promi
     const columns = stringArray(row.columns);
     if (row.contype === "p") table.primaryKey = columns;
     else if (row.contype === "u") table.uniqueKeys.push(columns);
-    else if (row.contype === "f") table.foreignKeys.push({ columns, referencesTable: String(row.references_table), referencesColumns: stringArray(row.references_columns) });
+    else if (row.contype === "f")
+      table.foreignKeys.push({
+        columns,
+        referencesTable: String(row.references_table),
+        referencesColumns: stringArray(row.references_columns),
+      });
   }
   return {
     tables: [...tableMap.values()],
-    indexes: indexesResult.rows.map((row) => ({ name: String(row.name), table: String(row.table_name), columns: stringArray(row.columns), unique: row.unique === true })),
+    indexes: indexesResult.rows.map((row) => ({
+      name: String(row.name),
+      table: String(row.table_name),
+      columns: stringArray(row.columns),
+      unique: row.unique === true,
+    })),
   };
 }
 

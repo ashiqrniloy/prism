@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism";
 import {
+  type CapabilityActorRef,
   createMemoryWorkflowCheckpoints,
   createProactiveScheduleCapabilities,
   createWorkflowSchedules,
   defineWorkflow,
   functionNode,
-  WorkflowRuntimeError,
-  type CapabilityActorRef,
   type ScheduleCapabilityEvent,
+  WorkflowRuntimeError,
 } from "../index.js";
 
 const ownership = { tenantId: "tenant-a", userId: "user-a" } as const;

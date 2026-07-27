@@ -1,5 +1,5 @@
-import type { Pool, PoolConfig } from "pg";
 import type { SecretRedactor } from "@arnilo/prism";
+import type { Pool, PoolConfig } from "pg";
 
 /** Default PostgreSQL schema for Prism tables. */
 export const DEFAULT_SCHEMA = "prism";

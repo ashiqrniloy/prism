@@ -22,16 +22,9 @@ import {
   providerUsage,
   toolCallContent,
 } from "@arnilo/prism";
-import {
-  bytesToBase64,
-  resolveProviderMediaMessages,
-} from "@arnilo/prism/providers/media";
+import { bytesToBase64, resolveProviderMediaMessages } from "@arnilo/prism/providers/media";
 import { readSseData } from "@arnilo/prism/providers/transport";
-import {
-  googlePreserveThinking,
-  googleThinkingConfig,
-  stripGoogleOwnedCompat,
-} from "./thinking.js";
+import { googlePreserveThinking, googleThinkingConfig, stripGoogleOwnedCompat } from "./thinking.js";
 
 /** Serialize a Prism `ProviderRequest` to a Gemini `generateContent` body. */
 export async function googleGenerateContentBody(request: ProviderRequest): Promise<JsonObject> {
@@ -74,10 +67,7 @@ export async function googleGenerateContentBody(request: ProviderRequest): Promi
 }
 
 /** Map Gemini `streamGenerateContent?alt=sse` chunks to Prism `ProviderEvent`s. */
-export async function* googleGenerateContentEvents(
-  body: ReadableStream<Uint8Array>,
-  signal?: AbortSignal,
-): AsyncIterable<ProviderEvent> {
+export async function* googleGenerateContentEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   let usage: Usage | undefined;
   let sawFinishReason = false;
   let toolIndex = 0;
@@ -104,11 +94,7 @@ export async function* googleGenerateContentEvents(
           const id = part.functionCall.id ?? `google_tool_${toolIndex}`;
           if (!emittedToolIds.has(id)) {
             emittedToolIds.add(id);
-            yield providerToolCall(toolCallContent(
-              id,
-              part.functionCall.name,
-              (part.functionCall.args ?? {}) as JsonObject,
-            ));
+            yield providerToolCall(toolCallContent(id, part.functionCall.name, (part.functionCall.args ?? {}) as JsonObject));
             toolIndex += 1;
           }
           continue;
@@ -125,9 +111,7 @@ export async function* googleGenerateContentEvents(
 
   if (!sawFinishReason) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(new Error(
-      "Google generateContent stream ended without completion evidence (finishReason missing)",
-    ));
+    yield providerError(new Error("Google generateContent stream ended without completion evidence (finishReason missing)"));
     return;
   }
   yield providerDone(usage);
@@ -135,29 +119,32 @@ export async function* googleGenerateContentEvents(
 
 async function toContent(
   message: Message,
-  model: ModelConfig,
+  _model: ModelConfig,
   preserveThinking: boolean,
   resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>,
 ): Promise<JsonObject> {
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
-    const responsePayload: JsonObject = result?.error !== undefined
-      ? {
-        error: clean({
-          message: result.error.message,
-          code: result.error.code,
-          name: result.error.name,
-        }),
-      }
-      : { result: jsonResult(result?.result) };
+    const responsePayload: JsonObject =
+      result?.error !== undefined
+        ? {
+            error: clean({
+              message: result.error.message,
+              code: result.error.code,
+              name: result.error.name,
+            }),
+          }
+        : { result: jsonResult(result?.result) };
     return {
       role: "user",
-      parts: [{
-        functionResponse: {
-          name: result?.name ?? "",
-          response: responsePayload,
+      parts: [
+        {
+          functionResponse: {
+            name: result?.name ?? "",
+            response: responsePayload,
+          },
         },
-      }],
+      ],
     };
   }
 
@@ -167,11 +154,13 @@ async function toContent(
       parts.push({ text: part.text });
     } else if (part.type === "thinking") {
       if (preserveThinking) {
-        parts.push(clean({
-          text: part.text,
-          thought: true,
-          thoughtSignature: part.signature,
-        }));
+        parts.push(
+          clean({
+            text: part.text,
+            thought: true,
+            thoughtSignature: part.signature,
+          }),
+        );
       } else if (part.text) {
         parts.push({ text: part.text });
       }
@@ -229,22 +218,21 @@ function toTool(tool: ToolDefinition): JsonObject {
 }
 
 function text(message: Message, preserveThinking = false): string {
-  return message.content.map((part) => {
-    if (part.type === "text") return part.text;
-    if (part.type === "thinking") return preserveThinking ? part.text : "";
-    return "";
-  }).join("");
+  return message.content
+    .map((part) => {
+      if (part.type === "text") return part.text;
+      if (part.type === "thinking") return preserveThinking ? part.text : "";
+      return "";
+    })
+    .join("");
 }
 
 function toUsage(usage: GeminiUsage | undefined): Usage | undefined {
   if (!usage) return undefined;
   // thoughtsTokenCount is billed separately on wire; fold into total when present.
   const total =
-    usage.totalTokenCount
-    ?? ((usage.promptTokenCount ?? 0)
-      + (usage.candidatesTokenCount ?? 0)
-      + (usage.thoughtsTokenCount ?? 0)
-      || undefined);
+    usage.totalTokenCount ??
+    ((usage.promptTokenCount ?? 0) + (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0) || undefined);
   return {
     inputTokens: usage.promptTokenCount,
     outputTokens: usage.candidatesTokenCount,

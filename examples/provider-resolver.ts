@@ -1,11 +1,11 @@
 import {
+  type AgentEvent,
   createAgent,
   createExtensionKernel,
-  createProviderResolver,
   createMockProvider,
+  createProviderResolver,
   providerDone,
   providerTextDelta,
-  type AgentEvent,
 } from "@arnilo/prism";
 import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
 

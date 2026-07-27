@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  THINKING_LEVELS,
   applyThinkingLevel,
   isThinkingLevel,
   mergeProviderRequestOptions,
   normalizeThinkingLevel,
+  THINKING_LEVELS,
   thinkingCompatFor,
   thinkingFamilyForModel,
 } from "../index.js";
@@ -58,18 +58,9 @@ describe("thinking helpers", () => {
     assert.equal(thinkingFamilyForModel({ provider: "openai" }), "openai_reasoning");
     assert.equal(thinkingFamilyForModel({ provider: "openai-responses-demo" }), "openai_reasoning");
     assert.equal(thinkingFamilyForModel({ provider: "neuralwatt" }), "reasoning_effort");
-    assert.equal(
-      thinkingFamilyForModel({ provider: "host", compat: { reasoning: { effort: "low" } } }),
-      "openai_reasoning",
-    );
-    assert.equal(
-      thinkingFamilyForModel({ provider: "host", compat: { thinking: { type: "enabled" } } }),
-      "thinking_type",
-    );
-    assert.equal(
-      thinkingFamilyForModel({ provider: "host", capabilities: { reasoning: true } }),
-      "reasoning_effort",
-    );
+    assert.equal(thinkingFamilyForModel({ provider: "host", compat: { reasoning: { effort: "low" } } }), "openai_reasoning");
+    assert.equal(thinkingFamilyForModel({ provider: "host", compat: { thinking: { type: "enabled" } } }), "thinking_type");
+    assert.equal(thinkingFamilyForModel({ provider: "host", capabilities: { reasoning: true } }), "reasoning_effort");
     assert.equal(thinkingFamilyForModel({ provider: "mock" }), "noop");
   });
 });

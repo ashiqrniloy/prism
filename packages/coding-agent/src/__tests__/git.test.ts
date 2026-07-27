@@ -1,22 +1,16 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
+import { test } from "node:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { parsePorcelainV2 } from "../git-status.js";
-import { createGitOperations, resolveGitLimits, GitError } from "../git.js";
-import {
-  createGitTools,
-  createGitStatusTool,
-  createGitCommitTool,
-  createGitApplyTool,
-  createGitPrHandoffTool,
-} from "../git-tools.js";
-import { createCodingCheckTool } from "../checks.js";
 import { createTempArtifactWriter } from "../artifacts.js";
+import { createCodingCheckTool } from "../checks.js";
+import { createGitOperations, GitError, resolveGitLimits } from "../git.js";
 import { SAFE_GIT_CONFIG_ARGS, SAFE_GIT_ENV } from "../git-exec.js";
+import { parsePorcelainV2 } from "../git-status.js";
+import { createGitApplyTool, createGitCommitTool, createGitPrHandoffTool, createGitStatusTool, createGitTools } from "../git-tools.js";
 
 let counter = 0;
 function ctx(signal?: AbortSignal): ToolExecutionContext {
@@ -34,7 +28,13 @@ async function tmp(): Promise<string> {
 function run(cwd: string, args: string[]): string {
   const result = spawnSync("/usr/bin/git", [...SAFE_GIT_CONFIG_ARGS, ...args], {
     cwd,
-    env: { ...SAFE_GIT_ENV, GIT_AUTHOR_NAME: "Prism", GIT_AUTHOR_EMAIL: "prism@example.com", GIT_COMMITTER_NAME: "Prism", GIT_COMMITTER_EMAIL: "prism@example.com" },
+    env: {
+      ...SAFE_GIT_ENV,
+      GIT_AUTHOR_NAME: "Prism",
+      GIT_AUTHOR_EMAIL: "prism@example.com",
+      GIT_COMMITTER_NAME: "Prism",
+      GIT_COMMITTER_EMAIL: "prism@example.com",
+    },
     encoding: "utf8",
   });
   if (result.status !== 0) {
@@ -69,7 +69,7 @@ test("parsePorcelainV2 ordinary/untracked/rename/branch", () => {
     "src/a.ts",
     "? untracked.txt",
   ].join("\0");
-  const parsed = parsePorcelainV2(Buffer.from(payload + "\0"));
+  const parsed = parsePorcelainV2(Buffer.from(`${payload}\0`));
   assert.equal(parsed.branch.head, "main");
   assert.equal(parsed.branch.oid, "abcdef");
   assert.equal(parsed.branch.ahead, 1);
@@ -104,10 +104,7 @@ test("git_status and dirty commit protection", async () => {
     assert.match(textOf(denied), /dirty/);
 
     await writeFile(join(cwd, "README.md"), "# root\nupdated\n");
-    const ok = await commitTool.execute(
-      { paths: ["README.md"], message: "update readme", createCheckpoint: true },
-      ctx(),
-    );
+    const ok = await commitTool.execute({ paths: ["README.md"], message: "update readme", createCheckpoint: true }, ctx());
     assert.equal(ok.error, undefined, textOf(ok));
     assert.match(textOf(ok), /committed /);
   } finally {
@@ -239,19 +236,16 @@ test("createGitTools includes optional coding_check", async () => {
       },
     });
     const names = tools.map((t) => t.name);
-    assert.deepEqual(
-      names,
-      [
-        "git_status",
-        "git_diff",
-        "git_branch",
-        "git_worktree",
-        "git_apply",
-        "git_commit",
-        "git_pr_handoff",
-        "coding_check",
-      ],
-    );
+    assert.deepEqual(names, [
+      "git_status",
+      "git_diff",
+      "git_branch",
+      "git_worktree",
+      "git_apply",
+      "git_commit",
+      "git_pr_handoff",
+      "coding_check",
+    ]);
     const check = tools.find((t) => t.name === "coding_check")!;
     const result = await check.execute({ name: "echo" }, ctx());
     assert.equal(result.error, undefined, textOf(result));
@@ -287,7 +281,7 @@ test("fake runner proves no shell and safe config args", async () => {
         calls.push([...request.args]);
         // Delegate a minimal fake status for the first call.
         if (request.args[0] === "status") {
-          const payload = ["# branch.oid deadbeef", "# branch.head main"].join("\0") + "\0";
+          const payload = `${["# branch.oid deadbeef", "# branch.head main"].join("\0")}\0`;
           return {
             exitCode: 0,
             stdout: Buffer.from(payload),

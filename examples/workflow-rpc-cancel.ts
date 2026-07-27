@@ -9,10 +9,10 @@ import {
 } from "@arnilo/prism";
 import {
   agentNode,
+  cancelWorkflowRun,
+  createMemoryWorkflowCheckpoints,
   defineWorkflow,
   functionNode,
-  createMemoryWorkflowCheckpoints,
-  cancelWorkflowRun,
   getWorkflowRun,
   resumeWorkflow,
   runWorkflow,
@@ -41,7 +41,7 @@ const fastStep = functionNode({
 });
 
 const slowStep = functionNode({
-  execute: async (ctx) => {
+  execute: async (_ctx) => {
     // Takes 500ms — the host will cancel before this finishes.
     await new Promise((r) => setTimeout(r, 500));
     return { step2: "should-not-reach" };
@@ -70,14 +70,18 @@ export async function demo() {
 
   // 1. Start, let fast node complete and checkpoint, then cancel during slow
   const controller = new AbortController();
-  const runPromise = runWorkflow(workflow, { step: "cancel-test" }, {
-    agentFactory: () => createAgentSession({ agent }),
-    checkpoints,
-    redactor,
-    runId: "cancel-test-run",
-    ownership: { tenantId: "demo" },
-    signal: controller.signal,
-  });
+  const runPromise = runWorkflow(
+    workflow,
+    { step: "cancel-test" },
+    {
+      agentFactory: () => createAgentSession({ agent }),
+      checkpoints,
+      redactor,
+      runId: "cancel-test-run",
+      ownership: { tenantId: "demo" },
+      signal: controller.signal,
+    },
+  );
 
   // Wait for fast node to finish and checkpoint to land
   await new Promise((r) => setTimeout(r, 100));
@@ -98,13 +102,17 @@ export async function demo() {
   });
 
   // 2. Resume after cancel — slow node re-executes (same adapter simulates "restart")
-  const resumeResult = await resumeWorkflow(workflow, { runId: "cancel-test-run" }, {
-    agentFactory: () => createAgentSession({ agent }),
-    checkpoints,
-    redactor,
-    ownership: { tenantId: "demo" },
-    signal: AbortSignal.timeout(30_000),
-  });
+  const resumeResult = await resumeWorkflow(
+    workflow,
+    { runId: "cancel-test-run" },
+    {
+      agentFactory: () => createAgentSession({ agent }),
+      checkpoints,
+      redactor,
+      ownership: { tenantId: "demo" },
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
 
   return {
     cancelled: cancelResult.aborted,

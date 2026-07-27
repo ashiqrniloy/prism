@@ -1,19 +1,34 @@
-import type { Readable, Writable } from "node:stream";
-import process from "node:process";
-import { createAgent, createMockProvider, providerDone, providerTextDelta, resolveInstructionInjectors, createContributionRegistry } from "./index.js";
-import type { AgentSession, AgentEvent, ContributionFileKind, InstructionInjector, ModelConfig, RunOptions, Skill, SystemPromptContribution } from "./contracts.js";
 import { readFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
+import process from "node:process";
+import type { Readable, Writable } from "node:stream";
+import { type InitRuntime, initUsage, runInitCommand } from "./cli-init.js";
+import type {
+  AgentSession,
+  ContributionFileKind,
+  InstructionInjector,
+  ModelConfig,
+  RunOptions,
+  Skill,
+  SystemPromptContribution,
+} from "./contracts.js";
 import { createContributionRegistries, registerDiscoveredContributions } from "./contributions.js";
-import { createSkillRegistry } from "./skills.js";
-import { discoverContributions } from "./node/contribution-discovery.js";
-import { discoverAgentBundles } from "./node/agent-definitions.js";
+import {
+  createAgent,
+  createContributionRegistry,
+  createMockProvider,
+  providerDone,
+  providerTextDelta,
+  resolveInstructionInjectors,
+} from "./index.js";
 import type { AgentBundle } from "./node/agent-definitions.js";
+import { discoverAgentBundles } from "./node/agent-definitions.js";
+import { discoverContributions } from "./node/contribution-discovery.js";
 import { registerDiscoveredInstructionInjectors } from "./node/instruction-injectors.js";
 import { loadSystemPromptFiles } from "./node/system-project-prompts.js";
 import { createPathTrustPolicy } from "./node/trust.js";
-import { runRpcServer, type RpcSessionFactory } from "./rpc.js";
-import { initUsage, runInitCommand, type InitRuntime } from "./cli-init.js";
+import { type RpcSessionFactory, runRpcServer } from "./rpc.js";
+import { createSkillRegistry } from "./skills.js";
 
 export type CliMode = "print" | "json" | "rpc";
 
@@ -60,7 +75,7 @@ export interface CliOptions {
   readonly agentsMdFile?: string;
   readonly systemMdFile?: string;
   /** Runtime-populated: AGENTS.md/SYSTEM.md layers loaded from disk (print/json modes only;
-  *  RPC is host-owned). Threaded into `AgentConfig.systemPrompt` by `defaultCreateSession`. */
+   *  RPC is host-owned). Threaded into `AgentConfig.systemPrompt` by `defaultCreateSession`. */
   readonly systemPromptLayers: readonly SystemPromptContribution[];
 }
 
@@ -110,7 +125,27 @@ Options:
   -h, --help                 Show this help
 `;
 
-const valueFlags = new Set(["--prompt", "--mode", "--provider", "--model", "--session", "--config", "--resource", "--extension", "--tool", "--system", "--context", "--compact", "--max-tool-rounds", "--discover-kinds", "--instruction", "--injector-file", "--agents-md-file", "--system-md-file", "--agents-config"]);
+const valueFlags = new Set([
+  "--prompt",
+  "--mode",
+  "--provider",
+  "--model",
+  "--session",
+  "--config",
+  "--resource",
+  "--extension",
+  "--tool",
+  "--system",
+  "--context",
+  "--compact",
+  "--max-tool-rounds",
+  "--discover-kinds",
+  "--instruction",
+  "--injector-file",
+  "--agents-md-file",
+  "--system-md-file",
+  "--agents-config",
+]);
 const boolFlags = new Set(["--discover", "--no-discovery", "--no-agents-md", "--no-system-md"]);
 const ALL_KINDS: readonly ContributionFileKind[] = ["skill", "tool", "context", "instructions"];
 
@@ -149,10 +184,18 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
     const name = flag === "-p" ? "--prompt" : flag;
     if (boolFlags.has(name)) {
       switch (name) {
-        case "--discover": discover = true; break;
-        case "--no-discovery": noDiscovery = true; break;
-        case "--no-agents-md": noAgentsMd = true; break;
-        case "--no-system-md": noSystemMd = true; break;
+        case "--discover":
+          discover = true;
+          break;
+        case "--no-discovery":
+          noDiscovery = true;
+          break;
+        case "--no-agents-md":
+          noAgentsMd = true;
+          break;
+        case "--no-system-md":
+          noSystemMd = true;
+          break;
       }
       continue;
     }
@@ -161,36 +204,105 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
     if (value === undefined || value.startsWith("--")) throw new CliUsageError(`Missing value for ${flag}`);
     i += 1;
     switch (name) {
-      case "--prompt": prompt = value; break;
+      case "--prompt":
+        prompt = value;
+        break;
       case "--mode":
         if (value !== "print" && value !== "json" && value !== "rpc") throw new CliUsageError(`Invalid mode: ${value}`);
         mode = value;
         break;
-      case "--provider": provider = value; break;
-      case "--model": model = value; break;
-      case "--session": session = value; break;
-      case "--config": config.push(value); break;
-      case "--resource": resources.push(value); break;
-      case "--extension": extensions.push(value); break;
-      case "--tool": tools.push(value); break;
-      case "--system": system = value; break;
-      case "--context": context.push(value); break;
-      case "--compact": compact = positiveInt(value, flag); break;
-      case "--max-tool-rounds": maxToolRounds = positiveInt(value, flag); break;
-      case "--discover-kinds": discoverKinds = parseKinds(value, flag); break;
-      case "--instruction": instructions.push(value); break;
-      case "--injector-file": injectorFiles.push(value); break;
-      case "--agents-md-file": agentsMdFile = value; break;
-      case "--system-md-file": systemMdFile = value; break;
-      case "--agents-config": agentsConfig = value; break;
+      case "--provider":
+        provider = value;
+        break;
+      case "--model":
+        model = value;
+        break;
+      case "--session":
+        session = value;
+        break;
+      case "--config":
+        config.push(value);
+        break;
+      case "--resource":
+        resources.push(value);
+        break;
+      case "--extension":
+        extensions.push(value);
+        break;
+      case "--tool":
+        tools.push(value);
+        break;
+      case "--system":
+        system = value;
+        break;
+      case "--context":
+        context.push(value);
+        break;
+      case "--compact":
+        compact = positiveInt(value, flag);
+        break;
+      case "--max-tool-rounds":
+        maxToolRounds = positiveInt(value, flag);
+        break;
+      case "--discover-kinds":
+        discoverKinds = parseKinds(value, flag);
+        break;
+      case "--instruction":
+        instructions.push(value);
+        break;
+      case "--injector-file":
+        injectorFiles.push(value);
+        break;
+      case "--agents-md-file":
+        agentsMdFile = value;
+        break;
+      case "--system-md-file":
+        systemMdFile = value;
+        break;
+      case "--agents-config":
+        agentsConfig = value;
+        break;
     }
   }
 
-  return { mode, prompt, provider, model, session, config, resources, extensions, tools, system, context, compact, maxToolRounds, help, discover, discoverKinds, noDiscovery, agentsConfig, discoveredSkills: [], discoveredInjectors: [], discoveredAgents: [], instructions, injectorFiles, resolvedInstructionInjectors: [], noAgentsMd, noSystemMd, agentsMdFile, systemMdFile, systemPromptLayers: [] };
+  return {
+    mode,
+    prompt,
+    provider,
+    model,
+    session,
+    config,
+    resources,
+    extensions,
+    tools,
+    system,
+    context,
+    compact,
+    maxToolRounds,
+    help,
+    discover,
+    discoverKinds,
+    noDiscovery,
+    agentsConfig,
+    discoveredSkills: [],
+    discoveredInjectors: [],
+    discoveredAgents: [],
+    instructions,
+    injectorFiles,
+    resolvedInstructionInjectors: [],
+    noAgentsMd,
+    noSystemMd,
+    agentsMdFile,
+    systemMdFile,
+    systemPromptLayers: [],
+  };
 }
 
 function parseKinds(csv: string, flag: string): readonly ContributionFileKind[] {
-  const kinds = csv.split(",").map((k) => k.trim()).filter(Boolean);
+  const kinds = csv
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
   if (kinds.length === 0) throw new CliUsageError(`Invalid value for ${flag}: ${csv}`);
   const invalid = kinds.filter((k) => !ALL_KINDS.includes(k as ContributionFileKind));
   if (invalid.length > 0) throw new CliUsageError(`Invalid kinds for ${flag}: ${invalid.join(", ")}`);
@@ -224,7 +336,12 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
 
   try {
     if (options.mode === "rpc") {
-      await runRpcServer({ stdin: runtime.stdin, stdout: runtime.stdout, createSession: (id) => (runtime.createSession ?? defaultCreateSession)({ ...options, session: id ?? options.session }), commands: runtime.commands });
+      await runRpcServer({
+        stdin: runtime.stdin,
+        stdout: runtime.stdout,
+        createSession: (id) => (runtime.createSession ?? defaultCreateSession)({ ...options, session: id ?? options.session }),
+        commands: runtime.commands,
+      });
       return 0;
     }
     if (!options.prompt) throw new CliUsageError("Missing prompt: use -p or --prompt");
@@ -276,7 +393,12 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       // the containment check (the user named it, so it's trusted by that act).
       const layers = await loadSystemPromptFiles({
         ...(options.noAgentsMd ? {} : { workspaceRoot, trust, ...(options.agentsMdFile ? { agentsMdPath: options.agentsMdFile } : {}) }),
-        ...(options.noSystemMd ? {} : { ...(runtime.globalRoot !== undefined ? { globalRoot: runtime.globalRoot } : {}), ...(options.systemMdFile ? { systemMdPath: options.systemMdFile } : {}) }),
+        ...(options.noSystemMd
+          ? {}
+          : {
+              ...(runtime.globalRoot !== undefined ? { globalRoot: runtime.globalRoot } : {}),
+              ...(options.systemMdFile ? { systemMdPath: options.systemMdFile } : {}),
+            }),
       });
       options = { ...options, systemPromptLayers: layers };
     }
@@ -298,7 +420,11 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
 export async function runPromptMode(session: AgentSession, options: CliOptions, stdout: Writable, mode: "print" | "json"): Promise<void> {
   const events = (async () => {
     for await (const event of session.subscribe()) {
-      if (mode === "json") write(stdout, `${JSON.stringify({ type: "event", sessionId: event.sessionId, runId: "runId" in event ? event.runId : undefined, event })}\n`);
+      if (mode === "json")
+        write(
+          stdout,
+          `${JSON.stringify({ type: "event", sessionId: event.sessionId, runId: "runId" in event ? event.runId : undefined, event })}\n`,
+        );
       else if (event.type === "message_delta" && event.content.type === "text") write(stdout, event.content.text);
     }
   })();
@@ -309,7 +435,8 @@ export async function runPromptMode(session: AgentSession, options: CliOptions, 
 export class CliUsageError extends Error {}
 
 function defaultCreateSession(options: CliOptions): AgentSession {
-  if (options.provider !== "mock") throw new CliUsageError("No provider configured. Pass --provider mock for a smoke test or embed Prism with an explicit provider.");
+  if (options.provider !== "mock")
+    throw new CliUsageError("No provider configured. Pass --provider mock for a smoke test or embed Prism with an explicit provider.");
   const model: ModelConfig = { provider: "mock", model: options.model ?? "mock" };
   return createAgent({
     model,
@@ -331,9 +458,7 @@ function runOptions(options: CliOptions): RunOptions {
     ...(options.discover && !options.noDiscovery && options.discoveredSkills.length > 0
       ? { activeSkills: options.discoveredSkills.map((s) => s.name) }
       : {}),
-    ...(options.resolvedInstructionInjectors.length > 0
-      ? { instructionInjectors: options.resolvedInstructionInjectors }
-      : {}),
+    ...(options.resolvedInstructionInjectors.length > 0 ? { instructionInjectors: options.resolvedInstructionInjectors } : {}),
   };
 }
 

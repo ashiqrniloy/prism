@@ -1,4 +1,4 @@
-import { redactSecrets, type JsonObject, type SessionEntry, type ToolDefinition } from "@arnilo/prism";
+import { type JsonObject, redactSecrets, type SessionEntry, type ToolDefinition } from "@arnilo/prism";
 import { isMemoryId } from "./ids.js";
 import { recallObservationalMemory } from "./recall.js";
 
@@ -23,7 +23,9 @@ export function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDe
         return { toolCallId: context.toolCallId, name, value, content: [{ type: "text", text: value.text }] };
       }
       const entries = await options.getEntries(context.sessionId);
-      const value = JSON.parse(redactSecrets(JSON.stringify(recallObservationalMemory(entries, id, options.secrets)), options.secrets ?? []));
+      const value = JSON.parse(
+        redactSecrets(JSON.stringify(recallObservationalMemory(entries, id, options.secrets)), options.secrets ?? []),
+      );
       return { toolCallId: context.toolCallId, name, value, content: [{ type: "text", text: value.text }] };
     },
   };

@@ -65,10 +65,36 @@ export interface SupervisorHooks {
 }
 
 export type SupervisorEvent =
-  | { readonly type: "delegation_started"; readonly childId: string; readonly delegationId: string; readonly depth: number; readonly resourceId: string; readonly threadId: string }
-  | { readonly type: "delegation_finished"; readonly childId: string; readonly delegationId: string; readonly depth: number; readonly status: AgentRunResult["status"]; readonly totalTokens: number }
-  | { readonly type: "delegation_rejected"; readonly childId: string; readonly delegationId: string; readonly depth: number; readonly reason: string }
-  | { readonly type: "delegation_error"; readonly childId: string; readonly delegationId: string; readonly depth: number; readonly error: string };
+  | {
+      readonly type: "delegation_started";
+      readonly childId: string;
+      readonly delegationId: string;
+      readonly depth: number;
+      readonly resourceId: string;
+      readonly threadId: string;
+    }
+  | {
+      readonly type: "delegation_finished";
+      readonly childId: string;
+      readonly delegationId: string;
+      readonly depth: number;
+      readonly status: AgentRunResult["status"];
+      readonly totalTokens: number;
+    }
+  | {
+      readonly type: "delegation_rejected";
+      readonly childId: string;
+      readonly delegationId: string;
+      readonly depth: number;
+      readonly reason: string;
+    }
+  | {
+      readonly type: "delegation_error";
+      readonly childId: string;
+      readonly delegationId: string;
+      readonly depth: number;
+      readonly error: string;
+    };
 
 export interface CreateSupervisorOptions {
   readonly id?: string;

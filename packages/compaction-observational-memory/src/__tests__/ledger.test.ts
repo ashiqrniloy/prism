@@ -8,16 +8,28 @@ import {
   foldObservationalMemoryLedger,
   isMemoryId,
   isMemoryObservation,
+  type MemoryObservation,
+  type MemoryReflection,
   OBSERVATIONS_DROPPED,
   OBSERVATIONS_RECORDED,
   REFLECTIONS_RECORDED,
   renderObservationalMemory,
-  type MemoryObservation,
-  type MemoryReflection,
 } from "../index.js";
 
-const obs: MemoryObservation = { id: "aaaaaaaaaaaa", content: "User prefers minimal diffs.", timestamp: "2026-06-20T00:00:00.000Z", relevance: "high", sourceEntryIds: ["m1"], tokenCount: 6 };
-const reflection: MemoryReflection = { id: "bbbbbbbbbbbb", content: "Keep implementation package-only.", supportingObservationIds: [obs.id], tokenCount: 5 };
+const obs: MemoryObservation = {
+  id: "aaaaaaaaaaaa",
+  content: "User prefers minimal diffs.",
+  timestamp: "2026-06-20T00:00:00.000Z",
+  relevance: "high",
+  sourceEntryIds: ["m1"],
+  tokenCount: 6,
+};
+const reflection: MemoryReflection = {
+  id: "bbbbbbbbbbbb",
+  content: "Keep implementation package-only.",
+  supportingObservationIds: [obs.id],
+  tokenCount: 5,
+};
 
 function entry(id: string, data?: unknown, kind: SessionEntry["kind"] = "custom"): SessionEntry {
   return { id, sessionId: "s1", timestamp: "2026-06-20T00:00:00.000Z", kind, data };

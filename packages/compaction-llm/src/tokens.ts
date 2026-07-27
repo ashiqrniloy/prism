@@ -24,6 +24,7 @@ function estimateContentBlockTokens(block: ContentBlock): number {
   if (block.type === "image") return estimateTextTokens(block.url ?? block.resourceUri ?? block.mimeType ?? "[image]");
   if (block.type === "audio") return estimateTextTokens(block.transcript ?? block.url ?? block.resourceUri ?? block.mediaType ?? "[audio]");
   if (block.type === "file") return estimateTextTokens(block.name ?? block.url ?? block.resourceUri ?? block.mediaType ?? "[file]");
-  if (block.type === "document") return estimateTextTokens(block.transcript ?? block.name ?? block.url ?? block.resourceUri ?? block.mediaType ?? "[document]");
+  if (block.type === "document")
+    return estimateTextTokens(block.transcript ?? block.name ?? block.url ?? block.resourceUri ?? block.mediaType ?? "[document]");
   return estimateTextTokens("[content]");
 }

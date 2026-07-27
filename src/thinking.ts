@@ -13,11 +13,7 @@ export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
  * Compat mapping families used by ≥2 packages, or explicit no-op for host-owned adapters.
  * Provider packages keep unique escape hatches (budgets, keep/all, tool_stream) local.
  */
-export type ThinkingCompatFamily =
-  | "openai_reasoning"
-  | "reasoning_effort"
-  | "thinking_type"
-  | "noop";
+export type ThinkingCompatFamily = "openai_reasoning" | "reasoning_effort" | "thinking_type" | "noop";
 
 export function isThinkingLevel(value: unknown): value is ThinkingLevel {
   return typeof value === "string" && (THINKING_LEVELS as readonly string[]).includes(value);
@@ -68,7 +64,12 @@ export function applyThinkingLevel(
   if (!normalized || family === "noop") return options ?? {};
 
   const patch = thinkingCompatFor(family, normalized);
-  if (family === "openai_reasoning" && options?.compat?.reasoning && typeof options.compat.reasoning === "object" && !Array.isArray(options.compat.reasoning)) {
+  if (
+    family === "openai_reasoning" &&
+    options?.compat?.reasoning &&
+    typeof options.compat.reasoning === "object" &&
+    !Array.isArray(options.compat.reasoning)
+  ) {
     return mergeProviderRequestOptions(options, {
       compat: {
         reasoning: {
@@ -95,9 +96,7 @@ export function applyThinkingLevel(
  * 6. `capabilities.reasoning` → `reasoning_effort` (portable string field)
  * 7. Else `noop`
  */
-export function thinkingFamilyForModel(
-  model: Pick<ModelConfig, "provider" | "compat" | "capabilities">,
-): ThinkingCompatFamily {
+export function thinkingFamilyForModel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): ThinkingCompatFamily {
   const compat = model.compat ?? {};
   if (compat.thinking != null && typeof compat.thinking === "object") return "thinking_type";
   if (compat.reasoning != null) return "openai_reasoning";

@@ -56,7 +56,10 @@ describe("durable workflow schedules", () => {
       value.schedules.pollOnce({ now: new Date("2026-01-02T00:00:00.000Z") }),
       second.pollOnce({ now: new Date("2026-01-02T00:00:00.000Z") }),
     ]);
-    assert.equal(fired.reduce((sum, count) => sum + count, 0), 1);
+    assert.equal(
+      fired.reduce((sum, count) => sum + count, 0),
+      1,
+    );
     const schedule = await value.schedules.get("once");
     assert.equal(schedule?.status, "completed");
     assert.ok(schedule?.lastRunId);
@@ -138,25 +141,33 @@ describe("durable workflow schedules", () => {
     });
     assert.doesNotMatch(JSON.stringify(await redacted.get("secure")), /sekrit/);
 
-    assert.throws(() => createWorkflowSchedules({
-      store: value.store,
-      leases: value.leases,
-      checkpoints: value.checkpoints,
-      workflows: { scheduled: value.workflow },
-      ownership: {},
-      ownerId: "bad",
-    }), WorkflowRuntimeError);
-    await assert.rejects(redacted.create({
-      id: "large",
-      workflowId: "scheduled",
-      nextRunAt: new Date(),
-      input: { value: "x".repeat(100) },
-    }));
-    await assert.rejects(value.schedules.create({
-      id: "bad",
-      workflowId: "scheduled",
-      nextRunAt: "not-a-date",
-    }));
+    assert.throws(
+      () =>
+        createWorkflowSchedules({
+          store: value.store,
+          leases: value.leases,
+          checkpoints: value.checkpoints,
+          workflows: { scheduled: value.workflow },
+          ownership: {},
+          ownerId: "bad",
+        }),
+      WorkflowRuntimeError,
+    );
+    await assert.rejects(
+      redacted.create({
+        id: "large",
+        workflowId: "scheduled",
+        nextRunAt: new Date(),
+        input: { value: "x".repeat(100) },
+      }),
+    );
+    await assert.rejects(
+      value.schedules.create({
+        id: "bad",
+        workflowId: "scheduled",
+        nextRunAt: "not-a-date",
+      }),
+    );
 
     const other = createWorkflowSchedules({
       store: value.store,
@@ -172,20 +183,38 @@ describe("durable workflow schedules", () => {
   test("registers schedule commands only when a schedule service is selected", async () => {
     const value = fixture();
     const without = createWorkflowCommands({ workflows: { scheduled: value.workflow }, checkpoints: value.checkpoints });
-    assert.equal(without.some((command) => command.name.startsWith("schedule.")), false);
+    assert.equal(
+      without.some((command) => command.name.startsWith("schedule.")),
+      false,
+    );
     const withSchedules = createWorkflowCommands({
       workflows: { scheduled: value.workflow },
       checkpoints: value.checkpoints,
       schedules: value.schedules,
     });
     const names = withSchedules.map((command) => command.name);
-    assert.deepEqual(names.slice(-6), ["schedule.create", "schedule.list", "schedule.pause", "schedule.resume", "schedule.trigger", "schedule.delete"]);
+    assert.deepEqual(names.slice(-6), [
+      "schedule.create",
+      "schedule.list",
+      "schedule.pause",
+      "schedule.resume",
+      "schedule.trigger",
+      "schedule.delete",
+    ]);
     const create = withSchedules.find((command) => command.name === "schedule.create")!;
-    assert.equal((await create.execute({
-      id: "command",
-      workflowId: "scheduled",
-      nextRunAt: "2026-01-01T00:00:00.000Z",
-    }, {})).error, undefined);
+    assert.equal(
+      (
+        await create.execute(
+          {
+            id: "command",
+            workflowId: "scheduled",
+            nextRunAt: "2026-01-01T00:00:00.000Z",
+          },
+          {},
+        )
+      ).error,
+      undefined,
+    );
   });
 
   test("stops idle polling on abort without a busy loop", async () => {

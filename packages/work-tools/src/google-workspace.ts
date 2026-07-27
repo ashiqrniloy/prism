@@ -1,17 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { assertIdentityActive, type AgentIdentity, type JsonObject } from "@arnilo/prism";
+import { type AgentIdentity, assertIdentityActive, type JsonObject } from "@arnilo/prism";
 import { assertSafeArgv, createCliRunner, parseCliJson, parseCliNdjson } from "./cli.js";
 import { WorkToolError } from "./errors.js";
 import { identityKey } from "./idempotency.js";
 import { resolveWorkLimits } from "./limits.js";
-import type {
-  GoogleWorkspaceAdapter,
-  GoogleWorkspaceOp,
-  WorkCliRunner,
-  WorkDraft,
-  WorkLimits,
-  WorkTokenProvider,
-} from "./types.js";
+import type { GoogleWorkspaceAdapter, GoogleWorkspaceOp, WorkCliRunner, WorkDraft, WorkLimits, WorkTokenProvider } from "./types.js";
 
 /** Default ops enabled without Docs/Sheets/Slides capability gates. */
 export const DEFAULT_GWS_OPS: readonly GoogleWorkspaceOp[] = [
@@ -30,11 +23,7 @@ export const DEFAULT_GWS_OPS: readonly GoogleWorkspaceOp[] = [
 ];
 
 /** Ops excluded from DEFAULT_GWS_OPS; host must pass them in allowedOps. */
-export const GATED_GWS_OPS: ReadonlySet<GoogleWorkspaceOp> = new Set([
-  "docs.create",
-  "sheets.create",
-  "slides.create",
-]);
+export const GATED_GWS_OPS: ReadonlySet<GoogleWorkspaceOp> = new Set(["docs.create", "sheets.create", "slides.create"]);
 
 function reqString(args: JsonObject, key: string): string {
   const value = args[key];
@@ -74,25 +63,30 @@ export function buildGoogleWorkspaceArgv(op: GoogleWorkspaceOp, args: JsonObject
         ...(q ? { q } : {}),
         ...(maxResults ? { maxResults: Number(maxResults) } : {}),
       };
-      return [
-        "gmail", "users", "messages", "list",
-        "--params", paramsJson(params),
-        "--fields", "messages(id,threadId,snippet)",
-      ];
+      return ["gmail", "users", "messages", "list", "--params", paramsJson(params), "--fields", "messages(id,threadId,snippet)"];
     }
     case "mail.get":
       return [
-        "gmail", "users", "messages", "get",
-        "--params", paramsJson({ userId: optString(args, "userId") ?? "me", id: reqString(args, "id") }),
-        "--fields", "id,threadId,snippet,payload/headers,labelIds",
+        "gmail",
+        "users",
+        "messages",
+        "get",
+        "--params",
+        paramsJson({ userId: optString(args, "userId") ?? "me", id: reqString(args, "id") }),
+        "--fields",
+        "id,threadId,snippet,payload/headers,labelIds",
       ];
     case "mail.send": {
       // Convenience helper avoids model-controlled raw MIME/base64.
       const argv = [
-        "gmail", "+send",
-        "--to", reqString(args, "to"),
-        "--subject", reqString(args, "subject"),
-        "--body", reqString(args, "body"),
+        "gmail",
+        "+send",
+        "--to",
+        reqString(args, "to"),
+        "--subject",
+        reqString(args, "subject"),
+        "--body",
+        reqString(args, "body"),
       ];
       const cc = optString(args, "cc");
       const bcc = optString(args, "bcc");
@@ -112,11 +106,7 @@ export function buildGoogleWorkspaceArgv(op: GoogleWorkspaceOp, args: JsonObject
         ...(timeMax ? { timeMax } : {}),
         ...(maxResults ? { maxResults: Number(maxResults) } : {}),
       };
-      return [
-        "calendar", "events", "list",
-        "--params", paramsJson(params),
-        "--fields", "items(id,summary,start,end,etag)",
-      ];
+      return ["calendar", "events", "list", "--params", paramsJson(params), "--fields", "items(id,summary,start,end,etag)"];
     }
     case "calendar.add": {
       const calendarId = optString(args, "calendarId") ?? "primary";
@@ -125,11 +115,7 @@ export function buildGoogleWorkspaceArgv(op: GoogleWorkspaceOp, args: JsonObject
         start: { dateTime: reqString(args, "start") },
         end: { dateTime: reqString(args, "end") },
       };
-      return [
-        "calendar", "events", "insert",
-        "--params", paramsJson({ calendarId }),
-        "--json", JSON.stringify(body),
-      ];
+      return ["calendar", "events", "insert", "--params", paramsJson({ calendarId }), "--json", JSON.stringify(body)];
     }
     case "file.list": {
       const q = optString(args, "q");
@@ -138,11 +124,7 @@ export function buildGoogleWorkspaceArgv(op: GoogleWorkspaceOp, args: JsonObject
         pageSize: pageSize ? Number(pageSize) : 10,
         ...(q ? { q } : {}),
       };
-      const argv = [
-        "drive", "files", "list",
-        "--params", paramsJson(params),
-        "--fields", "files(id,name,mimeType,size)",
-      ];
+      const argv = ["drive", "files", "list", "--params", paramsJson(params), "--fields", "files(id,name,mimeType,size)"];
       if (args.pageAll === true || args.pageAll === "true") argv.push("--page-all");
       return argv;
     }
@@ -152,15 +134,12 @@ export function buildGoogleWorkspaceArgv(op: GoogleWorkspaceOp, args: JsonObject
         name: reqString(args, "name"),
         ...(parentId ? { parents: [parentId] } : {}),
       };
-      return [
-        "drive", "files", "create",
-        "--json", JSON.stringify(meta),
-        "--upload", reqString(args, "filePath"),
-      ];
+      return ["drive", "files", "create", "--json", JSON.stringify(meta), "--upload", reqString(args, "filePath")];
     }
     case "file.share": {
       const type = reqString(args, "type");
-      if (type === "anyone") throw new WorkToolError("ERR_PRISM_WORK_POLICY", "Anonymous share denied; host must allow explicitly via policy override");
+      if (type === "anyone")
+        throw new WorkToolError("ERR_PRISM_WORK_POLICY", "Anonymous share denied; host must allow explicitly via policy override");
       if (type !== "domain" && type !== "user") throw new WorkToolError("ERR_PRISM_WORK_INPUT", "type must be domain or user");
       const role = optString(args, "role") ?? "reader";
       if (role !== "reader" && role !== "writer" && role !== "commenter") {
@@ -170,38 +149,44 @@ export function buildGoogleWorkspaceArgv(op: GoogleWorkspaceOp, args: JsonObject
       if (type === "domain") body.domain = reqString(args, "domain");
       else body.emailAddress = reqString(args, "emailAddress");
       return [
-        "drive", "permissions", "create",
-        "--params", paramsJson({ fileId: reqString(args, "fileId") }),
-        "--json", JSON.stringify(body),
+        "drive",
+        "permissions",
+        "create",
+        "--params",
+        paramsJson({ fileId: reqString(args, "fileId") }),
+        "--json",
+        JSON.stringify(body),
       ];
     }
     case "task.list":
-      return [
-        "tasks", "tasks", "list",
-        "--params", paramsJson({ tasklist: optString(args, "tasklist") ?? "@default" }),
-      ];
+      return ["tasks", "tasks", "list", "--params", paramsJson({ tasklist: optString(args, "tasklist") ?? "@default" })];
     case "task.add":
       return [
-        "tasks", "tasks", "insert",
-        "--params", paramsJson({ tasklist: optString(args, "tasklist") ?? "@default" }),
-        "--json", paramsJson({ title: reqString(args, "title") }),
+        "tasks",
+        "tasks",
+        "insert",
+        "--params",
+        paramsJson({ tasklist: optString(args, "tasklist") ?? "@default" }),
+        "--json",
+        paramsJson({ title: reqString(args, "title") }),
       ];
     case "task.complete":
       return [
-        "tasks", "tasks", "patch",
-        "--params", paramsJson({
+        "tasks",
+        "tasks",
+        "patch",
+        "--params",
+        paramsJson({
           tasklist: optString(args, "tasklist") ?? "@default",
           task: reqString(args, "id"),
         }),
-        "--json", paramsJson({ status: "completed" }),
+        "--json",
+        paramsJson({ status: "completed" }),
       ];
     case "docs.create":
       return ["docs", "documents", "create", "--json", paramsJson({ title: reqString(args, "title") })];
     case "sheets.create":
-      return [
-        "sheets", "spreadsheets", "create",
-        "--json", paramsJson({ properties: { title: reqString(args, "title") } }),
-      ];
+      return ["sheets", "spreadsheets", "create", "--json", paramsJson({ properties: { title: reqString(args, "title") } })];
     case "slides.create":
       return ["slides", "presentations", "create", "--json", paramsJson({ title: reqString(args, "title") })];
     default: {

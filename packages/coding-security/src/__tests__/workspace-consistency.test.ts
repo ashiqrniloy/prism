@@ -2,16 +2,17 @@
  * Adversarial workspace-mode consistency matrix (Plan 073 Task 5).
  * Network-free memory DisposableSandbox + host temp dirs only.
  */
-import { test } from "node:test";
+
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, posix } from "node:path";
+import { test } from "node:test";
 import type { ToolExecutionContext } from "@arnilo/prism";
 import {
   createSandboxCodingComposition,
-  SANDBOX_FS_SCRIPTS,
   type DisposableSandbox,
+  SANDBOX_FS_SCRIPTS,
   type SandboxExecFileRequest,
   type SandboxExecRequest,
 } from "../index.js";
@@ -29,7 +30,7 @@ function textOf(result: { content?: readonly { type: string; text?: string }[]; 
 }
 
 /** Minimal in-memory tree + SANDBOX_FS_SCRIPTS dialect (same as FS unit tests). */
-function createMemorySandbox(workspaceRoot = ROOT): DisposableSandbox & { readonly files: Map<string, Buffer> } {
+function createMemorySandbox(_workspaceRoot = ROOT): DisposableSandbox & { readonly files: Map<string, Buffer> } {
   const files = new Map<string, Buffer>();
 
   function listUnder(start: string, maxDepth: number): string[] {
@@ -137,10 +138,7 @@ test("adversarial: edit then shell cat share sandbox tree", async () => {
   assert.equal(composition.containmentClaim, true);
 
   const edit = tools.find((t) => t.name === "edit")!;
-  const edited = await edit.execute(
-    { path: "edit-me.txt", oldText: "before", newText: "after-edit" },
-    ctx(),
-  );
+  const edited = await edit.execute({ path: "edit-me.txt", oldText: "before", newText: "after-edit" }, ctx());
   assert.equal(edited.error, undefined);
   assert.equal(sandbox.files.get(`${ROOT}/edit-me.txt`)?.toString("utf8"), "after-edit\n");
 
@@ -165,10 +163,7 @@ test("adversarial: list then edit then search agree on sandbox tree", async () =
   assert.match(textOf(listed), /a\.ts/);
 
   const edit = tools.find((t) => t.name === "edit")!;
-  assert.equal(
-    (await edit.execute({ path: "a.ts", oldText: "marker = 1", newText: "marker = 42" }, ctx())).error,
-    undefined,
-  );
+  assert.equal((await edit.execute({ path: "a.ts", oldText: "marker = 1", newText: "marker = 42" }, ctx())).error, undefined);
 
   const search = tools.find((t) => t.name === "repo_search")!;
   const found = await search.execute({ query: "marker = 42" }, ctx());
@@ -189,10 +184,7 @@ test("adversarial: host mode write lands on host cwd; no containment claim", asy
     assert.equal(composition.workspaceRoot, hostRoot);
 
     const write = tools.find((t) => t.name === "write")!;
-    assert.equal(
-      (await write.execute({ path: "host-mut.txt", content: "on-host\n" }, ctx())).error,
-      undefined,
-    );
+    assert.equal((await write.execute({ path: "host-mut.txt", content: "on-host\n" }, ctx())).error, undefined);
     assert.equal(await readFile(join(hostRoot, "host-mut.txt"), "utf8"), "on-host\n");
   } finally {
     await rm(hostRoot, { recursive: true, force: true });
@@ -212,10 +204,7 @@ test("adversarial: sandbox write does not mutate host cwd", async () => {
     assert.equal(composition.containmentClaim, true);
 
     const write = tools.find((t) => t.name === "write")!;
-    assert.equal(
-      (await write.execute({ path: "sand-only.txt", content: "in-tree\n" }, ctx())).error,
-      undefined,
-    );
+    assert.equal((await write.execute({ path: "sand-only.txt", content: "in-tree\n" }, ctx())).error, undefined);
     assert.equal(sandbox.files.get(`${ROOT}/sand-only.txt`)?.toString("utf8"), "in-tree\n");
     await assert.rejects(() => readFile(join(hostRoot, "sand-only.txt"), "utf8"), /ENOENT/);
     assert.equal(await readFile(join(hostRoot, "preexisting.txt"), "utf8"), "host-only\n");
@@ -238,10 +227,7 @@ test("adversarial: mixed wiring escape hatch never claims containment", async ()
     assert.ok(composition.warnings.some((w) => /mixed/i.test(w)));
 
     const write = tools.find((t) => t.name === "write")!;
-    assert.equal(
-      (await write.execute({ path: "mixed-host.txt", content: "host\n" }, ctx())).error,
-      undefined,
-    );
+    assert.equal((await write.execute({ path: "mixed-host.txt", content: "host\n" }, ctx())).error, undefined);
     assert.equal(await readFile(join(hostRoot, "mixed-host.txt"), "utf8"), "host\n");
     assert.equal(sandbox.files.has(`${ROOT}/mixed-host.txt`), false);
   } finally {

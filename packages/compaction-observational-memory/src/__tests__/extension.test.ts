@@ -25,6 +25,9 @@ describe("observational memory extension", () => {
     const getEntries = () => [];
     await kernel.load([createObservationalMemoryExtension({ recallTool: { getEntries }, commands: { getEntries } })]);
     assert.equal(kernel.registries.tools.resolve("recall").name, "recall");
-    assert.deepEqual(kernel.registries.commands.list().map((command) => command.name), ["om:status", "om:view"]);
+    assert.deepEqual(
+      kernel.registries.commands.list().map((command) => command.name),
+      ["om:status", "om:view"],
+    );
   });
 });

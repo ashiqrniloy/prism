@@ -1,0 +1,7 @@
+AZURE_OPENAI_DEFAULT_API_VERSION	export declare const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21"
+azureChatCompletionsUrl	export declare function azureChatCompletionsUrl(input:
+createAzureOpenAIProvider	export declare function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): AIProvider
+createAzureOpenAIProviderPackage	export declare function createAzureOpenAIProviderPackage(options: AzureOpenAIProviderPackageOptions): ProviderPackage
+type AzureAuthStyle	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
+type AzureOpenAIProviderOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
+type AzureOpenAIProviderPackageOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"

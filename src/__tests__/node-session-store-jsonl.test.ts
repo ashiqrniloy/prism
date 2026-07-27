@@ -1,11 +1,11 @@
+import assert from "node:assert/strict";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
-import { createSessionEntry } from "../session-stores.js";
-import { createJsonlSessionStore, readJsonlSessionEntries } from "../node/session-store-jsonl.js";
 import { isSessionAppendConflict, isSessionEntryKind, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION } from "../index.js";
+import { createJsonlSessionStore, readJsonlSessionEntries } from "../node/session-store-jsonl.js";
+import { createSessionEntry } from "../session-stores.js";
 
 async function tempPath(name = "sessions.jsonl"): Promise<string> {
   return join(await mkdtemp(join(tmpdir(), "prism-jsonl-")), name);
@@ -14,7 +14,12 @@ async function tempPath(name = "sessions.jsonl"): Promise<string> {
 describe("node jsonl session store", () => {
   it("round trips entries across instances", async () => {
     const path = await tempPath("nested/sessions.jsonl");
-    const entry = createSessionEntry({ id: "e1", sessionId: "s1", kind: "message", message: { role: "user", content: [{ type: "text", text: "hi" }] } });
+    const entry = createSessionEntry({
+      id: "e1",
+      sessionId: "s1",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "hi" }] },
+    });
 
     await createJsonlSessionStore(path).append(entry);
 
@@ -27,7 +32,10 @@ describe("node jsonl session store", () => {
     await store.append(createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "one" }));
     await store.append(createSessionEntry({ id: "e2", sessionId: "s2", kind: "label", label: "two" }));
 
-    assert.deepEqual((await store.list("s1")).map((entry) => entry.id), ["e1"]);
+    assert.deepEqual(
+      (await store.list("s1")).map((entry) => entry.id),
+      ["e1"],
+    );
   });
 
   it("get returns entry by id", async () => {
@@ -65,14 +73,36 @@ describe("node jsonl session store", () => {
   it("quarantines invalid message summary parentId and model_change shapes", async () => {
     const path = await tempPath();
     const valid = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "ok" });
-    const badMessage = JSON.stringify({ id: "e2", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "message", message: "not-an-object" });
+    const badMessage = JSON.stringify({
+      id: "e2",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "message",
+      message: "not-an-object",
+    });
     const badSummary = JSON.stringify({ id: "e3", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "summary", summary: 123 });
-    const badParentId = JSON.stringify({ id: "e4", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "x", parentId: 1 });
-    const badModel = JSON.stringify({ id: "e5", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "model_change", model: "not-an-object" });
+    const badParentId = JSON.stringify({
+      id: "e4",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "label",
+      label: "x",
+      parentId: 1,
+    });
+    const badModel = JSON.stringify({
+      id: "e5",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "model_change",
+      model: "not-an-object",
+    });
     await writeFile(path, [JSON.stringify(valid), badMessage, badSummary, badParentId, badModel].join("\n"), "utf8");
 
     const store = createJsonlSessionStore(path);
-    assert.deepEqual((await store.list("s1")).map((entry) => entry.id), ["e1"]);
+    assert.deepEqual(
+      (await store.list("s1")).map((entry) => entry.id),
+      ["e1"],
+    );
 
     const result = await readJsonlSessionEntries(path);
     assert.equal(result.entries.length, 1);
@@ -86,8 +116,21 @@ describe("node jsonl session store", () => {
   it("quarantines invalid custom and compaction data shapes", async () => {
     const path = await tempPath();
     const badCustom = JSON.stringify({ id: "c1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "custom", data: ["array"] });
-    const badCompaction = JSON.stringify({ id: "cp1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "compaction", summary: 123, data: "not-object" });
-    const compactionNoSummary = JSON.stringify({ id: "cp2", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "compaction", data: { ok: true } });
+    const badCompaction = JSON.stringify({
+      id: "cp1",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "compaction",
+      summary: 123,
+      data: "not-object",
+    });
+    const compactionNoSummary = JSON.stringify({
+      id: "cp2",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "compaction",
+      data: { ok: true },
+    });
     await writeFile(path, [badCustom, badCompaction, compactionNoSummary].join("\n"), "utf8");
 
     const result = await readJsonlSessionEntries(path);
@@ -127,17 +170,34 @@ describe("node jsonl session store", () => {
       /Invalid JSONL at line 2/,
     );
     // Reads still quarantine rather than fail the whole file.
-    assert.deepEqual((await store.list("s1")).map((entry) => entry.id), ["e1"]);
+    assert.deepEqual(
+      (await store.list("s1")).map((entry) => entry.id),
+      ["e1"],
+    );
   });
 
   it("does not poison a branch when one entry is invalid", async () => {
     const path = await tempPath();
-    const good = createSessionEntry({ id: "good", sessionId: "s1", kind: "message", message: { role: "user", content: [{ type: "text", text: "hi" }] } });
-    const bad = JSON.stringify({ id: "bad", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "message", message: { role: 123 } });
+    const good = createSessionEntry({
+      id: "good",
+      sessionId: "s1",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "hi" }] },
+    });
+    const bad = JSON.stringify({
+      id: "bad",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "message",
+      message: { role: 123 },
+    });
     await writeFile(path, [JSON.stringify(good), bad].join("\n"), "utf8");
 
     const store = createJsonlSessionStore(path);
-    assert.deepEqual((await store.list("s1")).map((entry) => entry.id), ["good"]);
+    assert.deepEqual(
+      (await store.list("s1")).map((entry) => entry.id),
+      ["good"],
+    );
     assert.deepEqual(await store.get?.("good"), good);
     assert.equal(await store.get?.("bad"), undefined);
   });
@@ -205,11 +265,20 @@ describe("node jsonl session store", () => {
   it("quarantines unknown entry kinds", async () => {
     const path = await tempPath();
     const valid = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "ok" });
-    const unknownKind = JSON.stringify({ id: "e2", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "future_kind", label: "x" });
+    const unknownKind = JSON.stringify({
+      id: "e2",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "future_kind",
+      label: "x",
+    });
     await writeFile(path, [JSON.stringify(valid), unknownKind].join("\n"), "utf8");
 
     const store = createJsonlSessionStore(path);
-    assert.deepEqual((await store.list("s1")).map((entry) => entry.id), ["e1"]);
+    assert.deepEqual(
+      (await store.list("s1")).map((entry) => entry.id),
+      ["e1"],
+    );
 
     const result = await readJsonlSessionEntries(path);
     assert.equal(result.entries.length, 1);
@@ -232,8 +301,22 @@ describe("node jsonl session store", () => {
   it("rejects unsupported schemaVersion", async () => {
     const path = await tempPath();
     const valid = createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "ok" });
-    const futureVersion = JSON.stringify({ id: "e2", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "x", schemaVersion: 2 });
-    const badVersion = JSON.stringify({ id: "e3", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "x", schemaVersion: "v1" });
+    const futureVersion = JSON.stringify({
+      id: "e2",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "label",
+      label: "x",
+      schemaVersion: 2,
+    });
+    const badVersion = JSON.stringify({
+      id: "e3",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "label",
+      label: "x",
+      schemaVersion: "v1",
+    });
     await writeFile(path, [JSON.stringify(valid), futureVersion, badVersion].join("\n"), "utf8");
 
     const result = await readJsonlSessionEntries(path);
@@ -245,7 +328,12 @@ describe("node jsonl session store", () => {
 
   it("round trips event and metadata entries with valid payloads", async () => {
     const path = await tempPath();
-    const eventEntry = createSessionEntry({ id: "ev1", sessionId: "s1", kind: "event", event: { type: "agent_started", sessionId: "s1", runId: "r1" } });
+    const eventEntry = createSessionEntry({
+      id: "ev1",
+      sessionId: "s1",
+      kind: "event",
+      event: { type: "agent_started", sessionId: "s1", runId: "r1" },
+    });
     const metadataEntry = createSessionEntry({ id: "md1", sessionId: "s1", kind: "metadata", data: { source: "test" } });
     const store = createJsonlSessionStore(path);
     await store.append(eventEntry);
@@ -256,8 +344,20 @@ describe("node jsonl session store", () => {
 
   it("quarantines event and metadata entries with invalid payloads", async () => {
     const path = await tempPath();
-    const badEvent = JSON.stringify({ id: "ev1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "event", event: "not-an-object" });
-    const badMetadata = JSON.stringify({ id: "md1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "metadata", data: ["array"] });
+    const badEvent = JSON.stringify({
+      id: "ev1",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "event",
+      event: "not-an-object",
+    });
+    const badMetadata = JSON.stringify({
+      id: "md1",
+      sessionId: "s1",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      kind: "metadata",
+      data: ["array"],
+    });
     await writeFile(path, [badEvent, badMetadata].join("\n"), "utf8");
 
     const result = await readJsonlSessionEntries(path);

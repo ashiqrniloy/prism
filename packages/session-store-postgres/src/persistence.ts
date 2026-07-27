@@ -1,31 +1,30 @@
-import { Pool } from "pg";
 import {
-  SessionAppendConflictError,
-  assertSessionMetadataKey,
-  prepareRunFeedback,
-  requireRunFeedbackOwnership,
-  runFeedbackPageLimit,
-  RunFeedbackError,
-  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
-  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
-  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
-  resolveSessionSearchQuery,
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
+  assertSessionMetadataKey,
   type BranchQuery,
   type CheckpointStore,
+  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
+  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   type LeaseStore,
   type MigrationQuery,
   type PersistencePage,
   type ProductionPersistenceStore,
+  prepareRunFeedback,
   type RetentionPolicyQuery,
+  RunFeedbackError,
   type RunFeedbackQuery,
   type RunFeedbackRecord,
   type RunFeedbackStore,
   type RunLedger,
   type RunQuery,
   type RunRecord,
+  requireRunFeedbackOwnership,
+  resolveSessionSearchQuery,
+  runFeedbackPageLimit,
+  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  SessionAppendConflictError,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
@@ -40,16 +39,15 @@ import {
   type UsageQuery,
   type UsageRecord,
 } from "@arnilo/prism";
+import { createSessionRowMappers, type SessionEntryRow } from "@arnilo/prism-session-store-codecs";
+import { Pool } from "pg";
 import { createPostgresCheckpointStore } from "./checkpoints.js";
+import { qualifyTable } from "./identifiers.js";
 import { createPostgresLeaseStore } from "./leases.js";
 import { createPostgresPersistenceLifecycle } from "./lifecycle.js";
-import { qualifyTable } from "./identifiers.js";
-import {
-  applyPostgresMigrations,
-  assertPostgresSchemaReady,
-  verifyMigrationIdempotency,
-} from "./migrations.js";
-import {
+import { applyPostgresMigrations, assertPostgresSchemaReady, verifyMigrationIdempotency } from "./migrations.js";
+
+const {
   agentEventRecordToRow,
   decodeEntryCursor,
   encodeEntryCursor,
@@ -68,8 +66,11 @@ import {
   sessionEntryToRow,
   toolCallRecordToRow,
   usageRecordToRow,
-  type SessionEntryRow,
-} from "./row-mappers.js";
+} = createSessionRowMappers<boolean>({
+  encode: (redacted) => redacted,
+  decode: (redacted) => redacted,
+});
+
 import { DEFAULT_POOL_MAX, DEFAULT_SCHEMA, type PostgresPersistenceOptions } from "./types.js";
 
 export interface PostgresPersistence extends SessionStore, RunLedger, ProductionPersistenceStore {
@@ -87,9 +88,7 @@ export interface PostgresPersistence extends SessionStore, RunLedger, Production
   close(): Promise<void>;
 }
 
-export async function createPostgresPersistence(
-  options: PostgresPersistenceOptions,
-): Promise<PostgresPersistence> {
+export async function createPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence> {
   const ownsPool = !options.pool;
   const pool =
     options.pool ??
@@ -141,11 +140,15 @@ export async function createPostgresPersistence(
             [runId, ownership.tenantId, ownership.accountId ?? null, ownership.userId ?? null],
           );
           const row = result.rows[0] as Record<string, unknown> | undefined;
-          return row ? {
-            runId: String(row.id), sessionId: String(row.session_id), tenantId: String(row.tenant_id),
-            accountId: row.account_id === null ? undefined : String(row.account_id),
-            userId: row.user_id === null ? undefined : String(row.user_id),
-          } : false;
+          return row
+            ? {
+                runId: String(row.id),
+                sessionId: String(row.session_id),
+                tenantId: String(row.tenant_id),
+                accountId: row.account_id === null ? undefined : String(row.account_id),
+                userId: row.user_id === null ? undefined : String(row.user_id),
+              }
+            : false;
         },
       });
       await pool.query(
@@ -153,10 +156,23 @@ export async function createPostgresPersistence(
           id, run_id, session_id, trace_id, rating, comment, tags, scorer_ids, evaluation_ids,
           created_at, created_by, tenant_id, account_id, user_id, metadata
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-        [record.id, record.runId, record.sessionId, record.traceId ?? null, record.rating ?? null, record.comment ?? null,
-          JSON.stringify(record.tags), JSON.stringify(record.scorerIds), JSON.stringify(record.evaluationIds), record.createdAt,
-          record.createdBy ?? null, record.tenantId, record.accountId ?? null, record.userId ?? null,
-          record.metadata === undefined ? null : JSON.stringify(record.metadata)],
+        [
+          record.id,
+          record.runId,
+          record.sessionId,
+          record.traceId ?? null,
+          record.rating ?? null,
+          record.comment ?? null,
+          JSON.stringify(record.tags),
+          JSON.stringify(record.scorerIds),
+          JSON.stringify(record.evaluationIds),
+          record.createdAt,
+          record.createdBy ?? null,
+          record.tenantId,
+          record.accountId ?? null,
+          record.userId ?? null,
+          record.metadata === undefined ? null : JSON.stringify(record.metadata),
+        ],
       );
       return record;
     },
@@ -167,7 +183,10 @@ export async function createPostgresPersistence(
       const params: unknown[] = [];
       if (query.accountId === undefined) filters.push("account_id IS NULL");
       if (query.userId === undefined) filters.push("user_id IS NULL");
-      const add = (filter: (index: number) => string, value: unknown) => { params.push(value); filters.push(filter(params.length)); };
+      const add = (filter: (index: number) => string, value: unknown) => {
+        params.push(value);
+        filters.push(filter(params.length));
+      };
       if (query.runId) add((i) => `run_id = $${i}`, query.runId);
       if (query.sessionId) add((i) => `session_id = $${i}`, query.sessionId);
       if (query.traceId) add((i) => `trace_id = $${i}`, query.traceId);
@@ -177,7 +196,16 @@ export async function createPostgresPersistence(
       if (query.tag) add((i) => `tags::jsonb @> $${i}::jsonb`, JSON.stringify([query.tag]));
       if (query.fromCreatedAt) add((i) => `created_at >= $${i}`, query.fromCreatedAt);
       if (query.toCreatedAt) add((i) => `created_at <= $${i}`, query.toCreatedAt);
-      return queryTable(pool, feedbackTable, { ...query, limit: runFeedbackPageLimit(query.limit) }, filters, mapFeedbackRow, params, "created_at", "id");
+      return queryTable(
+        pool,
+        feedbackTable,
+        { ...query, limit: runFeedbackPageLimit(query.limit) },
+        filters,
+        mapFeedbackRow,
+        params,
+        "created_at",
+        "id",
+      );
     },
     async delete(input) {
       input.signal?.throwIfAborted();
@@ -212,10 +240,10 @@ export async function createPostgresPersistence(
         );
 
         if (appendOptions?.expectedParentId) {
-          const parent = await client.query(
-            `SELECT 1 FROM ${entries} WHERE id = $1 AND session_id = $2 LIMIT 1`,
-            [appendOptions.expectedParentId, entry.sessionId],
-          );
+          const parent = await client.query(`SELECT 1 FROM ${entries} WHERE id = $1 AND session_id = $2 LIMIT 1`, [
+            appendOptions.expectedParentId,
+            entry.sessionId,
+          ]);
           if (parent.rowCount === 0) {
             throw new SessionAppendConflictError({
               code: "session_append_conflict",
@@ -298,10 +326,7 @@ export async function createPostgresPersistence(
     },
 
     async list(sessionId: string): Promise<readonly SessionEntry[]> {
-      const result = await pool.query(
-        `SELECT * FROM ${entries} WHERE session_id = $1 ORDER BY timestamp ASC, ctid ASC`,
-        [sessionId],
-      );
+      const result = await pool.query(`SELECT * FROM ${entries} WHERE session_id = $1 ORDER BY timestamp ASC, ctid ASC`, [sessionId]);
       return (result.rows as SessionEntryRow[]).map(rowToSessionEntry);
     },
 
@@ -386,10 +411,9 @@ export async function createPostgresPersistence(
 
     async appendEvent(record: AgentEventRecord): Promise<void> {
       await ensureSession(record.sessionId, record.timestamp);
-      const sequenceResult = await pool.query(
-        `SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence FROM ${events} WHERE run_id = $1`,
-        [record.runId ?? ""],
-      );
+      const sequenceResult = await pool.query(`SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence FROM ${events} WHERE run_id = $1`, [
+        record.runId ?? "",
+      ]);
       const sequence = Number(sequenceResult.rows[0]?.next_sequence ?? 1);
       const row = agentEventRecordToRow(record, sequence);
       await pool.query(
@@ -517,12 +541,16 @@ export async function createPostgresPersistence(
     },
 
     async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {
-      return searchPostgresSessions(pool, {
-        sessions,
-        entries,
-        runs,
-        searchTable,
-      }, query);
+      return searchPostgresSessions(
+        pool,
+        {
+          sessions,
+          entries,
+          runs,
+          searchTable,
+        },
+        query,
+      );
     },
 
     async queryBranches(query: BranchQuery) {
@@ -752,16 +780,7 @@ export async function createPostgresPersistence(
         filters.push(`version = $${params.length + 1}`);
         params.push(query.version);
       }
-      return queryTable(
-        pool,
-        qualifyTable(schema, "prism_migrations"),
-        query,
-        filters,
-        mapMigrationRow,
-        params,
-        "applied_at",
-        "id",
-      );
+      return queryTable(pool, qualifyTable(schema, "prism_migrations"), query, filters, mapMigrationRow, params, "applied_at", "id");
     },
 
     async close(): Promise<void> {
@@ -774,9 +793,7 @@ export async function createPostgresPersistence(
   return persistence;
 }
 
-export async function reopenPostgresPersistence(
-  options: PostgresPersistenceOptions,
-): Promise<PostgresPersistence> {
+export async function reopenPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence> {
   return createPostgresPersistence(options);
 }
 
@@ -931,17 +948,13 @@ function parseSessionMetadata(raw: string | null): Readonly<Record<string, unkno
   if (!raw) return undefined;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Readonly<Record<string, unknown>>
-      : undefined;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Readonly<Record<string, unknown>>) : undefined;
   } catch {
     return undefined;
   }
 }
 
-function safeSearchMetadata(
-  metadata: Readonly<Record<string, unknown>> | undefined,
-): Readonly<Record<string, unknown>> | undefined {
+function safeSearchMetadata(metadata: Readonly<Record<string, unknown>> | undefined): Readonly<Record<string, unknown>> | undefined {
   if (!metadata) return undefined;
   const workspaceRoot = metadata[SESSION_SEARCH_WORKSPACE_METADATA_KEY];
   if (typeof workspaceRoot !== "string") return undefined;
@@ -1024,10 +1037,7 @@ async function queryTable<T>(
   const last = pageRows.at(-1);
   return {
     items: pageRows.map(mapRow),
-    nextCursor:
-      hasMore && last
-        ? encodeEntryCursor(String(last[sortColumn]), String(last[idColumn]))
-        : undefined,
+    nextCursor: hasMore && last ? encodeEntryCursor(String(last[sortColumn]), String(last[idColumn])) : undefined,
   };
 }
 
@@ -1047,21 +1057,24 @@ const mapRunRow = (row: Record<string, unknown>) => rowToRunRecord(row as never)
 const mapEventRow = (row: Record<string, unknown>) => rowToAgentEventRecord(row as never);
 const mapToolCallRow = (row: Record<string, unknown>) => rowToToolCallRecord(row as never);
 const mapUsageRow = (row: Record<string, unknown>) => rowToUsageRecord(row as never);
-const mapFeedbackRow = (row: Record<string, unknown>): RunFeedbackRecord => Object.freeze({
-  id: String(row.id), runId: String(row.run_id), sessionId: String(row.session_id),
-  traceId: row.trace_id === null ? undefined : String(row.trace_id),
-  rating: row.rating === null ? undefined : Number(row.rating),
-  comment: row.comment === null ? undefined : String(row.comment),
-  tags: Object.freeze(parseStringArray(row.tags)),
-  scorerIds: Object.freeze(parseStringArray(row.scorer_ids)),
-  evaluationIds: Object.freeze(parseStringArray(row.evaluation_ids)),
-  createdAt: String(row.created_at),
-  createdBy: row.created_by === null ? undefined : String(row.created_by),
-  tenantId: String(row.tenant_id),
-  accountId: row.account_id === null ? undefined : String(row.account_id),
-  userId: row.user_id === null ? undefined : String(row.user_id),
-  metadata: row.metadata === null ? undefined : deepFreeze(JSON.parse(String(row.metadata)) as Readonly<Record<string, unknown>>),
-});
+const mapFeedbackRow = (row: Record<string, unknown>): RunFeedbackRecord =>
+  Object.freeze({
+    id: String(row.id),
+    runId: String(row.run_id),
+    sessionId: String(row.session_id),
+    traceId: row.trace_id === null ? undefined : String(row.trace_id),
+    rating: row.rating === null ? undefined : Number(row.rating),
+    comment: row.comment === null ? undefined : String(row.comment),
+    tags: Object.freeze(parseStringArray(row.tags)),
+    scorerIds: Object.freeze(parseStringArray(row.scorer_ids)),
+    evaluationIds: Object.freeze(parseStringArray(row.evaluation_ids)),
+    createdAt: String(row.created_at),
+    createdBy: row.created_by === null ? undefined : String(row.created_by),
+    tenantId: String(row.tenant_id),
+    accountId: row.account_id === null ? undefined : String(row.account_id),
+    userId: row.user_id === null ? undefined : String(row.user_id),
+    metadata: row.metadata === null ? undefined : deepFreeze(JSON.parse(String(row.metadata)) as Readonly<Record<string, unknown>>),
+  });
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -1073,7 +1086,8 @@ function deepFreeze<T>(value: T): T {
 
 function parseStringArray(value: unknown): string[] {
   const parsed: unknown = JSON.parse(String(value));
-  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) throw new RunFeedbackError("Invalid stored feedback array");
+  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string"))
+    throw new RunFeedbackError("Invalid stored feedback array");
   return parsed;
 }
 const mapAgentDefinitionRow = rowToAgentDefinitionRecord;

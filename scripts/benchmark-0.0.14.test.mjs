@@ -1,15 +1,26 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { describe, it } from "node:test";
 import { dirname, join } from "node:path";
+import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const script = join(dirname(fileURLToPath(import.meta.url)), "benchmark-0.0.14.mjs");
 const required = [
-  "scenario", "mode", "iterations", "throughputPerSecond", "p50Ms", "p95Ms",
-  "memoryBytes", "peakQueueEvents", "eventBytes", "diskBytes", "processCount",
-  "estimatedCostUsd", "backpressureSignals", "resourceLimitSignals",
+  "scenario",
+  "mode",
+  "iterations",
+  "throughputPerSecond",
+  "p50Ms",
+  "p95Ms",
+  "memoryBytes",
+  "peakQueueEvents",
+  "eventBytes",
+  "diskBytes",
+  "processCount",
+  "estimatedCostUsd",
+  "backpressureSignals",
+  "resourceLimitSignals",
 ];
 
 describe("benchmark-0.0.14 schema", () => {
@@ -21,7 +32,9 @@ describe("benchmark-0.0.14 schema", () => {
 
   it("emits bounded network-free Phase 9 evidence", () => {
     const run = spawnSync(process.execPath, [script], {
-      env: { ...process.env, PRISM_BENCH_ITERATIONS: "10" }, encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
+      env: { ...process.env, PRISM_BENCH_ITERATIONS: "10" },
+      encoding: "utf8",
+      maxBuffer: 4 * 1024 * 1024,
     });
     assert.equal(run.status, 0, run.stderr || run.stdout);
     const report = JSON.parse(run.stdout);
@@ -29,13 +42,10 @@ describe("benchmark-0.0.14 schema", () => {
     assert.deepEqual(report.environment.network, false);
     assert.deepEqual(report.environment.credentials, false);
     assert.ok(report.frozenBudgets);
-    assert.deepEqual(new Set(report.results.map((row) => row.scenario)), new Set([
-      "conversation-replay",
-      "memory-consent-recall",
-      "artifact-delivery-link",
-      "cowork-map",
-      "connector-token-refresh",
-    ]));
+    assert.deepEqual(
+      new Set(report.results.map((row) => row.scenario)),
+      new Set(["conversation-replay", "memory-consent-recall", "artifact-delivery-link", "cowork-map", "connector-token-refresh"]),
+    );
     for (const row of report.results) {
       for (const field of required) assert.ok(field in row, `${row.scenario} missing ${field}`);
       assert.ok(row.peakQueueEvents >= 0 && row.eventBytes >= 0);

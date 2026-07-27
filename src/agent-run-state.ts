@@ -46,8 +46,11 @@ export function agentFingerprint(agent: Agent, revision: string): string {
     revision,
     model: config.model,
     tools: tools.map((tool) => ({ name: tool.name, parameters: tool.parameters, exclusive: tool.exclusive })),
-    guardrails: guardrails.map((guardrail) => ({ name: guardrail.name, stage: guardrail.stage, revision: guardrail.revision })), 
-    loop: typeof config.loop === "object" && config.loop && "strategy" in config.loop ? config.loop.strategy : config.loop?.name ?? "single-shot",
+    guardrails: guardrails.map((guardrail) => ({ name: guardrail.name, stage: guardrail.stage, revision: guardrail.revision })),
+    loop:
+      typeof config.loop === "object" && config.loop && "strategy" in config.loop
+        ? config.loop.strategy
+        : (config.loop?.name ?? "single-shot"),
   });
   return createHash("sha256").update(value).digest("hex");
 }
@@ -73,7 +76,12 @@ export async function loadAgentRunState(
 ): Promise<{ readonly record: CheckpointRecord; readonly state: StoredAgentRunState }> {
   const record = await checkpoints.loadCheckpoint({ namespace: AGENT_RUN_STATE_NAMESPACE, key: ref.runId, ...ownership });
   if (!record) throw new AgentRunStateError(`No durable agent run ${ref.runId}`);
-  if (ref.sessionId && record.value && typeof record.value === "object" && (record.value as { sessionId?: unknown }).sessionId !== ref.sessionId) {
+  if (
+    ref.sessionId &&
+    record.value &&
+    typeof record.value === "object" &&
+    (record.value as { sessionId?: unknown }).sessionId !== ref.sessionId
+  ) {
     throw new AgentRunStateError("Agent run session mismatch");
   }
   return { record, state: parseAgentRunState(record.value, record.version) };
@@ -107,7 +115,14 @@ export function statusFromState(state: StoredAgentRunState, version: number): Ag
 }
 
 export function publicState(state: StoredAgentRunState): AgentRunState {
-  const { input: _input, pending: _pending, interruptBeforeTool: _interruptBeforeTool, counters: _counters, deadlineAt: _deadlineAt, ...publicValue } = state;
+  const {
+    input: _input,
+    pending: _pending,
+    interruptBeforeTool: _interruptBeforeTool,
+    counters: _counters,
+    deadlineAt: _deadlineAt,
+    ...publicValue
+  } = state;
   return publicValue;
 }
 
@@ -149,8 +164,19 @@ export function initialAgentRunState(input: {
 export function parseAgentRunState(value: unknown, version?: number): StoredAgentRunState {
   if (!value || typeof value !== "object") throw new AgentRunStateError("Agent run state must be an object");
   const state = value as Partial<StoredAgentRunState>;
-  if (state.schemaVersion !== AGENT_RUN_STATE_SCHEMA_VERSION) throw new AgentRunStateError(`Unsupported agent run state schemaVersion ${String(state.schemaVersion)}`);
-  if (!state.agentId || !state.definitionRevision || !state.fingerprint || !state.runId || !state.sessionId || !state.model || !state.status || !state.counters || !state.deadlineAt) {
+  if (state.schemaVersion !== AGENT_RUN_STATE_SCHEMA_VERSION)
+    throw new AgentRunStateError(`Unsupported agent run state schemaVersion ${String(state.schemaVersion)}`);
+  if (
+    !state.agentId ||
+    !state.definitionRevision ||
+    !state.fingerprint ||
+    !state.runId ||
+    !state.sessionId ||
+    !state.model ||
+    !state.status ||
+    !state.counters ||
+    !state.deadlineAt
+  ) {
     throw new AgentRunStateError("Malformed agent run state");
   }
   return boundState({ ...state, version } as StoredAgentRunState, DEFAULT_MAX_AGENT_RUN_STATE_BYTES);
@@ -159,7 +185,11 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
 function boundState(state: StoredAgentRunState, maxBytes: number): StoredAgentRunState {
   checkShape(state, 0);
   let text: string;
-  try { text = JSON.stringify(state); } catch { throw new AgentRunStateError("Agent run state must be JSON serializable"); }
+  try {
+    text = JSON.stringify(state);
+  } catch {
+    throw new AgentRunStateError("Agent run state must be JSON serializable");
+  }
   if (Buffer.byteLength(text) > maxBytes) throw new AgentRunStateError(`Agent run state exceeds ${maxBytes} bytes`);
   return JSON.parse(text) as StoredAgentRunState;
 }
@@ -168,6 +198,7 @@ function checkShape(value: unknown, depth: number): void {
   if (depth > MAX_DEPTH) throw new AgentRunStateError(`Agent run state exceeds depth ${MAX_DEPTH}`);
   if (!value || typeof value !== "object") return;
   const entries = Array.isArray(value) ? value : Object.values(value);
-  if (!Array.isArray(value) && entries.length > MAX_PROPERTIES) throw new AgentRunStateError(`Agent run state exceeds ${MAX_PROPERTIES} properties`);
+  if (!Array.isArray(value) && entries.length > MAX_PROPERTIES)
+    throw new AgentRunStateError(`Agent run state exceeds ${MAX_PROPERTIES} properties`);
   for (const item of entries) checkShape(item, depth + 1);
 }

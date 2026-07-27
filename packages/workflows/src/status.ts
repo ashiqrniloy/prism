@@ -1,9 +1,6 @@
+import type { OwnershipScope } from "@arnilo/prism";
 import { abortActiveWorkflowRun } from "./active-runs.js";
-import {
-  WorkflowAbortError,
-  WorkflowCheckpointError,
-  WorkflowRuntimeError,
-} from "./errors.js";
+import { WorkflowAbortError, WorkflowCheckpointError, WorkflowRuntimeError } from "./errors.js";
 import type {
   WorkflowCheckpointAdapter,
   WorkflowCheckpointListInput,
@@ -13,7 +10,6 @@ import type {
   WorkflowDefinition,
   WorkflowRunStatus,
 } from "./types.js";
-import type { OwnershipScope } from "@arnilo/prism";
 import { hashWorkflowDefinition, nowIso, ownershipExactlyMatches } from "./util.js";
 
 export async function getWorkflowRun(
@@ -52,9 +48,7 @@ export interface CancelWorkflowRunResult {
  * Cancel an in-process workflow run. If the run is not active but a durable
  * checkpoint still says `running`/`pending`, mark it `aborted` (orphaned resume).
  */
-export async function cancelWorkflowRun(
-  input: CancelWorkflowRunInput,
-): Promise<CancelWorkflowRunResult> {
+export async function cancelWorkflowRun(input: CancelWorkflowRunInput): Promise<CancelWorkflowRunResult> {
   if (input.workflow.id !== input.workflowId) {
     throw new WorkflowCheckpointError("Workflow definition does not match cancellation target");
   }
@@ -72,10 +66,7 @@ export async function cancelWorkflowRun(
   }
 
   if (!input.checkpoints) {
-    throw new WorkflowRuntimeError(
-      `No active workflow run ${input.workflowId}/${input.runId}`,
-      "ERR_PRISM_WORKFLOW_NOT_FOUND",
-    );
+    throw new WorkflowRuntimeError(`No active workflow run ${input.workflowId}/${input.runId}`, "ERR_PRISM_WORKFLOW_NOT_FOUND");
   }
 
   const record = await input.checkpoints.load({
@@ -85,10 +76,7 @@ export async function cancelWorkflowRun(
     signal: input.signal,
   });
   if (!record) {
-    throw new WorkflowRuntimeError(
-      `No workflow run ${input.workflowId}/${input.runId}`,
-      "ERR_PRISM_WORKFLOW_NOT_FOUND",
-    );
+    throw new WorkflowRuntimeError(`No workflow run ${input.workflowId}/${input.runId}`, "ERR_PRISM_WORKFLOW_NOT_FOUND");
   }
   if (!ownershipExactlyMatches(input.ownership, record.ownership)) {
     throw new WorkflowCheckpointError("Checkpoint tenant/ownership mismatch");
@@ -100,19 +88,11 @@ export async function cancelWorkflowRun(
   if (record.value.status === "aborted") {
     return { aborted: true, wasActive: false, status: "aborted" };
   }
-  if (
-    record.value.status === "succeeded"
-    || record.value.status === "failed"
-    || record.value.status === "denied"
-  ) {
+  if (record.value.status === "succeeded" || record.value.status === "failed" || record.value.status === "denied") {
     return { aborted: false, wasActive: false, status: record.value.status };
   }
 
-  if (
-    record.value.status !== "suspended"
-    && record.fencingToken !== undefined
-    && input.checkpoints.requestCancel
-  ) {
+  if (record.value.status !== "suspended" && record.fencingToken !== undefined && input.checkpoints.requestCancel) {
     await input.checkpoints.requestCancel({
       workflowId: input.workflowId,
       runId: input.runId,

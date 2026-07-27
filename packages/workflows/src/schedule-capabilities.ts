@@ -31,8 +31,23 @@ export interface ScheduleCapabilityToken {
 }
 
 export type ScheduleCapabilityEvent =
-  | { readonly type: "capability_enabled"; readonly tokenId: string; readonly scheduleId: string; readonly workflowId: string; readonly scope: string; readonly actor: CapabilityActorRef; readonly timestamp: string }
-  | { readonly type: "capability_revoked"; readonly tokenId: string; readonly scheduleId: string; readonly scope: string; readonly actor: CapabilityActorRef; readonly timestamp: string }
+  | {
+      readonly type: "capability_enabled";
+      readonly tokenId: string;
+      readonly scheduleId: string;
+      readonly workflowId: string;
+      readonly scope: string;
+      readonly actor: CapabilityActorRef;
+      readonly timestamp: string;
+    }
+  | {
+      readonly type: "capability_revoked";
+      readonly tokenId: string;
+      readonly scheduleId: string;
+      readonly scope: string;
+      readonly actor: CapabilityActorRef;
+      readonly timestamp: string;
+    }
   | { readonly type: "capability_denied"; readonly tokenId: string; readonly reason: string; readonly timestamp: string };
 
 export interface EnableCapabilityInput {
@@ -73,9 +88,7 @@ export interface ProactiveScheduleCapabilities {
  * schedule so `pollOnce` never fires it (fail-closed), and `assertActive`
  * guards manual trigger paths. Hosts bridge `onCapability` to a policy ledger.
  */
-export function createProactiveScheduleCapabilities(
-  options: ProactiveScheduleCapabilitiesOptions,
-): ProactiveScheduleCapabilities {
+export function createProactiveScheduleCapabilities(options: ProactiveScheduleCapabilitiesOptions): ProactiveScheduleCapabilities {
   requireOwnership(options.ownership);
   requireId(options.ownerId, "ownerId");
   const maxTtlMs = positive(options.maxTtlMs ?? HARD_CAPABILITY_TTL_MS, "maxTtlMs");
@@ -165,11 +178,7 @@ export function createProactiveScheduleCapabilities(
       if (!current) throw new WorkflowCheckpointError(`Unknown capability ${tokenId}`);
       if (current.revoked) return current;
       const timestamp = nowIso();
-      const revoked = await save(
-        { ...withoutVersion(current), revoked: true, revokedAt: timestamp },
-        current.version,
-        signal,
-      );
+      const revoked = await save({ ...withoutVersion(current), revoked: true, revokedAt: timestamp }, current.version, signal);
       // Fail-closed stop: paused schedules never fire in pollOnce. Best-effort —
       // a missing schedule is already stopped.
       await options.schedules.pause(revoked.scheduleId, signal).catch(() => undefined);

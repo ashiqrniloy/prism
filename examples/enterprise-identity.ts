@@ -1,9 +1,4 @@
-import {
-  assertIdentityActive,
-  assertIdentityPropagation,
-  narrowIdentity,
-  type AgentIdentity,
-} from "@arnilo/prism";
+import { type AgentIdentity, assertIdentityActive, assertIdentityPropagation, narrowIdentity } from "@arnilo/prism";
 
 /** Network-free verified identity narrowing and propagation checks. */
 export async function demo(): Promise<Record<string, unknown>> {

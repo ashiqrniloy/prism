@@ -1,18 +1,11 @@
+import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it, afterEach } from "node:test";
-import assert from "node:assert/strict";
-import {
-  createAgent,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
-  type AIProvider,
-} from "@arnilo/prism";
+import { afterEach, describe, it } from "node:test";
+import { type AIProvider, createAgent, createSecretRedactor, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { createSqlitePersistence, type SqlitePersistence } from "@arnilo/prism-session-store-sqlite";
-import { createConversationHandler, createConversationService, type ConversationService } from "../conversations.js";
+import { type ConversationService, createConversationHandler, createConversationService } from "../conversations.js";
 
 const ownership = { tenantId: "tenant-1", userId: "user-1" };
 const otherOwnership = { tenantId: "tenant-1", userId: "user-2" };
@@ -57,11 +50,9 @@ function toolOnceProvider(state: { turns: number }): AIProvider {
   };
 }
 
-function makeService(options: {
-  provider?: AIProvider;
-  limits?: Parameters<typeof createConversationService>[1]["limits"];
-  onTool?: () => void;
-} = {}): { persistence: SqlitePersistence; service: ConversationService } {
+function makeService(
+  options: { provider?: AIProvider; limits?: Parameters<typeof createConversationService>[1]["limits"]; onTool?: () => void } = {},
+): { persistence: SqlitePersistence; service: ConversationService } {
   const persistence = createSqlitePersistence({ filename: tempDbPath("conv") });
   const agent = createAgent({
     model: { provider: "mock", model: "offline" },
@@ -69,14 +60,16 @@ function makeService(options: {
     redactor: createSecretRedactor([SECRET]),
     store: persistence,
     runLedger: persistence,
-    tools: [{
-      name: "note",
-      parameters: {},
-      execute: () => {
-        options.onTool?.();
-        return { toolCallId: "call-1", name: "note", value: "noted" };
+    tools: [
+      {
+        name: "note",
+        parameters: {},
+        execute: () => {
+          options.onTool?.();
+          return { toolCallId: "call-1", name: "note", value: "noted" };
+        },
       },
-    }],
+    ],
   });
   const service = createConversationService(persistence, {
     redactor: createSecretRedactor([SECRET]),
@@ -160,7 +153,12 @@ describe("createConversationService", () => {
   it("replays bounded redacted events without rerunning completed work", async () => {
     let toolCalls = 0;
     const turns = { turns: 0 };
-    const { persistence, service } = makeService({ provider: toolOnceProvider(turns), onTool: () => { toolCalls += 1; } });
+    const { persistence, service } = makeService({
+      provider: toolOnceProvider(turns),
+      onTool: () => {
+        toolCalls += 1;
+      },
+    });
     const thread = await service.create({ ownership });
     await service.continue({ ownership, threadId: thread.id, message: "do the thing" });
     assert.equal(toolCalls, 1);
@@ -187,10 +185,7 @@ describe("createConversationService", () => {
     await service.continue({ ownership, threadId: other.id, message: "other" });
     const otherPage = await service.replay({ ownership, threadId: other.id });
     if (otherPage.nextCursor) {
-      await assert.rejects(
-        () => service.replay({ ownership, threadId: thread.id, cursor: otherPage.nextCursor }),
-        /another thread/,
-      );
+      await assert.rejects(() => service.replay({ ownership, threadId: thread.id, cursor: otherPage.nextCursor }), /another thread/);
     }
     persistence.close();
   });
@@ -208,10 +203,7 @@ describe("createConversationService", () => {
     assert.equal(again.branches.length, 1, "branch must be idempotent per leaf");
 
     await service.branch({ ownership, threadId: thread.id, leafId: "leaf-2" });
-    await assert.rejects(
-      () => service.branch({ ownership, threadId: thread.id, leafId: "leaf-3" }),
-      /Too many active branches/,
-    );
+    await assert.rejects(() => service.branch({ ownership, threadId: thread.id, leafId: "leaf-3" }), /Too many active branches/);
 
     await assert.rejects(
       () => service.continue({ ownership, threadId: thread.id, message: "fork", leafId: "leaf-9" }),
@@ -229,10 +221,7 @@ describe("createConversationService", () => {
     assert.equal(archived.state, "archived");
     const again = await service.archive({ ownership, threadId: thread.id });
     assert.equal(again.state, "archived");
-    await assert.rejects(
-      () => service.continue({ ownership, threadId: thread.id, message: "still there?" }),
-      /archived/,
-    );
+    await assert.rejects(() => service.continue({ ownership, threadId: thread.id, message: "still there?" }), /archived/);
     const page = await service.list({ ownership });
     assert.equal(page.items[0]?.state, "archived");
     persistence.close();
@@ -246,7 +235,9 @@ describe("createConversationService", () => {
 
     const full = await createConversationService(persistence, {
       redactor: createSecretRedactor([SECRET]),
-      sessionFactory: () => { throw new Error("not used"); },
+      sessionFactory: () => {
+        throw new Error("not used");
+      },
     }).export({ ownership, threadId: thread.id });
     assert.ok(full.events.length >= 4);
     assert.equal(full.truncated, false);

@@ -1,0 +1,18 @@
+GOOGLE_DEFAULT_BASE_URL	export declare const GOOGLE_DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+createGoogleGenerateContentProvider	export declare function createGoogleGenerateContentProvider(options?: GoogleGenerateContentProviderOptions): AIProvider
+createGoogleProviderPackage	export declare function createGoogleProviderPackage(options?: GoogleProviderPackageOptions): ProviderPackage
+defineGoogleModel	export declare function defineGoogleModel(config: GoogleModelConfig): ModelConfig
+googleGenerateContentBody	export declare function googleGenerateContentBody(request: ProviderRequest): Promise<JsonObject>
+googleGenerateContentEvents	export declare function googleGenerateContentEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+googleModels	export declare const googleModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig]
+googleOwnedHeaders	export declare function googleOwnedHeaders(token: string | undefined, options: ProviderRequestOptions | undefined, userAgent?: string): Record<string, string>
+googlePreserveThinking	export declare function googlePreserveThinking(request: ProviderRequest): boolean
+googleThinkingConfig	export declare function googleThinkingConfig(request: ProviderRequest): JsonObject | undefined
+listGoogleModels	export declare function listGoogleModels(options?: ListGoogleModelsOptions): Promise<ModelConfig[]>
+mapGoogleModel	export declare function mapGoogleModel(entry: GoogleModelEntry, options?:
+stripGoogleOwnedCompat	export declare function stripGoogleOwnedCompat(compat: JsonObject | undefined): JsonObject
+stripModelsPrefix	export declare function stripModelsPrefix(name: string): string
+type GoogleGenerateContentProviderOptions	export { createGoogleGenerateContentProvider, type GoogleGenerateContentProviderOptions, googleOwnedHeaders, } from "./provider.js"
+type GoogleModelConfig	export { defineGoogleModel, GOOGLE_DEFAULT_BASE_URL, type GoogleModelConfig, type GoogleModelEntry, googleModels, type ListGoogleModelsOptions, listGoogleModels, mapGoogleModel, stripModelsPrefix, } from "./models.js"
+type GoogleModelEntry	export { defineGoogleModel, GOOGLE_DEFAULT_BASE_URL, type GoogleModelConfig, type GoogleModelEntry, googleModels, type ListGoogleModelsOptions, listGoogleModels, mapGoogleModel, stripModelsPrefix, } from "./models.js"
+type ListGoogleModelsOptions	export { defineGoogleModel, GOOGLE_DEFAULT_BASE_URL, type GoogleModelConfig, type GoogleModelEntry, googleModels, type ListGoogleModelsOptions, listGoogleModels, mapGoogleModel, stripModelsPrefix, } from "./models.js"

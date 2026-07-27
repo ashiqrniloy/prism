@@ -398,59 +398,202 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
       },
     ],
     indexes: [
-      { name: "prism_sessions_tenant_created_idx", table: "prism_sessions", columns: ["tenant_id", "account_id", "user_id", "created_at"], purpose: "tenant-scoped session listing" },
+      {
+        name: "prism_sessions_tenant_created_idx",
+        table: "prism_sessions",
+        columns: ["tenant_id", "account_id", "user_id", "created_at"],
+        purpose: "tenant-scoped session listing",
+      },
       { name: "prism_sessions_expires_idx", table: "prism_sessions", columns: ["expires_at"], purpose: "retention expiry scans" },
       { name: "prism_branches_session_name_idx", table: "prism_branches", columns: ["session_id", "name"], purpose: "named branch lookup" },
       { name: "prism_branches_leaf_idx", table: "prism_branches", columns: ["leaf_entry_id"], purpose: "leaf-to-branch resolution" },
-      { name: "prism_session_entries_session_parent_idx", table: "prism_session_entries", columns: ["session_id", "parent_id"], purpose: "parent existence checks and child lookups" },
-      { name: "prism_session_entries_session_kind_ts_idx", table: "prism_session_entries", columns: ["session_id", "kind", "timestamp"], purpose: "kind-filtered entry listing" },
-      { name: "prism_session_entries_session_run_ts_idx", table: "prism_session_entries", columns: ["session_id", "run_id", "timestamp"], purpose: "run-scoped entry listing" },
-      { name: "prism_session_entries_session_ts_id_idx", table: "prism_session_entries", columns: ["session_id", "timestamp", "id"], purpose: "cursor pagination without full scans" },
-      { name: "prism_session_entries_session_id_idx", table: "prism_session_entries", columns: ["session_id", "id"], purpose: "append parent validation and recursive branch reads" },
-      { name: "prism_session_append_idempotency_unique", table: "prism_session_append_idempotency", columns: ["session_id", "expected_parent_id", "idempotency_key"], purpose: "append retry deduplication (primary key enforces uniqueness)" },
-      { name: "prism_runs_session_started_idx", table: "prism_runs", columns: ["session_id", "started_at", "id"], purpose: "run history pagination" },
-      { name: "prism_runs_branch_started_idx", table: "prism_runs", columns: ["branch_id", "started_at", "id"], purpose: "branch-scoped runs" },
-      { name: "prism_runs_tenant_idempotency_unique", table: "prism_runs", columns: ["tenant_id", "idempotency_key"], unique: true, purpose: "run-level idempotency deduplication per tenant" },
-      { name: "prism_agent_events_run_sequence_idx", table: "prism_agent_events", columns: ["run_id", "sequence"], purpose: "stable per-run event timeline pagination" },
-      { name: "prism_agent_events_session_ts_id_idx", table: "prism_agent_events", columns: ["session_id", "timestamp", "id"], purpose: "event stream pagination" },
-      { name: "prism_tool_calls_session_name_started_idx", table: "prism_tool_calls", columns: ["session_id", "name", "started_at"], purpose: "tool usage by name" },
-      { name: "prism_tool_calls_run_started_idx", table: "prism_tool_calls", columns: ["run_id", "started_at"], purpose: "run tool-call listing" },
-      { name: "prism_usage_run_recorded_idx", table: "prism_usage", columns: ["run_id", "recorded_at", "id"], purpose: "run usage pagination" },
-      { name: "prism_usage_session_recorded_idx", table: "prism_usage", columns: ["session_id", "recorded_at"], purpose: "usage aggregation" },
-      { name: "prism_usage_session_scope_recorded_idx", table: "prism_usage", columns: ["session_id", "scope", "recorded_at"], purpose: "scope-safe usage aggregation" },
-      { name: "prism_run_feedback_owner_created_idx", table: "prism_run_feedback", columns: ["tenant_id", "account_id", "user_id", "created_at", "id"], purpose: "ownership-scoped feedback pagination" },
-      { name: "prism_run_feedback_run_created_idx", table: "prism_run_feedback", columns: ["run_id", "created_at", "id"], purpose: "run feedback lookup" },
-      { name: "prism_run_feedback_trace_created_idx", table: "prism_run_feedback", columns: ["trace_id", "created_at", "id"], purpose: "trace feedback lookup" },
-      { name: "prism_agent_definitions_name_version_idx", table: "prism_agent_definitions", columns: ["name", "version"], purpose: "definition lookup" },
-      { name: "prism_legal_holds_owner_resource_idx", table: "prism_legal_holds", columns: ["tenant_id", "account_id", "user_id", "resource_kind", "resource_id"], purpose: "hold lookup by owned resource" },
-      { name: "prism_legal_holds_created_id_idx", table: "prism_legal_holds", columns: ["created_at", "id"], purpose: "hold export pagination" },
-      { name: "prism_tenant_quotas_owner_kind_idx", table: "prism_tenant_quotas", columns: ["tenant_id", "account_id", "user_id", "resource_kind"], purpose: "tenant quota lookup" },
-      { name: "prism_migrations_name_version_idx", table: "prism_migrations", columns: ["name", "version"], purpose: "applied-migration lookup (table constraint enforces uniqueness)" },
+      {
+        name: "prism_session_entries_session_parent_idx",
+        table: "prism_session_entries",
+        columns: ["session_id", "parent_id"],
+        purpose: "parent existence checks and child lookups",
+      },
+      {
+        name: "prism_session_entries_session_kind_ts_idx",
+        table: "prism_session_entries",
+        columns: ["session_id", "kind", "timestamp"],
+        purpose: "kind-filtered entry listing",
+      },
+      {
+        name: "prism_session_entries_session_run_ts_idx",
+        table: "prism_session_entries",
+        columns: ["session_id", "run_id", "timestamp"],
+        purpose: "run-scoped entry listing",
+      },
+      {
+        name: "prism_session_entries_session_ts_id_idx",
+        table: "prism_session_entries",
+        columns: ["session_id", "timestamp", "id"],
+        purpose: "cursor pagination without full scans",
+      },
+      {
+        name: "prism_session_entries_session_id_idx",
+        table: "prism_session_entries",
+        columns: ["session_id", "id"],
+        purpose: "append parent validation and recursive branch reads",
+      },
+      {
+        name: "prism_session_append_idempotency_unique",
+        table: "prism_session_append_idempotency",
+        columns: ["session_id", "expected_parent_id", "idempotency_key"],
+        purpose: "append retry deduplication (primary key enforces uniqueness)",
+      },
+      {
+        name: "prism_runs_session_started_idx",
+        table: "prism_runs",
+        columns: ["session_id", "started_at", "id"],
+        purpose: "run history pagination",
+      },
+      {
+        name: "prism_runs_branch_started_idx",
+        table: "prism_runs",
+        columns: ["branch_id", "started_at", "id"],
+        purpose: "branch-scoped runs",
+      },
+      {
+        name: "prism_runs_tenant_idempotency_unique",
+        table: "prism_runs",
+        columns: ["tenant_id", "idempotency_key"],
+        unique: true,
+        purpose: "run-level idempotency deduplication per tenant",
+      },
+      {
+        name: "prism_agent_events_run_sequence_idx",
+        table: "prism_agent_events",
+        columns: ["run_id", "sequence"],
+        purpose: "stable per-run event timeline pagination",
+      },
+      {
+        name: "prism_agent_events_session_ts_id_idx",
+        table: "prism_agent_events",
+        columns: ["session_id", "timestamp", "id"],
+        purpose: "event stream pagination",
+      },
+      {
+        name: "prism_tool_calls_session_name_started_idx",
+        table: "prism_tool_calls",
+        columns: ["session_id", "name", "started_at"],
+        purpose: "tool usage by name",
+      },
+      {
+        name: "prism_tool_calls_run_started_idx",
+        table: "prism_tool_calls",
+        columns: ["run_id", "started_at"],
+        purpose: "run tool-call listing",
+      },
+      {
+        name: "prism_usage_run_recorded_idx",
+        table: "prism_usage",
+        columns: ["run_id", "recorded_at", "id"],
+        purpose: "run usage pagination",
+      },
+      {
+        name: "prism_usage_session_recorded_idx",
+        table: "prism_usage",
+        columns: ["session_id", "recorded_at"],
+        purpose: "usage aggregation",
+      },
+      {
+        name: "prism_usage_session_scope_recorded_idx",
+        table: "prism_usage",
+        columns: ["session_id", "scope", "recorded_at"],
+        purpose: "scope-safe usage aggregation",
+      },
+      {
+        name: "prism_run_feedback_owner_created_idx",
+        table: "prism_run_feedback",
+        columns: ["tenant_id", "account_id", "user_id", "created_at", "id"],
+        purpose: "ownership-scoped feedback pagination",
+      },
+      {
+        name: "prism_run_feedback_run_created_idx",
+        table: "prism_run_feedback",
+        columns: ["run_id", "created_at", "id"],
+        purpose: "run feedback lookup",
+      },
+      {
+        name: "prism_run_feedback_trace_created_idx",
+        table: "prism_run_feedback",
+        columns: ["trace_id", "created_at", "id"],
+        purpose: "trace feedback lookup",
+      },
+      {
+        name: "prism_agent_definitions_name_version_idx",
+        table: "prism_agent_definitions",
+        columns: ["name", "version"],
+        purpose: "definition lookup",
+      },
+      {
+        name: "prism_legal_holds_owner_resource_idx",
+        table: "prism_legal_holds",
+        columns: ["tenant_id", "account_id", "user_id", "resource_kind", "resource_id"],
+        purpose: "hold lookup by owned resource",
+      },
+      {
+        name: "prism_legal_holds_created_id_idx",
+        table: "prism_legal_holds",
+        columns: ["created_at", "id"],
+        purpose: "hold export pagination",
+      },
+      {
+        name: "prism_tenant_quotas_owner_kind_idx",
+        table: "prism_tenant_quotas",
+        columns: ["tenant_id", "account_id", "user_id", "resource_kind"],
+        purpose: "tenant quota lookup",
+      },
+      {
+        name: "prism_migrations_name_version_idx",
+        table: "prism_migrations",
+        columns: ["name", "version"],
+        purpose: "applied-migration lookup (table constraint enforces uniqueness)",
+      },
     ],
   };
 }
 
 function migrationStep(version: number, name: string, description: string): PersistenceMigrationStep {
   const model = createPersistenceSchemaModel();
-  const content = version === 1
-    ? {
-        tables: model.tables
-          .filter((table) => table.name !== "prism_run_feedback")
-          .map((table) => table.name === "prism_usage"
-            ? { ...table, columns: table.columns.filter((column) => !["scope", "turn", "attempt"].includes(column.name)) }
-            : table),
-        indexes: model.indexes.filter((index) => !index.name.startsWith("prism_usage_session_scope_") && !index.name.startsWith("prism_run_feedback_")),
-      }
-    : version === 2
-      ? { table: "prism_usage", columns: ["scope", "turn", "attempt"], indexes: ["prism_usage_session_scope_recorded_idx"] }
-      : version === 3
-        ? { tables: ["prism_run_feedback"], indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name) }
-        : version === 4
-          // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
-          ? { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
-          : version === 5
-            ? { tables: ["prism_legal_holds", "prism_tenant_quotas"], indexes: ["prism_legal_holds_owner_resource_idx", "prism_legal_holds_created_id_idx", "prism_tenant_quotas_owner_kind_idx"] }
-            : (() => { throw new Error(`Unknown migration version ${version}`); })();
+  const content =
+    version === 1
+      ? {
+          tables: model.tables
+            .filter((table) => table.name !== "prism_run_feedback")
+            .map((table) =>
+              table.name === "prism_usage"
+                ? { ...table, columns: table.columns.filter((column) => !["scope", "turn", "attempt"].includes(column.name)) }
+                : table,
+            ),
+          indexes: model.indexes.filter(
+            (index) => !index.name.startsWith("prism_usage_session_scope_") && !index.name.startsWith("prism_run_feedback_"),
+          ),
+        }
+      : version === 2
+        ? { table: "prism_usage", columns: ["scope", "turn", "attempt"], indexes: ["prism_usage_session_scope_recorded_idx"] }
+        : version === 3
+          ? {
+              tables: ["prism_run_feedback"],
+              indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name),
+            }
+          : version === 4
+            ? // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
+              { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
+            : version === 5
+              ? {
+                  tables: ["prism_legal_holds", "prism_tenant_quotas"],
+                  indexes: [
+                    "prism_legal_holds_owner_resource_idx",
+                    "prism_legal_holds_created_id_idx",
+                    "prism_tenant_quotas_owner_kind_idx",
+                  ],
+                }
+              : (() => {
+                  throw new Error(`Unknown migration version ${version}`);
+                })();
   return {
     version,
     name,
@@ -481,13 +624,33 @@ export function createPersistenceMigrationContract(): PersistenceMigrationContra
 /** Indexed cursor columns adapters must support for paginated reads. */
 export function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[] {
   return [
-    { table: "prism_session_entries", columns: ["session_id", "timestamp", "id"], supportsOrder: ["asc", "desc"], purpose: "entry listing and branch paging" },
+    {
+      table: "prism_session_entries",
+      columns: ["session_id", "timestamp", "id"],
+      supportsOrder: ["asc", "desc"],
+      purpose: "entry listing and branch paging",
+    },
     { table: "prism_runs", columns: ["session_id", "started_at", "id"], supportsOrder: ["asc", "desc"], purpose: "run history" },
-    { table: "prism_agent_events", columns: ["run_id", "sequence"], supportsOrder: ["asc", "desc"], purpose: "stable per-run event timeline" },
-    { table: "prism_agent_events", columns: ["session_id", "timestamp", "id"], supportsOrder: ["asc", "desc"], purpose: "session event stream" },
+    {
+      table: "prism_agent_events",
+      columns: ["run_id", "sequence"],
+      supportsOrder: ["asc", "desc"],
+      purpose: "stable per-run event timeline",
+    },
+    {
+      table: "prism_agent_events",
+      columns: ["session_id", "timestamp", "id"],
+      supportsOrder: ["asc", "desc"],
+      purpose: "session event stream",
+    },
     { table: "prism_usage", columns: ["run_id", "recorded_at", "id"], supportsOrder: ["asc", "desc"], purpose: "run usage totals" },
     { table: "prism_tool_calls", columns: ["run_id", "started_at"], supportsOrder: ["asc", "desc"], purpose: "run tool-call listing" },
-    { table: "prism_run_feedback", columns: ["tenant_id", "account_id", "user_id", "created_at", "id"], supportsOrder: ["asc", "desc"], purpose: "owned feedback listing" },
+    {
+      table: "prism_run_feedback",
+      columns: ["tenant_id", "account_id", "user_id", "created_at", "id"],
+      supportsOrder: ["asc", "desc"],
+      purpose: "owned feedback listing",
+    },
   ];
 }
 
@@ -529,7 +692,13 @@ export function assertPersistenceSchemaModel(model: PersistenceSchemaModel): voi
   }
 
   const indexTables = new Set(model.indexes.map((index) => index.table));
-  for (const requiredIndex of ["prism_session_append_idempotency", "prism_session_entries", "prism_agent_events", "prism_runs", "prism_run_feedback"]) {
+  for (const requiredIndex of [
+    "prism_session_append_idempotency",
+    "prism_session_entries",
+    "prism_agent_events",
+    "prism_runs",
+    "prism_run_feedback",
+  ]) {
     if (!indexTables.has(requiredIndex as PersistenceTableName)) {
       throw new Error(`Persistence schema missing indexes for ${requiredIndex}`);
     }
@@ -608,7 +777,10 @@ function schemaKey(columns: readonly string[]): string {
 }
 
 function normalizedDefault(value: string | undefined): string | undefined {
-  return value?.trim().toLowerCase().replace(/::[a-z_ ]+$/, "");
+  return value
+    ?.trim()
+    .toLowerCase()
+    .replace(/::[a-z_ ]+$/, "");
 }
 
 function compatibleColumnType(dialect: PersistenceSchemaDialect, actual: string, expected: PersistenceColumnType): boolean {
@@ -635,7 +807,8 @@ export function assertPersistenceSchemaShape(
   for (const expected of model.tables) {
     const actual = actualTables.get(expected.name);
     if (!actual) throw new Error(`Persistence schema missing table ${expected.name}`);
-    if (actual.columns.length !== expected.columns.length) throw new Error(`Persistence schema table ${expected.name} has unexpected columns`);
+    if (actual.columns.length !== expected.columns.length)
+      throw new Error(`Persistence schema table ${expected.name} has unexpected columns`);
     const actualColumns = new Map(actual.columns.map((column) => [column.name, column]));
     for (const column of expected.columns) {
       const found = actualColumns.get(column.name);
@@ -659,7 +832,9 @@ export function assertPersistenceSchemaShape(
         throw new Error(`Persistence schema table ${expected.name} missing unique key (${key.join(", ")})`);
       }
     }
-    const foreign = new Set(actual.foreignKeys.map((key) => `${schemaKey(key.columns)}>${key.referencesTable}:${schemaKey(key.referencesColumns)}`));
+    const foreign = new Set(
+      actual.foreignKeys.map((key) => `${schemaKey(key.columns)}>${key.referencesTable}:${schemaKey(key.referencesColumns)}`),
+    );
     for (const key of expected.foreignKeys ?? []) {
       if (!foreign.has(`${schemaKey(key.columns)}>${key.referencesTable}:${schemaKey(key.referencesColumns)}`)) {
         throw new Error(`Persistence schema table ${expected.name} missing foreign key (${key.columns.join(", ")})`);
@@ -670,7 +845,11 @@ export function assertPersistenceSchemaShape(
   for (const expected of model.indexes) {
     const actual = actualIndexes.get(expected.name);
     if (!actual) throw new Error(`Persistence schema missing required index ${expected.name}`);
-    if (actual.table !== expected.table || schemaKey(actual.columns) !== schemaKey(expected.columns) || actual.unique !== (expected.unique === true)) {
+    if (
+      actual.table !== expected.table ||
+      schemaKey(actual.columns) !== schemaKey(expected.columns) ||
+      actual.unique !== (expected.unique === true)
+    ) {
       throw new Error(`Persistence schema index ${expected.name} has incompatible definition`);
     }
   }

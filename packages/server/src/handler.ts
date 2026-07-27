@@ -1,4 +1,13 @@
-import { AgentRunStateError, assertIdentityActive, assertIdentityMatchesOwnership, type Agent, type AgentEvent, type AgentSession, type JsonObject, type Message } from "@arnilo/prism";
+import {
+  type Agent,
+  type AgentEvent,
+  AgentRunStateError,
+  type AgentSession,
+  assertIdentityActive,
+  assertIdentityMatchesOwnership,
+  type JsonObject,
+  type Message,
+} from "@arnilo/prism";
 import {
   cancelWorkflowRun,
   createWorkflowEventBus,
@@ -12,14 +21,13 @@ import {
   type WorkflowScheduleStatus,
 } from "@arnilo/prism-workflows";
 import { isAdmitOperation } from "./drain.js";
-import { resolvePrismServerLimits, type ResolvedPrismServerLimits } from "./limits.js";
+import { type ResolvedPrismServerLimits, resolvePrismServerLimits } from "./limits.js";
 import type {
   CreatePrismHandlerOptions,
   PrismAgentExposure,
   PrismRequestHandler,
   PrismServerAuthorization,
   PrismServerOperation,
-  PrismWorkflowExposure,
 } from "./types.js";
 import { PrismServerError } from "./types.js";
 
@@ -37,25 +45,27 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
 
   return async (request) => {
     const origin = request.headers.get("origin");
-    const corsHeaders = origin && options.allowedOrigins?.includes(origin)
-      ? { "access-control-allow-origin": origin, vary: "origin" }
-      : undefined;
+    const corsHeaders =
+      origin && options.allowedOrigins?.includes(origin) ? { "access-control-allow-origin": origin, vary: "origin" } : undefined;
     const respond = (response: Response) => addHeaders(response, corsHeaders);
 
     try {
       assertRequestPolicy(request, options.allowedHosts, options.allowedOrigins);
       const route = parseRoute(request, base);
       if (request.method === "OPTIONS") {
-        if (!origin || !options.allowedOrigins?.includes(origin)) throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
-        return respond(new Response(null, {
-          status: 204,
-          headers: {
-            "access-control-allow-origin": origin,
-            "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
-            "access-control-allow-headers": "content-type, authorization",
-            vary: "origin",
-          },
-        }));
+        if (!origin || !options.allowedOrigins?.includes(origin))
+          throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
+        return respond(
+          new Response(null, {
+            status: 204,
+            headers: {
+              "access-control-allow-origin": origin,
+              "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+              "access-control-allow-headers": "content-type, authorization",
+              vary: "origin",
+            },
+          }),
+        );
       }
       if (!route) throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
 
@@ -90,21 +100,25 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
         if (!selectedSchedules) throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
-          const schedules = typeof selectedSchedules === "function"
-            ? await awaitWithSignal(Promise.resolve(selectedSchedules(authorization, owned.signal)), owned.signal)
-            : selectedSchedules;
+          const schedules =
+            typeof selectedSchedules === "function"
+              ? await awaitWithSignal(Promise.resolve(selectedSchedules(authorization, owned.signal)), owned.signal)
+              : selectedSchedules;
           if (!sameOwnership(authorization.ownership, schedules.ownership)) {
             throw new PrismServerError("Forbidden", 403, "ERR_PRISM_SERVER_FORBIDDEN");
           }
           if (route.kind === "schedule-list") {
             const query = new URL(request.url).searchParams;
             const status = query.get("status");
-            const result = await awaitWithSignal(schedules.list({
-              status: readScheduleStatus(status),
-              cursor: query.get("cursor") ?? undefined,
-              limit: query.has("limit") ? readPositiveInteger(query.get("limit"), "limit") : undefined,
-              signal: owned.signal,
-            }), owned.signal);
+            const result = await awaitWithSignal(
+              schedules.list({
+                status: readScheduleStatus(status),
+                cursor: query.get("cursor") ?? undefined,
+                limit: query.has("limit") ? readPositiveInteger(query.get("limit"), "limit") : undefined,
+                signal: owned.signal,
+              }),
+              owned.signal,
+            );
             return respond(json(result, 200, limits, options));
           }
           if (route.kind === "schedule-delete") {
@@ -113,27 +127,49 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
           }
           const body = await readJsonObject(request, limits.maxRequestBytes, owned.signal);
           if (route.kind === "schedule-create") {
-            const result = await awaitWithSignal(schedules.create({
-              id: route.capabilityId,
-              workflowId: readRequiredId(body.workflowId, "workflowId"),
-              nextRunAt: readRequiredString(body.nextRunAt, "nextRunAt"),
-              input: body.input,
-              intervalMs: body.intervalMs === undefined ? undefined : readPositiveInteger(body.intervalMs, "intervalMs"),
-              calculatorId: readOptionalId(body.calculatorId, "calculatorId"),
-              paused: body.paused === true,
-              metadata: readOptionalObject(body.metadata, "metadata"),
-            }, owned.signal), owned.signal);
+            const result = await awaitWithSignal(
+              schedules.create(
+                {
+                  id: route.capabilityId,
+                  workflowId: readRequiredId(body.workflowId, "workflowId"),
+                  nextRunAt: readRequiredString(body.nextRunAt, "nextRunAt"),
+                  input: body.input,
+                  intervalMs: body.intervalMs === undefined ? undefined : readPositiveInteger(body.intervalMs, "intervalMs"),
+                  calculatorId: readOptionalId(body.calculatorId, "calculatorId"),
+                  paused: body.paused === true,
+                  metadata: readOptionalObject(body.metadata, "metadata"),
+                },
+                owned.signal,
+              ),
+              owned.signal,
+            );
             return respond(json(result, 201, limits, options));
           }
           if (route.kind === "schedule-pause") {
-            return respond(json(await awaitWithSignal(schedules.pause(route.capabilityId, owned.signal), owned.signal), 200, limits, options));
+            return respond(
+              json(await awaitWithSignal(schedules.pause(route.capabilityId, owned.signal), owned.signal), 200, limits, options),
+            );
           }
           if (route.kind === "schedule-resume") {
             const nextRunAt = body.nextRunAt === undefined ? undefined : readRequiredString(body.nextRunAt, "nextRunAt");
-            return respond(json(await awaitWithSignal(schedules.resume(route.capabilityId, nextRunAt, owned.signal), owned.signal), 200, limits, options));
+            return respond(
+              json(
+                await awaitWithSignal(schedules.resume(route.capabilityId, nextRunAt, owned.signal), owned.signal),
+                200,
+                limits,
+                options,
+              ),
+            );
           }
           const idempotencyKey = readRequiredId(body.idempotencyKey, "idempotencyKey");
-          return respond(json(await awaitWithSignal(schedules.trigger(route.capabilityId, { idempotencyKey, signal: owned.signal }), owned.signal), 200, limits, options));
+          return respond(
+            json(
+              await awaitWithSignal(schedules.trigger(route.capabilityId, { idempotencyKey, signal: owned.signal }), owned.signal),
+              200,
+              limits,
+              options,
+            ),
+          );
         } finally {
           owned.dispose();
         }
@@ -145,11 +181,24 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
         if (route.kind === "agent-status") {
           const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
           try {
-            return respond(json(await awaitWithSignal(exposure.lifecycle.status({ runId: route.runId }, {
-              ownership: authorization.ownership,
-              signal: owned.signal,
-              agentId: route.capabilityId,
-            }), owned.signal), 200, limits, options));
+            return respond(
+              json(
+                await awaitWithSignal(
+                  exposure.lifecycle.status(
+                    { runId: route.runId },
+                    {
+                      ownership: authorization.ownership,
+                      signal: owned.signal,
+                      agentId: route.capabilityId,
+                    },
+                  ),
+                  owned.signal,
+                ),
+                200,
+                limits,
+                options,
+              ),
+            );
           } finally {
             owned.dispose();
           }
@@ -158,11 +207,21 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
           const body = await readJsonObject(request, limits.maxRequestBytes, owned.signal);
-          return respond(json(await awaitWithSignal(exposure.lifecycle.resume({ runId: route.runId }, readAgentResume(body), {
-            ownership: authorization.ownership,
-            signal: owned.signal,
-            agentId: route.capabilityId,
-          }), owned.signal), 200, limits, options));
+          return respond(
+            json(
+              await awaitWithSignal(
+                exposure.lifecycle.resume({ runId: route.runId }, readAgentResume(body), {
+                  ownership: authorization.ownership,
+                  signal: owned.signal,
+                  agentId: route.capabilityId,
+                }),
+                owned.signal,
+              ),
+              200,
+              limits,
+              options,
+            ),
+          );
         } finally {
           owned.dispose();
           release();
@@ -213,13 +272,16 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
           const body = await readJsonObject(request, limits.maxRequestBytes, owned.signal);
-          const result = await awaitWithSignal(enqueueWorkflow(exposure.definition, body.input, {
-            checkpoints: exposure.checkpoints,
-            ownership: authorization.ownership,
-            runId: readOptionalId(body.runId, "runId"),
-            metadata: { ...exposure.runOptions?.metadata, ...authorization.metadata },
-            signal: owned.signal,
-          }), owned.signal);
+          const result = await awaitWithSignal(
+            enqueueWorkflow(exposure.definition, body.input, {
+              checkpoints: exposure.checkpoints,
+              ownership: authorization.ownership,
+              runId: readOptionalId(body.runId, "runId"),
+              metadata: { ...exposure.runOptions?.metadata, ...authorization.metadata },
+              signal: owned.signal,
+            }),
+            owned.signal,
+          );
           return respond(json(result, 202, limits, options));
         } finally {
           owned.dispose();
@@ -230,18 +292,25 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
           const body = await readJsonObject(request, limits.maxRequestBytes, owned.signal);
-          const result = await awaitWithSignal(replayWorkflow(exposure.definition, {
-            sourceRunId: route.runId,
-            fromNodeId: readRequiredId(body.fromNodeId, "fromNodeId"),
-            runId: readOptionalId(body.runId, "runId"),
-          }, {
-            ...exposure.runOptions,
-            checkpoints: exposure.checkpoints,
-            ownership: authorization.ownership,
-            metadata: { ...exposure.runOptions?.metadata, ...authorization.metadata },
-            redactor: options.redactor,
-            signal: owned.signal,
-          }), owned.signal);
+          const result = await awaitWithSignal(
+            replayWorkflow(
+              exposure.definition,
+              {
+                sourceRunId: route.runId,
+                fromNodeId: readRequiredId(body.fromNodeId, "fromNodeId"),
+                runId: readOptionalId(body.runId, "runId"),
+              },
+              {
+                ...exposure.runOptions,
+                checkpoints: exposure.checkpoints,
+                ownership: authorization.ownership,
+                metadata: { ...exposure.runOptions?.metadata, ...authorization.metadata },
+                redactor: options.redactor,
+                signal: owned.signal,
+              },
+            ),
+            owned.signal,
+          );
           return respond(json(result, 200, limits, options));
         } finally {
           owned.dispose();
@@ -251,12 +320,15 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
       if (route.kind === "workflow-status") {
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
-          const record = await awaitWithSignal(getWorkflowRun(exposure.checkpoints, {
-            workflowId: exposure.definition.id,
-            runId: route.runId,
-            ownership: authorization.ownership,
-            signal: owned.signal,
-          }), owned.signal);
+          const record = await awaitWithSignal(
+            getWorkflowRun(exposure.checkpoints, {
+              workflowId: exposure.definition.id,
+              runId: route.runId,
+              ownership: authorization.ownership,
+              signal: owned.signal,
+            }),
+            owned.signal,
+          );
           if (!record) throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
           return respond(json(record, 200, limits, options));
         } finally {
@@ -266,14 +338,17 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
       if (route.kind === "workflow-cancel") {
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
-          const result = await awaitWithSignal(cancelWorkflowRun({
-            workflowId: exposure.definition.id,
-            runId: route.runId,
-            workflow: exposure.definition,
-            checkpoints: exposure.checkpoints,
-            ownership: authorization.ownership,
-            signal: owned.signal,
-          }), owned.signal);
+          const result = await awaitWithSignal(
+            cancelWorkflowRun({
+              workflowId: exposure.definition.id,
+              runId: route.runId,
+              workflow: exposure.definition,
+              checkpoints: exposure.checkpoints,
+              ownership: authorization.ownership,
+              signal: owned.signal,
+            }),
+            owned.signal,
+          );
           return respond(json(result, 200, limits, options));
         } finally {
           owned.dispose();
@@ -284,18 +359,25 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
           const body = await readJsonObject(request, limits.maxRequestBytes, owned.signal);
-          const result = await awaitWithSignal(resumeWorkflow(exposure.definition, {
-            workflowId: exposure.definition.id,
-            runId: route.runId,
-          }, {
-            ...exposure.runOptions,
-            checkpoints: exposure.checkpoints,
-            ownership: authorization.ownership,
-            metadata: { ...exposure.runOptions?.metadata, ...authorization.metadata },
-            redactor: options.redactor,
-            signal: owned.signal,
-            resume: readResume(body),
-          }), owned.signal);
+          const result = await awaitWithSignal(
+            resumeWorkflow(
+              exposure.definition,
+              {
+                workflowId: exposure.definition.id,
+                runId: route.runId,
+              },
+              {
+                ...exposure.runOptions,
+                checkpoints: exposure.checkpoints,
+                ownership: authorization.ownership,
+                metadata: { ...exposure.runOptions?.metadata, ...authorization.metadata },
+                redactor: options.redactor,
+                signal: owned.signal,
+                resume: readResume(body),
+              },
+            ),
+            owned.signal,
+          );
           return respond(json(result, 200, limits, options));
         } finally {
           owned.dispose();
@@ -362,7 +444,11 @@ type Route =
   | { readonly kind: "agent-run" | "agent-stream"; readonly operation: "agent.run" | "agent.stream"; readonly capabilityId: string }
   | { readonly kind: "agent-status"; readonly operation: "agent.status"; readonly capabilityId: string; readonly runId: string }
   | { readonly kind: "agent-resume"; readonly operation: "agent.resume"; readonly capabilityId: string; readonly runId: string }
-  | { readonly kind: "workflow-run" | "workflow-stream" | "workflow-enqueue"; readonly operation: "workflow.run" | "workflow.stream" | "workflow.enqueue"; readonly capabilityId: string }
+  | {
+      readonly kind: "workflow-run" | "workflow-stream" | "workflow-enqueue";
+      readonly operation: "workflow.run" | "workflow.stream" | "workflow.enqueue";
+      readonly capabilityId: string;
+    }
   | { readonly kind: "workflow-status"; readonly operation: "workflow.status"; readonly capabilityId: string; readonly runId: string }
   | { readonly kind: "workflow-cancel"; readonly operation: "workflow.cancel"; readonly capabilityId: string; readonly runId: string }
   | { readonly kind: "workflow-resume"; readonly operation: "workflow.resume"; readonly capabilityId: string; readonly runId: string }
@@ -390,10 +476,14 @@ function parseRoute(request: Request, base: string): Route | undefined {
   if (!id || !validId(id)) return undefined;
   if (group === "schedules") {
     if (parts.length === 2 && request.method === "POST") return { kind: "schedule-create", operation: "schedule.create", capabilityId: id };
-    if (parts.length === 2 && request.method === "DELETE") return { kind: "schedule-delete", operation: "schedule.delete", capabilityId: id };
-    if (parts.length === 3 && segment === "pause" && request.method === "POST") return { kind: "schedule-pause", operation: "schedule.pause", capabilityId: id };
-    if (parts.length === 3 && segment === "resume" && request.method === "POST") return { kind: "schedule-resume", operation: "schedule.resume", capabilityId: id };
-    if (parts.length === 3 && segment === "trigger" && request.method === "POST") return { kind: "schedule-trigger", operation: "schedule.trigger", capabilityId: id };
+    if (parts.length === 2 && request.method === "DELETE")
+      return { kind: "schedule-delete", operation: "schedule.delete", capabilityId: id };
+    if (parts.length === 3 && segment === "pause" && request.method === "POST")
+      return { kind: "schedule-pause", operation: "schedule.pause", capabilityId: id };
+    if (parts.length === 3 && segment === "resume" && request.method === "POST")
+      return { kind: "schedule-resume", operation: "schedule.resume", capabilityId: id };
+    if (parts.length === 3 && segment === "trigger" && request.method === "POST")
+      return { kind: "schedule-trigger", operation: "schedule.trigger", capabilityId: id };
     return undefined;
   }
   if (group === "agents" && segment === "runs" && parts.length === 3 && request.method === "POST") {
@@ -404,7 +494,8 @@ function parseRoute(request: Request, base: string): Route | undefined {
   }
   if (group === "agents" && segment === "runs" && runId && validId(runId)) {
     if (parts.length === 4 && request.method === "GET") return { kind: "agent-status", operation: "agent.status", capabilityId: id, runId };
-    if (parts.length === 5 && action === "resume" && request.method === "POST") return { kind: "agent-resume", operation: "agent.resume", capabilityId: id, runId };
+    if (parts.length === 5 && action === "resume" && request.method === "POST")
+      return { kind: "agent-resume", operation: "agent.resume", capabilityId: id, runId };
   }
   if (group !== "workflows") return undefined;
   if (segment === "runs" && parts.length === 3 && request.method === "POST") {
@@ -489,14 +580,18 @@ async function createSession(
 
 async function readJsonObject(request: Request, maxBytes: number, signal: AbortSignal): Promise<JsonObject> {
   const type = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
-  if (type !== "application/json") throw new PrismServerError("Content-Type must be application/json", 415, "ERR_PRISM_SERVER_CONTENT_TYPE");
+  if (type !== "application/json")
+    throw new PrismServerError("Content-Type must be application/json", 415, "ERR_PRISM_SERVER_CONTENT_TYPE");
   const declared = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maxBytes) throw new PrismServerError("Request body too large", 413, "ERR_PRISM_SERVER_BODY_LIMIT");
+  if (Number.isFinite(declared) && declared > maxBytes)
+    throw new PrismServerError("Request body too large", 413, "ERR_PRISM_SERVER_BODY_LIMIT");
   const reader = request.body?.getReader();
   if (!reader) throw new PrismServerError("JSON body is required", 400, "ERR_PRISM_SERVER_BODY");
   const chunks: Uint8Array[] = [];
   let size = 0;
-  const abort = () => { void reader.cancel(signal.reason); };
+  const abort = () => {
+    void reader.cancel(signal.reason);
+  };
   if (signal.aborted) abort();
   else signal.addEventListener("abort", abort, { once: true });
   try {
@@ -580,13 +675,15 @@ function readRequiredId(value: unknown, name: string): string {
 
 function readPositiveInteger(value: unknown, name: string): number {
   const number = typeof value === "string" ? Number(value) : value;
-  if (!Number.isSafeInteger(number) || Number(number) < 1) throw new PrismServerError(`${name} must be a positive safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (!Number.isSafeInteger(number) || Number(number) < 1)
+    throw new PrismServerError(`${name} must be a positive safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
   return Number(number);
 }
 
 function readOptionalObject(value: unknown, name: string): JsonObject | undefined {
   if (value === undefined) return undefined;
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new PrismServerError(`${name} must be an object`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new PrismServerError(`${name} must be an object`, 400, "ERR_PRISM_SERVER_INPUT");
   return value as JsonObject;
 }
 
@@ -665,7 +762,9 @@ function sse(
   let events = 0;
   let bytes = 0;
   let finished = false;
-  const onAbort = () => { void finish(owned.signal.reason); };
+  const onAbort = () => {
+    void finish(owned.signal.reason);
+  };
   const finish = async (reason?: unknown) => {
     if (finished) return;
     finished = true;
@@ -690,7 +789,9 @@ function sse(
         events += 1;
         bytes += chunk.byteLength;
         if (chunk.byteLength > limits.maxEventBytes || events > limits.maxStreamEvents || bytes > limits.maxStreamBytes) {
-          const error = encoder.encode('data: {"type":"error","error":{"code":"ERR_PRISM_SERVER_STREAM_LIMIT","message":"stream limit exceeded"}}\n\n');
+          const error = encoder.encode(
+            'data: {"type":"error","error":{"code":"ERR_PRISM_SERVER_STREAM_LIMIT","message":"stream limit exceeded"}}\n\n',
+          );
           if (error.byteLength <= limits.maxEventBytes) controller.enqueue(error);
           await finish(new Error("stream limit exceeded"));
           controller.close();
@@ -721,25 +822,34 @@ function json(value: unknown, status: number, limits: ResolvedPrismServerLimits,
 }
 
 function errorResponse(error: unknown, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response {
-  const workflowCode = error && typeof error === "object" && "code" in error && typeof error.code === "string"
-    ? error.code
-    : undefined;
-  const mapped = workflowCode === "ERR_PRISM_WORKFLOW_SCHEDULE_BUSY"
-    ? { status: 409, code: workflowCode, message: "Schedule is busy" }
-    : workflowCode === "ERR_PRISM_WORKFLOW_SCHEDULE"
-      ? { status: 400, code: workflowCode, message: error instanceof Error ? error.message : "Invalid schedule" }
-      : workflowCode === "ERR_PRISM_WORKFLOW_SCHEDULE_OWNERSHIP"
-        ? { status: 403, code: workflowCode, message: "Forbidden" }
-        : workflowCode === "ERR_PRISM_WORKFLOW_NOT_FOUND"
-          ? { status: 404, code: workflowCode, message: "Not found" }
-          : workflowCode === "ERR_PRISM_WORKFLOW_CHECKPOINT"
-            ? { status: 409, code: workflowCode, message: "Workflow checkpoint operation rejected" }
-            : undefined;
+  const workflowCode = error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : undefined;
+  const mapped =
+    workflowCode === "ERR_PRISM_WORKFLOW_SCHEDULE_BUSY"
+      ? { status: 409, code: workflowCode, message: "Schedule is busy" }
+      : workflowCode === "ERR_PRISM_WORKFLOW_SCHEDULE"
+        ? { status: 400, code: workflowCode, message: error instanceof Error ? error.message : "Invalid schedule" }
+        : workflowCode === "ERR_PRISM_WORKFLOW_SCHEDULE_OWNERSHIP"
+          ? { status: 403, code: workflowCode, message: "Forbidden" }
+          : workflowCode === "ERR_PRISM_WORKFLOW_NOT_FOUND"
+            ? { status: 404, code: workflowCode, message: "Not found" }
+            : workflowCode === "ERR_PRISM_WORKFLOW_CHECKPOINT"
+              ? { status: 409, code: workflowCode, message: "Workflow checkpoint operation rejected" }
+              : undefined;
   const known = error instanceof PrismServerError;
   const agentState = error instanceof AgentRunStateError;
-  const status = mapped?.status ?? (agentState ? 404 : known ? error.status : error instanceof DOMException && error.name === "AbortError" ? 499 : 500);
-  const code = mapped?.code ?? (agentState ? "ERR_PRISM_SERVER_NOT_FOUND" : known ? error.code : status === 499 ? "ERR_PRISM_SERVER_ABORTED" : "ERR_PRISM_SERVER_INTERNAL");
-  const message = mapped?.message ?? (agentState ? "Not found" : known ? error.message : status === 499 ? "Request aborted" : "Internal server error");
+  const status =
+    mapped?.status ?? (agentState ? 404 : known ? error.status : error instanceof DOMException && error.name === "AbortError" ? 499 : 500);
+  const code =
+    mapped?.code ??
+    (agentState
+      ? "ERR_PRISM_SERVER_NOT_FOUND"
+      : known
+        ? error.code
+        : status === 499
+          ? "ERR_PRISM_SERVER_ABORTED"
+          : "ERR_PRISM_SERVER_INTERNAL");
+  const message =
+    mapped?.message ?? (agentState ? "Not found" : known ? error.message : status === 499 ? "Request aborted" : "Internal server error");
   try {
     const response = json({ error: { code, message } }, status, limits, options);
     if (known && error.headers) return addHeaders(response, error.headers);

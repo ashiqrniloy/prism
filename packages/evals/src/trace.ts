@@ -1,10 +1,5 @@
-import type {
-  AgentEventRecord,
-  ProductionPersistenceStore,
-  RunRecord,
-  ToolCallRecord,
-  UsageRecord,
-} from "@arnilo/prism";
+import type { AgentEventRecord, ProductionPersistenceStore, RunRecord, ToolCallRecord, UsageRecord } from "@arnilo/prism";
+import { resolveRedactor } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
 import {
   DEFAULT_TRACE_MAX_BYTES,
@@ -15,7 +10,7 @@ import {
   HARD_TRACE_PAGES,
 } from "./limits.js";
 import type { EvaluationTrace, TraceResolver, TraceResolverInput } from "./types.js";
-import { exactOwnershipMatches, resolveRedactor } from "./util.js";
+import { exactOwnershipMatches } from "./util.js";
 
 function limit(value: number | undefined, fallback: number, hard: number, name: string): number {
   const selected = value ?? fallback;
@@ -54,7 +49,10 @@ export function createPersistenceTraceResolver(store: ProductionPersistenceStore
     const query = { sessionId: input.sessionId, runId: input.runId, order: "asc" as const, limit: pageSize, ...ownership };
 
     const [runs, events, toolCalls, usage] = await Promise.all([
-      pages<RunRecord>((cursor) => store.queryRuns({ sessionId: input.sessionId, cursor, order: "asc", limit: pageSize, ...ownership }), maxPages),
+      pages<RunRecord>(
+        (cursor) => store.queryRuns({ sessionId: input.sessionId, cursor, order: "asc", limit: pageSize, ...ownership }),
+        maxPages,
+      ),
       pages<AgentEventRecord>((cursor) => store.queryEvents({ ...query, cursor }), maxPages),
       pages<ToolCallRecord>((cursor) => store.queryToolCalls({ ...query, cursor }), maxPages),
       pages<UsageRecord>((cursor) => store.queryUsage({ ...query, cursor }), maxPages),
@@ -70,9 +68,7 @@ export function createPersistenceTraceResolver(store: ProductionPersistenceStore
     }
 
     const redactor = resolveRedactor(input.redactor, input.secrets);
-    const trace = redactor
-      ? redactor.redact({ run, events, toolCalls, usage })
-      : { run, events, toolCalls, usage };
+    const trace = redactor ? redactor.redact({ run, events, toolCalls, usage }) : { run, events, toolCalls, usage };
     if (Buffer.byteLength(JSON.stringify(trace)) > maxBytes) {
       throw new EvalError("evaluation trace byte limit exceeded", "ERR_PRISM_EVAL_TRACE_BOUNDS");
     }

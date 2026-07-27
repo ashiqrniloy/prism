@@ -8,10 +8,10 @@ import type { JsonObject, ProviderRequest } from "@arnilo/prism";
  */
 export function openCodeGoPreserveThinking(request: ProviderRequest): boolean {
   const value =
-    request.options?.compat?.preserveThinking
-    ?? request.options?.compat?.preserve_thinking
-    ?? request.model.compat?.preserveThinking
-    ?? request.model.compat?.preserve_thinking;
+    request.options?.compat?.preserveThinking ??
+    request.options?.compat?.preserve_thinking ??
+    request.model.compat?.preserveThinking ??
+    request.model.compat?.preserve_thinking;
   if (value === false) return false;
   if (value === true) return true;
   return request.model.capabilities?.reasoning === true;
@@ -33,9 +33,7 @@ export function openCodeGoThinking(request: ProviderRequest): JsonObject | boole
  */
 export function openCodeGoReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
-    request.options?.compat?.reasoning_effort
-    ?? request.options?.compat?.reasoningEffort
-    ?? request.model.compat?.reasoning_effort;
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
   return typeof effort === "string" ? effort : undefined;
 }
 

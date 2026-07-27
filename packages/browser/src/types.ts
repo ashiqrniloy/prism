@@ -145,10 +145,7 @@ export interface PlaywrightPage {
     timeout?: number;
   }): Promise<Buffer>;
   locator(selector: string): PlaywrightLocator;
-  getByRole(
-    role: string,
-    options?: { name?: string | RegExp; exact?: boolean },
-  ): PlaywrightLocator;
+  getByRole(role: string, options?: { name?: string | RegExp; exact?: boolean }): PlaywrightLocator;
   getByLabel(text: string | RegExp, options?: { exact?: boolean }): PlaywrightLocator;
   getByTestId(testId: string | RegExp): PlaywrightLocator;
   getByText(text: string | RegExp, options?: { exact?: boolean }): PlaywrightLocator;

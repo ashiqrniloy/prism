@@ -78,7 +78,12 @@ export function resolvePrismDeploymentLimits(input: PrismDeploymentLimits = {}):
     maxHealthBytes: bounded(input.maxHealthBytes, DEFAULT_MAX_HEALTH_BYTES, HARD_MAX_HEALTH_BYTES, "maxHealthBytes"),
     drainDeadlineMs: bounded(input.drainDeadlineMs, DEFAULT_DRAIN_DEADLINE_MS, HARD_DRAIN_DEADLINE_MS, "drainDeadlineMs"),
     maxReplayEvents: bounded(input.maxReplayEvents, DEFAULT_MAX_REPLAY_EVENTS, HARD_MAX_REPLAY_EVENTS, "maxReplayEvents"),
-    maxReplayCursorBytes: bounded(input.maxReplayCursorBytes, DEFAULT_MAX_REPLAY_CURSOR_BYTES, HARD_MAX_REPLAY_CURSOR_BYTES, "maxReplayCursorBytes"),
+    maxReplayCursorBytes: bounded(
+      input.maxReplayCursorBytes,
+      DEFAULT_MAX_REPLAY_CURSOR_BYTES,
+      HARD_MAX_REPLAY_CURSOR_BYTES,
+      "maxReplayCursorBytes",
+    ),
   };
 }
 

@@ -1,0 +1,21 @@
+ANTHROPIC_API_VERSION	export declare const ANTHROPIC_API_VERSION = "2023-06-01"
+ANTHROPIC_DEFAULT_BASE_URL	export declare const ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com/v1"
+anthropicCacheEnabled	export declare function anthropicCacheEnabled(request: ProviderRequest): boolean
+anthropicEffort	export declare function anthropicEffort(request: ProviderRequest): string | undefined
+anthropicMessagesBody	export declare function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject>
+anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+anthropicModels	export declare const anthropicModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig]
+anthropicOwnedHeaders	export declare function anthropicOwnedHeaders(token: string | undefined, options: ProviderRequestOptions | undefined, userAgent?: string): Record<string, string>
+anthropicPreserveThinking	export declare function anthropicPreserveThinking(request: ProviderRequest): boolean
+anthropicThinking	export declare function anthropicThinking(request: ProviderRequest): JsonObject | undefined
+applyAnthropicCacheControl	export declare function applyAnthropicCacheControl(request: ProviderRequest): readonly Message[]
+createAnthropicMessagesProvider	export declare function createAnthropicMessagesProvider(options?: AnthropicMessagesProviderOptions): AIProvider
+createAnthropicProviderPackage	export declare function createAnthropicProviderPackage(options?: AnthropicProviderPackageOptions): ProviderPackage
+defineAnthropicModel	export declare function defineAnthropicModel(config: AnthropicModelConfig): ModelConfig
+listAnthropicModels	export declare function listAnthropicModels(options?: ListAnthropicModelsOptions): Promise<ModelConfig[]>
+mapAnthropicModel	export declare function mapAnthropicModel(entry: AnthropicModelEntry, options?:
+stripAnthropicOwnedCompat	export declare function stripAnthropicOwnedCompat(compat: JsonObject | undefined): JsonObject
+type AnthropicMessagesProviderOptions	export { type AnthropicMessagesProviderOptions, anthropicOwnedHeaders, createAnthropicMessagesProvider, } from "./provider.js"
+type AnthropicModelConfig	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"
+type AnthropicModelEntry	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"
+type ListAnthropicModelsOptions	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"

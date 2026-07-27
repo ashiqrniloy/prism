@@ -54,10 +54,7 @@ const BLOCKED_SCHEMES = new Set([
   "view-source:",
 ]);
 
-export function classifyBrowserUrl(
-  raw: string,
-  policy: BrowserNetworkPolicy = {},
-): BrowserUrlDecision {
+export function classifyBrowserUrl(raw: string, policy: BrowserNetworkPolicy = {}): BrowserUrlDecision {
   let url: URL;
   try {
     url = new URL(raw);
@@ -104,7 +101,7 @@ export function classifyBrowserUrl(
 
   if (policy.requireContainedProxy !== false) {
     const attestation = policy.containedProxyAttestation;
-    if (!attestation || attestation.denyDirectEgress !== true || !attestation.proxyEndpoint) {
+    if (attestation?.denyDirectEgress !== true || !attestation.proxyEndpoint) {
       return {
         allowed: false,
         reason: "contained proxy attestation required for external browser egress",
@@ -124,7 +121,10 @@ export function classifyBrowserUrl(
 }
 
 export function classifyHost(hostname: string): "public" | "loopback" | "private" | "link-local" | "ula" | "invalid" {
-  const host = hostname.trim().toLowerCase().replace(/^\[|\]$/g, "");
+  const host = hostname
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "");
   if (!host) return "invalid";
   if (host === "localhost" || host.endsWith(".localhost")) return "loopback";
   if (host === "0.0.0.0" || host === "::" || host === "0:0:0:0:0:0:0:0") return "loopback";
@@ -167,10 +167,7 @@ function isIpv4(host: string): boolean {
   });
 }
 
-export async function assertBrowserUrlAllowed(
-  raw: string,
-  policy: BrowserNetworkPolicy = {},
-): Promise<URL> {
+export async function assertBrowserUrlAllowed(raw: string, policy: BrowserNetworkPolicy = {}): Promise<URL> {
   const decision = classifyBrowserUrl(raw, policy);
   if (!decision.allowed) {
     throw new BrowserError("ERR_PRISM_BROWSER_NETWORK", decision.reason);
@@ -198,10 +195,7 @@ export interface InstallNetworkRoutingOptions {
 export async function installNetworkRouting(options: InstallNetworkRoutingOptions): Promise<() => void> {
   const { context, policy, limits, budget } = options;
   if (typeof context.route !== "function") {
-    throw new BrowserError(
-      "ERR_PRISM_BROWSER",
-      "BrowserContext.route is required for network policy enforcement",
-    );
+    throw new BrowserError("ERR_PRISM_BROWSER", "BrowserContext.route is required for network policy enforcement");
   }
 
   const handler = async (route: PlaywrightRoute): Promise<void> => {

@@ -1,10 +1,10 @@
 import {
-  redactSecrets,
-  resolveCredentialValue,
   type CredentialValueSource,
   type JsonObject,
   type JsonValue,
   type ModelConfig,
+  redactSecrets,
+  resolveCredentialValue,
 } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
@@ -99,10 +99,7 @@ export async function listZaiModels(options: ListZaiModelsOptions = {}): Promise
  * Map a sparse OpenAI-compatible `/models` entry to Prism `ModelConfig`.
  * Limits / thinking defaults are inferred from official Chat Completions model codes.
  */
-export function mapZaiModel(
-  entry: ZaiModelEntry,
-  options: { readonly provider?: string } = {},
-): ModelConfig {
+export function mapZaiModel(entry: ZaiModelEntry, options: { readonly provider?: string } = {}): ModelConfig {
   if (!entry || typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error("Z.AI model entry missing id");
   }
@@ -224,12 +221,7 @@ function limitsForZaiModel(modelId: string): ModelConfig["limits"] | undefined {
 
 function looksLikeReasoningModel(modelId: string): boolean {
   const id = modelId.toLowerCase();
-  return (
-    id.includes("glm-5")
-    || id.includes("glm-4.7")
-    || id.includes("glm-4.6")
-    || id.includes("glm-4.5")
-  );
+  return id.includes("glm-5") || id.includes("glm-4.7") || id.includes("glm-4.6") || id.includes("glm-4.5");
 }
 
 function looksLikeVisionModel(modelId: string): boolean {

@@ -1,13 +1,13 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
+  type ConfigProvider,
   createContributionRegistries,
   definePrismManifest,
   loadConfigLayers,
+  type ManifestContributionKind,
   mergeConfigLayers,
   parsePrismManifest,
-  type ConfigProvider,
-  type ManifestContributionKind,
 } from "../index.js";
 
 const base = {
@@ -75,16 +75,17 @@ describe("configuration and manifests", () => {
       { name: "host", load: () => ({ demo: { enabled: true } }) },
     ];
 
-    assert.deepEqual(await loadConfigLayers(providers), [
-      { name: "host", config: { demo: { enabled: true } } },
-    ]);
+    assert.deepEqual(await loadConfigLayers(providers), [{ name: "host", config: { demo: { enabled: true } } }]);
   });
 
   it("manifest validation accepts data only contributions and defaults", () => {
     const manifest = definePrismManifest({
       name: "demo-package",
       configDefaults: { demo: { enabled: true } },
-      contributions: [{ kind: "tool", name: "demo.echo", module: "./tool.js", exportName: "tool" }, { kind: "retryPolicy", name: "demo.retry", module: "./retry.js" }],
+      contributions: [
+        { kind: "tool", name: "demo.echo", module: "./tool.js", exportName: "tool" },
+        { kind: "retryPolicy", name: "demo.retry", module: "./retry.js" },
+      ],
       resources: [{ uri: "package://demo/prompt.md", purpose: "prompt", mediaType: "text/markdown" }],
     });
 
@@ -101,10 +102,7 @@ describe("configuration and manifests", () => {
       () => parsePrismManifest({ name: "demo", configDefaults: { run: () => undefined } }),
       /manifest.configDefaults must be a JSON object/,
     );
-    assert.throws(
-      () => parsePrismManifest({ name: "demo", contributions: [{ kind: "missing", name: "x" }] }),
-      /known contribution kind/,
-    );
+    assert.throws(() => parsePrismManifest({ name: "demo", contributions: [{ kind: "missing", name: "x" }] }), /known contribution kind/);
   });
 
   it("manifest json objects reject prototype pollution keys", () => {

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  type AgentEvent,
+  type AIProvider,
   createAgent,
   createToolRegistry,
   dispatchToolCall,
@@ -8,14 +10,8 @@ import {
   providerTextDelta,
   providerToolCall,
   toolCallContent,
-  type AgentEvent,
-  type AIProvider,
 } from "@arnilo/prism";
-import {
-  createInMemoryTelemetry,
-  createOpenTelemetryInstrumentation,
-  wrapOpenTelemetryApi,
-} from "../instrumentation.js";
+import { createInMemoryTelemetry, createOpenTelemetryInstrumentation, wrapOpenTelemetryApi } from "../instrumentation.js";
 
 test("disabled instrumentation is a no-op", () => {
   const memory = createInMemoryTelemetry();
@@ -73,16 +69,24 @@ test("provider_turn and tool spans record metadata without content", async () =>
   assert.equal(toolSpan.ended, true);
   assert.ok(memory.metrics.some((metric) => metric.name === "gen_ai.client.operation.duration"));
   assert.ok(memory.metrics.some((metric) => metric.name === "gen_ai.execute_tool.duration"));
-  assert.equal(events.some((event) => event.type === "provider_turn_started"), true);
+  assert.equal(
+    events.some((event) => event.type === "provider_turn_started"),
+    true,
+  );
 });
 
 test("guardrail and delegation spans share run context without content", () => {
   const memory = createInMemoryTelemetry();
   const references: string[] = [];
-  const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, onTraceReference: ({ traceId }) => references.push(traceId) });
+  const telemetry = createOpenTelemetryInstrumentation({
+    tracer: memory.tracer,
+    onTraceReference: ({ traceId }) => references.push(traceId),
+  });
   telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
   telemetry.handleAgentEvent({
-    type: "guardrail_decision", sessionId: "s1", runId: "r1",
+    type: "guardrail_decision",
+    sessionId: "s1",
+    runId: "r1",
     record: { guardrail: "secret-name", stage: "input", action: "allow", reason: "secret-reason", metadata: { secret: "canary" } },
   });
   telemetry.handleDelegation({ type: "started", runId: "r1", delegationId: "d1", childId: "research" });
@@ -131,7 +135,9 @@ test("run errors and detach close outstanding spans exactly once", async () => {
         return {
           setAttribute() {},
           setStatus() {},
-          end() { ends.set(name, (ends.get(name) ?? 0) + 1); },
+          end() {
+            ends.set(name, (ends.get(name) ?? 0) + 1);
+          },
         };
       },
     },
@@ -178,7 +184,11 @@ test("failed and aborted agent runs leave no active spans", async () => {
     await assert.rejects(session.run("test", mode === "aborted" ? { signal: controller.signal } : undefined));
     detach();
     assert.ok(memory.spans.length > 0);
-    assert.equal(memory.spans.every((span) => span.ended), true, `${mode} run leaked a span`);
+    assert.equal(
+      memory.spans.every((span) => span.ended),
+      true,
+      `${mode} run leaked a span`,
+    );
   }
 });
 
@@ -249,7 +259,13 @@ test("wrapOpenTelemetryApi bridges parent and ambient context", () => {
   );
   const telemetry = createOpenTelemetryInstrumentation({ tracer: wrapped.tracer, meter: wrapped.meter, parentContext: "host-parent" });
   telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
-  telemetry.handleAgentEvent({ type: "provider_turn_started", sessionId: "s1", runId: "r1", turn: 1, metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } } });
+  telemetry.handleAgentEvent({
+    type: "provider_turn_started",
+    sessionId: "s1",
+    runId: "r1",
+    turn: 1,
+    metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+  });
   telemetry.handleAgentEvent({ type: "agent_finished", sessionId: "s1", runId: "r1" });
   assert.ok(calls.includes("span:invoke_agent prism"));
   assert.equal(contexts[0], "host-parent");
@@ -263,10 +279,15 @@ test("feedback and evaluations project safe metadata without high-cardinality me
   telemetry.handleRunFeedback({ runId: "run-secret", rating: 1, hasComment: true, tagCount: 2, scorerCount: 1, evaluationCount: 1 });
   telemetry.handleEvaluation({ runId: "run-secret", status: "scored", score: 0.75, hasReason: true });
   const run = memory.spans.find((span) => span.name === "invoke_agent prism");
-  assert.deepEqual(run?.events.map((event) => event.name), ["prism.run.feedback", "gen_ai.evaluation.result"]);
+  assert.deepEqual(
+    run?.events.map((event) => event.name),
+    ["prism.run.feedback", "gen_ai.evaluation.result"],
+  );
   assert.equal(run?.events[0]?.attributes["prism.feedback.tag_count"], 2);
   assert.equal(run?.events[1]?.attributes["gen_ai.evaluation.score.value"], 0.75);
-  const metricJson = JSON.stringify(memory.metrics.filter((metric) => metric.name.includes("feedback") || metric.name.includes("evaluation")));
+  const metricJson = JSON.stringify(
+    memory.metrics.filter((metric) => metric.name.includes("feedback") || metric.name.includes("evaluation")),
+  );
   assert.doesNotMatch(metricJson, /run-secret|session-secret|comment|scorer|evaluation_id|tag_count/);
   assert.match(metricJson, /positive|scored/);
 
@@ -281,13 +302,24 @@ test("feedback exporter failures are isolated", () => {
   const telemetry = createOpenTelemetryInstrumentation({
     tracer: {
       startSpan() {
-        return { setAttribute() {}, setStatus() {}, addEvent() { throw new Error("feedback exporter down"); }, end() {} };
+        return {
+          setAttribute() {},
+          setStatus() {},
+          addEvent() {
+            throw new Error("feedback exporter down");
+          },
+          end() {},
+        };
       },
     },
-    onExporterError() { errors += 1; },
+    onExporterError() {
+      errors += 1;
+    },
   });
   telemetry.handleAgentEvent({ type: "agent_started", sessionId: "s1", runId: "r1" });
-  assert.doesNotThrow(() => telemetry.handleRunFeedback({ runId: "r1", hasComment: true, tagCount: 1, scorerCount: 0, evaluationCount: 0 }));
+  assert.doesNotThrow(() =>
+    telemetry.handleRunFeedback({ runId: "r1", hasComment: true, tagCount: 1, scorerCount: 0, evaluationCount: 0 }),
+  );
   assert.equal(errors, 1);
 });
 

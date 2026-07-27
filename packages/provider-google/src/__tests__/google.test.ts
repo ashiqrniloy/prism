@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AuthMethod, AIProvider, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
   assertNoSecretLeak,
@@ -10,9 +10,9 @@ import {
   collectProviderEvents,
 } from "@arnilo/prism/testing/provider-conformance";
 import {
-  GOOGLE_DEFAULT_BASE_URL,
   createGoogleGenerateContentProvider,
   createGoogleProviderPackage,
+  GOOGLE_DEFAULT_BASE_URL,
   googleModels,
   listGoogleModels,
   mapGoogleModel,
@@ -46,7 +46,10 @@ describe("@arnilo/prism-provider-google", () => {
     } as any);
     assert.equal(fetchCalls, 0);
     assert(registered.some((item: any) => item.id === "google"));
-    assert.deepEqual(registered.filter((item: any) => item?.kind), [{ kind: "api_key", provider: "google", credentialName: "apiKey" }]);
+    assert.deepEqual(
+      registered.filter((item: any) => item?.kind),
+      [{ kind: "api_key", provider: "google", credentialName: "apiKey" }],
+    );
     assert(registered.some((item: any) => item.model === "gemini-2.5-pro"));
     assert(registered.some((item: any) => item.model === "gemini-2.5-flash"));
     assert(registered.some((item: any) => item.model === "gemini-3.5-flash"));
@@ -56,34 +59,42 @@ describe("@arnilo/prism-provider-google", () => {
   it("streams_text_thinking_tool_calls_usage", async () => {
     const provider = createGoogleGenerateContentProvider({
       apiKey: "fake-google-key",
-      fetch: mockFetch(sse([
-        {
-          candidates: [{
-            content: {
-              parts: [
-                { text: "plan", thought: true },
-                { text: "hello" },
-                { functionCall: { id: "tool_1", name: "lookup", args: { q: "y" } } },
-              ],
+      fetch: mockFetch(
+        sse([
+          {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: "plan", thought: true },
+                    { text: "hello" },
+                    { functionCall: { id: "tool_1", name: "lookup", args: { q: "y" } } },
+                  ],
+                },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 4,
+              candidatesTokenCount: 3,
+              cachedContentTokenCount: 1,
+              thoughtsTokenCount: 2,
+              totalTokenCount: 9,
             },
-            finishReason: "STOP",
-          }],
-          usageMetadata: {
-            promptTokenCount: 4,
-            candidatesTokenCount: 3,
-            cachedContentTokenCount: 1,
-            thoughtsTokenCount: 2,
-            totalTokenCount: 9,
           },
-        },
-      ])),
+        ]),
+      ),
     });
     const events = await assertProviderStreamConforms({
       provider,
       request,
       expect: { text: "hello", usage: { inputTokens: 4, outputTokens: 3, cacheReadTokens: 1, totalTokens: 9 } },
     });
-    assert(events.some((event: ProviderEvent) => event.type === "content_delta" && event.content.type === "thinking" && event.content.text === "plan"));
+    assert(
+      events.some(
+        (event: ProviderEvent) => event.type === "content_delta" && event.content.type === "thinking" && event.content.text === "plan",
+      ),
+    );
     assert(events.some((event: ProviderEvent) => event.type === "tool_call" && event.call.id === "tool_1" && event.call.name === "lookup"));
     assert.equal(events.at(-1)?.type, "done");
   });
@@ -125,14 +136,16 @@ describe("@arnilo/prism-provider-google", () => {
     const tinyPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]).toString("base64");
     const replay: ProviderRequest = {
       model,
-      messages: [{
-        role: "user",
-        content: [
-          // Gemini inlineData has no filename field — omit name so coverage canaries match wire.
-          { type: "image", mimeType: "image/png", data: tinyPng },
-          { type: "document", mediaType: "application/pdf", data: tinyPdf },
-        ],
-      }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            // Gemini inlineData has no filename field — omit name so coverage canaries match wire.
+            { type: "image", mimeType: "image/png", data: tinyPng },
+            { type: "document", mediaType: "application/pdf", data: tinyPdf },
+          ],
+        },
+      ],
     };
     let body: unknown;
     const provider = createGoogleGenerateContentProvider({
@@ -246,10 +259,11 @@ describe("@arnilo/prism-provider-google", () => {
 
   it("list_google_models_redacts_token_in_errors", async () => {
     await assert.rejects(
-      () => listGoogleModels({
-        apiKey: "fake-google-key",
-        fetch: (async () => new Response("unauthorized fake-google-key", { status: 401 })) as typeof fetch,
-      }),
+      () =>
+        listGoogleModels({
+          apiKey: "fake-google-key",
+          fetch: (async () => new Response("unauthorized fake-google-key", { status: 401 })) as typeof fetch,
+        }),
       (error: unknown) => {
         const message = String(error);
         assert.ok(!message.includes("fake-google-key"));
@@ -267,9 +281,7 @@ describe("@arnilo/prism-provider-google", () => {
   it("truncated_stream_fails_closed", async () => {
     const provider = createGoogleGenerateContentProvider({
       apiKey: "fake-google-key",
-      fetch: mockFetch(sse([
-        { candidates: [{ content: { parts: [{ text: "partial" }] } }] },
-      ])),
+      fetch: mockFetch(sse([{ candidates: [{ content: { parts: [{ text: "partial" }] } }] }])),
     });
     const events = await collectProviderEvents(provider, request);
     assert.equal(events.at(-1)?.type, "error");
@@ -307,7 +319,7 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));

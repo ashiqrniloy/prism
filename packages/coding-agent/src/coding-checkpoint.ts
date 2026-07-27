@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import type { JsonObject } from "@arnilo/prism";
+import { sha256Hex } from "./artifacts.js";
 import {
   DEFAULT_MAX_CHECK_SUMMARY_BYTES,
   DEFAULT_MAX_CODING_ARTIFACT_BYTES,
@@ -26,7 +27,6 @@ import {
   HARD_MAX_TODOS,
   validateCodingLimit,
 } from "./limits.js";
-import { sha256Hex } from "./artifacts.js";
 
 export const CODING_CHECKPOINT_SCHEMA_VERSION = 1 as const;
 /** Workflow shared-state key that holds coding checkpoint metadata. */
@@ -157,26 +157,16 @@ export class CodingCheckpointError extends Error {
   }
 }
 
-export function resolveCodingCheckpointLimits(
-  options?: CodingCheckpointLimitOptions,
-): ResolvedCodingCheckpointLimits {
+export function resolveCodingCheckpointLimits(options?: CodingCheckpointLimitOptions): ResolvedCodingCheckpointLimits {
   return {
-    maxPlanBytes: validateCodingLimit(
-      "maxPlanBytes",
-      options?.maxPlanBytes ?? DEFAULT_MAX_PLAN_BYTES,
-      HARD_MAX_PLAN_BYTES,
-    ),
+    maxPlanBytes: validateCodingLimit("maxPlanBytes", options?.maxPlanBytes ?? DEFAULT_MAX_PLAN_BYTES, HARD_MAX_PLAN_BYTES),
     maxTodos: validateCodingLimit("maxTodos", options?.maxTodos ?? DEFAULT_MAX_TODOS, HARD_MAX_TODOS),
     maxTodoTextBytes: validateCodingLimit(
       "maxTodoTextBytes",
       options?.maxTodoTextBytes ?? DEFAULT_MAX_TODO_TEXT_BYTES,
       HARD_MAX_TODO_TEXT_BYTES,
     ),
-    maxArtifacts: validateCodingLimit(
-      "maxArtifacts",
-      options?.maxArtifacts ?? DEFAULT_MAX_CODING_ARTIFACTS,
-      HARD_MAX_CODING_ARTIFACTS,
-    ),
+    maxArtifacts: validateCodingLimit("maxArtifacts", options?.maxArtifacts ?? DEFAULT_MAX_CODING_ARTIFACTS, HARD_MAX_CODING_ARTIFACTS),
     maxArtifactBytes: validateCodingLimit(
       "maxArtifactBytes",
       options?.maxArtifactBytes ?? DEFAULT_MAX_CODING_ARTIFACT_BYTES,
@@ -221,19 +211,13 @@ export function createCodingArtifactRef(input: {
   };
 }
 
-export function verifyCodingArtifactBytes(
-  ref: CodingArtifactRef,
-  bytes: Buffer,
-  limits?: CodingCheckpointLimitOptions,
-): void {
+export function verifyCodingArtifactBytes(ref: CodingArtifactRef, bytes: Buffer, limits?: CodingCheckpointLimitOptions): void {
   const resolved = resolveCodingCheckpointLimits(limits);
   if (ref.bytes > resolved.maxArtifactBytes || bytes.length > resolved.maxArtifactBytes) {
     throw new CodingCheckpointError(`Artifact exceeds ${resolved.maxArtifactBytes} byte limit`);
   }
   if (bytes.length !== ref.bytes) {
-    throw new CodingCheckpointError(
-      `Artifact byte count mismatch: expected ${ref.bytes}, got ${bytes.length}`,
-    );
+    throw new CodingCheckpointError(`Artifact byte count mismatch: expected ${ref.bytes}, got ${bytes.length}`);
   }
   const digest = sha256Hex(bytes);
   if (digest !== ref.sha256) {
@@ -279,10 +263,7 @@ export function createCodingPlanMarkdown(input: {
   return markdown;
 }
 
-export function parseCodingPlanTodos(
-  markdown: string,
-  limits?: CodingCheckpointLimitOptions,
-): CodingTodoItem[] {
+export function parseCodingPlanTodos(markdown: string, limits?: CodingCheckpointLimitOptions): CodingTodoItem[] {
   const resolved = resolveCodingCheckpointLimits(limits);
   assertByteLimit("plan", markdown, resolved.maxPlanBytes);
   const todos: CodingTodoItem[] = [];
@@ -392,10 +373,7 @@ export function buildCodingCheckpointMetadata(input: {
   return validateCodingCheckpointMetadata(metadata, input.limits);
 }
 
-export function validateCodingCheckpointMetadata(
-  value: unknown,
-  limits?: CodingCheckpointLimitOptions,
-): CodingCheckpointMetadata {
+export function validateCodingCheckpointMetadata(value: unknown, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata {
   const resolved = resolveCodingCheckpointLimits(limits);
   if (!isPlainObject(value)) {
     throw new CodingCheckpointError("Coding checkpoint metadata must be an object");
@@ -414,27 +392,19 @@ export function validateCodingCheckpointMetadata(
   const branch = requireBranch(value.branch, "branch");
   const planPath = requireRelativePath(value.planPath, "planPath");
   const plan = validateArtifactRef(value.plan, resolved, { requireKind: "plan" });
-  const worktreePath =
-    value.worktreePath === undefined ? undefined : requireAbsolutePath(value.worktreePath, "worktreePath");
-  const workspaceExport =
-    value.workspaceExport === undefined
-      ? undefined
-      : validateArtifactRef(value.workspaceExport, resolved);
+  const worktreePath = value.worktreePath === undefined ? undefined : requireAbsolutePath(value.worktreePath, "worktreePath");
+  const workspaceExport = value.workspaceExport === undefined ? undefined : validateArtifactRef(value.workspaceExport, resolved);
   const artifacts = requireArray(value.artifacts, "artifacts").map((item, index) =>
     validateArtifactRef(item, resolved, { label: `artifacts[${index}]` }),
   );
   if (artifacts.length > resolved.maxArtifacts) {
     throw new CodingCheckpointError(`Coding checkpoint exceeds ${resolved.maxArtifacts} artifact references`);
   }
-  const checks = requireArray(value.checks, "checks").map((item, index) =>
-    validateCheckSummary(item, resolved, `checks[${index}]`),
-  );
+  const checks = requireArray(value.checks, "checks").map((item, index) => validateCheckSummary(item, resolved, `checks[${index}]`));
   if (checks.length > HARD_MAX_CODING_ARTIFACTS) {
     throw new CodingCheckpointError("Too many check summaries");
   }
-  const todos = requireArray(value.todos, "todos").map((item, index) =>
-    validateTodo(item, resolved, `todos[${index}]`),
-  );
+  const todos = requireArray(value.todos, "todos").map((item, index) => validateTodo(item, resolved, `todos[${index}]`));
   if (todos.length > resolved.maxTodos) {
     throw new CodingCheckpointError(`Coding checkpoint exceeds ${resolved.maxTodos} todos`);
   }
@@ -444,8 +414,7 @@ export function validateCodingCheckpointMetadata(
   if (Number.isNaN(Date.parse(updatedAt))) {
     throw new CodingCheckpointError("updatedAt must be an ISO-8601 timestamp");
   }
-  const handoff =
-    value.handoff === undefined ? undefined : validateHandoffSummary(value.handoff, resolved);
+  const handoff = value.handoff === undefined ? undefined : validateHandoffSummary(value.handoff, resolved);
 
   const metadata: CodingCheckpointMetadata = {
     schemaVersion: CODING_CHECKPOINT_SCHEMA_VERSION,
@@ -468,9 +437,7 @@ export function validateCodingCheckpointMetadata(
 
   const encoded = Buffer.byteLength(JSON.stringify(metadata), "utf8");
   if (encoded > resolved.maxCheckpointBytes) {
-    throw new CodingCheckpointError(
-      `Coding checkpoint metadata exceeds ${resolved.maxCheckpointBytes} byte limit`,
-    );
+    throw new CodingCheckpointError(`Coding checkpoint metadata exceeds ${resolved.maxCheckpointBytes} byte limit`);
   }
   return metadata;
 }
@@ -490,10 +457,7 @@ export function assertCodingResumeAllowed(input: {
 }): CodingCheckpointMetadata {
   const metadata = validateCodingCheckpointMetadata(input.metadata, input.limits);
   assertFingerprintsMatch(metadata.fingerprints, input.expected);
-  if (
-    input.expectedWorkspaceRoot !== undefined &&
-    resolve(input.expectedWorkspaceRoot) !== resolve(metadata.workspaceRoot)
-  ) {
+  if (input.expectedWorkspaceRoot !== undefined && resolve(input.expectedWorkspaceRoot) !== resolve(metadata.workspaceRoot)) {
     throw new CodingCheckpointError("Workspace root mismatch on coding resume");
   }
   if (input.expectedBaseBranch !== undefined && input.expectedBaseBranch !== metadata.baseBranch) {
@@ -520,9 +484,7 @@ export function readCodingCheckpointFromState(
   return validateCodingCheckpointMetadata(state[CODING_STATE_KEY], limits);
 }
 
-export function codingCheckpointStatePatch(
-  metadata: CodingCheckpointMetadata,
-): JsonObject {
+export function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject {
   return { [CODING_STATE_KEY]: validateCodingCheckpointMetadata(metadata) } as unknown as JsonObject;
 }
 
@@ -555,18 +517,10 @@ function validateFingerprints(value: unknown): CodingFingerprints {
   assertNoForbiddenKeys(value);
   const workflowRevision = requireString(value.workflowRevision, "fingerprints.workflowRevision");
   const toolFingerprint = requireFingerprint(value.toolFingerprint, "fingerprints.toolFingerprint");
-  const policyFingerprint = requireFingerprint(
-    value.policyFingerprint,
-    "fingerprints.policyFingerprint",
-  );
+  const policyFingerprint = requireFingerprint(value.policyFingerprint, "fingerprints.policyFingerprint");
   const definitionHash =
-    value.definitionHash === undefined
-      ? undefined
-      : requireFingerprint(value.definitionHash, "fingerprints.definitionHash");
-  const imageDigest =
-    value.imageDigest === undefined
-      ? undefined
-      : requireString(value.imageDigest, "fingerprints.imageDigest");
+    value.definitionHash === undefined ? undefined : requireFingerprint(value.definitionHash, "fingerprints.definitionHash");
+  const imageDigest = value.imageDigest === undefined ? undefined : requireString(value.imageDigest, "fingerprints.imageDigest");
   if (imageDigest !== undefined && !/sha256:[a-f0-9]{64}/.test(imageDigest) && !SHA256_HEX.test(imageDigest)) {
     // Allow either raw hex or docker digest form.
     if (!imageDigest.includes("@sha256:") && !imageDigest.startsWith("sha256:")) {
@@ -614,11 +568,7 @@ function validateArtifactRef(
   return { kind, uri, sha256, bytes };
 }
 
-function validateCheckSummary(
-  value: unknown,
-  limits: ResolvedCodingCheckpointLimits,
-  label: string,
-): CodingCheckSummary {
+function validateCheckSummary(value: unknown, limits: ResolvedCodingCheckpointLimits, label: string): CodingCheckSummary {
   if (!isPlainObject(value)) {
     throw new CodingCheckpointError(`${label} must be an object`);
   }
@@ -639,11 +589,7 @@ function validateCheckSummary(
   return { name, exitCode, summary };
 }
 
-function validateTodo(
-  value: unknown,
-  limits: ResolvedCodingCheckpointLimits,
-  label: string,
-): CodingTodoItem {
+function validateTodo(value: unknown, limits: ResolvedCodingCheckpointLimits, label: string): CodingTodoItem {
   if (!isPlainObject(value)) {
     throw new CodingCheckpointError(`${label} must be an object`);
   }
@@ -660,10 +606,7 @@ function validateTodo(
   return { id, text, done: value.done };
 }
 
-function validateHandoffSummary(
-  value: unknown,
-  limits: ResolvedCodingCheckpointLimits,
-): CodingHandoffSummary {
+function validateHandoffSummary(value: unknown, limits: ResolvedCodingCheckpointLimits): CodingHandoffSummary {
   if (!isPlainObject(value)) {
     throw new CodingCheckpointError("handoff must be an object");
   }
@@ -675,10 +618,7 @@ function validateHandoffSummary(
   if (changedPathCount < 0 || checkCount < 0) {
     throw new CodingCheckpointError("handoff counts must be non-negative");
   }
-  const artifact =
-    value.artifact === undefined
-      ? undefined
-      : validateArtifactRef(value.artifact, limits, { label: "handoff.artifact" });
+  const artifact = value.artifact === undefined ? undefined : validateArtifactRef(value.artifact, limits, { label: "handoff.artifact" });
   return { base, head, changedPathCount, checkCount, artifact };
 }
 
@@ -728,7 +668,7 @@ function requireRelativePath(value: unknown, label: string): string {
   if (isAbsolute(path) || path.split(/[\\/]/).includes("..")) {
     throw new CodingCheckpointError(`${label} must be a relative path without parent segments`);
   }
-  if (!path || path === "." ) {
+  if (!path || path === ".") {
     throw new CodingCheckpointError(`${label} must be a non-empty relative path`);
   }
   return path.replace(/\\/g, "/");

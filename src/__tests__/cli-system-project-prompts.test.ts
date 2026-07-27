@@ -1,14 +1,14 @@
-import { Readable, Writable } from "node:stream";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import type { CliOptions } from "../cli-runner.js";
+import { parseCliArgs, runCli } from "../cli-runner.js";
+import type { AgentSession, ProviderRequest, RunOptions, SystemPromptContribution } from "../contracts.js";
 import { createAgent, createMockProvider } from "../index.js";
 import { createSecretRedactor } from "../redaction.js";
-import { parseCliArgs, runCli } from "../cli-runner.js";
-import type { CliOptions } from "../cli-runner.js";
-import type { AgentSession, ProviderRequest, RunOptions, SystemPromptContribution } from "../contracts.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -16,7 +16,9 @@ class MemoryWritable extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
-  text(): string { return this.chunks.join(""); }
+  text(): string {
+    return this.chunks.join("");
+  }
 }
 
 function streams(input = "") {
@@ -36,7 +38,9 @@ function capturingSession(
 ): (options: CliOptions) => AgentSession {
   return (options) => {
     const provider = createMockProvider([{ type: "done" }], {
-      onRequest: (req) => { captured.push(req); },
+      onRequest: (req) => {
+        captured.push(req);
+      },
     });
     return createAgent({
       model: { provider: "mock", model: "m" },
@@ -140,10 +144,18 @@ describe("cli system/project prompt flags (Phase 31 Task 5)", () => {
     const io = streams();
 
     const code = await runCli(
-      ["--provider", "mock", "--system", "BASE",
-       "--agents-md-file", join(custom, "my-agents.md"),
-       "--system-md-file", join(custom, "my-system.md"),
-       "-p", "Hi"],
+      [
+        "--provider",
+        "mock",
+        "--system",
+        "BASE",
+        "--agents-md-file",
+        join(custom, "my-agents.md"),
+        "--system-md-file",
+        join(custom, "my-system.md"),
+        "-p",
+        "Hi",
+      ],
       { ...io, workspaceRoot: custom, createSession: capturingSession(captured) },
     );
 
@@ -181,7 +193,11 @@ describe("cli system/project prompt flags (Phase 31 Task 5)", () => {
       { id: "agents-md", source: "app", mode: "append", text: "PROJECT" },
     ];
     const captured: ProviderRequest[] = [];
-    const provider = createMockProvider([{ type: "done" }], { onRequest: (req) => { captured.push(req); } });
+    const provider = createMockProvider([{ type: "done" }], {
+      onRequest: (req) => {
+        captured.push(req);
+      },
+    });
     const session = createAgent({
       model: { provider: "mock", model: "m" },
       provider,
@@ -202,7 +218,11 @@ describe("cli system/project prompt flags (Phase 31 Task 5)", () => {
       { id: "agents-md", source: "app", mode: "append", text: "PROJECT" },
     ];
     const captured: ProviderRequest[] = [];
-    const provider = createMockProvider([{ type: "done" }], { onRequest: (req) => { captured.push(req); } });
+    const provider = createMockProvider([{ type: "done" }], {
+      onRequest: (req) => {
+        captured.push(req);
+      },
+    });
     const session = createAgent({
       model: { provider: "mock", model: "m" },
       provider,

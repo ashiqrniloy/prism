@@ -10,9 +10,9 @@ import {
 import {
   agentNode,
   conditionalNode,
+  createWorkflowEventBus,
   defineWorkflow,
   functionNode,
-  createWorkflowEventBus,
   runWorkflow,
   type WorkflowEvent,
 } from "@arnilo/prism-workflows";
@@ -85,18 +85,26 @@ export async function demo() {
     }
   })();
 
-  const result = await runWorkflow(workflow, { query: "status" }, {
-    agentFactory: () => createAgentSession({ agent }),
-    redactor,
-    ownership: { tenantId: "demo" },
-    signal: AbortSignal.timeout(30_000),
-    eventBus: bus,
-    runId: "event-sink-run",
-    onEvent: (e) => inlineEvents.push(e),
-  });
+  const result = await runWorkflow(
+    workflow,
+    { query: "status" },
+    {
+      agentFactory: () => createAgentSession({ agent }),
+      redactor,
+      ownership: { tenantId: "demo" },
+      signal: AbortSignal.timeout(30_000),
+      eventBus: bus,
+      runId: "event-sink-run",
+      onEvent: (e) => inlineEvents.push(e),
+    },
+  );
 
   bus.close();
-  try { await drain; } catch { /* iterator closed */ }
+  try {
+    await drain;
+  } catch {
+    /* iterator closed */
+  }
 
   // Classify events
   const byType = (events: WorkflowEvent[]) => {

@@ -4,18 +4,12 @@ import {
   createEnvCredentialResolver,
   createMockProvider,
   createSecretRedactor,
+  type Message,
   providerDone,
   providerTextDelta,
   providerUsage,
-  type Message,
 } from "@arnilo/prism";
-import {
-  agentNode,
-  createMemoryWorkflowCheckpoints,
-  defineWorkflow,
-  functionNode,
-  runWorkflow,
-} from "@arnilo/prism-workflows";
+import { agentNode, createMemoryWorkflowCheckpoints, defineWorkflow, functionNode, runWorkflow } from "@arnilo/prism-workflows";
 
 // Offline multimodal document workflow. Host constructs a bounded inline PDF
 // block, passes it through a function node, then an agent node summarizes it.

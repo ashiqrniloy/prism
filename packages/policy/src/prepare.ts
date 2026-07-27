@@ -1,9 +1,9 @@
 import {
+  type AgentIdentity,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
-  ownershipFromIdentity,
-  type AgentIdentity,
   type OwnershipScope,
+  ownershipFromIdentity,
 } from "@arnilo/prism";
 import { PolicyError } from "./errors.js";
 import { DEFAULT_POLICY_LIMITS, resolvePolicyLimits } from "./limits.js";
@@ -19,8 +19,20 @@ import type {
 
 const OUTCOMES = new Set<PolicyDecisionOutcome>(["allow", "deny", "modify", "approval"]);
 const FORBIDDEN_APPEND_KEYS = new Set([
-  "payload", "prompt", "prompts", "messages", "toolArguments", "arguments", "body", "content",
-  "raw", "secret", "token", "jwt", "credential", "credentials",
+  "payload",
+  "prompt",
+  "prompts",
+  "messages",
+  "toolArguments",
+  "arguments",
+  "body",
+  "content",
+  "raw",
+  "secret",
+  "token",
+  "jwt",
+  "credential",
+  "credentials",
 ]);
 
 export interface PreparePolicyDecisionOptions {
@@ -79,13 +91,15 @@ function normalizeEvidenceRefs(refs: readonly string[] | undefined, limits: Reso
   if (refs.length > limits.maxEvidenceRefs) {
     throw new PolicyError(`evidenceRefs exceeds ${limits.maxEvidenceRefs}`, "ERR_PRISM_POLICY_BOUNDS");
   }
-  return Object.freeze(refs.map((ref, i) => {
-    if (typeof ref !== "string" || !ref.trim()) throw new PolicyError(`evidenceRefs[${i}] required`, "ERR_PRISM_POLICY_VALIDATION");
-    if (utf8Bytes(ref) > limits.maxEvidenceRefBytes) {
-      throw new PolicyError(`evidenceRefs[${i}] exceeds ${limits.maxEvidenceRefBytes} bytes`, "ERR_PRISM_POLICY_BOUNDS");
-    }
-    return ref;
-  }));
+  return Object.freeze(
+    refs.map((ref, i) => {
+      if (typeof ref !== "string" || !ref.trim()) throw new PolicyError(`evidenceRefs[${i}] required`, "ERR_PRISM_POLICY_VALIDATION");
+      if (utf8Bytes(ref) > limits.maxEvidenceRefBytes) {
+        throw new PolicyError(`evidenceRefs[${i}] exceeds ${limits.maxEvidenceRefBytes} bytes`, "ERR_PRISM_POLICY_BOUNDS");
+      }
+      return ref;
+    }),
+  );
 }
 
 /** Reject unrestricted payload keys on append input (ledger stores refs only). */
@@ -98,10 +112,7 @@ export function assertNoUnrestrictedPayload(input: object): void {
 }
 
 /** Validate, ownership-check, bound, and freeze one policy decision record. */
-export function preparePolicyDecision(
-  input: AppendPolicyDecisionInput,
-  options: PreparePolicyDecisionOptions = {},
-): PolicyDecisionRecord {
+export function preparePolicyDecision(input: AppendPolicyDecisionInput, options: PreparePolicyDecisionOptions = {}): PolicyDecisionRecord {
   input.signal?.throwIfAborted();
   assertNoUnrestrictedPayload(input);
   const limits = resolvePolicyLimits(options.limits);
@@ -153,4 +164,4 @@ export function ownershipMatches(query: OwnershipScope, record: OwnershipScope):
   return sameOwnership(requireOwnership(query), record);
 }
 
-export { sameOwnership, requireOwnership, DEFAULT_POLICY_LIMITS };
+export { DEFAULT_POLICY_LIMITS, requireOwnership, sameOwnership };

@@ -1,7 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test } from "node:test";
 import { withFileMutationQueue } from "../file-mutation-queue.js";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -20,10 +20,7 @@ test("serializes ops on the same file path (no overlap)", async () => {
     return id;
   };
   const path = join(tmpdir(), `mq-serial-${Date.now()}.txt`);
-  const [a, b] = await Promise.all([
-    withFileMutationQueue(path, () => fn("a")),
-    withFileMutationQueue(path, () => fn("b")),
-  ]);
+  const [a, b] = await Promise.all([withFileMutationQueue(path, () => fn("a")), withFileMutationQueue(path, () => fn("b"))]);
   assert.equal(maxActive, 1, "same-file ops must never overlap");
   assert.deepEqual(log, ["start a", "end a", "start b", "end b"], "ops run strictly in order");
   assert.equal(a, "a");
@@ -56,17 +53,17 @@ test("serializes ops on a non-existent path (realpath fallback to resolved path)
     active--;
   };
   const path = join(tmpdir(), `mq-missing-${Date.now()}-${Math.random()}.txt`);
-  await Promise.all([
-    withFileMutationQueue(path, fn),
-    withFileMutationQueue(path, fn),
-  ]);
+  await Promise.all([withFileMutationQueue(path, fn), withFileMutationQueue(path, fn)]);
   assert.equal(maxActive, 1, "same non-existent path must still serialize");
 });
 
 test("releases the slot when fn throws (subsequent op still runs)", async () => {
   const path = join(tmpdir(), `mq-throw-${Date.now()}.txt`);
   await assert.rejects(
-    () => withFileMutationQueue(path, async () => { throw new Error("boom"); }),
+    () =>
+      withFileMutationQueue(path, async () => {
+        throw new Error("boom");
+      }),
     /boom/,
   );
   // slot must have been released — a follow-up op completes normally
@@ -84,11 +81,7 @@ test("chains 3 sequential ops on one path (each sees the prior complete)", async
     await delay(10);
     return id;
   };
-  const results = await Promise.all([
-    withFileMutationQueue(path, fn),
-    withFileMutationQueue(path, fn),
-    withFileMutationQueue(path, fn),
-  ]);
+  const results = await Promise.all([withFileMutationQueue(path, fn), withFileMutationQueue(path, fn), withFileMutationQueue(path, fn)]);
   assert.deepEqual(results, [1, 2, 3]);
   assert.deepEqual(order, [1, 2, 3]);
 });

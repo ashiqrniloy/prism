@@ -1,17 +1,17 @@
 import { randomUUID } from "node:crypto";
-import type { Pool } from "pg";
 import {
+  type ApplyRetentionInput,
   DEFAULT_LIFECYCLE_PAGE_SIZE,
   HARD_LIFECYCLE_PAGE_SIZE,
   HARD_MAX_HOLD_REASON_BYTES,
-  PersistenceLifecycleError,
-  type ApplyRetentionInput,
   type LegalHoldExportItem,
   type LegalHoldRecord,
   type OwnershipScope,
+  PersistenceLifecycleError,
   type PersistenceLifecycleStore,
   type TenantQuota,
 } from "@arnilo/prism";
+import type { Pool } from "pg";
 import { qualifyTable } from "./identifiers.js";
 
 export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): PersistenceLifecycleStore {
@@ -36,9 +36,29 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
       await pool.query(
         `INSERT INTO ${holds} (id, tenant_id, account_id, user_id, resource_kind, resource_id, reason, created_at, created_by, metadata)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [id, input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind, input.resourceId, reason, createdAt, input.createdBy ?? null, input.metadata ? JSON.stringify(input.metadata) : null],
+        [
+          id,
+          input.tenantId ?? null,
+          input.accountId ?? null,
+          input.userId ?? null,
+          input.resourceKind,
+          input.resourceId,
+          reason,
+          createdAt,
+          input.createdBy ?? null,
+          input.metadata ? JSON.stringify(input.metadata) : null,
+        ],
       );
-      return { id, resourceKind: input.resourceKind, resourceId: input.resourceId, reason, createdAt, ...(input.createdBy === undefined ? {} : { createdBy: input.createdBy }), ...(input.metadata === undefined ? {} : { metadata: input.metadata }), ...ownership(input) };
+      return {
+        id,
+        resourceKind: input.resourceKind,
+        resourceId: input.resourceId,
+        reason,
+        createdAt,
+        ...(input.createdBy === undefined ? {} : { createdBy: input.createdBy }),
+        ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+        ...ownership(input),
+      };
     },
 
     async releaseLegalHold(input) {
@@ -46,7 +66,11 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
       const found = await pool.query(`SELECT tenant_id, account_id, user_id FROM ${holds} WHERE id = $1`, [input.id]);
       if (!found.rowCount) return false;
       const row = found.rows[0]!;
-      assertSameOwnership(input, { tenantId: row.tenant_id ?? undefined, accountId: row.account_id ?? undefined, userId: row.user_id ?? undefined });
+      assertSameOwnership(input, {
+        tenantId: row.tenant_id ?? undefined,
+        accountId: row.account_id ?? undefined,
+        userId: row.user_id ?? undefined,
+      });
       const result = await pool.query(`DELETE FROM ${holds} WHERE id = $1`, [input.id]);
       return Boolean(result.rowCount);
     },
@@ -63,7 +87,14 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
            AND ($5::text IS NULL OR resource_kind = $5)
            AND ($6::text IS NULL OR resource_id = $6)
          ORDER BY created_at ASC, id ASC`,
-        [query.tenantId ?? null, query.accountId ?? null, query.userId ?? null, query.holdId ?? null, query.resourceKind ?? null, query.resourceId ?? null],
+        [
+          query.tenantId ?? null,
+          query.accountId ?? null,
+          query.userId ?? null,
+          query.holdId ?? null,
+          query.resourceKind ?? null,
+          query.resourceId ?? null,
+        ],
       );
       const rows = result.rows as Record<string, unknown>[];
       const start = query.cursor ? rows.findIndex((row) => String(row.id) === query.cursor) + 1 : 0;
@@ -86,7 +117,7 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
       const held = new Set(heldResult.rows.map((row) => String(row.resource_id)));
       let candidates = input.candidates ? [...input.candidates] : await discoverSessions(pool, sessions, input, limit);
       if (input.cursor && !input.candidates) {
-        const idx = candidates.findIndex((id) => id === input.cursor);
+        const idx = candidates.indexOf(input.cursor);
         candidates = idx >= 0 ? candidates.slice(idx + 1) : candidates;
       }
       const page = candidates.slice(0, limit);
@@ -115,16 +146,25 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
     },
 
     async exportUnderHold(input) {
-      const page = await this.listLegalHolds({ ...ownership(input), holdId: input.holdId, resourceKind: input.resourceKind, cursor: input.cursor, limit: input.limit, signal: input.signal });
+      const page = await this.listLegalHolds({
+        ...ownership(input),
+        holdId: input.holdId,
+        resourceKind: input.resourceKind,
+        cursor: input.cursor,
+        limit: input.limit,
+        signal: input.signal,
+      });
       return {
-        items: page.items.map((hold): LegalHoldExportItem => ({
-          holdId: hold.id,
-          resourceKind: hold.resourceKind,
-          resourceId: hold.resourceId,
-          reason: hold.reason,
-          createdAt: hold.createdAt,
-          redacted: true,
-        })),
+        items: page.items.map(
+          (hold): LegalHoldExportItem => ({
+            holdId: hold.id,
+            resourceKind: hold.resourceKind,
+            resourceId: hold.resourceId,
+            reason: hold.reason,
+            createdAt: hold.createdAt,
+            redacted: true,
+          }),
+        ),
         ...(page.nextCursor === undefined ? {} : { nextCursor: page.nextCursor }),
       };
     },
@@ -146,7 +186,11 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
       if (used > input.limit) throw new PersistenceLifecycleError("quota already exceeded", "ERR_PRISM_LIFECYCLE_QUOTA");
       const updatedAt = new Date().toISOString();
       if (existing.rows[0]) {
-        await pool.query(`UPDATE ${quotas} SET limit_count = $1, updated_at = $2 WHERE id = $3`, [input.limit, updatedAt, existing.rows[0].id]);
+        await pool.query(`UPDATE ${quotas} SET limit_count = $1, updated_at = $2 WHERE id = $3`, [
+          input.limit,
+          updatedAt,
+          existing.rows[0].id,
+        ]);
       } else {
         await pool.query(
           `INSERT INTO ${quotas} (id, tenant_id, account_id, user_id, resource_kind, limit_count, used_count, updated_at)
@@ -223,7 +267,7 @@ function rowToHold(row: Record<string, unknown>): LegalHoldRecord {
     reason: String(row.reason),
     createdAt: String(row.created_at),
     ...(row.created_by == null ? {} : { createdBy: String(row.created_by) }),
-    ...(row.metadata == null ? {} : { metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata as object }),
+    ...(row.metadata == null ? {} : { metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : (row.metadata as object) }),
     ...(row.tenant_id == null ? {} : { tenantId: String(row.tenant_id) }),
     ...(row.account_id == null ? {} : { accountId: String(row.account_id) }),
     ...(row.user_id == null ? {} : { userId: String(row.user_id) }),

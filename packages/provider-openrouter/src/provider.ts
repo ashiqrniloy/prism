@@ -1,18 +1,36 @@
-import type { AIProvider, CacheControlledMessage, ContentBlock, CredentialValueSource, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallFromArgumentsText } from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput, serializeOpenAITool } from "@arnilo/prism/providers/openai";
+import type {
+  AIProvider,
+  CacheControlledMessage,
+  ContentBlock,
+  CredentialValueSource,
+  JsonObject,
+  ModelConfig,
+  ProviderEvent,
+  ProviderRequest,
+} from "@arnilo/prism";
+import {
+  assertStructuredOutputRequestSupported,
+  providerDone,
+  providerError,
+  providerTextDelta,
+  providerThinkingDelta,
+  providerToolCall,
+  providerToolCallDelta,
+  providerUsage,
+  resolveCredentialValue,
+  toolCallFromArgumentsText,
+} from "@arnilo/prism";
 import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
+import { applyOpenAIChatStructuredOutput, serializeOpenAITool } from "@arnilo/prism/providers/openai";
 import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import {
   applyOpenRouterCacheControl,
+  type OpenRouterUsage,
   openRouterSessionId,
   openRouterTopLevelCacheControl,
   openRouterUsage,
-  type OpenRouterUsage } from "./cache.js";
-import {
-  openRouterPreserveThinking,
-  resolveOpenRouterReasoning,
-  stripOpenRouterOwnedCompat } from "./thinking.js";
+} from "./cache.js";
+import { openRouterPreserveThinking, resolveOpenRouterReasoning, stripOpenRouterOwnedCompat } from "./thinking.js";
 
 export interface OpenRouterProviderOptions {
   readonly id?: string;
@@ -23,7 +41,11 @@ export interface OpenRouterProviderOptions {
   readonly appTitle?: string;
 }
 
-interface ToolAccumulator { id?: string; name?: string; argumentsText: string }
+interface ToolAccumulator {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+}
 
 export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}): AIProvider {
   const id = options.id ?? "openrouter";
@@ -44,9 +66,11 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
             ...(token ? { authorization: `Bearer ${token}` } : {}),
             ...(sessionId ? { "x-session-id": sessionId } : {}),
             ...(options.appUrl ? { "http-referer": options.appUrl } : {}),
-            ...(options.appTitle ? { "x-title": options.appTitle } : {})}),
+            ...(options.appTitle ? { "x-title": options.appTitle } : {}),
+          }),
           body: JSON.stringify(openRouterBody(request, sessionId)),
-          signal: request.signal});
+          signal: request.signal,
+        });
         if (!response.ok) {
           return yield providerError(
             new Error(`OpenRouter request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -58,14 +82,15 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
       } catch (error) {
         yield providerError(error, secrets);
       }
-    }};
+    },
+  };
 }
 
 export function openRouterBody(request: ProviderRequest, sessionId = openRouterSessionId(request.options)): JsonObject {
   assertStructuredOutputRequestSupported(request.model, request.options);
   const routing =
-    (request.options?.compat?.openRouterRouting as JsonObject | undefined)
-    ?? (request.model.compat?.openRouterRouting as JsonObject | undefined);
+    (request.options?.compat?.openRouterRouting as JsonObject | undefined) ??
+    (request.model.compat?.openRouterRouting as JsonObject | undefined);
   const reasoning = resolveOpenRouterReasoning(request.model, request.options);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const messages = applyOpenRouterCacheControl(request);
@@ -83,23 +108,21 @@ export function openRouterBody(request: ProviderRequest, sessionId = openRouterS
     ...parameters,
     max_tokens: maxTokens,
     ...stripOpenRouterOwnedCompat(request.options?.compat as JsonObject | undefined),
-    ...request.options?.extra};
+    ...request.options?.extra,
+  };
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
 
-function toOpenRouterMessage(
-  message: CacheControlledMessage,
-  model: ModelConfig,
-  preserveThinking: boolean,
-): JsonObject {
+function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig, preserveThinking: boolean): JsonObject {
   const capabilities = model.capabilities ?? {};
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+    };
   }
 
   const thinkingText = message.content
@@ -119,7 +142,9 @@ function toOpenRouterMessage(
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) }}))});
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+        })),
+      });
     }
   }
 
@@ -163,7 +188,7 @@ function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObjec
 
 export async function* openRouterEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   const tools = new Map<number, ToolAccumulator>();
-  let usage;
+  let usage: ReturnType<typeof openRouterUsage>;
   for await (const data of readSseData(body, { signal })) {
     if (data === "[DONE]") break;
     const chunk = JSON.parse(data) as OpenRouterChunk;

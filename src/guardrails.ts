@@ -4,8 +4,8 @@ import type {
   GuardrailAction,
   GuardrailContext,
   GuardrailRecord,
-  Guardrails,
   GuardrailStage,
+  Guardrails,
   GuardrailValue,
 } from "./contracts.js";
 import type { SecretRedactor } from "./redaction.js";
@@ -21,9 +21,7 @@ export class GuardrailError extends Error {
   constructor(record: GuardrailRecord) {
     super(record.action === "interrupt" ? "Guardrail interruption is unavailable" : "Guardrail blocked run");
     this.name = "GuardrailError";
-    this.code = record.action === "interrupt"
-      ? "ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE"
-      : "ERR_PRISM_GUARDRAIL_BLOCKED";
+    this.code = record.action === "interrupt" ? "ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE" : "ERR_PRISM_GUARDRAIL_BLOCKED";
     this.record = record;
   }
 }
@@ -48,9 +46,7 @@ export async function runGuardrails<S extends GuardrailStage>(options: RunGuardr
   if (guards.length === 0) return { records: [] };
   const maxConcurrency = resolveConcurrency(options.guardrails?.maxConcurrency);
   const controller = new AbortController();
-  const signal = options.context.signal
-    ? AbortSignal.any([options.context.signal, controller.signal])
-    : controller.signal;
+  const signal = options.context.signal ? AbortSignal.any([options.context.signal, controller.signal]) : controller.signal;
   const records: (GuardrailRecord | undefined)[] = new Array(guards.length);
   let next = 0;
   let stopped = false;
@@ -93,10 +89,14 @@ export function assertGuardrailsAllowed(result: GuardrailRunResult): void {
 function stageGuards<S extends GuardrailStage>(guardrails: Guardrails | undefined, stage: S): readonly Guardrail<S>[] {
   if (!guardrails) return [];
   switch (stage) {
-    case "input": return (guardrails.input ?? []) as readonly Guardrail<S>[];
-    case "output": return (guardrails.output ?? []) as readonly Guardrail<S>[];
-    case "tool_input": return (guardrails.toolInput ?? []) as readonly Guardrail<S>[];
-    case "tool_output": return (guardrails.toolOutput ?? []) as readonly Guardrail<S>[];
+    case "input":
+      return (guardrails.input ?? []) as readonly Guardrail<S>[];
+    case "output":
+      return (guardrails.output ?? []) as readonly Guardrail<S>[];
+    case "tool_input":
+      return (guardrails.toolInput ?? []) as readonly Guardrail<S>[];
+    case "tool_output":
+      return (guardrails.toolOutput ?? []) as readonly Guardrail<S>[];
   }
 }
 
@@ -105,7 +105,14 @@ async function evaluate<S extends GuardrailStage>(
   options: RunGuardrailsOptions<S>,
   signal: AbortSignal,
 ): Promise<GuardrailRecord> {
-  if (!guardrail || typeof guardrail.name !== "string" || !guardrail.name || guardrail.name.length > 128 || guardrail.stage !== options.stage || typeof guardrail.evaluate !== "function") {
+  if (
+    !guardrail ||
+    typeof guardrail.name !== "string" ||
+    !guardrail.name ||
+    guardrail.name.length > 128 ||
+    guardrail.stage !== options.stage ||
+    typeof guardrail.evaluate !== "function"
+  ) {
     return record(guardrail?.name ?? "invalid", options.stage, "tripwire", "guardrail_invalid", undefined, options.redactor);
   }
   try {
@@ -154,9 +161,7 @@ function boundedMetadata(value: unknown, redactor: SecretRedactor | undefined): 
     const json = JSON.stringify(redactor?.redact(value) ?? value);
     if (!json || byteLength(json) > MAX_METADATA_BYTES) return { truncated: true };
     const parsed: unknown = JSON.parse(json);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Readonly<Record<string, unknown>>
-      : undefined;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Readonly<Record<string, unknown>>) : undefined;
   } catch {
     return { invalid: true };
   }

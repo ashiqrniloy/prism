@@ -21,17 +21,10 @@
  */
 import { Buffer } from "node:buffer";
 import { constants } from "node:fs";
-import { access as fsAccess, open, stat as fsStat } from "node:fs/promises";
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import { access as fsAccess, stat as fsStat, open } from "node:fs/promises";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { readFileBounded } from "./bounded-file.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import { resolveReadPathAsync } from "./path-utils.js";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_IMAGE_BYTES,
@@ -43,6 +36,7 @@ import {
   HARD_MAX_TEXT_SCAN_BYTES,
   validateCodingLimit,
 } from "./limits.js";
+import { resolveReadPathAsync } from "./path-utils.js";
 import { formatSize, type TruncationResult } from "./truncate.js";
 
 // --- magic-byte image MIME detection (faithful port of pi utils/mime.js, pure JS, no deps) ---
@@ -85,11 +79,7 @@ export async function detectSupportedImageMimeTypeFromFile(filePath: string): Pr
 
 function isPng(buffer: Buffer): boolean {
   // First chunk after the 8-byte signature must be a 13-byte IHDR.
-  return (
-    buffer.length >= 16 &&
-    readUint32BE(buffer, PNG_SIGNATURE.length) === 13 &&
-    startsWithAscii(buffer, 12, "IHDR")
-  );
+  return buffer.length >= 16 && readUint32BE(buffer, PNG_SIGNATURE.length) === 13 && startsWithAscii(buffer, 12, "IHDR");
 }
 
 function isAnimatedPng(buffer: Buffer): boolean {
@@ -135,18 +125,12 @@ function readUint16LE(buffer: Buffer, offset: number): number {
 }
 function readUint32BE(buffer: Buffer, offset: number): number {
   return (
-    (buffer[offset] ?? 0) * 0x1000000 +
-    ((buffer[offset + 1] ?? 0) << 16) +
-    ((buffer[offset + 2] ?? 0) << 8) +
-    (buffer[offset + 3] ?? 0)
+    (buffer[offset] ?? 0) * 0x1000000 + ((buffer[offset + 1] ?? 0) << 16) + ((buffer[offset + 2] ?? 0) << 8) + (buffer[offset + 3] ?? 0)
   );
 }
 function readUint32LE(buffer: Buffer, offset: number): number {
   return (
-    (buffer[offset] ?? 0) +
-    ((buffer[offset + 1] ?? 0) << 8) +
-    ((buffer[offset + 2] ?? 0) << 16) +
-    (buffer[offset + 3] ?? 0) * 0x1000000
+    (buffer[offset] ?? 0) + ((buffer[offset + 1] ?? 0) << 8) + ((buffer[offset + 2] ?? 0) << 16) + (buffer[offset + 3] ?? 0) * 0x1000000
   );
 }
 function startsWith(buffer: Buffer, bytes: readonly number[]): boolean {
@@ -236,10 +220,7 @@ export interface ReadToolOptions {
   maxBytes?: number;
 }
 
-async function readLocalTextPage(
-  path: string,
-  options: ReadTextOptions,
-): Promise<ReadTextResult> {
+async function readLocalTextPage(path: string, options: ReadTextOptions): Promise<ReadTextResult> {
   const handle = await open(path, "r");
   let fileSize: number;
   try {
@@ -402,9 +383,7 @@ async function loadImageBuffer(
     buffer = await options.transformImage({ buffer, mimeType });
     resized = true;
     if (buffer.length > options.maxImageBytes) {
-      throw new Error(
-        `Transformed image is ${formatSize(buffer.length)}, exceeds ${formatSize(options.maxImageBytes)} limit.`,
-      );
+      throw new Error(`Transformed image is ${formatSize(buffer.length)}, exceeds ${formatSize(options.maxImageBytes)} limit.`);
     }
   } else if (options.autoResizeImages) {
     // Deprecated flag without a transformer — intentionally ignored for backward compatibility.
@@ -426,16 +405,8 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
   const ops = options?.operations ?? defaultReadOperations;
   const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
   const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
-  const maxImageBytes = validateCodingLimit(
-    "maxImageBytes",
-    options?.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES,
-    HARD_MAX_IMAGE_BYTES,
-  );
-  const maxScanBytes = validateCodingLimit(
-    "maxScanBytes",
-    options?.maxScanBytes ?? DEFAULT_MAX_TEXT_SCAN_BYTES,
-    HARD_MAX_TEXT_SCAN_BYTES,
-  );
+  const maxImageBytes = validateCodingLimit("maxImageBytes", options?.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES, HARD_MAX_IMAGE_BYTES);
+  const maxScanBytes = validateCodingLimit("maxScanBytes", options?.maxScanBytes ?? DEFAULT_MAX_TEXT_SCAN_BYTES, HARD_MAX_TEXT_SCAN_BYTES);
 
   return {
     name: "read",
@@ -467,9 +438,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
       try {
         const startLine = validateCodingLimit("offset", offset ?? 1, Number.MAX_SAFE_INTEGER);
-        const requestedLines = limit === undefined
-          ? undefined
-          : validateCodingLimit("limit", limit, HARD_MAX_LINES);
+        const requestedLines = limit === undefined ? undefined : validateCodingLimit("limit", limit, HARD_MAX_LINES);
         const absolutePath = await resolveReadPathAsync(path, cwd);
 
         const policyCheck = await enforceExecutionPolicy(

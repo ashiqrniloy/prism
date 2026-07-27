@@ -1,10 +1,4 @@
-import {
-  redactSecrets,
-  resolveCredentialValue,
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /**
@@ -137,26 +131,26 @@ export function mapOllamaModel(entry: OllamaModelEntry): ModelConfig {
 function looksLikeReasoningModel(modelId: string): boolean {
   const id = modelId.toLowerCase();
   return (
-    id.includes("gpt-oss")
-    || id.includes("deepseek-r1")
-    || id.startsWith("qwq")
-    || id.startsWith("qvq")
-    || id.includes("-thinking")
-    || id.includes("reasoning")
+    id.includes("gpt-oss") ||
+    id.includes("deepseek-r1") ||
+    id.startsWith("qwq") ||
+    id.startsWith("qvq") ||
+    id.includes("-thinking") ||
+    id.includes("reasoning")
   );
 }
 
 function looksLikeVisionModel(modelId: string): boolean {
   const id = modelId.toLowerCase();
   return (
-    id.includes("llava")
-    || id.includes("bakllava")
-    || id.includes("moondream")
-    || id.includes("minicpm-v")
-    || id.includes("llama-vision")
-    || id.includes("llama3.2-vision")
-    || id.includes("-vl")
-    || id.includes("vision")
+    id.includes("llava") ||
+    id.includes("bakllava") ||
+    id.includes("moondream") ||
+    id.includes("minicpm-v") ||
+    id.includes("llama-vision") ||
+    id.includes("llama3.2-vision") ||
+    id.includes("-vl") ||
+    id.includes("vision")
   );
 }
 

@@ -108,7 +108,10 @@ export function parseNeuralWattComment(text: string): NeuralWattTelemetryEvent |
  * `energy` and `cost` JSON fields) into typed telemetry. Returns an object
  * with optional `energy`/`cost`; both are `undefined` when absent or malformed.
  */
-export function mapNeuralWattTelemetry(body: unknown): { readonly energy?: NeuralWattEnergyTelemetry; readonly cost?: NeuralWattCostTelemetry } {
+export function mapNeuralWattTelemetry(body: unknown): {
+  readonly energy?: NeuralWattEnergyTelemetry;
+  readonly cost?: NeuralWattCostTelemetry;
+} {
   const json = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   return {
     energy: json.energy && typeof json.energy === "object" ? parseNeuralWattEnergy(JSON.stringify(json.energy)) : undefined,

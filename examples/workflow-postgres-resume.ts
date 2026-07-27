@@ -1,13 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { Pool } from "pg";
 import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
-import {
-  createWorkflowCheckpoints,
-  defineWorkflow,
-  functionNode,
-  resumeWorkflow,
-  runWorkflow,
-} from "@arnilo/prism-workflows";
+import { createWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-workflows";
+import { Pool } from "pg";
 
 // Opt-in PostgreSQL restart/resume example. Default execution is network-free
 // and reports "skipped". Set PRISM_TEST_POSTGRES_URL to run against an explicit
@@ -33,7 +27,7 @@ export async function demo(postgresUrl = process.env.PRISM_TEST_POSTGRES_URL) {
   const schema = `prism_wf_demo_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const ownership = { tenantId: "demo" };
   const runId = "postgres-resume-run";
-  let firstPool = new Pool({ connectionString: postgresUrl, max: 2 });
+  const firstPool = new Pool({ connectionString: postgresUrl, max: 2 });
 
   try {
     const firstPersistence = await createPostgresPersistence({ pool: firstPool, schema });
@@ -51,11 +45,15 @@ export async function demo(postgresUrl = process.env.PRISM_TEST_POSTGRES_URL) {
     const secondPool = new Pool({ connectionString: postgresUrl, max: 2 });
     const secondPersistence = await createPostgresPersistence({ pool: secondPool, schema });
     const secondCheckpoints = createWorkflowCheckpoints({ store: secondPersistence.checkpoints });
-    const resumed = await resumeWorkflow(workflow, { runId }, {
-      checkpoints: secondCheckpoints,
-      ownership,
-      signal: AbortSignal.timeout(30_000),
-    });
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId },
+      {
+        checkpoints: secondCheckpoints,
+        ownership,
+        signal: AbortSignal.timeout(30_000),
+      },
+    );
     await secondPool.query(`DROP SCHEMA "${schema}" CASCADE`);
     await secondPool.end();
 

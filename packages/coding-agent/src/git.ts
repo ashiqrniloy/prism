@@ -5,9 +5,19 @@
  * `git check-ref-format` for refs, and safe config that disables hooks,
  * external diff/textconv, pagers, and credential prompts by default.
  */
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type BoundGitRunner,
+  type CreateGitRunnerOptions,
+  createBoundGitRunner,
+  GitError,
+  type GitExecResult,
+  gitRequireOk,
+  gitText,
+} from "./git-exec.js";
+import { type GitStatusResult, parsePorcelainV2 } from "./git-status.js";
 import {
   DEFAULT_MAX_GIT_CHANGED_FILES,
   DEFAULT_MAX_GIT_DIFF_LINES,
@@ -31,16 +41,6 @@ import {
   HARD_MAX_PR_HANDOFF_BYTES,
   validateCodingLimit,
 } from "./limits.js";
-import {
-  createBoundGitRunner,
-  GitError,
-  gitRequireOk,
-  gitText,
-  type BoundGitRunner,
-  type CreateGitRunnerOptions,
-  type GitExecResult,
-} from "./git-exec.js";
-import { parsePorcelainV2, type GitStatusResult } from "./git-status.js";
 import { resolveToCwd } from "./path-utils.js";
 
 export interface GitLimitOptions {
@@ -72,11 +72,7 @@ export interface ResolvedGitLimits {
 export function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits {
   return {
     maxPaths: validateCodingLimit("maxPaths", options?.maxPaths ?? DEFAULT_MAX_GIT_PATHS, HARD_MAX_GIT_PATHS),
-    maxRefBytes: validateCodingLimit(
-      "maxRefBytes",
-      options?.maxRefBytes ?? DEFAULT_MAX_GIT_REF_BYTES,
-      HARD_MAX_GIT_REF_BYTES,
-    ),
+    maxRefBytes: validateCodingLimit("maxRefBytes", options?.maxRefBytes ?? DEFAULT_MAX_GIT_REF_BYTES, HARD_MAX_GIT_REF_BYTES),
     maxMessageBytes: validateCodingLimit(
       "maxMessageBytes",
       options?.maxMessageBytes ?? DEFAULT_MAX_GIT_MESSAGE_BYTES,
@@ -87,31 +83,15 @@ export function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits {
       options?.maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES,
       HARD_MAX_GIT_OUTPUT_BYTES,
     ),
-    maxDiffLines: validateCodingLimit(
-      "maxDiffLines",
-      options?.maxDiffLines ?? DEFAULT_MAX_GIT_DIFF_LINES,
-      HARD_MAX_GIT_DIFF_LINES,
-    ),
+    maxDiffLines: validateCodingLimit("maxDiffLines", options?.maxDiffLines ?? DEFAULT_MAX_GIT_DIFF_LINES, HARD_MAX_GIT_DIFF_LINES),
     maxChangedFiles: validateCodingLimit(
       "maxChangedFiles",
       options?.maxChangedFiles ?? DEFAULT_MAX_GIT_CHANGED_FILES,
       HARD_MAX_GIT_CHANGED_FILES,
     ),
-    maxPatchBytes: validateCodingLimit(
-      "maxPatchBytes",
-      options?.maxPatchBytes ?? DEFAULT_MAX_GIT_PATCH_BYTES,
-      HARD_MAX_GIT_PATCH_BYTES,
-    ),
-    maxWorktrees: validateCodingLimit(
-      "maxWorktrees",
-      options?.maxWorktrees ?? DEFAULT_MAX_GIT_WORKTREES,
-      HARD_MAX_GIT_WORKTREES,
-    ),
-    maxPrCommits: validateCodingLimit(
-      "maxPrCommits",
-      options?.maxPrCommits ?? DEFAULT_MAX_PR_COMMITS,
-      HARD_MAX_PR_COMMITS,
-    ),
+    maxPatchBytes: validateCodingLimit("maxPatchBytes", options?.maxPatchBytes ?? DEFAULT_MAX_GIT_PATCH_BYTES, HARD_MAX_GIT_PATCH_BYTES),
+    maxWorktrees: validateCodingLimit("maxWorktrees", options?.maxWorktrees ?? DEFAULT_MAX_GIT_WORKTREES, HARD_MAX_GIT_WORKTREES),
+    maxPrCommits: validateCodingLimit("maxPrCommits", options?.maxPrCommits ?? DEFAULT_MAX_PR_COMMITS, HARD_MAX_PR_COMMITS),
     maxPrHandoffBytes: validateCodingLimit(
       "maxPrHandoffBytes",
       options?.maxPrHandoffBytes ?? DEFAULT_MAX_PR_HANDOFF_BYTES,
@@ -238,15 +218,11 @@ function truncateLines(text: string, maxLines: number): { text: string; truncate
   if (endsWithNewline) lines.pop();
   const lineCount = lines.length;
   if (lineCount <= maxLines) return { text, truncated: false, lineCount };
-  const kept = lines.slice(0, maxLines).join("\n") + "\n";
+  const kept = `${lines.slice(0, maxLines).join("\n")}\n`;
   return { text: kept, truncated: true, lineCount };
 }
 
-async function withTempFile<T>(
-  prefix: string,
-  contents: string | Buffer,
-  fn: (path: string) => Promise<T>,
-): Promise<T> {
+async function withTempFile<T>(prefix: string, contents: string | Buffer, fn: (path: string) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(join(tmpdir(), prefix));
   const filePath = join(dir, "payload");
   try {
@@ -273,12 +249,16 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
   async function status(request?: { includeIgnored?: boolean; signal?: AbortSignal }): Promise<GitStatusResult> {
     const args = ["status", "--porcelain=v2", "-z", "--branch", "--untracked-files=all"];
     if (request?.includeIgnored) args.push("--ignored=traditional");
-    const result = await gitRequireOk(runner, {
-      args,
-      cwd,
-      signal: request?.signal,
-      maxOutputBytes: limits.maxOutputBytes,
-    }, "git status");
+    const result = await gitRequireOk(
+      runner,
+      {
+        args,
+        cwd,
+        signal: request?.signal,
+        maxOutputBytes: limits.maxOutputBytes,
+      },
+      "git status",
+    );
     return parsePorcelainV2(result.stdout, { maxEntries: limits.maxChangedFiles });
   }
 
@@ -472,11 +452,7 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
         args.push("-b", branchName);
       }
       args.push("--", request.path);
-      await gitRequireOk(
-        runner,
-        { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes },
-        "git worktree add",
-      );
+      await gitRequireOk(runner, { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes }, "git worktree add");
       return { worktrees: (await worktree({ action: "list", signal: request.signal })).worktrees, path: request.path };
     }
 
@@ -485,11 +461,7 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
     const args = ["worktree", "remove"];
     if (request.force) args.push("--force");
     args.push("--", request.path);
-    await gitRequireOk(
-      runner,
-      { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes },
-      "git worktree remove",
-    );
+    await gitRequireOk(runner, { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes }, "git worktree remove");
     return { worktrees: (await worktree({ action: "list", signal: request.signal })).worktrees, path: request.path };
   }
 
@@ -526,18 +498,11 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
 
       const checkpoint =
         request.action === "apply"
-          ? await ensureCleanOrCheckpoint(
-              request.createCheckpoint,
-              request.signal,
-              `git apply ${request.action}`,
-            )
+          ? await ensureCleanOrCheckpoint(request.createCheckpoint, request.signal, `git apply ${request.action}`)
           : undefined;
 
       // Always check first for apply/reverse.
-      const checkArgs =
-        request.action === "reverse"
-          ? ["apply", "--reverse", "--check"]
-          : ["apply", "--check"];
+      const checkArgs = request.action === "reverse" ? ["apply", "--reverse", "--check"] : ["apply", "--check"];
       const check = await runApply(checkArgs, filePath);
       if (check.exitCode !== 0) {
         const output = (gitText(check, "stderr") || gitText(check)).trim();
@@ -545,10 +510,7 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
         return { ok: false, checkpoint, restored: Boolean(checkpoint), output: output || "patch check failed" };
       }
 
-      const applyArgs =
-        request.action === "reverse"
-          ? ["apply", "--reverse"]
-          : ["apply"];
+      const applyArgs = request.action === "reverse" ? ["apply", "--reverse"] : ["apply"];
       const result = await runApply(applyArgs, filePath);
       if (result.exitCode !== 0) {
         const output = (gitText(result, "stderr") || gitText(result)).trim();
@@ -557,12 +519,14 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
           restored = await restoreCheckpoint(checkpoint, request.signal).catch(() => false);
         } else {
           // Best-effort restore of tracked files when no checkpoint was taken (clean tree).
-          await runner.exec({
-            args: ["checkout", "--", "."],
-            cwd,
-            signal: request.signal,
-            maxOutputBytes: limits.maxOutputBytes,
-          }).catch(() => undefined);
+          await runner
+            .exec({
+              args: ["checkout", "--", "."],
+              cwd,
+              signal: request.signal,
+              maxOutputBytes: limits.maxOutputBytes,
+            })
+            .catch(() => undefined);
           restored = true;
         }
         return { ok: false, checkpoint, restored, output: output || `apply failed with exit ${result.exitCode}` };
@@ -597,12 +561,7 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
       throw new GitError("commitIdentity must not contain newlines");
     }
 
-    const checkpoint = await ensureCleanOrCheckpoint(
-      request.createCheckpoint,
-      request.signal,
-      "git commit",
-      new Set(paths),
-    );
+    const checkpoint = await ensureCleanOrCheckpoint(request.createCheckpoint, request.signal, "git commit", new Set(paths));
 
     try {
       await gitRequireOk(
@@ -648,12 +607,14 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
       return { sha: gitText(shaResult).trim(), checkpoint };
     } catch (error) {
       // Reset index for the attempted paths; never drop pre-existing dirty work unless checkpointed.
-      await runner.exec({
-        args: ["reset", "-q", "HEAD", "--", ...paths],
-        cwd,
-        signal: request.signal,
-        maxOutputBytes: limits.maxOutputBytes,
-      }).catch(() => undefined);
+      await runner
+        .exec({
+          args: ["reset", "-q", "HEAD", "--", ...paths],
+          cwd,
+          signal: request.signal,
+          maxOutputBytes: limits.maxOutputBytes,
+        })
+        .catch(() => undefined);
       if (checkpoint) await restoreCheckpoint(checkpoint, request.signal).catch(() => undefined);
       throw error;
     }
@@ -800,13 +761,13 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
   return { status, diff, branch, worktree, apply, commit, prHandoff };
 }
 
-export { parsePorcelainV2 } from "./git-status.js";
-export type { GitStatusResult, GitStatusEntry, GitStatusBranch, GitStatusEntryKind } from "./git-status.js";
+export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js";
 export {
-  GitError,
-  SAFE_GIT_ENV,
-  SAFE_GIT_CONFIG_ARGS,
   createBoundGitRunner,
+  GitError,
   runGitCli,
+  SAFE_GIT_CONFIG_ARGS,
+  SAFE_GIT_ENV,
 } from "./git-exec.js";
-export type { GitRunner, GitExecRequest, GitExecResult, BoundGitRunner, CreateGitRunnerOptions } from "./git-exec.js";
+export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js";
+export { parsePorcelainV2 } from "./git-status.js";

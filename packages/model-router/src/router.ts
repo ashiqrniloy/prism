@@ -1,10 +1,6 @@
 import type { AgentIdentity, AIProvider, ModelConfig, ProviderRequest, ProviderRequestPolicy } from "@arnilo/prism";
 import { ModelRouterError } from "./errors.js";
-import {
-  DEFAULT_CIRCUIT_COOLDOWN_MS,
-  DEFAULT_CIRCUIT_FAILURE_THRESHOLD,
-  resolveModelRouterLimits,
-} from "./limits.js";
+import { DEFAULT_CIRCUIT_COOLDOWN_MS, DEFAULT_CIRCUIT_FAILURE_THRESHOLD, resolveModelRouterLimits } from "./limits.js";
 import type {
   CreateModelRouterOptions,
   ModelRouter,
@@ -57,10 +53,7 @@ function utf8Bytes(value: unknown): number {
   return Buffer.byteLength(JSON.stringify(value), "utf8");
 }
 
-function redactDiagnostics(
-  diagnostics: ModelRouterDiagnostics,
-  maxBytes: number,
-): ModelRouterDiagnostics {
+function redactDiagnostics(diagnostics: ModelRouterDiagnostics, maxBytes: number): ModelRouterDiagnostics {
   const frozen = Object.freeze({
     ...diagnostics,
     attempts: Object.freeze(diagnostics.attempts.map((a) => Object.freeze({ ...a }))),
@@ -72,12 +65,16 @@ function redactDiagnostics(
       reason: frozen.reason ?? "diagnostics_truncated",
       selectedProvider: frozen.selectedProvider,
       selectedModel: frozen.selectedModel,
-      attempts: Object.freeze(frozen.attempts.slice(0, 3).map((a) => Object.freeze({
-        provider: a.provider,
-        model: a.model,
-        outcome: a.outcome,
-        reason: a.reason,
-      }))),
+      attempts: Object.freeze(
+        frozen.attempts.slice(0, 3).map((a) =>
+          Object.freeze({
+            provider: a.provider,
+            model: a.model,
+            outcome: a.outcome,
+            reason: a.reason,
+          }),
+        ),
+      ),
       openRouterRoutingHonored: frozen.openRouterRoutingHonored,
     });
   }
@@ -271,10 +268,14 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
       } catch (error) {
         const err = error as ModelRouterError;
         const reason =
-          err.code === "ERR_PRISM_MODEL_ROUTER_ALLOW_LIST" ? "allow_list"
-            : err.code === "ERR_PRISM_MODEL_ROUTER_RESIDENCY" ? "residency"
-              : err.code === "ERR_PRISM_MODEL_ROUTER_BUDGET" ? "budget"
-                : err.code === "ERR_PRISM_MODEL_ROUTER_RATE_LIMIT" ? "rate_limit"
+          err.code === "ERR_PRISM_MODEL_ROUTER_ALLOW_LIST"
+            ? "allow_list"
+            : err.code === "ERR_PRISM_MODEL_ROUTER_RESIDENCY"
+              ? "residency"
+              : err.code === "ERR_PRISM_MODEL_ROUTER_BUDGET"
+                ? "budget"
+                : err.code === "ERR_PRISM_MODEL_ROUTER_RATE_LIMIT"
+                  ? "rate_limit"
                   : err.code;
         attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "denied", reason });
         lastDeny = { reason: err.message, code: err.code };

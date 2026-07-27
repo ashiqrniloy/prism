@@ -2,14 +2,7 @@ import type { AgentIdentity, JsonObject, ToolDefinition } from "@arnilo/prism";
 
 export type WorkProvider = "microsoft365" | "google-workspace";
 
-export type Microsoft365Capability =
-  | "mail"
-  | "calendar"
-  | "files"
-  | "tasks"
-  | "todo"
-  | "planner"
-  | "teams";
+export type Microsoft365Capability = "mail" | "calendar" | "files" | "tasks" | "todo" | "planner" | "teams";
 
 export type Microsoft365Op =
   | "version"
@@ -29,14 +22,7 @@ export type Microsoft365Op =
   | "planner.add"
   | "planner.complete";
 
-export type GoogleWorkspaceCapability =
-  | "mail"
-  | "calendar"
-  | "files"
-  | "tasks"
-  | "docs"
-  | "sheets"
-  | "slides";
+export type GoogleWorkspaceCapability = "mail" | "calendar" | "files" | "tasks" | "docs" | "sheets" | "slides";
 
 export type GoogleWorkspaceOp =
   | "version"

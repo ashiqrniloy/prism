@@ -6,6 +6,39 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.16 performance budgets and artifact diet
+
+Release 0.0.16 is a simplification/readiness release: it added no performance-affecting code, so the six network-free scenario medians are held at the 0.0.15 baseline and the win is a smaller published artifact. Budgets live in `scripts/budgets.json` (measured baselines + tolerance) and are enforced two ways:
+
+- **Fast gate (every `npm test`)** — `scripts/budget-gate.test.mjs` re-packs the root tarball (`npm pack --dry-run --json`) and fails if packed bytes, unpacked bytes, or file count exceed baseline + 5%, and fails if cold-process `import('./dist/index.js')` exceeds the 250 ms sanity ceiling. Negative fixtures prove an inflated/regressed value fails.
+- **Release evidence runner** — `node scripts/benchmark-0.0.16.mjs` re-measures root pack + startup, spawns `benchmark-0.0.15.mjs` for the six scenario medians (reused unchanged), compares every value to `budgets.json` (throughput floor / latency ceiling at ±25%), prints the evidence report below, and exits non-zero on any regression.
+
+**Artifact diet (the 0.0.16 finding).** The Task 1 tarball deny list dropped the historical `docs/review-coverage-*.md` (11 files, 283,022 bytes) from the root package: the root tarball went from **659,478 packed / 2,310,686 unpacked / 281 files** (0.0.15) to a budgeted **≈575,680 packed / 2,043,402 unpacked / 270 files**. The per-release `scripts/benchmark-0.0.*.mjs` history never shipped in artifacts (root `files` is `dist`/`docs`/`templates`/`CHANGELOG.md` only — zero `scripts/` entries packed), so no archive move was needed; `benchmark-0.0.16.mjs` consolidates the current evidence behind one budget-gating runner.
+
+**Recorded budgets (`scripts/budgets.json`, measured 2026-07-26, Node v24.18.0, Linux x86_64):**
+
+| Budget | Baseline | Tolerance |
+| --- | --- | --- |
+| Root packed bytes | 575,680 | +5% |
+| Root unpacked bytes | 2,043,402 | +5% |
+| Root file count | 270 | +5% |
+| Aggregate packed bytes (44 manifests, reference only) | 1,217,694 | +10% |
+| Startup `import('./dist/index.js')` | ~38 ms | ceiling 250 ms |
+| Six scenario medians (below) | 0.0.15 baseline | ±25% |
+
+**0.0.16 measured evidence** (`node scripts/benchmark-0.0.16.mjs`, 100 iterations each, network-free, 0 backpressure / 0 resource-limit signals; all 22 budget checks passed):
+
+| Scenario | throughput/s | p50 ms | p95 ms |
+| --- | --- | --- | --- |
+| openai-hosted-continuation | 5,514.9 | 0.1305 | 0.2735 |
+| openai-realtime-envelope | 900.5 | 1.1277 | 1.2002 |
+| ai-sdk-v4-stream-mapping | 23,850.4 | 0.0225 | 0.0795 |
+| provider-package-metadata | 54,097.0 | 0.0066 | 0.0386 |
+| rag-parse-replace-rerank-retrieve | 5,176.6 | 0.1428 | 0.3671 |
+| memory-retention-export-rebuild | 13,952.1 | 0.0470 | 0.1339 |
+
+Root startup measured ≈37.7 ms (ceiling 250 ms). Timing is machine-dependent, so medians carry a wide ±25% band and are release evidence rather than tight cross-machine guarantees; the deterministic artifact-size gate is the hard CI tripwire. Raise the baselines in `scripts/budgets.json` after a deliberate, reviewed performance change.
+
 ## Release 0.0.15 provider, RAG, and memory evidence
 
 Run `node scripts/benchmark-0.0.15.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.15.test.mjs`. Default mode is network-free: fake Responses SSE/WebSocket transports, a fake AI SDK v4 model, zero-fetch provider-package registration, hash embeddings, in-memory RAG replacement/reranking/retrieval/status, and in-memory memory retention/export/rebuild.

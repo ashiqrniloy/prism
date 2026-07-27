@@ -1,10 +1,6 @@
-import {
-  resolvePrismDeploymentLimits,
-  type PrismDeploymentLimits,
-  type ResolvedPrismDeploymentLimits,
-} from "./limits.js";
 import type { PrismDrainController } from "./drain.js";
-import { PrismServerError, type PrismRequestHandler } from "./types.js";
+import { type PrismDeploymentLimits, type ResolvedPrismDeploymentLimits, resolvePrismDeploymentLimits } from "./limits.js";
+import { type PrismRequestHandler, PrismServerError } from "./types.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -58,11 +54,16 @@ export function createPrismHealthHandler(options: CreatePrismHealthHandlerOption
         return healthJson({ status: live ? "ok" : "fail", live }, live ? 200 : 503, limits, request.method);
       }
       if (path === readyPath) {
-        return healthJson({
-          status: ready ? "ok" : "fail",
-          ready,
-          ...(drainSnap ? { draining: drainSnap.draining } : {}),
-        }, ready ? 200 : 503, limits, request.method);
+        return healthJson(
+          {
+            status: ready ? "ok" : "fail",
+            ready,
+            ...(drainSnap ? { draining: drainSnap.draining } : {}),
+          },
+          ready ? 200 : 503,
+          limits,
+          request.method,
+        );
       }
 
       const body: Record<string, unknown> = {

@@ -1,11 +1,4 @@
-import type {
-  ContextBlock,
-  InputAssemblyLayout,
-  Message,
-  ProviderRequest,
-  Skill,
-  ToolDefinition,
-} from "./contracts.js";
+import type { ContextBlock, InputAssemblyLayout, Message, ProviderRequest, Skill, ToolDefinition } from "./contracts.js";
 
 /** Assembler-time input budget. At least one max required when present. */
 export interface ContextBudget {
@@ -14,14 +7,7 @@ export interface ContextBudget {
   readonly reportOmissions?: boolean;
 }
 
-export type ContextBudgetOmissionKind =
-  | "skills"
-  | "context"
-  | "history"
-  | "tool_results"
-  | "summaries"
-  | "attachments"
-  | "tools";
+export type ContextBudgetOmissionKind = "skills" | "context" | "history" | "tool_results" | "summaries" | "attachments" | "tools";
 
 export interface ContextBudgetOmission {
   readonly kind: ContextBudgetOmissionKind;
@@ -175,9 +161,10 @@ function dropNext(
 ): ContextBudgetOmission | undefined {
   // ponytail: drop from end of keep-stack (history/tool_results first). cache_aware keeps
   // attachments longer so stable prefix stays intact while budget still allows it.
-  const order = layout === "cache_aware"
-    ? (["tool_results", "history", "summaries", "context", "skills", "attachments"] as const)
-    : (["tool_results", "history", "summaries", "attachments", "context", "skills"] as const);
+  const order =
+    layout === "cache_aware"
+      ? (["tool_results", "history", "summaries", "context", "skills", "attachments"] as const)
+      : (["tool_results", "history", "summaries", "attachments", "context", "skills"] as const);
 
   for (const kind of order) {
     if (kind === "tool_results" && groups.toolResults.length > 0) {
@@ -285,30 +272,36 @@ function assertPositiveCap(value: number, name: string, hardMax: number): void {
 function isContextBudgetReport(value: unknown): value is ContextBudgetReport {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const report = value as Record<string, unknown>;
-  return Array.isArray(report.omitted)
-    && typeof report.keptTokens === "number"
-    && typeof report.keptBytes === "number"
-    && typeof report.truncated === "boolean";
+  return (
+    Array.isArray(report.omitted) &&
+    typeof report.keptTokens === "number" &&
+    typeof report.keptBytes === "number" &&
+    typeof report.truncated === "boolean"
+  );
 }
 
 function messageText(message: Message): string {
-  return message.content.map((part) => {
-    if (part.type === "text" || part.type === "thinking") return part.text;
-    if (part.type === "tool_result") return JSON.stringify(part.result ?? part.error ?? null);
-    if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
-    if (part.type === "tool_call_delta") return `${part.name ?? "tool"}(${part.argumentsText ?? ""})`;
-    if (part.type === "image") return part.url ?? part.resourceUri ?? part.mimeType ?? "[image]";
-    if (part.type === "audio") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[audio]";
-    if (part.type === "file") return part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[file]";
-    if (part.type === "document") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[document]";
-    return "[content]";
-  }).join("\n");
+  return message.content
+    .map((part) => {
+      if (part.type === "text" || part.type === "thinking") return part.text;
+      if (part.type === "tool_result") return JSON.stringify(part.result ?? part.error ?? null);
+      if (part.type === "tool_call") return `${part.name}(${JSON.stringify(part.arguments)})`;
+      if (part.type === "tool_call_delta") return `${part.name ?? "tool"}(${part.argumentsText ?? ""})`;
+      if (part.type === "image") return part.url ?? part.resourceUri ?? part.mimeType ?? "[image]";
+      if (part.type === "audio") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[audio]";
+      if (part.type === "file") return part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[file]";
+      if (part.type === "document") return part.transcript ?? part.name ?? part.url ?? part.resourceUri ?? part.mediaType ?? "[document]";
+      return "[content]";
+    })
+    .join("\n");
 }
 
 function contextBlockText(block: ContextBlock): string {
   if (typeof block.content === "string") return block.content;
-  return block.content.map((part) => {
-    if (part.type === "text" || part.type === "thinking") return part.text;
-    return "[content]";
-  }).join("\n");
+  return block.content
+    .map((part) => {
+      if (part.type === "text" || part.type === "thinking") return part.text;
+      return "[content]";
+    })
+    .join("\n");
 }

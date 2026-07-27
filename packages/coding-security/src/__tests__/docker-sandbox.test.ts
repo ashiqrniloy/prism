@@ -1,23 +1,23 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, rm, symlink, writeFile, chmod } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test } from "node:test";
+import { buildDockerCreateArgsForTest } from "../docker-sandbox.js";
+import type { DockerCliRequest, DockerCliResult, DockerRunner } from "../index.js";
 import {
   createDockerSandbox,
   createImportTarStream,
   createSecretRedactor,
   DockerSandboxError,
-  resolveDockerSandboxLimits,
-  summarizeTarStream,
   HARD_CPUS,
   HARD_MAX_COMMANDS,
+  resolveDockerSandboxLimits,
+  summarizeTarStream,
 } from "../index.js";
-import type { DockerCliRequest, DockerCliResult, DockerRunner } from "../index.js";
-import { buildDockerCreateArgsForTest } from "../docker-sandbox.js";
 
-const DIGEST = "sha256:" + "a".repeat(64);
+const DIGEST = `sha256:${"a".repeat(64)}`;
 const IMAGE = `registry.example/prism-code@${DIGEST}`;
 
 async function withTempDocker(run: (dockerPath: string, sourceRoot: string) => Promise<void>): Promise<void> {
@@ -92,7 +92,10 @@ test("buildDockerCreateArgsForTest pins pull=never, read-only, network none, and
     assert.ok(args.includes("--env"));
     assert.ok(args.includes("CI=1"));
     assert.equal(args.includes("--privileged"), false);
-    assert.equal(args.some((a) => a.includes("docker.sock")), false);
+    assert.equal(
+      args.some((a) => a.includes("docker.sock")),
+      false,
+    );
   });
 });
 
@@ -197,12 +200,15 @@ test("fake runner lifecycle: create/start/execFile/stop/rm with redacted secrets
       runner: badRunner,
       skipImport: true,
     });
-    await assert.rejects(() => sandbox2.execFile({ file: "false", args: [] }), (error: unknown) => {
-      assert.ok(error instanceof DockerSandboxError);
-      assert.equal(error.message.includes(secret), false);
-      assert.match(error.message, /REDACTED/);
-      return true;
-    });
+    await assert.rejects(
+      () => sandbox2.execFile({ file: "false", args: [] }),
+      (error: unknown) => {
+        assert.ok(error instanceof DockerSandboxError);
+        assert.equal(error.message.includes(secret), false);
+        assert.match(error.message, /REDACTED/);
+        return true;
+      },
+    );
     await sandbox2.close();
 
     await sandbox.close();
@@ -636,11 +642,16 @@ test("protected Docker sandbox matrix", { skip: process.env.PRISM_TEST_DOCKER_SA
       assert.ok(composition.treeIdentity);
       const write = tools.find((t) => t.name === "write")!;
       assert.equal(
-        (await write.execute({ path: "tool-write.txt", content: "unified\n" }, {
-          sessionId: "live",
-          runId: "live",
-          toolCallId: "live-1",
-        })).error,
+        (
+          await write.execute(
+            { path: "tool-write.txt", content: "unified\n" },
+            {
+              sessionId: "live",
+              runId: "live",
+              toolCallId: "live-1",
+            },
+          )
+        ).error,
         undefined,
       );
       const catChunks: Buffer[] = [];

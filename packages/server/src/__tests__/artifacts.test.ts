@@ -1,22 +1,16 @@
-import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  ArtifactError,
-  createMemoryCheckpointStore,
-  createSecretRedactor,
-  type ArtifactRecord,
-  type CheckpointStore,
-} from "@arnilo/prism";
+import { afterEach, describe, it } from "node:test";
+import { ArtifactError, type ArtifactRecord, type CheckpointStore, createMemoryCheckpointStore, createSecretRedactor } from "@arnilo/prism";
 import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 import {
+  type ArtifactService,
   createArtifactHandler,
   createArtifactService,
   signArtifactDeliveryLink,
   verifyArtifactDeliveryLink,
-  type ArtifactService,
 } from "../artifacts.js";
 
 const ownership = { tenantId: "tenant-1", userId: "user-1" };
@@ -33,11 +27,13 @@ const identity = {
   verified: true as const,
 };
 
-function makeService(options: {
-  store?: CheckpointStore;
-  limits?: Parameters<typeof createArtifactService>[1]["limits"];
-  onDecision?: Parameters<typeof createArtifactService>[1]["onDecision"];
-} = {}): { store: CheckpointStore; service: ArtifactService } {
+function makeService(
+  options: {
+    store?: CheckpointStore;
+    limits?: Parameters<typeof createArtifactService>[1]["limits"];
+    onDecision?: Parameters<typeof createArtifactService>[1]["onDecision"];
+  } = {},
+): { store: CheckpointStore; service: ArtifactService } {
   const store = options.store ?? createMemoryCheckpointStore();
   const service = createArtifactService(store, {
     redactor: createSecretRedactor([SECRET]),
@@ -71,7 +67,13 @@ describe("createArtifactService", () => {
   it("attach with an explicit id is idempotent get-or-create", async () => {
     const { service } = makeService();
     const first = await service.attach({ ...attachInput, ownership, id: "art-fixed" });
-    const second = await service.attach({ ...attachInput, uri: "https://blob.example/other", hash: "sha256:zzz", ownership, id: "art-fixed" });
+    const second = await service.attach({
+      ...attachInput,
+      uri: "https://blob.example/other",
+      hash: "sha256:zzz",
+      ownership,
+      id: "art-fixed",
+    });
     assert.equal(first.id, "art-fixed");
     assert.equal(second.id, "art-fixed");
     assert.equal(second.revisions.length, 1);
@@ -82,8 +84,12 @@ describe("createArtifactService", () => {
     const { service } = makeService();
     const record = await service.attach({ ...attachInput, ownership });
     const revised = await service.revise({
-      ownership, threadId: "thread-1", artifactId: record.id,
-      uri: "https://blob.example/doc-v2", hash: "sha256:bbb", changeNote: "edits",
+      ownership,
+      threadId: "thread-1",
+      artifactId: record.id,
+      uri: "https://blob.example/doc-v2",
+      hash: "sha256:bbb",
+      changeNote: "edits",
     });
     assert.equal(revised.revisions.length, 2);
     assert.equal(revised.revisions[1].version, 2);
@@ -94,7 +100,13 @@ describe("createArtifactService", () => {
   it("compare returns exactly two revisions with bounded change flags", async () => {
     const { service } = makeService();
     const record = await service.attach({ ...attachInput, ownership });
-    await service.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/doc-v2", hash: "sha256:bbb" });
+    await service.revise({
+      ownership,
+      threadId: "thread-1",
+      artifactId: record.id,
+      uri: "https://blob.example/doc-v2",
+      hash: "sha256:bbb",
+    });
     const diff = await service.compare({ ownership, threadId: "thread-1", artifactId: record.id, from: 1, to: 2 });
     assert.equal(diff.from.version, 1);
     assert.equal(diff.to.version, 2);
@@ -130,8 +142,21 @@ describe("createArtifactService", () => {
     const { service } = makeService();
     const record = await service.attach({ ...attachInput, ownership, identity });
     await service.approve({ ownership, identity, threadId: "thread-1", artifactId: record.id, version: 1 });
-    const revised = await service.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/doc-v2", hash: "sha256:bbb" });
-    const rejected = await service.reject({ ownership, identity, threadId: "thread-1", artifactId: revised.id, version: 2, note: "needs work" });
+    const revised = await service.revise({
+      ownership,
+      threadId: "thread-1",
+      artifactId: record.id,
+      uri: "https://blob.example/doc-v2",
+      hash: "sha256:bbb",
+    });
+    const rejected = await service.reject({
+      ownership,
+      identity,
+      threadId: "thread-1",
+      artifactId: revised.id,
+      version: 2,
+      note: "needs work",
+    });
     assert.equal(rejected.lastValidatedVersion, 1);
     const decision = rejected.approvals.find((a) => a.version === 2);
     assert.equal(decision?.state, "rejected");
@@ -156,9 +181,13 @@ describe("createArtifactService", () => {
     let armGate = false;
     let pausedOnce = false;
     let reachedSave!: () => void;
-    const reached = new Promise<void>((resolve) => { reachedSave = resolve; });
+    const reached = new Promise<void>((resolve) => {
+      reachedSave = resolve;
+    });
     let release!: () => void;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const store: CheckpointStore = {
       ...base,
       async saveCheckpoint(input) {
@@ -172,7 +201,13 @@ describe("createArtifactService", () => {
     };
     const { service } = makeService({ store });
     const record = await service.attach({ ...attachInput, ownership, identity });
-    await service.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/doc-v2", hash: "sha256:bbb" });
+    await service.revise({
+      ownership,
+      threadId: "thread-1",
+      artifactId: record.id,
+      uri: "https://blob.example/doc-v2",
+      hash: "sha256:bbb",
+    });
     armGate = true;
     const first = service.approve({ ownership, identity, threadId: "thread-1", artifactId: record.id, version: 1 });
     await reached; // first reviewer has loaded and is about to commit (checkpoint still at v2)
@@ -194,7 +229,8 @@ describe("createArtifactService", () => {
     const { service } = makeService({ limits: { revisionsPerArtifact: 1 } });
     const record = await service.attach({ ...attachInput, ownership });
     await assert.rejects(
-      () => service.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/doc-v2", hash: "sha256:bbb" }),
+      () =>
+        service.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/doc-v2", hash: "sha256:bbb" }),
       (error: unknown) => error instanceof ArtifactError && error.reason === "too_many_revisions",
     );
     const after = await service.get({ ownership, threadId: "thread-1", artifactId: record.id });
@@ -250,7 +286,11 @@ describe("createArtifactService", () => {
 
   it("emits redacted audit events via onDecision", async () => {
     const events: string[] = [];
-    const { service } = makeService({ onDecision: (event) => { events.push(event.type); } });
+    const { service } = makeService({
+      onDecision: (event) => {
+        events.push(event.type);
+      },
+    });
     const record = await service.attach({ ...attachInput, ownership, identity });
     await service.approve({ ownership, identity, threadId: "thread-1", artifactId: record.id, version: 1 });
     assert.deepEqual(events, ["artifact_attached", "artifact_approved"]);
@@ -274,15 +314,25 @@ describe("artifact delivery links", () => {
     const { service } = makeService();
     const record = await service.attach({ ...attachInput, ownership, identity });
     await service.approve({ ownership, identity, threadId: "thread-1", artifactId: record.id, version: 1 });
-    await service.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/doc-v2", hash: "sha256:bbb" });
+    await service.revise({
+      ownership,
+      threadId: "thread-1",
+      artifactId: record.id,
+      uri: "https://blob.example/doc-v2",
+      hash: "sha256:bbb",
+    });
     const { token } = await service.deliveryLink({ ownership, threadId: "thread-1", artifactId: record.id });
     assert.equal(token.version, 1);
   });
 
   it("rejects tampered and expired links", () => {
     const token = {
-      artifactId: "art-1", threadId: "thread-1", version: 1, ...ownership,
-      issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      artifactId: "art-1",
+      threadId: "thread-1",
+      version: 1,
+      ...ownership,
+      issuedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
     };
     const link = signArtifactDeliveryLink(token, LINK_SECRET);
     assert.throws(
@@ -319,7 +369,10 @@ describe("createArtifactHandler", () => {
     });
   }
 
-  function handler(service: ArtifactService, authorize: () => false | { ownership: typeof ownership; identity?: typeof identity } = () => ({ ownership, identity })) {
+  function handler(
+    service: ArtifactService,
+    authorize: () => false | { ownership: typeof ownership; identity?: typeof identity } = () => ({ ownership, identity }),
+  ) {
     return createArtifactHandler({ service, authorize, linkSecret: LINK_SECRET, redactor: createSecretRedactor([SECRET]) });
   }
 
@@ -333,7 +386,9 @@ describe("createArtifactHandler", () => {
     const got = await h(jsonRequest(`/prism/artifacts/thread-1/${record.id}`, undefined, "GET"));
     assert.equal(got.status, 200);
 
-    const revised = await h(jsonRequest(`/prism/artifacts/thread-1/${record.id}/revise`, { uri: "https://blob.example/doc-v2", hash: "sha256:bbb" }));
+    const revised = await h(
+      jsonRequest(`/prism/artifacts/thread-1/${record.id}/revise`, { uri: "https://blob.example/doc-v2", hash: "sha256:bbb" }),
+    );
     assert.equal(revised.status, 200);
 
     const approved = await h(jsonRequest(`/prism/artifacts/thread-1/${record.id}/approve`, { version: 1 }));
@@ -363,10 +418,17 @@ describe("createArtifactHandler", () => {
   it("download rejects an expired link with 410", async () => {
     const { service } = makeService();
     const record = await service.attach({ ...attachInput, ownership });
-    const expired = signArtifactDeliveryLink({
-      artifactId: record.id, threadId: "thread-1", version: 1, ...ownership,
-      issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() - 1000).toISOString(),
-    }, LINK_SECRET);
+    const expired = signArtifactDeliveryLink(
+      {
+        artifactId: record.id,
+        threadId: "thread-1",
+        version: 1,
+        ...ownership,
+        issuedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() - 1000).toISOString(),
+      },
+      LINK_SECRET,
+    );
     const h = handler(service);
     const res = await h(jsonRequest(`/prism/artifacts/download?link=${encodeURIComponent(expired)}`, undefined, "GET"));
     assert.equal(res.status, 410);
@@ -403,7 +465,13 @@ describe("artifact durability (sqlite checkpoint store)", () => {
     const first = createSqlitePersistence({ filename });
     const serviceA = createArtifactService(first.checkpoints, { redactor, linkSecret: LINK_SECRET });
     const record = await serviceA.attach({ ...attachInput, ownership, identity, id: "art-durable" });
-    await serviceA.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/doc-v2", hash: "sha256:bbb" });
+    await serviceA.revise({
+      ownership,
+      threadId: "thread-1",
+      artifactId: record.id,
+      uri: "https://blob.example/doc-v2",
+      hash: "sha256:bbb",
+    });
     await serviceA.approve({ ownership, identity, threadId: "thread-1", artifactId: record.id, version: 1 });
     first.close();
 

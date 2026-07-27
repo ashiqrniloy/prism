@@ -45,13 +45,15 @@ const SPECS = {
 } as const;
 
 export function resolveMemoryWorkerLimits(input: MemoryWorkerLimitOptions = {}): ResolvedMemoryWorkerLimits {
-  return Object.fromEntries(Object.entries(SPECS).map(([name, [fallback, hardCap]]) => {
-    const value = input[name as keyof MemoryWorkerLimitOptions] ?? fallback;
-    if (!Number.isSafeInteger(value) || value < 1 || value > hardCap) {
-      throw new RangeError(`${name} must be a positive safe integer at most ${hardCap}`);
-    }
-    return [name, value];
-  })) as unknown as ResolvedMemoryWorkerLimits;
+  return Object.fromEntries(
+    Object.entries(SPECS).map(([name, [fallback, hardCap]]) => {
+      const value = input[name as keyof MemoryWorkerLimitOptions] ?? fallback;
+      if (!Number.isSafeInteger(value) || value < 1 || value > hardCap) {
+        throw new RangeError(`${name} must be a positive safe integer at most ${hardCap}`);
+      }
+      return [name, value];
+    }),
+  ) as unknown as ResolvedMemoryWorkerLimits;
 }
 
 export function measureWorkerJson(value: unknown, maxBytes: number, label: string): number {
@@ -87,7 +89,7 @@ export function measureWorkerJson(value: unknown, maxBytes: number, label: strin
       add(2);
       let count = 0;
       for (const key in current as Record<string, unknown>) {
-        if (!Object.prototype.hasOwnProperty.call(current, key)) continue;
+        if (!Object.hasOwn(current, key)) continue;
         const item = (current as Record<string, unknown>)[key];
         if (item === undefined) continue;
         if (count++) add(1);

@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createAgent, createMemorySessionStore, createSecretRedactor } from "../index.js";
+import { describe, it } from "node:test";
 import type { ProviderRequest } from "../index.js";
+import { createAgent, createMemorySessionStore, createSecretRedactor } from "../index.js";
 
 describe("runtime redaction", () => {
   it("redacts provider requests events and stored entries when configured", async () => {
@@ -24,7 +24,9 @@ describe("runtime redaction", () => {
 
     const session = agent.createSession({ id: "s1" });
     const events: unknown[] = [];
-    (async () => { for await (const event of session.subscribe()) events.push(event); })();
+    (async () => {
+      for await (const event of session.subscribe()) events.push(event);
+    })();
     await session.run("token-value");
 
     assert.equal(JSON.stringify(request).includes("token-value"), false);
@@ -60,7 +62,12 @@ describe("runtime redaction", () => {
     assert.equal(JSON.stringify(objectRedacted).includes(secret), false);
     assert.equal(objectRedacted["[REDACTED]"], true);
 
-    const mapRedacted = redactor.redact(new Map([[secret, secret], ["safe", "ok"]])) as unknown as Record<string, unknown>;
+    const mapRedacted = redactor.redact(
+      new Map([
+        [secret, secret],
+        ["safe", "ok"],
+      ]),
+    ) as unknown as Record<string, unknown>;
     assert.equal(JSON.stringify(mapRedacted).includes(secret), false);
     assert.equal(mapRedacted["[REDACTED]"], "[REDACTED]");
     assert.equal(mapRedacted.safe, "ok");
@@ -81,16 +88,17 @@ describe("runtime redaction", () => {
     assert.equal(objectRedacted["[REDACTED]__2"], 1);
     assert.equal(objectRedacted["[REDACTED]__3"], 2);
 
-    const mapRedacted = redactor.redact(new Map([
-      ["[REDACTED]", "zero"],
-      [secretA, "one"],
-      [secretB, "two"],
-    ])) as unknown as Record<string, unknown>;
+    const mapRedacted = redactor.redact(
+      new Map([
+        ["[REDACTED]", "zero"],
+        [secretA, "one"],
+        [secretB, "two"],
+      ]),
+    ) as unknown as Record<string, unknown>;
     assert.equal(JSON.stringify(mapRedacted).includes(secretA), false);
     assert.equal(JSON.stringify(mapRedacted).includes(secretB), false);
     assert.equal(mapRedacted["[REDACTED]"], "zero");
     assert.equal(mapRedacted["[REDACTED]__2"], "one");
     assert.equal(mapRedacted["[REDACTED]__3"], "two");
   });
-
 });

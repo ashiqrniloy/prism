@@ -1,0 +1,152 @@
+BrowserActRequest	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+BrowserActResult	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+BrowserActionName	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+BrowserDownloadInfo	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+BrowserError	export declare class BrowserError extends Error
+BrowserOpenResult	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+BrowserPageInfo	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+BrowserSnapshotResult	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+BrowserTarget	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+DEFAULT_ACTION_TIMEOUT_MS	export declare const DEFAULT_ACTION_TIMEOUT_MS = 10000
+DEFAULT_BROWSER_LIMITS	export declare const DEFAULT_BROWSER_LIMITS: ResolvedBrowserLimits
+DEFAULT_CLOSE_GRACE_MS	export declare const DEFAULT_CLOSE_GRACE_MS = 5000
+DEFAULT_MAX_ACTIONS	export declare const DEFAULT_MAX_ACTIONS = 100
+DEFAULT_MAX_ACTION_INPUT_BYTES	export declare const DEFAULT_MAX_ACTION_INPUT_BYTES: number
+DEFAULT_MAX_CHECKPOINTS_PER_RUN	export declare const DEFAULT_MAX_CHECKPOINTS_PER_RUN = 16
+DEFAULT_MAX_CHECKPOINT_URL_BYTES	export declare const DEFAULT_MAX_CHECKPOINT_URL_BYTES: number
+DEFAULT_MAX_DIALOGS	export declare const DEFAULT_MAX_DIALOGS = 16
+DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES	export declare const DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES = 256
+DEFAULT_MAX_DOWNLOADS	export declare const DEFAULT_MAX_DOWNLOADS = 8
+DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES	export declare const DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES: number
+DEFAULT_MAX_DOWNLOAD_BYTES	export declare const DEFAULT_MAX_DOWNLOAD_BYTES: number
+DEFAULT_MAX_HOST_DATA_REF_BYTES	export declare const DEFAULT_MAX_HOST_DATA_REF_BYTES: number
+DEFAULT_MAX_LISTENERS	export declare const DEFAULT_MAX_LISTENERS = 64
+DEFAULT_MAX_NETWORK_REQUESTS	export declare const DEFAULT_MAX_NETWORK_REQUESTS = 1000
+DEFAULT_MAX_PAGES	export declare const DEFAULT_MAX_PAGES = 4
+DEFAULT_MAX_POPUPS	export declare const DEFAULT_MAX_POPUPS = 4
+DEFAULT_MAX_QUEUED_ACTIONS	export declare const DEFAULT_MAX_QUEUED_ACTIONS = 16
+DEFAULT_MAX_REDIRECTS_PER_REQUEST	export declare const DEFAULT_MAX_REDIRECTS_PER_REQUEST = 10
+DEFAULT_MAX_SCREENSHOTS	export declare const DEFAULT_MAX_SCREENSHOTS = 16
+DEFAULT_MAX_SCREENSHOT_BYTES	export declare const DEFAULT_MAX_SCREENSHOT_BYTES: number
+DEFAULT_MAX_SCREENSHOT_MEGAPIXELS	export declare const DEFAULT_MAX_SCREENSHOT_MEGAPIXELS = 16
+DEFAULT_MAX_SNAPSHOT_BYTES	export declare const DEFAULT_MAX_SNAPSHOT_BYTES: number
+DEFAULT_MAX_SNAPSHOT_DEPTH	export declare const DEFAULT_MAX_SNAPSHOT_DEPTH = 30
+DEFAULT_MAX_SNAPSHOT_REFS	export declare const DEFAULT_MAX_SNAPSHOT_REFS = 2000
+DEFAULT_MAX_UPLOADS	export declare const DEFAULT_MAX_UPLOADS = 8
+DEFAULT_MAX_UPLOAD_AGGREGATE_BYTES	export declare const DEFAULT_MAX_UPLOAD_AGGREGATE_BYTES: number
+DEFAULT_MAX_UPLOAD_BYTES	export declare const DEFAULT_MAX_UPLOAD_BYTES: number
+DEFAULT_MAX_WEBSOCKETS	export declare const DEFAULT_MAX_WEBSOCKETS = 8
+DEFAULT_NAVIGATION_TIMEOUT_MS	export declare const DEFAULT_NAVIGATION_TIMEOUT_MS = 30000
+DEFAULT_RUN_WALL_TIME_MS	export declare const DEFAULT_RUN_WALL_TIME_MS: number
+DEFAULT_WAIT_TIMEOUT_MS	export declare const DEFAULT_WAIT_TIMEOUT_MS = 30000
+FakeBrowser	export declare class FakeBrowser implements PlaywrightBrowser
+FakeContext	export declare class FakeContext
+FakeDialog	export declare class FakeDialog implements PlaywrightDialog
+FakeDownload	export declare class FakeDownload implements PlaywrightDownload
+FakeLocator	export declare class FakeLocator implements PlaywrightLocator
+FakePage	export declare class FakePage
+HARD_ACTION_TIMEOUT_MS	export declare const HARD_ACTION_TIMEOUT_MS = 60000
+HARD_BROWSER_LIMITS	export declare const HARD_BROWSER_LIMITS: ResolvedBrowserLimits
+HARD_CLOSE_GRACE_MS	export declare const HARD_CLOSE_GRACE_MS = 30000
+HARD_MAX_ACTIONS	export declare const HARD_MAX_ACTIONS = 256
+HARD_MAX_ACTION_INPUT_BYTES	export declare const HARD_MAX_ACTION_INPUT_BYTES: number
+HARD_MAX_CHECKPOINTS_PER_RUN	export declare const HARD_MAX_CHECKPOINTS_PER_RUN = 64
+HARD_MAX_CHECKPOINT_URL_BYTES	export declare const HARD_MAX_CHECKPOINT_URL_BYTES: number
+HARD_MAX_DIALOGS	export declare const HARD_MAX_DIALOGS = 64
+HARD_MAX_DOMAIN_STATE_HASH_BYTES	export declare const HARD_MAX_DOMAIN_STATE_HASH_BYTES = 1024
+HARD_MAX_DOWNLOADS	export declare const HARD_MAX_DOWNLOADS = 32
+HARD_MAX_DOWNLOAD_AGGREGATE_BYTES	export declare const HARD_MAX_DOWNLOAD_AGGREGATE_BYTES: number
+HARD_MAX_DOWNLOAD_BYTES	export declare const HARD_MAX_DOWNLOAD_BYTES: number
+HARD_MAX_HOST_DATA_REF_BYTES	export declare const HARD_MAX_HOST_DATA_REF_BYTES: number
+HARD_MAX_LISTENERS	export declare const HARD_MAX_LISTENERS = 256
+HARD_MAX_NETWORK_REQUESTS	export declare const HARD_MAX_NETWORK_REQUESTS = 10000
+HARD_MAX_PAGES	export declare const HARD_MAX_PAGES = 16
+HARD_MAX_POPUPS	export declare const HARD_MAX_POPUPS = 16
+HARD_MAX_QUEUED_ACTIONS	export declare const HARD_MAX_QUEUED_ACTIONS = 64
+HARD_MAX_REDIRECTS_PER_REQUEST	export declare const HARD_MAX_REDIRECTS_PER_REQUEST = 32
+HARD_MAX_SCREENSHOTS	export declare const HARD_MAX_SCREENSHOTS = 64
+HARD_MAX_SCREENSHOT_BYTES	export declare const HARD_MAX_SCREENSHOT_BYTES: number
+HARD_MAX_SCREENSHOT_MEGAPIXELS	export declare const HARD_MAX_SCREENSHOT_MEGAPIXELS = 64
+HARD_MAX_SNAPSHOT_BYTES	export declare const HARD_MAX_SNAPSHOT_BYTES: number
+HARD_MAX_SNAPSHOT_DEPTH	export declare const HARD_MAX_SNAPSHOT_DEPTH = 100
+HARD_MAX_SNAPSHOT_REFS	export declare const HARD_MAX_SNAPSHOT_REFS = 10000
+HARD_MAX_UPLOADS	export declare const HARD_MAX_UPLOADS = 32
+HARD_MAX_UPLOAD_AGGREGATE_BYTES	export declare const HARD_MAX_UPLOAD_AGGREGATE_BYTES: number
+HARD_MAX_UPLOAD_BYTES	export declare const HARD_MAX_UPLOAD_BYTES: number
+HARD_MAX_WEBSOCKETS	export declare const HARD_MAX_WEBSOCKETS = 32
+HARD_NAVIGATION_TIMEOUT_MS	export declare const HARD_NAVIGATION_TIMEOUT_MS = 120000
+HARD_RUN_WALL_TIME_MS	export declare const HARD_RUN_WALL_TIME_MS: number
+HARD_WAIT_TIMEOUT_MS	export declare const HARD_WAIT_TIMEOUT_MS = 120000
+ONE_PX_PNG	export declare const ONE_PX_PNG: Buffer<ArrayBuffer>
+PlaywrightBrowser	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+PlaywrightBrowserContext	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+PlaywrightDialog	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+PlaywrightDownload	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+PlaywrightLocator	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+PlaywrightPage	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+PlaywrightRequest	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+PlaywrightRoute	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+SnapshotRefInfo	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserDownloadInfo, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
+approveUploadPaths	export declare function approveUploadPaths(paths: readonly string[], options: BrowserUploadOptions, limits: ResolvedBrowserLimits, budget: UploadBudget): Promise<readonly ApprovedUploadFile[]>
+assertBrowserUrlAllowed	export declare function assertBrowserUrlAllowed(raw: string, policy?: BrowserNetworkPolicy): Promise<URL>
+assertValidRef	export declare function assertValidRef(ref: string): string
+buildBrowserExecutionAction	export declare function buildBrowserExecutionAction(input:
+captureAriaSnapshot	export declare function captureAriaSnapshot(page: PlaywrightPage, pageId: string, limits: ResolvedBrowserLimits): Promise<LiveSnapshot>
+captureBoundedScreenshot	export declare function captureBoundedScreenshot(options: CaptureScreenshotOptions): Promise<ScreenshotResult>
+classifyBrowserOperation	export declare function classifyBrowserOperation(operation: string, details?:
+classifyBrowserUrl	export declare function classifyBrowserUrl(raw: string, policy?: BrowserNetworkPolicy): BrowserUrlDecision
+classifyHost	export declare function classifyHost(hostname: string): "public" | "loopback" | "private" | "link-local" | "ula" | "invalid"
+cleanupDownloads	export declare function cleanupDownloads(budget: DownloadBudget): Promise<void>
+createBrowserCheckpointLedger	export declare function createBrowserCheckpointLedger(options?: BrowserCheckpointLimitOptions): BrowserCheckpointLedger
+createBrowserManager	export declare function createBrowserManager(options: CreateBrowserManagerOptions): BrowserManager
+createBrowserTools	export declare function createBrowserTools(options?: BrowserToolsOptions): ToolDefinition[]
+createDownloadBudget	export declare function createDownloadBudget(): DownloadBudget
+createNetworkBudget	export declare function createNetworkBudget(): NetworkBudget
+createScreenshotBudget	export declare function createScreenshotBudget(): ScreenshotBudget
+createSharedSandboxBrowserOptions	export declare function createSharedSandboxBrowserOptions(input: SharedSandboxBrowserAlignment): SharedSandboxBrowserOptions
+createSnapshotId	export declare function createSnapshotId(): string
+createUploadBudget	export declare function createUploadBudget(): UploadBudget
+getBrowserManagerFromTools	export declare function getBrowserManagerFromTools(options: BrowserToolsOptions): BrowserManager
+installNetworkRouting	export declare function installNetworkRouting(options: InstallNetworkRoutingOptions): Promise<() => void>
+isSideEffectAction	export declare function isSideEffectAction(action: BrowserActionName): boolean
+normalizeTarget	export declare function normalizeTarget(raw: unknown): BrowserTarget
+packageName	export declare const packageName = "@arnilo/prism-browser"
+parseSnapshotRefs	export declare function parseSnapshotRefs(ariaSnapshot: string, maxRefs: number):
+quarantineDownload	export declare function quarantineDownload(download: PlaywrightDownload, options: BrowserDownloadOptions, limits: ResolvedBrowserLimits, budget: DownloadBudget, signal?: AbortSignal): Promise<DownloadMetadata>
+releaseDownload	export declare function releaseDownload(downloadId: string, options: BrowserDownloadOptions, budget: DownloadBudget): Promise<DownloadMetadata>
+requireUniqueLocator	export declare function requireUniqueLocator(locator: PlaywrightLocator): Promise<PlaywrightLocator>
+resolveBrowserCheckpointLimits	export declare function resolveBrowserCheckpointLimits(input?: BrowserCheckpointLimitOptions): BrowserCheckpointLimits
+resolveBrowserLimits	export declare function resolveBrowserLimits(input?: BrowserLimitOptions): ResolvedBrowserLimits
+resolveTargetLocator	export declare function resolveTargetLocator(page: PlaywrightPage, target: BrowserTarget, refs: ReadonlyMap<string, SnapshotRefInfo> | undefined, snapshotId: string | undefined): Promise<PlaywrightLocator>
+resolveUploadCandidate	export declare function resolveUploadCandidate(root: string, relativePath: string): string
+sanitizeDownloadName	export declare function sanitizeDownloadName(name: string): string
+toSnapshotResult	export declare function toSnapshotResult(snapshot: LiveSnapshot): BrowserSnapshotResult
+type ApprovedUploadFile	export { type ApprovedUploadFile, approveUploadPaths, type BrowserUploadOptions, createUploadBudget, resolveUploadCandidate, type UploadBudget, } from "./uploads.js"
+type BrowserCheckpoint	export { type BrowserCheckpoint, type BrowserCheckpointInput, type BrowserCheckpointLedger, type BrowserCheckpointLimitOptions, type BrowserCheckpointLimits, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINT_URL_BYTES, DEFAULT_MAX_CHECKPOINTS_PER_RUN, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES, DEFAULT_MAX_HOST_DATA_REF_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINTS_PER_RUN, HARD_MAX_DOMAIN_STATE_HASH_BYTES, HARD_MAX_HOST_DATA_REF_BYTES, resolveBrowserCheckpointLimits, } from "./checkpo
+type BrowserCheckpointInput	export { type BrowserCheckpoint, type BrowserCheckpointInput, type BrowserCheckpointLedger, type BrowserCheckpointLimitOptions, type BrowserCheckpointLimits, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINT_URL_BYTES, DEFAULT_MAX_CHECKPOINTS_PER_RUN, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES, DEFAULT_MAX_HOST_DATA_REF_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINTS_PER_RUN, HARD_MAX_DOMAIN_STATE_HASH_BYTES, HARD_MAX_HOST_DATA_REF_BYTES, resolveBrowserCheckpointLimits, } from "./checkpo
+type BrowserCheckpointLedger	export { type BrowserCheckpoint, type BrowserCheckpointInput, type BrowserCheckpointLedger, type BrowserCheckpointLimitOptions, type BrowserCheckpointLimits, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINT_URL_BYTES, DEFAULT_MAX_CHECKPOINTS_PER_RUN, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES, DEFAULT_MAX_HOST_DATA_REF_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINTS_PER_RUN, HARD_MAX_DOMAIN_STATE_HASH_BYTES, HARD_MAX_HOST_DATA_REF_BYTES, resolveBrowserCheckpointLimits, } from "./checkpo
+type BrowserCheckpointLimitOptions	export { type BrowserCheckpoint, type BrowserCheckpointInput, type BrowserCheckpointLedger, type BrowserCheckpointLimitOptions, type BrowserCheckpointLimits, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINT_URL_BYTES, DEFAULT_MAX_CHECKPOINTS_PER_RUN, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES, DEFAULT_MAX_HOST_DATA_REF_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINTS_PER_RUN, HARD_MAX_DOMAIN_STATE_HASH_BYTES, HARD_MAX_HOST_DATA_REF_BYTES, resolveBrowserCheckpointLimits, } from "./checkpo
+type BrowserCheckpointLimits	export { type BrowserCheckpoint, type BrowserCheckpointInput, type BrowserCheckpointLedger, type BrowserCheckpointLimitOptions, type BrowserCheckpointLimits, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINT_URL_BYTES, DEFAULT_MAX_CHECKPOINTS_PER_RUN, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES, DEFAULT_MAX_HOST_DATA_REF_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINTS_PER_RUN, HARD_MAX_DOMAIN_STATE_HASH_BYTES, HARD_MAX_HOST_DATA_REF_BYTES, resolveBrowserCheckpointLimits, } from "./checkpo
+type BrowserDownloadOptions	export { type BrowserDownloadOptions, cleanupDownloads, createDownloadBudget, type DownloadBudget, type DownloadMetadata, quarantineDownload, releaseDownload, sanitizeDownloadName, } from "./downloads.js"
+type BrowserEffectClass	export { type BrowserEffectClass, type BrowserOperationClass, type BrowserRisk, buildBrowserExecutionAction, classifyBrowserOperation, isSideEffectAction, } from "./policy.js"
+type BrowserErrorCode	export { BrowserError, type BrowserErrorCode } from "./errors.js"
+type BrowserLimitOptions	export { type BrowserLimitOptions, DEFAULT_ACTION_TIMEOUT_MS, DEFAULT_BROWSER_LIMITS, DEFAULT_CLOSE_GRACE_MS, DEFAULT_MAX_ACTION_INPUT_BYTES, DEFAULT_MAX_ACTIONS, DEFAULT_MAX_DIALOGS, DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES, DEFAULT_MAX_DOWNLOAD_BYTES, DEFAULT_MAX_DOWNLOADS, DEFAULT_MAX_LISTENERS, DEFAULT_MAX_NETWORK_REQUESTS, DEFAULT_MAX_PAGES, DEFAULT_MAX_POPUPS, DEFAULT_MAX_QUEUED_ACTIONS, DEFAULT_MAX_REDIRECTS_PER_REQUEST, DEFAULT_MAX_SCREENSHOT_BYTES, DEFAULT_MAX_SCREENSHOT_MEGAPIXELS, DEFAULT
+type BrowserManager	export { type BrowserManager, type CreateBrowserManagerOptions, createBrowserManager } from "./manager.js"
+type BrowserNetworkPolicy	export { assertBrowserUrlAllowed, type BrowserNetworkPolicy, type BrowserUrlDecision, classifyBrowserUrl, classifyHost, createNetworkBudget, installNetworkRouting, type NetworkBudget, } from "./network.js"
+type BrowserOperationClass	export { type BrowserEffectClass, type BrowserOperationClass, type BrowserRisk, buildBrowserExecutionAction, classifyBrowserOperation, isSideEffectAction, } from "./policy.js"
+type BrowserRisk	export { type BrowserEffectClass, type BrowserOperationClass, type BrowserRisk, buildBrowserExecutionAction, classifyBrowserOperation, isSideEffectAction, } from "./policy.js"
+type BrowserToolsOptions	export { type BrowserToolsOptions, createBrowserTools, getBrowserManagerFromTools } from "./tools.js"
+type BrowserUploadOptions	export { type ApprovedUploadFile, approveUploadPaths, type BrowserUploadOptions, createUploadBudget, resolveUploadCandidate, type UploadBudget, } from "./uploads.js"
+type BrowserUrlDecision	export { assertBrowserUrlAllowed, type BrowserNetworkPolicy, type BrowserUrlDecision, classifyBrowserUrl, classifyHost, createNetworkBudget, installNetworkRouting, type NetworkBudget, } from "./network.js"
+type CaptureScreenshotOptions	export { type CaptureScreenshotOptions, captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget, type ScreenshotResult, } from "./screenshot.js"
+type CreateBrowserManagerOptions	export { type BrowserManager, type CreateBrowserManagerOptions, createBrowserManager } from "./manager.js"
+type DownloadBudget	export { type BrowserDownloadOptions, cleanupDownloads, createDownloadBudget, type DownloadBudget, type DownloadMetadata, quarantineDownload, releaseDownload, sanitizeDownloadName, } from "./downloads.js"
+type DownloadMetadata	export { type BrowserDownloadOptions, cleanupDownloads, createDownloadBudget, type DownloadBudget, type DownloadMetadata, quarantineDownload, releaseDownload, sanitizeDownloadName, } from "./downloads.js"
+type LiveSnapshot	export { captureAriaSnapshot, createSnapshotId, type LiveSnapshot, toSnapshotResult } from "./snapshot.js"
+type NetworkBudget	export { assertBrowserUrlAllowed, type BrowserNetworkPolicy, type BrowserUrlDecision, classifyBrowserUrl, classifyHost, createNetworkBudget, installNetworkRouting, type NetworkBudget, } from "./network.js"
+type ResolvedBrowserLimits	export { type BrowserLimitOptions, DEFAULT_ACTION_TIMEOUT_MS, DEFAULT_BROWSER_LIMITS, DEFAULT_CLOSE_GRACE_MS, DEFAULT_MAX_ACTION_INPUT_BYTES, DEFAULT_MAX_ACTIONS, DEFAULT_MAX_DIALOGS, DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES, DEFAULT_MAX_DOWNLOAD_BYTES, DEFAULT_MAX_DOWNLOADS, DEFAULT_MAX_LISTENERS, DEFAULT_MAX_NETWORK_REQUESTS, DEFAULT_MAX_PAGES, DEFAULT_MAX_POPUPS, DEFAULT_MAX_QUEUED_ACTIONS, DEFAULT_MAX_REDIRECTS_PER_REQUEST, DEFAULT_MAX_SCREENSHOT_BYTES, DEFAULT_MAX_SCREENSHOT_MEGAPIXELS, DEFAULT
+type ScreenshotBudget	export { type CaptureScreenshotOptions, captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget, type ScreenshotResult, } from "./screenshot.js"
+type ScreenshotResult	export { type CaptureScreenshotOptions, captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget, type ScreenshotResult, } from "./screenshot.js"
+type SharedSandboxBrowserAlignment	export { createSharedSandboxBrowserOptions, type SharedSandboxBrowserAlignment, type SharedSandboxBrowserOptions, } from "./shared-sandbox.js"
+type SharedSandboxBrowserOptions	export { createSharedSandboxBrowserOptions, type SharedSandboxBrowserAlignment, type SharedSandboxBrowserOptions, } from "./shared-sandbox.js"
+type UploadBudget	export { type ApprovedUploadFile, approveUploadPaths, type BrowserUploadOptions, createUploadBudget, resolveUploadCandidate, type UploadBudget, } from "./uploads.js"

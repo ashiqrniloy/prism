@@ -6,10 +6,9 @@ import { createOpenAIResponsesProvider } from "../responses.js";
 import { createOpenAIFileUploadManager } from "../uploads.js";
 
 const tinyPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]).toString("base64");
-const tinyWav = Buffer.from([
-  0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00,
-  0x57, 0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20,
-]).toString("base64");
+const tinyWav = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20]).toString(
+  "base64",
+);
 
 describe("@arnilo/prism-provider-openai multimodal responses", () => {
   it("openai_responses_serializes_file_audio_and_document_blocks", async () => {
@@ -19,15 +18,17 @@ describe("@arnilo/prism-provider-openai multimodal responses", () => {
         model: "gpt-5.1",
         capabilities: { input: ["text", "image", "audio", "file", "document"] },
       },
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: "review" },
-          { type: "file", mediaType: "application/pdf", name: "report.pdf", data: tinyPdf },
-          { type: "document", mediaType: "application/pdf", name: "brief.pdf", data: tinyPdf },
-          { type: "audio", mediaType: "audio/wav", name: "note.wav", data: tinyWav },
-        ],
-      }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "review" },
+            { type: "file", mediaType: "application/pdf", name: "report.pdf", data: tinyPdf },
+            { type: "document", mediaType: "application/pdf", name: "brief.pdf", data: tinyPdf },
+            { type: "audio", mediaType: "audio/wav", name: "note.wav", data: tinyWav },
+          ],
+        },
+      ],
     };
     let body: unknown;
     const provider = createOpenAIResponsesProvider({
@@ -67,24 +68,33 @@ describe("@arnilo/prism-provider-openai multimodal responses", () => {
       uploadManager: {
         inlineMaxBytes: 1,
         maxItemBytes: 10_000_000,
-        resolveFileWire: async (_mediaType, _bytes, filename) => { uploads += 1; return { filename, fileId: "unexpected", uploaded: true }; },
+        resolveFileWire: async (_mediaType, _bytes, filename) => {
+          uploads += 1;
+          return { filename, fileId: "unexpected", uploaded: true };
+        },
         cleanup: async () => {},
       },
-      fetch: (async () => { providerFetches += 1; return ok(sse([])); }) as typeof fetch,
+      fetch: (async () => {
+        providerFetches += 1;
+        return ok(sse([]));
+      }) as typeof fetch,
     });
     const events: ProviderEvent[] = [];
     for await (const event of provider.generate({
       model: { provider: "openai", model: "gpt-5.1", capabilities: { input: ["file"] } },
-      messages: [{
-        role: "user",
-        content: Array.from({ length: 33 }, (_, index) => ({
-          type: "file" as const,
-          mediaType: "application/pdf",
-          name: `${index}.pdf`,
-          data: tinyPdf,
-        })),
-      }],
-    })) events.push(event);
+      messages: [
+        {
+          role: "user",
+          content: Array.from({ length: 33 }, (_, index) => ({
+            type: "file" as const,
+            mediaType: "application/pdf",
+            name: `${index}.pdf`,
+            data: tinyPdf,
+          })),
+        },
+      ],
+    }))
+      events.push(event);
     assert.equal(events.at(-1)?.type, "error");
     assert.equal(uploads, 0);
     assert.equal(providerFetches, 0);
@@ -128,6 +138,11 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
-  return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }

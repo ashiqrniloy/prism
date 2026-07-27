@@ -54,9 +54,7 @@ export function azureChatCompletionsUrl(input: {
   const endpoint = requireEndpoint(input.endpoint);
   if (!input.deployment.trim()) throw new Error("Azure OpenAI deployment is required");
   const apiVersion = input.apiVersion ?? AZURE_OPENAI_DEFAULT_API_VERSION;
-  const url = new URL(
-    `${endpoint}/openai/deployments/${encodeURIComponent(input.deployment)}/chat/completions`,
-  );
+  const url = new URL(`${endpoint}/openai/deployments/${encodeURIComponent(input.deployment)}/chat/completions`);
   url.searchParams.set("api-version", apiVersion);
   return url.toString();
 }

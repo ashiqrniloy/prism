@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
   applyEditsToNormalizedContent,
   detectLineEnding,
@@ -85,33 +85,20 @@ test("applyEditsToNormalizedContent: fuzzy edit preserves unchanged line bytes",
   // Unchanged lines keep their original trailing-space bytes; the en-dash line is
   // matched via fuzzy normalization (hyphen oldText) and rewritten from the normalized base.
   const original = "keep   \nchange\u2013me\nkeep   ";
-  const { newContent } = applyEditsToNormalizedContent(
-    original,
-    [{ oldText: "change-me", newText: "changed" }],
-    "f",
-  );
+  const { newContent } = applyEditsToNormalizedContent(original, [{ oldText: "change-me", newText: "changed" }], "f");
   assert.equal(newContent, "keep   \nchanged\nkeep   ");
 });
 
 test("applyEditsToNormalizedContent: empty oldText throws", () => {
-  assert.throws(
-    () => applyEditsToNormalizedContent("a", [{ oldText: "", newText: "b" }], "f"),
-    /oldText must not be empty/,
-  );
+  assert.throws(() => applyEditsToNormalizedContent("a", [{ oldText: "", newText: "b" }], "f"), /oldText must not be empty/);
 });
 
 test("applyEditsToNormalizedContent: not found throws", () => {
-  assert.throws(
-    () => applyEditsToNormalizedContent("a\nb", [{ oldText: "zzz", newText: "y" }], "f"),
-    /Could not find the exact text in f/,
-  );
+  assert.throws(() => applyEditsToNormalizedContent("a\nb", [{ oldText: "zzz", newText: "y" }], "f"), /Could not find the exact text in f/);
 });
 
 test("applyEditsToNormalizedContent: duplicate match throws", () => {
-  assert.throws(
-    () => applyEditsToNormalizedContent("x\nx", [{ oldText: "x", newText: "y" }], "f"),
-    /Found 2 occurrences/,
-  );
+  assert.throws(() => applyEditsToNormalizedContent("x\nx", [{ oldText: "x", newText: "y" }], "f"), /Found 2 occurrences/);
 });
 
 test("applyEditsToNormalizedContent: overlapping edits throw", () => {
@@ -130,10 +117,7 @@ test("applyEditsToNormalizedContent: overlapping edits throw", () => {
 });
 
 test("applyEditsToNormalizedContent: identical replacement throws no-change", () => {
-  assert.throws(
-    () => applyEditsToNormalizedContent("a\nb", [{ oldText: "b", newText: "b" }], "f"),
-    /No changes made/,
-  );
+  assert.throws(() => applyEditsToNormalizedContent("a\nb", [{ oldText: "b", newText: "b" }], "f"), /No changes made/);
 });
 
 test("generateUnifiedPatch: header-only (no Index/underline), starts with file headers", () => {

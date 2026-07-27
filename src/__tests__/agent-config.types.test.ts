@@ -12,7 +12,12 @@ type _AgentConfigHasNoCredentials = ExpectFalse<HasKey<AgentConfig, "credentials
 
 describe("AgentConfig host-wiring migration", () => {
   it("documents extensions/settings/credentials as host-owned outside AgentConfig", () => {
-    const extension: Extension = { name: "demo", setup() { /* host loads via createExtensionKernel */ } };
+    const extension: Extension = {
+      name: "demo",
+      setup() {
+        /* host loads via createExtensionKernel */
+      },
+    };
     const settings: SettingsProvider = { get: () => undefined };
     const credentials: CredentialResolver = { resolve: () => undefined };
     // Host wires these into provider packages / kernels explicitly — not createAgent().

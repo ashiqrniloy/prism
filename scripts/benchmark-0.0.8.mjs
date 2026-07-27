@@ -42,8 +42,18 @@ try {
 
   let persisted = 0;
   const target = {
-    async appendRun() { persisted += 1; }, async appendEvent() { persisted += 1; },
-    async appendToolCall() { persisted += 1; }, async appendUsage() { persisted += 1; },
+    async appendRun() {
+      persisted += 1;
+    },
+    async appendEvent() {
+      persisted += 1;
+    },
+    async appendToolCall() {
+      persisted += 1;
+    },
+    async appendUsage() {
+      persisted += 1;
+    },
   };
   const ledger = createBatchedRunLedger(target, { maxBatchEntries: 128, durability: "buffered", maxDelayMs: 60_000 });
   await measure("batched-ledger", (index) => ledger.appendEvent({ runId: "benchmark", sequence: index, type: "delta" }), {
@@ -54,7 +64,9 @@ try {
   await ledger.dispose();
 
   const snapshot = new Map([["leaf:0", { generation: 0, entries: [] }]]);
-  await measure("snapshot-cache-hit", () => { if (!snapshot.get("leaf:0")) throw new Error("snapshot cache miss"); });
+  await measure("snapshot-cache-hit", () => {
+    if (!snapshot.get("leaf:0")) throw new Error("snapshot cache miss");
+  });
 
   const memory = createInMemoryTelemetry();
   const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer });
@@ -79,11 +91,17 @@ try {
   await measure("a2a-envelope", envelope("a2a"));
   await measure("web-tools-envelope", envelope("web-tools"));
 
-  console.log(JSON.stringify({
-    generatedAt: new Date().toISOString(),
-    environment: { node: process.version, platform: process.platform, arch: process.arch, network: false, credentials: false },
-    results,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        environment: { node: process.version, platform: process.platform, arch: process.arch, network: false, credentials: false },
+        results,
+      },
+      null,
+      2,
+    ),
+  );
 } finally {
   await rm(dir, { recursive: true, force: true });
 }

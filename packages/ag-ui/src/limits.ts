@@ -105,9 +105,16 @@ export function resolveAgUiLimits(options: AgUiLimitOptions = {}): ResolvedAgUiL
 
 function validate(name: keyof ResolvedAgUiLimits, value: number): number {
   const hard = HARD_AG_UI_LIMITS[name];
-  const minimum = name === "maxEventBytes" || name === "maxRequestBytes" || name === "maxInputTextBytes" || name === "maxCursorBytes" || name === "maxStreamBytes"
-    ? 1_024
-    : name === "maxTextBytes" || name === "maxErrorBytes" ? 16 : 1;
+  const minimum =
+    name === "maxEventBytes" ||
+    name === "maxRequestBytes" ||
+    name === "maxInputTextBytes" ||
+    name === "maxCursorBytes" ||
+    name === "maxStreamBytes"
+      ? 1_024
+      : name === "maxTextBytes" || name === "maxErrorBytes"
+        ? 16
+        : 1;
   if (!Number.isSafeInteger(value) || value < minimum || value > hard) {
     throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", `${name} must be a safe integer from ${minimum} through ${hard}`);
   }

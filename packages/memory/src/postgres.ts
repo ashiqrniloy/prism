@@ -1,9 +1,22 @@
 import type { JsonObject } from "@arnilo/prism";
 import type { Pool, PoolClient, PoolConfig } from "pg";
-import { MemoryConflictError, MemoryLimitError, MemoryValidationError } from "./errors.js";
+import { MemoryConflictError, MemoryValidationError } from "./errors.js";
+import { decodeMemoryCursor, encodeMemoryCursor } from "./pagination.js";
 import { buildMemoryDdl, DEFAULT_MEMORY_SCHEMA } from "./postgres-ddl.js";
 import { qualifyTable, validateIdentifier } from "./postgres-identifiers.js";
-import { decodeMemoryCursor, encodeMemoryCursor } from "./pagination.js";
+import type {
+  MemoryConsent,
+  MemoryVectorHit,
+  MemoryVectorOrder,
+  MemoryVectorRecord,
+  VectorDeleteFilter,
+  VectorQuery,
+  VectorStore,
+  WorkingMemoryKey,
+  WorkingMemoryRecord,
+  WorkingMemoryStore,
+  WorkingMemoryUpdateOptions,
+} from "./types.js";
 import {
   assertByteLimit,
   assertFiniteVector,
@@ -14,19 +27,6 @@ import {
   requireNonEmptyString,
   requireScope,
 } from "./util.js";
-import type {
-  MemoryConsent,
-  MemoryVectorHit,
-  MemoryVectorRecord,
-  MemoryVectorOrder,
-  VectorDeleteFilter,
-  VectorQuery,
-  VectorStore,
-  WorkingMemoryKey,
-  WorkingMemoryRecord,
-  WorkingMemoryStore,
-  WorkingMemoryUpdateOptions,
-} from "./types.js";
 
 export interface PostgresMemoryStoresOptions {
   readonly pool?: Pool;
@@ -54,9 +54,7 @@ export interface PostgresMemoryStores {
 
 type Queryable = Pick<Pool | PoolClient, "query">;
 
-export async function createPostgresMemoryStores(
-  options: PostgresMemoryStoresOptions,
-): Promise<PostgresMemoryStores> {
+export async function createPostgresMemoryStores(options: PostgresMemoryStoresOptions): Promise<PostgresMemoryStores> {
   const schema = validateIdentifier(options.schema ?? DEFAULT_MEMORY_SCHEMA, "schema");
   const maxWorkingMemoryBytes = options.maxWorkingMemoryBytes ?? 256 * 1024;
   const maxEntryTextChars = options.maxEntryTextChars ?? 64_384;
@@ -79,11 +77,13 @@ export async function createPostgresMemoryStores(
     await pool.query(buildMemoryDdl(schema));
     if (dimensions !== undefined) {
       // Ensure embedding column width when host declares dimensions up front.
-      await pool.query(
-        `ALTER TABLE ${qualifyTable(schema, "semantic_memory")}
+      await pool
+        .query(
+          `ALTER TABLE ${qualifyTable(schema, "semantic_memory")}
          ALTER COLUMN embedding TYPE vector(${dimensions})
          USING embedding::vector`,
-      ).catch(() => undefined);
+        )
+        .catch(() => undefined);
     }
   }
 
@@ -146,8 +146,7 @@ export async function createPostgresMemoryStores(
           }
         }
         const mode = updateOptions.mode ?? "merge";
-        const nextValue =
-          mode === "replace" ? cloneJsonObject(patch) : mergeJsonObjects(existing?.value ?? {}, patch);
+        const nextValue = mode === "replace" ? cloneJsonObject(patch) : mergeJsonObjects(existing?.value ?? {}, patch);
         assertByteLimit(nextValue, maxWorkingMemoryBytes, "working memory");
         const nextVersion = (existing?.version ?? 0) + 1;
         const updatedAt = new Date().toISOString();
@@ -280,7 +279,8 @@ export async function createPostgresMemoryStores(
     async listByThread(query) {
       assertNotAborted(query.signal);
       const required = requireScope(query, true) as Required<MemoryVectorRecord>;
-      if (!Number.isInteger(query.limit) || query.limit < 1) throw new MemoryValidationError("memory page limit must be a positive integer");
+      if (!Number.isInteger(query.limit) || query.limit < 1)
+        throw new MemoryValidationError("memory page limit must be a positive integer");
       const order: MemoryVectorOrder = query.order ?? "sequence";
       const cursor = decodeMemoryCursor(query.cursor, order);
       const params: unknown[] = [required.tenantId, required.resourceId, required.threadId];
@@ -347,13 +347,9 @@ function mapVectorRow(row: Record<string, unknown>, score?: number): MemoryVecto
   assertFiniteVector(embedding, "stored embedding");
   if (score !== undefined && !Number.isFinite(score)) throw new MemoryValidationError("stored vector score must be finite");
   const metadata =
-    row.metadata == null
-      ? undefined
-      : (typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata) as JsonObject;
+    row.metadata == null ? undefined : ((typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata) as JsonObject);
   const consent =
-    row.consent == null
-      ? undefined
-      : (typeof row.consent === "string" ? JSON.parse(row.consent) : row.consent) as MemoryConsent;
+    row.consent == null ? undefined : ((typeof row.consent === "string" ? JSON.parse(row.consent) : row.consent) as MemoryConsent);
   const base: MemoryVectorRecord = {
     tenantId: String(row.tenant_id),
     resourceId: String(row.resource_id),

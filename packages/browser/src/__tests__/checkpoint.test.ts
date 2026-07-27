@@ -1,11 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  BrowserError,
-  DEFAULT_MAX_CHECKPOINTS_PER_RUN,
-  createBrowserCheckpointLedger,
-  resolveBrowserCheckpointLimits,
-} from "../index.js";
+import { describe, it } from "node:test";
+import { BrowserError, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINTS_PER_RUN, resolveBrowserCheckpointLimits } from "../index.js";
 
 function input(overrides: Partial<{ runId: string; url: string; domainStateHash: string; hostDataRef: string }> = {}) {
   return {
@@ -38,15 +33,7 @@ describe("createBrowserCheckpointLedger", () => {
   it("never stores browser internals — only url, hash, and host data ref", () => {
     const ledger = createBrowserCheckpointLedger();
     const cp = ledger.checkpoint(input({ hostDataRef: "host:artifact/rev-3" }));
-    assert.deepEqual(Object.keys(cp).sort(), [
-      "checkpointId",
-      "createdAt",
-      "domainStateHash",
-      "hostDataRef",
-      "runId",
-      "url",
-      "verified",
-    ]);
+    assert.deepEqual(Object.keys(cp).sort(), ["checkpointId", "createdAt", "domainStateHash", "hostDataRef", "runId", "url", "verified"]);
   });
 
   it("enforces byte caps on url, hash, and host data ref", () => {

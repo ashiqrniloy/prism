@@ -1,6 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createContributionRegistries, createContributionRegistry } from "../index.js";
+import { describe, it } from "node:test";
 import type {
   AgentDefinition,
   AIProvider,
@@ -21,6 +20,7 @@ import type {
   SystemPromptContribution,
   ToolDefinition,
 } from "../index.js";
+import { createContributionRegistries, createContributionRegistry } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -64,7 +64,11 @@ const agent: AgentDefinition = {
 const inputBuilder: InputBuilder = {
   name: "input",
   build(input) {
-    return typeof input === "string" ? [{ role: "user", content: [{ type: "text", text: input }] }] : Array.isArray(input) ? input : [input];
+    return typeof input === "string"
+      ? [{ role: "user", content: [{ type: "text", text: input }] }]
+      : Array.isArray(input)
+        ? input
+        : [input];
   },
 };
 const promptBuilder: PromptBuilder = {

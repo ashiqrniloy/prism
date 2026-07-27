@@ -1,16 +1,20 @@
+import { randomUUID } from "node:crypto";
+import {
+  AgentRunStateError,
+  assertIdentityActive,
+  assertIdentityMatchesOwnership,
+  createRunLimitTracker,
+  createToolRegistry,
+  dispatchToolCall,
+  type JsonObject,
+  type ToolResult,
+} from "@arnilo/prism";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { randomUUID } from "node:crypto";
-import { AgentRunStateError, assertIdentityActive, assertIdentityMatchesOwnership, createRunLimitTracker, createToolRegistry, dispatchToolCall, type JsonObject, type ToolResult } from "@arnilo/prism";
 import * as z from "zod/v4";
-import type {
-  CreatePrismMcpServerOptions,
-  CreatePrismMcpWebHandlerOptions,
-  PrismMcpAuthorization,
-  PrismMcpWebHandler,
-} from "./types.js";
 import { measureBoundedJson } from "./json-bounds.js";
+import type { CreatePrismMcpServerOptions, CreatePrismMcpWebHandlerOptions, PrismMcpAuthorization, PrismMcpWebHandler } from "./types.js";
 import { McpBridgeError } from "./types.js";
 
 const DEFAULT_MAX_SERVER_RESULT_BYTES = 1024 * 1024;
@@ -46,16 +50,23 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
     }
   }
   const maxResultBytes = bounded(options.maxResultBytes, DEFAULT_MAX_SERVER_RESULT_BYTES, HARD_MAX_SERVER_RESULT_BYTES, "maxResultBytes");
-  const maxConcurrentCalls = bounded(options.maxConcurrentCalls, DEFAULT_MAX_SERVER_CONCURRENT_CALLS, HARD_MAX_SERVER_CONCURRENT_CALLS, "maxConcurrentCalls");
+  const maxConcurrentCalls = bounded(
+    options.maxConcurrentCalls,
+    DEFAULT_MAX_SERVER_CONCURRENT_CALLS,
+    HARD_MAX_SERVER_CONCURRENT_CALLS,
+    "maxConcurrentCalls",
+  );
   const callTimeoutMs = bounded(options.callTimeoutMs, DEFAULT_SERVER_CALL_TIMEOUT_MS, HARD_SERVER_CALL_TIMEOUT_MS, "callTimeoutMs");
   const registry = createToolRegistry(tools, { duplicate: "error" });
   const server = new McpServer(
     { name: options.name ?? "prism-mcp-server", version: options.version ?? "0.0.12" },
-    { capabilities: {
-      ...(tools.length || commands.length || Object.keys(agentRuns).length ? { tools: { listChanged: true } } : {}),
-      ...(resources.length ? { resources: { listChanged: true } } : {}),
-      ...(prompts.length ? { prompts: { listChanged: true } } : {}),
-    } },
+    {
+      capabilities: {
+        ...(tools.length || commands.length || Object.keys(agentRuns).length ? { tools: { listChanged: true } } : {}),
+        ...(resources.length ? { resources: { listChanged: true } } : {}),
+        ...(prompts.length ? { prompts: { listChanged: true } } : {}),
+      },
+    },
   );
   let activeCalls = 0;
 
@@ -63,26 +74,26 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
     register(tool.name, tool.description, tool.parameters, "tool", async (args, authorization, signal, requestId, sessionId) => {
       const limits = createRunLimitTracker(options.limits);
       try {
-      const result = await dispatchToolCall({
-        call: { type: "tool_call", id: requestId, name: tool.name, arguments: args },
-        registry,
-        context: {
-          sessionId: sessionId ?? "mcp",
-          runId: requestId,
-          toolCallId: requestId,
-          signal,
-          metadata: authorization.metadata,
+        const result = await dispatchToolCall({
+          call: { type: "tool_call", id: requestId, name: tool.name, arguments: args },
+          registry,
+          context: {
+            sessionId: sessionId ?? "mcp",
+            runId: requestId,
+            toolCallId: requestId,
+            signal,
+            metadata: authorization.metadata,
+            identity: authorization.identity,
+          },
+          validate: options.validate,
+          permission: options.permission,
+          redactor: options.redactor,
+          ownership: authorization.ownership,
           identity: authorization.identity,
-        },
-        validate: options.validate,
-        permission: options.permission,
-        redactor: options.redactor,
-        ownership: authorization.ownership,
-        identity: authorization.identity,
-        guardrails: options.guardrails,
-        limitTracker: limits,
-      });
-      return toolResult(result, maxResultBytes, options.redactor);
+          guardrails: options.guardrails,
+          limitTracker: limits,
+        });
+        return toolResult(result, maxResultBytes, options.redactor);
       } finally {
         limits.dispose();
       }
@@ -90,42 +101,73 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
   }
 
   for (const command of commands) {
-    register(command.name, command.description, command.parameters, "command", async (args, authorization, signal, requestId, sessionId) => {
-      const result = await command.execute(args, {
-        sessionId,
-        runId: requestId,
-        signal,
-        metadata: { ...command.metadata, ...authorization.metadata },
-      });
-      return toolResult({
-        toolCallId: requestId,
-        name: command.name,
-        content: result.content,
-        value: result.value,
-        error: result.error,
-        metadata: result.metadata,
-      }, maxResultBytes, options.redactor);
-    });
+    register(
+      command.name,
+      command.description,
+      command.parameters,
+      "command",
+      async (args, authorization, signal, requestId, sessionId) => {
+        const result = await command.execute(args, {
+          sessionId,
+          runId: requestId,
+          signal,
+          metadata: { ...command.metadata, ...authorization.metadata },
+        });
+        return toolResult(
+          {
+            toolCallId: requestId,
+            name: command.name,
+            content: result.content,
+            value: result.value,
+            error: result.error,
+            metadata: result.metadata,
+          },
+          maxResultBytes,
+          options.redactor,
+        );
+      },
+    );
   }
 
   for (const resource of resources) {
     assertUtf8("MCP resource name", resource.name, 1024);
     assertUtf8("MCP resource URI", resource.uri, 16 * 1024);
-    try { new URL(resource.uri); } catch { throw new McpBridgeError(`Invalid MCP resource URI: ${resource.uri}`); }
-    server.registerResource(resource.name, resource.uri, {
-      title: resource.title, description: resource.description, mimeType: resource.mimeType,
-    }, async (uri, extra) => {
-      const authorization = await authorize("resource", resource.name, { uri: uri.href }, extra);
-      const result = await resource.read({ uri: uri.href, authorization, signal: extra.signal });
-      return boundedProtocolResult(result, maxResultBytes, `MCP resource ${resource.name} result`, options.redactor) as never;
-    });
+    try {
+      new URL(resource.uri);
+    } catch {
+      throw new McpBridgeError(`Invalid MCP resource URI: ${resource.uri}`);
+    }
+    server.registerResource(
+      resource.name,
+      resource.uri,
+      {
+        title: resource.title,
+        description: resource.description,
+        mimeType: resource.mimeType,
+      },
+      async (uri, extra) => {
+        const authorization = await authorize("resource", resource.name, { uri: uri.href }, extra);
+        const result = await resource.read({ uri: uri.href, authorization, signal: extra.signal });
+        return boundedProtocolResult(result, maxResultBytes, `MCP resource ${resource.name} result`, options.redactor) as never;
+      },
+    );
   }
 
   for (const prompt of prompts) {
     assertUtf8("MCP prompt name", prompt.name, 1024);
     if (Object.keys(prompt.arguments ?? {}).length > 100) throw new McpBridgeError(`MCP prompt ${prompt.name} exceeds 100 arguments`);
     for (const name of Object.keys(prompt.arguments ?? {})) assertUtf8("MCP prompt argument name", name, 256);
-    const argsSchema = Object.fromEntries(Object.entries(prompt.arguments ?? {}).map(([name, value]) => [name, value.required ? z.string().describe(value.description ?? name) : z.string().optional().describe(value.description ?? name)]));
+    const argsSchema = Object.fromEntries(
+      Object.entries(prompt.arguments ?? {}).map(([name, value]) => [
+        name,
+        value.required
+          ? z.string().describe(value.description ?? name)
+          : z
+              .string()
+              .optional()
+              .describe(value.description ?? name),
+      ]),
+    );
     server.registerPrompt(prompt.name, { title: prompt.title, description: prompt.description, argsSchema }, async (args, extra) => {
       const authorization = await authorize("prompt", prompt.name, jsonObject(args), extra);
       const result = await prompt.get({ arguments: args as Record<string, string>, authorization, signal: extra.signal });
@@ -134,35 +176,63 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
   }
 
   for (const [agentId, exposure] of Object.entries(agentRuns)) {
-    register(`agent.${agentId}.status`, "Get redacted durable agent run status", {
-      type: "object", properties: { runId: { type: "string" }, sessionId: { type: "string" } }, required: ["runId"], additionalProperties: false,
-    }, "tool", async (args, authorization, signal, requestId) => {
-      const ownership = requireLifecycleOwnership(authorization);
-      try {
-        const result = await exposure.lifecycle.status({ runId: lifecycleId(args.runId), sessionId: optionalLifecycleId(args.sessionId) }, { ownership, signal, agentId });
-        return toolResult({ toolCallId: requestId, name: `agent.${agentId}.status`, value: result }, maxResultBytes, options.redactor);
-      } catch (error) {
-        if (error instanceof AgentRunStateError) throw new McpBridgeError("Agent run not found");
-        throw error;
-      }
-    });
-    register(`agent.${agentId}.resume`, "Approve or deny durable agent run interruption", {
-      type: "object", properties: {
-        runId: { type: "string" }, sessionId: { type: "string" }, decision: { type: "string", enum: ["approve", "deny"] }, expectedVersion: { type: "integer", minimum: 1 },
-      }, required: ["runId", "decision", "expectedVersion"], additionalProperties: false,
-    }, "tool", async (args, authorization, signal, requestId) => {
-      const ownership = requireLifecycleOwnership(authorization);
-      try {
-        const result = await exposure.lifecycle.resume({ runId: lifecycleId(args.runId), sessionId: optionalLifecycleId(args.sessionId) }, {
-          decision: args.decision === "approve" ? "approve" : args.decision === "deny" ? "deny" : invalidLifecycleResume(),
-          expectedVersion: lifecycleVersion(args.expectedVersion),
-        }, { ownership, signal, agentId });
-        return toolResult({ toolCallId: requestId, name: `agent.${agentId}.resume`, value: result }, maxResultBytes, options.redactor);
-      } catch (error) {
-        if (error instanceof AgentRunStateError) throw new McpBridgeError("Agent run not found");
-        throw error;
-      }
-    });
+    register(
+      `agent.${agentId}.status`,
+      "Get redacted durable agent run status",
+      {
+        type: "object",
+        properties: { runId: { type: "string" }, sessionId: { type: "string" } },
+        required: ["runId"],
+        additionalProperties: false,
+      },
+      "tool",
+      async (args, authorization, signal, requestId) => {
+        const ownership = requireLifecycleOwnership(authorization);
+        try {
+          const result = await exposure.lifecycle.status(
+            { runId: lifecycleId(args.runId), sessionId: optionalLifecycleId(args.sessionId) },
+            { ownership, signal, agentId },
+          );
+          return toolResult({ toolCallId: requestId, name: `agent.${agentId}.status`, value: result }, maxResultBytes, options.redactor);
+        } catch (error) {
+          if (error instanceof AgentRunStateError) throw new McpBridgeError("Agent run not found");
+          throw error;
+        }
+      },
+    );
+    register(
+      `agent.${agentId}.resume`,
+      "Approve or deny durable agent run interruption",
+      {
+        type: "object",
+        properties: {
+          runId: { type: "string" },
+          sessionId: { type: "string" },
+          decision: { type: "string", enum: ["approve", "deny"] },
+          expectedVersion: { type: "integer", minimum: 1 },
+        },
+        required: ["runId", "decision", "expectedVersion"],
+        additionalProperties: false,
+      },
+      "tool",
+      async (args, authorization, signal, requestId) => {
+        const ownership = requireLifecycleOwnership(authorization);
+        try {
+          const result = await exposure.lifecycle.resume(
+            { runId: lifecycleId(args.runId), sessionId: optionalLifecycleId(args.sessionId) },
+            {
+              decision: args.decision === "approve" ? "approve" : args.decision === "deny" ? "deny" : invalidLifecycleResume(),
+              expectedVersion: lifecycleVersion(args.expectedVersion),
+            },
+            { ownership, signal, agentId },
+          );
+          return toolResult({ toolCallId: requestId, name: `agent.${agentId}.resume`, value: result }, maxResultBytes, options.redactor);
+        } catch (error) {
+          if (error instanceof AgentRunStateError) throw new McpBridgeError("Agent run not found");
+          throw error;
+        }
+      },
+    );
   }
 
   return server;
@@ -171,11 +241,25 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
     kind: "resource" | "prompt",
     name: string,
     args: JsonObject,
-    extra: { readonly authInfo?: import("@modelcontextprotocol/sdk/server/auth/types.js").AuthInfo; readonly sessionId?: string; readonly signal: AbortSignal },
+    extra: {
+      readonly authInfo?: import("@modelcontextprotocol/sdk/server/auth/types.js").AuthInfo;
+      readonly sessionId?: string;
+      readonly signal: AbortSignal;
+    },
   ): Promise<PrismMcpAuthorization> {
     let decision: false | PrismMcpAuthorization;
-    try { decision = await options.authorize({ kind, name, arguments: args, authInfo: extra.authInfo, sessionId: extra.sessionId, signal: extra.signal }); }
-    catch { decision = false; }
+    try {
+      decision = await options.authorize({
+        kind,
+        name,
+        arguments: args,
+        authInfo: extra.authInfo,
+        sessionId: extra.sessionId,
+        signal: extra.signal,
+      });
+    } catch {
+      decision = false;
+    }
     if (!decision) throw new McpBridgeError("ERR_PRISM_MCP_FORBIDDEN: Forbidden");
     return assertAuthorizedIdentity(decision);
   }
@@ -228,10 +312,12 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
         controller.signal.throwIfAborted();
         return execute(args, authorization, controller.signal, requestId, extra.sessionId);
       })();
-      void execution.finally(() => {
-        activeCalls -= 1;
-        controller.dispose();
-      }).catch(() => undefined);
+      void execution
+        .finally(() => {
+          activeCalls -= 1;
+          controller.dispose();
+        })
+        .catch(() => undefined);
       try {
         return await raceTimeout(execution, callTimeoutMs, controller);
       } catch (error) {
@@ -254,20 +340,33 @@ export async function createPrismMcpWebHandler(
   options: CreatePrismMcpWebHandlerOptions = {},
 ): Promise<PrismMcpWebHandler> {
   const maxRequestBytes = bounded(options.maxRequestBytes, DEFAULT_MAX_HTTP_REQUEST_BYTES, HARD_MAX_HTTP_REQUEST_BYTES, "maxRequestBytes");
-  const maxResponseBytes = bounded(options.maxResponseBytes, DEFAULT_MAX_HTTP_RESPONSE_BYTES, HARD_MAX_HTTP_RESPONSE_BYTES, "maxResponseBytes");
+  const maxResponseBytes = bounded(
+    options.maxResponseBytes,
+    DEFAULT_MAX_HTTP_RESPONSE_BYTES,
+    HARD_MAX_HTTP_RESPONSE_BYTES,
+    "maxResponseBytes",
+  );
   const maxConcurrentRequests = bounded(options.maxConcurrentRequests, 32, 512, "maxConcurrentRequests");
-  const requestTimeoutMs = bounded(options.requestTimeoutMs, DEFAULT_SERVER_CALL_TIMEOUT_MS, HARD_SERVER_CALL_TIMEOUT_MS, "requestTimeoutMs");
+  const requestTimeoutMs = bounded(
+    options.requestTimeoutMs,
+    DEFAULT_SERVER_CALL_TIMEOUT_MS,
+    HARD_SERVER_CALL_TIMEOUT_MS,
+    "requestTimeoutMs",
+  );
   const stateful = options.sessionIdGenerator !== undefined;
-  if (stateful && (!options.resolveIdentity || !options.allowedOrigins?.length)) throw new McpBridgeError("Stateful MCP sessions require resolveIdentity and exact allowedOrigins");
+  if (stateful && (!options.resolveIdentity || !options.allowedOrigins?.length))
+    throw new McpBridgeError("Stateful MCP sessions require resolveIdentity and exact allowedOrigins");
   const maxSessions = bounded(options.maxSessions, 32, 512, "maxSessions");
   const sessions = new Map<string, string>();
   const transport = new WebStandardStreamableHTTPServerTransport({
-    sessionIdGenerator: stateful ? () => {
-      if (sessions.size >= maxSessions) throw new McpBridgeError("ERR_PRISM_MCP_SESSION_LIMIT: MCP session limit reached");
-      const id = options.sessionIdGenerator?.() ?? randomUUID();
-      if (!validCapabilityId(id) || sessions.has(id)) throw new McpBridgeError("Invalid or duplicate MCP session id");
-      return id;
-    } : undefined,
+    sessionIdGenerator: stateful
+      ? () => {
+          if (sessions.size >= maxSessions) throw new McpBridgeError("ERR_PRISM_MCP_SESSION_LIMIT: MCP session limit reached");
+          const id = options.sessionIdGenerator?.() ?? randomUUID();
+          if (!validCapabilityId(id) || sessions.has(id)) throw new McpBridgeError("Invalid or duplicate MCP session id");
+          return id;
+        }
+      : undefined,
     enableJsonResponse: true,
     allowedHosts: options.allowedHosts ? [...options.allowedHosts] : undefined,
     allowedOrigins: options.allowedOrigins ? [...options.allowedOrigins] : undefined,
@@ -283,10 +382,13 @@ export async function createPrismMcpWebHandler(
     const timeout = setTimeout(() => controller.controller.abort(new Error("MCP HTTP request timed out")), requestTimeoutMs);
     try {
       const authInfo = await awaitWithSignal(Promise.resolve(options.resolveAuthInfo?.(request)), controller.signal);
-      const identity = options.resolveIdentity ? await awaitWithSignal(Promise.resolve(options.resolveIdentity(request, authInfo)), controller.signal) : undefined;
+      const identity = options.resolveIdentity
+        ? await awaitWithSignal(Promise.resolve(options.resolveIdentity(request, authInfo)), controller.signal)
+        : undefined;
       if (options.resolveIdentity && !identity) return httpError(401, "Unauthorized");
       const identityId = identity ? identity.id : undefined;
-      if (identityId !== undefined && (!validCapabilityId(identityId) || Buffer.byteLength(identityId, "utf8") > 256)) return httpError(401, "Unauthorized");
+      if (identityId !== undefined && (!validCapabilityId(identityId) || Buffer.byteLength(identityId, "utf8") > 256))
+        return httpError(401, "Unauthorized");
       const requestedSession = request.headers.get("mcp-session-id") ?? undefined;
       if (requestedSession && sessions.get(requestedSession) !== identityId) return httpError(404, "MCP session not found");
       const parsedBody = request.method === "POST" ? await readBoundedJson(request, maxRequestBytes, controller.signal) : undefined;
@@ -316,7 +418,8 @@ export async function createPrismMcpWebHandler(
 }
 
 function assertUtf8(label: string, value: string, maxBytes: number): void {
-  if (!value || Buffer.byteLength(value, "utf8") > maxBytes) throw new McpBridgeError(`${label} must be non-empty and <= ${maxBytes} bytes`);
+  if (!value || Buffer.byteLength(value, "utf8") > maxBytes)
+    throw new McpBridgeError(`${label} must be non-empty and <= ${maxBytes} bytes`);
 }
 
 function validCapabilityId(value: string): boolean {
@@ -354,18 +457,26 @@ function jsonObject(value: unknown): JsonObject {
 
 function toolResult(result: ToolResult, maxBytes: number, redactor: CreatePrismMcpServerOptions["redactor"]): CallToolResult {
   const safe = redactor?.redact(result) ?? result;
-  const text = safe.content?.map((block) => {
-    if (block.type === "text" || block.type === "thinking") return block.text;
-    if (block.type === "image") return `[image ${block.mimeType}]`;
-    return `[${block.type}]`;
-  }).join("\n") || (safe.value !== undefined ? stringify(safe.value) : safe.error?.message ?? "OK");
+  const text =
+    safe.content
+      ?.map((block) => {
+        if (block.type === "text" || block.type === "thinking") return block.text;
+        if (block.type === "image") return `[image ${block.mimeType}]`;
+        return `[${block.type}]`;
+      })
+      .join("\n") || (safe.value !== undefined ? stringify(safe.value) : (safe.error?.message ?? "OK"));
   return {
     isError: Boolean(safe.error),
     content: [{ type: "text", text: truncateUtf8(text, maxBytes) }],
   };
 }
 
-function boundedProtocolResult(value: unknown, maxBytes: number, label: string, redactor: CreatePrismMcpServerOptions["redactor"]): unknown {
+function boundedProtocolResult(
+  value: unknown,
+  maxBytes: number,
+  label: string,
+  redactor: CreatePrismMcpServerOptions["redactor"],
+): unknown {
   const safe = redactor?.redact(value) ?? value;
   measureBoundedJson(safe, { maxBytes, maxDepth: 64, maxProperties: 10_000, label });
   return safe;
@@ -396,11 +507,7 @@ function linkedController(signal: AbortSignal) {
   };
 }
 
-async function raceTimeout<T>(
-  execution: Promise<T>,
-  timeoutMs: number,
-  linked: ReturnType<typeof linkedController>,
-): Promise<T> {
+async function raceTimeout<T>(execution: Promise<T>, timeoutMs: number, linked: ReturnType<typeof linkedController>): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const timedOut = new Promise<never>((_, reject) => {
     timeout = setTimeout(() => {
@@ -425,7 +532,9 @@ async function readBoundedJson(request: Request, maxBytes: number, signal: Abort
   if (!reader) throw new McpHttpError(400, "MCP request body is required");
   const chunks: Uint8Array[] = [];
   let size = 0;
-  const abort = () => { void reader.cancel(signal.reason); };
+  const abort = () => {
+    void reader.cancel(signal.reason);
+  };
   if (signal.aborted) abort();
   else signal.addEventListener("abort", abort, { once: true });
   try {
@@ -512,7 +621,8 @@ function errorMessage(error: unknown): string {
 
 function bounded(value: number | undefined, fallback: number, cap: number, name: string): number {
   const resolved = value ?? fallback;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > cap) throw new McpBridgeError(`${name} must be a positive safe integer <= ${cap}`);
+  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > cap)
+    throw new McpBridgeError(`${name} must be a positive safe integer <= ${cap}`);
   return resolved;
 }
 
@@ -521,7 +631,10 @@ function httpError(status: number, message: string): Response {
 }
 
 class McpHttpError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
     super(message);
   }
 }

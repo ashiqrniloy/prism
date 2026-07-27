@@ -1,14 +1,5 @@
-import type {
-  AgentEventRecord,
-  OwnershipScope,
-  PersistencePage,
-  ProductionPersistenceStore,
-} from "@arnilo/prism";
-import {
-  resolvePrismDeploymentLimits,
-  type PrismDeploymentLimits,
-  type ResolvedPrismDeploymentLimits,
-} from "./limits.js";
+import type { AgentEventRecord, OwnershipScope, PersistencePage, ProductionPersistenceStore } from "@arnilo/prism";
+import { type PrismDeploymentLimits, type ResolvedPrismDeploymentLimits, resolvePrismDeploymentLimits } from "./limits.js";
 import { PrismServerError } from "./types.js";
 
 export interface PrismEventReplayRequest {

@@ -1,0 +1,20 @@
+ALIBABA_MAX_CACHE_BREAKPOINTS	export declare const ALIBABA_MAX_CACHE_BREAKPOINTS = 4
+DEFAULT_ALIBABA_BASE_URL	export declare const DEFAULT_ALIBABA_BASE_URL: string
+alibabaBaseUrl	export declare function alibabaBaseUrl(options?:
+alibabaBody	export declare function alibabaBody(request: ProviderRequest): JsonObject
+alibabaCacheEnabled	export declare function alibabaCacheEnabled(request: ProviderRequest): boolean
+alibabaEnableThinking	export declare function alibabaEnableThinking(request: ProviderRequest): boolean | undefined
+alibabaEvents	export declare function alibabaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+applyAlibabaCacheControl	export declare function applyAlibabaCacheControl(request: ProviderRequest): readonly CacheControlledMessage[]
+createAlibabaProvider	export declare function createAlibabaProvider(options?: AlibabaProviderOptions): AIProvider
+createAlibabaProviderPackage	export declare function createAlibabaProviderPackage(options?: AlibabaProviderPackageOptions): ProviderPackage
+defineAlibabaModel	export declare function defineAlibabaModel(config: AlibabaModelConfig): ModelConfig
+listAlibabaModels	export declare function listAlibabaModels(options?: ListAlibabaModelsOptions): Promise<ModelConfig[]>
+mapAlibabaModel	export declare function mapAlibabaModel(entry: AlibabaModelEntry): ModelConfig
+serializeAlibabaMessage	export declare function serializeAlibabaMessage(message: CacheControlledMessage, capabilities?: ModelCapabilities): JsonObject
+type AlibabaBasePreset	export { type AlibabaBasePreset, type AlibabaModelConfig, type AlibabaModelEntry, alibabaBaseUrl, DEFAULT_ALIBABA_BASE_URL, defineAlibabaModel, type ListAlibabaModelsOptions, listAlibabaModels, mapAlibabaModel, } from "./models.js"
+type AlibabaModelConfig	export { type AlibabaBasePreset, type AlibabaModelConfig, type AlibabaModelEntry, alibabaBaseUrl, DEFAULT_ALIBABA_BASE_URL, defineAlibabaModel, type ListAlibabaModelsOptions, listAlibabaModels, mapAlibabaModel, } from "./models.js"
+type AlibabaModelEntry	export { type AlibabaBasePreset, type AlibabaModelConfig, type AlibabaModelEntry, alibabaBaseUrl, DEFAULT_ALIBABA_BASE_URL, defineAlibabaModel, type ListAlibabaModelsOptions, listAlibabaModels, mapAlibabaModel, } from "./models.js"
+type AlibabaProviderOptions	export { type AlibabaProviderOptions, alibabaBody, alibabaEnableThinking, alibabaEvents, createAlibabaProvider, serializeAlibabaMessage, } from "./provider.js"
+type ListAlibabaModelsOptions	export { type AlibabaBasePreset, type AlibabaModelConfig, type AlibabaModelEntry, alibabaBaseUrl, DEFAULT_ALIBABA_BASE_URL, defineAlibabaModel, type ListAlibabaModelsOptions, listAlibabaModels, mapAlibabaModel, } from "./models.js"
+withAlibabaCacheMarker	export declare function withAlibabaCacheMarker(contentItem: JsonObject, marker: JsonObject | undefined): JsonObject

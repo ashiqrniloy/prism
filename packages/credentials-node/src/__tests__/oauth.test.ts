@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { revokeOAuthCredential, type AgentIdentity, type OAuthCredentials } from "@arnilo/prism";
+import { type AgentIdentity, type OAuthCredentials, revokeOAuthCredential } from "@arnilo/prism";
 import {
   computeOAuth2S256Challenge,
   createGoogleWorkspaceOAuthProvider,
   createMicrosoft365OAuthProvider,
   createOAuthWorkTokenProvider,
+  type ExtendedOAuthCredentialStore,
   resolveGoogleWorkspaceScopes,
   resolveMicrosoft365Scopes,
-  type ExtendedOAuthCredentialStore,
 } from "../index.js";
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
@@ -26,14 +26,24 @@ function identity(overrides: Partial<AgentIdentity> = {}): AgentIdentity {
   };
 }
 
-function memoryStore(initial: Record<string, OAuthCredentials> = {}): ExtendedOAuthCredentialStore & { dump(): Record<string, OAuthCredentials> } {
+function memoryStore(
+  initial: Record<string, OAuthCredentials> = {},
+): ExtendedOAuthCredentialStore & { dump(): Record<string, OAuthCredentials> } {
   const map = new Map<string, OAuthCredentials>(Object.entries(initial));
   const key = (provider: string, accountId?: string) => `${provider}\u0000${accountId ?? ""}`;
   return {
-    async set(provider, credentials) { map.set(key(provider, credentials.accountId), credentials); },
-    async get(provider, accountId) { return map.get(key(provider, accountId)); },
-    async delete(provider, accountId) { return map.delete(key(provider, accountId)); },
-    dump() { return Object.fromEntries(map); },
+    async set(provider, credentials) {
+      map.set(key(provider, credentials.accountId), credentials);
+    },
+    async get(provider, accountId) {
+      return map.get(key(provider, accountId));
+    },
+    async delete(provider, accountId) {
+      return map.delete(key(provider, accountId));
+    },
+    dump() {
+      return Object.fromEntries(map);
+    },
   };
 }
 
@@ -76,7 +86,12 @@ describe("M365 / GWS OAuth providers", () => {
         return Response.json({ access_token: "m365-access", refresh_token: "m365-refresh", expires_in: 3600 });
       }) as typeof fetch,
     });
-    const credentials = await provider.login({ onAuth: (url) => { authUrl = url; }, onPrompt: () => "fake-code" });
+    const credentials = await provider.login({
+      onAuth: (url) => {
+        authUrl = url;
+      },
+      onPrompt: () => "fake-code",
+    });
     const params = new URL(authUrl).searchParams;
     assert.equal(params.get("code_challenge_method"), "S256");
     assert.match(params.get("code_challenge")!, BASE64URL);
@@ -89,7 +104,13 @@ describe("M365 / GWS OAuth providers", () => {
   it("supports the device-code flow", async () => {
     const fetchImpl = (async (url: string | URL | Request) =>
       String(url).includes("devicecode")
-        ? Response.json({ device_code: "dev", user_code: "CODE", verification_uri: "https://example.test/device", interval: 0, expires_in: 600 })
+        ? Response.json({
+            device_code: "dev",
+            user_code: "CODE",
+            verification_uri: "https://example.test/device",
+            interval: 0,
+            expires_in: 600,
+          })
         : Response.json({ access_token: "device-access" })) as typeof fetch;
     const provider = createMicrosoft365OAuthProvider({ fetch: fetchImpl, sleep: async () => {} });
     const credentials = await provider.login({ onDeviceCode: () => {} });
@@ -132,7 +153,7 @@ describe("revokeOAuthCredential", () => {
   it("GWS revokes upstream and deletes locally", async () => {
     let revokedToken: string | undefined;
     const provider = createGoogleWorkspaceOAuthProvider({
-      fetch: (async (url, init) => {
+      fetch: (async (_url, init) => {
         revokedToken = new URLSearchParams(String(init?.body)).get("token") ?? undefined;
         return new Response(null, { status: 200 });
       }) as typeof fetch,
@@ -144,7 +165,11 @@ describe("revokeOAuthCredential", () => {
   });
 
   it("M365 has no upstream endpoint but the local delete still fails closed", async () => {
-    const provider = createMicrosoft365OAuthProvider({ fetch: (async () => { throw new Error("must not call upstream"); }) as typeof fetch });
+    const provider = createMicrosoft365OAuthProvider({
+      fetch: (async () => {
+        throw new Error("must not call upstream");
+      }) as typeof fetch,
+    });
     const store = memoryStore({ "microsoft365\u0000acct-1": { access: "a", refresh: "r", accountId: "acct-1" } });
     await revokeOAuthCredential({ provider, credentials: { access: "a", refresh: "r", accountId: "acct-1" }, store });
     assert.equal(await store.get("microsoft365", "acct-1"), undefined);
@@ -155,7 +180,9 @@ describe("createOAuthWorkTokenProvider", () => {
   const envVar = "M365_ACCESSTOKEN";
 
   it("injects a valid access token into env", async () => {
-    const store = memoryStore({ "microsoft365\u0000acct-1": { access: "good-token", accountId: "acct-1", expires: Date.now() + 3600_000 } });
+    const store = memoryStore({
+      "microsoft365\u0000acct-1": { access: "good-token", accountId: "acct-1", expires: Date.now() + 3600_000 },
+    });
     const provider = createMicrosoft365OAuthProvider({ fetch: (async () => Response.json({})) as typeof fetch });
     const tokenProvider = createOAuthWorkTokenProvider({ provider, store, envVar });
     assert.deepEqual(await tokenProvider.tokenEnv(identity()), { [envVar]: "good-token" });
@@ -170,9 +197,14 @@ describe("createOAuthWorkTokenProvider", () => {
 
   it("late-binds a refresh when expired and persists it", async () => {
     let refreshCalls = 0;
-    const store = memoryStore({ "microsoft365\u0000acct-1": { access: "expired", refresh: "r", accountId: "acct-1", expires: Date.now() - 1000 } });
+    const store = memoryStore({
+      "microsoft365\u0000acct-1": { access: "expired", refresh: "r", accountId: "acct-1", expires: Date.now() - 1000 },
+    });
     const provider = createMicrosoft365OAuthProvider({
-      fetch: (async () => { refreshCalls += 1; return Response.json({ access_token: "fresh", refresh_token: "r2", expires_in: 3600 }); }) as typeof fetch,
+      fetch: (async () => {
+        refreshCalls += 1;
+        return Response.json({ access_token: "fresh", refresh_token: "r2", expires_in: 3600 });
+      }) as typeof fetch,
     });
     const tokenProvider = createOAuthWorkTokenProvider({ provider, store, envVar });
     assert.deepEqual(await tokenProvider.tokenEnv(identity()), { [envVar]: "fresh" });
@@ -188,7 +220,9 @@ describe("createOAuthWorkTokenProvider", () => {
   });
 
   it("isolates per identity (no cross-account fallback)", async () => {
-    const store = memoryStore({ "microsoft365\u0000acct-OTHER": { access: "other-token", accountId: "acct-OTHER", expires: Date.now() + 3600_000 } });
+    const store = memoryStore({
+      "microsoft365\u0000acct-OTHER": { access: "other-token", accountId: "acct-OTHER", expires: Date.now() + 3600_000 },
+    });
     const provider = createMicrosoft365OAuthProvider({ fetch: (async () => Response.json({})) as typeof fetch });
     const tokenProvider = createOAuthWorkTokenProvider({ provider, store, envVar });
     assert.equal(await tokenProvider.tokenEnv(identity({ accountId: "acct-1" })), undefined);
@@ -196,7 +230,12 @@ describe("createOAuthWorkTokenProvider", () => {
 
   it("rejects a wrong-tenant token", async () => {
     const store = memoryStore({
-      "microsoft365\u0000acct-1": { access: "t", accountId: "acct-1", expires: Date.now() + 3600_000, metadata: { tenantId: "tenant-OTHER" } },
+      "microsoft365\u0000acct-1": {
+        access: "t",
+        accountId: "acct-1",
+        expires: Date.now() + 3600_000,
+        metadata: { tenantId: "tenant-OTHER" },
+      },
     });
     const provider = createMicrosoft365OAuthProvider({ fetch: (async () => Response.json({})) as typeof fetch });
     const tokenProvider = createOAuthWorkTokenProvider({ provider, store, envVar });
@@ -205,7 +244,9 @@ describe("createOAuthWorkTokenProvider", () => {
 
   it("single-flights concurrent refreshes (no refresh storm)", async () => {
     let refreshCalls = 0;
-    const store = memoryStore({ "microsoft365\u0000acct-1": { access: "expired", refresh: "r", accountId: "acct-1", expires: Date.now() - 1000 } });
+    const store = memoryStore({
+      "microsoft365\u0000acct-1": { access: "expired", refresh: "r", accountId: "acct-1", expires: Date.now() - 1000 },
+    });
     const provider = createMicrosoft365OAuthProvider({
       fetch: (async () => {
         refreshCalls += 1;
@@ -214,7 +255,11 @@ describe("createOAuthWorkTokenProvider", () => {
       }) as typeof fetch,
     });
     const tokenProvider = createOAuthWorkTokenProvider({ provider, store, envVar });
-    const results = await Promise.all([tokenProvider.tokenEnv(identity()), tokenProvider.tokenEnv(identity()), tokenProvider.tokenEnv(identity())]);
+    const results = await Promise.all([
+      tokenProvider.tokenEnv(identity()),
+      tokenProvider.tokenEnv(identity()),
+      tokenProvider.tokenEnv(identity()),
+    ]);
     for (const result of results) assert.deepEqual(result, { [envVar]: "fresh" });
     assert.equal(refreshCalls, 1);
   });

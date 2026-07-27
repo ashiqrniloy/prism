@@ -115,10 +115,7 @@ function eventBlockBytes(block: string): number {
 }
 
 /** Incremental O(bytes) SSE parser with finite buffer/event limits. */
-export async function* readSseEvents(
-  body: ReadableStream<Uint8Array>,
-  options?: ReadSseEventsOptions,
-): AsyncGenerator<SseEvent> {
+export async function* readSseEvents(body: ReadableStream<Uint8Array>, options?: ReadSseEventsOptions): AsyncGenerator<SseEvent> {
   const limits = resolveLimits(options);
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -126,11 +123,7 @@ export async function* readSseEvents(
 
   const ensureBufferLimit = (): void => {
     if (byteLength(buffer) > limits.maxBufferBytes) {
-      throw new ProviderTransportError(
-        "sse_buffer_overflow",
-        `SSE buffer exceeded ${limits.maxBufferBytes} bytes`,
-        limits.maxBufferBytes,
-      );
+      throw new ProviderTransportError("sse_buffer_overflow", `SSE buffer exceeded ${limits.maxBufferBytes} bytes`, limits.maxBufferBytes);
     }
   };
 
@@ -144,11 +137,7 @@ export async function* readSseEvents(
       if (!parsed) continue;
       const size = eventBlockBytes(block);
       if (size > limits.maxEventBytes) {
-        throw new ProviderTransportError(
-          "sse_event_overflow",
-          `SSE event exceeded ${limits.maxEventBytes} bytes`,
-          limits.maxEventBytes,
-        );
+        throw new ProviderTransportError("sse_event_overflow", `SSE event exceeded ${limits.maxEventBytes} bytes`, limits.maxEventBytes);
       }
       yield parsed;
     }
@@ -172,11 +161,7 @@ export async function* readSseEvents(
       if (parsed) {
         const size = eventBlockBytes(tail);
         if (size > limits.maxEventBytes) {
-          throw new ProviderTransportError(
-            "sse_event_overflow",
-            `SSE event exceeded ${limits.maxEventBytes} bytes`,
-            limits.maxEventBytes,
-          );
+          throw new ProviderTransportError("sse_event_overflow", `SSE event exceeded ${limits.maxEventBytes} bytes`, limits.maxEventBytes);
         }
         yield parsed;
       }
@@ -196,10 +181,7 @@ export async function* readSseEvents(
 }
 
 /** Yields joined `data:` payloads for each SSE event (migration helper over {@link readSseEvents}). */
-export async function* readSseData(
-  body: ReadableStream<Uint8Array>,
-  options?: ReadSseEventsOptions,
-): AsyncGenerator<string> {
+export async function* readSseData(body: ReadableStream<Uint8Array>, options?: ReadSseEventsOptions): AsyncGenerator<string> {
   for await (const event of readSseEvents(body, options)) {
     const data = event.data.trim();
     if (data) yield data;
@@ -207,10 +189,7 @@ export async function* readSseData(
 }
 
 /** Read a response body with a hard byte ceiling; redacts optional secrets. */
-export async function readBoundedResponseText(
-  response: Response,
-  options?: ReadBoundedResponseTextOptions,
-): Promise<string> {
+export async function readBoundedResponseText(response: Response, options?: ReadBoundedResponseTextOptions): Promise<string> {
   const limits = resolveLimits(options);
   const secrets = options?.secrets ?? [];
   if (!response.body) {
@@ -270,21 +249,14 @@ export type ParseJsonObjectArgumentsResult =
   | { readonly ok: false; readonly error: ProviderTransportError };
 
 /** Parse streamed tool arguments without throwing; prefer this for recoverable tool-call recovery. */
-export function tryParseJsonObjectArguments(
-  text: string,
-  options?: ParseJsonObjectArgumentsOptions,
-): ParseJsonObjectArgumentsResult {
+export function tryParseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): ParseJsonObjectArgumentsResult {
   const maxBytes = options?.maxBytes ?? DEFAULT_MAX_ARGUMENT_BYTES;
   const suffix = options?.toolName ? ` for tool ${options.toolName}` : "";
   if (!text) return { ok: true, value: {} };
   if (byteLength(text) > maxBytes) {
     return {
       ok: false,
-      error: new ProviderTransportError(
-        "invalid_json_arguments",
-        `Tool arguments${suffix} exceeded ${maxBytes} bytes`,
-        maxBytes,
-      ),
+      error: new ProviderTransportError("invalid_json_arguments", `Tool arguments${suffix} exceeded ${maxBytes} bytes`, maxBytes),
     };
   }
   let parsed: unknown;
@@ -293,29 +265,20 @@ export function tryParseJsonObjectArguments(
   } catch {
     return {
       ok: false,
-      error: new ProviderTransportError(
-        "invalid_json_arguments",
-        `Invalid tool arguments JSON${suffix}`,
-      ),
+      error: new ProviderTransportError("invalid_json_arguments", `Invalid tool arguments JSON${suffix}`),
     };
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return {
       ok: false,
-      error: new ProviderTransportError(
-        "invalid_json_arguments",
-        `Tool arguments${suffix} must be a JSON object`,
-      ),
+      error: new ProviderTransportError("invalid_json_arguments", `Tool arguments${suffix} must be a JSON object`),
     };
   }
   return { ok: true, value: parsed as JsonObject };
 }
 
 /** Parse streamed tool arguments as a JSON object; throws {@link ProviderTransportError} on invalid input. */
-export function parseJsonObjectArguments(
-  text: string,
-  options?: ParseJsonObjectArgumentsOptions,
-): JsonObject {
+export function parseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): JsonObject {
   const result = tryParseJsonObjectArguments(text, options);
   if (!result.ok) throw result.error;
   return result.value;

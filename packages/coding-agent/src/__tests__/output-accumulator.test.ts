@@ -1,8 +1,6 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rm, readFile, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFile, rm, stat } from "node:fs/promises";
+import { test } from "node:test";
 import { OutputAccumulator } from "../output-accumulator.js";
 
 test("small output: snapshot returns full content, not truncated", () => {
@@ -110,7 +108,9 @@ test("total output cap retains only the cap and cleanup removes secure spill", a
     maxBytes: 4,
     maxLines: 100,
     maxTotalOutputBytes: 8,
-    onLimit: () => { limits++; },
+    onLimit: () => {
+      limits++;
+    },
   });
   assert.equal(acc.append(Buffer.from("0123456789ab")), false);
   acc.finish();

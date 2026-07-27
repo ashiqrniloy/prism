@@ -32,9 +32,18 @@ export function measureBoundedJson(value: unknown, bounds: JsonBounds): JsonMeas
 
   const walk = (item: unknown, depth: number): void => {
     if (depth > bounds.maxDepth) throw new McpBridgeError(`${label} exceeds depth ${bounds.maxDepth}`);
-    if (item === null) { addBytes(4); return; }
-    if (typeof item === "string") { addBytes(jsonStringBytes(item)); return; }
-    if (typeof item === "boolean") { addBytes(item ? 4 : 5); return; }
+    if (item === null) {
+      addBytes(4);
+      return;
+    }
+    if (typeof item === "string") {
+      addBytes(jsonStringBytes(item));
+      return;
+    }
+    if (typeof item === "boolean") {
+      addBytes(item ? 4 : 5);
+      return;
+    }
     if (typeof item === "number") {
       if (!Number.isFinite(item)) throw new McpBridgeError(`${label} contains a non-finite number`);
       addBytes(Buffer.byteLength(String(item), "utf8"));
@@ -61,7 +70,7 @@ export function measureBoundedJson(value: unknown, bounds: JsonBounds): JsonMeas
       addBytes(2);
       let index = 0;
       for (const key in record) {
-        if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
+        if (!Object.hasOwn(record, key)) continue;
         addProperty();
         if (index > 0) addBytes(1);
         addBytes(jsonStringBytes(key) + 1);

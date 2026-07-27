@@ -703,7 +703,8 @@ Updated: 2026-07-21
     - Network-free release gates passed: `npm run sdk:ready`; Phase 10 benchmark/schema (six 100-iteration scenarios, zero resource-limit and backpressure signals); `npm audit --audit-level=high` (zero high/critical; two existing moderate MCP-transitive advisories); SPDX/license verify (202 packages / 8 licenses); tracked-plus-untracked source secret scan (1,153 files / zero findings); and `git diff --check`.
     - Registry preflight reported 43/43 `available`; dependency-ordered `release:publish --dry-run` completed 43/43 with no publication. Protected OpenAI-hosted/Realtime, host AI SDK, provider, PostgreSQL/pgvector, and keychain canaries remain operator-gated and were not represented as local release evidence. Signed tag, OIDC attestation, and real publication remain operator/workflow prerequisites.
 
-- [ ] Phase 11 — Release 0.0.16: simplify the package and establish 1.0 readiness
+- [x] Phase 11 — Release 0.0.16: simplify the package and establish 0.1.0 readiness
+  - Completion evidence (2026-07-26, plan 079): exact graph **44 publishable manifests** (one internal `@arnilo/prism-session-store-codecs` added; zero retirements — all six profiles retained on adoption evidence). Only public-surface change is the additive `resolveRedactor` export. `sdk:ready` green (typecheck/lint/format/test/coverage 63.72·79.34·71.73 vs 60/70/75/pack/`release:gate` 0 breaks); `release:check` + `release:publish --dry-run` pass for all 44 in dependency order. Offline gates added: API-surface `.d.ts` compat diff + tarball deny-list + exact-range drift (`release:gate`), deterministic artifact/startup budget (`budget-gate.test.mjs`, +5%), benchmark medians (`benchmark-0.0.16.mjs`, ±25%), Biome format/lint, core coverage thresholds, Node 20 `node20-compat`. Security legs green: scan-secrets 0 findings, verify-sbom 188/8 licenses, `npm audit --audit-level=high` 0 high. Hotspot extraction and 3 of 5 duplication clusters were evidence-rejected (review addenda 1–2); phase-text tests consolidated to behavior/export tests (Task 5). 1.0 readiness gates distilled into [`docs/0.1.0-readiness.md`](docs/0.1.0-readiness.md). Signed tag, npm OIDC provenance, CodeQL, and the protected live-canary/PostgreSQL/keychain suites remain operator-gated; no package published by the plan.
   - Acceptance Criteria:
     - Functional: public packed imports, generated projects, examples, Node compatibility, PostgreSQL/keychain/live-provider suites, and cross-package journeys pass with no workspace-relative imports.
     - Functional: profile package adoption data determines whether `prism-all`, `prism-base`, `prism-code`, `prism-compaction`, `prism-providers`, and `prism-sdk` remain; `web-tools`, `browser`, `ag-ui`, and `work-tools` stay optional and are split/merged only from measured dependency/adoption data; low-value profiles are replaced by install recipes with migration guidance.
@@ -773,6 +774,7 @@ Updated: 2026-07-21
       - None until a capability passes entry criteria; create a dedicated numbered plan when it does.
     - References:
       - Product boundaries and persona outcomes in this roadmap.
+      - 0.1.0 readiness floor consumed by every promoted capability: [`docs/0.1.0-readiness.md`](docs/0.1.0-readiness.md) (frozen API/compat gate, budgets, security matrix, Phase 12 demand-evidence entry criteria).
   - Test Cases to Write:
     - Defined in each promoted capability plan; no speculative scaffolding or placeholder package tests.
   - Documentation/Wiki Assessment:

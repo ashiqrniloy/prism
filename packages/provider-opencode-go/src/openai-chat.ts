@@ -1,6 +1,15 @@
 import type { ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported } from "@arnilo/prism";
-import { providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, toolCallFromArgumentsText } from "@arnilo/prism";
+import {
+  assertStructuredOutputRequestSupported,
+  providerDone,
+  providerError,
+  providerTextDelta,
+  providerThinkingDelta,
+  providerToolCall,
+  providerToolCallDelta,
+  providerUsage,
+  toolCallFromArgumentsText,
+} from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
 import { readSseData } from "@arnilo/prism/providers/transport";
 import {
@@ -8,9 +17,14 @@ import {
   openCodeGoReasoning,
   openCodeGoReasoningEffort,
   openCodeGoThinking,
-  stripOpenCodeGoOwnedCompat } from "./thinking.js";
+  stripOpenCodeGoOwnedCompat,
+} from "./thinking.js";
 
-interface ToolAccumulator { id?: string; name?: string; argumentsText: string }
+interface ToolAccumulator {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+}
 
 export function openAIChatBody(request: ProviderRequest): JsonObject {
   assertStructuredOutputRequestSupported(request.model, request.options);
@@ -19,7 +33,9 @@ export function openAIChatBody(request: ProviderRequest): JsonObject {
   const compatRest = stripOpenCodeGoOwnedCompat(request.options?.compat);
   const body: Record<string, unknown> = {
     model: request.model.model,
-    messages: request.messages.map((message) => serializeOpenCodeGoChatMessage(message, request.model.capabilities ?? {}, preserveThinking)),
+    messages: request.messages.map((message) =>
+      serializeOpenCodeGoChatMessage(message, request.model.capabilities ?? {}, preserveThinking),
+    ),
     tools: request.tools?.map(serializeOpenAITool),
     stream: true,
     stream_options: { include_usage: true },
@@ -28,7 +44,8 @@ export function openAIChatBody(request: ProviderRequest): JsonObject {
     ...compatRest,
     thinking: openCodeGoThinking(request),
     reasoning_effort: openCodeGoReasoningEffort(request),
-    reasoning: openCodeGoReasoning(request)};
+    reasoning: openCodeGoReasoning(request),
+  };
   applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
   return clean(body);
 }
@@ -39,7 +56,10 @@ export async function* openAIChatEvents(body: ReadableStream<Uint8Array>, signal
   let sawDoneMarker = false;
   let sawFinishReason = false;
   for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") { sawDoneMarker = true; break; }
+    if (data === "[DONE]") {
+      sawDoneMarker = true;
+      break;
+    }
     const chunk = JSON.parse(data) as OpenAIChunk;
     usage = mapOpenAIChatUsage(chunk.usage) ?? usage;
     const mapped = mapOpenAIChatUsage(chunk.usage);
@@ -63,12 +83,14 @@ export async function* openAIChatEvents(body: ReadableStream<Uint8Array>, signal
   const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
   if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(new Error(
-      `OpenCode Go chat stream ended without completion evidence `
-      + `([DONE]: ${sawDoneMarker ? "received" : "missing"}, `
-      + `finish_reason: ${sawFinishReason ? "received" : "missing"}, `
-      + `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
-    ));
+    yield providerError(
+      new Error(
+        `OpenCode Go chat stream ended without completion evidence ` +
+          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
+          `finish_reason: ${sawFinishReason ? "received" : "missing"}, ` +
+          `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
+      ),
+    );
     return;
   }
   for (const call of tools.values()) {
@@ -82,23 +104,18 @@ export async function* openAIChatEvents(body: ReadableStream<Uint8Array>, signal
  * `reasoning_content` instead of folding it into text (needed for tool-call
  * continuity on reasoning models behind the Go gateway).
  */
-export function serializeOpenCodeGoChatMessage(
-  message: Message,
-  capabilities: ModelCapabilities,
-  preserveThinking: boolean,
-): JsonObject {
+export function serializeOpenCodeGoChatMessage(message: Message, capabilities: ModelCapabilities, preserveThinking: boolean): JsonObject {
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : ""};
+      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+    };
   }
 
   const thinkingParts = message.content.filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking");
-  const reasoningContent = preserveThinking && thinkingParts.length > 0
-    ? thinkingParts.map((part) => part.text).join("\n")
-    : undefined;
+  const reasoningContent = preserveThinking && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("\n") : undefined;
 
   if (message.role === "assistant") {
     const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
@@ -110,8 +127,10 @@ export function serializeOpenCodeGoChatMessage(
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) }})),
-        reasoning_content: reasoningContent});
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+        })),
+        reasoning_content: reasoningContent,
+      });
     }
   }
 
@@ -120,8 +139,6 @@ export function serializeOpenCodeGoChatMessage(
     if (part.type === "text") {
       content.push({ type: "text", text: part.text });
     } else if (part.type === "thinking") {
-      // Handled via reasoning_content when preserving; otherwise dropped (never folded into text).
-      continue;
     } else if (part.type === "image") {
       if (!capabilities.input?.includes("image")) {
         throw new Error(`OpenCode Go OpenAI route includes image but model does not declare image input capability`);
@@ -143,8 +160,9 @@ export function serializeOpenCodeGoChatMessage(
   }
   return clean({
     role: message.role,
-    content: content.length > 0 ? content : (reasoningContent ? null : ""),
-    reasoning_content: reasoningContent});
+    content: content.length > 0 ? content : reasoningContent ? null : "",
+    reasoning_content: reasoningContent,
+  });
 }
 
 function clean(value: Record<string, unknown>): JsonObject {
@@ -152,6 +170,17 @@ function clean(value: Record<string, unknown>): JsonObject {
 }
 
 interface OpenAIChunk {
-  readonly choices?: readonly { readonly finish_reason?: string | null; readonly delta?: { readonly content?: string; readonly reasoning_content?: string; readonly tool_calls?: readonly { readonly index?: number; readonly id?: string; readonly function?: { readonly name?: string; readonly arguments?: string } }[] } }[];
+  readonly choices?: readonly {
+    readonly finish_reason?: string | null;
+    readonly delta?: {
+      readonly content?: string;
+      readonly reasoning_content?: string;
+      readonly tool_calls?: readonly {
+        readonly index?: number;
+        readonly id?: string;
+        readonly function?: { readonly name?: string; readonly arguments?: string };
+      }[];
+    };
+  }[];
   readonly usage?: unknown;
 }

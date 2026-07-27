@@ -1,21 +1,17 @@
 import { randomUUID } from "node:crypto";
-import type Database from "better-sqlite3";
 import {
+  type ApplyRetentionInput,
   DEFAULT_LIFECYCLE_PAGE_SIZE,
   HARD_LIFECYCLE_PAGE_SIZE,
   HARD_MAX_HOLD_REASON_BYTES,
-  PersistenceLifecycleError,
-  type ApplyRetentionInput,
   type LegalHoldExportItem,
-  type LegalHoldQuery,
   type LegalHoldRecord,
-  type PersistenceLifecycleStore,
-  type PutLegalHoldInput,
-  type ReleaseLegalHoldInput,
-  type SetTenantQuotaInput,
-  type TenantQuota,
   type OwnershipScope,
+  PersistenceLifecycleError,
+  type PersistenceLifecycleStore,
+  type TenantQuota,
 } from "@arnilo/prism";
+import type Database from "better-sqlite3";
 
 export function createSqlitePersistenceLifecycle(db: Database.Database): PersistenceLifecycleStore {
   return {
@@ -57,15 +53,20 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
         | { tenant_id: string | null; account_id: string | null; user_id: string | null }
         | undefined;
       if (!row) return false;
-      assertSameOwnership(input, { tenantId: row.tenant_id ?? undefined, accountId: row.account_id ?? undefined, userId: row.user_id ?? undefined });
+      assertSameOwnership(input, {
+        tenantId: row.tenant_id ?? undefined,
+        accountId: row.account_id ?? undefined,
+        userId: row.user_id ?? undefined,
+      });
       return db.prepare("DELETE FROM prism_legal_holds WHERE id = ?").run(input.id).changes > 0;
     },
 
     async listLegalHolds(query) {
       assertOwnership(query);
       const limit = pageLimit(query.limit);
-      const rows = db.prepare(
-        `SELECT * FROM prism_legal_holds
+      const rows = db
+        .prepare(
+          `SELECT * FROM prism_legal_holds
          WHERE IFNULL(tenant_id,'') = IFNULL(?, '')
            AND IFNULL(account_id,'') = IFNULL(?, '')
            AND IFNULL(user_id,'') = IFNULL(?, '')
@@ -73,17 +74,18 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
            AND (? IS NULL OR resource_kind = ?)
            AND (? IS NULL OR resource_id = ?)
          ORDER BY created_at ASC, id ASC`,
-      ).all(
-        query.tenantId ?? null,
-        query.accountId ?? null,
-        query.userId ?? null,
-        query.holdId ?? null,
-        query.holdId ?? null,
-        query.resourceKind ?? null,
-        query.resourceKind ?? null,
-        query.resourceId ?? null,
-        query.resourceId ?? null,
-      ) as Record<string, unknown>[];
+        )
+        .all(
+          query.tenantId ?? null,
+          query.accountId ?? null,
+          query.userId ?? null,
+          query.holdId ?? null,
+          query.holdId ?? null,
+          query.resourceKind ?? null,
+          query.resourceKind ?? null,
+          query.resourceId ?? null,
+          query.resourceId ?? null,
+        ) as Record<string, unknown>[];
       const start = query.cursor ? rows.findIndex((row) => String(row.id) === query.cursor) + 1 : 0;
       const slice = rows.slice(Math.max(0, start), Math.max(0, start) + limit).map(rowToHold);
       const next = start + limit < rows.length ? slice.at(-1)?.id : undefined;
@@ -94,18 +96,21 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
       assertOwnership(input);
       const limit = pageLimit(input.limit);
       const held = new Set(
-        (db.prepare(
-          `SELECT resource_id FROM prism_legal_holds
+        (
+          db
+            .prepare(
+              `SELECT resource_id FROM prism_legal_holds
            WHERE resource_kind = 'session'
              AND IFNULL(tenant_id,'') = IFNULL(?, '')
              AND IFNULL(account_id,'') = IFNULL(?, '')
              AND IFNULL(user_id,'') = IFNULL(?, '')`,
-        ).all(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null) as { resource_id: string }[])
-          .map((row) => row.resource_id),
+            )
+            .all(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null) as { resource_id: string }[]
+        ).map((row) => row.resource_id),
       );
       let candidates = input.candidates ? [...input.candidates] : discoverSessions(db, input, limit);
       if (input.cursor && !input.candidates) {
-        const idx = candidates.findIndex((id) => id === input.cursor);
+        const idx = candidates.indexOf(input.cursor);
         candidates = idx >= 0 ? candidates.slice(idx + 1) : candidates;
       }
       const page = candidates.slice(0, limit);
@@ -152,14 +157,16 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
         signal: input.signal,
       });
       return {
-        items: page.items.map((hold): LegalHoldExportItem => ({
-          holdId: hold.id,
-          resourceKind: hold.resourceKind,
-          resourceId: hold.resourceId,
-          reason: hold.reason,
-          createdAt: hold.createdAt,
-          redacted: true,
-        })),
+        items: page.items.map(
+          (hold): LegalHoldExportItem => ({
+            holdId: hold.id,
+            resourceKind: hold.resourceKind,
+            resourceId: hold.resourceId,
+            reason: hold.reason,
+            createdAt: hold.createdAt,
+            redacted: true,
+          }),
+        ),
         ...(page.nextCursor === undefined ? {} : { nextCursor: page.nextCursor }),
       };
     },
@@ -169,13 +176,15 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
       if (!Number.isSafeInteger(input.limit) || input.limit < 0) {
         throw new PersistenceLifecycleError("limit must be a non-negative safe integer", "ERR_PRISM_LIFECYCLE_QUOTA");
       }
-      const existing = db.prepare(
-        `SELECT id, used_count FROM prism_tenant_quotas
+      const existing = db
+        .prepare(
+          `SELECT id, used_count FROM prism_tenant_quotas
          WHERE IFNULL(tenant_id,'') = IFNULL(?, '')
            AND IFNULL(account_id,'') = IFNULL(?, '')
            AND IFNULL(user_id,'') = IFNULL(?, '')
            AND resource_kind = ?`,
-      ).get(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind) as
+        )
+        .get(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind) as
         | { id: string; used_count: number }
         | undefined;
       const used = existing?.used_count ?? 0;
@@ -187,20 +196,32 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
         db.prepare(
           `INSERT INTO prism_tenant_quotas (id, tenant_id, account_id, user_id, resource_kind, limit_count, used_count, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-        ).run(randomUUID(), input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind, input.limit, updatedAt);
+        ).run(
+          randomUUID(),
+          input.tenantId ?? null,
+          input.accountId ?? null,
+          input.userId ?? null,
+          input.resourceKind,
+          input.limit,
+          updatedAt,
+        );
       }
       return { ...ownership(input), resourceKind: input.resourceKind, limit: input.limit, used, updatedAt };
     },
 
     async getTenantQuota(input) {
       assertOwnership(input);
-      const row = db.prepare(
-        `SELECT * FROM prism_tenant_quotas
+      const row = db
+        .prepare(
+          `SELECT * FROM prism_tenant_quotas
          WHERE IFNULL(tenant_id,'') = IFNULL(?, '')
            AND IFNULL(account_id,'') = IFNULL(?, '')
            AND IFNULL(user_id,'') = IFNULL(?, '')
            AND resource_kind = ?`,
-      ).get(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind) as Record<string, unknown> | undefined;
+        )
+        .get(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind) as
+        | Record<string, unknown>
+        | undefined;
       return row ? rowToQuota(row) : null;
     },
 
@@ -210,13 +231,17 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
       if (!Number.isSafeInteger(delta) || delta < 1) {
         throw new PersistenceLifecycleError("delta must be a positive safe integer", "ERR_PRISM_LIFECYCLE_QUOTA");
       }
-      const row = db.prepare(
-        `SELECT * FROM prism_tenant_quotas
+      const row = db
+        .prepare(
+          `SELECT * FROM prism_tenant_quotas
          WHERE IFNULL(tenant_id,'') = IFNULL(?, '')
            AND IFNULL(account_id,'') = IFNULL(?, '')
            AND IFNULL(user_id,'') = IFNULL(?, '')
            AND resource_kind = ?`,
-      ).get(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind) as Record<string, unknown> | undefined;
+        )
+        .get(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, input.resourceKind) as
+        | Record<string, unknown>
+        | undefined;
       if (!row) throw new PersistenceLifecycleError("tenant quota not configured", "ERR_PRISM_LIFECYCLE_QUOTA");
       const used = Number(row.used_count);
       const limit = Number(row.limit_count);
@@ -234,15 +259,19 @@ function discoverSessions(db: Database.Database, input: ApplyRetentionInput, lim
   const maxAgeDays = input.policy.maxAgeDays;
   if (maxAgeDays === undefined) return [];
   const cutoff = new Date(Date.now() - maxAgeDays * 86_400_000).toISOString();
-  return (db.prepare(
-    `SELECT id FROM prism_sessions
+  return (
+    db
+      .prepare(
+        `SELECT id FROM prism_sessions
      WHERE IFNULL(tenant_id,'') = IFNULL(?, '')
        AND IFNULL(account_id,'') = IFNULL(?, '')
        AND IFNULL(user_id,'') = IFNULL(?, '')
        AND (expires_at IS NOT NULL AND expires_at <= ? OR created_at <= ?)
      ORDER BY created_at ASC, id ASC
      LIMIT ?`,
-  ).all(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, cutoff, cutoff, limit * 2) as { id: string }[]).map((row) => row.id);
+      )
+      .all(input.tenantId ?? null, input.accountId ?? null, input.userId ?? null, cutoff, cutoff, limit * 2) as { id: string }[]
+  ).map((row) => row.id);
 }
 
 function rowToHold(row: Record<string, unknown>): LegalHoldRecord {

@@ -4,11 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
+  assertCodingResumeAllowed,
+  buildCodingCheckpointMetadata,
   CODING_CHECKPOINT_SCHEMA_VERSION,
   CODING_STATE_KEY,
   CodingCheckpointError,
-  assertCodingResumeAllowed,
-  buildCodingCheckpointMetadata,
+  type CodingFingerprints,
   codingCheckpointStatePatch,
   codingPlanPathForTask,
   createCodingArtifactRef,
@@ -21,7 +22,6 @@ import {
   validateCodingCheckpointMetadata,
   verifyCodingArtifactBytes,
   writeCodingPlanFile,
-  type CodingFingerprints,
 } from "../coding-checkpoint.js";
 import { HARD_MAX_PLAN_BYTES } from "../limits.js";
 
@@ -43,10 +43,7 @@ describe("coding checkpoint limits", () => {
     const limits = resolveCodingCheckpointLimits();
     assert.equal(limits.maxPlanBytes, 256 * 1024);
     assert.equal(limits.maxTodos, 1_000);
-    assert.throws(
-      () => resolveCodingCheckpointLimits({ maxPlanBytes: HARD_MAX_PLAN_BYTES + 1 }),
-      /maxPlanBytes/,
-    );
+    assert.throws(() => resolveCodingCheckpointLimits({ maxPlanBytes: HARD_MAX_PLAN_BYTES + 1 }), /maxPlanBytes/);
   });
 });
 
@@ -173,10 +170,7 @@ describe("coding checkpoint metadata", () => {
       bytes,
     });
     verifyCodingArtifactBytes(artifact, bytes);
-    assert.throws(
-      () => verifyCodingArtifactBytes(artifact, Buffer.from("tampered", "utf8")),
-      /SHA-256 mismatch|byte count/,
-    );
+    assert.throws(() => verifyCodingArtifactBytes(artifact, Buffer.from("tampered", "utf8")), /SHA-256 mismatch|byte count/);
 
     const root = "/tmp/workspace-root";
     const planBytes = Buffer.from("# plan\n", "utf8");

@@ -1,3 +1,4 @@
+import { createAgent } from "./agents.js";
 import type {
   Agent,
   AgentConfig,
@@ -10,8 +11,7 @@ import type {
   ToolDefinition,
   ToolRegistry,
 } from "./contracts.js";
-import { createAgent } from "./agents.js";
-import { resolveActiveSkills, createSkillRegistry } from "./skills.js";
+import { createSkillRegistry, resolveActiveSkills } from "./skills.js";
 import { createToolRegistry } from "./tools.js";
 
 /** Resolve an {@link AgentDefinition} into a runnable {@link Agent}.
@@ -24,10 +24,7 @@ import { createToolRegistry } from "./tools.js";
  *
  *  The host controls scope by which registries it passes. Missing dependencies
  *  fail closed at resolution time, before any provider turn. */
-export function resolveAgentDefinition(
-  def: AgentDefinition,
-  context: AgentDefinitionResolutionContext,
-): Promise<Agent> | Agent {
+export function resolveAgentDefinition(def: AgentDefinition, context: AgentDefinitionResolutionContext): Promise<Agent> | Agent {
   const baseConfig = buildBaseConfig(def, context);
   if (def.create) {
     const agentOrPromise = def.create(baseConfig);
@@ -36,10 +33,7 @@ export function resolveAgentDefinition(
   return createAgent(applyConfigOverrides(baseConfig, context.overrides));
 }
 
-function buildBaseConfig(
-  def: AgentDefinition,
-  context: AgentDefinitionResolutionContext,
-): AgentConfig {
+function buildBaseConfig(def: AgentDefinition, context: AgentDefinitionResolutionContext): AgentConfig {
   const model = resolveModel(def.name, def.model, context);
   const tools = resolveTools(def.tools, context);
   const skills = resolveSkills(def.skills, tools, context);
@@ -56,11 +50,7 @@ function buildBaseConfig(
   };
 }
 
-function resolveModel(
-  agentName: string,
-  model: ModelConfig | string | undefined,
-  context: AgentDefinitionResolutionContext,
-): ModelConfig {
+function resolveModel(agentName: string, model: ModelConfig | string | undefined, context: AgentDefinitionResolutionContext): ModelConfig {
   if (!model) throw new Error(`Agent "${agentName}" has no model`);
   if (typeof model !== "string") return model;
   const slash = model.indexOf("/");
@@ -88,10 +78,7 @@ function resolveProviderOptions(
   return undefined;
 }
 
-function resolveTools(
-  names: readonly string[] | undefined,
-  context: AgentDefinitionResolutionContext,
-): ToolRegistry | undefined {
+function resolveTools(names: readonly string[] | undefined, context: AgentDefinitionResolutionContext): ToolRegistry | undefined {
   const source = context.tools ?? context.registries?.tools;
   if (!names) {
     if (!context.activateAllCapabilities) return undefined;
@@ -132,8 +119,7 @@ function resolveSkills(
   context: AgentDefinitionResolutionContext,
 ): readonly Skill[] | undefined {
   const registry =
-    context.skillsRegistry ??
-    (context.registries?.skills ? createSkillRegistry(context.registries.skills.list()) : undefined);
+    context.skillsRegistry ?? (context.registries?.skills ? createSkillRegistry(context.registries.skills.list()) : undefined);
   if (!names && !context.activateAllCapabilities) return undefined;
   if (!registry) {
     if (!names) return undefined;
@@ -154,18 +140,12 @@ function resolveContextProviders(
   return names.map((name) => registry.resolve(name));
 }
 
-function applyConfigOverrides(
-  config: AgentConfig,
-  overrides: Partial<AgentConfig> | undefined,
-): AgentConfig {
+function applyConfigOverrides(config: AgentConfig, overrides: Partial<AgentConfig> | undefined): AgentConfig {
   if (!overrides) return config;
   return { ...config, ...overrides };
 }
 
-function applyAgentOverrides(
-  agent: Agent | Promise<Agent>,
-  overrides: Partial<AgentConfig> | undefined,
-): Agent | Promise<Agent> {
+function applyAgentOverrides(agent: Agent | Promise<Agent>, overrides: Partial<AgentConfig> | undefined): Agent | Promise<Agent> {
   if (!overrides) return agent;
   if (agent instanceof Promise) {
     return agent.then((resolved) => createAgent({ ...resolved.config, ...overrides }));

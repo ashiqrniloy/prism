@@ -2,23 +2,20 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
 import {
+  BrowserError,
   createBrowserManager,
   createBrowserTools,
   normalizeTarget,
   packageName,
   parseSnapshotRefs,
   resolveBrowserLimits,
-  BrowserError,
 } from "../index.js";
 import { FakeBrowser, FakeDialog } from "./fake-playwright.js";
 
 /** Unit tests disable contained-proxy requirement; production defaults remain fail-closed. */
 const testNetwork = { requireContainedProxy: false as const };
 
-function mgr(
-  browser: FakeBrowser,
-  limits: Record<string, number> = { closeGraceMs: 1 },
-) {
+function mgr(browser: FakeBrowser, limits: Record<string, number> = { closeGraceMs: 1 }) {
   return createBrowserManager({ browser, limits, networkPolicy: testNetwork });
 }
 
@@ -43,7 +40,7 @@ describe("@arnilo/prism-browser", () => {
 
   it("parseSnapshotRefs extracts bounded refs", () => {
     const yaml = [
-      '- generic [active] [ref=e1]:',
+      "- generic [active] [ref=e1]:",
       '  - button "One" [ref=e2]',
       '  - button "Two" [ref=e3]',
       '  - textbox "Q" [ref=e4]:',
@@ -173,18 +170,9 @@ describe("@arnilo/prism-browser", () => {
     await manager.open("run-1");
     await manager.act("run-1", { action: "click", target: { role: "button", name: "Go" } });
     await manager.act("run-1", { action: "click", target: { role: "link", name: "Home" } });
-    await assert.rejects(
-      () => manager.act("run-1", { action: "click", target: { role: "button", name: "Go" } }),
-      /maxActions/,
-    );
-    await assert.rejects(
-      () => manager.act("run-1", { action: "navigate", url: "file:///etc/passwd" }),
-      /file:|blocked|http\(s\)/,
-    );
-    await assert.rejects(
-      () => manager.open("run-2", { url: "javascript:alert(1)" }),
-      /javascript:|blocked|http\(s\)|absolute URL|url/,
-    );
+    await assert.rejects(() => manager.act("run-1", { action: "click", target: { role: "button", name: "Go" } }), /maxActions/);
+    await assert.rejects(() => manager.act("run-1", { action: "navigate", url: "file:///etc/passwd" }), /file:|blocked|http\(s\)/);
+    await assert.rejects(() => manager.open("run-2", { url: "javascript:alert(1)" }), /javascript:|blocked|http\(s\)|absolute URL|url/);
     await manager.close();
   });
 
@@ -206,10 +194,7 @@ describe("@arnilo/prism-browser", () => {
   it("createBrowserTools exports exactly four exclusive tools", async () => {
     const browser = new FakeBrowser();
     const deny: ExecutionPolicy = {
-      check: (action) =>
-        action.operation === "click"
-          ? { allowed: false, reason: "click denied" }
-          : { allowed: true },
+      check: (action) => (action.operation === "click" ? { allowed: false, reason: "click denied" } : { allowed: true }),
     };
     const tools = createBrowserTools({ browser, executionPolicy: deny, limits: { closeGraceMs: 1 }, networkPolicy: testNetwork });
     assert.deepEqual(
@@ -220,10 +205,7 @@ describe("@arnilo/prism-browser", () => {
 
     const open = await tools[0]!.execute({}, ctx("tools-1"));
     assert.equal(open.error, undefined);
-    const denied = await tools[2]!.execute(
-      { action: "click", target: { role: "button", name: "Go" } },
-      ctx("tools-1"),
-    );
+    const denied = await tools[2]!.execute({ action: "click", target: { role: "button", name: "Go" } }, ctx("tools-1"));
     assert.ok(denied.error);
     assert.match(denied.error!.message, /click denied/);
 

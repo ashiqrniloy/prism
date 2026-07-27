@@ -1,6 +1,6 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { createNeuralWattProvider, type NeuralWattProviderOptions } from "./provider.js";
-import { neuralWattModels, defineNeuralWattModel } from "./models.js";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { neuralWattModels } from "./models.js";
+import { createNeuralWattProvider } from "./provider.js";
 
 export interface NeuralWattProviderPackageOptions {
   readonly apiKey?: CredentialValueSource;
@@ -26,17 +26,25 @@ export function createNeuralWattProviderPackage(options: NeuralWattProviderPacka
 
 export {
   defineNeuralWattModel,
+  type ListNeuralWattModelsOptions,
   listNeuralWattModels,
   mapNeuralWattModel,
-  neuralWattModels,
-  type ListNeuralWattModelsOptions,
   type NeuralWattModelConfig,
   type NeuralWattModelEntry,
+  neuralWattModels,
 } from "./models.js";
-export { createNeuralWattProvider, neuralWattBody, neuralWattEvents, neuralWattEventsWithTelemetry, toUsage, type NeuralWattProviderOptions, type NeuralWattUsage } from "./provider.js";
 export {
-  getNeuralWattQuota,
+  createNeuralWattProvider,
+  type NeuralWattProviderOptions,
+  type NeuralWattUsage,
+  neuralWattBody,
+  neuralWattEvents,
+  neuralWattEventsWithTelemetry,
+  toUsage,
+} from "./provider.js";
+export {
   type GetNeuralWattQuotaOptions,
+  getNeuralWattQuota,
   type NeuralWattQuota,
   type NeuralWattQuotaBalance,
   type NeuralWattQuotaKey,
@@ -44,6 +52,23 @@ export {
   type NeuralWattQuotaSubscription,
   type NeuralWattQuotaUsage,
 } from "./quota.js";
+export {
+  classifyNeuralWattError,
+  type NeuralWattErrorInput,
+  type NeuralWattRetryDecision,
+  type NeuralWattRetryStrategy,
+  neuralWattHttpError,
+} from "./retry.js";
+export {
+  mapNeuralWattTelemetry,
+  type NeuralWattCostTelemetry,
+  type NeuralWattEnergyTelemetry,
+  type NeuralWattEvent,
+  type NeuralWattTelemetryEvent,
+  parseNeuralWattComment,
+  parseNeuralWattCost,
+  parseNeuralWattEnergy,
+} from "./telemetry.js";
 export {
   neuralWattChatTemplateKwargs,
   neuralWattClearThinking,
@@ -53,20 +78,3 @@ export {
   neuralWattToolChoice,
   stripNeuralWattOwnedCompat,
 } from "./thinking.js";
-export {
-  classifyNeuralWattError,
-  neuralWattHttpError,
-  type NeuralWattErrorInput,
-  type NeuralWattRetryDecision,
-  type NeuralWattRetryStrategy,
-} from "./retry.js";
-export {
-  mapNeuralWattTelemetry,
-  parseNeuralWattComment,
-  parseNeuralWattCost,
-  parseNeuralWattEnergy,
-  type NeuralWattCostTelemetry,
-  type NeuralWattEnergyTelemetry,
-  type NeuralWattEvent,
-  type NeuralWattTelemetryEvent,
-} from "./telemetry.js";

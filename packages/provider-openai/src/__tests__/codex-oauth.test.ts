@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ProviderRequest } from "@arnilo/prism";
-import { createOpenAICodexProvider, createOpenAICodexOAuthProvider, createOpenAIResponsesProvider } from "../index.js";
+import { createOpenAICodexOAuthProvider, createOpenAICodexProvider, createOpenAIResponsesProvider } from "../index.js";
 import { computeS256Challenge, createPkceVerifier } from "../oauth.js";
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
@@ -17,7 +17,9 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
       }) as typeof fetch,
     });
     const credentials = await provider.login({
-      onAuth: (url) => { authUrl = url; },
+      onAuth: (url) => {
+        authUrl = url;
+      },
       onPrompt: () => "fake-code",
     });
 
@@ -44,7 +46,12 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
       redirectUri: "https://app.example.test/cb",
       scope: "openid profile offline_access",
     });
-    await provider.login({ onAuth: (url) => { authUrl = url; }, onPrompt: () => "code" });
+    await provider.login({
+      onAuth: (url) => {
+        authUrl = url;
+      },
+      onPrompt: () => "code",
+    });
     const params = new URL(authUrl).searchParams;
     assert.equal(params.get("redirect_uri"), "https://app.example.test/cb");
     assert.equal(params.get("scope"), "openid profile offline_access");
@@ -57,7 +64,13 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
     const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).includes("device")) deviceBody = JSON.parse(String(init?.body)) as Record<string, string>;
       return String(url).includes("device")
-        ? Response.json({ device_code: "device", user_code: "FAKE-CODE", verification_uri: "https://example.test/device", interval: 0, expires_in: 600 })
+        ? Response.json({
+            device_code: "device",
+            user_code: "FAKE-CODE",
+            verification_uri: "https://example.test/device",
+            interval: 0,
+            expires_in: 600,
+          })
         : Response.json({ access_token: "device-access" });
     }) as typeof fetch;
     const provider = createOpenAICodexOAuthProvider({ fetch: fetchImpl, scope: "openid offline_access", sleep: async () => {} });
@@ -88,7 +101,9 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
     const sleeps: number[] = [];
     const provider = createOpenAICodexOAuthProvider({
       fetch: fetchImpl,
-      sleep: async (ms) => { sleeps.push(ms); },
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
     });
     const credentials = await provider.login({ onDeviceCode: () => {} });
     assert.equal(tokenPolls, 3);
@@ -117,7 +132,9 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
     const sleeps: number[] = [];
     const provider = createOpenAICodexOAuthProvider({
       fetch: fetchImpl,
-      sleep: async (ms) => { sleeps.push(ms); },
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
     });
     const credentials = await provider.login({ onDeviceCode: () => {} });
     assert.equal(credentials.access, "after-slow-down");
@@ -141,12 +158,17 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
     const provider = createOpenAICodexOAuthProvider({
       fetch: fetchImpl,
       now: () => now,
-      sleep: async (ms) => { now += ms; },
+      sleep: async (ms) => {
+        now += ms;
+      },
     });
-    await assert.rejects(async () => provider.login({ onDeviceCode: () => {} }), (error: Error) => {
-      assert.match(error.message, /expired before authorization completed/);
-      return true;
-    });
+    await assert.rejects(
+      async () => provider.login({ onDeviceCode: () => {} }),
+      (error: Error) => {
+        assert.match(error.message, /expired before authorization completed/);
+        return true;
+      },
+    );
   });
 
   it("codex_oauth_device_code_aborts_during_poll", async () => {
@@ -165,7 +187,9 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
     }) as typeof fetch;
     const provider = createOpenAICodexOAuthProvider({
       fetch: fetchImpl,
-      sleep: async () => { controller.abort(new Error("login cancelled")); },
+      sleep: async () => {
+        controller.abort(new Error("login cancelled"));
+      },
     });
     await assert.rejects(
       async () => provider.login({ onDeviceCode: () => {}, signal: controller.signal }),
@@ -190,13 +214,16 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
       return Response.json({ error: "access_denied", error_description: "denied secret-device-code secret-user-code" }, { status: 400 });
     }) as typeof fetch;
     const provider = createOpenAICodexOAuthProvider({ fetch: fetchImpl, sleep: async () => {} });
-    await assert.rejects(async () => provider.login({ onDeviceCode: () => {} }), (error: Error) => {
-      assert.match(error.message, /access_denied|invalid_token_response/);
-      assert(!error.message.includes("secret-device-code"));
-      assert(!error.message.includes("secret-user-code"));
-      assert.ok(error.message.includes("[REDACTED]"));
-      return true;
-    });
+    await assert.rejects(
+      async () => provider.login({ onDeviceCode: () => {} }),
+      (error: Error) => {
+        assert.match(error.message, /access_denied|invalid_token_response/);
+        assert(!error.message.includes("secret-device-code"));
+        assert(!error.message.includes("secret-user-code"));
+        assert.ok(error.message.includes("[REDACTED]"));
+        return true;
+      },
+    );
   });
 
   it("codex_oauth_authorization_code_errors_redact_code_and_verifier", async () => {
@@ -207,15 +234,19 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
         return Response.json({ error: "invalid_grant", error_description: "bad secret-auth-code" }, { status: 400 });
       }) as typeof fetch,
     });
-    await assert.rejects(async () => provider.login({
-      onAuth: () => {},
-      onPrompt: () => "secret-auth-code",
-    }), (error: Error) => {
-      assert(!error.message.includes("secret-auth-code"));
-      assert(!error.message.includes(tokenBody!.code_verifier!));
-      assert.ok(error.message.includes("[REDACTED]"));
-      return true;
-    });
+    await assert.rejects(
+      async () =>
+        provider.login({
+          onAuth: () => {},
+          onPrompt: () => "secret-auth-code",
+        }),
+      (error: Error) => {
+        assert(!error.message.includes("secret-auth-code"));
+        assert(!error.message.includes(tokenBody!.code_verifier!));
+        assert.ok(error.message.includes("[REDACTED]"));
+        return true;
+      },
+    );
   });
 
   it("codex_oauth_verifier_is_cryptographically_random", () => {
@@ -237,15 +268,25 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
     };
     const codex = createOpenAICodexProvider({
       accessToken: "fake-codex-token",
-      fetch: (async (url: string | URL | Request) => { codexUrl = String(url); return ok(sse([])); }) as typeof fetch,
+      fetch: (async (url: string | URL | Request) => {
+        codexUrl = String(url);
+        return ok(sse([]));
+      }) as typeof fetch,
     });
-    for await (const _ of codex.generate(request)) { void _; }
+    for await (const _ of codex.generate(request)) {
+      void _;
+    }
 
     const api = createOpenAIResponsesProvider({
       apiKey: "fake-openai-key",
-      fetch: (async (url: string | URL | Request) => { apiUrl = String(url); return ok(sse([])); }) as typeof fetch,
+      fetch: (async (url: string | URL | Request) => {
+        apiUrl = String(url);
+        return ok(sse([]));
+      }) as typeof fetch,
     });
-    for await (const _ of api.generate(request)) { void _; }
+    for await (const _ of api.generate(request)) {
+      void _;
+    }
 
     assert.ok(codexUrl.startsWith("https://chatgpt.com/backend-api/codex"), codexUrl);
     assert.ok(apiUrl.startsWith("https://api.openai.com/v1"), apiUrl);
@@ -273,6 +314,11 @@ function ok(body: ReadableStream<Uint8Array>): Response {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
-  return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }

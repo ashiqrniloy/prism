@@ -1,6 +1,6 @@
+import assert from "node:assert/strict";
 import { PassThrough, Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "../index.js";
 import { parseRpcRequest, runRpcServer } from "../rpc.js";
 
@@ -10,7 +10,14 @@ class MemoryWritable extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
-  lines(): unknown[] { return this.chunks.join("").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line)); }
+  lines(): unknown[] {
+    return this.chunks
+      .join("")
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  }
 }
 
 function createSession(id?: string) {
@@ -80,7 +87,11 @@ async function interactive(create = createSession) {
       const raw = stdout.chunks.join("");
       const upto = raw.lastIndexOf("\n");
       if (upto !== -1) {
-        const lines = raw.slice(0, upto + 1).split("\n").filter(Boolean).map((l) => JSON.parse(l));
+        const lines = raw
+          .slice(0, upto + 1)
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => JSON.parse(l));
         const resp = lines.find((l: any) => l?.id === id && (l.ok === true || l.ok === false));
         if (resp) return resp;
       }
@@ -90,8 +101,13 @@ async function interactive(create = createSession) {
   };
   return {
     stdout,
-    async send(req: Record<string, unknown>) { return send(req); },
-    async close() { stdin.end(); await done; },
+    async send(req: Record<string, unknown>) {
+      return send(req);
+    },
+    async close() {
+      stdin.end();
+      await done;
+    },
   };
 }
 
@@ -121,13 +137,17 @@ describe("rpc", () => {
   });
 
   it("rpc_compact_and_session_branch_commands_use_session_api", async () => {
-    const lines = await run([
-      { id: "1", command: "compact" },
-      { id: "2", command: "prompt", params: { input: "Hi" } },
-      { id: "3", command: "messages" },
-      { id: "4", command: "cloneSession", params: { id: "s2" } },
-      { id: "5", command: "switchSession", params: { sessionId: "s3" } },
-    ].map((line) => JSON.stringify(line)).join("\n") + "\n");
+    const lines = await run(
+      `${[
+        { id: "1", command: "compact" },
+        { id: "2", command: "prompt", params: { input: "Hi" } },
+        { id: "3", command: "messages" },
+        { id: "4", command: "cloneSession", params: { id: "s2" } },
+        { id: "5", command: "switchSession", params: { sessionId: "s3" } },
+      ]
+        .map((line) => JSON.stringify(line))
+        .join("\n")}\n`,
+    );
     assert.ok(lines.some((line: any) => line.id === "1" && line.ok === true && typeof line.result.summary === "string"));
     assert.ok(lines.some((line: any) => line.id === "3" && line.ok === true && Array.isArray(line.result.entries)));
     assert.ok(lines.some((line: any) => line.id === "4" && line.ok === true && line.result.sessionId === "s2"));
@@ -137,11 +157,13 @@ describe("rpc", () => {
   it("rpc_compact_fails_closed_during_active_prompt", async () => {
     const stdout = new MemoryWritable();
     const server = runRpcServer({
-      stdin: Readable.from([
-        JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
-        JSON.stringify({ id: "compact-1", command: "compact" }),
-        JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
-      ].join("\n") + "\n"),
+      stdin: Readable.from(
+        `${[
+          JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
+          JSON.stringify({ id: "compact-1", command: "compact" }),
+          JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
+        ].join("\n")}\n`,
+      ),
       stdout,
       createSession: createBlockingSession,
     });
@@ -153,10 +175,15 @@ describe("rpc", () => {
   });
 
   it("rpc_command_executes_only_registered_commands", async () => {
-    const lines = await run([
-      { id: "1", command: "command", params: { name: "echo", args: { ok: true } } },
-      { id: "2", command: "command", params: { name: "missing" } },
-    ].map((line) => JSON.stringify(line)).join("\n") + "\n", [{ name: "echo", execute: (args: any) => ({ name: "echo", value: args }) }]);
+    const lines = await run(
+      `${[
+        { id: "1", command: "command", params: { name: "echo", args: { ok: true } } },
+        { id: "2", command: "command", params: { name: "missing" } },
+      ]
+        .map((line) => JSON.stringify(line))
+        .join("\n")}\n`,
+      [{ name: "echo", execute: (args: any) => ({ name: "echo", value: args }) }],
+    );
     assert.ok(lines.some((line: any) => line.id === "1" && line.ok === true && line.result.value.ok === true));
     assert.ok(lines.some((line: any) => line.id === "2" && line.ok === false));
   });
@@ -164,10 +191,12 @@ describe("rpc", () => {
   it("rpc_abort_cancels_active_provider_stream_before_stdin_closes", async () => {
     const stdout = new MemoryWritable();
     const server = runRpcServer({
-      stdin: Readable.from([
-        JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
-        JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
-      ].join("\n") + "\n"),
+      stdin: Readable.from(
+        `${[
+          JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
+          JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
+        ].join("\n")}\n`,
+      ),
       stdout,
       createSession: createBlockingSession,
     });
@@ -186,11 +215,13 @@ describe("rpc", () => {
   it("rpc_state_responds_while_prompt_is_running", async () => {
     const stdout = new MemoryWritable();
     const server = runRpcServer({
-      stdin: Readable.from([
-        JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
-        JSON.stringify({ id: "state-1", command: "state" }),
-        JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
-      ].join("\n") + "\n"),
+      stdin: Readable.from(
+        `${[
+          JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
+          JSON.stringify({ id: "state-1", command: "state" }),
+          JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
+        ].join("\n")}\n`,
+      ),
       stdout,
       createSession: createBlockingSession,
     });
@@ -207,11 +238,13 @@ describe("rpc", () => {
   it("rpc_followup_during_active_prompt_is_processed_without_blocking", async () => {
     const stdout = new MemoryWritable();
     const server = runRpcServer({
-      stdin: Readable.from([
-        JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
-        JSON.stringify({ id: "run-2", command: "followUp", params: { input: "Again" } }),
-        JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
-      ].join("\n") + "\n"),
+      stdin: Readable.from(
+        `${[
+          JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
+          JSON.stringify({ id: "run-2", command: "followUp", params: { input: "Again" } }),
+          JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
+        ].join("\n")}\n`,
+      ),
       stdout,
       createSession: createBlockingSession,
     });
@@ -228,11 +261,13 @@ describe("rpc", () => {
   it("rpc_steer_during_active_prompt_soft_interrupts_and_followUp_still_rejects", async () => {
     const stdout = new MemoryWritable();
     const server = runRpcServer({
-      stdin: Readable.from([
-        JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
-        JSON.stringify({ id: "steer-1", command: "steer", params: { input: "Prefer SQLite", softInterrupt: true } }),
-        JSON.stringify({ id: "run-2", command: "followUp", params: { input: "Again" } }),
-      ].join("\n") + "\n"),
+      stdin: Readable.from(
+        `${[
+          JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
+          JSON.stringify({ id: "steer-1", command: "steer", params: { input: "Prefer SQLite", softInterrupt: true } }),
+          JSON.stringify({ id: "run-2", command: "followUp", params: { input: "Again" } }),
+        ].join("\n")}\n`,
+      ),
       stdout,
       createSession: createSoftSteerSession,
     });
@@ -246,7 +281,10 @@ describe("rpc", () => {
     assert.ok(followUpResponse?.error?.message.includes("already has an active run"));
 
     const promptResponse = lines.find((line: any) => line.id === "run-1" && (line.ok === true || line.ok === false)) as any;
-    assert.ok(promptResponse && promptResponse.ok === true, `expected prompt success after soft steer, got ${JSON.stringify(promptResponse)}`);
+    assert.ok(
+      promptResponse && promptResponse.ok === true,
+      `expected prompt success after soft steer, got ${JSON.stringify(promptResponse)}`,
+    );
   });
 
   it("rpc_steer_without_active_run_fails_closed", async () => {
@@ -259,10 +297,12 @@ describe("rpc", () => {
   it("rpc_events_remain_correlated_to_prompt_request_id_after_abort", async () => {
     const stdout = new MemoryWritable();
     const server = runRpcServer({
-      stdin: Readable.from([
-        JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
-        JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
-      ].join("\n") + "\n"),
+      stdin: Readable.from(
+        `${[
+          JSON.stringify({ id: "run-1", command: "prompt", params: { input: "Hi" } }),
+          JSON.stringify({ id: "abort-1", command: "abort", params: { reason: "stop" } }),
+        ].join("\n")}\n`,
+      ),
       stdout,
       createSession: createBlockingSession,
     });
@@ -290,8 +330,14 @@ describe("rpc", () => {
     const state = await s.send({ id: "4", command: "state" });
     const handles = state.result.handles as Array<{ handleId: string; sessionId: string; leafId?: string }>;
     assert.equal(handles.length, 2);
-    assert.ok(handles.some((h) => h.handleId === sessionId), "parent handle survived the fork");
-    assert.ok(handles.some((h) => h.handleId === `${sessionId}#2`), "fork handle registered");
+    assert.ok(
+      handles.some((h) => h.handleId === sessionId),
+      "parent handle survived the fork",
+    );
+    assert.ok(
+      handles.some((h) => h.handleId === `${sessionId}#2`),
+      "fork handle registered",
+    );
     // both handles share sessionId but resolve to distinct leaves (branch model)
     const parent = handles.find((h) => h.handleId === sessionId)!;
     const child = handles.find((h) => h.handleId === `${sessionId}#2`)!;
@@ -324,7 +370,14 @@ describe("rpc", () => {
     const counting = () => (id?: string) =>
       createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: { id: "mock", async *generate() { n++; yield providerTextDelta(`reply${n}`); yield providerDone(); } },
+        provider: {
+          id: "mock",
+          async *generate() {
+            n++;
+            yield providerTextDelta(`reply${n}`);
+            yield providerDone();
+          },
+        },
       }).createSession({ id });
     const s = await interactive(counting());
 

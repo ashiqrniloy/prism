@@ -8,8 +8,6 @@ export function formatMcpToolName(prefix: string, remoteName: string): string {
 
 export function assertValidServerId(serverId: string): void {
   if (!serverId || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(serverId)) {
-    throw new Error(
-      "serverId must be a non-empty identifier (letters, digits, ., _, -; must not start with . or -)",
-    );
+    throw new Error("serverId must be a non-empty identifier (letters, digits, ., _, -; must not start with . or -)");
   }
 }

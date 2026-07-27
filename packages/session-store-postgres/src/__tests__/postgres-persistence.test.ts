@@ -1,17 +1,17 @@
+import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { assertAdapterSchemaMatchesModel, createPersistenceSchemaModel } from "@arnilo/prism/testing/persistence-schema";
 import {
-  assertAdapterSchemaMatchesModel,
-  createPersistenceSchemaModel,
-} from "@arnilo/prism/testing/persistence-schema";
-import { ADAPTER_INDEX_NAMES, ADAPTER_TABLE_NAMES, buildMigration001Ddl, buildMigration002Ddl, buildMigration003Ddl, buildMigration004Ddl, buildMigration005Ddl } from "../ddl.js";
-import {
-  MIGRATION_LOCK_NAMESPACE,
-  quoteIdentifier,
-  schemaAdvisoryLockKey,
-  validateIdentifier,
-} from "../identifiers.js";
+  ADAPTER_INDEX_NAMES,
+  ADAPTER_TABLE_NAMES,
+  buildMigration001Ddl,
+  buildMigration002Ddl,
+  buildMigration003Ddl,
+  buildMigration004Ddl,
+  buildMigration005Ddl,
+} from "../ddl.js";
+import { MIGRATION_LOCK_NAMESPACE, quoteIdentifier, schemaAdvisoryLockKey, validateIdentifier } from "../identifiers.js";
 
 describe("postgres identifiers", () => {
   it("accepts safe schema names and rejects injection-like identifiers", () => {
@@ -40,7 +40,12 @@ describe("postgres identifiers", () => {
 
 describe("postgres ddl", () => {
   it("declares every adapter table and index from the shared schema model", () => {
-    const ddl = buildMigration001Ddl("prism") + buildMigration002Ddl("prism") + buildMigration003Ddl("prism") + buildMigration004Ddl("prism") + buildMigration005Ddl("prism");
+    const ddl =
+      buildMigration001Ddl("prism") +
+      buildMigration002Ddl("prism") +
+      buildMigration003Ddl("prism") +
+      buildMigration004Ddl("prism") +
+      buildMigration005Ddl("prism");
     for (const table of ADAPTER_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"."${table}"`, "m"));
     }

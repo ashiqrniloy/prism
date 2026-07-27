@@ -2,6 +2,7 @@
  * Realpath-contained upload path approval for browser file inputs.
  */
 import { createHash } from "node:crypto";
+import type { Stats } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { BrowserError } from "./errors.js";
@@ -87,7 +88,7 @@ export async function approveUploadPaths(
     }
     const abs = isAbsolute(raw) ? raw : resolve(raw);
     // Reject symlink escapes: lstat the leaf; realpath for containment of final target.
-    let leafStat;
+    let leafStat: Stats;
     try {
       leafStat = await lstat(abs);
     } catch {
@@ -110,16 +111,10 @@ export async function approveUploadPaths(
       throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", "upload path must resolve to a regular file");
     }
     if (stat.size > perFileCap) {
-      throw new BrowserError(
-        "ERR_PRISM_BROWSER_LIMIT",
-        `upload exceeds maxUploadBytes ${perFileCap}`,
-      );
+      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `upload exceeds maxUploadBytes ${perFileCap}`);
     }
     if (budget.aggregateBytes + stat.size > limits.maxUploadAggregateBytes) {
-      throw new BrowserError(
-        "ERR_PRISM_BROWSER_LIMIT",
-        `upload exceeds maxUploadAggregateBytes ${limits.maxUploadAggregateBytes}`,
-      );
+      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `upload exceeds maxUploadAggregateBytes ${limits.maxUploadAggregateBytes}`);
     }
 
     const hash = createHash("sha256");

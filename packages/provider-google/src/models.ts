@@ -1,10 +1,4 @@
-import {
-  redactSecrets,
-  resolveCredentialValue,
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** Official Gemini API base (`v1beta`). Vertex is out of scope for 0.0.12. */
@@ -97,19 +91,14 @@ export async function listGoogleModels(options: ListGoogleModelsOptions = {}): P
   }
   const payload = (await response.json()) as GoogleModelsResponse;
   if (!Array.isArray(payload.models)) throw new Error("Google model discovery response missing models array");
-  return payload.models
-    .filter((entry) => supportsGenerateContent(entry))
-    .map((entry) => mapGoogleModel(entry, { provider }));
+  return payload.models.filter((entry) => supportsGenerateContent(entry)).map((entry) => mapGoogleModel(entry, { provider }));
 }
 
 /**
  * Map a sparse official `/models` entry to Prism `ModelConfig`.
  * Capabilities/limits are heuristic when the payload omits them.
  */
-export function mapGoogleModel(
-  entry: GoogleModelEntry,
-  options: { readonly provider?: string } = {},
-): ModelConfig {
+export function mapGoogleModel(entry: GoogleModelEntry, options: { readonly provider?: string } = {}): ModelConfig {
   if (!entry || typeof entry.name !== "string" || entry.name.length === 0) {
     throw new Error("Google model entry missing name");
   }
@@ -190,7 +179,7 @@ function supportsGenerateContent(entry: GoogleModelEntry): boolean {
 
 function cleanLimits(value: Record<string, unknown>): ModelConfig["limits"] | undefined {
   const entries = Object.entries(value).filter(([, item]) => typeof item === "number");
-  return entries.length > 0 ? Object.fromEntries(entries) as ModelConfig["limits"] : undefined;
+  return entries.length > 0 ? (Object.fromEntries(entries) as ModelConfig["limits"]) : undefined;
 }
 
 function cleanJson(value: Record<string, unknown>): JsonObject {

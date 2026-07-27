@@ -1,0 +1,38 @@
+ADAPTER_INDEX_NAMES	export declare const ADAPTER_INDEX_NAMES: readonly ["prism_sessions_tenant_created_idx", "prism_sessions_expires_idx", "prism_branches_session_name_idx", "prism_branches_leaf_idx", "prism_session_entries_session_parent_idx", "prism_session_entries_session_kind_ts_idx", "prism_session_entries_session_run_ts_idx", "prism_session_entries_session_ts_id_idx", "prism_session_entries_session_id_idx", "prism_session_append_idempotency_unique", "prism_runs_session_started_idx", "prism_runs_branch_started
+ADAPTER_TABLE_NAMES	export declare const ADAPTER_TABLE_NAMES: readonly ["prism_tenants", "prism_accounts", "prism_users", "prism_agent_definitions", "prism_sessions", "prism_branches", "prism_session_entries", "prism_session_append_idempotency", "prism_runs", "prism_agent_events", "prism_tool_calls", "prism_usage", "prism_run_feedback", "prism_retention_policies", "prism_legal_holds", "prism_tenant_quotas", "prism_migrations"]
+DEFAULT_BUSY_TIMEOUT_MS	export declare const DEFAULT_BUSY_TIMEOUT_MS = 5000
+MIGRATION_001_INIT	export declare const MIGRATION_001_INIT = "\nCREATE TABLE IF NOT EXISTS prism_tenants (\n id TEXT NOT NULL PRIMARY KEY,\n name TEXT NOT NULL,\n created_at TEXT NOT NULL,\n metadata TEXT\n)
+MIGRATION_002_USAGE_SCOPE	export declare const MIGRATION_002_USAGE_SCOPE = "\nALTER TABLE prism_usage ADD COLUMN scope TEXT NOT NULL DEFAULT 'run_total'
+MIGRATION_003_RUN_FEEDBACK	export declare const MIGRATION_003_RUN_FEEDBACK = "\nCREATE TABLE IF NOT EXISTS prism_run_feedback (\n id TEXT NOT NULL PRIMARY KEY,\n run_id TEXT NOT NULL,\n session_id TEXT NOT NULL,\n trace_id TEXT,\n rating REAL,\n comment TEXT,\n tags TEXT NOT NULL,\n scorer_ids TEXT NOT NULL,\n evaluation_ids TEXT NOT NULL,\n created_at TEXT NOT NULL,\n created_by TEXT,\n tenant_id TEXT NOT NULL,\n account_id TEXT,\n user_id TEXT,\n metadata TEXT,\n FOREIGN KEY (run_id) REFERENCES prism_runs(id) ON DELETE 
+MIGRATION_004_SESSION_SEARCH	export declare const MIGRATION_004_SESSION_SEARCH = "\nCREATE INDEX IF NOT EXISTS prism_sessions_updated_id_idx\n ON prism_sessions (updated_at, id)
+MIGRATION_005_LIFECYCLE_HOLD_QUOTA	export declare const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = "\nCREATE TABLE IF NOT EXISTS prism_legal_holds (\n id TEXT NOT NULL PRIMARY KEY,\n tenant_id TEXT,\n account_id TEXT,\n user_id TEXT,\n resource_kind TEXT NOT NULL,\n resource_id TEXT NOT NULL,\n reason TEXT NOT NULL,\n created_at TEXT NOT NULL,\n created_by TEXT,\n metadata TEXT\n)
+SqlitePersistence	export type { SqlitePersistence } from "./persistence.js"
+SqlitePersistenceOptions	export type { SqlitePersistenceOptions } from "./types.js"
+agentEventRecordToRow	export declare function agentEventRecordToRow(record: AgentEventRecord, sequence: number): AgentEventRow
+applySqliteMigrations	export declare function applySqliteMigrations(db: Database.Database): readonly AppliedPersistenceMigration[]
+assertSqliteSchemaReady	export declare function assertSqliteSchemaReady(db: Database.Database): void
+configureSqliteDatabase	export declare function configureSqliteDatabase(db: Database.Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void
+createSqliteCheckpointStore	export declare function createSqliteCheckpointStore(database: Database.Database): CheckpointStore
+createSqliteLeaseStore	export declare function createSqliteLeaseStore(database: Database.Database): LeaseStore
+createSqlitePersistence	export declare function createSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence
+createSqlitePersistenceLifecycle	export declare function createSqlitePersistenceLifecycle(db: Database.Database): PersistenceLifecycleStore
+decodeEntryCursor	export declare function decodeEntryCursor(cursor: string):
+encodeEntryCursor	export declare function encodeEntryCursor(timestamp: string, id: string): string
+maybeRestrictFileMode	export declare function maybeRestrictFileMode(filename: string, fileMode: number | undefined): void
+parentKey	export declare function parentKey(parentId: string | undefined): string
+reopenSqlitePersistence	export declare function reopenSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence
+rowToAgentDefinitionRecord	export declare function rowToAgentDefinitionRecord(row: Record<string, unknown>): AgentDefinitionRecord
+rowToAgentEventRecord	export declare function rowToAgentEventRecord(row: AgentEventRow): AgentEventRecord
+rowToBranchRecord	export declare function rowToBranchRecord(row: Record<string, unknown>): BranchRecord
+rowToMigrationRecord	export declare function rowToMigrationRecord(row: Record<string, unknown>): MigrationRecord
+rowToRetentionPolicy	export declare function rowToRetentionPolicy(row: Record<string, unknown>): RetentionPolicy
+rowToRunRecord	export declare function rowToRunRecord(row: RunRow): RunRecord
+rowToSessionEntry	export declare function rowToSessionEntry(row: SessionEntryRow): SessionEntry
+rowToSessionRecord	export declare function rowToSessionRecord(row: Record<string, unknown>): SessionRecord
+rowToToolCallRecord	export declare function rowToToolCallRecord(row: ToolCallRow): ToolCallRecord
+rowToUsageRecord	export declare function rowToUsageRecord(row: UsageRow): UsageRecord
+runRecordToRow	export declare function runRecordToRow(record: RunRecord): RunRow
+sessionEntryToRow	export declare function sessionEntryToRow(entry: SessionEntry): SessionEntryRow
+toolCallRecordToRow	export declare function toolCallRecordToRow(record: ToolCallRecord): ToolCallRow
+usageRecordToRow	export declare function usageRecordToRow(record: UsageRecord): UsageRow
+verifyMigrationIdempotency	export declare function verifyMigrationIdempotency(db: Database.Database): void

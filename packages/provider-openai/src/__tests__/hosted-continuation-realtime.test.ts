@@ -10,10 +10,17 @@ const baseRequest: ProviderRequest = {
 };
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
-  return new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }
-function ok(body: ReadableStream<Uint8Array>): Response { return new Response(body, { status: 200 }); }
+function ok(body: ReadableStream<Uint8Array>): Response {
+  return new Response(body, { status: 200 });
+}
 
 async function collect(provider: AIProvider, request: ProviderRequest): Promise<ProviderEvent[]> {
   const out: ProviderEvent[] = [];
@@ -25,12 +32,18 @@ describe("@arnilo/prism-provider-openai hosted tools", () => {
   it("web_search_call emits a provider-hosted tool_call (no host dispatch, no tool_result)", async () => {
     const provider = createOpenAIResponsesProvider({
       apiKey: "fake-key",
-      fetch: (async () => ok(sse([
-        { type: "response.output_item.added", output_index: 0, item: { type: "web_search_call", id: "ws_1" } },
-        { type: "response.output_text.delta", delta: "result: " },
-        { type: "response.output_text.delta", delta: "42" },
-        { type: "response.completed", response: { id: "resp_1", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } },
-      ]))) as typeof fetch,
+      fetch: (async () =>
+        ok(
+          sse([
+            { type: "response.output_item.added", output_index: 0, item: { type: "web_search_call", id: "ws_1" } },
+            { type: "response.output_text.delta", delta: "result: " },
+            { type: "response.output_text.delta", delta: "42" },
+            {
+              type: "response.completed",
+              response: { id: "resp_1", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } },
+            },
+          ]),
+        )) as typeof fetch,
     });
     const events = await collect(provider, baseRequest);
     const hosted = events.filter((e) => e.type === "tool_call") as Extract<ProviderEvent, { type: "tool_call" }>[];
@@ -41,7 +54,12 @@ describe("@arnilo/prism-provider-openai hosted tools", () => {
     assert.deepEqual(hosted[0]!.call.arguments, {});
     // No function_call tool_call (host tool) present; core agent-loop coverage verifies
     // this authority is neither dispatched nor followed by a tool_result.
-    assert.equal(events.filter((e) => e.type === "tool_call" && (e as Extract<ProviderEvent, { type: "tool_call" }>).call.authority !== "provider-hosted").length, 0);
+    assert.equal(
+      events.filter(
+        (e) => e.type === "tool_call" && (e as Extract<ProviderEvent, { type: "tool_call" }>).call.authority !== "provider-hosted",
+      ).length,
+      0,
+    );
   });
 
   it("hosted assistant tool_call is not re-serialized as function_call on the next turn", async () => {
@@ -50,13 +68,23 @@ describe("@arnilo/prism-provider-openai hosted tools", () => {
       apiKey: "fake-key",
       fetch: (async (_url, init) => {
         body = JSON.parse(String(init?.body));
-        return ok(sse([{ type: "response.completed", response: { id: "resp_2", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } }]));
+        return ok(
+          sse([
+            {
+              type: "response.completed",
+              response: { id: "resp_2", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } },
+            },
+          ]),
+        );
       }) as typeof fetch,
     });
     await collect(provider, {
       ...baseRequest,
       messages: [
-        { role: "assistant", content: [{ type: "tool_call", id: "ws_1", name: "web_search_call", arguments: {}, authority: "provider-hosted" } as never] },
+        {
+          role: "assistant",
+          content: [{ type: "tool_call", id: "ws_1", name: "web_search_call", arguments: {}, authority: "provider-hosted" } as never],
+        },
         { role: "assistant", content: [{ type: "text", text: "result: 42" }] },
       ],
     });
@@ -76,21 +104,34 @@ describe("@arnilo/prism-provider-openai response continuation", () => {
         calls.push(hop.toString());
         const parsed = JSON.parse(String(init?.body)) as { previous_response_id?: string; input?: unknown[] };
         if (hop === 1) {
-          return ok(sse([
-            { type: "response.output_text.delta", delta: "part1 " },
-            { type: "response.completed", response: { id: "resp_A", status: "incomplete", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } },
-          ]));
+          return ok(
+            sse([
+              { type: "response.output_text.delta", delta: "part1 " },
+              {
+                type: "response.completed",
+                response: { id: "resp_A", status: "incomplete", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } },
+              },
+            ]),
+          );
         }
         assert.equal(parsed.previous_response_id, "resp_A", "second hop must resume from the cursor");
         assert.deepEqual(parsed.input, [], "cursor resumption must not replay prompt history");
-        return ok(sse([
-          { type: "response.output_text.delta", delta: "part2" },
-          { type: "response.completed", response: { id: "resp_B", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } },
-        ]));
+        return ok(
+          sse([
+            { type: "response.output_text.delta", delta: "part2" },
+            {
+              type: "response.completed",
+              response: { id: "resp_B", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } },
+            },
+          ]),
+        );
       }) as typeof fetch,
     });
     const events = await collect(provider, baseRequest);
-    const continuations = events.filter((e) => e.type === "continuation_required") as Extract<ProviderEvent, { type: "continuation_required" }>[];
+    const continuations = events.filter((e) => e.type === "continuation_required") as Extract<
+      ProviderEvent,
+      { type: "continuation_required" }
+    >[];
     assert.equal(continuations.length, 1, "exactly one continuation_required");
     assert.equal(continuations[0]!.cursor, "resp_A");
     assert.equal(continuations[0]!.reason, "incomplete");
@@ -106,7 +147,14 @@ describe("@arnilo/prism-provider-openai response continuation", () => {
       apiKey: "fake-key",
       fetch: (async (_url, init) => {
         if (!firstBody) firstBody = JSON.parse(String(init?.body)) as { previous_response_id?: string; input?: unknown[] };
-        return ok(sse([{ type: "response.completed", response: { id: "resp_C", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } }]));
+        return ok(
+          sse([
+            {
+              type: "response.completed",
+              response: { id: "resp_C", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } },
+            },
+          ]),
+        );
       }) as typeof fetch,
     });
     await collect(provider, { ...baseRequest, options: { continuation: { cursor: "resp_seed" } } });
@@ -120,10 +168,15 @@ describe("@arnilo/prism-provider-openai response continuation", () => {
       apiKey: "fake-key",
       fetch: (async () => {
         hop += 1;
-        return ok(sse([
-          { type: "response.output_text.delta", delta: "x" },
-          { type: "response.completed", response: { id: `resp_${hop}`, status: "incomplete", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } },
-        ]));
+        return ok(
+          sse([
+            { type: "response.output_text.delta", delta: "x" },
+            {
+              type: "response.completed",
+              response: { id: `resp_${hop}`, status: "incomplete", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } },
+            },
+          ]),
+        );
       }) as typeof fetch,
     });
     const events = await collect(provider, baseRequest);
@@ -181,18 +234,34 @@ describe("@arnilo/prism-provider-openai realtime session", () => {
     const handlers = new Map<string, Array<(e: { data?: string }) => void>>();
     let state = 1; // OPEN
     const transport: RealtimeTransport = {
-      get readyState() { return state; },
-      send: (data: string) => { sent.push(data); },
-      close: () => { state = 3; for (const h of handlers.get("close") ?? []) h({}); },
+      get readyState() {
+        return state;
+      },
+      send: (data: string) => {
+        sent.push(data);
+      },
+      close: () => {
+        state = 3;
+        for (const h of handlers.get("close") ?? []) h({});
+      },
       addEventListener: (type: "open" | "message" | "close" | "error", h: (e: { data?: string }) => void) => {
         (handlers.get(type) ?? handlers.set(type, []).get(type)!).push(h);
       },
       removeEventListener: () => {},
     };
-    return { transport, sent, emit: (type: "open" | "message" | "close" | "error", data?: string) => { for (const h of handlers.get(type) ?? []) h({ data }); } };
+    return {
+      transport,
+      sent,
+      emit: (type: "open" | "message" | "close" | "error", data?: string) => {
+        for (const h of handlers.get(type) ?? []) h({ data });
+      },
+    };
   }
 
-  async function start(session: ReturnType<typeof createOpenAIRealtimeSession>, fake: ReturnType<typeof fakeTransport>): Promise<{ iter: AsyncIterator<RealtimeEvent>; started: RealtimeEvent }> {
+  async function start(
+    session: ReturnType<typeof createOpenAIRealtimeSession>,
+    fake: ReturnType<typeof fakeTransport>,
+  ): Promise<{ iter: AsyncIterator<RealtimeEvent>; started: RealtimeEvent }> {
     const iter = session.events()[Symbol.asyncIterator]();
     const first = iter.next();
     await new Promise((r) => setTimeout(r, 0));
@@ -207,7 +276,10 @@ describe("@arnilo/prism-provider-openai realtime session", () => {
       model,
       ownerId: "owner_1",
       apiKey: "fake-key",
-      webSocket: (url, options) => { fake.connection = { url, headers: options.headers }; return fake.transport; },
+      webSocket: (url, options) => {
+        fake.connection = { url, headers: options.headers };
+        return fake.transport;
+      },
     });
     const { iter, started } = await start(session, fake);
     const events: RealtimeEvent[] = [started];
@@ -223,9 +295,15 @@ describe("@arnilo/prism-provider-openai realtime session", () => {
     const audio = events.find((e) => e.type === "audio_delta") as Extract<RealtimeEvent, { type: "audio_delta" }> | undefined;
     assert.ok(audio, "audio_delta emitted");
     assert.deepEqual(Array.from(audio!.audio), [1, 2, 3]);
-    assert.ok(events.some((e) => e.type === "interrupted"), "interrupted event");
+    assert.ok(
+      events.some((e) => e.type === "interrupted"),
+      "interrupted event",
+    );
     assert.equal(events[events.length - 1]!.type, "session_closed");
-    assert.ok(fake.sent.some((s) => s.includes("response.cancel")), "response.cancel sent");
+    assert.ok(
+      fake.sent.some((s) => s.includes("response.cancel")),
+      "response.cancel sent",
+    );
     assert.equal(fake.connection!.headers.Authorization, "Bearer fake-key");
     assert.equal(fake.connection!.headers["OpenAI-Safety-Identifier"], "owner_1");
     assert.ok(!fake.connection!.url.includes("fake-key"), "credentials stay out of WebSocket URL");
@@ -288,7 +366,12 @@ describe("@arnilo/prism-provider-openai realtime session", () => {
     const firstFake = fakeTransport();
     const first = createOpenAIRealtimeSession({ model, ownerId: "owner_shared", apiKey: "fake-key", webSocket: () => firstFake.transport });
     await start(first, firstFake);
-    const second = createOpenAIRealtimeSession({ model, ownerId: "owner_shared", apiKey: "fake-key", webSocket: () => fakeTransport().transport });
+    const second = createOpenAIRealtimeSession({
+      model,
+      ownerId: "owner_shared",
+      apiKey: "fake-key",
+      webSocket: () => fakeTransport().transport,
+    });
     await assert.rejects(() => second.events()[Symbol.asyncIterator]().next(), /already active/i);
     await first.close();
   });

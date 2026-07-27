@@ -126,21 +126,14 @@ function nextCheckpointId(): string {
   return `bcp_${checkpointSeq}`;
 }
 
-export function createBrowserCheckpointLedger(
-  options: BrowserCheckpointLimitOptions = {},
-): BrowserCheckpointLedger {
+export function createBrowserCheckpointLedger(options: BrowserCheckpointLimitOptions = {}): BrowserCheckpointLedger {
   const limits = resolveBrowserCheckpointLimits(options);
   const runs = new Map<string, RunCheckpointState>();
 
   function record(input: BrowserCheckpointInput): BrowserCheckpoint {
     const runId = validateBytes("runId", input.runId, 256, true)!;
     const url = validateBytes("url", input.url, limits.maxUrlBytes, true)!;
-    const domainStateHash = validateBytes(
-      "domainStateHash",
-      input.domainStateHash,
-      limits.maxDomainStateHashBytes,
-      true,
-    )!;
+    const domainStateHash = validateBytes("domainStateHash", input.domainStateHash, limits.maxDomainStateHashBytes, true)!;
     const hostDataRef = validateBytes("hostDataRef", input.hostDataRef, limits.maxHostDataRefBytes, false);
     const checkpoint: BrowserCheckpoint = {
       checkpointId: nextCheckpointId(),
@@ -189,10 +182,7 @@ export function createBrowserCheckpointLedger(
       validateBytes("runId", runId, 256, true);
       const state = runs.get(runId);
       if (!state || state.needsVerify || state.checkpoints.length === 0) {
-        throw new BrowserError(
-          "ERR_PRISM_BROWSER_STATE",
-          "browser side effect requires reload + verify after resume/interruption",
-        );
+        throw new BrowserError("ERR_PRISM_BROWSER_STATE", "browser side effect requires reload + verify after resume/interruption");
       }
     },
   };

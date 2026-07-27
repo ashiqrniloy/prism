@@ -1,17 +1,18 @@
 import { randomUUID } from "node:crypto";
+import type { PersistenceLifecycleStore, RetentionPolicy } from "@arnilo/prism";
 import {
-  CONVERSATION_METADATA_KEY,
-  ConversationError,
-  assertIdentityActive,
-  assertIdentityMatchesOwnership,
-  conversationMarkerMetadata,
-  conversationThreadFromRecord,
-  decodeConversationReplayCursor,
-  encodeConversationReplayCursor,
   type AgentEventRecord,
   type AgentIdentity,
   type AgentRunResult,
   type AgentSession,
+  assertIdentityActive,
+  assertIdentityMatchesOwnership,
+  CONVERSATION_METADATA_KEY,
+  ConversationError,
+  conversationMarkerMetadata,
+  conversationThreadFromRecord,
+  decodeConversationReplayCursor,
+  encodeConversationReplayCursor,
   type JsonObject,
   type Message,
   type OwnershipScope,
@@ -20,7 +21,6 @@ import {
   type SecretRedactor,
   type SessionRecord,
 } from "@arnilo/prism";
-import type { PersistenceLifecycleStore, RetentionPolicy } from "@arnilo/prism";
 import type { PrismRequestHandler, PrismServerAuthorization } from "./types.js";
 import { PrismServerError } from "./types.js";
 
@@ -71,12 +71,32 @@ export interface ResolvedConversationLimits {
 
 export function resolveConversationLimits(input: ConversationLimits = {}): ResolvedConversationLimits {
   return {
-    threadPageLimit: bounded(input.threadPageLimit, DEFAULT_CONVERSATION_THREAD_PAGE_LIMIT, HARD_CONVERSATION_THREAD_PAGE_LIMIT, "threadPageLimit"),
-    replayPageLimit: bounded(input.replayPageLimit, DEFAULT_CONVERSATION_REPLAY_PAGE_LIMIT, HARD_CONVERSATION_REPLAY_PAGE_LIMIT, "replayPageLimit"),
+    threadPageLimit: bounded(
+      input.threadPageLimit,
+      DEFAULT_CONVERSATION_THREAD_PAGE_LIMIT,
+      HARD_CONVERSATION_THREAD_PAGE_LIMIT,
+      "threadPageLimit",
+    ),
+    replayPageLimit: bounded(
+      input.replayPageLimit,
+      DEFAULT_CONVERSATION_REPLAY_PAGE_LIMIT,
+      HARD_CONVERSATION_REPLAY_PAGE_LIMIT,
+      "replayPageLimit",
+    ),
     cursorBytes: bounded(input.cursorBytes, DEFAULT_CONVERSATION_CURSOR_BYTES, HARD_CONVERSATION_CURSOR_BYTES, "cursorBytes"),
     titleBytes: bounded(input.titleBytes, DEFAULT_CONVERSATION_TITLE_BYTES, HARD_CONVERSATION_TITLE_BYTES, "titleBytes"),
-    requestIdBytes: bounded(input.requestIdBytes, DEFAULT_CONVERSATION_REQUEST_ID_BYTES, HARD_CONVERSATION_REQUEST_ID_BYTES, "requestIdBytes"),
-    maxActiveBranches: bounded(input.maxActiveBranches, DEFAULT_CONVERSATION_MAX_ACTIVE_BRANCHES, HARD_CONVERSATION_MAX_ACTIVE_BRANCHES, "maxActiveBranches"),
+    requestIdBytes: bounded(
+      input.requestIdBytes,
+      DEFAULT_CONVERSATION_REQUEST_ID_BYTES,
+      HARD_CONVERSATION_REQUEST_ID_BYTES,
+      "requestIdBytes",
+    ),
+    maxActiveBranches: bounded(
+      input.maxActiveBranches,
+      DEFAULT_CONVERSATION_MAX_ACTIVE_BRANCHES,
+      HARD_CONVERSATION_MAX_ACTIVE_BRANCHES,
+      "maxActiveBranches",
+    ),
     exportBytes: bounded(input.exportBytes, DEFAULT_CONVERSATION_EXPORT_BYTES, HARD_CONVERSATION_EXPORT_BYTES, "exportBytes"),
     exportPages: bounded(input.exportPages, DEFAULT_CONVERSATION_EXPORT_PAGES, HARD_CONVERSATION_EXPORT_PAGES, "exportPages"),
     maxRequestBytes: bounded(input.maxRequestBytes, DEFAULT_CONVERSATION_REQUEST_BYTES, HARD_CONVERSATION_REQUEST_BYTES, "maxRequestBytes"),
@@ -188,10 +208,7 @@ const CONVERSATION_DELETE_POLICY: RetentionPolicy = {
 
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 
-export function createConversationService(
-  store: ConversationServiceStore,
-  options: CreateConversationServiceOptions,
-): ConversationService {
+export function createConversationService(store: ConversationServiceStore, options: CreateConversationServiceOptions): ConversationService {
   if (typeof store.appendSession !== "function") {
     throw new RangeError("ConversationServiceStore requires appendSession (sqlite/postgres persistence)");
   }
@@ -207,10 +224,7 @@ export function createConversationService(
     return thread;
   }
 
-  async function writeMarker(
-    thread: import("@arnilo/prism").ConversationThread,
-    marker: Parameters<typeof conversationMarkerMetadata>[0],
-  ) {
+  async function writeMarker(thread: import("@arnilo/prism").ConversationThread, marker: Parameters<typeof conversationMarkerMetadata>[0]) {
     const now = new Date().toISOString();
     await appendSession({
       id: thread.id,
@@ -341,9 +355,8 @@ export function createConversationService(
 
     async export(input) {
       const thread = await loadThread(input, input.threadId);
-      const start = input.cursor === undefined
-        ? undefined
-        : decodeConversationReplayCursor(input.cursor, thread.id, limits.cursorBytes).cursor;
+      const start =
+        input.cursor === undefined ? undefined : decodeConversationReplayCursor(input.cursor, thread.id, limits.cursorBytes).cursor;
       const events: AgentEventRecord[] = [];
       let bytes = 0;
       let pages = 0;
@@ -386,7 +399,9 @@ export function createConversationService(
       return {
         thread,
         events: options.redactor.redact(events),
-        ...(nextCursor === undefined ? {} : { nextCursor: encodeConversationReplayCursor({ v: 1, threadId: thread.id, cursor: nextCursor }) }),
+        ...(nextCursor === undefined
+          ? {}
+          : { nextCursor: encodeConversationReplayCursor({ v: 1, threadId: thread.id, cursor: nextCursor }) }),
         truncated,
       };
     },
@@ -410,9 +425,8 @@ export function createConversationService(
 
     async replay(input) {
       const thread = await loadThread(input, input.threadId);
-      const inner = input.cursor === undefined
-        ? undefined
-        : decodeConversationReplayCursor(input.cursor, thread.id, limits.cursorBytes).cursor;
+      const inner =
+        input.cursor === undefined ? undefined : decodeConversationReplayCursor(input.cursor, thread.id, limits.cursorBytes).cursor;
       const limit = Math.min(input.limit ?? limits.replayPageLimit, limits.replayPageLimit);
       if (!Number.isSafeInteger(limit) || limit < 1) throw new ConversationError("limit is invalid", "invalid_input");
       const page = await store.queryEvents({
@@ -425,13 +439,15 @@ export function createConversationService(
       });
       if (page.items.length > limit) throw new ConversationError("Replay page exceeds limit", "limit_exceeded");
       const records = page.items.filter((record) => record.redacted);
-      const terminal = records.some((record) =>
-        record.event.type === "agent_finished" || record.event.type === "agent_denied" || record.event.type === "error",
+      const terminal = records.some(
+        (record) => record.event.type === "agent_finished" || record.event.type === "agent_denied" || record.event.type === "error",
       );
       if (page.nextCursor !== undefined) assertBytes(page.nextCursor, limits.cursorBytes, "cursor_too_large");
       return {
         records,
-        ...(page.nextCursor === undefined ? {} : { nextCursor: encodeConversationReplayCursor({ v: 1, threadId: thread.id, cursor: page.nextCursor }) }),
+        ...(page.nextCursor === undefined
+          ? {}
+          : { nextCursor: encodeConversationReplayCursor({ v: 1, threadId: thread.id, cursor: page.nextCursor }) }),
         terminal,
       };
     },
@@ -624,12 +640,18 @@ function conversationErrorResponse(error: unknown): Response {
   } else if (error instanceof ConversationError) {
     code = error.code;
     message = error.message;
-    status = error.reason === "not_found" ? 404
-      : error.reason === "thread_archived" ? 409
-        : error.reason === "ownership" ? 403
-          : error.reason === "unsupported" ? 501
-            : error.reason === "not_redacted" || error.reason === "limit_exceeded" ? 500
-              : 400;
+    status =
+      error.reason === "not_found"
+        ? 404
+        : error.reason === "thread_archived"
+          ? 409
+          : error.reason === "ownership"
+            ? 403
+            : error.reason === "unsupported"
+              ? 501
+              : error.reason === "not_redacted" || error.reason === "limit_exceeded"
+                ? 500
+                : 400;
   } else if (error instanceof RangeError) {
     status = 400;
     code = "ERR_PRISM_SERVER_INPUT";
@@ -707,17 +729,20 @@ async function readBody(request: Request, maxBytes: number): Promise<JsonObject>
 }
 
 function readString(value: unknown, name: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new PrismServerError(`${name} must be a string`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (typeof value !== "string" || value.length === 0)
+    throw new PrismServerError(`${name} must be a string`, 400, "ERR_PRISM_SERVER_INPUT");
   return value;
 }
 
 function readObject(value: unknown, name: string): JsonObject {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new PrismServerError(`${name} must be an object`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new PrismServerError(`${name} must be an object`, 400, "ERR_PRISM_SERVER_INPUT");
   return value as JsonObject;
 }
 
 function readPositiveInt(value: string | null, name: string): number {
   const parsed = value === null ? NaN : Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new PrismServerError(`${name} must be a positive safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
+  if (!Number.isSafeInteger(parsed) || parsed < 1)
+    throw new PrismServerError(`${name} must be a positive safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
   return parsed;
 }

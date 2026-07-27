@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { join } from "node:path";
 /**
  * Release 0.0.11 reproducible session-search + context-budget benchmark.
  * Default mode is network-free (memory SessionStore + assembleProviderInput).
@@ -6,7 +7,6 @@
  */
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
-import { join } from "node:path";
 
 const iterations = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
 if (!Number.isInteger(iterations) || iterations < 10 || iterations > 100_000) {
@@ -28,8 +28,7 @@ const REQUIRED_RESULT_FIELDS = Object.freeze([
   "resourceLimitSignals",
 ]);
 
-const percentile = (values, ratio) =>
-  [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
+const percentile = (values, ratio) => [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(values.length * ratio) - 1)];
 
 const results = [];
 
@@ -96,19 +95,21 @@ const seedCount = 200;
 const store = createMemorySessionStore();
 for (let i = 0; i < seedCount; i += 1) {
   const sessionId = `s-${i}`;
-  await store.append(createSessionEntry({
-    id: `e-${i}`,
-    sessionId,
-    timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString(),
-    kind: "message",
-    label: i % 17 === 0 ? "auth-flake" : `noise-${i}`,
-    summary: i % 17 === 0 ? "flaky login" : `summary-${i}`,
-    message: {
-      role: "user",
-      content: [{ type: "text", text: i % 17 === 0 ? "auth flake detail" : `body-${i}` }],
-    },
-    metadata: { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: "/ws" },
-  }));
+  await store.append(
+    createSessionEntry({
+      id: `e-${i}`,
+      sessionId,
+      timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString(),
+      kind: "message",
+      label: i % 17 === 0 ? "auth-flake" : `noise-${i}`,
+      summary: i % 17 === 0 ? "flaky login" : `summary-${i}`,
+      message: {
+        role: "user",
+        content: [{ type: "text", text: i % 17 === 0 ? "auth flake detail" : `body-${i}` }],
+      },
+      metadata: { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: "/ws" },
+    }),
+  );
 }
 
 await measure("memory-linear-search-label", "memory-linear", async () => {
@@ -134,9 +135,7 @@ for (let i = 0; i < 40; i += 1) {
   });
 }
 const model = { provider: "bench", model: "bench-model" };
-const budgetTokens = estimateTextTokens("System instruction:\nBe brief.")
-  + estimateTextTokens("current question")
-  + 200;
+const budgetTokens = estimateTextTokens("System instruction:\nBe brief.") + estimateTextTokens("current question") + 200;
 
 await measure("context-budget-evict", "assembler", async () => {
   const request = await assembleProviderInput({

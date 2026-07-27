@@ -1,11 +1,11 @@
 import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
+import { CredentialDecryptError, CredentialStoreTimeoutError } from "./errors.js";
 import {
   DEFAULT_MAX_VAULT_BYTES,
-  HARD_MAX_ENVELOPE_FILE_BYTES,
   HARD_KEYCHAIN_TIMEOUT_MS,
+  HARD_MAX_ENVELOPE_FILE_BYTES,
   resolveEncryptedCredentialStoreLimits,
 } from "./limits.js";
-import { CredentialDecryptError, CredentialStoreTimeoutError } from "./errors.js";
 
 const IV_BYTES = 12;
 const AUTH_TAG_BYTES = 16;
@@ -34,11 +34,7 @@ export interface HostKmsCryptoOptions {
 }
 
 /** Encrypt with a random DEK; host KMS wraps the DEK. Reuses envelope size caps. */
-export async function encryptWithHostKms(
-  plaintext: Uint8Array,
-  kms: HostKms,
-  options: HostKmsCryptoOptions = {},
-): Promise<KmsEnvelope> {
+export async function encryptWithHostKms(plaintext: Uint8Array, kms: HostKms, options: HostKmsCryptoOptions = {}): Promise<KmsEnvelope> {
   const maxPlaintext = options.maxPlaintextBytes ?? DEFAULT_MAX_VAULT_BYTES;
   const fileCap = resolveEncryptedCredentialStoreLimits().maxFileBytes;
   if (!Number.isSafeInteger(maxPlaintext) || maxPlaintext < 1 || maxPlaintext > HARD_MAX_ENVELOPE_FILE_BYTES) {
@@ -66,11 +62,7 @@ export async function encryptWithHostKms(
   return envelope;
 }
 
-export async function decryptWithHostKms(
-  envelope: KmsEnvelope,
-  kms: HostKms,
-  options: HostKmsCryptoOptions = {},
-): Promise<Buffer> {
+export async function decryptWithHostKms(envelope: KmsEnvelope, kms: HostKms, options: HostKmsCryptoOptions = {}): Promise<Buffer> {
   if (envelope.version !== KMS_ENVELOPE_VERSION || envelope.algorithm !== "aes-256-gcm") {
     throw new CredentialDecryptError("Unsupported KMS envelope");
   }

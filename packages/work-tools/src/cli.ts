@@ -1,12 +1,23 @@
 import { spawn } from "node:child_process";
-import { resolveWorkLimits } from "./limits.js";
 import { WorkToolError } from "./errors.js";
+import { resolveWorkLimits } from "./limits.js";
 import type { ResolvedWorkLimits, WorkCliExecResult, WorkCliRunner, WorkLimits } from "./types.js";
 
 const FORBIDDEN_TOKENS = new Set([
-  "login", "logout", "setup", "doctor", "status", "request", "util", "cli",
-  "auth", "schema", // gws interactive auth + Discovery free-form introspection
-  "--debug", "--verbose", "-debug", "-verbose",
+  "login",
+  "logout",
+  "setup",
+  "doctor",
+  "status",
+  "request",
+  "util",
+  "cli",
+  "auth",
+  "schema", // gws interactive auth + Discovery free-form introspection
+  "--debug",
+  "--verbose",
+  "-debug",
+  "-verbose",
 ]);
 
 export function assertSafeArgv(argv: readonly string[]): void {
@@ -27,14 +38,20 @@ export function createCliRunner(options: {
   readonly limits?: WorkLimits;
   readonly env?: Readonly<Record<string, string>>;
   /** Test seam: replace process spawn. */
-  readonly exec?: (argv: readonly string[], opts: { env: NodeJS.ProcessEnv; signal?: AbortSignal; limits: ResolvedWorkLimits }) => Promise<WorkCliExecResult>;
+  readonly exec?: (
+    argv: readonly string[],
+    opts: { env: NodeJS.ProcessEnv; signal?: AbortSignal; limits: ResolvedWorkLimits },
+  ) => Promise<WorkCliExecResult>;
 }): WorkCliRunner & { readonly limits: ResolvedWorkLimits } {
   const limits = resolveWorkLimits(options.limits);
   if (!options.binary || options.binary.includes("\0")) throw new WorkToolError("ERR_PRISM_WORK_BINARY", "Host-pinned binary required");
   if (!options.configDir) throw new WorkToolError("ERR_PRISM_WORK_CONFIG", "Isolated configDir required");
   let active = 0;
 
-  const defaultExec = (argv: readonly string[], opts: { env: NodeJS.ProcessEnv; signal?: AbortSignal; limits: ResolvedWorkLimits }): Promise<WorkCliExecResult> =>
+  const defaultExec = (
+    argv: readonly string[],
+    opts: { env: NodeJS.ProcessEnv; signal?: AbortSignal; limits: ResolvedWorkLimits },
+  ): Promise<WorkCliExecResult> =>
     new Promise((resolve, reject) => {
       assertSafeArgv(argv);
       const child = spawn(options.binary, [...argv], {

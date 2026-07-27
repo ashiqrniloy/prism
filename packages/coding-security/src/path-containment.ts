@@ -1,5 +1,5 @@
-import { isAbsolute, relative, resolve, dirname, basename, join } from "node:path";
 import { realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { isNodeErrorCode } from "@arnilo/prism/node/config";
 
 export function isPathInside(root: string, target: string): boolean {
@@ -35,13 +35,9 @@ export async function isPathInsideReal(root: string, target: string): Promise<bo
   return isPathInside(from, to);
 }
 
-export async function assertPathInsideRoots(
-  roots: readonly string[],
-  target: string,
-): Promise<boolean> {
+export async function assertPathInsideRoots(roots: readonly string[], target: string): Promise<boolean> {
   for (const root of roots) {
     if (await isPathInsideReal(root, target)) return true;
   }
   return false;
 }
-

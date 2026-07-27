@@ -1,9 +1,8 @@
-import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import { discoverContributions } from "../node/contribution-discovery.js";
 
 async function makeRoot(prefix: string): Promise<string> {
@@ -62,10 +61,7 @@ describe("discoverContributions", () => {
   it("performs no import(); file content is read, not module-loaded", async () => {
     // A skill file containing JS-like text is never evaluated as code.
     const root = await makeRoot("noeval");
-    await writeFileDeep(
-      `${root}/.agents/skills/j-skill/SKILL.md`,
-      "---\nname: j-skill\n---\nrequire('fs')\nprocess.exit(1)\n",
-    );
+    await writeFileDeep(`${root}/.agents/skills/j-skill/SKILL.md`, "---\nname: j-skill\n---\nrequire('fs')\nprocess.exit(1)\n");
     const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root });
     assert.equal(found.length, 1);
     assert.match(found[0].skill?.instructions ?? "", /require\('fs'\)/);
@@ -73,10 +69,7 @@ describe("discoverContributions", () => {
 
   it("untrusted workspace root yields no entries and does not throw; kind-root not read", async () => {
     const root = await makeRoot("untrusted");
-    await writeFileDeep(
-      `${root}/.agents/skills/s/SKILL.md`,
-      "---\nname: s\n---\nb\n",
-    );
+    await writeFileDeep(`${root}/.agents/skills/s/SKILL.md`, "---\nname: s\n---\nb\n");
     const checked: string[] = [];
     const trust = {
       check: (req: { target: string }) => {
@@ -88,7 +81,10 @@ describe("discoverContributions", () => {
     const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root, trust });
 
     assert.equal(found.length, 0);
-    assert.ok(checked.some((t) => t.endsWith(".agents/skills")), "kind-root was trust-checked");
+    assert.ok(
+      checked.some((t) => t.endsWith(".agents/skills")),
+      "kind-root was trust-checked",
+    );
   });
 
   it("trusted workspace root invokes permission per directory read inside the root", async () => {
@@ -106,7 +102,10 @@ describe("discoverContributions", () => {
     const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root, permission });
 
     assert.equal(found.length, 2);
-    assert.ok(checked.every((c) => c.startsWith("resource:load:")), "every read gated by permission");
+    assert.ok(
+      checked.every((c) => c.startsWith("resource:load:")),
+      "every read gated by permission",
+    );
   });
 
   it("symlink escaping the workspace kind-root is excluded", async () => {
@@ -160,8 +159,10 @@ describe("discoverContributions", () => {
 
     assert.equal(found.length, 1);
     assert.equal(found[0].name, "only-ws");
-    assert.ok(checked.every((t) => t.startsWith(root)),
-      "only workspace paths were checked");
+    assert.ok(
+      checked.every((t) => t.startsWith(root)),
+      "only workspace paths were checked",
+    );
   });
 
   it("contribution-discovery subpath is declared in package exports", async () => {

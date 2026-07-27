@@ -6,11 +6,13 @@ import { createCodingCompactionStrategy } from "@arnilo/prism-compaction-llm";
 export async function demo() {
   const sessionId = "coding-demo";
   const store = createMemorySessionStore();
-  await store.append(createSessionEntry({
-    sessionId,
-    kind: "message",
-    message: { role: "user", content: [{ type: "text", text: "Fix src/app.ts and run npm test" }] },
-  }));
+  await store.append(
+    createSessionEntry({
+      sessionId,
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "Fix src/app.ts and run npm test" }] },
+    }),
+  );
   const strategy = createCodingCompactionStrategy({
     provider: createMockProvider([providerTextDelta("Changed src/app.ts; npm test passed."), providerDone()]),
     model: { provider: "mock", model: "summary" },

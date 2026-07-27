@@ -213,28 +213,16 @@ export function resolveBrowserLimits(input: BrowserLimitOptions = {}): ResolvedB
     maxActionInputBytes: validate("maxActionInputBytes", input.maxActionInputBytes ?? DEFAULTS.maxActionInputBytes),
     closeGraceMs: validate("closeGraceMs", input.closeGraceMs ?? DEFAULTS.closeGraceMs),
     maxNetworkRequests: validate("maxNetworkRequests", input.maxNetworkRequests ?? DEFAULTS.maxNetworkRequests),
-    maxRedirectsPerRequest: validate(
-      "maxRedirectsPerRequest",
-      input.maxRedirectsPerRequest ?? DEFAULTS.maxRedirectsPerRequest,
-    ),
+    maxRedirectsPerRequest: validate("maxRedirectsPerRequest", input.maxRedirectsPerRequest ?? DEFAULTS.maxRedirectsPerRequest),
     maxWebSockets: validate("maxWebSockets", input.maxWebSockets ?? DEFAULTS.maxWebSockets),
     maxScreenshots: validate("maxScreenshots", input.maxScreenshots ?? DEFAULTS.maxScreenshots),
-    maxScreenshotMegapixels: validate(
-      "maxScreenshotMegapixels",
-      input.maxScreenshotMegapixels ?? DEFAULTS.maxScreenshotMegapixels,
-    ),
+    maxScreenshotMegapixels: validate("maxScreenshotMegapixels", input.maxScreenshotMegapixels ?? DEFAULTS.maxScreenshotMegapixels),
     maxScreenshotBytes: validate("maxScreenshotBytes", input.maxScreenshotBytes ?? DEFAULTS.maxScreenshotBytes),
     maxUploads: validate("maxUploads", input.maxUploads ?? DEFAULTS.maxUploads),
     maxUploadBytes: validate("maxUploadBytes", input.maxUploadBytes ?? DEFAULTS.maxUploadBytes),
-    maxUploadAggregateBytes: validate(
-      "maxUploadAggregateBytes",
-      input.maxUploadAggregateBytes ?? DEFAULTS.maxUploadAggregateBytes,
-    ),
+    maxUploadAggregateBytes: validate("maxUploadAggregateBytes", input.maxUploadAggregateBytes ?? DEFAULTS.maxUploadAggregateBytes),
     maxDownloads: validate("maxDownloads", input.maxDownloads ?? DEFAULTS.maxDownloads),
     maxDownloadBytes: validate("maxDownloadBytes", input.maxDownloadBytes ?? DEFAULTS.maxDownloadBytes),
-    maxDownloadAggregateBytes: validate(
-      "maxDownloadAggregateBytes",
-      input.maxDownloadAggregateBytes ?? DEFAULTS.maxDownloadAggregateBytes,
-    ),
+    maxDownloadAggregateBytes: validate("maxDownloadAggregateBytes", input.maxDownloadAggregateBytes ?? DEFAULTS.maxDownloadAggregateBytes),
   };
 }

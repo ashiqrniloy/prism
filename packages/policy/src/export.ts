@@ -1,11 +1,6 @@
 import type { PersistencePage } from "@arnilo/prism";
 import { resolvePolicyLimits } from "./limits.js";
-import type {
-  PolicyDecisionRecord,
-  PolicyDecisionStore,
-  PolicyExportOptions,
-  PolicyLimits,
-} from "./types.js";
+import type { PolicyDecisionRecord, PolicyDecisionStore, PolicyExportOptions, PolicyLimits } from "./types.js";
 
 export interface ExportPolicyDecisionsOptions extends PolicyExportOptions {
   readonly store: PolicyDecisionStore;

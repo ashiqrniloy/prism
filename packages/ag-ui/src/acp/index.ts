@@ -1,7 +1,7 @@
-export { createAcpEventMapper, type AcpEventMapper, type AcpEventMapperOptions } from "./mapper.js";
 export {
-  createPrismAcpAgent,
   type AcpAuthorization,
   type AcpSessionBinding,
   type CreatePrismAcpAgentOptions,
+  createPrismAcpAgent,
 } from "./agent.js";
+export { type AcpEventMapper, type AcpEventMapperOptions, createAcpEventMapper } from "./mapper.js";

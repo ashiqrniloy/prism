@@ -1,4 +1,4 @@
-import { validateIdentifier, quoteIdentifier } from "./postgres-identifiers.js";
+import { quoteIdentifier, validateIdentifier } from "./postgres-identifiers.js";
 
 export const DEFAULT_MEMORY_SCHEMA = "prism_memory";
 

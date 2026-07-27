@@ -81,18 +81,12 @@ export interface DevicePolicyOptions {
 function validateCap(name: string, value: number | undefined, def: number, hard: number): number {
   const resolved = value ?? def;
   if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > hard) {
-    throw new DevicePolicyError(
-      "ERR_PRISM_DEVICE_INPUT",
-      `${name} must be a positive safe integer at most ${hard}`,
-    );
+    throw new DevicePolicyError("ERR_PRISM_DEVICE_INPUT", `${name} must be a positive safe integer at most ${hard}`);
   }
   return resolved;
 }
 
-export function resolveDevicePolicy(
-  adapter: DeviceAdapter,
-  options: DevicePolicyOptions = {},
-): ResolvedDevicePolicy {
+export function resolveDevicePolicy(adapter: DeviceAdapter, options: DevicePolicyOptions = {}): ResolvedDevicePolicy {
   if (!adapter || (adapter.kind !== "voice" && adapter.kind !== "desktop-control")) {
     throw new DevicePolicyError("ERR_PRISM_DEVICE_INPUT", "device kind must be 'voice' or 'desktop-control'");
   }
@@ -190,10 +184,7 @@ export interface DeviceConformanceResult {
  * run accounting, redaction) against a resolved policy and throws on any
  * regression. Tested in 0.0.14 via fixtures only.
  */
-export function runDevicePolicyConformance(
-  adapter: DeviceAdapter,
-  options: DevicePolicyOptions = {},
-): DeviceConformanceResult {
+export function runDevicePolicyConformance(adapter: DeviceAdapter, options: DevicePolicyOptions = {}): DeviceConformanceResult {
   const runLimits = options.runLimits ?? { maxTurns: 1 };
   const expectThrow = (code: DevicePolicyErrorCode, fn: () => void): void => {
     let threw = false;
@@ -227,10 +218,7 @@ export function runDevicePolicyConformance(
   passed.push("session-budget");
 
   // 4. Run accounting: no shared RunLimits denies.
-  const unaccounted = resolveDevicePolicy(
-    { ...adapter, enabled: true, sandbox: "sandbox" },
-    { ...options, runLimits: undefined },
-  );
+  const unaccounted = resolveDevicePolicy({ ...adapter, enabled: true, sandbox: "sandbox" }, { ...options, runLimits: undefined });
   expectThrow("ERR_PRISM_DEVICE_RUN_LIMITS", () => assertDeviceAdmit(unaccounted, { approved: true, activeSessions: 0 }));
   passed.push("run-accounting");
 

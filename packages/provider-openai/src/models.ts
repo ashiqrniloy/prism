@@ -1,10 +1,4 @@
-import {
-  redactSecrets,
-  resolveCredentialValue,
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH } from "./cache.js";
 
@@ -175,12 +169,12 @@ function supportsExtendedPromptCacheRetention(modelId: string): boolean {
     return false;
   }
   return (
-    id.includes("gpt-5.5")
-    || id.includes("gpt-5.4")
-    || id.includes("gpt-5.2")
-    || id.includes("gpt-5.1")
-    || id.includes("gpt-5")
-    || id.includes("gpt-4.1")
+    id.includes("gpt-5.5") ||
+    id.includes("gpt-5.4") ||
+    id.includes("gpt-5.2") ||
+    id.includes("gpt-5.1") ||
+    id.includes("gpt-5") ||
+    id.includes("gpt-4.1")
   );
 }
 

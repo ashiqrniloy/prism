@@ -4,23 +4,17 @@
  * Tools cover status, diff, branch, worktree, apply, commit, and PR handoff.
  * Shell is never used internally; all Git invocations go through typed arg arrays.
  */
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { type CodingCheckToolOptions, createCodingCheckTool, type NamedCheckDefinition } from "./checks.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
-  createGitOperations,
-  GitError,
   type ArtifactWriter,
   type CreateGitOperationsOptions,
+  createGitOperations,
+  GitError,
   type GitOperations,
   type PrHandoff,
 } from "./git.js";
-import { createCodingCheckTool, type CodingCheckToolOptions, type NamedCheckDefinition } from "./checks.js";
 
 export interface GitToolsOptions {
   readonly executionPolicy?: ExecutionPolicy;
@@ -182,8 +176,7 @@ export function createGitBranchTool(cwd: string, options?: GitToolsOptions): Too
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_branch",
-    description:
-      "Validate, list, create, or switch branches. Switch refuses a dirty worktree unless createCheckpoint=true.",
+    description: "Validate, list, create, or switch branches. Switch refuses a dirty worktree unless createCheckpoint=true.",
     exclusive: true,
     parameters: {
       type: "object",
@@ -303,8 +296,7 @@ export function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): T
         });
         const text =
           action === "list"
-            ? result.worktrees.map((w) => `${w.path}\t${w.branch ?? ""}\t${w.head ?? ""}`).join("\n") ||
-              "(no worktrees)"
+            ? result.worktrees.map((w) => `${w.path}\t${w.branch ?? ""}\t${w.head ?? ""}`).join("\n") || "(no worktrees)"
             : `ok action=${action} path=${result.path ?? ""}`;
         return {
           toolCallId,
@@ -491,9 +483,7 @@ export function createGitPrHandoffTool(cwd: string, options?: GitToolsOptions): 
       const base = typeof args.base === "string" ? args.base : "";
       const head = typeof args.head === "string" ? args.head : undefined;
       const includeBundle = args.includeBundle === true;
-      const checks = Array.isArray(args.checks)
-        ? (args.checks as Array<{ name: string; exitCode: number; summary: string }>)
-        : undefined;
+      const checks = Array.isArray(args.checks) ? (args.checks as Array<{ name: string; exitCode: number; summary: string }>) : undefined;
       const policy = await enforceExecutionPolicy(
         options?.executionPolicy,
         {

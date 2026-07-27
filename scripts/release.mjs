@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runGates } from "./release-gates.mjs";
 
 const INTERNAL_SCOPE = "@arnilo/";
 const DEPENDENCY_FIELDS = ["dependencies", "optionalDependencies", "peerDependencies"];
@@ -17,7 +18,9 @@ export function loadRelease(root = process.cwd()) {
   }
   const packages = paths.map((path) => ({ path, manifest: JSON.parse(readFileSync(join(root, path, "package.json"), "utf8")) }));
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
-  return { root, packages, byName };
+  const release = { root, packages, byName };
+  release.validate = (version) => validateRelease(release, version);
+  return release;
 }
 
 export function validateRelease(release, version) {
@@ -28,7 +31,8 @@ export function validateRelease(release, version) {
     if (pkg.manifest.publishConfig?.access !== "public") errors.push(`${pkg.manifest.name} must set publishConfig.access to public`);
     for (const field of DEPENDENCY_FIELDS) {
       for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
-        if (release.byName.has(name) && range !== version) errors.push(`${pkg.manifest.name} ${field}.${name} is ${range}, expected ${version}`);
+        if (release.byName.has(name) && range !== version)
+          errors.push(`${pkg.manifest.name} ${field}.${name} is ${range}, expected ${version}`);
       }
     }
   }
@@ -55,7 +59,10 @@ export function topologicalOrder(release) {
 
   const order = [];
   while (remaining.size) {
-    const ready = [...remaining].filter(([, dependencies]) => dependencies.size === 0).map(([name]) => name).sort();
+    const ready = [...remaining]
+      .filter(([, dependencies]) => dependencies.size === 0)
+      .map(([name]) => name)
+      .sort();
     if (!ready.length) throw new Error(`internal dependency cycle: ${[...remaining.keys()].sort().join(", ")}`);
     for (const name of ready) {
       order.push(release.byName.get(name));
@@ -76,11 +83,20 @@ export function assertGitState(root, version, { allowDirty = false, allowUntagge
 }
 
 function releaseFields(manifest) {
-  return Object.fromEntries(DEPENDENCY_FIELDS.map((field) => [field, Object.fromEntries(Object.entries(manifest[field] ?? {}).filter(([name]) => name.startsWith(INTERNAL_SCOPE)))]) );
+  return Object.fromEntries(
+    DEPENDENCY_FIELDS.map((field) => [
+      field,
+      Object.fromEntries(Object.entries(manifest[field] ?? {}).filter(([name]) => name.startsWith(INTERNAL_SCOPE))),
+    ]),
+  );
 }
 
 export function samePublishedManifest(local, published) {
-  return published?.name === local.name && published?.version === local.version && JSON.stringify(releaseFields(published)) === JSON.stringify(releaseFields(local));
+  return (
+    published?.name === local.name &&
+    published?.version === local.version &&
+    JSON.stringify(releaseFields(published)) === JSON.stringify(releaseFields(local))
+  );
 }
 
 export async function registryManifest(pkg, version, registry = "https://registry.npmjs.org", fetcher = fetch) {
@@ -104,13 +120,30 @@ export function publishArgs(pkg, dryRun = false) {
   return args;
 }
 
-export async function runRelease({ release, version, mode, resume = false, dryRun = false, registry, fetcher = fetch, reportPath, publisher }) {
+export async function runRelease({
+  release,
+  version,
+  mode,
+  resume = false,
+  dryRun = false,
+  registry,
+  fetcher = fetch,
+  reportPath,
+  publisher,
+}) {
   const order = validateRelease(release, version);
   const report = { version, dryRun, order: order.map((pkg) => pkg.manifest.name), packages: [] };
-  const publish = publisher ?? ((pkg) => {
-    const result = spawnSync("npm", publishArgs(pkg, dryRun), { cwd: release.root, encoding: "utf8", stdio: "inherit", env: process.env });
-    if (result.status !== 0) throw new Error(`npm publish failed for ${pkg.manifest.name}`);
-  });
+  const publish =
+    publisher ??
+    ((pkg) => {
+      const result = spawnSync("npm", publishArgs(pkg, dryRun), {
+        cwd: release.root,
+        encoding: "utf8",
+        stdio: "inherit",
+        env: process.env,
+      });
+      if (result.status !== 0) throw new Error(`npm publish failed for ${pkg.manifest.name}`);
+    });
 
   for (const pkg of order) {
     const published = await registryManifest(pkg.manifest.name, version, registry, fetcher);
@@ -148,10 +181,19 @@ function parseArgs(argv) {
     else if (arg === "--dry-run") options.dryRun = true;
     else if (arg === "--allow-dirty") options.allowDirty = true;
     else if (arg === "--allow-untagged") options.allowUntagged = true;
-    else if (["--version", "--root", "--registry", "--report"].includes(arg)) options[arg.slice(2).replace("report", "reportPath")] = argv[++i];
+    else if (arg === "--allow-break") options.allowBreak = true;
+    else if (arg === "--update-baseline") options.updateBaseline = true;
+    else if (arg === "--skip-tarball") options.skipTarball = true;
+    else if (["--version", "--root", "--registry", "--report"].includes(arg))
+      options[arg.slice(2).replace("report", "reportPath")] = argv[++i];
     else throw new Error(`unknown argument: ${arg}`);
   }
-  if (!["check", "publish"].includes(options.mode)) throw new Error("usage: release.mjs <check|publish> --version <version> [--resume] [--dry-run]");
+  if (!["check", "publish", "gate"].includes(options.mode))
+    throw new Error("usage: release.mjs <check|publish|gate> --version <version> [--resume] [--dry-run]");
+  if (options.mode === "gate") {
+    options.version ??= JSON.parse(readFileSync(join(resolve(options.root ?? process.cwd()), "package.json"), "utf8")).version;
+    return options;
+  }
   if (!options.version) throw new Error("--version is required");
   if (options.mode === "publish" && !options.dryRun && (options.allowDirty || options.allowUntagged)) {
     throw new Error("real publication cannot bypass clean tagged git checks");
@@ -163,6 +205,17 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const root = resolve(options.root ?? process.cwd());
   const release = loadRelease(root);
+  if (options.mode === "gate") {
+    const report = runGates({
+      release,
+      version: options.version,
+      allowBreak: options.allowBreak,
+      updateBaseline: options.updateBaseline,
+      skipTarball: options.skipTarball,
+    });
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
   assertGitState(root, options.version, options);
   const report = await runRelease({ ...options, release, reportPath: options.reportPath ? resolve(root, options.reportPath) : undefined });
   console.log(JSON.stringify(report, null, 2));

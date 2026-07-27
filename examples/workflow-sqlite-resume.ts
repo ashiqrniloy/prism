@@ -14,8 +14,8 @@ import {
   createWorkflowCheckpoints,
   defineWorkflow,
   functionNode,
-  runWorkflow,
   resumeWorkflow,
+  runWorkflow,
   type WorkflowEvent,
   type WorkflowRunResult,
 } from "@arnilo/prism-workflows";
@@ -64,14 +64,18 @@ async function runFresh(): Promise<WorkflowRunResult> {
   const checkpoints = createWorkflowCheckpoints({ store: persistence.checkpoints, redactor });
   const events: WorkflowEvent[] = [];
 
-  const result = await runWorkflow(workflow, { input: "hello" }, {
-    agentFactory: () => createAgentSession({ agent }),
-    checkpoints,
-    redactor,
-    ownership: { tenantId: "demo" },
-    signal: AbortSignal.timeout(30_000),
-    onEvent: (e) => events.push(e),
-  });
+  const result = await runWorkflow(
+    workflow,
+    { input: "hello" },
+    {
+      agentFactory: () => createAgentSession({ agent }),
+      checkpoints,
+      redactor,
+      ownership: { tenantId: "demo" },
+      signal: AbortSignal.timeout(30_000),
+      onEvent: (e) => events.push(e),
+    },
+  );
 
   persistence.close();
   return result;
@@ -83,14 +87,18 @@ async function resumeRun(runId: string): Promise<WorkflowRunResult> {
   const checkpoints = createWorkflowCheckpoints({ store: persistence.checkpoints, redactor });
   const events: WorkflowEvent[] = [];
 
-  const result = await resumeWorkflow(workflow, { runId }, {
-    agentFactory: () => createAgentSession({ agent }),
-    checkpoints,
-    redactor,
-    ownership: { tenantId: "demo" },
-    signal: AbortSignal.timeout(30_000),
-    onEvent: (e) => events.push(e),
-  });
+  const result = await resumeWorkflow(
+    workflow,
+    { runId },
+    {
+      agentFactory: () => createAgentSession({ agent }),
+      checkpoints,
+      redactor,
+      ownership: { tenantId: "demo" },
+      signal: AbortSignal.timeout(30_000),
+      onEvent: (e) => events.push(e),
+    },
+  );
 
   persistence.close();
   return result;
@@ -98,9 +106,21 @@ async function resumeRun(runId: string): Promise<WorkflowRunResult> {
 
 export async function demo() {
   // Clean up from previous runs
-  try { unlinkSync(DB_PATH); } catch { /* ok */ }
-  try { unlinkSync(DB_PATH + "-wal"); } catch { /* ok */ }
-  try { unlinkSync(DB_PATH + "-shm"); } catch { /* ok */ }
+  try {
+    unlinkSync(DB_PATH);
+  } catch {
+    /* ok */
+  }
+  try {
+    unlinkSync(`${DB_PATH}-wal`);
+  } catch {
+    /* ok */
+  }
+  try {
+    unlinkSync(`${DB_PATH}-shm`);
+  } catch {
+    /* ok */
+  }
 
   // 1. Fresh run — should succeed
   const fresh = await runFresh();
@@ -109,9 +129,21 @@ export async function demo() {
   const resumed = await resumeRun(fresh.runId);
 
   // Cleanup
-  try { unlinkSync(DB_PATH); } catch { /* ok */ }
-  try { unlinkSync(DB_PATH + "-wal"); } catch { /* ok */ }
-  try { unlinkSync(DB_PATH + "-shm"); } catch { /* ok */ }
+  try {
+    unlinkSync(DB_PATH);
+  } catch {
+    /* ok */
+  }
+  try {
+    unlinkSync(`${DB_PATH}-wal`);
+  } catch {
+    /* ok */
+  }
+  try {
+    unlinkSync(`${DB_PATH}-shm`);
+  } catch {
+    /* ok */
+  }
 
   return {
     freshStatus: fresh.status,

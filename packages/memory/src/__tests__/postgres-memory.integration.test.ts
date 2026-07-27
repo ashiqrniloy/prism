@@ -1,13 +1,8 @@
-import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import { Pool } from "pg";
-import {
-  createHashEmbedder,
-  createMemory,
-  createPostgresMemoryStores,
-  runMemoryConformance,
-} from "../index.js";
+import { createHashEmbedder, createMemory, createPostgresMemoryStores, runMemoryConformance } from "../index.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
 const describeIntegration = postgresUrl ? describe : describe.skip;
@@ -82,10 +77,7 @@ describeIntegration("createPostgresMemoryStores integration", () => {
       workingStore: first.workingStore,
     });
     await memoryA.updateWorking({ name: "Ada" });
-    await memoryA.remember(
-      { entries: [{ id: "m1", text: "Prefers concise answers", sequence: 1 }] },
-      { wait: true },
-    );
+    await memoryA.remember({ entries: [{ id: "m1", text: "Prefers concise answers", sequence: 1 }] }, { wait: true });
 
     const reopened = await createPostgresMemoryStores({ pool, schema, dimensions: 32, skipMigrations: true });
     const memoryA2 = createMemory({

@@ -24,11 +24,7 @@ import type {
 import { AiSdkProviderError } from "./errors.js";
 
 type UserPart = LanguageModelV4TextPart | LanguageModelV4FilePart;
-type AssistantPart =
-  | LanguageModelV4TextPart
-  | LanguageModelV4FilePart
-  | LanguageModelV4ReasoningPart
-  | LanguageModelV4ToolCallPart;
+type AssistantPart = LanguageModelV4TextPart | LanguageModelV4FilePart | LanguageModelV4ReasoningPart | LanguageModelV4ToolCallPart;
 
 export function toAiSdkCallOptions(request: ProviderRequest): LanguageModelV4CallOptions {
   const parameters = request.model.parameters ?? {};
@@ -143,11 +139,7 @@ function toFilePart(
   part: Extract<ContentBlock, { type: "image" | "file" | "document" | "audio" }>,
   model: ModelConfig,
 ): LanguageModelV4FilePart {
-  const capability =
-    part.type === "image" ? "image"
-      : part.type === "audio" ? "audio"
-        : part.type === "document" ? "document"
-          : "file";
+  const capability = part.type === "image" ? "image" : part.type === "audio" ? "audio" : part.type === "document" ? "document" : "file";
   if (!model.capabilities?.input?.includes(capability) && !model.capabilities?.input?.includes("file")) {
     throw new AiSdkProviderError(
       "unsupported_content",
@@ -178,15 +170,10 @@ function toFilePart(
       data: { type: "data", data: part.data },
     };
   }
-  throw new AiSdkProviderError(
-    "unsupported_content",
-    `AI SDK adapter ${part.type} block requires url or data`,
-  );
+  throw new AiSdkProviderError("unsupported_content", `AI SDK adapter ${part.type} block requires url or data`);
 }
 
-function resolveMediaType(
-  part: Extract<ContentBlock, { type: "image" | "file" | "document" | "audio" }>,
-): string {
+function resolveMediaType(part: Extract<ContentBlock, { type: "image" | "file" | "document" | "audio" }>): string {
   if (part.type === "image") return part.mimeType ?? "image/png";
   return part.mediaType || (part.type === "audio" ? "audio/wav" : "application/octet-stream");
 }
@@ -239,10 +226,7 @@ function textOnlyContent(content: readonly ContentBlock[], role: string): string
 }
 
 function unsupported(type: string, role: string): never {
-  throw new AiSdkProviderError(
-    "unsupported_content",
-    `AI SDK adapter does not support content type "${type}" on ${role} messages`,
-  );
+  throw new AiSdkProviderError("unsupported_content", `AI SDK adapter does not support content type "${type}" on ${role} messages`);
 }
 
 function sanitizeHeaders(headers: Readonly<Record<string, string>> | undefined): Record<string, string | undefined> | undefined {

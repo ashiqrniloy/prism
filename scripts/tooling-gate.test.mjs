@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, it } from "node:test";
+
+// Negative fixtures proving the formatting/linting/coverage gates actually fail
+// on a violation (plan 079, Task 6). Mirrors scripts/release-gate.test.mjs.
+
+const BIOME = join(process.cwd(), "node_modules", ".bin", "biome");
+
+function biome(args, cwd) {
+  try {
+    execFileSync(BIOME, args, { cwd, stdio: "pipe" });
+    return 0;
+  } catch (error) {
+    return error.status ?? 1;
+  }
+}
+
+function tempFile(name, content) {
+  const dir = mkdtempSync(join(tmpdir(), "prism-tooling-"));
+  const file = join(dir, name);
+  writeFileSync(file, content);
+  return { dir, file };
+}
+
+describe("tooling gates fail on violations", () => {
+  it("biome lint rejects a lint error", () => {
+    const { dir, file } = tempFile("bad.ts", "function f() {\n  debugger;\n}\n");
+    try {
+      assert.notEqual(biome(["lint", file], dir), 0, "biome lint passed on a debugger statement");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("biome format rejects an unformatted file", () => {
+    const { dir, file } = tempFile("ugly.ts", "const   x=1\n");
+    try {
+      assert.notEqual(biome(["format", file], dir), 0, "biome format passed on an unformatted file");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("biome accepts a clean file", () => {
+    const { dir, file } = tempFile("ok.ts", "const x = 1;\nconsole.log(x);\n");
+    try {
+      assert.equal(biome(["check", file], dir), 0, "biome check failed on a clean file");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("coverage thresholds and gates are wired into package scripts", () => {
+    const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts;
+    for (const flag of [
+      "--experimental-test-coverage",
+      "--test-coverage-lines=",
+      "--test-coverage-functions=",
+      "--test-coverage-branches=",
+    ]) {
+      assert.ok(scripts["test:coverage"].includes(flag), `test:coverage missing ${flag}`);
+    }
+    for (const gate of ["npm run lint", "npm run format:check", "npm run test:coverage"]) {
+      assert.ok(scripts["sdk:ready"].includes(gate), `sdk:ready missing ${gate}`);
+    }
+  });
+});

@@ -16,10 +16,7 @@ describe("CheckpointStore", () => {
     await store.saveCheckpoint({ namespace: "workflow", key: "c", version: 1, value: null, category: "done", tenantId: "t1" });
 
     assert.equal((await store.loadCheckpoint({ namespace: "workflow", key: "a", tenantId: "t1" }))?.version, 1);
-    await assert.rejects(
-      store.loadCheckpoint({ namespace: "workflow", key: "a", tenantId: "other" }),
-      CheckpointConflictError,
-    );
+    await assert.rejects(store.loadCheckpoint({ namespace: "workflow", key: "a", tenantId: "other" }), CheckpointConflictError);
     await assert.rejects(
       store.saveCheckpoint({ namespace: "workflow", key: "a", version: 1, value: null, tenantId: "t1" }),
       CheckpointConflictError,
@@ -49,10 +46,7 @@ describe("CheckpointStore", () => {
 
   it("fails closed on abort", async () => {
     const signal = AbortSignal.abort(new Error("stop"));
-    await assert.rejects(
-      createMemoryCheckpointStore().loadCheckpoint({ namespace: "n", key: "k", signal }),
-      /stop/,
-    );
+    await assert.rejects(createMemoryCheckpointStore().loadCheckpoint({ namespace: "n", key: "k", signal }), /stop/);
   });
 });
 
@@ -62,7 +56,10 @@ describe("LeaseStore", () => {
     const first = await store.tryAcquireLease({ namespace: "workflow", key: "run", ownerId: "a", ttlMs: 100, tenantId: "t1" });
     assert.ok(first);
     assert.equal(await store.tryAcquireLease({ namespace: "workflow", key: "run", ownerId: "b", ttlMs: 100, tenantId: "t1" }), null);
-    assert.equal(await store.renewLease({ namespace: "workflow", key: "run", ownerId: "a", token: "wrong", ttlMs: 100, tenantId: "t1" }), null);
+    assert.equal(
+      await store.renewLease({ namespace: "workflow", key: "run", ownerId: "a", token: "wrong", ttlMs: 100, tenantId: "t1" }),
+      null,
+    );
     await assert.rejects(store.getLease({ namespace: "workflow", key: "run", tenantId: "other" }), LeaseConflictError);
     await new Promise((resolve) => setTimeout(resolve, 110));
     const second = await store.tryAcquireLease({ namespace: "workflow", key: "run", ownerId: "b", ttlMs: 20, tenantId: "t1" });
@@ -99,8 +96,13 @@ describe("EventMultiplexer", () => {
       [Symbol.asyncIterator]() {
         let value = 0;
         return {
-          async next() { return { value: ++value, done: false }; },
-          async return() { returned = true; return { value: undefined, done: true }; },
+          async next() {
+            return { value: ++value, done: false };
+          },
+          async return() {
+            returned = true;
+            return { value: undefined, done: true };
+          },
         };
       },
     };

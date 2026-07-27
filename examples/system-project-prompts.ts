@@ -1,15 +1,10 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  composeSystemPrompt,
-  createAgent,
-  createMockProvider,
-  providerDone,
-} from "@arnilo/prism";
+import type { ProviderRequest } from "@arnilo/prism";
+import { composeSystemPrompt, createAgent, createMockProvider, providerDone } from "@arnilo/prism";
 import { loadSystemPromptFiles } from "@arnilo/prism/node/system-prompts";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
-import type { ProviderRequest } from "@arnilo/prism";
 
 // Phase 31 system/project prompt files: AGENTS.md (workspace, source: app) and
 // SYSTEM.md (host-supplied globalRoot, source: user) auto-load as SystemPromptContribution
@@ -44,7 +39,9 @@ export async function demo(): Promise<{ composed: string; reachedProvider: boole
 
   const captured: ProviderRequest[] = [];
   const provider = createMockProvider([providerDone()], {
-    onRequest: (request) => { captured.push(request); },
+    onRequest: (request) => {
+      captured.push(request);
+    },
   });
   const session = createAgent({
     model: { provider: "mock", model: "demo" },
@@ -61,10 +58,11 @@ export async function demo(): Promise<{ composed: string; reachedProvider: boole
   }
   await done;
 
-  const input = captured[0]?.messages
-    .flatMap((m) => m.content)
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join("\n") ?? "";
+  const input =
+    captured[0]?.messages
+      .flatMap((m) => m.content)
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("\n") ?? "";
 
   return {
     composed,

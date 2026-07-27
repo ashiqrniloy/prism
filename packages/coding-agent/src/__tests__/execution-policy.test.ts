@@ -1,12 +1,10 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { realpathSync } from "node:fs";
-import type { ToolExecutionContext } from "@arnilo/prism";
-import { createShellTool, createReadTool, createWriteTool } from "../index.js";
-import type { ExecutionPolicy } from "@arnilo/prism";
+import { test } from "node:test";
+import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
+import { createReadTool, createShellTool, createWriteTool } from "../index.js";
 
 let counter = 0;
 function ctx(signal?: AbortSignal): ToolExecutionContext {

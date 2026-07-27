@@ -11,11 +11,20 @@ function entry(id: string, message: Message): SessionEntry {
 }
 
 test("serialize_compaction_conversation_prevents_continuation_and_truncates_tool_results", () => {
-  const text = serializeCompactionConversation([
-    entry("u1", { role: "user", content: [{ type: "text", text: "please inspect" }] }),
-    entry("a2", { role: "assistant", content: [{ type: "thinking", text: "checking" }, { type: "tool_call", id: "call-1", name: "read", arguments: { path: "src/a.ts" } }] }),
-    entry("t3", { role: "tool", content: [{ type: "tool_result", toolCallId: "call-1", name: "read", result: "x".repeat(20) }] }),
-  ], { maxToolResultChars: 5 });
+  const text = serializeCompactionConversation(
+    [
+      entry("u1", { role: "user", content: [{ type: "text", text: "please inspect" }] }),
+      entry("a2", {
+        role: "assistant",
+        content: [
+          { type: "thinking", text: "checking" },
+          { type: "tool_call", id: "call-1", name: "read", arguments: { path: "src/a.ts" } },
+        ],
+      }),
+      entry("t3", { role: "tool", content: [{ type: "tool_result", toolCallId: "call-1", name: "read", result: "x".repeat(20) }] }),
+    ],
+    { maxToolResultChars: 5 },
+  );
 
   assert.match(text, /\[User\]/);
   assert.match(text, /\[Assistant thinking\]/);
@@ -25,9 +34,9 @@ test("serialize_compaction_conversation_prevents_continuation_and_truncates_tool
 });
 
 test("serialize_compaction_conversation_redacts_known_secrets", () => {
-  const text = serializeCompactionConversation([
-    entry("u1", { role: "user", content: [{ type: "text", text: "token secret-value" }] }),
-  ], { secrets: ["secret-value"] });
+  const text = serializeCompactionConversation([entry("u1", { role: "user", content: [{ type: "text", text: "token secret-value" }] })], {
+    secrets: ["secret-value"],
+  });
 
   assert.equal(text.includes("secret-value"), false);
   assert.equal(text.includes("[REDACTED]"), true);
@@ -35,12 +44,15 @@ test("serialize_compaction_conversation_redacts_known_secrets", () => {
 
 test("file_operation_tracking_collects_read_and_modified_paths", () => {
   const details = collectFileOperations([
-    { role: "assistant", content: [
-      { type: "tool_call", id: "1", name: "read", arguments: { path: "src/a.ts" } },
-      { type: "tool_call", id: "2", name: "read", arguments: { path: "src/b.ts" } },
-      { type: "tool_call", id: "3", name: "edit", arguments: { path: "src/a.ts" } },
-      { type: "tool_call", id: "4", name: "write", arguments: { path: "src/c.ts" } },
-    ] },
+    {
+      role: "assistant",
+      content: [
+        { type: "tool_call", id: "1", name: "read", arguments: { path: "src/a.ts" } },
+        { type: "tool_call", id: "2", name: "read", arguments: { path: "src/b.ts" } },
+        { type: "tool_call", id: "3", name: "edit", arguments: { path: "src/a.ts" } },
+        { type: "tool_call", id: "4", name: "write", arguments: { path: "src/c.ts" } },
+      ],
+    },
   ]);
 
   assert.deepEqual(details.readFiles, ["src/b.ts"]);

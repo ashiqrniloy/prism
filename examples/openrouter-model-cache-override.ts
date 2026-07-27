@@ -1,8 +1,5 @@
 import { createExtensionKernel } from "@arnilo/prism";
-import {
-  createOpenRouterProviderPackage,
-  defineOpenRouterModel,
-} from "@arnilo/prism-provider-openrouter";
+import { createOpenRouterProviderPackage, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
 
 // OpenRouter: app-controlled catalog with per-model routing/cache overrides.
 // No catalog is fetched during setup; the host supplies the models.
@@ -13,9 +10,7 @@ export async function demo() {
   });
 
   const kernel = createExtensionKernel();
-  await kernel.load([
-    createOpenRouterProviderPackage({ apiKey: () => "fake-openrouter-key", models: [sonnet] }),
-  ]);
+  await kernel.load([createOpenRouterProviderPackage({ apiKey: () => "fake-openrouter-key", models: [sonnet] })]);
 
   return { model: sonnet.model, routing: sonnet.compat?.openRouterRouting };
 }

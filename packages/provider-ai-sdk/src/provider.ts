@@ -5,11 +5,7 @@ import { assertStructuredOutputRequestSupported, providerError } from "@arnilo/p
 import { AiSdkProviderError } from "./errors.js";
 import { toAiSdkCallOptions } from "./prompt.js";
 import { mapAiSdkStream } from "./stream.js";
-import {
-  assertSupportedAiSdkVersion,
-  SUPPORTED_AI_SDK_SPECIFICATION,
-  type AiSdkProviderOptions,
-} from "./types.js";
+import { type AiSdkProviderOptions, assertSupportedAiSdkVersion, SUPPORTED_AI_SDK_SPECIFICATION } from "./types.js";
 
 const installedVersion = readInstalledVersion();
 
@@ -22,9 +18,12 @@ export function createAiSdkProvider(options: AiSdkProviderOptions): AIProvider {
     id,
     async *generate(request: ProviderRequest): AsyncIterable<ProviderEvent> {
       if (request.signal?.aborted) {
-        yield errorEvent(new AiSdkProviderError("aborted", "AI SDK provider request aborted", {
-          cause: request.signal.reason,
-        }), options);
+        yield errorEvent(
+          new AiSdkProviderError("aborted", "AI SDK provider request aborted", {
+            cause: request.signal.reason,
+          }),
+          options,
+        );
         return;
       }
 
@@ -38,19 +37,18 @@ export function createAiSdkProvider(options: AiSdkProviderOptions): AIProvider {
         yield* mapAiSdkStream(result.stream, request.signal, options.redactor);
       } catch (error) {
         if (request.signal?.aborted) {
-          yield errorEvent(new AiSdkProviderError("aborted", "AI SDK provider request aborted", {
-            cause: request.signal.reason ?? error,
-          }), options);
+          yield errorEvent(
+            new AiSdkProviderError("aborted", "AI SDK provider request aborted", {
+              cause: request.signal.reason ?? error,
+            }),
+            options,
+          );
           return;
         }
         yield errorEvent(
           error instanceof AiSdkProviderError
             ? error
-            : new AiSdkProviderError(
-              "model_error",
-              error instanceof Error ? error.message : "AI SDK model failed",
-              { cause: error },
-            ),
+            : new AiSdkProviderError("model_error", error instanceof Error ? error.message : "AI SDK model failed", { cause: error }),
           options,
         );
       }
@@ -66,10 +64,7 @@ function assertLanguageModelV4(model: LanguageModelV4): LanguageModelV4 {
     );
   }
   if (typeof model.doStream !== "function") {
-    throw new AiSdkProviderError(
-      "unsupported_specification",
-      "createAiSdkProvider requires LanguageModelV4.doStream",
-    );
+    throw new AiSdkProviderError("unsupported_specification", "createAiSdkProvider requires LanguageModelV4.doStream");
   }
   return model;
 }

@@ -1,9 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
-import type {
-  DiscoveredContribution,
-  InstructionInjector,
-} from "../contracts.js";
+import type { DiscoveredContribution, InstructionInjector } from "../contracts.js";
 import type { ContributionRegistries, ContributionRegistry } from "../contributions.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import { assertPermission, assertTrusted } from "../security.js";

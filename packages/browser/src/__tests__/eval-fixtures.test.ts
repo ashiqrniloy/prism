@@ -13,17 +13,11 @@ import {
   assertEvaluationThreshold,
   defineDataset,
   defineScorer,
+  type ExperimentReport,
   scoreRun,
   serializeEvaluationReport,
-  type ExperimentReport,
 } from "@arnilo/prism-evals";
-import {
-  BrowserError,
-  classifyBrowserUrl,
-  createBrowserManager,
-  createBrowserTools,
-  normalizeTarget,
-} from "../index.js";
+import { BrowserError, classifyBrowserUrl, createBrowserManager, createBrowserTools, normalizeTarget } from "../index.js";
 import { FakeBrowser, FakeDownload, ONE_PX_PNG } from "./fake-playwright.js";
 
 const openNetwork = {
@@ -55,8 +49,7 @@ const outcomeScorer = defineScorer<unknown, { readonly pass: boolean }>({
 
 function toReport(evaluations: ExperimentReport["evaluations"]): ExperimentReport {
   const scored = evaluations.filter((e) => e.status === "scored");
-  const mean =
-    scored.length === 0 ? undefined : scored.reduce((sum, e) => sum + (e.score ?? 0), 0) / scored.length;
+  const mean = scored.length === 0 ? undefined : scored.reduce((sum, e) => sum + (e.score ?? 0), 0) / scored.length;
   return {
     experimentId: "browser-adversarial-0.0.9",
     datasetId: "browser-adversarial-0.0.9",
@@ -175,9 +168,7 @@ describe("browser adversarial eval fixtures", () => {
       try {
         await manager.open("run-1", { url: "https://example.com/" });
       } catch (error) {
-        navDenied =
-          error instanceof BrowserError &&
-          error.code === "ERR_PRISM_BROWSER_NETWORK";
+        navDenied = error instanceof BrowserError && error.code === "ERR_PRISM_BROWSER_NETWORK";
       } finally {
         await manager.close();
       }
@@ -234,11 +225,7 @@ describe("browser adversarial eval fixtures", () => {
           await manager.act("run-1", { action: "download_release", downloadId: items[0]!.downloadId });
         }
         const observed = {
-          pass:
-            Boolean(shot.image) &&
-            shot.screenshotBytes === ONE_PX_PNG.length &&
-            items.length >= 1 &&
-            released,
+          pass: Boolean(shot.image) && shot.screenshotBytes === ONE_PX_PNG.length && items.length >= 1 && released,
           detail: `downloads=${items.length}; released=${released}`,
         };
         evaluations.push(
@@ -329,21 +316,19 @@ describe("browser adversarial eval fixtures", () => {
           { sessionId: "s", runId: "run-1", toolCallId: "a1" },
         );
         evaluations.push(
-          ...(
-            await scoreRun({
-              result: resultOf("prompt-injection-a11y", {
-                pass:
-                  snapText.includes("Ignore instructions") &&
-                  Boolean(deniedUpload.error) &&
-                  /high-impact denied/i.test(deniedUpload.error?.message ?? ""),
-                detail: deniedUpload.error?.message ?? "",
-              }),
-              scorers: [outcomeScorer],
-              item: { id: "prompt-injection-a11y", input: {}, expected: { pass: true } },
-              datasetId: "browser-adversarial-0.0.9",
-              itemId: "prompt-injection-a11y",
-            })
-          ),
+          ...(await scoreRun({
+            result: resultOf("prompt-injection-a11y", {
+              pass:
+                snapText.includes("Ignore instructions") &&
+                Boolean(deniedUpload.error) &&
+                /high-impact denied/i.test(deniedUpload.error?.message ?? ""),
+              detail: deniedUpload.error?.message ?? "",
+            }),
+            scorers: [outcomeScorer],
+            item: { id: "prompt-injection-a11y", input: {}, expected: { pass: true } },
+            datasetId: "browser-adversarial-0.0.9",
+            itemId: "prompt-injection-a11y",
+          })),
         );
         await close.execute({}, { sessionId: "s", runId: "run-1", toolCallId: "c1" });
       } finally {

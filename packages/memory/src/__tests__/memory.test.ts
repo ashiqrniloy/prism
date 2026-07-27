@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createSecretRedactor, resolveContextProviders } from "@arnilo/prism";
+import { MemoryConflictError, MemoryLimitError, MemoryValidationError } from "../errors.js";
 import {
   assertFiniteVector,
   createHashEmbedder,
@@ -15,7 +16,6 @@ import {
   validateAgainstJsonSchema,
   validateIdentifier,
 } from "../index.js";
-import { MemoryConflictError, MemoryLimitError, MemoryValidationError } from "../errors.js";
 
 describe("@arnilo/prism-memory", () => {
   it("exports package name and resolves default limits", () => {
@@ -48,10 +48,7 @@ describe("@arnilo/prism-memory", () => {
       () => validateAgainstJsonSchema({ name: 1 }, { type: "object", properties: { name: { type: "string" } } }),
       MemoryValidationError,
     );
-    assert.throws(
-      () => validateAgainstJsonSchema({}, { $ref: "https://example.com/schema.json" } as never),
-      /remote refs/i,
-    );
+    assert.throws(() => validateAgainstJsonSchema({}, { $ref: "https://example.com/schema.json" } as never), /remote refs/i);
   });
 
   it("passes shared in-memory conformance", async () => {
@@ -70,15 +67,32 @@ describe("@arnilo/prism-memory", () => {
     assert.throws(() => assertFiniteVector([1], "vector", 2), MemoryValidationError);
 
     const store = createMemoryVectorStore();
-    const record = { tenantId: "t", resourceId: "r", threadId: "th", id: "id", text: "text", embedding: [1, 0], sequence: 1, createdAt: new Date().toISOString() };
+    const record = {
+      tenantId: "t",
+      resourceId: "r",
+      threadId: "th",
+      id: "id",
+      text: "text",
+      embedding: [1, 0],
+      sequence: 1,
+      createdAt: new Date().toISOString(),
+    };
     await assert.rejects(store.upsert([{ ...record, embedding: [NaN] }]), MemoryValidationError);
-    await assert.rejects(store.query({ tenantId: "t", resourceId: "r", threadId: "th", embedding: [Infinity], topK: 1 }), MemoryValidationError);
+    await assert.rejects(
+      store.query({ tenantId: "t", resourceId: "r", threadId: "th", embedding: [Infinity], topK: 1 }),
+      MemoryValidationError,
+    );
 
     const memory = createMemory({
       tenantId: "t",
       resourceId: "r",
       threadId: "th",
-      embedder: { dimensions: 2, async embed() { return [[1, NaN]]; } },
+      embedder: {
+        dimensions: 2,
+        async embed() {
+          return [[1, NaN]];
+        },
+      },
     });
     await assert.rejects(memory.remember({ entries: [{ id: "bad", text: "bad" }] }, { wait: true }), MemoryValidationError);
   });
@@ -104,10 +118,7 @@ describe("@arnilo/prism-memory", () => {
     await memory.updateWorking({ city: "Lisbon" }, { mode: "merge" });
     assert.deepEqual((await memory.getWorking())?.value, { name: "Ada", city: "Lisbon" });
 
-    await assert.rejects(
-      memory.updateWorking({ name: "Ada" }, { expectedVersion: 99 }),
-      MemoryConflictError,
-    );
+    await assert.rejects(memory.updateWorking({ name: "Ada" }, { expectedVersion: 99 }), MemoryConflictError);
 
     const replaced = await memory.updateWorking({ name: "Ada" }, { mode: "replace", expectedVersion: 2 });
     assert.deepEqual(replaced.value, { name: "Ada" });
@@ -177,10 +188,7 @@ describe("@arnilo/prism-memory", () => {
     assert.ok(working);
     assert.equal(JSON.stringify(working.value).includes(canary), false);
 
-    await memory.remember(
-      { entries: [{ id: "1", text: `token ${canary} stored`, metadata: { note: canary } }] },
-      { wait: true },
-    );
+    await memory.remember({ entries: [{ id: "1", text: `token ${canary} stored`, metadata: { note: canary } }] }, { wait: true });
     const recalled = await memory.recall("token stored", { topK: 3 });
     assert.ok(recalled.hits.length >= 1);
     assert.equal(JSON.stringify(recalled).includes(canary), false);
@@ -215,10 +223,7 @@ describe("@arnilo/prism-memory", () => {
       workingMemoryTemplate: "Name: {{name}}; Format: {{preferences.format}}",
     });
     await memory.updateWorking({ name: "Ada", preferences: { format: "concise" } });
-    await memory.remember(
-      { entries: [{ id: "1", text: "Prefers concise answers" }] },
-      { wait: true },
-    );
+    await memory.remember({ entries: [{ id: "1", text: "Prefers concise answers" }] }, { wait: true });
 
     const blocks = await resolveContextProviders({
       providers: [memory.createContextProvider({ includeWorking: true, includeSemantic: true })],
@@ -240,26 +245,19 @@ describe("@arnilo/prism-memory", () => {
         const last = messages.at(-1);
         const text =
           last && Array.isArray(last.content)
-            ? last.content
-                .map((block) => ("text" in block && typeof block.text === "string" ? block.text : ""))
-                .join("")
+            ? last.content.map((block) => ("text" in block && typeof block.text === "string" ? block.text : "")).join("")
             : "";
         const match = /my name is ([A-Za-z]+)/i.exec(text);
         return match ? { name: match[1]! } : undefined;
       },
     });
-    const updated = await processor.process([
-      { role: "user", content: [{ type: "text", text: "Hi, my name is Ada" }] },
-    ]);
+    const updated = await processor.process([{ role: "user", content: [{ type: "text", text: "Hi, my name is Ada" }] }]);
     assert.equal(updated?.value.name, "Ada");
   });
 
   it("denies unsafe postgres identifiers and validates factory inputs offline", async () => {
     assert.throws(() => validateIdentifier("bad-name;", "schema"), MemoryValidationError);
-    await assert.rejects(
-      createPostgresMemoryStores({ connectionString: "" }),
-      MemoryValidationError,
-    );
+    await assert.rejects(createPostgresMemoryStores({ connectionString: "" }), MemoryValidationError);
   });
 
   it("rejects oversized working memory and entry text", async () => {
@@ -271,10 +269,7 @@ describe("@arnilo/prism-memory", () => {
       limits: { maxWorkingMemoryBytes: 64, maxEntryTextChars: 8 },
     });
     await assert.rejects(memory.updateWorking({ name: "x".repeat(200) }), MemoryLimitError);
-    await assert.rejects(
-      memory.remember({ entries: [{ id: "1", text: "too-long-text" }] }, { wait: true }),
-      MemoryLimitError,
-    );
+    await assert.rejects(memory.remember({ entries: [{ id: "1", text: "too-long-text" }] }, { wait: true }), MemoryLimitError);
   });
 
   it("exports only redacted, consented entries and rebuilds one resumable page", async () => {
@@ -296,12 +291,15 @@ describe("@arnilo/prism-memory", () => {
       secrets: [canary],
       redactor: createSecretRedactor([canary]),
     });
-    await memory.remember({
-      entries: [
-        { id: "one", text: `visible ${canary}`, consent: { source: "user", scope: "thread", visible: true } },
-        { id: "two", text: "hidden", consent: { visible: false } },
-      ],
-    }, { wait: true });
+    await memory.remember(
+      {
+        entries: [
+          { id: "one", text: `visible ${canary}`, consent: { source: "user", scope: "thread", visible: true } },
+          { id: "two", text: "hidden", consent: { visible: false } },
+        ],
+      },
+      { wait: true },
+    );
     rebuildCalls = 0;
 
     const exported = await memory.exportMemory({
@@ -311,10 +309,7 @@ describe("@arnilo/prism-memory", () => {
     assert.equal(exported.entries.length, 1);
     assert.equal(exported.entries[0]?.id, "one");
     assert.equal(JSON.stringify(exported).includes(canary), false);
-    await assert.rejects(
-      memory.exportMemory({ identity: { tenantId: "other", resourceId: "u1", threadId: "th1" } }),
-      /boundary/i,
-    );
+    await assert.rejects(memory.exportMemory({ identity: { tenantId: "other", resourceId: "u1", threadId: "th1" } }), /boundary/i);
 
     const first = await memory.rebuildIndex({ batchSize: 1 });
     assert.equal(first.rebuilt, 1);
@@ -334,10 +329,7 @@ describe("@arnilo/prism-memory", () => {
       getByThread: backing.getByThread,
     };
     const noPaging = createMemory({ tenantId: "t1", resourceId: "u1", threadId: "legacy", embedder, vectorStore: legacyStore });
-    await assert.rejects(
-      noPaging.exportMemory({ identity: { tenantId: "t1", resourceId: "u1", threadId: "legacy" } }),
-      /listByThread/i,
-    );
+    await assert.rejects(noPaging.exportMemory({ identity: { tenantId: "t1", resourceId: "u1", threadId: "legacy" } }), /listByThread/i);
     await assert.rejects(noPaging.applyRetention({ maxEntries: 1 }), /countByThread/i);
   });
 
@@ -365,7 +357,10 @@ describe("@arnilo/prism-memory", () => {
     const injected = blocks.map((block) => String(block.content)).join("\n");
     const recalled = await memory.recall("favorite color is teal", { topK: 8 });
     assert.ok(recalled.hits.some((hit) => hit.id === "open"));
-    assert.ok(recalled.hits.every((hit) => hit.id !== "secret"), "invisible memory must not be recalled");
+    assert.ok(
+      recalled.hits.every((hit) => hit.id !== "secret"),
+      "invisible memory must not be recalled",
+    );
     assert.ok(!injected.includes("secret"));
 
     // Re-grant makes it injectable again.
@@ -376,7 +371,16 @@ describe("@arnilo/prism-memory", () => {
     // Strict mode drops consent-less entries; default mode keeps them.
     const vectorStore = createMemoryVectorStore();
     await vectorStore.upsert([
-      { tenantId: "t1", resourceId: "u1", threadId: "th-strict", id: "legacy", text: "legacy note", embedding: [1, 0], sequence: 1, createdAt: new Date().toISOString() },
+      {
+        tenantId: "t1",
+        resourceId: "u1",
+        threadId: "th-strict",
+        id: "legacy",
+        text: "legacy note",
+        embedding: [1, 0],
+        sequence: 1,
+        createdAt: new Date().toISOString(),
+      },
     ]);
     const strictMemory = createMemory({
       tenantId: "t1",

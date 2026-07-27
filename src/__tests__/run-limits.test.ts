@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  type AgentEvent,
+  type AgentLoopStrategy,
   AgentRunError,
-  RunLimitError,
-  RunLimitTracker,
   createAgent,
   createMockProvider,
   providerDone,
   providerTextDelta,
   providerUsage,
+  RunLimitError,
+  RunLimitTracker,
   resolveRunLimits,
-  type AgentEvent,
-  type AgentLoopStrategy,
 } from "../index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
@@ -25,7 +25,10 @@ describe("run limits", () => {
     assert.equal(resolveRunLimits({ maxTurns: 2 }, { maxTurns: 20 }).maxTurns, 2);
     assert.equal(resolveRunLimits(undefined, { maxTurns: 20 }).maxTurns, 20);
     assert.throws(() => resolveRunLimits(undefined, { maxRequestBytes: 0 }), /positive safe integer/);
-    assert.throws(() => resolveRunLimits({ maxCost: { amount: 1, currency: "USD" } }, { maxCost: { amount: 1, currency: "EUR" } }), /currencies/);
+    assert.throws(
+      () => resolveRunLimits({ maxCost: { amount: 1, currency: "USD" } }, { maxCost: { amount: 1, currency: "EUR" } }),
+      /currencies/,
+    );
   });
 
   it("accounts usage once, derives totals, and rejects missing or mixed cost", () => {
@@ -62,6 +65,9 @@ describe("run limits", () => {
     });
     const observed = await events;
     assert.equal(observed.filter((event) => event.type === "run_limit_exceeded").length, 1);
-    assert.equal(observed.some((event) => event.type === "message_delta"), false);
+    assert.equal(
+      observed.some((event) => event.type === "message_delta"),
+      false,
+    );
   });
 });

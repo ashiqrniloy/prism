@@ -5,10 +5,7 @@ export interface MockProviderOptions {
   readonly onRequest?: (request: ProviderRequest) => void;
 }
 
-export function createMockProvider(
-  events: readonly ProviderEvent[] = [{ type: "done" }],
-  options: MockProviderOptions = {},
-): AIProvider {
+export function createMockProvider(events: readonly ProviderEvent[] = [{ type: "done" }], options: MockProviderOptions = {}): AIProvider {
   return {
     id: options.id ?? "mock",
     async *generate(request) {

@@ -1,28 +1,15 @@
+import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { Client } from "@modelcontextprotocol/sdk/client";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   CompatibilityCallToolResultSchema,
   ListToolsResultSchema,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import {
-  DEFAULT_CALL_TIMEOUT_MS,
-  DEFAULT_LIST_CACHE_TTL_MS,
-  DEFAULT_MAX_RESULT_BYTES,
-} from "./constants.js";
-import {
-  boundedMcpErrorMessage,
-  mapMcpContentToBlocks,
-  mcpCallError,
-  summarizeMcpContent,
-} from "./content.js";
+import { DEFAULT_CALL_TIMEOUT_MS, DEFAULT_LIST_CACHE_TTL_MS, DEFAULT_MAX_RESULT_BYTES } from "./constants.js";
+import { boundedMcpErrorMessage, mapMcpContentToBlocks, mcpCallError, summarizeMcpContent } from "./content.js";
 import { measureBoundedJson } from "./json-bounds.js";
-import {
-  resolveMcpClientLimits,
-  type McpClientLimitsInput,
-  type ResolvedMcpClientLimits,
-} from "./limits.js";
+import { type McpClientLimitsInput, type ResolvedMcpClientLimits, resolveMcpClientLimits } from "./limits.js";
 import { assertValidServerId, defaultMcpNamePrefix, formatMcpToolName } from "./names.js";
 import { createMcpTransport } from "./transport.js";
 import type { AttachMcpToolBridgeOptions, ConnectMcpToolsOptions, McpToolBridge } from "./types.js";
@@ -50,7 +37,9 @@ export async function connectMcpTools(options: ConnectMcpToolsOptions): Promise<
   const client = createMcpBridgeClient();
   const state = createBridgeState(client, transport, options);
 
-  const abortListener = () => { void closeBridge(state); };
+  const abortListener = () => {
+    void closeBridge(state);
+  };
   options.signal?.addEventListener("abort", abortListener, { once: true });
 
   try {
@@ -83,11 +72,7 @@ export async function attachMcpToolBridge(
 }
 
 /** List through raw SDK requests so untrusted output schemas are bounded before any Ajv compilation. */
-export async function listAllMcpTools(
-  client: Client,
-  signal?: AbortSignal,
-  input: McpClientLimitsInput = {},
-): Promise<ListedMcpTool[]> {
+export async function listAllMcpTools(client: Client, signal?: AbortSignal, input: McpClientLimitsInput = {}): Promise<ListedMcpTool[]> {
   const limits = resolveMcpClientLimits(input, {
     maxResultBytes: DEFAULT_MAX_RESULT_BYTES,
     callTimeoutMs: DEFAULT_CALL_TIMEOUT_MS,
@@ -105,11 +90,11 @@ export async function listAllMcpTools(
     if (pages > limits.maxListPages) {
       throw new McpBridgeError(`MCP tools/list exceeds ${limits.maxListPages} pages`);
     }
-    const page = await client.request(
-      { method: "tools/list", params: cursor ? { cursor } : undefined },
-      ListToolsResultSchema,
-      { signal, timeout: limits.callTimeoutMs, maxTotalTimeout: limits.callTimeoutMs },
-    );
+    const page = await client.request({ method: "tools/list", params: cursor ? { cursor } : undefined }, ListToolsResultSchema, {
+      signal,
+      timeout: limits.callTimeoutMs,
+      maxTotalTimeout: limits.callTimeoutMs,
+    });
     if (tools.length + page.tools.length > limits.maxTools) {
       throw new McpBridgeError(`MCP tools/list exceeds ${limits.maxTools} tools`);
     }
@@ -199,11 +184,7 @@ function createMcpBridgeClient(): Client {
   return new Client({ name: "prism-mcp-bridge", version: "0.0.12" }, { capabilities: {} });
 }
 
-function createBridgeState(
-  client: Client,
-  transport: Transport,
-  options: AttachMcpToolBridgeOptions,
-): BridgeState {
+function createBridgeState(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions): BridgeState {
   const limits = resolveMcpClientLimits(options, {
     maxResultBytes: DEFAULT_MAX_RESULT_BYTES,
     callTimeoutMs: DEFAULT_CALL_TIMEOUT_MS,
@@ -220,13 +201,18 @@ function createBridgeState(
     closed: false,
   };
 
-  client.setNotificationHandler(ToolListChangedNotificationSchema, () => { state.listFetchedAt = 0; });
+  client.setNotificationHandler(ToolListChangedNotificationSchema, () => {
+    state.listFetchedAt = 0;
+  });
   return state;
 }
 
 function createBridgeFacade(state: BridgeState): McpToolBridge {
   return {
-    get tools() { assertOpen(state); return state.tools; },
+    get tools() {
+      assertOpen(state);
+      return state.tools;
+    },
     refresh: () => refreshBridgeTools(state, { force: true }),
     close: () => closeBridge(state),
   };
@@ -239,7 +225,10 @@ async function refreshBridgeTools(
   assertOpen(state);
   const now = Date.now();
   if (!options?.force && state.tools.length > 0 && now - state.listFetchedAt < state.limits.listCacheTtlMs) return;
-  if (state.listRefresh) { await state.listRefresh; return; }
+  if (state.listRefresh) {
+    await state.listRefresh;
+    return;
+  }
 
   state.listRefresh = (async () => {
     const remoteTools = await listAllMcpTools(state.client, options?.signal, state.limits);
@@ -255,7 +244,11 @@ async function refreshBridgeTools(
     state.listFetchedAt = Date.now();
   })();
 
-  try { await state.listRefresh; } finally { state.listRefresh = undefined; }
+  try {
+    await state.listRefresh;
+  } finally {
+    state.listRefresh = undefined;
+  }
 }
 
 async function callRemoteTool(
@@ -350,8 +343,16 @@ async function closeBridge(state: BridgeState): Promise<void> {
   state.closed = true;
   state.listFetchedAt = 0;
   state.tools = [];
-  try { await state.client.close(); } catch { /* Best-effort shutdown. */ }
-  try { await state.transport.close(); } catch { /* Best-effort shutdown. */ }
+  try {
+    await state.client.close();
+  } catch {
+    /* Best-effort shutdown. */
+  }
+  try {
+    await state.transport.close();
+  } catch {
+    /* Best-effort shutdown. */
+  }
 }
 
 function assertOpen(state: BridgeState): void {

@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   AgentRunStateError,
   createAgent,
@@ -40,7 +40,16 @@ describe("durable agent runs", () => {
           },
         };
       })(),
-      tools: [{ name: "write", parameters: {}, execute: () => { calls += 1; return { toolCallId: "call-1", name: "write", value: "done" }; } }],
+      tools: [
+        {
+          name: "write",
+          parameters: {},
+          execute: () => {
+            calls += 1;
+            return { toolCallId: "call-1", name: "write", value: "done" };
+          },
+        },
+      ],
     });
     const first = await agent.createSession({ id: "durable-session" }).run("go", {
       runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
@@ -50,18 +59,32 @@ describe("durable agent runs", () => {
     assert.equal(calls, 0);
     assert.equal(first.interruption?.toolCallId, "call-1");
 
-    const result = await resumeAgentRun(agent, { runId: first.runId, sessionId: first.sessionId }, {
-      decision: "approve",
-      expectedVersion: first.runState!.version!,
-    }, { checkpoints, definitionRevision: "1" });
+    const result = await resumeAgentRun(
+      agent,
+      { runId: first.runId, sessionId: first.sessionId },
+      {
+        decision: "approve",
+        expectedVersion: first.runState!.version!,
+      },
+      { checkpoints, definitionRevision: "1" },
+    );
 
     assert.equal(result.status, "succeeded");
     assert.equal(result.text, "finished");
     assert.equal(calls, 1);
-    await assert.rejects(() => resumeAgentRun(agent, { runId: first.runId }, {
-      decision: "approve",
-      expectedVersion: first.runState!.version!,
-    }, { checkpoints, definitionRevision: "1" }), AgentRunStateError);
+    await assert.rejects(
+      () =>
+        resumeAgentRun(
+          agent,
+          { runId: first.runId },
+          {
+            decision: "approve",
+            expectedVersion: first.runState!.version!,
+          },
+          { checkpoints, definitionRevision: "1" },
+        ),
+      AgentRunStateError,
+    );
   });
 
   it("never retries an ambiguous dispatched tool", async () => {
@@ -72,15 +95,31 @@ describe("durable agent runs", () => {
       provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-3", "write", {}) }, providerDone()]),
       tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-3", name: "write" }) }],
     });
-    const suspended = await agent.createSession().run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+    const suspended = await agent
+      .createSession()
+      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
     const loaded = await loadAgentRunState(checkpoints, { runId: suspended.runId });
     await checkpoints.saveCheckpoint({
-      namespace: "prism.agent-run", key: suspended.runId, version: loaded.record.version + 1, expectedVersion: loaded.record.version,
-      value: { ...loaded.state, pending: { ...loaded.state.pending!, status: "dispatched" } }, category: "agent-run",
+      namespace: "prism.agent-run",
+      key: suspended.runId,
+      version: loaded.record.version + 1,
+      expectedVersion: loaded.record.version,
+      value: { ...loaded.state, pending: { ...loaded.state.pending!, status: "dispatched" } },
+      category: "agent-run",
     });
-    await assert.rejects(() => resumeAgentRun(agent, { runId: suspended.runId }, {
-      decision: "approve", expectedVersion: loaded.record.version + 1,
-    }, { checkpoints, definitionRevision: "1" }), /Ambiguous dispatched tool/);
+    await assert.rejects(
+      () =>
+        resumeAgentRun(
+          agent,
+          { runId: suspended.runId },
+          {
+            decision: "approve",
+            expectedVersion: loaded.record.version + 1,
+          },
+          { checkpoints, definitionRevision: "1" },
+        ),
+      /Ambiguous dispatched tool/,
+    );
   });
 
   it("streams approved durable resume events once", async () => {
@@ -113,17 +152,32 @@ describe("durable agent runs", () => {
       runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
     });
     const events = [];
-    for await (const event of resumeAgentRunStream(agent, { runId: suspended.runId, sessionId: suspended.sessionId }, {
-      decision: "approve",
-      expectedVersion: suspended.runState!.version!,
-    }, { checkpoints, definitionRevision: "1", maxQueuedEvents: 64, overflow: "close" })) events.push(event);
+    for await (const event of resumeAgentRunStream(
+      agent,
+      { runId: suspended.runId, sessionId: suspended.sessionId },
+      {
+        decision: "approve",
+        expectedVersion: suspended.runState!.version!,
+      },
+      { checkpoints, definitionRevision: "1", maxQueuedEvents: 64, overflow: "close" },
+    ))
+      events.push(event);
 
     assert.equal(calls, 1);
     assert.deepEqual(events.map((event) => event.type).slice(0, 2), ["agent_started", "agent_resumed"]);
-    assert.equal(events.some((event) => event.type === "tool_execution_started"), true);
-    assert.equal(events.some((event) => event.type === "message_delta"), true);
+    assert.equal(
+      events.some((event) => event.type === "tool_execution_started"),
+      true,
+    );
+    assert.equal(
+      events.some((event) => event.type === "message_delta"),
+      true,
+    );
     assert.equal(events.at(-1)?.type, "agent_finished");
-    assert.equal(events.every((event) => !("runId" in event) || event.runId === suspended.runId), true);
+    assert.equal(
+      events.every((event) => !("runId" in event) || event.runId === suspended.runId),
+      true,
+    );
   });
 
   it("streams denial without provider or tool execution", async () => {
@@ -135,15 +189,26 @@ describe("durable agent runs", () => {
       provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-deny", "write", {}) }, providerDone()]),
       tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-deny", name: "write", value: ++calls }) }],
     });
-    const suspended = await agent.createSession().run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+    const suspended = await agent
+      .createSession()
+      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
     const events = [];
-    for await (const event of resumeAgentRunStream(agent, { runId: suspended.runId }, {
-      decision: "deny",
-      expectedVersion: suspended.runState!.version!,
-    }, { checkpoints, definitionRevision: "1" })) events.push(event);
+    for await (const event of resumeAgentRunStream(
+      agent,
+      { runId: suspended.runId },
+      {
+        decision: "deny",
+        expectedVersion: suspended.runState!.version!,
+      },
+      { checkpoints, definitionRevision: "1" },
+    ))
+      events.push(event);
 
     assert.equal(calls, 0);
-    assert.deepEqual(events.map((event) => event.type), ["agent_denied"]);
+    assert.deepEqual(
+      events.map((event) => event.type),
+      ["agent_denied"],
+    );
   });
 
   it("aborts before claiming and closes an overflowing resume subscriber", async () => {
@@ -173,20 +238,32 @@ describe("durable agent runs", () => {
       })(),
       tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-bounds", name: "write", value: ++calls }) }],
     });
-    const suspended = await agent.createSession().run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+    const suspended = await agent
+      .createSession()
+      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
     const aborted = new AbortController();
     aborted.abort(new Error("disconnect"));
-    const rejected = resumeAgentRunStream(agent, { runId: suspended.runId }, {
-      decision: "approve",
-      expectedVersion: suspended.runState!.version!,
-    }, { checkpoints, definitionRevision: "1", signal: aborted.signal })[Symbol.asyncIterator]();
+    const rejected = resumeAgentRunStream(
+      agent,
+      { runId: suspended.runId },
+      {
+        decision: "approve",
+        expectedVersion: suspended.runState!.version!,
+      },
+      { checkpoints, definitionRevision: "1", signal: aborted.signal },
+    )[Symbol.asyncIterator]();
     await assert.rejects(() => rejected.next(), /disconnect/);
     assert.equal((await loadAgentRunState(checkpoints, { runId: suspended.runId })).state.status, "suspended");
 
-    const stream = resumeAgentRunStream(agent, { runId: suspended.runId }, {
-      decision: "approve",
-      expectedVersion: suspended.runState!.version!,
-    }, { checkpoints, definitionRevision: "1", maxQueuedEvents: 1, overflow: "close" })[Symbol.asyncIterator]();
+    const stream = resumeAgentRunStream(
+      agent,
+      { runId: suspended.runId },
+      {
+        decision: "approve",
+        expectedVersion: suspended.runState!.version!,
+      },
+      { checkpoints, definitionRevision: "1", maxQueuedEvents: 1, overflow: "close" },
+    )[Symbol.asyncIterator]();
     assert.equal((await stream.next()).value?.type, "event_subscriber_overflow");
     assert.equal((await stream.next()).done, true);
     assert.equal(calls, 1);
@@ -199,7 +276,16 @@ describe("durable agent runs", () => {
       id: "redacted-durable-demo",
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-2", "write", { token: "secret" }) }, providerDone()]),
-      tools: [{ name: "write", parameters: {}, execute: () => { calls += 1; return { toolCallId: "call-2", name: "write" }; } }],
+      tools: [
+        {
+          name: "write",
+          parameters: {},
+          execute: () => {
+            calls += 1;
+            return { toolCallId: "call-2", name: "write" };
+          },
+        },
+      ],
     });
     const result = await agent.createSession({ id: "redacted-session" }).run("secret", {
       redactor: createSecretRedactor(["secret"]),
@@ -208,10 +294,15 @@ describe("durable agent runs", () => {
     const loaded = await loadAgentRunState(checkpoints, { runId: result.runId });
     assert.equal(JSON.stringify(loaded.state).includes("secret"), false);
 
-    const denied = await resumeAgentRun(agent, { runId: result.runId }, {
-      decision: "deny",
-      expectedVersion: result.runState!.version!,
-    }, { checkpoints, definitionRevision: "1" });
+    const denied = await resumeAgentRun(
+      agent,
+      { runId: result.runId },
+      {
+        decision: "deny",
+        expectedVersion: result.runState!.version!,
+      },
+      { checkpoints, definitionRevision: "1" },
+    );
     assert.equal(denied.status, "denied");
     assert.equal(calls, 0);
   });

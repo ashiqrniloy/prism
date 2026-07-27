@@ -1,0 +1,102 @@
+ApprovalCacheScope	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+CodingApprovalFn	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+CodingApprovalPolicyOptions	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+CodingApprovalRequest	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+CommandRule	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
+CommandRuleAction	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
+CommandRuleEvaluation	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
+CreateDockerSandboxOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
+DEFAULT_CLEANUP_DEADLINE_MS	export declare const DEFAULT_CLEANUP_DEADLINE_MS = 30000
+DEFAULT_CPUS	export declare const DEFAULT_CPUS = 2
+DEFAULT_DOWNLOAD_BYTES	export declare const DEFAULT_DOWNLOAD_BYTES: number
+DEFAULT_IDLE_TIMEOUT_MS	export declare const DEFAULT_IDLE_TIMEOUT_MS: number
+DEFAULT_MAX_COMMANDS	export declare const DEFAULT_MAX_COMMANDS = 100
+DEFAULT_MAX_CONCURRENT_EXECS	export declare const DEFAULT_MAX_CONCURRENT_EXECS = 1
+DEFAULT_MAX_ENV_BYTES	export declare const DEFAULT_MAX_ENV_BYTES: number
+DEFAULT_MAX_ENV_NAMES	export declare const DEFAULT_MAX_ENV_NAMES = 64
+DEFAULT_MAX_EXPORT_BYTES	export declare const DEFAULT_MAX_EXPORT_BYTES: number
+DEFAULT_MAX_EXPORT_ENTRIES	export declare const DEFAULT_MAX_EXPORT_ENTRIES = 50000
+DEFAULT_MAX_FDS	export declare const DEFAULT_MAX_FDS = 1024
+DEFAULT_MAX_OUTPUT_BYTES	export declare const DEFAULT_MAX_OUTPUT_BYTES: number
+DEFAULT_MAX_PIDS	export declare const DEFAULT_MAX_PIDS = 256
+DEFAULT_MAX_RETAINED_ARTIFACTS	export declare const DEFAULT_MAX_RETAINED_ARTIFACTS = 16
+DEFAULT_MEMORY_BYTES	export declare const DEFAULT_MEMORY_BYTES: number
+DEFAULT_STARTUP_TIMEOUT_MS	export declare const DEFAULT_STARTUP_TIMEOUT_MS = 30000
+DEFAULT_STOP_GRACE_MS	export declare const DEFAULT_STOP_GRACE_MS = 5000
+DEFAULT_TMP_BYTES	export declare const DEFAULT_TMP_BYTES: number
+DEFAULT_WALL_TIME_MS	export declare const DEFAULT_WALL_TIME_MS: number
+DEFAULT_WORKSPACE_BYTES	export declare const DEFAULT_WORKSPACE_BYTES: number
+DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+DockerCliError	export declare class DockerCliError extends Error
+DockerCliRequest	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
+DockerCliResult	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
+DockerNetworkConfig	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
+DockerRunner	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
+DockerSandboxError	export declare class DockerSandboxError extends Error
+DockerSandboxLimitOptions	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
+HARD_CLEANUP_DEADLINE_MS	export declare const HARD_CLEANUP_DEADLINE_MS = 120000
+HARD_CPUS	export declare const HARD_CPUS = 8
+HARD_DOWNLOAD_BYTES	export declare const HARD_DOWNLOAD_BYTES: number
+HARD_IDLE_TIMEOUT_MS	export declare const HARD_IDLE_TIMEOUT_MS: number
+HARD_MAX_COMMANDS	export declare const HARD_MAX_COMMANDS = 256
+HARD_MAX_CONCURRENT_EXECS	export declare const HARD_MAX_CONCURRENT_EXECS = 8
+HARD_MAX_ENV_BYTES	export declare const HARD_MAX_ENV_BYTES: number
+HARD_MAX_ENV_NAMES	export declare const HARD_MAX_ENV_NAMES = 256
+HARD_MAX_EXPORT_BYTES	export declare const HARD_MAX_EXPORT_BYTES: number
+HARD_MAX_EXPORT_ENTRIES	export declare const HARD_MAX_EXPORT_ENTRIES = 250000
+HARD_MAX_FDS	export declare const HARD_MAX_FDS = 8192
+HARD_MAX_OUTPUT_BYTES	export declare const HARD_MAX_OUTPUT_BYTES: number
+HARD_MAX_PIDS	export declare const HARD_MAX_PIDS = 1024
+HARD_MAX_RETAINED_ARTIFACTS	export declare const HARD_MAX_RETAINED_ARTIFACTS = 64
+HARD_MEMORY_BYTES	export declare const HARD_MEMORY_BYTES: number
+HARD_STARTUP_TIMEOUT_MS	export declare const HARD_STARTUP_TIMEOUT_MS = 120000
+HARD_STOP_GRACE_MS	export declare const HARD_STOP_GRACE_MS = 30000
+HARD_TMP_BYTES	export declare const HARD_TMP_BYTES: number
+HARD_WALL_TIME_MS	export declare const HARD_WALL_TIME_MS: number
+HARD_WORKSPACE_BYTES	export declare const HARD_WORKSPACE_BYTES: number
+ResolvedDockerSandboxLimits	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
+SANDBOX_FS_SCRIPTS	export declare const SANDBOX_FS_SCRIPTS: Readonly<
+SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCodingComposition	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+SandboxCodingCompositionError	export declare class SandboxCodingCompositionError extends Error
+SandboxCodingCompositionResult	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+SandboxCodingToolsOptions	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecutionError	export declare class SandboxExecutionError extends Error
+SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxFsError	export declare class SandboxFsError extends Error
+SandboxFsOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
+SandboxRepositoryOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
+SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxTarError	export declare class SandboxTarError extends Error
+WorkspaceMode	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+assertAbsoluteExecutable	export declare function assertAbsoluteExecutable(path: string, label: string): Promise<string>
+assertBrowserSandboxNetwork	export declare function assertBrowserSandboxNetwork(network: DockerNetworkConfig | undefined): void
+assertPathInsideRoots	export declare function assertPathInsideRoots(roots: readonly string[], target: string): Promise<boolean>
+assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: string, absolutePath: string): string
+buildDockerCreateArgsForTest	export declare function buildDockerCreateArgsForTest(options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">): string[]
+createCodingApprovalPolicy	export declare function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions): ExecutionPolicy
+createDockerSandbox	export declare function createDockerSandbox(options: CreateDockerSandboxOptions): Promise<DisposableSandbox>
+createImportTarStream	export declare function createImportTarStream(sourceRoot: string, bounds: TarBounds): Readable
+createSandboxBashOperations	export declare function createSandboxBashOperations(adapter: SandboxAdapter): BashOperations
+createSandboxCodingComposition	export declare function createSandboxCodingComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult
+createSandboxCodingTools	export declare function createSandboxCodingTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[]
+createSandboxFilesystemOperations	export declare function createSandboxFilesystemOperations(sandbox: DisposableSandbox, options?: SandboxFsOperationsOptions):
+createSandboxReadOnlyComposition	export declare function createSandboxReadOnlyComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult
+createSandboxReadOnlyTools	export declare function createSandboxReadOnlyTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[]
+createSandboxRepositoryOperations	export declare function createSandboxRepositoryOperations(sandbox: DisposableSandbox, options?: SandboxRepositoryOperationsOptions): RepositoryOperations
+createSecretRedactor	export declare function createSecretRedactor(secrets?: readonly string[]): (text: string) => string
+dockerOutputText	export declare function dockerOutputText(runner: DockerRunner, request: Omit<DockerCliRequest, "collectStdout">): Promise<string>
+evaluateCommandRules	export declare function evaluateCommandRules(command: string, rules: readonly CommandRule[] | undefined, options?:
+hasShellMetacharacters	export declare function hasShellMetacharacters(command: string): boolean
+isPathInside	export declare function isPathInside(root: string, target: string): boolean
+isPathInsideReal	export declare function isPathInsideReal(root: string, target: string): Promise<boolean>
+resolveDockerSandboxLimits	export declare function resolveDockerSandboxLimits(input?: DockerSandboxLimitOptions): ResolvedDockerSandboxLimits
+resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
+runDockerCli	export declare function runDockerCli(request: DockerCliRequest): Promise<DockerCliResult>
+sha256Hex	export declare function sha256Hex(data: Buffer | string): string
+summarizeTarStream	export declare function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: TarBounds): Promise<TarExportSummary>
+validateSandboxLimit	export declare function validateSandboxLimit(name: string, value: number, hardCap: number): number

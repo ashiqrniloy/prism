@@ -1,6 +1,14 @@
-import { agent, methods, PROTOCOL_VERSION, type AgentApp, type AgentContext, type RequestPermissionResponse, type SessionUpdate } from "@agentclientprotocol/sdk";
+import {
+  type AgentApp,
+  type AgentContext,
+  agent,
+  methods,
+  PROTOCOL_VERSION,
+  type RequestPermissionResponse,
+  type SessionUpdate,
+} from "@agentclientprotocol/sdk";
 import type { AgentEvent, AgentRunLifecycle, AgentSession, SecretRedactor } from "@arnilo/prism";
-import { resolveAgUiLimits, type AgUiLimitOptions } from "../limits.js";
+import { type AgUiLimitOptions, resolveAgUiLimits } from "../limits.js";
 import type { AgUiProjection } from "../projection.js";
 import type { AgUiAuthorization } from "../types.js";
 import { createAcpEventMapper } from "./mapper.js";
@@ -16,9 +24,15 @@ export interface AcpSessionBinding {
 export interface CreatePrismAcpAgentOptions<Authorization extends AcpAuthorization = AcpAuthorization> {
   readonly name?: string;
   /** Host binds transport identity to Prism ownership. False rejects new sessions. */
-  readonly authorize: (input: { readonly sessionId?: string; readonly signal: AbortSignal }) => Authorization | false | Promise<Authorization | false>;
+  readonly authorize: (input: {
+    readonly sessionId?: string;
+    readonly signal: AbortSignal;
+  }) => Authorization | false | Promise<Authorization | false>;
   /** Host owns session construction; ACP cwd, files, MCP, and editor state are never forwarded. */
-  readonly sessionFactory: (input: { readonly authorization: Authorization; readonly signal: AbortSignal }) => AcpSessionBinding | Promise<AcpSessionBinding>;
+  readonly sessionFactory: (input: {
+    readonly authorization: Authorization;
+    readonly signal: AbortSignal;
+  }) => AcpSessionBinding | Promise<AcpSessionBinding>;
   readonly lifecycle: AgentRunLifecycle;
   readonly redactor?: SecretRedactor;
   readonly projection?: AgUiProjection;
@@ -35,7 +49,9 @@ interface AcpStreamBudget {
 }
 
 /** Builds a stable ACP v1 agent using Prism sessions and durable-resume streams. */
-export function createPrismAcpAgent<Authorization extends AcpAuthorization = AcpAuthorization>(options: CreatePrismAcpAgentOptions<Authorization>): AgentApp {
+export function createPrismAcpAgent<Authorization extends AcpAuthorization = AcpAuthorization>(
+  options: CreatePrismAcpAgentOptions<Authorization>,
+): AgentApp {
   const limits = resolveAgUiLimits(options.limits);
   const sessions = new Map<string, ActiveSession>();
 
@@ -62,13 +78,23 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       const controller = abortOn(context.signal);
       current.controller = controller;
       try {
-        await forward(current.session.stream(prompt, {
-          ownership: authorization.ownership,
-          redactor: options.redactor,
-          signal: controller.signal,
-          maxQueuedEvents: limits.maxQueuedEvents,
-          overflow: "close",
-        }), current, authorization, context.params.sessionId, context.client, controller.signal, { events: 0, bytes: 0 }, limits, options);
+        await forward(
+          current.session.stream(prompt, {
+            ownership: authorization.ownership,
+            redactor: options.redactor,
+            signal: controller.signal,
+            maxQueuedEvents: limits.maxQueuedEvents,
+            overflow: "close",
+          }),
+          current,
+          authorization,
+          context.params.sessionId,
+          context.client,
+          controller.signal,
+          { events: 0, bytes: 0 },
+          limits,
+          options,
+        );
         return { stopReason: controller.signal.aborted ? "cancelled" : "end_turn" };
       } finally {
         current.controller = undefined;
@@ -104,11 +130,21 @@ async function forward<Authorization extends AcpAuthorization>(
     if (event.type !== "agent_suspended") continue;
     const response = await permission(client, sessionId, event, budget, limits);
     const decision = decisionFor(response);
-    await forward(options.lifecycle.resumeStream(
-      { sessionId: event.sessionId, runId: event.runId },
-      { decision, expectedVersion: event.version },
-      { ownership: authorization.ownership, agentId: current.agentId, signal, overflow: "close" },
-    ), current, authorization, sessionId, client, signal, budget, limits, options);
+    await forward(
+      options.lifecycle.resumeStream(
+        { sessionId: event.sessionId, runId: event.runId },
+        { decision, expectedVersion: event.version },
+        { ownership: authorization.ownership, agentId: current.agentId, signal, overflow: "close" },
+      ),
+      current,
+      authorization,
+      sessionId,
+      client,
+      signal,
+      budget,
+      limits,
+      options,
+    );
     return;
   }
 }
@@ -120,21 +156,41 @@ function session(sessions: ReadonlyMap<string, ActiveSession>, id: string): Acti
 }
 
 function textPrompt(prompt: readonly { readonly type: string; readonly text?: string }[], maxBlocks: number, maxBytes: number): string {
-  if (prompt.length === 0 || prompt.length > maxBlocks || prompt.some((block) => block.type !== "text" || typeof block.text !== "string")) throw new Error("ACP prompt must contain only text blocks");
+  if (prompt.length === 0 || prompt.length > maxBlocks || prompt.some((block) => block.type !== "text" || typeof block.text !== "string"))
+    throw new Error("ACP prompt must contain only text blocks");
   const text = prompt.map((block) => block.text!).join("");
   if (Buffer.byteLength(text, "utf8") > maxBytes) throw new Error("ACP prompt exceeds configured limit");
   return text;
 }
 
-async function notify(client: AgentContext, sessionId: string, update: SessionUpdate, budget: AcpStreamBudget, limits: ReturnType<typeof resolveAgUiLimits>): Promise<void> {
+async function notify(
+  client: AgentContext,
+  sessionId: string,
+  update: SessionUpdate,
+  budget: AcpStreamBudget,
+  limits: ReturnType<typeof resolveAgUiLimits>,
+): Promise<void> {
   const bytes = Buffer.byteLength(JSON.stringify({ sessionId, update }), "utf8");
-  if (bytes > limits.maxEventBytes || ++budget.events > limits.maxStreamEvents || (budget.bytes += bytes) > limits.maxStreamBytes) throw new Error("ACP update limit exceeded");
+  if (bytes > limits.maxEventBytes || ++budget.events > limits.maxStreamEvents || (budget.bytes += bytes) > limits.maxStreamBytes)
+    throw new Error("ACP update limit exceeded");
   await client.notify(methods.client.session.update, { sessionId, update });
 }
 
-async function permission(client: AgentContext, sessionId: string, event: Extract<AgentEvent, { readonly type: "agent_suspended" }>, budget: AcpStreamBudget, limits: ReturnType<typeof resolveAgUiLimits>): Promise<RequestPermissionResponse> {
+async function permission(
+  client: AgentContext,
+  sessionId: string,
+  event: Extract<AgentEvent, { readonly type: "agent_suspended" }>,
+  budget: AcpStreamBudget,
+  limits: ReturnType<typeof resolveAgUiLimits>,
+): Promise<RequestPermissionResponse> {
   const toolCallId = truncate(event.interruption.toolCallId ?? `prism:${event.runId}:${event.version}`, limits.maxTextBytes);
-  await notify(client, sessionId, { sessionUpdate: "tool_call", toolCallId, title: "Approval required", kind: "other", status: "pending" }, budget, limits);
+  await notify(
+    client,
+    sessionId,
+    { sessionUpdate: "tool_call", toolCallId, title: "Approval required", kind: "other", status: "pending" },
+    budget,
+    limits,
+  );
   try {
     return await client.request(methods.client.session.requestPermission, {
       sessionId,

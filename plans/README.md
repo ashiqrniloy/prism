@@ -83,5 +83,6 @@ Numbered plans are immutable implementation records. Current release status live
 | [076-release-0-0-13-enterprise-identity-policy-governance-work-connectors.md](076-release-0-0-13-enterprise-identity-policy-governance-work-connectors.md) | Phase 8 / Release 0.0.13 — Enterprise identity, policy, provider governance, and work connectors |
 | [077-release-0-0-14-personal-work-agent-conversations-co-work-review-channels.md](077-release-0-0-14-personal-work-agent-conversations-co-work-review-channels.md) | Phase 9 / Release 0.0.14 — Personal/work-agent conversations, co-work review, and channel/device expansion |
 | [078-release-0-0-15-provider-memory-rag-ecosystem-parity.md](078-release-0-0-15-provider-memory-rag-ecosystem-parity.md) | Phase 10 / Release 0.0.15 — Provider, memory, and RAG ecosystem parity |
+| [079-release-0-0-16-simplify-and-0-1-0-readiness.md](079-release-0-0-16-simplify-and-0-1-0-readiness.md) | Phase 11 / Release 0.0.16 — Simplify the package and establish 0.1.0 readiness |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

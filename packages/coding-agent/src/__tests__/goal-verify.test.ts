@@ -3,18 +3,14 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import {
-  createMemoryCheckpointStore,
-  createSecretRedactor,
-  type JsonObject,
-} from "@arnilo/prism";
+import { createMemoryCheckpointStore, createSecretRedactor, type JsonObject } from "@arnilo/prism";
 import { createWorkflowCheckpoints } from "@arnilo/prism-workflows";
 import {
   CODING_GOAL_VERIFY_SUSPEND_REASON,
-  CodingGoalVerifyError,
-  runCodingGoalVerify,
   type CodingCheckSummary,
+  CodingGoalVerifyError,
   type CodingHandoffSummary,
+  runCodingGoalVerify,
 } from "../index.js";
 
 describe("runCodingGoalVerify", () => {
@@ -36,9 +32,7 @@ describe("runCodingGoalVerify", () => {
           approval: {},
           checkpoints: createWorkflowCheckpoints({ store: createMemoryCheckpointStore() }),
         }),
-      (error: unknown) =>
-        error instanceof CodingGoalVerifyError
-        && /approval\.validateResume/.test(error.message),
+      (error: unknown) => error instanceof CodingGoalVerifyError && /approval\.validateResume/.test(error.message),
     );
   });
 
@@ -58,19 +52,14 @@ describe("runCodingGoalVerify", () => {
         return { name, exitCode: 1, summary: "failed once" };
       };
 
-      const buildHandoff = async (input: {
-        readonly checks: readonly CodingCheckSummary[];
-      }): Promise<CodingHandoffSummary> => ({
+      const buildHandoff = async (input: { readonly checks: readonly CodingCheckSummary[] }): Promise<CodingHandoffSummary> => ({
         base: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         head: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         changedPathCount: 1,
         checkCount: input.checks.length,
       });
 
-      const validateResume = async (input: {
-        readonly value: unknown;
-        readonly suspension: { readonly reason: string };
-      }) => {
+      const validateResume = async (input: { readonly value: unknown; readonly suspension: { readonly reason: string } }) => {
         if (input.suspension.reason !== CODING_GOAL_VERIFY_SUSPEND_REASON) {
           throw new Error("unexpected suspension");
         }
@@ -121,14 +110,10 @@ describe("runCodingGoalVerify", () => {
       });
 
       assert.equal(completed.status, "succeeded");
-      const handoffOut = completed.outputs.handoff as
-        | { handoff?: CodingHandoffSummary; codingStatus?: string }
-        | undefined;
+      const handoffOut = completed.outputs.handoff as { handoff?: CodingHandoffSummary; codingStatus?: string } | undefined;
       assert.equal(handoffOut?.codingStatus, "completed");
       assert.equal(handoffOut?.handoff?.changedPathCount, 1);
-      assert.ok(
-        Buffer.byteLength(JSON.stringify(handoffOut?.handoff ?? {}), "utf8") < 64 * 1024,
-      );
+      assert.ok(Buffer.byteLength(JSON.stringify(handoffOut?.handoff ?? {}), "utf8") < 64 * 1024);
 
       const coding = (completed.state as JsonObject).coding as JsonObject | undefined;
       assert.ok(coding);

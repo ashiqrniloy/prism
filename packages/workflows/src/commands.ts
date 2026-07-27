@@ -1,42 +1,24 @@
-import type {
-  CommandDefinition,
-  CommandResult,
-  JsonObject,
-  OwnershipScope,
-} from "@arnilo/prism";
-import { WorkflowAbortError, WorkflowCheckpointError, WorkflowRuntimeError } from "./errors.js";
+import type { CommandDefinition, CommandResult, JsonObject, OwnershipScope } from "@arnilo/prism";
 import { enqueueWorkflow } from "./coordinator.js";
+import { WorkflowAbortError, WorkflowCheckpointError, WorkflowRuntimeError } from "./errors.js";
 import { replayWorkflow } from "./replay.js";
 import { resumeWorkflow, runWorkflow } from "./run.js";
-import { cancelWorkflowRun, getWorkflowRun, listWorkflowRuns } from "./status.js";
-import type {
-  RunWorkflowOptions,
-  WorkflowCheckpointAdapter,
-  WorkflowDefinition,
-  WorkflowRunStatus,
-} from "./types.js";
 import type { WorkflowSchedules } from "./schedules.js";
+import { cancelWorkflowRun, getWorkflowRun, listWorkflowRuns } from "./status.js";
+import type { RunWorkflowOptions, WorkflowCheckpointAdapter, WorkflowDefinition, WorkflowRunStatus } from "./types.js";
 import { errorCode, errorMessage, isAbortError } from "./util.js";
 
 export interface CreateWorkflowCommandsInput {
-  readonly workflows:
-    | Readonly<Record<string, WorkflowDefinition>>
-    | ((id: string) => WorkflowDefinition | undefined);
+  readonly workflows: Readonly<Record<string, WorkflowDefinition>> | ((id: string) => WorkflowDefinition | undefined);
   readonly checkpoints: WorkflowCheckpointAdapter;
   readonly runOptions?: Omit<RunWorkflowOptions, "checkpoints" | "signal">;
   readonly schedules?: WorkflowSchedules;
 }
 
-function resolveWorkflow(
-  workflows: CreateWorkflowCommandsInput["workflows"],
-  workflowId: string,
-): WorkflowDefinition {
+function resolveWorkflow(workflows: CreateWorkflowCommandsInput["workflows"], workflowId: string): WorkflowDefinition {
   const workflow = typeof workflows === "function" ? workflows(workflowId) : workflows[workflowId];
   if (!workflow) {
-    throw new WorkflowRuntimeError(
-      `Unknown workflow: ${workflowId}`,
-      "ERR_PRISM_WORKFLOW_NOT_FOUND",
-    );
+    throw new WorkflowRuntimeError(`Unknown workflow: ${workflowId}`, "ERR_PRISM_WORKFLOW_NOT_FOUND");
   }
   return workflow;
 }
@@ -71,9 +53,7 @@ function readOwnership(args: JsonObject): OwnershipScope | undefined {
   };
 }
 
-function readStatusFilter(
-  args: JsonObject,
-): WorkflowRunStatus | readonly WorkflowRunStatus[] | undefined {
+function readStatusFilter(args: JsonObject): WorkflowRunStatus | readonly WorkflowRunStatus[] | undefined {
   const status = args.status;
   if (typeof status === "string") return status as WorkflowRunStatus;
   if (Array.isArray(status) && status.every((item) => typeof item === "string")) {
@@ -116,16 +96,10 @@ function readResume(args: JsonObject): RunWorkflowOptions["resume"] {
     return undefined;
   }
   if (args.decision !== "approve" && args.decision !== "deny") {
-    throw new WorkflowRuntimeError(
-      "decision must be approve or deny",
-      "ERR_PRISM_WORKFLOW_INVALID_ARGS",
-    );
+    throw new WorkflowRuntimeError("decision must be approve or deny", "ERR_PRISM_WORKFLOW_INVALID_ARGS");
   }
   if (!Number.isSafeInteger(args.expectedVersion) || (args.expectedVersion as number) < 1) {
-    throw new WorkflowRuntimeError(
-      "expectedVersion must be a positive safe integer",
-      "ERR_PRISM_WORKFLOW_INVALID_ARGS",
-    );
+    throw new WorkflowRuntimeError("expectedVersion must be a positive safe integer", "ERR_PRISM_WORKFLOW_INVALID_ARGS");
   }
   return {
     decision: args.decision,
@@ -169,10 +143,12 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
         return {
           name: "workflow.start",
           value: result,
-          content: [{
-            type: "text",
-            text: `Workflow ${result.workflowId} run ${result.runId} ${result.status}`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `Workflow ${result.workflowId} run ${result.runId} ${result.status}`,
+            },
+          ],
         };
       } catch (error) {
         if (isAbortError(error) || error instanceof WorkflowAbortError) {
@@ -189,7 +165,10 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
     parameters: {
       type: "object",
       properties: {
-        workflowId: { type: "string" }, input: {}, runId: { type: "string" }, ownership: { type: "object" },
+        workflowId: { type: "string" },
+        input: {},
+        runId: { type: "string" },
+        ownership: { type: "object" },
       },
       required: ["workflowId"],
     } as JsonObject,
@@ -202,7 +181,11 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
           ownership: readOwnership(args) ?? runOptions?.ownership,
           signal: context.signal,
         });
-        return { name: "workflow.enqueue", value: result, content: [{ type: "text", text: `Queued workflow ${result.workflowId} run ${result.runId}` }] };
+        return {
+          name: "workflow.enqueue",
+          value: result,
+          content: [{ type: "text", text: `Queued workflow ${result.workflowId} run ${result.runId}` }],
+        };
       } catch (error) {
         return commandError("workflow.enqueue", error);
       }
@@ -215,7 +198,11 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
     parameters: {
       type: "object",
       properties: {
-        workflowId: { type: "string" }, sourceRunId: { type: "string" }, fromNodeId: { type: "string" }, runId: { type: "string" }, ownership: { type: "object" },
+        workflowId: { type: "string" },
+        sourceRunId: { type: "string" },
+        fromNodeId: { type: "string" },
+        runId: { type: "string" },
+        ownership: { type: "object" },
       },
       required: ["workflowId", "sourceRunId", "fromNodeId"],
     } as JsonObject,
@@ -224,14 +211,23 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
         const workflow = resolveWorkflow(workflows, requireWorkflowId(args));
         const sourceRunId = readString(args, "sourceRunId");
         const fromNodeId = readString(args, "fromNodeId");
-        if (!sourceRunId || !fromNodeId) throw new WorkflowRuntimeError("sourceRunId and fromNodeId are required", "ERR_PRISM_WORKFLOW_INVALID_ARGS");
-        const result = await replayWorkflow(workflow, { sourceRunId, fromNodeId, runId: readString(args, "runId") }, {
-          ...runOptions,
-          checkpoints,
-          ownership: readOwnership(args) ?? runOptions?.ownership,
-          signal: context.signal,
-        });
-        return { name: "workflow.replay", value: result, content: [{ type: "text", text: `Replayed workflow ${result.workflowId} run ${result.runId}: ${result.status}` }] };
+        if (!sourceRunId || !fromNodeId)
+          throw new WorkflowRuntimeError("sourceRunId and fromNodeId are required", "ERR_PRISM_WORKFLOW_INVALID_ARGS");
+        const result = await replayWorkflow(
+          workflow,
+          { sourceRunId, fromNodeId, runId: readString(args, "runId") },
+          {
+            ...runOptions,
+            checkpoints,
+            ownership: readOwnership(args) ?? runOptions?.ownership,
+            signal: context.signal,
+          },
+        );
+        return {
+          name: "workflow.replay",
+          value: result,
+          content: [{ type: "text", text: `Replayed workflow ${result.workflowId} run ${result.runId}: ${result.status}` }],
+        };
       } catch (error) {
         return commandError("workflow.replay", error);
       }
@@ -261,18 +257,17 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
           signal: context.signal,
         });
         if (!record) {
-          return commandError(
-            "workflow.status",
-            new WorkflowCheckpointError(`No checkpoint for workflow ${workflowId} run ${runId}`),
-          );
+          return commandError("workflow.status", new WorkflowCheckpointError(`No checkpoint for workflow ${workflowId} run ${runId}`));
         }
         return {
           name: "workflow.status",
           value: record,
-          content: [{
-            type: "text",
-            text: `Workflow ${record.workflowId} run ${record.runId}: ${record.value.status} (v${record.version})`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `Workflow ${record.workflowId} run ${record.runId}: ${record.value.status} (v${record.version})`,
+            },
+          ],
         };
       } catch (error) {
         return commandError("workflow.status", error);
@@ -306,10 +301,12 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
         return {
           name: "workflow.list",
           value: page,
-          content: [{
-            type: "text",
-            text: `Listed ${page.items.length} workflow run(s)${page.nextCursor ? " (more available)" : ""}`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `Listed ${page.items.length} workflow run(s)${page.nextCursor ? " (more available)" : ""}`,
+            },
+          ],
         };
       } catch (error) {
         return commandError("workflow.list", error);
@@ -345,12 +342,14 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
         return {
           name: "workflow.cancel",
           value: result,
-          content: [{
-            type: "text",
-            text: result.aborted
-              ? `Cancelled workflow ${workflowId} run ${runId}`
-              : `Workflow ${workflowId} run ${runId} was not running (${result.status ?? "unknown"})`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: result.aborted
+                ? `Cancelled workflow ${workflowId} run ${runId}`
+                : `Workflow ${workflowId} run ${runId} was not running (${result.status ?? "unknown"})`,
+            },
+          ],
         };
       } catch (error) {
         return commandError("workflow.cancel", error);
@@ -393,10 +392,12 @@ export function createWorkflowCommands(input: CreateWorkflowCommandsInput): Comm
         return {
           name: "workflow.resume",
           value: result,
-          content: [{
-            type: "text",
-            text: `Resumed workflow ${result.workflowId} run ${result.runId}: ${result.status}`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `Resumed workflow ${result.workflowId} run ${result.runId}: ${result.status}`,
+            },
+          ],
         };
       } catch (error) {
         return commandError("workflow.resume", error);
@@ -438,41 +439,77 @@ function createScheduleCommands(schedules: WorkflowSchedules): CommandDefinition
     return value;
   };
   return [
-    execute("schedule.create", "Create a durable workflow schedule.", {
-      type: "object",
-      properties: {
-        id: { type: "string" }, workflowId: { type: "string" }, nextRunAt: { type: "string" }, input: {},
-        intervalMs: { type: "integer", minimum: 1 }, calculatorId: { type: "string" }, paused: { type: "boolean" }, metadata: { type: "object" },
-      },
-      required: ["id", "workflowId", "nextRunAt"],
-    } as JsonObject, (args, signal) => schedules.create({
-      id: id(args),
-      workflowId: requireWorkflowId(args),
-      nextRunAt: readString(args, "nextRunAt") ?? "",
-      input: args.input,
-      intervalMs: typeof args.intervalMs === "number" ? args.intervalMs : undefined,
-      calculatorId: readString(args, "calculatorId"),
-      paused: args.paused === true,
-      metadata: args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
-        ? args.metadata as JsonObject
-        : undefined,
-    }, signal)),
-    execute("schedule.list", "List durable workflow schedules.", {
-      type: "object",
-      properties: { status: {}, cursor: { type: "string" }, limit: { type: "integer", minimum: 1 } },
-    } as JsonObject, (args, signal) => schedules.list({
-      status: readScheduleStatus(args.status),
-      cursor: readString(args, "cursor"),
-      limit: typeof args.limit === "number" ? args.limit : undefined,
-      signal,
-    })),
+    execute(
+      "schedule.create",
+      "Create a durable workflow schedule.",
+      {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          workflowId: { type: "string" },
+          nextRunAt: { type: "string" },
+          input: {},
+          intervalMs: { type: "integer", minimum: 1 },
+          calculatorId: { type: "string" },
+          paused: { type: "boolean" },
+          metadata: { type: "object" },
+        },
+        required: ["id", "workflowId", "nextRunAt"],
+      } as JsonObject,
+      (args, signal) =>
+        schedules.create(
+          {
+            id: id(args),
+            workflowId: requireWorkflowId(args),
+            nextRunAt: readString(args, "nextRunAt") ?? "",
+            input: args.input,
+            intervalMs: typeof args.intervalMs === "number" ? args.intervalMs : undefined,
+            calculatorId: readString(args, "calculatorId"),
+            paused: args.paused === true,
+            metadata:
+              args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
+                ? (args.metadata as JsonObject)
+                : undefined,
+          },
+          signal,
+        ),
+    ),
+    execute(
+      "schedule.list",
+      "List durable workflow schedules.",
+      {
+        type: "object",
+        properties: { status: {}, cursor: { type: "string" }, limit: { type: "integer", minimum: 1 } },
+      } as JsonObject,
+      (args, signal) =>
+        schedules.list({
+          status: readScheduleStatus(args.status),
+          cursor: readString(args, "cursor"),
+          limit: typeof args.limit === "number" ? args.limit : undefined,
+          signal,
+        }),
+    ),
     execute("schedule.pause", "Pause a durable workflow schedule.", idSchema, (args, signal) => schedules.pause(id(args), signal)),
-    execute("schedule.resume", "Resume a durable workflow schedule.", {
-      type: "object", properties: { id: { type: "string" }, nextRunAt: { type: "string" } }, required: ["id"],
-    } as JsonObject, (args, signal) => schedules.resume(id(args), readString(args, "nextRunAt"), signal)),
-    execute("schedule.trigger", "Idempotently trigger a workflow schedule now.", {
-      type: "object", properties: { id: { type: "string" }, idempotencyKey: { type: "string" } }, required: ["id", "idempotencyKey"],
-    } as JsonObject, (args, signal) => schedules.trigger(id(args), { idempotencyKey: readString(args, "idempotencyKey") ?? "", signal })),
+    execute(
+      "schedule.resume",
+      "Resume a durable workflow schedule.",
+      {
+        type: "object",
+        properties: { id: { type: "string" }, nextRunAt: { type: "string" } },
+        required: ["id"],
+      } as JsonObject,
+      (args, signal) => schedules.resume(id(args), readString(args, "nextRunAt"), signal),
+    ),
+    execute(
+      "schedule.trigger",
+      "Idempotently trigger a workflow schedule now.",
+      {
+        type: "object",
+        properties: { id: { type: "string" }, idempotencyKey: { type: "string" } },
+        required: ["id", "idempotencyKey"],
+      } as JsonObject,
+      (args, signal) => schedules.trigger(id(args), { idempotencyKey: readString(args, "idempotencyKey") ?? "", signal }),
+    ),
     execute("schedule.delete", "Delete a durable workflow schedule.", idSchema, (args, signal) => schedules.delete(id(args), signal)),
   ];
 }

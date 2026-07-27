@@ -1,16 +1,12 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createMemoryCheckpointStore,
-  createSecretRedactor,
-  type JsonObject,
-} from "@arnilo/prism";
+import { createMemoryCheckpointStore, createSecretRedactor, type JsonObject } from "@arnilo/prism";
 import {
   CODING_GOAL_VERIFY_SUSPEND_REASON,
-  runCodingGoalVerify,
   type CodingCheckSummary,
   type CodingHandoffSummary,
+  runCodingGoalVerify,
 } from "@arnilo/prism-coding-agent";
 import { createWorkflowCheckpoints } from "@arnilo/prism-workflows";
 
@@ -36,19 +32,14 @@ export async function demo() {
       summary: "demo check failed (host would re-run after fix)",
     });
 
-    const buildHandoff = async (input: {
-      readonly checks: readonly CodingCheckSummary[];
-    }): Promise<CodingHandoffSummary> => ({
+    const buildHandoff = async (input: { readonly checks: readonly CodingCheckSummary[] }): Promise<CodingHandoffSummary> => ({
       base: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       head: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       changedPathCount: 1,
       checkCount: input.checks.length,
     });
 
-    const validateResume = async (input: {
-      readonly value: unknown;
-      readonly suspension: { readonly reason: string };
-    }) => {
+    const validateResume = async (input: { readonly value: unknown; readonly suspension: { readonly reason: string } }) => {
       if (input.suspension.reason !== CODING_GOAL_VERIFY_SUSPEND_REASON) {
         throw new Error("unexpected suspension");
       }
@@ -95,9 +86,7 @@ export async function demo() {
       },
     });
 
-    const handoff = completed.outputs.handoff as
-      | { handoff?: CodingHandoffSummary; codingStatus?: string }
-      | undefined;
+    const handoff = completed.outputs.handoff as { handoff?: CodingHandoffSummary; codingStatus?: string } | undefined;
     const stateText = JSON.stringify(completed.state ?? {});
 
     return {

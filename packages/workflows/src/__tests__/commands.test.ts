@@ -47,19 +47,13 @@ describe("createWorkflowCommands", () => {
     });
     const byName = Object.fromEntries(commands.map((command) => [command.name, command]));
 
-    const started = await byName["workflow.start"]!.execute(
-      { workflowId: "demo", input: { hello: "world" } },
-      {},
-    );
+    const started = await byName["workflow.start"]!.execute({ workflowId: "demo", input: { hello: "world" } }, {});
     assert.equal(started.error, undefined);
     const value = started.value as { runId: string; status: string; outputs: Record<string, unknown> };
     assert.equal(value.status, "succeeded");
     assert.deepEqual(value.outputs.step, { echo: { hello: "world" } });
 
-    const status = await byName["workflow.status"]!.execute(
-      { workflowId: "demo", runId: value.runId },
-      {},
-    );
+    const status = await byName["workflow.status"]!.execute({ workflowId: "demo", runId: value.runId }, {});
     assert.equal(status.error, undefined);
     assert.equal((status.value as { value: { status: string } }).value.status, "succeeded");
 
@@ -77,12 +71,15 @@ describe("createWorkflowCommands", () => {
     assert.equal((queued.value as { status: string }).status, "queued");
 
     const source = await runWorkflow(workflow, "source", { checkpoints, runId: "source-1" });
-    const replayed = await byName["workflow.replay"]!.execute({
-      workflowId: "demo",
-      sourceRunId: source.runId,
-      fromNodeId: "step",
-      runId: "replay-1",
-    }, {});
+    const replayed = await byName["workflow.replay"]!.execute(
+      {
+        workflowId: "demo",
+        sourceRunId: source.runId,
+        fromNodeId: "step",
+        runId: "replay-1",
+      },
+      {},
+    );
     assert.equal(replayed.error, undefined);
     assert.equal((replayed.value as { status: string }).status, "succeeded");
   });
@@ -93,10 +90,14 @@ describe("createWorkflowCommands", () => {
       execute: async (ctx) => {
         await new Promise<void>((resolve, reject) => {
           const timer = setTimeout(resolve, 5_000);
-          ctx.signal?.addEventListener("abort", () => {
-            clearTimeout(timer);
-            reject(new WorkflowAbortError());
-          }, { once: true });
+          ctx.signal?.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(new WorkflowAbortError());
+            },
+            { once: true },
+          );
         });
         return "done";
       },
@@ -193,10 +194,14 @@ describe("createWorkflowCommands", () => {
           execute: async (ctx) => {
             await new Promise<void>((resolve, reject) => {
               const timer = setTimeout(resolve, 5_000);
-              ctx.signal?.addEventListener("abort", () => {
-                clearTimeout(timer);
-                reject(new WorkflowAbortError());
-              }, { once: true });
+              ctx.signal?.addEventListener(
+                "abort",
+                () => {
+                  clearTimeout(timer);
+                  reject(new WorkflowAbortError());
+                },
+                { once: true },
+              );
             });
             return `${ctx.upstream.first}-two`;
           },
@@ -226,10 +231,7 @@ describe("createWorkflowCommands", () => {
       runOptions: { ownership: { tenantId: "t1" } },
     });
     const resumeCmd = commands.find((command) => command.name === "workflow.resume")!;
-    const resumed = await resumeCmd.execute(
-      { workflowId: "resume-demo", runId: "wfr_resume_1" },
-      {},
-    );
+    const resumed = await resumeCmd.execute({ workflowId: "resume-demo", runId: "wfr_resume_1" }, {});
     assert.equal(resumed.error, undefined, String(resumed.error?.message));
     const value = resumed.value as { status: string; outputs: Record<string, unknown> };
     assert.equal(value.status, "succeeded");
@@ -243,9 +245,8 @@ describe("createWorkflowCommands", () => {
       id: "command-suspend",
       nodes: {
         review: functionNode({
-          execute: async (ctx) => ctx.resume
-            ? { reviewer: (ctx.resume.input as { reviewer: string }).reviewer }
-            : suspend({ reason: "review" }),
+          execute: async (ctx) =>
+            ctx.resume ? { reviewer: (ctx.resume.input as { reviewer: string }).reviewer } : suspend({ reason: "review" }),
         }),
       },
     });
@@ -255,18 +256,18 @@ describe("createWorkflowCommands", () => {
     const startValue = started.value as { runId: string; status: string; version: number };
     assert.equal(startValue.status, "suspended");
 
-    const resumed = await byName["workflow.resume"]!.execute({
-      workflowId: workflow.id,
-      runId: startValue.runId,
-      decision: "approve",
-      input: { reviewer: "Ada" },
-      expectedVersion: startValue.version,
-    }, {});
-    assert.equal(resumed.error, undefined);
-    assert.deepEqual(
-      (resumed.value as { outputs: Record<string, unknown> }).outputs.review,
-      { reviewer: "Ada" },
+    const resumed = await byName["workflow.resume"]!.execute(
+      {
+        workflowId: workflow.id,
+        runId: startValue.runId,
+        decision: "approve",
+        input: { reviewer: "Ada" },
+        expectedVersion: startValue.version,
+      },
+      {},
     );
+    assert.equal(resumed.error, undefined);
+    assert.deepEqual((resumed.value as { outputs: Record<string, unknown> }).outputs.review, { reviewer: "Ada" });
   });
 
   it("listWorkflowRuns helper paginates", async () => {

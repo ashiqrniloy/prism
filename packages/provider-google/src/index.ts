@@ -1,4 +1,4 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
 import { googleModels } from "./models.js";
 import { createGoogleGenerateContentProvider } from "./provider.js";
 
@@ -19,13 +19,15 @@ export function createGoogleProviderPackage(options: GoogleProviderPackageOption
     description: "Google Gemini generateContent provider package for Prism.",
     docs: { links: ["docs/providers/google.md"] },
     setup(api) {
-      api.registerProvider(createGoogleGenerateContentProvider({
-        id: providerId,
-        apiKey: options.apiKey,
-        fetch: options.fetch,
-        baseUrl: options.baseUrl,
-        userAgent: options.userAgent,
-      }));
+      api.registerProvider(
+        createGoogleGenerateContentProvider({
+          id: providerId,
+          apiKey: options.apiKey,
+          fetch: options.fetch,
+          baseUrl: options.baseUrl,
+          userAgent: options.userAgent,
+        }),
+      );
       for (const model of options.models ?? googleModels) {
         api.registerModel({ ...model, provider: providerId });
       }
@@ -35,27 +37,27 @@ export function createGoogleProviderPackage(options: GoogleProviderPackageOption
 }
 
 export {
-  GOOGLE_DEFAULT_BASE_URL,
-  googleModels,
-  defineGoogleModel,
-  listGoogleModels,
-  mapGoogleModel,
-  stripModelsPrefix,
-  type GoogleModelConfig,
-  type GoogleModelEntry,
-  type ListGoogleModelsOptions,
-} from "./models.js";
-export {
-  googleOwnedHeaders,
-  createGoogleGenerateContentProvider,
-  type GoogleGenerateContentProviderOptions,
-} from "./provider.js";
-export {
   googleGenerateContentBody,
   googleGenerateContentEvents,
 } from "./generate-content.js";
 export {
-  googleThinkingConfig,
+  defineGoogleModel,
+  GOOGLE_DEFAULT_BASE_URL,
+  type GoogleModelConfig,
+  type GoogleModelEntry,
+  googleModels,
+  type ListGoogleModelsOptions,
+  listGoogleModels,
+  mapGoogleModel,
+  stripModelsPrefix,
+} from "./models.js";
+export {
+  createGoogleGenerateContentProvider,
+  type GoogleGenerateContentProviderOptions,
+  googleOwnedHeaders,
+} from "./provider.js";
+export {
   googlePreserveThinking,
+  googleThinkingConfig,
   stripGoogleOwnedCompat,
 } from "./thinking.js";

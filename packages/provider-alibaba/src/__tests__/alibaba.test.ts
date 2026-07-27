@@ -33,7 +33,10 @@ describe("@arnilo/prism-provider-alibaba", () => {
     assert.equal(alibabaBaseUrl({ preset: "beijing" }), "https://dashscope.aliyuncs.com/compatible-mode/v1");
     assert.equal(alibabaBaseUrl({ preset: "us" }), "https://dashscope-us.aliyuncs.com/compatible-mode/v1");
     assert.equal(alibabaBaseUrl({ preset: "coding-plan" }), "https://coding-intl.dashscope.aliyuncs.com/v1");
-    assert.equal(alibabaBaseUrl({ baseUrl: "https://ws123.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/" }), "https://ws123.cn-beijing.maas.aliyuncs.com/compatible-mode/v1");
+    assert.equal(
+      alibabaBaseUrl({ baseUrl: "https://ws123.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/" }),
+      "https://ws123.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+    );
     // Explicit baseUrl wins over preset.
     assert.equal(alibabaBaseUrl({ preset: "beijing", baseUrl: "https://override.test/v1" }), "https://override.test/v1");
   });
@@ -69,7 +72,11 @@ describe("@arnilo/prism-provider-alibaba", () => {
     const thinkingModel = defineAlibabaModel({ model: "qwen3-max", compat: { enable_thinking: false } });
     const off = alibabaBody({ model: thinkingModel, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
     assert.equal(off.enable_thinking, false);
-    const on = alibabaBody({ model: thinkingModel, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }], options: { compat: { enable_thinking: true } } });
+    const on = alibabaBody({
+      model: thinkingModel,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { enable_thinking: true } },
+    });
     assert.equal(on.enable_thinking, true);
     // Provider-owned compat keys are stripped from the opaque spread.
     assert.equal((on as any).route, undefined);
@@ -78,13 +85,22 @@ describe("@arnilo/prism-provider-alibaba", () => {
   it("stream_maps_text_reasoning_tool_calls_and_usage", async () => {
     const provider = createAlibabaProvider({
       apiKey: "sk-dashscope-secret",
-      fetch: mockFetch(chatSse([
-        { choices: [{ delta: { reasoning_content: "think" } }] },
-        { choices: [{ delta: { content: "hello" } }] },
-        { choices: [{ delta: { tool_calls: [{ index: 0, id: "tool_1", function: { name: "lookup", arguments: "{\"q\":" } }] } }] },
-        { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: "\"x\"}" } }] }, finish_reason: "tool_calls" }] },
-        { usage: { prompt_tokens: 4, completion_tokens: 3, total_tokens: 7, prompt_tokens_details: { cached_tokens: 1, cache_creation_input_tokens: 2 } } },
-      ])),
+      fetch: mockFetch(
+        chatSse([
+          { choices: [{ delta: { reasoning_content: "think" } }] },
+          { choices: [{ delta: { content: "hello" } }] },
+          { choices: [{ delta: { tool_calls: [{ index: 0, id: "tool_1", function: { name: "lookup", arguments: '{"q":' } }] } }] },
+          { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '"x"}' } }] }, finish_reason: "tool_calls" }] },
+          {
+            usage: {
+              prompt_tokens: 4,
+              completion_tokens: 3,
+              total_tokens: 7,
+              prompt_tokens_details: { cached_tokens: 1, cache_creation_input_tokens: 2 },
+            },
+          },
+        ]),
+      ),
     });
     const events = await assertProviderStreamConforms({
       provider,
@@ -97,10 +113,18 @@ describe("@arnilo/prism-provider-alibaba", () => {
   it("cache_usage_maps_dashscope_cached_and_creation_tokens", async () => {
     const provider = createAlibabaProvider({
       apiKey: "sk-dashscope-secret",
-      fetch: mockFetch(chatSse([
-        { choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] },
-        { usage: { prompt_tokens: 100, completion_tokens: 5, prompt_tokens_details: { cached_tokens: 80, cache_creation_input_tokens: 10 } } },
-      ])),
+      fetch: mockFetch(
+        chatSse([
+          { choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] },
+          {
+            usage: {
+              prompt_tokens: 100,
+              completion_tokens: 5,
+              prompt_tokens_details: { cached_tokens: 80, cache_creation_input_tokens: 10 },
+            },
+          },
+        ]),
+      ),
     });
     await assertProviderStreamConforms({
       provider,
@@ -131,12 +155,16 @@ describe("@arnilo/prism-provider-alibaba", () => {
     const body = alibabaBody({
       model: cacheModel,
       messages,
-      options: { cache: { breakpoints: [
-        { location: "message_id", messageId: "x" }, // no match
-        { location: "stable_context" },
-        { location: "last_stable_message" },
-        { location: "last_user_message" },
-      ] } },
+      options: {
+        cache: {
+          breakpoints: [
+            { location: "message_id", messageId: "x" }, // no match
+            { location: "stable_context" },
+            { location: "last_stable_message" },
+            { location: "last_user_message" },
+          ],
+        },
+      },
     });
     const marked = (body.messages as any[]).filter((m) => Array.isArray(m.content) && m.content.some((b: any) => b.cache_control));
     assert.ok(marked.length >= 1 && marked.length <= 4, `expected 1..4 marked messages, got ${marked.length}`);
@@ -147,7 +175,10 @@ describe("@arnilo/prism-provider-alibaba", () => {
 
   it("explicit_cache_breakpoint_count_is_hard_capped_at_four", () => {
     const cacheModel = defineAlibabaModel({ model: "qwen-plus", cache: { kind: "cache_control", maxBreakpoints: 99 } });
-    const messages: Message[] = Array.from({ length: 8 }, (_, i) => ({ role: i % 2 === 0 ? "user" as const : "assistant" as const, content: [{ type: "text" as const, text: `m${i}` }] }));
+    const messages: Message[] = Array.from({ length: 8 }, (_, i) => ({
+      role: i % 2 === 0 ? ("user" as const) : ("assistant" as const),
+      content: [{ type: "text" as const, text: `m${i}` }],
+    }));
     const body = alibabaBody({
       model: cacheModel,
       messages,
@@ -158,14 +189,18 @@ describe("@arnilo/prism-provider-alibaba", () => {
     const body2 = alibabaBody({
       model: cacheModel,
       messages,
-      options: { cache: { breakpoints: [
-        { location: "stable_context" },
-        { location: "last_stable_message" },
-        { location: "last_user_message" },
-        { location: "system_prompt" },
-        { location: "tools" },
-        { location: "last_user_message" },
-      ] } },
+      options: {
+        cache: {
+          breakpoints: [
+            { location: "stable_context" },
+            { location: "last_stable_message" },
+            { location: "last_user_message" },
+            { location: "system_prompt" },
+            { location: "tools" },
+            { location: "last_user_message" },
+          ],
+        },
+      },
     });
     const countMarkers = (b: unknown) => JSON.stringify(b).split('"cache_control"').length - 1;
     assert.ok(countMarkers(body2) <= 4, `expected <= 4 cache_control markers, got ${countMarkers(body2)}`);
@@ -173,10 +208,13 @@ describe("@arnilo/prism-provider-alibaba", () => {
   });
 
   it("truncated_stream_without_done_fails_loudly", async () => {
-    const text = [
-      `data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] }) }\n\n`,
-    ].join("");
-    const stream = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(new TextEncoder().encode(text)); c.close(); } });
+    const text = [`data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`].join("");
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode(text));
+        c.close();
+      },
+    });
     const provider = createAlibabaProvider({ apiKey: "sk-x", fetch: (async () => new Response(stream, { status: 200 })) as typeof fetch });
     const events = await assertProviderStreamConforms({ provider, request });
     assert.equal(events.at(-1)?.type, "error");
@@ -185,7 +223,11 @@ describe("@arnilo/prism-provider-alibaba", () => {
   it("http_error_maps_to_provider_error_and_redacts_api_key", async () => {
     const provider = createAlibabaProvider({
       apiKey: "sk-dashscope-secret",
-      fetch: (async () => new Response(JSON.stringify({ error: { message: "bad key sk-dashscope-secret", type: "invalid_request_error", code: "invalid_api_key" } }), { status: 401 })) as typeof fetch,
+      fetch: (async () =>
+        new Response(
+          JSON.stringify({ error: { message: "bad key sk-dashscope-secret", type: "invalid_request_error", code: "invalid_api_key" } }),
+          { status: 401 },
+        )) as typeof fetch,
     });
     const events = await assertProviderStreamConforms({ provider, request });
     const terminal = events.at(-1);
@@ -215,21 +257,28 @@ describe("@arnilo/prism-provider-alibaba", () => {
       fetch: (async (input, init) => {
         url = String(input);
         headers = new Headers(init?.headers);
-        return new Response(JSON.stringify({ object: "list", data: [{ id: "qwen3-coder-plus", owned_by: "system", created: 1 }, { id: "qwen3-max" }] }), { status: 200 });
+        return new Response(
+          JSON.stringify({ object: "list", data: [{ id: "qwen3-coder-plus", owned_by: "system", created: 1 }, { id: "qwen3-max" }] }),
+          { status: 200 },
+        );
       }) as typeof fetch,
     });
     assert.equal(url, "https://coding-intl.dashscope.aliyuncs.com/v1/models");
     assert.equal(headers?.get("authorization"), "Bearer sk-dashscope-secret");
-    assert.deepEqual(models.map((m) => m.model), ["qwen3-coder-plus", "qwen3-max"]);
+    assert.deepEqual(
+      models.map((m) => m.model),
+      ["qwen3-coder-plus", "qwen3-max"],
+    );
     assert.equal(models[0]?.provider, "alibaba");
   });
 
   it("list_alibaba_models_redacts_api_key_from_discovery_errors", async () => {
     await assert.rejects(
-      () => listAlibabaModels({
-        apiKey: "sk-dashscope-secret",
-        fetch: (async () => new Response("upstream said sk-dashscope-secret is invalid", { status: 401 })) as typeof fetch,
-      }),
+      () =>
+        listAlibabaModels({
+          apiKey: "sk-dashscope-secret",
+          fetch: (async () => new Response("upstream said sk-dashscope-secret is invalid", { status: 401 })) as typeof fetch,
+        }),
       (error: Error) => {
         assert.ok(error.message.includes("401"));
         assert.ok(!error.message.includes("sk-dashscope-secret"), `must redact key: ${error.message}`);
@@ -245,7 +294,10 @@ describe("@arnilo/prism-provider-alibaba", () => {
     await createAlibabaProviderPackage({
       apiKey: "sk-dashscope-secret",
       models: discovered,
-      fetch: (async () => { fetchCalls += 1; return ok(chatSse([])); }) as typeof fetch,
+      fetch: (async () => {
+        fetchCalls += 1;
+        return ok(chatSse([]));
+      }) as typeof fetch,
     }).setup({
       registerProvider: (provider: AIProvider) => registered.push(provider),
       registerModel: (m: ModelConfig) => registered.push(m),
@@ -265,6 +317,11 @@ function ok(body: ReadableStream<Uint8Array>): Response {
   return new Response(body, { status: 200 });
 }
 function chatSse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + "data: [DONE]\n\n";
-  return new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); } });
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }

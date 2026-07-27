@@ -1,5 +1,5 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { createAlibabaProvider, type AlibabaProviderOptions } from "./provider.js";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { type AlibabaProviderOptions, createAlibabaProvider } from "./provider.js";
 
 export interface AlibabaProviderPackageOptions extends AlibabaProviderOptions {
   readonly apiKey?: CredentialValueSource;
@@ -18,13 +18,15 @@ export function createAlibabaProviderPackage(options: AlibabaProviderPackageOpti
     description: "Alibaba Cloud (Model Studio / DashScope, incl. Coding Plan) provider package for Prism.",
     docs: { links: ["docs/providers/alibaba.md"] },
     setup(api) {
-      api.registerProvider(createAlibabaProvider({
-        id: providerId,
-        apiKey: options.apiKey,
-        fetch: options.fetch,
-        baseUrl: options.baseUrl,
-        preset: options.preset,
-      }));
+      api.registerProvider(
+        createAlibabaProvider({
+          id: providerId,
+          apiKey: options.apiKey,
+          fetch: options.fetch,
+          baseUrl: options.baseUrl,
+          preset: options.preset,
+        }),
+      );
       for (const model of options.models ?? []) {
         api.registerModel({ ...model, provider: providerId });
       }
@@ -34,27 +36,27 @@ export function createAlibabaProviderPackage(options: AlibabaProviderPackageOpti
 }
 
 export {
-  alibabaBaseUrl,
-  defineAlibabaModel,
-  DEFAULT_ALIBABA_BASE_URL,
-  listAlibabaModels,
-  mapAlibabaModel,
+  ALIBABA_MAX_CACHE_BREAKPOINTS,
+  alibabaCacheEnabled,
+  applyAlibabaCacheControl,
+  withAlibabaCacheMarker,
+} from "./cache.js";
+export {
   type AlibabaBasePreset,
   type AlibabaModelConfig,
   type AlibabaModelEntry,
+  alibabaBaseUrl,
+  DEFAULT_ALIBABA_BASE_URL,
+  defineAlibabaModel,
   type ListAlibabaModelsOptions,
+  listAlibabaModels,
+  mapAlibabaModel,
 } from "./models.js";
 export {
+  type AlibabaProviderOptions,
   alibabaBody,
   alibabaEnableThinking,
   alibabaEvents,
   createAlibabaProvider,
   serializeAlibabaMessage,
-  type AlibabaProviderOptions,
 } from "./provider.js";
-export {
-  alibabaCacheEnabled,
-  ALIBABA_MAX_CACHE_BREAKPOINTS,
-  applyAlibabaCacheControl,
-  withAlibabaCacheMarker,
-} from "./cache.js";

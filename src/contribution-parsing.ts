@@ -1,5 +1,4 @@
-import type { Skill } from "./contracts.js";
-import type { JsonValue } from "./contracts.js";
+import type { JsonValue, Skill } from "./contracts.js";
 import type { ManifestContributionDeclaration } from "./manifests.js";
 
 /** Frontmatter split + scalar/simple-list parser for `SKILL.md` and agent bundle
@@ -55,7 +54,14 @@ function parseFrontBlock(lines: readonly string[]): Map<string, unknown> {
       }
       out.set(key, items);
     } else if (value.startsWith("[") && value.endsWith("]")) {
-      out.set(key, value.slice(1, -1).split(",").map((s) => s.trim()).filter((s) => s.length > 0));
+      out.set(
+        key,
+        value
+          .slice(1, -1)
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0),
+      );
     } else {
       out.set(key, value);
     }
@@ -68,7 +74,7 @@ function parseFrontBlock(lines: readonly string[]): Map<string, unknown> {
 // plain string split instead of `node:path`. Expects `.../<name>/SKILL.md`.
 function parentDirName(path: string): string {
   const parts = path.split(/[/\\]+/).filter(Boolean);
-  return parts.length >= 2 ? parts[parts.length - 2] : parts[parts.length - 1] ?? "";
+  return parts.length >= 2 ? parts[parts.length - 2] : (parts[parts.length - 1] ?? "");
 }
 
 const NAME_RE = /^[A-Za-z0-9 _-]+$/;

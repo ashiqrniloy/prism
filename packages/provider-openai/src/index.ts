@@ -1,8 +1,8 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { createOpenAICodexProvider } from "./codex.js";
 import { openAICodexModels, openAIModels } from "./models.js";
-import { createOpenAICodexOAuthProvider, openAICodexOAuthProvider } from "./oauth.js";
-import { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions } from "./responses.js";
+import { openAICodexOAuthProvider } from "./oauth.js";
+import { createOpenAIResponsesProvider } from "./responses.js";
 
 export interface OpenAIProviderPackageOptions {
   readonly apiKey?: CredentialValueSource;
@@ -23,7 +23,9 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
     docs: { links: ["docs/providers/openai.md"] },
     setup(api) {
       api.registerProvider(createOpenAIResponsesProvider({ apiKey: options.apiKey, baseUrl: options.baseUrl, fetch: options.fetch }));
-      api.registerProvider(createOpenAICodexProvider({ accessToken: options.codexAccessToken, baseUrl: options.codexBaseUrl, fetch: options.fetch }));
+      api.registerProvider(
+        createOpenAICodexProvider({ accessToken: options.codexAccessToken, baseUrl: options.codexBaseUrl, fetch: options.fetch }),
+      );
       for (const model of options.models ?? openAIModels) api.registerModel(model);
       for (const model of options.codexModels ?? openAICodexModels) api.registerModel(model);
       api.registerAuthMethod({ kind: "api_key", provider: "openai", credentialName: "apiKey" });
@@ -32,23 +34,29 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
   });
 }
 
-export { createOpenAIResponsesProvider, resolveOpenAIReasoning, type OpenAIResponsesProviderOptions } from "./responses.js";
+export { OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheRetention } from "./cache.js";
 export { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js";
+export {
+  defineOpenAIModel,
+  type ListOpenAIModelsOptions,
+  listOpenAIModels,
+  mapOpenAIModel,
+  type OpenAIModelConfig,
+  type OpenAIModelEntry,
+  openAICodexModels,
+  openAIModels,
+} from "./models.js";
+export {
+  computeS256Challenge,
+  createOpenAICodexOAuthProvider,
+  createPkceVerifier,
+  type OpenAICodexOAuthOptions,
+  openAICodexOAuthProvider,
+} from "./oauth.js";
 export {
   createOpenAIRealtimeSession,
   type OpenAIRealtimeSessionOptions,
   type RealtimeTransport,
   type RealtimeTransportOptions,
 } from "./realtime.js";
-export {
-  defineOpenAIModel,
-  listOpenAIModels,
-  mapOpenAIModel,
-  openAIModels,
-  openAICodexModels,
-  type ListOpenAIModelsOptions,
-  type OpenAIModelConfig,
-  type OpenAIModelEntry,
-} from "./models.js";
-export { createOpenAICodexOAuthProvider, openAICodexOAuthProvider, type OpenAICodexOAuthOptions, createPkceVerifier, computeS256Challenge } from "./oauth.js";
-export { OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheRetention } from "./cache.js";
+export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "./responses.js";

@@ -1,31 +1,27 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
+  type AudioContent,
   assertDeclaredMediaTypeMatches,
   assertMediaBlocksWithinBounds,
-  assertMessagesSupportModelCapabilities,
   assertModelSupportsContentBlocks,
   assertSsrfAllowedUrl,
   DEFAULT_MAX_AUDIO_DURATION_MS,
   DEFAULT_MAX_MEDIA_ITEM_BYTES,
   DEFAULT_MAX_MEDIA_REQUEST_BYTES,
+  type DocumentContent,
+  type FileContent,
   MediaContentError,
   resolveMediaContentBlock,
   resolveMediaContentBlocks,
   sniffMediaMimeType,
   UnsupportedModalityError,
-  type AudioContent,
-  type DocumentContent,
-  type FileContent,
 } from "../content.js";
 import { assembleProviderInput } from "../input.js";
 
 const tinyPdf = Uint8Array.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]);
 const tinyPdfBase64 = Buffer.from(tinyPdf).toString("base64");
-const tinyWav = Uint8Array.from([
-  0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00,
-  0x57, 0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20,
-]);
+const tinyWav = Uint8Array.from([0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20]);
 const tinyWavBase64 = Buffer.from(tinyWav).toString("base64");
 
 describe("multimodal content contracts", () => {
@@ -91,12 +87,13 @@ describe("multimodal content contracts", () => {
 
   it("rejects ambiguous or missing media sources", async () => {
     await assert.rejects(
-      () => resolveMediaContentBlock({
-        type: "file",
-        mediaType: "application/pdf",
-        data: tinyPdfBase64,
-        url: "https://cdn.example.test/report.pdf",
-      }),
+      () =>
+        resolveMediaContentBlock({
+          type: "file",
+          mediaType: "application/pdf",
+          data: tinyPdfBase64,
+          url: "https://cdn.example.test/report.pdf",
+        }),
       (error: unknown) => error instanceof MediaContentError && error.code === "ambiguous_source",
     );
     await assert.rejects(
@@ -107,34 +104,41 @@ describe("multimodal content contracts", () => {
 
   it("enforces byte, count, and audio duration bounds", () => {
     assert.throws(
-      () => assertMediaBlocksWithinBounds([
-        { type: "file", mediaType: "application/pdf", data: "a".repeat(40_000_000) },
-      ], { maxItemBytes: 1_000 }),
+      () =>
+        assertMediaBlocksWithinBounds([{ type: "file", mediaType: "application/pdf", data: "a".repeat(40_000_000) }], {
+          maxItemBytes: 1_000,
+        }),
       (error: unknown) => error instanceof MediaContentError && error.code === "item_too_large",
     );
     assert.throws(
-      () => assertMediaBlocksWithinBounds(
-        Array.from({ length: 40 }, (_, index) => ({
-          type: "file" as const,
-          mediaType: "application/pdf",
-          name: String(index),
-          data: tinyPdfBase64,
-        })),
-        { maxItems: 2 },
-      ),
+      () =>
+        assertMediaBlocksWithinBounds(
+          Array.from({ length: 40 }, (_, index) => ({
+            type: "file" as const,
+            mediaType: "application/pdf",
+            name: String(index),
+            data: tinyPdfBase64,
+          })),
+          { maxItems: 2 },
+        ),
       (error: unknown) => error instanceof MediaContentError && error.code === "too_many_items",
     );
     assert.throws(
-      () => assertMediaBlocksWithinBounds([
-        { type: "audio", mediaType: "audio/wav", data: tinyWavBase64, durationMs: DEFAULT_MAX_AUDIO_DURATION_MS + 1 },
-      ]),
+      () =>
+        assertMediaBlocksWithinBounds([
+          { type: "audio", mediaType: "audio/wav", data: tinyWavBase64, durationMs: DEFAULT_MAX_AUDIO_DURATION_MS + 1 },
+        ]),
       (error: unknown) => error instanceof MediaContentError && error.code === "audio_too_long",
     );
     assert.throws(
-      () => assertMediaBlocksWithinBounds([
-        { type: "file", mediaType: "application/pdf", data: tinyPdfBase64 },
-        { type: "file", mediaType: "application/pdf", data: tinyPdfBase64 },
-      ], { maxItemBytes: tinyPdf.byteLength + 10, maxRequestBytes: tinyPdf.byteLength + 5 }),
+      () =>
+        assertMediaBlocksWithinBounds(
+          [
+            { type: "file", mediaType: "application/pdf", data: tinyPdfBase64 },
+            { type: "file", mediaType: "application/pdf", data: tinyPdfBase64 },
+          ],
+          { maxItemBytes: tinyPdf.byteLength + 10, maxRequestBytes: tinyPdf.byteLength + 5 },
+        ),
       (error: unknown) => error instanceof MediaContentError && error.code === "request_too_large",
     );
   });
@@ -158,7 +162,11 @@ describe("multimodal content contracts", () => {
       "http://[::ffff:127.0.0.1]/file",
       "http://[::ffff:10.0.0.1]/file",
     ]) {
-      assert.throws(() => assertSsrfAllowedUrl(url), (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied", url);
+      assert.throws(
+        () => assertSsrfAllowedUrl(url),
+        (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+        url,
+      );
     }
     assert.doesNotThrow(() => assertSsrfAllowedUrl("https://CDN.EXAMPLE.TEST./file.pdf"));
     assert.doesNotThrow(() => assertSsrfAllowedUrl("https://93.184.216.34/file.pdf"));
@@ -196,12 +204,13 @@ describe("multimodal content contracts", () => {
       [{ address: "::ffff:127.0.0.1", family: 6 as const }],
     ]) {
       await assert.rejects(
-        () => resolveMediaContentBlock(block, {
-          resolveHostname: async () => answers,
-          requestUrl: async () => {
-            assert.fail("request must not run for private DNS answers");
-          },
-        }),
+        () =>
+          resolveMediaContentBlock(block, {
+            resolveHostname: async () => answers,
+            requestUrl: async () => {
+              assert.fail("request must not run for private DNS answers");
+            },
+          }),
         (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
       );
     }
@@ -214,29 +223,37 @@ describe("multimodal content contracts", () => {
       url: "https://media.example.test/report.pdf",
     };
     await assert.rejects(
-      () => resolveMediaContentBlock(block, { resolveHostname: async () => { throw new Error("lookup failed"); } }),
+      () =>
+        resolveMediaContentBlock(block, {
+          resolveHostname: async () => {
+            throw new Error("lookup failed");
+          },
+        }),
       (error: unknown) => error instanceof MediaContentError && error.code === "fetch_failed",
     );
     await assert.rejects(
-      () => resolveMediaContentBlock(block, {
-        resolveHostname: async () => Array.from({ length: 33 }, () => ({ address: "93.184.216.34", family: 4 as const })),
-      }),
+      () =>
+        resolveMediaContentBlock(block, {
+          resolveHostname: async () => Array.from({ length: 33 }, () => ({ address: "93.184.216.34", family: 4 as const })),
+        }),
       (error: unknown) => error instanceof MediaContentError && error.code === "fetch_failed",
     );
     await assert.rejects(
-      () => resolveMediaContentBlock(block, {
-        bounds: { fetchTimeoutMs: 5 },
-        resolveHostname: () => new Promise(() => {}),
-      }),
+      () =>
+        resolveMediaContentBlock(block, {
+          bounds: { fetchTimeoutMs: 5 },
+          resolveHostname: () => new Promise(() => {}),
+        }),
       (error: unknown) => error instanceof MediaContentError && error.code === "fetch_timeout",
     );
     const controller = new AbortController();
     controller.abort(new Error("stop lookup"));
     await assert.rejects(
-      () => resolveMediaContentBlock(block, {
-        signal: controller.signal,
-        resolveHostname: async () => [{ address: "93.184.216.34", family: 4 }],
-      }),
+      () =>
+        resolveMediaContentBlock(block, {
+          signal: controller.signal,
+          resolveHostname: async () => [{ address: "93.184.216.34", family: 4 }],
+        }),
       /stop lookup/,
     );
   });
@@ -259,14 +276,21 @@ describe("multimodal content contracts", () => {
 
     let resolutions = 0;
     await assert.rejects(
-      () => resolveMediaContentBlocks(Array.from({ length: 33 }, (_, index) => ({
-        type: "file" as const,
-        mediaType: "application/octet-stream",
-        url: `https://example.com/${index}`,
-      })), {
-        resolveHostname: async () => { resolutions += 1; return [{ address: "93.184.216.34", family: 4 }]; },
-        requestUrl: async () => new Uint8Array(),
-      }),
+      () =>
+        resolveMediaContentBlocks(
+          Array.from({ length: 33 }, (_, index) => ({
+            type: "file" as const,
+            mediaType: "application/octet-stream",
+            url: `https://example.com/${index}`,
+          })),
+          {
+            resolveHostname: async () => {
+              resolutions += 1;
+              return [{ address: "93.184.216.34", family: 4 }];
+            },
+            requestUrl: async () => new Uint8Array(),
+          },
+        ),
       (error: unknown) => error instanceof MediaContentError && error.code === "too_many_items",
     );
     assert.equal(resolutions, 0);
@@ -287,18 +311,20 @@ describe("multimodal content contracts", () => {
       UnsupportedModalityError,
     );
     assert.doesNotThrow(() => assertModelSupportsContentBlocks(model, [{ type: "text", text: "hello" }]));
-    assert.doesNotThrow(() => assertModelSupportsContentBlocks(
-      { provider: "demo", model: "undeclared" },
-      [{ type: "audio", mediaType: "audio/wav", data: tinyWavBase64 }],
-    ));
+    assert.doesNotThrow(() =>
+      assertModelSupportsContentBlocks({ provider: "demo", model: "undeclared" }, [
+        { type: "audio", mediaType: "audio/wav", data: tinyWavBase64 },
+      ]),
+    );
   });
 
   it("assembleProviderInput rejects unsupported modalities before provider calls", async () => {
     await assert.rejects(
-      () => assembleProviderInput({
-        model: { provider: "demo", model: "text-only", capabilities: { input: ["text"] } },
-        input: [{ role: "user", content: [{ type: "document", mediaType: "application/pdf", data: tinyPdfBase64 }] }],
-      }),
+      () =>
+        assembleProviderInput({
+          model: { provider: "demo", model: "text-only", capabilities: { input: ["text"] } },
+          input: [{ role: "user", content: [{ type: "document", mediaType: "application/pdf", data: tinyPdfBase64 }] }],
+        }),
       UnsupportedModalityError,
     );
   });
@@ -307,15 +333,16 @@ describe("multimodal content contracts", () => {
     const controller = new AbortController();
     controller.abort(new Error("stop"));
     await assert.rejects(
-      () => resolveMediaContentBlock(
-        { type: "file", mediaType: "application/pdf", url: "https://cdn.example.test/report.pdf" },
-        {
-          fetch: async () => {
-            throw new Error("fetch should not run");
+      () =>
+        resolveMediaContentBlock(
+          { type: "file", mediaType: "application/pdf", url: "https://cdn.example.test/report.pdf" },
+          {
+            fetch: async () => {
+              throw new Error("fetch should not run");
+            },
+            signal: controller.signal,
           },
-          signal: controller.signal,
-        },
-      ),
+        ),
       /stop|aborted/i,
     );
   });

@@ -1,19 +1,18 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   assembleProviderInput,
-  createSecretRedactor,
-  redactProviderRequest,
   type ContextBlock,
+  createSecretRedactor,
   type InstructionInjector,
   type Message,
   type ProviderRequest,
+  redactProviderRequest,
 } from "../index.js";
 
 const MODEL = { provider: "mock", model: "demo" };
 const text = (m: Message) => m.content.find((p) => p.type === "text")?.text ?? "";
-const systemTexts = (r: ProviderRequest) =>
-  r.messages.filter((m) => m.role === "system").map(text);
+const systemTexts = (r: ProviderRequest) => r.messages.filter((m) => m.role === "system").map(text);
 const blockIds = (blocks: readonly ContextBlock[] | undefined) => (blocks ?? []).map((b) => b.id).filter(Boolean);
 
 function injectedRequest(opts: {
@@ -61,7 +60,11 @@ describe("assembleProviderInput instruction injector integration (Phase 30 Task 
   it("on_input with predicate contributes only when predicate matches", async () => {
     const schemaAware: InstructionInjector = {
       name: "schema-aware",
-      apply: () => ({ instructions: "Use the schema", when: "on_input", predicate: (ctx) => ctx.input.some((m) => m.content.some((b) => b.type === "text" && b.text.includes("schema"))) }),
+      apply: () => ({
+        instructions: "Use the schema",
+        when: "on_input",
+        predicate: (ctx) => ctx.input.some((m) => m.content.some((b) => b.type === "text" && b.text.includes("schema"))),
+      }),
     };
     const matching = await injectedRequest({ injectors: [schemaAware], turn: 1, input: "define the schema" });
     const nonMatching = await injectedRequest({ injectors: [schemaAware], turn: 1, input: "hello" });
@@ -87,10 +90,12 @@ describe("assembleProviderInput instruction injector integration (Phase 30 Task 
 
   it("injector contextBlocks merge after host+skill provider blocks", async () => {
     const host: { name: string; resolve: () => readonly ContextBlock[] } = {
-      name: "host", resolve: () => [{ id: "host-block", content: "host" }],
+      name: "host",
+      resolve: () => [{ id: "host-block", content: "host" }],
     };
     const inj: InstructionInjector = {
-      name: "extra", apply: () => ({ contextBlocks: [{ id: "inj-block", content: "inj" }], when: "every_turn" }),
+      name: "extra",
+      apply: () => ({ contextBlocks: [{ id: "inj-block", content: "inj" }], when: "every_turn" }),
     };
     const r = await injectedRequest({ injectors: [inj], contextProviders: [host], turn: 1 });
     const ids = blockIds(r.context);
@@ -124,7 +129,8 @@ describe("assembleProviderInput instruction injector integration (Phase 30 Task 
   it("injector-produced text is passed through redactProviderRequest (secret redacted)", async () => {
     const secret = "SUPERSECRET-key";
     const leaky: InstructionInjector = {
-      name: "leak", apply: () => ({ instructions: `token=${secret}`, when: "every_turn" }),
+      name: "leak",
+      apply: () => ({ instructions: `token=${secret}`, when: "every_turn" }),
     };
     const r = await injectedRequest({ injectors: [leaky], turn: 1 });
     const redacted = redactProviderRequest(r, createSecretRedactor([secret]));
@@ -133,7 +139,10 @@ describe("assembleProviderInput instruction injector integration (Phase 30 Task 
 
   it("contribution fields beyond instructions/contextBlocks/when/predicate are ignored (no privilege)", async () => {
     // ponytail: an injector that returns extra fields grants nothing — only text/blocks honored.
-    const rogue = { name: "rogue", apply: () => ({ instructions: "ok", when: "every_turn", tools: ["rm-rf"] } as never) } as InstructionInjector;
+    const rogue = {
+      name: "rogue",
+      apply: () => ({ instructions: "ok", when: "every_turn", tools: ["rm-rf"] }) as never,
+    } as InstructionInjector;
     const r = await injectedRequest({ injectors: [rogue], turn: 1 });
     assert.ok(systemTexts(r).some((t) => t.includes("ok")));
     assert.equal(r.tools, undefined, "injector must not grant tools");

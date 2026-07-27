@@ -1,12 +1,41 @@
-import type { AIProvider, AudioContent, ContentBlock, CredentialValueSource, DocumentContent, FileContent, JsonObject, MediaContentBlock, Message, ModelConfig, ProviderRequest, ProviderRequestOptions, ResolvedMediaContent, ToolDefinition, Usage } from "@arnilo/prism";
-import { assertStructuredOutputRequestSupported, providerContinuationRequired, providerDone, providerError, providerTextDelta, providerThinkingDelta, providerToolCall, providerToolCallDelta, providerUsage, resolveCredentialValue, toolCallFromArgumentsText } from "@arnilo/prism";
+import type {
+  AIProvider,
+  AudioContent,
+  ContentBlock,
+  CredentialValueSource,
+  DocumentContent,
+  FileContent,
+  JsonObject,
+  MediaContentBlock,
+  Message,
+  ModelConfig,
+  ProviderRequest,
+  ProviderRequestOptions,
+  ResolvedMediaContent,
+  ToolDefinition,
+  Usage,
+} from "@arnilo/prism";
+import {
+  assertStructuredOutputRequestSupported,
+  providerContinuationRequired,
+  providerDone,
+  providerError,
+  providerTextDelta,
+  providerThinkingDelta,
+  providerToolCall,
+  providerToolCallDelta,
+  providerUsage,
+  resolveCredentialValue,
+  toolCallFromArgumentsText,
+} from "@arnilo/prism";
 import {
   bytesToBase64,
   defaultProviderFilename,
   openAIAudioFormat,
   resolveProviderMediaMessages,
   serializeOpenAIResponsesInputAudio,
-  serializeOpenAIResponsesInputFile } from "@arnilo/prism/providers/media";
+  serializeOpenAIResponsesInputFile,
+} from "@arnilo/prism/providers/media";
 import { applyOpenAIResponsesStructuredOutput } from "@arnilo/prism/providers/openai";
 import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { promptCacheKey, promptCacheRetention } from "./cache.js";
@@ -20,7 +49,11 @@ export interface OpenAIResponsesProviderOptions {
   readonly uploadManager?: OpenAIFileUploadManager;
 }
 
-interface ToolAccumulator { id?: string; name?: string; argumentsText: string }
+interface ToolAccumulator {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+}
 
 const MAX_CONTINUATION_HOPS = 8;
 const MAX_CONTINUATION_CURSOR_BYTES = 4 * 1024;
@@ -42,20 +75,25 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
       let token: string | undefined;
       const secrets: (string | undefined)[] = [];
       let usage: Usage | undefined;
-      const uploadManager = options.uploadManager ?? createOpenAIFileUploadManager({
-        providerId: id,
-        baseUrl: options.baseUrl,
-        apiKey: options.apiKey,
-        fetch: options.fetch,
-        scope: {
-          sessionId: request.options?.sessionId,
-          runId: typeof request.metadata?.runId === "string" ? request.metadata.runId : undefined,
-          tenantId: typeof request.metadata?.tenantId === "string" ? request.metadata.tenantId : undefined}});
+      const uploadManager =
+        options.uploadManager ??
+        createOpenAIFileUploadManager({
+          providerId: id,
+          baseUrl: options.baseUrl,
+          apiKey: options.apiKey,
+          fetch: options.fetch,
+          scope: {
+            sessionId: request.options?.sessionId,
+            runId: typeof request.metadata?.runId === "string" ? request.metadata.runId : undefined,
+            tenantId: typeof request.metadata?.tenantId === "string" ? request.metadata.tenantId : undefined,
+          },
+        });
       const mediaContext: ResponsesMediaContext = {
         model: request.model,
         fetch: options.fetch,
         signal: request.signal,
-        uploadManager};
+        uploadManager,
+      };
       // ponytail: continuation auto-resumes internally up to 8 hops; the host sees a
       // `continuation_required` event for telemetry/AG-UI but never drives resume. Explicit
       // `options.continuation.cursor` seeds the first hop (e.g. resume an incomplete response).
@@ -73,15 +111,20 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
             secrets.push(token);
           }
-          const response = await (options.fetch ?? fetch)(`${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/responses`, {
-            method: "POST",
-            headers: {
-              ...request.options?.headers,
-              "content-type": "application/json",
-              ...(token ? { authorization: `Bearer ${token}` } : {}),
-              ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {})},
-            body: JSON.stringify(body),
-            signal: request.signal});
+          const response = await (options.fetch ?? fetch)(
+            `${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/responses`,
+            {
+              method: "POST",
+              headers: {
+                ...request.options?.headers,
+                "content-type": "application/json",
+                ...(token ? { authorization: `Bearer ${token}` } : {}),
+                ...(request.options?.sessionId ? { "x-client-request-id": request.options.sessionId } : {}),
+              },
+              body: JSON.stringify(body),
+              signal: request.signal,
+            },
+          );
           if (!response.ok) {
             return yield providerError(
               new Error(`OpenAI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
@@ -100,103 +143,112 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             if (typeof event.delta === "string" && event.type?.includes("output_text")) yield providerTextDelta(event.delta);
             if (typeof event.delta === "string" && event.type?.includes("reasoning")) yield providerThinkingDelta(event.delta);
 
-          // Official streaming: https://developers.openai.com/api/reference/resources/responses/streaming-events/
-          // response.output_item.added carries the function_call item (call_id, name);
-          // response.function_call_arguments.delta carries a raw string delta.
-          if (event.type === "response.output_item.added" && isHostedCallItem(event.item)) {
-            // Provider-hosted tools (web_search_call, file_search_call, code_interpreter_call,
-            // computer_call, mcp_call) are executed server-side; the assistant text that
-            // follows already incorporates their effect. Recorded as provider-hosted
-            // tool_calls so the transcript/telemetry shows the invocation, but the host never
-            // dispatches them or sends a tool_result (see agent-loops.dispatchableToolCalls).
-            const hosted = event.item as { id?: string; type?: string };
-            const hostedId = hosted.id ?? "hosted:" + (event.output_index ?? 0);
-            yield providerToolCall({ type: "tool_call", id: hostedId, name: hosted.type ?? "hosted", arguments: {}, authority: "provider-hosted" });
-          } else if (event.type === "response.output_item.added" && isFunctionCallItem(event.item)) {
-            const index = event.output_index ?? 0;
-            const item = event.item;
-            const current = tools.get(index) ?? { argumentsText: "" };
-            current.id = item.call_id ?? item.id ?? current.id;
-            current.name = item.name ?? current.name;
-            if (typeof item.arguments === "string" && item.arguments.length > 0) current.argumentsText = item.arguments;
-            tools.set(index, current);
-            yield providerToolCallDelta({
-              index,
-              id: current.id,
-              name: current.name,
-              argumentsText: typeof item.arguments === "string" && item.arguments.length > 0 ? item.arguments : undefined});
-          } else if (event.type === "response.function_call_arguments.delta" && typeof event.delta === "string") {
-            const index = event.output_index ?? 0;
-            const current = tools.get(index) ?? { argumentsText: "" };
-            current.argumentsText += event.delta;
-            tools.set(index, current);
-            yield providerToolCallDelta({ index, id: current.id, name: current.name, argumentsText: event.delta });
-          } else if (event.type === "response.function_call_arguments.done" && typeof event.arguments === "string") {
-            const index = event.output_index ?? 0;
-            const current = tools.get(index) ?? { argumentsText: "" };
-            current.argumentsText = event.arguments;
-            tools.set(index, current);
-          } else if (isLegacyToolDelta(event.item ?? event.delta)) {
-            // Compat for older object-shaped fixtures; official wire uses the branches above.
-            const tool = (event.item ?? event.delta) as {
-              index?: number;
-              id?: string;
-              call_id?: string;
-              name?: string;
-              arguments?: string;
-              arguments_delta?: string;
-            };
-            const index = tool.index ?? event.output_index ?? 0;
-            const current = tools.get(index) ?? { argumentsText: "" };
-            current.id = tool.call_id ?? tool.id ?? current.id;
-            current.name = tool.name ?? current.name;
-            current.argumentsText += tool.arguments ?? tool.arguments_delta ?? "";
-            tools.set(index, current);
-            yield providerToolCallDelta({
-              index,
-              id: current.id,
-              name: current.name,
-              argumentsText: tool.arguments ?? tool.arguments_delta});
-          }
+            // Official streaming: https://developers.openai.com/api/reference/resources/responses/streaming-events/
+            // response.output_item.added carries the function_call item (call_id, name);
+            // response.function_call_arguments.delta carries a raw string delta.
+            if (event.type === "response.output_item.added" && isHostedCallItem(event.item)) {
+              // Provider-hosted tools (web_search_call, file_search_call, code_interpreter_call,
+              // computer_call, mcp_call) are executed server-side; the assistant text that
+              // follows already incorporates their effect. Recorded as provider-hosted
+              // tool_calls so the transcript/telemetry shows the invocation, but the host never
+              // dispatches them or sends a tool_result (see agent-loops.dispatchableToolCalls).
+              const hosted = event.item as { id?: string; type?: string };
+              const hostedId = hosted.id ?? `hosted:${event.output_index ?? 0}`;
+              yield providerToolCall({
+                type: "tool_call",
+                id: hostedId,
+                name: hosted.type ?? "hosted",
+                arguments: {},
+                authority: "provider-hosted",
+              });
+            } else if (event.type === "response.output_item.added" && isFunctionCallItem(event.item)) {
+              const index = event.output_index ?? 0;
+              const item = event.item;
+              const current = tools.get(index) ?? { argumentsText: "" };
+              current.id = item.call_id ?? item.id ?? current.id;
+              current.name = item.name ?? current.name;
+              if (typeof item.arguments === "string" && item.arguments.length > 0) current.argumentsText = item.arguments;
+              tools.set(index, current);
+              yield providerToolCallDelta({
+                index,
+                id: current.id,
+                name: current.name,
+                argumentsText: typeof item.arguments === "string" && item.arguments.length > 0 ? item.arguments : undefined,
+              });
+            } else if (event.type === "response.function_call_arguments.delta" && typeof event.delta === "string") {
+              const index = event.output_index ?? 0;
+              const current = tools.get(index) ?? { argumentsText: "" };
+              current.argumentsText += event.delta;
+              tools.set(index, current);
+              yield providerToolCallDelta({ index, id: current.id, name: current.name, argumentsText: event.delta });
+            } else if (event.type === "response.function_call_arguments.done" && typeof event.arguments === "string") {
+              const index = event.output_index ?? 0;
+              const current = tools.get(index) ?? { argumentsText: "" };
+              current.argumentsText = event.arguments;
+              tools.set(index, current);
+            } else if (isLegacyToolDelta(event.item ?? event.delta)) {
+              // Compat for older object-shaped fixtures; official wire uses the branches above.
+              const tool = (event.item ?? event.delta) as {
+                index?: number;
+                id?: string;
+                call_id?: string;
+                name?: string;
+                arguments?: string;
+                arguments_delta?: string;
+              };
+              const index = tool.index ?? event.output_index ?? 0;
+              const current = tools.get(index) ?? { argumentsText: "" };
+              current.id = tool.call_id ?? tool.id ?? current.id;
+              current.name = tool.name ?? current.name;
+              current.argumentsText += tool.arguments ?? tool.arguments_delta ?? "";
+              tools.set(index, current);
+              yield providerToolCallDelta({
+                index,
+                id: current.id,
+                name: current.name,
+                argumentsText: tool.arguments ?? tool.arguments_delta,
+              });
+            }
 
-          usage = toUsage(event.response?.usage ?? event.usage) ?? usage;
-          if (event.type?.endsWith("completed") && usage) yield providerUsage(usage);
-        }
-        for (const call of tools.values()) {
-          if (call.id && call.name) {
-            yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
+            usage = toUsage(event.response?.usage ?? event.usage) ?? usage;
+            if (event.type?.endsWith("completed") && usage) yield providerUsage(usage);
           }
-        }
-        if (incomplete) {
-          if (!responseId) {
-            yield providerError(new Error("OpenAI incomplete response had no continuation cursor"), secrets);
-            completed = true;
-            break;
+          for (const call of tools.values()) {
+            if (call.id && call.name) {
+              yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
+            }
           }
-          const nextCursor = continuationCursor(responseId)!;
-          if (seenCursors.has(nextCursor)) {
-            yield providerError(new Error("OpenAI returned a duplicate continuation cursor"), secrets);
-            completed = true;
-            break;
+          if (incomplete) {
+            if (!responseId) {
+              yield providerError(new Error("OpenAI incomplete response had no continuation cursor"), secrets);
+              completed = true;
+              break;
+            }
+            const nextCursor = continuationCursor(responseId)!;
+            if (seenCursors.has(nextCursor)) {
+              yield providerError(new Error("OpenAI returned a duplicate continuation cursor"), secrets);
+              completed = true;
+              break;
+            }
+            seenCursors.add(nextCursor);
+            // Long response truncated by max_output_tokens: emit the opaque cursor and
+            // self-continue with previous_response_id. The bounded loop fails closed below.
+            yield providerContinuationRequired(nextCursor, "incomplete");
+            cursor = nextCursor;
+            continue;
           }
-          seenCursors.add(nextCursor);
-          // Long response truncated by max_output_tokens: emit the opaque cursor and
-          // self-continue with previous_response_id. The bounded loop fails closed below.
-          yield providerContinuationRequired(nextCursor, "incomplete");
-          cursor = nextCursor;
-          continue;
+          yield providerDone(usage);
+          completed = true;
+          break;
         }
-        yield providerDone(usage);
-        completed = true;
-        break;
-      }
         if (!completed) yield providerError(new Error("OpenAI continuation hop cap exceeded"), secrets);
       } catch (error) {
         yield providerError(error, secrets);
       } finally {
         await mediaContext.uploadManager.cleanup(request.signal);
       }
-    }};
+    },
+  };
 }
 
 function continuationCursor(cursor: string | undefined): string | undefined {
@@ -212,7 +264,8 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const resolvedMedia = await resolveProviderMediaMessages(request.messages, request.model, {
     fetch: mediaContext.fetch,
-    signal: mediaContext.signal});
+    signal: mediaContext.signal,
+  });
   const resolvedContext = { ...mediaContext, resolvedMedia };
   const optionsCompat = { ...(request.options?.compat ?? {}) } as Record<string, unknown>;
   const reasoning = resolveOpenAIReasoning(request.model, request.options);
@@ -232,7 +285,8 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
     ...optionsCompat,
     ...(reasoning ? { reasoning } : {}),
     ...(request.options?.extra ?? {}),
-    ...(cursor ? { previous_response_id: cursor } : {})};
+    ...(cursor ? { previous_response_id: cursor } : {}),
+  };
   applyOpenAIResponsesStructuredOutput(payload, request.options?.structuredOutput);
   return clean(payload);
 }
@@ -243,18 +297,18 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
  * are top-level items with `call_id` (not nested message content with `id`).
  * @see https://developers.openai.com/api/docs/guides/function-calling
  */
-async function toResponsesInput(
-  messages: readonly Message[],
-  mediaContext: ResponsesMediaContext,
-): Promise<JsonObject[]> {
+async function toResponsesInput(messages: readonly Message[], mediaContext: ResponsesMediaContext): Promise<JsonObject[]> {
   const items: JsonObject[] = [];
   for (const message of messages) {
     if (message.role === "tool") {
       const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
-      items.push(clean({
-        type: "function_call_output",
-        call_id: result?.toolCallId ?? "",
-        output: result ? JSON.stringify(result.result ?? result.error ?? null) : ""}));
+      items.push(
+        clean({
+          type: "function_call_output",
+          call_id: result?.toolCallId ?? "",
+          output: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+        }),
+      );
       continue;
     }
 
@@ -265,17 +319,18 @@ async function toResponsesInput(
         if (part.type === "text") {
           contentParts.push({ type: "output_text", text: part.text });
         } else if (part.type === "thinking") {
-          // Bare thinking text cannot round-trip without an encrypted Responses reasoning item.
-          continue;
         } else if (part.type === "tool_call") {
           // Provider-hosted calls (web_search_call, etc.) were executed server-side; resending
           // them as function_call would ask OpenAI to re-run them. Skip when serializing.
           if (part.authority === "provider-hosted") continue;
-          functionCalls.push(clean({
-            type: "function_call",
-            call_id: part.id,
-            name: part.name,
-            arguments: JSON.stringify(part.arguments)}));
+          functionCalls.push(
+            clean({
+              type: "function_call",
+              call_id: part.id,
+              name: part.name,
+              arguments: JSON.stringify(part.arguments),
+            }),
+          );
         } else if (part.type === "tool_result") {
           throw new Error("OpenAI Responses tool_result blocks must appear in role=tool messages");
         } else if (part.type === "image" || part.type === "audio" || part.type === "file" || part.type === "document") {
@@ -299,11 +354,14 @@ async function toResponsesInput(
         contentParts.push(await toResponsesFile(part, mediaContext));
       } else if (part.type === "tool_call") {
         if (part.authority === "provider-hosted") continue;
-        items.push(clean({
-          type: "function_call",
-          call_id: part.id,
-          name: part.name,
-          arguments: JSON.stringify(part.arguments)}));
+        items.push(
+          clean({
+            type: "function_call",
+            call_id: part.id,
+            name: part.name,
+            arguments: JSON.stringify(part.arguments),
+          }),
+        );
       } else if (part.type === "tool_result") {
         throw new Error("OpenAI Responses tool_result blocks must appear in role=tool messages");
       }
@@ -330,28 +388,18 @@ function toResponsesImage(resolved: ResolvedMediaContent): JsonObject {
   return { type: "input_image", image_url: `data:${resolved.mediaType};base64,${bytesToBase64(resolved.bytes)}` };
 }
 
-async function toResponsesAudio(
-  part: AudioContent,
-  mediaContext: ResponsesMediaContext,
-): Promise<JsonObject> {
+async function toResponsesAudio(part: AudioContent, mediaContext: ResponsesMediaContext): Promise<JsonObject> {
   const resolved = mediaContext.resolvedMedia!.get(part)!;
   return serializeOpenAIResponsesInputAudio({
     data: bytesToBase64(resolved.bytes),
-    format: openAIAudioFormat(resolved.mediaType)});
+    format: openAIAudioFormat(resolved.mediaType),
+  });
 }
 
-async function toResponsesFile(
-  part: FileContent | DocumentContent,
-  mediaContext: ResponsesMediaContext,
-): Promise<JsonObject> {
+async function toResponsesFile(part: FileContent | DocumentContent, mediaContext: ResponsesMediaContext): Promise<JsonObject> {
   const resolved = mediaContext.resolvedMedia!.get(part)!;
   const filename = defaultProviderFilename(part, part.type === "document" ? "document.pdf" : "file.bin");
-  const wire = await mediaContext.uploadManager.resolveFileWire(
-    resolved.mediaType,
-    resolved.bytes,
-    filename,
-    mediaContext.signal,
-  );
+  const wire = await mediaContext.uploadManager.resolveFileWire(resolved.mediaType, resolved.bytes, filename, mediaContext.signal);
   return serializeOpenAIResponsesInputFile(wire);
 }
 
@@ -365,7 +413,8 @@ function toUsage(usage: OpenAIUsage | undefined): Usage | undefined {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
     totalTokens: usage.total_tokens,
-    cacheReadTokens: usage.input_tokens_details?.cached_tokens};
+    cacheReadTokens: usage.input_tokens_details?.cached_tokens,
+  };
 }
 
 function isHostedCallItem(value: unknown): value is { readonly id?: string; readonly type?: string } {
@@ -393,10 +442,12 @@ function isLegacyToolDelta(value: unknown): value is {
   arguments?: string;
   arguments_delta?: string;
 } {
-  return !!value
-    && typeof value === "object"
-    && ("arguments" in value || "arguments_delta" in value)
-    && ("name" in value || "id" in value || "call_id" in value);
+  return (
+    !!value &&
+    typeof value === "object" &&
+    ("arguments" in value || "arguments_delta" in value) &&
+    ("name" in value || "id" in value || "call_id" in value)
+  );
 }
 
 function clean(value: Record<string, unknown>): JsonObject {

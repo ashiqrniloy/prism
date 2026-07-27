@@ -1,24 +1,29 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createAgent, createMockProvider, createProviderTurnMetadata, createToolRegistry, dispatchToolCall, providerDone, providerTextDelta, readProviderHttpStatus } from "../index.js";
+import { describe, it } from "node:test";
 import type { AgentEvent, ProviderRequest } from "../index.js";
+import {
+  createAgent,
+  createMockProvider,
+  createProviderTurnMetadata,
+  createToolRegistry,
+  dispatchToolCall,
+  providerDone,
+  providerTextDelta,
+  readProviderHttpStatus,
+} from "../index.js";
 
 describe("observability helpers", () => {
   it("createProviderTurnMetadata reads requestId from metadata then sessionId", () => {
     const model = { provider: "mock", model: "demo" };
-    const fromMetadata = createProviderTurnMetadata(
-      { model, messages: [], metadata: { requestId: "req_meta" } },
-      "mock",
-      { attempt: 2, latencyMs: 10 },
-    );
+    const fromMetadata = createProviderTurnMetadata({ model, messages: [], metadata: { requestId: "req_meta" } }, "mock", {
+      attempt: 2,
+      latencyMs: 10,
+    });
     assert.equal(fromMetadata.requestId, "req_meta");
     assert.equal(fromMetadata.attempt, 2);
     assert.equal(fromMetadata.latencyMs, 10);
 
-    const fromSession = createProviderTurnMetadata(
-      { model, messages: [], options: { sessionId: "sess_1" } } as ProviderRequest,
-      "mock",
-    );
+    const fromSession = createProviderTurnMetadata({ model, messages: [], options: { sessionId: "sess_1" } } as ProviderRequest, "mock");
     assert.equal(fromSession.requestId, "sess_1");
   });
 

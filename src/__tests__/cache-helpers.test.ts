@@ -31,28 +31,29 @@ describe("cache helpers", () => {
   });
 
   it("applies cache_control only to selected breakpoint messages", () => {
-    const stamped = applyCacheControl(messages, [
-      { location: "system_prompt" },
-      { location: "last_user_message" },
-      { location: "message_id", messageId: "tool" },
-    ], { maxBreakpoints: 2, ttl: "1h" });
+    const stamped = applyCacheControl(
+      messages,
+      [{ location: "system_prompt" }, { location: "last_user_message" }, { location: "message_id", messageId: "tool" }],
+      { maxBreakpoints: 2, ttl: "1h" },
+    );
 
-    assert.deepEqual(stamped.map((message) => message.content.at(-1)?.cache_control), [
-      { type: "ephemeral", ttl: "1h" },
-      undefined,
-      undefined,
-      { type: "ephemeral", ttl: "1h" },
-    ]);
+    assert.deepEqual(
+      stamped.map((message) => message.content.at(-1)?.cache_control),
+      [{ type: "ephemeral", ttl: "1h" }, undefined, undefined, { type: "ephemeral", ttl: "1h" }],
+    );
     assert.equal(messages[0]?.content[0]?.type, "text", "original messages are not mutated");
   });
 
   it("computes cache hit rate and estimated read savings", () => {
     assert.equal(cacheHitRate({ inputTokens: 1000, cacheReadTokens: 800 }), 0.8);
     assert.equal(cacheHitRate({ inputTokens: 0, cacheReadTokens: 1 }), undefined);
-    assert.equal(cacheSavings(
-      { inputTokens: 1_000_000, cacheReadTokens: 500_000 },
-      { provider: "mock", model: "priced", cost: { input: 10, cacheRead: 2, unit: "1M tokens" } },
-    ), 4);
+    assert.equal(
+      cacheSavings(
+        { inputTokens: 1_000_000, cacheReadTokens: 500_000 },
+        { provider: "mock", model: "priced", cost: { input: 10, cacheRead: 2, unit: "1M tokens" } },
+      ),
+      4,
+    );
     assert.equal(cacheSavings({ cacheReadTokens: 1 }, { provider: "mock", model: "free" }), undefined);
   });
 
@@ -68,15 +69,18 @@ describe("cache helpers", () => {
   });
 
   it("reports cache savings and currency from model pricing", () => {
-    assert.deepEqual(cacheUsageReport(
-      { inputTokens: 1_000_000, cacheReadTokens: 500_000, cacheWriteTokens: 1000 },
-      { provider: "mock", model: "priced", cost: { input: 10, cacheRead: 2, unit: "1M tokens", currency: "USD" } },
-    ), {
-      cacheReadTokens: 500_000,
-      cacheWriteTokens: 1000,
-      hitRate: 0.5,
-      estimatedSavings: 4,
-      currency: "USD",
-    });
+    assert.deepEqual(
+      cacheUsageReport(
+        { inputTokens: 1_000_000, cacheReadTokens: 500_000, cacheWriteTokens: 1000 },
+        { provider: "mock", model: "priced", cost: { input: 10, cacheRead: 2, unit: "1M tokens", currency: "USD" } },
+      ),
+      {
+        cacheReadTokens: 500_000,
+        cacheWriteTokens: 1000,
+        hitRate: 0.5,
+        estimatedSavings: 4,
+        currency: "USD",
+      },
+    );
   });
 });

@@ -1,15 +1,26 @@
+import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
+import {
+  agentFingerprint,
+  initialAgentRunState,
+  loadAgentRunState,
+  publicState,
+  type StoredAgentRunState,
+  saveAgentRunState,
+  validateRunStateOptions,
+} from "./agent-run-state.js";
+import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
 import type {
   Agent,
   AgentConfig,
   AgentEvent,
   AgentEventRecord,
+  AgentRunRef,
   AgentRunResult,
   AgentRunResume,
   AgentRunResumeOptions,
   AgentRunResumeStreamOptions,
   AgentRunState,
   AgentRunStateOptions,
-  AgentRunRef,
   AgentSession,
   AgentSessionConfig,
   AIProvider,
@@ -25,7 +36,6 @@ import type {
   ProviderEvent,
   ProviderRequest,
   ProviderRequestPolicy,
-  ProviderResolver,
   ProviderTurnMetadata,
   ProviderTurnResult,
   RetryMiddlewarePayload,
@@ -33,9 +43,9 @@ import type {
   RunLedger,
   RunOptions,
   RunRecord,
+  SessionBranchRead,
   SessionEntry,
   SessionStore,
-  SessionBranchRead,
   Skill,
   SteerOptions,
   SubscribeOptions,
@@ -43,40 +53,40 @@ import type {
   ToolCallContent,
   ToolDefinition,
   ToolRegistry,
-  ToolResult,
   Usage,
   UsageRecord,
 } from "./contracts.js";
-import {
-  AgentRunError,
-  AgentRunStateError,
-  DEFAULT_MAX_PENDING_STEER_BYTES,
-  DEFAULT_MAX_PENDING_STEERS,
-} from "./contracts.js";
-import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
-import { createId } from "./ids.js";
+import { AgentRunError, AgentRunStateError, DEFAULT_MAX_PENDING_STEER_BYTES, DEFAULT_MAX_PENDING_STEERS } from "./contracts.js";
 import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "./guardrails.js";
+import { type AgentIdentity, identityTelemetryAttributes, ownershipFromIdentity, resolveRunIdentity } from "./identity.js";
+import { createId } from "./ids.js";
+import { type AgentInput, assembleProviderInput } from "./input.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
-import { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
-import { assembleProviderInput, type AgentInput } from "./input.js";
 import { providerToolCallDeltaContent, reconstructToolCallDeltas } from "./provider-events.js";
-import { createProviderRequestPolicyChain, mergeProviderRequestOptions, normalizeProviderRequestPolicyResult } from "./provider-request-policy.js";
-import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "./structured-output.js";
-import { errorToErrorInfo, redactAgentEvent, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry, type SecretRedactor } from "./redaction.js";
-import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
-import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
-import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext, type SessionContextSnapshot } from "./session-stores.js";
-import { isFlushableRunLedger } from "./run-ledger.js";
-import { createToolRegistry, dispatchToolCall } from "./tools.js";
-import { RunLimitError, RunLimitTracker, resolveRunLimits } from "./run-limits.js";
-import { agentFingerprint, initialAgentRunState, loadAgentRunState, publicState, saveAgentRunState, validateRunStateOptions, type StoredAgentRunState } from "./agent-run-state.js";
-import { resolveActiveSkills } from "./skills.js";
+import { createProviderRequestPolicyChain, normalizeProviderRequestPolicyResult } from "./provider-request-policy.js";
 import {
-  identityTelemetryAttributes,
-  ownershipFromIdentity,
-  resolveRunIdentity,
-  type AgentIdentity,
-} from "./identity.js";
+  errorToErrorInfo,
+  redactAgentEvent,
+  redactProviderRequest,
+  redactRunLedgerRecord,
+  redactSecrets,
+  redactSessionEntry,
+  type SecretRedactor,
+} from "./redaction.js";
+import { createDefaultRetryPolicy, waitForRetry } from "./retry.js";
+import { isFlushableRunLedger } from "./run-ledger.js";
+import { RunLimitError, RunLimitTracker, resolveRunLimits } from "./run-limits.js";
+import {
+  createMemorySessionStore,
+  createSessionEntry,
+  getSessionBranchEntries,
+  rebuildSessionContext,
+  type SessionContextSnapshot,
+} from "./session-stores.js";
+import { resolveActiveSkills } from "./skills.js";
+import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "./structured-output.js";
+import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
+import { createToolRegistry, dispatchToolCall } from "./tools.js";
 
 export function createAgent(config: AgentConfig): Agent {
   return {
@@ -112,7 +122,9 @@ export async function* resumeAgentRunStream(
   const prepared = await prepareAgentRunResume(agent, ref, resume, options, options.signal);
   const subscription = prepared.session.subscribe(options);
   let settled = false;
-  const runPromise = executePreparedAgentRunResume(prepared, options.signal).finally(() => { settled = true; });
+  const runPromise = executePreparedAgentRunResume(prepared, options.signal).finally(() => {
+    settled = true;
+  });
   try {
     for await (const event of subscription) {
       if ("runId" in event && event.runId !== ref.runId) continue;
@@ -128,8 +140,21 @@ export async function* resumeAgentRunStream(
 }
 
 type PreparedAgentRunResume =
-  | { readonly kind: "deny"; readonly session: RuntimeAgentSession; readonly result: AgentRunResult; readonly interruption: import("./contracts.js").AgentRunInterruption; readonly version: number; readonly ownership?: OwnershipScope }
-  | { readonly kind: "approve"; readonly session: RuntimeAgentSession; readonly state: StoredAgentRunState; readonly runState: AgentRunStateOptions; readonly ownership?: OwnershipScope };
+  | {
+      readonly kind: "deny";
+      readonly session: RuntimeAgentSession;
+      readonly result: AgentRunResult;
+      readonly interruption: import("./contracts.js").AgentRunInterruption;
+      readonly version: number;
+      readonly ownership?: OwnershipScope;
+    }
+  | {
+      readonly kind: "approve";
+      readonly session: RuntimeAgentSession;
+      readonly state: StoredAgentRunState;
+      readonly runState: AgentRunStateOptions;
+      readonly ownership?: OwnershipScope;
+    };
 
 async function prepareAgentRunResume(
   agent: Agent,
@@ -140,7 +165,11 @@ async function prepareAgentRunResume(
 ): Promise<PreparedAgentRunResume> {
   throwIfAbortedSignal(signal);
   const { record, state } = await loadAgentRunState(options.checkpoints, ref, options.ownership);
-  if (state.definitionRevision !== options.definitionRevision || state.agentId !== (agent.config.id ?? agent.config.name) || state.fingerprint !== agentFingerprint(agent, options.definitionRevision)) {
+  if (
+    state.definitionRevision !== options.definitionRevision ||
+    state.agentId !== (agent.config.id ?? agent.config.name) ||
+    state.fingerprint !== agentFingerprint(agent, options.definitionRevision)
+  ) {
     throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on resume");
   }
   if (record.version !== resume.expectedVersion || state.status !== "suspended") {
@@ -211,7 +240,10 @@ async function executePreparedAgentRunResume(prepared: PreparedAgentRunResume, s
 
 class AgentRunSuspended extends Error {
   readonly code = "ERR_PRISM_AGENT_RUN_SUSPENDED";
-  constructor(readonly state: AgentRunState, readonly interruption: import("./contracts.js").AgentRunInterruption) {
+  constructor(
+    readonly state: AgentRunState,
+    readonly interruption: import("./contracts.js").AgentRunInterruption,
+  ) {
     super("Agent run suspended");
     this.name = "AgentRunSuspended";
   }
@@ -252,7 +284,12 @@ class RuntimeAgentSession implements AgentSession {
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
   private snapshotGeneration = 0;
-  private snapshotCache?: { readonly leafId?: string; readonly generation: number; readonly expiresAt: number; readonly value: SessionContextSnapshot };
+  private snapshotCache?: {
+    readonly leafId?: string;
+    readonly generation: number;
+    readonly expiresAt: number;
+    readonly value: SessionContextSnapshot;
+  };
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -297,8 +334,17 @@ class RuntimeAgentSession implements AgentSession {
     }
   }
 
-  async resumeDurable(state: StoredAgentRunState, runState: AgentRunStateOptions, ownership?: OwnershipScope, signal?: AbortSignal): Promise<AgentRunResult> {
-    return this.runInternal(state.input ?? [], { runState, ownership, signal }, state.runId, { options: runState, state, version: state.version! });
+  async resumeDurable(
+    state: StoredAgentRunState,
+    runState: AgentRunStateOptions,
+    ownership?: OwnershipScope,
+    signal?: AbortSignal,
+  ): Promise<AgentRunResult> {
+    return this.runInternal(state.input ?? [], { runState, ownership, signal }, state.runId, {
+      options: runState,
+      state,
+      version: state.version!,
+    });
   }
 
   async recordDurableDenial(
@@ -321,18 +367,20 @@ class RuntimeAgentSession implements AgentSession {
     }
   }
 
-  private async runInternal(
-    input: AgentInput,
-    options: RunOptions,
-    runId: string,
-    resumed?: ActiveDurableRun,
-  ): Promise<AgentRunResult> {
-    if (this.agent.config.secure && (options.redactor !== undefined || options.ownership !== undefined || options.validate !== undefined || options.runState !== undefined)) {
+  private async runInternal(input: AgentInput, options: RunOptions, runId: string, resumed?: ActiveDurableRun): Promise<AgentRunResult> {
+    if (
+      this.agent.config.secure &&
+      (options.redactor !== undefined ||
+        options.ownership !== undefined ||
+        options.validate !== undefined ||
+        options.runState !== undefined)
+    ) {
       throw new AgentRunStateError("Secure agent defaults cannot be replaced per run");
     }
-    const requestedLimits = options.maxToolRounds === undefined
-      ? options.limits
-      : { ...options.limits, maxToolRounds: Math.min(options.maxToolRounds, options.limits?.maxToolRounds ?? options.maxToolRounds) };
+    const requestedLimits =
+      options.maxToolRounds === undefined
+        ? options.limits
+        : { ...options.limits, maxToolRounds: Math.min(options.maxToolRounds, options.limits?.maxToolRounds ?? options.maxToolRounds) };
     const resolvedLimits = resolveRunLimits(this.agent.config.limits, requestedLimits);
     const durableOptions = options.runState ?? this.agent.config.runState;
     if (this.agent.config.runState && options.runState && this.agent.config.runState !== options.runState) {
@@ -340,7 +388,8 @@ class RuntimeAgentSession implements AgentSession {
     }
     if (durableOptions) {
       validateRunStateOptions(durableOptions);
-      if (options.model || options.guardrails || options.loop) throw new AgentRunStateError("Durable runs require model, guardrails, and loop on AgentConfig for fingerprinting");
+      if (options.model || options.guardrails || options.loop)
+        throw new AgentRunStateError("Durable runs require model, guardrails, and loop on AgentConfig for fingerprinting");
       const configuredLoop = this.agent.config.loop;
       if (configuredLoop && !isBuiltInLoop(configuredLoop)) throw new AgentRunStateError("Custom AgentLoopStrategy is not durable");
     }
@@ -389,8 +438,8 @@ class RuntimeAgentSession implements AgentSession {
       deadlineAt: resumed?.state?.deadlineAt,
     });
     this.activeLimits = limits;
-    this.activeLimitOutputBuffer = [this.agent.config.limits, requestedLimits].some((value) =>
-      value?.maxOutputTokens !== undefined || value?.maxTotalTokens !== undefined || value?.maxCost !== undefined,
+    this.activeLimitOutputBuffer = [this.agent.config.limits, requestedLimits].some(
+      (value) => value?.maxOutputTokens !== undefined || value?.maxTotalTokens !== undefined || value?.maxCost !== undefined,
     );
 
     try {
@@ -416,7 +465,16 @@ class RuntimeAgentSession implements AgentSession {
       const { registry, tools } = activeTools(this.agent.config.tools);
       const activeSkills = this.resolveRunSkills(options, tools);
       if (options.model && JSON.stringify(options.model) !== JSON.stringify(this.agent.config.model)) {
-        await this.appendEntry(createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "model_change", previousModel: this.agent.config.model, model: options.model }));
+        await this.appendEntry(
+          createSessionEntry({
+            sessionId: this.id,
+            parentId: this.currentLeafId,
+            runId,
+            kind: "model_change",
+            previousModel: this.agent.config.model,
+            model: options.model,
+          }),
+        );
       }
       const inputMessages = inputToMessages(input).map((message) => this.redact(message));
       const inputGuardrails = await runGuardrails({
@@ -430,7 +488,10 @@ class RuntimeAgentSession implements AgentSession {
       if (inputGuardrails.terminal?.action === "interrupt" && this.activeDurable) {
         if (!resumed) {
           const interruption = { kind: "input_guardrail" as const, reason: inputGuardrails.terminal.reason ?? "Input requires approval" };
-          throw new AgentRunSuspended(await this.suspendDurable({ runId, model, limits, interruption, messages: inputMessages }), interruption);
+          throw new AgentRunSuspended(
+            await this.suspendDurable({ runId, model, limits, interruption, messages: inputMessages }),
+            interruption,
+          );
         }
       } else {
         assertGuardrailsAllowed(inputGuardrails);
@@ -438,7 +499,9 @@ class RuntimeAgentSession implements AgentSession {
       for (const message of inputMessages) await this.appendMessage(message, runId);
       await this.autoCompact(runId, options, controller.signal, inputMessages);
       const maxToolRounds = resolvedLimits.maxToolRounds;
-      const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(this.agent.config.systemPrompt, options.systemPrompt), { base: this.agent.config.instructions });
+      const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(this.agent.config.systemPrompt, options.systemPrompt), {
+        base: this.agent.config.instructions,
+      });
       const contextProviders = [
         ...(this.agent.config.context ?? []),
         // ponytail: skill context after host context; no per-skill token budget yet.
@@ -489,30 +552,30 @@ class RuntimeAgentSession implements AgentSession {
         assemble: async (nextInput, toolResults, turn) => {
           limits.charge("maxTurns");
           const request = await assembleProviderInput({
-          model: options.model ?? this.agent.config.model,
-          input: nextInput,
-          history: this.history,
-          summaries: (await this.snapshot()).summaries,
-          toolResults: toolResults ?? [],
-          turn,
-          instructionInjectors,
-          inputLayout,
-          systemInstructions,
-          inputBuilder: this.agent.config.inputBuilder,
-          promptBuilder: this.agent.config.promptBuilder,
-          contextProviders,
-          skills: activeSkills,
-          tools,
-          resourceLoader: this.agent.config.resourceLoader,
-          permission: this.agent.config.permission,
-          trust: this.agent.config.trust,
-          providerOptions,
-          redactor: this.activeRedactor,
-          middleware: this.agent.config.middleware,
-          sessionId: this.id,
-          runId,
-          metadata,
-          signal: controller.signal,
+            model: options.model ?? this.agent.config.model,
+            input: nextInput,
+            history: this.history,
+            summaries: (await this.snapshot()).summaries,
+            toolResults: toolResults ?? [],
+            turn,
+            instructionInjectors,
+            inputLayout,
+            systemInstructions,
+            inputBuilder: this.agent.config.inputBuilder,
+            promptBuilder: this.agent.config.promptBuilder,
+            contextProviders,
+            skills: activeSkills,
+            tools,
+            resourceLoader: this.agent.config.resourceLoader,
+            permission: this.agent.config.permission,
+            trust: this.agent.config.trust,
+            providerOptions,
+            redactor: this.activeRedactor,
+            middleware: this.agent.config.middleware,
+            sessionId: this.id,
+            runId,
+            metadata,
+            signal: controller.signal,
           });
           assembledTurn = true;
           return request;
@@ -524,7 +587,8 @@ class RuntimeAgentSession implements AgentSession {
           if (!assembledTurn) limits.charge("maxTurns");
           assembledTurn = false;
           const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
-          const middlewareRequest = await this.agent.config.middleware?.run("provider_request", policyResult.request) ?? policyResult.request;
+          const middlewareRequest =
+            (await this.agent.config.middleware?.run("provider_request", policyResult.request)) ?? policyResult.request;
           try {
             return await this.generateWithRetry(
               this.redactProviderRequest(middlewareRequest),
@@ -543,48 +607,62 @@ class RuntimeAgentSession implements AgentSession {
           }
         },
         isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
-        dispatchToolCall: (call) => dispatchToolCall({
-          call,
-          registry,
-          context: {
-            sessionId: this.id,
-            runId,
-            toolCallId: call.id,
-            signal: controller.signal,
-            metadata,
-            identity: this.activeIdentity,
-          },
-          middleware: this.agent.config.middleware,
-          emit: (event) => this.emit(event),
-          permission: this.agent.config.permission,
-          trust: this.agent.config.trust,
-          redactor: this.activeRedactor,
-          ledger: this.activeLedger,
-          ownership: this.activeOwnership,
-          identity: this.activeIdentity,
-          guardrails: this.activeGuardrails,
-          limitTracker: limits,
-          beforeExecute: async (mediatedCall) => {
-            const durable = this.activeDurable;
-            if (!durable) return;
-            const pending = durable.state?.pending;
-            if (pending?.call.id === mediatedCall.id && pending.status === "ready") {
-              await this.persistDurable({ ...durable.state!, status: "running", pending: { ...pending, status: "dispatched" }, interruption: undefined });
-              return;
-            }
-            if (!durable.options.interruptBeforeTool) return;
-            const interruption = { kind: "tool_approval" as const, reason: "Tool side effect requires approval", toolCallId: mediatedCall.id, toolName: mediatedCall.name };
-            throw new AgentRunSuspended(await this.suspendDurable({
+        dispatchToolCall: (call) =>
+          dispatchToolCall({
+            call,
+            registry,
+            context: {
+              sessionId: this.id,
               runId,
-              model,
-              limits,
-              interruption,
-              pending: { call: mediatedCall, status: "ready" },
-            }), interruption);
-          },
-          // ponytail: RunOptions wins; array-compose deferred (roadmap: compose-later).
-          validate,
-        }),
+              toolCallId: call.id,
+              signal: controller.signal,
+              metadata,
+              identity: this.activeIdentity,
+            },
+            middleware: this.agent.config.middleware,
+            emit: (event) => this.emit(event),
+            permission: this.agent.config.permission,
+            trust: this.agent.config.trust,
+            redactor: this.activeRedactor,
+            ledger: this.activeLedger,
+            ownership: this.activeOwnership,
+            identity: this.activeIdentity,
+            guardrails: this.activeGuardrails,
+            limitTracker: limits,
+            beforeExecute: async (mediatedCall) => {
+              const durable = this.activeDurable;
+              if (!durable) return;
+              const pending = durable.state?.pending;
+              if (pending?.call.id === mediatedCall.id && pending.status === "ready") {
+                await this.persistDurable({
+                  ...durable.state!,
+                  status: "running",
+                  pending: { ...pending, status: "dispatched" },
+                  interruption: undefined,
+                });
+                return;
+              }
+              if (!durable.options.interruptBeforeTool) return;
+              const interruption = {
+                kind: "tool_approval" as const,
+                reason: "Tool side effect requires approval",
+                toolCallId: mediatedCall.id,
+                toolName: mediatedCall.name,
+              };
+              throw new AgentRunSuspended(
+                await this.suspendDurable({
+                  runId,
+                  model,
+                  limits,
+                  interruption,
+                  pending: { call: mediatedCall, status: "ready" },
+                }),
+                interruption,
+              );
+            },
+            // ponytail: RunOptions wins; array-compose deferred (roadmap: compose-later).
+            validate,
+          }),
         appendMessage: (message) => this.appendMessage(message, runId),
         hasPendingSteers: () => this.pendingSteers.length > 0,
         applyPendingSteers: () => this.applyPendingSteers(runId, metadata, controller.signal),
@@ -607,16 +685,19 @@ class RuntimeAgentSession implements AgentSession {
         const result = await ctx.dispatchToolCall(resumed.state.pending.call);
         await ctx.appendMessage({
           role: "tool",
-          content: [{ type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error }, ...(result.content ?? [])],
+          content: [
+            { type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error },
+            ...(result.content ?? []),
+          ],
           metadata: result.metadata,
         });
       }
       const loopUsage = await loop.run(ctx);
       if (loop.name === "generate-validate-revise" && !artifactFinished) {
-        throw Object.assign(
-          new Error(artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"),
-          { name: "ArtifactFailed", code: artifactFailedInfo?.code ?? "artifact_failed" },
-        );
+        throw Object.assign(new Error(artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"), {
+          name: "ArtifactFailed",
+          code: artifactFailedInfo?.code ?? "artifact_failed",
+        });
       }
       usage = runUsage.value() ?? loopUsage;
       if (usage && this.activeLedger) {
@@ -687,7 +768,8 @@ class RuntimeAgentSession implements AgentSession {
             ...this.activeOwnership,
           };
           await this.activeLedger.appendRun(redactRunLedgerRecord(finishRecord, this.activeRedactor));
-          if (isFlushableRunLedger(this.activeLedger) && this.activeLedger.durability === "flush_on_terminal") await this.activeLedger.flush();
+          if (isFlushableRunLedger(this.activeLedger) && this.activeLedger.durability === "flush_on_terminal")
+            await this.activeLedger.flush();
         }
       } finally {
         this.activeLedger = undefined;
@@ -774,21 +856,23 @@ class RuntimeAgentSession implements AgentSession {
   }): Promise<AgentRunState> {
     const durable = this.activeDurable;
     if (!durable) throw new AgentRunStateError("Durable interruption is not configured");
-    const state = durable.state ?? initialAgentRunState({
-      agent: this.agent,
-      options: durable.options,
-      runId: input.runId,
-      sessionId: this.id,
-      leafId: this.currentLeafId,
-      model: input.model,
-      counters: input.limits.snapshot(),
-      deadlineAt: input.limits.deadlineAt,
-      status: "suspended",
-      interruption: input.interruption,
-      messages: input.messages,
-      pending: input.pending,
-      interruptBeforeTool: durable.options.interruptBeforeTool,
-    });
+    const state =
+      durable.state ??
+      initialAgentRunState({
+        agent: this.agent,
+        options: durable.options,
+        runId: input.runId,
+        sessionId: this.id,
+        leafId: this.currentLeafId,
+        model: input.model,
+        counters: input.limits.snapshot(),
+        deadlineAt: input.limits.deadlineAt,
+        status: "suspended",
+        interruption: input.interruption,
+        messages: input.messages,
+        pending: input.pending,
+        interruptBeforeTool: durable.options.interruptBeforeTool,
+      });
     return this.persistDurable({
       ...state,
       leafId: this.currentLeafId,
@@ -840,7 +924,13 @@ class RuntimeAgentSession implements AgentSession {
   }
 
   fork(options: { readonly leafId?: string } = {}): AgentSession {
-    return createAgentSession({ agent: this.agent, id: this.id, store: this.store, leafId: options.leafId ?? this.currentLeafId, metadata: this.metadata });
+    return createAgentSession({
+      agent: this.agent,
+      id: this.id,
+      store: this.store,
+      leafId: options.leafId ?? this.currentLeafId,
+      metadata: this.metadata,
+    });
   }
 
   async clone(options: { readonly id?: string; readonly leafId?: string } = {}): Promise<AgentSession> {
@@ -857,7 +947,13 @@ class RuntimeAgentSession implements AgentSession {
       const { id: _oldId, parentId: _oldParentId, sessionId: _oldSessionId, ...rest } = entry;
       await this.store.append({ ...rest, id: nextId, parentId: entry.parentId ? remap.get(entry.parentId) : undefined, sessionId: id });
     }
-    return createAgentSession({ agent: this.agent, id, store: this.store, leafId: branch.length ? remap.get(branch[branch.length - 1]!.id) : undefined, metadata: this.metadata });
+    return createAgentSession({
+      agent: this.agent,
+      id,
+      store: this.store,
+      leafId: branch.length ? remap.get(branch[branch.length - 1]!.id) : undefined,
+      metadata: this.metadata,
+    });
   }
 
   private branchReader() {
@@ -873,10 +969,7 @@ class RuntimeAgentSession implements AgentSession {
     // the resolver entirely; otherwise `RunOptions.providerSource` overrides
     // `AgentConfig.providerSource` for this run. A miss on every source fails
     // closed with `Unknown provider: ${model.provider}` before any provider turn.
-    const provider =
-      this.agent.config.provider ??
-      options.providerSource?.(model) ??
-      this.agent.config.providerSource?.(model);
+    const provider = this.agent.config.provider ?? options.providerSource?.(model) ?? this.agent.config.providerSource?.(model);
     if (!provider) throw new Error(`Unknown provider: ${model.provider}`);
     this.activeProvider = provider;
   }
@@ -953,7 +1046,10 @@ class RuntimeAgentSession implements AgentSession {
         if (!policy || failure?.observable) throw errorFromInfo(info);
         const context = { sessionId: this.id, runId, attempt, error: info, metadata: retry?.metadata, signal };
         let decision = await policy.decide(context);
-        const payload: RetryMiddlewarePayload = await this.agent.config.middleware?.run("retry", { context, decision }) ?? { context, decision };
+        const payload: RetryMiddlewarePayload = (await this.agent.config.middleware?.run("retry", { context, decision })) ?? {
+          context,
+          decision,
+        };
         decision = payload.decision;
         if (!decision.retry) throw errorFromInfo(info);
         const delayMs = decision.delayMs ?? 0;
@@ -1051,14 +1147,16 @@ class RuntimeAgentSession implements AgentSession {
       }
       await recordTurnUsage();
       if (this.activeGuardrails?.output?.length) {
-        assertGuardrailsAllowed(await runGuardrails({
-          stage: "output",
-          guardrails: this.activeGuardrails,
-          value: { content, calls, messageId, started, usage },
-          context: { sessionId: this.id, runId, metadata: this.activeMetadata ?? {}, signal: turnAbort.signal },
-          redactor: this.activeRedactor,
-          emit: (event) => this.emit(event),
-        }));
+        assertGuardrailsAllowed(
+          await runGuardrails({
+            stage: "output",
+            guardrails: this.activeGuardrails,
+            value: { content, calls, messageId, started, usage },
+            context: { sessionId: this.id, runId, metadata: this.activeMetadata ?? {}, signal: turnAbort.signal },
+            redactor: this.activeRedactor,
+            emit: (event) => this.emit(event),
+          }),
+        );
       }
       if (bufferOutput) for (const event of bufferedOutput) this.emit(event);
       const latencyMs = Math.round(performance.now() - startedAt);
@@ -1105,11 +1203,7 @@ class RuntimeAgentSession implements AgentSession {
     }
   }
 
-  private async applyPendingSteers(
-    runId: string,
-    metadata: Readonly<Record<string, unknown>>,
-    signal: AbortSignal,
-  ): Promise<boolean> {
+  private async applyPendingSteers(runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): Promise<boolean> {
     if (this.pendingSteers.length === 0) return false;
     const drained = this.pendingSteers.splice(0);
     this.pendingSteerBytes = 0;
@@ -1131,7 +1225,13 @@ class RuntimeAgentSession implements AgentSession {
     return true;
   }
 
-  private async applyProviderRequestPolicies(request: ProviderRequest, runId: string, options: RunOptions, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal) {
+  private async applyProviderRequestPolicies(
+    request: ProviderRequest,
+    runId: string,
+    options: RunOptions,
+    metadata: Readonly<Record<string, unknown>>,
+    signal: AbortSignal,
+  ) {
     const policies = [...policyList(this.agent.config.providerRequestPolicies), ...policyList(options.providerRequestPolicies)];
     if (policies.length === 0) return { request, secrets: [] as readonly (string | undefined)[] };
     const result = await createProviderRequestPolicyChain(policies).apply({ request, sessionId: this.id, runId, metadata, signal });
@@ -1152,20 +1252,45 @@ class RuntimeAgentSession implements AgentSession {
     this.history = withoutTrailingInput(compacted.messages, inputMessages);
   }
 
-  private async compactBranch(options: CompactionOptions, runId: string | undefined, signal: AbortSignal | undefined, trigger: "manual" | "auto"): Promise<CompactionResult> {
+  private async compactBranch(
+    options: CompactionOptions,
+    runId: string | undefined,
+    signal: AbortSignal | undefined,
+    trigger: "manual" | "auto",
+  ): Promise<CompactionResult> {
     throwIfAbortedSignal(signal);
     const entries = await this.entries();
     const secrets = options.secrets ?? [];
-    const strategy = options.strategy ?? createDefaultCompactionStrategy({ keepRecentEntries: options.keepRecentEntries, maxSummaryChars: options.maxSummaryChars, secrets });
-    const context = { sessionId: this.id, entries, keepRecentEntries: options.keepRecentEntries, trigger, secrets, metadata: options.metadata, signal };
+    const strategy =
+      options.strategy ??
+      createDefaultCompactionStrategy({ keepRecentEntries: options.keepRecentEntries, maxSummaryChars: options.maxSummaryChars, secrets });
+    const context = {
+      sessionId: this.id,
+      entries,
+      keepRecentEntries: options.keepRecentEntries,
+      trigger,
+      secrets,
+      metadata: options.metadata,
+      signal,
+    };
     this.emit({ type: "compaction_started", sessionId: this.id, runId });
     let result = await strategy.compact(context);
     result = { ...result, summary: redactSecrets(result.summary, secrets) };
-    const payload: CompactionMiddlewarePayload = await this.agent.config.middleware?.run("compaction", { context, result }) ?? { context, result };
+    const payload: CompactionMiddlewarePayload = (await this.agent.config.middleware?.run("compaction", { context, result })) ?? {
+      context,
+      result,
+    };
     result = { ...payload.result, summary: redactSecrets(payload.result.summary, secrets) };
     const source = result.entries?.find((entry) => entry.kind === "compaction");
     const data = isCompactionEntryData(source?.data) ? source.data : undefined;
-    const entry = createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "compaction", summary: result.summary, data });
+    const entry = createSessionEntry({
+      sessionId: this.id,
+      parentId: this.currentLeafId,
+      runId,
+      kind: "compaction",
+      summary: result.summary,
+      data,
+    });
     await this.appendEntry(entry);
     const finalResult = { ...result, entries: [entry] };
     this.emit({ type: "compaction_finished", sessionId: this.id, runId, summary: finalResult.summary });
@@ -1203,7 +1328,8 @@ class RuntimeAgentSession implements AgentSession {
   private async snapshot(): Promise<SessionContextSnapshot> {
     const now = performance.now();
     const cached = this.snapshotCache;
-    if (cached && cached.leafId === this.currentLeafId && cached.generation === this.snapshotGeneration && cached.expiresAt > now) return cached.value;
+    if (cached && cached.leafId === this.currentLeafId && cached.generation === this.snapshotGeneration && cached.expiresAt > now)
+      return cached.value;
     const reader = this.branchReader();
     const value = reader
       ? await rebuildSessionContext(reader, { sessionId: this.id, leafId: this.currentLeafId })
@@ -1220,7 +1346,11 @@ class EventSubscriber implements AsyncIterable<AgentEvent>, AsyncIterator<AgentE
   private readonly overflow: NonNullable<SubscribeOptions["overflow"]>;
   private closed = false;
 
-  constructor(private readonly sessionId: string, options: SubscribeOptions, private readonly onClose: () => void) {
+  constructor(
+    private readonly sessionId: string,
+    options: SubscribeOptions,
+    private readonly onClose: () => void,
+  ) {
     const maxQueuedEvents = options.maxQueuedEvents ?? 1024;
     this.maxQueuedEvents = Number.isFinite(maxQueuedEvents) ? Math.max(1, Math.floor(maxQueuedEvents)) : 1024;
     this.overflow = options.overflow ?? "close";
@@ -1315,8 +1445,10 @@ class SteerSoftInterrupt extends Error {
 }
 
 function isSteerSoftInterrupt(error: unknown): boolean {
-  return error instanceof SteerSoftInterrupt
-    || (typeof error === "object" && error !== null && (error as { code?: unknown }).code === STEER_SOFT_INTERRUPT_CODE);
+  return (
+    error instanceof SteerSoftInterrupt ||
+    (typeof error === "object" && error !== null && (error as { code?: unknown }).code === STEER_SOFT_INTERRUPT_CODE)
+  );
 }
 
 function finalAssistantMessage(history: readonly Message[]): {
@@ -1353,7 +1485,10 @@ function errorFromInfo(error: ErrorInfo): Error {
 }
 
 class ProviderTurnFailure extends Error {
-  constructor(readonly info: ErrorInfo, readonly observable: boolean) {
+  constructor(
+    readonly info: ErrorInfo,
+    readonly observable: boolean,
+  ) {
     super(info.message);
   }
 }
@@ -1364,7 +1499,10 @@ function mergeRetry(agent: false | RetryOptions | undefined, run: false | RetryO
   return agent || undefined;
 }
 
-function mergeCompaction(agent: false | CompactionOptions | undefined, run: false | CompactionOptions | undefined): CompactionOptions | undefined {
+function mergeCompaction(
+  agent: false | CompactionOptions | undefined,
+  run: false | CompactionOptions | undefined,
+): CompactionOptions | undefined {
   if (run === false) return undefined;
   if (run) return { ...(agent || {}), ...run };
   return agent || undefined;
@@ -1429,8 +1567,9 @@ function createUsageAccumulator(): { add(usage: Usage): void; value(): Usage | u
         const value = usage[key];
         if (value !== undefined) sums.set(key, (sums.get(key) ?? 0) + value);
       }
-      const total = usage.totalTokens
-        ?? (usage.inputTokens !== undefined || usage.outputTokens !== undefined
+      const total =
+        usage.totalTokens ??
+        (usage.inputTokens !== undefined || usage.outputTokens !== undefined
           ? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0)
           : undefined);
       if (total !== undefined) sums.set("totalTokens", (sums.get("totalTokens") ?? 0) + total);
@@ -1447,7 +1586,7 @@ function createUsageAccumulator(): { add(usage: Usage): void; value(): Usage | u
         if (key !== "cost" || costCompatible) usage[key] = value;
       }
       if (costCompatible && sums.has("cost") && costCurrency !== undefined) usage.currency = costCurrency;
-      return Object.keys(usage).length > 0 ? usage as Usage : undefined;
+      return Object.keys(usage).length > 0 ? (usage as Usage) : undefined;
     },
   };
 }

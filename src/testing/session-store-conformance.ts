@@ -50,10 +50,7 @@ export type SessionStoreConformanceFactory = () => SessionStore | Promise<Sessio
  * distinct linear appends sharing a key are not collapsed. Throws on the first
  * violation; returns silently when the store conforms.
  */
-export async function assertSessionStoreConforms(
-  store: SessionStore,
-  options: SessionStoreConformanceOptions = {},
-): Promise<void> {
+export async function assertSessionStoreConforms(store: SessionStore, options: SessionStoreConformanceOptions = {}): Promise<void> {
   const sessionId = options.sessionId ?? "conformance";
   const now = () => "2026-01-01T00:00:00.000Z";
   const make = (id: string, parentId?: string): SessionEntry => ({
@@ -73,11 +70,7 @@ export async function assertSessionStoreConforms(
   assertIds(await store.list(sessionId), ["root", "child"], "append/list round-trip dropped entries");
 
   // 2. duplicate entry id is rejected.
-  await reject(
-    () => store.append(make("root")),
-    /Duplicate session entry id: root/,
-    "store must reject a duplicate entry id",
-  );
+  await reject(() => store.append(make("root")), /Duplicate session entry id: root/, "store must reject a duplicate entry id");
 
   // 3. expectedParentId mismatch throws SessionAppendConflictError and writes nothing.
   const before = (await store.list(sessionId)).length;
@@ -150,14 +143,17 @@ export async function runSessionStoreConformance(
   const sessionId = options.sessionId ?? "conformance";
   const listed = await store.list(sessionId);
   const parent = listed.at(-1);
-  await store.append({
-    id: "reopen-target",
-    parentId: parent?.id,
-    sessionId,
-    timestamp: "2026-01-01T00:00:01.000Z",
-    kind: "label",
-    label: "reopen",
-  }, { idempotencyKey: "reopen-idem", expectedParentId: parent?.id });
+  await store.append(
+    {
+      id: "reopen-target",
+      parentId: parent?.id,
+      sessionId,
+      timestamp: "2026-01-01T00:00:01.000Z",
+      kind: "label",
+      label: "reopen",
+    },
+    { idempotencyKey: "reopen-idem", expectedParentId: parent?.id },
+  );
 
   const before = (await store.list(sessionId)).map((entry) => entry.id);
   const reopened = await factory();
@@ -167,14 +163,18 @@ export async function runSessionStoreConformance(
   }
 
   await reject(
-    () => reopened.append({
-      id: "reopen-idem-dup",
-      parentId: parent?.id,
-      sessionId,
-      timestamp: "2026-01-01T00:00:01.000Z",
-      kind: "label",
-      label: "dup",
-    }, { idempotencyKey: "reopen-idem", expectedParentId: parent?.id }),
+    () =>
+      reopened.append(
+        {
+          id: "reopen-idem-dup",
+          parentId: parent?.id,
+          sessionId,
+          timestamp: "2026-01-01T00:00:01.000Z",
+          kind: "label",
+          label: "dup",
+        },
+        { idempotencyKey: "reopen-idem", expectedParentId: parent?.id },
+      ),
     (error: unknown) => isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate === true,
     "Restarted store must still deduplicate an exact idempotency retry",
   );
@@ -204,10 +204,12 @@ async function assertSessionStoreSearchSessions(store: SessionStore): Promise<vo
     "searchSessions must reject oversize query string",
   );
 
-  const empty = await search(resolveSessionSearchQuery({
-    workspaceRoot: "__prism_conformance_empty__",
-    limit: 5,
-  }));
+  const empty = await search(
+    resolveSessionSearchQuery({
+      workspaceRoot: "__prism_conformance_empty__",
+      limit: 5,
+    }),
+  );
   if (!Array.isArray(empty.items)) {
     throw new Error("searchSessions must return a PersistencePage with an items array");
   }
@@ -233,10 +235,7 @@ async function assertSessionStoreSearchSessions(store: SessionStore): Promise<vo
   }
 }
 
-async function assertSessionStoreBranchIsolation(
-  store: SessionStore,
-  options: SessionStoreConformanceOptions,
-): Promise<void> {
+async function assertSessionStoreBranchIsolation(store: SessionStore, options: SessionStoreConformanceOptions): Promise<void> {
   const sessionId = options.sessionId ?? "conformance";
   const otherSessionId = options.otherSessionId ?? `${sessionId}-other`;
   const entry: SessionEntry = {
@@ -256,7 +255,7 @@ async function assertSessionStoreBranchIsolation(
 async function assertConcurrentParentAppendAllowed(
   store: SessionStore,
   sessionId: string,
-  now: () => string,
+  _now: () => string,
   make: (id: string, parentId?: string) => SessionEntry,
 ): Promise<void> {
   const forkRoot = make("fork-root");
@@ -268,7 +267,8 @@ async function assertConcurrentParentAppendAllowed(
     store.append(childB, { expectedParentId: forkRoot.id }),
   ]);
   const succeeded = results.filter((result) => result.status === "fulfilled").length;
-  if (succeeded === 0) throw new Error("Concurrent append to an existing parent rejected both writers; at least one fork child must succeed");
+  if (succeeded === 0)
+    throw new Error("Concurrent append to an existing parent rejected both writers; at least one fork child must succeed");
   const listed = await store.list(sessionId);
   if (!listed.some((entry) => entry.id === "fork-a") && !listed.some((entry) => entry.id === "fork-b")) {
     throw new Error("Concurrent parent append wrote no child entries");
@@ -282,11 +282,7 @@ function assertIds(entries: readonly SessionEntry[], expected: readonly string[]
   }
 }
 
-async function reject(
-  fn: () => Promise<unknown>,
-  match: RegExp | ((error: unknown) => boolean),
-  message: string,
-): Promise<void> {
+async function reject(fn: () => Promise<unknown>, match: RegExp | ((error: unknown) => boolean), message: string): Promise<void> {
   let threw = false;
   try {
     await fn();

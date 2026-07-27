@@ -1,16 +1,16 @@
-import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import type { DiscoveredContribution, InstructionInjector } from "../contracts.js";
+import { createContributionRegistries, resolveInstructionInjectors } from "../index.js";
 import { discoverContributions } from "../node/contribution-discovery.js";
 import {
   loadInstructionInjector,
   loadInstructionInjectors,
   registerDiscoveredInstructionInjectors,
 } from "../node/instruction-injectors.js";
-import { createContributionRegistries, resolveInstructionInjectors } from "../index.js";
-import type { DiscoveredContribution, InstructionInjector } from "../contracts.js";
 
 async function makeRoot(prefix: string): Promise<string> {
   return mkdtemp(join(tmpdir(), `prism-inj-${prefix}-`));
@@ -99,10 +99,7 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
 
   it("rejects a markdown resource escaping its contribution directory", async () => {
     const root = await makeRoot("escape");
-    await writeFileDeep(
-      `${root}/.agents/instructions/escape/manifest.json`,
-      JSON.stringify({ name: "escape", resource: "../outside.md" }),
-    );
+    await writeFileDeep(`${root}/.agents/instructions/escape/manifest.json`, JSON.stringify({ name: "escape", resource: "../outside.md" }));
     await writeFileDeep(`${root}/.agents/instructions/outside.md`, "outside");
 
     const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
@@ -114,10 +111,7 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
     const root = await makeRoot("resource-link");
     const outside = await mkdtemp(join(tmpdir(), "prism-outside-inj-"));
     await writeFileDeep(`${outside}/outside.md`, "outside");
-    await writeFileDeep(
-      `${root}/.agents/instructions/link/manifest.json`,
-      JSON.stringify({ name: "link", resource: "./INSTRUCTIONS.md" }),
-    );
+    await writeFileDeep(`${root}/.agents/instructions/link/manifest.json`, JSON.stringify({ name: "link", resource: "./INSTRUCTIONS.md" }));
     await symlink(`${outside}/outside.md`, `${root}/.agents/instructions/link/INSTRUCTIONS.md`);
 
     const [contribution] = await discoverContributions({ kinds: ["instructions"], workspaceRoot: root });
@@ -152,7 +146,12 @@ describe("loadInstructionInjector (Phase 30 Task 7)", () => {
 
     const injector = await loadInstructionInjector(contribution, {
       resourceTrust: { check: (req) => ({ trusted: req.target === `${outside}/shared.md` }) },
-      permission: { check: (req) => { checked.push(`${req.kind}:${req.action}:${req.target}`); return { allowed: true }; } },
+      permission: {
+        check: (req) => {
+          checked.push(`${req.kind}:${req.action}:${req.target}`);
+          return { allowed: true };
+        },
+      },
     });
 
     assert.equal(injector?.apply(applyCtx).instructions, "trusted outside");

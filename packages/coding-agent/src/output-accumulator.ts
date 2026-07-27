@@ -13,7 +13,7 @@ import {
   HARD_MAX_TOTAL_OUTPUT_BYTES,
   validateCodingLimit,
 } from "./limits.js";
-import { truncateTail, type TruncationResult } from "./truncate.js";
+import { type TruncationResult, truncateTail } from "./truncate.js";
 
 export interface OutputAccumulatorOptions {
   maxLines?: number;

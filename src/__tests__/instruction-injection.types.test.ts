@@ -1,10 +1,5 @@
 import { describe, it } from "node:test";
-import type {
-  InstructionContribution,
-  InstructionContext,
-  InstructionInjector,
-  InstructionTiming,
-} from "../index.js";
+import type { InstructionContext, InstructionContribution, InstructionInjector, InstructionTiming } from "../index.js";
 
 // ponytail: compile-only type test — no runtime assertions. Tasks 5/6 add behavior tests.
 describe("InstructionInjector types (compile only)", () => {

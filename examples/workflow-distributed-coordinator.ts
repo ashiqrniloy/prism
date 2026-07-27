@@ -22,19 +22,35 @@ export async function demo(): Promise<Record<string, unknown>> {
       revision: "1",
       id: "distributed-demo",
       nodes: {
-        work: functionNode({ execute: async () => {
-          executions += 1;
-          await new Promise((resolve) => setTimeout(resolve, 20));
-          return "completed";
-        } }),
+        work: functionNode({
+          execute: async () => {
+            executions += 1;
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            return "completed";
+          },
+        }),
       },
       edges: [],
     });
     const firstCheckpoints = createWorkflowCheckpoints({ store: firstPersistence.checkpoints });
     const secondCheckpoints = createWorkflowCheckpoints({ store: secondPersistence.checkpoints });
     const queued = await enqueueWorkflow(workflow, null, { checkpoints: firstCheckpoints });
-    const first = createWorkflowCoordinator({ coordinatorId: "process-a", workflows: { [workflow.id]: workflow }, checkpoints: firstCheckpoints, leases: firstPersistence.leases, leaseTtlMs: 1_000, renewalIntervalMs: 200 });
-    const second = createWorkflowCoordinator({ coordinatorId: "process-b", workflows: { [workflow.id]: workflow }, checkpoints: secondCheckpoints, leases: secondPersistence.leases, leaseTtlMs: 1_000, renewalIntervalMs: 200 });
+    const first = createWorkflowCoordinator({
+      coordinatorId: "process-a",
+      workflows: { [workflow.id]: workflow },
+      checkpoints: firstCheckpoints,
+      leases: firstPersistence.leases,
+      leaseTtlMs: 1_000,
+      renewalIntervalMs: 200,
+    });
+    const second = createWorkflowCoordinator({
+      coordinatorId: "process-b",
+      workflows: { [workflow.id]: workflow },
+      checkpoints: secondCheckpoints,
+      leases: secondPersistence.leases,
+      leaseTtlMs: 1_000,
+      renewalIntervalMs: 200,
+    });
     const claims = await Promise.all([first.pollOnce(), second.pollOnce()]);
     let record = await getWorkflowRun(firstCheckpoints, queued);
     while (record?.value.status !== "succeeded") {

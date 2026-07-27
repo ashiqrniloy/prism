@@ -1,8 +1,8 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { Message, ProviderEvent, ProviderRequest } from "../index.js";
 import { createOpenAICompatibleProvider } from "../providers/openai-compatible.js";
 import { assertSerializedRequestCoversContent } from "../testing/provider-conformance.js";
-import type { ProviderEvent, ProviderRequest, Message } from "../index.js";
 
 function sse(lines: readonly string[]) {
   const encoder = new TextEncoder();
@@ -43,10 +43,11 @@ describe("openai-compatible provider", () => {
 
     await collect({
       ...provider,
-      generate: (request) => provider.generate({
-        ...request,
-        options: { headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" } },
-      }),
+      generate: (request) =>
+        provider.generate({
+          ...request,
+          options: { headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" } },
+        }),
     });
 
     assert.equal(headers.get("authorization"), "Bearer real-key");
@@ -75,7 +76,15 @@ describe("openai-compatible provider", () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
       fetch: okFetch([
-        JSON.stringify({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3, prompt_tokens_details: { cached_tokens: 4, cache_write_tokens: 5 } } }),
+        JSON.stringify({
+          choices: [],
+          usage: {
+            prompt_tokens: 1,
+            completion_tokens: 2,
+            total_tokens: 3,
+            prompt_tokens_details: { cached_tokens: 4, cache_write_tokens: 5 },
+          },
+        }),
         "[DONE]",
       ]),
     });
@@ -89,10 +98,7 @@ describe("openai-compatible provider", () => {
   it("maps reasoning content to thinking deltas", async () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
-      fetch: okFetch([
-        JSON.stringify({ choices: [{ delta: { reasoning_content: "think" } }] }),
-        "[DONE]",
-      ]),
+      fetch: okFetch([JSON.stringify({ choices: [{ delta: { reasoning_content: "think" } }] }), "[DONE]"]),
     });
 
     assert.deepEqual(await collect(provider), [
@@ -105,15 +111,17 @@ describe("openai-compatible provider", () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
       fetch: okFetch([
-        JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: "{\"id\"" } }] } }] }),
-        JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: ":\"1\"}" } }] } }] }),
+        JSON.stringify({
+          choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: '{"id"' } }] } }],
+        }),
+        JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: ':"1"}' } }] } }] }),
         "[DONE]",
       ]),
     });
 
     assert.deepEqual(await collect(provider), [
-      { type: "tool_call_delta", index: 0, id: "call_1", name: "lookup", argumentsText: "{\"id\"" },
-      { type: "tool_call_delta", index: 0, id: undefined, name: undefined, argumentsText: ":\"1\"}" },
+      { type: "tool_call_delta", index: 0, id: "call_1", name: "lookup", argumentsText: '{"id"' },
+      { type: "tool_call_delta", index: 0, id: undefined, name: undefined, argumentsText: ':"1"}' },
       { type: "tool_call", call: { type: "tool_call", id: "call_1", name: "lookup", arguments: { id: "1" } } },
       { type: "done", usage: undefined },
     ]);
@@ -123,13 +131,16 @@ describe("openai-compatible provider", () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
       fetch: okFetch([
-        JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { arguments: "{\"a\":" } }] } }] }),
+        JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { arguments: '{"a":' } }] } }] }),
         "[DONE]",
       ]),
     });
 
     const events = await collect(provider);
-    assert.equal(events.some((event) => event.type === "done"), false);
+    assert.equal(
+      events.some((event) => event.type === "done"),
+      false,
+    );
     const error = events.find((event) => event.type === "error");
     assert.equal(error?.type, "error");
     if (error?.type === "error") {
@@ -218,7 +229,13 @@ describe("openai-compatible provider", () => {
       messages: [
         { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
         { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
-        { role: "user", content: [{ type: "text", text: "hi" }, { type: "image", url: "https://example.invalid/img.png" }] },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "hi" },
+            { type: "image", url: "https://example.invalid/img.png" },
+          ],
+        },
       ],
     };
     let body: unknown;
@@ -243,10 +260,7 @@ describe("openai-compatible provider", () => {
     });
     const request = {
       model: { provider: provider.id, model: "demo" },
-      messages: [
-        { role: "user", content: [{ type: "text", text: "ok" }] },
-        "[Circular]" as unknown as Message,
-      ],
+      messages: [{ role: "user", content: [{ type: "text", text: "ok" }] }, "[Circular]" as unknown as Message],
     } satisfies ProviderRequest;
 
     const events: ProviderEvent[] = [];
@@ -270,7 +284,9 @@ describe("openai-compatible provider", () => {
       model: { provider: provider.id, model: "demo", capabilities: { structuredOutput: "json_schema" } },
       messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
       options: { structuredOutput: { name: "answer", schema, strict: true } },
-    })) { void _; }
+    })) {
+      void _;
+    }
     assert.deepEqual(body?.response_format, {
       type: "json_schema",
       json_schema: { name: "answer", schema, strict: true },

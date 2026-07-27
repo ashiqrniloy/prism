@@ -1,5 +1,6 @@
 import { MemoryScopeError, MemoryValidationError } from "./errors.js";
 import { compareMemoryRecord, compareMemoryRecords, decodeMemoryCursor, encodeMemoryCursor } from "./pagination.js";
+import type { MemoryVectorHit, MemoryVectorOrder, MemoryVectorRecord, VectorDeleteFilter, VectorQuery, VectorStore } from "./types.js";
 import {
   assertFiniteVector,
   assertNotAborted,
@@ -9,14 +10,6 @@ import {
   requireNonEmptyString,
   requireScope,
 } from "./util.js";
-import type {
-  MemoryVectorHit,
-  MemoryVectorRecord,
-  VectorDeleteFilter,
-  MemoryVectorOrder,
-  VectorQuery,
-  VectorStore,
-} from "./types.js";
 
 export interface MemoryVectorStoreOptions {
   readonly maxEntryTextChars?: number;
@@ -88,19 +81,26 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
 
       async getByThread(scope) {
         const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
-        return sorted([...target.values()].filter(
-          (record) => record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId,
-        ));
+        return sorted(
+          [...target.values()].filter(
+            (record) =>
+              record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId,
+          ),
+        );
       },
 
       async listByThread(query) {
         assertNotAborted(query.signal);
         const required = requireScope(query, true) as Required<MemoryVectorRecord>;
-        if (!Number.isInteger(query.limit) || query.limit < 1) throw new MemoryValidationError("memory page limit must be a positive integer");
+        if (!Number.isInteger(query.limit) || query.limit < 1)
+          throw new MemoryValidationError("memory page limit must be a positive integer");
         const order: MemoryVectorOrder = query.order ?? "sequence";
         const cursor = decodeMemoryCursor(query.cursor, order);
         const candidates = [...target.values()]
-          .filter((record) => record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId)
+          .filter(
+            (record) =>
+              record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId,
+          )
           .filter((record) => compareMemoryRecord(record, cursor, order) > 0)
           .sort((a, b) => compareMemoryRecords(a, b, order));
         const page = candidates.slice(0, query.limit);
@@ -116,7 +116,8 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
         const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
         let count = 0;
         for (const record of target.values()) {
-          if (record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId) count += 1;
+          if (record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId)
+            count += 1;
         }
         return count;
       },
@@ -125,12 +126,15 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
         assertNotAborted(sourceOptions.signal);
         const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
         requireNonEmptyString(sourceId, "sourceId");
-        return sorted([...target.values()].filter((record) =>
-          record.tenantId === required.tenantId
-          && record.resourceId === required.resourceId
-          && record.threadId === required.threadId
-          && ragSourceId(record) === sourceId,
-        ));
+        return sorted(
+          [...target.values()].filter(
+            (record) =>
+              record.tenantId === required.tenantId &&
+              record.resourceId === required.resourceId &&
+              record.threadId === required.threadId &&
+              ragSourceId(record) === sourceId,
+          ),
+        );
       },
     };
   }

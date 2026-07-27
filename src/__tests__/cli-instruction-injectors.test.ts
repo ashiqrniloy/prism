@@ -1,13 +1,13 @@
-import { Readable, Writable } from "node:stream";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
-import { createAgent, createMockProvider, providerDone } from "../index.js";
-import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { CliOptions } from "../cli-runner.js";
+import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { AgentSession, ProviderRequest } from "../contracts.js";
+import { createAgent, createMockProvider } from "../index.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -15,7 +15,9 @@ class MemoryWritable extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
-  text(): string { return this.chunks.join(""); }
+  text(): string {
+    return this.chunks.join("");
+  }
 }
 function streams(input = "") {
   return { stdin: Readable.from(input), stdout: new MemoryWritable(), stderr: new MemoryWritable() };
@@ -30,7 +32,9 @@ async function writeFileDeep(path: string, text: string): Promise<void> {
 function capturingSession(captured: ProviderRequest[]): (options: CliOptions) => AgentSession {
   return (_options) => {
     const provider = createMockProvider([{ type: "done" }], {
-      onRequest: (req) => { captured.push(req); },
+      onRequest: (req) => {
+        captured.push(req);
+      },
     });
     return createAgent({ model: { provider: "mock", model: "m" }, provider }).createSession();
   };
@@ -51,16 +55,22 @@ describe("cli instruction-injector flags (Phase 30 Task 8)", () => {
 
   it("--instruction <name> with a discovered injector reaches the provider input", async () => {
     const root = await makeRoot("named");
-    await writeFileDeep(`${root}/.agents/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
+    await writeFileDeep(
+      `${root}/.agents/instructions/json-always/manifest.json`,
+      JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }),
+    );
     await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
     const captured: ProviderRequest[] = [];
     const io = streams();
 
-    const code = await runCli(["--discover", "--discover-kinds", "instructions", "--instruction", "json-always", "-p", "Hi", "--provider", "mock"], {
-      ...io,
-      workspaceRoot: root,
-      createSession: capturingSession(captured),
-    });
+    const code = await runCli(
+      ["--discover", "--discover-kinds", "instructions", "--instruction", "json-always", "-p", "Hi", "--provider", "mock"],
+      {
+        ...io,
+        workspaceRoot: root,
+        createSession: capturingSession(captured),
+      },
+    );
 
     assert.equal(code, 0);
     assert.ok(captured.length >= 1);
@@ -69,7 +79,10 @@ describe("cli instruction-injector flags (Phase 30 Task 8)", () => {
 
   it("without --instruction the discovered injector is not applied", async () => {
     const root = await makeRoot("noinj");
-    await writeFileDeep(`${root}/.agents/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
+    await writeFileDeep(
+      `${root}/.agents/instructions/json-always/manifest.json`,
+      JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }),
+    );
     await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
     const captured: ProviderRequest[] = [];
     const io = streams();
@@ -104,16 +117,22 @@ describe("cli instruction-injector flags (Phase 30 Task 8)", () => {
 
   it("--instruction false yields zero injectors (disables)", async () => {
     const root = await makeRoot("false");
-    await writeFileDeep(`${root}/.agents/instructions/json-always/manifest.json`, JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }));
+    await writeFileDeep(
+      `${root}/.agents/instructions/json-always/manifest.json`,
+      JSON.stringify({ name: "json-always", resource: "./INSTRUCTIONS.md" }),
+    );
     await writeFileDeep(`${root}/.agents/instructions/json-always/INSTRUCTIONS.md`, "Always answer in JSON");
     const captured: ProviderRequest[] = [];
     const io = streams();
 
-    const code = await runCli(["--discover", "--discover-kinds", "instructions", "--instruction", "false", "-p", "Hi", "--provider", "mock"], {
-      ...io,
-      workspaceRoot: root,
-      createSession: capturingSession(captured),
-    });
+    const code = await runCli(
+      ["--discover", "--discover-kinds", "instructions", "--instruction", "false", "-p", "Hi", "--provider", "mock"],
+      {
+        ...io,
+        workspaceRoot: root,
+        createSession: capturingSession(captured),
+      },
+    );
 
     assert.equal(code, 0);
     assert.ok(captured.length >= 1);

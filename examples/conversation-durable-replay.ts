@@ -2,13 +2,13 @@ import {
   createAgent,
   createMockProvider,
   createSecretRedactor,
+  type OwnershipScope,
   providerDone,
   providerTextDelta,
   providerUsage,
-  type OwnershipScope,
 } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 import { createConversationService } from "@arnilo/prism-server";
+import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 
 // Durable personal/work-agent conversation: create a thread, continue it through
 // a mock agent run, then replay redacted events from a cursor. Network-free —
@@ -30,8 +30,7 @@ export async function demo(): Promise<Record<string, unknown>> {
 
   const conversations = createConversationService(persistence, {
     redactor: createSecretRedactor(["super-secret"]),
-    sessionFactory: ({ thread, leafId }) =>
-      agent.createSession({ id: thread.id, ...(leafId === undefined ? {} : { leafId }) }),
+    sessionFactory: ({ thread, leafId }) => agent.createSession({ id: thread.id, ...(leafId === undefined ? {} : { leafId }) }),
   });
 
   const thread = await conversations.create({ ownership, title: "Release follow-up" });

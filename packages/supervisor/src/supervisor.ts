@@ -1,8 +1,8 @@
 import {
   AgentRunError,
+  type AgentRunResult,
   createAgent,
   createEventMultiplexer,
-  type AgentRunResult,
   type PermissionPolicy,
   type PermissionRequest,
 } from "@arnilo/prism";
@@ -11,7 +11,10 @@ import { narrowSupervisorLimits, resolveSupervisorLimits } from "./limits.js";
 import type { CreateSupervisorOptions, DelegationCompletion, DelegationRequest, Supervisor, SupervisorEvent } from "./types.js";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-interface ChainContext { readonly path: readonly string[]; readonly signal?: AbortSignal }
+interface ChainContext {
+  readonly path: readonly string[];
+  readonly signal?: AbortSignal;
+}
 
 export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
   requireOwnership(options.ownership);
@@ -47,16 +50,23 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     try {
       let hookPermission: PermissionPolicy | undefined;
       if (options.hooks?.before) {
-        const decision = await abortable(Promise.resolve(options.hooks.before(Object.freeze({
-          childId: request.childId,
-          delegationId,
-          depth,
-          path,
-          input,
-          limits,
-          metadata: options.redactor?.redact(request.metadata) ?? request.metadata,
-          signal: controller.signal,
-        }))), controller.signal);
+        const decision = await abortable(
+          Promise.resolve(
+            options.hooks.before(
+              Object.freeze({
+                childId: request.childId,
+                delegationId,
+                depth,
+                path,
+                input,
+                limits,
+                metadata: options.redactor?.redact(request.metadata) ?? request.metadata,
+                signal: controller.signal,
+              }),
+            ),
+          ),
+          controller.signal,
+        );
         if (decision.allowed === false) {
           const reason = safeError(decision.reason ?? "Delegation denied", options);
           events.publish({ type: "delegation_rejected", childId: request.childId, delegationId, depth, reason });
@@ -76,52 +86,74 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
 
       const resourceId = `${id}/${delegationId}/${request.childId}`;
       const threadId = `${resourceId}/${encodeURIComponent(request.threadId ?? "default")}`;
-      const preliminaryPermission = intersectPolicies(options.permission, child.permission, hookPermission, toolBudgetPolicy(limits.maxToolCalls));
+      const preliminaryPermission = intersectPolicies(
+        options.permission,
+        child.permission,
+        hookPermission,
+        toolBudgetPolicy(limits.maxToolCalls),
+      );
       events.publish({ type: "delegation_started", childId: request.childId, delegationId, depth, resourceId, threadId });
-      const childAgent = await abortable(Promise.resolve(child.createAgent(Object.freeze({
-        childId: request.childId,
-        delegationId,
-        depth,
-        path,
-        ownership: options.ownership,
-        resourceId,
-        threadId,
-        permission: preliminaryPermission,
-        signal: controller.signal,
-        delegate: (nested: DelegationRequest) => delegate(nested, { path, signal: controller.signal }),
-      }))), controller.signal);
+      const childAgent = await abortable(
+        Promise.resolve(
+          child.createAgent(
+            Object.freeze({
+              childId: request.childId,
+              delegationId,
+              depth,
+              path,
+              ownership: options.ownership,
+              resourceId,
+              threadId,
+              permission: preliminaryPermission,
+              signal: controller.signal,
+              delegate: (nested: DelegationRequest) => delegate(nested, { path, signal: controller.signal }),
+            }),
+          ),
+        ),
+        controller.signal,
+      );
       const agent = createAgent({
         ...childAgent.config,
         permission: intersectPolicies(preliminaryPermission, childAgent.config.permission),
         ownership: options.ownership,
         redactor: options.redactor ?? childAgent.config.redactor,
       });
-      const session = agent.createSession({ id: `${delegationId}-session`, metadata: { supervisorId: id, delegationId, resourceId, threadId } });
+      const session = agent.createSession({
+        id: `${delegationId}-session`,
+        metadata: { supervisorId: id, delegationId, resourceId, threadId },
+      });
       let result: AgentRunResult;
       try {
-        result = await abortable(session.run(input, {
-          signal: controller.signal,
-          limits: {
-            maxToolRounds: limits.maxSteps,
-            maxToolCalls: limits.maxToolCalls,
-            maxTotalTokens: limits.maxTokens,
-            maxWallTimeMs: limits.timeoutMs,
-          },
-          ownership: options.ownership,
-          redactor: options.redactor,
-          metadata: { ...request.metadata, supervisorId: id, delegationId, resourceId, threadId, depth },
-        }), controller.signal);
+        result = await abortable(
+          session.run(input, {
+            signal: controller.signal,
+            limits: {
+              maxToolRounds: limits.maxSteps,
+              maxToolCalls: limits.maxToolCalls,
+              maxTotalTokens: limits.maxTokens,
+              maxWallTimeMs: limits.timeoutMs,
+            },
+            ownership: options.ownership,
+            redactor: options.redactor,
+            metadata: { ...request.metadata, supervisorId: id, delegationId, resourceId, threadId, depth },
+          }),
+          controller.signal,
+        );
       } catch (error) {
         if (error instanceof AgentRunError && error.result.limit) {
-          const label = error.result.limit.limit === "maxTotalTokens" ? "token"
-            : error.result.limit.limit === "maxToolCalls" ? "tool-call"
-            : error.result.limit.limit === "maxWallTimeMs" ? "timeout"
-            : "run";
+          const label =
+            error.result.limit.limit === "maxTotalTokens"
+              ? "token"
+              : error.result.limit.limit === "maxToolCalls"
+                ? "tool-call"
+                : error.result.limit.limit === "maxWallTimeMs"
+                  ? "timeout"
+                  : "run";
           throw new SupervisorLimitError(`Delegation ${label} limit exceeded`);
         }
         throw error;
       }
-      const totalTokens = result.usage?.totalTokens ?? ((result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0));
+      const totalTokens = result.usage?.totalTokens ?? (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0);
       events.publish({ type: "delegation_finished", childId: request.childId, delegationId, depth, status: result.status, totalTokens });
       await complete(toCompletion(result, request.childId, delegationId, depth, options));
       completionSent = true;
@@ -131,14 +163,18 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         const result = error instanceof AgentRunError ? error.result : undefined;
         const message = safeError(error, options);
         events.publish({ type: "delegation_error", childId: request.childId, delegationId, depth, error: message });
-        await complete(result ? toCompletion(result, request.childId, delegationId, depth, options) : {
-          childId: request.childId,
-          delegationId,
-          depth,
-          status: controller.signal.aborted ? "aborted" : "rejected",
-          text: "",
-          error: message,
-        });
+        await complete(
+          result
+            ? toCompletion(result, request.childId, delegationId, depth, options)
+            : {
+                childId: request.childId,
+                delegationId,
+                depth,
+                status: controller.signal.aborted ? "aborted" : "rejected",
+                text: "",
+                error: message,
+              },
+        );
       }
       if (error instanceof AgentRunError || error instanceof SupervisorError) throw error;
       throw new SupervisorError(safeError(error, options));
@@ -151,15 +187,35 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
 
   async function complete(value: DelegationCompletion): Promise<void> {
     if (!options.hooks?.after) return;
-    try { await options.hooks.after(Object.freeze(value)); } catch (error) {
-      events.publish({ type: "delegation_error", childId: value.childId, delegationId: value.delegationId, depth: value.depth, error: safeError(error, options) });
+    try {
+      await options.hooks.after(Object.freeze(value));
+    } catch (error) {
+      events.publish({
+        type: "delegation_error",
+        childId: value.childId,
+        delegationId: value.delegationId,
+        depth: value.depth,
+        error: safeError(error, options),
+      });
     }
   }
 
-  return { delegate: (request) => delegate(request), subscribe: () => events.subscribe(), get activeChildren() { return activeChildren; } };
+  return {
+    delegate: (request) => delegate(request),
+    subscribe: () => events.subscribe(),
+    get activeChildren() {
+      return activeChildren;
+    },
+  };
 }
 
-function toCompletion(result: AgentRunResult, childId: string, delegationId: string, depth: number, options: CreateSupervisorOptions): DelegationCompletion {
+function toCompletion(
+  result: AgentRunResult,
+  childId: string,
+  delegationId: string,
+  depth: number,
+  options: CreateSupervisorOptions,
+): DelegationCompletion {
   return Object.freeze({
     childId,
     delegationId,
@@ -173,22 +229,26 @@ function toCompletion(result: AgentRunResult, childId: string, delegationId: str
 
 function intersectPolicies(...policies: readonly (PermissionPolicy | undefined)[]): PermissionPolicy {
   const active = policies.filter((policy): policy is PermissionPolicy => policy !== undefined);
-  return { async check(request: PermissionRequest) {
-    for (const policy of active) {
-      const decision = await policy.check(request);
-      if (!decision.allowed) return decision;
-    }
-    return { allowed: true };
-  } };
+  return {
+    async check(request: PermissionRequest) {
+      for (const policy of active) {
+        const decision = await policy.check(request);
+        if (!decision.allowed) return decision;
+      }
+      return { allowed: true };
+    },
+  };
 }
 
 function toolBudgetPolicy(max: number): PermissionPolicy {
   let count = 0;
-  return { check(request) {
-    if (request.kind !== "tool" || request.action !== "execute") return { allowed: true };
-    count += 1;
-    return count <= max ? { allowed: true } : { allowed: false, reason: "Delegation tool-call limit exceeded" };
-  } };
+  return {
+    check(request) {
+      if (request.kind !== "tool" || request.action !== "execute") return { allowed: true };
+      count += 1;
+      return count <= max ? { allowed: true } : { allowed: false, reason: "Delegation tool-call limit exceeded" };
+    },
+  };
 }
 
 function linkSignals(controller: AbortController, ...signals: readonly (AbortSignal | undefined)[]): () => void {
@@ -202,7 +262,9 @@ function linkSignals(controller: AbortController, ...signals: readonly (AbortSig
       removers.push(() => signal.removeEventListener("abort", abort));
     }
   }
-  return () => { for (const remove of removers) remove(); };
+  return () => {
+    for (const remove of removers) remove();
+  };
 }
 
 function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -219,10 +281,13 @@ function assertBytes(value: string, max: number, label: string): void {
 }
 
 function requireOwnership(ownership: CreateSupervisorOptions["ownership"]): void {
-  if (!ownership.tenantId?.trim()
-    || (ownership.accountId !== undefined && !ownership.accountId.trim())
-    || (ownership.userId !== undefined && !ownership.userId.trim())
-    || (!ownership.accountId && !ownership.userId)) throw new SupervisorValidationError("tenantId and non-empty accountId or userId are required");
+  if (
+    !ownership.tenantId?.trim() ||
+    (ownership.accountId !== undefined && !ownership.accountId.trim()) ||
+    (ownership.userId !== undefined && !ownership.userId.trim()) ||
+    (!ownership.accountId && !ownership.userId)
+  )
+    throw new SupervisorValidationError("tenantId and non-empty accountId or userId are required");
 }
 
 function safeError(error: unknown, options: CreateSupervisorOptions): string {

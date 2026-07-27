@@ -1,12 +1,27 @@
-import type { AgentEvent, ErrorInfo, Guardrails, JsonObject, OwnershipScope, RunLedger, ToolCallContent, ToolCallRecord, ToolCallStatus, ToolDefinition, ToolExecutionContext, ToolExecutionMetadata, ToolRegistry, ToolResult } from "./contracts.js";
 import { isJsonObject } from "./config.js";
-import { createId } from "./ids.js";
+import type {
+  AgentEvent,
+  ErrorInfo,
+  Guardrails,
+  JsonObject,
+  OwnershipScope,
+  RunLedger,
+  ToolCallContent,
+  ToolCallRecord,
+  ToolCallStatus,
+  ToolDefinition,
+  ToolExecutionContext,
+  ToolExecutionMetadata,
+  ToolRegistry,
+  ToolResult,
+} from "./contracts.js";
 import { GuardrailError, runGuardrails } from "./guardrails.js";
 import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
-import type { RunLimitTracker } from "./run-limits.js";
+import { createId } from "./ids.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
+import type { RunLimitTracker } from "./run-limits.js";
 import { assertPermission, assertTrusted, type PermissionPolicy, type TrustPolicy } from "./security.js";
 
 export interface ToolFilter {
@@ -15,7 +30,11 @@ export interface ToolFilter {
 }
 
 export type ToolFilterInput = ToolFilter | readonly ToolFilter[];
-export type ToolValidator = (tool: ToolDefinition, args: JsonObject, context: ToolExecutionContext) => void | string | ErrorInfo | Promise<void | string | ErrorInfo>;
+export type ToolValidator = (
+  tool: ToolDefinition,
+  args: JsonObject,
+  context: ToolExecutionContext,
+) => undefined | string | ErrorInfo | Promise<undefined | string | ErrorInfo>;
 
 export interface ToolArgumentValidationError {
   readonly path?: string;
@@ -37,10 +56,7 @@ export interface ToolParameterValidatorOptions {
 }
 
 /** Wrap a schema adapter as the existing `ToolValidator` seam used by dispatch and the agent runtime. */
-export function createToolParameterValidator(
-  validator: ToolArgumentValidator,
-  options: ToolParameterValidatorOptions = {},
-): ToolValidator {
+export function createToolParameterValidator(validator: ToolArgumentValidator, options: ToolParameterValidatorOptions = {}): ToolValidator {
   const missingSchema = options.missingSchema ?? "allow";
   return (tool, args) => {
     if (!tool.parameters) {
@@ -112,7 +128,9 @@ export function createToolRegistry(tools: readonly ToolDefinition[] = [], option
 export function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilterInput): readonly ToolDefinition[] {
   const filters = Array.isArray(filter) ? filter : filter ? [filter] : [];
   const denied = new Set(filters.flatMap((item) => item.deny ?? []));
-  const allows = filters.map((item) => item.allow?.length ? new Set(item.allow) : undefined).filter((item): item is Set<string> => Boolean(item));
+  const allows = filters
+    .map((item) => (item.allow?.length ? new Set(item.allow) : undefined))
+    .filter((item): item is Set<string> => Boolean(item));
 
   return tools.filter((tool) => !denied.has(tool.name) && allows.every((allow) => allow.has(tool.name)));
 }
@@ -177,8 +195,18 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
       assertIdentityActive(context.identity);
       assertIdentityMatchesOwnership(context.identity, options.ownership);
     }
-    await assertTrusted(options.trust, { kind: "tool", target: mediatedCall.name, capability: "execute", metadata: options.context.metadata });
-    await assertPermission(options.permission, { kind: "tool", action: "execute", target: mediatedCall.name, metadata: options.context.metadata });
+    await assertTrusted(options.trust, {
+      kind: "tool",
+      target: mediatedCall.name,
+      capability: "execute",
+      metadata: options.context.metadata,
+    });
+    await assertPermission(options.permission, {
+      kind: "tool",
+      action: "execute",
+      target: mediatedCall.name,
+      metadata: options.context.metadata,
+    });
   } catch (error) {
     return blocked(mediatedCall, context, "permission_denied", errorToErrorInfo(error, secrets), options, startedAt);
   }
@@ -230,7 +258,14 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     const result = { toolCallId: mediatedCall.id, name: mediatedCall.name, error: info };
     const finishedAt = new Date().toISOString();
     const metadata = toolExecutionMetadata(startedAt, "error");
-    await options.emit?.({ type: "tool_execution_error", sessionId: context.sessionId, runId: context.runId, call: mediatedCall, error: info, metadata });
+    await options.emit?.({
+      type: "tool_execution_error",
+      sessionId: context.sessionId,
+      runId: context.runId,
+      call: mediatedCall,
+      error: info,
+      metadata,
+    });
     await appendToolCallRecord(options, "error", mediatedCall, startedAt, { finishedAt, result });
     return result;
   }
@@ -240,13 +275,22 @@ async function checkCall(call: ToolCallContent, options: DispatchToolCallOptions
   const context = options.context;
   const tool = options.registry.get(call.name);
   if (!tool) return blocked(call, context, "unknown_tool", { message: `Unknown tool: ${call.name}` }, options, startedAt);
-  if (filterTools([tool], options.filter).length === 0) return blocked(call, context, "tool_denied", { message: `Tool denied: ${call.name}` }, options, startedAt);
+  if (filterTools([tool], options.filter).length === 0)
+    return blocked(call, context, "tool_denied", { message: `Tool denied: ${call.name}` }, options, startedAt);
   if (call.argumentsError) return blocked(call, context, "invalid_arguments", call.argumentsError, options, startedAt);
-  if (!isJsonObject(call.arguments)) return blocked(call, context, "invalid_arguments", { message: "Tool arguments must be a JSON object" }, options, startedAt);
+  if (!isJsonObject(call.arguments))
+    return blocked(call, context, "invalid_arguments", { message: "Tool arguments must be a JSON object" }, options, startedAt);
   return undefined;
 }
 
-async function blocked(call: ToolCallContent, context: ToolExecutionContext, reason: string, error: ErrorInfo, options: DispatchToolCallOptions, startedAt: string): Promise<ToolResult> {
+async function blocked(
+  call: ToolCallContent,
+  context: ToolExecutionContext,
+  reason: string,
+  error: ErrorInfo,
+  options: DispatchToolCallOptions,
+  startedAt: string,
+): Promise<ToolResult> {
   const metadata = toolExecutionMetadata(startedAt, "blocked");
   await options.emit?.({
     type: "tool_execution_blocked",

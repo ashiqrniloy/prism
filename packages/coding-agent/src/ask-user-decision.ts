@@ -9,13 +9,7 @@
  *
  * Not included in `createCodingTools` / `createAllTools` / `createReadOnlyTools`.
  */
-import type {
-  ExecutionPolicy,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import {
   suspend,
   type WorkflowResumeValidationInput,
@@ -40,10 +34,8 @@ export const HARD_MAX_ASK_USER_DECISION_LABEL_BYTES = 2_048;
 export const DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES = 512;
 export const HARD_MAX_ASK_USER_DECISION_BULLET_BYTES = 2_048;
 /** Same ceiling as question text — free-text answers stay short. */
-export const DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES =
-  DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES;
-export const HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES =
-  HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES;
+export const DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES = DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES;
+export const HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES = HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES;
 
 export type AskUserDecisionSelectionMode = "single" | "multiple";
 
@@ -79,9 +71,7 @@ export type ResolvedAskUserDecisionAnswer =
   | { readonly kind: "selection"; readonly selectedId: string; readonly selectedIds: readonly string[] }
   | { readonly kind: "custom"; readonly customText: string };
 
-export type AskUserDecisionHandler = (
-  request: AskUserDecisionRequest,
-) => Promise<AskUserDecisionAnswer>;
+export type AskUserDecisionHandler = (request: AskUserDecisionRequest) => Promise<AskUserDecisionAnswer>;
 
 export interface AskUserDecisionToolOptions {
   /** Required host UI/callback — tool fails closed without it. */
@@ -103,14 +93,7 @@ export interface ResolvedAskUserDecisionLimits {
 }
 
 export function resolveAskUserDecisionLimits(
-  options?: Pick<
-    AskUserDecisionToolOptions,
-    | "maxOptions"
-    | "maxQuestionBytes"
-    | "maxLabelBytes"
-    | "maxBulletBytes"
-    | "maxCustomTextBytes"
-  >,
+  options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">,
 ): ResolvedAskUserDecisionLimits {
   return {
     maxOptions: validateCodingLimit(
@@ -160,11 +143,7 @@ function assertByteLimit(label: string, text: string, maxBytes: number): void {
   }
 }
 
-function requireThreeBullets(
-  value: unknown,
-  label: string,
-  maxBytes: number,
-): [string, string, string] {
+function requireThreeBullets(value: unknown, label: string, maxBytes: number): [string, string, string] {
   if (!Array.isArray(value) || value.length !== ASK_USER_DECISION_RATIONALE_COUNT) {
     throw new Error(`${label} must be exactly ${ASK_USER_DECISION_RATIONALE_COUNT} strings`);
   }
@@ -200,8 +179,7 @@ export function resolveAskUserDecisionAnswer(
   options: readonly AskUserDecisionOption[],
   gates: { readonly allowCustom: boolean; readonly maxCustomTextBytes: number },
 ): ResolvedAskUserDecisionAnswer {
-  const customRaw =
-    answer && typeof answer.customText === "string" ? answer.customText.trim() : "";
+  const customRaw = answer && typeof answer.customText === "string" ? answer.customText.trim() : "";
   const hasCustom = customRaw.length > 0;
   const hasSelection = hasSelectionFields(answer);
 
@@ -327,9 +305,7 @@ export function parseAskUserDecisionArgs(
  * Create the opt-in `ask_user_decision` tool.
  * Host must supply `ask`; factory throws if missing.
  */
-export function createAskUserDecisionTool(
-  options: AskUserDecisionToolOptions,
-): ToolDefinition {
+export function createAskUserDecisionTool(options: AskUserDecisionToolOptions): ToolDefinition {
   if (typeof options?.ask !== "function") {
     throw new Error("ask_user_decision requires options.ask");
   }
@@ -356,12 +332,11 @@ export function createAskUserDecisionTool(
         selectionMode: {
           type: "string",
           enum: ["single", "multiple"],
-          description: 'single (default) or multiple selection',
+          description: "single (default) or multiple selection",
         },
         allowCustom: {
           type: "boolean",
-          description:
-            "When true, host may return customText instead of selecting option ids (XOR). Default false.",
+          description: "When true, host may return customText instead of selecting option ids (XOR). Default false.",
         },
         options: {
           type: "array",
@@ -452,10 +427,7 @@ export function createAskUserDecisionTool(
           signal: context.signal,
         });
       } catch (error) {
-        return errorResult(
-          toolCallId,
-          error instanceof Error ? error.message : String(error),
-        );
+        return errorResult(toolCallId, error instanceof Error ? error.message : String(error));
       }
 
       if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
@@ -569,25 +541,19 @@ export function askUserDecisionResumeSchema(
         maxLength: DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES,
       },
     },
-    anyOf: [
-      { required: ["selectedId"] },
-      { required: ["selectedIds"] },
-      { required: ["customText"] },
-    ],
+    anyOf: [{ required: ["selectedId"] }, { required: ["selectedIds"] }, { required: ["customText"] }],
   };
 }
 
-export function toAskUserDecisionSuspendData(
-  request: {
-    readonly question: string;
-    readonly options: readonly AskUserDecisionOption[];
-    readonly selectionMode: AskUserDecisionSelectionMode;
-    readonly allowCustom: boolean;
-    readonly toolCallId?: string;
-    readonly sessionId?: string;
-    readonly runId?: string;
-  },
-): AskUserDecisionSuspendData {
+export function toAskUserDecisionSuspendData(request: {
+  readonly question: string;
+  readonly options: readonly AskUserDecisionOption[];
+  readonly selectionMode: AskUserDecisionSelectionMode;
+  readonly allowCustom: boolean;
+  readonly toolCallId?: string;
+  readonly sessionId?: string;
+  readonly runId?: string;
+}): AskUserDecisionSuspendData {
   return {
     question: request.question,
     options: request.options,
@@ -603,10 +569,10 @@ function isAskUserDecisionSuspendData(value: unknown): value is AskUserDecisionS
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const row = value as Record<string, unknown>;
   return (
-    typeof row.question === "string"
-    && Array.isArray(row.options)
-    && (row.selectionMode === "single" || row.selectionMode === "multiple")
-    && typeof row.allowCustom === "boolean"
+    typeof row.question === "string" &&
+    Array.isArray(row.options) &&
+    (row.selectionMode === "single" || row.selectionMode === "multiple") &&
+    typeof row.allowCustom === "boolean"
   );
 }
 
@@ -615,10 +581,9 @@ function isAskUserDecisionSuspendData(value: unknown): value is AskUserDecisionS
  * Host resumes via `resumeWorkflow` + `createAskUserDecisionResumeValidator` / `validateAskUserDecisionResume`.
  */
 export function suspendAskUserDecision(
-  request: AskUserDecisionSuspendData | Pick<
-    AskUserDecisionRequest,
-    "question" | "options" | "selectionMode" | "allowCustom" | "toolCallId" | "sessionId" | "runId"
-  >,
+  request:
+    | AskUserDecisionSuspendData
+    | Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "allowCustom" | "toolCallId" | "sessionId" | "runId">,
   options?: SuspendAskUserDecisionOptions,
 ): WorkflowSuspension<AskUserDecisionAnswer> {
   const data = toAskUserDecisionSuspendData(request);
@@ -647,14 +612,11 @@ export function validateAskUserDecisionResume(
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("resume input must be an ask_user_decision answer object");
   }
-  const maxCustomTextBytes =
-    limits?.maxCustomTextBytes ?? DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES;
-  return resolveAskUserDecisionAnswer(
-    value as AskUserDecisionAnswer,
-    request.selectionMode,
-    request.options,
-    { allowCustom: request.allowCustom, maxCustomTextBytes },
-  );
+  const maxCustomTextBytes = limits?.maxCustomTextBytes ?? DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES;
+  return resolveAskUserDecisionAnswer(value as AskUserDecisionAnswer, request.selectionMode, request.options, {
+    allowCustom: request.allowCustom,
+    maxCustomTextBytes,
+  });
 }
 
 /**
@@ -687,8 +649,6 @@ export function validateAskUserDecisionAgentResume(input: {
   return validateAskUserDecisionResume(
     input.request,
     input.answer,
-    input.maxCustomTextBytes === undefined
-      ? undefined
-      : { maxCustomTextBytes: input.maxCustomTextBytes },
+    input.maxCustomTextBytes === undefined ? undefined : { maxCustomTextBytes: input.maxCustomTextBytes },
   );
 }

@@ -3,7 +3,8 @@ import { redactSecrets } from "@arnilo/prism";
 import { measureWorkerJson } from "./limits.js";
 
 export function serializeSessionEntry(entry: SessionEntry, secrets: readonly (string | undefined)[] = [], maxBytes?: number): string {
-  if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 1)) throw new RangeError("maxBytes must be a positive safe integer");
+  if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 1))
+    throw new RangeError("maxBytes must be a positive safe integer");
   const value = entry.message ?? entry.summary ?? entry.data ?? entry.event ?? entry.metadata ?? {};
   if (maxBytes !== undefined) {
     if (typeof value === "string") {
@@ -14,12 +15,18 @@ export function serializeSessionEntry(entry: SessionEntry, secrets: readonly (st
   }
   const text = typeof value === "string" ? value : JSON.stringify(value);
   const serialized = redactSecrets(`[${entry.id}] ${entry.kind}: ${text}`, secrets);
-  if (maxBytes !== undefined && Buffer.byteLength(serialized, "utf8") > maxBytes) throw new Error(`Observational memory source entry exceeds ${maxBytes} bytes`);
+  if (maxBytes !== undefined && Buffer.byteLength(serialized, "utf8") > maxBytes)
+    throw new Error(`Observational memory source entry exceeds ${maxBytes} bytes`);
   return serialized;
 }
 
-export function serializeSourceEntries(entries: readonly SessionEntry[], secrets: readonly (string | undefined)[] = [], maxBytes?: number): string {
-  if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 1)) throw new RangeError("maxBytes must be a positive safe integer");
+export function serializeSourceEntries(
+  entries: readonly SessionEntry[],
+  secrets: readonly (string | undefined)[] = [],
+  maxBytes?: number,
+): string {
+  if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 1))
+    throw new RangeError("maxBytes must be a positive safe integer");
   let output = "";
   for (const entry of entries) {
     const remaining = maxBytes === undefined ? undefined : maxBytes - Buffer.byteLength(output, "utf8") - (output ? 1 : 0);

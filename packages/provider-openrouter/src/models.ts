@@ -1,10 +1,10 @@
 import {
-  redactSecrets,
-  resolveCredentialValue,
   type CredentialValueSource,
   type JsonObject,
   type ModelConfig,
   type ModelCost,
+  redactSecrets,
+  resolveCredentialValue,
 } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { defineOpenRouterModel } from "./model.js";
@@ -91,21 +91,14 @@ export async function listOpenRouterModels(options: ListOpenRouterModelsOptions 
  * Cache kind is best-effort: Anthropic/Qwen/Gemini families that document explicit
  * `cache_control` map to `cache_control`; others with cache-read pricing map to `implicit`.
  */
-export function mapOpenRouterModel(
-  entry: OpenRouterModelEntry,
-  options: { readonly provider?: string } = {},
-): ModelConfig {
+export function mapOpenRouterModel(entry: OpenRouterModelEntry, options: { readonly provider?: string } = {}): ModelConfig {
   if (!entry || typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error("OpenRouter model entry missing id");
   }
   const id = entry.id;
   const params = new Set(entry.supported_parameters ?? []);
   const reasoningMeta = entry.reasoning;
-  const reasoning =
-    reasoningMeta != null
-    || params.has("reasoning")
-    || params.has("reasoning_effort")
-    || params.has("include_reasoning");
+  const reasoning = reasoningMeta != null || params.has("reasoning") || params.has("reasoning_effort") || params.has("include_reasoning");
   const input = mapModalities(entry.architecture?.input_modalities, ["text"]);
   const output = mapModalities(entry.architecture?.output_modalities, ["text"]);
   const cache = inferOpenRouterCache(id, entry.pricing);
@@ -117,9 +110,7 @@ export function mapOpenRouterModel(
         ? entry.top_provider.context_length
         : undefined;
   const maxOutputTokens =
-    typeof entry.top_provider?.max_completion_tokens === "number"
-      ? entry.top_provider.max_completion_tokens
-      : undefined;
+    typeof entry.top_provider?.max_completion_tokens === "number" ? entry.top_provider.max_completion_tokens : undefined;
 
   const mapped = defineOpenRouterModel({
     model: id,
@@ -147,15 +138,10 @@ export function mapOpenRouterModel(
       }),
     }),
   });
-  return options.provider && options.provider !== "openrouter"
-    ? { ...mapped, provider: options.provider }
-    : mapped;
+  return options.provider && options.provider !== "openrouter" ? { ...mapped, provider: options.provider } : mapped;
 }
 
-function inferOpenRouterCache(
-  id: string,
-  pricing: OpenRouterModelEntry["pricing"],
-): ModelConfig["cache"] | undefined {
+function inferOpenRouterCache(id: string, pricing: OpenRouterModelEntry["pricing"]): ModelConfig["cache"] | undefined {
   const hasCacheRead = pricing?.input_cache_read != null && Number(pricing.input_cache_read) >= 0;
   const hasCacheWrite = pricing?.input_cache_write != null && Number(pricing.input_cache_write) >= 0;
   if (!hasCacheRead && !hasCacheWrite) return undefined;
@@ -199,13 +185,9 @@ function mapModalities(values: readonly string[] | undefined, fallback: string[]
 }
 
 function cleanJson(value: Record<string, unknown>): JsonObject {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, item]) => item !== undefined && item !== null),
-  ) as JsonObject;
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && item !== null)) as JsonObject;
 }
 
 function cleanLimits(value: NonNullable<ModelConfig["limits"]>): ModelConfig["limits"] {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, item]) => item !== undefined),
-  ) as ModelConfig["limits"];
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as ModelConfig["limits"];
 }

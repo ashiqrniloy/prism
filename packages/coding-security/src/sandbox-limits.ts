@@ -131,9 +131,7 @@ function validateCpus(value: number): number {
   return value;
 }
 
-export function resolveDockerSandboxLimits(
-  input: DockerSandboxLimitOptions = {},
-): ResolvedDockerSandboxLimits {
+export function resolveDockerSandboxLimits(input: DockerSandboxLimitOptions = {}): ResolvedDockerSandboxLimits {
   const resolved = Object.fromEntries(
     Object.entries(SPECS).map(([name, [fallback, hardCap]]) => {
       const value = input[name as keyof DockerSandboxLimitOptions] ?? fallback;

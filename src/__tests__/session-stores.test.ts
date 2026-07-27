@@ -1,7 +1,16 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import type { BranchReader, SessionEntry } from "../index.js";
-import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, listSessionBranches, rebuildSessionContext, SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError, isSessionAppendConflict } from "../index.js";
+import {
+  createMemorySessionStore,
+  createSessionEntry,
+  getSessionBranchEntries,
+  isSessionAppendConflict,
+  listSessionBranches,
+  rebuildSessionContext,
+  SESSION_APPEND_CONFLICT_CODE,
+  SessionAppendConflictError,
+} from "../index.js";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
@@ -40,7 +49,10 @@ describe("session store helpers", () => {
     assert.equal(entries[0]?.id, "entry_1");
     assert.equal(entries[0]?.timestamp, "2026-01-01T00:00:00.000Z");
     assert.equal(entries[1]?.model?.model, "next");
-    assert.deepEqual(entries.map((item) => item.kind), ["label", "model_change", "custom", "summary", "compaction"]);
+    assert.deepEqual(
+      entries.map((item) => item.kind),
+      ["label", "model_change", "custom", "summary", "compaction"],
+    );
   });
 
   it("rebuild session context uses only current leaf path", () => {
@@ -48,7 +60,10 @@ describe("session store helpers", () => {
 
     const snapshot = rebuildSessionContext(entries, { leafId: "c" });
 
-    assert.deepEqual(snapshot.entries.map((item) => item.id), ["a", "c"]);
+    assert.deepEqual(
+      snapshot.entries.map((item) => item.id),
+      ["a", "c"],
+    );
     assert.deepEqual(snapshot.messages, [userMessage, assistantMessage]);
   });
 
@@ -58,8 +73,17 @@ describe("session store helpers", () => {
 
     const branches = listSessionBranches(entries);
 
-    assert.deepEqual(branches.map((branch) => branch.leafId), ["b", "c"]);
-    assert.deepEqual(branches.map((branch) => branch.entries.map((item) => item.id)), [["a", "b"], ["a", "c"]]);
+    assert.deepEqual(
+      branches.map((branch) => branch.leafId),
+      ["b", "c"],
+    );
+    assert.deepEqual(
+      branches.map((branch) => branch.entries.map((item) => item.id)),
+      [
+        ["a", "b"],
+        ["a", "c"],
+      ],
+    );
     assert.deepEqual(entries, before);
   });
 
@@ -82,7 +106,10 @@ describe("session store helpers", () => {
     const store = createMemorySessionStore(entries.slice(0, 1));
     for (const item of entries.slice(1)) await store.append(item);
 
-    assert.deepEqual((await store.list("s1")).map((item) => item.kind), ["message", "event", "summary", "metadata", "model_change", "label", "custom", "compaction"]);
+    assert.deepEqual(
+      (await store.list("s1")).map((item) => item.kind),
+      ["message", "event", "summary", "metadata", "model_change", "label", "custom", "compaction"],
+    );
     assert.equal((await store.get?.("custom"))?.id, "custom");
   });
 
@@ -90,8 +117,14 @@ describe("session store helpers", () => {
     const store = createMemorySessionStore([entry("a")]);
     await store.append(createSessionEntry({ id: "other", sessionId: "s2", kind: "custom" }));
 
-    assert.deepEqual((await store.list("s1")).map((item) => item.id), ["a"]);
-    assert.deepEqual((await store.list("s2")).map((item) => item.id), ["other"]);
+    assert.deepEqual(
+      (await store.list("s1")).map((item) => item.id),
+      ["a"],
+    );
+    assert.deepEqual(
+      (await store.list("s2")).map((item) => item.id),
+      ["other"],
+    );
   });
 
   it("memory session store rejects duplicate entry ids", async () => {
@@ -110,24 +143,22 @@ describe("session store helpers", () => {
       message: { role: "user", content: [{ type: "text", text: "Hi" }] },
     });
     const store = createMemorySessionStore([original]);
-    const list = await store.list("s1") as unknown as SessionEntry[];
+    const list = (await store.list("s1")) as unknown as SessionEntry[];
     list.length = 0;
     assert.equal((await store.list("s1")).length, 1);
 
-    const list2 = await store.list("s1") as unknown as Mutable<SessionEntry>[];
+    const list2 = (await store.list("s1")) as unknown as Mutable<SessionEntry>[];
     list2[0]!.id = "mutated";
-    ((list2[0]!.message!.content as unknown) as { type: string; text: string }[])[0] = { type: "text", text: "mutated" };
+    (list2[0]!.message!.content as unknown as { type: string; text: string }[])[0] = { type: "text", text: "mutated" };
     assert.equal((await store.get?.("a"))?.id, "a");
 
-    const got = await store.get?.("a") as unknown as Mutable<SessionEntry> | undefined;
+    const got = (await store.get?.("a")) as unknown as Mutable<SessionEntry> | undefined;
     if (got?.kind === "message" && got.message) {
       (got.message.content as unknown as { type: string; text: string }[])[0] = { type: "text", text: "mutated" };
     }
     const refetched = await store.get?.("a");
     assert.equal(
-      refetched?.kind === "message" && refetched.message
-        ? (refetched.message.content[0] as { text: string }).text
-        : undefined,
+      refetched?.kind === "message" && refetched.message ? (refetched.message.content[0] as { text: string }).text : undefined,
       "Hi",
     );
   });
@@ -145,7 +176,7 @@ describe("session store helpers", () => {
     const entries = [entry("a"), entry("b", "a")];
     const snapshot = rebuildSessionContext(entries, { leafId: "b" });
     (snapshot.entries as unknown as Mutable<SessionEntry>[])[0]!.id = "mutated";
-    (((snapshot.messages[0]!.content as unknown) as { type: string; text: string }[])[0]) = { type: "text", text: "mutated" };
+    (snapshot.messages[0]!.content as unknown as { type: string; text: string }[])[0] = { type: "text", text: "mutated" };
     assert.equal(entries[0]!.id, "a");
     assert.equal((entries[0]!.message!.content[0] as { text: string }).text, "Hi");
   });
@@ -153,7 +184,10 @@ describe("session store helpers", () => {
   it("memory session store preserves branch parent links", async () => {
     const store = createMemorySessionStore([entry("a"), entry("b", "a"), entry("c", "a")]);
 
-    assert.deepEqual(listSessionBranches(await store.list("s1")).map((branch) => branch.leafId), ["b", "c"]);
+    assert.deepEqual(
+      listSessionBranches(await store.list("s1")).map((branch) => branch.leafId),
+      ["b", "c"],
+    );
   });
 });
 
@@ -170,7 +204,10 @@ describe("branch reader overloads (DB-friendly path)", () => {
       return { items: [a] };
     };
     const branch = await getSessionBranchEntries(reader, { sessionId: "s1", leafId: "c", limit: 2 });
-    assert.deepEqual(branch.map((e) => e.id), ["a", "b", "c"]);
+    assert.deepEqual(
+      branch.map((e) => e.id),
+      ["a", "b", "c"],
+    );
     assert.deepEqual(queries, [
       { sessionId: "s1", leafId: "c", limit: 2 },
       { sessionId: "s1", leafId: "c", limit: 2, cursor: "p2" },
@@ -191,7 +228,10 @@ describe("branch reader overloads (DB-friendly path)", () => {
     const viaReader = await rebuildSessionContext(reader, { sessionId: "s1", leafId: "b" });
     const viaSync = rebuildSessionContext(all, { leafId: "b" });
     assert.deepEqual(viaReader.messages, viaSync.messages);
-    assert.deepEqual(viaReader.entries.map((e) => e.id), viaSync.entries.map((e) => e.id));
+    assert.deepEqual(
+      viaReader.entries.map((e) => e.id),
+      viaSync.entries.map((e) => e.id),
+    );
     assert.equal(viaReader.leafId, viaSync.leafId);
   });
 
@@ -267,8 +307,15 @@ describe("atomic append guards (memory store)", () => {
     assert.equal(after.length, 2, "rejected append wrote nothing");
     // Parent order of the surviving chain is unchanged: root <- tip still resolves tip.parentId === root.id.
     const survivors = getSessionBranchEntries(after, { leafId: tip.id });
-    assert.deepEqual(survivors.map((e) => e.id), [root.id, tip.id]);
-    assert.equal(after.some((e) => e.id === "orphan"), false, "orphan was not persisted");
+    assert.deepEqual(
+      survivors.map((e) => e.id),
+      [root.id, tip.id],
+    );
+    assert.equal(
+      after.some((e) => e.id === "orphan"),
+      false,
+      "orphan was not persisted",
+    );
   });
 });
 

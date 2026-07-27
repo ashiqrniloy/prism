@@ -1,8 +1,8 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, posix } from "node:path";
+import { test } from "node:test";
 import type { ToolExecutionContext } from "@arnilo/prism";
 import { createGitTools } from "@arnilo/prism-coding-agent";
 import {
@@ -10,11 +10,11 @@ import {
   createSandboxCodingComposition,
   createSandboxFilesystemOperations,
   createSandboxRepositoryOperations,
-  SANDBOX_FS_SCRIPTS,
-  SandboxFsError,
   type DisposableSandbox,
+  SANDBOX_FS_SCRIPTS,
   type SandboxExecFileRequest,
   type SandboxExecRequest,
+  SandboxFsError,
 } from "../index.js";
 
 const ROOT = "/workspace";
@@ -234,10 +234,7 @@ test("shell-visible file readable via tool after composition auto-wire", async (
   const read = tools.find((t) => t.name === "read")!;
   const result = await read.execute({ path: "seed.txt" }, ctx());
   assert.equal(result.error, undefined);
-  assert.match(
-    String(result.content?.[0] && result.content[0].type === "text" ? result.content[0].text : ""),
-    /from-shell/,
-  );
+  assert.match(String(result.content?.[0] && result.content[0].type === "text" ? result.content[0].text : ""), /from-shell/);
 
   const write = tools.find((t) => t.name === "write")!;
   assert.equal((await write.execute({ path: "out.txt", content: "via-tool\n" }, ctx())).error, undefined);
@@ -270,10 +267,7 @@ test("list/search agree with tree contents", async () => {
 test("oversized write fails closed without retaining", async () => {
   const sandbox = createMemorySandbox();
   const { write } = createSandboxFilesystemOperations(sandbox, { workspaceRoot: ROOT });
-  await assert.rejects(
-    () => write.writeFile(`${ROOT}/big.txt`, "x".repeat(100), { maxBytes: 8 }),
-    SandboxFsError,
-  );
+  await assert.rejects(() => write.writeFile(`${ROOT}/big.txt`, "x".repeat(100), { maxBytes: 8 }), SandboxFsError);
   assert.equal(sandbox.files.has(`${ROOT}/big.txt`), false);
 });
 
@@ -340,7 +334,7 @@ test("host mode Git stays on host cwd; composition does not claim containment", 
       gitPath: "/usr/bin/git",
       runner: async (request) => {
         calls.push({ cwd: request.cwd, args: request.args });
-        const payload = ["# branch.oid abc", "# branch.head main", "? host-only.txt"].join("\0") + "\0";
+        const payload = `${["# branch.oid abc", "# branch.head main", "? host-only.txt"].join("\0")}\0`;
         return {
           exitCode: 0,
           stdout: Buffer.from(payload),

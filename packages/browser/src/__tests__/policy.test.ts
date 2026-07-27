@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm, readFile, symlink } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
 import {
-  BrowserError,
   approveUploadPaths,
   assertBrowserUrlAllowed,
+  BrowserError,
   buildBrowserExecutionAction,
   classifyBrowserOperation,
   classifyBrowserUrl,
@@ -101,9 +101,7 @@ describe("browser Task 6 policy", () => {
     await assert.rejects(
       () => manager.open("run-1", { url: "https://example.com/" }),
       (error: unknown) =>
-        error instanceof BrowserError &&
-        error.code === "ERR_PRISM_BROWSER_NETWORK" &&
-        /contained proxy/.test(error.message),
+        error instanceof BrowserError && error.code === "ERR_PRISM_BROWSER_NETWORK" && /contained proxy/.test(error.message),
     );
     await manager.close();
   });
@@ -195,12 +193,7 @@ describe("browser Task 6 policy", () => {
       const limits = resolveBrowserLimits({ maxDownloadBytes: 1024, maxDownloads: 2, maxDownloadAggregateBytes: 4096 });
       const budget = createDownloadBudget();
       const download = new FakeDownload("https://example.com/a.bin", "../evil\nname.bin", Buffer.from("abc123"));
-      const meta = await quarantineDownload(
-        download,
-        { quarantine, approveRelease: async () => false },
-        limits,
-        budget,
-      );
+      const meta = await quarantineDownload(download, { quarantine, approveRelease: async () => false }, limits, budget);
       assert.equal(meta.bytes, 6);
       assert.equal(meta.sha256.length, 64);
       assert.equal(sanitizeDownloadName(meta.suggestedName).includes(".."), false);
@@ -210,11 +203,7 @@ describe("browser Task 6 policy", () => {
         () => releaseDownload(meta.downloadId, { quarantine, approveRelease: async () => false }, budget),
         /denied download release/,
       );
-      const released = await releaseDownload(
-        meta.downloadId,
-        { quarantine, approveRelease: async () => true },
-        budget,
-      );
+      const released = await releaseDownload(meta.downloadId, { quarantine, approveRelease: async () => true }, budget);
       assert.equal(released.released, true);
     } finally {
       await rm(quarantine, { recursive: true, force: true });

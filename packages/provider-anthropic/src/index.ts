@@ -1,4 +1,4 @@
-import { defineProviderPackage, type CredentialValueSource, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
 import { anthropicModels } from "./models.js";
 import { createAnthropicMessagesProvider } from "./provider.js";
 
@@ -19,13 +19,15 @@ export function createAnthropicProviderPackage(options: AnthropicProviderPackage
     description: "Anthropic Messages provider package for Prism.",
     docs: { links: ["docs/providers/anthropic.md"] },
     setup(api) {
-      api.registerProvider(createAnthropicMessagesProvider({
-        id: providerId,
-        apiKey: options.apiKey,
-        fetch: options.fetch,
-        baseUrl: options.baseUrl,
-        userAgent: options.userAgent,
-      }));
+      api.registerProvider(
+        createAnthropicMessagesProvider({
+          id: providerId,
+          apiKey: options.apiKey,
+          fetch: options.fetch,
+          baseUrl: options.baseUrl,
+          userAgent: options.userAgent,
+        }),
+      );
       for (const model of options.models ?? anthropicModels) {
         api.registerModel({ ...model, provider: providerId });
       }
@@ -35,32 +37,32 @@ export function createAnthropicProviderPackage(options: AnthropicProviderPackage
 }
 
 export {
-  ANTHROPIC_API_VERSION,
-  ANTHROPIC_DEFAULT_BASE_URL,
-  anthropicModels,
-  defineAnthropicModel,
-  listAnthropicModels,
-  mapAnthropicModel,
-  type AnthropicModelConfig,
-  type AnthropicModelEntry,
-  type ListAnthropicModelsOptions,
-} from "./models.js";
-export {
-  anthropicOwnedHeaders,
-  createAnthropicMessagesProvider,
-  type AnthropicMessagesProviderOptions,
-} from "./provider.js";
+  anthropicCacheEnabled,
+  applyAnthropicCacheControl,
+} from "./cache.js";
 export {
   anthropicMessagesBody,
   anthropicMessagesEvents,
 } from "./messages.js";
+export {
+  ANTHROPIC_API_VERSION,
+  ANTHROPIC_DEFAULT_BASE_URL,
+  type AnthropicModelConfig,
+  type AnthropicModelEntry,
+  anthropicModels,
+  defineAnthropicModel,
+  type ListAnthropicModelsOptions,
+  listAnthropicModels,
+  mapAnthropicModel,
+} from "./models.js";
+export {
+  type AnthropicMessagesProviderOptions,
+  anthropicOwnedHeaders,
+  createAnthropicMessagesProvider,
+} from "./provider.js";
 export {
   anthropicEffort,
   anthropicPreserveThinking,
   anthropicThinking,
   stripAnthropicOwnedCompat,
 } from "./thinking.js";
-export {
-  anthropicCacheEnabled,
-  applyAnthropicCacheControl,
-} from "./cache.js";

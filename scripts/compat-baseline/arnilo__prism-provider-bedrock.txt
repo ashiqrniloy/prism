@@ -1,0 +1,8 @@
+bedrockRuntimeEndpoint	export declare function bedrockRuntimeEndpoint(region: string, endpoint?: string): string
+createBedrockProvider	export declare function createBedrockProvider(options: BedrockProviderOptions): AIProvider
+createBedrockProviderPackage	export declare function createBedrockProviderPackage(options: BedrockProviderPackageOptions): ProviderPackage
+signAwsRequest	export declare function signAwsRequest(input: SignAwsRequestInput): Record<string, string>
+type AwsCredentials	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockCredentialSource	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockProviderOptions	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockProviderPackageOptions	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"

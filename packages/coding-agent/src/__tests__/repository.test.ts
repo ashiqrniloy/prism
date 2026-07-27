@@ -1,21 +1,13 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test } from "node:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { createCodingTools, createReadOnlyTools } from "../index.js";
 import { createRepoListTool } from "../list.js";
+import { compileSearchPattern, createLocalRepositoryOperations, isBinaryBuffer, resolveRepositoryLimits } from "../repository.js";
 import { createRepoSearchTool } from "../search.js";
-import {
-  createLocalRepositoryOperations,
-  resolveRepositoryLimits,
-  compileSearchPattern,
-  isBinaryBuffer,
-} from "../repository.js";
-import {
-  createCodingTools,
-  createReadOnlyTools,
-} from "../index.js";
 
 let counter = 0;
 function ctx(signal?: AbortSignal): ToolExecutionContext {
@@ -88,7 +80,10 @@ test("repo_list returns deterministic relative paths and skips defaults", async 
     assert.doesNotMatch(text, /\.hidden/);
     const entries = r.metadata?.entries as Array<{ path: string }>;
     const paths = entries.map((e) => e.path);
-    assert.deepEqual(paths, [...paths].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
+    assert.deepEqual(
+      paths,
+      [...paths].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+    );
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -105,7 +100,7 @@ test("repo_list pagination, includeHidden, and path scope", async () => {
     assert.equal(page1.metadata?.nextOffset, 2);
 
     const page2 = await tool.execute({ maxResults: 2, offset: 2 }, ctx());
-    assert.equal((page2.metadata?.entries as unknown[]).length <= 2, true);
+    assert.equal((page2.metadata?.entries as unknown[])!.length <= 2, true);
 
     const hidden = await tool.execute({ includeHidden: true, maxResults: 100 }, ctx());
     assert.match(textOf(hidden), /\.hidden\.txt/);
@@ -130,7 +125,7 @@ test("repo_list rejects symlink escape and does not follow symlink dirs", async 
     assert.match(textOf(r), /symlink\tescape-link/);
     assert.doesNotMatch(textOf(r), /secret\.txt/);
 
-    const escape = await tool.execute({ path: "../" + outside.split("/").pop() }, ctx());
+    const escape = await tool.execute({ path: `../${outside.split("/").pop()}` }, ctx());
     assert.ok(escape.error);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -171,10 +166,7 @@ test("repo_search literal and regex with ordering, binary skip, and context", as
   const cwd = await tmp();
   try {
     await seedTree(cwd);
-    await writeFile(
-      join(cwd, "src", "multi.ts"),
-      "alpha\ncreateAgent here\nbeta\ngamma\n",
-    );
+    await writeFile(join(cwd, "src", "multi.ts"), "alpha\ncreateAgent here\nbeta\ngamma\n");
     const tool = createRepoSearchTool(cwd);
 
     const lit = await tool.execute({ query: "createAgent", mode: "literal", context: 1 }, ctx());
@@ -236,9 +228,7 @@ test("repo_search aborts and respects custom RepositoryOperations", async () => 
         search: async () => {
           called = true;
           return {
-            matches: [
-              { path: "x.ts", line: 1, column: 1, text: "x", before: [], after: [] },
-            ],
+            matches: [{ path: "x.ts", line: 1, column: 1, text: "x", before: [], after: [] }],
             truncated: false,
             truncatedBy: null,
             scannedBytes: 1,

@@ -94,10 +94,20 @@ export function resolveRagLimits(input: RagLimitsInput = {}): RagLimits {
     maxResultBytes: integer(input.maxResultBytes, DEFAULT_MAX_RESULT_BYTES, HARD_MAX_RESULT_BYTES_CAP, "maxResultBytes"),
     maxContextTokens: integer(input.maxContextTokens, DEFAULT_MAX_CONTEXT_TOKENS, HARD_MAX_CONTEXT_TOKENS_CAP, "maxContextTokens"),
     maxMetadataBytes: integer(input.maxMetadataBytes, DEFAULT_MAX_METADATA_BYTES, HARD_MAX_METADATA_BYTES_CAP, "maxMetadataBytes"),
-    maxVectorDimensions: integer(input.maxVectorDimensions, DEFAULT_MAX_VECTOR_DIMENSIONS, DEFAULT_MAX_VECTOR_DIMENSIONS, "maxVectorDimensions"),
+    maxVectorDimensions: integer(
+      input.maxVectorDimensions,
+      DEFAULT_MAX_VECTOR_DIMENSIONS,
+      DEFAULT_MAX_VECTOR_DIMENSIONS,
+      "maxVectorDimensions",
+    ),
     maxRerankBytes: integer(input.maxRerankBytes, DEFAULT_MAX_RERANK_BYTES, HARD_MAX_RERANK_BYTES_CAP, "maxRerankBytes"),
     maxRerankMs: integer(input.maxRerankMs, DEFAULT_MAX_RERANK_MS, HARD_MAX_RERANK_MS_CAP, "maxRerankMs"),
     rerankConcurrency: integer(input.rerankConcurrency, DEFAULT_RERANK_CONCURRENCY, HARD_RERANK_CONCURRENCY_CAP, "rerankConcurrency"),
-    ingestionStatusPageSize: integer(input.ingestionStatusPageSize, DEFAULT_INGESTION_STATUS_PAGE_SIZE, HARD_INGESTION_STATUS_PAGE_SIZE_CAP, "ingestionStatusPageSize"),
+    ingestionStatusPageSize: integer(
+      input.ingestionStatusPageSize,
+      DEFAULT_INGESTION_STATUS_PAGE_SIZE,
+      HARD_INGESTION_STATUS_PAGE_SIZE_CAP,
+      "ingestionStatusPageSize",
+    ),
   });
 }

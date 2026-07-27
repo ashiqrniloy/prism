@@ -1,8 +1,6 @@
 import type { RunFeedbackStore } from "../contracts.js";
 
-export interface RunFeedbackConformanceFactory {
-  (): RunFeedbackStore | Promise<RunFeedbackStore>;
-}
+export type RunFeedbackConformanceFactory = () => RunFeedbackStore | Promise<RunFeedbackStore>;
 
 /** Shared minimum behavior for memory and production feedback stores. */
 export async function runFeedbackConformance(factory: RunFeedbackConformanceFactory): Promise<void> {
@@ -34,5 +32,5 @@ export async function runFeedbackConformance(factory: RunFeedbackConformanceFact
   if (await store.delete({ id: "feedback-1", tenantId: "feedback-tenant", userId: "other" })) {
     throw new Error("cross-owner feedback deletion succeeded");
   }
-  if (!await store.delete({ id: "feedback-1", ...owner })) throw new Error("owned feedback deletion failed");
+  if (!(await store.delete({ id: "feedback-1", ...owner }))) throw new Error("owned feedback deletion failed");
 }

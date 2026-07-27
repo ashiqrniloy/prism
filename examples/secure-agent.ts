@@ -1,8 +1,8 @@
 import {
   createMemoryCheckpointStore,
   createMockProvider,
-  createSecureAgent,
   createSecretRedactor,
+  createSecureAgent,
   createStaticPermissionPolicy,
   createStaticTrustPolicy,
   providerDone,
@@ -16,7 +16,13 @@ export async function demo() {
     id: "secure-demo",
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta("safe"), providerDone()]),
-    tools: [{ name: "notes/read", parameters: { type: "object" }, execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "notes/read", value: "ok" }) }],
+    tools: [
+      {
+        name: "notes/read",
+        parameters: { type: "object" },
+        execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "notes/read", value: "ok" }),
+      },
+    ],
     toolArgumentValidator: createJsonSchemaArgumentValidator(),
     redactor: createSecretRedactor(["fake-secret"]),
     permission: createStaticPermissionPolicy({ allow: ["tool:notes/read:execute"] }),

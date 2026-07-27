@@ -1,16 +1,5 @@
-import {
-  createAgent,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
-import {
-  createMemoryEvaluationStore,
-  defineDataset,
-  defineScorer,
-  runExperiment,
-  scoreRunLive,
-} from "@arnilo/prism-evals";
+import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createMemoryEvaluationStore, defineDataset, defineScorer, runExperiment, scoreRunLive } from "@arnilo/prism-evals";
 
 const scorer = defineScorer({
   id: "contains-citation",
@@ -31,10 +20,7 @@ const dataset = defineDataset({
 
 const agent = createAgent({
   model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([
-    providerTextDelta("Prism is an agent harness [1]."),
-    providerDone(),
-  ]),
+  provider: createMockProvider([providerTextDelta("Prism is an agent harness [1]."), providerDone()]),
 });
 
 const store = createMemoryEvaluationStore();
@@ -58,4 +44,8 @@ void scoreRunLive(liveResult, {
 });
 
 const page = await store.query({ tenantId: "demo", experimentId: "demo-exp" });
-console.log("stored evaluations", page.items.length, page.items.map((item) => item.score));
+console.log(
+  "stored evaluations",
+  page.items.length,
+  page.items.map((item) => item.score),
+);

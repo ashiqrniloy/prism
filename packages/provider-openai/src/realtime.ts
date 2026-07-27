@@ -95,7 +95,11 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
   function closeTransport(reason?: string): void {
     if (wallTimer) clearTimeout(wallTimer);
     wallTimer = undefined;
-    try { transport?.close(1000, reason); } catch { /* transport already gone */ }
+    try {
+      transport?.close(1000, reason);
+    } catch {
+      /* transport already gone */
+    }
     releaseOwnerSlot();
   }
 
@@ -151,7 +155,11 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
     if (opening) return opening;
     const pending = openTransport();
     opening = pending;
-    try { await pending; } finally { if (opening === pending) opening = undefined; }
+    try {
+      await pending;
+    } finally {
+      if (opening === pending) opening = undefined;
+    }
   }
 
   async function openTransport(): Promise<void> {
@@ -160,7 +168,10 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
     ownsOwnerSlot = true;
     try {
       secret = await resolveCredentialValue(options.apiKey, { provider: providerId, name: "apiKey" });
-      if (closed) { releaseOwnerSlot(); return; }
+      if (closed) {
+        releaseOwnerSlot();
+        return;
+      }
       const base = (options.baseUrl ?? "wss://api.openai.com/v1").replace(/\/$/, "");
       if (!base.startsWith("wss://")) throw new Error("OpenAI realtime baseUrl must use wss://");
       const url = `${base}/realtime?model=${encodeURIComponent(options.model.model)}`;
@@ -169,7 +180,9 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
         "OpenAI-Safety-Identifier": ownerId,
       };
       transport = (options.webSocket ?? globalWebSocket)(url, { headers });
-      transport.addEventListener("open", () => { /* session.created confirms the bound server session */ });
+      transport.addEventListener("open", () => {
+        /* session.created confirms the bound server session */
+      });
       transport.addEventListener("message", (event) => {
         if (typeof event.data === "string") handleInbound(event.data);
       });
@@ -202,7 +215,11 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
       return;
     }
     let parsed: { readonly type?: string; readonly [key: string]: unknown };
-    try { parsed = JSON.parse(text); } catch { return; }
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return;
+    }
     const type = parsed.type ?? "";
     if (type === "session.created") {
       const session = parsed.session as { readonly id?: unknown } | undefined;
@@ -217,7 +234,7 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
       return;
     }
     if (type === "response.output_audio.delta" && typeof parsed.delta === "string") {
-      const estimatedBytes = Math.ceil(parsed.delta.length * 3 / 4);
+      const estimatedBytes = Math.ceil((parsed.delta.length * 3) / 4);
       if (!chargeAudio(estimatedBytes)) return;
       push({ type: "audio_delta", audio: new Uint8Array(Buffer.from(parsed.delta, "base64")) }, estimatedBytes);
       return;
@@ -260,7 +277,13 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
         for (;;) {
           const queued = queue.shift();
           if (queued) queuedBytes -= queued.bytes;
-          const event = queued?.event ?? (closed ? undefined : await new Promise<RealtimeEvent | undefined>((resolve) => { resolveEvent = resolve; }));
+          const event =
+            queued?.event ??
+            (closed
+              ? undefined
+              : await new Promise<RealtimeEvent | undefined>((resolve) => {
+                  resolveEvent = resolve;
+                }));
           if (!event) break;
           yield event;
           if (event.type === "session_closed") break;
@@ -303,10 +326,15 @@ function hostedToolItem(value: unknown): value is { readonly id?: string; readon
 function globalWebSocket(url: string, options: RealtimeTransportOptions): RealtimeTransport {
   // Node 24's WebSocketInit accepts headers; Node 22 hosts can inject `webSocket`
   // until their global implementation supports the same documented header shape.
-  const HeaderWebSocket = WebSocket as unknown as new (url: string, options: { readonly headers: Readonly<Record<string, string>> }) => WebSocket;
+  const HeaderWebSocket = WebSocket as unknown as new (
+    url: string,
+    options: { readonly headers: Readonly<Record<string, string>> },
+  ) => WebSocket;
   const ws = new HeaderWebSocket(url, { headers: options.headers });
   return {
-    get readyState() { return ws.readyState; },
+    get readyState() {
+      return ws.readyState;
+    },
     send: (data) => ws.send(data),
     close: (code, reason) => ws.close(code, reason),
     addEventListener: (type, handler) => ws.addEventListener(type, handler as EventListener),

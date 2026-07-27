@@ -32,9 +32,7 @@ export interface SharedSandboxBrowserOptions {
  * and download quarantine mounts. Callers still supply the Playwright Browser and
  * must close the browser context before disposing the sandbox.
  */
-export function createSharedSandboxBrowserOptions(
-  input: SharedSandboxBrowserAlignment,
-): SharedSandboxBrowserOptions {
+export function createSharedSandboxBrowserOptions(input: SharedSandboxBrowserAlignment): SharedSandboxBrowserOptions {
   if (!input.workspaceRoot || !input.downloadsRoot) {
     throw new Error("workspaceRoot and downloadsRoot are required");
   }
@@ -42,9 +40,7 @@ export function createSharedSandboxBrowserOptions(
     requireContainedProxy: true,
     allowLoopback: input.allowLoopback ?? false,
     allowPrivateHosts: input.allowPrivateHosts ?? false,
-    ...(input.containedProxyAttestation
-      ? { containedProxyAttestation: input.containedProxyAttestation }
-      : {}),
+    ...(input.containedProxyAttestation ? { containedProxyAttestation: input.containedProxyAttestation } : {}),
   };
   return {
     networkPolicy,

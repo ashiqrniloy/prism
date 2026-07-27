@@ -4,8 +4,8 @@
  */
 import {
   assertExecutionAllowed,
-  ExecutionDeniedError,
   type ContentBlock,
+  ExecutionDeniedError,
   type ExecutionPolicy,
   type JsonObject,
   type ToolDefinition,
@@ -15,14 +15,10 @@ import {
 import type { BrowserDownloadOptions } from "./downloads.js";
 import { BrowserError } from "./errors.js";
 import type { BrowserLimitOptions } from "./limits.js";
-import {
-  createBrowserManager,
-  type BrowserManager,
-  type CreateBrowserManagerOptions,
-} from "./manager.js";
+import { type BrowserManager, type CreateBrowserManagerOptions, createBrowserManager } from "./manager.js";
 import type { BrowserNetworkPolicy } from "./network.js";
 import { buildBrowserExecutionAction, classifyBrowserOperation } from "./policy.js";
-import type { BrowserActRequest, BrowserActionName, PlaywrightBrowser } from "./types.js";
+import type { BrowserActionName, BrowserActRequest, PlaywrightBrowser } from "./types.js";
 import type { BrowserUploadOptions } from "./uploads.js";
 
 export interface BrowserToolsOptions {
@@ -72,10 +68,7 @@ function messageOf(error: unknown): string {
 function resolveManager(options: BrowserToolsOptions = {}): BrowserManager {
   if (options.manager) return options.manager;
   if (!options.browser) {
-    throw new BrowserError(
-      "ERR_PRISM_BROWSER_INPUT",
-      "createBrowserTools requires browser or manager",
-    );
+    throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "createBrowserTools requires browser or manager");
   }
   const managerOptions: CreateBrowserManagerOptions = {
     browser: options.browser,
@@ -126,10 +119,7 @@ function parseActRequest(args: JsonObject): BrowserActRequest {
   if (typeof action !== "string" || !ACTION_NAMES.has(action as BrowserActionName)) {
     throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "browser_act requires a supported action");
   }
-  const clip =
-    args.clip && typeof args.clip === "object" && !Array.isArray(args.clip)
-      ? (args.clip as Record<string, unknown>)
-      : undefined;
+  const clip = args.clip && typeof args.clip === "object" && !Array.isArray(args.clip) ? (args.clip as Record<string, unknown>) : undefined;
   const request: BrowserActRequest = {
     action: action as BrowserActionName,
     ...(args.target !== undefined ? { target: args.target as BrowserActRequest["target"] } : {}),
@@ -151,9 +141,7 @@ function parseActRequest(args: JsonObject): BrowserActRequest {
     ...(args.direction === "up" || args.direction === "down" ? { direction: args.direction } : {}),
     ...(typeof args.amount === "number" ? { amount: args.amount } : {}),
     ...(typeof args.timeoutMs === "number" ? { timeoutMs: args.timeoutMs } : {}),
-    ...(args.dialogResponse === "accept" || args.dialogResponse === "dismiss"
-      ? { dialogResponse: args.dialogResponse }
-      : {}),
+    ...(args.dialogResponse === "accept" || args.dialogResponse === "dismiss" ? { dialogResponse: args.dialogResponse } : {}),
     ...(typeof args.promptText === "string" ? { promptText: args.promptText } : {}),
   };
   return request;

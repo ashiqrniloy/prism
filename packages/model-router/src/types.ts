@@ -1,4 +1,4 @@
-import type { AgentIdentity, AIProvider, ModelConfig, ProviderResolver, ProviderRequestPolicy } from "@arnilo/prism";
+import type { AgentIdentity, AIProvider, ModelConfig, ProviderRequestPolicy, ProviderResolver } from "@arnilo/prism";
 
 export interface ModelRouterAllowList {
   readonly providers?: readonly string[];
