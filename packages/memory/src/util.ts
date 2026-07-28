@@ -53,7 +53,7 @@ export function assertSafeJsonKey(key: string): void {
 }
 
 export function cloneJsonObject(value: JsonObject): JsonObject {
-  return JSON.parse(JSON.stringify(value)) as JsonObject;
+  return structuredClone(value);
 }
 
 export function mergeJsonObjects(base: JsonObject, patch: JsonObject): JsonObject {

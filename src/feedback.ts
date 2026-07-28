@@ -263,7 +263,7 @@ function freezeRecord(record: RunFeedbackRecord): RunFeedbackRecord {
 }
 
 function cloneFrozenJsonObject(value: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
-  const cloned: unknown = JSON.parse(JSON.stringify(value));
+  const cloned: unknown = structuredClone(value);
   if (!cloned || typeof cloned !== "object" || Array.isArray(cloned)) throw new RunFeedbackError("metadata must be a JSON object");
   return deepFreeze(cloned as Record<string, unknown>);
 }

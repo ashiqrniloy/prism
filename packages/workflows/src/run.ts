@@ -1135,7 +1135,7 @@ function resultFromRecord(workflowId: string, record: WorkflowCheckpointRecord):
 }
 
 function cloneState(value: JsonObject): JsonObject {
-  return JSON.parse(JSON.stringify(value)) as JsonObject;
+  return structuredClone(value);
 }
 
 function parseStateHistory(history: Readonly<Record<string, JsonObject>> | undefined, current: JsonObject): Map<number, JsonObject> {

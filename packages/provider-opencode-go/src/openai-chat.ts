@@ -1,17 +1,6 @@
-import type { ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
-import {
-  assertStructuredOutputRequestSupported,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerThinkingDelta,
-  providerToolCall,
-  providerToolCallDelta,
-  providerUsage,
-  toolCallFromArgumentsText,
-} from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
-import { readSseData } from "@arnilo/prism/providers/transport";
+import type { ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { buildOpenAIChatBody, openAIChatEvents as sharedOpenAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import {
   openCodeGoPreserveThinking,
   openCodeGoReasoning,
@@ -20,83 +9,32 @@ import {
   stripOpenCodeGoOwnedCompat,
 } from "./thinking.js";
 
-interface ToolAccumulator {
-  id?: string;
-  name?: string;
-  argumentsText: string;
+export function openAIChatBody(request: ProviderRequest): JsonObject {
+  return buildOpenAIChatBody(request, {
+    serializeMessage: (message, req) =>
+      serializeOpenCodeGoChatMessage(message, req.model.capabilities ?? {}, openCodeGoPreserveThinking(req)),
+    transformBody: (body, req) => openAIChatTransform(body, req),
+  });
 }
 
-export function openAIChatBody(request: ProviderRequest): JsonObject {
-  assertStructuredOutputRequestSupported(request.model, request.options);
-  const { maxTokens, ...parameters } = request.model.parameters ?? {};
-  const preserveThinking = openCodeGoPreserveThinking(request);
-  const compatRest = stripOpenCodeGoOwnedCompat(request.options?.compat);
-  const body: Record<string, unknown> = {
-    model: request.model.model,
-    messages: request.messages.map((message) =>
-      serializeOpenCodeGoChatMessage(message, request.model.capabilities ?? {}, preserveThinking),
-    ),
-    tools: request.tools?.map(serializeOpenAITool),
-    stream: true,
-    stream_options: { include_usage: true },
-    ...parameters,
+function openAIChatTransform(body: JsonObject, request: ProviderRequest): JsonObject {
+  const { maxTokens, ...rest } = body as Record<string, unknown>;
+  const transformed: Record<string, unknown> = {
+    ...rest,
+    // Only the explicit `maxTokens` parameter; no limits fallback (legacy).
     max_tokens: maxTokens,
-    ...compatRest,
+    ...stripOpenCodeGoOwnedCompat(request.options?.compat),
+    // Resolved thinking fields win over raw compat passthrough (legacy order).
     thinking: openCodeGoThinking(request),
     reasoning_effort: openCodeGoReasoningEffort(request),
     reasoning: openCodeGoReasoning(request),
   };
-  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
-  return clean(body);
+  applyOpenAIChatStructuredOutput(transformed, request.options?.structuredOutput);
+  return clean(transformed);
 }
 
-export async function* openAIChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
-  const tools = new Map<number, ToolAccumulator>();
-  let usage: Usage | undefined;
-  let sawDoneMarker = false;
-  let sawFinishReason = false;
-  for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") {
-      sawDoneMarker = true;
-      break;
-    }
-    const chunk = JSON.parse(data) as OpenAIChunk;
-    usage = mapOpenAIChatUsage(chunk.usage) ?? usage;
-    const mapped = mapOpenAIChatUsage(chunk.usage);
-    if (mapped) yield providerUsage(mapped);
-    for (const choice of chunk.choices ?? []) {
-      if (choice.finish_reason) sawFinishReason = true;
-      const delta = choice.delta ?? {};
-      if (delta.content) yield providerTextDelta(delta.content);
-      if (delta.reasoning_content) yield providerThinkingDelta(delta.reasoning_content);
-      for (const tool of delta.tool_calls ?? []) {
-        const index = tool.index ?? 0;
-        const current = tools.get(index) ?? { argumentsText: "" };
-        current.id = tool.id ?? current.id;
-        current.name = tool.function?.name ?? current.name;
-        current.argumentsText += tool.function?.arguments ?? "";
-        tools.set(index, current);
-        yield providerToolCallDelta({ index, id: tool.id, name: tool.function?.name, argumentsText: tool.function?.arguments });
-      }
-    }
-  }
-  const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
-  if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
-    // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(
-      new Error(
-        `OpenCode Go chat stream ended without completion evidence ` +
-          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
-          `finish_reason: ${sawFinishReason ? "received" : "missing"}, ` +
-          `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
-      ),
-    );
-    return;
-  }
-  for (const call of tools.values()) {
-    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
-  }
-  yield providerDone(usage);
+export function openAIChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
+  return sharedOpenAIChatEvents(body, { signal, strictCompletion: true });
 }
 
 /**
@@ -167,20 +105,4 @@ export function serializeOpenCodeGoChatMessage(message: Message, capabilities: M
 
 function clean(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as JsonObject;
-}
-
-interface OpenAIChunk {
-  readonly choices?: readonly {
-    readonly finish_reason?: string | null;
-    readonly delta?: {
-      readonly content?: string;
-      readonly reasoning_content?: string;
-      readonly tool_calls?: readonly {
-        readonly index?: number;
-        readonly id?: string;
-        readonly function?: { readonly name?: string; readonly arguments?: string };
-      }[];
-    };
-  }[];
-  readonly usage?: unknown;
 }

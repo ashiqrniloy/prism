@@ -3,6 +3,7 @@
  * One non-persistent context per run; actions serialize through a per-run queue.
  * Task 6: egress routing, side-effect hooks, upload/download/screenshot policy.
  */
+import { setTimeout as sleep } from "node:timers/promises";
 import {
   type BrowserDownloadOptions,
   cleanupDownloads,
@@ -887,8 +888,4 @@ function isActionName(value: string): value is BrowserActionName {
     value === "screenshot" ||
     value === "download_release"
   );
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

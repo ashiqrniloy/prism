@@ -7,22 +7,9 @@ import type {
   ModelCapabilities,
   ProviderEvent,
   ProviderRequest,
-  Usage,
 } from "@arnilo/prism";
-import {
-  assertStructuredOutputRequestSupported,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerThinkingDelta,
-  providerToolCall,
-  providerToolCallDelta,
-  providerUsage,
-  resolveCredentialValue,
-  toolCallFromArgumentsText,
-} from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
-import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { kimiPreserveThinking, kimiReasoningEffort, kimiThinking, stripKimiThinkingCompat } from "./thinking.js";
 
 export interface MoonshotProviderOptions {
@@ -33,12 +20,6 @@ export interface MoonshotProviderOptions {
   readonly fetch?: typeof fetch;
 }
 
-interface ToolAccumulator {
-  id?: string;
-  name?: string;
-  argumentsText: string;
-}
-
 /**
  * Moonshot / Kimi Open Platform Chat Completions provider (`POST /chat/completions`).
  * Official base: `https://api.moonshot.ai/v1` (or `api.moonshot.cn/v1`).
@@ -46,118 +27,43 @@ interface ToolAccumulator {
  * @see https://platform.kimi.ai/docs/api/overview
  */
 export function createMoonshotProvider(options: MoonshotProviderOptions = {}): AIProvider {
-  const id = options.id ?? "moonshot";
-  const baseUrl = (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/$/, "");
-  return {
-    id,
-    async *generate(request) {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      let token: string | undefined;
-      const secrets: (string | undefined)[] = [];
-      try {
-        const body = moonshotBody(request);
-        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-        secrets.push(token);
-        const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: {
-            ...request.options?.headers,
-            "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(body),
-          signal: request.signal,
-        });
-        if (!response.ok) {
-          return yield providerError(
-            new Error(`Moonshot request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
-            secrets,
-          );
-        }
-        if (!response.body) return yield providerError(new Error("Moonshot response had no body"), secrets);
-        yield* moonshotEvents(response.body, request.signal);
-      } catch (error) {
-        yield providerError(error, secrets);
-      }
-    },
-  };
+  return createOpenAICompatibleProvider({
+    id: options.id ?? "moonshot",
+    baseUrl: (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/$/, ""),
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    strictCompletion: true,
+    requestFailedPrefix: "Moonshot request failed",
+    serializeMessage: (message, request) =>
+      serializeMoonshotMessage(message, request.model.capabilities ?? {}, kimiPreserveThinking(request)),
+    transformBody: (body, request) => moonshotTransform(body, request),
+  });
 }
 
 export function moonshotBody(request: ProviderRequest): JsonObject {
-  assertStructuredOutputRequestSupported(request.model, request.options);
-  const preserveThinking = kimiPreserveThinking(request);
-  const { maxTokens, ...parameters } = request.model.parameters ?? {};
-  const body: Record<string, unknown> = {
-    model: request.model.model,
-    messages: request.messages.map((message) => serializeMoonshotMessage(message, request.model.capabilities ?? {}, preserveThinking)),
-    tools: request.tools?.map(serializeOpenAITool),
-    stream: true,
-    stream_options: { include_usage: true },
+  return buildOpenAIChatBody(request, {
+    serializeMessage: (message, req) => serializeMoonshotMessage(message, req.model.capabilities ?? {}, kimiPreserveThinking(req)),
+    transformBody: (body, req) => moonshotTransform(body, req),
+  });
+}
+
+function moonshotTransform(body: JsonObject, request: ProviderRequest): JsonObject {
+  const { maxTokens, ...rest } = body as Record<string, unknown>;
+  const transformed: Record<string, unknown> = {
+    // Resolved thinking fields first: model `parameters` may override them (legacy order).
     thinking: kimiThinking(request),
     reasoning_effort: kimiReasoningEffort(request),
-    ...parameters,
+    ...rest,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
     ...stripKimiThinkingCompat(request.options?.compat as JsonObject | undefined),
     ...request.options?.extra,
   };
-  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
-  return clean(body);
+  applyOpenAIChatStructuredOutput(transformed, request.options?.structuredOutput);
+  return clean(transformed);
 }
 
-export async function* moonshotEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
-  const tools = new Map<number, ToolAccumulator>();
-  let usage: Usage | undefined;
-  let sawDoneMarker = false;
-  let sawFinishReason = false;
-  for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") {
-      sawDoneMarker = true;
-      break;
-    }
-    const chunk = JSON.parse(data) as MoonshotChunk;
-    usage = mapOpenAIChatUsage(chunk.usage) ?? usage;
-    if (chunk.usage) {
-      const mapped = mapOpenAIChatUsage(chunk.usage);
-      if (mapped) yield providerUsage(mapped);
-    }
-    for (const choice of chunk.choices ?? []) {
-      if (choice.finish_reason) sawFinishReason = true;
-      const delta = choice.delta ?? {};
-      if (delta.content) yield providerTextDelta(delta.content);
-      if (delta.reasoning_content) yield providerThinkingDelta(delta.reasoning_content);
-      for (const tool of delta.tool_calls ?? []) {
-        const index = tool.index ?? 0;
-        const current = tools.get(index) ?? { argumentsText: "" };
-        current.id = tool.id ?? current.id;
-        current.name = tool.function?.name ?? current.name;
-        current.argumentsText += tool.function?.arguments ?? "";
-        tools.set(index, current);
-        yield providerToolCallDelta({
-          index,
-          id: tool.id,
-          name: tool.function?.name,
-          argumentsText: tool.function?.arguments,
-        });
-      }
-    }
-  }
-  const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
-  if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
-    // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(
-      new Error(
-        `Moonshot chat stream ended without completion evidence ` +
-          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
-          `finish_reason: ${sawFinishReason ? "received" : "missing"}, ` +
-          `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
-      ),
-    );
-    return;
-  }
-  for (const call of tools.values()) {
-    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
-  }
-  yield providerDone(usage);
+export function moonshotEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
+  return openAIChatEvents(body, { signal, strictCompletion: true });
 }
 
 /**
@@ -224,20 +130,4 @@ function clean(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(
     Object.entries(value).filter(([, item]) => item !== undefined && !(Array.isArray(item) && item.length === 0)),
   ) as JsonObject;
-}
-
-interface MoonshotChunk {
-  readonly choices?: readonly {
-    readonly finish_reason?: string | null;
-    readonly delta?: {
-      readonly content?: string;
-      readonly reasoning_content?: string;
-      readonly tool_calls?: readonly {
-        readonly index?: number;
-        readonly id?: string;
-        readonly function?: { readonly name?: string; readonly arguments?: string };
-      }[];
-    };
-  }[];
-  readonly usage?: unknown;
 }

@@ -1,19 +1,7 @@
-import type { AIProvider, ContentBlock, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
-import {
-  assertStructuredOutputRequestSupported,
-  type CredentialValueSource,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerThinkingDelta,
-  providerToolCall,
-  providerToolCallDelta,
-  providerUsage,
-  resolveCredentialValue,
-  toolCallFromArgumentsText,
-} from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
-import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+import type { AIProvider, ContentBlock, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { type CredentialValueSource } from "@arnilo/prism";
+import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { zaiPreserveThinking, zaiReasoningEffort, zaiThinking, zaiToolStream } from "./thinking.js";
 
 /** Official international Chat Completions base (China `open.bigmodel.cn` remains overridable). */
@@ -26,109 +14,44 @@ export interface ZaiProviderOptions {
   readonly fetch?: typeof fetch;
 }
 
-interface ToolAccumulator {
-  id?: string;
-  name?: string;
-  argumentsText: string;
-}
-
 export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider {
-  const id = options.id ?? "zai";
-  const baseUrl = (options.baseUrl ?? ZAI_DEFAULT_BASE_URL).replace(/\/$/, "");
-  return {
-    id,
-    async *generate(request) {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-      const secrets = [token];
-      try {
-        const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: {
-            ...request.options?.headers,
-            "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(zaiBody(request)),
-          signal: request.signal,
-        });
-        if (!response.ok) {
-          return yield providerError(
-            new Error(`Z.AI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
-            secrets,
-          );
-        }
-        if (!response.body) return yield providerError(new Error("Z.AI response had no body"), secrets);
-        yield* zaiEvents(response.body, request.signal);
-      } catch (error) {
-        yield providerError(error, secrets);
-      }
-    },
-  };
+  return createOpenAICompatibleProvider({
+    id: options.id ?? "zai",
+    baseUrl: (options.baseUrl ?? ZAI_DEFAULT_BASE_URL).replace(/\/$/, ""),
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    doneUsage: true,
+    requestFailedPrefix: "Z.AI request failed",
+    serializeMessage: (message, request) => toZaiMessage(message, request.model, zaiPreserveThinking(request)),
+    transformBody: (body, request) => zaiTransform(body, request),
+  });
 }
 
 export function zaiBody(request: ProviderRequest): JsonObject {
-  assertStructuredOutputRequestSupported(request.model, request.options);
-  const { maxTokens, ...parameters } = request.model.parameters ?? {};
-  const compatRest = stripZaiManagedCompat(request.options?.compat);
-  const preserveThinking = zaiPreserveThinking(request);
-  const body: Record<string, unknown> = {
-    model: request.model.model,
-    messages: request.messages.map((message) => toZaiMessage(message, request.model, preserveThinking)),
-    tools: request.tools?.map(serializeOpenAITool),
-    stream: true,
-    ...parameters,
+  return buildOpenAIChatBody(request, {
+    serializeMessage: (message, req) => toZaiMessage(message, req.model, zaiPreserveThinking(req)),
+    transformBody: (body, req) => zaiTransform(body, req),
+  });
+}
+
+function zaiTransform(body: JsonObject, request: ProviderRequest): JsonObject {
+  const { maxTokens, stream_options: _streamOptions, ...rest } = body as Record<string, unknown>;
+  const transformed: Record<string, unknown> = {
+    ...rest,
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
-    ...compatRest,
+    ...stripZaiManagedCompat(request.options?.compat),
     ...request.options?.extra,
     // Resolved official fields win over raw compat/extra escape hatches.
     thinking: zaiThinking(request),
     reasoning_effort: zaiReasoningEffort(request),
     tool_stream: zaiToolStream(request),
   };
-  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
-  return clean(body);
+  applyOpenAIChatStructuredOutput(transformed, request.options?.structuredOutput);
+  return clean(transformed);
 }
 
-export async function* zaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
-  const tools = new Map<number, ToolAccumulator>();
-  let usage: Usage | undefined;
-  for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") break;
-    const chunk = JSON.parse(data) as ZaiChunk;
-    if (chunk.usage) {
-      const mapped = mapOpenAIChatUsage(chunk.usage);
-      if (mapped) {
-        usage = mapped;
-        yield providerUsage(mapped);
-      }
-    }
-    for (const choice of chunk.choices ?? []) {
-      const delta = choice.delta ?? {};
-      if (delta.content) yield providerTextDelta(delta.content);
-      if (delta.reasoning_content) yield providerThinkingDelta(delta.reasoning_content);
-      for (const tool of delta.tool_calls ?? []) {
-        const index = tool.index ?? 0;
-        const current = tools.get(index) ?? { argumentsText: "" };
-        current.id = tool.id ?? current.id;
-        current.name = tool.function?.name ?? current.name;
-        current.argumentsText += tool.function?.arguments ?? "";
-        tools.set(index, current);
-        yield providerToolCallDelta({
-          index,
-          id: tool.id,
-          name: tool.function?.name,
-          argumentsText: tool.function?.arguments,
-        });
-      }
-    }
-  }
-  for (const call of tools.values()) {
-    if (call.id && call.name) {
-      yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
-    }
-  }
-  yield providerDone(usage);
+export function zaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
+  return openAIChatEvents(body, { signal, doneUsage: true });
 }
 
 /**
@@ -214,19 +137,4 @@ function stripZaiManagedCompat(compat: JsonObject | undefined): JsonObject {
 
 function clean(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as JsonObject;
-}
-
-interface ZaiChunk {
-  readonly choices?: readonly {
-    readonly delta?: {
-      readonly content?: string;
-      readonly reasoning_content?: string;
-      readonly tool_calls?: readonly {
-        readonly index?: number;
-        readonly id?: string;
-        readonly function?: { readonly name?: string; readonly arguments?: string };
-      }[];
-    };
-  }[];
-  readonly usage?: unknown;
 }

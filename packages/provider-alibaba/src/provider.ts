@@ -7,22 +7,9 @@ import type {
   ModelCapabilities,
   ProviderEvent,
   ProviderRequest,
-  Usage,
 } from "@arnilo/prism";
-import {
-  assertStructuredOutputRequestSupported,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerThinkingDelta,
-  providerToolCall,
-  providerToolCallDelta,
-  providerUsage,
-  resolveCredentialValue,
-  toolCallFromArgumentsText,
-} from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput, mapOpenAIChatUsage, serializeOpenAITool } from "@arnilo/prism/providers/openai";
-import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { applyAlibabaCacheControl, withAlibabaCacheMarker } from "./cache.js";
 import { type AlibabaBasePreset, alibabaBaseUrl } from "./models.js";
 
@@ -36,12 +23,6 @@ export interface AlibabaProviderOptions {
   readonly fetch?: typeof fetch;
 }
 
-interface ToolAccumulator {
-  id?: string;
-  name?: string;
-  argumentsText: string;
-}
-
 /**
  * Alibaba Cloud Model Studio / DashScope Chat Completions provider
  * (`POST {base}/chat/completions`, OpenAI-compatible). Works against pay-as-you-go
@@ -50,117 +31,43 @@ interface ToolAccumulator {
  * @see https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope
  */
 export function createAlibabaProvider(options: AlibabaProviderOptions = {}): AIProvider {
-  const id = options.id ?? "alibaba";
-  const baseUrl = alibabaBaseUrl(options);
-  return {
-    id,
-    async *generate(request) {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      let token: string | undefined;
-      const secrets: (string | undefined)[] = [];
-      try {
-        const body = alibabaBody(request);
-        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-        secrets.push(token);
-        const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: {
-            ...request.options?.headers,
-            "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(body),
-          signal: request.signal,
-        });
-        if (!response.ok) {
-          return yield providerError(
-            new Error(`Alibaba request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
-            secrets,
-          );
-        }
-        if (!response.body) return yield providerError(new Error("Alibaba response had no body"), secrets);
-        yield* alibabaEvents(response.body, request.signal);
-      } catch (error) {
-        yield providerError(error, secrets);
-      }
-    },
-  };
+  return createOpenAICompatibleProvider({
+    id: options.id ?? "alibaba",
+    baseUrl: alibabaBaseUrl(options),
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    strictCompletion: true,
+    requestFailedPrefix: "Alibaba request failed",
+    mapMessages: (request) => applyAlibabaCacheControl(request),
+    serializeMessage: (message, request) => serializeAlibabaMessage(message as CacheControlledMessage, request.model.capabilities ?? {}),
+    transformBody: (body, request) => alibabaTransform(body, request),
+  });
 }
 
 export function alibabaBody(request: ProviderRequest): JsonObject {
-  assertStructuredOutputRequestSupported(request.model, request.options);
-  const { maxTokens, ...parameters } = request.model.parameters ?? {};
-  const messages = applyAlibabaCacheControl(request);
-  const body: Record<string, unknown> = {
-    model: request.model.model,
-    messages: messages.map((message) => serializeAlibabaMessage(message, request.model.capabilities ?? {})),
-    tools: request.tools?.map(serializeOpenAITool),
-    stream: true,
-    stream_options: { include_usage: true },
-    enable_thinking: alibabaEnableThinking(request),
-    ...parameters,
+  return buildOpenAIChatBody(request, {
+    mapMessages: (req) => applyAlibabaCacheControl(req),
+    serializeMessage: (message, req) => serializeAlibabaMessage(message as CacheControlledMessage, req.model.capabilities ?? {}),
+    transformBody: (body, req) => alibabaTransform(body, req),
+  });
+}
+
+function alibabaTransform(body: JsonObject, request: ProviderRequest): JsonObject {
+  const { maxTokens, ...rest } = body as Record<string, unknown>;
+  const transformed: Record<string, unknown> = {
+    ...rest,
+    // Model `parameters.enable_thinking` wins over the compat-derived default (legacy order).
+    enable_thinking: (rest.enable_thinking as boolean | undefined) ?? alibabaEnableThinking(request),
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
     ...stripAlibabaCompat(request.options?.compat as JsonObject | undefined),
     ...request.options?.extra,
   };
-  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
-  return clean(body);
+  applyOpenAIChatStructuredOutput(transformed, request.options?.structuredOutput);
+  return clean(transformed);
 }
 
-export async function* alibabaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
-  const tools = new Map<number, ToolAccumulator>();
-  let usage: Usage | undefined;
-  let sawDoneMarker = false;
-  let sawFinishReason = false;
-  for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") {
-      sawDoneMarker = true;
-      break;
-    }
-    const chunk = JSON.parse(data) as AlibabaChunk;
-    usage = mapOpenAIChatUsage(chunk.usage) ?? usage;
-    if (chunk.usage) {
-      const mapped = mapOpenAIChatUsage(chunk.usage);
-      if (mapped) yield providerUsage(mapped);
-    }
-    for (const choice of chunk.choices ?? []) {
-      if (choice.finish_reason) sawFinishReason = true;
-      const delta = choice.delta ?? {};
-      if (delta.content) yield providerTextDelta(delta.content);
-      if (delta.reasoning_content) yield providerThinkingDelta(delta.reasoning_content);
-      for (const tool of delta.tool_calls ?? []) {
-        const index = tool.index ?? 0;
-        const current = tools.get(index) ?? { argumentsText: "" };
-        current.id = tool.id ?? current.id;
-        current.name = tool.function?.name ?? current.name;
-        current.argumentsText += tool.function?.arguments ?? "";
-        tools.set(index, current);
-        yield providerToolCallDelta({
-          index,
-          id: tool.id,
-          name: tool.function?.name,
-          argumentsText: tool.function?.arguments,
-        });
-      }
-    }
-  }
-  const danglingToolCall = [...tools.values()].some((call) => !call.id || !call.name);
-  if (!sawDoneMarker || !sawFinishReason || danglingToolCall) {
-    // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(
-      new Error(
-        `Alibaba chat stream ended without completion evidence ` +
-          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
-          `finish_reason: ${sawFinishReason ? "received" : "missing"}, ` +
-          `tool calls complete: ${danglingToolCall ? "no" : "yes"})`,
-      ),
-    );
-    return;
-  }
-  for (const call of tools.values()) {
-    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
-  }
-  yield providerDone(usage);
+export function alibabaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
+  return openAIChatEvents(body, { signal, strictCompletion: true });
 }
 
 /**
@@ -247,20 +154,4 @@ function clean(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(
     Object.entries(value).filter(([, item]) => item !== undefined && !(Array.isArray(item) && item.length === 0)),
   ) as JsonObject;
-}
-
-interface AlibabaChunk {
-  readonly choices?: readonly {
-    readonly finish_reason?: string | null;
-    readonly delta?: {
-      readonly content?: string;
-      readonly reasoning_content?: string;
-      readonly tool_calls?: readonly {
-        readonly index?: number;
-        readonly id?: string;
-        readonly function?: { readonly name?: string; readonly arguments?: string };
-      }[];
-    };
-  }[];
-  readonly usage?: unknown;
 }

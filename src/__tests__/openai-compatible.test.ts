@@ -270,6 +270,151 @@ describe("openai-compatible provider", () => {
     assert.match(String(errorEvent.error?.message ?? errorEvent.error), /Invalid provider message at messages\[1\]: expected object/);
   });
 
+  it("applies buildBodyExtra over the base body", async () => {
+    let body: Record<string, unknown> | undefined;
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      buildBodyExtra: (request) => ({ thinking: { type: "enabled" }, model_seen: request.model.model }),
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+
+    await collect(provider);
+
+    assert.equal(body?.model_seen, "demo");
+    assert.deepEqual(body?.thinking, { type: "enabled" });
+    assert.equal(body?.stream, true);
+  });
+
+  it("applies mapMessages before serialization", async () => {
+    let body: Record<string, unknown> | undefined;
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      mapMessages: (request) => [{ role: "system", content: [{ type: "text", text: "marker" }] }, ...request.messages],
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+
+    await collect(provider);
+
+    const messages = body?.messages as { role: string }[];
+    assert.equal(messages.length, 2);
+    assert.equal(messages[0]?.role, "system");
+  });
+
+  it("uses mapUsage override when provided", async () => {
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      mapUsage: (usage) => ({ inputTokens: 99, outputTokens: 0, totalTokens: 99, raw: usage }) as never,
+      fetch: okFetch([JSON.stringify({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 } }), "[DONE]"]),
+    });
+
+    const events = await collect(provider);
+    assert.deepEqual(events[0], {
+      type: "usage",
+      usage: { inputTokens: 99, outputTokens: 0, totalTokens: 99, raw: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 } },
+    });
+  });
+
+  it("merges extraHeaders while provider auth still wins", async () => {
+    let headers = new Headers();
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      apiKey: "real-key",
+      extraHeaders: () => ({ "http-referer": "https://app.example", "x-title": "app", authorization: "Bearer attacker" }),
+      fetch: (async (_input, init) => {
+        headers = new Headers(init?.headers);
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+
+    await collect(provider);
+
+    assert.equal(headers.get("http-referer"), "https://app.example");
+    assert.equal(headers.get("x-title"), "app");
+    assert.equal(headers.get("authorization"), "Bearer real-key");
+  });
+
+  it("transformBody runs last and wins over base fields", async () => {
+    let body: Record<string, unknown> | undefined;
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      buildBodyExtra: () => ({ vendor: 1 }),
+      transformBody: (body) => ({ ...body, max_tokens: 42, vendor: 2 }),
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return new Response(sse(["[DONE]"]), { status: 200 });
+      }) as typeof fetch,
+    });
+
+    await collect(provider);
+
+    assert.equal(body?.max_tokens, 42);
+    assert.equal(body?.vendor, 2);
+    assert.equal(body?.stream, true);
+  });
+
+  it("strictCompletion fails truncated streams and carries usage in done", async () => {
+    const truncated = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      strictCompletion: true,
+      fetch: okFetch([JSON.stringify({ choices: [{ delta: { content: "partial" } }] })]),
+    });
+    const truncatedEvents = await collect(truncated);
+    assert.equal(truncatedEvents.at(-1)?.type, "error");
+    assert.match(String((truncatedEvents.at(-1) as { error?: { message?: string } }).error?.message), /without completion evidence/);
+
+    const complete = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      strictCompletion: true,
+      fetch: okFetch([
+        JSON.stringify({ choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] }),
+        JSON.stringify({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 } }),
+        "[DONE]",
+      ]),
+    });
+    const events = await collect(complete);
+    const done = events.at(-1);
+    assert.equal(done?.type, "done");
+    if (done?.type === "done") {
+      assert.equal(done.usage?.inputTokens, 1);
+      assert.equal(done.usage?.outputTokens, 2);
+      assert.equal(done.usage?.totalTokens, 3);
+    }
+  });
+
+  it("uses requestFailedPrefix for HTTP errors", async () => {
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      requestFailedPrefix: "Vendor request failed",
+      fetch: (async () => new Response("nope", { status: 500 })) as typeof fetch,
+    });
+
+    const [event] = await collect(provider);
+    assert.equal(event?.type, "error");
+    if (event?.type === "error") assert.match(event.error.message, /^Vendor request failed: 500/);
+  });
+
+  it("throws when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const provider = createOpenAICompatibleProvider({ baseUrl: "https://example.test/v1", fetch: okFetch(["[DONE]"]) });
+
+    await assert.rejects(async () => {
+      for await (const _ of provider.generate({
+        model: { provider: provider.id, model: "demo" },
+        messages: [],
+        signal: controller.signal,
+      })) {
+        void _;
+      }
+    });
+  });
+
   it("maps structuredOutput to OpenAI response_format when supported", async () => {
     let body: Record<string, unknown> | undefined;
     const provider = createOpenAICompatibleProvider({

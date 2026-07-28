@@ -175,6 +175,7 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
 export function boundedJson<T>(value: T, maxDepth: number, maxProperties: number, maxBytes: number): T {
   let clone: T;
   try {
+    // Deliberate JSON round-trip, not structuredClone: normalizes the value to its wire shape (drops undefined keys) before bounds validation.
     clone = JSON.parse(JSON.stringify(value)) as T;
   } catch {
     throw new WebToolError("ERR_PRISM_WEB_JSON", "JSON value is cyclic or unserializable");

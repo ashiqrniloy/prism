@@ -32,6 +32,22 @@ Options:
 | `fetch` | `typeof fetch` | Optional fetch implementation for tests or custom hosts. |
 | `chatCompletionsUrl` | `string \| ((request) => string)` | Optional full chat-completions URL override (Azure deployment paths). |
 | `authStyle` | `"bearer" \| "api-key" \| "none"` | Auth header style. Default `bearer`. |
+| `buildBodyExtra` | `(request) => JsonObject \| undefined` | Optional provider-specific body fields (thinking/reasoning/cache); merged over the base body. |
+| `mapMessages` | `(request) => readonly Message[]` | Optional message transform before serialization (e.g. cache-control markers). Defaults to `request.messages`. |
+| `mapUsage` | `(usage: unknown) => Usage \| undefined` | Optional usage mapping override (e.g. OpenRouter cost fields). Defaults to `mapOpenAIChatUsage`. |
+| `serializeMessage` | `(message, request) => JsonObject` | Optional custom message serializer (e.g. Z.AI `reasoning_content` replay). Defaults to assert + `serializeOpenAIChatMessage`. |
+| `doneUsage` | `boolean` | Emit the final stream usage on the `done` event (without strict completion checks). |
+| `mapHttpError` | `(response, bodyText, secrets) => Error` | Custom HTTP error mapping (e.g. NeuralWatt retry classification). Receives the response and redacted body text. |
+| `onComment` | `(text) => ProviderEvent \| undefined` | Handle SSE comment lines (text after `:`), e.g. NeuralWatt `: energy` / `: cost` telemetry. Returned events are yielded in stream order. |
+| `extraHeaders` | `(request) => Record<string, string>` | Optional extra request headers; provider auth and `content-type` still win. |
+| `transformBody` | `(body, request) => JsonObject` | Optional final body transform, applied last (token limits, compat stripping); wins over everything. |
+| `strictCompletion` | `boolean` | Require `[DONE]` and a `finish_reason`; truncated streams yield an `error` and `done` carries the final usage. |
+| `requestFailedPrefix` | `string` | Prefix for HTTP error messages. Default `OpenAI-compatible request failed`. |
+
+The subpath also exports the building blocks for provider packages that keep public body/stream helpers:
+
+- `openAIChatEvents(body, { signal, strictCompletion, doneUsage, mapUsage, onComment })`: the shared SSE stream loop as an `AsyncIterable<ProviderEvent>`.
+- `buildOpenAIChatBody(request, { mapMessages, serializeMessage, buildBodyExtra, transformBody })`: the base Chat Completions request body builder.
 
 Provider requests use the standard `ProviderRequest` shape: `model`, `messages`, optional `tools`, `metadata`, and `signal`.
 
@@ -49,7 +65,7 @@ The returned provider emits normalized `ProviderEvent` values:
 | `[DONE]` or stream end | `done` event. |
 | HTTP/stream/parsing error | `error` event with redacted `ErrorInfo`. |
 
-The adapter passes `request.signal` to `fetch` for abort propagation.
+The adapter passes `request.signal` to `fetch` for abort propagation; an already-aborted signal throws before fetch.
 
 ## Request/response example
 
@@ -110,6 +126,17 @@ const provider = createOpenAICompatibleProvider({
 - The adapter resolves `apiKey` per request through `resolveCredentialValue()`.
 - This adapter currently targets Chat Completions streaming only.
 - The serializer preserves text, thinking (downgraded to text), assistant `tool_call` blocks as `tool_calls`, `tool_result` blocks as role `tool` messages, and image blocks when the model declares `capabilities.input` includes `"image"`. Unsupported block placements or unclaimed images fail before fetch.
+- Vendor-specific OpenAI-compatible endpoints (cache markers, thinking bodies, reasoning fields, custom usage) plug in through `buildBodyExtra`/`mapMessages`/`mapUsage`/`extraHeaders` instead of duplicating the stream loop:
+
+```ts
+const provider = createOpenAICompatibleProvider({
+  baseUrl: "https://vendor.example/v1",
+  apiKey: () => process.env.VENDOR_API_KEY,
+  buildBodyExtra: (request) => ({ thinking: { type: "enabled" } }),
+  extraHeaders: () => ({ "x-vendor-app": "my-app" }),
+});
+```
+
 - Cache behavior is intentionally minimal: this Chat Completions adapter sends no `prompt_cache_key`, `prompt_cache_retention`, or `cache_control` fields. Endpoints that cache implicitly do so automatically; hosts needing OpenAI `prompt_cache_key`/`prompt_cache_retention` should use the [`@arnilo/prism-provider-openai`](openai.md) Responses package. The adapter still normalizes cache usage from `prompt_tokens_details.cached_tokens` (and `prompt_cache_hit_tokens`) into `Usage.cacheReadTokens`.
 
 ## Security and performance notes

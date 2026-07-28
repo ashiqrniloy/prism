@@ -8,28 +8,10 @@ import type {
   ProviderEvent,
   ProviderRequest,
 } from "@arnilo/prism";
-import {
-  assertStructuredOutputRequestSupported,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerThinkingDelta,
-  providerToolCall,
-  providerToolCallDelta,
-  providerUsage,
-  resolveCredentialValue,
-  toolCallFromArgumentsText,
-} from "@arnilo/prism";
 import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
-import { applyOpenAIChatStructuredOutput, serializeOpenAITool } from "@arnilo/prism/providers/openai";
-import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
-import {
-  applyOpenRouterCacheControl,
-  type OpenRouterUsage,
-  openRouterSessionId,
-  openRouterTopLevelCacheControl,
-  openRouterUsage,
-} from "./cache.js";
+import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
+import { applyOpenRouterCacheControl, openRouterSessionId, openRouterTopLevelCacheControl, openRouterUsage } from "./cache.js";
 import { openRouterPreserveThinking, resolveOpenRouterReasoning, stripOpenRouterOwnedCompat } from "./thinking.js";
 
 export interface OpenRouterProviderOptions {
@@ -41,77 +23,63 @@ export interface OpenRouterProviderOptions {
   readonly appTitle?: string;
 }
 
-interface ToolAccumulator {
-  id?: string;
-  name?: string;
-  argumentsText: string;
-}
-
 export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}): AIProvider {
-  const id = options.id ?? "openrouter";
-  const baseUrl = (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/$/, "");
-  return {
-    id,
-    async *generate(request) {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-      const secrets = [token];
-      try {
-        const sessionId = openRouterSessionId(request.options);
-        const response = await (options.fetch ?? fetch)(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: cleanHeaders({
-            ...request.options?.headers,
-            "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-            ...(sessionId ? { "x-session-id": sessionId } : {}),
-            ...(options.appUrl ? { "http-referer": options.appUrl } : {}),
-            ...(options.appTitle ? { "x-title": options.appTitle } : {}),
-          }),
-          body: JSON.stringify(openRouterBody(request, sessionId)),
-          signal: request.signal,
-        });
-        if (!response.ok) {
-          return yield providerError(
-            new Error(`OpenRouter request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
-            secrets,
-          );
-        }
-        if (!response.body) return yield providerError(new Error("OpenRouter response had no body"), secrets);
-        yield* openRouterEvents(response.body, request.signal);
-      } catch (error) {
-        yield providerError(error, secrets);
-      }
-    },
-  };
+  return createOpenAICompatibleProvider({
+    id: options.id ?? "openrouter",
+    baseUrl: (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/$/, ""),
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    doneUsage: true,
+    requestFailedPrefix: "OpenRouter request failed",
+    mapUsage: (usage) => openRouterUsage(usage as Parameters<typeof openRouterUsage>[0]),
+    mapMessages: (request) => applyOpenRouterCacheControl(request),
+    serializeMessage: (message, request) =>
+      toOpenRouterMessage(message as CacheControlledMessage, request.model, openRouterPreserveThinking(request)),
+    transformBody: (body, request) => openRouterTransform(body, request, openRouterSessionId(request.options)),
+    extraHeaders: (request) =>
+      cleanHeaders({
+        "x-session-id": openRouterSessionId(request.options),
+        "http-referer": options.appUrl,
+        "x-title": options.appTitle,
+      }),
+  });
 }
 
 export function openRouterBody(request: ProviderRequest, sessionId = openRouterSessionId(request.options)): JsonObject {
-  assertStructuredOutputRequestSupported(request.model, request.options);
+  return buildOpenAIChatBody(request, {
+    mapMessages: (req) => applyOpenRouterCacheControl(req),
+    serializeMessage: (message, req) => toOpenRouterMessage(message as CacheControlledMessage, req.model, openRouterPreserveThinking(req)),
+    transformBody: (body, req) => openRouterTransform(body, req, sessionId),
+  });
+}
+
+function openRouterTransform(body: JsonObject, request: ProviderRequest, sessionId: string | undefined): JsonObject {
+  const { maxTokens, ...rest } = body as Record<string, unknown>;
   const routing =
     (request.options?.compat?.openRouterRouting as JsonObject | undefined) ??
     (request.model.compat?.openRouterRouting as JsonObject | undefined);
-  const reasoning = resolveOpenRouterReasoning(request.model, request.options);
-  const { maxTokens, ...parameters } = request.model.parameters ?? {};
-  const messages = applyOpenRouterCacheControl(request);
-  const preserveThinking = openRouterPreserveThinking(request);
-  const body: Record<string, unknown> = {
-    model: request.model.model,
-    messages: messages.map((message) => toOpenRouterMessage(message, request.model, preserveThinking)),
-    tools: request.tools?.map(serializeOpenAITool),
-    stream: true,
-    stream_options: { include_usage: true },
+  const transformed: Record<string, unknown> = {
+    // Resolved OpenRouter fields first: model `parameters` may override them (legacy order).
     provider: routing,
-    reasoning,
+    reasoning: resolveOpenRouterReasoning(request.model, request.options),
     session_id: sessionId,
     cache_control: openRouterTopLevelCacheControl(request),
-    ...parameters,
+    ...rest,
+    // OpenRouter uses only the explicit `maxTokens` parameter; no limits fallback.
     max_tokens: maxTokens,
     ...stripOpenRouterOwnedCompat(request.options?.compat as JsonObject | undefined),
     ...request.options?.extra,
   };
-  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
-  return clean(body);
+  applyOpenAIChatStructuredOutput(transformed, request.options?.structuredOutput);
+  return clean(transformed);
+}
+
+export function openRouterEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
+  return openAIChatEvents(body, {
+    signal,
+    doneUsage: true,
+    mapUsage: (usage) => openRouterUsage(usage as Parameters<typeof openRouterUsage>[0]),
+  });
 }
 
 function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig, preserveThinking: boolean): JsonObject {
@@ -186,61 +154,10 @@ function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObjec
   return marker ? { ...item, cache_control: marker } : item;
 }
 
-export async function* openRouterEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
-  const tools = new Map<number, ToolAccumulator>();
-  let usage: ReturnType<typeof openRouterUsage>;
-  for await (const data of readSseData(body, { signal })) {
-    if (data === "[DONE]") break;
-    const chunk = JSON.parse(data) as OpenRouterChunk;
-    const mapped = openRouterUsage(chunk.usage);
-    if (mapped) {
-      usage = mapped;
-      yield providerUsage(mapped);
-    }
-    for (const choice of chunk.choices ?? []) {
-      const delta = choice.delta ?? {};
-      if (delta.content) yield providerTextDelta(delta.content);
-      const thinking = delta.reasoning ?? delta.reasoning_content;
-      if (thinking) yield providerThinkingDelta(thinking);
-      for (const tool of delta.tool_calls ?? []) {
-        const index = tool.index ?? 0;
-        const current = tools.get(index) ?? { argumentsText: "" };
-        current.id = tool.id ?? current.id;
-        current.name = tool.function?.name ?? current.name;
-        current.argumentsText += tool.function?.arguments ?? "";
-        tools.set(index, current);
-        yield providerToolCallDelta({ index, id: tool.id, name: tool.function?.name, argumentsText: tool.function?.arguments });
-      }
-    }
-  }
-  for (const call of tools.values()) {
-    if (call.id && call.name) {
-      yield providerToolCall(toolCallFromArgumentsText(call.id, call.name, call.argumentsText));
-    }
-  }
-  yield providerDone(usage);
-}
-
 function clean(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as JsonObject;
 }
 
 function cleanHeaders(value: Record<string, string | undefined>): Record<string, string> {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Record<string, string>;
-}
-
-interface OpenRouterChunk {
-  readonly choices?: readonly {
-    readonly delta?: {
-      readonly content?: string;
-      readonly reasoning?: string;
-      readonly reasoning_content?: string;
-      readonly tool_calls?: readonly {
-        readonly index?: number;
-        readonly id?: string;
-        readonly function?: { readonly name?: string; readonly arguments?: string };
-      }[];
-    };
-  }[];
-  readonly usage?: OpenRouterUsage;
 }

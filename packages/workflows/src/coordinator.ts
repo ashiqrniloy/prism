@@ -38,7 +38,7 @@ export async function enqueueWorkflow(
     nodes[nodeId] = { nodeId, status: readyNodeIds.includes(nodeId) ? "ready" : "pending" };
   }
   const timestamp = nowIso();
-  const state = JSON.parse(JSON.stringify(workflow.state?.initial ?? {})) as import("@arnilo/prism").JsonObject;
+  const state = structuredClone(workflow.state?.initial ?? {}) as import("@arnilo/prism").JsonObject;
   await options.checkpoints.save({
     workflowId: workflow.id,
     runId,
