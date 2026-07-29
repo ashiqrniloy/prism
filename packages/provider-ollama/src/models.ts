@@ -24,7 +24,7 @@ export const DEFAULT_OLLAMA_BASE_URL = OLLAMA_BASE_URLS.cloud;
  */
 export function ollamaBaseUrl(options: { readonly baseUrl?: string; readonly preset?: OllamaBasePreset } = {}): string {
   const base = options.baseUrl ?? OLLAMA_BASE_URLS[options.preset ?? "cloud"];
-  return base.replace(/\/$/, "");
+  return base.replace(/\/+$/, "");
 }
 
 export interface OllamaModelConfig extends Omit<ModelConfig, "provider" | "compat"> {

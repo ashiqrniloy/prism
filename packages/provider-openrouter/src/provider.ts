@@ -26,7 +26,7 @@ export interface OpenRouterProviderOptions {
 export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "openrouter",
-    baseUrl: (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/$/, ""),
+    baseUrl: (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/+$/, ""),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

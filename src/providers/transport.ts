@@ -39,6 +39,26 @@ export class ProviderTransportError extends Error {
   }
 }
 
+/** HTTP failure error carrying the status as numeric `code` plus any `Retry-After`
+ *  hint as `retryAfterMs`, so retry policies classify transience and pace retries
+ *  without parsing message text. Both fields flow into `ErrorInfo` via errorToErrorInfo. */
+export function httpStatusError(prefix: string, response: Response, bodyText: string): Error {
+  const error = new Error(`${prefix}: ${response.status} ${bodyText}`) as Error & { code?: number; retryAfterMs?: number };
+  error.code = response.status;
+  const hint = parseRetryAfterMs(response.headers.get("retry-after"));
+  if (hint !== undefined) error.retryAfterMs = hint;
+  return error;
+}
+
+/** Parse a `Retry-After` header (delay-seconds or HTTP-date) into milliseconds. */
+export function parseRetryAfterMs(value: string | null, now: number = Date.now()): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? undefined : Math.max(0, date - now);
+}
+
 export interface ReadSseEventsOptions extends BoundedStreamLimits {
   readonly signal?: AbortSignal;
 }

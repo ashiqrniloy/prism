@@ -188,6 +188,29 @@ test("spawnHook can rewrite command/cwd/env", async () => {
   }
 });
 
+test("envAllowlist restricts the environment the spawn hook and child see", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "shell-"));
+  const secret = "PRISM_TEST_ALLOWLIST_SECRET";
+  process.env[secret] = "topsecret";
+  try {
+    let hookEnvKeys: string[] = [];
+    const tool = createShellTool(cwd, {
+      envAllowlist: ["PATH"],
+      spawnHook: (c) => {
+        hookEnvKeys = Object.keys(c.env);
+        return c;
+      },
+    });
+    const r = await tool.execute({ command: `echo "$${secret}:-empty"` }, ctx());
+    assert.equal(r.metadata?.exitCode, 0);
+    assert.equal(hookEnvKeys.includes(secret), false, "hook env must not include non-allowlisted names");
+    assert.match(textOf(r), /empty/, "child process must not inherit the scrubbed variable");
+  } finally {
+    delete process.env.PRISM_TEST_ALLOWLIST_SECRET;
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("total output overflow aborts custom and local operations and removes spill", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "shell-"));
   try {

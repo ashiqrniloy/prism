@@ -45,7 +45,7 @@ export function bedrockRuntimeEndpoint(region: string, endpoint?: string): strin
       if (error instanceof Error && error.message.startsWith("Bedrock")) throw error;
       throw new Error("Bedrock endpoint must be an absolute https URL");
     }
-    return endpoint.replace(/\/$/, "");
+    return endpoint.replace(/\/+$/, "");
   }
   return `https://bedrock-runtime.${region}.amazonaws.com`;
 }

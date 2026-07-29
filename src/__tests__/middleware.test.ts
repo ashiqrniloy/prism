@@ -52,4 +52,54 @@ describe("middleware registry", () => {
 
     await assert.rejects(() => middleware.run("retry", {}), /boom/);
   });
+
+  it("double next() is rejected and names hook and index", async () => {
+    const errors: ExtensionEvent[] = [];
+    const middleware = createMiddlewareRegistry({
+      onError: (event) => {
+        errors.push(event);
+      },
+    });
+    middleware.use<{ v: number }>("context", async (value, next) => {
+      await next(value);
+      return next(value);
+    });
+
+    await middleware.run("context", { v: 1 });
+    assert.match(errors[0]?.error?.message ?? "", /Middleware hook "context" #0: next\(\) called more than once/);
+
+    const strict = createMiddlewareRegistry({ errorPolicy: "throw" });
+    strict.use<{ v: number }>("context", async (value, next) => {
+      await next(value);
+      return next(value);
+    });
+    await assert.rejects(() => strict.run("context", { v: 1 }), /next\(\) called more than once/);
+  });
+
+  it("next(value) plus a conflicting return is diagnosed; the next() value wins", async () => {
+    const errors: ExtensionEvent[] = [];
+    const middleware = createMiddlewareRegistry({
+      onError: (event) => {
+        errors.push(event);
+      },
+    });
+    middleware.use<{ v: number }>("context", async (value, next) => {
+      await next({ v: value.v + 1 });
+      return { v: 999 };
+    });
+
+    assert.deepEqual(await middleware.run("context", { v: 1 }), { v: 2 });
+    assert.match(errors[0]?.error?.message ?? "", /called next\(value\) and returned a different value/);
+
+    // The correct `return next(v)` shape stays silent.
+    errors.length = 0;
+    const clean = createMiddlewareRegistry({
+      onError: (event) => {
+        errors.push(event);
+      },
+    });
+    clean.use<{ v: number }>("context", (value, next) => next({ v: value.v + 1 }));
+    assert.deepEqual(await clean.run("context", { v: 1 }), { v: 2 });
+    assert.equal(errors.length, 0);
+  });
 });

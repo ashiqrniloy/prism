@@ -38,9 +38,20 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
   if (options.signal?.aborted) isClosed = true;
   else options.signal?.addEventListener("abort", abort, { once: true });
 
+  // With compare set, publish always enqueues and the parked consumer is woken with
+  // this token instead of a value, so every event drains through the sorted queue —
+  // delivery order follows the comparator even when the consumer is caught up.
+  const WAKE = Symbol("wake");
+  const wakeWaiter = () => {
+    if (!waiter) return;
+    const resolve = waiter;
+    waiter = undefined;
+    resolve({ value: WAKE as T, done: false });
+  };
+
   function publish(event: T): void {
     if (isClosed) return;
-    if (waiter) {
+    if (!options.compare && waiter) {
       const resolve = waiter;
       waiter = undefined;
       resolve({ value: event, done: false });
@@ -48,6 +59,7 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
     }
     if (queue.length < maxQueuedEvents) {
       queue.push(event);
+      wakeWaiter();
       return;
     }
 
@@ -66,6 +78,7 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
     }
     if (overflow === "drop_newest") {
       if (notice !== undefined) queue[queue.length - 1] = notice;
+      wakeWaiter();
       return;
     }
 
@@ -75,6 +88,7 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
       if (queue.length >= maxQueuedEvents) queue.shift();
     }
     queue.push(event);
+    wakeWaiter();
   }
 
   function observe<S>(source: AsyncIterable<S>, map: (event: S) => T): () => void {
@@ -134,6 +148,7 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
         waiter = resolve;
       });
       if (next.done) return;
+      if (next.value === (WAKE as T)) continue;
       yield next.value;
     }
   }

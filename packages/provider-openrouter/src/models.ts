@@ -69,7 +69,7 @@ interface OpenRouterModelsResponse {
  */
 export async function listOpenRouterModels(options: ListOpenRouterModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "openrouter";
-  const baseUrl = (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

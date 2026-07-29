@@ -485,17 +485,20 @@ class RuntimeAgentSession implements AgentSession {
         redactor: this.activeRedactor,
         emit: (event) => this.emit(event),
       });
-      if (inputGuardrails.terminal?.action === "interrupt" && this.activeDurable) {
-        if (!resumed) {
-          const interruption = { kind: "input_guardrail" as const, reason: inputGuardrails.terminal.reason ?? "Input requires approval" };
-          throw new AgentRunSuspended(
-            await this.suspendDurable({ runId, model, limits, interruption, messages: inputMessages }),
-            interruption,
-          );
-        }
-      } else {
-        assertGuardrailsAllowed(inputGuardrails);
+      // Input-guardrail decision table:
+      // - interrupt + durable + fresh run  → suspend for approval.
+      // - interrupt + durable + resumed run → proceed: resuming IS the operator approval.
+      // - interrupt without durable, or block/tripwire → fail via assertGuardrailsAllowed.
+      const approvedByResume =
+        resumed !== undefined && inputGuardrails.terminal?.action === "interrupt" && this.activeDurable !== undefined;
+      if (inputGuardrails.terminal?.action === "interrupt" && this.activeDurable && !approvedByResume) {
+        const interruption = { kind: "input_guardrail" as const, reason: inputGuardrails.terminal.reason ?? "Input requires approval" };
+        throw new AgentRunSuspended(
+          await this.suspendDurable({ runId, model, limits, interruption, messages: inputMessages }),
+          interruption,
+        );
       }
+      if (inputGuardrails.terminal && !approvedByResume) assertGuardrailsAllowed(inputGuardrails);
       for (const message of inputMessages) await this.appendMessage(message, runId);
       await this.autoCompact(runId, options, controller.signal, inputMessages);
       const maxToolRounds = resolvedLimits.maxToolRounds;
@@ -1218,7 +1221,21 @@ class RuntimeAgentSession implements AgentSession {
         redactor: this.activeRedactor,
         emit: (event) => this.emit(event),
       });
-      assertGuardrailsAllowed(inputGuardrails);
+      // Mid-run steer: a terminal decision drops the message (never enters history or
+      // the session store) and the run continues. Run-start input blocking still fails
+      // the run — only the blast radius of steered input is narrowed.
+      const terminal = inputGuardrails.terminal;
+      if (terminal) {
+        if (terminal.action === "interrupt") throw new GuardrailError(terminal);
+        this.emit({
+          type: "steer_rejected",
+          sessionId: this.id,
+          runId,
+          message: this.activeRedactor ? this.activeRedactor.redact(message) : message,
+          record: terminal,
+        });
+        continue;
+      }
       this.history.push(message);
       await this.appendMessage(message, runId);
     }
@@ -1527,9 +1544,23 @@ function withoutTrailingInput(messages: readonly Message[], input: readonly Mess
   const next = [...messages];
   for (let i = input.length - 1; i >= 0; i -= 1) {
     const last = next.at(-1);
-    if (last && JSON.stringify(last) === JSON.stringify(input[i])) next.pop();
+    if (last && stableMessageKey(last) === stableMessageKey(input[i])) next.pop();
   }
   return next;
+}
+
+// Key-order-insensitive comparison: a redacted-then-reassembled message with reordered
+// keys must still dedupe against the trailing input, or auto-compaction duplicates it.
+function stableMessageKey(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableMessageKey).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableMessageKey(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
 }
 
 function bridgeAbort(signal: AbortSignal | undefined, controller: AbortController): () => void {
@@ -1548,9 +1579,11 @@ function throwIfAbortedSignal(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
 }
 
+const jsonTextEncoder = new TextEncoder();
+
 function jsonBytes(value: unknown): number {
   try {
-    return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+    return jsonTextEncoder.encode(JSON.stringify(value)).byteLength;
   } catch {
     throw new TypeError("Provider request or event must be JSON-serializable for run limits");
   }

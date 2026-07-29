@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.0.17] - 2026-07-29
+
+### Added
+- Extension lifecycle: `ExtensionKernel.load()` returns `LoadedExtension[]` dispose handles; contribution/provider/model registries gain `unregister(...)`; a failed `setup` unwinds its partial registrations.
+- `MemoryCredentialStoreOptions.allowProviderFallback` for strict provider-scoped credential resolution; `createMemoryCheckpointStore` `maxRecords`/`maxValueBytes` bounds; `ShellToolOptions.envAllowlist` (coding-agent); `ErrorInfo.retryAfterMs` plus `retryAfterMs`-aware `createDefaultRetryPolicy` with `jitter`/`random` options; guardrail `steer_rejected` event; `httpStatusError` provider transport helper wired into anthropic, google, kimi, openai, opencode-go, and the shared OpenAI-compatible transport.
+
+### Changed
+- Durable runs: run-state load now bounds against the 1 MiB hard cap (states saved with a raised `maxStateBytes` resume correctly); agent fingerprint also covers instructions, system-prompt contributions, and skills; resume-after-interrupt is explicit implicit-approval.
+- Retry/backpressure: HTTP provider errors carry numeric codes and `Retry-After` hints; default retry policy applies ±25% jitter.
+- `input_assembly` middleware runs unconditionally (both plain and context-budget paths, any `InputBuilder`); memory session store rejects cross-session `expectedParentId`; context-budget eviction is O(n) instead of O(n²).
+- Guardrails: `interrupt` errors name the stage; `guardrail_failed` records carry the underlying error message in `metadata.error`; steer `block`/`tripwire` drops the message and emits `steer_rejected` instead of failing the run.
+- Default prompt builder omits the `Available tools:` text for tool-capable models (`capabilities.tools === true`).
+- Middleware registry throws on double `next()` and diagnoses conflicting `next(v)` + return; event multiplexer keeps sorted delivery while a consumer is parked; batched run-ledger dead counters removed.
+
+### Breaking (minor, pre-1.0)
+- CLI: `--config`, `--resource`, `--extension`, `--tool` are rejected (`<flag> is not supported in this build`); the dead `CliOptions.config/resources/extensions/tools` fields are removed.
+- `ExtensionKernel.load()` resolves to `LoadedExtension[]` instead of `void`.
+
+See [docs/migration.md](docs/migration.md) for the full 0.0.16 → 0.0.17 notes.
+
 ## [0.0.16] - 2026-07-26
 
 ### Added

@@ -66,7 +66,7 @@ export function defineOpenAIModel(config: OpenAIModelConfig): ModelConfig {
  */
 export async function listOpenAIModels(options: ListOpenAIModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "openai";
-  const baseUrl = (options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

@@ -1,5 +1,16 @@
 # Migration guide
 
+## 0.0.16 → 0.0.17 code-review hardening (small intentional breaks)
+
+Release **0.0.17** implements the 2026-07-29 full implementation review (plan 081): twenty fixes across durable runs, guardrails, retry, extension lifecycle, CLI, and provider plumbing. Most changes are additive or internal; four intentionally change existing behavior:
+
+1. **CLI: inert flags now rejected.** `--config`, `--resource`, `--extension`, and `--tool` were parsed-and-recorded without effect; `parseCliArgs` now throws `CliUsageError("<flag> is not supported in this build")`. The dead `config` / `resources` / `extensions` / `tools` fields were removed from `CliOptions`. Hosts passing those flags must drop them until a CLI-harness plan wires them.
+2. **`ExtensionKernel.load()` returns handles.** `load(extensions)` now resolves to `LoadedExtension[]` (`{ name, dispose() }`) instead of `void`; callers ignoring the return value are unaffected. A failed `setup` now unwinds that extension's partial registrations. Contribution registries, `ProviderRegistry`, and `ModelRegistry` gain `unregister(...)` (additive).
+3. **Default prompt builder omits the tool text list for tool-capable models.** When `model.capabilities.tools === true`, the `Available tools:` system message is no longer emitted (schemas already travel via `request.tools`); unknown/`false` capability keeps it. Saves duplicated tokens per turn; observable only in prompt text.
+4. **Default retry policy applies jitter and honors Retry-After.** `createDefaultRetryPolicy` now applies ±25% jitter (`jitter`/`random` options) and honors `error.retryAfterMs` (populated from provider `Retry-After` headers), capped by `maxDelayMs`. Delays are no longer deterministic unless `random` is injected.
+
+Additive-only highlights: `MemoryCredentialStoreOptions.allowProviderFallback` (strict provider scoping opt-in), `createMemoryCheckpointStore` `maxRecords`/`maxValueBytes` bounds, `ShellToolOptions.envAllowlist`, guardrail `steer_rejected` event, `ErrorInfo.retryAfterMs`, agent fingerprint now covers instructions/system prompt/skills (existing durable runs resume or fail fingerprint exactly as before — the fingerprint only got stricter).
+
 ## What it does
 
 Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intentional Phase 3 public-API cleanups:

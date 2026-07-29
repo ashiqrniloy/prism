@@ -19,7 +19,11 @@ export class GuardrailError extends Error {
   readonly record: GuardrailRecord;
 
   constructor(record: GuardrailRecord) {
-    super(record.action === "interrupt" ? "Guardrail interruption is unavailable" : "Guardrail blocked run");
+    super(
+      record.action === "interrupt"
+        ? `Guardrail interruption is unavailable at stage "${record.stage}"; interrupt suspends only at the input stage of durable runs`
+        : "Guardrail blocked run",
+    );
     this.name = "GuardrailError";
     this.code = record.action === "interrupt" ? "ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE" : "ERR_PRISM_GUARDRAIL_BLOCKED";
     this.record = record;
@@ -121,8 +125,19 @@ async function evaluate<S extends GuardrailStage>(
       return record(guardrail.name, options.stage, "tripwire", "guardrail_invalid_decision", undefined, options.redactor);
     }
     return record(guardrail.name, options.stage, decision.action, decision.reason, decision.metadata, options.redactor);
-  } catch {
-    return record(guardrail.name, options.stage, "tripwire", "guardrail_failed", undefined, options.redactor);
+  } catch (error) {
+    // Keep the cause diagnosable without leaking internals: message only, bounded and
+    // passed through the same redact+bound metadata path as guardrail-provided metadata.
+    const message = error instanceof Error ? error.message : String(error);
+    const redacted = options.redactor?.redact(message) ?? message;
+    return record(
+      guardrail.name,
+      options.stage,
+      "tripwire",
+      "guardrail_failed",
+      { error: boundText(redacted, MAX_REASON_BYTES) },
+      options.redactor,
+    );
   }
 }
 

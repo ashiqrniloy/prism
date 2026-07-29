@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  applyContextBudget,
   assembleProviderInput,
   CONTEXT_BUDGET_REPORT_METADATA_KEY,
   ContextBudgetError,
@@ -77,6 +78,47 @@ describe("context budget", () => {
     );
     assert.ok(request.messages.some((message) => message.content.some((part) => part.type === "text" && part.text.includes("skill body"))));
     assert.doesNotMatch(JSON.stringify(report.omitted), /old-a|old-b|lookup/);
+  });
+
+  it("report kept totals match the content that survives eviction", () => {
+    const groups = {
+      instructions: [{ role: "system" as const, content: [{ type: "text" as const, text: "Be brief." }] }],
+      summaries: [user("s".repeat(400), "sum")],
+      history: [assistant("h".repeat(400), "h1"), user("h".repeat(400), "h2")],
+      input: [user("current question")],
+      attachments: [{ role: "user" as const, content: [{ type: "text" as const, text: `Attachment notes.md:\n${"a".repeat(400)}` }] }],
+      toolResults: [
+        { role: "user" as const, content: [{ type: "tool_result" as const, toolCallId: "c1", name: "lookup", result: "r".repeat(400) }] },
+      ],
+    };
+    const first = applyContextBudget({
+      groups,
+      context: [{ id: "ctx-1", title: "Ctx", content: "c".repeat(400) }],
+      skills: [{ name: "skill-a", instructions: "i".repeat(400) }],
+      budget: {
+        maxInputTokens: estimateTextTokens("System instruction:\nBe brief.") + estimateTextTokens("current question") + 40,
+        reportOmissions: true,
+      },
+    });
+    // Multiple kinds had to be evicted to fit.
+    assert.ok(first.report.truncated);
+    assert.ok(first.report.omitted.length >= 3);
+
+    // Re-running on the surviving content must omit nothing and reproduce the same
+    // kept totals — proves incremental accounting stayed exact through every drop.
+    const second = applyContextBudget({
+      groups: first.groups,
+      context: first.context,
+      skills: first.skills,
+      tools: first.tools,
+      budget: { maxInputTokens: HARD_MAX_CONTEXT_BUDGET_TOKENS, reportOmissions: true },
+    });
+    assert.equal(second.report.truncated, false);
+    assert.equal(first.report.keptTokens, second.report.keptTokens);
+    assert.equal(first.report.keptBytes, second.report.keptBytes);
+    assert.ok(
+      first.report.keptTokens <= 40 + estimateTextTokens("System instruction:\nBe brief.") + estimateTextTokens("current question"),
+    );
   });
 
   it("fails closed when mandatory prefix cannot fit", async () => {

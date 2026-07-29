@@ -5,8 +5,10 @@ import {
   createAgent,
   createMockProvider,
   createToolRegistry,
+  createSecretRedactor,
   dispatchToolCall,
   type Guardrail,
+  GuardrailError,
   providerDone,
   providerTextDelta,
   runGuardrails,
@@ -84,6 +86,33 @@ describe("guardrails", () => {
     assert.equal(result.terminal?.reason, "guardrail_invalid_decision");
   });
 
+  it("guardrail_failed records carry a bounded, redacted cause", async () => {
+    const huge = `boom token-123 ${"x".repeat(10_000)}`;
+    const result = await runGuardrails({
+      stage: "input",
+      guardrails: {
+        input: [
+          {
+            name: "throws",
+            stage: "input",
+            evaluate: () => {
+              throw new Error(huge);
+            },
+          },
+        ],
+      },
+      value: [],
+      context,
+      redactor: createSecretRedactor(["token-123"]),
+    });
+    assert.equal(result.terminal?.action, "tripwire");
+    assert.equal(result.terminal?.reason, "guardrail_failed");
+    const cause = result.terminal?.metadata?.error;
+    assert.equal(typeof cause, "string");
+    assert.ok((cause as string).startsWith("boom [REDACTED]"));
+    assert.ok(new TextEncoder().encode(cause as string).length <= 4096);
+  });
+
   it("blocks input before provider or session persistence", async () => {
     let generated = false;
     const agent = createAgent({
@@ -157,5 +186,25 @@ describe("guardrails", () => {
       false,
     );
     assert.equal(JSON.stringify(events).includes("raw secret"), false);
+  });
+
+  it("interrupt at tool_input fails closed naming the stage", async () => {
+    const tool: ToolDefinition = {
+      name: "echo",
+      execute: () => ({ toolCallId: "c1", name: "echo", value: "ok" }),
+    };
+    await assert.rejects(
+      () =>
+        dispatchToolCall({
+          call,
+          registry: createToolRegistry([tool]),
+          context: { ...context, toolCallId: "c1" },
+          guardrails: { toolInput: [{ name: "pause", stage: "tool_input", evaluate: () => ({ action: "interrupt" }) }] },
+        }),
+      (error: unknown) =>
+        error instanceof GuardrailError &&
+        error.code === "ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE" &&
+        error.message.includes('stage "tool_input"'),
+    );
   });
 });

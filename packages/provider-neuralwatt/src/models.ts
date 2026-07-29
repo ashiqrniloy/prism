@@ -77,7 +77,7 @@ function featuredModel(config: NeuralWattModelConfig): ModelConfig {
  * cache-read policy, not fixed rates for every featured alias.
  */
 export async function listNeuralWattModels(options: ListNeuralWattModelsOptions = {}): Promise<ModelConfig[]> {
-  const baseUrl = (options.baseUrl ?? "https://api.neuralwatt.com/v1").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://api.neuralwatt.com/v1").replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider: "neuralwatt", name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

@@ -62,14 +62,14 @@ export interface CreatePrismReplayHandlerOptions {
 
 /** Optional HTTP adapter: POST `{ sessionId, runId, cursor? }` → ownership-scoped page. */
 export function createPrismReplayHandler(options: CreatePrismReplayHandlerOptions): import("./types.js").PrismRequestHandler {
-  const base = (options.basePath ?? "/prism/replay/events").replace(/\/$/, "");
+  const base = (options.basePath ?? "/prism/replay/events").replace(/\/+$/, "");
   const limits = resolvePrismDeploymentLimits(options.limits);
   return async (request) => {
     try {
       if (request.method !== "POST") {
         throw new PrismServerError("Method not allowed", 405, "ERR_PRISM_SERVER_METHOD");
       }
-      const path = new URL(request.url).pathname.replace(/\/$/, "");
+      const path = new URL(request.url).pathname.replace(/\/+$/, "");
       if (path !== base) throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
       const ownership = await options.authorize(request);
       if (!ownership) throw new PrismServerError("Forbidden", 403, "ERR_PRISM_SERVER_FORBIDDEN");

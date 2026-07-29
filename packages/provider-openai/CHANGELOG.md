@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.17] - 2026-07-29
+
+### Changed
+- HTTP errors now carry numeric `code` and parsed `Retry-After` (`retryAfterMs`), so 429/5xx classify as transient and the core retry policy honors provider backpressure. Base-URL stripping now handles repeated trailing slashes.
+- Released with exact 0.0.17 graph.
+
 ## [0.0.16] - 2026-07-26
 
 ### Changed

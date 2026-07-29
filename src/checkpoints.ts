@@ -13,12 +13,21 @@ export class CheckpointConflictError extends Error {
 
 export interface MemoryCheckpointStoreOptions {
   readonly maxPageSize?: number;
+  /** Capacity bound: least-recently-saved records are evicted past this count (default 10_000). */
+  readonly maxRecords?: number;
+  /** Per-record bound on the JSON-encoded value in bytes (default 1 MiB); oversized values are rejected. */
+  readonly maxValueBytes?: number;
 }
+
+const DEFAULT_MAX_CHECKPOINT_RECORDS = 10_000;
+const DEFAULT_MAX_CHECKPOINT_VALUE_BYTES = 1024 * 1024;
 
 /** In-process reference implementation of the generic checkpoint contract. */
 export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOptions = {}): CheckpointStore {
   const records = new Map<string, CheckpointRecord>();
   const maxPageSize = Math.max(1, options.maxPageSize ?? 500);
+  const maxRecords = Math.max(1, options.maxRecords ?? DEFAULT_MAX_CHECKPOINT_RECORDS);
+  const maxValueBytes = Math.max(1, options.maxValueBytes ?? DEFAULT_MAX_CHECKPOINT_VALUE_BYTES);
 
   return {
     async saveCheckpoint(input) {
@@ -45,6 +54,9 @@ export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOption
       }
       const now = new Date().toISOString();
       const value = cloneJson(input.value, "Checkpoint value");
+      if (new TextEncoder().encode(JSON.stringify(value)).length > maxValueBytes) {
+        throw new RangeError(`Checkpoint value exceeds maxValueBytes (${maxValueBytes})`);
+      }
       const metadata =
         input.metadata === undefined ? undefined : (cloneJson(input.metadata, "Checkpoint metadata") as Readonly<Record<string, unknown>>);
       const record: CheckpointRecord = {
@@ -59,7 +71,11 @@ export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOption
         updatedAt: now,
         ...(metadata === undefined ? {} : { metadata }),
       };
+      // delete+set moves an updated record to the end, keeping Map order = least- to
+      // most-recently-saved, so capacity eviction is O(1) off the front.
+      records.delete(id);
       records.set(id, record);
+      while (records.size > maxRecords) records.delete(records.keys().next().value!);
       return record;
     },
 

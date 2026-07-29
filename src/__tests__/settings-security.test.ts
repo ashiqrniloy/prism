@@ -50,6 +50,17 @@ describe("settings auth trust security", () => {
     assert.equal(await resolveCredentialValue(store, { name: "api", provider: "demo" }), undefined);
   });
 
+  it("gates the providerless credential fallback behind allowProviderFallback", async () => {
+    const record = { name: "shared", credential: { type: "api_key", value: "shared-token" } as const };
+    // Default: a providerless record is served for a provider-scoped request (backward compatible).
+    const lenient = createMemoryCredentialStore([record]);
+    assert.equal((await lenient.resolve({ name: "shared", provider: "anyone" }))?.type, "api_key");
+    // Strict: exact match only — the providerless record is not served cross-provider.
+    const strict = createMemoryCredentialStore([record], { allowProviderFallback: false });
+    assert.equal(await strict.resolve({ name: "shared", provider: "anyone" }), undefined);
+    assert.equal((await strict.resolve({ name: "shared" }))?.type, "api_key");
+  });
+
   it("denies trust permissions and resource loads before side effects", async () => {
     await assert.rejects(() => assertTrusted(createStaticTrustPolicy(false), { kind: "resource", target: "x" }), /Untrusted/);
     await assert.rejects(

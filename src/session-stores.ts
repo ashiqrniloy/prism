@@ -83,8 +83,13 @@ async function readBranchFromReader(reader: BranchReader, query: SessionBranchRe
   return getSessionBranchEntriesCore(items, { leafId: query.leafId });
 }
 
-function getSessionBranchEntriesCore(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): readonly SessionEntry[] {
-  const index = indexEntries(entries);
+type SessionIndex = { byId: Map<string, SessionEntry>; parentIds: Set<string> };
+
+function getSessionBranchEntriesCore(
+  entries: readonly SessionEntry[],
+  options: SessionBranchOptions = {},
+  index: SessionIndex = indexEntries(entries),
+): readonly SessionEntry[] {
   const leafId = options.leafId ?? entries.at(-1)?.id;
   if (!leafId) return [];
   if (!index.byId.has(leafId)) throw new Error(`Unknown session leaf: ${leafId}`);
@@ -103,7 +108,7 @@ export function listSessionBranches(entries: readonly SessionEntry[]): readonly 
   const index = indexEntries(entries);
   return entries
     .filter((entry) => !index.parentIds.has(entry.id))
-    .map((entry) => ({ leafId: entry.id, entries: getSessionBranchEntries(entries, { leafId: entry.id }) }));
+    .map((entry) => ({ leafId: entry.id, entries: getSessionBranchEntriesCore(entries, { leafId: entry.id }, index) }));
 }
 
 export function rebuildSessionContext(reader: BranchReader, query: SessionBranchRead): Promise<SessionContextSnapshot>;
@@ -203,17 +208,22 @@ export function createMemorySessionStore(
     if (dedupKey !== undefined && idempotencySeen.has(dedupKey)) {
       throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, idempotencyDuplicate: true });
     }
-    // expectedParentId is existence validation (the parent must already be in the
-    // store or be undefined for a root). Tip-CAS is intentionally NOT used: prism
+    // expectedParentId is same-session existence validation (the parent must already
+    // be in the store for THIS session, or be undefined for a root). A parent from
+    // another session is rejected: the write would be unreadable, since every branch
+    // walk is per-session. Tip-CAS is intentionally NOT used: prism
     // allows branching from any existing leaf (checkout + append), so a stale-but-
     // existing parent is a valid branch, not a conflict. DB adapters may layer
     // stricter tip-CAS via unique constraints for linear-only sessions.
-    if (options?.expectedParentId !== undefined && !byId.has(options.expectedParentId)) {
-      throw new SessionAppendConflictError({
-        code: SESSION_APPEND_CONFLICT_CODE,
-        expectedParentId: options.expectedParentId,
-        currentLeafId: leafBySession.get(entry.sessionId),
-      });
+    if (options?.expectedParentId !== undefined) {
+      const parent = byId.get(options.expectedParentId);
+      if (!parent || parent.sessionId !== entry.sessionId) {
+        throw new SessionAppendConflictError({
+          code: SESSION_APPEND_CONFLICT_CODE,
+          expectedParentId: options.expectedParentId,
+          currentLeafId: leafBySession.get(entry.sessionId),
+        });
+      }
     }
     if (byId.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
     if (dedupKey !== undefined) idempotencySeen.add(dedupKey);

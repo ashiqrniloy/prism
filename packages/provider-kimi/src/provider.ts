@@ -34,7 +34,7 @@ import {
   resolveProviderMediaMessages,
   serializePdfDocumentWireBlock,
 } from "@arnilo/prism/providers/media";
-import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+import { httpStatusError, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { applyKimiAnthropicCacheControl } from "./cache.js";
 import { kimiPreserveThinking, kimiReasoningEffort, kimiThinking, stripKimiThinkingCompat } from "./thinking.js";
 
@@ -55,7 +55,7 @@ interface PartialBlock {
 
 export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}): AIProvider {
   const id = options.id ?? "kimi-coding";
-  const baseUrl = (options.baseUrl ?? "https://api.kimi.com/coding").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://api.kimi.com/coding").replace(/\/+$/, "");
   return {
     id,
     async *generate(request) {
@@ -82,7 +82,7 @@ export function createKimiCodingProvider(options: KimiCodingProviderOptions = {}
         });
         if (!response.ok) {
           return yield providerError(
-            new Error(`Kimi request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
+            httpStatusError("Kimi request failed", response, await readBoundedResponseText(response, { secrets })),
             secrets,
           );
         }

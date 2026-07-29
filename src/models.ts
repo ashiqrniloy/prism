@@ -3,6 +3,8 @@ import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry
 
 export interface ModelRegistry {
   register(model: ModelConfig): void;
+  /** Remove a model; returns false when it was not registered. */
+  unregister(provider: string, model: string): boolean;
   get(provider: string, model: string): ModelConfig | undefined;
   resolve(provider: string, model: string): ModelConfig;
   list(): readonly ModelConfig[];
@@ -19,6 +21,9 @@ export function createModelRegistry(models: readonly ModelConfig[] = [], options
       const id = key(model.provider, model.model);
       assertCanRegister(byId, id, "model", `${model.provider}/${model.model}`, options.duplicate);
       byId.set(id, model);
+    },
+    unregister(provider, model) {
+      return byId.delete(key(provider, model));
     },
     get(provider, model) {
       return byId.get(key(provider, model));

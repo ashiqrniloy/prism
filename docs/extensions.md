@@ -37,7 +37,7 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 
 ## Outputs / response / events
 
-- `kernel.load(extensions)` calls each extension's `setup(api)` in host-provided order.
+- `kernel.load(extensions)` calls each extension's `setup(api)` in host-provided order and resolves to `LoadedExtension[]` (`{ name, dispose() }`). A failed `setup` unwinds that extension's partial registrations (no orphaned half-loads). `dispose()` removes the extension's registry contributions and middleware/event subscriptions via each registry's `unregister(key)` — best-effort, idempotent, and limited to registries/subscriptions: side effects outside the registries (files, network, spawned work) are not unwound, and load-order/dependency graphs between extensions are out of scope.
 - `kernel.registries` exposes the explicit contribution registry bundle.
 - `kernel.events.on(type, handler)` registers ordered event handlers and returns an unsubscribe function.
 - `kernel.events.emit(event)` calls matching handlers in registration order.

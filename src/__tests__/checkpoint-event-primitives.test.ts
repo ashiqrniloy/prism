@@ -30,6 +30,21 @@ describe("CheckpointStore", () => {
     assert.equal(await store.deleteCheckpoint({ namespace: "workflow", key: "a", tenantId: "t1" }), true);
   });
 
+  it("evicts least-recently-saved records past maxRecords and rejects oversized values", async () => {
+    const store = createMemoryCheckpointStore({ maxRecords: 2, maxValueBytes: 64 });
+    await store.saveCheckpoint({ namespace: "n", key: "a", version: 1, value: null });
+    await store.saveCheckpoint({ namespace: "n", key: "b", version: 1, value: null });
+    // Updating "a" makes it most-recently-saved, so "b" is the eviction victim.
+    await store.saveCheckpoint({ namespace: "n", key: "a", version: 2, value: null });
+    await store.saveCheckpoint({ namespace: "n", key: "c", version: 1, value: null });
+
+    assert.equal((await store.loadCheckpoint({ namespace: "n", key: "a" }))?.version, 2);
+    assert.equal(await store.loadCheckpoint({ namespace: "n", key: "b" }), null);
+    assert.notEqual(await store.loadCheckpoint({ namespace: "n", key: "c" }), null);
+
+    await assert.rejects(store.saveCheckpoint({ namespace: "n", key: "big", version: 1, value: "x".repeat(128) }), /maxValueBytes/);
+  });
+
   it("enforces compare-and-swap and lease fencing", async () => {
     const store = createMemoryCheckpointStore();
     await store.saveCheckpoint({ namespace: "n", key: "k", version: 1, expectedVersion: 0, fencingToken: 2, value: 1 });
@@ -88,6 +103,19 @@ describe("EventMultiplexer", () => {
     mux.close();
     assert.equal(mux.droppedEvents, 1);
     assert.deepEqual(seen, [-1, 3]);
+  });
+
+  it("delivers in comparator order even when the consumer is parked", async () => {
+    const mux = createEventMultiplexer<number>({ compare: (a, b) => a - b });
+    const iterator = mux.subscribe()[Symbol.asyncIterator]();
+    const first = iterator.next(); // parks the consumer on an empty queue
+    mux.publish(3);
+    mux.publish(1);
+    mux.publish(2);
+    assert.equal((await first).value, 1);
+    assert.equal((await iterator.next()).value, 2);
+    assert.equal((await iterator.next()).value, 3);
+    mux.close();
   });
 
   it("observes async sources and closes them", async () => {

@@ -85,5 +85,6 @@ Numbered plans are immutable implementation records. Current release status live
 | [078-release-0-0-15-provider-memory-rag-ecosystem-parity.md](078-release-0-0-15-provider-memory-rag-ecosystem-parity.md) | Phase 10 / Release 0.0.15 — Provider, memory, and RAG ecosystem parity |
 | [079-release-0-0-16-simplify-and-0-1-0-readiness.md](079-release-0-0-16-simplify-and-0-1-0-readiness.md) | Phase 11 / Release 0.0.16 — Simplify the package and establish 0.1.0 readiness |
 | [080-ponytail-audit-over-engineering-cuts.md](080-ponytail-audit-over-engineering-cuts.md) | Ponytail audit — delete duplicated provider clients and other over-engineering |
+| [081-code-review-findings-implementation.md](081-code-review-findings-implementation.md) | 2026-07-29 code review findings implementation |
 
 New work increments the highest three-digit prefix. Completed plan bodies stay unchanged; append evidence only while executing their own task list.

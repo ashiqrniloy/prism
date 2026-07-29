@@ -1,6 +1,6 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
 import { providerError, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
 import { opencodeOwnedHeaders } from "./cache.js";
 import { OPENCODE_GO_DEFAULT_BASE_URL } from "./models.js";
@@ -16,7 +16,7 @@ export interface OpenCodeGoProviderOptions {
 
 export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}): AIProvider {
   const id = options.id ?? "opencode-go";
-  const baseUrl = (options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL).replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL).replace(/\/+$/, "");
   return {
     id,
     async *generate(request) {
@@ -43,7 +43,7 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
         });
         if (!response.ok) {
           return yield providerError(
-            new Error(`OpenCode Go request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
+            httpStatusError("OpenCode Go request failed", response, await readBoundedResponseText(response, { secrets })),
             secrets,
           );
         }

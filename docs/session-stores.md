@@ -100,7 +100,7 @@ await store.append(entry, options);
 }
 ```
 
-Recognize it with `isSessionAppendConflict(error)`, not message text. Built-in stores reject duplicate entry ids, dangling `expectedParentId` values, and exact idempotency retries. They allow two distinct children of the same existing parent because that is a branch/fork, not parent-order corruption. Production stores may add a stricter branch-tip compare-and-swap when a host wants one-writer linear branches.
+Recognize it with `isSessionAppendConflict(error)`, not message text. Built-in stores reject duplicate entry ids, dangling `expectedParentId` values, and `expectedParentId` pointing at another session's entry (the parent must exist in the same session — a cross-session parent would be a write no per-session branch walk could read back), and exact idempotency retries. They allow two distinct children of the same existing parent because that is a branch/fork, not parent-order corruption. Production stores may add a stricter branch-tip compare-and-swap when a host wants one-writer linear branches.
 
 ## Extension and configuration notes
 

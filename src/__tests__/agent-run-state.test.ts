@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  AgentRunError,
   AgentRunStateError,
+  AGENT_RUN_STATE_SCHEMA_VERSION,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
   createMockProvider,
   createSecretRedactor,
+  GuardrailError,
+  HARD_MAX_AGENT_RUN_STATE_BYTES,
   loadAgentRunState,
   providerDone,
   providerTextDelta,
@@ -14,6 +18,7 @@ import {
   resumeAgentRunStream,
   toolCallContent,
 } from "../index.js";
+import { parseAgentRunState, agentFingerprint, saveAgentRunState, type StoredAgentRunState } from "../agent-run-state.js";
 
 describe("durable agent runs", () => {
   it("suspends before a tool, recreates process objects, and executes it once on approval", async () => {
@@ -305,5 +310,162 @@ describe("durable agent runs", () => {
     );
     assert.equal(denied.status, "denied");
     assert.equal(calls, 0);
+  });
+
+  it("resumes state saved above the default byte cap but within the hard cap", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const zero = {
+      turns: 0,
+      providerAttempts: 0,
+      toolRounds: 0,
+      toolCalls: 0,
+      wallTimeMs: 0,
+      requestBytes: 0,
+      responseBytes: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      cost: 0,
+    };
+    // `pad` is an extra JSON key: parse validates required fields only, and boundState
+    // round-trips all keys, so it survives save/load and drives the byte count.
+    const state = {
+      schemaVersion: AGENT_RUN_STATE_SCHEMA_VERSION,
+      agentId: "oversized-demo",
+      definitionRevision: "1",
+      fingerprint: "fingerprint",
+      runId: "run-oversized",
+      sessionId: "session-oversized",
+      model: { provider: "mock", model: "demo" },
+      status: "suspended",
+      counters: zero,
+      deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+      // Pad past the 256KB default cap but well under the 1MB hard cap.
+      pad: "x".repeat(300 * 1024),
+    } as unknown as StoredAgentRunState;
+    const saved = await saveAgentRunState({
+      checkpoints,
+      state,
+      expectedVersion: 0,
+      maxStateBytes: HARD_MAX_AGENT_RUN_STATE_BYTES,
+    });
+    const loaded = await loadAgentRunState(checkpoints, { runId: state.runId });
+    assert.equal(loaded.state.runId, state.runId);
+    assert.equal(loaded.record.version, saved.record.version);
+    assert.throws(() => parseAgentRunState({ ...state, pad: "x".repeat(1100 * 1024) }), AgentRunStateError);
+  });
+
+  it("treats resume as approval for input-stage interrupt guardrails", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const agent = createAgent({
+      id: "interrupt-resume-demo",
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("approved output"), providerDone()]),
+      // Always interrupts: if resume did not count as approval, the resumed run would dead-end.
+      guardrails: {
+        input: [{ name: "approval", stage: "input", evaluate: () => ({ action: "interrupt" as const, reason: "needs approval" }) }],
+      },
+    });
+    const session = agent.createSession();
+    const suspended = await session.run("go", { runState: { checkpoints, definitionRevision: "1" } });
+    assert.equal(suspended.status, "suspended");
+    assert.equal(suspended.interruption?.kind, "input_guardrail");
+
+    const resumed = await resumeAgentRun(
+      agent,
+      { runId: suspended.runId, sessionId: suspended.sessionId },
+      { decision: "approve", expectedVersion: suspended.runState!.version! },
+      { checkpoints, definitionRevision: "1" },
+    );
+    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.text, "approved output");
+  });
+
+  it("still fails a resumed durable run when an input guardrail blocks", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    let evaluations = 0;
+    const agent = createAgent({
+      id: "interrupt-then-block-demo",
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("never reached"), providerDone()]),
+      guardrails: {
+        input: [
+          {
+            name: "flip",
+            stage: "input",
+            evaluate: () => {
+              evaluations += 1;
+              // First pass (fresh run): interrupt → suspend. Resume re-evaluation: block → fail.
+              return evaluations === 1 ? { action: "interrupt" as const } : { action: "block" as const, reason: "denied on re-check" };
+            },
+          },
+        ],
+      },
+    });
+    const session = agent.createSession();
+    const suspended = await session.run("go", { runState: { checkpoints, definitionRevision: "1" } });
+    assert.equal(suspended.status, "suspended");
+
+    await assert.rejects(
+      () =>
+        resumeAgentRun(
+          agent,
+          { runId: suspended.runId, sessionId: suspended.sessionId },
+          { decision: "approve", expectedVersion: suspended.runState!.version! },
+          { checkpoints, definitionRevision: "1" },
+        ),
+      (error) => {
+        assert.ok(error instanceof AgentRunError);
+        assert.ok(error.cause instanceof GuardrailError);
+        return true;
+      },
+    );
+  });
+
+  it("fingerprint changes with instructions, system prompt, and skills", () => {
+    const base = () =>
+      createAgent({
+        id: "fp-demo",
+        model: { provider: "mock", model: "demo" },
+        instructions: "be terse",
+        skills: [{ name: "review", instructions: "review the code" }],
+      });
+
+    const stable = agentFingerprint(base(), "1");
+    assert.equal(agentFingerprint(base(), "1"), stable, "identical config must hash identically");
+    assert.notEqual(agentFingerprint(base(), "2"), stable, "revision bump must change the fingerprint");
+
+    assert.notEqual(
+      agentFingerprint(createAgent({ id: "fp-demo", model: { provider: "mock", model: "demo" }, instructions: "be verbose" }), "1"),
+      stable,
+      "instructions change must change the fingerprint",
+    );
+    assert.notEqual(
+      agentFingerprint(
+        createAgent({
+          id: "fp-demo",
+          model: { provider: "mock", model: "demo" },
+          instructions: "be terse",
+          skills: [{ name: "review", instructions: "review the code harder" }],
+        }),
+        "1",
+      ),
+      stable,
+      "skill instructions change must change the fingerprint",
+    );
+    assert.notEqual(
+      agentFingerprint(
+        createAgent({
+          id: "fp-demo",
+          model: { provider: "mock", model: "demo" },
+          instructions: "be terse",
+          skills: [{ name: "review", instructions: "review the code" }],
+          systemPrompt: { id: "sp", text: "extra prompt layer" },
+        }),
+        "1",
+      ),
+      stable,
+      "system prompt change must change the fingerprint",
+    );
   });
 });

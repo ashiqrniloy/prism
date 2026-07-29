@@ -25,6 +25,8 @@ import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry
 
 export interface ContributionRegistry<T> {
   register(key: string, contribution: T): void;
+  /** Remove a contribution; returns false when the key was not registered. */
+  unregister(key: string): boolean;
   get(key: string): T | undefined;
   resolve(key: string): T;
   list(): readonly T[];
@@ -42,6 +44,9 @@ export function createContributionRegistry<T>(options: ContributionRegistryOptio
     register(key, contribution) {
       assertCanRegister(byKey, key, label, key, options.duplicate);
       byKey.set(key, contribution);
+    },
+    unregister(key) {
+      return byKey.delete(key);
     },
     get(key) {
       return byKey.get(key);

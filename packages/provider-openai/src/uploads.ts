@@ -30,7 +30,7 @@ export interface OpenAIResolvedFileWire {
 
 export function createOpenAIFileUploadManager(options: OpenAIFileUploadManagerOptions = {}) {
   const providerId = options.providerId ?? "openai";
-  const baseUrl = (options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "");
   const fetchImpl = options.fetch ?? fetch;
   const inlineMaxBytes = options.inlineMaxBytes ?? DEFAULT_OPENAI_INLINE_FILE_BYTES;
   const purpose = options.purpose ?? "user_data";

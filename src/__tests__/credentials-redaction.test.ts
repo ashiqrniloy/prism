@@ -129,6 +129,14 @@ describe("redaction", () => {
     });
   });
 
+  it("bounds recursion depth on hostile deep structures", () => {
+    let deep: Record<string, unknown> = { leaf: "sk-deep-1" };
+    for (let i = 0; i < 64; i += 1) deep = { next: deep };
+
+    const redacted = redactSecrets(deep, ["sk-deep-1"]) as Record<string, unknown>;
+    assert.ok(JSON.stringify(redacted).includes("[MaxDepth]"), "deep input yields a bounded placeholder");
+  });
+
   it("redacts known secret values from error info", () => {
     const info = errorToErrorInfo(new Error("bad key sk-test-123"), ["sk-test-123"]);
 

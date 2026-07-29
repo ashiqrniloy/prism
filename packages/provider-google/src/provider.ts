@@ -1,6 +1,6 @@
 import type { AIProvider, CredentialValueSource, ProviderRequestOptions } from "@arnilo/prism";
 import { providerError, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { googleGenerateContentBody, googleGenerateContentEvents } from "./generate-content.js";
 import { GOOGLE_DEFAULT_BASE_URL, stripModelsPrefix } from "./models.js";
 
@@ -32,7 +32,7 @@ export function googleOwnedHeaders(
 
 export function createGoogleGenerateContentProvider(options: GoogleGenerateContentProviderOptions = {}): AIProvider {
   const id = options.id ?? "google";
-  const baseUrl = (options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL).replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL).replace(/\/+$/, "");
   return {
     id,
     async *generate(request) {
@@ -56,7 +56,7 @@ export function createGoogleGenerateContentProvider(options: GoogleGenerateConte
         });
         if (!response.ok) {
           return yield providerError(
-            new Error(`Google request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
+            httpStatusError("Google request failed", response, await readBoundedResponseText(response, { secrets })),
             secrets,
           );
         }

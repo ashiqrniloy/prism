@@ -79,7 +79,7 @@ export function defineAnthropicModel(config: AnthropicModelConfig): ModelConfig 
  */
 export async function listAnthropicModels(options: ListAnthropicModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "anthropic";
-  const baseUrl = (options.baseUrl ?? ANTHROPIC_DEFAULT_BASE_URL).replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? ANTHROPIC_DEFAULT_BASE_URL).replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

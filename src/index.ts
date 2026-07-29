@@ -233,6 +233,7 @@ export type {
   ExtensionKernel,
   ExtensionKernelOptions,
   ExtensionLoadPolicy,
+  LoadedExtension,
 } from "./extensions.js";
 export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
 export type {
@@ -463,5 +464,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.0.16";
+export const version = "0.0.17";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

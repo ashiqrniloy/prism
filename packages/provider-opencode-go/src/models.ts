@@ -105,7 +105,7 @@ export function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute {
  */
 export async function listOpenCodeGoModels(options: ListOpenCodeGoModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "opencode-go";
-  const baseUrl = (options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL).replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL).replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

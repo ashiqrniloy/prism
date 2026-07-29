@@ -79,7 +79,7 @@ export function defineZaiModel(config: ZaiModelConfig): ModelConfig {
  */
 export async function listZaiModels(options: ListZaiModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "zai";
-  const baseUrl = (options.baseUrl ?? "https://api.z.ai/api/paas/v4").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://api.z.ai/api/paas/v4").replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

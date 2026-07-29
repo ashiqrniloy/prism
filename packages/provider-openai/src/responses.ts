@@ -37,7 +37,7 @@ import {
   serializeOpenAIResponsesInputFile,
 } from "@arnilo/prism/providers/media";
 import { applyOpenAIResponsesStructuredOutput } from "@arnilo/prism/providers/openai";
-import { readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
+import { httpStatusError, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { promptCacheKey, promptCacheRetention } from "./cache.js";
 import { createOpenAIFileUploadManager, type OpenAIFileUploadManager } from "./uploads.js";
 
@@ -112,7 +112,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             secrets.push(token);
           }
           const response = await (options.fetch ?? fetch)(
-            `${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/responses`,
+            `${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "")}/responses`,
             {
               method: "POST",
               headers: {
@@ -127,7 +127,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
           );
           if (!response.ok) {
             return yield providerError(
-              new Error(`OpenAI request failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`),
+              httpStatusError("OpenAI request failed", response, await readBoundedResponseText(response, { secrets })),
               secrets,
             );
           }

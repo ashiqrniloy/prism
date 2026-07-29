@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "Umbrella package: installs all first-party Prism provider adapters, including Anthropic, Google, and AI SDK interoperability.",
   "license": "MIT",
   "scripts": {
@@ -11,17 +11,17 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-provider-ai-sdk": "0.0.16",
-    "@arnilo/prism-provider-alibaba": "0.0.16",
-    "@arnilo/prism-provider-anthropic": "0.0.16",
-    "@arnilo/prism-provider-google": "0.0.16",
-    "@arnilo/prism-provider-kimi": "0.0.16",
-    "@arnilo/prism-provider-neuralwatt": "0.0.16",
-    "@arnilo/prism-provider-ollama": "0.0.16",
-    "@arnilo/prism-provider-openai": "0.0.16",
-    "@arnilo/prism-provider-opencode-go": "0.0.16",
-    "@arnilo/prism-provider-openrouter": "0.0.16",
-    "@arnilo/prism-provider-zai": "0.0.16"
+    "@arnilo/prism-provider-ai-sdk": "0.0.17",
+    "@arnilo/prism-provider-alibaba": "0.0.17",
+    "@arnilo/prism-provider-anthropic": "0.0.17",
+    "@arnilo/prism-provider-google": "0.0.17",
+    "@arnilo/prism-provider-kimi": "0.0.17",
+    "@arnilo/prism-provider-neuralwatt": "0.0.17",
+    "@arnilo/prism-provider-ollama": "0.0.17",
+    "@arnilo/prism-provider-openai": "0.0.17",
+    "@arnilo/prism-provider-opencode-go": "0.0.17",
+    "@arnilo/prism-provider-openrouter": "0.0.17",
+    "@arnilo/prism-provider-zai": "0.0.17"
   },
   "engines": {
     "node": ">=20"

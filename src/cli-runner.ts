@@ -38,10 +38,6 @@ export interface CliOptions {
   readonly provider?: string;
   readonly model?: string;
   readonly session?: string;
-  readonly config: readonly string[];
-  readonly resources: readonly string[];
-  readonly extensions: readonly string[];
-  readonly tools: readonly string[];
   readonly system?: string;
   readonly context: readonly string[];
   readonly compact?: number;
@@ -106,10 +102,6 @@ Options:
   --provider <name>          Explicit provider id (mock is built in for smoke tests)
   --model <name>             Explicit model name
   --session <id>             Session id
-  --config <path>            Explicit config path (recorded, not auto-loaded)
-  --resource <uri>           Explicit resource URI (recorded, not auto-loaded)
-  --extension <name>         Explicit extension name (recorded, not auto-loaded)
-  --tool <name>              Explicit tool name (recorded, not auto-enabled)
   --system <text>            System instructions
   --context <text>           Context text
   --compact <entries>        Auto-compaction threshold
@@ -131,10 +123,6 @@ const valueFlags = new Set([
   "--provider",
   "--model",
   "--session",
-  "--config",
-  "--resource",
-  "--extension",
-  "--tool",
   "--system",
   "--context",
   "--compact",
@@ -147,6 +135,9 @@ const valueFlags = new Set([
   "--agents-config",
 ]);
 const boolFlags = new Set(["--discover", "--no-discovery", "--no-agents-md", "--no-system-md"]);
+// Known-but-inert flags: parsed by earlier builds, never wired to any behavior.
+// Rejected loudly (rather than silently ignored) until a CLI-harness plan wires them.
+const unsupportedFlags = new Set(["--config", "--resource", "--extension", "--tool"]);
 const ALL_KINDS: readonly ContributionFileKind[] = ["skill", "tool", "context", "instructions"];
 
 export function parseCliArgs(argv: readonly string[]): CliOptions {
@@ -167,10 +158,6 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
   let agentsMdFile: string | undefined;
   let systemMdFile: string | undefined;
   let agentsConfig: string | undefined;
-  const config: string[] = [];
-  const resources: string[] = [];
-  const extensions: string[] = [];
-  const tools: string[] = [];
   const context: string[] = [];
   const instructions: string[] = [];
   const injectorFiles: string[] = [];
@@ -182,6 +169,7 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
       continue;
     }
     const name = flag === "-p" ? "--prompt" : flag;
+    if (unsupportedFlags.has(name)) throw new CliUsageError(`${name} is not supported in this build`);
     if (boolFlags.has(name)) {
       switch (name) {
         case "--discover":
@@ -219,18 +207,6 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
         break;
       case "--session":
         session = value;
-        break;
-      case "--config":
-        config.push(value);
-        break;
-      case "--resource":
-        resources.push(value);
-        break;
-      case "--extension":
-        extensions.push(value);
-        break;
-      case "--tool":
-        tools.push(value);
         break;
       case "--system":
         system = value;
@@ -271,10 +247,6 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
     provider,
     model,
     session,
-    config,
-    resources,
-    extensions,
-    tools,
     system,
     context,
     compact,

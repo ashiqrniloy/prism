@@ -40,14 +40,6 @@ describe("cli", () => {
       "demo",
       "--session",
       "s1",
-      "--config",
-      "c.json",
-      "--resource",
-      "r",
-      "--extension",
-      "e",
-      "--tool",
-      "t",
       "--system",
       "sys",
       "--context",
@@ -61,12 +53,14 @@ describe("cli", () => {
     assert.equal(parsed.mode, "json");
     assert.equal(parsed.provider, "mock");
     assert.equal(parsed.model, "demo");
-    assert.deepEqual(parsed.config, ["c.json"]);
-    assert.deepEqual(parsed.resources, ["r"]);
-    assert.deepEqual(parsed.extensions, ["e"]);
-    assert.deepEqual(parsed.tools, ["t"]);
     assert.equal(parsed.compact, 3);
     assert.equal(parsed.maxToolRounds, 2);
+  });
+
+  it("cli_parser_rejects_known_but_unsupported_flags_loudly", async () => {
+    for (const flag of ["--config", "--resource", "--extension", "--tool"]) {
+      assert.throws(() => parseCliArgs([flag, "x"]), new RegExp(`${flag} is not supported in this build`));
+    }
   });
 
   it("cli_parser_rejects_unknown_or_missing_flag_values", async () => {

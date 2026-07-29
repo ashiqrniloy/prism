@@ -68,10 +68,12 @@ createDefaultRetryPolicy(options?: DefaultRetryPolicyOptions): RetryPolicy
 | `maxAttempts` | Total provider-turn attempts; defaults to `3`. |
 | `baseDelayMs` | First retry delay; defaults to `100`. |
 | `maxDelayMs` | Backoff cap; defaults to `1000`. |
+| `jitter` | Symmetric jitter fraction on computed delays; defaults to `0.25` (±25%). Set `0` for exact delays. |
+| `random` | Random source for jitter (tests); defaults to `Math.random`. |
 | `secrets` | Exact known secret strings to redact from retry errors/events. |
 | `metadata` | Explicit host metadata for retry policy context. |
 
-`RunOptions.retry: false` disables configured retry for that run. Default classification retries generic transient codes/messages such as `ETIMEDOUT`, `ECONNRESET`, `429`, `500`, `502`, `503`, `504`, `timeout`, `rate_limit`, and `temporarily_unavailable`; aborts and non-transient errors fail closed.
+`RunOptions.retry: false` disables configured retry for that run. Default classification retries generic transient codes/messages such as `ETIMEDOUT`, `ECONNRESET`, `429`, `500`, `502`, `503`, `504`, `timeout`, `rate_limit`, and `temporarily_unavailable`; aborts and non-transient errors fail closed. Delays are exponential (`baseDelayMs * 2^(attempt-1)`, capped at `maxDelayMs`) with symmetric jitter, so concurrent sessions do not retry in lockstep during a shared outage. When `ErrorInfo.retryAfterMs` is set — first-party HTTP providers populate it from the `Retry-After` response header via `httpStatusError()` — the hint wins over computed backoff, jitter still applies, and the result is always capped at `maxDelayMs` so a hostile or huge hint cannot pin a run.
 
 `CompactionEntryData` is stored in `SessionEntry.data` for compaction entries:
 

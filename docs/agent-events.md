@@ -44,7 +44,7 @@ The `AgentEvent` union (grouped by concern):
 | Assistant messages | `message_started`, `message_delta`, `message_finished` |
 | Tool execution | `tool_execution_started`, `tool_execution_progress`, `tool_execution_finished`, `tool_execution_error`, `tool_execution_blocked` |
 | Guardrails | `guardrail_decision` |
-| Queue/subscribers | `queue_updated`, `event_subscriber_overflow` |
+| Queue/subscribers | `queue_updated`, `event_subscriber_overflow`, `steer_rejected` |
 | Compaction | `compaction_started`, `compaction_finished` |
 | Retry | `retry_scheduled` |
 | Artifacts | `artifact_validation_started`, `artifact_validation_finished`, `artifact_revision_started`, `artifact_finished`, `artifact_failed` |
@@ -92,6 +92,7 @@ Queue / subscriber / compaction / retry / provider events:
 | Variant | Fields |
 | --- | --- |
 | `queue_updated` | `sessionId`, `runId`, `size: number` |
+| `steer_rejected` | `sessionId`, `runId`, `message: Message` (redacted), `record: GuardrailRecord` — a steered message dropped by a terminal input guardrail; the run continues without it |
 | `event_subscriber_overflow` | `sessionId`, `droppedEvents: number`, `maxQueuedEvents: number`, `overflow: "close" \| "drop_oldest" \| "drop_newest"` |
 | `compaction_started` | `sessionId`, `runId?` |
 | `compaction_finished` | `sessionId`, `runId?`, `summary: string` |

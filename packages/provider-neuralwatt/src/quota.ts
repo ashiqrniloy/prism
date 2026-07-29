@@ -71,7 +71,7 @@ export interface NeuralWattQuota {
  * any error message.
  */
 export async function getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Promise<NeuralWattQuota> {
-  const baseUrl = (options.baseUrl ?? "https://api.neuralwatt.com/v1").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://api.neuralwatt.com/v1").replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider: "neuralwatt", name: "apiKey" });
   if (!token) throw new Error("NeuralWatt quota requires an API key");
   const response = await (options.fetch ?? fetch)(`${baseUrl}/quota`, {

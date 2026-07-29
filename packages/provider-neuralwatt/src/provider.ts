@@ -34,7 +34,7 @@ export interface NeuralWattProviderOptions {
 export function createNeuralWattProvider(options: NeuralWattProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "neuralwatt",
-    baseUrl: (options.baseUrl ?? "https://api.neuralwatt.com/v1").replace(/\/$/, ""),
+    baseUrl: (options.baseUrl ?? "https://api.neuralwatt.com/v1").replace(/\/+$/, ""),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

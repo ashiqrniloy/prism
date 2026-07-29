@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.17] - 2026-07-29
+
+### Added
+- `ShellToolOptions.envAllowlist` restricts the environment the spawn hook and child process see (secret scrubbing without re-implementing the hook).
+
+### Changed
+- Released with exact 0.0.17 graph.
+
 ## [0.0.16] - 2026-07-26
 
 ### Changed

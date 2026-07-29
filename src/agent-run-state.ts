@@ -35,16 +35,26 @@ export interface StoredAgentRunState extends AgentRunState {
 export function agentFingerprint(agent: Agent, revision: string): string {
   const config = agent.config;
   const tools = !config.tools ? [] : "list" in config.tools ? config.tools.list() : config.tools;
+  const skills = !config.skills ? [] : "list" in config.skills ? config.skills.list() : config.skills;
   const guardrails = [
     ...(config.guardrails?.input ?? []),
     ...(config.guardrails?.output ?? []),
     ...(config.guardrails?.toolInput ?? []),
     ...(config.guardrails?.toolOutput ?? []),
   ];
+  const systemPrompt =
+    config.systemPrompt === false || config.systemPrompt === undefined
+      ? (config.systemPrompt ?? null)
+      : (Array.isArray(config.systemPrompt) ? config.systemPrompt : [config.systemPrompt]).map((c) => ({ id: c.id, text: c.text }));
   const value = JSON.stringify({
     id: config.id ?? config.name ?? "agent",
     revision,
     model: config.model,
+    // Instructions/prompt text shapes agent behavior as much as the tool set; a change
+    // without a definitionRevision bump must not resume stale durable runs silently.
+    instructions: config.instructions ?? null,
+    systemPrompt,
+    skills: skills.map((skill) => ({ name: skill.name, instructions: skill.instructions, toolNames: skill.toolNames })),
     tools: tools.map((tool) => ({ name: tool.name, parameters: tool.parameters, exclusive: tool.exclusive })),
     guardrails: guardrails.map((guardrail) => ({ name: guardrail.name, stage: guardrail.stage, revision: guardrail.revision })),
     loop:
@@ -179,7 +189,10 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
   ) {
     throw new AgentRunStateError("Malformed agent run state");
   }
-  return boundState({ ...state, version } as StoredAgentRunState, DEFAULT_MAX_AGENT_RUN_STATE_BYTES);
+  // Load bounds against the hard cap, not the default: the configured maxStateBytes is a
+  // save-side policy knob, while the load-side bound is only a DoS ceiling. States saved
+  // with a raised maxStateBytes must remain resumable.
+  return boundState({ ...state, version } as StoredAgentRunState, HARD_MAX_AGENT_RUN_STATE_BYTES);
 }
 
 function boundState(state: StoredAgentRunState, maxBytes: number): StoredAgentRunState {

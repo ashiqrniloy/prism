@@ -7,7 +7,9 @@ import {
   DEFAULT_MAX_EVENT_BYTES,
   DEFAULT_MAX_RESPONSE_BODY_BYTES,
   ProviderTransportError,
+  httpStatusError,
   parseJsonObjectArguments,
+  parseRetryAfterMs,
   readBoundedResponseText,
   readSseData,
   readSseEvents,
@@ -39,6 +41,26 @@ async function collectData(body: ReadableStream<Uint8Array>, options?: Parameter
 }
 
 describe("provider transport primitives", () => {
+  it("httpStatusError carries status code and Retry-After hint", () => {
+    const response = new Response("slow down", { status: 429, headers: { "retry-after": "2" } });
+    const error = httpStatusError("OpenAI request failed", response, "slow down") as Error & { code?: number; retryAfterMs?: number };
+    assert.equal(error.message, "OpenAI request failed: 429 slow down");
+    assert.equal(error.code, 429);
+    assert.equal(error.retryAfterMs, 2000);
+
+    const plain = httpStatusError("X request failed", new Response("bad", { status: 400 }), "bad") as Error & { retryAfterMs?: number };
+    assert.equal(plain.retryAfterMs, undefined);
+  });
+
+  it("parseRetryAfterMs handles delay-seconds, HTTP-date, and garbage", () => {
+    assert.equal(parseRetryAfterMs(null), undefined);
+    assert.equal(parseRetryAfterMs("5"), 5000);
+    assert.equal(parseRetryAfterMs("nonsense"), undefined);
+    const now = Date.parse("Wed, 21 Oct 2015 07:28:00 GMT");
+    assert.equal(parseRetryAfterMs("Wed, 21 Oct 2015 07:28:10 GMT", now), 10_000);
+    assert.equal(parseRetryAfterMs("Wed, 21 Oct 2015 07:27:00 GMT", now), 0);
+  });
+
   it("parses CRLF and LF delimited events with multiline data", async () => {
     const body = stream(["data: line1\r\n", "data: line2\r\n\r\ndata: ok\n\n"]);
     const events = await collectEvents(body);

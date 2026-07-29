@@ -101,8 +101,9 @@ export function createDefaultInputBuilder(): DefaultInputBuilder {
     name: "default-input",
     async build(input, context = {}) {
       const groups = await buildDefaultInputMessageGroups(input, context);
-      const messages = flattenInputGroups(groups, context.inputLayout ?? "legacy");
-      return context.middleware ? context.middleware.run("input_assembly", messages) : messages;
+      // `input_assembly` middleware is applied by assembleProviderInput after build(),
+      // never here: builders must not be a security seam.
+      return flattenInputGroups(groups, context.inputLayout ?? "legacy");
     },
   };
 }
@@ -130,7 +131,10 @@ export function createDefaultPromptBuilder(): DefaultPromptBuilder {
   return {
     name: "default-prompt",
     async build(request) {
-      return [...contextMessages(request.context), ...skillMessages(request.skills), ...toolMessages(request.tools), ...request.messages];
+      // Tool-capable models receive schemas via request.tools; the text list only serves
+      // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
+      const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
+      return [...contextMessages(request.context), ...skillMessages(request.skills), ...toolMessages(tools), ...request.messages];
     },
   };
 }
@@ -208,6 +212,8 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   } else {
     const inputBuilder = options.inputBuilder ?? createDefaultInputBuilder();
     messages = await inputBuilder.build(options.input, buildContext);
+    // Runtime-owned: input_assembly middleware always runs, regardless of which builder is installed.
+    if (buildContext.middleware) messages = await buildContext.middleware.run("input_assembly", messages);
     context = await resolveContextProviders({
       providers: options.contextProviders,
       messages,
@@ -235,7 +241,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         metadata: options.metadata,
         signal: options.signal,
       };
-  const providerMessages = await promptBuilder.build({ ...promptRequest, tools });
+  const providerMessages = await promptBuilder.build({ ...promptRequest, tools, model: options.model });
   assertMessagesSupportModelCapabilities(options.model, providerMessages);
 
   const metadata = budgetReport ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport } : options.metadata;

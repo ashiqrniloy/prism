@@ -7,6 +7,11 @@ export interface DefaultRetryPolicyOptions {
   readonly baseDelayMs?: number;
   readonly maxDelayMs?: number;
   readonly transientCodes?: readonly (string | number)[];
+  /** Symmetric jitter fraction applied to computed delays (default 0.25 → ±25%).
+   *  Prevents thundering-herd retries under a shared outage. Set 0 to disable. */
+  readonly jitter?: number;
+  /** Random source for jitter (tests); defaults to Math.random. */
+  readonly random?: () => number;
 }
 
 const TRANSIENT_CODES = new Set<string | number>([
@@ -33,13 +38,23 @@ export function createDefaultRetryPolicy(options: DefaultRetryPolicyOptions = {}
   const maxAttempts = Math.max(1, options.maxAttempts ?? 3);
   const baseDelayMs = Math.max(0, options.baseDelayMs ?? 100);
   const maxDelayMs = Math.max(baseDelayMs, options.maxDelayMs ?? 1000);
+  const jitter = Math.min(1, Math.max(0, options.jitter ?? 0.25));
+  const random = options.random ?? Math.random;
   const transientCodes = new Set([...TRANSIENT_CODES, ...(options.transientCodes ?? [])]);
   return {
     name: options.name ?? "default-retry",
     decide(context) {
       if (context.signal?.aborted || context.attempt >= maxAttempts || !isTransientErrorInfo(context.error, transientCodes))
         return { retry: false };
-      return { retry: true, delayMs: Math.min(maxDelayMs, baseDelayMs * 2 ** Math.max(0, context.attempt - 1)) };
+      // Provider backpressure hint (Retry-After) wins over computed backoff, always
+      // capped at maxDelayMs so a hostile/huge hint cannot pin a run.
+      const hint = context.error.retryAfterMs;
+      const base = Math.min(
+        hint !== undefined && Number.isFinite(hint) && hint >= 0 ? hint : baseDelayMs * 2 ** Math.max(0, context.attempt - 1),
+        maxDelayMs,
+      );
+      const delayMs = jitter > 0 ? Math.round(base * (1 - jitter + random() * 2 * jitter)) : base;
+      return { retry: true, delayMs };
     },
   };
 }

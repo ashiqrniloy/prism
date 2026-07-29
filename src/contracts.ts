@@ -17,6 +17,9 @@ export interface ErrorInfo {
   readonly name?: string;
   readonly message: string;
   readonly code?: string | number;
+  /** Provider backpressure hint (e.g. from a `Retry-After` header); retry policies
+   *  honor it capped at their own `maxDelayMs`. */
+  readonly retryAfterMs?: number;
   readonly cause?: unknown;
 }
 
@@ -784,6 +787,14 @@ export type AgentEvent =
   | { readonly type: "run_limit_exceeded"; readonly sessionId: string; readonly runId: string; readonly breach: RunLimitBreach }
   | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
   | {
+      /** A steered message was dropped by a terminal input guardrail; the run continues without it. */
+      readonly type: "steer_rejected";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly message: Message;
+      readonly record: GuardrailRecord;
+    }
+  | {
       readonly type: "event_subscriber_overflow";
       readonly sessionId: string;
       readonly runId?: string;
@@ -984,6 +995,9 @@ export interface PromptBuildRequest {
   readonly context?: readonly ContextBlock[];
   readonly skills?: readonly Skill[];
   readonly tools?: readonly ToolDefinition[];
+  /** Model being prompted; lets builders adapt composition to declared capabilities
+   *  (e.g. the default builder omits the `Available tools:` text for tool-capable models). */
+  readonly model?: ModelConfig;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly signal?: AbortSignal;
 }

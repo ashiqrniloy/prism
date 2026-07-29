@@ -26,11 +26,22 @@ const guardrails: Guardrails = { input: [pii], maxConcurrency: 1 };
 
 Set `AgentConfig.guardrails` for every session run or `RunOptions.guardrails` to append checks for one run. `DispatchToolCallOptions.guardrails`, workflow `RunWorkflowOptions.guardrails`, and MCP server `CreatePrismMcpServerOptions.guardrails` apply tool stages to direct calls. A stage has `Guardrail<"input" | "output" | "tool_input" | "tool_output">`, a name, optional revision, and `evaluate(context)` result.
 
-Decisions are `allow`, `block`, `tripwire`, or `interrupt`. Evaluation defaults to declaration-order sequential. `maxConcurrency` may be 1–16; records are emitted in declaration order. Thrown or malformed decisions become a fail-closed tripwire. Decision reasons are capped at 4 KiB and metadata at 16 KiB after JSON normalization and optional redaction.
+Decisions are `allow`, `block`, `tripwire`, or `interrupt`. Evaluation defaults to declaration-order sequential. `maxConcurrency` may be 1–16; records are emitted in declaration order. Thrown or malformed decisions become a fail-closed tripwire. A throwing guardrail produces a `guardrail_failed` record whose `metadata.error` carries the underlying error message — redacted and bounded to 4 KiB — so failures stay diagnosable without leaking internals. Decision reasons are capped at 4 KiB and metadata at 16 KiB after JSON normalization and optional redaction.
 
 ## Outputs / response / events
 
-Every evaluated guard produces a redacted `guardrail_decision` `AgentEvent` with a bounded `GuardrailRecord`. Optional OpenTelemetry instrumentation records only controlled stage/action on a short run-child span; guardrail name, reason, and metadata are excluded. An input or output terminal decision rejects the run with `GuardrailError`; `tripwire` stops remaining evaluation. A tool-input or tool-output `block` returns a redacted blocked `ToolResult`; a `tripwire` rejects the enclosing run. `interrupt` is reserved for durable runs and currently fails closed with `ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE`.
+Every evaluated guard produces a redacted `guardrail_decision` `AgentEvent` with a bounded `GuardrailRecord`. Optional OpenTelemetry instrumentation records only controlled stage/action on a short run-child span; guardrail name, reason, and metadata are excluded. An input or output terminal decision rejects the run with `GuardrailError`; `tripwire` stops remaining evaluation. A tool-input or tool-output `block` returns a redacted blocked `ToolResult`; a `tripwire` rejects the enclosing run. `interrupt` is reserved for durable runs: at the input stage of a fresh durable run it suspends the run for approval (persisted `input_guardrail` interruption); anywhere else it currently fails closed with `ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE`. Resuming a suspended durable run re-evaluates input guardrails on the stored input, and the resume decision itself counts as the approval: a repeated input-stage `interrupt` does not re-suspend or fail the resumed run, while `block`/`tripwire` still reject it.
+
+Action outcome by stage:
+
+| Stage | `block` | `tripwire` | `interrupt` |
+| --- | --- | --- | --- |
+| `input` | run rejected (`GuardrailError`); steered message: dropped + `steer_rejected`, run continues | run rejected; steered message: dropped + `steer_rejected`, run continues | fresh durable run: suspends for approval; otherwise fails closed |
+| `output` | run rejected | run rejected | fails closed (`ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE`) |
+| `tool_input` | blocked `ToolResult`, run continues | run rejected | fails closed |
+| `tool_output` | blocked `ToolResult`, run continues | run rejected | fails closed |
+
+The `GuardrailError` message names the stage so unsupported `interrupt` placements are diagnosable without reading core source.
 
 Ordering is fixed:
 

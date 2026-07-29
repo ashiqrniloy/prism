@@ -30,7 +30,7 @@ export const DEFAULT_ALIBABA_BASE_URL = ALIBABA_BASE_URLS.singapore;
  */
 export function alibabaBaseUrl(options: { readonly baseUrl?: string; readonly preset?: AlibabaBasePreset } = {}): string {
   const base = options.baseUrl ?? ALIBABA_BASE_URLS[options.preset ?? "singapore"];
-  return base.replace(/\/$/, "");
+  return base.replace(/\/+$/, "");
 }
 
 export interface AlibabaModelConfig extends Omit<ModelConfig, "provider" | "compat"> {

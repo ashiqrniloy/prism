@@ -172,7 +172,7 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
         releaseOwnerSlot();
         return;
       }
-      const base = (options.baseUrl ?? "wss://api.openai.com/v1").replace(/\/$/, "");
+      const base = (options.baseUrl ?? "wss://api.openai.com/v1").replace(/\/+$/, "");
       if (!base.startsWith("wss://")) throw new Error("OpenAI realtime baseUrl must use wss://");
       const url = `${base}/realtime?model=${encodeURIComponent(options.model.model)}`;
       const headers = {

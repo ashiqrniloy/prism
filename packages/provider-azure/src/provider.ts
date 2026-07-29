@@ -42,7 +42,7 @@ function requireEndpoint(endpoint: string | undefined): string {
     if (error instanceof Error && error.message.startsWith("Azure")) throw error;
     throw new Error("Azure OpenAI endpoint must be an absolute https URL");
   }
-  return endpoint.replace(/\/$/, "");
+  return endpoint.replace(/\/+$/, "");
 }
 
 /** Build deployment chat-completions URL without rewriting the endpoint host. */

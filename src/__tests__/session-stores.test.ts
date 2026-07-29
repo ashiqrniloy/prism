@@ -266,6 +266,20 @@ describe("atomic append guards (memory store)", () => {
     assert.equal((await store.list("s1")).length, 3);
   });
 
+  it("rejects expectedParentId pointing at another session's entry", async () => {
+    const store = createMemorySessionStore();
+    const foreign = createSessionEntry({ sessionId: "sA", kind: "label", label: "foreign" });
+    await store.append(foreign);
+    const orphan = createSessionEntry({ sessionId: "sB", parentId: foreign.id, kind: "label", label: "orphan" });
+    await assert.rejects(
+      () => store.append(orphan, { expectedParentId: foreign.id }),
+      (error: unknown) => isSessionAppendConflict(error) && error.conflict.expectedParentId === foreign.id,
+    );
+    // The unreadable write never landed.
+    assert.equal((await store.list("sB")).length, 0);
+    assert.equal((await store.list("sA")).length, 1);
+  });
+
   it("deduplicates an exact retry at the same position by idempotencyKey", async () => {
     const store = createMemorySessionStore();
     const root = createSessionEntry({ sessionId: "s1", kind: "label", label: "root" });

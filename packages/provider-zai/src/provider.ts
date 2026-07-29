@@ -17,7 +17,7 @@ export interface ZaiProviderOptions {
 export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "zai",
-    baseUrl: (options.baseUrl ?? ZAI_DEFAULT_BASE_URL).replace(/\/$/, ""),
+    baseUrl: (options.baseUrl ?? ZAI_DEFAULT_BASE_URL).replace(/\/+$/, ""),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

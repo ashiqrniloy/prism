@@ -3,6 +3,8 @@ import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry
 
 export interface ProviderRegistry {
   register(provider: AIProvider): void;
+  /** Remove a provider; returns false when the id was not registered. */
+  unregister(id: string): boolean;
   get(id: string): AIProvider | undefined;
   resolve(model: Pick<ModelConfig, "provider"> | string): AIProvider;
   list(): readonly AIProvider[];
@@ -17,6 +19,9 @@ export function createProviderRegistry(providers: readonly AIProvider[] = [], op
     register(provider) {
       assertCanRegister(byId, provider.id, "provider", provider.id, options.duplicate);
       byId.set(provider.id, provider);
+    },
+    unregister(id) {
+      return byId.delete(id);
     },
     get(id) {
       return byId.get(id);

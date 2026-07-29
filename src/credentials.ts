@@ -22,8 +22,19 @@ export interface MemoryCredentialStore extends CredentialResolver {
   clear(): void;
 }
 
-export function createMemoryCredentialStore(initial: readonly CredentialRecord[] = []): MemoryCredentialStore {
+export interface MemoryCredentialStoreOptions {
+  /** When true (default, backward compatible), a provider-scoped request falls back to a
+   *  providerless record of the same name — that record is then served to EVERY provider.
+   *  Set false for exact-match-only resolution (strict provider scoping). */
+  readonly allowProviderFallback?: boolean;
+}
+
+export function createMemoryCredentialStore(
+  initial: readonly CredentialRecord[] = [],
+  options: MemoryCredentialStoreOptions = {},
+): MemoryCredentialStore {
   const records = new Map<string, Credential>();
+  const allowProviderFallback = options.allowProviderFallback ?? true;
   const key = (name: string, provider?: string) => `${provider ?? ""}\u0000${name}`;
   const store: MemoryCredentialStore = {
     set(record) {
@@ -36,7 +47,9 @@ export function createMemoryCredentialStore(initial: readonly CredentialRecord[]
       records.clear();
     },
     resolve(request) {
-      return records.get(key(request.name, request.provider)) ?? records.get(key(request.name));
+      const exact = records.get(key(request.name, request.provider));
+      if (exact !== undefined || !allowProviderFallback || request.provider === undefined) return exact;
+      return records.get(key(request.name));
     },
   };
   for (const record of initial) store.set(record);

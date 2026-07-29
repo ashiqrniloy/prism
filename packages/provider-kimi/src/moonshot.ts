@@ -29,7 +29,7 @@ export interface MoonshotProviderOptions {
 export function createMoonshotProvider(options: MoonshotProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "moonshot",
-    baseUrl: (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/$/, ""),
+    baseUrl: (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/+$/, ""),
     apiKey: options.apiKey,
     fetch: options.fetch,
     strictCompletion: true,

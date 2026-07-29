@@ -18,7 +18,7 @@ import {
   serializeOpenAIChatMessage,
   serializeOpenAITool,
 } from "./openai-primitives.js";
-import { ProviderTransportError, readBoundedResponseText, readSseEvents } from "./transport.js";
+import { httpStatusError, ProviderTransportError, readBoundedResponseText, readSseEvents } from "./transport.js";
 
 export interface OpenAICompatibleProviderOptions {
   readonly id?: string;
@@ -174,7 +174,7 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
         const url =
           typeof options.chatCompletionsUrl === "function"
             ? options.chatCompletionsUrl(request)
-            : (options.chatCompletionsUrl ?? `${options.baseUrl.replace(/\/$/, "")}/chat/completions`);
+            : (options.chatCompletionsUrl ?? `${options.baseUrl.replace(/\/+$/, "")}/chat/completions`);
         const authStyle = options.authStyle ?? "bearer";
         const headers: Record<string, string> = {
           ...Object.fromEntries(
@@ -196,7 +196,7 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
           const bodyText = await readBoundedResponseText(response, { secrets });
           const error = options.mapHttpError
             ? options.mapHttpError(response, bodyText, secrets)
-            : new Error(`${options.requestFailedPrefix ?? "OpenAI-compatible request failed"}: ${response.status} ${bodyText}`);
+            : httpStatusError(options.requestFailedPrefix ?? "OpenAI-compatible request failed", response, bodyText);
           yield providerError(error, secrets);
           return;
         }

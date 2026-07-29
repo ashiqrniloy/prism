@@ -77,6 +77,9 @@ export interface ShellToolOptions {
   shellPath?: string;
   /** Hook to adjust command, cwd, or env before execution. */
   spawnHook?: BashSpawnHook;
+  /** Restrict the process environment cloned for the spawn hook / child process to these
+   *  names (e.g. scrub secrets). Unset keeps the full `process.env` clone. */
+  envAllowlist?: readonly string[];
   /** Max lines kept in the tail snapshot (default 2000). */
   maxLines?: number;
   /** Max bytes kept in the tail snapshot (default 50KB). */
@@ -90,6 +93,17 @@ export interface ShellToolOptions {
 }
 
 // --- spawn internals (re-ported from pi utils/shell.js + utils/child-process.js) ---
+
+/** Clone the process environment, optionally restricted to an allowlist of names. */
+function pickSpawnEnv(allowlist?: readonly string[]): NodeJS.ProcessEnv {
+  if (!allowlist) return { ...process.env };
+  const env: NodeJS.ProcessEnv = {};
+  for (const name of allowlist) {
+    const value = process.env[name];
+    if (value !== undefined) env[name] = value;
+  }
+  return env;
+}
 
 /** Resolve the shell binary + args. shellPath → SHELL env → /bin/bash → sh. */
 export function getShellConfig(customShellPath?: string): ShellConfig {
@@ -339,9 +353,10 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
       }
 
       const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
+      const baseEnv = pickSpawnEnv(options?.envAllowlist);
       let spawnContext = spawnHook
-        ? spawnHook({ command: resolvedCommand, cwd, env: { ...process.env } })
-        : { command: resolvedCommand, cwd, env: { ...process.env } };
+        ? spawnHook({ command: resolvedCommand, cwd, env: baseEnv })
+        : { command: resolvedCommand, cwd, env: baseEnv };
 
       const policyCheck = await enforceExecutionPolicy(
         options?.executionPolicy,

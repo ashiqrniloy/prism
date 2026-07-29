@@ -45,10 +45,6 @@ Default generation installs only `@arnilo/prism` (mock provider). Selecting a re
 | `--provider <name>` | Explicit provider id. The built-in `mock` id is only a smoke-test provider. |
 | `--model <name>` | Explicit model name. |
 | `--session <id>` | Session id. |
-| `--config <path>` | Explicit config path recorded by the adapter; not auto-loaded. |
-| `--resource <uri>` | Explicit resource URI recorded by the adapter; not auto-loaded. |
-| `--extension <name>` | Explicit extension name recorded by the adapter; not auto-loaded/imported. |
-| `--tool <name>` | Explicit tool name recorded by the adapter; not auto-enabled. |
 | `--system <text>` | System instructions. |
 | `--context <text>` | Context text reserved for host adapters. |
 | `--compact <entries>` | Auto-compaction threshold for the run. |
@@ -202,6 +198,6 @@ Suspended workflow resume parameters are `{ workflowId, runId, decision: "approv
 - [Observational memory compaction package](compaction-observational-memory.md): optional `om:status` and `om:view` command factories for explicitly wired hosts.
 - [Workflows](workflows.md): optional `createWorkflowCommands()` for direct/background/replay/status/cancel/resume and selected schedule control over the same RPC `command` seam.
 
-The CLI records flags but does not auto-load project-local resources, extensions, tools, or config. The two system/project prompt files are the exception: in print/json modes the CLI auto-loads `<workspaceRoot>/AGENTS.md` (trust-gated) and an app-supplied `SYSTEM.md` layer as `AgentConfig.systemPrompt` layers composed with `--system` (base); `--no-agents-md` / `--no-system-md` skip them and `--agents-md-file` / `--system-md-file` override the paths. The CLI does not default `globalRoot` to the user's home directory — pass it from a host adapter or use `--agents-config <path>` for the app-config bundle layout. RPC mode does not auto-read these files (the host owns the session factory). Hosts must make explicit trust and permission decisions before wiring any other local loading.
+The CLI records flags but does not auto-load project-local resources, extensions, tools, or config. `--config`, `--resource`, `--extension`, and `--tool` were parsed-and-recorded in earlier builds without any effect; they are now rejected loudly (`<flag> is not supported in this build`) until a CLI-harness plan wires them. The two system/project prompt files are the exception: in print/json modes the CLI auto-loads `<workspaceRoot>/AGENTS.md` (trust-gated) and an app-supplied `SYSTEM.md` layer as `AgentConfig.systemPrompt` layers composed with `--system` (base); `--no-agents-md` / `--no-system-md` skip them and `--agents-md-file` / `--system-md-file` override the paths. The CLI does not default `globalRoot` to the user's home directory — pass it from a host adapter or use `--agents-config <path>` for the app-config bundle layout. RPC mode does not auto-read these files (the host owns the session factory). Hosts must make explicit trust and permission decisions before wiring any other local loading.
 
 For app-controlled agent bundles under `<configRoot>/agents/<name>/AGENT.md` (including the three-layer `SYSTEM.md` → `AGENT.md` body → repo `AGENTS.md` prompt append and the union skill/tool scopes), see [Agent definitions](agent-definitions.md).

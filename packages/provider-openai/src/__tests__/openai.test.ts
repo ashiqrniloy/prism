@@ -53,6 +53,20 @@ describe("@arnilo/prism-provider-openai responses", () => {
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "lookup", arguments: { q: "x" } }]);
   });
 
+  it("openai_responses_http_error_carries_status_code_and_retry_after_hint", async () => {
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: (async () => new Response("rate limited", { status: 429, headers: { "retry-after": "2" } })) as typeof fetch,
+    });
+    const events: ProviderEvent[] = [];
+    for await (const event of provider.generate(request)) events.push(event);
+    const error = events.find((event) => event.type === "error");
+    assert.ok(error && error.type === "error");
+    assert.equal(error.error.code, 429);
+    assert.equal(error.error.retryAfterMs, 2000);
+    assert.match(error.error.message, /OpenAI request failed: 429/);
+  });
+
   it("openai_responses_parses_string_function_call_arguments_delta", async () => {
     const provider = createOpenAIResponsesProvider({
       apiKey: "fake-openai-key",

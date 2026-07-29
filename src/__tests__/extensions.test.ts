@@ -120,6 +120,67 @@ describe("extension kernel", () => {
     assert.deepEqual(order, ["one", "two"]);
   });
 
+  it("dispose removes an extension's contributions and subscriptions, others unaffected", async () => {
+    const kernel = createExtensionKernel();
+    const events: string[] = [];
+
+    const loaded = await kernel.load([
+      {
+        name: "disposable",
+        setup(api) {
+          api.registerTool({ name: "temp-tool", execute: (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "temp-tool", value: 1 }) });
+          api.registerProvider(provider);
+          api.use("provider_request", (value) => value);
+          api.on("turn", () => {
+            events.push("disposable");
+          });
+        },
+      },
+      {
+        name: "permanent",
+        setup(api) {
+          api.registerTool({ name: "keep-tool", execute: (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "keep-tool", value: 1 }) });
+          api.on("turn", () => {
+            events.push("permanent");
+          });
+        },
+      },
+    ]);
+
+    assert.equal(kernel.registries.tools.get("temp-tool") !== undefined, true);
+    loaded[0]!.dispose();
+    loaded[0]!.dispose(); // idempotent
+    assert.equal(kernel.registries.tools.get("temp-tool"), undefined);
+    assert.equal(kernel.registries.providers.get("mock"), undefined);
+    assert.equal(kernel.middleware.list("provider_request").length, 0);
+    assert.equal(kernel.registries.tools.get("keep-tool") !== undefined, true);
+
+    await kernel.events.emit({ type: "turn" });
+    assert.deepEqual(events, ["permanent"]);
+  });
+
+  it("a failed setup unwinds its partial contributions", async () => {
+    const kernel = createExtensionKernel();
+    const errors: ExtensionEvent[] = [];
+    kernel.events.on("extension_error", (event) => {
+      errors.push(event);
+    });
+
+    await kernel.load([
+      {
+        name: "half-loaded",
+        setup(api) {
+          api.registerTool(tool);
+          throw new Error("setup boom");
+        },
+      },
+    ]);
+
+    assert.equal(kernel.registries.tools.get("echo"), undefined);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0]?.error?.message ?? "", /setup boom/);
+  });
+
   it("registers all contribution categories through ExtensionAPI", async () => {
     const kernel = createExtensionKernel();
 

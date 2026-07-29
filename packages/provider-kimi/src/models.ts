@@ -69,7 +69,7 @@ export function defineKimiModel(config: KimiModelConfig): ModelConfig {
  */
 export async function listKimiModels(options: ListKimiModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "moonshot";
-  const baseUrl = (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

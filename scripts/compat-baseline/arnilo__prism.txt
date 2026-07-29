@@ -128,12 +128,12 @@ ExecutionDeniedError	export declare class ExecutionDeniedError extends Error
 ExecutionPolicy	export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js"
 ExecutionRisk	export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js"
 ExportUnderHoldInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
-ExtensionErrorPolicy	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, } from "./extensions.js"
-ExtensionEventBus	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, } from "./extensions.js"
-ExtensionEventHandler	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, } from "./extensions.js"
-ExtensionKernel	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, } from "./extensions.js"
-ExtensionKernelOptions	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, } from "./extensions.js"
-ExtensionLoadPolicy	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, } from "./extensions.js"
+ExtensionErrorPolicy	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionEventBus	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionEventHandler	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionKernel	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionKernelOptions	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionLoadPolicy	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 FileContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
 GuardrailError	export declare class GuardrailError extends Error
 GuardrailRunResult	export type { GuardrailRunResult, RunGuardrailsOptions, } from "./guardrails.js"
@@ -179,6 +179,7 @@ LegalHoldExportItem	export type { ApplyRetentionInput, ApplyRetentionResult, Con
 LegalHoldQuery	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 LegalHoldRecord	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 LoadBinaryResourceOptions	export type { LoadBinaryResourceOptions } from "./resources.js"
+LoadedExtension	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 MAX_FEEDBACK_ID_LENGTH	export declare const MAX_FEEDBACK_ID_LENGTH = 128
 MAX_FEEDBACK_TAG_LENGTH	export declare const MAX_FEEDBACK_TAG_LENGTH = 64
 MAX_GUARDRAIL_CONCURRENCY	export declare const MAX_GUARDRAIL_CONCURRENCY = 16
@@ -345,6 +346,7 @@ assertToolDispatchConforms	export declare function assertToolDispatchConforms(re
 assertTrusted	export declare function assertTrusted(policy: TrustPolicy | undefined, request: TrustRequest): Promise<void>
 assertUsageAccounting	export declare function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage
 authMethodKey	export declare function authMethodKey(method: AuthMethod): string
+buildOpenAIChatBody	export declare function buildOpenAIChatBody(request: ProviderRequest, options?: OpenAIChatBodyOptions): JsonObject
 bytesToBase64	export declare function bytesToBase64(bytes: Uint8Array): string
 cacheHitRate	export declare function cacheHitRate(usage: Usage | undefined): number | undefined
 cacheSavings	export declare function cacheSavings(usage: Usage | undefined, model: ModelConfig): number | undefined
@@ -379,7 +381,7 @@ createId	export declare function createId(prefix: string): string
 createInitProject	export declare function createInitProject(options: InitOptions, runtime?: InitRuntime): Promise<InitResult>
 createJsonlSessionStore	export declare function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStoreOptions): SessionStore
 createMemoryCheckpointStore	export declare function createMemoryCheckpointStore(options?: MemoryCheckpointStoreOptions): CheckpointStore
-createMemoryCredentialStore	export declare function createMemoryCredentialStore(initial?: readonly CredentialRecord[]): MemoryCredentialStore
+createMemoryCredentialStore	export declare function createMemoryCredentialStore(initial?: readonly CredentialRecord[], options?: MemoryCredentialStoreOptions): MemoryCredentialStore
 createMemoryLeaseStore	export declare function createMemoryLeaseStore(): LeaseStore
 createMemoryPersistenceLifecycle	export declare function createMemoryPersistenceLifecycle(): PersistenceLifecycleStore
 createMemoryRunFeedbackStore	export declare function createMemoryRunFeedbackStore(options: MemoryRunFeedbackStoreOptions): RunFeedbackStore
@@ -434,6 +436,7 @@ getContextBudgetReport	export declare function getContextBudgetReport(request: P
 getInitUsage	export declare function getInitUsage(templatesRoot?: string): string
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
 getSessionBranchEntries	export declare function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>
+httpStatusError	export declare function httpStatusError(prefix: string, response: Response, bodyText: string): Error
 identityTelemetryAttributes	export declare function identityTelemetryAttributes(identity: AgentIdentity): Readonly<Record<string, string>>
 initUsage	export declare const initUsage: string
 initialAgentRunState	export declare function initialAgentRunState(input:
@@ -481,6 +484,7 @@ narrowIdentity	export declare function narrowIdentity(parent: AgentIdentity, opt
 normalizeProviderRequestPolicyResult	export declare function normalizeProviderRequestPolicyResult(result: ProviderRequest | ProviderRequestPolicyResult): ProviderRequestPolicyResult
 normalizeThinkingLevel	export declare function normalizeThinkingLevel(level: string): ThinkingLevel | string | undefined
 openAIAudioFormat	export declare function openAIAudioFormat(mediaType: string): string
+openAIChatEvents	export declare function openAIChatEvents(body: ReadableStream<Uint8Array>, options?: OpenAIChatEventsOptions): AsyncIterable<ProviderEvent>
 ownershipFromIdentity	export declare function ownershipFromIdentity(identity: AgentIdentity): OwnershipScope
 parseAgentFile	export declare function parseAgentFile(text: string, path: string): ManifestContributionDeclaration
 parseAgentRunState	export declare function parseAgentRunState(value: unknown, version?: number): StoredAgentRunState
@@ -489,6 +493,7 @@ parseContextFile	export declare function parseContextFile(text: string, path: st
 parseInitArgs	export declare function parseInitArgs(argv: readonly string[], templatesRoot?: string): InitOptions
 parseJsonObjectArguments	export declare function parseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): JsonObject
 parsePrismManifest	export declare function parsePrismManifest(value: unknown): PrismManifest
+parseRetryAfterMs	export declare function parseRetryAfterMs(value: string | null, now?: number): number | undefined
 parseRpcRequest	export declare function parseRpcRequest(value: unknown): RpcRequest
 parseSkillFile	export declare function parseSkillFile(text: string, path: string): Skill
 parseToolFile	export declare function parseToolFile(text: string, path: string): ToolDefinition
@@ -584,7 +589,7 @@ thinkingFamilyForModel	export declare function thinkingFamilyForModel(model: Pic
 toolCallContent	export declare function toolCallContent(id: string, name: string, args?: JsonObject): ToolCallContent
 toolCallFromArgumentsText	export declare function toolCallFromArgumentsText(id: string, name: string, argumentsText: string): ToolCallContent
 tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): ParseJsonObjectArgumentsResult
-usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --config <path> Explicit config path (recorded, not auto-loaded)\n --resource <uri> Explicit resource URI (recorded, n
+usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System instructions\n --context <text> Context text\n --compact <entries> Auto-compaction threshold\n 
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions

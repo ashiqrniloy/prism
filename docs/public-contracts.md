@@ -145,7 +145,7 @@ Important request shapes:
 | `ConfigLayer` | Named JSON config layer consumed by `mergeConfigLayers()`. |
 | `PrismManifest` | Data-only package manifest with config defaults, contribution declarations, and resource declarations. |
 | `ProductionPersistenceStore` | Adapter-facing interface for durable, paginated, multi-tenant storage plus optional `checkpoints?: CheckpointStore`, `leases?: LeaseStore`, and `feedback?: RunFeedbackStore`. No SQL/ORM/host file storage/network dependency. |
-| `CheckpointStore` | Generic versioned checkpoint capability: save/load/bounded-list/delete by namespace and key, with ownership, exact-version CAS, and lease fencing. `createMemoryCheckpointStore()` is the reference implementation. |
+| `CheckpointStore` | Generic versioned checkpoint capability: save/load/bounded-list/delete by namespace and key, with ownership, exact-version CAS, and lease fencing. `createMemoryCheckpointStore()` is the reference implementation; it is bounded — `maxRecords` (default 10,000, evicts least-recently-saved) and `maxValueBytes` (default 1 MiB per JSON value). |
 | `LeaseStore` | Atomic acquire/renew/release/get by namespace and key, with opaque claim tokens, expiry, ownership scope, and monotonically increasing takeover fences. `createMemoryLeaseStore()` is the reference implementation. |
 | `RunFeedbackStore` | Immutable append, bounded owned query, and owned deletion for ratings/comments/tags linked to existing run/trace/evaluation IDs. `createMemoryRunFeedbackStore()` is the reference implementation. |
 | `EventMultiplexer<T>` | Generic bounded fan-in from async sources. `createEventMultiplexer()` owns queue limits, overflow policy, abort, source teardown, and close behavior. |

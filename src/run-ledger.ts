@@ -17,9 +17,15 @@ export const DEFAULT_LEDGER_BATCH_DELAY_MS = 25;
 export const HARD_LEDGER_BATCH_DELAY_MS = 60_000;
 
 export interface BatchedRunLedgerOptions {
+  /** Flush triggers, not write grouping: a pending flush fires once the buffer reaches
+   *  this many entries. Writes still go to the target one at a time (RunLedger has no
+   *  batch append); these bounds shape flush *timing*, not per-write coalescing. */
   readonly maxBatchEntries?: number;
+  /** Flush trigger: pending flush fires once buffered bytes reach this bound. */
   readonly maxBatchBytes?: number;
+  /** Backpressure bound: enqueue flushes synchronously before exceeding this. */
   readonly maxBufferedEntries?: number;
+  /** Backpressure bound (bytes): enqueue flushes synchronously before exceeding this. */
   readonly maxBufferedBytes?: number;
   readonly maxDelayMs?: number;
   readonly durability?: RunLedgerDurability;
@@ -93,20 +99,14 @@ export function createBatchedRunLedger(target: RunLedger, options: BatchedRunLed
   const flush = (): Promise<RunLedgerFlushResult> => {
     cancelTimer();
     const operation = flushChain.then(async () => {
-      let entries = 0;
-      let bytes = 0;
+      // One write per record — RunLedger has no batch append API. maxBatchEntries/
+      // maxBatchBytes only decide when a flush fires (see enqueue), never how writes group.
       while (queue.length) {
         const item = queue[0]!;
-        if (entries && (entries >= maxBatchEntries || bytes + item.bytes > maxBatchBytes)) {
-          entries = 0;
-          bytes = 0;
-        }
-        await write(item);
+        await write(item); // shifts only after success — a failed write stays buffered for retry
         queue.shift();
         bufferedBytes -= item.bytes;
         flushed += 1;
-        entries += 1;
-        bytes += item.bytes;
       }
       return status();
     });

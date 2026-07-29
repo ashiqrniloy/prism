@@ -27,6 +27,7 @@ createContributionRegistries(options?: { duplicate?: "replace" | "error" }): Con
 | Method | Input | Result |
 | --- | --- | --- |
 | `register(key, contribution)` | string key and contribution | Stores/replaces the contribution for that key; throws `Duplicate <label>: <key>` when `duplicate: "error"`. |
+| `unregister(key)` | string key | Removes the contribution; returns `false` when the key was not registered. `providers.unregister(id)` and `models.unregister(provider, model)` mirror this on the specialized registries. |
 | `get(key)` | string key | Returns the contribution or `undefined`. |
 | `resolve(key)` | string key | Returns the contribution or throws `Unknown <label>: <key>`. |
 | `list()` | none | Returns contributions in insertion order. |

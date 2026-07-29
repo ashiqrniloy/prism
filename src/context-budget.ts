@@ -119,16 +119,19 @@ export function applyContextBudget(options: {
   const tools = options.tools ? [...options.tools] : undefined;
   const omitted: ContextBudgetOmission[] = [];
 
-  const cost = () => measureAll(groups, context, skills, tools);
-  while (overBudget(cost(), budget)) {
+  // Measure once, then subtract each dropped item's own estimate (dropNext computes it
+  // with the same estimators) — avoids an O(n²) re-scan of the full keep-set per drop.
+  const kept = measureAll(groups, context, skills, tools);
+  while (overBudget(kept, budget)) {
     const drop = dropNext(groups, context, skills, layout);
     if (!drop) {
       throw new ContextBudgetError();
     }
+    kept.tokens -= drop.tokenEstimate;
+    kept.bytes -= drop.byteLength;
     if (omitted.length < HARD_MAX_CONTEXT_BUDGET_OMISSIONS) omitted.push(drop);
   }
 
-  const kept = cost();
   const reportOmissions = omitted.slice(0, DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS);
   return {
     groups,

@@ -2,9 +2,9 @@
 
 ## What it does
 
-`createDefaultInputBuilder()` turns common host input into Prism `Message[]` without starting an agent loop or calling a provider. It accepts strings, `Message`, or `Message[]`, and can add host-supplied instructions, history, summaries, attachments, explicit text resources, tool results, metadata, and optional `input_assembly` middleware.
+`createDefaultInputBuilder()` turns common host input into Prism `Message[]` without starting an agent loop or calling a provider. It accepts strings, `Message`, or `Message[]`, and can add host-supplied instructions, history, summaries, attachments, explicit text resources, tool results, and metadata. It never applies `input_assembly` middleware itself: `assembleProviderInput()` owns that hook and runs it exactly once after whichever `InputBuilder` is installed returns, so a custom builder cannot bypass it.
 
-`createDefaultPromptBuilder()` composes messages, context blocks, selected skills, and host-supplied active tools into provider-ready messages. `assembleProviderInput()` wires input assembly, ordered context resolution, prompt middleware, and prompt composition into a `ProviderRequest` without calling a provider. Layered system prompts are composed before this helper and passed as `systemInstructions`. `renderPromptTemplate()` expands tiny `{{name}}` variables for CLI/RPC prompt strings before input assembly.
+`createDefaultPromptBuilder()` composes messages, context blocks, selected skills, and host-supplied active tools into provider-ready messages. The `Available tools:` text listing is emitted only for models without declared tool support (`model.capabilities.tools !== true` — unknown capability keeps it, fail-safe for text-only providers); tool-capable models receive schemas via `request.tools` and skip the duplicated text. `assembleProviderInput()` wires input assembly, ordered context resolution, prompt middleware, and prompt composition into a `ProviderRequest` without calling a provider. Layered system prompts are composed before this helper and passed as `systemInstructions`. `renderPromptTemplate()` expands tiny `{{name}}` variables for CLI/RPC prompt strings before input assembly.
 
 ## When to use it
 
@@ -161,7 +161,7 @@ const request = await assembleProviderInput({
 });
 ```
 
-`input_assembly`, `context`, and `prompt_build` middleware are not global. They run only for helper calls that receive a `MiddlewareRegistry`, in that assembly order. `assembleProviderInput()` keeps provider `tools` equal to the host-supplied active tool list after prompt middleware.
+`input_assembly`, `context`, and `prompt_build` middleware are not global. They run only for helper calls that receive a `MiddlewareRegistry`, in that assembly order. Inside `assembleProviderInput()`, `input_assembly` always runs — for both the default and any custom `InputBuilder`, and on both the plain and context-budget paths. `assembleProviderInput()` keeps provider `tools` equal to the host-supplied active tool list after prompt middleware.
 
 ## Security and performance notes
 

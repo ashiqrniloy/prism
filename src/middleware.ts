@@ -50,16 +50,31 @@ export function createMiddlewareRegistry(options: MiddlewareRegistryOptions = {}
     },
     async run(hook, value) {
       let current = value;
-      for (const middleware of byHook.get(hook) ?? []) {
+      for (const [index, middleware] of (byHook.get(hook) ?? []).entries()) {
         try {
           let calledNext = false;
           const next: MiddlewareNext<typeof current> = async (nextValue) => {
+            // Double next() forks the chain value nondeterministically — always a bug.
+            if (calledNext) throw new Error(`Middleware hook "${hook}" #${index}: next() called more than once`);
             calledNext = true;
             current = nextValue;
             return current;
           };
           const result = await (middleware as Middleware<typeof current>)(current, next);
           if (!calledNext) current = result;
+          else if (result !== undefined && result !== current) {
+            // next(v) already committed the chain value; a conflicting return is silently
+            // discarded. Ambiguous rather than certainly-wrong, so diagnose, don't throw.
+            await options.onError?.(
+              middlewareError(
+                new Error(
+                  `Middleware hook "${hook}" #${index}: called next(value) and returned a different value; the next() value wins, the return is discarded`,
+                ),
+                hook,
+                secrets,
+              ),
+            );
+          }
         } catch (error) {
           if (errorPolicy === "throw") throw error;
           await options.onError?.(middlewareError(error, hook, secrets));

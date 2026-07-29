@@ -144,15 +144,39 @@ describe("default input builder", () => {
     assert.equal(text(messages[2]!), "Follow up");
   });
 
-  it("runs input assembly middleware only when supplied", async () => {
+  it("leaves input_assembly middleware to the assembler", async () => {
     const middleware = createMiddlewareRegistry();
     middleware.use<readonly Message[]>("input_assembly", (messages) => [
       ...messages,
       { role: "system", content: [{ type: "text", text: "middleware" }] },
     ]);
 
+    // Builders never apply middleware; assembleProviderInput owns that seam.
     assert.equal((await createDefaultInputBuilder().build("Hi")).length, 1);
-    assert.equal((await createDefaultInputBuilder().build("Hi", { middleware })).length, 2);
+    assert.equal((await createDefaultInputBuilder().build("Hi", { middleware })).length, 1);
+  });
+
+  it("applies input_assembly middleware once even when a custom builder ignores it", async () => {
+    const middleware = createMiddlewareRegistry();
+    let calls = 0;
+    middleware.use<readonly Message[]>("input_assembly", (messages) => {
+      calls += 1;
+      return [...messages, { role: "system" as const, content: [{ type: "text" as const, text: "middleware" }] }];
+    });
+    const model = { provider: "mock", model: "demo" };
+    const customBuilder = {
+      name: "custom",
+      build: (input: string) => [{ role: "user" as const, content: [{ type: "text" as const, text: input }] }],
+    };
+
+    const request = await assembleProviderInput({ model, input: "Hi", middleware, inputBuilder: customBuilder });
+    assert.equal(calls, 1);
+    assert.ok(request.messages.some((message) => text(message) === "middleware"));
+
+    calls = 0;
+    const budgeted = await assembleProviderInput({ model, input: "Hi", middleware, contextBudget: { maxInputTokens: 10_000 } });
+    assert.equal(calls, 1);
+    assert.ok(budgeted.messages.some((message) => text(message) === "middleware"));
   });
 });
 
@@ -402,6 +426,27 @@ describe("context resolution and prompt composition", () => {
     assert.match(text(messages[0]!)!, /Project:\nContext/);
     assert.match(text(messages[1]!)!, /Skill brief:\nBe brief\./);
     assert.match(text(messages[2]!)!, /Available tools:\n- echo: Echo input/);
+  });
+
+  it("default prompt builder omits the tool text list for tool-capable models only", async () => {
+    const tool: ToolDefinition = { name: "echo", description: "Echo input", execute: () => ({ toolCallId: "c", name: "echo" }) };
+    const base = { messages: [{ role: "user" as const, content: [{ type: "text" as const, text: "Question" }] }], tools: [tool] };
+    const builder = createDefaultPromptBuilder();
+
+    const capable = await builder.build({ ...base, model: { provider: "mock", model: "demo", capabilities: { tools: true } } });
+    assert.equal(
+      capable.some((message) => /Available tools:/.test(text(message) ?? "")),
+      false,
+    );
+
+    // Unknown (undefined) or declared-false capability keeps the text (fail-safe for text-only providers).
+    for (const capabilities of [undefined, { tools: false }]) {
+      const kept = await builder.build({ ...base, model: { provider: "mock", model: "demo", capabilities } });
+      assert.equal(
+        kept.some((message) => /Available tools:/.test(text(message) ?? "")),
+        true,
+      );
+    }
   });
 
   it("cache-aware provider input has byte-stable prefix for different current user turns", async () => {

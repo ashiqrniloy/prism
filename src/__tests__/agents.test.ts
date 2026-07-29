@@ -768,6 +768,77 @@ describe("agent session runtime", () => {
     );
   });
 
+  it("steer blocked mid-run is dropped with steer_rejected and the run continues", async () => {
+    const requests: ProviderRequest[] = [];
+    let toolStarted!: () => void;
+    const toolGate = new Promise<void>((resolve) => {
+      toolStarted = resolve;
+    });
+    let releaseTool!: () => void;
+    const toolHold = new Promise<void>((resolve) => {
+      releaseTool = resolve;
+    });
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        requests.push(request);
+        if (requests.length === 1) {
+          yield { type: "tool_call", call: toolCallContent("call_1", "hold", {}) };
+          yield providerDone();
+          return;
+        }
+        yield providerTextDelta("done");
+        yield providerDone();
+      },
+    };
+    const tools: ToolDefinition[] = [
+      {
+        name: "hold",
+        async execute() {
+          toolStarted();
+          await toolHold;
+          return { toolCallId: "call_1", name: "hold", value: { ok: true } };
+        },
+      },
+    ];
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      tools,
+      guardrails: {
+        input: [
+          {
+            name: "deny-steer",
+            stage: "input",
+            evaluate: ({ value }) =>
+              value.some((m) => m.content.some((b) => b.type === "text" && b.text.includes("blocked-steer")))
+                ? { action: "block", reason: "nope" }
+                : { action: "allow" },
+          },
+        ],
+      },
+    }).createSession({ id: "steer-blocked" });
+    const reader = collect(session.subscribe());
+    // Run-start input passes the guardrail ("Hi" is clean), so the run starts.
+    const run = session.run("Hi", { maxToolRounds: 2 });
+    await toolGate;
+    session.steer("blocked-steer");
+    releaseTool();
+    const result = await run;
+    const events = await reader;
+
+    assert.equal(result.status, "succeeded");
+    const rejected = events.find((e) => e.type === "steer_rejected");
+    assert.ok(rejected && rejected.type === "steer_rejected");
+    assert.equal(rejected.record.action, "block");
+    assert.equal(rejected.record.guardrail, "deny-steer");
+    // Dropped message never reaches the next provider turn or the session store.
+    assert.equal(requests.length, 2);
+    assert.equal(JSON.stringify(requests[1]!.messages).includes("blocked-steer"), false);
+    const entries = await session.entries();
+    assert.equal(JSON.stringify(entries).includes("blocked-steer"), false);
+  });
+
   it("softInterrupt aborts provider stream then continues same runId", async () => {
     const requests: ProviderRequest[] = [];
     let firstSignal!: AbortSignal;
@@ -1616,6 +1687,49 @@ describe("agent session runtime", () => {
     assert.equal(result.entries?.[0]?.parentId, previousLeaf);
     assert.equal(entries.at(-1)?.kind, "compaction");
     assert.equal(entries.at(-1)?.id, result.entries?.[0]?.id);
+  });
+
+  it("auto-compaction dedupes trailing input even when the store reorders message keys", async () => {
+    // A store whose serialization normalizes key order must not defeat trailing-input dedupe.
+    const requests: ProviderRequest[] = [];
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        requests.push(request);
+        yield providerTextDelta(`reply ${requests.length}`);
+        yield providerDone();
+      },
+    };
+    const memory = createMemorySessionStore();
+    const store = {
+      ...memory,
+      append: (entry: Parameters<typeof memory.append>[0], context: Parameters<typeof memory.append>[1]) =>
+        memory.append(
+          entry.message
+            ? {
+                ...entry,
+                message: Object.fromEntries(Object.entries(entry.message).reverse()) as typeof entry.message,
+              }
+            : entry,
+          context,
+        ),
+    };
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      store,
+      compaction: { thresholdEntries: 2, keepRecentEntries: 1 },
+    });
+    const session = agent.createSession({ id: "s1" });
+
+    await session.run("old");
+    await session.run("new");
+
+    assert.equal(
+      requests[1]!.messages.filter((message) => message.role === "user").length,
+      1,
+      "reordered keys must not duplicate the trailing input after auto-compaction",
+    );
   });
 
   it("auto compacts before provider input when threshold is exceeded", async () => {

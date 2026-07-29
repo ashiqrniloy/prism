@@ -444,6 +444,7 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "ExtensionKernel",
   "ExtensionKernelOptions",
   "ExtensionLoadPolicy",
+  "LoadedExtension",
   "FileContent",
   "ExecutionAction",
   "ExecutionDecision",

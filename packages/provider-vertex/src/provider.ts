@@ -34,7 +34,7 @@ export function vertexOpenApiBaseUrl(input: { readonly projectId: string; readon
       if (error instanceof Error && error.message.startsWith("Vertex")) throw error;
       throw new Error("Vertex endpoint must be an absolute https URL");
     }
-    return input.endpoint.replace(/\/$/, "");
+    return input.endpoint.replace(/\/+$/, "");
   }
   if (!input.projectId.trim()) throw new Error("Vertex projectId is required");
   if (!input.location.trim()) throw new Error("Vertex location is required");

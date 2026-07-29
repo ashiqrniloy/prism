@@ -24,7 +24,7 @@ import type {
   ToolDefinition,
 } from "./contracts.js";
 import { type ContributionRegistries, createContributionRegistries } from "./contributions.js";
-import { createMiddlewareRegistry, type MiddlewareRegistry } from "./middleware.js";
+import { createMiddlewareRegistry, type Middleware, type MiddlewareHookName, type MiddlewareRegistry } from "./middleware.js";
 import { authMethodKey, systemPromptContributionKey } from "./provider-packages.js";
 import { errorToErrorInfo } from "./redaction.js";
 import { assertPermission, type PermissionPolicy } from "./security.js";
@@ -57,11 +57,18 @@ export interface ExtensionEventBus {
   emit(event: ExtensionEvent): Promise<void>;
 }
 
+export interface LoadedExtension {
+  readonly name: string;
+  /** Remove this extension's registry contributions and middleware/event subscriptions.
+   *  Best-effort and idempotent; side effects outside the registries are NOT unwound. */
+  dispose(): void;
+}
+
 export interface ExtensionKernel {
   readonly registries: ContributionRegistries;
   readonly middleware: MiddlewareRegistry;
   readonly events: ExtensionEventBus;
-  load(extensions: readonly Extension[]): Promise<void>;
+  load(extensions: readonly Extension[]): Promise<LoadedExtension[]>;
 }
 
 function extensionError(error: unknown, source?: string, secrets: readonly (string | undefined)[] = []): ExtensionEvent {
@@ -106,72 +113,114 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
   const errorPolicy = options.errorPolicy ?? "event";
   const secrets = options.secrets ?? [];
 
-  const api = {
+  // Per-extension tracked API: every registration records an undo so a dispose handle
+  // (or a failed setup) can unwind exactly what that extension added.
+  const createApi = (track?: (undo: () => void) => void) => ({
     registries,
     middleware,
-    on: events.on,
+    on(type: ExtensionLifecycleEventName | string, handler: ExtensionEventHandler) {
+      const off = events.on(type, handler);
+      track?.(off);
+      return off;
+    },
     emit: events.emit,
-    use: middleware.use,
+    use<T>(hook: MiddlewareHookName | string, mw: Middleware<T>) {
+      const off = middleware.use(hook, mw);
+      track?.(off);
+      return off;
+    },
     registerProvider(provider: AIProvider) {
       registries.providers.register(provider);
+      track?.(() => registries.providers.unregister(provider.id));
     },
     registerModel(model: ModelConfig) {
       registries.models.register(model);
+      track?.(() => registries.models.unregister(model.provider, model.model));
     },
     registerTool(tool: ToolDefinition) {
       registries.tools.register(tool.name, tool);
+      track?.(() => registries.tools.unregister(tool.name));
     },
     registerContextProvider(provider: ContextProvider) {
       registries.contextProviders.register(provider.name, provider);
+      track?.(() => registries.contextProviders.unregister(provider.name));
     },
     registerSkill(skill: Skill) {
       registries.skills.register(skill.name, skill);
+      track?.(() => registries.skills.unregister(skill.name));
     },
     registerCommand(command: CommandDefinition) {
       registries.commands.register(command.name, command);
+      track?.(() => registries.commands.unregister(command.name));
     },
     registerAgent(agent: AgentDefinition) {
       registries.agents.register(agent.name, agent);
+      track?.(() => registries.agents.unregister(agent.name));
     },
     registerInputBuilder(builder: InputBuilder) {
       registries.inputBuilders.register(builder.name, builder);
+      track?.(() => registries.inputBuilders.unregister(builder.name));
     },
     registerPromptBuilder(builder: PromptBuilder) {
       registries.promptBuilders.register(builder.name, builder);
+      track?.(() => registries.promptBuilders.unregister(builder.name));
     },
     registerCompactionStrategy(strategy: CompactionStrategy) {
       registries.compactionStrategies.register(strategy.name, strategy);
+      track?.(() => registries.compactionStrategies.unregister(strategy.name));
     },
     registerRetryPolicy(policy: RetryPolicy) {
       registries.retryPolicies.register(policy.name, policy);
+      track?.(() => registries.retryPolicies.unregister(policy.name));
     },
     registerStoreFactory(factory: StoreFactory) {
       registries.storeFactories.register(factory.name, factory);
+      track?.(() => registries.storeFactories.unregister(factory.name));
     },
     registerResourceLoader(key: string, loader: ResourceLoader) {
       registries.resourceLoaders.register(key, loader);
+      track?.(() => registries.resourceLoaders.unregister(key));
     },
     registerSettingsProvider(key: string, provider: SettingsProvider) {
       registries.settingsProviders.register(key, provider);
+      track?.(() => registries.settingsProviders.unregister(key));
     },
     registerCredentialResolver(key: string, resolver: CredentialResolver) {
       registries.credentialResolvers.register(key, resolver);
+      track?.(() => registries.credentialResolvers.unregister(key));
     },
     registerProviderPackage(providerPackage: ProviderPackage) {
       registries.providerPackages.register(providerPackage.name, providerPackage);
+      track?.(() => registries.providerPackages.unregister(providerPackage.name));
     },
     registerAuthMethod(method: AuthMethod) {
-      registries.authMethods.register(authMethodKey(method), method);
+      const key = authMethodKey(method);
+      registries.authMethods.register(key, method);
+      track?.(() => registries.authMethods.unregister(key));
     },
     registerProviderRequestPolicy(policy: ProviderRequestPolicy) {
       registries.providerRequestPolicies.register(policy.name, policy);
+      track?.(() => registries.providerRequestPolicies.unregister(policy.name));
     },
     registerSystemPromptContribution(contribution: SystemPromptContribution) {
-      registries.systemPromptContributions.register(systemPromptContributionKey(contribution), contribution);
+      const key = systemPromptContributionKey(contribution);
+      registries.systemPromptContributions.register(key, contribution);
+      track?.(() => registries.systemPromptContributions.unregister(key));
     },
     registerInstructionInjector(injector: InstructionInjector) {
       registries.instructionInjectors.register(injector.name, injector);
+      track?.(() => registries.instructionInjectors.unregister(injector.name));
     },
+  });
+
+  const unwind = (undo: (() => void)[]) => {
+    for (const fn of undo.reverse()) {
+      try {
+        fn();
+      } catch {
+        // best-effort: one stuck undo must not block the rest
+      }
+    }
   };
 
   return {
@@ -179,16 +228,31 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
     middleware,
     events,
     async load(extensions) {
+      const loaded: LoadedExtension[] = [];
       for (const extension of extensions) {
+        const undo: (() => void)[] = [];
         try {
           await assertPermission(options.permission, { kind: "extension", action: "setup", target: extension.name });
           await assertExtensionLoadPolicy(options.loadPolicy, extension);
-          await extension.setup(api);
+          await extension.setup(createApi((fn) => undo.push(fn)));
         } catch (error) {
+          // A failed setup must not leave partial contributions behind.
+          unwind(undo);
           if (errorPolicy === "throw") throw error;
           await events.emit(extensionError(error, extension.name, secrets));
+          continue;
         }
+        let disposed = false;
+        loaded.push({
+          name: extension.name,
+          dispose() {
+            if (disposed) return;
+            disposed = true;
+            unwind(undo);
+          },
+        });
       }
+      return loaded;
     },
   };
 }

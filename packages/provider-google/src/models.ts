@@ -73,7 +73,7 @@ export function defineGoogleModel(config: GoogleModelConfig): ModelConfig {
  */
 export async function listGoogleModels(options: ListGoogleModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "google";
-  const baseUrl = (options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL).replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL).replace(/\/+$/, "");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const url = new URL(`${baseUrl}/models`);
   if (options.pageSize !== undefined) url.searchParams.set("pageSize", String(options.pageSize));

@@ -367,6 +367,8 @@ const shell = createShellTool("/repo", {
   maxLines: 500,
   timeout: 600,
   maxTotalOutputBytes: 64 * 1024 * 1024,
+  // Optional: scrub the environment the spawn hook and child process see (default: full process.env clone).
+  envAllowlist: ["PATH", "HOME", "LANG"],
 });
 
 const remoteWrite = createWriteTool("/repo", {
