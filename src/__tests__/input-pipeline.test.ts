@@ -58,13 +58,14 @@ describe("default input builder", () => {
     assert.deepEqual(calls, ["package://demo/file.md"]);
     assert.deepEqual(
       messages.map((message) => message.role),
-      ["system", "system", "system", "user", "user", "user"],
+      ["system", "system", "user", "user", "system", "user"],
     );
     assert.match(text(messages[0]!)!, /System instruction:\nBe accurate\./);
     assert.match(text(messages[1]!)!, /Developer instruction:\nCite sources\./);
-    assert.match(text(messages[2]!)!, /Summary:\nEarlier summary\./);
-    assert.match(text(messages[4]!)!, /Attachment notes\.md:\n# Notes/);
-    assert.match(text(messages[5]!)!, /Resource file\.md:\nloaded text/);
+    assert.match(text(messages[2]!)!, /Attachment notes\.md:\n# Notes/);
+    assert.match(text(messages[3]!)!, /Resource file\.md:\nloaded text/);
+    assert.match(text(messages[4]!)!, /Summary:\nEarlier summary\./);
+    assert.equal(text(messages[5]!)!, "Summarize");
   });
 
   it("adds tool result messages without executing tools", async () => {
@@ -72,8 +73,11 @@ describe("default input builder", () => {
 
     const messages = await createDefaultInputBuilder().build("Continue", { toolResults });
 
-    assert.equal(messages.at(-1)?.role, "tool");
-    assert.deepEqual(messages.at(-1)?.content[0], {
+    assert.deepEqual(
+      messages.map((message) => message.role),
+      ["tool", "user"],
+    );
+    assert.deepEqual(messages[0]?.content[0], {
       type: "tool_result",
       toolCallId: "call_1",
       name: "lookup",
@@ -82,8 +86,26 @@ describe("default input builder", () => {
     });
   });
 
-  it("keeps legacy layout as the default", async () => {
+  it("uses cache_aware layout by default", async () => {
     const messages = await createDefaultInputBuilder().build("Now", {
+      summaries: ["Earlier"],
+      history: [{ role: "assistant", content: [{ type: "text", text: "old" }] }],
+      attachments: [{ name: "notes.md", text: "notes" }],
+    });
+
+    assert.deepEqual(
+      messages.map((message) => message.role),
+      ["user", "system", "assistant", "user"],
+    );
+    assert.match(text(messages[0]!)!, /Attachment notes\.md:\nnotes/);
+    assert.match(text(messages[1]!)!, /Summary:\nEarlier/);
+    assert.equal(text(messages[2]!)!, "old");
+    assert.equal(text(messages[3]!)!, "Now");
+  });
+
+  it("legacy layout restores prior input-before-attachments order", async () => {
+    const messages = await createDefaultInputBuilder().build("Now", {
+      inputLayout: "legacy",
       summaries: ["Earlier"],
       history: [{ role: "assistant", content: [{ type: "text", text: "old" }] }],
       attachments: [{ name: "notes.md", text: "notes" }],
@@ -94,7 +116,7 @@ describe("default input builder", () => {
       ["system", "assistant", "user", "user"],
     );
     assert.match(text(messages[0]!)!, /Summary:\nEarlier/);
-    assert.equal(text(messages[2]!), "Now");
+    assert.equal(text(messages[2]!)!, "Now");
     assert.match(text(messages[3]!)!, /Attachment notes\.md:\nnotes/);
   });
 

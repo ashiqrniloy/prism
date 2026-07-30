@@ -21,8 +21,9 @@
  */
 import { Buffer } from "node:buffer";
 import { constants } from "node:fs";
-import { access as fsAccess, stat as fsStat, writeFile as fsWriteFile } from "node:fs/promises";
+import { access as fsAccess, stat as fsStat } from "node:fs/promises";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { atomicWriteUtf8File } from "./atomic-write.js";
 import { readFileBounded } from "./bounded-file.js";
 import {
   applyEditsToNormalizedContent,
@@ -91,7 +92,7 @@ export interface EditToolOptions {
 
 const defaultEditOperations: EditOperations = {
   readFile: (path, options) => readFileBounded(path, options.maxBytes, options.signal),
-  writeFile: (path, content, options) => fsWriteFile(path, content, { encoding: "utf-8", signal: options?.signal }),
+  writeFile: (path, content, options) => atomicWriteUtf8File(path, content, { signal: options?.signal }),
   access: (path) => fsAccess(path, constants.R_OK | constants.W_OK),
   statFile: async (path) => ({ size: (await fsStat(path)).size }),
 };

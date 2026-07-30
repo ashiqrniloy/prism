@@ -11,7 +11,7 @@
 | `createWriteTool(cwd, options?)` | `write` tool: create or overwrite a file, creating parent directories. |
 | `createEditTool(cwd, options?)` | `edit` tool: precise exact-then-fuzzy text replacement in an existing file. |
 | `createRepoListTool(cwd, options?)` | `repo_list` tool: bounded deterministic repository listing. |
-| `createRepoSearchTool(cwd, options?)` | `repo_search` tool: bounded literal/regex text search. |
+| `createRepoSearchTool(cwd, options?)` | `repo_search` tool: bounded literal text search. |
 | `createCodingTools(cwd, options?)` | Default six tools (`shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`). |
 | `createReadOnlyTools(cwd, options?)` | Read-only subset: `read`, `repo_list`, `repo_search`. |
 | `createAllTools(cwd, options?)` | Identical to `createCodingTools` (Git tools remain opt-in via `createGitTools`). |
@@ -152,6 +152,8 @@ Create or overwrite a file, creating parent directories as needed.
 
 **Outputs:** a `TextContent` confirmation naming the **absolute path** with UTF-8 byte and line counts (e.g. `Successfully wrote 42 bytes (3 lines) to /abs/path.txt`). `maxInputBytes` defaults to 8 MiB (64 MiB hard cap); oversized UTF-8 input fails before policy evaluation, directory creation, or write. Write failures and abort are error results. Empty `content` is valid.
 
+Default local `writeFile` uses same-directory temp + `rename` so a crash mid-write cannot truncate the target; custom `WriteOperations` should provide equivalent durability.
+
 `write` result `metadata`: `{ bytes, lines, path }` (absolute path). Concurrent writes to the same path serialize through `withFileMutationQueue`; writes to different paths run in parallel.
 
 ### `edit`
@@ -165,7 +167,7 @@ Precise text replacement in an existing file via exact-then-fuzzy matching.
 | `path` | `string` | Path to the file to edit. Required. |
 | `edits` | `Array<{ oldText: string, newText: string }>` | Targeted replacements, each matched against the **original** file (not incrementally). No overlapping/nested edits. Required, non-empty. |
 
-Each `edits[].oldText` must match a unique, non-overlapping region of the original file. Matching is exact first, then fuzzy (unicode normalization / whitespace collapse). A BOM is stripped before matching and re-prepended on write; original line endings are restored. Defaults reject targets over 8 MiB, aggregate old/new UTF-8 input over 2 MiB, or more than 100 edits (hard caps: 64 MiB, 16 MiB, and 1,000). Stat and bounded read checks run before matching or mutation.
+Each `edits[].oldText` must match a unique, non-overlapping region of the original file. Matching is exact first, then fuzzy (unicode normalization / whitespace collapse). **Fuzzy matching can apply a wrong region when `oldText` is slightly off** — tradeoff for imprecise models; prefer exact `oldText` when possible. A BOM is stripped before matching and re-prepended on write; original line endings are restored. Defaults reject targets over 8 MiB, aggregate old/new UTF-8 input over 2 MiB, or more than 100 edits (hard caps: 64 MiB, 16 MiB, and 1,000). Stat and bounded read checks run before matching or mutation. Default local `writeFile` uses same-directory temp + `rename` (crash-safe replace).
 
 **Outputs:** a `TextContent` confirmation (`Successfully replaced N block(s) in {path}.`) plus `metadata`. Any failure — missing/unreadable file, no match, duplicate (non-unique) match, overlap, empty `oldText`, no-op edit, or abort — is an error result, and the file is left **unchanged** (the match runs before the write).
 
@@ -189,15 +191,15 @@ List repository entries with deterministic relative paths. Uses Node `opendir`/`
 
 ### `repo_search`
 
-Search text files under the workspace. Default mode is literal substring match; `mode: "regex"` enables length-bounded regular expressions. Binary files (NUL in a bounded prefix) and oversize files are skipped. Aggregate scanned bytes, matches, line bytes, pattern bytes, and wall time are finite.
+Search text files under the workspace using literal substring match. Binary files (NUL in a bounded prefix) and oversize files are skipped. Aggregate scanned bytes, matches, line bytes, pattern bytes, and wall time are finite.
 
 **Inputs:**
 
 | Field | Type | Purpose |
 | --- | --- | --- |
-| `query` | `string` | Literal or regex pattern (required). |
+| `query` | `string` | Literal substring (required). |
 | `path` | `string` | Workspace-relative start path. |
-| `mode` | `"literal" \| "regex"` | Default `literal`. |
+| `mode` | `"literal"` | Literal only (default). `regex` removed in 0.0.18. |
 | `caseSensitive` | `boolean` | Default false. |
 | `includeHidden` | `boolean` | Default false. |
 | `context` | `number` | Context lines before/after each match (default 5, hard 20). |
@@ -410,7 +412,7 @@ const remoteWrite = createWriteTool("/repo", {
 | Shell total stdout+stderr | 64 MiB | 1 GiB | process-tree kill; spill removal |
 | Repo depth / entries / files / page | 32 / 10,000 / 10,000 / 1,000 | 128 / 100,000 / 100,000 / 10,000 | before descending/retaining next entry |
 | Search scan / file / matches | 64 MiB / 8 MiB / 1,000 | 1 GiB / 64 MiB / 10,000 | before next file/match retention |
-| Search pattern / line / context / time | 512 B / 50 KiB / 5 / 30 s | 4 KiB / 1 MiB / 20 / 300 s | before regex compile / line retain / deadline |
+| Search pattern / line / context / time | 512 B / 50 KiB / 5 / 30 s | 4 KiB / 1 MiB / 20 / 300 s | before pattern compile / line retain / deadline |
 | Git paths / refs / message | 1,000 / 1 KiB / 64 KiB | 10,000 / 4 KiB / 256 KiB | before process/temp-file creation |
 | Git output / diff lines / changed files / patch | 4 MiB / 10,000 / 1,000 / 16 MiB | 64 MiB / 100,000 / 10,000 / 64 MiB | stream before retain; artifact spill optional |
 | Worktrees | 4 | 16 | before add |

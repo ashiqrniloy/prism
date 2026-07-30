@@ -122,7 +122,7 @@ Important request shapes:
 | `ToolRegistry` | Host active tool registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `ToolExecutionContext` | Host tool execution context: session/run ids, tool call id, optional abort signal, metadata, and progress callback. |
 | `ContextResolutionContext` | Context provider input: messages plus optional session/run ids, metadata, and signal. |
-| `InputAssemblyLayout` | Default input layout selector: `"legacy"` (default) or opt-in `"cache_aware"`. |
+| `InputAssemblyLayout` | Default input layout selector: `"cache_aware"` (default) or opt-in `"legacy"`. |
 | `DefaultInputBuildContext` | Optional default input assembly context: input layout, instructions, history, summaries, attachments, explicit resources, tool results, middleware, ids, metadata, and signal. |
 | `ResolveContextOptions` | Ordered context resolution input: selected providers, messages, ids, metadata, signal, and optional middleware. |
 | `AssembleProviderInputOptions` | Provider input assembly input: model, input, optional builders, selected context providers/skills, active tools, metadata, and signal. |

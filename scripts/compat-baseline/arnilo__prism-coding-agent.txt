@@ -195,7 +195,7 @@ buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetad
 codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
 codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
 codingSha256Hex	export declare function codingSha256Hex(data: Buffer | string): string
-compileSearchPattern	export declare function compileSearchPattern(query: string, mode: "literal" | "regex", caseSensitive: boolean, maxPatternBytes: number):
+compileSearchPattern	export declare function compileSearchPattern(query: string, caseSensitive: boolean, maxPatternBytes: number):
 createAllTools	export declare function createAllTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
 createAskUserDecisionResumeValidator	export declare function createAskUserDecisionResumeValidator(limits?: Pick<ResolvedAskUserDecisionLimits, "maxCustomTextBytes">): WorkflowResumeValidator
 createAskUserDecisionTool	export declare function createAskUserDecisionTool(options: AskUserDecisionToolOptions): ToolDefinition

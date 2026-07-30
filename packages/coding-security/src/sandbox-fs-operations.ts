@@ -395,12 +395,11 @@ export function createSandboxRepositoryOperations(
       if (request.signal?.aborted) throw new SandboxFsError("Operation aborted");
       const root = assertSandboxPath(workspaceRoot, request.root);
       const start = request.path ? assertSandboxPath(workspaceRoot, posix.resolve(root, request.path)) : root;
-      const { testLine } = compileSearchPattern(
-        request.query,
-        request.mode ?? "literal",
-        request.caseSensitive === true,
-        limits.maxPatternBytes,
-      );
+      const mode = request.mode ?? "literal";
+      if (mode !== "literal") {
+        throw new SandboxFsError(`unsupported search mode: ${String(mode)} (literal only)`);
+      }
+      const { testLine } = compileSearchPattern(request.query, request.caseSensitive === true, limits.maxPatternBytes);
       const maxMatches = request.maxMatches ?? limits.maxMatches;
       const context = Math.min(request.context ?? limits.maxContextLines, limits.maxContextLines);
       const exclude = new Set(request.exclude ?? limits.exclude);

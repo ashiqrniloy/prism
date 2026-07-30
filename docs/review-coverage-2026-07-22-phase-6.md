@@ -35,7 +35,7 @@ Working evidence for Plan 074 Task 0. Freezes Phase 6 / Release **0.0.11** scope
 
 | Surface | Frozen reference | Compatibility decision |
 | --- | --- | --- |
-| Prism | [`a677113a409b1b60a3361a76c980e7411013916a`](../plans/074-release-0-0-11-coding-harness-fundamentals.md) | Caller/limit claims checked against shipped 0.0.10 tree. |
+| Prism | `a677113a409b1b60a3361a76c980e7411013916a` | Caller/limit claims checked against shipped 0.0.10 tree. |
 | Node.js | Local reference `v24.18.0`; release support remains Node 20 and current | Providers use `fetch` + existing `@arnilo/prism/providers/transport` SSE helpers; no vendor SDKs. |
 | Anthropic Messages | ctx7 `/anthropics/anthropic-sdk-typescript` + official Messages docs at impl time | Stream SSE, tools, `cache_control` ephemeral `5m`/`1h`, thinking blocks, usage; package-local wire (OpenCode Go route is pattern only). |
 | Google Gemini | ctx7 `/websites/ai_google_dev_gemini-api` + Gemini `generateContent` / stream docs at impl time | Tools/function calling, multimodal `inlineData`, usage metadata; Vertex enterprise identity stays 0.0.13. |

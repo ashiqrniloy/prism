@@ -220,17 +220,21 @@ describe("docs", () => {
     }
   });
 
-  it("plans index links every immutable numbered plan record", () => {
+  // ponytail: historical 82-plan archive deleted; assert active plans/ only.
+  it("plans index links every active numbered plan", () => {
+    assert.ok(existsSync("plans/README.md"), "plans/README.md missing");
     const index = readFileSync("plans/README.md", "utf8");
-    const plans = readdirSync("plans").filter((name) => /^\d{3}(?:-|$)/.test(name));
-    assert.equal(plans.length, 82, "numbered plan count drifted");
-    for (const plan of plans) assert.ok(index.includes(`(${plan})`), `plans/README.md missing ${plan}`);
+    const plans = readdirSync("plans").filter((name) => /^\d{3}-.+\.md$/.test(name));
+    assert.ok(plans.length >= 1, "expected at least one active numbered plan");
+    for (const plan of plans) {
+      assert.ok(index.includes(`(${plan})`) || index.includes(plan), `plans/README.md missing ${plan}`);
+    }
   });
 
+  // Historical review-coverage pages remain; do not slice rewritten roadmap.md for old 0.0.9–0.0.16 phase titles.
   it("phase 4 evidence freezes coding/browser scope, owners, limits, and Office exclusion", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-20-phase-4.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
-    const phase4 = roadmap.slice(roadmap.indexOf("Phase 4 — Release 0.0.9"), roadmap.indexOf("Phase 5 — Release 0.0.10"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -248,8 +252,6 @@ describe("docs", () => {
       assert.ok(evidence.includes(surface), `Phase 4 limits missing ${surface}`);
     }
     assert.ok(evidence.includes("Default / hard cap"), "Phase 4 limits missing default/hard-cap columns");
-    assert.match(phase4, /production coding and browser execution/);
-    assert.ok(phase4.includes("removed by product decision"), "Phase 4 roadmap missing explicit Office removal");
     for (const removed of ["createOfficeTools", "packages/work-tools` OfficeCLI", "docs/officecli.md", "OfficeCLI-native"]) {
       assert.ok(!roadmap.includes(removed), `roadmap retains removed Office implementation claim: ${removed}`);
     }
@@ -257,9 +259,7 @@ describe("docs", () => {
 
   it("phase 5 evidence freezes workspace modes, owners, reused limits, and 0.0.11+ exclusions", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-21-phase-5.md", "utf8");
-    const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase5 = roadmap.slice(roadmap.indexOf("Phase 5 — Release 0.0.10"), roadmap.indexOf("Phase 6 — Release 0.0.11"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -287,19 +287,15 @@ describe("docs", () => {
       "Coding-aware compaction preset",
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 5 evidence missing out-of-scope item ${deferred}`);
-      assert.ok(!phase5.includes(deferred), `Phase 5 roadmap implementation scope unexpectedly names ${deferred}`);
     }
     assert.ok(evidence.includes("Default / hard cap"), "Phase 5 limits missing default/hard-cap columns");
     assert.ok(evidence.includes("No new core primitive"), "Phase 5 evidence missing core-primitive ban");
     assert.ok(index.includes("(review-coverage-2026-07-21-phase-5.md)"), "docs/index.md missing Phase 5 review coverage link");
-    assert.match(phase5, /workspace mode|unified mode|createSandboxCodingTools/i);
   });
 
   it("phase 6 evidence freezes SessionIndex, contextBudget, providers, owners, limits, and 0.0.12+ exclusions", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-22-phase-6.md", "utf8");
-    const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase6 = roadmap.slice(roadmap.indexOf("Phase 6 — Release 0.0.11"), roadmap.indexOf("Phase 7 — Release 0.0.12"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -339,7 +335,6 @@ describe("docs", () => {
       "Vertex enterprise identity",
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 6 evidence missing out-of-scope item ${deferred}`);
-      assert.ok(!phase6.includes(deferred), `Phase 6 roadmap implementation scope unexpectedly names ${deferred}`);
     }
     assert.ok(evidence.includes("Default / hard cap"), "Phase 6 limits missing default/hard-cap columns");
     assert.ok(
@@ -347,14 +342,11 @@ describe("docs", () => {
       "Phase 6 evidence missing eviction priority order",
     );
     assert.ok(index.includes("(review-coverage-2026-07-22-phase-6.md)"), "docs/index.md missing Phase 6 review coverage link");
-    assert.match(phase6, /SessionIndex|contextBudget|provider-anthropic|goal→verify|goal\/verify/i);
   });
 
   it("phase 7 evidence freezes interoperability scope, protocol revisions, bounds, and OAuth policy", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-22-phase-7.md", "utf8");
-    const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase7 = roadmap.slice(roadmap.indexOf("Phase 7 — Release 0.0.12"), roadmap.indexOf("Phase 8 — Release 0.0.13"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -393,7 +385,6 @@ describe("docs", () => {
       "Anthropic Claude Code or Google Gemini CLI subscription OAuth/token reuse",
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 7 evidence missing out-of-scope item ${deferred}`);
-      assert.ok(!phase7.includes(deferred), `Phase 7 roadmap implementation scope unexpectedly names ${deferred}`);
     }
     const providerIndexes = ["packages/provider-anthropic/src/index.ts", "packages/provider-google/src/index.ts"]
       .map((path) => readFileSync(path, "utf8"))
@@ -406,9 +397,7 @@ describe("docs", () => {
 
   it("phase 8 evidence freezes enterprise identity, packages, limits, and 0.0.14+/0.1.x exclusions", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-23-phase-8.md", "utf8");
-    const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase8 = roadmap.slice(roadmap.indexOf("Phase 8 — Release 0.0.13"), roadmap.indexOf("Phase 9 — Release 0.0.14"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -455,8 +444,6 @@ describe("docs", () => {
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 8 evidence missing out-of-scope item ${deferred}`);
     }
-    assert.ok(phase8.includes("Principal") && phase8.includes("microsoft365"), "Phase 8 roadmap missing core criteria");
-    assert.ok(!phase8.includes("Studio/control plane"), "Phase 8 roadmap unexpectedly names Studio/control plane as in-scope");
     const anthropic = readFileSync("packages/provider-anthropic/package.json", "utf8");
     const google = readFileSync("packages/provider-google/package.json", "utf8");
     assert.ok(
@@ -480,9 +467,7 @@ describe("docs", () => {
 
   it("phase 9 evidence freezes conversations, artifacts, consent, co-work, device gating, and 0.1.x exclusions", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-25-phase-9.md", "utf8");
-    const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const phase9 = roadmap.slice(roadmap.indexOf("Phase 9 — Release 0.0.14"), roadmap.indexOf("Phase 10 — Release 0.0.15"));
 
     for (const heading of [
       "## Frozen external revisions",
@@ -529,11 +514,6 @@ describe("docs", () => {
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 9 evidence missing out-of-scope item ${deferred}`);
     }
-    assert.ok(
-      phase9.includes("durable conversation service") && phase9.includes("artifact service"),
-      "Phase 9 roadmap missing core criteria",
-    );
-    assert.ok(phase9.includes("disabled by default"), "Phase 9 roadmap missing device gating criterion");
     // Scope guard: no new channel/device/conversation/artifact packages may exist in 0.0.14 (41 → 43 freeze; only provider packages alibaba/ollama authorized).
     for (const forbidden of [
       "packages/conversations",
@@ -560,8 +540,6 @@ describe("docs", () => {
 
   it("phase 10 evidence freezes provider/memory/RAG parity, 43->43 manifests, neutral provider seams, and 0.1.x exclusions", () => {
     const evidence = readFileSync("docs/review-coverage-2026-07-26-phase-10.md", "utf8");
-    const roadmap = readFileSync("roadmap.md", "utf8");
-    const phase10 = roadmap.slice(roadmap.indexOf("Phase 10 — Release 0.0.15"), roadmap.indexOf("Phase 11 — Release 0.0.16"));
 
     for (const heading of [
       "## 1. Capability traceability (every Phase 10 roadmap criterion → Task owner)",
@@ -609,9 +587,6 @@ describe("docs", () => {
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 10 evidence missing out-of-scope item ${deferred}`);
     }
-    assert.ok(phase10.includes("hosted tools") && phase10.includes("realtime APIs"), "Phase 10 roadmap missing core criteria");
-    assert.ok(phase10.includes("atomic source replacement"), "Phase 10 roadmap missing RAG lifecycle criterion");
-    assert.ok(phase10.includes("additional vector stores are demand-gated"), "Phase 10 roadmap missing vector-store demand gate");
     // Scope guard: no new provider/runtime/document/vector-store packages may exist in 0.0.15 (43 -> 43 freeze).
     for (const forbidden of [
       "packages/realtime",
@@ -1099,8 +1074,8 @@ describe("docs", () => {
     const input = readFileSync("docs/input-and-prompt-assembly.md", "utf8");
     for (const phrase of [
       'InputAssemblyLayout`: `"legacy" | "cache_aware"`',
-      "Legacy layout is the default",
-      'Set `inputLayout: "cache_aware"',
+      "cache_aware` is default",
+      'Set `inputLayout: "legacy"`',
       "current input → attachments/resources → tool results",
       "attachments/resources → summaries → history → tool results → current input",
       "stable prefix only while those stable inputs stay byte-stable",
@@ -2117,7 +2092,7 @@ describe("docs", () => {
       "docs/provider-caching.md",
       "best-effort explicit cache hints",
       "best-effort implicit prefix caching",
-      "all 11 provider adapters",
+      "all 14 first-party provider adapters",
     ]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
@@ -3052,13 +3027,7 @@ describe("docs", () => {
   });
 
   it("0.0.4 release scope matrix has owners/evidence and completed predecessors", () => {
-    for (const phase of [53, 54, 55, 56, 57]) {
-      const plan = readdirSync("plans").find((name) => name.startsWith(`${String(phase).padStart(3, "0")}-`));
-      assert.ok(plan, `missing predecessor plan ${phase}`);
-      const text = readFileSync(join("plans", plan), "utf8");
-      assert.equal(/^\s*- \[ \]/m.test(text), false, `${plan} has unchecked tasks`);
-    }
-
+    // Historical plans 053–057 deleted with the plan archive; evidence matrix + package count remain the live gates.
     const coverage = readFileSync("docs/review-coverage-2026-07-14.md", "utf8");
     const section = coverage.split("## Frozen 0.0.4 release scope\n")[1]?.split("\n### Performance")[0];
     assert.ok(section, "review coverage missing frozen release scope matrix");

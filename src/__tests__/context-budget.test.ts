@@ -34,6 +34,30 @@ describe("context budget", () => {
     assert.equal(resolveContextBudget({ maxInputTokens: 100 }).reportOmissions, false);
   });
 
+  it("evicts oldest history messages before newer ones under budget pressure", () => {
+    const groups = {
+      instructions: [{ role: "system" as const, content: [{ type: "text" as const, text: "sys" }] }],
+      summaries: [],
+      history: [user("first", "hist-old"), assistant("second", "hist-mid"), user("third", "hist-new")],
+      input: [user("current")],
+      attachments: [],
+      toolResults: [],
+    };
+    const result = applyContextBudget({
+      groups,
+      budget: {
+        maxInputTokens: estimateTextTokens("sys") + estimateTextTokens("current") + estimateTextTokens("third"),
+        reportOmissions: true,
+      },
+    });
+    const historyOmitted = result.report.omitted.filter((row) => row.kind === "history").map((row) => row.id);
+    assert.deepEqual(historyOmitted, ["hist-old", "hist-mid"]);
+    assert.deepEqual(
+      result.groups.history.map((message) => message.id),
+      ["hist-new"],
+    );
+  });
+
   it("evicts history/tool results before context and skills", async () => {
     const history: Message[] = [assistant("old-a", "h1"), user("old-b", "h2")];
     const skills: Skill[] = [{ name: "skill-a", instructions: "skill body" }];

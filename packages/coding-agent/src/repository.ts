@@ -128,7 +128,7 @@ export interface RepositorySearchRequest {
   readonly root: string;
   readonly query: string;
   readonly path?: string;
-  readonly mode?: "literal" | "regex";
+  readonly mode?: "literal";
   readonly caseSensitive?: boolean;
   readonly includeHidden?: boolean;
   readonly exclude?: readonly string[];
@@ -275,7 +275,6 @@ export function isBinaryBuffer(buffer: Buffer): boolean {
 
 export function compileSearchPattern(
   query: string,
-  mode: "literal" | "regex",
   caseSensitive: boolean,
   maxPatternBytes: number,
 ): { testLine: (line: string) => { column: number } | null; patternBytes: number } {
@@ -285,39 +284,21 @@ export function compileSearchPattern(
     throw new RepositoryError(`query exceeds ${maxPatternBytes} byte pattern limit`);
   }
 
-  if (mode === "literal") {
-    if (caseSensitive) {
-      return {
-        patternBytes,
-        testLine: (line) => {
-          const column = line.indexOf(query);
-          return column >= 0 ? { column: column + 1 } : null;
-        },
-      };
-    }
-    const needle = query.toLowerCase();
+  if (caseSensitive) {
     return {
       patternBytes,
       testLine: (line) => {
-        const column = line.toLowerCase().indexOf(needle);
+        const column = line.indexOf(query);
         return column >= 0 ? { column: column + 1 } : null;
       },
     };
   }
-
-  let regex: RegExp;
-  try {
-    regex = new RegExp(query, caseSensitive ? "u" : "iu");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new RepositoryError(`invalid regular expression: ${message}`);
-  }
+  const needle = query.toLowerCase();
   return {
     patternBytes,
     testLine: (line) => {
-      regex.lastIndex = 0;
-      const match = regex.exec(line);
-      return match && match.index !== undefined ? { column: match.index + 1 } : null;
+      const column = line.toLowerCase().indexOf(needle);
+      return column >= 0 ? { column: column + 1 } : null;
     },
   };
 }
@@ -667,11 +648,11 @@ async function searchFileLines(
 
 async function searchLocal(request: RepositorySearchRequest, defaults: ResolvedRepositoryLimits): Promise<RepositorySearchResult> {
   const mode = request.mode ?? "literal";
-  if (mode !== "literal" && mode !== "regex") {
-    throw new RepositoryError(`unsupported search mode: ${String(mode)}`);
+  if (mode !== "literal") {
+    throw new RepositoryError(`unsupported search mode: ${String(mode)} (literal only)`);
   }
   const caseSensitive = request.caseSensitive === true;
-  const { testLine } = compileSearchPattern(request.query, mode, caseSensitive, defaults.maxPatternBytes);
+  const { testLine } = compileSearchPattern(request.query, caseSensitive, defaults.maxPatternBytes);
 
   const resolved = await resolveRepoPath(request.root, request.path);
   const maxMatches = validateCodingLimit("maxMatches", request.maxMatches ?? defaults.maxMatches, HARD_MAX_SEARCH_MATCHES);

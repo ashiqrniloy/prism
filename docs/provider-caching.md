@@ -66,7 +66,7 @@ Cache helpers return plain data:
 
 Provider events do not change. Cache accounting stays in normalized `Usage.cacheReadTokens` and `Usage.cacheWriteTokens`.
 
-For stable-prefix payloads, set `inputLayout: "cache_aware"` on the default input builder, `assembleProviderInput()`, `AgentConfig`, or `RunOptions`. The default prompt builder already places context, selected skills, and tool declarations before input messages; cache-aware input ordering then places attachments/resources, summaries, prior history, and pending tool results before the current user suffix. The prefix is byte-stable only when those stable inputs are unchanged; Prism still does not guarantee provider cache hits.
+For stable-prefix payloads, `inputLayout: "cache_aware"` is the default on the default input builder, `assembleProviderInput()`, `AgentConfig`, and `RunOptions`; set `inputLayout: "legacy"` to restore the prior order. The default prompt builder already places context, selected skills, and tool declarations before input messages; cache-aware input ordering then places attachments/resources, summaries, prior history, and pending tool results before the current user suffix. The prefix is byte-stable only when those stable inputs are unchanged; Prism still does not guarantee provider cache hits.
 
 ## Request/response example
 

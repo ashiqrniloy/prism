@@ -37,7 +37,7 @@ Working evidence for Plan 075 Task 0. Freezes Phase 7 / Release **0.0.12** scope
 
 | Surface | Frozen reference | Compatibility decision |
 | --- | --- | --- |
-| Prism | [`f9630a9bd12f299fdf473640e3869eea050b786f`](../plans/075-release-0-0-12-coding-harness-interoperability.md) | Existing core/session/server/compaction contracts inventoried below. |
+| Prism | `f9630a9bd12f299fdf473640e3869eea050b786f` | Existing core/session/server/compaction contracts inventoried below. |
 | Node.js | Release support remains Node 20+ | Optional package uses Web `Request`/`Response`, `ReadableStream`, native abort, and existing bounded SSE patterns; no framework dependency. |
 | AG-UI | `@ag-ui/core` **0.0.57**; [Events](https://docs.ag-ui.com/concepts/events), [Interrupts](https://docs.ag-ui.com/concepts/interrupts), [Serialization](https://docs.ag-ui.com/concepts/serialization), [TypeScript schemas](https://github.com/ag-ui-protocol/ag-ui/tree/main/sdks/typescript/packages/core) | Pin the official schema package. Validate produced events with `EventSchemas`; close active message/tool sequences before `RUN_FINISHED` or `RUN_ERROR`. |
 | ACP | `@agentclientprotocol/sdk` **1.3.0** stable root; [overview](https://agentclientprotocol.com/protocol/overview), [tool calls](https://agentclientprotocol.com/protocol/tool-calls), [TypeScript SDK](https://agentclientprotocol.com/libraries/typescript) | Use stable `session/update` and `session/request_permission` contracts only. Exclude `./experimental/v2`. |

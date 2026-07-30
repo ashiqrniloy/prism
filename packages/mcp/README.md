@@ -1,6 +1,6 @@
 # @arnilo/prism-mcp
 
-Bounded MCP client capabilities and explicit Prism MCP server exposure, pinned to official SDK 1.29.0. Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler. Server `guardrails` apply shared core tool stages to registered tools; commands remain host callbacks.
+Bounded MCP client capabilities and explicit Prism MCP server exposure, pinned to official SDK 1.30.0. Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler. Server `guardrails` apply shared core tool stages to registered tools; commands remain host callbacks.
 
 ## Install
 

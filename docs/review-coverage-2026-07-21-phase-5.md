@@ -36,7 +36,7 @@ Working evidence for Plan 073 Task 0. Freezes Phase 5 / Release **0.0.10** scope
 
 | Surface | Frozen reference | Compatibility decision |
 | --- | --- | --- |
-| Prism | [`5fc05437224f347b00fb6124d1783eb2cd3a9b25`](../plans/073-release-0-0-10-coding-harness-unified-workspace.md) | Caller/limit claims below checked against post-0.0.9 tree. |
+| Prism | `5fc05437224f347b00fb6124d1783eb2cd3a9b25` | Caller/limit claims below checked against post-0.0.9 tree. |
 | Node.js | Local reference `v24.18.0`; release support remains Node 20 and current | FS/exec backends use `node:child_process` argument arrays, streams, `AbortSignal`, path, crypto hashes only. |
 | Docker CLI/Engine | Local reference client/server `29.6.1`; same Phase 4 docs | Reuse `createDockerSandbox` flags/limits; no new daemon features required for FS backends. |
 | Git | Local reference `git version 2.55.0` | Reuse `createGitTools` + `execFile` binder; same cwd/tree as sandbox mode. |

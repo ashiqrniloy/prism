@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.18] - 2026-07-30
+
+### Changed
+- Dependency: `@modelcontextprotocol/sdk` 1.29.0 → 1.30.0 (clears moderate `@hono/node-server` path-traversal advisory on the MCP HTTP stack).
+
 ## [0.0.17] - 2026-07-29
 
 ### Changed

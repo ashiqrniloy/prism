@@ -73,7 +73,7 @@ const askUser = createAskUserDecisionTool({
 | `write` | `{ path, content }` | Bounded UTF-8 input; `Successfully wrote N bytes (M lines) to <abs>`. |
 | `edit` | `{ path, edits: [{oldText,newText}] }` | Bounded target/input/count; `Successfully replaced N block(s)` + diff metadata. |
 | `repo_list` | `{ path?, includeHidden?, maxDepth?, maxResults?, offset? }` | Deterministic relative entries; skips hidden/excluded basenames; does not follow symlinks; paginates with `nextOffset`. |
-| `repo_search` | `{ query, path?, mode?, caseSensitive?, includeHidden?, context?, maxMatches? }` | Literal (default) or bounded regex matches with context; skips binary/excluded paths; finite scan/match/time caps. |
+| `repo_search` | `{ query, path?, mode?, caseSensitive?, includeHidden?, context?, maxMatches? }` | Literal substring matches with context; skips binary/excluded paths; finite scan/match/time caps. |
 | `git_*` / `coding_check` | via `createGitTools(cwd, { commitIdentity, checks? })` | Opt-in structured Git status/diff/branch/worktree/apply/commit/PR-handoff and named checks. Not in `createCodingTools()`. |
 | `ask_user_decision` | via `createAskUserDecisionTool({ ask })` | Opt-in user choice: question + options (3 pros/3 cons); `selectionMode` single\|multiple; `allowCustom` for XOR free-text; host `ask` returns `selectedId` / `selectedIds` / `customText`. Durable: `suspendAskUserDecision` + resume validators. Not in default aggregators. |
 

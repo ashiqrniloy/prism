@@ -103,7 +103,7 @@ export function createDefaultInputBuilder(): DefaultInputBuilder {
       const groups = await buildDefaultInputMessageGroups(input, context);
       // `input_assembly` middleware is applied by assembleProviderInput after build(),
       // never here: builders must not be a security seam.
-      return flattenInputGroups(groups, context.inputLayout ?? "legacy");
+      return flattenInputGroups(groups, context.inputLayout ?? "cache_aware");
     },
   };
 }
@@ -176,7 +176,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     ? composeSystemPrompt(injectorContribs.instructions, { base: options.systemInstructions })
     : options.systemInstructions;
   const buildContext: DefaultInputBuildContext = { ...options, ...baseContext, systemInstructions };
-  const layout = buildContext.inputLayout ?? "legacy";
+  const layout = buildContext.inputLayout ?? "cache_aware";
 
   let messages: readonly Message[];
   let context: readonly ContextBlock[];

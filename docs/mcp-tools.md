@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-mcp` has two explicit directions. Its client bridge connects hosts to remote [Model Context Protocol](https://modelcontextprotocol.io) servers and maps discovered tools to ordinary `ToolDefinition`s. Its server API registers selected Prism `ToolDefinition` and `CommandDefinition` values on the official SDK `McpServer`, with required authorization and a bounded optional Web-standard Streamable HTTP handler. The package pins `@modelcontextprotocol/sdk` **1.29.0** (MCP protocol negotiation remains SDK-owned) and adds no MCP branch to core Prism.
+`@arnilo/prism-mcp` has two explicit directions. Its client bridge connects hosts to remote [Model Context Protocol](https://modelcontextprotocol.io) servers and maps discovered tools to ordinary `ToolDefinition`s. Its server API registers selected Prism `ToolDefinition` and `CommandDefinition` values on the official SDK `McpServer`, with required authorization and a bounded optional Web-standard Streamable HTTP handler. The package pins `@modelcontextprotocol/sdk` **1.30.0** (MCP protocol negotiation remains SDK-owned) and adds no MCP branch to core Prism.
 
 Primary API:
 
@@ -33,7 +33,7 @@ await bridge.listResources();
 await bridge.getPrompt("review", { topic: "security" });
 ```
 
-Server capability matrix for SDK 1.29.0: tools/resources/prompts and their list-change notifications are supported through official registrations; roots/sampling/form+URL elicitation are supported as explicit client callbacks. Missing server resources/prompts throw `McpUnsupportedCapabilityError` with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`. Resource/prompt results and sampling/elicitation inputs/results are bounded JSON. Accepted form/URL elicitation requires host-only `humanInteraction: true`; bridge strips marker before protocol output and fails closed when absent. Automatic root discovery/consent, model selection, credential resolution, URL navigation, generic command proxying, and custom JSON-RPC are unsupported.
+Server capability matrix for SDK 1.30.0: tools/resources/prompts and their list-change notifications are supported through official registrations; roots/sampling/form+URL elicitation are supported as explicit client callbacks. Missing server resources/prompts throw `McpUnsupportedCapabilityError` with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`. Resource/prompt results and sampling/elicitation inputs/results are bounded JSON. Accepted form/URL elicitation requires host-only `humanInteraction: true`; bridge strips marker before protocol output and fails closed when absent. Automatic root discovery/consent, model selection, credential resolution, URL navigation, generic command proxying, and custom JSON-RPC are unsupported.
 
 Server direction:
 
@@ -61,7 +61,7 @@ const handleMcp = await createPrismMcpWebHandler(server, {
 });
 ```
 
-`McpServer.connect(transport)` remains available for SDK stdio or in-memory transports. The helper uses SDK `WebStandardStreamableHTTPServerTransport`; it does not start a listener. Default remains bounded stateless JSON-response mode. Supplying `sessionIdGenerator` enables SDK `MCP-Session-Id` POST/GET/DELETE/SSE lifecycle and requires exact `allowedOrigins` plus host `resolveIdentity`. Every request re-authenticates, and a different principal receives non-disclosing 404. SDK owns protocol-version/session headers and SSE semantics. SDK 1.29.0's in-memory event store is not enabled, so `Last-Event-ID` replay is explicitly unsupported; reconnect starts only through SDK-supported active session GET.
+`McpServer.connect(transport)` remains available for SDK stdio or in-memory transports. The helper uses SDK `WebStandardStreamableHTTPServerTransport`; it does not start a listener. Default remains bounded stateless JSON-response mode. Supplying `sessionIdGenerator` enables SDK `MCP-Session-Id` POST/GET/DELETE/SSE lifecycle and requires exact `allowedOrigins` plus host `resolveIdentity`. Every request re-authenticates, and a different principal receives non-disclosing 404. SDK owns protocol-version/session headers and SSE semantics. SDK 1.30.0's in-memory event store is not enabled, so `Last-Event-ID` replay is explicitly unsupported; reconnect starts only through SDK-supported active session GET.
 
 ## When to use it
 

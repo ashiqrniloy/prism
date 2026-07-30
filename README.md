@@ -157,6 +157,13 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-provider-neuralwatt` | NeuralWatt provider with implicit vLLM prefix caching |
 | `@arnilo/prism-provider-alibaba` | Alibaba Cloud (Model Studio / DashScope + Coding Plan) provider with dynamic discovery and explicit/implicit caching |
 | `@arnilo/prism-provider-ollama` | Ollama Cloud / local provider with dynamic discovery and implicit-only caching |
+| `@arnilo/prism-provider-anthropic` | Anthropic Messages provider |
+| `@arnilo/prism-provider-google` | Google Gemini provider |
+| `@arnilo/prism-provider-azure` | Azure OpenAI provider |
+| `@arnilo/prism-provider-bedrock` | AWS Bedrock provider |
+| `@arnilo/prism-provider-vertex` | Google Vertex provider |
+| `@arnilo/prism-provider-ai-sdk` | AI SDK interoperability adapter |
+| `@arnilo/prism-browser` | optional host-wired Playwright browser automation (not core; not auto-activated) |
 | `@arnilo/prism-compaction-llm` | provider-backed compaction strategy |
 | `@arnilo/prism-compaction-observational-memory` | source-backed memory + recall tool |
 | `@arnilo/prism-coding-agent` | bounded shell/read/write/edit tools |
@@ -170,7 +177,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-credentials-node` | encrypted-file and keychain credentials |
 | `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases/owned run feedback |
 | `@arnilo/prism-session-store-postgres` | PostgreSQL persistence/checkpoints/leases/owned run feedback |
-| `@arnilo/prism-providers` | family: all 11 provider adapters, including AI SDK interoperability |
+| `@arnilo/prism-providers` | family: all 14 first-party provider adapters, including AI SDK interoperability |
 | `@arnilo/prism-compaction` | family: both compaction strategies |
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
@@ -189,6 +196,6 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 ## Non-goals (v1)
 
 - Privileged tools, MCP servers, telemetry, credentials, or databases activated by install — hosts explicitly configure and register every capability.
-- Browser automation or interactive terminal UI — CLI/RPC and workflow control APIs only.
+- Browser automation or interactive terminal UI in core — hosts may opt into `@arnilo/prism-browser` with their own Playwright lifecycle; Prism does not auto-start browsers or ship a TUI.
 - Provider, credential, extension, or package auto-discovery.
 - Core-owned database drivers, secret persistence, sandbox, or application policy — optional packages implement adapters over host-owned boundaries.

@@ -105,7 +105,7 @@ export function applyContextBudget(options: {
   readonly report: ContextBudgetReport;
 } {
   const budget = resolveContextBudget(options.budget);
-  const layout = options.layout ?? "legacy";
+  const layout = options.layout ?? "cache_aware";
   const groups = {
     instructions: [...options.groups.instructions],
     summaries: [...options.groups.summaries],
@@ -162,8 +162,8 @@ function dropNext(
   skills: Skill[],
   layout: InputAssemblyLayout,
 ): ContextBudgetOmission | undefined {
-  // ponytail: drop from end of keep-stack (history/tool_results first). cache_aware keeps
-  // attachments longer so stable prefix stays intact while budget still allows it.
+  // ponytail: drop droppable groups in layout order; within history, drop oldest first (shift).
+  // cache_aware keeps attachments longer so stable prefix stays intact while budget still allows it.
   const order =
     layout === "cache_aware"
       ? (["tool_results", "history", "summaries", "context", "skills", "attachments"] as const)
@@ -175,7 +175,7 @@ function dropNext(
       return omission("tool_results", message.id ?? toolResultId(message), message);
     }
     if (kind === "history" && groups.history.length > 0) {
-      const message = groups.history.pop()!;
+      const message = groups.history.shift()!;
       return omission("history", message.id, message);
     }
     if (kind === "summaries" && groups.summaries.length > 0) {

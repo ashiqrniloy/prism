@@ -37,7 +37,7 @@ Working evidence for Plan 076 Task 0. Freezes Phase 8 / Release **0.0.13** scope
 
 | Surface | Frozen reference | Compatibility decision |
 | --- | --- | --- |
-| Prism | [`5b21f78cde6c4f3c9e7760f153c4bd8670d104e4`](../plans/076-release-0-0-13-enterprise-identity-policy-governance-work-connectors.md) | Existing ownership/credential/permission/provider/server/persistence/lease seams inventoried below. |
+| Prism | `5b21f78cde6c4f3c9e7760f153c4bd8670d104e4` | Existing ownership/credential/permission/provider/server/persistence/lease seams inventoried below. |
 | Node.js | Release support remains Node 20+ | Optional packages use Web `Request`/`Response`, `execFile`, abort, and existing bounded patterns; no framework dependency. |
 | Microsoft Entra Agent ID | [Governing Agent Identities](https://learn.microsoft.com/en-us/entra/id-governance/agent-id-governance-overview); [What are agent identities?](https://learn.microsoft.com/en-us/entra/agent-id/what-are-agent-identities) | Informs `Principal`/`AgentIdentity` sponsor/owner/delegation/scope/expiry vocabulary. Prism does **not** embed Entra; hosts verify tokens/claims and supply identity context. |
 | CLI for Microsoft 365 | [CLI for Microsoft 365 docs](https://pnp.github.io/cli-microsoft365/); npm `@pnp/cli-microsoft365`; GitHub `pnp/cli-microsoft365` | Host-installed execution adapter only. Prism ships hard-coded typed `execFile` argument templates; never `m365 login`, setup, tenant-admin, or model-built argv. |

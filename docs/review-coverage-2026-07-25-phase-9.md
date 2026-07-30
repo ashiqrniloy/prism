@@ -36,7 +36,7 @@ Working evidence for Plan 077 Task 0. Freezes Phase 9 / Release **0.0.14** scope
 
 | Surface | Frozen reference | Compatibility decision |
 | --- | --- | --- |
-| Prism | [`56692ad8ab8d05dce2d5a08f29ad768a8b43e0af`](../plans/077-release-0-0-14-personal-work-agent-conversations-co-work-review-channels.md) | 0.0.13 graph (41 manifests → 43 at 0.0.14 with provider packages alibaba/ollama); conversation/artifact/memory/AG-UI/connector/device seams inventoried below. |
+| Prism | `56692ad8ab8d05dce2d5a08f29ad768a8b43e0af` | 0.0.13 graph (41 manifests → 43 at 0.0.14 with provider packages alibaba/ollama); conversation/artifact/memory/AG-UI/connector/device seams inventoried below. |
 | Node.js | Release support remains Node 20+ | Delivery-link/token signing uses node `crypto` HMAC via host key material; no new runtime dependency enters core. |
 | AG-UI | `@ag-ui/core` **0.0.57** (pinned in `packages/ag-ui/package.json`); [Events](https://docs.ag-ui.com/concepts/events), [State](https://docs.ag-ui.com/concepts/state), [Interrupts](https://docs.ag-ui.com/concepts/interrupts) | Co-work events ride official `CUSTOM`/state extension points; produced events still validate with `EventSchemas`; no fork of the 0.0.12 mapper. |
 | ACP | `@agentclientprotocol/sdk` **1.3.0** stable root | `./acp` sibling gains co-work parity only where stable `session/update` contracts overlap; no experimental v2. |

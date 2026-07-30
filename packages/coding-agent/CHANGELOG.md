@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.18] - 2026-07-30
+
+### Changed
+- `repo_search` is literal-only: `mode: "regex"` removed from the tool schema; `compileSearchPattern` no longer compiles `RegExp` (ReDoS mitigation).
+- Default `write`/`edit` local `writeFile` uses same-directory temp + `rename` for crash-safe replacement.
+
 ## [0.0.17] - 2026-07-29
 
 ### Added

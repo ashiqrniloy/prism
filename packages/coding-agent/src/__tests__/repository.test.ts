@@ -44,19 +44,15 @@ test("resolveRepositoryLimits rejects values above hard caps", () => {
   assert.throws(() => resolveRepositoryLimits({ maxMatches: 0 }), /maxMatches/);
 });
 
-test("compileSearchPattern literal and regex", () => {
-  const lit = compileSearchPattern("Agent", "literal", true, 512);
+test("compileSearchPattern literal only", () => {
+  const lit = compileSearchPattern("Agent", true, 512);
   assert.deepEqual(lit.testLine("createAgent"), { column: 7 });
   assert.equal(lit.testLine("createagent"), null);
 
-  const litCi = compileSearchPattern("Agent", "literal", false, 512);
+  const litCi = compileSearchPattern("Agent", false, 512);
   assert.deepEqual(litCi.testLine("createagent"), { column: 7 });
 
-  const re = compileSearchPattern("create\\w+", "regex", true, 512);
-  assert.deepEqual(re.testLine("xx createAgent yy"), { column: 4 });
-
-  assert.throws(() => compileSearchPattern("(", "regex", true, 512), /invalid regular expression/);
-  assert.throws(() => compileSearchPattern("x".repeat(600), "literal", true, 512), /pattern limit/);
+  assert.throws(() => compileSearchPattern("x".repeat(600), true, 512), /pattern limit/);
 });
 
 test("isBinaryBuffer detects NUL prefix", () => {
@@ -162,7 +158,7 @@ test("repo_list honors abort and execution policy", async () => {
   }
 });
 
-test("repo_search literal and regex with ordering, binary skip, and context", async () => {
+test("repo_search literal with ordering, binary skip, and context", async () => {
   const cwd = await tmp();
   try {
     await seedTree(cwd);
@@ -177,13 +173,26 @@ test("repo_search literal and regex with ordering, binary skip, and context", as
     assert.match(textOf(lit), /src\/multi\.ts\+beta/);
     assert.doesNotMatch(textOf(lit), /binary\.bin/);
     assert.doesNotMatch(textOf(lit), /node_modules/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
 
-    const re = await tool.execute({ query: "create\\w+", mode: "regex", maxMatches: 10 }, ctx());
-    assert.equal(re.error, undefined);
-    assert.ok((re.metadata?.matchCount as number) >= 1);
+test("repo_search rejects regex mode and evil patterns stay bounded as literal", async () => {
+  const cwd = await tmp();
+  try {
+    await mkdir(join(cwd, "src"), { recursive: true });
+    await writeFile(join(cwd, "evil.txt"), `${"a".repeat(50_000)}!`);
+    const tool = createRepoSearchTool(cwd);
 
-    const bad = await tool.execute({ query: "(", mode: "regex" }, ctx());
-    assert.ok(bad.error?.message.includes("invalid regular expression"));
+    const rejected = await tool.execute({ query: "x", mode: "regex" }, ctx());
+    assert.match(rejected.error?.message ?? "", /regex|literal/i);
+
+    const start = Date.now();
+    const lit = await tool.execute({ query: "(a+)+$", mode: "literal" }, ctx());
+    assert.ok(Date.now() - start < 5_000, "literal evil pattern must not block the event loop");
+    assert.equal(lit.error, undefined);
+    assert.equal(lit.metadata?.matchCount, 0);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

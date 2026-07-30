@@ -15,9 +15,10 @@
  *    (pi would throw "Operation aborted" even after a successful write — misleading, so dropped).
  */
 import { Buffer } from "node:buffer";
-import { mkdir as fsMkdir, writeFile as fsWriteFile } from "node:fs/promises";
+import { mkdir as fsMkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { atomicWriteUtf8File } from "./atomic-write.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
@@ -44,7 +45,7 @@ export interface WriteToolOptions {
 }
 
 const defaultWriteOperations: WriteOperations = {
-  writeFile: (path, content, options) => fsWriteFile(path, content, { encoding: "utf-8", signal: options?.signal }),
+  writeFile: (path, content, options) => atomicWriteUtf8File(path, content, { signal: options?.signal }),
   mkdir: (dir) => fsMkdir(dir, { recursive: true }).then(() => {}),
 };
 

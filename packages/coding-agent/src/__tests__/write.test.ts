@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -67,6 +67,8 @@ test("overwrite existing file → content replaced", async () => {
     assert.equal(r.error, undefined);
     assert.equal(await readFile(filePath, "utf-8"), "new");
     assert.match(textOf(r), /Successfully wrote 3 bytes \(1 lines\)/);
+    const names = await readdir(cwd);
+    assert.ok(!names.some((n) => n.startsWith(".prism-write-")));
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

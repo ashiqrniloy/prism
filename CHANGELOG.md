@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.18] - 2026-07-30
+
+### Changed
+- Default `inputLayout` is `cache_aware` (unset `AgentConfig` / `RunOptions` use cache-stable message order); set `inputLayout: "legacy"` to restore prior ordering.
+- `applyContextBudget` evicts oldest history messages first under pressure (was newest-first).
+- `@arnilo/prism-mcp` pins `@modelcontextprotocol/sdk` **1.30.0** (clears moderate `@hono/node-server` path-traversal advisory on the MCP HTTP stack).
+
+### Breaking (minor, pre-1.0)
+- `@arnilo/prism-coding-agent` `repo_search` is literal-only: `mode: "regex"` removed; `compileSearchPattern` drops the `mode` argument (ReDoS mitigation).
+- Default local `write` / `edit` operations use same-directory temp + `rename` for crash-safe replacement.
+
+See [docs/migration.md](docs/migration.md) for the full 0.0.17 → 0.0.18 notes.
+
 ## [0.0.17] - 2026-07-29
 
 ### Added

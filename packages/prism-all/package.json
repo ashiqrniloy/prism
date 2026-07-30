@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-all",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "Complete Prism umbrella: every first-party runtime, capability, provider, and persistence package.",
   "license": "MIT",
   "scripts": {
@@ -11,25 +11,25 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-code": "0.0.17",
-    "@arnilo/prism-sdk": "0.0.17",
-    "@arnilo/prism-providers": "0.0.17",
-    "@arnilo/prism-session-store-sqlite": "0.0.17",
-    "@arnilo/prism-session-store-postgres": "0.0.17",
-    "@arnilo/prism-evals": "0.0.17",
-    "@arnilo/prism-memory": "0.0.17",
-    "@arnilo/prism-rag": "0.0.17",
-    "@arnilo/prism-server": "0.0.17",
-    "@arnilo/prism-supervisor": "0.0.17",
-    "@arnilo/prism-web-tools": "0.0.17",
-    "@arnilo/prism-browser": "0.0.17",
-    "@arnilo/prism-ag-ui": "0.0.17",
-    "@arnilo/prism-policy": "0.0.17",
-    "@arnilo/prism-model-router": "0.0.17",
-    "@arnilo/prism-provider-azure": "0.0.17",
-    "@arnilo/prism-provider-bedrock": "0.0.17",
-    "@arnilo/prism-provider-vertex": "0.0.17",
-    "@arnilo/prism-work-tools": "0.0.17"
+    "@arnilo/prism-code": "0.0.18",
+    "@arnilo/prism-sdk": "0.0.18",
+    "@arnilo/prism-providers": "0.0.18",
+    "@arnilo/prism-session-store-sqlite": "0.0.18",
+    "@arnilo/prism-session-store-postgres": "0.0.18",
+    "@arnilo/prism-evals": "0.0.18",
+    "@arnilo/prism-memory": "0.0.18",
+    "@arnilo/prism-rag": "0.0.18",
+    "@arnilo/prism-server": "0.0.18",
+    "@arnilo/prism-supervisor": "0.0.18",
+    "@arnilo/prism-web-tools": "0.0.18",
+    "@arnilo/prism-browser": "0.0.18",
+    "@arnilo/prism-ag-ui": "0.0.18",
+    "@arnilo/prism-policy": "0.0.18",
+    "@arnilo/prism-model-router": "0.0.18",
+    "@arnilo/prism-provider-azure": "0.0.18",
+    "@arnilo/prism-provider-bedrock": "0.0.18",
+    "@arnilo/prism-provider-vertex": "0.0.18",
+    "@arnilo/prism-work-tools": "0.0.18"
   },
   "engines": {
     "node": ">=20"

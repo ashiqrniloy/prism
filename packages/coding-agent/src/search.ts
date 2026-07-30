@@ -1,5 +1,5 @@
 /**
- * `repo_search` tool: bounded native literal/regex repository text search.
+ * `repo_search` tool: bounded native literal repository text search.
  */
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { enforceExecutionPolicy } from "./execution-policy.js";
@@ -68,19 +68,19 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
 
   return {
     name: "repo_search",
-    description: `Search text files under the workspace. Default mode is literal substring match; set mode=regex for bounded regular expressions. Skips binary files, excluded basenames (default: ${limits.exclude.join(", ")}), and hidden names unless includeHidden is true. Does not follow symlinks. Caps matches/scanned bytes/time.`,
+    description: `Search text files under the workspace using literal substring match. Skips binary files, excluded basenames (default: ${limits.exclude.join(", ")}), and hidden names unless includeHidden is true. Does not follow symlinks. Caps matches/scanned bytes/time.`,
     parameters: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Literal text or regular expression to search for (required)" },
+        query: { type: "string", description: "Literal text to search for (required)" },
         path: {
           type: "string",
           description: "Workspace-relative directory or file to search (default: workspace root)",
         },
         mode: {
           type: "string",
-          description: 'Search mode: "literal" (default) or "regex"',
-          enum: ["literal", "regex"],
+          description: "Search mode: literal substring match only",
+          enum: ["literal"],
         },
         caseSensitive: {
           type: "boolean",
@@ -110,7 +110,13 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
       if (query.length === 0) return errorResult(toolCallId, "query is required and must be a non-empty string.");
 
       const path = typeof args.path === "string" ? args.path : undefined;
-      const mode = args.mode === "regex" ? "regex" : "literal";
+      if (args.mode === "regex") {
+        return errorResult(toolCallId, 'repo_search no longer supports mode "regex"; use literal substring search.');
+      }
+      if (args.mode !== undefined && args.mode !== "literal") {
+        return errorResult(toolCallId, `unsupported search mode: ${String(args.mode)}`);
+      }
+      const mode = "literal";
       const caseSensitive = args.caseSensitive === true;
       const includeHidden = args.includeHidden === true;
       let contextLines: number | undefined;

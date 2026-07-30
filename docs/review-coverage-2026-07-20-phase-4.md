@@ -24,7 +24,7 @@ Cloud Microsoft 365 and Google Workspace connectors remain a separate later road
 
 | Surface | Frozen reference | Compatibility decision |
 | --- | --- | --- |
-| Prism | [`0d109989b4892e3fe4378ab782044ceadc460277`](../plans/072-release-0-0-9-production-coding-and-browser-execution.md) | All primitive/caller claims below were checked against the 0.0.8 release tree. |
+| Prism | `0d109989b4892e3fe4378ab782044ceadc460277` | All primitive/caller claims below were checked against the 0.0.8 release tree. |
 | Node.js | Local reference `v24.18.0`; Prism release support remains Node 20 and current | Use `node:child_process`, `node:fs`, streams, `AbortSignal`, `URL`, crypto hashes, and path APIs only. Node 20/current tests own compatibility. |
 | Playwright | [`playwright-core@1.61.0`](https://github.com/microsoft/playwright/tree/v1.61.0), npm integrity `sha512-caX7TrY3Ml6egyDX0WUcTHDxodl/b51y5wJOdCEA36QviK/s2g081hvmGs8eaE3DWb6NYZQ6BjO/QkNRPenoPA==` | Task 5 tests this exact compatibility line. Browser binary remains host supplied; package install performs no browser download. Only documented Browser/BrowserContext/Page/Locator/Download APIs are allowed. |
 | Playwright context/locator/snapshot/network docs | [BrowserContext](https://playwright.dev/docs/api/class-browsercontext), [Locator](https://playwright.dev/docs/api/class-locator), [locators](https://playwright.dev/docs/locators), [ARIA snapshots](https://playwright.dev/docs/aria-snapshots), [network](https://playwright.dev/docs/network), retrieved 2026-07-20 | Non-persistent contexts; role/label/test-id and snapshot refs before CSS; `ariaSnapshot({ mode: "ai" })`; service workers blocked when routing must observe requests. Request routing is defense in depth, not DNS containment. |

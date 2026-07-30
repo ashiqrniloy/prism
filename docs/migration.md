@@ -1,5 +1,17 @@
 # Migration guide
 
+## 0.0.17 → 0.0.18 restore integrity (small intentional break)
+
+Release **0.0.18** removes model-facing regex from `repo_search`:
+
+1. **`repo_search` literal only.** The tool schema no longer advertises `mode: "regex"`. Passing `mode: "regex"` returns a bounded tool error. `compileSearchPattern(query, caseSensitive, maxPatternBytes)` dropped the `mode` argument; hosts calling it with the old signature must update imports. Use literal substring search or a host-owned search backend for regex needs.
+2. **`write` / `edit` crash-safe replace.** Default local operations write to a same-directory `.prism-write-*` temp file then `rename` onto the target, so a crash mid-write cannot truncate the original. Happy-path ToolResult shape unchanged. Custom `WriteOperations` / `EditOperations` should provide equivalent durability.
+3. **`contextBudget` history eviction.** Under pressure, `applyContextBudget` drops oldest history messages first (not newest). Hosts that relied on newest-first history retention under budget should revisit eviction expectations.
+4. **Default `inputLayout` is `cache_aware`.** Unset `AgentConfig.inputLayout` / `RunOptions.inputLayout` now use cache-stable ordering (attachments/resources and tool results before current input). Set `inputLayout: "legacy"` to restore the prior order.
+5. **`@arnilo/prism-mcp` SDK bump.** `@modelcontextprotocol/sdk` is pinned to **1.30.0** (from 1.29.0), clearing the moderate `@hono/node-server` path-traversal advisory on the MCP HTTP transport. No Prism MCP public API signature changes; hosts pinning the SDK independently should align to 1.30.0+.
+
+Docs-only: README provider inventory (14 adapters), optional `@arnilo/prism-browser` wording, and `docs/0.1.0-readiness.md` current-line status were corrected; no runtime behavior change beyond the items above.
+
 ## 0.0.16 → 0.0.17 code-review hardening (small intentional breaks)
 
 Release **0.0.17** implements the 2026-07-29 full implementation review (plan 081): twenty fixes across durable runs, guardrails, retry, extension lifecycle, CLI, and provider plumbing. Most changes are additive or internal; four intentionally change existing behavior:

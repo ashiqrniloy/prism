@@ -18,7 +18,6 @@ Do not use it for tool execution, provider calls, file discovery, credential loo
 import { createDefaultInputBuilder } from "@arnilo/prism";
 
 const messages = await createDefaultInputBuilder().build("Summarize", {
-  inputLayout: "legacy", // default; "cache_aware" passes the cache-aware layout preference
   systemInstructions: "Be accurate.",
   developerInstructions: "Cite supplied context only.",
   history,
@@ -58,7 +57,7 @@ Useful exported types:
 
 - `AgentInput`: `string | Message | readonly Message[]`.
 - `DefaultInputBuilder`: the default `InputBuilder` with typed default context.
-- `InputAssemblyLayout`: `"legacy" | "cache_aware"`; legacy is default.
+- `InputAssemblyLayout`: `"legacy" | "cache_aware"`; `cache_aware` is default.
 - `DefaultInputBuildContext`: optional input layout, instructions, history, summaries, attachments, resource loader/URIs, tool results, middleware, ids, metadata, and abort signal.
 - `InputAttachment`: already-loaded text/content blocks (including `audio`, `file`, and `document`) or an explicit URI loaded through a caller-provided `ResourceLoader`.
 - `PromptInstruction`: labeled system instruction text.
@@ -73,7 +72,7 @@ The builder returns `readonly Message[]`.
 
 - String input becomes one user text message.
 - `Message` and `Message[]` input are preserved.
-- Legacy layout is the default. Set `inputLayout: "cache_aware"` on the default builder, `assembleProviderInput()`, `AgentConfig`, or `RunOptions` to pass the cache-aware layout preference without replacing the builder.
+- `cache_aware` layout is the default. Set `inputLayout: "legacy"` on the default builder, `assembleProviderInput()`, `AgentConfig`, or `RunOptions` to restore the prior order.
 
 | Layout | Input message order |
 | --- | --- |
@@ -87,8 +86,7 @@ The default prompt builder still prepends context, selected skills, and tool dec
 - Tool results are tool messages containing `tool_result` content; the agent/session runtime uses this to feed dispatched tool results into the next provider turn, placing the assistant `tool_call` and the matching role `tool` `tool_result` before any final assistant content. Cache-aware layout keeps tool results before the current user suffix so it does not split tool transcripts.
 - Middleware runs only when `middleware` is supplied in the context.
 - `assembleProviderInput()` returns a `ProviderRequest` with the caller's model/tools/provider options/metadata/signal and composed messages/context. It also calls `assertMessagesSupportModelCapabilities()` so unsupported `audio`/`file`/`document`/`image` blocks fail with `UnsupportedModalityError` when the model declares `capabilities.input`.
-- Optional `contextBudget` (at least one of `maxInputTokens` / `maxInputBytes`) runs after default message groups are built and before final flatten. Eviction drops droppable sections first (toolResults → history → summaries → context → skills → attachments; layout-aware). Protected instructions + current user `input` (+ tools catalog) fail closed with `ContextBudgetError` if they alone exceed the budget. When `reportOmissions: true`, attach `ProviderRequest.metadata[CONTEXT_BUDGET_REPORT_METADATA_KEY]` and read via `getContextBudgetReport(request)` (kinds/ids/sizes only — no secrets). Raw session store entries are never deleted.
-- Optional `contextBudget` (at least one of `maxInputTokens` / `maxInputBytes`) runs after default message groups are built and before final flatten. Eviction drops droppable sections first (toolResults → history → summaries → context → skills → attachments; layout-aware). Protected instructions + current user `input` (+ tools catalog) fail closed with `ContextBudgetError` if they alone exceed the budget. When `reportOmissions: true`, attach `ProviderRequest.metadata[CONTEXT_BUDGET_REPORT_METADATA_KEY]` and read via `getContextBudgetReport(request)` (kinds/ids/sizes only — no secrets). Raw session store entries are never deleted.
+- Optional `contextBudget` (at least one of `maxInputTokens` / `maxInputBytes`) runs after default message groups are built and before final flatten. Eviction drops droppable sections first (toolResults → history → summaries → context → skills → attachments; layout-aware). Within `history`, oldest messages drop first. Protected instructions + current user `input` (+ tools catalog) fail closed with `ContextBudgetError` if they alone exceed the budget. When `reportOmissions: true`, attach `ProviderRequest.metadata[CONTEXT_BUDGET_REPORT_METADATA_KEY]` and read via `getContextBudgetReport(request)` (kinds/ids/sizes only — no secrets). Raw session store entries are never deleted.
 - `renderPromptTemplate()` replaces top-level `{{name}}` variables with caller-supplied JSON-compatible values. Strings are inserted directly; numbers, booleans, `null`, arrays, and objects are stringified deterministically with sorted object keys. Missing variables throw by default or stay unchanged with `{ missing: "preserve" }`.
 
 ## Request/response example
