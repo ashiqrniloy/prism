@@ -274,7 +274,7 @@ Default `npm test`, `npm run sdk:ready`, and `benchmark-0.0.15` are network-free
 | --- | --- | --- | --- |
 | OpenAI Responses baseline | `PRISM_LIVE_PROVIDER_TESTS=1` + `OPENAI_API_KEY` | `npm test -w @arnilo/prism-provider-openai` | Bounded text/tool/abort smoke; key never enters events. |
 | OpenAI hosted tools + Realtime | `OPENAI_API_KEY`; protected release harness additionally supplies host-owned safety identifier and hosted-tool entitlement | No generic fixture; record result with the release evidence | Provider-hosted `web_search`/similar execution and Realtime audio/interruption need account-specific availability, so fake transport coverage remains default gate. |
-| AI SDK adapter | Host-selected AI SDK v4 model factory plus its provider credential | No generic fixture; run host integration in protected release environment | Exact `@ai-sdk/provider@4.0.3` mapping/version check; Prism does not own upstream model credentials. |
+| AI SDK adapter | Host-selected AI SDK v4 model factory plus its provider credential | No generic fixture; run host integration in protected release environment | Exact `@ai-sdk/provider@4.0.4` mapping/version check; Prism does not own upstream model credentials. |
 | Kimi / Moonshot | `PRISM_LIVE_PROVIDER_TESTS=1` + `KIMI_API_KEY` | `npm test -w @arnilo/prism-provider-kimi` | Coding route; Moonshot entitlement is account-specific. |
 | Z.AI | `PRISM_LIVE_PROVIDER_TESTS=1` + `ZAI_API_KEY` | `npm test -w @arnilo/prism-provider-zai` | GLM stream/tool/reasoning smoke. |
 | OpenRouter | `PRISM_LIVE_PROVIDER_TESTS=1` + `OPENROUTER_API_KEY` | `npm test -w @arnilo/prism-provider-openrouter` | Routed stream/model metadata smoke; host chooses permitted route. |

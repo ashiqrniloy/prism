@@ -28,7 +28,7 @@ Offline conformance is mandatory for every package; credentialed probes are not 
 | Package | Required offline evidence | Restricted live evidence |
 | --- | --- | --- |
 | OpenAI | Responses serialization/stream ordering, provider-hosted authority, continuation cap/cursor, Realtime fake WebSocket caps | Standard API-key smoke; separate protected hosted-tool/Realtime entitlement probe |
-| AI SDK | Exact 4.0.3/V4 gate; every mapped stream part; authority, cache usage, redaction, unsupported mapping | Host-created V4 model only; no Prism credential fixture |
+| AI SDK | Exact 4.0.4/V4 gate (`4.0.3` also listed); every mapped stream part; authority, cache usage, redaction, unsupported mapping | Host-created V4 model only; no Prism credential fixture |
 | Anthropic | Messages serialization, cache/thinking/tools, header/redaction/abort assertions | Protected `ANTHROPIC_API_KEY` smoke |
 | Google | `generateContent` serialization, complete tool calls, media/abort/redaction assertions | Protected `GOOGLE_API_KEY` or `GEMINI_API_KEY` smoke |
 | Kimi | Coding/Moonshot route fixtures, thinking/tool reconstruction, headers/redaction | Protected `KIMI_API_KEY` smoke |

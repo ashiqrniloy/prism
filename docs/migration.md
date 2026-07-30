@@ -67,7 +67,7 @@ Realtime is opt-in through `createOpenAIRealtimeSession({ model, ownerId, apiKey
 
 ## 0.0.14 → 0.0.15 AI SDK adapter matrix (additive, pre-release)
 
-`@arnilo/prism-provider-ai-sdk` now pins and verifies `@ai-sdk/provider@4.0.3` at setup rather than accepting any v4 minor. Upgrade the peer package to the documented matrix entry. An unlisted installed version fails with typed `AiSdkProviderError` code `unsupported_version`; add a tested matrix row before changing it.
+`@arnilo/prism-provider-ai-sdk` now pins and verifies `@ai-sdk/provider@4.0.4` at setup (matrix also lists `4.0.3`) rather than accepting any v4 minor. Upgrade the peer package to the documented matrix entry. An unlisted installed version fails with typed `AiSdkProviderError` code `unsupported_version`; add a tested matrix row before changing it.
 
 Stream output now maps `response-metadata.id` to `message_start`, preserves `providerExecuted` tool authority as `"provider-hosted"`, and rejects unsupported output parts or `structuredOutput.strict` with `unsupported_mapping` rather than dropping them. Pass `redactor` when using the adapter directly; agents retain their existing active-redactor behavior.
 

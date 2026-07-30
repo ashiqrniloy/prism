@@ -320,7 +320,7 @@ describe("createAiSdkProvider", () => {
       assert.doesNotThrow(() => assertSupportedAiSdkVersion(version.providerVersion));
     }
     assert.throws(
-      () => assertSupportedAiSdkVersion("4.0.4"),
+      () => assertSupportedAiSdkVersion("4.0.5"),
       (error: unknown) => error instanceof AiSdkProviderError && error.code === "unsupported_version",
     );
   });

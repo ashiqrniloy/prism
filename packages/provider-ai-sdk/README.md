@@ -7,7 +7,7 @@ Install explicitly. This package is not included in profile bundles until a size
 ## Install
 
 ```bash
-npm install @arnilo/prism-provider-ai-sdk @arnilo/prism @ai-sdk/provider@4.0.3
+npm install @arnilo/prism-provider-ai-sdk @arnilo/prism @ai-sdk/provider@4.0.4
 ```
 
 ## Supported version matrix
@@ -15,6 +15,7 @@ npm install @arnilo/prism-provider-ai-sdk @arnilo/prism @ai-sdk/provider@4.0.3
 | `@ai-sdk/provider` | Specification | Status |
 | --- | --- | --- |
 | `4.0.3` | `LanguageModelV4` (`"v4"`) | Supported and offline-tested |
+| `4.0.4` | `LanguageModelV4` (`"v4"`) | Supported and offline-tested |
 
 The peer dependency is exact and `createAiSdkProvider()` reads the resolved package version at setup. An unlisted version fails with `AiSdkProviderError` code `unsupported_version`; it never guesses ABI compatibility.
 

@@ -2,7 +2,10 @@ import type { LanguageModelV4 } from "@ai-sdk/provider";
 import type { SecretRedactor } from "@arnilo/prism";
 import { AiSdkProviderError } from "./errors.js";
 
-export const SUPPORTED_AI_SDK_VERSION_MATRIX = [{ providerVersion: "4.0.3", specificationVersion: "v4" }] as const;
+export const SUPPORTED_AI_SDK_VERSION_MATRIX = [
+  { providerVersion: "4.0.3", specificationVersion: "v4" },
+  { providerVersion: "4.0.4", specificationVersion: "v4" },
+] as const;
 
 export const SUPPORTED_AI_SDK_SPECIFICATION = "v4" as const;
 

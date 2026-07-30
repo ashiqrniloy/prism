@@ -3,7 +3,7 @@
 ## [0.0.18] - 2026-07-30
 
 ### Changed
-- Released with exact 0.0.18 graph.
+- `@ai-sdk/provider` peer pin **4.0.3 → 4.0.4**; `SUPPORTED_AI_SDK_VERSION_MATRIX` adds `4.0.4` (keeps `4.0.3`).
 
 ## [0.0.17] - 2026-07-29
 
