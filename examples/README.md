@@ -25,6 +25,7 @@ node examples/provider-resolver.ts
 node examples/cache-aware-prompt-assembly.ts
 node examples/neuralwatt-agent-run.ts
 node examples/observational-memory-recall-status-view.ts
+node examples/observational-memory-lifecycle.ts
 node examples/external-app-db-backed.ts
 node examples/minimal-host-app.ts
 node examples/custom-builders.ts
@@ -115,6 +116,8 @@ Each demo prints a single JSON line with its result.
 - `coding-compaction.ts` — **demo**: coding-focused LLM compaction preset with a mock summarizer; raw history remains intact.
 - `observational-memory-recall-status-view.ts` — **demo**: recall tool +
   status/view commands; recall fails closed on invalid ids.
+- `observational-memory-lifecycle.ts` — **demo**: `createObservationalMemory().attach()` →
+  turn → projection/recall/branch page (mock workers, no network).
 - `synapta-style-artifact-loop.ts` — **demo**: third-party host mixing first-party
   and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the
   `generate-validate-revise` artifact loop with host-owned schema validation.

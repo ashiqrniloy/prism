@@ -2,36 +2,32 @@
 
 Optional observational-memory compaction package for Prism.
 
-Importing it is inert: it starts no workers, reads no settings or credentials, and makes no provider calls. Hosts can explicitly create a runtime to run observer/reflector/dropper workers against a supplied session/appendEntry/provider, and select the fast compaction strategy when desired.
+Importing it is inert: no workers, settings reads, credentials, or provider calls until `createObservationalMemory().attach()` or `createObservationalMemoryRuntime().flush()`.
 
-Worker model selection follows Prism use-case model selection: pass optional `workerModel`, plus `sessionModel: agent.config.model` so workers fall back to the session model when unset. Use `requireExplicitModel: true` to keep the historical `missing_model` skip.
+## Four layers
+
+1. **Recent exact messages** — bounded suffix in provider context (`context.recentMessages`)
+2. **Observation log** — source-backed facts from the observer worker
+3. **Reflections** — consolidations from the reflector worker
+4. **Raw-source retrieval** — exact-id recall and cursor paging on the current branch
+
+## Quick start
 
 ```ts
-import {
-  createObservationalMemoryCommands,
-  createObservationalMemoryCompactionStrategy,
-  createObservationalMemoryRuntime,
-  createRecallMemoryTool,
-} from "@arnilo/prism-compaction-observational-memory";
+import { createObservationalMemory } from "@arnilo/prism-compaction-observational-memory";
 
-const memory = createObservationalMemoryRuntime({
-  session,
-  appendEntry: (entry) => store.append(entry),
-  workerProvider,
-  sessionModel: agent.config.model,
-  // workerModel: { provider: "mock", model: "memory" }, // optional override
-  maxWorkerTurns: 8,
-  maxWorkerToolCalls: 64,
-  maxWorkerResultBytes: 64 * 1024,
-  overrides: { observeAfterTokens: 10_000, thinkingLevel: "low" },
+const om = createObservationalMemory({
+  observation: { provider: observerProvider, model: observerModel },
+  reflection: { provider: reflectorProvider, model: reflectorModel },
+  context: { compactAfterTokens: 81_000, recentMessages: 8 },
 });
-
-await memory.flush();
-// Defaults: 16 turns, 32 calls/turn, 128 calls total, 64 KiB arguments/results,
-// 1 MiB transcript, and 1 KiB surfaced errors. Every limit has a finite hard cap.
-await session.compact({ strategy: createObservationalMemoryCompactionStrategy() });
-
-const getEntries = (sessionId: string) => sessions.get(sessionId)?.entries() ?? [];
-const recall = createRecallMemoryTool({ getEntries });
-const commands = createObservationalMemoryCommands({ getEntries });
+const attached = om.attach(session, {
+  appendEntry: (entry, options) => store.append(entry, options),
+  sessionModel: agent.config.model,
+});
+await attached.session.run("Continue from prior work");
 ```
+
+Runnable network-free demo: `node examples/observational-memory-lifecycle.ts` (from repo root).
+
+See [docs/compaction-observational-memory.md](../../docs/compaction-observational-memory.md) and [docs/migration.md](../../docs/migration.md) (`0.0.18 → 0.0.19`).

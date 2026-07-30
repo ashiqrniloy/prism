@@ -7,7 +7,9 @@ import {
   type SessionEntry,
 } from "@arnilo/prism";
 import { activeObservations } from "./ledger.js";
+import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-bounds.js";
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails } from "./projection.js";
+import { DEFAULT_KEEP_RECENT_ENTRIES, selectRecentMessageEntryIds } from "./recent-messages.js";
 import { renderObservationalMemory } from "./render.js";
 import type { MemoryObservation, MemoryReflection } from "./types.js";
 
@@ -18,7 +20,6 @@ export interface ObservationalMemoryCompactionStrategyOptions {
   readonly secrets?: readonly (string | undefined)[];
 }
 
-const DEFAULT_KEEP_RECENT_ENTRIES = 8;
 const DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
 
 export function createObservationalMemoryCompactionStrategy(
@@ -30,7 +31,7 @@ export function createObservationalMemoryCompactionStrategy(
     compact(context) {
       throwIfAborted(context.signal);
       const keepRecentEntries = Math.max(0, context.keepRecentEntries ?? options.keepRecentEntries ?? DEFAULT_KEEP_RECENT_ENTRIES);
-      const keepEntryIds = selectKeepEntryIds(context.entries, keepRecentEntries);
+      const keepEntryIds = selectRecentMessageEntryIds(context.entries, keepRecentEntries);
       const firstKeptEntryId = keepEntryIds[0];
       const firstKeptIndex = firstKeptEntryId
         ? context.entries.findIndex((entry) => entry.id === firstKeptEntryId)
@@ -40,8 +41,9 @@ export function createObservationalMemoryCompactionStrategy(
       const projection = buildObservationalMemoryProjection(context.entries, firstKeptEntryId);
       const fullActiveObservations = activeObservations(projection.full);
       const fullObservationTokens = fullActiveObservations.reduce((sum, item) => sum + item.tokenCount, 0);
-      const fullFold = fullObservationTokens > (options.observationsPoolMaxTokens ?? DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS);
-      const memory = fullFold
+      const maxTokens = options.observationsPoolMaxTokens ?? DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS;
+      const fullFold = fullObservationTokens > maxTokens;
+      const source = fullFold
         ? {
             observations: fullActiveObservations,
             reflections: projection.full.reflections,
@@ -52,14 +54,26 @@ export function createObservationalMemoryCompactionStrategy(
             reflections: projection.reflections,
             droppedObservationIds: projection.droppedObservationIds,
           };
+      const bounded = boundMemoryPayload(
+        source.observations,
+        source.reflections,
+        source.droppedObservationIds,
+        maxTokens,
+        HARD_MAX_FOLDED_PAYLOAD_BYTES,
+      );
+      const memory = {
+        observations: bounded.observations,
+        reflections: bounded.reflections,
+        droppedObservationIds: bounded.droppedObservationIds,
+      };
       const secrets = [...(options.secrets ?? []), ...(context.secrets ?? [])];
-      const summary = renderObservationalMemory(memory.reflections, memory.observations, secrets);
+      const summary = renderObservationalMemory(memory.reflections, memory.observations, { secrets });
       const data: CompactionEntryData & { readonly memory: unknown } = {
         throughEntryId,
         keepEntryIds,
         strategy: name,
         trigger: context.trigger,
-        memory: redactMemory(memory, fullFold, secrets),
+        memory: redactMemory(memory, bounded.fullFold || fullFold, secrets),
       };
       const parentId = context.entries.at(-1)?.id;
       return {
@@ -68,14 +82,6 @@ export function createObservationalMemoryCompactionStrategy(
       } satisfies CompactionResult;
     },
   };
-}
-
-function selectKeepEntryIds(entries: readonly SessionEntry[], keepRecentEntries: number): readonly string[] {
-  if (keepRecentEntries === 0) return [];
-  return entries
-    .filter((entry) => entry.kind === "message" && entry.message)
-    .slice(-keepRecentEntries)
-    .map((entry) => entry.id);
 }
 
 function redactMemory(

@@ -475,6 +475,6 @@ Baseline: `@arnilo/prism` **0.0.18** — **Plan 001 complete** (Tasks 0–9; exi
 
 ## Further Actions
 
-- **Create Phase 2 plan** (`0.0.19` observational memory) after operator tags/releases 0.0.18.
+- **Phase 2 plan created:** `plans/002-Release-0-0-19-Observational-Memory.md`.
 - **Operator publish** — signed `v0.0.18` tag + `release:publish` per `docs/release-and-install.md`.
 - **Phase 4 coding gaps** (glob, files_with_matches, etc.) remain roadmap Phase 4; not Phase 1 scope.

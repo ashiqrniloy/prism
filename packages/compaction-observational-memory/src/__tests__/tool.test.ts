@@ -89,7 +89,8 @@ describe("observational memory recall tool", () => {
     const tool = createRecallMemoryTool({ getEntries: () => entries });
     const result = await tool.execute({ id: reflection.id }, context);
     assert.equal((result.value as any).kind, "reflection");
-    assert.equal((result.value as any).supportingObservations.length, 0);
+    assert.equal((result.value as any).supportingObservations.length, 1);
+    assert.deepEqual((result.value as any).droppedSupportingObservationIds, [observation.id]);
   });
 
   it("recall_tool_reports_missing_non_source_and_dropped_evidence", async () => {
@@ -97,5 +98,24 @@ describe("observational memory recall tool", () => {
     const result = await tool.execute({ id: observation.id }, context);
     assert.equal((result.value as any).dropped, true);
     assert.deepEqual((result.value as any).missingSourceEntryIds, ["missing"]);
+  });
+
+  it("recall_tool_pages_current_branch_messages", async () => {
+    const tool = createRecallMemoryTool({ getEntries: () => entries });
+    const result = await tool.execute({ cursor: "m1", limit: 1, direction: "backward" }, context);
+    assert.equal((result.value as any).found, true);
+    assert.deepEqual(
+      (result.value as any).entries.map((entry: { id: string }) => entry.id),
+      ["m1"],
+    );
+  });
+
+  it("recall_tool_rejects_wrong_session_and_ambiguous_requests", async () => {
+    const tool = createRecallMemoryTool({ getEntries: () => entries });
+    const wrongSession = await tool.execute({ id: observation.id, sessionId: "other" }, context);
+    assert.equal((wrongSession.value as any).reason, "wrong_session");
+
+    const ambiguous = await tool.execute({}, context);
+    assert.equal((ambiguous.value as any).reason, "invalid_request");
   });
 });

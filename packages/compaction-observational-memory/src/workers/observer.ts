@@ -6,11 +6,15 @@ import { estimateTextTokens } from "../tokens.js";
 import { isMemoryObservation, type MemoryObservation } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
+export const DEFAULT_OBSERVER_INSTRUCTION =
+  "Find durable source-backed facts from the supplied messages. Call record_observation for each useful fact.";
+
 export interface RunObserverOptions extends MemoryWorkerLimitOptions {
   readonly entries: readonly SessionEntry[];
   readonly provider: AIProvider;
   readonly model: ModelConfig;
   readonly maxTurns: number;
+  readonly instruction?: string;
   readonly providerOptions?: ProviderRequestOptions;
   readonly thinkingLevel?: string;
   readonly secrets?: readonly (string | undefined)[];
@@ -45,9 +49,10 @@ export async function runObserver(options: RunObserverOptions): Promise<readonly
     },
   };
   const limits = resolveMemoryWorkerLimits(options);
+  const system = options.instruction ? `${DEFAULT_OBSERVER_INSTRUCTION}\n\n${options.instruction}` : DEFAULT_OBSERVER_INSTRUCTION;
   await runMemoryWorkerLoop({
     ...options,
-    system: "Find durable source-backed facts from this coding session. Call record_observation for each useful fact.",
+    system,
     prompt: serializeSourceEntries(options.entries, options.secrets, limits.maxMessageBytes),
     tools: [tool],
   });

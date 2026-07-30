@@ -5,11 +5,15 @@ import { estimateTextTokens } from "../tokens.js";
 import { isMemoryReflection, type MemoryObservation, type MemoryReflection } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
+export const DEFAULT_REFLECTOR_INSTRUCTION =
+  "Distill durable reflections from observations. Call record_reflection with supporting observation ids.";
+
 export interface RunReflectorOptions extends MemoryWorkerLimitOptions {
   readonly observations: readonly MemoryObservation[];
   readonly provider: AIProvider;
   readonly model: ModelConfig;
   readonly maxTurns: number;
+  readonly instruction?: string;
   readonly providerOptions?: ProviderRequestOptions;
   readonly thinkingLevel?: string;
   readonly secrets?: readonly (string | undefined)[];
@@ -40,9 +44,10 @@ export async function runReflector(options: RunReflectorOptions): Promise<readon
   };
   const limits = resolveMemoryWorkerLimits(options);
   const prompt = joinWorkerText(observationLines(options.observations), limits.maxMessageBytes, "Observational memory reflection prompt");
+  const system = options.instruction ? `${DEFAULT_REFLECTOR_INSTRUCTION}\n\n${options.instruction}` : DEFAULT_REFLECTOR_INSTRUCTION;
   await runMemoryWorkerLoop({
     ...options,
-    system: "Distill durable reflections from observations. Call record_reflection with supporting observation ids.",
+    system,
     prompt,
     tools: [tool],
   });

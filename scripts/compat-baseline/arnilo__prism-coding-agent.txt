@@ -191,6 +191,7 @@ applyReplacementsPreservingUnchangedLines	export declare function applyReplaceme
 askUserDecisionResumeSchema	export declare function askUserDecisionResumeSchema(request: Pick<AskUserDecisionSuspendData, "selectionMode" | "allowCustom" | "options">): JsonObject
 assertAbsoluteGit	export declare function assertAbsoluteGit(path: string): Promise<string>
 assertCodingResumeAllowed	export declare function assertCodingResumeAllowed(input:
+atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
 buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetadata(input:
 codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
 codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string

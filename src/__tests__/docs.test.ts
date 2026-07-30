@@ -2345,6 +2345,7 @@ describe("docs", () => {
       "examples/compaction.ts",
       "examples/coding-compaction.ts",
       "examples/observational-memory-recall-status-view.ts",
+      "examples/observational-memory-lifecycle.ts",
       "examples/cli.ts",
       "examples/rpc.ts",
       "examples/discover-skills.ts",
@@ -3084,5 +3085,26 @@ describe("docs", () => {
       const text = readFileSync(page, "utf8").toLowerCase();
       assert.ok(!/guaranteed cache hit|will always cache|cache will hit/.test(text), `${page} promises cache hits`);
     }
+  });
+
+  it("phase2_observational_memory_docs_cover_four_layers_migration_and_lifecycle_example", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    for (const phrase of [
+      "Recent exact messages",
+      "Observation log",
+      "Reflections",
+      "Raw-source retrieval",
+      "Four-layer provider context",
+      "createObservationalMemory",
+      "attach()",
+      "recallObservationalMemoryBranchPage",
+    ]) {
+      assert.ok(om.includes(phrase) || index.includes(phrase), `observational memory docs missing ${phrase}`);
+    }
+    assert.ok(migration.includes("0.0.18 → 0.0.19 observational memory lifecycle"), "migration missing 0.0.19 OM section");
+    assert.ok(migration.includes("createObservationalMemory().attach()"), "migration missing attach migration");
+    assert.ok(existsSync("examples/observational-memory-lifecycle.ts"), "missing lifecycle example");
   });
 });

@@ -1,8 +1,8 @@
 # Prism Enterprise and Coding Harness Completion Roadmap
 
 Updated: 2026-07-30
-Baseline: `@arnilo/prism` **0.0.18** (Phase 1 exit gate passed)
-Status: Phase 1 complete; Phase 2+ pending exit gates
+Baseline: `@arnilo/prism` **0.0.19** (Phase 2 exit gate passed)
+Status: Phase 2 complete; Phase 3+ pending exit gates
 
 ## Objectives
 
@@ -243,7 +243,8 @@ Status: Phase 1 complete; Phase 2+ pending exit gates
   - Exit Gate:
     - Compiled docs tests, relevant package tests, `npm run sdk:ready`, audit, package budget, secret/SBOM/license checks, Node 20/current imports, `git diff --check`, and 44-package dry-run pack all pass from a clean checkout.
 
-- [ ] Phase 2 — Release 0.0.19: complete observational memory lifecycle and source-faithful retrieval
+- [x] Phase 2 — Release 0.0.19: complete observational memory lifecycle and source-faithful retrieval
+  - **Completion evidence (2026-07-30):** `plans/002-Release-0-0-19-Observational-Memory.md` Tasks 0–7 done. `@arnilo/prism-compaction-observational-memory` 78/78 offline; `npm run sdk:ready` green; `release:check --version 0.0.19` + compat baseline updated; docs tripwire `phase2_observational_memory_docs_cover_four_layers_migration_and_lifecycle_example` green; `examples/observational-memory-lifecycle.ts` in demo gate. Shipped: `createObservationalMemory().attach()` post-run lifecycle, four-layer provider context, nested settings + legacy map, full-ledger reflection recall + branch paging, dual-model live canary (`PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1` + `OPENAI_API_KEY`, fails closed without key).
   - Objectives:
     - Upgrade `@arnilo/prism-compaction-observational-memory` from manually coordinated primitives into one explicitly activated session-memory composition.
     - Match Mastra's useful four-part memory model: recent exact messages, an incremental observation log, reflections over that log, and retrieval of the exact raw sources behind compressed memory.
@@ -1099,5 +1100,6 @@ Every numbered release must satisfy:
 
 ## Further Actions
 
-- Execute `plans/001-Release-0-0-18-Restore-Integrity.md` (Phase 1) — **complete** (exit gate 2026-07-30). Create Phase 2 plan (`0.0.19` observational memory) next.
+- Execute `plans/001-Release-0-0-18-Restore-Integrity.md` (Phase 1) — **complete** (exit gate 2026-07-30).
+- Execute `plans/002-Release-0-0-19-Observational-Memory.md` (Phase 2) — **complete** (exit gate 2026-07-30).
 - Do not create plans or scaffolding for later phases until every earlier exit gate passes.

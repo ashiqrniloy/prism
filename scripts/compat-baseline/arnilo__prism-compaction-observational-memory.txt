@@ -1,4 +1,9 @@
+AttachedObservationalMemorySession	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+BoundedMemoryPayload	export type { BoundedMemoryPayload } from "./memory-bounds.js"
 CoverageTier	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+CreateObservationalMemoryOptions	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+DEFAULT_DROPPER_INSTRUCTION	export declare const DEFAULT_DROPPER_INSTRUCTION = "Drop enough observations to approach the target token budget. Call drop_observations."
+DEFAULT_KEEP_RECENT_ENTRIES	export declare const DEFAULT_KEEP_RECENT_ENTRIES = 8
 DEFAULT_MAX_WORKER_ARGUMENT_BYTES	export declare const DEFAULT_MAX_WORKER_ARGUMENT_BYTES: number
 DEFAULT_MAX_WORKER_ERROR_BYTES	export declare const DEFAULT_MAX_WORKER_ERROR_BYTES = 1024
 DEFAULT_MAX_WORKER_MESSAGE_BYTES	export declare const DEFAULT_MAX_WORKER_MESSAGE_BYTES: number
@@ -6,9 +11,16 @@ DEFAULT_MAX_WORKER_RESULT_BYTES	export declare const DEFAULT_MAX_WORKER_RESULT_B
 DEFAULT_MAX_WORKER_TOOL_CALLS	export declare const DEFAULT_MAX_WORKER_TOOL_CALLS = 128
 DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN	export declare const DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN = 32
 DEFAULT_MAX_WORKER_TURNS	export declare const DEFAULT_MAX_WORKER_TURNS = 16
+DEFAULT_OBSERVER_INSTRUCTION	export declare const DEFAULT_OBSERVER_INSTRUCTION = "Find durable source-backed facts from the supplied messages. Call record_observation for each useful fact."
+DEFAULT_RECALL_PAGE_LIMIT	export declare const DEFAULT_RECALL_PAGE_LIMIT = 20
+DEFAULT_REFLECTOR_INSTRUCTION	export declare const DEFAULT_REFLECTOR_INSTRUCTION = "Distill durable reflections from observations. Call record_reflection with supporting observation ids."
 FOLDED_MEMORY	export declare const FOLDED_MEMORY = "om.folded"
 FoldedMemoryDetails	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
 GetMemoryEntries	export type { GetMemoryEntries, RecallMemoryToolOptions } from "./tool.js"
+HARD_MAX_FOLDED_PAYLOAD_BYTES	export declare const HARD_MAX_FOLDED_PAYLOAD_BYTES: number
+HARD_MAX_RECALL_PAGE_LIMIT	export declare const HARD_MAX_RECALL_PAGE_LIMIT = 100
+HARD_MAX_RECENT_MESSAGE_RENDER_BYTES	export declare const HARD_MAX_RECENT_MESSAGE_RENDER_BYTES: number
+HARD_MAX_RENDERED_MEMORY_BYTES	export declare const HARD_MAX_RENDERED_MEMORY_BYTES: number
 HARD_MAX_WORKER_ARGUMENT_BYTES	export declare const HARD_MAX_WORKER_ARGUMENT_BYTES: number
 HARD_MAX_WORKER_ERROR_BYTES	export declare const HARD_MAX_WORKER_ERROR_BYTES: number
 HARD_MAX_WORKER_MESSAGE_BYTES	export declare const HARD_MAX_WORKER_MESSAGE_BYTES: number
@@ -19,33 +31,63 @@ HARD_MAX_WORKER_TURNS	export declare const HARD_MAX_WORKER_TURNS = 64
 MemoryCommandOptions	export type { MemoryCommandOptions } from "./commands.js"
 MemoryId	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
 MemoryObservation	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
-MemoryRecallResult	export type { MemoryRecallResult, RecallKind } from "./recall.js"
+MemoryRecallResult	export type { MemoryRecallResult, RecallBranchPageRequest, RecallBranchPageResult, RecallKind, RecallPageDetail, RecallPageDirection, } from "./recall.js"
 MemoryReflection	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
 MemoryRelevance	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
 MemoryWorkerLimitOptions	export type { MemoryWorkerLimitOptions, ResolvedMemoryWorkerLimits } from "./limits.js"
 OBSERVATIONS_DROPPED	export declare const OBSERVATIONS_DROPPED = "om.observations.dropped"
 OBSERVATIONS_RECORDED	export declare const OBSERVATIONS_RECORDED = "om.observations.recorded"
+ObservationalMemory	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryAppendOptions	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryAttachOptions	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
 ObservationalMemoryCompactionStrategyOptions	export type { ObservationalMemoryCompactionStrategyOptions } from "./strategy.js"
+ObservationalMemoryContextConfig	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryContextOptions	export type { ObservationalMemoryContextOptions, RecentMessageWindowOptions } from "./recent-messages.js"
+ObservationalMemoryContextSettings	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryContextSettingsInput	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryDropperConfig	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryDropperPolicy	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryDropperSettings	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryDropperSettingsInput	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
 ObservationalMemoryExtensionOptions	export type { ObservationalMemoryExtensionOptions } from "./extension.js"
-ObservationalMemoryFlushResult	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemoryFlushOptions	export type { ObservationalMemoryFlushOptions, ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemoryFlushResult	export type { ObservationalMemoryFlushOptions, ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
 ObservationalMemoryLedger	export type { ObservationalMemoryLedger } from "./ledger.js"
+ObservationalMemoryObservationConfig	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryObservationSettings	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryObservationSettingsInput	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
 ObservationalMemoryProjection	export type { ObservationalMemoryProjection } from "./projection.js"
-ObservationalMemoryRuntime	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
-ObservationalMemoryRuntimeOptions	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
-ObservationalMemoryRuntimeStatus	export type { ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeOptions, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
-ObservationalMemorySettings	export type { ObservationalMemorySettings, ObservationalMemorySettingsInput } from "./settings.js"
-ObservationalMemorySettingsInput	export type { ObservationalMemorySettings, ObservationalMemorySettingsInput } from "./settings.js"
+ObservationalMemoryReflectionConfig	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryReflectionSettings	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryReflectionSettingsInput	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryRetrievalConfig	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryRetrievalSettings	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryRetrievalSettingsInput	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryRuntime	export type { ObservationalMemoryFlushOptions, ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemoryRuntimeStatus	export type { ObservationalMemoryFlushOptions, ObservationalMemoryFlushResult, ObservationalMemoryRuntime, ObservationalMemoryRuntimeStatus, } from "./runtime.js"
+ObservationalMemorySettings	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemorySettingsInput	export type { ObservationalMemoryContextSettings, ObservationalMemoryContextSettingsInput, ObservationalMemoryDropperPolicy, ObservationalMemoryDropperSettings, ObservationalMemoryDropperSettingsInput, ObservationalMemoryObservationSettings, ObservationalMemoryObservationSettingsInput, ObservationalMemoryReflectionSettings, ObservationalMemoryReflectionSettingsInput, ObservationalMemoryRetrievalSettings, ObservationalMemoryRetrievalSettingsInput, ObservationalMemorySettings, ObservationalMemoryS
+ObservationalMemoryWorkerConfig	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+ObservationalMemoryWorkerRuntimeConfig	export type { ObservationalMemoryWorkerRuntimeConfig } from "./runtime.js"
 ObservationsDroppedData	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
 ObservationsRecordedData	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
 REFLECTIONS_RECORDED	export declare const REFLECTIONS_RECORDED = "om.reflections.recorded"
-RecallKind	export type { MemoryRecallResult, RecallKind } from "./recall.js"
+RecallBranchPageRequest	export type { MemoryRecallResult, RecallBranchPageRequest, RecallBranchPageResult, RecallKind, RecallPageDetail, RecallPageDirection, } from "./recall.js"
+RecallBranchPageResult	export type { MemoryRecallResult, RecallBranchPageRequest, RecallBranchPageResult, RecallKind, RecallPageDetail, RecallPageDirection, } from "./recall.js"
+RecallKind	export type { MemoryRecallResult, RecallBranchPageRequest, RecallBranchPageResult, RecallKind, RecallPageDetail, RecallPageDirection, } from "./recall.js"
 RecallMemoryToolOptions	export type { GetMemoryEntries, RecallMemoryToolOptions } from "./tool.js"
+RecallPageDetail	export type { MemoryRecallResult, RecallBranchPageRequest, RecallBranchPageResult, RecallKind, RecallPageDetail, RecallPageDirection, } from "./recall.js"
+RecallPageDirection	export type { MemoryRecallResult, RecallBranchPageRequest, RecallBranchPageResult, RecallKind, RecallPageDetail, RecallPageDirection, } from "./recall.js"
+RecentMessageWindowOptions	export type { ObservationalMemoryContextOptions, RecentMessageWindowOptions } from "./recent-messages.js"
 ReflectionsRecordedData	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
+RenderObservationalMemoryOptions	export type { RenderObservationalMemoryOptions } from "./render.js"
 ResolvedMemoryWorkerLimits	export type { MemoryWorkerLimitOptions, ResolvedMemoryWorkerLimits } from "./limits.js"
 RunDropperOptions	export type { RunDropperOptions } from "./workers/dropper.js"
 RunObserverOptions	export type { RunObserverOptions } from "./workers/observer.js"
 RunReflectorOptions	export type { RunReflectorOptions } from "./workers/reflector.js"
 activeObservations	export declare function activeObservations(ledger: ObservationalMemoryLedger): readonly MemoryObservation[]
+boundMemoryPayload	export declare function boundMemoryPayload(observations: readonly MemoryObservation[], reflections: readonly MemoryReflection[], droppedObservationIds: readonly string[], maxObservationTokens: number, maxPayloadBytes: number): BoundedMemoryPayload
+buildObservationalMemoryContextBlocks	export declare function buildObservationalMemoryContextBlocks(entries: readonly SessionEntry[], options?: ObservationalMemoryContextOptions): readonly ContextBlock[]
 buildObservationalMemoryProjection	export declare function buildObservationalMemoryProjection(entries: readonly SessionEntry[], firstKeptEntryId?: string): ObservationalMemoryProjection
 coverageTier	export declare function coverageTier(covered: number, total: number): CoverageTier
 coverageTierValues	export declare const coverageTierValues: readonly ["none", "partial", "full"]
@@ -53,17 +95,22 @@ createFoldedMemoryDetails	export declare function createFoldedMemoryDetails(proj
 createMemoryId	export declare function createMemoryId(...parts: readonly unknown[]): string
 createMemoryStatusCommand	export declare function createMemoryStatusCommand(options: MemoryCommandOptions): CommandDefinition
 createMemoryViewCommand	export declare function createMemoryViewCommand(options: MemoryCommandOptions): CommandDefinition
+createObservationalMemory	export declare function createObservationalMemory(options: CreateObservationalMemoryOptions): ObservationalMemory
 createObservationalMemoryCommands	export declare function createObservationalMemoryCommands(options: MemoryCommandOptions): readonly CommandDefinition[]
 createObservationalMemoryCompactionStrategy	export declare function createObservationalMemoryCompactionStrategy(options?: ObservationalMemoryCompactionStrategyOptions): CompactionStrategy
 createObservationalMemoryExtension	export declare function createObservationalMemoryExtension(options?: ObservationalMemoryExtensionOptions): Extension
 createObservationalMemoryRuntime	export declare function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime
 createRecallMemoryTool	export declare function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDefinition
 defaultObservationalMemorySettings	export declare const defaultObservationalMemorySettings: ObservationalMemorySettings
+dropObservationsToTarget	export declare function dropObservationsToTarget(observations: readonly MemoryObservation[], targetTokens: number): readonly string[]
+eligibleObservationSources	export declare function eligibleObservationSources(unscanned: readonly SessionEntry[]): readonly SessionEntry[]
+eligibleObservationTokenCount	export declare function eligibleObservationTokenCount(sources: readonly SessionEntry[]): number
 estimateEntryTokens	export declare function estimateEntryTokens(entry: SessionEntry): number
 estimateMessageTokens	export declare function estimateMessageTokens(message: Message): number
 estimateTextTokens	export declare function estimateTextTokens(text: string): number
 foldObservationalMemoryLedger	export declare function foldObservationalMemoryLedger(entries: readonly SessionEntry[]): ObservationalMemoryLedger
 foldedMemoryFromEntry	export declare function foldedMemoryFromEntry(entry: SessionEntry): FoldedMemoryDetails | undefined
+isEligibleObservationSourceEntry	export declare function isEligibleObservationSourceEntry(entry: SessionEntry): boolean
 isFoldedMemoryDetails	export declare function isFoldedMemoryDetails(value: unknown): value is FoldedMemoryDetails
 isMemoryId	export declare function isMemoryId(value: unknown): value is MemoryId
 isMemoryObservation	export declare function isMemoryObservation(value: unknown): value is MemoryObservation
@@ -73,16 +120,25 @@ isObservationsRecordedData	export declare function isObservationsRecordedData(va
 isReflectionsRecordedData	export declare function isReflectionsRecordedData(value: unknown): value is ReflectionsRecordedData
 joinWorkerText	export declare function joinWorkerText(parts: Iterable<string>, maxBytes: number, label: string): string
 measureWorkerJson	export declare function measureWorkerJson(value: unknown, maxBytes: number, label: string): number
+observationsUncoveredByReflection	export declare function observationsUncoveredByReflection(entries: readonly SessionEntry[], ledger: ObservationalMemoryLedger, fullRebuild?: boolean): readonly MemoryObservation[]
 packageName	export declare const packageName = "@arnilo/prism-compaction-observational-memory"
 recallObservationalMemory	export declare function recallObservationalMemory(entries: readonly SessionEntry[], id: string, secrets?: readonly (string | undefined)[]): MemoryRecallResult
+recallObservationalMemoryBranchPage	export declare function recallObservationalMemoryBranchPage(entries: readonly SessionEntry[], request: RecallBranchPageRequest, secrets?: readonly (string | undefined)[]): RecallBranchPageResult
 relevanceValues	export declare const relevanceValues: readonly ["low", "medium", "high", "critical"]
-renderObservationalMemory	export declare function renderObservationalMemory(reflections: readonly MemoryReflection[], observations: readonly MemoryObservation[], secrets?: readonly (string | undefined)[]): string
+renderObservationalMemory	export declare function renderObservationalMemory(reflections: readonly MemoryReflection[], observations: readonly MemoryObservation[], secretsOrOptions?: readonly (string | undefined)[] | RenderObservationalMemoryOptions): string
+renderRecentMessageWindow	export declare function renderRecentMessageWindow(entries: readonly SessionEntry[], secrets?: readonly (string | undefined)[]): string
 resolveMemoryWorkerLimits	export declare function resolveMemoryWorkerLimits(input?: MemoryWorkerLimitOptions): ResolvedMemoryWorkerLimits
 resolveObservationalMemorySettings	export declare function resolveObservationalMemorySettings(settings?: SettingsProvider, overrides?: ObservationalMemorySettingsInput): Promise<ObservationalMemorySettings>
+resolveRecallPageLimit	export declare function resolveRecallPageLimit(limit?: number): number
+resumeAgentRun	export { createObservationalMemory, resumeAgentRun, resumeAgentRunStream } from "./compose.js"
+resumeAgentRunStream	export { createObservationalMemory, resumeAgentRun, resumeAgentRunStream } from "./compose.js"
 runDropper	export declare function runDropper(options: RunDropperOptions): Promise<readonly string[]>
 runMemoryWorkerLoop	export declare function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<void>
 runObserver	export declare function runObserver(options: RunObserverOptions): Promise<readonly MemoryObservation[]>
 runReflector	export declare function runReflector(options: RunReflectorOptions): Promise<readonly MemoryReflection[]>
+selectRecentMessageEntries	export declare function selectRecentMessageEntries(entries: readonly SessionEntry[], options?: RecentMessageWindowOptions): readonly SessionEntry[]
+selectRecentMessageEntryIds	export declare function selectRecentMessageEntryIds(entries: readonly SessionEntry[], keepRecentEntries: number): readonly string[]
 serializeSessionEntry	export declare function serializeSessionEntry(entry: SessionEntry, secrets?: readonly (string | undefined)[], maxBytes?: number): string
 serializeSourceEntries	export declare function serializeSourceEntries(entries: readonly SessionEntry[], secrets?: readonly (string | undefined)[], maxBytes?: number): string
 truncateWorkerText	export declare function truncateWorkerText(text: string, maxBytes: number): string
+unscannedEntries	export declare function unscannedEntries(entries: readonly SessionEntry[], latestObservationCoverageId?: string): readonly SessionEntry[]

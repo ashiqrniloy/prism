@@ -1,5 +1,18 @@
 # Migration guide
 
+## 0.0.18 → 0.0.19 observational memory lifecycle (small intentional breaks)
+
+Release **0.0.19** completes Phase 2 observational memory in `@arnilo/prism-compaction-observational-memory` only; core `@arnilo/prism` runtime behavior is unchanged.
+
+1. **Preferred host path: `createObservationalMemory().attach()`.** Post-run observe/reflect/drop and `compactAfterTokens` compaction run automatically after proxied `run`/`prompt`/`stream`/`compact` (and via `wrapResumeRun` / `wrapResumeStream`). Manual `createObservationalMemoryRuntime().flush()` remains on `attached.runtime` for advanced hosts.
+2. **Nested settings replace flat keys.** Use `observation` / `reflection` / `dropper` / `context` / `retrieval` groups from `resolveObservationalMemorySettings()`. Legacy flat keys still map (`observeAfterTokens` → `observation.messageTokens`, `reflectAfterTokens` → `reflection.observationTokens`, `compactAfterTokens` → `context.compactAfterTokens`, `keepRecentEntries` → `context.recentMessages`, flat `workerModel` → all workers when nested models absent). **Throw** if flat and nested values conflict.
+3. **Separate observer/reflector/dropper models.** Pass per-worker `provider` / `model` / `instruction` / `thinkingLevel` under `observation`, `reflection`, and `dropper`. `dropper.policy: "lowest-relevance"` drops without a model; default is `"model"`.
+4. **Reflection recall reads the full ledger.** Supporting observations dropped from the active pool still resolve in `recallObservationalMemory()` with `dropped` / `missingSourceEntryIds` status instead of being invisible.
+5. **Recall tool adds current-branch paging.** `createRecallMemoryTool()` accepts either `{ id }` or `{ cursor, limit?, direction?, detail? }` (default limit 20, hard cap 100). Both `id` and `cursor` together fail closed.
+6. **Coverage and eligibility fixes.** Observer input is eligible `user`/`assistant`/`tool` messages only; bookkeeping/compaction/custom OM entries advance scan coverage without entering the prompt. Empty observer passes still append `coversUpToId`. Compaction `fullFold` actively trims lowest-relevance observations to hard byte caps.
+
+Example: `node examples/observational-memory-lifecycle.ts` (network-free). Live worker canary: `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1` (Task 7 gate).
+
 ## 0.0.17 → 0.0.18 restore integrity (small intentional break)
 
 Release **0.0.18** removes model-facing regex from `repo_search`:

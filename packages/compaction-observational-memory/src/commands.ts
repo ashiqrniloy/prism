@@ -38,14 +38,14 @@ export function createMemoryStatusCommand(options: MemoryCommandOptions): Comman
         tokens: {
           raw: rawTokens,
           activeObservationPool: activeTokens,
-          observationsPoolTarget: settings.observationsPoolTargetTokens,
-          observationsPoolMax: settings.observationsPoolMaxTokens,
+          observationsPoolTarget: settings.context.observationsPoolTargetTokens,
+          observationsPoolMax: settings.context.observationsPoolMaxTokens,
         },
         runtime: status ?? { inFlight: false },
       };
       const text = [
         `Observational memory: ${value.observations.active} active / ${value.observations.recorded} recorded observations (${value.observations.dropped} dropped), ${value.reflections.recorded} reflections.`,
-        `Pool: ${activeTokens}/${settings.observationsPoolTargetTokens} target tokens, max ${settings.observationsPoolMaxTokens}.`,
+        `Pool: ${activeTokens}/${settings.context.observationsPoolTargetTokens} target tokens, max ${settings.context.observationsPoolMaxTokens}.`,
         `Runtime: ${value.runtime.inFlight ? "in flight" : "idle"}${value.runtime.lastError ? `; last error: ${value.runtime.lastError}` : ""}.`,
       ].join("\n");
       return { name: "om:status", value, content: [{ type: "text", text }] };

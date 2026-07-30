@@ -40,7 +40,7 @@ describe("observational memory commands", () => {
   it("status_command_reports_counts_progress_visible_full_and_in_flight_state", async () => {
     const command = createMemoryStatusCommand({
       getEntries: () => entries,
-      settings: { observationsPoolTargetTokens: 10, observationsPoolMaxTokens: 20 },
+      settings: { context: { observationsPoolTargetTokens: 10, observationsPoolMaxTokens: 20 } },
       runtimeStatus: () => ({ inFlight: true, lastError: "none" }),
     });
     const result = await command.execute({}, { sessionId: "s1" });

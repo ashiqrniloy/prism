@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.19] - 2026-07-30
+
+### Added
+- `@arnilo/prism-compaction-observational-memory`: `createObservationalMemory()` + `attach()` lifecycle, four-layer provider context (recent exact messages, observation log, reflections, raw-source retrieval), `recallObservationalMemoryBranchPage()`, `wrapResumeRun` / `wrapResumeStream`, nested settings with legacy flat-key mapping.
+
+### Changed
+- Observational memory: separate observer/reflector/dropper workers, domain-neutral observer default, dual coverage/eligibility fixes, full-ledger reflection recall, hard fold/render byte caps, post-run `compactAfterTokens` compaction when attached.
+
+See [docs/migration.md](docs/migration.md) for the full 0.0.18 → 0.0.19 observational memory notes.
+
 ## [0.0.18] - 2026-07-30
 
 ### Changed

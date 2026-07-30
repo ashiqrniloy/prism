@@ -113,6 +113,14 @@ describe("observational memory compaction strategy", () => {
     assert.doesNotMatch(seen.at(-1) ?? "", /first/);
   });
 
+  it("observational_memory_strategy_full_fold_trims_observations_to_pool_cap", async () => {
+    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1, observationsPoolMaxTokens: 4 });
+    const result = await strategy.compact({ sessionId: "s1", entries: memoryEntries() });
+    const memory = (result.entries?.[0]?.data as any)!.memory;
+    assert.equal(memory.fullFold, true);
+    assert.equal(memory.observations.length < 1 || memory.observations.reduce((s: number, o: any) => s + o.tokenCount, 0) <= 4, true);
+  });
+
   it("observational_memory_strategy_handles_repeated_compactions_and_full_fold", async () => {
     const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1, observationsPoolMaxTokens: 1 });
     const first = await strategy.compact({ sessionId: "s1", entries: memoryEntries() });
@@ -120,7 +128,7 @@ describe("observational memory compaction strategy", () => {
     const second = await strategy.compact({ sessionId: "s1", entries: secondEntries });
     assert.equal((first.entries?.[0]?.data as any)!.memory.fullFold, true);
     assert.equal((second.entries?.[0]?.data as any)!.memory.fullFold, true);
-    assert.equal((second.entries?.[0]?.data as any)!.memory.observations.length, 1);
+    assert.equal((second.entries?.[0]?.data as any)!.memory.observations.length, 0);
   });
 
   it("observational_memory_strategy_redacts_known_secrets_from_summary_and_data", async () => {

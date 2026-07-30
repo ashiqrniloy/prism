@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.19] - 2026-07-30
+
+### Added
+- `createObservationalMemory()` / `attach()` with post-run observe/reflect/drop and `compactAfterTokens` compaction; `wrapResumeRun` / `wrapResumeStream`.
+- Four-layer context: recent exact messages, observation log, reflections, raw-source retrieval (`recallObservationalMemoryBranchPage`, recall tool cursor paging).
+- Nested `observation` / `reflection` / `dropper` / `context` / `retrieval` settings with legacy flat-key mapping.
+
+### Changed
+- Separate observer/reflector/dropper providers/models/instructions; `dropper.policy: "lowest-relevance"` non-model path.
+- Domain-neutral observer default; eligible-only observer input; empty-pass coverage advancement; full-ledger reflection recall with dropped/missing support status.
+- `boundMemoryPayload` enforces hard render/fold byte caps; compaction strategy trims on `fullFold`.
+
+### Breaking (minor, pre-1.0)
+- Flat `ObservationalMemorySettings` keys map to nested groups; conflicting flat+nested values throw.
+
+See [docs/migration.md](../../docs/migration.md) for upgrade notes.
+
 ## [0.0.18] - 2026-07-30
 
 ### Changed

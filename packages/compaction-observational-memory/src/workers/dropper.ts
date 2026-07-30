@@ -3,16 +3,42 @@ import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimit
 import { type MemoryObservation } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
+export const DEFAULT_DROPPER_INSTRUCTION = "Drop enough observations to approach the target token budget. Call drop_observations.";
+
 export interface RunDropperOptions extends MemoryWorkerLimitOptions {
   readonly observations: readonly MemoryObservation[];
   readonly targetTokens: number;
   readonly provider: AIProvider;
   readonly model: ModelConfig;
   readonly maxTurns: number;
+  readonly instruction?: string;
   readonly providerOptions?: ProviderRequestOptions;
   readonly thinkingLevel?: string;
   readonly secrets?: readonly (string | undefined)[];
   readonly signal?: AbortSignal;
+}
+
+const relevanceRank: Record<MemoryObservation["relevance"], number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+};
+
+export function dropObservationsToTarget(observations: readonly MemoryObservation[], targetTokens: number): readonly string[] {
+  const active = [...observations];
+  let total = active.reduce((sum, item) => sum + item.tokenCount, 0);
+  if (total <= targetTokens) return [];
+  const sorted = [...active].sort(
+    (left, right) => relevanceRank[left.relevance] - relevanceRank[right.relevance] || left.tokenCount - right.tokenCount,
+  );
+  const dropped: string[] = [];
+  for (const item of sorted) {
+    if (total <= targetTokens) break;
+    dropped.push(item.id);
+    total -= item.tokenCount;
+  }
+  return dropped;
 }
 
 export async function runDropper(options: RunDropperOptions): Promise<readonly string[]> {
@@ -35,9 +61,12 @@ export async function runDropper(options: RunDropperOptions): Promise<readonly s
   };
   const limits = resolveMemoryWorkerLimits(options);
   const prompt = joinWorkerText(observationLines(active), limits.maxMessageBytes, "Observational memory drop prompt");
+  const system = options.instruction
+    ? `${DEFAULT_DROPPER_INSTRUCTION}\n\nTarget tokens: ${options.targetTokens}.\n\n${options.instruction}`
+    : `${DEFAULT_DROPPER_INSTRUCTION}\n\nTarget tokens: ${options.targetTokens}.`;
   await runMemoryWorkerLoop({
     ...options,
-    system: `Drop enough observations to approach ${options.targetTokens} tokens. Call drop_observations.`,
+    system,
     prompt,
     tools: [tool],
   });

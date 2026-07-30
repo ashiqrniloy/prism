@@ -8,6 +8,21 @@ Current status: ledger/projection/render/recall utilities, explicit worker runti
 
 This package is distinct from `@arnilo/prism-memory` working/semantic memory: observational memory compresses and recalls source-backed observations/reflections; semantic memory retrieves embeddings; working memory stores the current structured profile/state. Hosts may compose both.
 
+## Four-layer provider context
+
+Observational memory composes four independent layers for long sessions (Mastra-style):
+
+| Layer | What it holds | How it is produced |
+| --- | --- | --- |
+| **Recent exact messages** | Last `context.recentMessages` user/assistant/tool entries in branch order (optional `recentMessageMaxTokens` trim, oldest first) | `buildObservationalMemoryContextBlocks()` → `recent-messages` ContextBlock; aligned with compaction `keepRecentEntries` |
+| **Observation log** | Source-backed facts with 12-hex ids and `sourceEntryIds` | Observer worker on eligible unscanned `message` entries after `observation.messageTokens`; coverage advances even on empty passes |
+| **Reflections** | Higher-level summaries over observation ids | Reflector worker on observations after last reflection coverage when `reflection.observationTokens` met |
+| **Raw-source retrieval** | Exact branch messages behind a memory id or cursor page | `recallObservationalMemory()` / `recallObservationalMemoryBranchPage()` / `createRecallMemoryTool()` — exact-id or cursor paging only; no semantic search |
+
+Activation is explicit: `createObservationalMemory().attach()` coordinates post-run observe/reflect/drop and `context.compactAfterTokens` compaction. Import and extension `setup` start nothing. Recall, commands, and utilities fail closed on invalid ids, wrong `sessionId`, ambiguous tool input, or oversized pages. Pass `secrets` for exact-value redaction in render/recall/worker paths. Branch isolation: hosts supply current-branch `appendEntry` and `getEntries`; mismatched store/session pairs fail closed after append.
+
+See `examples/observational-memory-lifecycle.ts` for attach → turn → projection/recall/page without live credentials.
+
 ## When to use it
 
 Use it when a host wants to opt in to long-session memory that records observations/reflections as session custom entries, renders prepared memory during compaction, and supports exact-id recall.
@@ -20,7 +35,7 @@ Memory records use `SessionEntry.kind: "custom"` with `entry.data.type` markers:
 
 | Type | Payload |
 | --- | --- |
-| `om.observations.recorded` | `{ observations, coversUpToId? }` |
+| `om.observations.recorded` | `{ observations, coversUpToId? }` — successful observer runs append coverage even when `observations` is empty. |
 | `om.reflections.recorded` | `{ reflections, coversUpToId? }` |
 | `om.observations.dropped` | `{ observationIds, coversUpToId? }` |
 | `om.folded` | Compaction `data.memory` folded details. |
@@ -38,6 +53,10 @@ Worker limits are finite positive safe integers:
 | `maxWorkerResultBytes` | 64 KiB | 1 MiB | Full tool result and replayed value/error payload |
 | `maxWorkerMessageBytes` | 1 MiB | 8 MiB | System/prompt plus assistant-call/tool-result transcript |
 | `maxWorkerErrorBytes` | 1 KiB | 8 KiB | Provider/tool/runtime error text after exact known-secret redaction |
+| Rendered memory projection | — | 256 KiB | `renderObservationalMemory()` / context block text |
+| Folded compaction payload | — | 512 KiB | `data.memory` JSON; strategy trims lowest-relevance observations before failing |
+| Recent-message window | — | 512 KiB | `renderRecentMessageWindow()` hard cap |
+| Recall page size | 20 | 100 | `retrieval.pageLimit` / recall tool `limit` |
 
 Direct `runObserver()` / `runReflector()` / `runDropper()` calls retain required `maxTurns` and accept the corresponding shorter worker fields (`maxToolCalls`, `maxResultBytes`, etc.). Named default/hard constants and `resolveMemoryWorkerLimits()` are exported.
 
@@ -48,20 +67,26 @@ Key exports:
 | Export | Purpose |
 | --- | --- |
 | `foldObservationalMemoryLedger()` | Fold custom memory entries into observations, reflections, drops, and coverage markers. |
+| `isEligibleObservationSourceEntry()` / `eligibleObservationSources()` | Select user/assistant/tool `message` entries for observer input. |
+| `unscannedEntries()` / `observationsUncoveredByReflection()` | Dual coverage helpers for observation scan and reflection windows. |
 | `buildObservationalMemoryProjection()` | Build active/full/folded projections from current branch entries. |
+| `buildObservationalMemoryContextBlocks()` | Render observational-memory + recent-messages context blocks for provider input. |
+| `selectRecentMessageEntries()` / `renderRecentMessageWindow()` | Bounded exact recent-message suffix; count via `keepRecentEntries`, optional token trim via `estimateEntryTokens`. |
 | `createFoldedMemoryDetails()` | Create JSON details for compaction `data.memory`. |
 | `renderObservationalMemory()` | Render reflections and observations into a prepared memory summary. |
 | `recallObservationalMemory()` | Recover source evidence for a known observation/reflection id from supplied current-branch entries. |
+| `recallObservationalMemoryBranchPage()` | Page eligible user/assistant/tool messages around a cursor entry id (`forward`/`backward`, optional `detail: summary|full`). |
 | `createMemoryId()` / `isMemoryId()` | Create/check 12-character ids. |
 | `resolveObservationalMemorySettings()` | Merge `observational-memory` settings with defaults and overrides. |
-| `createObservationalMemoryRuntime()` | Explicitly run observer/reflector/dropper workers for a supplied session, owned append callback, and provider. |
+| `createObservationalMemory()` / `attach()` | One activation wires post-run observe/reflect/drop and `compactAfterTokens` compaction; returns proxied session, runtime, context provider, and strategy. |
+| `createObservationalMemoryRuntime()` | Low-level explicit flush for advanced hosts or tests. |
 | `createObservationalMemoryCompactionStrategy()` | Render existing folded memory as a standard Prism compaction summary with `data.memory`. |
 | `createObservationalMemoryExtension()` | Inert extension helper that registers the strategy contribution unless disabled. |
-| `createRecallMemoryTool()` | Optional exact-id `recall` tool factory backed by host-supplied current-branch entries. |
+| `createRecallMemoryTool()` | Optional `recall` tool factory: exact id lookup or current-branch message paging via host-supplied entries. |
 | `createMemoryStatusCommand()` / `createMemoryViewCommand()` | Optional `om:status` and `om:view` command factories. |
 | `createObservationalMemoryCommands()` | Convenience factory returning status and view commands. |
 
-Pure utilities create no events, workers, tools, commands, credentials, or provider requests. `createObservationalMemoryRuntime()` runs workers only when the host explicitly constructs it and calls `flush()`. The compaction strategy is O(n) over supplied entries and makes no provider call. Tool and command factories are inert until a host registers/selects them.
+Pure utilities create no events, workers, tools, commands, credentials, or provider requests. `createObservationalMemoryExtension()` and import alone start nothing. `createObservationalMemory().attach()` runs workers only after proxied `run`/`prompt`/`stream`/`compact` complete (or after `wrapResumeRun` / `wrapResumeStream`). `createObservationalMemoryRuntime().flush()` remains for manual/advanced use. Attached `contextProvider` renders two blocks each turn: `observational-memory` (active reflections/observations aligned to the recent-message boundary) and `recent-messages` (last `keepRecentEntries` message entries in branch order, optionally trimmed by `recentMessageMaxTokens` using `estimateEntryTokens`; oldest dropped first). Compaction uses the same `keepRecentEntries` setting. Observer input includes only eligible `message` entries (`user`, `assistant`, `tool`); memory/compaction/bookkeeping entries advance `coversUpToId` scan coverage without entering the observer prompt. Successful observer/reflector runs append coverage markers even when they record zero facts. Reflection uses only active observations recorded after the last `om.reflections.recorded` entry unless `flush({ fullReflectionRebuild: true })`. Attached `flush()` skips with `run_active` while a proxied run is in flight. The compaction strategy is O(n) over supplied entries and makes no provider call. Tool and command factories are inert until a host registers/selects them.
 
 ## Request/response example
 
@@ -74,6 +99,7 @@ Pure utilities create no events, workers, tools, commands, credentials, or provi
 ```ts
 import {
   buildObservationalMemoryProjection,
+  createObservationalMemory,
   createObservationalMemoryCompactionStrategy,
   createObservationalMemoryExtension,
   createObservationalMemoryCommands,
@@ -82,6 +108,18 @@ import {
   recallObservationalMemory,
   renderObservationalMemory,
 } from "@arnilo/prism-compaction-observational-memory";
+
+const om = createObservationalMemory({
+  observation: { provider: observerProvider, model: observerModel, messageTokens: 10_000 },
+  reflection: { provider: reflectorProvider, model: reflectorModel, observationTokens: 20_000 },
+  context: { compactAfterTokens: 81_000, recentMessages: 8 },
+  retrieval: { pageLimit: 20 },
+});
+const attached = om.attach(session, {
+  appendEntry: (entry, options) => store.append(entry, options),
+  sessionModel: agent.config.model,
+});
+await attached.session.run("Continue from prior work");
 
 const entries = await session.entries();
 const projection = buildObservationalMemoryProjection(entries);
@@ -111,13 +149,19 @@ await kernel.load([createObservationalMemoryExtension({ recallTool: { getEntries
 
 ## Extension and configuration notes
 
-Settings are read from the `observational-memory` key only when a host calls `resolveObservationalMemorySettings()` or `runtime.flush()`. Defaults are `observeAfterTokens: 10000`, `reflectAfterTokens: 20000`, `compactAfterTokens: 81000`, `observationsPoolMaxTokens: 20000`, `observationsPoolTargetTokens: 10000`, `agentMaxTurns: 16`, `passive: false`, and `debugLog: false`. `agentMaxTurns` now rejects non-integer/non-finite/out-of-range input (hard 64) instead of flooring/falling back. Runtime `maxWorkerTurns` takes precedence.
+Settings resolve to nested `observation` / `reflection` / `dropper` / `context` / `retrieval` groups via `resolveObservationalMemorySettings()`. Defaults: `observation.messageTokens: 10000`, `reflection.observationTokens: 20000`, `context.compactAfterTokens: 81000`, `context.recentMessages: 8`, `context.observationsPoolMaxTokens: 20000`, `dropper.targetTokens: 10000` (from `context.observationsPoolTargetTokens`), `retrieval.pageLimit: 20`, `agentMaxTurns: 16`, `passive: false`, `debugLog: false`. Optional `context.recentMessageMaxTokens` trims the recent-message context window (oldest first) after the count limit.
 
-The runtime requires host-supplied `session`, an `appendEntry` callback bound to that session's owning store/branch, and `workerProvider`. Model selection uses [use-case model selection](use-case-model-selection.md): pass optional `workerModel` (or settings `workerModel`) to override, and `sessionModel: agent.config.model` so workers fall back to the session model when no worker model is configured. `requireExplicitModel: true` restores the historical `missing_model` skip when no explicit worker model is set. It no longer accepts a separate `store` option because mismatched session/store pairs can append memory entries outside the active branch. After each memory append, the runtime checks the appended entry is visible at the session leaf and fails closed/restores the previous checkout if the callback points elsewhere. Optional credential resolution is explicit; missing requested credentials skip worker execution. Default credential requests use the **resolved** model's provider id.
+Legacy flat keys still map for pre-1.0 hosts (`observeAfterTokens` → `observation.messageTokens`, `reflectAfterTokens` → `reflection.observationTokens`, `compactAfterTokens` → `context.compactAfterTokens`, `keepRecentEntries` → `context.recentMessages`, flat `workerModel` → all workers when nested models absent). Conflicting flat+nested values throw.
 
-`createObservationalMemoryCompactionStrategy()` keeps recent message entries like the default compaction strategy, renders existing observations/reflections as the summary, and returns a standard Prism compaction entry. Its `data` includes `throughEntryId`, `keepEntryIds`, `strategy`, `trigger`, and `memory: { type: "om.folded", version: 1, fullFold, observations, reflections, droppedObservationIds }`. When active observations exceed `observationsPoolMaxTokens`, it performs a full fold into `data.memory`.
+Observer/reflector/dropper may use separate providers, models, instructions, thinking levels, credentials, and `requireExplicitModel`. `dropper.policy: "lowest-relevance"` drops deterministically without a model call; default is `"model"`. Top-level `workerProvider` / `workerModel` remain as deprecated aliases.
 
-`createRecallMemoryTool()` requires `args.id` to match `^[a-f0-9]{12}$`; invalid ids fail before entry lookup. Recall returns text and structured details for observations/reflections, dropped observations, supporting observations, source entries, and missing source ids. It does not search by topic.
+Token counting uses `estimateEntryTokens()` / `estimateMessageTokens()`.
+
+The runtime requires host-supplied `session`, an `appendEntry` callback bound to that session's owning store/branch, and at least one worker provider (`observation.provider` or legacy `workerProvider`). Model selection uses [use-case model selection](use-case-model-selection.md): pass per-worker `model` (or settings `observation.model` / `reflection.model` / `dropper.model`) to override, and `sessionModel: agent.config.model` so workers fall back to the session model when no worker model is configured. `requireExplicitModel: true` restores the historical `missing_model` skip when no explicit worker model is set. It no longer accepts a separate `store` option because mismatched session/store pairs can append memory entries outside the active branch. After each memory append, the runtime checks the appended entry is visible at the session leaf and fails closed/restores the previous checkout if the callback points elsewhere. Optional credential resolution is explicit; missing requested credentials skip worker execution. Default credential requests use the **resolved** model's provider id.
+
+`createObservationalMemoryCompactionStrategy()` keeps recent message entries like the default compaction strategy, renders existing observations/reflections as the summary, and returns a standard Prism compaction entry. Its `data` includes `throughEntryId`, `keepEntryIds`, `strategy`, `trigger`, and `memory: { type: "om.folded", version: 1, fullFold, observations, reflections, droppedObservationIds }`. When active observations exceed `context.observationsPoolMaxTokens`, it performs a full fold and synchronously trims lowest-relevance observations until the folded payload fits hard byte/token caps (or throws a typed error).
+
+`createRecallMemoryTool()` accepts either `{ id }` for exact memory recall or `{ cursor, limit?, direction?, detail? }` for current-branch raw-message paging (default limit 20, hard cap 100). Reflection recall resolves supporting observations from the full ledger and reports `droppedSupportingObservationIds` / `missingSupportingObservationIds`; dropped supports still return available raw sources. Invalid ids, ambiguous requests, wrong `sessionId`, missing cursors, non-message cursors, and oversized pages fail closed. It does not search by topic.
 
 `createMemoryStatusCommand()` reports recorded/dropped/active/visible observations, recorded/visible reflections, pool token counts, and optional runtime in-flight/last-error state. `createMemoryViewCommand()` renders visible memory by default or full active recorded memory with `{ mode: "full" }`; other modes return `Usage: /om:view [full]`.
 

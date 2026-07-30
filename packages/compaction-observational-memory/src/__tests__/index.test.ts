@@ -14,8 +14,11 @@ describe("observational memory package skeleton", () => {
     assert.deepEqual(pkg.exports["."], { types: "./dist/index.d.ts", default: "./dist/index.js" });
     assert.deepEqual(pkg.files, ["dist", "!dist/__tests__", "!dist/**/*.map", "README.md", "CHANGELOG.md"]);
     assert.deepEqual(pkg.dependencies ?? {}, {});
-    assert.deepEqual(pkg.devDependencies ?? {}, { "@arnilo/prism": "file:../.." });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.18");
+    assert.deepEqual(pkg.devDependencies ?? {}, {
+      "@arnilo/prism": "file:../..",
+      "@arnilo/prism-provider-openai": "file:../provider-openai",
+    });
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.0.19");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });
