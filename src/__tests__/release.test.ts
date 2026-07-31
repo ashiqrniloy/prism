@@ -31,8 +31,8 @@ function fixture() {
 
 const missing = async () => new Response("not found", { status: 404 });
 
-test("0.0.20 release graph is exact, publishable, and documented", () => {
-  const version = "0.0.20";
+test("0.0.21 release graph is exact, publishable, and documented", () => {
+  const version = "0.0.21";
   const release = loadRelease(process.cwd());
   assert.equal(release.packages.length, 44);
   assert.doesNotThrow(() => validateRelease(release, version));
@@ -41,7 +41,7 @@ test("0.0.20 release graph is exact, publishable, and documented", () => {
     assert.ok(changelog.includes(`## [${version}] - 2026-07-31`), `${pkg.manifest.name} missing ${version} changelog`);
   }
   const docs = readFileSync(join(process.cwd(), "docs/release-and-install.md"), "utf8");
-  assert.ok(docs.includes("### 0.0.20 publish handoff"));
+  assert.ok(docs.includes("### 0.0.21 publish handoff"));
   assert.ok(docs.includes("44 publishable manifests"));
 });
 

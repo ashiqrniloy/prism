@@ -1,8 +1,8 @@
 # Prism Enterprise and Coding Harness Completion Roadmap
 
 Updated: 2026-07-31
-Baseline: `@arnilo/prism` **0.0.20** (Phase 3 exit gate passed)
-Status: Phase 3 complete; Phase 4+ pending exit gates
+Baseline: `@arnilo/prism` **0.0.21** (Phase 4 exit gate passed)
+Status: Phase 4 complete; Phase 5+ pending exit gates
 
 ## Objectives
 
@@ -398,8 +398,9 @@ Status: Phase 3 complete; Phase 4+ pending exit gates
   - Exit Gate:
     - Core skill/context/budget tests, migration note, packed progressive-disclosure example, `npm run sdk:ready`, docs links, and full release gate pass.
 
-- [ ] Phase 4 — Release 0.0.21: coding-tool capability gaps for least-error agent operation
-  - **Prerequisite:** Phase 3 exit gate passed (2026-07-31); create `plans/004-…` before implementation — do not scaffold until Phase 3 release is tagged/published if shipping versioned artifacts.
+- [x] Phase 4 — Release 0.0.21: coding-tool capability gaps for least-error agent operation
+  - **Completion evidence (2026-07-31):** `plans/004-Release-0-0-21-Coding-Tool-Capability-Gaps.md` Tasks 0–7 done. Coding-agent 239 tests; coding-security approval/sandbox wired; `examples/coding-tools-capability-gaps.ts`; docs tripwire Phase 4; migration `0.0.20 → 0.0.21`; workspace **0.0.21** / 44 manifests; `npm run sdk:ready` green. Shipped: `repo_search` `outputMode`, bounded `glob`, optional `requireReadBeforeWrite`/`ReadPathSet`, bounded `delete`/`move`, aggregator 9/4, fuzzy-edit loud docs. Non-goals: PDF/trash/PTY/LSP/recursive delete/brace glob.
+  - **Prerequisite:** Phase 3 exit gate passed (2026-07-31).
   - Objectives:
     - Add bounded native tools that reduce shell/`find`/`rm`/`mv` round-trips and blind overwrites.
     - Keep each addition optional, ExecutionPolicy-gated, and within existing coding-agent bounds.
@@ -1102,6 +1103,7 @@ Every numbered release must satisfy:
 
 ## Compromises Made
 
+- **Phase 4 (0.0.21):** no PDF/trash/PTY/LSP; delete is non-recursive (empty dirs only); glob has no brace expansion; read-before-write is opt-in and not checkpoint-persisted; fuzzy edit may succeed silently on normalized match (documented tradeoff).
 - **Phase 3 (0.0.20):** loaded-skill bodies are session-scoped in-memory only — checkpoint resume does not restore loaded bodies unless host reloads; `toolResultFold` off by default; breaking registry empty-default + progressive catalog default require `activateAllSkills` / `skillsDisclosure: "eager"` migration for prior activate-all hosts; root tarball budget baselines bumped ~6% for Phase 3 modules.
 
 ## Further Actions
@@ -1109,8 +1111,9 @@ Every numbered release must satisfy:
 - Execute `plans/001-Release-0-0-18-Restore-Integrity.md` (Phase 1) — **complete** (exit gate 2026-07-30).
 - Execute `plans/002-Release-0-0-19-Observational-Memory.md` (Phase 2) — **complete** (exit gate 2026-07-30).
 - Execute `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md` (Phase 3) — **complete** (exit gate 2026-07-31).
-- **Phase 4 next:** create and execute numbered plan for coding-tool capability gaps (`repo_search` output modes, glob, read-before-write, delete/move) — prerequisite Phase 3 gate passed; defer implementation scaffolding until Phase 3 release is tagged if shipping versioned artifacts.
+- Execute `plans/004-Release-0-0-21-Coding-Tool-Capability-Gaps.md` (Phase 4) — **complete** (exit gate 2026-07-31).
+- **Phase 5 next:** execute Phase 5 Caveman/Ponytail third-party integrations when ready — consume Phase 3 progressive-disclosure contracts.
 - **Phase 5 follow-on:** `@arnilo/prism-caveman` / `@arnilo/prism-ponytail` must wire upstream packages through Phase 3 contracts (`skillsDisclosure`, `createLoadSkillTool`, `LoadedSkillSet`, `activateAllSkills`) — catalog + `load_skill` / injector slices; no full upstream `SKILL.md` every turn.
 - **Future 0.0.x:** evaluate checkpoint persistence for loaded-skill names when hosts need durable resume without model reload.
-- **Release handoff:** tag and publish `@arnilo/prism@0.0.20` when ready — `docs/release-and-install.md` publish checklist.
+- **Release handoff:** tag and publish `@arnilo/prism@0.0.21` when ready — `docs/release-and-install.md` publish checklist.
 - Do not create plans or scaffolding for later phases until every earlier exit gate passes.

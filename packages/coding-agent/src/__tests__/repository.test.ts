@@ -149,6 +149,9 @@ test("repo_list honors abort and execution policy", async () => {
         search: async () => {
           throw new Error("should not run");
         },
+        glob: async () => {
+          throw new Error("should not run");
+        },
       },
     }).execute({}, ctx());
     assert.equal(denied.error?.message, "no list");
@@ -193,6 +196,92 @@ test("repo_search rejects regex mode and evil patterns stay bounded as literal",
     assert.ok(Date.now() - start < 5_000, "literal evil pattern must not block the event loop");
     assert.equal(lit.error, undefined);
     assert.equal(lit.metadata?.matchCount, 0);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("repo_search outputMode files_with_matches returns unique paths without line bodies", async () => {
+  const cwd = await tmp();
+  try {
+    await seedTree(cwd);
+    await writeFile(join(cwd, "src", "multi.ts"), "alpha\ncreateAgent here\nbeta\ncreateAgent again\n");
+    const tool = createRepoSearchTool(cwd);
+
+    const r = await tool.execute({ query: "createAgent", outputMode: "files_with_matches" }, ctx());
+    assert.equal(r.error, undefined);
+    assert.equal(r.metadata?.outputMode, "files_with_matches");
+    assert.equal(r.metadata?.fileCount, 2);
+    assert.equal(r.metadata?.matches, undefined);
+    const text = textOf(r);
+    assert.equal(text, "src/index.ts\nsrc/multi.ts");
+    assert.doesNotMatch(text, /:\d+:\d+:/);
+    assert.doesNotMatch(text, /binary\.bin/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("repo_search outputMode count returns totals without line bodies", async () => {
+  const cwd = await tmp();
+  try {
+    await seedTree(cwd);
+    await writeFile(join(cwd, "src", "multi.ts"), "createAgent\nline\ncreateAgent\n");
+    const tool = createRepoSearchTool(cwd);
+
+    const r = await tool.execute({ query: "createAgent", outputMode: "count" }, ctx());
+    assert.equal(r.error, undefined);
+    assert.equal(r.metadata?.outputMode, "count");
+    assert.equal(r.metadata?.fileCount, 2);
+    assert.equal(r.metadata?.matchCount, 4);
+    assert.equal(r.metadata?.matches, undefined);
+    assert.equal(textOf(r), "4 matches in 2 files");
+    assert.doesNotMatch(textOf(r), /src\/index\.ts:/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("repo_search outputMode count empty and invalid values fail closed", async () => {
+  const cwd = await tmp();
+  try {
+    await seedTree(cwd);
+    const tool = createRepoSearchTool(cwd);
+
+    const empty = await tool.execute({ query: "zzz-not-found", outputMode: "count" }, ctx());
+    assert.equal(empty.error, undefined);
+    assert.equal(textOf(empty), "0 matches in 0 files");
+
+    const bad = await tool.execute({ query: "x", outputMode: "paths_only" }, ctx());
+    assert.match(bad.error?.message ?? "", /unsupported outputMode/);
+
+    const content = await tool.execute({ query: "createAgent", outputMode: "content" }, ctx());
+    assert.match(textOf(content), /src\/index\.ts:\d+:\d+:/);
+    assert.ok(Array.isArray(content.metadata?.matches));
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("repo_search outputMode preserves truncation semantics across modes", async () => {
+  const cwd = await tmp();
+  try {
+    await mkdir(join(cwd, "src"), { recursive: true });
+    await writeFile(join(cwd, "src", "a.ts"), "hit\nhit\nhit\n");
+    const tool = createRepoSearchTool(cwd, { maxMatches: 2 });
+
+    const content = await tool.execute({ query: "hit", maxMatches: 2, outputMode: "content" }, ctx());
+    assert.equal(content.metadata?.truncated, true);
+    assert.equal(content.metadata?.matchCount, 2);
+
+    const files = await tool.execute({ query: "hit", maxMatches: 2, outputMode: "files_with_matches" }, ctx());
+    assert.equal(files.metadata?.truncated, true);
+    assert.match(textOf(files), /\[truncated by matches\]/);
+    assert.doesNotMatch(textOf(files), /:\d+:\d+:/);
+
+    const count = await tool.execute({ query: "hit", maxMatches: 2, outputMode: "count" }, ctx());
+    assert.equal(count.metadata?.truncated, true);
+    assert.match(textOf(count), /^2 matches in 1 file\n\[truncated by matches\]$/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -247,6 +336,9 @@ test("repo_search aborts and respects custom RepositoryOperations", async () => 
             filesSkippedOversize: 0,
           };
         },
+        glob: async () => {
+          throw new Error("unused");
+        },
       },
     }).execute({ query: "x" }, ctx());
     assert.equal(called, true);
@@ -269,18 +361,18 @@ test("local repository operations stream without materializing full trees", asyn
   }
 });
 
-test("aggregators include list/search; read-only excludes mutating tools", async () => {
+test("aggregators include list/search/glob; read-only excludes mutating tools", async () => {
   const cwd = await tmp();
   try {
     const full = createCodingTools(cwd);
     assert.deepEqual(
       full.map((t) => t.name),
-      ["shell", "read", "write", "edit", "repo_list", "repo_search"],
+      ["shell", "read", "write", "edit", "repo_list", "repo_search", "glob", "delete", "move"],
     );
     const ro = createReadOnlyTools(cwd);
     assert.deepEqual(
       ro.map((t) => t.name),
-      ["read", "repo_list", "repo_search"],
+      ["read", "repo_list", "repo_search", "glob"],
     );
     assert.ok(!ro.some((t) => t.name === "shell" || t.name === "write" || t.name === "edit"));
 

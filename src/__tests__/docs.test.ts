@@ -3130,6 +3130,10 @@ describe("docs", () => {
     assert.ok(migration.includes("0.0.19 → 0.0.20 skills and context progressive disclosure"), "migration missing 0.0.20 section");
     assert.ok(migration.includes("activateAllSkills: true"), "migration missing activateAllSkills migration");
     assert.ok(existsSync("examples/skills-progressive-disclosure.ts"), "missing skills-progressive-disclosure example");
+    assert.ok(
+      migration.includes("0.0.20 → 0.0.21 coding-tool capability gaps"),
+      "migration missing 0.0.21 coding-tool capability gaps section",
+    );
   });
 
   it("phase2_observational_memory_docs_cover_four_layers_migration_and_lifecycle_example", () => {
@@ -3151,5 +3155,49 @@ describe("docs", () => {
     assert.ok(migration.includes("0.0.18 → 0.0.19 observational memory lifecycle"), "migration missing 0.0.19 OM section");
     assert.ok(migration.includes("createObservationalMemory().attach()"), "migration missing attach migration");
     assert.ok(existsSync("examples/observational-memory-lifecycle.ts"), "missing lifecycle example");
+  });
+
+  it("phase 4 coding-tool capability gaps docs cover outputMode glob delete move RBW fuzzy non-goals", () => {
+    const tools = readFileSync("docs/coding-agent-tools.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const readme = readFileSync("packages/coding-agent/README.md", "utf8");
+    for (const [name, text, tokens] of [
+      [
+        "coding-agent-tools.md",
+        tools,
+        [
+          "outputMode",
+          "files_with_matches",
+          "createGlobTool",
+          "createDeleteTool",
+          "createMoveTool",
+          "requireReadBeforeWrite",
+          "Fuzzy silent-success tradeoff",
+          "No PDF / document reader",
+          "No trash / recycle daemon",
+          "No PTY / interactive process control",
+          "No LSP / language-server tools",
+          "nine default coding tools",
+          "coding-tools-capability-gaps.ts",
+        ],
+      ],
+      ["index.md", index, ["glob", "delete", "move", "outputMode", "No PDF/trash/PTY/LSP"]],
+      [
+        "coding-agent README",
+        readme,
+        ["createGlobTool", "createDeleteTool", "createMoveTool", "outputMode", "fuzzy may succeed silently", "No PDF reader"],
+      ],
+    ] as const) {
+      for (const token of tokens) {
+        assert.ok(text.includes(token), `${name} missing ${token}`);
+      }
+    }
+    assert.ok(existsSync("examples/coding-tools-capability-gaps.ts"), "missing coding-tools-capability-gaps example");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    assert.ok(
+      migration.includes("0.0.20 → 0.0.21 coding-tool capability gaps"),
+      "migration missing 0.0.21 coding-tool capability gaps section",
+    );
+    assert.ok(migration.includes("createCodingTools") && migration.includes("9"), "migration missing aggregator length note");
   });
 });

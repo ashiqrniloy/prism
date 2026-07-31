@@ -4,7 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { ToolExecutionContext } from "@arnilo/prism";
-import type { EditOperations, ReadOperations, RepositoryOperations, WriteOperations } from "@arnilo/prism-coding-agent";
+import type {
+  DeleteOperations,
+  EditOperations,
+  MoveOperations,
+  ReadOperations,
+  RepositoryOperations,
+  WriteOperations,
+} from "@arnilo/prism-coding-agent";
 import {
   createSandboxBashOperations,
   createSandboxCodingComposition,
@@ -58,6 +65,8 @@ function stubTreeOps(): {
   read: ReadOperations;
   write: WriteOperations;
   edit: EditOperations;
+  delete: DeleteOperations;
+  move: MoveOperations;
   repository: RepositoryOperations;
 } {
   const boom = async () => {
@@ -80,9 +89,22 @@ function stubTreeOps(): {
       access: boom,
       statFile: boom as EditOperations["statFile"],
     },
+    delete: {
+      lstat: boom as DeleteOperations["lstat"],
+      unlink: boom,
+      rmdir: boom,
+      readdir: boom as DeleteOperations["readdir"],
+    },
+    move: {
+      lstat: boom as MoveOperations["lstat"],
+      rename: boom,
+      unlink: boom,
+      access: boom,
+    },
     repository: {
       list: boom as RepositoryOperations["list"],
       search: boom as RepositoryOperations["search"],
+      glob: boom as RepositoryOperations["glob"],
     },
   };
 }
@@ -110,7 +132,7 @@ test("host mode uses local FS and does not claim containment", async () => {
     assert.equal(composition.workspaceRoot, cwd);
     assert.deepEqual(
       tools.map((t) => t.name),
-      ["shell", "read", "write", "edit", "repo_list", "repo_search"],
+      ["shell", "read", "write", "edit", "repo_list", "repo_search", "glob", "delete", "move"],
     );
     const read = tools.find((t) => t.name === "read")!;
     const result = await read.execute({ path: "note.txt" }, ctx());
@@ -244,12 +266,30 @@ test("sandbox mode with custom tree operations claims containment", () => {
     read: { operations: ops.read },
     write: { operations: ops.write },
     edit: { operations: ops.edit },
+    delete: { operations: ops.delete },
+    move: { operations: ops.move },
     repository: { operations: ops.repository },
   });
   assert.equal(composition.workspaceMode, "sandbox");
   assert.equal(composition.containmentClaim, true);
   assert.equal(composition.warnings.length, 0);
   assert.equal(composition.workspaceRoot, "/workspace");
+});
+
+test("sandbox mode custom ops without delete/move fall through (not claimed custom)", () => {
+  const ops = stubTreeOps();
+  assert.throws(
+    () =>
+      createSandboxCodingTools("/tmp", {
+        workspaceMode: "sandbox",
+        sandbox: fakeSandbox(),
+        read: { operations: ops.read },
+        write: { operations: ops.write },
+        edit: { operations: ops.edit },
+        repository: { operations: ops.repository },
+      }),
+    SandboxCodingCompositionError,
+  );
 });
 
 test("createSandboxReadOnlyTools host mode excludes mutating tools", async () => {
@@ -262,7 +302,7 @@ test("createSandboxReadOnlyTools host mode excludes mutating tools", async () =>
     assert.equal(composition.containmentClaim, false);
     assert.deepEqual(
       tools.map((t) => t.name),
-      ["read", "repo_list", "repo_search"],
+      ["read", "repo_list", "repo_search", "glob"],
     );
     const search = tools.find((t) => t.name === "repo_search")!;
     const result = await search.execute({ query: "marker" }, ctx());

@@ -38,6 +38,7 @@ import {
   validateCodingLimit,
   validateCodingLimitAllowZero,
 } from "./limits.js";
+import { matchGlobPattern, validateGlobPattern } from "./glob-match.js";
 import { resolveToCwd } from "./path-utils.js";
 
 export type RepoEntryKind = "file" | "directory" | "symlink" | "other";
@@ -57,6 +58,18 @@ export interface RepositoryListResult {
   readonly nextOffset?: number;
   readonly offset: number;
 }
+
+export interface RepositoryGlobResult {
+  readonly paths: readonly string[];
+  readonly truncated: boolean;
+  readonly truncatedBy: RepositoryListResult["truncatedBy"];
+  readonly scannedEntries: number;
+  readonly scannedFiles: number;
+  readonly nextOffset?: number;
+  readonly offset: number;
+}
+
+export type RepoSearchOutputMode = "content" | "files_with_matches" | "count";
 
 export interface RepositorySearchMatch {
   readonly path: string;
@@ -129,6 +142,7 @@ export interface RepositorySearchRequest {
   readonly query: string;
   readonly path?: string;
   readonly mode?: "literal";
+  readonly outputMode?: RepoSearchOutputMode;
   readonly caseSensitive?: boolean;
   readonly includeHidden?: boolean;
   readonly exclude?: readonly string[];
@@ -138,9 +152,23 @@ export interface RepositorySearchRequest {
   readonly deadlineMs?: number;
 }
 
+export interface RepositoryGlobRequest {
+  readonly root: string;
+  readonly pattern: string;
+  readonly path?: string;
+  readonly includeHidden?: boolean;
+  readonly exclude?: readonly string[];
+  readonly maxDepth?: number;
+  readonly maxResults?: number;
+  readonly offset?: number;
+  readonly signal?: AbortSignal;
+  readonly deadlineMs?: number;
+}
+
 export interface RepositoryOperations {
   list(request: RepositoryListRequest): Promise<RepositoryListResult>;
   search(request: RepositorySearchRequest): Promise<RepositorySearchResult>;
+  glob(request: RepositoryGlobRequest): Promise<RepositoryGlobResult>;
 }
 
 export const DEFAULT_REPO_EXCLUDE = Object.freeze([".git", "node_modules", "dist"]);
@@ -783,11 +811,134 @@ async function searchLocal(request: RepositorySearchRequest, defaults: ResolvedR
   };
 }
 
+async function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepositoryLimits): Promise<RepositoryGlobResult> {
+  try {
+    validateGlobPattern(request.pattern, defaults.maxPatternBytes);
+  } catch (error) {
+    throw new RepositoryError(error instanceof Error ? error.message : String(error));
+  }
+  const resolved = await resolveRepoPath(request.root, request.path);
+  const maxResults = validateCodingLimit("maxResults", request.maxResults ?? defaults.maxResults, HARD_MAX_REPO_RESULTS);
+  const offset = validateCodingLimitAllowZero("offset", request.offset ?? 0, HARD_MAX_REPO_ENTRIES);
+  const maxDepth = validateCodingLimit("maxDepth", request.maxDepth ?? defaults.maxDepth, HARD_MAX_REPO_DEPTH);
+  const exclude = new Set(request.exclude ?? defaults.exclude);
+  const deadlineAt = request.deadlineMs !== undefined ? Date.now() + request.deadlineMs : Date.now() + defaults.maxTimeMs;
+
+  const collected: string[] = [];
+  let scannedEntries = 0;
+  let scannedFiles = 0;
+  let seen = 0;
+  let truncated = false;
+  let truncatedBy: RepositoryGlobResult["truncatedBy"] = null;
+
+  const maybeCollect = (relativePath: string): boolean => {
+    if (!matchGlobPattern(request.pattern, relativePath)) return false;
+    if (seen < offset) {
+      seen++;
+      return false;
+    }
+    if (collected.length >= maxResults) {
+      truncated = true;
+      truncatedBy = "results";
+      return true;
+    }
+    collected.push(relativePath);
+    seen++;
+    return truncated;
+  };
+
+  try {
+    const startStat = await lstat(resolved.absolute);
+    if (!startStat.isDirectory()) {
+      scannedEntries = 1;
+      if (startStat.isFile()) {
+        scannedFiles = 1;
+        if (matchGlobPattern(request.pattern, resolved.relative)) {
+          if (offset === 0 && maxResults > 0) collected.push(resolved.relative);
+          else if (offset === 0 && maxResults === 0) {
+            truncated = true;
+            truncatedBy = "results";
+          }
+        }
+      }
+      return {
+        paths: collected,
+        truncated,
+        truncatedBy,
+        scannedEntries,
+        scannedFiles,
+        offset,
+        nextOffset: undefined,
+      };
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new RepositoryError(`cannot open path: ${message}`);
+  }
+
+  try {
+    for await (const event of walkRepository(resolved.rootReal, resolved.absolute, {
+      maxDepth,
+      maxEntries: defaults.maxEntries,
+      maxFiles: defaults.maxFiles,
+      exclude,
+      includeHidden: request.includeHidden === true,
+      signal: request.signal,
+      deadlineAt,
+    })) {
+      if (event.type === "limit") {
+        truncated = true;
+        truncatedBy = event.truncatedBy;
+        break;
+      }
+      scannedEntries++;
+      if (event.entry.kind === "file") scannedFiles++;
+      if (event.entry.kind !== "file") continue;
+      if (maybeCollect(event.entry.path)) break;
+    }
+  } catch (error) {
+    if (error instanceof RepositoryError && error.message === "Operation aborted") {
+      return {
+        paths: collected,
+        truncated: true,
+        truncatedBy: "abort",
+        scannedEntries,
+        scannedFiles,
+        offset,
+        nextOffset: collected.length > 0 || offset > 0 ? offset + collected.length : undefined,
+      };
+    }
+    if (error instanceof RepositoryError && error.message === "Repository operation exceeded time limit") {
+      return {
+        paths: collected,
+        truncated: true,
+        truncatedBy: "time",
+        scannedEntries,
+        scannedFiles,
+        offset,
+        nextOffset: offset + collected.length,
+      };
+    }
+    throw error;
+  }
+
+  return {
+    paths: collected,
+    truncated,
+    truncatedBy,
+    scannedEntries,
+    scannedFiles,
+    offset,
+    nextOffset: truncated ? offset + collected.length : undefined,
+  };
+}
+
 /** Local filesystem repository operations (default backend). */
 export function createLocalRepositoryOperations(limits?: RepositoryLimitOptions): RepositoryOperations {
   const resolved = resolveRepositoryLimits(limits);
   return {
     list: (request) => listLocal(request, resolved),
     search: (request) => searchLocal(request, resolved),
+    glob: (request) => globLocal(request, resolved),
   };
 }

@@ -46,6 +46,7 @@ import {
   validateCodingLimit,
 } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
+import { refuseReadBeforeWrite, type ReadBeforeWriteOptions } from "./read-path-set.js";
 
 export interface Edit {
   oldText: string;
@@ -77,7 +78,7 @@ export interface EditOperations {
   statFile: (absolutePath: string, options?: { signal?: AbortSignal }) => Promise<{ size: number }>;
 }
 
-export interface EditToolOptions {
+export interface EditToolOptions extends ReadBeforeWriteOptions {
   /** Structured pre-execution policy checked before filesystem writes. */
   executionPolicy?: ExecutionPolicy;
   /** Custom operations backend (default: local filesystem). */
@@ -162,11 +163,15 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
   return {
     name: "edit",
     description:
-      "Edit a single file using exact text replacement. Every edits[].oldText must match a unique, non-overlapping region of the original file. If two changes affect the same block or nearby lines, merge them into one edit instead of emitting overlapping edits. Do not include large unchanged regions just to connect distant changes.",
+      "Edit a single file using exact-then-fuzzy text replacement. Every edits[].oldText must match a unique, non-overlapping region of the original file. Exact match is tried first; if it fails, fuzzy match (unicode normalize + whitespace collapse) may still succeed silently — prefer exact oldText to avoid wrong-region edits. Duplicate/ambiguous matches fail closed and leave the file unchanged. If two changes affect the same block or nearby lines, merge them into one edit. Do not include large unchanged regions just to connect distant changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true.",
     parameters: {
       type: "object",
       properties: {
         path: { type: "string", description: "Path to the file to edit (relative or absolute)" },
+        force: {
+          type: "boolean",
+          description: "Bypass read-before-write guard when the host enabled requireReadBeforeWrite.",
+        },
         edits: {
           type: "array",
           description:
@@ -196,6 +201,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
       }
 
       const prepared = prepareEditArguments(args);
+      const force = args.force === true;
       if (prepared.path.length === 0) {
         return errorResult(toolCallId, "path is required and must be a non-empty string.");
       }
@@ -222,6 +228,9 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
         );
         if (!policyCheck.allowed) return policyCheck.result;
         const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
+
+        const rbwRefusal = refuseReadBeforeWrite("edit", prepared.path, allowedPath, options, force);
+        if (rbwRefusal) return errorResult(toolCallId, rbwRefusal);
 
         return await withFileMutationQueue(allowedPath, async () => {
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");

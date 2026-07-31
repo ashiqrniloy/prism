@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-session-store-postgres",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "description": "Optional PostgreSQL SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,11 +26,11 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@arnilo/prism-session-store-codecs": "0.0.20",
+    "@arnilo/prism-session-store-codecs": "0.0.21",
     "pg": "^8.22.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.20"
+    "@arnilo/prism": "0.0.21"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

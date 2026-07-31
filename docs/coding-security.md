@@ -26,14 +26,14 @@ import type { ExecutionAction, ExecutionPolicy, ExecutionDecision } from "@arnil
 
 Use this package when coding tools need path scoping, human approval, command rules, or a pluggable sandbox backend. Wire the returned policy through `createCodingTools(cwd, { executionPolicy })` or per-tool `executionPolicy` options.
 
-Use `createDockerSandbox()` when the host wants a production-reference containment boundary. Prism does **not** claim OS-level isolation unless the host constructs this adapter (or supplies an equivalent custom `DisposableSandbox`). Default policy denies shell/write/edit without an `approve` callback and rejects paths outside configured roots. Coding shell definitions are marked `exclusive: true`, matching the approval policy's shell decision, so a single-shot turn containing shell work runs sequentially even when `toolConcurrency > 1`. Non-shell turns retain configured parallelism.
+Use `createDockerSandbox()` when the host wants a production-reference containment boundary. Prism does **not** claim OS-level isolation unless the host constructs this adapter (or supplies an equivalent custom `DisposableSandbox`). Default policy denies shell/write/edit/delete/move without an `approve` callback and rejects paths outside configured roots. Coding shell definitions are marked `exclusive: true`, matching the approval policy's shell decision, so a single-shot turn containing shell work runs sequentially even when `toolConcurrency > 1`. Non-shell turns retain configured parallelism.
 
 ## Inputs / request
 
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `roots` | required | Realpath-contained filesystem roots. |
-| `readOnly` | `false` | Deny shell/write/edit actions. |
+| `readOnly` | `false` | Deny non-`read` actions (including shell/write/edit/delete/move). |
 | `commandRules` | `[]` | Ordered allow/deny/approval command classification. |
 | `approve` | none | Host callback for actions not statically allowed; omission fails closed. |
 | `approvalCacheScope` | `"none"` | Optional `run` or `session` decision cache scope. |
@@ -110,7 +110,7 @@ const sandbox = await createDockerSandbox({
   limits: { cpus: 2, memoryBytes: 2 * 1024 ** 3, maxPids: 256, workspaceBytes: 1024 ** 3 },
 });
 
-// Sandbox mode: shell/read/write/edit/list/search share one disposable tree.
+// Sandbox mode: shell/read/write/edit/list/search/glob/delete/move share one disposable tree.
 const { tools, composition } = createSandboxCodingComposition("/srv/jobs/task-1/source", {
   workspaceMode: "sandbox",
   sandbox,

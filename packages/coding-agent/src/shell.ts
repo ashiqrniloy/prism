@@ -320,7 +320,7 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
   return {
     name: "shell",
     exclusive: true,
-    description: `Execute a shell command in the current working directory. Returns combined stdout and stderr. Output is truncated to the last ${maxLines} lines or ${maxBytes / 1024}KB and capped at ${formatSize(maxTotalOutputBytes)} total. Truncated successful output is saved to a temp file. Timeout defaults to ${defaultTimeout} seconds.`,
+    description: `Execute a shell command in the current working directory. Returns combined stdout and stderr. Prefer repo_list, repo_search, glob, read, write, edit, delete, or move for those jobs — use shell only when no dedicated tool fits. Output is truncated to the last ${maxLines} lines or ${maxBytes / 1024}KB and capped at ${formatSize(maxTotalOutputBytes)} total. Truncated successful output is saved to a temp file. Timeout defaults to ${defaultTimeout} seconds.`,
     parameters: {
       type: "object",
       properties: {

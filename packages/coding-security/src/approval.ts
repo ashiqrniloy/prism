@@ -26,7 +26,7 @@ export interface CodingApprovalPolicyOptions {
 const MAX_APPROVAL_CACHE_ENTRIES = 1_000;
 
 function isMutatingKind(kind: string): boolean {
-  return kind === "shell" || kind === "write" || kind === "edit";
+  return kind === "shell" || kind === "write" || kind === "edit" || kind === "delete" || kind === "move";
 }
 
 function approvalCacheKey(action: ExecutionAction, scope: Exclude<ApprovalCacheScope, "none">): string | undefined {

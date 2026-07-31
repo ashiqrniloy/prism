@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.21] - 2026-07-31
+
+### Changed
+- `isMutatingKind` treats `delete` and `move` as mutating (not `glob`).
+- Sandbox coding composition requires delete/move backends for full kind; sandbox FS ops expose delete/move.
+
+
+
 ## [0.0.20] - 2026-07-31
 
 ### Changed

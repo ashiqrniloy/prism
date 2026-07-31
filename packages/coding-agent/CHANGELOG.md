@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.21] - 2026-07-31
+
+### Added
+- `repo_search` `outputMode` (`content` | `files_with_matches` | `count`).
+- Bounded `glob` tool (`*`/`?`/`**`; no brace expansion).
+- Optional session-scoped `requireReadBeforeWrite` + `ReadPathSet` + `force` on write/edit.
+- Bounded `delete` (file or empty dir) and `move` tools with dual-path mutation queue.
+
+### Changed
+- `createCodingTools` returns 9 tools; `createReadOnlyTools` returns 4 (includes `glob`).
+
+
+
 ## [0.0.20] - 2026-07-31
 
 ### Changed

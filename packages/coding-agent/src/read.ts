@@ -37,6 +37,7 @@ import {
   validateCodingLimit,
 } from "./limits.js";
 import { resolveReadPathAsync } from "./path-utils.js";
+import type { ReadPathSet } from "./read-path-set.js";
 import { formatSize, type TruncationResult } from "./truncate.js";
 
 // --- magic-byte image MIME detection (faithful port of pi utils/mime.js, pure JS, no deps) ---
@@ -218,6 +219,8 @@ export interface ReadToolOptions {
   maxLines?: number;
   /** Max bytes kept from the head (default 50KB). */
   maxBytes?: number;
+  /** When set, successful reads record the resolved absolute path for read-before-write guards. */
+  readPathSet?: ReadPathSet;
 }
 
 async function readLocalTextPage(path: string, options: ReadTextOptions): Promise<ReadTextResult> {
@@ -410,7 +413,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
   return {
     name: "read",
-    description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp, bmp); images are returned as image content. For text files, output is truncated to ${maxLines} lines or ${maxBytes / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.`,
+    description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp, bmp); images are returned as image content. For text files, output is truncated to ${maxLines} lines or ${maxBytes / 1024}KB (whichever is hit first). When truncated, continue with the suggested offset until complete. Prefer repo_search to find text across many files.`,
     parameters: {
       type: "object",
       properties: {
@@ -467,6 +470,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
             autoResizeImages: options?.autoResizeImages,
             signal: context.signal,
           });
+          options?.readPathSet?.add(allowedPath);
           return {
             toolCallId,
             name: "read",
@@ -521,6 +525,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
           }
         }
 
+        options?.readPathSet?.add(allowedPath);
         return {
           toolCallId,
           name: "read",

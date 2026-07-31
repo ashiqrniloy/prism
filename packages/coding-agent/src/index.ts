@@ -46,6 +46,8 @@ export {
 } from "./ask-user-decision.js";
 export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js";
 export { createCodingCheckTool } from "./checks.js";
+export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js";
+export { createDeleteTool } from "./delete.js";
 export type {
   CodingArtifactKind,
   CodingArtifactRef,
@@ -130,8 +132,13 @@ export {
   createCodingGoalVerifyWorkflow,
   runCodingGoalVerify,
 } from "./goal-verify.js";
+export type { GlobToolOptions } from "./glob.js";
+export { createGlobTool } from "./glob.js";
+export { matchGlobPattern, validateGlobPattern } from "./glob-match.js";
 export type { ListToolOptions } from "./list.js";
 export { createRepoListTool } from "./list.js";
+export type { MoveOperations, MoveToolOptions } from "./move.js";
+export { createMoveTool } from "./move.js";
 export type {
   ReadOperations,
   ReadTextOptions,
@@ -146,13 +153,18 @@ export {
   detectSupportedImageMimeType,
   detectSupportedImageMimeTypeFromFile,
 } from "./read.js";
+export type { ReadPathSet } from "./read-path-set.js";
+export { createReadPathSet } from "./read-path-set.js";
 export type {
   RepoEntryKind,
   RepoListEntry,
+  RepositoryGlobRequest,
+  RepositoryGlobResult,
   RepositoryLimitOptions,
   RepositoryListRequest,
   RepositoryListResult,
   RepositoryOperations,
+  RepoSearchOutputMode,
   RepositorySearchMatch,
   RepositorySearchRequest,
   RepositorySearchResult,
@@ -287,10 +299,16 @@ export {
 // --- aggregators ---
 
 import type { ExecutionPolicy, ToolDefinition } from "@arnilo/prism";
+import type { DeleteToolOptions } from "./delete.js";
+import { createDeleteTool } from "./delete.js";
 import type { EditToolOptions } from "./edit.js";
 import { createEditTool } from "./edit.js";
+import type { GlobToolOptions } from "./glob.js";
+import { createGlobTool } from "./glob.js";
 import type { ListToolOptions } from "./list.js";
 import { createRepoListTool } from "./list.js";
+import type { MoveToolOptions } from "./move.js";
+import { createMoveTool } from "./move.js";
 import type { ReadToolOptions } from "./read.js";
 import { createReadTool } from "./read.js";
 import type { RepositoryLimitOptions, RepositoryOperations } from "./repository.js";
@@ -309,11 +327,14 @@ export interface ToolsOptions {
   read?: ReadToolOptions;
   write?: WriteToolOptions;
   edit?: EditToolOptions;
+  delete?: DeleteToolOptions;
+  move?: MoveToolOptions;
   list?: ListToolOptions;
   search?: SearchToolOptions;
+  glob?: GlobToolOptions;
   /**
-   * Shared repository limits/backends for `repo_list` / `repo_search`.
-   * Per-tool `list` / `search` options override these when both are set.
+   * Shared repository limits/backends for `repo_list` / `repo_search` / `glob`.
+   * Per-tool `list` / `search` / `glob` options override these when both are set.
    */
   repository?: RepositoryLimitOptions & { operations?: RepositoryOperations };
 }
@@ -327,9 +348,9 @@ function withSharedExecutionPolicy<T extends { executionPolicy?: ExecutionPolicy
 }
 
 function withRepositoryDefaults(
-  toolOptions: ListToolOptions | SearchToolOptions | undefined,
+  toolOptions: ListToolOptions | SearchToolOptions | GlobToolOptions | undefined,
   shared?: ToolsOptions["repository"],
-): ListToolOptions | SearchToolOptions {
+): ListToolOptions | SearchToolOptions | GlobToolOptions {
   if (!shared && !toolOptions) return {};
   return {
     ...(toolOptions ?? {}),
@@ -340,7 +361,7 @@ function withRepositoryDefaults(
 }
 
 /**
- * Full coding tool set: `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`.
+ * Full coding tool set: `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`, `glob`, `delete`, `move`.
  * Opt-in tools (`createGitTools`, `createAskUserDecisionTool`, `createCodingCheckTool`)
  * stay out — hosts register them explicitly.
  */
@@ -348,6 +369,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): readonly
   const policy = options?.executionPolicy;
   const listOpts = withRepositoryDefaults(options?.list, options?.repository) as ListToolOptions;
   const searchOpts = withRepositoryDefaults(options?.search, options?.repository) as SearchToolOptions;
+  const globOpts = withRepositoryDefaults(options?.glob, options?.repository) as GlobToolOptions;
   return [
     createShellTool(cwd, withSharedExecutionPolicy(options?.shell, policy)),
     createReadTool(cwd, withSharedExecutionPolicy(options?.read, policy)),
@@ -355,21 +377,26 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): readonly
     createEditTool(cwd, withSharedExecutionPolicy(options?.edit, policy)),
     createRepoListTool(cwd, withSharedExecutionPolicy(listOpts, policy)),
     createRepoSearchTool(cwd, withSharedExecutionPolicy(searchOpts, policy)),
+    createGlobTool(cwd, withSharedExecutionPolicy(globOpts, policy)),
+    createDeleteTool(cwd, withSharedExecutionPolicy(options?.delete, policy)),
+    createMoveTool(cwd, withSharedExecutionPolicy(options?.move, policy)),
   ];
 }
 
 /**
- * Read-only subset: `read`, `repo_list`, `repo_search`.
+ * Read-only subset: `read`, `repo_list`, `repo_search`, `glob`.
  * Deliberate 0.0.9 expansion from the previous `read`-only set.
  */
 export function createReadOnlyTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[] {
   const policy = options?.executionPolicy;
   const listOpts = withRepositoryDefaults(options?.list, options?.repository) as ListToolOptions;
   const searchOpts = withRepositoryDefaults(options?.search, options?.repository) as SearchToolOptions;
+  const globOpts = withRepositoryDefaults(options?.glob, options?.repository) as GlobToolOptions;
   return [
     createReadTool(cwd, withSharedExecutionPolicy(options?.read, policy)),
     createRepoListTool(cwd, withSharedExecutionPolicy(listOpts, policy)),
     createRepoSearchTool(cwd, withSharedExecutionPolicy(searchOpts, policy)),
+    createGlobTool(cwd, withSharedExecutionPolicy(globOpts, policy)),
   ];
 }
 

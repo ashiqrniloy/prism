@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-coding-agent` is an optional first-party package that provides host shell/filesystem/repository tools as Prism `ToolDefinition` objects. It ships six default coding tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search` — plus opt-in structured Git/check set (`createGitTools`), opt-in `createAskUserDecisionTool({ ask })`, and bounded coding-plan/checkpoint helpers. The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Hosts may register any subset, omit aggregators entirely, or mix first-party tools with host-owned `ToolDefinition`s. Behavior for shell/read/write/edit is a behavioral port of the pi coding agent's tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library). List/search/Git are native Prism tools with no glob/ripgrep/Git-library dependency.
+`@arnilo/prism-coding-agent` is an optional first-party package that provides host shell/filesystem/repository tools as Prism `ToolDefinition` objects. It ships nine default coding tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`, `glob`, `delete`, `move` — plus opt-in structured Git/check set (`createGitTools`), opt-in `createAskUserDecisionTool({ ask })`, and bounded coding-plan/checkpoint helpers. The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Hosts may register any subset, omit aggregators entirely, or mix first-party tools with host-owned `ToolDefinition`s. Behavior for shell/read/write/edit is a behavioral port of the pi coding agent's tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library). List/search/glob/Git are native Prism tools with no picomatch/ripgrep/Git-library dependency (hand-rolled `*`/`?`/`**` glob matcher).
 
 | Export | Purpose |
 | --- | --- |
@@ -11,14 +11,18 @@
 | `createWriteTool(cwd, options?)` | `write` tool: create or overwrite a file, creating parent directories. |
 | `createEditTool(cwd, options?)` | `edit` tool: precise exact-then-fuzzy text replacement in an existing file. |
 | `createRepoListTool(cwd, options?)` | `repo_list` tool: bounded deterministic repository listing. |
-| `createRepoSearchTool(cwd, options?)` | `repo_search` tool: bounded literal text search. |
-| `createCodingTools(cwd, options?)` | Default six tools (`shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`). |
-| `createReadOnlyTools(cwd, options?)` | Read-only subset: `read`, `repo_list`, `repo_search`. |
+| `createRepoSearchTool(cwd, options?)` | `repo_search` tool: bounded literal text search (`outputMode`: content / files_with_matches / count). |
+| `createGlobTool(cwd, options?)` | `glob` tool: bounded filename-pattern match (`*` / `?` / `**`; no brace expansion). |
+| `createDeleteTool(cwd, options?)` | `delete` tool: high-risk delete of a file or empty directory (no recursive delete, no trash). |
+| `createMoveTool(cwd, options?)` | `move` tool: high-risk rename/move within the workspace (`overwrite` default false). |
+| `createReadPathSet()` | Session-scoped path set for optional `requireReadBeforeWrite` soft guard. |
+| `createCodingTools(cwd, options?)` | Default nine tools (`shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`, `glob`, `delete`, `move`). |
+| `createReadOnlyTools(cwd, options?)` | Read-only subset: `read`, `repo_list`, `repo_search`, `glob`. |
 | `createAllTools(cwd, options?)` | Identical to `createCodingTools` (Git tools remain opt-in via `createGitTools`). |
 | `createGitTools(cwd, options?)` | Opt-in Git tools (`git_status`/`git_diff`/`git_branch`/`git_worktree`/`git_apply`/`git_commit`/`git_pr_handoff`) plus optional `coding_check`. |
 | `createCodingCheckTool(cwd, options)` | Named host-declared checks; model selects only a name. |
 | `createAskUserDecisionTool(options)` | Opt-in user decision tool (`ask_user_decision`); host supplies `ask` callback. Not in default aggregators. |
-| `createLocalRepositoryOperations(limits?)` | Default streaming Node filesystem backend for list/search. |
+| `createLocalRepositoryOperations(limits?)` | Default streaming Node filesystem backend for list/search/glob. |
 | `createGitOperations(options)` | Typed Git operations backend (argument arrays, safe config, finite output). |
 | `buildCodingCheckpointMetadata` / `validateCodingCheckpointMetadata` / `assertCodingResumeAllowed` | Bounded durable coding-task metadata for workflow `state.coding` (no second runtime). |
 | `writeCodingPlanFile` / `readCodingPlanFile` / `createCodingPlanMarkdown` / `parseCodingPlanTodos` | Workspace plan/todo Markdown helpers with finite byte/todo caps and hash verification. |
@@ -66,13 +70,39 @@ const tools = createCodingTools(workspaceRoot, {
 | `read` | `read` |
 | `write` | `write` |
 | `edit` | `edit` |
-| `repo_list` / `repo_search` | _(native; no pi equivalent)_ |
+| `repo_list` / `repo_search` / `glob` | _(native; no pi equivalent)_ |
+| `delete` / `move` | _(native; no pi equivalent)_ |
+
+### Tool selection guide
+
+| Need | Prefer | Avoid |
+| --- | --- | --- |
+| Enumerate directories | `repo_list` | `shell` `find`/`ls` |
+| Match filename patterns | `glob` | `shell` `find` |
+| Find text in files | `repo_search` | `shell` `grep`/`rg` |
+| Read one file (paged) | `read` | `shell` `cat` |
+| Create / full overwrite | `write` | — |
+| Targeted replace | `edit` | full `write` rewrite when a small edit works |
+| Remove file / empty dir | `delete` | `shell` `rm` |
+| Rename / relocate | `move` | `shell` `mv` |
+| Arbitrary process | `shell` | dedicated tools above |
+
+### Phase 4 non-goals (0.0.21)
+
+These are **out of scope** for this package release (see roadmap Phase 9 / later):
+
+- **No PDF / document reader** — text and supported images only via `read`.
+- **No trash / recycle daemon** — `delete` / `move` are permanent; host undo is not automatic.
+- **No PTY / interactive process control** — `shell` is one-shot exec with bounded capture.
+- **No LSP / language-server tools** — use host-owned tools if needed.
+- **No recursive directory delete** — `delete` refuses non-empty directories.
+- **No brace-expansion globs** — `glob` supports only `*`, `?`, and `**`.
 
 ## Inputs / request
 
 ### `shell`
 
-Run a shell command and return combined stdout+stderr.
+Run a shell command and return combined stdout+stderr. Prefer dedicated coding tools (table above) when they fit.
 
 **Inputs:**
 
@@ -141,7 +171,7 @@ const read = createReadTool(cwd, {
 
 ### `write`
 
-Create or overwrite a file, creating parent directories as needed.
+Create or **overwrite** a file (full replace), creating parent directories as needed. Prefer `edit` for targeted changes.
 
 **Inputs:**
 
@@ -149,12 +179,26 @@ Create or overwrite a file, creating parent directories as needed.
 | --- | --- | --- |
 | `path` | `string` | Path to the file to write (relative or absolute). Required. |
 | `content` | `string` | Content to write (empty string creates an empty file). Required. |
+| `force` | `boolean` | Bypass optional read-before-write guard when the host enabled `requireReadBeforeWrite`. |
 
 **Outputs:** a `TextContent` confirmation naming the **absolute path** with UTF-8 byte and line counts (e.g. `Successfully wrote 42 bytes (3 lines) to /abs/path.txt`). `maxInputBytes` defaults to 8 MiB (64 MiB hard cap); oversized UTF-8 input fails before policy evaluation, directory creation, or write. Write failures and abort are error results. Empty `content` is valid.
 
 Default local `writeFile` uses same-directory temp + `rename` so a crash mid-write cannot truncate the target; custom `WriteOperations` should provide equivalent durability.
 
 `write` result `metadata`: `{ bytes, lines, path }` (absolute path). Concurrent writes to the same path serialize through `withFileMutationQueue`; writes to different paths run in parallel.
+
+### Optional read-before-write guard
+
+Hosts may opt in to a session-scoped soft guard: share one `createReadPathSet()` across `read` / `write` / `edit` and set `requireReadBeforeWrite: true` on write/edit options. Successful `read` marks the path; unread existing-file writes/edits fail with a clear error unless `force: true`. Default is **off** (no behavior change for hosts that ignore it).
+
+```ts
+import { createReadPathSet, createReadTool, createWriteTool, createEditTool } from "@arnilo/prism-coding-agent";
+
+const readPaths = createReadPathSet();
+const read = createReadTool(cwd, { readPathSet: readPaths });
+const write = createWriteTool(cwd, { requireReadBeforeWrite: true, readPathSet: readPaths });
+const edit = createEditTool(cwd, { requireReadBeforeWrite: true, readPathSet: readPaths });
+```
 
 ### `edit`
 
@@ -166,8 +210,13 @@ Precise text replacement in an existing file via exact-then-fuzzy matching.
 | --- | --- | --- |
 | `path` | `string` | Path to the file to edit. Required. |
 | `edits` | `Array<{ oldText: string, newText: string }>` | Targeted replacements, each matched against the **original** file (not incrementally). No overlapping/nested edits. Required, non-empty. |
+| `force` | `boolean` | Bypass optional read-before-write guard when enabled. |
 
-Each `edits[].oldText` must match a unique, non-overlapping region of the original file. Matching is exact first, then fuzzy (unicode normalization / whitespace collapse). **Fuzzy matching can apply a wrong region when `oldText` is slightly off** — tradeoff for imprecise models; prefer exact `oldText` when possible. A BOM is stripped before matching and re-prepended on write; original line endings are restored. Defaults reject targets over 8 MiB, aggregate old/new UTF-8 input over 2 MiB, or more than 100 edits (hard caps: 64 MiB, 16 MiB, and 1,000). Stat and bounded read checks run before matching or mutation. Default local `writeFile` uses same-directory temp + `rename` (crash-safe replace).
+Each `edits[].oldText` must match a unique, non-overlapping region of the original file. Matching is exact first, then fuzzy (unicode normalization / whitespace collapse).
+
+**Fuzzy silent-success tradeoff (loud):** when exact match fails, fuzzy may still apply a replacement **without warning the model**. That can edit the wrong region if `oldText` is slightly off (extra/missing whitespace, unicode lookalikes). Prefer exact `oldText` copied from a fresh `read`. Duplicate / non-unique matches already **fail closed** and leave the file unchanged — ambiguity is not silently resolved by picking the first hit.
+
+A BOM is stripped before matching and re-prepended on write; original line endings are restored. Defaults reject targets over 8 MiB, aggregate old/new UTF-8 input over 2 MiB, or more than 100 edits (hard caps: 64 MiB, 16 MiB, and 1,000). Stat and bounded read checks run before matching or mutation. Default local `writeFile` uses same-directory temp + `rename` (crash-safe replace).
 
 **Outputs:** a `TextContent` confirmation (`Successfully replaced N block(s) in {path}.`) plus `metadata`. Any failure — missing/unreadable file, no match, duplicate (non-unique) match, overlap, empty `oldText`, no-op edit, or abort — is an error result, and the file is left **unchanged** (the match runs before the write).
 
@@ -175,7 +224,7 @@ Each `edits[].oldText` must match a unique, non-overlapping region of the origin
 
 ### `repo_list`
 
-List repository entries with deterministic relative paths. Uses Node `opendir`/`lstat` only — no glob dependency. Does not follow symlinks; rejects path escapes outside the workspace root. Hidden names and excluded basenames (default `.git`, `node_modules`, `dist`) are skipped unless `includeHidden` is set / host `exclude` is overridden.
+List repository entries with deterministic relative paths. Uses Node `opendir`/`lstat` only — no glob dependency. Prefer `glob` when you already know a filename pattern. Prefer `repo_search` to find text inside files. Does not follow symlinks; rejects path escapes outside the workspace root. Hidden names and excluded basenames (default `.git`, `node_modules`, `dist`) are skipped unless `includeHidden` is set / host `exclude` is overridden.
 
 **Inputs:**
 
@@ -202,10 +251,59 @@ Search text files under the workspace using literal substring match. Binary file
 | `mode` | `"literal"` | Literal only (default). `regex` removed in 0.0.18. |
 | `caseSensitive` | `boolean` | Default false. |
 | `includeHidden` | `boolean` | Default false. |
-| `context` | `number` | Context lines before/after each match (default 5, hard 20). |
+| `context` | `number` | Context lines before/after each match (default 5, hard 20). Ignored for non-content `outputMode`. |
 | `maxMatches` | `number` | Match cap (default 1,000, hard 10,000). |
+| `outputMode` | `"content"` \| `"files_with_matches"` \| `"count"` | Result shape (default `content`). |
 
-**Outputs:** ripgrep-like lines `path:line:column:text` with optional `path-` / `path+` context, plus metadata (`matches`, `truncated`, scan/skip counts).
+**Outputs:**
+- `content` (default): ripgrep-like lines `path:line:column:text` with optional `path-` / `path+` context.
+- `files_with_matches`: unique matching paths only.
+- `count`: totals (`N matches in M files`) without line bodies.
+
+Metadata includes `matches`, `truncated`, scan/skip counts; non-content modes also expose `fileCount`.
+
+### `glob`
+
+Find workspace files by filename pattern without shell `find`. Hand-rolled matcher: `*` (one path segment), `?` (one char), `**` (directories). Brace expansion (`{a,b}`) is **rejected**. Patterns match workspace-relative full paths (e.g. `src/util/a.ts`). Returns **files only** (directories traversed but not listed). Same exclude/hidden/depth/page/time caps as `repo_list`.
+
+**Inputs:**
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `pattern` | `string` | Glob pattern (required). |
+| `path` | `string` | Workspace-relative start directory (default root). |
+| `includeHidden` | `boolean` | Default false. |
+| `maxDepth` | `number` | Depth cap (default 32, hard 128). |
+| `maxResults` | `number` | Page size (default 1,000, hard 10,000). |
+| `offset` | `number` | Matches to skip (default 0). |
+
+**Outputs:** one relative path per line plus metadata (`truncated`, `truncatedBy`, `nextOffset`, scan counts). Continue with `offset=nextOffset` when truncated.
+
+### `delete`
+
+High-risk: permanently delete a **single file or empty directory**. Non-empty directories fail closed (no recursive delete). Symlinks are unlinked as links (targets not followed for containment). **No trash daemon** — host undo is not automatic; gate with approval policy.
+
+**Inputs:**
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `path` | `string` | File or empty directory to delete. Required. |
+
+**Outputs:** confirmation with absolute path, or error (missing, non-empty dir, escape, abort).
+
+### `move`
+
+High-risk: rename or move a file within the workspace. Dual-path mutation queue (lexicographic lock order). `overwrite` defaults **false**; when true, replaces an existing destination **file** only. Does not create parent directories. **No trash** — host undo is not automatic.
+
+**Inputs:**
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `from` | `string` | Source path. Required. |
+| `to` | `string` | Destination path. Required. |
+| `overwrite` | `boolean` | Replace existing destination file (default false). |
+
+**Outputs:** confirmation with absolute from/to, or error (missing source, dest exists without overwrite, escape, abort).
 
 ### Structured Git tools (`createGitTools`)
 
@@ -351,10 +449,10 @@ Minimal drop-in for any Prism app:
 import { createToolRegistry } from "@arnilo/prism";
 import { createCodingTools, createReadOnlyTools } from "@arnilo/prism-coding-agent";
 
-// Full coding set (shell + read + write + edit + repo_list + repo_search) against the project root:
+// Full coding set (shell + read + write + edit + repo_list + repo_search + glob + delete + move):
 const tools = createToolRegistry(createCodingTools(process.cwd()));
 
-// Or a read-only set for inspection-only agents (read + repo_list + repo_search):
+// Or a read-only set for inspection-only agents (read + repo_list + repo_search + glob):
 const ro = createToolRegistry(createReadOnlyTools(process.cwd()));
 ```
 
@@ -381,23 +479,27 @@ const remoteWrite = createWriteTool("/repo", {
 });
 ```
 
+Packed capability demo: `examples/coding-tools-capability-gaps.ts` (search modes, glob, read-before-write, delete/move).
+
 ## Extension and configuration notes
 
 - **Long coding sessions.** Use `createCodingCompactionStrategy()` from optional `@arnilo/prism-compaction-llm` when history needs a bounded coding handoff. It is selected explicitly through normal `session.compact()` / agent compaction configuration, preserves raw session entries, and prioritizes file paths, patch intent, checks, plan/todo state, blockers, and verification steps. It does not read files, retain full diffs, or create a second coding runtime.
-- **Pluggable operation backends.** Every tool accepts an `operations` seam. Custom `ReadOperations` must implement bounded `readText` plus `statFile`; custom `EditOperations` must implement `statFile`; read/write methods receive caps/signals. `BashOperations` must stream through `onData` and honor `signal`/`timeout`. Custom `RepositoryOperations` must honor depth/entry/file/match/scan/time caps and abort. A hostile custom backend can still violate its host-owned contract, so isolate it separately.
-- **Per-tool options.** `ShellToolOptions` adds `timeout` and `maxTotalOutputBytes`; `ReadToolOptions` adds `maxScanBytes`; `WriteToolOptions` adds `maxInputBytes`; `EditToolOptions` adds `maxFileBytes`, `maxInputBytes`, and `maxEdits`; list/search accept `repository` limits and shared aggregator `ToolsOptions.repository`.
-- **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit?, list?, search?, repository? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override. Read-only membership is deliberately `read` + `repo_list` + `repo_search` (0.0.9 behavior change).
-- **Sandbox composition.** Prefer `@arnilo/prism-coding-security` `createSandboxCodingComposition(cwd, { workspaceMode, sandbox, ... })` (or tools-only wrappers). `workspaceMode` is required: `"sandbox"` keeps shell/read/write/edit/list/search on one disposable tree; `"host"` runs against host cwd and never claims containment. Mixed sandbox-shell + host-FS wiring throws unless `allowMixedWorkspaceWiring: true`. Same-tree Git: `createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`.
+- **Pluggable operation backends.** Every tool accepts an `operations` seam. Custom `ReadOperations` must implement bounded `readText` plus `statFile`; custom `EditOperations` must implement `statFile`; read/write methods receive caps/signals. `BashOperations` must stream through `onData` and honor `signal`/`timeout`. Custom `RepositoryOperations` must honor depth/entry/file/match/scan/time caps and abort (including `glob`). Custom `DeleteOperations` / `MoveOperations` must honor containment and abort. A hostile custom backend can still violate its host-owned contract, so isolate it separately.
+- **Per-tool options.** `ShellToolOptions` adds `timeout` and `maxTotalOutputBytes`; `ReadToolOptions` adds `maxScanBytes` and optional `readPathSet`; `WriteToolOptions` / `EditToolOptions` add input caps plus optional `requireReadBeforeWrite` / `readPathSet` / `force`; list/search/glob accept `repository` limits and shared aggregator `ToolsOptions.repository`.
+- **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit?, delete?, move?, list?, search?, glob?, repository? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override. Full membership is nine tools; read-only is `read` + `repo_list` + `repo_search` + `glob`.
+- **Sandbox composition.** Prefer `@arnilo/prism-coding-security` `createSandboxCodingComposition(cwd, { workspaceMode, sandbox, ... })` (or tools-only wrappers). `workspaceMode` is required: `"sandbox"` keeps shell/read/write/edit/list/search/glob/delete/move on one disposable tree; `"host"` runs against host cwd and never claims containment. Mixed sandbox-shell + host-FS wiring throws unless `allowMixedWorkspaceWiring: true`. Same-tree Git: `createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`.
 - **`ToolsOptions`** and the per-tool option types are exported from the package barrel for host configuration.
 - No auto-discovery or manifest registration: import and register explicitly. This package registers no extensions and owns no globals (the mutation queue is a process-wide per-path map — see `ponytail:` note in the source).
 
 ## Security and performance notes
 
-- **Host shell/filesystem access.** These tools run real commands and read/write/list/search real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. Shared `executionPolicy` applies to both full and read-only aggregators before filesystem/process side effects. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).
+- **Host shell/filesystem access.** These tools run real commands and read/write/list/search/glob/delete/move real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. Shared `executionPolicy` applies to both full and read-only aggregators before filesystem/process side effects. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).
+- **High-risk mutations.** `delete` and `move` are permanent (no trash). Prefer host confirmation via `ExecutionPolicy` before allowing them. Do not instruct models to bypass policy/sandbox.
 - **Non-zero exit is not an error.** A failing command is a normal `shell` result (exit code in metadata); only timeout/abort/spawn failures are error results. Do not assume `error == undefined` means the command succeeded.
-- **Bounded I/O.** `read` streams one page and bounds scan bytes; image/edit reads use stat plus a shared cap-enforcing reader; write/edit inputs are measured before mutation. `repo_list`/`repo_search` stream walks and charge depth/entry/file/match/scan/time before retention. Structured Git tools use argument arrays with finite output/path/ref/message/patch caps, disable hooks/credential prompts/external diff by default, and never push or open PRs. `shell` retains only a rolling display tail and synchronously spills accepted raw chunks so stream backpressure cannot grow heap; wall time and total raw output remain finite.
-- **Per-path serialization.** Concurrent mutations to the same file serialize; concurrent mutations to different files do not block each other. The queue is a process-wide map — across sessions in one process, same-path writes still serialize (upgrade path: scope per registry if throughput matters).
+- **Bounded I/O.** `read` streams one page and bounds scan bytes; image/edit reads use stat plus a shared cap-enforcing reader; write/edit inputs are measured before mutation. `repo_list`/`repo_search`/`glob` stream walks and charge depth/entry/file/match/scan/time before retention. Structured Git tools use argument arrays with finite output/path/ref/message/patch caps, disable hooks/credential prompts/external diff by default, and never push or open PRs. `shell` retains only a rolling display tail and synchronously spills accepted raw chunks so stream backpressure cannot grow heap; wall time and total raw output remain finite.
+- **Per-path serialization.** Concurrent mutations to the same file serialize; concurrent mutations to different files do not block each other. `move` locks both paths in lexicographic order. The queue is a process-wide map — across sessions in one process, same-path writes still serialize (upgrade path: scope per registry if throughput matters).
 - **Bounded image reads.** `read` rejects images over `maxImageBytes` (default 10 MB) by `stat` before read when possible; MIME is detected from magic bytes only. Optional `transformImage` is host-owned — the base package has no image-processing dependency.
+- **Fuzzy edit risk.** Silent fuzzy success can mis-apply edits; duplicate matches fail closed. See the `edit` section above.
 
 ### Resource-limit defaults and hard caps
 

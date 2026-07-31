@@ -13,9 +13,13 @@ import type { ExecutionPolicy, ToolDefinition } from "@arnilo/prism";
 import {
   createCodingTools,
   createReadOnlyTools,
+  type DeleteOperations,
+  type DeleteToolOptions,
   type EditOperations,
   type EditToolOptions,
   type ListToolOptions,
+  type MoveOperations,
+  type MoveToolOptions,
   type ReadOperations,
   type ReadToolOptions,
   type RepositoryLimitOptions,
@@ -62,6 +66,8 @@ export interface SandboxCodingToolsOptions {
   readonly read?: ReadToolOptions;
   readonly write?: WriteToolOptions;
   readonly edit?: EditToolOptions;
+  readonly delete?: DeleteToolOptions;
+  readonly move?: MoveToolOptions;
   readonly list?: ListToolOptions;
   readonly search?: SearchToolOptions;
 }
@@ -96,7 +102,14 @@ function hasCustomOperations(options: SandboxCodingToolsOptions, kind: "full" | 
   const readOk = options.read?.operations !== undefined;
   const repoOk = repoOps !== undefined;
   if (kind === "readonly") return readOk && repoOk;
-  return readOk && options.write?.operations !== undefined && options.edit?.operations !== undefined && repoOk;
+  return (
+    readOk &&
+    options.write?.operations !== undefined &&
+    options.edit?.operations !== undefined &&
+    options.delete?.operations !== undefined &&
+    options.move?.operations !== undefined &&
+    repoOk
+  );
 }
 
 /**
@@ -110,6 +123,8 @@ function tryAutoWireSandboxTreeOperations(
   read: ReadOperations;
   write: WriteOperations;
   edit: EditOperations;
+  delete: DeleteOperations;
+  move: MoveOperations;
   repository: RepositoryOperations;
 } {
   const fs = createSandboxFilesystemOperations(sandbox, { workspaceRoot });
@@ -121,6 +136,8 @@ function tryAutoWireSandboxTreeOperations(
     read: fs.read,
     write: fs.write,
     edit: fs.edit,
+    delete: fs.delete,
+    move: fs.move,
     repository,
   };
 }
@@ -161,6 +178,8 @@ function resolveComposition(
       read: options.read,
       write: options.write,
       edit: options.edit,
+      delete: options.delete,
+      move: options.move,
       list: options.list,
       search: options.search,
     };
@@ -187,6 +206,8 @@ function resolveComposition(
   let readOps = options.read?.operations;
   let writeOps = options.write?.operations;
   let editOps = options.edit?.operations;
+  let deleteOps = options.delete?.operations;
+  let moveOps = options.move?.operations;
   let repoOps = options.repository?.operations ?? options.list?.operations ?? options.search?.operations;
   let backendsBound = hasCustomOperations(options, kind);
 
@@ -197,13 +218,15 @@ function resolveComposition(
     } else if (!isDisposableSandbox(sandbox)) {
       throw new SandboxCodingCompositionError(
         'workspaceMode "sandbox" requires DisposableSandbox (execFile) for auto-wire, ' +
-          "custom read/write/edit/repository operations, or allowMixedWorkspaceWiring: true",
+          "custom read/write/edit/delete/move/repository operations, or allowMixedWorkspaceWiring: true",
       );
     } else {
       const auto = tryAutoWireSandboxTreeOperations(sandbox, workspaceRoot, options.repository);
       readOps = auto.read;
       writeOps = auto.write;
       editOps = auto.edit;
+      deleteOps = auto.delete;
+      moveOps = auto.move;
       repoOps = auto.repository;
       backendsBound = true;
     }
@@ -222,6 +245,8 @@ function resolveComposition(
     read: { ...options.read, ...(readOps ? { operations: readOps } : {}) },
     write: { ...options.write, ...(writeOps ? { operations: writeOps } : {}) },
     edit: { ...options.edit, ...(editOps ? { operations: editOps } : {}) },
+    delete: { ...options.delete, ...(deleteOps ? { operations: deleteOps } : {}) },
+    move: { ...options.move, ...(moveOps ? { operations: moveOps } : {}) },
     list: options.list,
     search: options.search,
   };

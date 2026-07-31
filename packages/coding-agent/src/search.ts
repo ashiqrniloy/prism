@@ -9,6 +9,7 @@ import {
   RepositoryError,
   type RepositoryLimitOptions,
   type RepositoryOperations,
+  type RepoSearchOutputMode,
   type RepositorySearchMatch,
   type RepositorySearchResult,
   resolveRepositoryLimits,
@@ -57,6 +58,66 @@ function formatSearchText(result: RepositorySearchResult): string {
   return `${body}\n[truncated by ${result.truncatedBy ?? "limit"}]`;
 }
 
+function uniqueMatchPaths(matches: readonly RepositorySearchMatch[]): string[] {
+  return [...new Set(matches.map((m) => m.path))].sort();
+}
+
+function formatFilesWithMatches(result: RepositorySearchResult): string {
+  if (result.matches.length === 0) {
+    return result.truncated ? `[truncated by ${result.truncatedBy ?? "limit"} before any matches]` : "(no matches)";
+  }
+  const body = uniqueMatchPaths(result.matches).join("\n");
+  if (!result.truncated) return body;
+  return `${body}\n[truncated by ${result.truncatedBy ?? "limit"}]`;
+}
+
+function formatCount(result: RepositorySearchResult): string {
+  const matchCount = result.matches.length;
+  const fileCount = uniqueMatchPaths(result.matches).length;
+  if (matchCount === 0) {
+    return result.truncated ? `[truncated by ${result.truncatedBy ?? "limit"} before any matches]` : "0 matches in 0 files";
+  }
+  const noun = fileCount === 1 ? "file" : "files";
+  const body = `${matchCount} matches in ${fileCount} ${noun}`;
+  if (!result.truncated) return body;
+  return `${body}\n[truncated by ${result.truncatedBy ?? "limit"}]`;
+}
+
+function formatSearchResult(result: RepositorySearchResult, outputMode: RepoSearchOutputMode): string {
+  switch (outputMode) {
+    case "files_with_matches":
+      return formatFilesWithMatches(result);
+    case "count":
+      return formatCount(result);
+    default:
+      return formatSearchText(result);
+  }
+}
+
+function parseOutputMode(value: unknown): RepoSearchOutputMode {
+  if (value === undefined || value === "content") return "content";
+  if (value === "files_with_matches" || value === "count") return value;
+  throw new Error(`unsupported outputMode: ${String(value)}`);
+}
+
+function buildSearchMetadata(result: RepositorySearchResult, outputMode: RepoSearchOutputMode): Record<string, unknown> {
+  const base = {
+    outputMode,
+    truncated: result.truncated,
+    truncatedBy: result.truncatedBy,
+    matchCount: result.matches.length,
+    scannedBytes: result.scannedBytes,
+    scannedFiles: result.scannedFiles,
+    scannedEntries: result.scannedEntries,
+    filesSkippedBinary: result.filesSkippedBinary,
+    filesSkippedOversize: result.filesSkippedOversize,
+  };
+  if (outputMode === "content") {
+    return { ...base, matches: result.matches };
+  }
+  return { ...base, fileCount: uniqueMatchPaths(result.matches).length };
+}
+
 export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): ToolDefinition {
   const limits = resolveRepositoryLimits({
     ...options?.repository,
@@ -68,7 +129,7 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
 
   return {
     name: "repo_search",
-    description: `Search text files under the workspace using literal substring match. Skips binary files, excluded basenames (default: ${limits.exclude.join(", ")}), and hidden names unless includeHidden is true. Does not follow symlinks. Caps matches/scanned bytes/time.`,
+    description: `Search text files under the workspace using literal substring match. Use outputMode "files_with_matches" for paths only or "count" for totals without line bodies. Skips binary files, excluded basenames (default: ${limits.exclude.join(", ")}), and hidden names unless includeHidden is true. Does not follow symlinks. Caps matches/scanned bytes/time.`,
     parameters: {
       type: "object",
       properties: {
@@ -98,6 +159,12 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
           type: "number",
           description: `Maximum matches to retain (default ${limits.maxMatches}, hard ${HARD_MAX_SEARCH_MATCHES})`,
         },
+        outputMode: {
+          type: "string",
+          description:
+            'Result shape: "content" (default, line bodies), "files_with_matches" (unique paths), or "count" (match/file totals)',
+          enum: ["content", "files_with_matches", "count"],
+        },
       },
       required: ["query"],
       additionalProperties: false,
@@ -117,6 +184,12 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
         return errorResult(toolCallId, `unsupported search mode: ${String(args.mode)}`);
       }
       const mode = "literal";
+      let outputMode: RepoSearchOutputMode;
+      try {
+        outputMode = parseOutputMode(args.outputMode);
+      } catch (error) {
+        return errorResult(toolCallId, error instanceof Error ? error.message : String(error));
+      }
       const caseSensitive = args.caseSensitive === true;
       const includeHidden = args.includeHidden === true;
       let contextLines: number | undefined;
@@ -141,6 +214,7 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
           risk: "low",
           metadata: {
             mode,
+            outputMode,
             caseSensitive,
             includeHidden,
             context: contextLines,
@@ -161,6 +235,7 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
           query,
           path,
           mode,
+          outputMode,
           caseSensitive,
           includeHidden,
           exclude: limits.exclude,
@@ -172,18 +247,8 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
         return {
           toolCallId,
           name: "repo_search",
-          content: [{ type: "text", text: formatSearchText(result) }],
-          metadata: {
-            truncated: result.truncated,
-            truncatedBy: result.truncatedBy,
-            matchCount: result.matches.length,
-            scannedBytes: result.scannedBytes,
-            scannedFiles: result.scannedFiles,
-            scannedEntries: result.scannedEntries,
-            filesSkippedBinary: result.filesSkippedBinary,
-            filesSkippedOversize: result.filesSkippedOversize,
-            matches: result.matches,
-          },
+          content: [{ type: "text", text: formatSearchResult(result, outputMode) }],
+          metadata: buildSearchMetadata(result, outputMode),
         };
       } catch (error) {
         const message = error instanceof RepositoryError ? error.message : error instanceof Error ? error.message : String(error);

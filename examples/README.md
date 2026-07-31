@@ -51,6 +51,7 @@ node examples/workflow-distributed-coordinator.ts
 node examples/workflow-schedules-replay.ts
 node examples/durable-coding-workflow.ts
 node examples/coding-goal-verify.ts
+node examples/coding-tools-capability-gaps.ts
 node examples/agent-durable-approval.ts
 node examples/ag-ui-server.ts
 node examples/secure-agent.ts
@@ -142,6 +143,7 @@ Each demo prints a single JSON line with its result.
 - `workflow-schedules-replay.ts` — **demo**: ownership-scoped one-time schedule → existing coordinator background run → nested shared-state workflow → immutable-lineage replay.
 - `durable-coding-workflow.ts` — **demo**: durable coding plan/todos as workspace Markdown, workflow `state.coding` checkpoint metadata, approval suspend/resume with fingerprint/hash revalidation, background cancel, and host-owned PR handoff (no network).
 - `coding-goal-verify.ts` — **demo**: `runCodingGoalVerify` thin goal→verify helper (failing check → suspend → approve → bounded handoff; no Goal table / network).
+- `coding-tools-capability-gaps.ts` — **demo**: `outputMode`, `glob`, read-before-write, `delete`/`move` smoke (network-free).
 - `tsconfig.json` — typecheck-only config.
 
 **demo** = the file has a runnable `main()`; the others are compile-checked

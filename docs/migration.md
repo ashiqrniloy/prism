@@ -1,5 +1,29 @@
 # Migration guide
 
+## 0.0.20 → 0.0.21 coding-tool capability gaps (small intentional breaks)
+
+Release **0.0.21** completes Phase 4 coding-tool capability gaps in `@arnilo/prism-coding-agent` / `@arnilo/prism-coding-security`:
+
+1. **`repo_search` gains `outputMode`.** Optional `outputMode?: "content" | "files_with_matches" | "count"` (default `"content"`). Files-only and count modes omit match body text from model content; invalid values fail closed.
+2. **Bounded `glob` tool.** `createGlobTool` / aggregator membership; `*` / `?` / `**` only (no brace expansion); reuses repository walk limits; files only.
+3. **Optional read-before-write.** Host sets `requireReadBeforeWrite: true` with a shared `ReadPathSet` on read/write/edit; unread paths fail unless `force: true`. In-memory / session-scoped only — not checkpoint-persisted.
+4. **Bounded `delete` and `move`.** File or empty directory delete (no recursive); move with `overwrite` default `false`; high-risk `ExecutionPolicy` kinds; host undo is not automatic.
+5. **Aggregator membership.** `createCodingTools` → **9** tools (adds `glob`, `delete`, `move`); `createReadOnlyTools` → **4** (adds `glob`). Hosts asserting exact `.length` must update.
+6. **Approval / sandbox.** `isMutatingKind` includes `delete` and `move` (not `glob`). Full sandbox custom ops must supply delete/move backends; `RepositoryOperations` requires `glob`.
+
+Example: `node examples/coding-tools-capability-gaps.ts` (network-free).
+
+```ts
+const tools = createCodingTools(cwd); // length 9
+const search = createRepoSearchTool(cwd);
+await search.execute({ query: "TODO", outputMode: "files_with_matches" }, ctx);
+
+const readPathSet = createReadPathSet();
+const write = createWriteTool(cwd, { requireReadBeforeWrite: true, readPathSet });
+```
+
+Fuzzy edit may still succeed silently on a normalized whitespace/unicode match — docs state that tradeoff; ambiguous multi-match already fails closed. No PDF/trash/PTY/LSP in 0.0.21.
+
 ## 0.0.19 → 0.0.20 skills and context progressive disclosure (small intentional breaks)
 
 Release **0.0.20** completes Phase 3 progressive skill disclosure in core `@arnilo/prism`:

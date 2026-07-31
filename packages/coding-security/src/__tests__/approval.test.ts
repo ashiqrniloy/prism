@@ -66,6 +66,66 @@ test("shell requires approval by default", async () => {
   }
 });
 
+test("delete and move require approval; glob does not", async () => {
+  const root = await mkdtemp(join(tmpdir(), "coding-sec-mut-"));
+  try {
+    const deny = createCodingApprovalPolicy({ roots: [root] });
+    for (const kind of ["delete", "move"] as const) {
+      const decision = await deny.check({
+        kind,
+        operation: kind,
+        paths: [join(root, "a.txt")],
+      });
+      assert.equal(decision.allowed, false, `${kind} must require approval`);
+      assert.match(decision.reason ?? "", /approval required/i);
+    }
+
+    const allow = createCodingApprovalPolicy({
+      roots: [root],
+      approve: () => true,
+    });
+    for (const kind of ["delete", "move"] as const) {
+      const decision = await allow.check({
+        kind,
+        operation: kind,
+        paths: [join(root, "a.txt")],
+      });
+      assert.equal(decision.allowed, true, `${kind} allowed when approved`);
+    }
+
+    const globDecision = await deny.check({
+      kind: "glob",
+      operation: "glob",
+      paths: [root],
+    });
+    assert.equal(globDecision.allowed, true, "glob is not mutating");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("read-only mode blocks delete and move", async () => {
+  const root = await mkdtemp(join(tmpdir(), "coding-sec-ro-mut-"));
+  try {
+    const policy = createCodingApprovalPolicy({
+      roots: [root],
+      readOnly: true,
+      approve: () => true,
+    });
+    for (const kind of ["delete", "move"] as const) {
+      const decision = await policy.check({
+        kind,
+        operation: kind,
+        paths: [join(root, "a.txt")],
+      });
+      assert.equal(decision.allowed, false);
+      assert.match(decision.reason ?? "", /read-only/i);
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("approval denial and cache reuse", async () => {
   const root = await mkdtemp(join(tmpdir(), "coding-sec-approve-"));
   let calls = 0;

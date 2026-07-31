@@ -8,20 +8,25 @@
 import { posix } from "node:path";
 import {
   compileSearchPattern,
+  matchGlobPattern,
+  type DeleteOperations,
   type EditOperations,
   HARD_MAX_EDIT_FILE_BYTES,
   HARD_MAX_TEXT_SCAN_BYTES,
   HARD_MAX_WRITE_BYTES,
   isBinaryBuffer,
+  type MoveOperations,
   type ReadOperations,
   type ReadTextOptions,
   type ReadTextResult,
   type RepositoryLimitOptions,
+  type RepositoryGlobResult,
   type RepositoryListResult,
   type RepositoryOperations,
   type RepositorySearchMatch,
   type RepositorySearchResult,
   resolveRepositoryLimits,
+  validateGlobPattern,
   type WriteOperations,
 } from "@arnilo/prism-coding-agent";
 import type { DisposableSandbox } from "./sandbox.js";
@@ -37,6 +42,11 @@ export const SANDBOX_FS_SCRIPTS = Object.freeze({
   stat: 'wc -c < "$1"',
   // Absolute paths; prune common heavy dirs. Extra excludes filtered in JS.
   find: `find "$1" -mindepth 1 -maxdepth "$2" \\( -name .git -o -name node_modules -o -name dist \\) -prune -o \\( -type f -o -type d -o -type l \\) -print 2>/dev/null`,
+  delete: 'if [ -L "$1" ] || [ -f "$1" ]; then rm -f -- "$1"; elif [ -d "$1" ]; then rmdir -- "$1"; else exit 1; fi',
+  listdir: 'ls -A -- "$1" 2>/dev/null',
+  kind: 'if [ -L "$1" ]; then echo symlink; elif [ -f "$1" ]; then echo file; elif [ -d "$1" ]; then echo dir; else echo other; fi',
+  move: 'mv -- "$1" "$2"',
+  remove: 'rm -f -- "$1"',
 });
 
 export class SandboxFsError extends Error {
@@ -187,8 +197,9 @@ function toRel(root: string, abs: string): string {
 export function createSandboxFilesystemOperations(
   sandbox: DisposableSandbox,
   options?: SandboxFsOperationsOptions,
-): { read: ReadOperations; write: WriteOperations; edit: EditOperations } {
+): { read: ReadOperations; write: WriteOperations; edit: EditOperations; delete: DeleteOperations; move: MoveOperations } {
   const workspaceRoot = normalizeWorkspaceRoot(options?.workspaceRoot);
+  const maxOutputBytes = options?.maxOutputBytes ?? HARD_MAX_TEXT_SCAN_BYTES;
 
   const readFile = async (absolutePath: string, opts: { maxBytes: number; signal?: AbortSignal }): Promise<Buffer> => {
     const path = assertSandboxPath(workspaceRoot, absolutePath);
@@ -297,7 +308,84 @@ export function createSandboxFilesystemOperations(
     statFile,
   };
 
-  return { read, write, edit };
+  const sandboxLstat = async (absolutePath: string, opts?: { signal?: AbortSignal }) => {
+    const path = assertSandboxPath(workspaceRoot, absolutePath);
+    const [{ exitCode: kindCode, stdout: kindOut }, { exitCode: sizeCode, stdout: sizeOut }] = await Promise.all([
+      sh(sandbox, SANDBOX_FS_SCRIPTS.kind, [path], { cwd: workspaceRoot, signal: opts?.signal, maxBytes: 64 }),
+      sh(sandbox, SANDBOX_FS_SCRIPTS.stat, [path], { cwd: workspaceRoot, signal: opts?.signal, maxBytes: 64 }),
+    ]);
+    if (kindCode !== 0 || sizeCode !== 0) throw new SandboxFsError(`failed to stat ${path}`);
+    const kind = kindOut.toString("utf8").trim();
+    const size = Number.parseInt(sizeOut.toString("utf8").trim(), 10);
+    return {
+      isFile: () => kind === "file",
+      isDirectory: () => kind === "dir",
+      isSymbolicLink: () => kind === "symlink",
+      size: Number.isFinite(size) && size >= 0 ? size : 0,
+    };
+  };
+
+  const del: DeleteOperations = {
+    lstat: sandboxLstat,
+    unlink: async (absolutePath, opts) => {
+      const path = assertSandboxPath(workspaceRoot, absolutePath);
+      const { exitCode } = await sh(sandbox, SANDBOX_FS_SCRIPTS.delete, [path], {
+        cwd: workspaceRoot,
+        signal: opts?.signal,
+        maxBytes: 64,
+      });
+      if (exitCode !== 0) throw new SandboxFsError(`failed to delete ${path}`);
+    },
+    rmdir: async (absolutePath, opts) => {
+      const path = assertSandboxPath(workspaceRoot, absolutePath);
+      const { exitCode } = await sh(sandbox, SANDBOX_FS_SCRIPTS.delete, [path], {
+        cwd: workspaceRoot,
+        signal: opts?.signal,
+        maxBytes: 64,
+      });
+      if (exitCode !== 0) throw new SandboxFsError(`failed to delete ${path}`);
+    },
+    readdir: async (absolutePath, opts) => {
+      const path = assertSandboxPath(workspaceRoot, absolutePath);
+      const { exitCode, stdout } = await sh(sandbox, SANDBOX_FS_SCRIPTS.listdir, [path], {
+        cwd: workspaceRoot,
+        signal: opts?.signal,
+        maxBytes: maxOutputBytes,
+      });
+      if (exitCode !== 0) throw new SandboxFsError(`failed to list ${path}`);
+      return stdout
+        .toString("utf8")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    },
+  };
+
+  const move: MoveOperations = {
+    lstat: sandboxLstat,
+    rename: async (from, to, opts) => {
+      const fromPath = assertSandboxPath(workspaceRoot, from);
+      const toPath = assertSandboxPath(workspaceRoot, to);
+      const { exitCode } = await sh(sandbox, SANDBOX_FS_SCRIPTS.move, [fromPath, toPath], {
+        cwd: workspaceRoot,
+        signal: opts?.signal,
+        maxBytes: 64,
+      });
+      if (exitCode !== 0) throw new SandboxFsError(`failed to move ${fromPath} to ${toPath}`);
+    },
+    unlink: async (absolutePath, opts) => {
+      const path = assertSandboxPath(workspaceRoot, absolutePath);
+      const { exitCode } = await sh(sandbox, SANDBOX_FS_SCRIPTS.remove, [path], {
+        cwd: workspaceRoot,
+        signal: opts?.signal,
+        maxBytes: 64,
+      });
+      if (exitCode !== 0) throw new SandboxFsError(`failed to remove ${path}`);
+    },
+    access,
+  };
+
+  return { read, write, edit, delete: del, move };
 }
 
 export function createSandboxRepositoryOperations(
@@ -489,6 +577,77 @@ export function createSandboxRepositoryOperations(
         scannedEntries,
         filesSkippedBinary,
         filesSkippedOversize,
+      };
+    },
+
+    async glob(request): Promise<RepositoryGlobResult> {
+      if (request.signal?.aborted) throw new SandboxFsError("Operation aborted");
+      try {
+        validateGlobPattern(request.pattern, limits.maxPatternBytes);
+      } catch (error) {
+        throw new SandboxFsError(error instanceof Error ? error.message : String(error));
+      }
+      const root = assertSandboxPath(workspaceRoot, request.root);
+      const start = request.path ? assertSandboxPath(workspaceRoot, posix.resolve(root, request.path)) : root;
+      const maxDepth = request.maxDepth ?? limits.maxDepth;
+      const maxResults = request.maxResults ?? limits.maxResults;
+      const offset = request.offset ?? 0;
+      const exclude = new Set(request.exclude ?? limits.exclude);
+      const includeHidden = request.includeHidden === true;
+      const deadlineAt = Date.now() + (request.deadlineMs ?? limits.maxTimeMs);
+
+      const absPaths = await listAbsPaths(start, maxDepth, request.signal);
+      const paths: string[] = [];
+      let scannedEntries = 0;
+      let scannedFiles = 0;
+      let seen = 0;
+      let truncatedBy: RepositoryGlobResult["truncatedBy"] = null;
+
+      for (const absPath of absPaths) {
+        if (Date.now() >= deadlineAt) {
+          truncatedBy = "time";
+          break;
+        }
+        if (request.signal?.aborted) {
+          truncatedBy = "abort";
+          break;
+        }
+        const rel = toRel(root, absPath);
+        const base = posix.basename(rel);
+        if (!includeHidden && base.startsWith(".")) continue;
+        if (exclude.has(base)) continue;
+        scannedEntries += 1;
+        if (scannedEntries > limits.maxEntries) {
+          truncatedBy = "entries";
+          break;
+        }
+        scannedFiles += 1;
+        if (scannedFiles > limits.maxFiles) {
+          truncatedBy = "files";
+          break;
+        }
+        if (!matchGlobPattern(request.pattern, rel)) continue;
+        if (seen < offset) {
+          seen++;
+          continue;
+        }
+        if (paths.length >= maxResults) {
+          truncatedBy = "results";
+          break;
+        }
+        paths.push(rel);
+        seen++;
+      }
+
+      const truncated = truncatedBy !== null;
+      return {
+        paths,
+        truncated,
+        truncatedBy,
+        scannedEntries,
+        scannedFiles,
+        offset,
+        nextOffset: truncated ? offset + paths.length : undefined,
       };
     },
   };

@@ -23,6 +23,7 @@ import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
+import { refuseReadBeforeWrite, type ReadBeforeWriteOptions } from "./read-path-set.js";
 
 /**
  * Pluggable operations for the write tool. Override to delegate file writing to remote systems
@@ -35,7 +36,7 @@ export interface WriteOperations {
   mkdir: (dir: string, options?: { signal?: AbortSignal }) => Promise<void>;
 }
 
-export interface WriteToolOptions {
+export interface WriteToolOptions extends ReadBeforeWriteOptions {
   /** Structured pre-execution policy checked before filesystem writes. */
   executionPolicy?: ExecutionPolicy;
   /** Custom operations backend (default: local filesystem). */
@@ -70,12 +71,16 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
   return {
     name: "write",
     description:
-      "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories.",
+      "Create or overwrite a file (full replace). Creates parent directories. Prefer edit for targeted changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true to override.",
     parameters: {
       type: "object",
       properties: {
         path: { type: "string", description: "Path to the file to write (relative or absolute)" },
         content: { type: "string", description: "Content to write to the file" },
+        force: {
+          type: "boolean",
+          description: "Bypass read-before-write guard when the host enabled requireReadBeforeWrite.",
+        },
       },
       required: ["path", "content"],
       additionalProperties: false,
@@ -85,6 +90,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
 
       const path = typeof args.path === "string" ? args.path : "";
       const content = typeof args.content === "string" ? args.content : undefined;
+      const force = args.force === true;
 
       if (path.length === 0) {
         return errorResult(toolCallId, "path is required and must be a non-empty string.");
@@ -114,6 +120,10 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
         );
         if (!policyCheck.allowed) return policyCheck.result;
         const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
+
+        const rbwRefusal = refuseReadBeforeWrite("write", path, allowedPath, options, force);
+        if (rbwRefusal) return errorResult(toolCallId, rbwRefusal);
+
         const dir = dirname(allowedPath);
 
         return await withFileMutationQueue(allowedPath, async () => {

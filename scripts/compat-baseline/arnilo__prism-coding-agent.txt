@@ -87,6 +87,8 @@ DEFAULT_MAX_TOTAL_OUTPUT_BYTES	export declare const DEFAULT_MAX_TOTAL_OUTPUT_BYT
 DEFAULT_MAX_WRITE_BYTES	export declare const DEFAULT_MAX_WRITE_BYTES: number
 DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[]
 DEFAULT_SHELL_TIMEOUT_SECONDS	export declare const DEFAULT_SHELL_TIMEOUT_SECONDS = 600
+DeleteOperations	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
+DeleteToolOptions	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
 Edit	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
 EditOperations	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
 EditToolDetails	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
@@ -102,6 +104,7 @@ GitStatusEntry	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind
 GitStatusEntryKind	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
 GitStatusResult	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
 GitToolsOptions	export type { GitToolsOptions } from "./git-tools.js"
+GlobToolOptions	export type { GlobToolOptions } from "./glob.js"
 HARD_CHECK_TIMEOUT_MS	export declare const HARD_CHECK_TIMEOUT_MS: number
 HARD_GIT_TIMEOUT_MS	export declare const HARD_GIT_TIMEOUT_MS = 600000
 HARD_MAX_ASK_USER_DECISION_BULLET_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_BULLET_BYTES = 2048
@@ -153,28 +156,35 @@ HARD_MAX_TOTAL_OUTPUT_BYTES	export declare const HARD_MAX_TOTAL_OUTPUT_BYTES: nu
 HARD_MAX_WRITE_BYTES	export declare const HARD_MAX_WRITE_BYTES: number
 HARD_SHELL_TIMEOUT_SECONDS	export declare const HARD_SHELL_TIMEOUT_SECONDS = 3600
 ListToolOptions	export type { ListToolOptions } from "./list.js"
+MoveOperations	export type { MoveOperations, MoveToolOptions } from "./move.js"
+MoveToolOptions	export type { MoveOperations, MoveToolOptions } from "./move.js"
+MutationStat	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
 NamedCheckDefinition	export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js"
 OutputAccumulator	export declare class OutputAccumulator
 PrHandoff	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
 ReadOperations	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadPathSet	export type { ReadPathSet } from "./read-path-set.js"
 ReadTextOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 ReadTextResult	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 ReadToolOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
-RepoEntryKind	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
-RepoListEntry	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepoEntryKind	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepoListEntry	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepoSearchOutputMode	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
 RepositoryError	export declare class RepositoryError extends Error
-RepositoryLimitOptions	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
-RepositoryListRequest	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
-RepositoryListResult	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
-RepositoryOperations	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
-RepositorySearchMatch	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
-RepositorySearchRequest	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
-RepositorySearchResult	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryGlobRequest	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryGlobResult	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryLimitOptions	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryListRequest	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryListResult	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositoryOperations	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositorySearchMatch	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositorySearchRequest	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+RepositorySearchResult	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
 ResolvedAskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedAskUserDecisionLimits	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedCodingCheckpointLimits	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
 ResolvedGitLimits	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
-ResolvedRepositoryLimits	export type { RepoEntryKind, RepoListEntry, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
+ResolvedRepositoryLimits	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, } from "./repository.js"
 RunCodingGoalVerifyOptions	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
 SAFE_GIT_CONFIG_ARGS	export declare const SAFE_GIT_CONFIG_ARGS: readonly ["-c", "core.hooksPath=/dev/null", "-c", "core.pager=cat", "-c", "sequence.editor=true", "-c", "credential.helper=", "-c", "advice.detachedHead=false"]
 SAFE_GIT_ENV	export declare const SAFE_GIT_ENV: Readonly<Record<string, string>>
@@ -206,6 +216,7 @@ createCodingCheckTool	export declare function createCodingCheckTool(cwd: string,
 createCodingGoalVerifyWorkflow	export declare function createCodingGoalVerifyWorkflow(options:
 createCodingPlanMarkdown	export declare function createCodingPlanMarkdown(input:
 createCodingTools	export declare function createCodingTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createDeleteTool	export declare function createDeleteTool(cwd: string, options?: DeleteToolOptions): ToolDefinition
 createDirectoryArtifactWriter	export declare function createDirectoryArtifactWriter(rootDir: string): ArtifactWriter
 createEditTool	export declare function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition
 createGitApplyTool	export declare function createGitApplyTool(cwd: string, options?: GitToolsOptions): ToolDefinition
@@ -217,9 +228,12 @@ createGitPrHandoffTool	export declare function createGitPrHandoffTool(cwd: strin
 createGitStatusTool	export declare function createGitStatusTool(cwd: string, options?: GitToolsOptions): ToolDefinition
 createGitTools	export declare function createGitTools(cwd: string, options?: GitToolsOptions): readonly ToolDefinition[]
 createGitWorktreeTool	export declare function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGlobTool	export declare function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefinition
 createLocalBashOperations	export declare function createLocalBashOperations(options?:
 createLocalRepositoryOperations	export declare function createLocalRepositoryOperations(limits?: RepositoryLimitOptions): RepositoryOperations
+createMoveTool	export declare function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefinition
 createReadOnlyTools	export declare function createReadOnlyTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createReadPathSet	export declare function createReadPathSet(): ReadPathSet
 createReadTool	export declare function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition
 createRepoListTool	export declare function createRepoListTool(cwd: string, options?: ListToolOptions): ToolDefinition
 createRepoSearchTool	export declare function createRepoSearchTool(cwd: string, options?: SearchToolOptions): ToolDefinition
@@ -241,6 +255,7 @@ gitRequireOk	export declare function gitRequireOk(runner: BoundGitRunner, reques
 gitText	export declare function gitText(result: GitExecResult, stream?: "stdout" | "stderr"): string
 isBinaryBuffer	export declare function isBinaryBuffer(buffer: Buffer): boolean
 killProcessTree	export declare function killProcessTree(pid: number): void
+matchGlobPattern	export declare function matchGlobPattern(pattern: string, path: string): boolean
 normalizeForFuzzyMatch	export declare function normalizeForFuzzyMatch(text: string): string
 normalizeToLF	export declare function normalizeToLF(text: string): string
 parseAskUserDecisionArgs	export declare function parseAskUserDecisionArgs(args: Record<string, unknown>, limits: ResolvedAskUserDecisionLimits):
@@ -250,9 +265,11 @@ pathExists	export declare function pathExists(filePath: string): Promise<boolean
 readCodingCheckpointFromState	export declare function readCodingCheckpointFromState(state: Readonly<Record<string, unknown>>, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata | undefined
 readCodingPlanFile	export declare function readCodingPlanFile(input:
 readFileBounded	export declare function readFileBounded(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer>
+refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "write" | "edit", displayPath: string, absolutePath: string, options: ReadBeforeWriteOptions | undefined, force: boolean): string | null
 resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
 resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits
 resolveCodingCheckpointLimits	export declare function resolveCodingCheckpointLimits(options?: CodingCheckpointLimitOptions): ResolvedCodingCheckpointLimits
+resolveContainedMutationPath	export declare function resolveContainedMutationPath(root: string, inputPath: string, options?:
 resolveGitLimits	export declare function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits
 resolveReadPath	export declare function resolveReadPath(filePath: string, cwd: string): string
 resolveReadPathAsync	export declare function resolveReadPathAsync(filePath: string, cwd: string): Promise<string>
@@ -275,6 +292,7 @@ validateAskUserDecisionResume	export declare function validateAskUserDecisionRes
 validateCodingCheckpointMetadata	export declare function validateCodingCheckpointMetadata(value: unknown, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata
 validateCodingLimit	export declare function validateCodingLimit(name: string, value: number, hardCap: number): number
 validateCodingLimitAllowZero	export declare function validateCodingLimitAllowZero(name: string, value: number, hardCap: number): number
+validateGlobPattern	export declare function validateGlobPattern(pattern: string, maxPatternBytes: number): void
 verifyCodingArtifactBytes	export declare function verifyCodingArtifactBytes(ref: CodingArtifactRef, bytes: Buffer, limits?: CodingCheckpointLimitOptions): void
 waitForChildProcess	export declare function waitForChildProcess(child: ChildProcess): Promise<number | null>
 withFileMutationQueue	export declare function withFileMutationQueue<T>(filePath: string, fn: () => Promise<T>): Promise<T>

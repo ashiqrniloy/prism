@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.21] - 2026-07-31
+
+### Added
+- `@arnilo/prism-coding-agent`: `repo_search` `outputMode`, bounded `glob`, optional `requireReadBeforeWrite`/`ReadPathSet`, bounded `delete`/`move`.
+- Example `examples/coding-tools-capability-gaps.ts`.
+
+### Changed
+- Default coding aggregator: 9 tools (`createCodingTools`); read-only aggregator: 4 (includes `glob`).
+- `@arnilo/prism-coding-security`: approval + sandbox wiring for `delete`/`move`.
+
+### Breaking (minor, pre-1.0)
+- Hosts asserting exact `createCodingTools().length === 6` or readonly length `3` must update (now 9 / 4).
+- Custom sandbox `RepositoryOperations` must implement `glob`; full sandbox custom ops must supply `delete`/`move`.
+
+See [docs/migration.md](docs/migration.md) for the full 0.0.20 → 0.0.21 notes.
+
+
 ## [0.0.20] - 2026-07-31
 
 ### Added

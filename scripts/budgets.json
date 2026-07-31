@@ -1,5 +1,5 @@
 {
-  "$comment": "Release 0.0.20 performance budgets (Phase 3 progressive disclosure). Baselines measured 2026-07-31, Node v24.18.0, Linux x86_64. Pack bytes/file count are deterministic -> tight tolerance. Startup and benchmark medians are machine-dependent -> generous ceiling/tolerance to stay non-flaky. Enforced by scripts/budget-gate.test.mjs (fast, in `npm test`: root pack + startup) and scripts/benchmark-0.0.16.mjs (release evidence: the six scenario medians). A regression beyond tolerance fails the gate.",
+  "$comment": "Release 0.0.21 performance budgets (Phase 4 coding-tool capability gaps). Baselines measured 2026-07-31, Node v24.18.0, Linux x86_64. Pack bytes/file count are deterministic -> tight tolerance. Startup and benchmark medians are machine-dependent -> generous ceiling/tolerance to stay non-flaky. Enforced by scripts/budget-gate.test.mjs (fast, in `npm test`: root pack + startup) and scripts/benchmark-0.0.16.mjs (release evidence: the six scenario medians). A regression beyond tolerance fails the gate.",
   "root": {
     "packedBytes": { "baseline": 610315, "tolerance": 0.05 },
     "unpackedBytes": { "baseline": 2157330, "tolerance": 0.05 },
