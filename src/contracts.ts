@@ -400,6 +400,12 @@ export interface RunOptions {
   readonly validate?: ToolValidator;
   readonly activeSkills?: readonly string[];
   readonly skills?: readonly Skill[];
+  /** Migration opt-in: activate every skill in a configured `SkillRegistry` when `activeSkills` / `skills` are unset. */
+  readonly activateAllSkills?: true;
+  /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
+  readonly skillsDisclosure?: import("./skill-disclosure.js").SkillsDisclosure;
+  /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
+  readonly toolResultFold?: import("./tool-result-fold.js").ToolResultFoldOptions;
   readonly instructionInjectors?: readonly InstructionInjector[];
   readonly inputLayout?: InputAssemblyLayout;
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
@@ -450,6 +456,12 @@ export interface AgentConfig {
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
   readonly context?: readonly ContextProvider[];
   readonly skills?: SkillRegistry | readonly Skill[];
+  /** Migration opt-in: activate every registry skill by default when run options do not narrow activation. */
+  readonly activateAllSkills?: true;
+  /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
+  readonly skillsDisclosure?: import("./skill-disclosure.js").SkillsDisclosure;
+  /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
+  readonly toolResultFold?: import("./tool-result-fold.js").ToolResultFoldOptions;
   readonly inputBuilder?: InputBuilder;
   readonly promptBuilder?: PromptBuilder;
   readonly middleware?: MiddlewareRegistry;
@@ -994,6 +1006,10 @@ export interface PromptBuildRequest {
   readonly messages: readonly Message[];
   readonly context?: readonly ContextBlock[];
   readonly skills?: readonly Skill[];
+  readonly skillsDisclosure?: import("./skill-disclosure.js").SkillsDisclosure;
+  readonly loadedSkills?: import("./skill-disclosure.js").LoadedSkillSet;
+  /** Skills demoted to catalog-only by context budget this turn. */
+  readonly demotedSkillBodies?: readonly string[];
   readonly tools?: readonly ToolDefinition[];
   /** Model being prompted; lets builders adapt composition to declared capabilities
    *  (e.g. the default builder omits the `Available tools:` text for tool-capable models). */

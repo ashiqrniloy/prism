@@ -357,7 +357,13 @@ describe("extension contribution integration", () => {
     const registry = createSkillRegistry([kernel.registries.skills.resolve("brief")]);
     const skills = resolveActiveSkills({ registry, names: ["brief"], tools: [tool] });
 
-    const request = await assembleProviderInput({ model: { provider: "mock", model: "demo" }, input: "Hi", skills, tools: [tool] });
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Hi",
+      skills,
+      tools: [tool],
+      skillsDisclosure: "eager",
+    });
 
     assert.match(request.messages.map((message) => text(message) ?? "").join("\n"), /Skill brief:\nBe brief\./);
   });
@@ -439,6 +445,7 @@ describe("context resolution and prompt composition", () => {
       context: [{ title: "Project", content: "Context" }],
       skills: [{ name: "brief", instructions: "Be brief." }],
       tools: [tool],
+      skillsDisclosure: "eager",
     });
 
     assert.deepEqual(
@@ -448,6 +455,16 @@ describe("context resolution and prompt composition", () => {
     assert.match(text(messages[0]!)!, /Project:\nContext/);
     assert.match(text(messages[1]!)!, /Skill brief:\nBe brief\./);
     assert.match(text(messages[2]!)!, /Available tools:\n- echo: Echo input/);
+  });
+
+  it("default prompt builder progressive mode shows skill catalog only", async () => {
+    const messages = await createDefaultPromptBuilder().build({
+      messages: [{ role: "user", content: [{ type: "text", text: "Question" }] }],
+      skills: [{ name: "brief", description: "Be brief.", instructions: "Full instructions." }],
+      skillsDisclosure: "progressive",
+    });
+    assert.match(text(messages[0]!)!, /Skill brief: Be brief\./);
+    assert.doesNotMatch(text(messages[0]!)!, /Full instructions/);
   });
 
   it("default prompt builder omits the tool text list for tool-capable models only", async () => {

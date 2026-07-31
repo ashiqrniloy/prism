@@ -27,6 +27,8 @@ import type { MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import { redactMessage } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
+import { type LoadedSkillSet, type SkillsDisclosure, skillMessages as buildSkillMessages } from "./skill-disclosure.js";
+import { foldToolResultHistory, foldToolResults, type ResolvedToolResultFoldOptions } from "./tool-result-fold.js";
 import { composeSystemPrompt } from "./system-prompts.js";
 
 export type AgentInput = string | Message | readonly Message[];
@@ -90,10 +92,14 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly contextProviders?: readonly ContextProvider[];
   readonly promptBuilder?: PromptBuilder;
   readonly skills?: readonly Skill[];
+  readonly skillsDisclosure?: SkillsDisclosure;
+  readonly loadedSkills?: LoadedSkillSet;
   readonly tools?: readonly ToolDefinition[];
   readonly providerOptions?: ProviderRequestOptions;
   /** Assembler-time eviction; does not delete session store history. */
   readonly contextBudget?: ContextBudget;
+  /** Resolved tool-result fold; projection-only, store untouched. */
+  readonly toolResultFold?: ResolvedToolResultFoldOptions;
 }
 
 export function createDefaultInputBuilder(): DefaultInputBuilder {
@@ -134,7 +140,16 @@ export function createDefaultPromptBuilder(): DefaultPromptBuilder {
       // Tool-capable models receive schemas via request.tools; the text list only serves
       // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
       const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
-      return [...contextMessages(request.context), ...skillMessages(request.skills), ...toolMessages(tools), ...request.messages];
+      return [
+        ...contextMessages(request.context),
+        ...buildSkillMessages(request.skills, {
+          disclosure: request.skillsDisclosure,
+          loaded: request.loadedSkills,
+          demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
+        }),
+        ...toolMessages(tools),
+        ...request.messages,
+      ];
     },
   };
 }
@@ -160,6 +175,19 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   // filter against loop-local turn. Instructions layer via composeSystemPrompt (no parallel prompt
   // code); contextBlocks merge via resolveContextProviders (middleware still runs).
   const turn = options.turn ?? 1;
+  const foldContext = {
+    sessionId: options.sessionId ?? "",
+    runId: options.runId ?? "",
+    turn,
+    signal: options.signal,
+  };
+  const foldedHistory = options.toolResultFold
+    ? await foldToolResultHistory(options.history ?? [], options.toolResultFold, foldContext)
+    : (options.history ?? []);
+  const foldedToolResults =
+    options.toolResultFold && options.toolResults?.length
+      ? await foldToolResults(options.toolResults, options.toolResultFold, foldContext)
+      : options.toolResults;
   const injectorContribs = options.instructionInjectors?.length
     ? runInstructionInjectors(options.instructionInjectors, {
         sessionId: options.sessionId ?? "",
@@ -167,7 +195,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         turn,
         // Runtime history is already redacted; input is redacted here before injector code sees it.
         input: inputMessages(options.input).map((message) => redactMessage(message, options.redactor)),
-        history: options.history ?? [],
+        history: foldedHistory,
         metadata: options.metadata ?? {},
         signal: options.signal ?? new AbortController().signal,
       })
@@ -175,13 +203,20 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   const systemInstructions = injectorContribs.instructions.length
     ? composeSystemPrompt(injectorContribs.instructions, { base: options.systemInstructions })
     : options.systemInstructions;
-  const buildContext: DefaultInputBuildContext = { ...options, ...baseContext, systemInstructions };
+  const buildContext: DefaultInputBuildContext = {
+    ...options,
+    ...baseContext,
+    systemInstructions,
+    history: foldedHistory,
+    toolResults: foldedToolResults,
+  };
   const layout = buildContext.inputLayout ?? "cache_aware";
 
   let messages: readonly Message[];
   let context: readonly ContextBlock[];
   let skills = options.skills;
   let tools = options.tools;
+  let demotedSkillBodies: readonly string[] | undefined;
   let budgetReport: ContextBudgetReport | undefined;
 
   if (options.contextBudget) {
@@ -202,12 +237,15 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       tools,
       budget: options.contextBudget,
       layout,
+      skillsDisclosure: options.skillsDisclosure,
+      loadedSkills: options.loadedSkills,
     });
     messages = flattenInputGroups(applied.groups, layout);
     if (buildContext.middleware) messages = await buildContext.middleware.run("input_assembly", messages);
     context = applied.context;
     skills = applied.skills;
     tools = applied.tools;
+    demotedSkillBodies = applied.demotedSkillBodies;
     if (options.contextBudget.reportOmissions) budgetReport = applied.report;
   } else {
     const inputBuilder = options.inputBuilder ?? createDefaultInputBuilder();
@@ -229,6 +267,9 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         messages,
         context,
         skills,
+        skillsDisclosure: options.skillsDisclosure,
+        loadedSkills: options.loadedSkills,
+        demotedSkillBodies,
         tools,
         metadata: options.metadata,
         signal: options.signal,
@@ -237,6 +278,9 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         messages,
         context,
         skills,
+        skillsDisclosure: options.skillsDisclosure,
+        loadedSkills: options.loadedSkills,
+        demotedSkillBodies,
         tools,
         metadata: options.metadata,
         signal: options.signal,
@@ -390,12 +434,6 @@ function contextMessages(context: readonly ContextBlock[] | undefined): Message[
   return (context ?? []).map((block) =>
     textMessage("system", `${block.title ? `${block.title}:\n` : "Context:\n"}${blockText(block)}`, block.metadata),
   );
-}
-
-function skillMessages(skills: readonly Skill[] | undefined): Message[] {
-  return (skills ?? [])
-    .filter((skill) => skill.instructions)
-    .map((skill) => textMessage("system", `Skill ${skill.name}:\n${skill.instructions}`, skill.metadata));
 }
 
 function toolMessages(tools: readonly ToolDefinition[] | undefined): Message[] {

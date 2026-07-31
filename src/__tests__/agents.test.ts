@@ -1265,7 +1265,7 @@ describe("agent session runtime", () => {
     assert.equal(text.includes("Skill brief"), false);
   });
 
-  it("no skill overrides keeps all configured skills active", async () => {
+  it("registry without activation injects zero skill messages by default", async () => {
     let request!: ProviderRequest;
     const provider: AIProvider = {
       id: "mock",
@@ -1286,8 +1286,113 @@ describe("agent session runtime", () => {
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
+    assert.equal(text.includes("Skill summarize"), false);
+    assert.equal(text.includes("Skill translate"), false);
+  });
+
+  it("activateAllSkills restores all registry skills for migration hosts", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const registry = createSkillRegistry([
+      { name: "summarize", instructions: "Summarize." },
+      { name: "translate", instructions: "Translate." },
+    ]);
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
+
+    await agent.createSession().run("Hi", { activateAllSkills: true });
+
+    const text = request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
     assert.equal(text.includes("Skill summarize"), true);
     assert.equal(text.includes("Skill translate"), true);
+  });
+
+  it("AgentConfig.activateAllSkills applies when run does not override activation", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const registry = createSkillRegistry([
+      { name: "summarize", instructions: "Summarize." },
+      { name: "translate", instructions: "Translate." },
+    ]);
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      skills: registry,
+      activateAllSkills: true,
+    });
+
+    await agent.createSession().run("Hi");
+
+    const text = request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
+    assert.equal(text.includes("Skill summarize"), true);
+    assert.equal(text.includes("Skill translate"), true);
+  });
+
+  it("plain-array AgentConfig.skills still activates all configured skills without overrides", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      skills: [{ name: "brief", instructions: "Be brief." }],
+    });
+
+    await agent.createSession().run("Hi");
+
+    const text = request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
+    assert.equal(text.includes("Skill brief"), true);
+  });
+
+  it("RunOptions.skills overrides a SkillRegistry AgentConfig.skills for the run", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const registry = createSkillRegistry([
+      { name: "summarize", instructions: "Summarize." },
+      { name: "translate", instructions: "Translate." },
+    ]);
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
+
+    await agent.createSession().run("Hi", { skills: [{ name: "brief", instructions: "Be brief." }] });
+
+    const text = request.messages
+      .flatMap((m) => m.content)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("\n");
+    assert.equal(text.includes("Skill brief"), true);
+    assert.equal(text.includes("Skill summarize"), false);
+    assert.equal(text.includes("Skill translate"), false);
   });
 
   it("external agent definition can create runtime agent", async () => {

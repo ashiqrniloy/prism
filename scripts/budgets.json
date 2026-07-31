@@ -1,9 +1,9 @@
 {
-  "$comment": "Release 0.0.16 performance budgets. Baselines are MEASURED values (2026-07-26, Node v24.18.0, Linux x86_64 / Ryzen 9 PRO 7940HS), not aspirational. Pack bytes/file count are deterministic -> tight tolerance. Startup and benchmark medians are machine-dependent -> generous ceiling/tolerance to stay non-flaky. Enforced by scripts/budget-gate.test.mjs (fast, in `npm test`: root pack + startup) and scripts/benchmark-0.0.16.mjs (release evidence: the six scenario medians). A regression beyond tolerance fails the gate.",
+  "$comment": "Release 0.0.20 performance budgets (Phase 3 progressive disclosure). Baselines measured 2026-07-31, Node v24.18.0, Linux x86_64. Pack bytes/file count are deterministic -> tight tolerance. Startup and benchmark medians are machine-dependent -> generous ceiling/tolerance to stay non-flaky. Enforced by scripts/budget-gate.test.mjs (fast, in `npm test`: root pack + startup) and scripts/benchmark-0.0.16.mjs (release evidence: the six scenario medians). A regression beyond tolerance fails the gate.",
   "root": {
-    "packedBytes": { "baseline": 575680, "tolerance": 0.05 },
-    "unpackedBytes": { "baseline": 2043402, "tolerance": 0.05 },
-    "fileCount": { "baseline": 270, "tolerance": 0.05 }
+    "packedBytes": { "baseline": 610315, "tolerance": 0.05 },
+    "unpackedBytes": { "baseline": 2157330, "tolerance": 0.05 },
+    "fileCount": { "baseline": 277, "tolerance": 0.05 }
   },
   "aggregate": {
     "$comment": "Sum of `npm pack --dry-run` sizes across all 44 publishable manifests (root + 43 packages). Recorded reference baseline; not gated in the fast test (43 extra pack calls are too slow for a unit gate).",

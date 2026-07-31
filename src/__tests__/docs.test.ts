@@ -2346,6 +2346,7 @@ describe("docs", () => {
       "examples/coding-compaction.ts",
       "examples/observational-memory-recall-status-view.ts",
       "examples/observational-memory-lifecycle.ts",
+      "examples/skills-progressive-disclosure.ts",
       "examples/cli.ts",
       "examples/rpc.ts",
       "examples/discover-skills.ts",
@@ -2518,15 +2519,26 @@ describe("docs", () => {
     assert.match(rootExports, /\bresolveActiveSkills\b/, "src/index.ts does not export resolveActiveSkills");
     assert.ok(contracts.includes("activeSkills?: readonly string[]"), "RunOptions does not declare activeSkills");
     assert.ok(contracts.includes("readonly skills?: readonly Skill[]"), "RunOptions does not declare skills override");
+    assert.ok(contracts.includes("activateAllSkills?: true"), "RunOptions does not declare activateAllSkills");
 
     for (const phrase of [
       "Runtime skill selection and activation",
       "RunOptions.activeSkills",
       "RunOptions.skills",
+      "activateAllSkills: true",
+      "skillsDisclosure",
+      "progressive",
+      "createLoadSkillTool",
+      "load_skill",
+      "toolResultFold",
+      "skill_body",
+      "ContextBlock.priority",
+      "LoadedSkillSet",
       "Runtime `AgentConfig.skills` and declarative `AgentDefinition.skills` have different defaults",
       "All registry skills (`SkillRegistry.list()`)",
-      "omitted `AgentDefinition.skills`",
       "No skills active",
+      "fail-closed default",
+      "omitted `AgentDefinition.skills`",
       "activateAllCapabilities: true",
       "migration-only",
       "This is not the declarative default",
@@ -2537,6 +2549,8 @@ describe("docs", () => {
       "toolNames",
       "requires inactive tool",
       "before the first provider turn",
+      "cannot grant tools",
+      "untrusted",
     ]) {
       assert.ok(page.includes(phrase), `docs/context-and-skills.md missing ${phrase}`);
     }
@@ -3085,6 +3099,37 @@ describe("docs", () => {
       const text = readFileSync(page, "utf8").toLowerCase();
       assert.ok(!/guaranteed cache hit|will always cache|cache will hit/.test(text), `${page} promises cache hits`);
     }
+  });
+
+  it("phase3_progressive_disclosure_docs_cover_catalog_load_migration_and_example", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const contextSkills = readFileSync("docs/context-and-skills.md", "utf8");
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const rootExports = readFileSync("src/index.ts", "utf8");
+
+    assert.match(rootExports, /\bcreateLoadSkillTool\b/, "src/index.ts does not export createLoadSkillTool");
+    assert.match(rootExports, /\bresolveToolResultFold\b/, "src/index.ts does not export resolveToolResultFold");
+
+    for (const phrase of [
+      "skillsDisclosure",
+      "createLoadSkillTool",
+      "load_skill",
+      "toolResultFold",
+      "skill_body",
+      "ContextBlock.priority",
+      "activateAllSkills",
+      "Progressive skill disclosure",
+    ]) {
+      assert.ok(contextSkills.includes(phrase), `context-and-skills.md missing ${phrase}`);
+    }
+    assert.ok(runtime.includes("skillsDisclosure"), "agent-session-runtime.md missing skillsDisclosure");
+    assert.ok(runtime.includes("activateAllSkills"), "agent-session-runtime.md missing activateAllSkills");
+    assert.ok(runtime.includes("toolResultFold"), "agent-session-runtime.md missing toolResultFold");
+    assert.ok(index.includes("progressive skill catalog"), "docs/index.md missing progressive skill catalog");
+    assert.ok(migration.includes("0.0.19 → 0.0.20 skills and context progressive disclosure"), "migration missing 0.0.20 section");
+    assert.ok(migration.includes("activateAllSkills: true"), "migration missing activateAllSkills migration");
+    assert.ok(existsSync("examples/skills-progressive-disclosure.ts"), "missing skills-progressive-disclosure example");
   });
 
   it("phase2_observational_memory_docs_cover_four_layers_migration_and_lifecycle_example", () => {

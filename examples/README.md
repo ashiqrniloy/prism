@@ -26,6 +26,7 @@ node examples/cache-aware-prompt-assembly.ts
 node examples/neuralwatt-agent-run.ts
 node examples/observational-memory-recall-status-view.ts
 node examples/observational-memory-lifecycle.ts
+node examples/skills-progressive-disclosure.ts
 node examples/external-app-db-backed.ts
 node examples/minimal-host-app.ts
 node examples/custom-builders.ts
@@ -103,6 +104,7 @@ Each demo prints a single JSON line with its result.
 - `tools.ts` — host-owned tool registry: allow/deny filter + dispatch.
 - `context.ts` — ordered context-provider pipeline.
 - `skills.ts` — skill registry + progressive disclosure activation.
+- `skills-progressive-disclosure.ts` — **demo**: many-skill catalog under budget + `load_skill` body load (network-free).
 - `extensions.ts` — extension kernel + event bus.
 - `manifests.ts` — data-only Prism manifest: define + parse.
 - `config-settings.ts` — layered config merge + settings providers.

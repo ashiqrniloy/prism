@@ -122,8 +122,8 @@ describe("cli discovery flags", () => {
     assert.equal(code, 0);
     assert.ok(captured.length >= 1, "provider was called");
     const input = textOf(captured[0]);
-    assert.match(input, /Skill greeter:/);
-    assert.match(input, /say hi to the user warmly/);
+    assert.match(input, /Skill greeter: g/);
+    assert.doesNotMatch(input, /say hi to the user warmly/);
   });
 
   it("default run (no --discover) performs no discovery; discoveredSkills stays empty", async () => {

@@ -5,6 +5,7 @@ import {
   assembleProviderInput,
   CONTEXT_BUDGET_REPORT_METADATA_KEY,
   ContextBudgetError,
+  createLoadedSkillSet,
   type ContextProvider,
   estimateTextTokens,
   getContextBudgetReport,
@@ -76,6 +77,7 @@ describe("context budget", () => {
       systemInstructions: "Be brief.",
       history,
       skills,
+      skillsDisclosure: "eager",
       contextProviders,
       toolResults: [{ toolCallId: "call_1", name: "lookup", value: { ok: true } }],
       contextBudget: {
@@ -119,6 +121,7 @@ describe("context budget", () => {
       groups,
       context: [{ id: "ctx-1", title: "Ctx", content: "c".repeat(400) }],
       skills: [{ name: "skill-a", instructions: "i".repeat(400) }],
+      skillsDisclosure: "eager",
       budget: {
         maxInputTokens: estimateTextTokens("System instruction:\nBe brief.") + estimateTextTokens("current question") + 40,
         reportOmissions: true,
@@ -195,5 +198,117 @@ describe("context budget", () => {
     });
     assert.equal(getContextBudgetReport(request), undefined);
     assert.equal(request.metadata?.[CONTEXT_BUDGET_REPORT_METADATA_KEY], undefined);
+  });
+
+  it("drops lower-priority context blocks before higher-priority ones", () => {
+    const groups = {
+      instructions: [{ role: "system" as const, content: [{ type: "text" as const, text: "sys" }] }],
+      summaries: [],
+      history: [],
+      input: [user("ask")],
+      attachments: [],
+      toolResults: [],
+    };
+    const low = "l".repeat(400);
+    const high = "h".repeat(400);
+    const result = applyContextBudget({
+      groups,
+      context: [
+        { id: "low", title: "Low", content: low, priority: 0 },
+        { id: "high", title: "High", content: high, priority: 100 },
+      ],
+      budget: {
+        maxInputTokens: estimateTextTokens("sys") + estimateTextTokens("ask") + estimateTextTokens(`High:\n${high}`) + 5,
+        reportOmissions: true,
+      },
+    });
+    assert.deepEqual(
+      result.report.omitted.filter((row) => row.kind === "context").map((row) => row.id),
+      ["low"],
+    );
+    assert.deepEqual(
+      result.context.map((block) => block.id),
+      ["high"],
+    );
+  });
+
+  it("equal context priority preserves LIFO eviction", () => {
+    const groups = {
+      instructions: [{ role: "system" as const, content: [{ type: "text" as const, text: "sys" }] }],
+      summaries: [],
+      history: [],
+      input: [user("ask")],
+      attachments: [],
+      toolResults: [],
+    };
+    const first = "a".repeat(200);
+    const second = "b".repeat(200);
+    const result = applyContextBudget({
+      groups,
+      context: [
+        { id: "first", title: "First", content: first, priority: 5 },
+        { id: "second", title: "Second", content: second, priority: 5 },
+      ],
+      budget: {
+        maxInputTokens: estimateTextTokens("sys") + estimateTextTokens("ask") + estimateTextTokens(`First:\n${first}`) + 5,
+        reportOmissions: true,
+      },
+    });
+    assert.deepEqual(
+      result.report.omitted.filter((row) => row.kind === "context").map((row) => row.id),
+      ["second"],
+    );
+    assert.deepEqual(
+      result.context.map((block) => block.id),
+      ["first"],
+    );
+  });
+
+  it("demotes skill body to catalog before full skill removal", async () => {
+    const body = "i".repeat(400);
+    const description = "short desc";
+    const catalogText = `Skill big: ${description}`;
+    const bodyText = `Skill big:\n${body}`;
+    const request = await assembleProviderInput({
+      model,
+      input: "ask",
+      systemInstructions: "sys",
+      skills: [{ name: "big", description, instructions: body }],
+      skillsDisclosure: "eager",
+      contextBudget: {
+        maxInputTokens: estimateTextTokens("System instruction:\nsys") + estimateTextTokens("ask") + estimateTextTokens(catalogText) + 10,
+        reportOmissions: true,
+      },
+    });
+    const report = getContextBudgetReport(request)!;
+    assert.ok(report.omitted.some((row) => row.kind === "skill_body" && row.id === "big"));
+    const text = request.messages.map((m) => m.content.map((p) => (p.type === "text" ? p.text : "")).join("")).join("\n");
+    assert.match(text, /Skill big: short desc/);
+    assert.doesNotMatch(text, new RegExp(body.slice(0, 40)));
+  });
+
+  it("demotes loaded skill body under progressive disclosure before dropping skill", async () => {
+    const loaded = createLoadedSkillSet();
+    loaded.add("big");
+    const body = "i".repeat(400);
+    const request = await assembleProviderInput({
+      model,
+      input: "ask",
+      systemInstructions: "sys",
+      skills: [{ name: "big", description: "desc", instructions: body }],
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      contextBudget: {
+        maxInputTokens:
+          estimateTextTokens("System instruction:\nsys") + estimateTextTokens("ask") + estimateTextTokens("Skill big: desc") + 10,
+        reportOmissions: true,
+      },
+    });
+    const report = getContextBudgetReport(request)!;
+    assert.ok(report.omitted.some((row) => row.kind === "skill_body" && row.id === "big"));
+    const text = request.messages.map((m) => m.content.map((p) => (p.type === "text" ? p.text : "")).join("")).join("\n");
+    assert.match(text, /Skill big: desc/);
+    assert.doesNotMatch(text, new RegExp(body.slice(0, 40)));
+    assert.ok(loaded.has("big"), "session loaded set unchanged; demotion is projection-only");
   });
 });

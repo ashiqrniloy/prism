@@ -1,4 +1,13 @@
 import type { ContextBlock, InputAssemblyLayout, Message, ProviderRequest, Skill, ToolDefinition } from "./contracts.js";
+import {
+  capSkillCatalog,
+  type LoadedSkillSet,
+  selectSkillsForPrompt,
+  skillHasRenderableBody,
+  skillPromptText,
+  type SkillRenderContext,
+  type SkillsDisclosure,
+} from "./skill-disclosure.js";
 
 /** Assembler-time input budget. At least one max required when present. */
 export interface ContextBudget {
@@ -7,7 +16,15 @@ export interface ContextBudget {
   readonly reportOmissions?: boolean;
 }
 
-export type ContextBudgetOmissionKind = "skills" | "context" | "history" | "tool_results" | "summaries" | "attachments" | "tools";
+export type ContextBudgetOmissionKind =
+  | "skills"
+  | "skill_body"
+  | "context"
+  | "history"
+  | "tool_results"
+  | "summaries"
+  | "attachments"
+  | "tools";
 
 export interface ContextBudgetOmission {
   readonly kind: ContextBudgetOmissionKind;
@@ -97,11 +114,14 @@ export function applyContextBudget(options: {
   readonly tools?: readonly ToolDefinition[];
   readonly budget: ContextBudget;
   readonly layout?: InputAssemblyLayout;
+  readonly skillsDisclosure?: SkillsDisclosure;
+  readonly loadedSkills?: LoadedSkillSet;
 }): {
   readonly groups: ContextBudgetMessageGroups;
   readonly context: readonly ContextBlock[];
   readonly skills: readonly Skill[];
   readonly tools: readonly ToolDefinition[] | undefined;
+  readonly demotedSkillBodies: readonly string[];
   readonly report: ContextBudgetReport;
 } {
   const budget = resolveContextBudget(options.budget);
@@ -115,15 +135,17 @@ export function applyContextBudget(options: {
     toolResults: [...options.groups.toolResults],
   };
   const context = [...(options.context ?? [])];
-  const skills = [...(options.skills ?? [])].filter((skill) => skill.instructions);
+  const skillContext: SkillRenderContext = { disclosure: options.skillsDisclosure, loaded: options.loadedSkills };
+  const skills = [...capSkillCatalog(selectSkillsForPrompt(options.skills ?? [], skillContext))];
   const tools = options.tools ? [...options.tools] : undefined;
   const omitted: ContextBudgetOmission[] = [];
+  const demotedBodies = new Set<string>();
 
   // Measure once, then subtract each dropped item's own estimate (dropNext computes it
   // with the same estimators) — avoids an O(n²) re-scan of the full keep-set per drop.
-  const kept = measureAll(groups, context, skills, tools);
+  const kept = measureAll(groups, context, skills, tools, skillContext, demotedBodies);
   while (overBudget(kept, budget)) {
-    const drop = dropNext(groups, context, skills, layout);
+    const drop = dropNext(groups, context, skills, layout, skillContext, demotedBodies);
     if (!drop) {
       throw new ContextBudgetError();
     }
@@ -138,6 +160,7 @@ export function applyContextBudget(options: {
     context,
     skills,
     tools,
+    demotedSkillBodies: [...demotedBodies],
     report: {
       omitted: budget.reportOmissions ? reportOmissions : [],
       keptTokens: kept.tokens,
@@ -161,6 +184,8 @@ function dropNext(
   context: ContextBlock[],
   skills: Skill[],
   layout: InputAssemblyLayout,
+  skillContext: SkillRenderContext,
+  demotedBodies: Set<string>,
 ): ContextBudgetOmission | undefined {
   // ponytail: drop droppable groups in layout order; within history, drop oldest first (shift).
   // cache_aware keeps attachments longer so stable prefix stays intact while budget still allows it.
@@ -187,7 +212,8 @@ function dropNext(
       return omission("attachments", message.id, message);
     }
     if (kind === "context" && context.length > 0) {
-      const block = context.pop()!;
+      const index = pickVictimIndex(context, (block) => block.priority ?? 0);
+      const block = context.splice(index, 1)[0]!;
       const text = `${block.title ? `${block.title}:\n` : "Context:\n"}${contextBlockText(block)}`;
       return {
         kind: "context",
@@ -197,8 +223,23 @@ function dropNext(
       };
     }
     if (kind === "skills" && skills.length > 0) {
-      const skill = skills.pop()!;
-      const text = `Skill ${skill.name}:\n${skill.instructions ?? ""}`;
+      const renderContext = withDemoted(skillContext, demotedBodies);
+      const demoteIndex = findSkillBodyIndex(skills, renderContext);
+      if (demoteIndex !== undefined) {
+        const skill = skills[demoteIndex]!;
+        const beforeText = skillPromptText(skill, renderContext) ?? "";
+        demotedBodies.add(skill.name);
+        const afterText = skillPromptText(skill, withDemoted(skillContext, demotedBodies)) ?? "";
+        return {
+          kind: "skill_body",
+          id: skill.name,
+          tokenEstimate: estimateTextTokens(beforeText) - estimateTextTokens(afterText),
+          byteLength: estimateTextBytes(beforeText) - estimateTextBytes(afterText),
+        };
+      }
+      const index = pickVictimIndex(skills, () => 0);
+      const skill = skills.splice(index, 1)[0]!;
+      const text = skillPromptText(skill, withDemoted(skillContext, demotedBodies)) ?? "";
       return {
         kind: "skills",
         id: skill.name,
@@ -229,7 +270,10 @@ function measureAll(
   context: readonly ContextBlock[],
   skills: readonly Skill[],
   tools: readonly ToolDefinition[] | undefined,
+  skillContext: SkillRenderContext,
+  demotedBodies: ReadonlySet<string>,
 ): { tokens: number; bytes: number } {
+  const renderContext = withDemoted(skillContext, demotedBodies);
   let tokens = 0;
   let bytes = 0;
   const addMessage = (message: Message) => {
@@ -248,7 +292,7 @@ function measureAll(
     bytes += estimateTextBytes(text);
   }
   for (const skill of skills) {
-    const text = `Skill ${skill.name}:\n${skill.instructions ?? ""}`;
+    const text = skillPromptText(skill, renderContext) ?? "";
     tokens += estimateTextTokens(text);
     bytes += estimateTextBytes(text);
   }
@@ -297,6 +341,31 @@ function messageText(message: Message): string {
       return "[content]";
     })
     .join("\n");
+}
+
+/** Lowest priority first; equal priority → LIFO (highest index). */
+function pickVictimIndex<T>(items: readonly T[], priorityOf: (item: T) => number): number {
+  let best = 0;
+  for (let i = 1; i < items.length; i++) {
+    const pi = priorityOf(items[i]!);
+    const pb = priorityOf(items[best]!);
+    if (pi < pb || (pi === pb && i > best)) best = i;
+  }
+  return best;
+}
+
+function withDemoted(context: SkillRenderContext, demotedBodies: ReadonlySet<string>): SkillRenderContext {
+  return demotedBodies.size > 0 ? { ...context, demotedBodies } : context;
+}
+
+/** Index of skill with renderable body to demote; LIFO among ties (all skills default priority 0). */
+function findSkillBodyIndex(skills: readonly Skill[], renderContext: SkillRenderContext): number | undefined {
+  let best: number | undefined;
+  for (let i = 0; i < skills.length; i++) {
+    if (!skillHasRenderableBody(skills[i]!, renderContext)) continue;
+    if (best === undefined || i > best) best = i;
+  }
+  return best;
 }
 
 function contextBlockText(block: ContextBlock): string {

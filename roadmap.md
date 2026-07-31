@@ -1,8 +1,8 @@
 # Prism Enterprise and Coding Harness Completion Roadmap
 
-Updated: 2026-07-30
-Baseline: `@arnilo/prism` **0.0.19** (Phase 2 exit gate passed)
-Status: Phase 2 complete; Phase 3+ pending exit gates
+Updated: 2026-07-31
+Baseline: `@arnilo/prism` **0.0.20** (Phase 3 exit gate passed)
+Status: Phase 3 complete; Phase 4+ pending exit gates
 
 ## Objectives
 
@@ -63,13 +63,15 @@ Status: Phase 2 complete; Phase 3+ pending exit gates
 8. Context-budget history eviction pops newest messages first (`groups.history.pop()`), discarding the most relevant recent turn before older history.
 9. Default `inputLayout` is `legacy`, which places transient user input before stable attachments/tool results and defeats prompt-cache prefix stability unless hosts know to set `cache_aware`.
 
-### Skill and context progressive-disclosure gaps
+### Skill and context progressive disclosure (Phase 3 shipped in 0.0.20)
 
-- `Skill.description` is never rendered into provider input; only full `instructions` bodies are injected as system messages every turn for active skills.
-- No on-demand skill-load mechanism exists; large skill registries (including future Caveman/Ponytail wiring) pay full instruction tokens every turn.
-- Runtime `SkillRegistry` without explicit `activeSkills`/`skills` defaults to `configured.list()` (all skills), contradicting declarative `AgentDefinition` safe default of no skills active.
-- `ContextBlock.priority` is unused by `applyContextBudget`; context/skill blocks drop LIFO all-or-nothing with no description-only fallback.
-- Tool results stay verbatim in history until compaction; there is no mid-flight summarization of stale large tool outputs between compaction cycles.
+- **Shipped:** default `skillsDisclosure: "progressive"` renders `Skill <name>: <description>` catalog for active skills; full `instructions` only when eager or name ∈ session `LoadedSkillSet` after successful `load_skill`.
+- **Shipped:** `createLoadSkillTool` / `resolveSkillLoad` (`load_skill`); host must register tool; fail-closed on unknown name, inactive `toolNames`, oversize body, duplicate load.
+- **Shipped:** `SkillRegistry` without `RunOptions.activeSkills` / `RunOptions.skills` activates **zero** skills; `activateAllSkills: true` restores prior list-all migration path.
+- **Shipped:** `applyContextBudget` honors `ContextBlock.priority` (default 0); skills demote via `skill_body` omission before full `skills` drop.
+- **Shipped:** optional host-gated `toolResultFold` (projection-only; store untouched; off by default).
+- **Deferred (follow Phase 3 plan):** checkpoint persistence for loaded-skill names — session `LoadedSkillSet` is in-memory only; resume loses bodies unless host/model reloads.
+- **Reference:** `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md`, `docs/context-and-skills.md`, `examples/skills-progressive-disclosure.ts`.
 
 ### Coding tool capability gaps
 
@@ -331,7 +333,8 @@ Status: Phase 2 complete; Phase 3+ pending exit gates
   - Exit Gate:
     - Primitive review is accepted; package unit/integration/live tests, core lifecycle/compaction regressions, branch/ownership/adversarial/resource tests, packed public example, `npm run sdk:ready`, package budget, docs links, declarations, changelog/migration, and full release gate pass with no unexplained observational-memory skip.
 
-- [ ] Phase 3 — Release 0.0.20: skills and context progressive disclosure
+- [x] Phase 3 — Release 0.0.20: skills and context progressive disclosure
+  - **Completion evidence (2026-07-31):** `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md` Tasks 0–7 done. Phase 3 core tests 159/159; full suite 1328/1328; `npm run sdk:ready` green; `release:check --version 0.0.20` + compat baseline updated; docs tripwire `phase3_progressive_disclosure_docs_cover_catalog_load_migration_and_example` green; `examples/skills-progressive-disclosure.ts` in demo gate. Shipped: default `skillsDisclosure: "progressive"` catalog, session `LoadedSkillSet` + `createLoadSkillTool` (`load_skill`), empty registry default + `activateAllSkills` migration opt-in, priority-aware context budget with `skill_body` demotion, optional host-gated `toolResultFold`.
   - Objectives:
     - Make skill assembly progressive: always expose name+description for selected skills; load full instruction bodies only on demand or when host opts into eager injection.
     - Align runtime `SkillRegistry` activation with declarative safe defaults (no silent activate-all).
@@ -396,6 +399,7 @@ Status: Phase 2 complete; Phase 3+ pending exit gates
     - Core skill/context/budget tests, migration note, packed progressive-disclosure example, `npm run sdk:ready`, docs links, and full release gate pass.
 
 - [ ] Phase 4 — Release 0.0.21: coding-tool capability gaps for least-error agent operation
+  - **Prerequisite:** Phase 3 exit gate passed (2026-07-31); create `plans/004-…` before implementation — do not scaffold until Phase 3 release is tagged/published if shipping versioned artifacts.
   - Objectives:
     - Add bounded native tools that reduce shell/`find`/`rm`/`mv` round-trips and blind overwrites.
     - Keep each addition optional, ExecutionPolicy-gated, and within existing coding-agent bounds.
@@ -451,12 +455,13 @@ Status: Phase 2 complete; Phase 3+ pending exit gates
     - Coding-agent unit/integration tests, policy/adversarial path tests, `npm run sdk:ready`, docs links, and full release gate pass.
 
 - [ ] Phase 5 — Release 0.0.22: third-party behavior integrations (Caveman, Ponytail)
+  - **Prerequisite:** Phase 3 progressive-disclosure contracts are live (`skillsDisclosure`, `createLoadedSkillSet`, `createLoadSkillTool`, `activateAllSkills`, priority budget + `skill_body` demotion). Phase 5 must **consume** these — not reimplement catalog/load/eviction.
   - Objectives:
     - Add `@arnilo/prism-caveman` and `@arnilo/prism-ponytail` as optional third-party integration packages that wire the upstream Caveman and Ponytail projects into a Prism-powered harness.
     - Map every upstream hook, skill, command, rule, and mode-lifecycle behavior to Prism's existing extension, system-prompt, instruction-injector, skill, command, context-provider, settings, and middleware contracts.
     - Never reimplement Caveman or Ponytail: load prompt fragments, skill bodies, hook logic, and rules from the installed upstream package and adapt them into Prism contributions.
     - Keep both packages inert until a host explicitly loads the extension; no implicit prompt injection, mode activation, config write, timer, or status rendering.
-    - Consume Phase 3 progressive-disclosure skill contracts so large upstream SKILL.md bodies are cataloged by description and loaded on demand (or via mode-scoped InstructionInjector slices), not injected every turn by default.
+    - Consume Phase 3 progressive-disclosure skill contracts so large upstream SKILL.md bodies are cataloged by description and loaded on demand via `load_skill` (or via mode-scoped `InstructionInjector` slices), not injected every turn by default.
   - Acceptance Criteria:
     - Functional (Caveman): the extension registers the `caveman` skill and companion skills (`caveman-commit`, `caveman-review`, `caveman-stats`, `caveman-compress`, `caveman-help`, `cavecrew`) as Prism `Skill` contributions whose `instructions` are the upstream `SKILL.md` bodies and whose `toolNames` match upstream declarations.
     - Functional (Caveman): the `/caveman`, `/caveman-commit`, `/caveman-review`, `/caveman-stats`, `/caveman-compress`, and `/caveman-init` commands are registered as Prism `CommandDefinition`s; `/caveman [lite|full|ultra|wenyan|wenyan-lite|wenyan-ultra|micro|off]` changes the active level, and `caveman-config`/`caveman-stats`/`caveman-compress` invoke the corresponding upstream skill behavior through Prism command dispatch.
@@ -466,7 +471,7 @@ Status: Phase 2 complete; Phase 3+ pending exit gates
     - Functional (Ponytail): upstream `ponytail-activate`, `ponytail-config`, `ponytail-instructions`, `ponytail-mode-tracker`, and `ponytail-subagent` hooks map to Prism lifecycle/middleware; the active mode's instructions are injected through an `InstructionInjector` that calls upstream `getPonytailInstructions` and `filterSkillBodyForMode`, and mode persists as a session custom entry restored on resume; `stop ponytail`/`normal mode` deactivation is honored.
     - Functional (both): mode state is per-session via session custom entries (`ponytail-mode`, `caveman-level`) with a host-configurable default resolved through a `SettingsProvider` and/or bounded config file; no TUI status bar is rendered because Prism is a harness, not a terminal host—status is exposed as extension events/metadata for the host to render.
     - Functional (both): prompt fragments, skill bodies, and rule text are loaded from the resolved upstream package (optional peer dependency where published, otherwise a host-supplied upstream path); if upstream is absent, `setup` fails closed with a bounded redacted error rather than registering empty contributions.
-    - Functional (both): registered skills participate in Phase 3 progressive disclosure (description catalog + on-demand or injector-scoped body); mode-specific slices continue to use `InstructionInjector` + upstream `filterSkillBodyForMode` / level fragments rather than dumping full SKILL.md every turn.
+    - Functional (both): registered skills participate in Phase 3 progressive disclosure — register upstream skills in a `SkillRegistry`, activate by name, default progressive catalog, host registers `createLoadSkillTool({ registry, loaded })` on the tool set; mode-specific slices continue to use `InstructionInjector` + upstream `filterSkillBodyForMode` / level fragments rather than `skillsDisclosure: "eager"` or dumping full SKILL.md every turn.
     - Functional (both): a primitive review confirms Prism's existing `Extension`, `Skill`, `CommandDefinition`, `SystemPromptContribution`, `InstructionInjector`, `ContextProvider`, `SettingsProvider`, middleware, and session-custom-entry contracts suffice; no new core primitive is added unless the review proves a gap.
     - Performance: injected prompt additions are bounded and sourced from upstream constants; skill/context resolution is O(registered skills); mode tracking is O(1) per turn; no timers, watchers, file watchers, or background workers start by default.
     - Code Quality: each package is independently installable, tree-shakeable, side-effect-free on import, and contains no duplicated upstream prompt/skill/rule content; the compaction-observational-memory extension is the reference package pattern.
@@ -1002,10 +1007,11 @@ Status: Phase 2 complete; Phase 3+ pending exit gates
 
 ### Skills and context progressive disclosure
 
-- Skill catalogs expose `name` + `description` by default; full `instructions` load on demand or via explicit eager mode.
-- Runtime skill registries default to no active skills; activate-all is an explicit host opt-in.
-- Context-budget eviction honors `ContextBlock.priority` and may demote skill bodies to description-only before full drop.
-- Mid-flight tool-result summarization is host-opt-in and never the default memory system; observational memory and compaction remain the durable paths.
+- Skill catalogs expose `name` + `description` by default (`skillsDisclosure: "progressive"`); full `instructions` load on demand via session `LoadedSkillSet` + `load_skill` or via explicit `skillsDisclosure: "eager"`.
+- Runtime skill registries default to no active skills; `activateAllSkills: true` is the explicit host opt-in for prior list-all behavior.
+- Context-budget eviction honors `ContextBlock.priority` (missing = 0) and may demote skill bodies to description-only (`skill_body` omission) before full drop.
+- Mid-flight tool-result summarization is host-opt-in (`toolResultFold` + summarizer callback; off by default) and never the default memory system; observational memory and compaction remain the durable paths.
+- Loaded-skill state is session-scoped in-memory in 0.0.20; durable checkpoint restore of loaded names is a future 0.0.x follow-on if hosts need resume without model reload.
 
 ### Coding tools
 
@@ -1027,7 +1033,7 @@ Status: Phase 2 complete; Phase 3+ pending exit gates
 - Upstream content is loaded from the installed upstream package (optional peer dependency or host-supplied path) and treated as untrusted, bounded text before injection.
 - Mode state is per-session via session custom entries with a host-configurable default; no TUI status rendering is performed by Prism.
 - Both packages are optional, host-selected, and off the 0.1.0 critical path; loading them is explicit and produces no implicit provider, network, timer, or filesystem activity.
-- Caveman/Ponytail skill registration must use Phase 3 progressive disclosure; mode/level prompt slices stay on InstructionInjector paths.
+- Caveman/Ponytail skill registration must use Phase 3 progressive disclosure: `SkillRegistry` + `activeSkills` / `activateAllSkills`, default progressive catalog, host-registered `createLoadSkillTool`; mode/level prompt slices stay on `InstructionInjector` paths — never bypass with eager full-body injection every turn.
 
 ### Durable state
 
@@ -1096,10 +1102,15 @@ Every numbered release must satisfy:
 
 ## Compromises Made
 
-- None yet. Record phase-specific deviations only after implementation and verification.
+- **Phase 3 (0.0.20):** loaded-skill bodies are session-scoped in-memory only — checkpoint resume does not restore loaded bodies unless host reloads; `toolResultFold` off by default; breaking registry empty-default + progressive catalog default require `activateAllSkills` / `skillsDisclosure: "eager"` migration for prior activate-all hosts; root tarball budget baselines bumped ~6% for Phase 3 modules.
 
 ## Further Actions
 
 - Execute `plans/001-Release-0-0-18-Restore-Integrity.md` (Phase 1) — **complete** (exit gate 2026-07-30).
 - Execute `plans/002-Release-0-0-19-Observational-Memory.md` (Phase 2) — **complete** (exit gate 2026-07-30).
+- Execute `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md` (Phase 3) — **complete** (exit gate 2026-07-31).
+- **Phase 4 next:** create and execute numbered plan for coding-tool capability gaps (`repo_search` output modes, glob, read-before-write, delete/move) — prerequisite Phase 3 gate passed; defer implementation scaffolding until Phase 3 release is tagged if shipping versioned artifacts.
+- **Phase 5 follow-on:** `@arnilo/prism-caveman` / `@arnilo/prism-ponytail` must wire upstream packages through Phase 3 contracts (`skillsDisclosure`, `createLoadSkillTool`, `LoadedSkillSet`, `activateAllSkills`) — catalog + `load_skill` / injector slices; no full upstream `SKILL.md` every turn.
+- **Future 0.0.x:** evaluate checkpoint persistence for loaded-skill names when hosts need durable resume without model reload.
+- **Release handoff:** tag and publish `@arnilo/prism@0.0.20` when ready — `docs/release-and-install.md` publish checklist.
 - Do not create plans or scaffolding for later phases until every earlier exit gate passes.

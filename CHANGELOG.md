@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.0.20] - 2026-07-31
+
+### Added
+- Progressive skill disclosure: `skillsDisclosure` (`"progressive"` default, `"eager"` opt-in), session `LoadedSkillSet`, `createLoadSkillTool` / `resolveSkillLoad` (`load_skill`), catalog/body byte caps.
+- Runtime `activateAllSkills` migration opt-in when `AgentConfig.skills` is a `SkillRegistry` without per-run activation.
+- Context budget: `ContextBlock.priority` ordering; skill body demotion (`skill_body` omission) before full drop.
+- Optional `toolResultFold` host-gated projection for aged large tool results (session store untouched).
+
+### Changed
+- Default runtime `SkillRegistry` activation is **empty** when neither `RunOptions.activeSkills` nor `RunOptions.skills` is set (was `SkillRegistry.list()`).
+- Default skill prompt assembly is catalog-only (`name` + `description`); full `instructions` require eager mode or successful `load_skill`.
+
+### Breaking (minor, pre-1.0)
+- Hosts relying on implicit activate-all registry behavior must pass `activateAllSkills: true` or set `activeSkills` / `skills` explicitly.
+- Hosts expecting full skill bodies every turn must set `skillsDisclosure: "eager"` or register and use `load_skill`.
+
+See [docs/migration.md](docs/migration.md) for the full 0.0.19 → 0.0.20 notes.
+
 ## [0.0.19] - 2026-07-30
 
 ### Added

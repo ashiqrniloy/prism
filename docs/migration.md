@@ -1,5 +1,27 @@
 # Migration guide
 
+## 0.0.19 → 0.0.20 skills and context progressive disclosure (small intentional breaks)
+
+Release **0.0.20** completes Phase 3 progressive skill disclosure in core `@arnilo/prism`:
+
+1. **Default skill prompt is catalog-only.** Active skills render `Skill <name>: <description>` every turn (`skillsDisclosure: "progressive"` default). Full `instructions` appear only after a successful `load_skill` for that session or when the host sets `skillsDisclosure: "eager"`.
+2. **Runtime `SkillRegistry` without activation is empty.** When `AgentConfig.skills` is a `SkillRegistry` and neither `RunOptions.activeSkills` nor `RunOptions.skills` is set, **zero** skills activate (was `SkillRegistry.list()`). Migration: `activateAllSkills: true` on the run or agent restores list-all activation (still subject to disclosure rules). Plain `Skill[]` configs are unchanged.
+3. **`load_skill` is host-opt-in.** Export `createLoadSkillTool({ registry, loaded })` from `@arnilo/prism`; register on the active tool set. Unknown names, inactive required tools, oversize bodies, and duplicate loads fail closed; load cannot widen tools or permissions.
+4. **Context budget honors `ContextBlock.priority`.** Within `context` and `skills` victims, lower priority drops first (missing = 0), then LIFO. Skills with loaded bodies may demote to description-only (`skill_body` omission) before full removal.
+5. **Optional `toolResultFold`.** Off by default; host `summarize` + thresholds fold aged large tool results in provider view only (session store untouched). Summarizer failure keeps raw results.
+
+Example: `node examples/skills-progressive-disclosure.ts` (network-free).
+
+```ts
+// Migration for hosts that relied on activate-all registry behavior:
+await session.run("Hi", { activateAllSkills: true });
+
+// Migration for hosts that want full bodies every turn without load_skill:
+const agent = createAgent({ model, provider, skills: registry, skillsDisclosure: "eager" });
+```
+
+Declarative `activateAllCapabilities: true` is unchanged and does **not** set runtime `activateAllSkills`.
+
 ## 0.0.18 → 0.0.19 observational memory lifecycle (small intentional breaks)
 
 Release **0.0.19** completes Phase 2 observational memory in `@arnilo/prism-compaction-observational-memory` only; core `@arnilo/prism` runtime behavior is unchanged.

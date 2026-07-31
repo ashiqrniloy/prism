@@ -55,6 +55,7 @@ ConversationError	export declare class ConversationError extends Error
 ConversationReplayCursor	export type { ConversationBranchRef, ConversationReplayCursor, ConversationThread, ConversationThreadState, } from "./conversations.js"
 ConversationThread	export type { ConversationBranchRef, ConversationReplayCursor, ConversationThread, ConversationThreadState, } from "./conversations.js"
 ConversationThreadState	export type { ConversationBranchRef, ConversationReplayCursor, ConversationThread, ConversationThreadState, } from "./conversations.js"
+CreateLoadSkillToolOptions	export type { CreateLoadSkillToolOptions, ResolveSkillLoadOptions } from "./skill-load.js"
 CreateMemorySessionStoreOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CreateSessionEntryOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CredentialRecord	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
@@ -67,6 +68,7 @@ DEFAULT_LEDGER_BATCH_BYTES	export declare const DEFAULT_LEDGER_BATCH_BYTES: numb
 DEFAULT_LEDGER_BATCH_DELAY_MS	export declare const DEFAULT_LEDGER_BATCH_DELAY_MS = 25
 DEFAULT_LEDGER_BATCH_ENTRIES	export declare const DEFAULT_LEDGER_BATCH_ENTRIES = 128
 DEFAULT_LIFECYCLE_PAGE_SIZE	export declare const DEFAULT_LIFECYCLE_PAGE_SIZE = 100
+DEFAULT_LOAD_SKILL_TOOL_NAME	export declare const DEFAULT_LOAD_SKILL_TOOL_NAME: "load_skill"
 DEFAULT_MAX_AGENT_RUN_STATE_BYTES	export declare const DEFAULT_MAX_AGENT_RUN_STATE_BYTES: number
 DEFAULT_MAX_ARGUMENT_BYTES	export declare const DEFAULT_MAX_ARGUMENT_BYTES = 262144
 DEFAULT_MAX_AUDIO_DURATION_MS	export declare const DEFAULT_MAX_AUDIO_DURATION_MS: number
@@ -92,6 +94,9 @@ DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES	export declare const DEFAULT_MAX_SESSI
 DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS	export declare const DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS = 1000
 DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES	export declare const DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES: number
 DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES	export declare const DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES = 512
+DEFAULT_MAX_SKILL_CATALOG_ENTRIES	export declare const DEFAULT_MAX_SKILL_CATALOG_ENTRIES = 64
+DEFAULT_MAX_SKILL_DESCRIPTION_BYTES	export declare const DEFAULT_MAX_SKILL_DESCRIPTION_BYTES = 512
+DEFAULT_MAX_SKILL_INSTRUCTION_BYTES	export declare const DEFAULT_MAX_SKILL_INSTRUCTION_BYTES = 32768
 DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH	export declare const DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH = 128
 DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES	export declare const DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES = 65536
 DEFAULT_MEDIA_FETCH_TIMEOUT_MS	export declare const DEFAULT_MEDIA_FETCH_TIMEOUT_MS = 30000
@@ -100,6 +105,9 @@ DEFAULT_PROVIDER_MEDIA_ITEM_BYTES	export declare const DEFAULT_PROVIDER_MEDIA_IT
 DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES	export declare const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32
 DEFAULT_RUN_LIMITS	export declare const DEFAULT_RUN_LIMITS: Required<Omit<RunLimits, "maxCost">>
 DEFAULT_SESSION_SEARCH_LIMIT	export declare const DEFAULT_SESSION_SEARCH_LIMIT = 20
+DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
+DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
+DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096
 DefaultCompactionStrategyOptions	export type { DefaultCompactionStrategyOptions } from "./compaction.js"
 DefaultInputBuildContext	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 DefaultInputBuilder	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
@@ -118,6 +126,7 @@ DispatchToolCallOptions	export type { DispatchToolCallOptions, ToolArgumentValid
 DocumentContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
 DuplicateRegistrationOptions	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
 DuplicateRegistrationPolicy	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
+EMPTY_SKILL_DESCRIPTION	export declare const EMPTY_SKILL_DESCRIPTION: "(no description)"
 EventMultiplexer	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
 EventMultiplexerOptions	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
 EventOverflowInfo	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
@@ -135,6 +144,7 @@ ExtensionKernel	export type { ExtensionErrorPolicy, ExtensionEventBus, Extension
 ExtensionKernelOptions	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 ExtensionLoadPolicy	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 FileContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
+FoldToolResultsContext	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
 GuardrailError	export declare class GuardrailError extends Error
 GuardrailRunResult	export type { GuardrailRunResult, RunGuardrailsOptions, } from "./guardrails.js"
 HARD_DEVICE_MAX_CHUNK_BYTES	export declare const HARD_DEVICE_MAX_CHUNK_BYTES: number
@@ -166,7 +176,11 @@ HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES	export declare const HARD_MAX_SESSION_SEA
 HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS	export declare const HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS = 5000
 HARD_MAX_SESSION_SEARCH_QUERY_BYTES	export declare const HARD_MAX_SESSION_SEARCH_QUERY_BYTES: number
 HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES	export declare const HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES: number
+HARD_MAX_SKILL_CATALOG_ENTRIES	export declare const HARD_MAX_SKILL_CATALOG_ENTRIES = 256
+HARD_MAX_SKILL_DESCRIPTION_BYTES	export declare const HARD_MAX_SKILL_DESCRIPTION_BYTES = 4096
+HARD_MAX_SKILL_INSTRUCTION_BYTES	export declare const HARD_MAX_SKILL_INSTRUCTION_BYTES = 262144
 HARD_RUN_LIMITS	export declare const HARD_RUN_LIMITS: Required<Omit<RunLimits, "maxCost">>
+HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
 INIT_PROVIDERS	export declare const INIT_PROVIDERS: readonly string[]
 IdentityError	export declare class IdentityError extends Error
 IdentityLimits	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
@@ -180,9 +194,11 @@ LegalHoldQuery	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeT
 LegalHoldRecord	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 LoadBinaryResourceOptions	export type { LoadBinaryResourceOptions } from "./resources.js"
 LoadedExtension	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+LoadedSkillSet	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 MAX_FEEDBACK_ID_LENGTH	export declare const MAX_FEEDBACK_ID_LENGTH = 128
 MAX_FEEDBACK_TAG_LENGTH	export declare const MAX_FEEDBACK_TAG_LENGTH = 64
 MAX_GUARDRAIL_CONCURRENCY	export declare const MAX_GUARDRAIL_CONCURRENCY = 16
+MAX_LOAD_SKILL_RESULT_BYTES	export declare const MAX_LOAD_SKILL_RESULT_BYTES = 512
 MODEL_INPUT_CAPABILITIES	export declare const MODEL_INPUT_CAPABILITIES: readonly ["text", "image", "audio", "file", "document"]
 ManifestContributionDeclaration	export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js"
 ManifestContributionKind	export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js"
@@ -238,10 +254,12 @@ ResolveActiveSkillsOptions	export type { ResolveActiveSkillsOptions, SkillRegist
 ResolveContextOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 ResolveInstructionInjectorsOptions	export type { ResolveInstructionInjectorsOptions } from "./instruction-injection.js"
 ResolveMediaContentOptions	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
+ResolveSkillLoadOptions	export type { CreateLoadSkillToolOptions, ResolveSkillLoadOptions } from "./skill-load.js"
 ResolveUseCaseModelInput	export type { ResolvedUseCaseModel, ResolveUseCaseModelInput, UseCaseModelBinding, } from "./use-case-model.js"
 ResolvedDevicePolicy	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
 ResolvedIdentityLimits	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
 ResolvedMediaContent	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
+ResolvedToolResultFoldOptions	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
 ResolvedUseCaseModel	export type { ResolvedUseCaseModel, ResolveUseCaseModelInput, UseCaseModelBinding, } from "./use-case-model.js"
 RevocableOAuthCredentialStore	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
 RunFeedbackError	export declare class RunFeedbackError extends Error
@@ -259,6 +277,8 @@ SESSION_ENTRY_KINDS	export declare const SESSION_ENTRY_KINDS: readonly SessionEn
 SESSION_ENTRY_SCHEMA_VERSION	export declare const SESSION_ENTRY_SCHEMA_VERSION = 1
 SESSION_SEARCH_UNSUPPORTED_CODE	export declare const SESSION_SEARCH_UNSUPPORTED_CODE: "session_search_unsupported"
 SESSION_SEARCH_WORKSPACE_METADATA_KEY	export declare const SESSION_SEARCH_WORKSPACE_METADATA_KEY: "workspaceRoot"
+SKILL_DISCLOSURE_ERROR_CODE	export declare const SKILL_DISCLOSURE_ERROR_CODE: "skill_disclosure_exceeded"
+SKILL_LOAD_ERROR_CODE	export declare const SKILL_LOAD_ERROR_CODE: "skill_load_failed"
 SecretRedactor	export type { SecretRedactor } from "./redaction.js"
 SecureAgentOptions	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
 SessionAppendConflictError	export declare class SessionAppendConflictError extends Error
@@ -268,11 +288,16 @@ SessionCachePolicyOptions	export type { SessionCachePolicyOptions } from "./prov
 SessionContextSnapshot	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 SessionSearchUnsupportedError	export declare class SessionSearchUnsupportedError extends Error
 SetTenantQuotaInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
+SkillDisclosureError	export declare class SkillDisclosureError extends Error
+SkillLoadError	export declare class SkillLoadError extends Error
 SkillRegistryOptions	export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js"
+SkillRenderContext	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
+SkillsDisclosure	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 SsrfPolicy	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 StoredAgentRunState	export type { StoredAgentRunState } from "./agent-run-state.js"
 StructuredOutputError	export declare class StructuredOutputError extends Error
 THINKING_LEVELS	export declare const THINKING_LEVELS: readonly ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+TOOL_RESULT_FOLD_TURN_METADATA_KEY	export declare const TOOL_RESULT_FOLD_TURN_METADATA_KEY: "prismToolResultTurn"
 TenantQuota	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ThinkingCompatFamily	export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js"
 ThinkingLevel	export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js"
@@ -284,6 +309,8 @@ ToolFilter	export type { DispatchToolCallOptions, ToolArgumentValidationError, T
 ToolFilterInput	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolParameterValidatorOptions	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolRegistryOptions	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
+ToolResultFoldInput	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
+ToolResultFoldOptions	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
 ToolValidator	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 TrustDecision	export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js"
 TrustDeniedError	export declare class TrustDeniedError extends Error
@@ -351,6 +378,7 @@ bytesToBase64	export declare function bytesToBase64(bytes: Uint8Array): string
 cacheHitRate	export declare function cacheHitRate(usage: Usage | undefined): number | undefined
 cacheSavings	export declare function cacheSavings(usage: Usage | undefined, model: ModelConfig): number | undefined
 cacheUsageReport	export declare function cacheUsageReport(usage: Usage | undefined, model?: ModelConfig): CacheUsageReport | undefined
+capSkillCatalog	export declare function capSkillCatalog(skills: readonly Skill[]): readonly Skill[]
 checkExecution	export declare function checkExecution(policy: ExecutionPolicy | undefined, action: ExecutionAction): Promise<ExecutionDecision>
 checkPermission	export declare function checkPermission(policy: PermissionPolicy | undefined, request: PermissionRequest): Promise<PermissionDecision>
 collectMessageContentBlocks	export declare function collectMessageContentBlocks(messages: readonly Message[]): ContentBlock[]
@@ -380,6 +408,8 @@ createExtensionKernel	export declare function createExtensionKernel(options?: Ex
 createId	export declare function createId(prefix: string): string
 createInitProject	export declare function createInitProject(options: InitOptions, runtime?: InitRuntime): Promise<InitResult>
 createJsonlSessionStore	export declare function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStoreOptions): SessionStore
+createLoadSkillTool	export declare function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDefinition
+createLoadedSkillSet	export declare function createLoadedSkillSet(): LoadedSkillSet
 createMemoryCheckpointStore	export declare function createMemoryCheckpointStore(options?: MemoryCheckpointStoreOptions): CheckpointStore
 createMemoryCredentialStore	export declare function createMemoryCredentialStore(initial?: readonly CredentialRecord[], options?: MemoryCredentialStoreOptions): MemoryCredentialStore
 createMemoryLeaseStore	export declare function createMemoryLeaseStore(): LeaseStore
@@ -431,6 +461,10 @@ estimateMessageTokens	export declare function estimateMessageTokens(message: Mes
 estimateTextBytes	export declare function estimateTextBytes(text: string): number
 estimateTextTokens	export declare function estimateTextTokens(text: string): number
 filterTools	export declare function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilterInput): readonly ToolDefinition[]
+foldToolResultHistory	export declare function foldToolResultHistory(history: readonly Message[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly Message[]>
+foldToolResults	export declare function foldToolResults(results: readonly ToolResult[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly ToolResult[]>
+foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
+formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
 generateValidateReviseLoop	export declare function generateValidateReviseLoop(opts:
 getContextBudgetReport	export declare function getContextBudgetReport(request: ProviderRequest): ContextBudgetReport | undefined
 getInitUsage	export declare function getInitUsage(templatesRoot?: string): string
@@ -455,6 +489,8 @@ isResourceHeld	export declare function isResourceHeld(holds: readonly Pick<Legal
 isSessionAppendConflict	export declare function isSessionAppendConflict(error: unknown): error is SessionAppendConflictError
 isSessionEntryKind	export declare function isSessionEntryKind(value: unknown): value is SessionEntryKind
 isSessionSearchUnsupported	export declare function isSessionSearchUnsupported(error: unknown): error is SessionSearchUnsupportedError
+isSkillDisclosureError	export declare function isSkillDisclosureError(error: unknown): error is SkillDisclosureError
+isSkillLoadError	export declare function isSkillLoadError(error: unknown): error is SkillLoadError
 isThinkingLevel	export declare function isThinkingLevel(value: unknown): value is ThinkingLevel
 isTransientErrorInfo	export declare function isTransientErrorInfo(error: ErrorInfo, transientCodes?: ReadonlySet<string | number>): boolean
 isTrusted	export declare function isTrusted(policy: TrustPolicy | undefined, request: TrustRequest): Promise<boolean>
@@ -552,7 +588,10 @@ resolveRunIdentity	export declare function resolveRunIdentity(runIdentity: Agent
 resolveRunLimits	export declare function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">>
 resolveRunProviderOptions	export declare function resolveRunProviderOptions(runOptions: Pick<RunOptions, "providerOptions" | "loop">, config: Pick<AgentConfig, "providerOptions" | "loop">): ProviderRequestOptions | undefined
 resolveSessionSearchQuery	export declare function resolveSessionSearchQuery(query: SessionSearchQuery): ResolvedSessionSearchQuery
+resolveSkillLoad	export declare function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill
+resolveSkillsDisclosure	export declare function resolveSkillsDisclosure(run?: SkillsDisclosure, agent?: SkillsDisclosure): SkillsDisclosure
 resolveToolConcurrency	export declare function resolveToolConcurrency(options:
+resolveToolResultFold	export declare function resolveToolResultFold(run?: ToolResultFoldOptions, agent?: ToolResultFoldOptions): ResolvedToolResultFoldOptions | undefined
 resolveUseCaseModel	export declare function resolveUseCaseModel(input: ResolveUseCaseModelInput): ResolvedUseCaseModel | undefined
 resolveUseCaseModelBinding	export declare function resolveUseCaseModelBinding(binding: UseCaseModelBinding | undefined, sessionModel?: ModelConfig): ResolvedUseCaseModel | undefined
 resumeAgentRun	export declare function resumeAgentRun(agent: Agent, ref: AgentRunRef, resume: AgentRunResume, options: AgentRunResumeOptions): Promise<AgentRunResult>
@@ -571,6 +610,7 @@ runRunLedgerConformance	export declare function runRunLedgerConformance(factory:
 runSessionStoreConformance	export declare function runSessionStoreConformance(factory: SessionStoreConformanceFactory, options?: SessionStoreConformanceOptions): Promise<void>
 sanitizeCacheKey	export declare function sanitizeCacheKey(value: string | undefined, maxLength: number): string | undefined
 saveAgentRunState	export declare function saveAgentRunState(input:
+selectSkillsForPrompt	export declare function selectSkillsForPrompt(skills: readonly Skill[], context?: SkillRenderContext): readonly Skill[]
 serializeOpenAIChatMessage	export declare function serializeOpenAIChatMessage(message: Message, capabilities?: ModelCapabilities): JsonObject
 serializeOpenAIChatStructuredOutput	export declare function serializeOpenAIChatStructuredOutput(options: StructuredOutputOptions): JsonObject
 serializeOpenAIResponsesInputAudio	export declare function serializeOpenAIResponsesInputAudio(options:
@@ -579,6 +619,9 @@ serializeOpenAIResponsesStructuredOutput	export declare function serializeOpenAI
 serializeOpenAITool	export declare function serializeOpenAITool(tool: ToolDefinition): JsonObject
 serializePdfDocumentWireBlock	export declare function serializePdfDocumentWireBlock(options:
 singleShotLoop	export declare const singleShotLoop: AgentLoopStrategy
+skillHasRenderableBody	export declare function skillHasRenderableBody(skill: Skill, context?: SkillRenderContext): boolean
+skillMessages	export declare function skillMessages(skills: readonly Skill[] | undefined, context?: SkillRenderContext): Message[]
+skillPromptText	export declare function skillPromptText(skill: Skill, context?: SkillRenderContext): string | undefined
 sniffMediaMimeType	export declare function sniffMediaMimeType(bytes: Uint8Array): string | undefined
 splitFrontmatter	export declare function splitFrontmatter(text: string, path: string):
 statusFromState	export declare function statusFromState(state: StoredAgentRunState, version: number): AgentRunStatusResult
@@ -593,6 +636,6 @@ usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p pro
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.0.19"
+version	export declare const version = "0.0.20"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

@@ -75,7 +75,7 @@ describe("skill registry and selection", () => {
     assert.deepEqual(resolveActiveSkills({ registry, names: ["brief"], tools: [tool] }), [skill]);
   });
 
-  it("prompt builder includes selected skill instructions only", async () => {
+  it("prompt builder includes selected skill catalog in progressive mode", async () => {
     const registry = createSkillRegistry([skill, { name: "hidden", instructions: "Do not include." }]);
     const active = resolveActiveSkills({ registry, names: ["brief"], tools: [tool] });
 
@@ -85,6 +85,27 @@ describe("skill registry and selection", () => {
       promptBuilder: createDefaultPromptBuilder(),
       skills: active,
       tools: [tool],
+    });
+    const text = request.messages
+      .map((message) => message.content.map((part) => (part.type === "text" ? part.text : "")).join("\n"))
+      .join("\n");
+
+    assert.match(text, /Skill brief: \(no description\)/);
+    assert.doesNotMatch(text, /Answer briefly/);
+    assert.doesNotMatch(text, /Do not include/);
+  });
+
+  it("prompt builder includes selected skill instructions in eager mode", async () => {
+    const registry = createSkillRegistry([skill, { name: "hidden", instructions: "Do not include." }]);
+    const active = resolveActiveSkills({ registry, names: ["brief"], tools: [tool] });
+
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Hi",
+      promptBuilder: createDefaultPromptBuilder(),
+      skills: active,
+      tools: [tool],
+      skillsDisclosure: "eager",
     });
     const text = request.messages
       .map((message) => message.content.map((part) => (part.type === "text" ? part.text : "")).join("\n"))

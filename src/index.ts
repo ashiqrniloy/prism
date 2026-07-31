@@ -419,6 +419,48 @@ export { createChainedSettingsProvider, createStaticSettingsProvider } from "./s
 export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js";
 export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
 export {
+  createLoadedSkillSet,
+  DEFAULT_MAX_SKILL_CATALOG_ENTRIES,
+  DEFAULT_MAX_SKILL_DESCRIPTION_BYTES,
+  DEFAULT_MAX_SKILL_INSTRUCTION_BYTES,
+  EMPTY_SKILL_DESCRIPTION,
+  HARD_MAX_SKILL_CATALOG_ENTRIES,
+  HARD_MAX_SKILL_DESCRIPTION_BYTES,
+  HARD_MAX_SKILL_INSTRUCTION_BYTES,
+  isSkillDisclosureError,
+  resolveSkillsDisclosure,
+  SkillDisclosureError,
+} from "./skill-disclosure.js";
+export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js";
+export type { CreateLoadSkillToolOptions, ResolveSkillLoadOptions } from "./skill-load.js";
+export {
+  createLoadSkillTool,
+  DEFAULT_LOAD_SKILL_TOOL_NAME,
+  isSkillLoadError,
+  MAX_LOAD_SKILL_RESULT_BYTES,
+  resolveSkillLoad,
+  SKILL_LOAD_ERROR_CODE,
+  SkillLoadError,
+} from "./skill-load.js";
+export {
+  DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES,
+  DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS,
+  DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES,
+  foldedToolResultHeader,
+  foldToolResultHistory,
+  foldToolResults,
+  formatFoldedToolResult,
+  HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES,
+  resolveToolResultFold,
+  TOOL_RESULT_FOLD_TURN_METADATA_KEY,
+} from "./tool-result-fold.js";
+export type {
+  FoldToolResultsContext,
+  ResolvedToolResultFoldOptions,
+  ToolResultFoldInput,
+  ToolResultFoldOptions,
+} from "./tool-result-fold.js";
+export {
   artifactStructuredOutputRequest,
   assertStructuredOutputRequestSupported,
   DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH,
@@ -464,5 +506,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.0.19";
+export const version = "0.0.20";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

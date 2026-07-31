@@ -84,6 +84,8 @@ import {
   type SessionContextSnapshot,
 } from "./session-stores.js";
 import { resolveActiveSkills } from "./skills.js";
+import { createLoadedSkillSet, resolveSkillsDisclosure } from "./skill-disclosure.js";
+import { resolveToolResultFold } from "./tool-result-fold.js";
 import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "./structured-output.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
 import { createToolRegistry, dispatchToolCall } from "./tools.js";
@@ -281,6 +283,7 @@ class RuntimeAgentSession implements AgentSession {
   private activeLimitOutputBuffer = false;
   private activeDurable?: ActiveDurableRun;
   private activeLoopTurn = 1;
+  private readonly loadedSkills = createLoadedSkillSet();
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
   private snapshotGeneration = 0;
@@ -568,6 +571,9 @@ class RuntimeAgentSession implements AgentSession {
             promptBuilder: this.agent.config.promptBuilder,
             contextProviders,
             skills: activeSkills,
+            skillsDisclosure: resolveSkillsDisclosure(options.skillsDisclosure, this.agent.config.skillsDisclosure),
+            toolResultFold: resolveToolResultFold(options.toolResultFold, this.agent.config.toolResultFold),
+            loadedSkills: this.loadedSkills,
             tools,
             resourceLoader: this.agent.config.resourceLoader,
             permission: this.agent.config.permission,
@@ -619,7 +625,12 @@ class RuntimeAgentSession implements AgentSession {
               runId,
               toolCallId: call.id,
               signal: controller.signal,
-              metadata,
+              metadata: {
+                ...metadata,
+                loadedSkills: this.loadedSkills,
+                activeTools: tools,
+                activeSkillNames: activeSkills.map((skill) => skill.name),
+              },
               identity: this.activeIdentity,
             },
             middleware: this.agent.config.middleware,
@@ -981,7 +992,9 @@ class RuntimeAgentSession implements AgentSession {
     const configured = this.agent.config.skills;
     if (configured && typeof configured === "object" && "list" in configured) {
       if (options.activeSkills) return resolveActiveSkills({ registry: configured, names: options.activeSkills, tools });
-      return configured.list();
+      if (options.skills !== undefined) return options.skills;
+      if (options.activateAllSkills ?? this.agent.config.activateAllSkills) return configured.list();
+      return [];
     }
     const arr = options.skills ?? (Array.isArray(configured) ? configured : []);
     return arr;
