@@ -1,0 +1,32 @@
+CAVEMAN_LEVELS	export declare const CAVEMAN_LEVELS: readonly ["off", "lite", "full", "ultra", "wenyan-lite", "wenyan", "wenyan-ultra", "micro"]
+CAVEMAN_LEVEL_TYPE	export declare const CAVEMAN_LEVEL_TYPE: "caveman-level"
+CAVEMAN_SKILL_NAMES	export declare const CAVEMAN_SKILL_NAMES: readonly ["caveman", "caveman-commit", "caveman-review", "caveman-stats", "caveman-compress", "caveman-help", "cavecrew"]
+CAVEMAN_UPSTREAM_PACKAGE	export declare const CAVEMAN_UPSTREAM_PACKAGE = "juliusbrussee/caveman"
+CavemanAppendOptions	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+CavemanExtensionOptions	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+CavemanExtensionState	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+CavemanLevel	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+DEFAULT_CAVEMAN_CONFIG	export declare const DEFAULT_CAVEMAN_CONFIG: CavemanConfig
+MAX_CONFIG_FILE_BYTES	export declare const MAX_CONFIG_FILE_BYTES = 16384
+MAX_INJECTED_INSTRUCTION_BYTES	export declare const MAX_INJECTED_INSTRUCTION_BYTES = 32768
+MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES = 262144
+SKILLS_DIR_NAME	export declare const SKILLS_DIR_NAME = "skills"
+UpstreamResolveError	export declare class UpstreamResolveError extends Error
+buildCavemanInstructions	export declare function buildCavemanInstructions(upstreamRoot: string, level: CavemanLevel): string | undefined
+createCavemanCommands	export declare function createCavemanCommands(ctx: CavemanCommandContext): readonly CommandDefinition[]
+createCavemanExtension	export declare function createCavemanExtension(options: CavemanExtensionOptions): Extension
+extractUserText	export declare function extractUserText(messages: readonly
+filterSkillBodyForLevel	export declare function filterSkillBodyForLevel(body: string, level: CavemanLevel): string
+isCavemanLevel	export declare function isCavemanLevel(value: string): value is CavemanLevel
+isDeactivationCommand	export declare function isDeactivationCommand(text: string): boolean
+loadUpstreamSkills	export declare function loadUpstreamSkills(upstreamRoot: string): Skill[]
+normalizeLevelArg	export declare function normalizeLevelArg(arg: string): CavemanLevel | null
+persistLevel	export declare function persistLevel(options: PersistLevelOptions): Promise<void>
+readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
+readCavemanConfig	export declare function readCavemanConfig(configPath?: string): CavemanConfig
+readInitialConfig	export declare function readInitialConfig(configPath: string | undefined, defaultLevel?: CavemanLevel, showStatus?: boolean): CavemanConfig
+redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
+requireCavemanSkills	export declare function requireCavemanSkills(skills: readonly Skill[]): Map<CavemanSkillName, Skill>
+resolveLevelFromEntries	export declare function resolveLevelFromEntries(entries: readonly SessionEntry[]): CavemanLevel | undefined
+resolveUpstreamRoot	export declare function resolveUpstreamRoot(options: ResolveUpstreamRootOptions): string
+writeCavemanConfig	export declare function writeCavemanConfig(configPath: string, config: CavemanConfig): void

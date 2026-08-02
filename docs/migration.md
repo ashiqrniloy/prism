@@ -1,5 +1,30 @@
 # Migration guide
 
+## 0.0.21 → 0.0.22 third-party behavior integrations (additive)
+
+Release **0.0.22** adds two optional behavior packages; core `@arnilo/prism` runtime behavior is unchanged.
+
+1. **New packages (opt-in).** `@arnilo/prism-caveman` and `@arnilo/prism-ponytail` wire upstream Caveman and Ponytail into Prism extension contracts. They are **not** included in `@arnilo/prism-code`, `@arnilo/prism-sdk`, or `@arnilo/prism-all` by default — install explicitly when needed.
+2. **Inert until loaded.** Import registers nothing. Host calls `createExtensionKernel().load([createCavemanExtension(...)])` / `createPonytailExtension(...)`.
+3. **Session attach required.** Both factories require host `appendEntry` and `getEntries` callbacks (same pattern as observational memory `attach`) for mode/level persistence (`caveman-level`, `ponytail-mode` custom entries).
+4. **Progressive disclosure.** Keep `skillsDisclosure: "progressive"` and register `createLoadSkillTool`; mode/level slices come from `caveman-mode` / `ponytail-mode` instruction injectors, not eager full `SKILL.md` bodies.
+5. **Upstream resolution.** Caveman requires `upstreamPath` to a [juliusbrussee/caveman](https://github.com/juliusbrussee/caveman) checkout (`skills/` marker). Ponytail resolves optional peer `@dietrichgebert/ponytail@^4.8.4` or `upstreamPath`. Missing upstream → `setup` throws; zero contributions registered.
+6. **Publish graph.** Publishable manifest count is **46** (was 44).
+
+Example: `node examples/caveman-ponytail.ts` (network-free fixture upstream trees).
+
+```ts
+import { createCavemanExtension } from "@arnilo/prism-caveman";
+import { createPonytailExtension } from "@arnilo/prism-ponytail";
+
+await kernel.load([
+  createCavemanExtension({ upstreamPath: "/path/to/caveman", appendEntry, getEntries }),
+  createPonytailExtension({ defaultMode: "full", appendEntry, getEntries }),
+]);
+```
+
+No breaking changes for hosts that do not install the new packages.
+
 ## 0.0.20 → 0.0.21 coding-tool capability gaps (small intentional breaks)
 
 Release **0.0.21** completes Phase 4 coding-tool capability gaps in `@arnilo/prism-coding-agent` / `@arnilo/prism-coding-security`:

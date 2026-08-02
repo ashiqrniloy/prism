@@ -1012,18 +1012,18 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.13 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.22 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 44, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 46, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.13] - 2026-07-24"), `${dir}/CHANGELOG.md missing finalized 0.0.13 section`);
+      assert.ok(changelog.includes("## [0.0.22] - 2026-07-31"), `${dir}/CHANGELOG.md missing finalized 0.0.22 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -1548,17 +1548,14 @@ describe("docs", () => {
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
     const docs = readFileSync("docs/release-and-install.md", "utf8");
-    const handoff = docs.slice(docs.indexOf("### 0.0.14 publish handoff"), docs.indexOf("### 0.0.13 publish handoff"));
+    const handoff = docs.slice(docs.indexOf("### 0.0.22 publish handoff"), docs.indexOf("### 0.0.21 publish handoff"));
     for (const phrase of [
       "Decision: GO",
-      "43 manifests",
-      "git tag -s v0.0.14",
-      "git push origin v0.0.14",
-      "Re-run failed jobs",
-      "npm audit signatures --json --include-attestations",
-      "Rollback limitations",
-      "@arnilo/prism-browser",
-      "no Office",
+      "46 manifests",
+      "git tag -s v0.0.22",
+      "git push origin v0.0.22",
+      "@arnilo/prism-caveman",
+      "@arnilo/prism-ponytail",
     ])
       assert.ok(handoff.includes(phrase), `publish handoff missing ${phrase}`);
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
@@ -1566,7 +1563,7 @@ describe("docs", () => {
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string };
-      assert.ok(handoff.includes(manifest.name), `publish handoff missing ${manifest.name}`);
+      assert.ok(docs.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
   });
 
@@ -2264,9 +2261,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, thirty-seven first-party capability packages, and six pure-manifest family/profile packages",
+      "one core package, thirty-nine first-party capability packages, and six pure-manifest family/profile packages",
       "all eleven `@arnilo/prism-provider-*` packages",
-      "All 43 manifests (37 code packages + 6 family/profile packages)",
+      "All 46 manifests (40 code packages + 6 family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "NeuralWatt package/docs/examples release gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -2347,6 +2344,7 @@ describe("docs", () => {
       "examples/observational-memory-recall-status-view.ts",
       "examples/observational-memory-lifecycle.ts",
       "examples/skills-progressive-disclosure.ts",
+      "examples/caveman-ponytail.ts",
       "examples/cli.ts",
       "examples/rpc.ts",
       "examples/discover-skills.ts",
@@ -3060,7 +3058,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 44, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 46, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {
@@ -3199,5 +3197,33 @@ describe("docs", () => {
       "migration missing 0.0.21 coding-tool capability gaps section",
     );
     assert.ok(migration.includes("createCodingTools") && migration.includes("9"), "migration missing aggregator length note");
+  });
+
+  it("phase5_third_party_behavior_docs_cover_caveman_ponytail_migration_and_example", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const caveman = readFileSync("docs/caveman.md", "utf8");
+    const ponytail = readFileSync("docs/ponytail.md", "utf8");
+    const extensions = readFileSync("docs/extensions.md", "utf8");
+    const contextSkills = readFileSync("docs/context-and-skills.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+
+    assert.ok(index.includes("Third-party integrations"), "docs/index.md missing Third-party integrations group");
+    assert.ok(index.includes("caveman.md"), "docs/index.md missing caveman link");
+    assert.ok(index.includes("ponytail.md"), "docs/index.md missing ponytail link");
+
+    for (const [name, text, tokens] of [
+      ["caveman.md", caveman, ["createCavemanExtension", "caveman-level", "caveman-mode", "upstreamPath", "appendEntry"]],
+      ["ponytail.md", ponytail, ["createPonytailExtension", "ponytail-mode", "ponytail-mode", "getPonytailInstructions", "appendEntry"]],
+    ] as const) {
+      for (const token of tokens) {
+        assert.ok(text.includes(token), `${name} missing ${token}`);
+      }
+    }
+
+    assert.ok(extensions.includes("caveman.md"), "extensions.md missing caveman link");
+    assert.ok(contextSkills.includes("Third-party behavior packages"), "context-and-skills.md missing third-party section");
+    assert.ok(contextSkills.includes("createLoadSkillTool"), "context-and-skills.md missing load_skill in third-party section");
+    assert.ok(migration.includes("0.0.21 → 0.0.22 third-party behavior integrations"), "migration missing 0.0.22 third-party section");
+    assert.ok(existsSync("examples/caveman-ponytail.ts"), "missing caveman-ponytail example");
   });
 });

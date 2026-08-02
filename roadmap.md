@@ -1,8 +1,8 @@
 # Prism Enterprise and Coding Harness Completion Roadmap
 
 Updated: 2026-07-31
-Baseline: `@arnilo/prism` **0.0.21** (Phase 4 exit gate passed)
-Status: Phase 4 complete; Phase 5+ pending exit gates
+Baseline: `@arnilo/prism` **0.0.22** (Phase 5 exit gate passed)
+Status: Phase 5 complete; Phase 6+ pending exit gates
 
 ## Objectives
 
@@ -455,7 +455,8 @@ Status: Phase 4 complete; Phase 5+ pending exit gates
   - Exit Gate:
     - Coding-agent unit/integration tests, policy/adversarial path tests, `npm run sdk:ready`, docs links, and full release gate pass.
 
-- [ ] Phase 5 — Release 0.0.22: third-party behavior integrations (Caveman, Ponytail)
+- [x] Phase 5 — Release 0.0.22: third-party behavior integrations (Caveman, Ponytail)
+  - **Completion evidence (2026-07-31):** `plans/005-Release-0-0-22-Third-Party-Behavior-Integrations.md` Tasks 0–5 done. `@arnilo/prism-caveman` 19/19, `@arnilo/prism-ponytail` 20/20; `npm run sdk:ready` green; docs tripwire `phase5_third_party_behavior_docs_cover_caveman_ponytail_migration_and_example`; `examples/caveman-ponytail.ts` in demo gate. Shipped: upstream Caveman/Ponytail wiring, session `caveman-level`/`ponytail-mode` persistence, progressive catalog + injector slices, opt-in packages (not in code/sdk/all profiles). Workspace **0.0.22** / 46 manifests. Core `src/` unchanged.
   - **Prerequisite:** Phase 3 progressive-disclosure contracts are live (`skillsDisclosure`, `createLoadedSkillSet`, `createLoadSkillTool`, `activateAllSkills`, priority budget + `skill_body` demotion). Phase 5 must **consume** these — not reimplement catalog/load/eviction.
   - Objectives:
     - Add `@arnilo/prism-caveman` and `@arnilo/prism-ponytail` as optional third-party integration packages that wire the upstream Caveman and Ponytail projects into a Prism-powered harness.
@@ -1112,8 +1113,6 @@ Every numbered release must satisfy:
 - Execute `plans/002-Release-0-0-19-Observational-Memory.md` (Phase 2) — **complete** (exit gate 2026-07-30).
 - Execute `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md` (Phase 3) — **complete** (exit gate 2026-07-31).
 - Execute `plans/004-Release-0-0-21-Coding-Tool-Capability-Gaps.md` (Phase 4) — **complete** (exit gate 2026-07-31).
-- **Phase 5 next:** execute Phase 5 Caveman/Ponytail third-party integrations when ready — consume Phase 3 progressive-disclosure contracts.
-- **Phase 5 follow-on:** `@arnilo/prism-caveman` / `@arnilo/prism-ponytail` must wire upstream packages through Phase 3 contracts (`skillsDisclosure`, `createLoadSkillTool`, `LoadedSkillSet`, `activateAllSkills`) — catalog + `load_skill` / injector slices; no full upstream `SKILL.md` every turn.
-- **Future 0.0.x:** evaluate checkpoint persistence for loaded-skill names when hosts need durable resume without model reload.
-- **Release handoff:** tag and publish `@arnilo/prism@0.0.21` when ready — `docs/release-and-install.md` publish checklist.
+- **Phase 6 next:** execute Phase 6 production enterprise state adapters when ready.
+- **Release handoff:** tag and publish `@arnilo/prism@0.0.22` when ready — `docs/release-and-install.md` 0.0.22 publish handoff.
 - Do not create plans or scaffolding for later phases until every earlier exit gate passes.

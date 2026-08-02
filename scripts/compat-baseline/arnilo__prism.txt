@@ -636,6 +636,6 @@ usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p pro
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.0.21"
+version	export declare const version = "0.0.22"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

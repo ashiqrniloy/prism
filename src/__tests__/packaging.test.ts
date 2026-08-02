@@ -30,6 +30,8 @@ const packages = [
   { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
+  { dir: "packages/prism-caveman", name: "@arnilo/prism-caveman" },
+  { dir: "packages/prism-ponytail", name: "@arnilo/prism-ponytail" },
   { dir: "packages/observability-opentelemetry", name: "@arnilo/prism-observability-opentelemetry" },
   { dir: "packages/tool-validator-json-schema", name: "@arnilo/prism-tool-validator-json-schema" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
@@ -167,7 +169,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.21", `${pkg.name} @arnilo/prism peer must be 0.0.21`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.22", `${pkg.name} @arnilo/prism peer must be 0.0.22`);
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
         });
@@ -234,7 +236,7 @@ describe("packaging guard", () => {
           assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.21", `${pkg.name} dependency must be pinned to 0.0.21`);
+            assert.equal(v, "0.0.22", `${pkg.name} dependency must be pinned to 0.0.22`);
           }
         });
       }
@@ -263,12 +265,12 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.21", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.22", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.21", "@arnilo/prism-all must hard-depend on provider umbrella");
-    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.0.21", "@arnilo/prism-all must hard-depend on AG-UI only");
-    assert.equal(all?.["@arnilo/prism-work-tools"], "0.0.21", "@arnilo/prism-all must hard-depend on work-tools");
-    assert.equal(all?.["@arnilo/prism-policy"], "0.0.21", "@arnilo/prism-all must hard-depend on policy");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.22", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.0.22", "@arnilo/prism-all must hard-depend on AG-UI only");
+    assert.equal(all?.["@arnilo/prism-work-tools"], "0.0.22", "@arnilo/prism-all must hard-depend on work-tools");
+    assert.equal(all?.["@arnilo/prism-policy"], "0.0.22", "@arnilo/prism-all must hard-depend on policy");
     for (const profile of ["packages/prism-code", "packages/prism-sdk"]) {
       const deps = readPkg(profile).dependencies as Record<string, string>;
       assert.equal(deps["@arnilo/prism-ag-ui"], undefined, `${profile} must not include AG-UI`);
@@ -291,7 +293,9 @@ describe("packaging guard", () => {
       }
     };
     visit("@arnilo/prism-all");
-    assert.deepEqual([...included].sort(), packages.map((pkg) => pkg.name).sort());
+    const optOutOfAll = new Set(["@arnilo/prism-caveman", "@arnilo/prism-ponytail"]);
+    const expected = packages.map((pkg) => pkg.name).filter((name) => !optOutOfAll.has(name));
+    assert.deepEqual([...included].sort(), expected.sort());
   });
 
   it("workspace dependency tree is clean (npm ls --all --depth=0 exits 0)", () => {

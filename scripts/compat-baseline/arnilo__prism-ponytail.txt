@@ -1,0 +1,31 @@
+DEFAULT_PONYTAIL_CONFIG	export declare const DEFAULT_PONYTAIL_CONFIG: PonytailConfig
+MAX_CONFIG_FILE_BYTES	export declare const MAX_CONFIG_FILE_BYTES = 16384
+MAX_INJECTED_INSTRUCTION_BYTES	export declare const MAX_INJECTED_INSTRUCTION_BYTES = 32768
+MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES = 262144
+PONYTAIL_MODES	export declare const PONYTAIL_MODES: readonly ["off", "lite", "full", "ultra"]
+PONYTAIL_MODE_TYPE	export declare const PONYTAIL_MODE_TYPE: "ponytail-mode"
+PONYTAIL_PEER_PACKAGE	export declare const PONYTAIL_PEER_PACKAGE = "@dietrichgebert/ponytail"
+PONYTAIL_PEER_RANGE	export declare const PONYTAIL_PEER_RANGE = "^4.8.4"
+PONYTAIL_SKILL_NAMES	export declare const PONYTAIL_SKILL_NAMES: readonly ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-gain", "ponytail-help", "ponytail-review"]
+PonytailAppendOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PonytailExtensionOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PonytailExtensionState	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PonytailMode	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+SKILLS_DIR_NAME	export declare const SKILLS_DIR_NAME = "skills"
+UpstreamResolveError	export declare class UpstreamResolveError extends Error
+buildPonytailInstructions	export declare function buildPonytailInstructions(api: UpstreamPonytailInstructions, mode: PonytailMode): string | undefined
+createPonytailCommands	export declare function createPonytailCommands(ctx: PonytailCommandContext): readonly CommandDefinition[]
+createPonytailExtension	export declare function createPonytailExtension(options: PonytailExtensionOptions): Extension
+extractUserText	export declare function extractUserText(messages: readonly
+isPonytailMode	export declare function isPonytailMode(value: string): value is PonytailMode
+loadUpstreamHooks	export declare function loadUpstreamHooks(upstreamRoot: string): UpstreamPonytailHooks
+loadUpstreamSkills	export declare function loadUpstreamSkills(upstreamRoot: string): Skill[]
+persistMode	export declare function persistMode(options: PersistModeOptions): Promise<void>
+readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
+readInitialConfig	export declare function readInitialConfig(configPath: string | undefined, defaultMode?: PonytailMode, quietStartup?: boolean): PonytailConfig
+readPonytailConfig	export declare function readPonytailConfig(configPath?: string): PonytailConfig
+redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
+requirePonytailSkills	export declare function requirePonytailSkills(skills: readonly Skill[]): Map<PonytailSkillName, Skill>
+resolveModeFromEntries	export declare function resolveModeFromEntries(entries: readonly SessionEntry[]): PonytailMode | undefined
+resolveUpstreamRoot	export declare function resolveUpstreamRoot(options?: ResolveUpstreamRootOptions): string
+writePonytailDefaultMode	export declare function writePonytailDefaultMode(configPath: string, mode: PonytailMode): void

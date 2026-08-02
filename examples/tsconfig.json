@@ -19,6 +19,8 @@
       "@arnilo/prism-provider-ai-sdk": ["./packages/provider-ai-sdk/src/index.ts"],
       "@arnilo/prism-compaction-llm": ["./packages/compaction-llm/src/index.ts"],
       "@arnilo/prism-compaction-observational-memory": ["./packages/compaction-observational-memory/src/index.ts"],
+      "@arnilo/prism-caveman": ["./packages/prism-caveman/src/index.ts"],
+      "@arnilo/prism-ponytail": ["./packages/prism-ponytail/src/index.ts"],
       "@arnilo/prism-workflows": ["./packages/workflows/src/index.ts"],
       "@arnilo/prism-coding-agent": ["./packages/coding-agent/src/index.ts"],
       "@arnilo/prism-browser": ["./packages/browser/src/index.ts"],

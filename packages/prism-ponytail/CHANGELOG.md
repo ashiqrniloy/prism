@@ -1,0 +1,12 @@
+# Changelog
+
+## [0.0.22] - 2026-07-31
+
+### Added
+- Initial release: upstream Ponytail skills/commands, mode injector, session `ponytail-mode` persistence.
+
+## [0.0.21] - 2026-07-31
+
+### Added
+- Package scaffold with `createPonytailExtension` and fail-closed upstream resolution (`upstreamPath` or optional peer `@dietrichgebert/ponytail`).
+- Ponytail skills, commands, mode persistence (`ponytail-mode`), upstream hook instruction injection, bounded config IO, extension events for status/loaded.

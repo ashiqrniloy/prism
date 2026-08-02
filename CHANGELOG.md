@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.22] - 2026-07-31
+
+### Added
+- `@arnilo/prism-caveman` and `@arnilo/prism-ponytail`: optional third-party behavior integrations (Phase 5).
+- Example `examples/caveman-ponytail.ts`.
+
+### Changed
+- Publishable manifest count: **46** (was 44).
+
+See [docs/migration.md](docs/migration.md) for the full 0.0.21 → 0.0.22 notes.
+
 ## [0.0.21] - 2026-07-31
 
 ### Added
