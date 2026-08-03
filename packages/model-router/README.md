@@ -15,9 +15,12 @@ npm install @arnilo/prism-model-router @arnilo/prism
 ```ts
 import { createProviderResolver } from "@arnilo/prism";
 import { createModelRouter } from "@arnilo/prism-model-router";
+import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
 
+const enterprise = await createPostgresEnterpriseState({ pool, schema: "prism" });
 const router = createModelRouter({
   resolver: createProviderResolver(providers),
+  stateStore: enterprise.modelRouter,
   allowList: { providers: ["openai", "openrouter"], models: ["gpt-4o", "openrouter/auto"] },
   allowedResidencies: ["eu"],
   budgets: { maxTokens: 200_000, maxCostUsd: 5 },
@@ -35,9 +38,10 @@ const { provider, model, providerRequestPolicy, diagnostics } = await router.res
   maxCostUsd: 0.25,
 });
 
-// AgentConfig.providerSource = router.providerSource
-// AgentConfig.providerRequestPolicies = [providerRequestPolicy]
-router.recordOutcome({ provider: provider.id, model: model.model, success: true });
+// Resolve before provider I/O; durable state makes router methods async.
+await router.recordUsage({ identity, provider: provider.id, model: model.model, tokens: 500 });
+await router.recordOutcome({ identity, provider: provider.id, model: model.model, success: true });
+await enterprise.close();
 ```
 
-See [Model routing](../../docs/model-routing.md).
+Without `stateStore`, the default memory state is process-local. With a durable state store, `resolve`, `recordUsage`, and `recordOutcome` require verified identity and must be awaited; synchronous `providerSource` throws rather than bypassing durable budgets/rates/circuits. See [Model routing](../../docs/model-routing.md) and [Enterprise PostgreSQL state](../../docs/enterprise-postgres-state.md).

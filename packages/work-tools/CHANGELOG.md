@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.23] - 2026-08-03
+
+### Changed
+- Replaced `IdempotencyStore` `get`/`put` replay handling with async `begin`/CAS transitions, retry caps, and explicit `unknown` reconciliation.
+
+### Breaking (minor, pre-1.0)
+- Custom idempotency stores must implement the new claim lifecycle; ambiguous effects are never auto-replayed.
+
+
 ## [0.0.22] - 2026-07-31
 
 ### Changed

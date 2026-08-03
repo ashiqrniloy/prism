@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.23] - 2026-08-03
+
+### Changed
+- Documented optional `@arnilo/prism-enterprise-postgres` `PolicyDecisionStore` composition; memory/file adapters remain development/reference stores.
+
+
 ## [0.0.22] - 2026-07-31
 
 ### Changed

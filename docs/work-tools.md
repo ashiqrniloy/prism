@@ -89,7 +89,22 @@ Startup: M365 `version --output json`; GWS `--version`. Forbidden: `login`, `set
 
 ### Draft → approve → execute
 
-Mutation tools (`*_mail_draft_send`, `*_draft_*`) create an in-adapter draft and return `{ status: "pending_approval", draftId }` until `approval.isApproved` is true. Retries with the same `idempotencyKey` return `{ status: "duplicate" }` after first successful execute.
+Mutation tools (`*_mail_draft_send`, `*_draft_*`) create an in-adapter draft and return `{ status: "pending_approval", draftId }` until `approval.isApproved` is true.
+
+### Durable idempotency (0.0.23)
+
+`createMemoryIdempotencyStore()` remains for tests and a single process. For production replicas, use `createPostgresEnterpriseState({ pool }).workIdempotency`. It changes the old `get`/`put` replay abstraction to explicit async state transitions:
+
+| Observable state | Meaning / host action |
+| --- | --- |
+| absent | `begin()` atomically acquires the first claim. |
+| `in_progress` | Another worker owns the claim; do not dispatch a second connector effect. |
+| `completed` | Return the bounded stored `{ draftId, resourceId? }` duplicate summary. |
+| `failed_retryable` | A later `begin()` may reclaim it within the capped attempt policy. |
+| `failed_terminal` | Do not retry; surface the bounded failure. |
+| `unknown` | External result is ambiguous; reconcile with the connector/operator through `resolveUnknown()`. Never auto-replay. |
+
+Call `begin({ identity, key, op })` **before** the external effect. After it succeeds, call `complete`, `fail`, or `markUnknown` with the returned claim token and version. The connector effect stays outside the database transaction, so this is claim-before-effect/deduplication—not exactly-once delivery. Claims default to 15 minutes (hard 60 minutes); expired claims transition to `unknown`; attempts default to 3 (hard 5). Stored rows contain no request body, token, raw provider response, or unrestricted payload.
 
 ## Limits
 
@@ -111,6 +126,7 @@ Mutation tools (`*_mail_draft_send`, `*_draft_*`) create an in-adapter draft and
 
 ## Related
 
+- [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable claim/CAS store, cleanup, and operator reconciliation.
 - [Work connectors](work-connectors.md)
 - [Agent identity](agent-identity.md)
 - [Host security](host-security.md)

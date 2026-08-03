@@ -146,6 +146,18 @@ Release 0.0.9 ships curated network-free adversarial fixtures in package tests:
 
 Fixtures reuse `@arnilo/prism-evals` (`defineDataset` / `defineScorer` / `scoreRun` / `assertEvaluationThreshold` / `serializeEvaluationReport`). Optional SWE-bench-compatible or live-browser harnesses remain host adapters — they are not default dependencies or quality claims. Protected real Docker/Playwright gates stay env-gated (`PRISM_TEST_DOCKER_SANDBOX`, `PRISM_LIVE_PLAYWRIGHT`) and never enter `sdk:ready`.
 
+## PostgreSQL enterprise state (0.0.23)
+
+`createPostgresEnterpriseState({ pool, schema }).evaluations` implements this package's existing `EvaluationStore`. The host creates an `EvaluationRecord` from verified ownership before append; every PostgreSQL query requires tenant scope, uses exact normalized account/user matching, and returns owner-bound opaque cursor pages. It is durable across reopen and supports the existing id/scorer/session/run/trace/dataset/item/experiment/status filters.
+
+```ts
+const state = await createPostgresEnterpriseState({ pool });
+await state.evaluations.append(record); // record is already host-owned and redacted
+const page = await state.evaluations.query({ tenantId: "t1", userId: "u1", status: "scored", limit: 100 });
+```
+
+Memory evaluation storage remains suitable for development and deterministic tests; it is not cross-replica production storage. PostgreSQL bounds each evaluation row to 64 KiB (reason/error 8 KiB each and metadata 32 KiB).
+
 ## Related APIs
 
 - [Agent/session runtime](agent-session-runtime.md): `AgentRunResult` and `session.run()`
@@ -153,4 +165,5 @@ Fixtures reuse `@arnilo/prism-evals` (`defineDataset` / `defineScorer` / `scoreR
 - [Observability](observability.md): use `onTraceReference` or bounded `traceId(runId)` to supply `ScoreRunOptions.traceId`; evaluation telemetry emits no reason/explanation content
 - [Coding agent tools](coding-agent-tools.md) / [Browser automation](browser-automation.md) / [Workflows](workflows.md): network-free coding-task composition at `examples/durable-coding-workflow.ts`; adversarial coding/browser eval example at `examples/coding-browser-evaluation.ts`
 - [Performance limits](performance.md): `scripts/benchmark-0.0.11.mjs` search/budget evidence, `scripts/benchmark-0.0.10.mjs` workspace-mode evidence, and `scripts/benchmark-0.0.9.mjs` coding/browser evidence fields
+- [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable owner-scoped evaluation storage.
 - [Release and install](release-and-install.md): optional package install and protected sandbox-browser workflow

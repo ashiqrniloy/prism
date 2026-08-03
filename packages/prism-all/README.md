@@ -12,10 +12,10 @@ npm install @arnilo/prism-all
 
 - `@arnilo/prism-code` — base runtime, compaction, JSON Schema validation, coding tools/security, and MCP
 - `@arnilo/prism-sdk` — base runtime, workflows, MCP, Node credentials, and OpenTelemetry
-- `@arnilo/prism-providers` — all seven first-party provider adapters: OpenAI, OpenCode Go, OpenRouter, Z.AI, Kimi, `@arnilo/prism-provider-neuralwatt`, and `@arnilo/prism-provider-ai-sdk`
-- `@arnilo/prism-session-store-sqlite` and `@arnilo/prism-session-store-postgres`
-- `@arnilo/prism-evals`, `@arnilo/prism-memory`, and `@arnilo/prism-rag`
-- `@arnilo/prism-server`, `@arnilo/prism-supervisor`, host-selected `@arnilo/prism-web-tools`, optional `@arnilo/prism-browser`, and optional `@arnilo/prism-ag-ui` (AG-UI root plus stable ACP sibling)
+- `@arnilo/prism-providers` — all eleven first-party provider adapters, including `@arnilo/prism-provider-neuralwatt`, plus AI SDK interoperability
+- `@arnilo/prism-session-store-sqlite`, `@arnilo/prism-session-store-postgres`, and `@arnilo/prism-enterprise-postgres` (separate session/run versus enterprise-state compositions)
+- `@arnilo/prism-evals`, `@arnilo/prism-memory`, `@arnilo/prism-rag`, `@arnilo/prism-policy`, `@arnilo/prism-model-router`, and `@arnilo/prism-work-tools`
+- `@arnilo/prism-server`, `@arnilo/prism-supervisor`, host-selected `@arnilo/prism-web-tools`, optional `@arnilo/prism-browser`, optional `@arnilo/prism-ag-ui` (AG-UI root plus stable ACP sibling), and optional Azure/Bedrock/Vertex providers
 
 Shared packages are deduplicated by npm. This is a pure manifest package with no exports; import APIs from their owning packages.
 

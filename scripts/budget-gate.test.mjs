@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   assertAll,
@@ -33,6 +34,44 @@ describe("performance budget gate", () => {
         assert.ok(Number.isFinite(median[field]) && median[field] > 0, `${name}.${field} must be a positive number`);
       }
     }
+    const enterprise = budgets.enterprisePostgres;
+    assert.deepEqual(enterprise.fixture, {
+      tenants: 10,
+      principalsPerTenant: 10,
+      recordsPerOwner: 1000,
+      policyRows: 100000,
+      evaluationRows: 100000,
+      routerKeys: 10000,
+      clients: 16,
+      warmups: 100,
+      measuredOperations: 1000,
+      cleanupBatch: 100,
+    });
+    const enterpriseScenarios = Object.entries(enterprise.p95CeilingsMs);
+    assert.equal(enterpriseScenarios.length, 10, "expected ten protected enterprise PostgreSQL ceilings");
+    for (const [name, ceiling] of enterpriseScenarios) {
+      assert.ok(Number.isFinite(ceiling) && ceiling >= 50 && ceiling <= 100, `${name} must use the approved 50ms/100ms ceiling`);
+    }
+  });
+
+  it("checks the recorded protected enterprise PostgreSQL evidence", () => {
+    const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.23.json", "utf8"));
+    assert.equal(evidence.version, "0.0.23");
+    assert.deepEqual(evidence.fixture, budgets.enterprisePostgres.fixture);
+    for (const [name, ceiling] of Object.entries(budgets.enterprisePostgres.p95CeilingsMs)) {
+      const result = evidence.results.find((entry) => entry.name === name);
+      assert.ok(result, `missing protected result for ${name}`);
+      assert.ok(result.p95Ms <= ceiling, `${name} p95 exceeded its frozen ceiling`);
+      assert.ok(result.throughputPerSecond > 0, `${name} throughput missing`);
+    }
+    assert.deepEqual(evidence.assertions, { acceptedRateContention: 1000, budgetTokenSum: 16000, circuitProbeCount: 1000 });
+    assert.equal(evidence.plans.length, 14, "all frozen indexed query shapes need recorded plans");
+    assert.ok(evidence.plans.every((plan) => plan.sequentialScan === false && plan.indexes.length > 0));
+    assert.equal(
+      evidence.storageBeforeCleanup.prism_model_router_rates.rows - evidence.storageAfterCleanup.prism_model_router_rates.rows,
+      (evidence.fixture.warmups + evidence.fixture.measuredOperations) * evidence.fixture.cleanupBatch,
+      "cleanup evidence must remove every warmup and measured capped batch",
+    );
   });
 
   it("root tarball stays within the artifact diet budget", () => {

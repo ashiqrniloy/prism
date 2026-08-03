@@ -25,6 +25,7 @@
       "@arnilo/prism-coding-agent": ["./packages/coding-agent/src/index.ts"],
       "@arnilo/prism-browser": ["./packages/browser/src/index.ts"],
       "@arnilo/prism-evals": ["./packages/evals/src/index.ts"],
+      "@arnilo/prism-enterprise-postgres": ["./packages/enterprise-postgres/src/index.ts"],
       "@arnilo/prism-memory": ["./packages/memory/src/index.ts"],
       "@arnilo/prism-rag": ["./packages/rag/src/index.ts"],
       "@arnilo/prism-server": ["./packages/server/src/index.ts"],

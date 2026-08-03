@@ -8,6 +8,8 @@ export interface ModelRouterAllowList {
 export interface ModelRouterBudgets {
   readonly maxTokens?: number;
   readonly maxCostUsd?: number;
+  /** Accounting window; default 24h, bounded to 31 days. */
+  readonly windowMs?: number;
 }
 
 export interface ModelRouterRateLimit {
@@ -32,6 +34,61 @@ export interface ResolvedModelRouterLimits {
   readonly maxDiagnosticsBytes: number;
 }
 
+/** Exact owner identity persisted by durable router state. */
+export interface ModelRouterStateOwner {
+  readonly tenantId: string;
+  readonly accountId?: string;
+  readonly userId?: string;
+  readonly principalId: string;
+}
+
+export interface ModelRouterStateKey extends ModelRouterStateOwner {
+  readonly provider: string;
+  readonly model: string;
+}
+
+export interface ModelRouterStateStore {
+  consumeRate(input: {
+    readonly key: ModelRouterStateKey;
+    readonly maxRequests: number;
+    readonly windowMs: number;
+    readonly now: number;
+  }): Promise<{ readonly admitted: boolean; readonly retryAfterMs?: number }>;
+  readBudget(input: {
+    readonly key: ModelRouterStateKey;
+    readonly windowMs: number;
+    readonly now: number;
+  }): Promise<{ readonly tokens: number; readonly costUsd: number }>;
+  addUsage(input: {
+    readonly key: ModelRouterStateKey;
+    readonly tokens?: number;
+    readonly costUsd?: number;
+    readonly windowMs: number;
+    readonly now: number;
+  }): Promise<void>;
+  claimCircuitProbe(input: {
+    readonly key: ModelRouterStateKey;
+    readonly failureThreshold: number;
+    readonly coolDownMs: number;
+    readonly maxKeys: number;
+    readonly now: number;
+  }): Promise<{ readonly admitted: boolean; readonly probeToken?: string }>;
+  recordCircuitOutcome(input: {
+    readonly key: ModelRouterStateKey;
+    readonly success: boolean;
+    readonly failureThreshold: number;
+    readonly coolDownMs: number;
+    readonly maxKeys: number;
+    readonly probeToken?: string;
+    readonly now: number;
+  }): Promise<void>;
+  cleanup(input: {
+    readonly owner: ModelRouterStateOwner;
+    readonly limit?: number;
+    readonly now: number;
+  }): Promise<{ readonly removed: number }>;
+}
+
 export interface ModelRouteCandidate {
   readonly model: ModelConfig;
   readonly region?: string;
@@ -46,6 +103,8 @@ export interface CreateModelRouterOptions {
   readonly budgets?: ModelRouterBudgets;
   readonly rateLimit?: ModelRouterRateLimit;
   readonly circuit?: ModelRouterCircuitOptions;
+  /** Async state implementation. Requires host-verified identity per call. */
+  readonly stateStore?: ModelRouterStateStore;
   /** Ordered fallbacks after the primary model. */
   readonly fallbacks?: readonly ModelConfig[];
   /** Honor `compat.openRouterRouting` only when true (default false). */
@@ -104,6 +163,8 @@ export interface ModelRouterResolveResult {
   readonly provider: AIProvider;
   readonly model: ModelConfig;
   readonly diagnostics: ModelRouterDiagnostics;
+  /** Pass to recordOutcome after a half-open circuit probe. */
+  readonly circuitProbeToken?: string;
   /** Chainable policy that strips OpenRouter routing unless router allows it. */
   readonly providerRequestPolicy: ProviderRequestPolicy;
 }
@@ -112,7 +173,13 @@ export interface ModelRouter {
   resolve(request: ModelRouterResolveRequest): Promise<ModelRouterResolveResult>;
   /** Sync `ProviderResolver` facade using router defaults (no per-call budget overrides). */
   readonly providerSource: ProviderResolver;
-  recordUsage(input: { provider: string; model: string; tokens?: number; costUsd?: number; identityKey?: string }): void;
-  recordOutcome(input: { provider: string; model: string; success: boolean; identityKey?: string }): void;
+  recordUsage(input: { identity: AgentIdentity; provider: string; model: string; tokens?: number; costUsd?: number }): Promise<void>;
+  recordOutcome(input: {
+    identity: AgentIdentity;
+    provider: string;
+    model: string;
+    success: boolean;
+    circuitProbeToken?: string;
+  }): Promise<void>;
   createOpenRouterRoutingPolicy(): ProviderRequestPolicy;
 }

@@ -1,5 +1,24 @@
 # Migration guide
 
+## 0.0.22 → 0.0.23 production enterprise state adapters (intentional pre-1.0 contract changes)
+
+Release **0.0.23** adds `@arnilo/prism-enterprise-postgres` and makes work-mutation idempotency plus durable model-router state explicit. Core agent/session behavior stays unchanged; install/configure this package only when a host needs PostgreSQL coordination.
+
+1. **Install and open deliberately.** Add `@arnilo/prism-enterprise-postgres` with `@arnilo/prism`, the four domain packages, and `pg`. Call `await createPostgresEnterpriseState({ pool, schema })`; import is inert. Open applies/verifies the checksum-protected enterprise migration under a per-schema advisory lock. Keep its migration history separate from session-store PostgreSQL history; backup/restore-test both. Configure TLS, credentials, pool limits, roles, and a deployment migration principal in the host.
+2. **Use one composition, not ad-hoc SQL.** Wire `state.policy`, `state.evaluations`, and `state.workIdempotency` into existing package APIs. Policy/work/router operations require active verified identity; hosts must project evaluation records and queries from verified ownership. Every query needs tenant scope; owner-bound cursors cannot cross tenants. Memory/JSONL stores remain test/single-process adapters, not production substitutes.
+3. **Replace work `get`/`put` with claim transitions.** `IdempotencyStore` now uses async `begin`, `complete`, `fail`, `markUnknown`, and `resolveUnknown` (plus reconciliation `get`). Call `begin` before an approved external connector effect and use returned claim token/version for CAS transitions. Treat **absent**, `in_progress`, `completed`, `failed_retryable`, `failed_terminal`, and `unknown` differently. Only completed summaries replay; ambiguous `unknown` requires connector/operator reconciliation and is never auto-replayed. This is not exactly-once delivery.
+4. **Make router paths asynchronous when state is durable.** Pass `stateStore: state.modelRouter` to `createModelRouter`. Await `resolve`, `recordUsage`, and `recordOutcome`, pass a verified identity to each, and retain any `circuitProbeToken` from `resolve` for outcome recording. `providerSource` is memory-only; with a durable state store it throws `ERR_PRISM_MODEL_ROUTER_ASYNC_STATE` rather than bypassing rate/budget/circuit state.
+5. **Own cleanup.** No background worker starts. Schedule bounded `await state.cleanup({ tenantId, accountId?, userId?, principalId, limit })` from an authorized host job; expired work claims become `unknown` and expired circuit probes reopen safely. Do not make a global sweep or auto-resolve unknown outcomes.
+6. **Keep request roles narrow.** Request state SQL is limited to `SELECT`/`INSERT`/`UPDATE`/`DELETE` on six state tables plus schema `USAGE`; DDL/catalog/advisory-lock work belongs to controlled migration setup. Never persist prompt/body/tool-argument material, raw connector/provider results, JWTs, or credentials. See [Enterprise PostgreSQL state](enterprise-postgres-state.md) for bounds, cleanup, SQL inventory, and recorded performance evidence.
+
+```ts
+const state = await createPostgresEnterpriseState({ pool, schema: "prism" });
+const router = createModelRouter({ resolver, stateStore: state.modelRouter });
+const selected = await router.resolve({ model, identity });
+await router.recordOutcome({ identity, provider: selected.provider.id, model: selected.model.model, success: true, circuitProbeToken: selected.circuitProbeToken });
+await state.close(); // caller-owned pool stays open
+```
+
 ## 0.0.21 → 0.0.22 third-party behavior integrations (additive)
 
 Release **0.0.22** adds two optional behavior packages; core `@arnilo/prism` runtime behavior is unchanged.

@@ -117,6 +117,17 @@ Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permi
 - Evaluate/append are O(fields) and network-free in-package; remote WORM I/O stays in the host sink/adapter.
 - Export never full-scans: page size is capped; raise hard caps only with Phase 8 freeze + tests + docs updates.
 
+## PostgreSQL enterprise state (0.0.23)
+
+For durable multi-replica policy decisions, construct [`createPostgresEnterpriseState`](enterprise-postgres-state.md) and pass its `policy` store to the existing helpers. PostgreSQL keeps the same append/query contract, requires tenant scope and verified identity at append, binds owner data into opaque cursors, validates record bounds on read, and rejects duplicate ids. Memory and JSONL remain development/reference adapters, not production WORM or cross-replica stores.
+
+```ts
+const state = await createPostgresEnterpriseState({ pool, schema: "prism" });
+await evaluateAndAppend(request, { store: state.policy, evaluator, id: crypto.randomUUID() });
+```
+
+`state.close()` leaves a caller-owned pool open. Run `state.cleanup(...)` from an authorized host schedule only when expiration cleanup is needed; it does not run in the background.
+
 ## Related APIs
 
 - [Model routing](model-routing.md)
@@ -125,4 +136,5 @@ Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permi
 - [Runs and usage ledger](runs-and-usage.md)
 - [Workflows](workflows.md): proactive schedule capability enable/revoke events bridge here via `onCapability`.
 - [Host security](host-security.md)
+- [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable policy/evaluation/work/router composition.
 - Package README: [`@arnilo/prism-policy`](../packages/policy/README.md)

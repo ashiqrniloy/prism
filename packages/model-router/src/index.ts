@@ -7,6 +7,7 @@ export {
   resolveModelRouterLimits,
 } from "./limits.js";
 export { createModelRouter } from "./router.js";
+export { createMemoryModelRouterStateStore } from "./state.js";
 export type {
   CreateModelRouterOptions,
   ModelRouteCandidate,
@@ -21,5 +22,8 @@ export type {
   ModelRouterRateLimit,
   ModelRouterResolveRequest,
   ModelRouterResolveResult,
+  ModelRouterStateKey,
+  ModelRouterStateOwner,
+  ModelRouterStateStore,
   ResolvedModelRouterLimits,
 } from "./types.js";

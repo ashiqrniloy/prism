@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.23] - 2026-08-03
+
+### Added
+- `ModelRouterStateStore` and memory reference implementation; optional PostgreSQL state comes from `@arnilo/prism-enterprise-postgres`.
+
+### Breaking (minor, pre-1.0)
+- `recordUsage` and `recordOutcome` are async and take verified identity. `providerSource` throws when a durable state store is configured.
+
+
 ## [0.0.22] - 2026-07-31
 
 ### Changed

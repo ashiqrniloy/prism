@@ -24,7 +24,7 @@ Use this package when you need server-backed persistence with pooled connections
 - managed cloud databases (RDS, Cloud SQL, Neon, Supabase, etc.)
 - CI integration tests against a real PostgreSQL service
 
-Prefer [`@arnilo/prism-session-store-sqlite`](sqlite-persistence.md) for local CLI tools, single-writer workloads, and network-free default tests. This adapter stores sessions/runs, not semantic vectors; use the separate [`@arnilo/prism-memory` pgvector path](working-and-semantic-memory.md), which rejects non-finite vectors before SQL, when vector recall is needed.
+Prefer [`@arnilo/prism-session-store-sqlite`](sqlite-persistence.md) for local CLI tools, single-writer workloads, and network-free default tests. This adapter stores sessions/runs, not semantic vectors; use the separate [`@arnilo/prism-memory` pgvector path](working-and-semantic-memory.md), which rejects non-finite vectors before SQL, when vector recall is needed. For durable policy decisions, evaluations, work mutation idempotency, and model-router state, use the separate [`@arnilo/prism-enterprise-postgres`](enterprise-postgres-state.md) composition; it has its own migration history and does not replace session/run persistence.
 
 ## Inputs / request
 
@@ -141,4 +141,5 @@ PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnil
 - [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): package matrix and threat model.
 - [Workflows](workflows.md): adapt `persistence.checkpoints` and pass `persistence.leases` to `createWorkflowCoordinator()` and `createWorkflowSchedules()` for durable background execution and schedules.
 - [Working and semantic memory](working-and-semantic-memory.md): optional `@arnilo/prism-memory` PostgreSQL/pgvector working + semantic stores (separate from session/run persistence).
+- [Enterprise PostgreSQL state](enterprise-postgres-state.md): separate durable policy/evaluation/work/router stores and cleanup.
 - [Migration guide](migration.md): moving from JSONL/in-memory to database-backed persistence.

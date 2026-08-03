@@ -65,7 +65,8 @@ void scoreRunLive(result, { scorers: [scorer], store }); // does not change resu
 | `defineDataset` | Immutable dataset snapshot; duplicate item ids fail closed |
 | `scoreRun` / `scoreRunLive` | Score one `AgentRunResult`; live helper never mutates the result |
 | `runExperiment` | Bounded concurrency batch runner with stable item order |
-| `createMemoryEvaluationStore` | In-memory `EvaluationStore` with ownership filters |
+| `createMemoryEvaluationStore` | In-memory `EvaluationStore` with ownership filters; development/reference only. |
+| `createPostgresEnterpriseState(...).evaluations` | Optional durable PostgreSQL `EvaluationStore` from `@arnilo/prism-enterprise-postgres`; exact owner-scoped query pages. |
 | `appendEvaluationFeedback` | Verify same run/trace/ownership and copy only evaluation/scorer IDs into `RunFeedbackStore` |
 | `createPersistenceTraceResolver` | Resolve one exact owned run trace through bounded persistence pages/bytes |
 | `createModelJudge` | Adapt an explicit host judge callback with rubric/version and timeout/attempt/output bounds |
@@ -82,4 +83,4 @@ void scoreRunLive(result, { scorers: [scorer], store }); // does not change resu
 - Model judges receive only rubric/version, target, item, and abort signal—not providers, credentials, tools, or workspace.
 - Candidate, judge, scorer, dataset, and report sizes are finite. Default tests require no model or network.
 
-See [Evaluations](../../docs/evaluations.md).
+See [Evaluations](../../docs/evaluations.md) and [Enterprise PostgreSQL state](../../docs/enterprise-postgres-state.md).

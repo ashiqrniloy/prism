@@ -1,12 +1,12 @@
 import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { WorkToolError } from "./errors.js";
-import { identityKey } from "./idempotency.js";
 import { normalizeCalendarPage, normalizeFilePage, normalizeMailMessage, normalizeMailPage, normalizeTaskPage } from "./normalize.js";
 import type {
   GoogleWorkspaceAdapter,
   GoogleWorkspaceOp,
   Microsoft365Adapter,
   Microsoft365Op,
+  WorkMutationRecord,
   WorkProvider,
   WorkToolsOptions,
 } from "./types.js";
@@ -64,35 +64,75 @@ async function executeApprovedMutation(
   context: ToolExecutionContext,
   idempotencyKey: string | undefined,
 ): Promise<unknown> {
-  const idKey = identityKey(adapter.identity);
-  if (idempotencyKey && options.idempotencyStore) {
-    const existing = await options.idempotencyStore.get({ identityKey: idKey, key: idempotencyKey });
-    if (existing) return { draftId: (existing.result as { draftId?: string })?.draftId, status: "duplicate", untrusted: true };
-  }
   const draft = adapter.createDraft(op as never, payload);
   const approved = options.approval ? await options.approval.isApproved({ draftId: draft.draftId, op, identity: adapter.identity }) : false;
-  if (!approved) {
-    return { draftId: draft.draftId, status: "pending_approval", untrusted: true };
+  if (!approved) return { draftId: draft.draftId, status: "pending_approval", untrusted: true };
+
+  const store = idempotencyKey ? options.idempotencyStore : undefined;
+  const claim = store ? await store.begin({ identity: adapter.identity, key: idempotencyKey!, op, signal: context.signal }) : undefined;
+  if (claim?.outcome === "existing") return existingMutationResult(claim.record);
+
+  let result: { draftId: string; resourceId?: string };
+  try {
+    adapter.markDraft(draft.draftId, "approved");
+    const value = await adapter.runOp(op as never, payload, context.signal);
+    adapter.markDraft(draft.draftId, "executed");
+    result = {
+      draftId: draft.draftId,
+      ...(typeof (value as { id?: string })?.id === "string" ? { resourceId: (value as { id: string }).id } : {}),
+    };
+  } catch (error) {
+    if (claim?.record.claimToken) {
+      const input = {
+        identity: adapter.identity,
+        key: idempotencyKey!,
+        op,
+        claimToken: claim.record.claimToken,
+        expectedVersion: claim.record.version,
+      };
+      const failure = classifiedFailure(error);
+      if (failure) await store!.fail({ ...input, ...failure });
+      else await store!.markUnknown({ ...input, failure: { code: "ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN" } });
+    }
+    throw error;
   }
-  adapter.markDraft(draft.draftId, "approved");
-  const value = await adapter.runOp(op as never, payload, context.signal);
-  adapter.markDraft(draft.draftId, "executed");
-  const out = {
-    draftId: draft.draftId,
-    status: "executed",
-    resourceId: typeof (value as { id?: string })?.id === "string" ? (value as { id: string }).id : undefined,
-    untrusted: true as const,
-  };
-  if (idempotencyKey && options.idempotencyStore) {
-    await options.idempotencyStore.put({
-      key: idempotencyKey,
-      identityKey: idKey,
+  if (claim?.record.claimToken) {
+    await store!.complete({
+      identity: adapter.identity,
+      key: idempotencyKey!,
       op,
-      result: out,
-      createdAt: new Date().toISOString(),
+      claimToken: claim.record.claimToken,
+      expectedVersion: claim.record.version,
+      result,
     });
   }
-  return out;
+  return { ...result, status: "executed", untrusted: true as const };
+}
+
+function existingMutationResult(record: WorkMutationRecord): {
+  readonly draftId: string;
+  readonly resourceId?: string;
+  readonly status: "duplicate";
+  readonly untrusted: true;
+} {
+  if (record.status === "completed" && record.result) {
+    return { ...record.result, status: "duplicate", untrusted: true };
+  }
+  if (record.status === "unknown") {
+    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN", "mutation outcome requires reconciliation");
+  }
+  throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "mutation is not available for replay");
+}
+
+function classifiedFailure(
+  error: unknown,
+): { readonly status: "failed_retryable" | "failed_terminal"; readonly failure: { readonly code: string } } | undefined {
+  if (!(error instanceof WorkToolError)) return undefined;
+  if (error.code === "ERR_PRISM_WORK_CREDENTIAL") return { status: "failed_retryable", failure: { code: error.code } };
+  if (error.code === "ERR_PRISM_WORK_INPUT" || error.code === "ERR_PRISM_WORK_POLICY" || error.code === "ERR_PRISM_WORK_LIMIT") {
+    return { status: "failed_terminal", failure: { code: error.code } };
+  }
+  return undefined;
 }
 
 function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365: Microsoft365Adapter): void {

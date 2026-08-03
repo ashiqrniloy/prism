@@ -6,6 +6,20 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.23 enterprise PostgreSQL evidence
+
+`node scripts/benchmark-0.0.23.mjs` is an explicit protected PostgreSQL benchmark, not part of `npm test` or `sdk:ready`. It requires `PRISM_TEST_POSTGRES_URL`, creates/drops an isolated schema, and checks frozen p95 ceilings from `scripts/budgets.json`. The checked `scripts/benchmark-0.0.23.json` evidence was recorded on Node v24.18.0/Linux x64 with `postgres:16-alpine`: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row cleanup batches.
+
+| Scenario | Recorded p95 ms | Ceiling |
+| --- | ---: | ---: |
+| Policy append / query | 0.747 / 1.479 | 50 / 100 |
+| Evaluation append / query | 0.698 / 0.963 | 50 / 100 |
+| Work claim+complete / contention | 1.892 / 4.162 | 50 / 50 |
+| Router rate / budget / circuit contention | 12.011 / 6.715 / 28.410 | 50 / 50 / 50 |
+| Explicit cleanup batch | 2.981 | 100 |
+
+The same run accepted 1,000 rate claims, accumulated 16,000 budget tokens, granted 1,000 circuit probes, and verified 14 named-index `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans with no sequential scans. Before cleanup it recorded 101,100 policy rows (68,517,888 bytes), 101,100 evaluation rows (97,296,384 bytes), and 121,100 router-rate rows; cleanup removed exactly 100,000 expired rate rows. PostgreSQL relation allocation does not necessarily shrink after `DELETE` under MVCC, so row removal—not immediate file shrink—is the cleanup assertion. Values are dated environment evidence, not universal production SLOs; size pools, partitions, retention, and cleanup frequency from host measurements.
+
 ## Release 0.0.16 performance budgets and artifact diet
 
 Release 0.0.16 is a simplification/readiness release: it added no performance-affecting code, so the six network-free scenario medians are held at the 0.0.15 baseline and the win is a smaller published artifact. Budgets live in `scripts/budgets.json` (measured baselines + tolerance) and are enforced two ways:

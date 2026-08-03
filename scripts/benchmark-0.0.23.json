@@ -1,0 +1,252 @@
+{
+  "version": "0.0.23",
+  "generatedAt": "2026-08-03T11:59:51.689Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "postgres": "PRISM_TEST_POSTGRES_URL",
+    "clients": 16
+  },
+  "fixture": {
+    "tenants": 10,
+    "principalsPerTenant": 10,
+    "recordsPerOwner": 1000,
+    "policyRows": 100000,
+    "evaluationRows": 100000,
+    "routerKeys": 10000,
+    "clients": 16,
+    "warmups": 100,
+    "measuredOperations": 1000,
+    "cleanupBatch": 100
+  },
+  "assertions": {
+    "acceptedRateContention": 1000,
+    "budgetTokenSum": 16000,
+    "circuitProbeCount": 1000
+  },
+  "results": [
+    {
+      "name": "policyAppend",
+      "operations": 1000,
+      "p50Ms": 0.492,
+      "p95Ms": 0.747,
+      "throughputPerSecond": 1863.94
+    },
+    {
+      "name": "policyQuery",
+      "operations": 1000,
+      "p50Ms": 0.743,
+      "p95Ms": 1.479,
+      "throughputPerSecond": 1158.43
+    },
+    {
+      "name": "evaluationAppend",
+      "operations": 1000,
+      "p50Ms": 0.489,
+      "p95Ms": 0.698,
+      "throughputPerSecond": 1937.83
+    },
+    {
+      "name": "evaluationQuery",
+      "operations": 1000,
+      "p50Ms": 0.52,
+      "p95Ms": 0.963,
+      "throughputPerSecond": 1658.98
+    },
+    {
+      "name": "workClaimComplete",
+      "operations": 1000,
+      "p50Ms": 1.327,
+      "p95Ms": 1.892,
+      "throughputPerSecond": 711.35
+    },
+    {
+      "name": "workContention",
+      "operations": 16000,
+      "p50Ms": 2.934,
+      "p95Ms": 4.162,
+      "throughputPerSecond": 3710.83
+    },
+    {
+      "name": "routerRateContention",
+      "operations": 16000,
+      "p50Ms": 8.792,
+      "p95Ms": 12.011,
+      "throughputPerSecond": 1314.39
+    },
+    {
+      "name": "routerBudgetContention",
+      "operations": 16000,
+      "p50Ms": 3.99,
+      "p95Ms": 6.715,
+      "throughputPerSecond": 2059.43
+    },
+    {
+      "name": "routerCircuitContention",
+      "operations": 16000,
+      "p50Ms": 15.061,
+      "p95Ms": 28.41,
+      "throughputPerSecond": 276.3
+    },
+    {
+      "name": "cleanupBatch",
+      "operations": 100000,
+      "p50Ms": 2.162,
+      "p95Ms": 2.981,
+      "throughputPerSecond": 45436.54
+    }
+  ],
+  "plans": [
+    {
+      "name": "policy-owner",
+      "indexes": [
+        "prism_policy_decisions_owner_created_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "policy-policy",
+      "indexes": [
+        "prism_policy_decisions_owner_policy_created_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "policy-outcome",
+      "indexes": [
+        "prism_policy_decisions_owner_outcome_created_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "evaluation-scorer",
+      "indexes": [
+        "prism_evaluations_owner_scorer_created_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "evaluation-run",
+      "indexes": [
+        "prism_evaluations_owner_run_created_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "evaluation-experiment",
+      "indexes": [
+        "prism_evaluations_owner_experiment_created_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "evaluation-dataset-item",
+      "indexes": [
+        "prism_evaluations_owner_dataset_item_created_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "work-expiry",
+      "indexes": [
+        "prism_work_idempotency_expiry_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "router-rate",
+      "indexes": [
+        "prism_model_router_rates_pkey"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "router-budget",
+      "indexes": [
+        "prism_model_router_budgets_pkey"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "router-circuit",
+      "indexes": [
+        "prism_model_router_circuits_pkey"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "router-rate-expiry",
+      "indexes": [
+        "prism_model_router_rates_expiry_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "router-budget-expiry",
+      "indexes": [
+        "prism_model_router_budgets_expiry_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "router-circuit-expiry",
+      "indexes": [
+        "prism_model_router_circuits_expiry_idx"
+      ],
+      "sequentialScan": false
+    }
+  ],
+  "storageBeforeCleanup": {
+    "prism_policy_decisions": {
+      "rows": 101100,
+      "bytes": 68517888
+    },
+    "prism_evaluations": {
+      "rows": 101100,
+      "bytes": 97296384
+    },
+    "prism_work_idempotency": {
+      "rows": 3300,
+      "bytes": 1867776
+    },
+    "prism_model_router_budgets": {
+      "rows": 11100,
+      "bytes": 4145152
+    },
+    "prism_model_router_rates": {
+      "rows": 121100,
+      "bytes": 76619776
+    },
+    "prism_model_router_circuits": {
+      "rows": 11100,
+      "bytes": 3530752
+    }
+  },
+  "storageAfterCleanup": {
+    "prism_policy_decisions": {
+      "rows": 101100,
+      "bytes": 68517888
+    },
+    "prism_evaluations": {
+      "rows": 101100,
+      "bytes": 97296384
+    },
+    "prism_work_idempotency": {
+      "rows": 3300,
+      "bytes": 1867776
+    },
+    "prism_model_router_budgets": {
+      "rows": 11100,
+      "bytes": 4145152
+    },
+    "prism_model_router_rates": {
+      "rows": 11100,
+      "bytes": 76619776
+    },
+    "prism_model_router_circuits": {
+      "rows": 11100,
+      "bytes": 3530752
+    }
+  }
+}

@@ -36,6 +36,7 @@ Start from explicit host inputs. Do not let runtime code discover security state
 | Remote agent/workflow API | host authentication + ownership mapping | `@arnilo/prism-server`, `createPrismHandler()` |
 | Authenticated identity | host `IdentityVerifier` → verified `AgentIdentity` | [Agent identity](agent-identity.md), `assertIdentityActive`, `narrowIdentity` |
 | Policy decision audit | optional redacted ledger + host WORM sink | [Policy and audit](policy-and-audit.md), `@arnilo/prism-policy` |
+| Durable enterprise state | host PostgreSQL pool, TLS, exact owner/principal projection, migration/runtime database roles, backup and explicit cleanup schedule | [Enterprise PostgreSQL state](enterprise-postgres-state.md), `@arnilo/prism-enterprise-postgres` |
 | MCP server exposure | host MCP auth + selected capability list | `createPrismMcpServer()`, `createPrismMcpWebHandler()` |
 
 ## Outputs / response / events
@@ -152,6 +153,7 @@ Wire those values where they matter: provider adapters receive the resolved cred
 - Default remote-media loading resolves every DNS answer, rejects the hostname if any address is non-public, and pins one validated address through the request. Explicit `allowedHostnames` can trust private destinations. A host-supplied `fetch` owns DNS/rebinding/proxy/redirect safety; a custom `requestUrl` must connect to its supplied validated address.
 - Permission checks happen before tool validation and before `tool.execute()`. Middleware cannot grant permission by renaming a tool.
 - Session stores and ledgers receive redacted values when a redactor is active, but durable storage remains host-owned. Enforce tenant/account/user ownership, retention, legal hold, and quotas via `ProductionPersistenceStore.lifecycle` (or host-equivalent DB controls). Hold always blocks delete.
+- `@arnilo/prism-enterprise-postgres` request paths require exact tenant scope plus principal for work/router state, use bound SQL values, and retain no prompts, connector request bodies, raw provider results, tokens, or credentials. Configure TLS/credential rotation/connection limits with the host `pg` pool. Run checksum/catalog migration setup with a controlled migration principal; keep request-path SQL least-privilege (`USAGE`, `SELECT`, `INSERT`, `UPDATE`, `DELETE` on six state tables) and do not grant request workers `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, or `COPY PROGRAM`. Back up and restore-test the schema; run bounded owner-scoped `state.cleanup()` from an authorized host job. `unknown` connector outcomes require reconciliation and must never auto-replay.
 - Prefer `createExtensionKernel({ loadPolicy })` allow-list/signature checks before loading third-party extension packages.
 - Provider-owned auth/content/session/cache/security headers win over caller headers in adapters that merge headers.
 - Security checks are bounded explicit calls on the active path. Prism adds no hidden global middleware, background workers, watchers, network calls, or filesystem scans.
@@ -213,4 +215,5 @@ PostgreSQL TLS/network policy, MCP endpoint trust/credentials and egress policy 
 - [Session stores](session-stores.md): durable session store contract and secret/persistence boundaries.
 - [Runs and usage ledger](runs-and-usage.md): redacted run/event/tool/usage ledger records.
 - [Database persistence](database-persistence.md): production schema, ownership, indexes, retention, and adapter readiness checklist.
+- [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable policy/evaluation/work/router state and database-role boundary.
 - [Provider caching](provider-caching.md): cache keys and provider-owned header safety rules.

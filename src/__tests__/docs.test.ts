@@ -28,6 +28,7 @@ const apiPages = [
   "docs/database-persistence.md",
   "docs/sqlite-persistence.md",
   "docs/postgres-persistence.md",
+  "docs/enterprise-postgres-state.md",
   "docs/compaction-and-retry.md",
   "docs/provider-layer.md",
   "docs/model-registry.md",
@@ -1012,18 +1013,18 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.22 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.23 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 46, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 47, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.22] - 2026-07-31"), `${dir}/CHANGELOG.md missing finalized 0.0.22 section`);
+      assert.ok(changelog.includes("## [0.0.23] - 2026-08-03"), `${dir}/CHANGELOG.md missing finalized 0.0.23 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -1493,8 +1494,8 @@ describe("docs", () => {
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
-      "npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory",
-      "root test:postgres should cover persistence, checkpoint, and memory PostgreSQL adapters",
+      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres",
+      "root test:postgres should require an explicit PostgreSQL URL and cover session, memory, and enterprise adapters",
     );
 
     for (const phrase of [
@@ -1637,7 +1638,7 @@ describe("docs", () => {
       "no hidden provider/credential globals",
       "no auto package discovery",
       "no secret persistence in core",
-      "NeuralWatt package/docs/examples release gate",
+      "Enterprise PostgreSQL package/docs/example gate",
       "@arnilo/prism-provider-neuralwatt",
       "dist/index.d.ts",
       "examples/neuralwatt-agent-run.ts",
@@ -2261,11 +2262,11 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, thirty-nine first-party capability packages, and six pure-manifest family/profile packages",
+      "one core package, forty first-party capability packages, and six pure-manifest family/profile packages",
       "all eleven `@arnilo/prism-provider-*` packages",
-      "All 46 manifests (40 code packages + 6 family/profile packages)",
+      "All 47 manifests (41 code packages + 6 family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
-      "NeuralWatt package/docs/examples release gate",
+      "Enterprise PostgreSQL package/docs/example gate",
       "dist/index.js` + `dist/index.d.ts`",
     ]) {
       assert.ok(release.includes(phrase), `docs/release-and-install.md missing ${phrase}`);
@@ -3058,7 +3059,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 46, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 47, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {
@@ -3225,5 +3226,43 @@ describe("docs", () => {
     assert.ok(contextSkills.includes("createLoadSkillTool"), "context-and-skills.md missing load_skill in third-party section");
     assert.ok(migration.includes("0.0.21 → 0.0.22 third-party behavior integrations"), "migration missing 0.0.22 third-party section");
     assert.ok(existsSync("examples/caveman-ponytail.ts"), "missing caveman-ponytail example");
+  });
+
+  it("phase6 enterprise PostgreSQL docs cover all stores, migration, ownership, and recovery", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const enterprise = readFileSync("docs/enterprise-postgres-state.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const work = readFileSync("docs/work-tools.md", "utf8");
+    const router = readFileSync("docs/model-routing.md", "utf8");
+    const security = readFileSync("docs/host-security.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+
+    assert.ok(index.includes("enterprise-postgres-state.md"), "docs/index.md missing enterprise PostgreSQL state page");
+    for (const token of [
+      "createPostgresEnterpriseState",
+      "PolicyDecisionStore",
+      "EvaluationStore",
+      "IdempotencyStore",
+      "ModelRouterStateStore",
+      "in_progress",
+      "completed",
+      "failed_retryable",
+      "failed_terminal",
+      "unknown",
+      "absent",
+      "exactly-once",
+      "providerSource",
+      "PRISM_TEST_POSTGRES_URL",
+      "state.cleanup",
+      "TLS",
+      "migration principal",
+    ])
+      assert.ok(enterprise.includes(token), `enterprise PostgreSQL docs missing ${token}`);
+    assert.ok(migration.includes("0.0.22 → 0.0.23 production enterprise state adapters"));
+    assert.ok(work.includes("resolveUnknown") && work.includes("Never auto-replay"));
+    assert.ok(router.includes("ERR_PRISM_MODEL_ROUTER_ASYNC_STATE") && router.includes("recordUsage"));
+    assert.ok(security.includes("request-path SQL") && security.includes("unknown"));
+    assert.ok(performance.includes("benchmark-0.0.23.mjs") && performance.includes("28.410"));
+    assert.ok(existsSync("examples/enterprise-postgres-state.ts"), "missing enterprise PostgreSQL example");
   });
 });

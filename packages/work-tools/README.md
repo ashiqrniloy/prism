@@ -49,6 +49,12 @@ Shared normalizers map both providers onto `WorkMailMessage` / `WorkCalendarEven
 
 Mutations create drafts first; CLI side effects run only after `approval.isApproved`. Credentials never appear in argv. Optionally pass a `tokenProvider` (0.0.14, e.g. `createOAuthWorkTokenProvider()` from `@arnilo/prism-credentials-node`) to inject a late-bound per-identity token via env var per call — never argv/model context; a missing/expired/revoked/cross-identity token fails the call closed before any exec.
 
+## Durable idempotency (0.0.23)
+
+`createMemoryIdempotencyStore()` is a single-process/test adapter. For replicas, pass `createPostgresEnterpriseState({ pool }).workIdempotency` to `createWorkTools`. It atomically claims before connector dispatch and exposes `begin` → `complete` / `fail` / `markUnknown` transitions guarded by claim token plus version. Only `completed` mutations replay their bounded summary. `unknown` is an ambiguous external effect and must be reconciled with `resolveUnknown`; never auto-replay it. This is deduplication, not exactly-once delivery.
+
+See [Work tools](../../docs/work-tools.md) and [Enterprise PostgreSQL state](../../docs/enterprise-postgres-state.md).
+
 ## Limits
 
 Defaults / hard caps match Phase 8 freeze (pagination 20/100, stdout 2/16 MiB, timeout 60s/10min, concurrency 2/8).

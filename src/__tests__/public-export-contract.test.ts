@@ -617,6 +617,7 @@ const packages = [
   { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
+  { dir: "packages/enterprise-postgres", name: "@arnilo/prism-enterprise-postgres" },
 ];
 
 type Manifest = {

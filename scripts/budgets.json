@@ -1,12 +1,12 @@
 {
-  "$comment": "Release 0.0.22 performance budgets (Phase 5 third-party behavior integrations). Baselines measured 2026-07-31, Node v24.18.0, Linux x86_64. Pack bytes/file count are deterministic -> tight tolerance. Startup and benchmark medians are machine-dependent -> generous ceiling/tolerance to stay non-flaky. Enforced by scripts/budget-gate.test.mjs (fast, in `npm test`: root pack + startup) and scripts/benchmark-0.0.16.mjs (release evidence: the six scenario medians). A regression beyond tolerance fails the gate.",
+  "$comment": "Release 0.0.23 baselines plus protected enterprise PostgreSQL evidence. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark-0.0.23.mjs.",
   "root": {
     "packedBytes": { "baseline": 610315, "tolerance": 0.05 },
     "unpackedBytes": { "baseline": 2157330, "tolerance": 0.05 },
     "fileCount": { "baseline": 277, "tolerance": 0.05 }
   },
   "aggregate": {
-    "$comment": "Sum of `npm pack --dry-run` sizes across all 46 publishable manifests (root + 45 packages). Recorded reference baseline; not gated in the fast test (45 extra pack calls are too slow for a unit gate).",
+    "$comment": "Historical 0.0.22 reference sum across 46 publishable manifests; 0.0.23 has 47 and must be remeasured before changing this non-fast-gated baseline.",
     "packedBytes": { "baseline": 1217694, "tolerance": 0.1 },
     "unpackedBytes": { "baseline": 4820895, "tolerance": 0.1 }
   },
@@ -25,6 +25,33 @@
       "provider-package-metadata": { "throughputPerSecond": 55829.2, "p50Ms": 0.0065, "p95Ms": 0.0394 },
       "rag-parse-replace-rerank-retrieve": { "throughputPerSecond": 4800.3, "p50Ms": 0.1432, "p95Ms": 0.4064 },
       "memory-retention-export-rebuild": { "throughputPerSecond": 8763.2, "p50Ms": 0.0686, "p95Ms": 0.1892 }
+    }
+  },
+  "enterprisePostgres": {
+    "$comment": "Release 0.0.23 protected PostgreSQL benchmark. Fixed fixture: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row explicit cleanup batches. All ceilings are milliseconds and intentionally match Phase 6's 50ms indexed-point and 100ms page/cleanup ceilings.",
+    "fixture": {
+      "tenants": 10,
+      "principalsPerTenant": 10,
+      "recordsPerOwner": 1000,
+      "policyRows": 100000,
+      "evaluationRows": 100000,
+      "routerKeys": 10000,
+      "clients": 16,
+      "warmups": 100,
+      "measuredOperations": 1000,
+      "cleanupBatch": 100
+    },
+    "p95CeilingsMs": {
+      "policyAppend": 50,
+      "policyQuery": 100,
+      "evaluationAppend": 50,
+      "evaluationQuery": 100,
+      "workClaimComplete": 50,
+      "workContention": 50,
+      "routerRateContention": 50,
+      "routerBudgetContention": 50,
+      "routerCircuitContention": 50,
+      "cleanupBatch": 100
     }
   }
 }

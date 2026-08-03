@@ -198,6 +198,61 @@ describe("createWorkTools", () => {
     );
   });
 
+  it("claims before dispatch and leaves ambiguous connector failures unknown", async () => {
+    const store = createMemoryIdempotencyStore();
+    let release: (() => void) | undefined;
+    let calls = 0;
+    const adapter = createMicrosoft365CliAdapter({
+      binary: "/usr/bin/m365",
+      identity,
+      configDir: "/tmp/prism-m365-test",
+      runner: fakeRunner(async (argv) => {
+        if (argv[0] === "version") return { exitCode: 0, stdout: '"v11.7.0"', stderr: "" };
+        calls += 1;
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        return { exitCode: 0, stdout: "", stderr: "" };
+      }),
+    });
+    const send = createWorkTools({
+      microsoft365: adapter,
+      idempotencyStore: store,
+      approval: { isApproved: () => true },
+      externalRecipients: { allow: () => true },
+    }).find((tool) => tool.name === "m365_mail_draft_send")!;
+    const args = { to: "a@contoso.com", subject: "Hi", bodyContents: "Body", idempotencyKey: "concurrent-1" };
+    const first = send.execute(args, ctx());
+    await Promise.resolve();
+    await assert.rejects(async () => send.execute(args, ctx()), /not available for replay/);
+    release?.();
+    await first;
+    assert.equal(calls, 1);
+  });
+
+  it("marks ambiguous connector failures unknown instead of replaying", async () => {
+    const store = createMemoryIdempotencyStore();
+    const adapter = createMicrosoft365CliAdapter({
+      binary: "/usr/bin/m365",
+      identity,
+      configDir: "/tmp/prism-m365-test",
+      runner: fakeRunner((argv) => {
+        if (argv[0] === "version") return { exitCode: 0, stdout: '"v11.7.0"', stderr: "" };
+        throw new Error("transport lost");
+      }),
+    });
+    const send = createWorkTools({
+      microsoft365: adapter,
+      idempotencyStore: store,
+      approval: { isApproved: () => true },
+      externalRecipients: { allow: () => true },
+    }).find((tool) => tool.name === "m365_mail_draft_send")!;
+    const args = { to: "a@contoso.com", subject: "Hi", bodyContents: "Body", idempotencyKey: "unknown-1" };
+    await assert.rejects(async () => send.execute(args, ctx()), /transport lost/);
+    assert.equal((await store.get({ identity, key: "unknown-1", op: "mail.send" }))?.status, "unknown");
+    await assert.rejects(async () => send.execute(args, ctx()), /requires reconciliation/);
+  });
+
   it("does not expose model-controlled command surface", () => {
     const adapter = createMicrosoft365CliAdapter({
       binary: "/usr/bin/m365",
@@ -207,6 +262,75 @@ describe("createWorkTools", () => {
     });
     const names = createWorkTools({ microsoft365: adapter }).map((tool) => tool.name);
     assert.ok(!names.some((name) => name.includes("exec") || name.includes("cli") || name.includes("raw")));
+  });
+});
+
+describe("idempotency claim state", () => {
+  it("claims once, enforces CAS, caps retries, and isolates owners", async () => {
+    const clock = { t: 1_000 };
+    const store = createMemoryIdempotencyStore({ now: () => clock.t });
+    const input = { identity, key: "mutation-1", op: "mail.send" };
+    const [first, second] = await Promise.all([store.begin(input), store.begin(input)]);
+    const claim = first.outcome === "acquired" ? first : second;
+    assert.equal(claim.outcome, "acquired");
+    assert.ok(claim.record.claimToken);
+    assert.equal(first.outcome === "acquired" ? second.outcome : first.outcome, "existing");
+
+    await assert.rejects(
+      () =>
+        store.complete({
+          ...input,
+          claimToken: "stale",
+          expectedVersion: claim.record.version,
+          result: { draftId: "draft-1" },
+        }),
+      (error: WorkToolError) => error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
+    );
+    const completed = await store.complete({
+      ...input,
+      claimToken: claim.record.claimToken!,
+      expectedVersion: claim.record.version,
+      result: { draftId: "draft-1", resourceId: "resource-1" },
+    });
+    assert.equal(completed.status, "completed");
+    assert.equal(Object.isFrozen(completed), true);
+    assert.equal((await store.begin(input)).outcome, "existing");
+    assert.equal(await store.get({ ...input, identity: { ...identity, tenantId: "other-tenant" } }), undefined);
+
+    const retry = await store.begin({ ...input, key: "retry-1", maxAttempts: 2 });
+    await store.fail({
+      ...input,
+      key: "retry-1",
+      claimToken: retry.record.claimToken!,
+      expectedVersion: retry.record.version,
+      status: "failed_retryable",
+      failure: { code: "ERR_PRISM_WORK_CREDENTIAL" },
+    });
+    const retryClaim = await store.begin({ ...input, key: "retry-1", maxAttempts: 2 });
+    assert.equal(retryClaim.outcome, "acquired");
+    await store.fail({
+      ...input,
+      key: "retry-1",
+      claimToken: retryClaim.record.claimToken!,
+      expectedVersion: retryClaim.record.version,
+      status: "failed_retryable",
+      failure: { code: "ERR_PRISM_WORK_CREDENTIAL" },
+    });
+    assert.equal((await store.begin({ ...input, key: "retry-1", maxAttempts: 2 })).outcome, "existing");
+  });
+
+  it("turns expired claims into unknown until explicit reconciliation", async () => {
+    const clock = { t: 1_000 };
+    const store = createMemoryIdempotencyStore({ now: () => clock.t });
+    const input = { identity, key: "expired-1", op: "mail.send", claimTtlMs: 10 };
+    await store.begin(input);
+    clock.t += 10;
+    const unknown = await store.get(input);
+    assert.equal(unknown?.status, "unknown");
+    assert.equal((await store.begin(input)).outcome, "existing");
+    const resolved = await store.resolveUnknown({ ...input, expectedVersion: unknown!.version, status: "failed_terminal" });
+    assert.equal(resolved.status, "failed_terminal");
+    await assert.rejects(() => store.begin({ ...input, key: "x".repeat(2_049) }), /bounded/);
   });
 });
 

@@ -55,7 +55,7 @@ jobs:
         timeout-minutes: 3
 
   postgres-integration:
-    name: postgres integration (session-store + memory adapters)
+    name: postgres integration (session-store, memory, enterprise adapters)
     runs-on: ubuntu-latest
     services:
       postgres:

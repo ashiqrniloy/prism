@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -53,6 +53,29 @@ describe("tooling gates fail on violations", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("requires an explicit PostgreSQL URL without making sdk:ready networked", () => {
+    const result = spawnSync(process.execPath, ["scripts/require-postgres-url.mjs"], {
+      env: { ...process.env, PRISM_TEST_POSTGRES_URL: "" },
+      encoding: "utf8",
+    });
+    assert.notEqual(result.status, 0, "protected PostgreSQL gate passed without a URL");
+    assert.match(result.stderr, /PRISM_TEST_POSTGRES_URL is required/);
+    const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts;
+    assert.match(scripts["test:postgres"], /require-postgres-url/);
+    assert.doesNotMatch(scripts["sdk:ready"], /test:postgres/);
+  });
+
+  it("keeps DDL out of the least-privilege enterprise request path", () => {
+    const inventory = JSON.parse(readFileSync("scripts/enterprise-postgres-sql-inventory.json", "utf8"));
+    assert.deepEqual(inventory.requestPath.verbs, ["SELECT", "INSERT", "UPDATE", "DELETE"]);
+    assert.ok(inventory.requestPath.forbidden.includes("DROP"));
+    const requestSources = ["policy", "evaluations", "work-idempotency", "model-router", "cleanup"]
+      .map((name) => readFileSync(`packages/enterprise-postgres/src/${name}.ts`, "utf8"))
+      .join("\n");
+    assert.doesNotMatch(requestSources, /\b(?:CREATE|ALTER|DROP|TRUNCATE|GRANT)\s+(?:SCHEMA|TABLE|INDEX)\b/);
+    assert.match(readFileSync("packages/enterprise-postgres/src/ddl.ts", "utf8"), /CREATE SCHEMA/);
   });
 
   it("coverage thresholds and gates are wired into package scripts", () => {

@@ -47,6 +47,8 @@ for await (const page of exportPolicyDecisions({
 }
 ```
 
-Ledger stores allow/deny/modify/approval with policy version, actor refs, target, reason, expiry, and evidence references. Unrestricted prompts/tool bodies are rejected. Use `createFilePolicyDecisionStore({ path })` for append-only JSONL; replace with host WORM/KMS adapters as needed.
+Ledger stores allow/deny/modify/approval with policy version, actor refs, target, reason, expiry, and evidence references. Unrestricted prompts/tool bodies are rejected. `createFilePolicyDecisionStore({ path })` and memory storage are single-process/reference adapters.
 
-See [Policy and audit](../../docs/policy-and-audit.md).
+For cross-replica PostgreSQL persistence, use `createPostgresEnterpriseState({ pool }).policy` from `@arnilo/prism-enterprise-postgres`; it preserves this `PolicyDecisionStore` contract with exact owner-bound pages and checksummed migration.
+
+See [Policy and audit](../../docs/policy-and-audit.md) and [Enterprise PostgreSQL state](../../docs/enterprise-postgres-state.md).

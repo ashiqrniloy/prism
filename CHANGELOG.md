@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.0.23] - 2026-08-03
+
+### Added
+- `@arnilo/prism-enterprise-postgres`: optional PostgreSQL composition for policy decisions, evaluation records, work-mutation idempotency, and model-router state.
+- Checked enterprise PostgreSQL conformance/restart/contention, cleanup/index/storage performance evidence, and protected `PRISM_TEST_POSTGRES_URL` gate.
+
+### Changed
+- `@arnilo/prism-work-tools` idempotency uses claim/CAS lifecycle states; ambiguous connector outcomes are `unknown` and require reconciliation.
+- `@arnilo/prism-model-router` accepts durable async state; `recordUsage`/`recordOutcome` are awaited and `providerSource` cannot bypass a supplied state store.
+- Publishable graph: **47** manifests (was 46); `@arnilo/prism-all` includes enterprise PostgreSQL state.
+
+### Breaking (minor, pre-1.0)
+- Hosts implementing `IdempotencyStore` must migrate from `get`/`put` to `begin`/transition methods.
+- Hosts using durable router state must await router methods with verified identity; synchronous `providerSource` is memory-state only.
+
+See [docs/migration.md](docs/migration.md) for the 0.0.22 → 0.0.23 guide.
+
+
 ## [0.0.22] - 2026-07-31
 
 ### Added

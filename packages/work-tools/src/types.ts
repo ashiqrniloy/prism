@@ -1,4 +1,4 @@
-import type { AgentIdentity, JsonObject, ToolDefinition } from "@arnilo/prism";
+import type { AgentIdentity, JsonObject, OwnershipScope, ToolDefinition } from "@arnilo/prism";
 
 export type WorkProvider = "microsoft365" | "google-workspace";
 
@@ -119,25 +119,68 @@ export interface WorkDraft {
   readonly concurrencyToken?: string;
 }
 
+/** Bounded summary retained after an approved external mutation. */
 export interface WorkMutationResult {
   readonly draftId: string;
-  readonly status: "pending_approval" | "executed" | "duplicate";
   readonly resourceId?: string;
-  readonly untrusted: true;
 }
 
-export interface IdempotencyRecord {
+export interface WorkMutationFailure {
+  readonly code: string;
+  readonly reference?: string;
+}
+
+export type WorkMutationStatus = "in_progress" | "completed" | "failed_retryable" | "failed_terminal" | "unknown";
+
+export interface WorkMutationKey {
+  /** Active host-verified identity; its exact owner/principal scopes this mutation. */
+  readonly identity: AgentIdentity;
   readonly key: string;
-  readonly identityKey: string;
   readonly op: string;
-  readonly result: unknown;
-  readonly concurrencyToken?: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface WorkMutationBeginInput extends WorkMutationKey {
+  readonly claimTtlMs?: number;
+  readonly maxAttempts?: number;
+}
+
+export interface WorkMutationTransitionInput extends WorkMutationKey {
+  readonly claimToken: string;
+  readonly expectedVersion: number;
+}
+
+export interface WorkMutationRecord extends OwnershipScope {
+  readonly principalId: string;
+  readonly key: string;
+  readonly op: string;
+  readonly status: WorkMutationStatus;
+  readonly attempt: number;
+  readonly version: number;
+  readonly claimToken?: string;
+  readonly result?: WorkMutationResult;
+  readonly failure?: WorkMutationFailure;
   readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly expiresAt?: string;
 }
 
 export interface IdempotencyStore {
-  get(input: { identityKey: string; key: string }): Promise<IdempotencyRecord | undefined>;
-  put(record: IdempotencyRecord): Promise<IdempotencyRecord>;
+  /** Reconciliation read. Normal execution starts with {@link begin}. */
+  get(input: WorkMutationKey): Promise<WorkMutationRecord | undefined>;
+  begin(input: WorkMutationBeginInput): Promise<{ readonly outcome: "acquired" | "existing"; readonly record: WorkMutationRecord }>;
+  complete(input: WorkMutationTransitionInput & { readonly result: WorkMutationResult }): Promise<WorkMutationRecord>;
+  fail(
+    input: WorkMutationTransitionInput & { readonly status: "failed_retryable" | "failed_terminal"; readonly failure: WorkMutationFailure },
+  ): Promise<WorkMutationRecord>;
+  markUnknown(input: WorkMutationTransitionInput & { readonly failure?: WorkMutationFailure }): Promise<WorkMutationRecord>;
+  resolveUnknown(
+    input: WorkMutationKey & {
+      readonly expectedVersion: number;
+      readonly status: "failed_retryable" | "failed_terminal";
+      readonly failure?: WorkMutationFailure;
+    },
+  ): Promise<WorkMutationRecord>;
 }
 
 export interface WorkApprovalGate {

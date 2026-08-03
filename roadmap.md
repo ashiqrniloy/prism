@@ -1,8 +1,8 @@
 # Prism Enterprise and Coding Harness Completion Roadmap
 
-Updated: 2026-07-31
-Baseline: `@arnilo/prism` **0.0.22** (Phase 5 exit gate passed)
-Status: Phase 5 complete; Phase 6+ pending exit gates
+Updated: 2026-08-03
+Baseline: `@arnilo/prism` **0.0.23** (Phase 6 exit gate passed)
+Status: Phase 6 complete; Phase 7+ pending exit gates
 
 ## Objectives
 
@@ -546,7 +546,8 @@ Status: Phase 5 complete; Phase 6+ pending exit gates
   - Exit Gate:
     - Primitive review accepted; both package test suites, packed-install fixture, no-core-regression check, `npm run sdk:ready`, package budget, docs links/examples, declarations, changelog/migration, and full release gate pass with both extensions inert until explicitly loaded.
 
-- [ ] Phase 6 — Release 0.0.23: production enterprise state adapters
+- [x] Phase 6 — Release 0.0.23: production enterprise state adapters
+  - **Completion evidence (2026-08-03):** `plans/006-Release-0-0-23-Production-Enterprise-State-Adapters.md` Tasks 0–7 complete. Added `@arnilo/prism-enterprise-postgres` with checksum-protected migrations and durable policy/evaluation/work/router stores; work claim/CAS and async router-state contracts. `npm run sdk:ready`, Node 20 root-import smoke, disposable PostgreSQL suite (57 passing), protected benchmark/index evidence, and 47-package release preflight pass.
   - Objectives:
     - Make existing policy, evaluation, connector-idempotency, and model-governance contracts durable and replica-consistent.
     - Reuse existing PostgreSQL lifecycle, ownership, migrations, codecs, and conformance patterns rather than creating a universal state abstraction.
@@ -572,10 +573,11 @@ Status: Phase 5 complete; Phase 6+ pending exit gates
       - Add a narrow router-state contract only because router mutation semantics are not represented by an existing store.
     - API Notes and Examples:
       ```ts
-      const policyStore = createPostgresPolicyDecisionStore({ pool });
-      const evaluationStore = createPostgresEvaluationStore({ pool });
-      const idempotencyStore = createPostgresIdempotencyStore({ pool });
-      const router = createModelRouter({ stateStore: createPostgresModelRouterStateStore({ pool }) });
+      const enterprise = await createPostgresEnterpriseState({ pool });
+      const policyStore = enterprise.policy;
+      const evaluationStore = enterprise.evaluations;
+      const idempotencyStore = enterprise.workIdempotency;
+      const router = createModelRouter({ stateStore: enterprise.modelRouter });
       ```
     - Files to Create/Edit (tentative):
       - Existing policy, evals, work-tools, and model-router types/exports/tests/docs.
@@ -1113,6 +1115,6 @@ Every numbered release must satisfy:
 - Execute `plans/002-Release-0-0-19-Observational-Memory.md` (Phase 2) — **complete** (exit gate 2026-07-30).
 - Execute `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md` (Phase 3) — **complete** (exit gate 2026-07-31).
 - Execute `plans/004-Release-0-0-21-Coding-Tool-Capability-Gaps.md` (Phase 4) — **complete** (exit gate 2026-07-31).
-- **Phase 6 next:** execute Phase 6 production enterprise state adapters when ready.
-- **Release handoff:** tag and publish `@arnilo/prism@0.0.22` when ready — `docs/release-and-install.md` 0.0.22 publish handoff.
-- Do not create plans or scaffolding for later phases until every earlier exit gate passes.
+- Execute `plans/006-Release-0-0-23-Production-Enterprise-State-Adapters.md` (Phase 6) — **complete** (exit gate 2026-08-03).
+- **Release handoff:** tag and publish `@arnilo/prism@0.0.23` from a clean checkout — `docs/release-and-install.md` 0.0.23 publish handoff.
+- **Phase 7 next:** create its numbered plan only when ready; do not scaffold later-phase APIs early.

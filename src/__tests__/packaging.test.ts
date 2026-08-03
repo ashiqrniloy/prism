@@ -38,6 +38,7 @@ const packages = [
   { dir: "packages/session-store-codecs", name: "@arnilo/prism-session-store-codecs" },
   { dir: "packages/session-store-sqlite", name: "@arnilo/prism-session-store-sqlite" },
   { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
+  { dir: "packages/enterprise-postgres", name: "@arnilo/prism-enterprise-postgres" },
   { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
   { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
   { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
@@ -169,7 +170,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.0.22", `${pkg.name} @arnilo/prism peer must be 0.0.22`);
+          assert.equal(peers?.["@arnilo/prism"], "0.0.23", `${pkg.name} @arnilo/prism peer must be 0.0.23`);
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
         });
@@ -216,6 +217,7 @@ describe("packaging guard", () => {
               "@arnilo/prism-providers",
               "@arnilo/prism-session-store-sqlite",
               "@arnilo/prism-session-store-postgres",
+              "@arnilo/prism-enterprise-postgres",
               "@arnilo/prism-evals",
               "@arnilo/prism-memory",
               "@arnilo/prism-rag",
@@ -236,7 +238,7 @@ describe("packaging guard", () => {
           assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.0.22", `${pkg.name} dependency must be pinned to 0.0.22`);
+            assert.equal(v, "0.0.23", `${pkg.name} dependency must be pinned to 0.0.23`);
           }
         });
       }
@@ -265,12 +267,13 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.22", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.0.23", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.0.22", "@arnilo/prism-all must hard-depend on provider umbrella");
-    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.0.22", "@arnilo/prism-all must hard-depend on AG-UI only");
-    assert.equal(all?.["@arnilo/prism-work-tools"], "0.0.22", "@arnilo/prism-all must hard-depend on work-tools");
-    assert.equal(all?.["@arnilo/prism-policy"], "0.0.22", "@arnilo/prism-all must hard-depend on policy");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.0.23", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.0.23", "@arnilo/prism-all must hard-depend on AG-UI only");
+    assert.equal(all?.["@arnilo/prism-work-tools"], "0.0.23", "@arnilo/prism-all must hard-depend on work-tools");
+    assert.equal(all?.["@arnilo/prism-policy"], "0.0.23", "@arnilo/prism-all must hard-depend on policy");
+    assert.equal(all?.["@arnilo/prism-enterprise-postgres"], "0.0.23", "@arnilo/prism-all must hard-depend on enterprise PostgreSQL state");
     for (const profile of ["packages/prism-code", "packages/prism-sdk"]) {
       const deps = readPkg(profile).dependencies as Record<string, string>;
       assert.equal(deps["@arnilo/prism-ag-ui"], undefined, `${profile} must not include AG-UI`);

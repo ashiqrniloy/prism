@@ -8,6 +8,8 @@ Prism itself does not ship a production database adapter. The built-in `SessionS
 
 Plan 056 Task 1 adds dialect-neutral shared primitives under `@arnilo/prism/testing/persistence-schema`, `@arnilo/prism/testing/session-store-conformance`, and `@arnilo/prism/testing/run-ledger-conformance`. Task 2 ships `@arnilo/prism-session-store-sqlite` (see [SQLite persistence](sqlite-persistence.md)); Task 3 ships `@arnilo/prism-session-store-postgres` (see [PostgreSQL persistence](postgres-persistence.md)). Both implement dialect-local SQL against the shared model; Prism core still ships no ORM, driver, or migration runner.
 
+Release 0.0.23 additionally ships [`@arnilo/prism-enterprise-postgres`](enterprise-postgres-state.md), a separate PostgreSQL composition for policy decisions, evaluations, work-mutation claims, and model-router state. It is not a `ProductionPersistenceStore` replacement and does not store sessions/runs. Its fixed `prism_enterprise_migrations` history is independent of `prism_migrations`; hosts may use both compositions against the same validated schema.
+
 ## When to use it
 
 Use these contracts when you write a database-backed `SessionStore` or a separate persistence adapter that needs:
@@ -461,6 +463,7 @@ const dbStore: ProductionPersistenceStore = {
 ## Related APIs
 
 - [Session store conformance](session-store-conformance.md): executable adapter baseline for append/idempotency/conflict/branch invariants.
+- [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable governance and connector/router state outside the session/run contract.
 - [Migration guide](migration.md): before/after shapes for moving from in-memory/JSONL to this contract.
 - [Performance limits](performance.md): production sizing, subscriber queues, branch-read limits, and database adapter guidance.
 - [Session stores and branching](session-stores-and-branching.md): `SessionStore`, `SessionEntry`, branch helpers, and runtime branch semantics.

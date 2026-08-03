@@ -1,6 +1,6 @@
 # @arnilo/prism-ponytail
 
-Optional Ponytail behavior integration for Prism (**0.0.22**).
+Optional Ponytail behavior integration for Prism (**0.0.23**).
 
 Importing is inert: no skills, commands, timers, or network until the host loads the extension via `kernel.load([createPonytailExtension(...)])`.
 
@@ -8,7 +8,7 @@ Importing is inert: no skills, commands, timers, or network until the host loads
 
 - Optional peer `@dietrichgebert/ponytail@^4.8.4`, **or** host-supplied `upstreamPath` to a Ponytail checkout with `skills/` and `hooks/`.
 - Session callbacks (`appendEntry`, `getEntries`) for mode persistence — same pattern as observational memory `attach`.
-- Peer `@arnilo/prism@0.0.22`.
+- Peer `@arnilo/prism@0.0.23`.
 
 ## Quick start
 

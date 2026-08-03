@@ -1,6 +1,6 @@
 # @arnilo/prism-caveman
 
-Optional Caveman behavior integration for Prism (**0.0.22**).
+Optional Caveman behavior integration for Prism (**0.0.23**).
 
 Importing is inert: no skills, commands, timers, or network until the host loads the extension via `kernel.load([createCavemanExtension(...)])`.
 
@@ -9,7 +9,7 @@ Importing is inert: no skills, commands, timers, or network until the host loads
 - A local checkout of [juliusbrussee/caveman](https://github.com/juliusbrussee/caveman) (not published on npm).
 - Host-supplied `upstreamPath` pointing at that checkout (must contain a `skills/` directory).
 - Session callbacks (`appendEntry`, `getEntries`) for level persistence — same pattern as observational memory `attach`.
-- Peer `@arnilo/prism@0.0.22`.
+- Peer `@arnilo/prism@0.0.23`.
 
 ## Quick start
 

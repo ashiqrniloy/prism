@@ -14,7 +14,7 @@ Do not put secrets, prompts, or raw OpenRouter keys into diagnostics. Do not hon
 
 | API / field | Meaning |
 | --- | --- |
-| `createModelRouter({ resolver, ... })` | Wraps host `ProviderResolver` |
+| `createModelRouter({ resolver, stateStore?, ... })` | Wraps host `ProviderResolver`; omit `stateStore` for in-process memory state or pass durable async state. |
 | `allowList.providers` / `allowList.models` | Exact provider id / model id or `provider/model` |
 | `allowedResidencies` | Request residency must match when configured |
 | `budgets` / per-call `maxTokens` / `maxCostUsd` | Finite non-negative ceilings; `recordUsage` charges |
@@ -24,7 +24,7 @@ Do not put secrets, prompts, or raw OpenRouter keys into diagnostics. Do not hon
 | `allowOpenRouterRouting` | Default `false`; when false, routing metadata is stripped |
 | `onDiagnostics` | Optional redacted hook (e.g. policy ledger evidence ref) |
 | `router.resolve({ model, identity?, residency?, ... })` | Rich async selection |
-| `router.providerSource` | Sync `ProviderResolver` facade for `AgentConfig` |
+| `router.providerSource` | Sync facade only for memory state; with `stateStore` it throws `ERR_PRISM_MODEL_ROUTER_ASYNC_STATE` rather than bypass durable checks. |
 
 Frozen caps (default / hard): attempts `3 / 8`, circuit keys `1,024 / 16,384`, diagnostics `8 KiB / 64 KiB`.
 
@@ -32,7 +32,7 @@ Frozen caps (default / hard): attempts `3 / 8`, circuit keys `1,024 / 16,384`, d
 
 - `ModelRouterResolveResult` — selected `provider` + possibly stripped `model`, `diagnostics`, and `providerRequestPolicy`.
 - Deny throws `ModelRouterError` with code + redacted `diagnostics` (allow-list/residency/budget fail closed without calling resolver).
-- `recordOutcome({ success })` opens/closes circuits; `recordUsage` advances budgets.
+- `await recordOutcome({ identity, success, circuitProbeToken? })` opens/closes circuits; `await recordUsage({ identity, ... })` advances budgets. Pass the probe token returned by `resolve` for a half-open outcome.
 
 ## Request/response example
 
@@ -56,9 +56,12 @@ Frozen caps (default / hard): attempts `3 / 8`, circuit keys `1,024 / 16,384`, d
 ```ts
 import { createAgent, createProviderResolver } from "@arnilo/prism";
 import { createModelRouter } from "@arnilo/prism-model-router";
+import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
 
+const enterprise = await createPostgresEnterpriseState({ pool, schema: "prism" });
 const router = createModelRouter({
   resolver: createProviderResolver(providers),
+  stateStore: enterprise.modelRouter,
   allowList: { providers: ["openai", "openrouter"] },
   allowedResidencies: ["eu"],
   fallbacks: [{ provider: "openrouter", model: "auto" }],
@@ -77,7 +80,11 @@ const agent = createAgent({
   provider,
   providerRequestPolicies: [providerRequestPolicy],
 });
-// or: providerSource: router.providerSource
+await router.recordUsage({ identity, provider: provider.id, model: model.model, tokens: 500 });
+await router.recordOutcome({ identity, provider: provider.id, model: model.model, success: true });
+await enterprise.close();
+
+// `router.providerSource` is unavailable with durable state; resolve before provider I/O.
 ```
 
 ## Extension and configuration notes
@@ -87,10 +94,11 @@ Router is optional. Chain returned `providerRequestPolicy` with other `ProviderR
 ## Security and performance notes
 
 - Allow-list and residency denies never call the underlying resolver.
-- Budget/rate/circuit state is memory-capped; oldest keys evict.
-- Diagnostics carry identity refs and attempt outcomes only — no prompts/secrets.
-- Selection is O(attempts × map ops); no network I/O inside the router.
-- Raising hard caps requires Phase 8 freeze + tests + docs updates.
+- Without `stateStore`, budget/rate/circuit state is process-local, memory-capped, and oldest keys evict. It is not a cross-replica production path.
+- With `stateStore: createPostgresEnterpriseState(...).modelRouter`, rate/budget updates and circuit probes are atomic across replicas, use database time, and are owner/principal/provider/model scoped. Router calls become asynchronous and require verified identity.
+- Diagnostics carry identity refs and attempt outcomes only — no prompts/secrets. Durable state stores at most bounded numeric/timestamp/token material, never prompts or credentials.
+- Selection is O(attempts × state operations); no provider network I/O happens inside state updates. Recorded 0.0.23 PostgreSQL p95 point operations stayed under 50 ms and cursor/cleanup pages under 100 ms on the documented fixture.
+- Raising hard caps requires a reviewed release update with tests and docs.
 
 ## Related APIs
 
@@ -99,4 +107,5 @@ Router is optional. Chain returned `providerRequestPolicy` with other `ProviderR
 - [OpenRouter](providers/openrouter.md)
 - [Policy and audit](policy-and-audit.md)
 - [Agent identity](agent-identity.md)
+- [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable router state, migration, cleanup, and ownership requirements.
 - Package README: [`@arnilo/prism-model-router`](../packages/model-router/README.md)

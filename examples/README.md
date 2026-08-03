@@ -73,6 +73,7 @@ Each demo prints a single JSON line with its result.
 - `enterprise-identity.ts` — **demo**: verified `AgentIdentity`, `narrowIdentity`, and propagation guards (network-free).
 - `enterprise-policy-audit.ts` — **demo**: `@arnilo/prism-policy` evaluate → append → cursor export with fake identity.
 - `enterprise-work-connectors.ts` — **demo**: fake M365/GWS CLI adapters, shared mail normalizers, and draft-gated work tools.
+- `enterprise-postgres-state.ts` — compile-checked durable policy/evaluation/work/router composition; host provides the PostgreSQL pool and explicitly schedules cleanup.
 - `server-deployment-seams.ts` — **demo**: health, drain, rate-limit, and deployment lease on `@arnilo/prism-server` (network-free).
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
 - `artifact-review-delivery.ts` — **demo**: artifact attach/revise/approve review + expiring authorized delivery link over an in-memory checkpoint store.
