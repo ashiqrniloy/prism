@@ -1,9 +1,9 @@
 {
-  "$comment": "Release 0.0.23 baselines plus protected enterprise PostgreSQL evidence. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark-0.0.23.mjs.",
+  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark-0.0.23.mjs.",
   "root": {
-    "packedBytes": { "baseline": 610315, "tolerance": 0.05 },
-    "unpackedBytes": { "baseline": 2157330, "tolerance": 0.05 },
-    "fileCount": { "baseline": 277, "tolerance": 0.05 }
+    "packedBytes": { "baseline": 645024, "tolerance": 0.05 },
+    "unpackedBytes": { "baseline": 2269194, "tolerance": 0.05 },
+    "fileCount": { "baseline": 290, "tolerance": 0.05 }
   },
   "aggregate": {
     "$comment": "Historical 0.0.22 reference sum across 46 publishable manifests; 0.0.23 has 47 and must be remeasured before changing this non-fast-gated baseline.",
@@ -25,6 +25,29 @@
       "provider-package-metadata": { "throughputPerSecond": 55829.2, "p50Ms": 0.0065, "p95Ms": 0.0394 },
       "rag-parse-replace-rerank-retrieve": { "throughputPerSecond": 4800.3, "p50Ms": 0.1432, "p95Ms": 0.4064 },
       "memory-retention-export-rebuild": { "throughputPerSecond": 8763.2, "p50Ms": 0.0686, "p95Ms": 0.1892 }
+    }
+  },
+  "phase7Postgres": {
+    "$comment": "Release 0.0.24 protected durable event/effect evidence. Fixture stays fixed: 10 tenants × 10 principals × 1,000 events/owner, 16 producer clients, 16 subscribers, 100 warmups, 1,000 append/page/effect measurements, 10,000 sustained replay events, and 100-row cleanup batches.",
+    "fixture": {
+      "tenants": 10,
+      "principalsPerTenant": 10,
+      "eventsPerOwner": 1000,
+      "producers": 16,
+      "subscribers": 16,
+      "warmups": 100,
+      "measuredOperations": 1000,
+      "sustainedStreamEvents": 10000,
+      "cleanupBatch": 100,
+      "reconnectSamples": 20
+    },
+    "p95CeilingsMs": {
+      "eventAppend": 50,
+      "eventPage": 100,
+      "eventCleanup": 100,
+      "effectClaimTransition": 50,
+      "effectCleanup": 100,
+      "reconnectCatchup": 2000
     }
   },
   "enterprisePostgres": {

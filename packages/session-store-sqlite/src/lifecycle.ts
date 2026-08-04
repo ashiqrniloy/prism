@@ -119,6 +119,7 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
       // Whole-session purge: clear ledger children before the session row (FK order).
       // prism_run_feedback cascades from prism_runs; search rows are best-effort cleanup.
       const delIdempotency = db.prepare("DELETE FROM prism_session_append_idempotency WHERE session_id = ?");
+      const delEventStreams = db.prepare("DELETE FROM prism_agent_event_streams WHERE session_id = ?");
       const delEvents = db.prepare("DELETE FROM prism_agent_events WHERE session_id = ?");
       const delToolCalls = db.prepare("DELETE FROM prism_tool_calls WHERE session_id = ?");
       const delUsage = db.prepare("DELETE FROM prism_usage WHERE session_id = ?");
@@ -133,6 +134,7 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
           continue;
         }
         delIdempotency.run(id);
+        delEventStreams.run(id);
         delEvents.run(id);
         delToolCalls.run(id);
         delUsage.run(id);

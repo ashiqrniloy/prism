@@ -7,7 +7,7 @@ import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../contra
 // adapter authors implement and test against before shipping dialect-specific DDL.
 
 /** Current shared persistence schema version for production database adapters. */
-export const PERSISTENCE_SCHEMA_VERSION = 5;
+export const PERSISTENCE_SCHEMA_VERSION = 7;
 
 export type PersistenceTableName =
   | "prism_tenants"
@@ -20,6 +20,7 @@ export type PersistenceTableName =
   | "prism_session_append_idempotency"
   | "prism_runs"
   | "prism_agent_events"
+  | "prism_agent_event_streams"
   | "prism_tool_calls"
   | "prism_usage"
   | "prism_run_feedback"
@@ -275,6 +276,17 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
         foreignKeys: [{ columns: ["session_id"], referencesTable: "prism_sessions", referencesColumns: ["id"] }],
       },
       {
+        name: "prism_agent_event_streams",
+        primaryKey: ["session_id", "run_id"],
+        columns: [
+          { name: "session_id", type: "text" },
+          { name: "run_id", type: "text" },
+          { name: "next_sequence", type: "integer" },
+          { name: "updated_at", type: "timestamp" },
+        ],
+        foreignKeys: [{ columns: ["session_id"], referencesTable: "prism_sessions", referencesColumns: ["id"] }],
+      },
+      {
         name: "prism_tool_calls",
         primaryKey: ["id"],
         columns: [
@@ -466,6 +478,7 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
         name: "prism_agent_events_run_sequence_idx",
         table: "prism_agent_events",
         columns: ["run_id", "sequence"],
+        unique: true,
         purpose: "stable per-run event timeline pagination",
       },
       {
@@ -473,6 +486,12 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
         table: "prism_agent_events",
         columns: ["session_id", "timestamp", "id"],
         purpose: "event stream pagination",
+      },
+      {
+        name: "prism_agent_events_owner_timestamp_sequence_idx",
+        table: "prism_agent_events",
+        columns: ["tenant_id", "account_id", "user_id", "timestamp", "sequence", "id"],
+        purpose: "owned durable event retention cleanup",
       },
       {
         name: "prism_tool_calls_session_name_started_idx",
@@ -562,38 +581,58 @@ function migrationStep(version: number, name: string, description: string): Pers
     version === 1
       ? {
           tables: model.tables
-            .filter((table) => table.name !== "prism_run_feedback")
+            .filter((table) => table.name !== "prism_run_feedback" && table.name !== "prism_agent_event_streams")
             .map((table) =>
               table.name === "prism_usage"
                 ? { ...table, columns: table.columns.filter((column) => !["scope", "turn", "attempt"].includes(column.name)) }
                 : table,
             ),
-          indexes: model.indexes.filter(
-            (index) => !index.name.startsWith("prism_usage_session_scope_") && !index.name.startsWith("prism_run_feedback_"),
-          ),
+          indexes: model.indexes
+            .filter(
+              (index) =>
+                !index.name.startsWith("prism_usage_session_scope_") &&
+                !index.name.startsWith("prism_run_feedback_") &&
+                !index.name.startsWith("prism_agent_event_streams_") &&
+                !index.name.startsWith("prism_agent_events_owner_timestamp_"),
+            )
+            .map((index) =>
+              index.name === "prism_agent_events_run_sequence_idx"
+                ? (() => {
+                    const { unique: _unique, ...legacy } = index;
+                    return legacy;
+                  })()
+                : index,
+            ),
         }
-      : version === 2
-        ? { table: "prism_usage", columns: ["scope", "turn", "attempt"], indexes: ["prism_usage_session_scope_recorded_idx"] }
-        : version === 3
+      : version === 7
+        ? { indexes: ["prism_agent_events_owner_timestamp_sequence_idx"] }
+        : version === 6
           ? {
-              tables: ["prism_run_feedback"],
-              indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name),
+              tables: ["prism_agent_event_streams"],
+              indexes: ["prism_agent_events_run_sequence_idx"],
             }
-          : version === 4
-            ? // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
-              { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
-            : version === 5
+          : version === 2
+            ? { table: "prism_usage", columns: ["scope", "turn", "attempt"], indexes: ["prism_usage_session_scope_recorded_idx"] }
+            : version === 3
               ? {
-                  tables: ["prism_legal_holds", "prism_tenant_quotas"],
-                  indexes: [
-                    "prism_legal_holds_owner_resource_idx",
-                    "prism_legal_holds_created_id_idx",
-                    "prism_tenant_quotas_owner_kind_idx",
-                  ],
+                  tables: ["prism_run_feedback"],
+                  indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name),
                 }
-              : (() => {
-                  throw new Error(`Unknown migration version ${version}`);
-                })();
+              : version === 4
+                ? // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
+                  { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
+                : version === 5
+                  ? {
+                      tables: ["prism_legal_holds", "prism_tenant_quotas"],
+                      indexes: [
+                        "prism_legal_holds_owner_resource_idx",
+                        "prism_legal_holds_created_id_idx",
+                        "prism_tenant_quotas_owner_kind_idx",
+                      ],
+                    }
+                  : (() => {
+                      throw new Error(`Unknown migration version ${version}`);
+                    })();
   return {
     version,
     name,
@@ -613,6 +652,8 @@ export function createPersistenceMigrationContract(): PersistenceMigrationContra
       migrationStep(3, "003_run_feedback", "Add immutable ownership-scoped run/trace feedback and evaluation links."),
       migrationStep(4, "004_session_search", "Add bounded session search indexes and adapter-local FTS objects."),
       migrationStep(5, "005_lifecycle_hold_quota", "Add legal-hold and tenant-quota tables for retention lifecycle."),
+      migrationStep(6, "006_agent_event_source", "Add transactional per-run event counters and unique durable event sequencing."),
+      migrationStep(7, "007_agent_event_retention_index", "Add an exact-owner durable-event retention cleanup index."),
     ],
     lockGuidance:
       "Acquire a dialect-specific migration lock before applying steps (PostgreSQL advisory lock; SQLite exclusive transaction). Only one process should migrate at a time.",

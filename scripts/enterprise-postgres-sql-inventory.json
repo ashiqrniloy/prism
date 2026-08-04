@@ -1,11 +1,12 @@
 {
-  "$comment": "Release 0.0.23 least-privilege SQL inventory. Request-path stores never issue DDL; migration setup is a separate explicit factory-open lifecycle concern.",
+  "$comment": "Release 0.0.24 least-privilege SQL inventory. Request-path stores never issue DDL; migration setup is a separate explicit factory-open lifecycle concern.",
   "requestPath": {
     "schemaPrivilege": "USAGE",
     "tables": [
       "prism_policy_decisions",
       "prism_evaluations",
       "prism_work_idempotency",
+      "prism_tool_effects",
       "prism_model_router_budgets",
       "prism_model_router_rates",
       "prism_model_router_circuits"

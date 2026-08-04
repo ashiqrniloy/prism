@@ -93,6 +93,8 @@ export type A2ATaskEvent =
         readonly lastChunk?: boolean;
       };
     };
+/** A streaming response may be a task lifecycle or one direct message. */
+export type A2AStreamEvent = A2ATaskEvent | { readonly eventId: string; readonly message: A2AMessage };
 
 export type A2ARequestId = string | number | null;
 export interface A2AJsonRpcRequest {
@@ -246,6 +248,8 @@ export interface A2AClient {
   send(input: string, options?: { readonly signal?: AbortSignal }): Promise<AgentRunResult>;
   sendMessage(message: A2AMessage, options?: { readonly signal?: AbortSignal; readonly returnImmediately?: boolean }): Promise<A2ATask>;
   stream(input: string, options?: { readonly signal?: AbortSignal }): AsyncIterable<string>;
+  /** Rich `SendStreamingMessage` events. Host-supplied messages remain subject to client bounds/card verification. */
+  streamMessage(message: A2AMessage, options?: { readonly signal?: AbortSignal }): AsyncIterable<A2AStreamEvent>;
   getTask(id: string, options?: { readonly signal?: AbortSignal; readonly historyLength?: number }): Promise<A2ATask>;
   listTasks(options?: {
     readonly signal?: AbortSignal;

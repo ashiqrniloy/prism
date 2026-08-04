@@ -54,6 +54,7 @@ const apiPages = [
   "docs/extension-authoring.md",
   "docs/middleware-hooks.md",
   "docs/tools.md",
+  "docs/tool-effects.md",
   "docs/tool-execution-primitives.md",
   "docs/coding-agent-tools.md",
   "docs/coding-security.md",
@@ -967,8 +968,8 @@ describe("docs", () => {
       ],
       ["providers/anthropic.md", anthropic, ["createAnthropicProviderPackage", "listAnthropicModels", "cache_control"]],
       ["providers/google.md", google, ["createGoogleProviderPackage", "listGoogleModels", "generateContent"]],
-      ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **5**", "005_lifecycle_hold_quota"]],
-      ["postgres-persistence.md", postgres, ["searchSessions", "Schema version **5**", "005_lifecycle_hold_quota"]],
+      ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **6**", "006_agent_event_source"]],
+      ["postgres-persistence.md", postgres, ["searchSessions", "Schema version **6**", "006_agent_event_source"]],
       ["index.md", index, ["providers/anthropic.md", "providers/google.md", "searchSessions", "contextBudget", "steer"]],
     ] as const) {
       for (const token of tokens) {
@@ -1013,7 +1014,7 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.23 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.24 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
@@ -1024,7 +1025,7 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.23] - 2026-08-03"), `${dir}/CHANGELOG.md missing finalized 0.0.23 section`);
+      assert.ok(changelog.includes("## [0.0.24] - 2026-08-04"), `${dir}/CHANGELOG.md missing finalized 0.0.24 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -1494,8 +1495,8 @@ describe("docs", () => {
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
-      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres",
-      "root test:postgres should require an explicit PostgreSQL URL and cover session, memory, and enterprise adapters",
+      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres && node --test scripts/phase7-conformance.test.mjs",
+      "root test:postgres should require an explicit PostgreSQL URL and cover adapters plus Phase 7 process conformance",
     );
 
     for (const phrase of [
@@ -3264,5 +3265,25 @@ describe("docs", () => {
     assert.ok(security.includes("request-path SQL") && security.includes("unknown"));
     assert.ok(performance.includes("benchmark-0.0.23.mjs") && performance.includes("28.410"));
     assert.ok(existsSync("examples/enterprise-postgres-state.ts"), "missing enterprise PostgreSQL example");
+  });
+
+  it("phase7 distributed events and tool effects docs cover source, effects, migration, and example", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const effects = readFileSync("docs/tool-effects.md", "utf8");
+    const events = readFileSync("docs/agent-events.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const security = readFileSync("docs/host-security.md", "utf8");
+    assert.ok(index.includes("tool-effects.md"), "docs/index.md missing tool-effects link");
+    assert.ok(apiPages.includes("docs/tool-effects.md"), "apiPages missing tool-effects.md");
+    for (const token of ["ToolEffectStore", "createMemoryToolEffectStore", "unknown", "exactly-once", "idempotencyKey", "AgentEventSource"])
+      assert.ok(effects.includes(token), `tool-effects.md missing ${token}`);
+    assert.ok(events.includes("AgentEventSource") && events.includes("at-least-once"));
+    assert.ok(migration.includes("0.0.23 → 0.0.24 distributed events and recoverable tool effects"));
+    assert.ok(migration.includes("schema") && migration.includes("007") && migration.includes("002"));
+    assert.ok(performance.includes("benchmark-0.0.24") && performance.includes("1.502"));
+    assert.ok(security.includes("unknown") && security.includes("AgentEventSource"));
+    assert.ok(existsSync("examples/distributed-events-and-tool-effects.ts"), "missing distributed events example");
+    assert.ok(effects.includes("not exactly-once"));
   });
 });

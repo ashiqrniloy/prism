@@ -328,6 +328,32 @@ ON CONFLICT (entry_id) DO NOTHING;
 `;
 }
 
+export function buildMigration006Ddl(schema: string): string {
+  const events = qualifyTable(schema, "prism_agent_events");
+  const streams = qualifyTable(schema, "prism_agent_event_streams");
+  const index = qualifyTable(schema, "prism_agent_events_run_sequence_idx");
+  return `
+CREATE TABLE IF NOT EXISTS ${streams} (
+  session_id TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  next_sequence INTEGER NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (session_id, run_id),
+  FOREIGN KEY (session_id) REFERENCES ${qualifyTable(schema, "prism_sessions")}(id)
+);
+INSERT INTO ${streams} (session_id, run_id, next_sequence, updated_at)
+SELECT session_id, COALESCE(run_id, ''), MAX(sequence) + 1, MAX(timestamp)
+FROM ${events}
+GROUP BY session_id, COALESCE(run_id, '')
+ON CONFLICT (session_id, run_id) DO UPDATE SET
+  next_sequence = GREATEST(${streams}.next_sequence, EXCLUDED.next_sequence),
+  updated_at = GREATEST(${streams}.updated_at, EXCLUDED.updated_at);
+DROP INDEX IF EXISTS ${index};
+CREATE UNIQUE INDEX IF NOT EXISTS prism_agent_events_run_sequence_idx
+  ON ${events} (run_id, sequence);
+`;
+}
+
 export function buildMigration005Ddl(schema: string): string {
   const holds = qualifyTable(schema, "prism_legal_holds");
   const quotas = qualifyTable(schema, "prism_tenant_quotas");
@@ -364,6 +390,16 @@ CREATE INDEX IF NOT EXISTS prism_tenant_quotas_owner_kind_idx
 `;
 }
 
+/** Exact owner/time prefix keeps bounded durable-event retention cleanup indexed. */
+export function buildMigration007Ddl(schema: string): string {
+  const events = qualifyTable(schema, "prism_agent_events");
+  return `
+CREATE INDEX IF NOT EXISTS prism_agent_events_owner_timestamp_sequence_idx
+  ON ${events} (tenant_id, account_id, user_id, timestamp, sequence, id)
+  WHERE redacted = TRUE;
+`;
+}
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",
@@ -375,6 +411,7 @@ export const ADAPTER_TABLE_NAMES = [
   "prism_session_append_idempotency",
   "prism_runs",
   "prism_agent_events",
+  "prism_agent_event_streams",
   "prism_tool_calls",
   "prism_usage",
   "prism_run_feedback",
@@ -400,6 +437,7 @@ export const ADAPTER_INDEX_NAMES = [
   "prism_runs_tenant_idempotency_unique",
   "prism_agent_events_run_sequence_idx",
   "prism_agent_events_session_ts_id_idx",
+  "prism_agent_events_owner_timestamp_sequence_idx",
   "prism_tool_calls_session_name_started_idx",
   "prism_tool_calls_run_started_idx",
   "prism_usage_run_recorded_idx",

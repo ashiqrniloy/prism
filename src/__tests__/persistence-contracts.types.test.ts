@@ -1,7 +1,9 @@
 import { describe, it } from "node:test";
 import type {
   AgentDefinitionQuery,
+  AgentEventRecord,
   AgentEventQuery,
+  AgentEventSource,
   BranchQuery,
   BranchReader,
   MigrationQuery,
@@ -173,6 +175,37 @@ describe("production persistence contracts (compile only)", () => {
     void branchQuery;
     void agentDefinitionQuery;
     void migrationQuery;
+  });
+
+  it("keeps durable events optional and legacy event records assignable", () => {
+    const legacy: AgentEventRecord = {
+      id: "event-1",
+      sessionId: "s1",
+      runId: "r1",
+      type: "agent_started",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      event: { type: "agent_started", sessionId: "s1", runId: "r1" },
+      redacted: true,
+    };
+    const events: AgentEventSource = {
+      async append(record) {
+        return { ...record, runId: record.runId ?? "r1", sequence: 1 };
+      },
+      async page() {
+        return { items: [], terminal: false };
+      },
+      async *subscribe() {
+        return;
+      },
+      async cleanup() {
+        return { deleted: 0 };
+      },
+    };
+    const withoutEvents: Pick<ProductionPersistenceStore, "events"> = {};
+    const withEvents: Pick<ProductionPersistenceStore, "events"> = { events };
+    void legacy;
+    void withoutEvents;
+    void withEvents;
   });
 
   it("accepts a host write-side RunLedger adapter", () => {

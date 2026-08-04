@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AgentIdentity } from "@arnilo/prism";
+import { ToolEffectError } from "@arnilo/prism";
+import type { AgentIdentity, ToolEffectKey } from "@arnilo/prism";
 import { PolicyError } from "@arnilo/prism-policy";
 import { WorkToolError } from "@arnilo/prism-work-tools";
 import type { Pool } from "pg";
@@ -8,6 +9,7 @@ import { createPostgresEvaluationStore } from "../evaluations.js";
 import { EnterprisePostgresError } from "../errors.js";
 import { createPostgresPolicyDecisionStore } from "../policy.js";
 import { createPostgresIdempotencyStore } from "../work-idempotency.js";
+import { createPostgresToolEffectStore } from "../tool-effects.js";
 
 const identity: AgentIdentity = {
   tenantId: "tenant",
@@ -110,5 +112,42 @@ describe("enterprise policy and evaluation stores", () => {
       (error: unknown) => error instanceof WorkToolError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
     );
     assert.equal(queries.length, queryCount);
+  });
+
+  it("validates generic tool effects before SQL and parameterizes effect identifiers", async () => {
+    const queries: Array<{ text: string; values: readonly unknown[] }> = [];
+    const pool = {
+      query: async (text: string, values: readonly unknown[]) => {
+        queries.push({ text, values });
+        return { rowCount: 0, rows: [] };
+      },
+    } as unknown as Pool;
+    const effects = createPostgresToolEffectStore(pool, "prism");
+    const hostile = `prism:tool-effect:v1:x'; DROP TABLE prism_tool_effects; --`;
+    const input: ToolEffectKey = {
+      identity,
+      ownership: { tenantId: "tenant", userId: "user" },
+      key: hostile,
+      sessionId: "session",
+      runId: "run",
+      toolCallId: "call",
+      toolName: "mail.send",
+      argumentsHash: "a".repeat(64),
+    };
+    await effects.get(input);
+    assert.equal(queries.length, 2);
+    for (const query of queries) {
+      assert.equal(query.text.includes(hostile), false);
+      assert.ok(query.values.includes(hostile));
+    }
+    await assert.rejects(
+      () => effects.begin({ ...input, argumentsHash: "not-a-sha" }),
+      (error: unknown) => error instanceof ToolEffectError && error.code === "ERR_PRISM_TOOL_EFFECT_LIMIT",
+    );
+    await assert.rejects(
+      () => effects.get({ ...input, ownership: {} }),
+      (error: unknown) => error instanceof ToolEffectError && error.code === "ERR_PRISM_TOOL_EFFECT_CONFLICT",
+    );
+    assert.equal(queries.length, 2);
   });
 });

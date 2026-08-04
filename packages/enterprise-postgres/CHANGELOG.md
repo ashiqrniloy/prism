@@ -1,10 +1,19 @@
 # Changelog
 
+## [0.0.24] - 2026-08-04
+
+### Added
+- Durable `AgentEventSource` (memory + PostgreSQL LISTEN/NOTIFY), recoverable `ToolEffectStore`, and AG-UI MCP/MCP Apps/A2A fronting for Phase 7.
+
+### Changed
+- Publishable graph remains **47** manifests at **0.0.24**; peers and lockfile move together.
+
+See [migration guide](../../docs/migration.md) for the 0.0.23 → 0.0.24 notes.
+
 ## [0.0.23] - 2026-08-03
 
 ### Added
 - Initial optional PostgreSQL enterprise-state composition: checksum-verified migrations, policy/evaluation stores, work claim/CAS reconciliation, durable model-router rate/budget/circuit state, and explicit owner-scoped cleanup.
-
 
 ## Unreleased
 

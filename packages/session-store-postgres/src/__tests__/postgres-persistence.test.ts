@@ -10,6 +10,8 @@ import {
   buildMigration003Ddl,
   buildMigration004Ddl,
   buildMigration005Ddl,
+  buildMigration006Ddl,
+  buildMigration007Ddl,
 } from "../ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, quoteIdentifier, schemaAdvisoryLockKey, validateIdentifier } from "../identifiers.js";
 
@@ -45,7 +47,9 @@ describe("postgres ddl", () => {
       buildMigration002Ddl("prism") +
       buildMigration003Ddl("prism") +
       buildMigration004Ddl("prism") +
-      buildMigration005Ddl("prism");
+      buildMigration005Ddl("prism") +
+      buildMigration006Ddl("prism") +
+      buildMigration007Ddl("prism");
     for (const table of ADAPTER_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"."${table}"`, "m"));
     }
@@ -54,6 +58,8 @@ describe("postgres ddl", () => {
     }
     assert.match(ddl, /CREATE TABLE IF NOT EXISTS "prism"\."prism_session_search"/);
     assert.match(ddl, /prism_sessions_updated_id_idx/);
+    assert.match(ddl, /CREATE UNIQUE INDEX IF NOT EXISTS prism_agent_events_run_sequence_idx/);
+    assert.match(ddl, /prism_agent_event_streams/);
     assertAdapterSchemaMatchesModel([...ADAPTER_TABLE_NAMES], [...ADAPTER_INDEX_NAMES], createPersistenceSchemaModel());
   });
 

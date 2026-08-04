@@ -1,0 +1,144 @@
+{
+  "version": "0.0.24",
+  "generatedAt": "2026-08-04T16:40:09.461Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics",
+    "memoryBytes": 65977401344,
+    "postgres": "16.14 (Debian 16.14-1.pgdg13+1)",
+    "producers": 16,
+    "subscribers": 16
+  },
+  "fixture": {
+    "tenants": 10,
+    "principalsPerTenant": 10,
+    "eventsPerOwner": 1000,
+    "producers": 16,
+    "subscribers": 16,
+    "warmups": 100,
+    "measuredOperations": 1000,
+    "sustainedStreamEvents": 10000,
+    "cleanupBatch": 100,
+    "reconnectSamples": 20
+  },
+  "results": [
+    {
+      "name": "eventAppend",
+      "operations": 1000,
+      "p50Ms": 1.072,
+      "p95Ms": 1.502,
+      "throughputPerSecond": 898.55
+    },
+    {
+      "name": "eventPage",
+      "operations": 1000,
+      "p50Ms": 2.222,
+      "p95Ms": 3.103,
+      "throughputPerSecond": 432.21
+    },
+    {
+      "name": "effectClaimTransition",
+      "operations": 1000,
+      "p50Ms": 1.985,
+      "p95Ms": 3.084,
+      "throughputPerSecond": 459.11
+    },
+    {
+      "name": "eventCleanup",
+      "operations": 1,
+      "p50Ms": 1.37,
+      "p95Ms": 1.37,
+      "throughputPerSecond": 729.2
+    },
+    {
+      "name": "effectCleanup",
+      "operations": 1,
+      "p50Ms": 3.242,
+      "p95Ms": 3.242,
+      "throughputPerSecond": 308.37
+    },
+    {
+      "name": "reconnectCatchup",
+      "operations": 20,
+      "p50Ms": 5.827,
+      "p95Ms": 7.883,
+      "throughputPerSecond": 163.7
+    }
+  ],
+  "sustainedStream": {
+    "events": 10000,
+    "subscribers": 16,
+    "deliveries": 160000,
+    "throughputPerSecond": 101.34,
+    "durationMs": 98676.944,
+    "subscriberHeapBytes": 20095072
+  },
+  "plans": [
+    {
+      "name": "event-replay",
+      "indexes": [
+        "prism_agent_events_owner_timestamp_sequence_idx",
+        "prism_agent_events_run_sequence_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "event-sequence-allocation",
+      "indexes": [
+        "prism_agent_event_streams_pkey"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "event-retention-cleanup",
+      "indexes": [
+        "prism_agent_events_owner_timestamp_sequence_idx"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "effect-key-lookup",
+      "indexes": [
+        "prism_tool_effects_pkey"
+      ],
+      "sequentialScan": false
+    },
+    {
+      "name": "effect-expiry-cleanup",
+      "indexes": [
+        "prism_tool_effects_expiry_idx"
+      ],
+      "sequentialScan": false
+    }
+  ],
+  "storageBeforeCleanup": {
+    "prism_agent_events": {
+      "rows": 101200,
+      "bytes": 55017472
+    },
+    "prism_agent_event_streams": {
+      "rows": 102,
+      "bytes": 90112
+    },
+    "prism_tool_effects": {
+      "rows": 1200,
+      "bytes": 1359872
+    }
+  },
+  "storageAfterCleanup": {
+    "prism_agent_events": {
+      "rows": 101100,
+      "bytes": 55017472
+    },
+    "prism_agent_event_streams": {
+      "rows": 102,
+      "bytes": 90112
+    },
+    "prism_tool_effects": {
+      "rows": 1100,
+      "bytes": 1359872
+    }
+  }
+}

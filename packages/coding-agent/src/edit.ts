@@ -24,6 +24,7 @@ import { constants } from "node:fs";
 import { access as fsAccess, stat as fsStat } from "node:fs/promises";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { atomicWriteUtf8File } from "./atomic-write.js";
+import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { readFileBounded } from "./bounded-file.js";
 import {
   applyEditsToNormalizedContent,
@@ -162,6 +163,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
   return {
     name: "edit",
+    effect: CODING_LOCAL_EFFECT,
     description:
       "Edit a single file using exact-then-fuzzy text replacement. Every edits[].oldText must match a unique, non-overlapping region of the original file. Exact match is tried first; if it fails, fuzzy match (unicode normalize + whitespace collapse) may still succeed silently — prefer exact oldText to avoid wrong-region edits. Duplicate/ambiguous matches fail closed and leave the file unchanged. If two changes affect the same block or nearby lines, merge them into one edit. Do not include large unchanged regions just to connect distant changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true.",
     parameters: {

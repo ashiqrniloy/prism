@@ -429,6 +429,8 @@ void credentials;
 - `createAgent()` and `createAgentSession()` implement the session runtime. They use explicit providers only; no hidden provider registry is created. Store-backed sessions use explicit `SessionStore` values and branch methods on `AgentSession`. `AgentSession.compact()` and `AgentConfig`/`RunOptions.compaction` provide manual and opt-in auto-compaction. `AgentConfig`/`RunOptions.retry` provide bounded provider-turn retry before observable output.
 - `createMemorySessionStore()` is the built-in in-memory `SessionStore`. Node hosts can opt into file durability with `@arnilo/prism/node/session-store-jsonl`. `createSessionEntry()`, `getSessionBranchEntries()`, `listSessionBranches()`, and `rebuildSessionContext()` are pure helpers for branch-aware session entries. `rebuildSessionContext()` understands compaction entries produced by `createDefaultCompactionStrategy()`, reducing provider-context messages while keeping raw entries. They do not read files or call providers.
 
+Phase 7 contracts: `AgentEventSource`, `ToolEffectDeclaration`/`ToolEffectStore`, and related error codes. Opt-in only; hosts without stores keep prior dispatch behavior.
+
 ## Security and performance notes
 
 - Type-only imports have no runtime side effects.

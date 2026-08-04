@@ -104,6 +104,7 @@ export {
   type BrowserRisk,
   buildBrowserExecutionAction,
   classifyBrowserOperation,
+  classifyBrowserToolEffect,
   isSideEffectAction,
 } from "./policy.js";
 export {

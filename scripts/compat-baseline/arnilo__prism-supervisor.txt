@@ -25,6 +25,7 @@ SupervisorValidationError	export declare class SupervisorValidationError extends
 bounded	export declare function bounded<T>(value: T, maxBytes: number, label: string): T
 canonicalizeA2AAgentCard	export declare function canonicalizeA2AAgentCard(card: A2AAgentCard): string
 createA2AAgentCard	export declare function createA2AAgentCard(card: A2AAgentCard): A2AAgentCard
+createA2AAgentEventSource	export declare function createA2AAgentEventSource(options: A2AAgentEventSourceOptions): A2AAgentEventSource
 createA2AClient	export declare function createA2AClient(options: A2AClientOptions): A2AClient
 createA2AHandler	export declare function createA2AHandler(options: CreateA2AHandlerOptions): (request: Request) => Promise<Response>
 createSupervisor	export declare function createSupervisor(options: CreateSupervisorOptions): Supervisor

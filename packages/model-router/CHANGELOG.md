@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.24] - 2026-08-04
+
+### Added
+- Durable `AgentEventSource` (memory + PostgreSQL LISTEN/NOTIFY), recoverable `ToolEffectStore`, and AG-UI MCP/MCP Apps/A2A fronting for Phase 7.
+
+### Changed
+- Publishable graph remains **47** manifests at **0.0.24**; peers and lockfile move together.
+
+See [migration guide](../../docs/migration.md) for the 0.0.23 → 0.0.24 notes.
+
 ## [0.0.23] - 2026-08-03
 
 ### Added
@@ -7,7 +17,6 @@
 
 ### Breaking (minor, pre-1.0)
 - `recordUsage` and `recordOutcome` are async and take verified identity. `providerSource` throws when a durable state store is configured.
-
 
 ## [0.0.22] - 2026-07-31
 
@@ -19,13 +28,10 @@
 ### Changed
 - Released with exact 0.0.21 graph.
 
-
-
 ## [0.0.20] - 2026-07-31
 
 ### Changed
 - Released with exact 0.0.20 graph.
-
 
 ## [0.0.19] - 2026-07-30
 

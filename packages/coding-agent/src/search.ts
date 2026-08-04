@@ -2,6 +2,7 @@
  * `repo_search` tool: bounded native literal repository text search.
  */
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 import {
@@ -129,6 +130,7 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
 
   return {
     name: "repo_search",
+    effect: CODING_OBSERVATION_EFFECT,
     description: `Search text files under the workspace using literal substring match. Use outputMode "files_with_matches" for paths only or "count" for totals without line bodies. Skips binary files, excluded basenames (default: ${limits.exclude.join(", ")}), and hidden names unless includeHidden is true. Does not follow symlinks. Caps matches/scanned bytes/time.`,
     parameters: {
       type: "object",

@@ -19,6 +19,7 @@ import { mkdir as fsMkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { atomicWriteUtf8File } from "./atomic-write.js";
+import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
@@ -70,6 +71,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
 
   return {
     name: "write",
+    effect: CODING_LOCAL_EFFECT,
     description:
       "Create or overwrite a file (full replace). Creates parent directories. Prefer edit for targeted changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true to override.",
     parameters: {

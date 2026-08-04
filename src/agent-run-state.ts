@@ -55,7 +55,12 @@ export function agentFingerprint(agent: Agent, revision: string): string {
     instructions: config.instructions ?? null,
     systemPrompt,
     skills: skills.map((skill) => ({ name: skill.name, instructions: skill.instructions, toolNames: skill.toolNames })),
-    tools: tools.map((tool) => ({ name: tool.name, parameters: tool.parameters, exclusive: tool.exclusive })),
+    tools: tools.map((tool) => ({
+      name: tool.name,
+      parameters: tool.parameters,
+      exclusive: tool.exclusive,
+      effect: typeof tool.effect === "function" ? "classifier" : tool.effect,
+    })),
     guardrails: guardrails.map((guardrail) => ({ name: guardrail.name, stage: guardrail.stage, revision: guardrail.revision })),
     loop:
       typeof config.loop === "object" && config.loop && "strategy" in config.loop

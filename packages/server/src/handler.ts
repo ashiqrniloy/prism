@@ -1,6 +1,7 @@
 import {
   type Agent,
   type AgentEvent,
+  type AgentEventEnvelope,
   AgentRunStateError,
   type AgentSession,
   assertIdentityActive,
@@ -61,7 +62,7 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
             headers: {
               "access-control-allow-origin": origin,
               "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
-              "access-control-allow-headers": "content-type, authorization",
+              "access-control-allow-headers": "content-type, authorization, last-event-id",
               vary: "origin",
             },
           }),
@@ -172,6 +173,36 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
           );
         } finally {
           owned.dispose();
+        }
+      }
+
+      if (route.kind === "agent-events") {
+        const exposure = options.agents?.[route.capabilityId];
+        if (!exposure || !("sessionFactory" in exposure) || !exposure.events || !exposure.resolveRun) {
+          throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
+        }
+        if (!authorization.ownership.tenantId) throw new PrismServerError("Forbidden", 403, "ERR_PRISM_SERVER_FORBIDDEN");
+        acquire();
+        const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
+        try {
+          const run = await awaitWithSignal(
+            Promise.resolve(exposure.resolveRun({ runId: route.runId, authorization, signal: owned.signal })),
+            owned.signal,
+          );
+          if (!run?.sessionId) throw new PrismServerError("Not found", 404, "ERR_PRISM_SERVER_NOT_FOUND");
+          const after = replayCursor(request, limits.maxReplayCursorBytes);
+          const events = exposure.events.subscribe({
+            ownership: authorization.ownership,
+            sessionId: run.sessionId,
+            runId: run.runId,
+            after,
+            signal: owned.signal,
+          });
+          return respond(sseAgentEvents(events, owned, limits, options, release));
+        } catch (error) {
+          owned.dispose();
+          release();
+          throw error;
         }
       }
 
@@ -444,6 +475,7 @@ type Route =
   | { readonly kind: "agent-run" | "agent-stream"; readonly operation: "agent.run" | "agent.stream"; readonly capabilityId: string }
   | { readonly kind: "agent-status"; readonly operation: "agent.status"; readonly capabilityId: string; readonly runId: string }
   | { readonly kind: "agent-resume"; readonly operation: "agent.resume"; readonly capabilityId: string; readonly runId: string }
+  | { readonly kind: "agent-events"; readonly operation: "agent.events"; readonly capabilityId: string; readonly runId: string }
   | {
       readonly kind: "workflow-run" | "workflow-stream" | "workflow-enqueue";
       readonly operation: "workflow.run" | "workflow.stream" | "workflow.enqueue";
@@ -496,6 +528,8 @@ function parseRoute(request: Request, base: string): Route | undefined {
     if (parts.length === 4 && request.method === "GET") return { kind: "agent-status", operation: "agent.status", capabilityId: id, runId };
     if (parts.length === 5 && action === "resume" && request.method === "POST")
       return { kind: "agent-resume", operation: "agent.resume", capabilityId: id, runId };
+    if (parts.length === 5 && action === "events" && request.method === "GET")
+      return { kind: "agent-events", operation: "agent.events", capabilityId: id, runId };
   }
   if (group !== "workflows") return undefined;
   if (segment === "runs" && parts.length === 3 && request.method === "POST") {
@@ -707,6 +741,19 @@ function validId(value: string): boolean {
   return value.length <= 128 && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value);
 }
 
+function replayCursor(request: Request, maxBytes: number): string | undefined {
+  const query = new URL(request.url).searchParams.get("cursor") ?? undefined;
+  const header = request.headers.get("last-event-id") ?? undefined;
+  if (query !== undefined && header !== undefined && query !== header) {
+    throw new PrismServerError("Conflicting event cursors", 400, "ERR_PRISM_SERVER_REPLAY_CURSOR");
+  }
+  const cursor = header ?? query;
+  if (cursor !== undefined && (Buffer.byteLength(cursor, "utf8") > maxBytes || /\r|\n|\0/.test(cursor))) {
+    throw new PrismServerError("Invalid event cursor", 400, "ERR_PRISM_SERVER_REPLAY_CURSOR");
+  }
+  return cursor;
+}
+
 function normalizeBasePath(value: string): string {
   if (!value.startsWith("/") || value.includes("?") || value.includes("#")) throw new RangeError("basePath must be an absolute URL path");
   const normalized = value.length > 1 ? value.replace(/\/+$/, "") : value;
@@ -750,11 +797,43 @@ function ownedSignal(request: Request, timeoutMs: number, disconnectAborts: bool
   };
 }
 
+function sseAgentEvents(
+  source: AsyncIterable<AgentEventEnvelope>,
+  owned: ReturnType<typeof ownedSignal>,
+  limits: ResolvedPrismServerLimits,
+  options: CreatePrismHandlerOptions,
+  release: () => void,
+): Response {
+  return sseStream(
+    source,
+    ({ record, cursor }) => {
+      if (/\r|\n|\0/.test(cursor) || Buffer.byteLength(cursor, "utf8") > limits.maxReplayCursorBytes) {
+        throw new PrismServerError("Invalid event cursor", 500, "ERR_PRISM_SERVER_REPLAY_CURSOR");
+      }
+      const safe = options.redactor?.redact(record.event) ?? record.event;
+      return `id: ${cursor}\ndata: ${JSON.stringify(safe)}\n\n`;
+    },
+    owned,
+    limits,
+    release,
+  );
+}
+
 function sse(
   source: AsyncIterable<AgentEvent | WorkflowEvent>,
   owned: ReturnType<typeof ownedSignal>,
   limits: ResolvedPrismServerLimits,
   options: CreatePrismHandlerOptions,
+  release: () => void,
+): Response {
+  return sseStream(source, (value) => `data: ${JSON.stringify(options.redactor?.redact(value) ?? value)}\n\n`, owned, limits, release);
+}
+
+function sseStream<T>(
+  source: AsyncIterable<T>,
+  serialize: (value: T) => string,
+  owned: ReturnType<typeof ownedSignal>,
+  limits: ResolvedPrismServerLimits,
   release: () => void,
 ): Response {
   const iterator = source[Symbol.asyncIterator]();
@@ -784,8 +863,7 @@ function sse(
           controller.close();
           return;
         }
-        const safe = options.redactor?.redact(next.value) ?? next.value;
-        const chunk = encoder.encode(`data: ${JSON.stringify(safe)}\n\n`);
+        const chunk = encoder.encode(serialize(next.value));
         events += 1;
         bytes += chunk.byteLength;
         if (chunk.byteLength > limits.maxEventBytes || events > limits.maxStreamEvents || bytes > limits.maxStreamBytes) {

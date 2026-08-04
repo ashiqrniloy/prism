@@ -19,7 +19,10 @@ CODING_CHECKPOINT_SCHEMA_VERSION	export declare const CODING_CHECKPOINT_SCHEMA_V
 CODING_GOAL_VERIFY_REVISION	export declare const CODING_GOAL_VERIFY_REVISION: "1"
 CODING_GOAL_VERIFY_SUSPEND_REASON	export declare const CODING_GOAL_VERIFY_SUSPEND_REASON: "approve-coding-goal-verify"
 CODING_GOAL_VERIFY_WORKFLOW_ID	export declare const CODING_GOAL_VERIFY_WORKFLOW_ID: "coding-goal-verify"
+CODING_LOCAL_EFFECT	export declare const CODING_LOCAL_EFFECT:
+CODING_OBSERVATION_EFFECT	export declare const CODING_OBSERVATION_EFFECT:
 CODING_STATE_KEY	export declare const CODING_STATE_KEY = "coding"
+CODING_UNSUPPORTED_EFFECT	export declare const CODING_UNSUPPORTED_EFFECT:
 CodingArtifactKind	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
 CodingArtifactRef	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
 CodingCheckSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
@@ -27,6 +30,8 @@ CodingCheckToolOptions	export type { CodingCheckToolOptions, NamedCheckDefinitio
 CodingCheckpointError	export declare class CodingCheckpointError extends Error
 CodingCheckpointLimitOptions	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
 CodingCheckpointMetadata	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingEffectReconciliation	export type { CodingEffectReconciliation, CodingEffectReconciliationInput } from "./effects.js"
+CodingEffectReconciliationInput	export type { CodingEffectReconciliation, CodingEffectReconciliationInput } from "./effects.js"
 CodingFingerprints	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
 CodingGoalVerifyApproval	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
 CodingGoalVerifyError	export declare class CodingGoalVerifyError extends Error
@@ -203,6 +208,9 @@ assertAbsoluteGit	export declare function assertAbsoluteGit(path: string): Promi
 assertCodingResumeAllowed	export declare function assertCodingResumeAllowed(input:
 atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
 buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetadata(input:
+classifyGitApplyEffect	export declare function classifyGitApplyEffect(args: JsonObject): ToolEffectDeclaration
+classifyGitBranchEffect	export declare function classifyGitBranchEffect(args: JsonObject): ToolEffectDeclaration
+classifyGitWorktreeEffect	export declare function classifyGitWorktreeEffect(args: JsonObject): ToolEffectDeclaration
 codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
 codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
 codingSha256Hex	export declare function codingSha256Hex(data: Buffer | string): string
@@ -265,6 +273,7 @@ pathExists	export declare function pathExists(filePath: string): Promise<boolean
 readCodingCheckpointFromState	export declare function readCodingCheckpointFromState(state: Readonly<Record<string, unknown>>, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata | undefined
 readCodingPlanFile	export declare function readCodingPlanFile(input:
 readFileBounded	export declare function readFileBounded(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer>
+reconcileCodingToolEffect	export declare function reconcileCodingToolEffect(input: CodingEffectReconciliationInput): Promise<CodingEffectReconciliation>
 refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "write" | "edit", displayPath: string, absolutePath: string, options: ReadBeforeWriteOptions | undefined, force: boolean): string | null
 resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
 resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits

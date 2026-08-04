@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.0.24] - 2026-08-04
+
+### Added
+- Durable `AgentEventSource` with append/page/subscribe/resume and PostgreSQL LISTEN/NOTIFY wakeups (schema v6 streams + v7 retention index).
+- Recoverable `ToolEffectStore` claim/CAS lifecycle; enterprise PostgreSQL `toolEffects`; coding/browser/work/MCP/supervisor effect classification.
+- AG-UI 0.0.57 full input/event/interrupt compatibility plus MCP Apps and remote A2A adapters.
+- Protected Phase 7 process conformance and `benchmark-0.0.24.json` evidence.
+- Example `examples/distributed-events-and-tool-effects.ts`; docs `docs/tool-effects.md`.
+
+### Changed
+- Work mutations require core-derived idempotency keys; ambiguous outcomes stay `unknown` (not exactly-once).
+- Publishable graph remains **47** manifests at **0.0.24**.
+
+### Breaking (minor, pre-1.0)
+- Hosts using approved work mutations must supply `effectStore` / core `idempotencyKey` (model keys ignored).
+- Durable event reconnect uses `AgentEventSource` cursors / `Last-Event-ID`; sticky sessions are optional only.
+
+See [docs/migration.md](docs/migration.md) for the 0.0.23 → 0.0.24 guide.
+
 ## [0.0.23] - 2026-08-03
 
 ### Added
@@ -16,7 +35,6 @@
 - Hosts using durable router state must await router methods with verified identity; synchronous `providerSource` is memory-state only.
 
 See [docs/migration.md](docs/migration.md) for the 0.0.22 → 0.0.23 guide.
-
 
 ## [0.0.22] - 2026-07-31
 
@@ -44,7 +62,6 @@ See [docs/migration.md](docs/migration.md) for the full 0.0.21 → 0.0.22 notes.
 - Custom sandbox `RepositoryOperations` must implement `glob`; full sandbox custom ops must supply `delete`/`move`.
 
 See [docs/migration.md](docs/migration.md) for the full 0.0.20 → 0.0.21 notes.
-
 
 ## [0.0.20] - 2026-07-31
 
@@ -168,7 +185,6 @@ All notable changes to this project will be documented in this file.
 
 - Versioned all 35 first-party manifests and exact internal ranges to `0.0.12`; `@arnilo/prism-all` includes AG-UI while `@arnilo/prism-code` and `@arnilo/prism-sdk` remain free of UI protocol dependencies.
 - Added network-free interoperability/compaction evidence: `scripts/benchmark-0.0.12.mjs`.
-
 
 ## [0.0.11] - 2026-07-22
 

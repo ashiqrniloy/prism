@@ -13,16 +13,20 @@ import type {
 } from "../index.js";
 import {
   createDefaultCompactionStrategy,
+  createMemoryAgentEventSource,
+  createMemoryToolEffectStore,
   createMemorySessionStore,
   createToolRegistry,
   SESSION_APPEND_CONFLICT_CODE,
   SessionAppendConflictError,
 } from "../index.js";
+import { assertAgentEventSourceConforms } from "../testing/agent-event-source-conformance.js";
 import { assertCompactionStrategyConforms } from "../testing/compaction-conformance.js";
 import { assertExtensionConforms } from "../testing/extension-conformance.js";
 import { assertRunLedgerConforms, runRunLedgerConformance } from "../testing/run-ledger-conformance.js";
 import { assertSessionStoreConforms, runSessionStoreConformance } from "../testing/session-store-conformance.js";
 import { assertToolBlocked, assertToolDispatchConforms } from "../testing/tool-conformance.js";
+import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 
 void describe("session-store conformance helper", () => {
   it("conforms against the core memory store", async () => {
@@ -60,6 +64,17 @@ void describe("session-store conformance helper", () => {
       otherSessionId: "reopen-shared-other",
       exerciseReopen: true,
     });
+  });
+});
+
+void describe("agent-event-source conformance helper", () => {
+  it("conforms against core memory source", async () => {
+    await assertAgentEventSourceConforms(() => createMemoryAgentEventSource());
+  });
+
+  it("testing/agent-event-source-conformance subpath is exported", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    assert.ok(pkg.exports["./testing/agent-event-source-conformance"]);
   });
 });
 
@@ -152,6 +167,17 @@ void describe("compaction conformance helper", () => {
   it("testing/compaction-conformance subpath is exported", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(pkg.exports["./testing/compaction-conformance"]);
+  });
+});
+
+void describe("tool-effect-store conformance helper", () => {
+  it("conforms against the core memory store", async () => {
+    await assertToolEffectStoreConforms(() => createMemoryToolEffectStore());
+  });
+
+  it("testing/tool-effect-store-conformance subpath is exported", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    assert.ok(pkg.exports["./testing/tool-effect-store-conformance"]);
   });
 });
 

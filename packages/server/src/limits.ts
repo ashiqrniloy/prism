@@ -32,6 +32,7 @@ export interface PrismServerLimits {
   readonly maxStreamEvents?: number;
   readonly maxConcurrentRuns?: number;
   readonly maxQueuedEvents?: number;
+  readonly maxReplayCursorBytes?: number;
   readonly requestTimeoutMs?: number;
 }
 
@@ -43,6 +44,7 @@ export interface ResolvedPrismServerLimits {
   readonly maxStreamEvents: number;
   readonly maxConcurrentRuns: number;
   readonly maxQueuedEvents: number;
+  readonly maxReplayCursorBytes: number;
   readonly requestTimeoutMs: number;
 }
 
@@ -69,6 +71,12 @@ export function resolvePrismServerLimits(input: PrismServerLimits = {}): Resolve
     maxStreamEvents: bounded(input.maxStreamEvents, DEFAULT_MAX_STREAM_EVENTS, HARD_MAX_STREAM_EVENTS, "maxStreamEvents"),
     maxConcurrentRuns: bounded(input.maxConcurrentRuns, DEFAULT_MAX_CONCURRENT_RUNS, HARD_MAX_CONCURRENT_RUNS, "maxConcurrentRuns"),
     maxQueuedEvents: bounded(input.maxQueuedEvents, DEFAULT_MAX_QUEUED_EVENTS, HARD_MAX_QUEUED_EVENTS, "maxQueuedEvents"),
+    maxReplayCursorBytes: bounded(
+      input.maxReplayCursorBytes,
+      DEFAULT_MAX_REPLAY_CURSOR_BYTES,
+      HARD_MAX_REPLAY_CURSOR_BYTES,
+      "maxReplayCursorBytes",
+    ),
     requestTimeoutMs: bounded(input.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT_MS, HARD_REQUEST_TIMEOUT_MS, "requestTimeoutMs"),
   };
 }

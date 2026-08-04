@@ -10,5 +10,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [004-Release-0-0-21-Coding-Tool-Capability-Gaps.md](004-Release-0-0-21-Coding-Tool-Capability-Gaps.md) | Phase 4 — Release 0.0.21 | complete (2026-07-31) |
 | [005-Release-0-0-22-Third-Party-Behavior-Integrations.md](005-Release-0-0-22-Third-Party-Behavior-Integrations.md) | Phase 5 — Release 0.0.22 | complete (2026-07-31) |
 | [006-Release-0-0-23-Production-Enterprise-State-Adapters.md](006-Release-0-0-23-Production-Enterprise-State-Adapters.md) | Phase 6 — Release 0.0.23 | complete (2026-08-03) |
+| [007-Release-0-0-24-Distributed-Events-and-Recoverable-Tool-Effects.md](007-Release-0-0-24-Distributed-Events-and-Recoverable-Tool-Effects.md) | Phase 7 — Release 0.0.24 | complete (2026-08-04) |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

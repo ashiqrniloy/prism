@@ -1,8 +1,8 @@
 # Prism Enterprise and Coding Harness Completion Roadmap
 
-Updated: 2026-08-03
-Baseline: `@arnilo/prism` **0.0.23** (Phase 6 exit gate passed)
-Status: Phase 6 complete; Phase 7+ pending exit gates
+Updated: 2026-08-04
+Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed)
+Status: Phase 7 complete; Phase 8+ pending exit gates
 
 ## Objectives
 
@@ -602,7 +602,7 @@ Status: Phase 6 complete; Phase 7+ pending exit gates
   - Exit Gate:
     - Network-free conformance, disposable PostgreSQL tests, restart/multi-client contention tests, migration checks, storage/performance budget, `npm run sdk:ready`, and package/release gates pass.
 
-- [ ] Phase 7 — Release 0.0.24: distributed event delivery and recoverable tool effects
+- [x] Phase 7 — Release 0.0.24: distributed event delivery and recoverable tool effects
   - Objectives:
     - Allow agent streams and subscriptions to reconnect across replicas without rerunning completed work.
     - Define honest, durable side-effect semantics across tools, MCP, browser, work connectors, coding operations, and delegated agents.
@@ -660,6 +660,13 @@ Status: Phase 6 complete; Phase 7+ pending exit gates
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
   - Exit Gate:
     - Multi-process PostgreSQL reconnect and crash-window suites pass; server/AG-UI/A2A/MCP conformance passes; event/idempotency benchmarks stay within approved budgets; full release gate passes.
+
+### Phase 7 completion evidence — 2026-08-04
+
+- Durable `AgentEventSource` + PostgreSQL LISTEN/NOTIFY; recoverable `ToolEffectStore` across coding/browser/work/MCP/supervisor; AG-UI 0.0.57 + MCP Apps/A2A fronting.
+- Protected `scripts/phase7-conformance.test.mjs` and checked `scripts/benchmark-0.0.24.json` under Task 0 ceilings.
+- Docs: `docs/tool-effects.md`, migration `0.0.23 → 0.0.24`, example `examples/distributed-events-and-tool-effects.ts`.
+- Publishable graph remains **47** manifests at **0.0.24**.
 
 - [ ] Phase 8 — Release 0.0.25: durable custom loops and complete human-in-the-loop semantics
   - Objectives:

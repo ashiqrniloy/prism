@@ -2,6 +2,7 @@ import {
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
+  type AgentEventSource,
   assertSessionMetadataKey,
   type BranchQuery,
   type CheckpointStore,
@@ -42,13 +43,13 @@ import {
 import { createSessionRowMappers, type SessionEntryRow } from "@arnilo/prism-session-store-codecs";
 import { Pool } from "pg";
 import { createPostgresCheckpointStore } from "./checkpoints.js";
+import { createPostgresAgentEventSource } from "./event-source.js";
 import { qualifyTable } from "./identifiers.js";
 import { createPostgresLeaseStore } from "./leases.js";
 import { createPostgresPersistenceLifecycle } from "./lifecycle.js";
 import { applyPostgresMigrations, assertPostgresSchemaReady, verifyMigrationIdempotency } from "./migrations.js";
 
 const {
-  agentEventRecordToRow,
   decodeEntryCursor,
   encodeEntryCursor,
   parentKey,
@@ -76,6 +77,7 @@ import { DEFAULT_POOL_MAX, DEFAULT_SCHEMA, type PostgresPersistenceOptions } fro
 export interface PostgresPersistence extends SessionStore, RunLedger, ProductionPersistenceStore {
   readonly name: "postgres";
   readonly checkpoints: CheckpointStore;
+  readonly events: AgentEventSource;
   readonly leases: LeaseStore;
   readonly feedback: RunFeedbackStore;
   readonly lifecycle: import("@arnilo/prism").PersistenceLifecycleStore;
@@ -117,6 +119,13 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     await assertPostgresSchemaReady(pool, schema);
     await verifyMigrationIdempotency(pool, schema);
   }
+
+  const eventSource = createPostgresAgentEventSource({
+    pool,
+    schema,
+    limits: options.eventSource,
+    cursorSecret: options.eventCursorSecret,
+  });
 
   async function ensureSession(sessionId: string, timestamp: string): Promise<void> {
     await pool.query(
@@ -221,6 +230,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
   const persistence: PostgresPersistence = {
     name: "postgres",
     checkpoints: createPostgresCheckpointStore(pool, schema),
+    events: eventSource,
     leases: createPostgresLeaseStore(pool, schema),
     feedback,
     lifecycle: createPostgresPersistenceLifecycle(pool, schema),
@@ -410,33 +420,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     },
 
     async appendEvent(record: AgentEventRecord): Promise<void> {
-      await ensureSession(record.sessionId, record.timestamp);
-      const sequenceResult = await pool.query(`SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence FROM ${events} WHERE run_id = $1`, [
-        record.runId ?? "",
-      ]);
-      const sequence = Number(sequenceResult.rows[0]?.next_sequence ?? 1);
-      const row = agentEventRecordToRow(record, sequence);
-      await pool.query(
-        `INSERT INTO ${events} (
-          id, session_id, run_id, entry_id, sequence, type, timestamp, event,
-          redacted, tenant_id, account_id, user_id, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [
-          row.id,
-          row.session_id,
-          row.run_id,
-          row.entry_id,
-          row.sequence,
-          row.type,
-          row.timestamp,
-          row.event,
-          row.redacted,
-          row.tenant_id,
-          row.account_id,
-          row.user_id,
-          row.metadata,
-        ],
-      );
+      await eventSource.appendLedger(record);
     },
 
     async appendToolCall(record: ToolCallRecord): Promise<void> {
@@ -784,6 +768,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     },
 
     async close(): Promise<void> {
+      await eventSource.close();
       if (ownsPool) {
         await pool.end();
       }

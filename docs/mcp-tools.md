@@ -21,6 +21,17 @@ await bridge.close();   // close client + transport
 
 Advanced hosts that manage their own `Client` + `Transport` can call `attachMcpToolBridge()` or `attachMcpCapabilities()` after connect. `connectMcpCapabilities()` keeps resources/prompts as host-facing facades rather than converting them into model tools, and declares roots/sampling/elicitation only when callbacks are supplied.
 
+MCP Apps is an explicit opt-in on the normal bridge:
+
+```ts
+const bridge = await connectMcpTools({ serverId: "weather", transport, mcpApps: true });
+// Fails unless the server acknowledges io.modelcontextprotocol/ui.
+const app = await bridge.apps!.readResource("ui://weather/card");
+// bridge.tools excludes _meta.ui.visibility: ["app"] tools.
+```
+
+`bridge.apps` exposes reviewed UI metadata, linked bounded `ui://` HTML, and same-server app tools for a host renderer/proxy; it never creates an iframe or executes HTML.
+
 ```ts
 const bridge = await connectMcpCapabilities({
   serverId: "research",
@@ -78,7 +89,7 @@ Do **not** use this package as a sandbox, permission engine, or auto-discovery l
 
 ## Outputs / response / events
 
-The resolved `McpToolBridge` exposes `tools`, `refresh()`, and `close()`. Each discovered MCP tool becomes a normal Prism `ToolDefinition`; calls return `ToolResult`, with remote `isError` mapped to `ToolResult.error`. List-change notifications invalidate the cache but register nothing automatically.
+`McpToolBridge` exposes `tools`, optional `apps`, `refresh()`, and `close()`. Normal tools are Prism `ToolDefinition`s. Apps requires server acknowledgement; nested resource metadata wins over flat/deprecated and app-only tools stay outside `tools`. Resource reads require linked bounded `ui://` HTML5 with exact MIME; content metadata wins over list defaults.
 
 `createPrismMcpServer()` returns the SDK `McpServer`. It lists only passed tools/commands and explicitly selected `agentRuns` lifecycle tools; JSON Schema parameters are converted through installed Zod v4 for SDK validation, then Prism tool calls still pass through `dispatchToolCall` permission/validator/redactor gates. Command definitions support explicitly selected direct/background/replay workflow operations and optional ownership-scoped schedule operations from `createWorkflowCommands()`; none are registered unless the host passes those command definitions. Calls return bounded MCP text content and `isError` on denial/failure. `createPrismMcpWebHandler()` returns `(Request) => Promise<Response>`.
 
@@ -126,6 +137,7 @@ Duplicate prefixed names throw `McpToolNameCollisionError` at refresh time.
 | `serverId` | required | Stable identifier used in default name prefix |
 | `transport` | required | `stdio` or `streamable-http` config |
 | `namePrefix` | `mcp:<serverId>:` | Registry namespace for remote tools |
+| `mcpApps` | `false` | Explicitly negotiate `io.modelcontextprotocol/ui`; exposes `bridge.apps` only after server acknowledgement |
 | `listCacheTtlMs` | 30 s (24 h hard) | Skip re-listing until TTL expires (invalidated on list-changed) |
 | `callTimeoutMs` | 60 s (30 min hard) | Connect, list-page, and tool-call SDK request timeout/abort |
 | `maxListPages` / `maxTools` | 20 / 500 (hard 100 / 5,000) | Stop pagination before another request/append |
@@ -187,6 +199,8 @@ Plaintext is accepted only when `allowLoopbackHttp: true`, the URL hostname is l
 
 Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 32 concurrent requests (512 hard), 60 s timeout (30 min hard), and 32 sessions (512 hard). Stateful mode is intentionally one official SDK transport/session lineage per handler; use one handler/server instance per independently hosted endpoint when multi-tenant transport isolation is required. It parses bounded JSON before passing `parsedBody` to the SDK transport. `allowedHosts`/`allowedOrigins` activate SDK DNS-rebinding checks only when explicitly configured. Authentication data comes only from host `resolveAuthInfo()`.
 
+Remote MCP tools default to `external_mutation`/`unsupported` unless the host `effect` policy classifies them. MCP Apps (`io.modelcontextprotocol/ui`) stay behind host CSP/origin/visibility gates. See [tool effects](tool-effects.md) and [AG-UI adoption](ag-ui-adoption.md).
+
 ## Security and performance notes
 
 | Risk | Mitigation |
@@ -195,6 +209,7 @@ Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 
 | SSRF / DNS rebinding / redirects (HTTP) | Exact HTTPS origins; credentials/fragments/redirects denied; every DNS answer public; one address pinned per request; explicit loopback-only HTTP escape hatch |
 | Hostile discovery / schema compilation | Raw SDK `tools/list` requests avoid SDK Ajv output-schema compilation; finite pages/tools/cursors/metadata/schema totals; failed refresh leaves previous tools unchanged |
 | Tool-name shadowing | Prefixed names + `createToolRegistry({ duplicate: "error" })` |
+| MCP Apps metadata/HTML | Explicit extension acknowledgement; bounded nested metadata; app-only tools absent from model list; only linked `ui://` HTML/MIME resource body reaches the host renderer |
 | Oversized/deep/wide server output | One aggregate byte/depth/property walk covers content, structured content, compatibility `toolResult`, and bounded remote errors before `ToolResult` |
 | Unvalidated arguments | Register tools with `createJsonSchemaToolArgumentValidator()` at dispatch |
 | Missing permission gate | Client direction: `PermissionPolicy` on `tool:mcp:<serverId>:<name>:execute`; server direction: required MCP `authorize` plus optional core `PermissionPolicy` |
@@ -207,7 +222,7 @@ Web handler defaults: 1 MiB request (8 MiB hard), 2 MiB response (16 MiB hard), 
 
 For durable lifecycle exposure, construct `createAgentRunLifecycle({ checkpoints, resolveAgent })` in core, then pass selected entries as `agentRuns: { support: { lifecycle } }`. MCP registers two tools: `agent.support.status` accepts `{ runId, sessionId? }`; `agent.support.resume` accepts `{ runId, sessionId?, decision, expectedVersion }`. Do not expose an agent without durable checkpoints and a restart-safe `SessionStore`; no lifecycle tool appears by default.
 
-MCP output is untrusted. Register bridge tools through core dispatch with a `SecretRedactor` so bounded remote content/errors are redacted before persistence or display. `CreatePrismMcpServerOptions.guardrails` applies shared tool-input/output stages to registered Prism tools; commands remain host callbacks. See [Guardrails](guardrails.md). Prism does not infer unknown secrets. MCP server authorization does not replace tool `PermissionPolicy`, argument validation, coding `ExecutionPolicy`, workflow ownership checks, TLS, rate limiting, or sandboxing. A timed-out tool must cooperate with `AbortSignal` to stop side effects; protocol retention and HTTP responses remain bounded when remote work ignores abort.
+MCP output is untrusted. Register bridge tools through core dispatch with a `SecretRedactor`. Apps renderer needs separate origin, `allow-scripts allow-same-origin`, no-wider CSP, and authenticated proxy approval; no app mutation retry before Task 4 recovery. `CreatePrismMcpServerOptions.guardrails` applies shared tool-input/output stages to registered Prism tools; commands remain host callbacks. See [Guardrails](guardrails.md). Prism does not infer unknown secrets. MCP server authorization does not replace tool `PermissionPolicy`, argument validation, coding `ExecutionPolicy`, workflow ownership checks, TLS, rate limiting, or sandboxing. A timed-out tool must cooperate with `AbortSignal` to stop side effects; protocol retention and HTTP responses remain bounded when remote work ignores abort.
 
 Discovery validation is atomic: cursor/page/tool/name/description/schema failures reject `refresh()` and preserve the previous immutable tool-array reference. The bridge intentionally uses raw SDK `request()` for `tools/list` and `tools/call`; this avoids eager Ajv compilation/validation of untrusted remote output schemas. Host `ToolValidator` remains the argument-validation owner.
 

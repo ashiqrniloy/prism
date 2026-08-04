@@ -1,15 +1,24 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
+import {
+  createAgent,
+  createMemoryAgentEventSource,
+  createMockProvider,
+  createSecretRedactor,
+  providerDone,
+  providerTextDelta,
+} from "@arnilo/prism";
 import {
   type A2AAgentCard,
   A2AError,
   type A2ALimits,
   type A2APushConfig,
   type A2ATask,
+  type A2ATaskEvent,
   type A2ATaskLifecycle,
   canonicalizeA2AAgentCard,
   createA2AAgentCard,
+  createA2AAgentEventSource,
   createA2AClient,
   createA2AHandler,
   deliverA2APushEvent,
@@ -99,6 +108,53 @@ describe("A2A agent cards", () => {
     await assert.rejects(
       verifyA2AAgentCard(signed, { publicKey: keys.publicKey, now: new Date("2028-01-01T00:00:00Z") }),
       /invalid or expired/,
+    );
+  });
+});
+
+describe("createA2AAgentEventSource", () => {
+  it("maps one owned durable run to resumable A2A task events", async () => {
+    const source = createMemoryAgentEventSource();
+    const task: A2ATask = {
+      id: "task-1",
+      contextId: "context-1",
+      status: { state: "TASK_STATE_WORKING", timestamp: "2026-08-04T00:00:00.000Z" },
+    };
+    for (const [id, event, timestamp] of [
+      ["event-1", { type: "agent_started", sessionId: "session-1", runId: "run-1" }, "2026-08-04T00:00:00.000Z"],
+      ["event-2", { type: "agent_finished", sessionId: "session-1", runId: "run-1" }, "2026-08-04T00:00:01.000Z"],
+    ] as const) {
+      await source.append({ id, sessionId: "session-1", runId: "run-1", type: event.type, timestamp, event, redacted: true, ...ownership });
+    }
+    const adapter = createA2AAgentEventSource({
+      source,
+      resolveTask: ({ id }) => (id === task.id ? { task, run: { sessionId: "session-1", runId: "run-1" } } : undefined),
+      map: ({ record, task: current }) =>
+        record.event.type === "agent_started"
+          ? { task: current }
+          : record.event.type === "agent_finished"
+            ? {
+                statusUpdate: {
+                  taskId: current.id,
+                  contextId: current.contextId,
+                  status: { state: "TASK_STATE_COMPLETED", timestamp: record.timestamp },
+                },
+              }
+            : undefined,
+    });
+    const signal = new AbortController().signal;
+    const first: A2ATaskEvent[] = [];
+    for await (const event of adapter.subscribe({ id: task.id, authorization: { ownership }, signal })) first.push(event);
+    assert.equal(first.length, 2);
+    assert.equal("task" in first[0]!, true);
+    assert.equal("statusUpdate" in first[1]!, true);
+    const resumed: A2ATaskEvent[] = [];
+    for await (const event of adapter.subscribe({ id: task.id, afterEventId: first[0].eventId, authorization: { ownership }, signal })) {
+      resumed.push(event);
+    }
+    assert.deepEqual(
+      resumed.map((event) => event.eventId),
+      [first[1].eventId],
     );
   });
 });
@@ -376,6 +432,27 @@ describe("createA2AClient", () => {
     const chunks: string[] = [];
     for await (const chunk of client.stream("question")) chunks.push(chunk);
     assert.deepEqual(chunks, ["answer"]);
+  });
+
+  it("exposes verified rich streaming task events without changing text stream compatibility", async () => {
+    const event = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        task: {
+          id: "t-rich",
+          contextId: "c-rich",
+          status: { state: "TASK_STATE_COMPLETED", message: { role: "agent", messageId: "m-rich", parts: [{ text: "done" }] } },
+          artifacts: [{ artifactId: "a-rich", parts: [{ data: { a2ui: true } }] }],
+        },
+      },
+    });
+    const client = streamClient([new TextEncoder().encode(`data: ${event}\n\n`)]);
+    const received = [] as unknown[];
+    for await (const item of client.streamMessage({ role: "user", messageId: "ask", parts: [{ text: "question" }] })) received.push(item);
+    assert.equal(received.length, 1);
+    assert.equal((received[0] as { task?: A2ATask }).task?.status.message?.messageId, "m-rich");
+    assert.deepEqual((received[0] as { task?: A2ATask }).task?.artifacts?.[0]?.parts[0]?.data, { a2ui: true });
   });
 
   it("parses split UTF-8, CRLF, mixed separators, and multiline data incrementally", async () => {

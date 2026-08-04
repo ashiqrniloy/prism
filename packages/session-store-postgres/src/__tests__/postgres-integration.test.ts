@@ -158,6 +158,8 @@ describeIntegration("createPostgresPersistence integration", () => {
       "003_run_feedback",
       "004_session_search",
       "005_lifecycle_hold_quota",
+      "006_agent_event_source",
+      "007_agent_event_retention_index",
     ]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
@@ -265,7 +267,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     ]);
     const persistence = await createPostgresPersistence({ pool, schema });
     const migrations = await persistence.queryMigrations({});
-    assert.equal(migrations.items.length, 5);
+    assert.equal(migrations.items.length, 7);
     await persistence.close();
   });
 

@@ -54,6 +54,8 @@ const result = await supervisor.delegate({ childId: "research", input: "Check so
 
 Child factories resolve their own providers/credentials and construct context/memory using the supplied IDs. Parent, child, returned-agent, budget, and hook permission policies are AND-composed. Child/request/hook limits can only lower inherited limits. A nested factory can call the supplied `delegate()`; immutable path state rejects cycles and depth overflow.
 
+Supervisors propagate parent `identity` and `effectStore` to every child agent/run so delegated tool effects stay under the same ownership scope.
+
 ## Security and performance notes
 
 - Child IDs are explicit; no package/provider discovery occurs.

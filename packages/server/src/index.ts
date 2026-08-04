@@ -152,12 +152,14 @@ export { createMemoryRateLimiter } from "./rate-limit.js";
 export type {
   CreatePrismEventReplayOptions,
   CreatePrismReplayHandlerOptions,
+  PrismAgentEventReplay,
   PrismEventReplay,
   PrismEventReplayRequest,
 } from "./replay.js";
-export { createPrismEventReplay, createPrismReplayHandler } from "./replay.js";
+export { createPrismAgentEventReplay, createPrismEventReplay, createPrismReplayHandler } from "./replay.js";
 export type {
   CreatePrismHandlerOptions,
+  PrismAgentEventResolutionInput,
   PrismAgentExposure,
   PrismAgentRunExposure,
   PrismRequestHandler,

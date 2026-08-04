@@ -1,4 +1,12 @@
-import type { Agent, AgentRunResult, OwnershipScope, PermissionPolicy, SecretRedactor } from "@arnilo/prism";
+import type {
+  Agent,
+  AgentIdentity,
+  AgentRunResult,
+  OwnershipScope,
+  PermissionPolicy,
+  SecretRedactor,
+  ToolEffectStore,
+} from "@arnilo/prism";
 import type { ResolvedSupervisorLimits, SupervisorLimits } from "./limits.js";
 
 export interface DelegationRequest {
@@ -16,6 +24,10 @@ export interface DelegationChildContext {
   readonly depth: number;
   readonly path: readonly string[];
   readonly ownership: OwnershipScope;
+  /** Parent-verified identity; child factories cannot widen it. */
+  readonly identity?: AgentIdentity;
+  /** One shared durable effect store for every child run. */
+  readonly effectStore?: ToolEffectStore;
   readonly resourceId: string;
   readonly threadId: string;
   readonly permission: PermissionPolicy;
@@ -99,6 +111,10 @@ export type SupervisorEvent =
 export interface CreateSupervisorOptions {
   readonly id?: string;
   readonly ownership: OwnershipScope;
+  /** Optional parent-verified identity, propagated unchanged to every child. */
+  readonly identity?: AgentIdentity;
+  /** Optional parent effect store, propagated unchanged to every child. */
+  readonly effectStore?: ToolEffectStore;
   readonly children: Readonly<Record<string, SupervisorChild>>;
   readonly permission?: PermissionPolicy;
   readonly limits?: SupervisorLimits;

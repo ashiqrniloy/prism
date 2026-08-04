@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   type AgentEventRecord,
   createAgent,
+  createMemoryAgentEventSource,
   createMemoryLeaseStore,
   createMockProvider,
   type OwnershipScope,
@@ -12,6 +13,7 @@ import {
 } from "@arnilo/prism";
 import {
   createMemoryRateLimiter,
+  createPrismAgentEventReplay,
   createPrismDeploymentLease,
   createPrismDrainController,
   createPrismEventReplay,
@@ -159,6 +161,24 @@ describe("server deployment seams", () => {
       }),
     );
     assert.equal(ok.status, 200);
+
+    const source = createMemoryAgentEventSource();
+    await source.append({
+      id: "durable-1",
+      sessionId: "s1",
+      runId: "r1",
+      type: "agent_finished",
+      timestamp: "2026-08-04T00:00:00.000Z",
+      event: { type: "agent_finished", runId: "r1", sessionId: "s1" },
+      redacted: true,
+      ...ownership,
+    });
+    const durable = createPrismAgentEventReplay(source);
+    const durablePage = await durable.page({ ownership, sessionId: "s1", runId: "r1" });
+    assert.equal(durablePage.items[0]?.record.id, "durable-1");
+    const followed: string[] = [];
+    for await (const item of durable.subscribe({ ownership, sessionId: "s1", runId: "r1" })) followed.push(item.record.id);
+    assert.deepEqual(followed, ["durable-1"]);
   });
 
   it("deployment lease elects one coordinator; second acquire fails until release (fencing)", async () => {

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-supervisor` implements bounded A2A 1.0 over the JSON-RPC/HTTPS binding. Supported operations: `SendMessage`, `SendStreamingMessage`, `GetTask`, `ListTasks`, `CancelTask`, `SubscribeToTask`, push-notification-config create/get/list/delete, and `GetExtendedAgentCard`. Agent Cards retain explicit ES256 verification. gRPC, HTTP+JSON, discovery registries, automatic JWK/OAuth fetching, and an internal task worker/store are absent.
+`@arnilo/prism-supervisor` implements bounded A2A 1.0 over the JSON-RPC/HTTPS binding. Supported operations: `SendMessage`, `SendStreamingMessage`, `GetTask`, `ListTasks`, `CancelTask`, `SubscribeToTask`, push-notification-config create/get/list/delete, and `GetExtendedAgentCard`. `client.streamMessage()` additionally exposes verified rich task/message events for frontend adapters while legacy `stream()` remains text-compatible. Agent Cards retain explicit ES256 verification. gRPC, HTTP+JSON, discovery registries, automatic JWK/OAuth fetching, and an internal task worker/store are absent.
 
 ## When to use it
 
@@ -59,11 +59,14 @@ Streams use ordered SSE frames with `id:` and JSON-RPC `result` containing one `
 Client APIs:
 
 - `send()` / `stream()` preserve text-to-`AgentRunResult` compatibility.
+- `streamMessage(message)` exposes bounded verified `A2AStreamEvent` task/message records without discarding artifact/data parts.
 - `sendMessage()` returns rich/durable `A2ATask`.
 - `getTask()`, `listTasks()`, `cancelTask()`, `subscribeToTask()` operate on durable tasks.
 - `createPushConfig()`, `getPushConfig()`, `listPushConfigs()`, `deletePushConfig()` expose declared push config operations.
 
 Every protocol request sends/negotiates `A2A-Version: 1.0`. Client endpoint/card URLs require exact allow-listed HTTPS and `redirect: "error"`. Cards are parsed then optionally verified against host-pinned keys; no key URL is fetched.
+
+`createA2AAgentEventSource({ source, resolveTask, map })` supplies only the durable `subscribe` seam for a host-owned `A2ATaskLifecycle`. It resolves task→exact Prism run under authorization, consumes `AgentEventSource.subscribe()`, and uses each opaque source cursor as stable A2A `eventId`. With no cursor, the first mapped update must be a full Task, matching A2A streaming rules. It creates no task store or worker. Standard `SubscribeToTask` has no `afterEventId`; Prism retains that bounded field as an explicitly documented reconnect extension.
 
 ## Request/response example
 
@@ -73,7 +76,7 @@ Every protocol request sends/negotiates `A2A-Version: 1.0`. Client endpoint/card
 
 ## Extension and configuration notes
 
-Handler requires `card.capabilities.pushNotifications` to exactly match supplied `push`; mismatch fails construction, preserving signed-card integrity and preventing false capability claims. Streaming remains available for direct text invocation. Push adapter owns exact-owner persistence, signing/auth credentials, and network transport. Host explicitly calls `deliverA2APushEvent()` from its durable update path; helper bounds event, timeout (10s default/60s hard), attempts (1 default/3 hard), and passes stable event ID as idempotency key to host `A2APushDelivery`. It starts no hidden sender and performs no network itself. Config handling validates IDs/count/bytes and requires same explicit URL policy used for URL parts. Returned push configs omit token and authentication credentials.
+Handler requires `card.capabilities.pushNotifications` to exactly match supplied `push`; mismatch fails construction, preserving signed-card integrity and preventing false capability claims. `createAgUiA2AAdapter({ client, select, correlate, projectPart })` in `@arnilo/prism-ag-ui` fronts one host-selected verified client: host selects new/follow task mode, persists exact run/thread/task correlation before output, and may project non-text/tool/A2UI parts. It never discovers agents, opens a local session, or replaces this direct A2A API. Streaming remains available for direct text invocation. Push adapter owns exact-owner persistence, signing/auth credentials, and network transport. Host explicitly calls `deliverA2APushEvent()` from its durable update path; helper bounds event, timeout (10s default/60s hard), attempts (1 default/3 hard), and passes stable event ID as idempotency key to host `A2APushDelivery`. It starts no hidden sender and performs no network itself. Config handling validates IDs/count/bytes and requires same explicit URL policy used for URL parts. Returned push configs omit token and authentication credentials.
 
 Defaults/hard caps include: request 64 KiB/1 MiB; response 1/8 MiB; event 64 KiB/1 MiB; stream 10/64 MiB and 10k/100k events; replay 1k/10k events; concurrency 16/256; timeout 120s/30m; IDs 256/4096 B; parts 32/256; part/raw 1/8 MiB; data 256 KiB/4 MiB; artifacts 32/256; history/page 100/1000; cursor 4/16 KiB; push configs 10/100. Hosts may narrow limits.
 
@@ -95,3 +98,4 @@ Defaults/hard caps include: request 64 KiB/1 MiB; response 1/8 MiB; event 64 KiB
 - [Workflows](workflows.md)
 - [Host security](host-security.md)
 - [Frontend interoperability (AG-UI and ACP)](ag-ui.md): browser/editor protocol adapters over a Prism session; not an A2A card, task lifecycle, or remote-agent transport.
+- [AG-UI adoption evaluation](ag-ui-adoption.md): official AG-UI A2A fronting assessment and shipped explicit adapter.

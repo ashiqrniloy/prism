@@ -21,6 +21,7 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
   const entries = qualifyTable(schema, "prism_session_entries");
   const idempotency = qualifyTable(schema, "prism_session_append_idempotency");
   const events = qualifyTable(schema, "prism_agent_events");
+  const eventStreams = qualifyTable(schema, "prism_agent_event_streams");
   const toolCalls = qualifyTable(schema, "prism_tool_calls");
   const usage = qualifyTable(schema, "prism_usage");
   const runs = qualifyTable(schema, "prism_runs");
@@ -131,6 +132,7 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
         // Whole-session purge: clear ledger children before the session row (FK order).
         // prism_run_feedback cascades from prism_runs; search rows are best-effort cleanup.
         await pool.query(`DELETE FROM ${idempotency} WHERE session_id = $1`, [id]);
+        await pool.query(`DELETE FROM ${eventStreams} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${events} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${toolCalls} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${usage} WHERE session_id = $1`, [id]);

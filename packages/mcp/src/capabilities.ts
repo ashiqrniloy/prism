@@ -117,6 +117,7 @@ export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions
     { name: "prism-mcp-bridge", version: "0.0.12" },
     {
       capabilities: {
+        ...(options.mcpApps ? { extensions: { "io.modelcontextprotocol/ui": {} } } : {}),
         ...(options.roots ? { roots: { listChanged: true } } : {}),
         ...(options.sampling ? { sampling: {} } : {}),
         ...(options.elicitation ? { elicitation: { form: {}, url: {} } } : {}),

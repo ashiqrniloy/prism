@@ -1,66 +1,135 @@
+AgUiActivityDelta	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiActivitySnapshot	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiAuthorization	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
+AgUiCustomProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiError	export declare class AgUiError extends Error
-AgUiProjection	export type { AgUiProjection } from "./projection.js"
+AgUiProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiRawProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiReasoningProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiRunReference	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 CoWorkContext	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 CoWorkEvent	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 CoWorkKind	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 DEFAULT_AG_UI_LIMITS	export declare const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits
+DEFAULT_MAX_ACTIVITY_BYTES	export declare const DEFAULT_MAX_ACTIVITY_BYTES: number
 DEFAULT_MAX_CURSOR_BYTES	export declare const DEFAULT_MAX_CURSOR_BYTES: number
 DEFAULT_MAX_ERROR_BYTES	export declare const DEFAULT_MAX_ERROR_BYTES: number
 DEFAULT_MAX_EVENT_BYTES	export declare const DEFAULT_MAX_EVENT_BYTES: number
+DEFAULT_MAX_INPUT_CONTEXTS	export declare const DEFAULT_MAX_INPUT_CONTEXTS = 32
+DEFAULT_MAX_INPUT_CONTEXT_BYTES	export declare const DEFAULT_MAX_INPUT_CONTEXT_BYTES: number
+DEFAULT_MAX_INPUT_INTERRUPTS	export declare const DEFAULT_MAX_INPUT_INTERRUPTS = 8
+DEFAULT_MAX_INPUT_MEDIA_BYTES	export declare const DEFAULT_MAX_INPUT_MEDIA_BYTES: number
+DEFAULT_MAX_INPUT_MEDIA_PARTS	export declare const DEFAULT_MAX_INPUT_MEDIA_PARTS = 16
 DEFAULT_MAX_INPUT_MESSAGES	export declare const DEFAULT_MAX_INPUT_MESSAGES = 128
 DEFAULT_MAX_INPUT_TEXT_BYTES	export declare const DEFAULT_MAX_INPUT_TEXT_BYTES: number
+DEFAULT_MAX_INPUT_TOOLS	export declare const DEFAULT_MAX_INPUT_TOOLS = 32
+DEFAULT_MAX_INPUT_TOOL_BYTES	export declare const DEFAULT_MAX_INPUT_TOOL_BYTES: number
+DEFAULT_MAX_JSON_ARRAY_ITEMS	export declare const DEFAULT_MAX_JSON_ARRAY_ITEMS = 512
+DEFAULT_MAX_JSON_DEPTH	export declare const DEFAULT_MAX_JSON_DEPTH = 16
+DEFAULT_MAX_JSON_PROPERTIES	export declare const DEFAULT_MAX_JSON_PROPERTIES = 128
+DEFAULT_MAX_PATCH_OPERATIONS	export declare const DEFAULT_MAX_PATCH_OPERATIONS = 128
 DEFAULT_MAX_QUEUED_EVENTS	export declare const DEFAULT_MAX_QUEUED_EVENTS = 128
+DEFAULT_MAX_RAW_EVENT_BYTES	export declare const DEFAULT_MAX_RAW_EVENT_BYTES: number
+DEFAULT_MAX_REASONING_BYTES	export declare const DEFAULT_MAX_REASONING_BYTES: number
 DEFAULT_MAX_REPLAY_EVENTS	export declare const DEFAULT_MAX_REPLAY_EVENTS = 100
 DEFAULT_MAX_REQUEST_BYTES	export declare const DEFAULT_MAX_REQUEST_BYTES: number
+DEFAULT_MAX_STATE_BYTES	export declare const DEFAULT_MAX_STATE_BYTES: number
 DEFAULT_MAX_STREAM_BYTES	export declare const DEFAULT_MAX_STREAM_BYTES: number
 DEFAULT_MAX_STREAM_EVENTS	export declare const DEFAULT_MAX_STREAM_EVENTS = 10000
 DEFAULT_MAX_TEXT_BYTES	export declare const DEFAULT_MAX_TEXT_BYTES: number
 DEFAULT_REQUEST_TIMEOUT_MS	export declare const DEFAULT_REQUEST_TIMEOUT_MS = 120000
 HARD_AG_UI_LIMITS	export declare const HARD_AG_UI_LIMITS: ResolvedAgUiLimits
+HARD_MAX_ACTIVITY_BYTES	export declare const HARD_MAX_ACTIVITY_BYTES: number
 HARD_MAX_CURSOR_BYTES	export declare const HARD_MAX_CURSOR_BYTES: number
 HARD_MAX_ERROR_BYTES	export declare const HARD_MAX_ERROR_BYTES: number
 HARD_MAX_EVENT_BYTES	export declare const HARD_MAX_EVENT_BYTES: number
+HARD_MAX_INPUT_CONTEXTS	export declare const HARD_MAX_INPUT_CONTEXTS = 256
+HARD_MAX_INPUT_CONTEXT_BYTES	export declare const HARD_MAX_INPUT_CONTEXT_BYTES: number
+HARD_MAX_INPUT_INTERRUPTS	export declare const HARD_MAX_INPUT_INTERRUPTS = 64
+HARD_MAX_INPUT_MEDIA_BYTES	export declare const HARD_MAX_INPUT_MEDIA_BYTES: number
+HARD_MAX_INPUT_MEDIA_PARTS	export declare const HARD_MAX_INPUT_MEDIA_PARTS = 64
 HARD_MAX_INPUT_MESSAGES	export declare const HARD_MAX_INPUT_MESSAGES = 1024
 HARD_MAX_INPUT_TEXT_BYTES	export declare const HARD_MAX_INPUT_TEXT_BYTES: number
+HARD_MAX_INPUT_TOOLS	export declare const HARD_MAX_INPUT_TOOLS = 256
+HARD_MAX_INPUT_TOOL_BYTES	export declare const HARD_MAX_INPUT_TOOL_BYTES: number
+HARD_MAX_JSON_ARRAY_ITEMS	export declare const HARD_MAX_JSON_ARRAY_ITEMS = 8192
+HARD_MAX_JSON_DEPTH	export declare const HARD_MAX_JSON_DEPTH = 64
+HARD_MAX_JSON_PROPERTIES	export declare const HARD_MAX_JSON_PROPERTIES = 4096
+HARD_MAX_PATCH_OPERATIONS	export declare const HARD_MAX_PATCH_OPERATIONS = 4096
 HARD_MAX_QUEUED_EVENTS	export declare const HARD_MAX_QUEUED_EVENTS = 4096
+HARD_MAX_RAW_EVENT_BYTES	export declare const HARD_MAX_RAW_EVENT_BYTES: number
+HARD_MAX_REASONING_BYTES	export declare const HARD_MAX_REASONING_BYTES: number
 HARD_MAX_REPLAY_EVENTS	export declare const HARD_MAX_REPLAY_EVENTS = 500
 HARD_MAX_REQUEST_BYTES	export declare const HARD_MAX_REQUEST_BYTES: number
+HARD_MAX_STATE_BYTES	export declare const HARD_MAX_STATE_BYTES: number
 HARD_MAX_STREAM_BYTES	export declare const HARD_MAX_STREAM_BYTES: number
 HARD_MAX_STREAM_EVENTS	export declare const HARD_MAX_STREAM_EVENTS = 100000
 HARD_MAX_TEXT_BYTES	export declare const HARD_MAX_TEXT_BYTES: number
 HARD_REQUEST_TIMEOUT_MS	export declare const HARD_REQUEST_TIMEOUT_MS: number
+assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxBytes: number, limits: Pick<ResolvedAgUiLimits, "maxJsonDepth" | "maxJsonProperties" | "maxJsonArrayItems">, name: string): void
 createAcpEventMapper	export declare function createAcpEventMapper(options?: AcpEventMapperOptions): AcpEventMapper
+createAgUiA2AAdapter	export declare function createAgUiA2AAdapter<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiA2AAdapterOptions<Authorization>): AgUiA2AAdapter<Authorization>
 createAgUiEventMapper	export declare function createAgUiEventMapper(options?: AgUiEventMapperOptions): AgUiEventMapper
-createAgUiHandler	export declare function createAgUiHandler<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiHandlerOptions<Authorization>): (request: Request) => Promise<Response>
+createAgUiHandler	export declare function createAgUiHandler<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiHandlerOptions<Authorization>): AgUiHandler
+createAgUiMcpAdapter	export declare function createAgUiMcpAdapter<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiMcpAdapterOptions<Authorization>): AgUiMcpAdapter<Authorization>
+createAgUiMcpAppHandler	export declare function createAgUiMcpAppHandler<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiMcpAppHandlerOptions<Authorization>): (request: Request) => Promise<Response>
+createAgUiMcpAppSandbox	export declare function createAgUiMcpAppSandbox(resource: Pick<McpAppResource, "ui">): AgUiMcpAppSandbox
+createAgentEventSourceAgUiReplay	export declare function createAgentEventSourceAgUiReplay<Authorization>(source: AgentEventSource, options: AgentEventSourceAgUiReplayOptions<Authorization>): AgUiReplay<Authorization>
 createCoWorkReplay	export declare function createCoWorkReplay<Authorization>(options: CoWorkReplayOptions<Authorization>): CoWorkReplay<Authorization>
 createPersistenceAgUiReplay	export declare function createPersistenceAgUiReplay<Authorization>(store: Pick<ProductionPersistenceStore, "queryEvents">, options: PersistenceAgUiReplayOptions<Authorization>): AgUiReplay<Authorization>
 createPrismAcpAgent	export declare function createPrismAcpAgent<Authorization extends AcpAuthorization = AcpAuthorization>(options: CreatePrismAcpAgentOptions<Authorization>): AgentApp
+defaultAgUiInput	export declare function defaultAgUiInput(input: ParsedAgUiInput, limits: ResolvedAgUiLimits): string
 packageName	export declare const packageName = "@arnilo/prism-ag-ui"
 parseAgUiInput	export declare function parseAgUiInput(value: unknown, limits: ResolvedAgUiLimits): ParsedAgUiInput
+projectAgUiJson	export declare function projectAgUiJson(value: unknown, maxBytes: number, limits: ResolvedAgUiLimits, name: string): unknown | undefined
+projectAgUiPatch	export declare function projectAgUiPatch(value: readonly unknown[] | undefined, maxOperations: number, maxBytes: number, limits: ResolvedAgUiLimits, name: string): readonly unknown[] | undefined
 projectCoWorkEvent	export declare function projectCoWorkEvent(event: CoWorkEvent, options: CoWorkProjectionOptions): Record<string, unknown> | undefined
+resolveAgUiCapabilities	export declare function resolveAgUiCapabilities<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: Pick<CreateAgUiHandlerOptions<Authorization>, "capabilities" | "input" | "interrupts" | "lifecycle" | "projection" | "replay" | "resolveRun">): AgentCapabilities
 resolveAgUiLimits	export declare function resolveAgUiLimits(options?: AgUiLimitOptions): ResolvedAgUiLimits
 type AcpAuthorization	export { type AcpAuthorization, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
 type AcpEventMapper	export { type AcpEventMapper, type AcpEventMapperOptions, createAcpEventMapper } from "./mapper.js"
 type AcpEventMapperOptions	export { type AcpEventMapper, type AcpEventMapperOptions, createAcpEventMapper } from "./mapper.js"
 type AcpSessionBinding	export { type AcpAuthorization, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
-type AgUiAuthorizationInput	export { type AgUiAuthorizationInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler } from "./handler.js"
+type AgUiA2AAdapter	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type AgUiA2APartProjectionInput	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type AgUiA2ASelection	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type AgUiA2ASelectionInput	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type AgUiAuthorizationInput	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
 type AgUiErrorCode	export { AgUiError, type AgUiErrorCode } from "./errors.js"
 type AgUiEventMapper	export { type AgUiEventMapper, type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js"
 type AgUiEventMapperOptions	export { type AgUiEventMapper, type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js"
-type AgUiLimitOptions	export { type AgUiLimitOptions, DEFAULT_AG_UI_LIMITS, DEFAULT_MAX_CURSOR_BYTES, DEFAULT_MAX_ERROR_BYTES, DEFAULT_MAX_EVENT_BYTES, DEFAULT_MAX_INPUT_MESSAGES, DEFAULT_MAX_INPUT_TEXT_BYTES, DEFAULT_MAX_QUEUED_EVENTS, DEFAULT_MAX_REPLAY_EVENTS, DEFAULT_MAX_REQUEST_BYTES, DEFAULT_MAX_STREAM_BYTES, DEFAULT_MAX_STREAM_EVENTS, DEFAULT_MAX_TEXT_BYTES, DEFAULT_REQUEST_TIMEOUT_MS, HARD_AG_UI_LIMITS, HARD_MAX_CURSOR_BYTES, HARD_MAX_ERROR_BYTES, HARD_MAX_EVENT_BYTES, HARD_MAX_INPUT_MESSAGES, HARD_MAX_INPUT_
-type AgUiReplay	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type AgUiReplayPage	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type AgUiReplayRequest	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type AgUiRunResolutionRequest	export { type AgUiAuthorizationInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler } from "./handler.js"
-type CoWorkProjectionOptions	export { type CoWorkProjectionOptions, projectCoWorkEvent } from "./projection.js"
-type CoWorkReplay	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type CoWorkReplayOptions	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type CoWorkReplayPage	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type CoWorkReplayRequest	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type CoWorkSource	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type CreateAgUiHandlerOptions	export { type AgUiAuthorizationInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler } from "./handler.js"
+type AgUiFrontendToolHandoff	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiFrontendToolPolicyInput	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiHandler	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiInputOptions	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiInputProjection	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiInputProjectorInput	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiInterruptOptions	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiInterruptResume	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiLimitOptions	export { type AgUiLimitOptions, DEFAULT_AG_UI_LIMITS, DEFAULT_MAX_ACTIVITY_BYTES, DEFAULT_MAX_CURSOR_BYTES, DEFAULT_MAX_ERROR_BYTES, DEFAULT_MAX_EVENT_BYTES, DEFAULT_MAX_INPUT_CONTEXT_BYTES, DEFAULT_MAX_INPUT_CONTEXTS, DEFAULT_MAX_INPUT_INTERRUPTS, DEFAULT_MAX_INPUT_MEDIA_BYTES, DEFAULT_MAX_INPUT_MEDIA_PARTS, DEFAULT_MAX_INPUT_MESSAGES, DEFAULT_MAX_INPUT_TEXT_BYTES, DEFAULT_MAX_INPUT_TOOL_BYTES, DEFAULT_MAX_INPUT_TOOLS, DEFAULT_MAX_JSON_ARRAY_ITEMS, DEFAULT_MAX_JSON_DEPTH, DEFAULT_MAX_JSON_PROPE
+type AgUiMcpAdapter	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
+type AgUiMcpAppAuthorizationInput	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
+type AgUiMcpAppCallContext	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
+type AgUiMcpAppSandbox	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
+type AgUiMcpPrepareInput	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
+type AgUiMcpToolSelectionInput	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
+type AgUiPreparedInput	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiReplay	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type AgUiReplayEvent	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type AgUiReplayPage	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type AgUiReplayRequest	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type AgUiRunResolutionRequest	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgentEventSourceAgUiReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type CoWorkProjectionOptions	export { type CoWorkProjectionOptions, projectAgUiJson, projectAgUiPatch, projectCoWorkEvent } from "./projection.js"
+type CoWorkReplay	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type CoWorkReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type CoWorkReplayPage	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type CoWorkReplayRequest	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type CoWorkSource	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type CreateAgUiA2AAdapterOptions	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type CreateAgUiHandlerOptions	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type CreateAgUiMcpAdapterOptions	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
+type CreateAgUiMcpAppHandlerOptions	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
 type CreatePrismAcpAgentOptions	export { type AcpAuthorization, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
-type PersistenceAgUiReplayOptions	export { type AgUiReplay, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
-type ResolvedAgUiLimits	export { type AgUiLimitOptions, DEFAULT_AG_UI_LIMITS, DEFAULT_MAX_CURSOR_BYTES, DEFAULT_MAX_ERROR_BYTES, DEFAULT_MAX_EVENT_BYTES, DEFAULT_MAX_INPUT_MESSAGES, DEFAULT_MAX_INPUT_TEXT_BYTES, DEFAULT_MAX_QUEUED_EVENTS, DEFAULT_MAX_REPLAY_EVENTS, DEFAULT_MAX_REQUEST_BYTES, DEFAULT_MAX_STREAM_BYTES, DEFAULT_MAX_STREAM_EVENTS, DEFAULT_MAX_TEXT_BYTES, DEFAULT_REQUEST_TIMEOUT_MS, HARD_AG_UI_LIMITS, HARD_MAX_CURSOR_BYTES, HARD_MAX_ERROR_BYTES, HARD_MAX_EVENT_BYTES, HARD_MAX_INPUT_MESSAGES, HARD_MAX_INPUT_
+type PersistenceAgUiReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type ResolvedAgUiLimits	export { type AgUiLimitOptions, DEFAULT_AG_UI_LIMITS, DEFAULT_MAX_ACTIVITY_BYTES, DEFAULT_MAX_CURSOR_BYTES, DEFAULT_MAX_ERROR_BYTES, DEFAULT_MAX_EVENT_BYTES, DEFAULT_MAX_INPUT_CONTEXT_BYTES, DEFAULT_MAX_INPUT_CONTEXTS, DEFAULT_MAX_INPUT_INTERRUPTS, DEFAULT_MAX_INPUT_MEDIA_BYTES, DEFAULT_MAX_INPUT_MEDIA_PARTS, DEFAULT_MAX_INPUT_MESSAGES, DEFAULT_MAX_INPUT_TEXT_BYTES, DEFAULT_MAX_INPUT_TOOL_BYTES, DEFAULT_MAX_INPUT_TOOLS, DEFAULT_MAX_JSON_ARRAY_ITEMS, DEFAULT_MAX_JSON_DEPTH, DEFAULT_MAX_JSON_PROPE

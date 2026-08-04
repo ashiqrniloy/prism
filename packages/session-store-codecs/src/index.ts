@@ -247,6 +247,7 @@ export function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionR
         sessionId: row.session_id,
         runId: row.run_id ?? undefined,
         entryId: row.entry_id ?? undefined,
+        sequence: row.sequence,
         type: row.type as AgentEventRecord["type"],
         timestamp: row.timestamp,
         event: JSON.parse(row.event),

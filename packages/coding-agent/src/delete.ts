@@ -1,5 +1,6 @@
 import { lstat, readdir, rmdir, unlink } from "node:fs/promises";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { resolveContainedMutationPath } from "./mutation-path.js";
@@ -52,6 +53,7 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
 
   return {
     name: "delete",
+    effect: CODING_LOCAL_EFFECT,
     description:
       "High-risk: permanently delete a single file or empty directory in the workspace. Non-empty directories are rejected (no recursive delete). No trash/recycle — host undo is not automatic. Prefer edit/write when content can be fixed in place.",
     parameters: {

@@ -133,6 +133,8 @@ describe("createSqlitePersistence", () => {
       "003_run_feedback",
       "004_session_search",
       "005_lifecycle_hold_quota",
+      "006_agent_event_source",
+      "007_agent_event_retention_index",
     ]);
     first.close();
 
@@ -143,6 +145,48 @@ describe("createSqlitePersistence", () => {
       firstMigrations.items.map((row) => row.name),
     );
     reopened.close();
+  });
+
+  it("allocates per-run event sequences through the v6 stream counter", async () => {
+    const filename = tempDbPath("event-sequences");
+    const persistence = createSqlitePersistence({ filename });
+    const base = {
+      sessionId: "event-session",
+      runId: "event-run",
+      tenantId: "tenant-a",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      redacted: true,
+    } as const;
+    await persistence.appendEvent({
+      ...base,
+      id: "event-a",
+      type: "agent_started",
+      event: { type: "agent_started", sessionId: base.sessionId, runId: base.runId },
+    });
+    await persistence.appendEvent({
+      ...base,
+      id: "event-b",
+      type: "turn_started",
+      timestamp: "2026-01-01T00:00:01.000Z",
+      event: { type: "turn_started", sessionId: base.sessionId, runId: base.runId, turn: 1 },
+    });
+    assert.deepEqual(
+      (await persistence.queryEvents({ runId: base.runId })).items.map((item) => item.sequence),
+      [1, 2],
+    );
+    persistence.close();
+    const db = new Database(filename);
+    assert.equal(
+      (
+        db
+          .prepare("SELECT next_sequence FROM prism_agent_event_streams WHERE session_id = ? AND run_id = ?")
+          .get(base.sessionId, base.runId) as {
+          next_sequence: number;
+        }
+      ).next_sequence,
+      3,
+    );
+    db.close();
   });
 
   it("backfills only complete legacy checksum history after shape verification", async () => {
@@ -167,7 +211,7 @@ describe("createSqlitePersistence", () => {
     db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
     db.exec("DROP INDEX prism_usage_session_scope_recorded_idx");
     assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
-    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 5);
+    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 7);
     db.close();
   });
 

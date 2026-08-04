@@ -28,6 +28,7 @@ node examples/observational-memory-recall-status-view.ts
 node examples/observational-memory-lifecycle.ts
 node examples/skills-progressive-disclosure.ts
 node examples/caveman-ponytail.ts
+node examples/distributed-events-and-tool-effects.ts
 node examples/external-app-db-backed.ts
 node examples/minimal-host-app.ts
 node examples/custom-builders.ts
@@ -55,6 +56,7 @@ node examples/coding-goal-verify.ts
 node examples/coding-tools-capability-gaps.ts
 node examples/agent-durable-approval.ts
 node examples/ag-ui-server.ts
+node examples/ag-ui-mcp-apps.ts
 node examples/secure-agent.ts
 node examples/enterprise-identity.ts
 node examples/enterprise-policy-audit.ts
@@ -73,12 +75,14 @@ Each demo prints a single JSON line with its result.
 - `enterprise-identity.ts` — **demo**: verified `AgentIdentity`, `narrowIdentity`, and propagation guards (network-free).
 - `enterprise-policy-audit.ts` — **demo**: `@arnilo/prism-policy` evaluate → append → cursor export with fake identity.
 - `enterprise-work-connectors.ts` — **demo**: fake M365/GWS CLI adapters, shared mail normalizers, and draft-gated work tools.
+- `distributed-events-and-tool-effects.ts` — **demo**: durable event cursor resume + required tool-effect claim/replay/unknown resolve (memory reference, network-free).
 - `enterprise-postgres-state.ts` — compile-checked durable policy/evaluation/work/router composition; host provides the PostgreSQL pool and explicitly schedules cleanup.
 - `server-deployment-seams.ts` — **demo**: health, drain, rate-limit, and deployment lease on `@arnilo/prism-server` (network-free).
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
 - `artifact-review-delivery.ts` — **demo**: artifact attach/revise/approve review + expiring authorized delivery link over an in-memory checkpoint store.
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
+- `ag-ui-mcp-apps.ts` — **demo**: authenticated single-bridge MCP Apps resource proxy plus separate-origin sandbox/CSP configuration (network-free).
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.
 - `coding-browser-evaluation.ts` — network-free coding/browser adversarial dataset + scorers + CI threshold (no Docker/Playwright binary).

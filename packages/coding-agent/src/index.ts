@@ -81,6 +81,16 @@ export {
 } from "./coding-checkpoint.js";
 export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js";
 export { createEditTool } from "./edit.js";
+export type { CodingEffectReconciliation, CodingEffectReconciliationInput } from "./effects.js";
+export {
+  classifyGitApplyEffect,
+  classifyGitBranchEffect,
+  classifyGitWorktreeEffect,
+  CODING_LOCAL_EFFECT,
+  CODING_OBSERVATION_EFFECT,
+  CODING_UNSUPPORTED_EFFECT,
+  reconcileCodingToolEffect,
+} from "./effects.js";
 export type {
   ArtifactReference,
   ArtifactWriter,

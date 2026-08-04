@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { EnterprisePostgresError } from "./errors.js";
 import { qualifyTable } from "./identifiers.js";
+import { cleanupExpiredPostgresToolEffects } from "./tool-effects.js";
 import type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult } from "./types.js";
 
 const DEFAULT_CLEANUP_LIMIT = 100;
@@ -26,6 +27,18 @@ export function createEnterpriseStateCleanup(
     const expiredClaims = await transitionExpiredWorkClaims(pool, work, owner, remaining);
     transitioned += expiredClaims;
     remaining -= expiredClaims;
+    if (remaining > 0) {
+      const effects = await cleanupExpiredPostgresToolEffects(pool, schema, {
+        tenantId: owner.tenantId,
+        ...(owner.accountKey === "" ? {} : { accountId: owner.accountKey }),
+        ...(owner.userKey === "" ? {} : { userId: owner.userKey }),
+        principalId: owner.principalId,
+        limit: remaining,
+      });
+      transitioned += effects.transitioned;
+      removed += effects.removed;
+      remaining -= effects.transitioned + effects.removed;
+    }
     if (remaining > 0) {
       const expiredProbes = await reopenExpiredCircuitProbes(pool, circuits, owner, remaining);
       transitioned += expiredProbes;

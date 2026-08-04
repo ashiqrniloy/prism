@@ -7,6 +7,7 @@ import {
   type A2AClient,
   type A2AClientOptions,
   type A2AJsonRpcResponse,
+  type A2AStreamEvent,
   type A2ATask,
 } from "./a2a-types.js";
 import { A2AError } from "./errors.js";
@@ -83,16 +84,19 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
     });
   }
 
-  async function* stream(input: string, call: { readonly signal?: AbortSignal } = {}): AsyncGenerator<string> {
+  async function* streamMessage(
+    message: import("./a2a-types.js").A2AMessage,
+    call: { readonly signal?: AbortSignal } = {},
+  ): AsyncGenerator<A2AStreamEvent> {
     if (active >= limits.maxConcurrentRequests) throw new A2AError("A2A client concurrency exceeded", 429, "ERR_PRISM_A2A_CONCURRENCY");
     active += 1;
     const owned = ownedSignal(call.signal, limits.timeoutMs);
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
-      assertInput(input, limits.maxRequestBytes);
+      assertMessage(message, limits.maxRequestBytes);
       await getCardWithin(owned.signal);
       const id = ++requestId;
-      const body = JSON.stringify(requestBody(id, "SendStreamingMessage", input));
+      const body = JSON.stringify({ jsonrpc: "2.0", id, method: "SendStreamingMessage", params: { message } });
       if (new TextEncoder().encode(body).byteLength > limits.maxRequestBytes)
         throw new A2AError("A2A request exceeds max bytes", 413, "ERR_PRISM_A2A_REQUEST_LIMIT");
       const authHeaders = await abortable(
@@ -115,6 +119,7 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
         throw new A2AError("A2A stream request failed", response.status, "ERR_PRISM_A2A_REMOTE");
       reader = response.body.getReader();
       let terminal = false;
+      let count = 0;
       for await (const data of readA2AStreamData(reader, limits, owned.signal)) {
         if (terminal) throw new A2AError("A2A stream continued after terminal task state", 502, "ERR_PRISM_A2A_REMOTE");
         if (!data) continue;
@@ -126,24 +131,36 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
         }
         const rpc = parseRpcResponse(parsed, id);
         if (rpc.error) throw new A2AError(safeRemote(rpc.error.message, options), 502, "ERR_PRISM_A2A_REMOTE");
-        const task = parseTaskResult(rpc.result);
+        const event = parseA2AStreamEvent(rpc.result, `stream-${++count}`);
+        const status = eventStatus(event);
         if (
-          task.status.state === "TASK_STATE_FAILED" ||
-          task.status.state === "TASK_STATE_CANCELED" ||
-          task.status.state === "TASK_STATE_REJECTED"
+          status === "TASK_STATE_FAILED" ||
+          status === "TASK_STATE_CANCELED" ||
+          status === "TASK_STATE_REJECTED" ||
+          status === "TASK_STATE_INPUT_REQUIRED" ||
+          status === "TASK_STATE_AUTH_REQUIRED"
         )
-          throw new A2AError("Remote A2A stream task failed", 502, "ERR_PRISM_A2A_REMOTE");
-        if (task.status.state === "TASK_STATE_INPUT_REQUIRED" || task.status.state === "TASK_STATE_AUTH_REQUIRED")
-          throw new A2AError(`Remote A2A task interrupted: ${task.status.state}`, 409, "ERR_PRISM_A2A_INTERRUPTED");
-        if (task.status.state === "TASK_STATE_COMPLETED") terminal = true;
-        for (const artifact of task.artifacts ?? [])
-          for (const part of artifact.parts) if (typeof part.text === "string") yield options.redactor?.redact(part.text) ?? part.text;
+          terminal = true;
+        if (status === "TASK_STATE_COMPLETED") terminal = true;
+        yield event;
       }
       if (!terminal) throw new A2AError("A2A stream ended before terminal task state", 502, "ERR_PRISM_A2A_REMOTE");
     } finally {
       await reader?.cancel().catch(() => undefined);
       owned.dispose();
       active -= 1;
+    }
+  }
+
+  async function* stream(input: string, call: { readonly signal?: AbortSignal } = {}): AsyncGenerator<string> {
+    assertInput(input, limits.maxRequestBytes);
+    for await (const event of streamMessage({ role: "user", messageId: "stream-input", parts: [{ text: input }] }, call)) {
+      const status = eventStatus(event);
+      if (status === "TASK_STATE_FAILED" || status === "TASK_STATE_CANCELED" || status === "TASK_STATE_REJECTED")
+        throw new A2AError("Remote A2A stream task failed", 502, "ERR_PRISM_A2A_REMOTE");
+      if (status === "TASK_STATE_INPUT_REQUIRED" || status === "TASK_STATE_AUTH_REQUIRED")
+        throw new A2AError(`Remote A2A task interrupted: ${status}`, 409, "ERR_PRISM_A2A_INTERRUPTED");
+      for (const text of streamEventText(event)) yield options.redactor?.redact(text) ?? text;
     }
   }
 
@@ -253,14 +270,14 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
       if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith("text/event-stream"))
         throw new A2AError("A2A subscribe request failed", response.status, "ERR_PRISM_A2A_REMOTE");
       reader = response.body.getReader();
-      let previous = "",
-        count = 0;
+      const seen = new Set<string>();
+      let count = 0;
       for await (const data of readA2AStreamData(reader, limits, owned.signal)) {
         const rpc = parseRpcResponse(JSON.parse(data), request);
         if (rpc.error) throw remoteProtocolError(rpc.error.code, rpc.error.message, options);
         const event = parseTaskEvent(rpc.result);
-        if (event.eventId === previous) continue;
-        previous = event.eventId;
+        if (seen.has(event.eventId)) continue;
+        seen.add(event.eventId);
         if (++count > limits.maxReplayEvents) throw new A2AError("A2A replay exceeds event limit", 507, "ERR_PRISM_A2A_STREAM_LIMIT");
         yield event;
       }
@@ -302,6 +319,7 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
     send,
     sendMessage,
     stream,
+    streamMessage,
     getTask,
     listTasks,
     cancelTask,
@@ -462,6 +480,7 @@ function parseTaskResult(value: unknown): A2ATask {
     status: {
       state: task.status.state as A2ATask["status"]["state"],
       timestamp: typeof task.status.timestamp === "string" ? task.status.timestamp : new Date(0).toISOString(),
+      ...(task.status.message === undefined ? {} : { message: parseRemoteMessage(task.status.message) }),
     },
     artifacts,
     history,
@@ -517,6 +536,32 @@ function parseRemoteMessage(value: unknown): import("./a2a-types.js").A2AMessage
     taskId: typeof value.taskId === "string" ? value.taskId : undefined,
   };
 }
+function parseA2AStreamEvent(value: unknown, fallbackEventId: string): A2AStreamEvent {
+  if (isRecord(value) && isRecord(value.message)) return { eventId: fallbackEventId, message: parseRemoteMessage(value.message) };
+  if (isRecord(value) && !Object.hasOwn(value, "eventId") && (isRecord(value.task) || typeof value.id === "string")) {
+    return { eventId: fallbackEventId, task: parseTaskResult(value) };
+  }
+  return parseTaskEvent(value);
+}
+
+function eventStatus(event: A2AStreamEvent): A2ATask["status"]["state"] | undefined {
+  if ("task" in event) return event.task.status.state;
+  if ("statusUpdate" in event) return event.statusUpdate.status.state;
+  return undefined;
+}
+
+function streamEventText(event: A2AStreamEvent): readonly string[] {
+  const parts =
+    "message" in event
+      ? event.message.parts
+      : "task" in event
+        ? (event.task.artifacts?.flatMap((artifact) => artifact.parts) ?? [])
+        : "artifactUpdate" in event
+          ? event.artifactUpdate.artifact.parts
+          : [];
+  return parts.flatMap((part) => (typeof part.text === "string" ? [part.text] : []));
+}
+
 function parseTaskEvent(value: unknown): import("./a2a-types.js").A2ATaskEvent {
   if (!isRecord(value) || typeof value.eventId !== "string" || !value.eventId)
     throw new A2AError("Malformed A2A task event", 502, "ERR_PRISM_A2A_REMOTE");
@@ -728,6 +773,17 @@ function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
 function assertInput(input: string, maxBytes: number): void {
   if (new TextEncoder().encode(input).byteLength > maxBytes)
     throw new A2AError("A2A input exceeds max bytes", 413, "ERR_PRISM_A2A_REQUEST_LIMIT");
+}
+function assertMessage(message: import("./a2a-types.js").A2AMessage, maxBytes: number): void {
+  if (!message.messageId || !Array.isArray(message.parts) || message.parts.length === 0)
+    throw new A2AError("Invalid A2A outbound message", 400, "ERR_PRISM_A2A_MESSAGE");
+  let encoded: string;
+  try {
+    encoded = JSON.stringify(message);
+  } catch {
+    throw new A2AError("Invalid A2A outbound message", 400, "ERR_PRISM_A2A_MESSAGE");
+  }
+  if (Buffer.byteLength(encoded, "utf8") > maxBytes) throw new A2AError("A2A input exceeds max bytes", 413, "ERR_PRISM_A2A_REQUEST_LIMIT");
 }
 function headersObject(headers: HeadersInit): Record<string, string> {
   return Object.fromEntries(new Headers(headers).entries());

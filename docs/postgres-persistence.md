@@ -40,6 +40,8 @@ import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres"
 | `schema` | `string` | PostgreSQL schema for Prism tables. Defaults to `"prism"`. Validated and double-quoted. |
 | `poolMax` | `number` | Maximum pool size for adapter-owned pools. Defaults to `10`. |
 | `feedbackRedactor` | `SecretRedactor` | Optional redaction for feedback comment/tags/metadata before insert. |
+| `eventSource` | `AgentEventSourceOptions` | Bounds durable event pages, subscribers, polling, reconnects, and cleanup. |
+| `eventCursorSecret` | `string \| Uint8Array` | Stable HMAC secret shared by replicas that resume durable event cursors. |
 | `poolConfig` | `PoolConfig` | Additional `pg` options (TLS, idle timeout, application name, etc.). |
 
 Hosts own TLS (`ssl` in `poolConfig`), credentials, connection limits, and backup/retention enforcement.
@@ -54,12 +56,13 @@ Hosts own TLS (`ssl` in `poolConfig`), credentials, connection limits, and backu
 | `SessionStore.list` / `get` | Indexed reads by `session_id` and primary key. |
 | `SessionStore.readBranchPath` | Recursive ancestor query from `leafId` (or latest leaf) in root→leaf order. |
 | `RunLedger.append*` | Inserts run/event/tool/usage rows; events receive monotonic per-run `sequence` values. |
+| `events` | Durable `AgentEventSource`; `LISTEN`/`NOTIFY` only wakes exact owned indexed reads, while polling remains recovery fallback. |
 | `ProductionPersistenceStore.query*` | Parameterized cursor pagination on indexed columns with tenant/account/user filters. |
 | `checkpoints` | Generic versioned `CheckpointStore` backed by `prism_checkpoints`; ownership, CAS/fencing checks, bounded pagination, and workflow suspended/denied/schedule/state/replay values without a schema migration. |
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Ends the pool when the adapter created it from `connectionString`. |
 
-Migrations run automatically on open and are idempotent across reopen. Concurrent setup uses per-schema advisory transaction locks. While holding that lock, startup verifies ordered contract name/version/SHA-256 rows and full schema-v4 `information_schema`/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
+Migrations run automatically on open and are idempotent across reopen. Concurrent setup uses per-schema advisory transaction locks. While holding that lock, startup verifies ordered contract name/version/SHA-256 rows and full schema-v7 `information_schema`/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
 
 ## Request/response example
 
@@ -116,7 +119,7 @@ PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnil
 - The package is optional and workspace-local; `@arnilo/prism` core has no PostgreSQL dependency.
 - Schema names must match `^[a-zA-Z_][a-zA-Z0-9_]*$`; the adapter quotes them and never interpolates user values into identifier positions.
 - `SessionAppendOptions` idempotency rows are durable in `prism_session_append_idempotency` and survive reopen.
-- Schema version **5** applies `001_init`, `002_usage_scope`, `003_run_feedback`, `004_session_search`, and `005_lifecycle_hold_quota`. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (Postgres `tsvector` FTS table dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. SQLite shares the same model with dialect-local DDL.
+- Schema version **6** applies `001_init`, `002_usage_scope`, `003_run_feedback`, `004_session_search`, `005_lifecycle_hold_quota`, and `006_agent_event_source`. Migration 006 backfills `prism_agent_event_streams`, then replaces the former non-unique run sequence index with unique `(run_id, sequence)` allocation enforced in the event append transaction. `LISTEN` registration commits before initial catch-up; notifications carry only a constant wake token, so dropped/coalesced notifications affect latency rather than delivery. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (Postgres `tsvector` FTS table dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. SQLite shares sequence compatibility only; it does not provide distributed subscriptions.
 - Pass an existing `pg` `Pool` when your host already manages pooling, TLS, and credential rotation.
 
 ## Security and performance notes

@@ -116,6 +116,10 @@ Call `begin({ identity, key, op })` **before** the external effect. After it suc
 | Process wall time | 60 s / 10 min |
 | Concurrent CLI / identity | 2 / 8 |
 
+## Tool effects
+
+Approved mutations require core-derived `context.idempotencyKey` and a configured store (`effect: external_mutation/tool_managed`). Model-supplied idempotency keys are ignored. Ambiguous connector outcomes stay `unknown` — never auto-replayed (not exactly-once). See [tool effects](tool-effects.md).
+
 ## Security
 
 - Require host-verified `AgentIdentity`; no cross-identity configDir reuse.

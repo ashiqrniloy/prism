@@ -24,6 +24,7 @@ import { constants } from "node:fs";
 import { access as fsAccess, stat as fsStat, open } from "node:fs/promises";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { readFileBounded } from "./bounded-file.js";
+import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
   DEFAULT_MAX_BYTES,
@@ -413,6 +414,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
   return {
     name: "read",
+    effect: CODING_OBSERVATION_EFFECT,
     description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp, bmp); images are returned as image content. For text files, output is truncated to ${maxLines} lines or ${maxBytes / 1024}KB (whichever is hit first). When truncated, continue with the suggested offset until complete. Prefer repo_search to find text across many files.`,
     parameters: {
       type: "object",

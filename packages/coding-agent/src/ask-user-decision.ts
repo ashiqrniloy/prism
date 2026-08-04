@@ -16,6 +16,7 @@ import {
   type WorkflowResumeValidator,
   type WorkflowSuspension,
 } from "@arnilo/prism-workflows";
+import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { validateCodingLimit } from "./limits.js";
 
@@ -314,6 +315,7 @@ export function createAskUserDecisionTool(options: AskUserDecisionToolOptions): 
 
   return {
     name: ASK_USER_DECISION_TOOL_NAME,
+    effect: CODING_OBSERVATION_EFFECT,
     description:
       "Ask the user to choose a direction when instructions are ambiguous and the choice matters. " +
       "Provide 2+ options; each option MUST include exactly 3 pros and 3 cons. " +

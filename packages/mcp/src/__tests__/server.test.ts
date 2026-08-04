@@ -5,6 +5,7 @@ import {
   createAgent,
   createAgentRunLifecycle,
   createMemoryCheckpointStore,
+  createMemoryToolEffectStore,
   createMockProvider,
   createSecretRedactor,
   createStaticPermissionPolicy,
@@ -79,6 +80,36 @@ describe("Prism MCP server", () => {
     const status = await item.client.callTool({ name: "workflow.status", arguments: { runId: "r1" } });
     assert.match(JSON.stringify(status.content), /suspended/);
     assert.deepEqual(seen, ["tool:echo", "command:workflow.status"]);
+  });
+
+  it("passes the configured effect store and verified owner into core dispatch", async () => {
+    let key: string | undefined;
+    const identity = {
+      tenantId: "tenant-1",
+      userId: "user-1",
+      principal: { kind: "user" as const, id: "user-1" },
+      scopes: ["tool:execute"],
+      issuedAt: "2026-08-04T00:00:00.000Z",
+      verified: true as const,
+    };
+    const item = await fixture({
+      effectStore: createMemoryToolEffectStore(),
+      tools: [
+        {
+          name: "mutate",
+          effect: { kind: "external_mutation", idempotency: "required" },
+          execute: (_args, context) => {
+            key = context.idempotencyKey;
+            return { toolCallId: context.toolCallId, name: "mutate", value: "done" };
+          },
+        },
+      ],
+      authorize: () => ({ allowed: true, ownership: { tenantId: "tenant-1", userId: "user-1" }, identity }),
+    });
+    open.push(item);
+    const result = await item.client.callTool({ name: "mutate", arguments: {} });
+    assert.equal(result.isError, false);
+    assert.match(key ?? "", /^prism:tool-effect:v1:[a-f0-9]{64}$/);
   });
 
   it("registers durable agent lifecycle tools only when explicitly selected", async () => {

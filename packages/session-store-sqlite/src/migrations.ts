@@ -18,6 +18,8 @@ import {
   MIGRATION_003_RUN_FEEDBACK,
   MIGRATION_004_SESSION_SEARCH,
   MIGRATION_005_LIFECYCLE_HOLD_QUOTA,
+  MIGRATION_006_AGENT_EVENT_SOURCE,
+  MIGRATION_007_AGENT_EVENT_RETENTION_INDEX,
 } from "./ddl.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
@@ -45,6 +47,8 @@ export function applySqliteMigrations(db: Database.Database): readonly AppliedPe
       else if (step.name === "003_run_feedback") db.exec(MIGRATION_003_RUN_FEEDBACK);
       else if (step.name === "004_session_search") db.exec(MIGRATION_004_SESSION_SEARCH);
       else if (step.name === "005_lifecycle_hold_quota") db.exec(MIGRATION_005_LIFECYCLE_HOLD_QUOTA);
+      else if (step.name === "006_agent_event_source") db.exec(MIGRATION_006_AGENT_EVENT_SOURCE);
+      else if (step.name === "007_agent_event_retention_index") db.exec(MIGRATION_007_AGENT_EVENT_RETENTION_INDEX);
       else throw new Error(`Unknown migration step: ${step.name}`);
       db.prepare(
         `INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum)

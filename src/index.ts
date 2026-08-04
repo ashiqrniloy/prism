@@ -128,6 +128,15 @@ export type {
   RunLimitName,
   SecureAgentOptions,
   ToolCallAuthority,
+  ToolEffectClassifier,
+  ToolEffectDeclaration,
+  ToolEffectIdempotency,
+  ToolEffectKey,
+  ToolEffectKind,
+  ToolEffectRecord,
+  ToolEffectStatus,
+  ToolEffectStore,
+  ToolEffectTransition,
 } from "./contracts.js";
 export {
   AgentRunError,
@@ -222,6 +231,9 @@ export {
   resolveDevicePolicy,
   runDevicePolicyConformance,
 } from "./devices.js";
+export type { AgentEventSourceErrorCode } from "./agent-event-source.js";
+export { AgentEventSourceError, createMemoryAgentEventSource } from "./agent-event-source.js";
+export { assertAgentEventSourceConforms } from "./testing/agent-event-source-conformance.js";
 export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
 export { createEventMultiplexer } from "./event-multiplexer.js";
 export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
@@ -494,6 +506,8 @@ export type {
   ToolValidator,
 } from "./tools.js";
 export { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
+export { createMemoryToolEffectStore, ToolEffectError } from "./tool-effects.js";
+export type { ToolEffectErrorCode } from "./tool-effects.js";
 export type {
   ResolvedUseCaseModel,
   ResolveUseCaseModelInput,
@@ -506,5 +520,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.0.23";
+export const version = "0.0.24";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

@@ -164,13 +164,42 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       error = excluded.error,
       metadata = excluded.metadata`,
   );
-  const nextEventSequence = db.prepare(`SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence FROM prism_agent_events WHERE run_id = ?`);
+  const nextEventSequence = db.prepare(
+    `INSERT INTO prism_agent_event_streams (session_id, run_id, next_sequence, updated_at)
+     VALUES (?, ?, 2, ?)
+     ON CONFLICT(session_id, run_id) DO UPDATE SET
+       next_sequence = prism_agent_event_streams.next_sequence + 1,
+       updated_at = excluded.updated_at
+     RETURNING next_sequence - 1 AS sequence`,
+  );
   const insertEvent = db.prepare(
     `INSERT INTO prism_agent_events (
       id, session_id, run_id, entry_id, sequence, type, timestamp, event,
       redacted, tenant_id, account_id, user_id, metadata
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
+  const appendEventRecord = db.transaction((record: AgentEventRecord) => {
+    ensureSession.run(record.sessionId, record.timestamp, record.timestamp);
+    const sequence = Number(
+      (nextEventSequence.get(record.sessionId, record.runId ?? "", record.timestamp) as { sequence: number } | undefined)?.sequence ?? 1,
+    );
+    const row = agentEventRecordToRow(record, sequence);
+    insertEvent.run(
+      row.id,
+      row.session_id,
+      row.run_id,
+      row.entry_id,
+      row.sequence,
+      row.type,
+      row.timestamp,
+      row.event,
+      row.redacted,
+      row.tenant_id,
+      row.account_id,
+      row.user_id,
+      row.metadata,
+    );
+  });
   const insertToolCall = db.prepare(
     `INSERT INTO prism_tool_calls (
       id, session_id, run_id, entry_id, tool_call_id, name, arguments, result,
@@ -428,25 +457,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     appendEvent(record: AgentEventRecord): void {
-      ensureSession.run(record.sessionId, record.timestamp, record.timestamp);
-      const sequenceRow = nextEventSequence.get(record.runId ?? "") as { next_sequence: number } | undefined;
-      const sequence = sequenceRow?.next_sequence ?? 1;
-      const row = agentEventRecordToRow(record, sequence);
-      insertEvent.run(
-        row.id,
-        row.session_id,
-        row.run_id,
-        row.entry_id,
-        row.sequence,
-        row.type,
-        row.timestamp,
-        row.event,
-        row.redacted,
-        row.tenant_id,
-        row.account_id,
-        row.user_id,
-        row.metadata,
-      );
+      appendEventRecord(record);
     },
 
     appendToolCall(record: ToolCallRecord): void {

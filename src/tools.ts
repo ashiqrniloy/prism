@@ -12,17 +12,21 @@ import type {
   ToolDefinition,
   ToolExecutionContext,
   ToolExecutionMetadata,
+  ToolEffectDeclaration,
+  ToolEffectKey,
+  ToolEffectStore,
   ToolRegistry,
   ToolResult,
 } from "./contracts.js";
 import { GuardrailError, runGuardrails } from "./guardrails.js";
-import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
+import { assertIdentityActive, assertIdentityMatchesOwnership, ownershipFromIdentity } from "./identity.js";
 import { createId } from "./ids.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 import type { RunLimitTracker } from "./run-limits.js";
 import { assertPermission, assertTrusted, type PermissionPolicy, type TrustPolicy } from "./security.js";
+import { deriveToolEffectKey, toolEffectArgumentsHash, ToolEffectError } from "./tool-effects.js";
 
 export interface ToolFilter {
   readonly allow?: readonly string[];
@@ -89,6 +93,8 @@ export interface DispatchToolCallOptions {
   readonly trust?: TrustPolicy;
   readonly redactor?: SecretRedactor;
   readonly ledger?: RunLedger;
+  /** Optional shared recovery store. Only declared optional/required effects use it. */
+  readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
   /** Host-verified identity; asserted active before tool side effects when present. */
   readonly identity?: import("./identity.js").AgentIdentity;
@@ -167,8 +173,9 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   const postcheck = await checkCall(mediatedCall, options, startedAt);
   if (postcheck) return postcheck;
 
-  const context: ToolExecutionContext = {
-    ...options.context,
+  const { idempotencyKey: _untrustedKey, ...baseContext } = options.context;
+  let context: ToolExecutionContext = {
+    ...baseContext,
     toolCallId: mediatedCall.id,
     identity: options.identity ?? options.context.identity,
     progress: async (progress, metadata) => {
@@ -214,17 +221,35 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   const validation = await options.validate?.(tool!, mediatedCall.arguments, context);
   if (validation) return blocked(mediatedCall, context, "validation_failed", toErrorInfo(validation, secrets), options, startedAt);
 
+  let effect: ClaimedToolEffect | undefined;
   try {
-    await options.beforeExecute?.(mediatedCall, tool!, context);
+    const prepared = await prepareToolEffect(tool!, mediatedCall, context, options);
+    if (prepared.result) return prepared.result;
+    context = prepared.context;
+    effect = prepared.effect;
   } catch (error) {
-    if ((error as { code?: unknown })?.code === "ERR_PRISM_AGENT_RUN_SUSPENDED") throw error;
     return blocked(mediatedCall, context, "execution_denied", errorToErrorInfo(error, secrets), options, startedAt);
   }
 
-  await options.emit?.({ type: "tool_execution_started", sessionId: context.sessionId, runId: context.runId, call: mediatedCall });
-  await appendToolCallRecord(options, "started", mediatedCall, startedAt, {});
-
   try {
+    await options.beforeExecute?.(mediatedCall, tool!, context);
+  } catch (error) {
+    await failBeforeEffect(effect, isSuspended(error) ? "failed_retryable" : "failed_terminal");
+    if (isSuspended(error)) throw error;
+    return blocked(mediatedCall, context, "execution_denied", errorToErrorInfo(error, secrets), options, startedAt);
+  }
+
+  let completedResult: ToolResult | undefined;
+  let dispatchAttempted = false;
+  try {
+    await options.emit?.({ type: "tool_execution_started", sessionId: context.sessionId, runId: context.runId, call: mediatedCall });
+    await appendToolCallRecord(options, "started", mediatedCall, startedAt, {});
+    if (effect) {
+      dispatchAttempted = true;
+      const record = await effect.store.markDispatched(transition(effect));
+      effect.expectedVersion = record.version;
+      effect.dispatched = true;
+    }
     const raw = await tool!.execute(mediatedCall.arguments, context);
     const mediatedResult = await (options.middleware?.run<ToolResult>("tool_result", raw) ?? raw);
     const outputGuards = await runGuardrails({
@@ -244,15 +269,37 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     });
     if (outputGuards.terminal) {
       if (outputGuards.terminal.action !== "block") throw new GuardrailError(outputGuards.terminal);
+      if (effect) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
       return blocked(mediatedCall, context, "guardrail_blocked", { message: "Tool result blocked by guardrail" }, options, startedAt);
     }
+    if (effect && mediatedResult.error) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
     const result = options.redactor?.redact(mediatedResult) ?? mediatedResult;
+    if (effect) {
+      try {
+        const record = await effect.store.complete({ ...transition(effect), result });
+        effect.expectedVersion = record.version;
+        effect.completed = true;
+        completedResult = record.result ?? result;
+      } catch {
+        return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
+      }
+    }
+    completedResult ??= result;
     const finishedAt = new Date().toISOString();
     const metadata = toolExecutionMetadata(startedAt, "finished");
-    await options.emit?.({ type: "tool_execution_finished", sessionId: context.sessionId, runId: context.runId, result, metadata });
-    await appendToolCallRecord(options, "finished", mediatedCall, startedAt, { finishedAt, result });
-    return result;
+    await options.emit?.({
+      type: "tool_execution_finished",
+      sessionId: context.sessionId,
+      runId: context.runId,
+      result: completedResult,
+      metadata,
+    });
+    await appendToolCallRecord(options, "finished", mediatedCall, startedAt, { finishedAt, result: completedResult });
+    return completedResult;
   } catch (error) {
+    if (completedResult) return completedResult;
+    if (effect && (effect.dispatched || dispatchAttempted)) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
+    await failBeforeEffect(effect, "failed_terminal");
     if (error instanceof GuardrailError) throw error;
     const info = errorToErrorInfo(error, secrets);
     const result = { toolCallId: mediatedCall.id, name: mediatedCall.name, error: info };
@@ -269,6 +316,176 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     await appendToolCallRecord(options, "error", mediatedCall, startedAt, { finishedAt, result });
     return result;
   }
+}
+
+interface ClaimedToolEffect {
+  readonly store: ToolEffectStore;
+  readonly key: ToolEffectKey;
+  readonly claimToken: string;
+  expectedVersion: number;
+  dispatched: boolean;
+  completed: boolean;
+}
+
+type PreparedToolEffect =
+  | { readonly context: ToolExecutionContext; readonly effect?: ClaimedToolEffect; readonly result?: undefined }
+  | { readonly context: ToolExecutionContext; readonly result: ToolResult };
+
+async function prepareToolEffect(
+  tool: ToolDefinition,
+  call: ToolCallContent,
+  context: ToolExecutionContext,
+  options: DispatchToolCallOptions,
+): Promise<PreparedToolEffect> {
+  const identity = context.identity;
+  const declaration = resolveToolEffectDeclaration(tool, call.arguments, context);
+  if (!declaration || declaration.kind === "none" || declaration.idempotency === "none") return { context };
+  if (!identity && declaration.idempotency === "unsupported") return { context };
+  if (!identity) throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_CONFLICT", "verified identity is required for a durable tool effect");
+  const ownership = ownershipFromIdentity(identity);
+  const argumentsHash = toolEffectArgumentsHash(call.arguments);
+  const base = {
+    identity,
+    ownership,
+    sessionId: context.sessionId,
+    runId: context.runId,
+    toolCallId: call.id,
+    toolName: call.name,
+    argumentsHash,
+  };
+  const key: ToolEffectKey = { ...base, key: deriveToolEffectKey(base), signal: context.signal };
+  const keyedContext = { ...context, idempotencyKey: key.key };
+  if (declaration.idempotency === "tool_managed" || declaration.idempotency === "unsupported") return { context: keyedContext };
+  const store = options.effectStore;
+  if (!store) {
+    if (declaration.idempotency === "required")
+      throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_REQUIRED", "durable tool effect store is required");
+    return { context: keyedContext };
+  }
+  let begun: Awaited<ReturnType<ToolEffectStore["begin"]>>;
+  try {
+    begun = await store.begin(key);
+  } catch (error) {
+    if (error instanceof ToolEffectError) throw error;
+    throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_UNKNOWN", "tool effect claim outcome is unknown");
+  }
+  if (begun.outcome === "existing") return { context: keyedContext, result: replayEffectResult(begun.record) };
+  if (!begun.record.claimToken) throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_UNKNOWN", "tool effect claim outcome is unknown");
+  return {
+    context: keyedContext,
+    effect: {
+      store,
+      key,
+      claimToken: begun.record.claimToken,
+      expectedVersion: begun.record.version,
+      dispatched: false,
+      completed: false,
+    },
+  };
+}
+
+function resolveToolEffectDeclaration(
+  tool: ToolDefinition,
+  args: JsonObject,
+  context: ToolExecutionContext,
+): ToolEffectDeclaration | undefined {
+  const classifierContext: ToolExecutionContext = Object.freeze({
+    sessionId: context.sessionId,
+    runId: context.runId,
+    toolCallId: context.toolCallId,
+    signal: context.signal,
+    metadata: context.metadata,
+  });
+  const declaration = typeof tool.effect === "function" ? tool.effect(args, classifierContext) : tool.effect;
+  if (!declaration) return undefined;
+  if (
+    !["none", "local_mutation", "external_mutation"].includes(declaration.kind) ||
+    !["none", "optional", "required", "tool_managed", "unsupported"].includes(declaration.idempotency) ||
+    (declaration.kind === "none" && declaration.idempotency !== "none")
+  ) {
+    throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_LIMIT", "tool effect declaration is invalid");
+  }
+  return declaration;
+}
+
+function replayEffectResult(record: import("./contracts.js").ToolEffectRecord): ToolResult {
+  if (record.status === "completed") {
+    if (record.result) return record.result;
+    throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_COMPLETED", "tool effect already completed without replayable result");
+  }
+  if (record.status === "dispatched" || record.status === "unknown") {
+    throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_UNKNOWN", "tool effect outcome requires reconciliation");
+  }
+  throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_CONFLICT", "tool effect is not dispatchable");
+}
+
+function transition(effect: ClaimedToolEffect): ToolEffectKey & { readonly claimToken: string; readonly expectedVersion: number } {
+  return { ...effect.key, claimToken: effect.claimToken, expectedVersion: effect.expectedVersion };
+}
+
+async function failBeforeEffect(effect: ClaimedToolEffect | undefined, status: "failed_retryable" | "failed_terminal"): Promise<void> {
+  if (!effect || effect.dispatched || effect.completed) return;
+  try {
+    await effect.store.fail({
+      ...transition(effect),
+      status,
+      failure: { code: "ERR_PRISM_TOOL_EFFECT_PRE_DISPATCH" },
+    });
+  } catch {
+    // No effect was invoked. A stale/failed pre-dispatch transition only delays a later safe retry.
+  }
+}
+
+async function unknownEffectResult(effect: ClaimedToolEffect, call: ToolCallContent): Promise<ToolResult> {
+  try {
+    let claim: { readonly claimToken: string; readonly version: number } | undefined = effect.dispatched
+      ? { claimToken: effect.claimToken, version: effect.expectedVersion }
+      : undefined;
+    if (!claim) {
+      const current = await effect.store.get(effect.key);
+      if (current?.status === "dispatched" && current.claimToken) claim = { claimToken: current.claimToken, version: current.version };
+    }
+    if (claim) {
+      await effect.store.markUnknown({
+        ...effect.key,
+        claimToken: claim.claimToken,
+        expectedVersion: claim.version,
+        failure: { code: "ERR_PRISM_TOOL_EFFECT_UNKNOWN" },
+      });
+    }
+  } catch {
+    // A post-dispatch persistence error is itself ambiguous; never expose or retry it.
+  }
+  return effectErrorResult(call, "ERR_PRISM_TOOL_EFFECT_UNKNOWN", "tool effect outcome requires reconciliation");
+}
+
+async function finishUnknownEffect(
+  effect: ClaimedToolEffect,
+  call: ToolCallContent,
+  context: ToolExecutionContext,
+  options: DispatchToolCallOptions,
+  startedAt: string,
+): Promise<ToolResult> {
+  const result = await unknownEffectResult(effect, call);
+  const error = result.error!;
+  const finishedAt = new Date().toISOString();
+  const metadata = toolExecutionMetadata(startedAt, "error");
+  try {
+    await options.emit?.({ type: "tool_execution_error", sessionId: context.sessionId, runId: context.runId, call, error, metadata });
+    await appendToolCallRecord(options, "error", call, startedAt, { finishedAt, result });
+  } catch {
+    // The effect is already ambiguous; exposure/ledger failures cannot make it safe to retry.
+  }
+  return result;
+}
+
+function effectErrorResult(call: ToolCallContent, code: import("./tool-effects.js").ToolEffectErrorCode, message: string): ToolResult {
+  const error = new ToolEffectError(code, message);
+  return { toolCallId: call.id, name: call.name, error: errorToErrorInfo(error) };
+}
+
+function isSuspended(error: unknown): boolean {
+  return (error as { code?: unknown })?.code === "ERR_PRISM_AGENT_RUN_SUSPENDED";
 }
 
 async function checkCall(call: ToolCallContent, options: DispatchToolCallOptions, startedAt: string): Promise<ToolResult | undefined> {

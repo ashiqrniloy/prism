@@ -6,6 +6,7 @@ export const ENTERPRISE_TABLE_NAMES = [
   "prism_policy_decisions",
   "prism_evaluations",
   "prism_work_idempotency",
+  "prism_tool_effects",
   "prism_model_router_budgets",
   "prism_model_router_rates",
   "prism_model_router_circuits",
@@ -23,6 +24,8 @@ export const ENTERPRISE_INDEX_NAMES = [
   "prism_evaluations_owner_experiment_created_idx",
   "prism_evaluations_owner_dataset_item_created_idx",
   "prism_work_idempotency_expiry_idx",
+  "prism_tool_effects_expiry_idx",
+  "prism_tool_effects_cleanup_idx",
   "prism_model_router_budgets_expiry_idx",
   "prism_model_router_rates_expiry_idx",
   "prism_model_router_circuits_expiry_idx",
@@ -178,5 +181,41 @@ CREATE TABLE IF NOT EXISTS ${table("prism_model_router_circuits")} (
 CREATE INDEX IF NOT EXISTS prism_model_router_circuits_expiry_idx
   ON ${table("prism_model_router_circuits")} (tenant_id, account_key, user_key, principal_id, expires_at)
   WHERE expires_at IS NOT NULL;
+`;
+}
+
+/** Adds durable generic tool effects without mutating migration 001. */
+export function buildEnterpriseMigration002Ddl(schema: string): string {
+  const table = (name: string) => qualifyTable(schema, name);
+  return `
+CREATE TABLE IF NOT EXISTS ${table("prism_tool_effects")} (
+  tenant_id TEXT NOT NULL,
+  account_key TEXT NOT NULL,
+  user_key TEXT NOT NULL,
+  principal_id TEXT NOT NULL,
+  effect_key TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  tool_call_id TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  arguments_hash TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'dispatched', 'completed', 'failed_retryable', 'failed_terminal', 'unknown')),
+  attempt INTEGER NOT NULL,
+  version INTEGER NOT NULL,
+  claim_token TEXT,
+  result JSONB,
+  result_ref TEXT,
+  failure JSONB,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ,
+  PRIMARY KEY (tenant_id, account_key, user_key, principal_id, effect_key)
+);
+CREATE INDEX IF NOT EXISTS prism_tool_effects_expiry_idx
+  ON ${table("prism_tool_effects")} (tenant_id, account_key, user_key, principal_id, status, expires_at, effect_key)
+  WHERE expires_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS prism_tool_effects_cleanup_idx
+  ON ${table("prism_tool_effects")} (tenant_id, account_key, user_key, status, updated_at, effect_key)
+  WHERE status IN ('completed', 'failed_terminal');
 `;
 }

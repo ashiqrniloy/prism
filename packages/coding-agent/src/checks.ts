@@ -7,6 +7,7 @@ import { rm } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import type { Readable } from "node:stream";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { CODING_UNSUPPORTED_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
   DEFAULT_CHECK_TIMEOUT_MS,
@@ -222,6 +223,7 @@ export function createCodingCheckTool(cwd: string, options: CodingCheckToolOptio
 
   return {
     name: "coding_check",
+    effect: CODING_UNSUPPORTED_EFFECT,
     description: `Run a host-declared named check. Allowed names: ${names.join(", ")}. The model cannot choose executables or arguments.`,
     exclusive: true,
     parameters: {

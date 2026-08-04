@@ -10,13 +10,17 @@ Events are emitted by the runtime and by loops through `LoopContext.emit`, both 
 
 Subscribe via `session.stream()` for a single owned run, or `session.subscribe()` when a host needs a long-lived observer across runs: render streamed assistant text in a UI, react to tool execution, drive observability/telemetry, or audit artifact validation outcomes. Do not parse provider stream events directly for these — `AgentEvent` is the stable, normalized surface across providers and loops.
 
-Do not use `AgentEvent` for durable replay (use a `SessionStore`) or for cross-session coordination (the broadcaster is per-session and live-only).
+Do not use live `session.subscribe()` for cross-replica reconnect — use durable `AgentEventSource` below. Live subscribe remains process-local.
 
 ## Durable event ledger
 
 When `AgentConfig.runLedger` or `RunOptions.runLedger` is configured, every emitted `AgentEvent` is also persisted as an `AgentEventRecord` through the host adapter. The runtime calls `redactAgentEvent(event, activeRedactor)` before creating the record, sets `AgentEventRecord.redacted` to `true` when a redactor is active, and writes the record with the same `sessionId`, `runId`, and `timestamp`.
 
 Event records preserve emission order within a run because the runtime drains pending event appends before writing the final `RunRecord`. Subscribers still see the live, in-memory stream; the ledger is the durable copy.
+
+## Durable AgentEventSource
+
+`AgentEventSource` (`createMemoryAgentEventSource` / `persistence.events` on PostgreSQL) appends, pages, and subscribes with opaque ownership-bound cursors. `subscribe` registers wake interest before replaying history so replay-to-live handoff has no gap. Delivery is at-least-once; consumers dedupe `record.id`. PostgreSQL uses transactional sequence allocation plus `LISTEN`/`NOTIFY` wakeups with polling fallback. Transport adapters (server SSE `Last-Event-ID`, AG-UI, A2A `afterEventId`) map source envelopes only — they do not invent private replay loops. This is not exactly-once.
 
 ## Inputs / request
 

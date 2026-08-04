@@ -10,6 +10,10 @@ import type {
   RunLimits,
   SecretRedactor,
   ToolDefinition,
+  ToolEffectDeclaration,
+  ToolEffectStore,
+  ToolExecutionContext,
+  ToolResult,
   ToolValidator,
 } from "@arnilo/prism";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
@@ -104,6 +108,8 @@ export interface CreatePrismMcpServerOptions {
   readonly permission?: PermissionPolicy;
   readonly validate?: ToolValidator;
   readonly redactor?: SecretRedactor;
+  /** Optional core recovery store for registered Prism tool dispatch. */
+  readonly effectStore?: ToolEffectStore;
   /** Applied only to registered Prism tools; commands remain host callbacks. */
   readonly guardrails?: Guardrails;
   /** Per MCP tool-call ceilings. */
@@ -140,10 +146,70 @@ export type PrismMcpWebHandler = (request: Request) => Promise<Response>;
 
 export type AttachMcpToolBridgeOptions = Omit<ConnectMcpToolsOptions, "transport">;
 
+export interface McpUiResourceMetadata {
+  readonly csp?: Readonly<{
+    readonly connectDomains?: readonly string[];
+    readonly resourceDomains?: readonly string[];
+    readonly frameDomains?: readonly string[];
+    readonly baseUriDomains?: readonly string[];
+  }>;
+  readonly permissions?: Readonly<{
+    readonly camera?: true;
+    readonly microphone?: true;
+    readonly geolocation?: true;
+    readonly clipboardWrite?: true;
+  }>;
+  /** Advisory only. Hosts select sandbox origins; this value never controls one. */
+  readonly domain?: string;
+  readonly prefersBorder?: boolean;
+}
+
+export interface McpAppTool {
+  readonly name: string;
+  readonly prismName: string;
+  readonly description?: string;
+  readonly inputSchema: JsonObject;
+  readonly resourceUri?: string;
+  readonly visibility: readonly ("model" | "app")[];
+}
+
+export interface McpAppResource {
+  readonly uri: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly mimeType: "text/html;profile=mcp-app";
+  readonly html: string;
+  readonly ui?: McpUiResourceMetadata;
+}
+
+export interface McpAppsBridge {
+  readonly serverId: string;
+  readonly negotiated: true;
+  /** Includes app-only tools. `McpToolBridge.tools` contains model-visible tools only. */
+  readonly tools: readonly McpAppTool[];
+  listResources(): Promise<readonly Omit<McpAppResource, "html">[]>;
+  readResource(uri: string): Promise<McpAppResource>;
+  /** App calls remain host-approved; this method performs no retries or effect recovery. */
+  callTool(name: string, args: JsonObject, context: ToolExecutionContext): Promise<ToolResult>;
+}
+
+export interface McpToolEffectPolicyInput {
+  /** Exact host-configured server/tool selector; remote descriptions and annotations are excluded. */
+  readonly serverId: string;
+  readonly remoteName: string;
+}
+
+/** Host review classifies remote tools. Omission is deliberately nonrecoverable. */
+export type McpToolEffectPolicy = (input: McpToolEffectPolicyInput) => ToolEffectDeclaration | undefined;
+
 export interface ConnectMcpToolsOptions {
   readonly serverId: string;
   readonly transport: McpTransportConfig;
   readonly namePrefix?: string;
+  /** Host-owned remote tool policy; unclassified tools remain external and unsupported. */
+  readonly effect?: McpToolEffectPolicy;
+  /** Explicitly negotiate `io.modelcontextprotocol/ui`; false/omitted preserves normal MCP behavior. */
+  readonly mcpApps?: boolean;
   readonly listCacheTtlMs?: number;
   readonly callTimeoutMs?: number;
   readonly maxResultBytes?: number;
@@ -195,6 +261,8 @@ export interface McpCapabilityBridge extends McpToolBridge {
 
 export interface McpToolBridge {
   readonly tools: readonly ToolDefinition[];
+  /** Present only when `mcpApps: true` negotiated the MCP Apps extension. */
+  readonly apps?: McpAppsBridge;
   refresh(): Promise<void>;
   close(): Promise<void>;
 }

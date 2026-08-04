@@ -1,4 +1,4 @@
-import type { SecretRedactor } from "@arnilo/prism";
+import type { AgentEventSourceOptions, SecretRedactor } from "@arnilo/prism";
 import type { Pool, PoolConfig } from "pg";
 
 /** Default PostgreSQL schema for Prism tables. */
@@ -20,6 +20,10 @@ export interface PostgresPersistenceOptions {
   readonly poolConfig?: Omit<PoolConfig, "connectionString" | "max">;
   /** Redacts feedback comments/tags/metadata before durable storage. */
   readonly feedbackRedactor?: SecretRedactor;
+  /** Bounds durable event pages, subscriptions, polling, and retention operations. */
+  readonly eventSource?: AgentEventSourceOptions;
+  /** Stable HMAC secret shared by replicas that resume durable event cursors. */
+  readonly eventCursorSecret?: string | Uint8Array;
   /** Skip automatic migration on open (tests only). */
   readonly skipMigrations?: boolean;
 }

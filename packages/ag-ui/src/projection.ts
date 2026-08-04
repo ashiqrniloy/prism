@@ -1,14 +1,65 @@
-import type { AgentEvent, SecretRedactor, ToolCallContent, ToolResult } from "@arnilo/prism";
+import type { Message as AgUiMessage, Interrupt } from "@ag-ui/core";
+import type { AgentEvent, SecretRedactor, ThinkingContent, ToolCallContent, ToolResult } from "@arnilo/prism";
+import { assertBoundedJson } from "./input.js";
+import type { ResolvedAgUiLimits } from "./limits.js";
 import type { CoWorkEvent, CoWorkKind } from "./types.js";
 
-/** Host-owned allow-list. All callbacks receive redacted Prism values. */
+export interface AgUiActivitySnapshot {
+  readonly type: "snapshot";
+  readonly messageId: string;
+  readonly activityType: string;
+  readonly content: Record<string, unknown>;
+  readonly replace?: boolean;
+}
+
+export interface AgUiActivityDelta {
+  readonly type: "delta";
+  readonly messageId: string;
+  readonly activityType: string;
+  readonly patch: readonly unknown[];
+}
+
+export interface AgUiReasoningProjection {
+  /** Visible, host-approved reasoning summary. Prism never exposes thinking by default. */
+  readonly text?: string;
+  /** Opaque value already encrypted for this AG-UI client; never inferred from a Prism signature. */
+  readonly encryptedValue?: string;
+}
+
+export interface AgUiRawProjection {
+  readonly event: unknown;
+  readonly source?: string;
+}
+
+export interface AgUiCustomProjection {
+  readonly name: string;
+  readonly value: unknown;
+}
+
+/** Host-owned allow-list. All callbacks receive redacted Prism values and must be synchronous/pure. */
 export interface AgUiProjection {
   /** Return a safe display string to expose tool arguments; absent means omit them. */
   toolArguments?(call: ToolCallContent): string | undefined;
   /** Return a safe display string to expose a tool result; absent means status only. */
   toolResult?(result: ToolResult): string | undefined;
-  /** Return a safe, JSON-serializable application-state addition; absent exposes status only. */
+  /** Legacy run-status state addition used for suspension/resume snapshots. */
   state?(event: AgentEvent): unknown;
+  /** Return a complete safe state replacement for a `STATE_SNAPSHOT`. */
+  stateSnapshot?(event: AgentEvent): unknown;
+  /** Return an RFC 6902 patch for a `STATE_DELTA`; absent means no delta. */
+  stateDelta?(event: AgentEvent): readonly unknown[] | undefined;
+  /** Return a complete safe transcript for `MESSAGES_SNAPSHOT`; host preserves AG-UI message IDs. */
+  messages?(event: AgentEvent): readonly AgUiMessage[] | undefined;
+  /** Return one safe activity snapshot or delta. */
+  activity?(event: AgentEvent): AgUiActivitySnapshot | AgUiActivityDelta | undefined;
+  /** Explicitly reveal a safe reasoning summary or pre-encrypted client value. */
+  reasoning?(content: ThinkingContent, event: AgentEvent): AgUiReasoningProjection | undefined;
+  /** Explicitly expose a bounded raw event wrapper. */
+  raw?(event: AgentEvent): AgUiRawProjection | undefined;
+  /** Explicitly expose one bounded named `CUSTOM` value. */
+  custom?(event: AgentEvent): AgUiCustomProjection | undefined;
+  /** Return safe interrupt additions. Core decision/CAS fields remain adapter-owned. */
+  interrupt?(event: Extract<AgentEvent, { readonly type: "agent_suspended" }>): readonly Interrupt[] | undefined;
   /** Return a safe, JSON-serializable co-work payload; absent exposes the redacted event fields. */
   coWork?(event: CoWorkEvent): unknown;
   /** Reserved for host-owned path projection in handlers; mapper never exposes paths itself. */
@@ -27,6 +78,31 @@ export interface CoWorkProjectionOptions {
   readonly redactor?: SecretRedactor;
   readonly projection?: AgUiProjection;
   readonly maxBytes: number;
+}
+
+/** Validates a host-projected JSON value and returns a detached copy. */
+export function projectAgUiJson(value: unknown, maxBytes: number, limits: ResolvedAgUiLimits, name: string): unknown | undefined {
+  if (value === undefined) return undefined;
+  try {
+    assertBoundedJson(value, maxBytes, limits, name);
+    return JSON.parse(JSON.stringify(value)) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+/** RFC 6902 has a small, exact wire shape; unsupported operations fail closed. */
+export function projectAgUiPatch(
+  value: readonly unknown[] | undefined,
+  maxOperations: number,
+  maxBytes: number,
+  limits: ResolvedAgUiLimits,
+  name: string,
+): readonly unknown[] | undefined {
+  if (value === undefined || value.length > maxOperations) return undefined;
+  const projected = projectAgUiJson(value, maxBytes, limits, name);
+  if (!Array.isArray(projected) || projected.some((operation) => !isPatchOperation(operation))) return undefined;
+  return projected;
 }
 
 /**
@@ -48,6 +124,29 @@ export function projectCoWorkEvent(event: CoWorkEvent, options: CoWorkProjection
   } catch {
     return undefined;
   }
+}
+
+function isPatchOperation(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const operation = value as Record<string, unknown>;
+  if (typeof operation.op !== "string" || typeof operation.path !== "string" || !validPointer(operation.path)) return false;
+  switch (operation.op) {
+    case "add":
+    case "replace":
+    case "test":
+      return Object.hasOwn(operation, "value");
+    case "remove":
+      return true;
+    case "move":
+    case "copy":
+      return typeof operation.from === "string" && validPointer(operation.from);
+    default:
+      return false;
+  }
+}
+
+function validPointer(value: string): boolean {
+  return value.length <= 4 * 1024 && !/[\0\r\n]/.test(value) && (value === "" || value.startsWith("/"));
 }
 
 function isCoWorkEvent(value: unknown): value is CoWorkEvent {

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  type AgentEventRecord,
   type AIProvider,
   createAgent,
   createAgentRunLifecycle,
+  createMemoryAgentEventSource,
   createMemoryCheckpointStore,
   createMemoryLeaseStore,
   createMemorySessionStore,
@@ -57,6 +59,72 @@ describe("createPrismHandler", () => {
     assert.match(text, /message_delta/);
     assert.match(text, /agent_finished/);
     assert.deepEqual(calls, ["agent.run:support", "agent.stream:support"]);
+  });
+
+  it("reconnects durable agent SSE on another handler with Last-Event-ID and no session run", async () => {
+    const events = createMemoryAgentEventSource();
+    const record = (id: string, event: Pick<AgentEventRecord, "sessionId" | "runId" | "event">, timestamp: string) =>
+      events.append({ ...event, id, type: event.event.type, timestamp, redacted: true, ...authorization.ownership });
+    await record(
+      "event-1",
+      { sessionId: "session-1", runId: "stored-run", event: { type: "agent_started", sessionId: "session-1", runId: "stored-run" } },
+      "2026-08-04T00:00:00.000Z",
+    );
+    await record(
+      "event-2",
+      {
+        sessionId: "session-1",
+        runId: "stored-run",
+        event: { type: "message_delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: "durable" } },
+      },
+      "2026-08-04T00:00:01.000Z",
+    );
+    await record(
+      "event-3",
+      { sessionId: "session-1", runId: "stored-run", event: { type: "agent_finished", sessionId: "session-1", runId: "stored-run" } },
+      "2026-08-04T00:00:02.000Z",
+    );
+    const page = await events.page({ ownership: authorization.ownership, sessionId: "session-1", runId: "stored-run" });
+    let sessions = 0;
+    const exposure = {
+      sessionFactory: () => {
+        sessions += 1;
+        throw new Error("reconnect must not create a session");
+      },
+      events,
+      resolveRun: () => ({ sessionId: "session-1", runId: "stored-run" }),
+    };
+    const replicaA = createPrismHandler({ agents: { support: exposure }, authorize: () => authorization });
+    const replicaB = createPrismHandler({ agents: { support: exposure }, authorize: () => authorization });
+    const first = await replicaA(
+      new Request("https://example.test/prism/agents/support/runs/public-run/events", {
+        headers: { "last-event-id": page.items[0]!.cursor },
+      }),
+    );
+    const firstText = await first.text();
+    assert.match(firstText, /id: /);
+    assert.match(firstText, /durable/);
+    const lastId = [...firstText.matchAll(/^id: (.+)$/gm)].at(-1)?.[1];
+    assert.ok(lastId);
+    const resumed = await replicaB(
+      new Request(`https://example.test/prism/agents/support/runs/public-run/events?cursor=${encodeURIComponent(page.items[1]!.cursor)}`, {
+        headers: { "last-event-id": page.items[1]!.cursor },
+      }),
+    );
+    assert.match(await resumed.text(), /agent_finished/);
+    assert.equal(sessions, 0);
+
+    const conflict = await replicaB(
+      new Request("https://example.test/prism/agents/support/runs/public-run/events?cursor=one", {
+        headers: { "last-event-id": "two" },
+      }),
+    );
+    assert.equal(conflict.status, 400);
+    const tenantless = createPrismHandler({
+      agents: { support: exposure },
+      authorize: () => ({ ownership: { userId: "user-1" } }),
+    });
+    assert.equal((await tenantless(new Request("https://example.test/prism/agents/support/runs/public-run/events"))).status, 403);
   });
 
   it("exposes durable agent status and resume only through explicit lifecycle capabilities", async () => {

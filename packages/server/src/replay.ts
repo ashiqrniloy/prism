@@ -1,4 +1,12 @@
-import type { AgentEventRecord, OwnershipScope, PersistencePage, ProductionPersistenceStore } from "@arnilo/prism";
+import type {
+  AgentEventEnvelope,
+  AgentEventRecord,
+  AgentEventSource,
+  AgentEventSourcePage,
+  OwnershipScope,
+  PersistencePage,
+  ProductionPersistenceStore,
+} from "@arnilo/prism";
 import { type PrismDeploymentLimits, type ResolvedPrismDeploymentLimits, resolvePrismDeploymentLimits } from "./limits.js";
 import { PrismServerError } from "./types.js";
 
@@ -18,7 +26,39 @@ export interface CreatePrismEventReplayOptions {
   readonly limits?: PrismDeploymentLimits;
 }
 
-/** Ownership-scoped, cursor-paginated durable event replay. Does not re-run work. */
+export interface PrismAgentEventReplay {
+  page(input: PrismEventReplayRequest): Promise<AgentEventSourcePage>;
+  subscribe(input: PrismEventReplayRequest): AsyncIterable<AgentEventEnvelope>;
+}
+
+/** Shared source-backed page/follow adapter. Authorization supplies ownership before each call. */
+export function createPrismAgentEventReplay(source: AgentEventSource, options: CreatePrismEventReplayOptions = {}): PrismAgentEventReplay {
+  const limits = resolvePrismDeploymentLimits(options.limits);
+  const read = (input: PrismEventReplayRequest) => {
+    input.signal?.throwIfAborted();
+    assertOwnership(input.ownership);
+    if (!input.sessionId || !input.runId) throw new PrismServerError("Run is unavailable", 404, "ERR_PRISM_SERVER_REPLAY");
+    if (input.cursor !== undefined) assertCursor(input.cursor, limits);
+    return {
+      ownership: input.ownership,
+      sessionId: input.sessionId,
+      runId: input.runId,
+      after: input.cursor,
+      limit: limits.maxReplayEvents,
+      signal: input.signal,
+    };
+  };
+  return {
+    page: (input) => source.page(read(input)),
+    subscribe(input) {
+      return {
+        [Symbol.asyncIterator]: () => source.subscribe(read(input))[Symbol.asyncIterator](),
+      };
+    },
+  };
+}
+
+/** Ownership-scoped, cursor-paginated legacy persistence replay. Does not re-run work. */
 export function createPrismEventReplay(
   store: Pick<ProductionPersistenceStore, "queryEvents">,
   options: CreatePrismEventReplayOptions = {},

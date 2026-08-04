@@ -1,5 +1,27 @@
 # Migration guide
 
+## 0.0.23 → 0.0.24 distributed events and recoverable tool effects (intentional pre-1.0 contract changes)
+
+Release **0.0.24** adds a replaceable durable `AgentEventSource`, recoverable `ToolEffectStore`, full AG-UI 0.0.57 compatibility, and AG-UI fronting for MCP / MCP Apps / remote A2A. Core remains dependency-free; PostgreSQL adapters and effect stores stay opt-in. Delivery is at-least-once with consumer deduplication — not exactly-once.
+
+1. **Open persistence for durable events.** `createPostgresPersistence({ pool, eventCursorSecret })` exposes `persistence.events` (`AgentEventSource`). Migration **006** adds `prism_agent_event_streams`; migration **007** adds the exact-owner retention index. Share one HMAC `eventCursorSecret` across replicas. SQLite gains sequence compatibility only (no distributed subscribe). Backup before upgrade; rollback restores both session-store and enterprise migration histories.
+2. **Reconnect through the shared source.** Prefer `events.subscribe({ ownership, sessionId, runId, after })` or transport cursors (`Last-Event-ID` / `?cursor=` / A2A `afterEventId` Prism extension). Live `session.subscribe()` remains process-local. Consumers must dedupe `record.id`; sticky sessions are optional.
+3. **Opt into tool effects.** Pass `effectStore` on the agent/run. Declare `tool.effect` (`kind` + `idempotency`). Core derives `idempotencyKey` — model keys are ignored. Required effects without a store fail closed. Ambiguous post-dispatch outcomes become `unknown` and need `resolveUnknown`; they never auto-replay.
+4. **Enterprise tool effects.** `createPostgresEnterpriseState` applies enterprise migration **002** (`prism_tool_effects`) and exposes `state.toolEffects`. Cleanup remains host-scheduled via `state.cleanup`.
+5. **Package adapters.** Coding/browser/work/MCP/supervisor tools ship effect declarations or host policies. Work mutations require the core key + store. MCP defaults remote tools to unsupported unless the host policy classifies them.
+6. **AG-UI.** Handler accepts full RunAgentInput with host `input.project` / `frontendTools` / interrupt resume; optional `mcp` / `a2a` adapters. Direct Prism MCP/A2A APIs remain independent.
+
+```ts
+const persistence = await createPostgresPersistence({ pool, eventCursorSecret: secret });
+const enterprise = await createPostgresEnterpriseState({ pool });
+const agent = createAgent({ model, provider, tools, runLedger: persistence, effectStore: enterprise.toolEffects });
+for await (const { record, cursor } of persistence.events.subscribe({ ownership, sessionId, runId, after })) {
+  save(cursor); // dedupe record.id; reconnect never reruns completed effects
+}
+```
+
+Example: `node examples/distributed-events-and-tool-effects.ts` (network-free memory reference). Hosts that never open an event source or effect store keep prior behavior.
+
 ## 0.0.22 → 0.0.23 production enterprise state adapters (intentional pre-1.0 contract changes)
 
 Release **0.0.23** adds `@arnilo/prism-enterprise-postgres` and makes work-mutation idempotency plus durable model-router state explicit. Core agent/session behavior stays unchanged; install/configure this package only when a host needs PostgreSQL coordination.

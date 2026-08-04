@@ -6,6 +6,30 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.24 distributed events and tool effects
+
+`node scripts/benchmark-0.0.24.mjs` is an explicit protected PostgreSQL benchmark behind `PRISM_TEST_POSTGRES_URL`. Checked `scripts/benchmark-0.0.24.json` (Node v24.18.0/Linux x64, PostgreSQL 16.14): 10 tenants × 10 principals × 1,000 events/owner, 16 producers/subscribers, 100 warmups, 1,000 measured ops, 10,000-event sustained replay, 100-row cleanup.
+
+| Scenario | Recorded p95 ms | Ceiling |
+| --- | ---: | ---: |
+| Event append / page | 1.502 / 3.103 | 50 / 100 |
+| Effect claim+transition / cleanup | 3.084 / 3.242 | 50 / 100 |
+| Event cleanup / reconnect catch-up | 1.370 / 7.883 | 100 / 2000 |
+
+Sustained replay delivered 160,000 subscriber-events at 101.34 events/s. Five `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans used named indexes with no sequential scans. Process conformance (`scripts/phase7-conformance.test.mjs`) covers 16-process producers, `LISTEN` backend kill + poll catch-up, and pending/dispatched effect crash windows. Values are environment evidence, not universal SLOs.
+
+## Release 0.0.24 distributed events and tool effects
+
+`node scripts/benchmark-0.0.24.mjs` is an explicit protected PostgreSQL benchmark behind `PRISM_TEST_POSTGRES_URL`. Checked `scripts/benchmark-0.0.24.json` (Node v24.18.0/Linux x64, PostgreSQL 16.14): 10 tenants × 10 principals × 1,000 events/owner, 16 producers/subscribers, 100 warmups, 1,000 measured ops, 10,000-event sustained replay, 100-row cleanup.
+
+| Scenario | Recorded p95 ms | Ceiling |
+| --- | ---: | ---: |
+| Event append / page | 1.502 / 3.103 | 50 / 100 |
+| Effect claim+transition / cleanup | 3.084 / 3.242 | 50 / 100 |
+| Event cleanup / reconnect catch-up | 1.370 / 7.883 | 100 / 2000 |
+
+Sustained replay delivered 160,000 subscriber-events at 101.34 events/s. Five `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans used named indexes with no sequential scans. Process conformance (`scripts/phase7-conformance.test.mjs`) covers 16-process producers, `LISTEN` backend kill + poll catch-up, and pending/dispatched effect crash windows. Values are environment evidence, not universal SLOs.
+
 ## Release 0.0.23 enterprise PostgreSQL evidence
 
 `node scripts/benchmark-0.0.23.mjs` is an explicit protected PostgreSQL benchmark, not part of `npm test` or `sdk:ready`. It requires `PRISM_TEST_POSTGRES_URL`, creates/drops an isolated schema, and checks frozen p95 ceilings from `scripts/budgets.json`. The checked `scripts/benchmark-0.0.23.json` evidence was recorded on Node v24.18.0/Linux x64 with `postgres:16-alpine`: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row cleanup batches.

@@ -56,7 +56,7 @@ import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Closes the underlying database when the adapter opened it. |
 
-Migrations run automatically on open and are idempotent across reopen. Under the SQLite migration transaction, startup checks ordered contract name/version/SHA-256 rows plus full schema-v4 PRAGMA/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
+Migrations run automatically on open and are idempotent across reopen. Under the SQLite migration transaction, startup checks ordered contract name/version/SHA-256 rows plus full schema-v6 PRAGMA/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
 
 ## Request/response example
 
@@ -99,8 +99,16 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - The package is optional and workspace-local; `@arnilo/prism` core has no SQLite dependency.
 - Hosts choose the database path and own backup, retention enforcement, and filesystem permissions.
 - `SessionAppendOptions` idempotency rows are durable in `prism_session_append_idempotency` and survive reopen.
-- Schema version **5** applies `001_init`, `002_usage_scope`, `003_run_feedback`, `004_session_search`, and `005_lifecycle_hold_quota`. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (FTS5 virtual table `prism_session_search_fts` dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. PostgreSQL shares the same model with dialect-local DDL.
+- Schema version **6** applies `001_init`, `002_usage_scope`, `003_run_feedback`, `004_session_search`, `005_lifecycle_hold_quota`, and `006_agent_event_source`. Migration 006 backfills `prism_agent_event_streams` and uses it to allocate unique per-run event sequences inside the SQLite append transaction. It is sequence-compatible with PostgreSQL but remains local/file-backed; it does not expose distributed subscriptions. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (FTS5 virtual table `prism_session_search_fts` dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. PostgreSQL shares the same model with dialect-local DDL.
 - Pass an existing `better-sqlite3` `Database` via `database` when your host already manages connections.
+
+## Durable events
+
+SQLite applies migrations **006**/**007** for per-run event sequence compatibility and the owner retention index. It does **not** provide cross-process subscribe/LISTEN; use PostgreSQL for distributed reconnect.
+
+## Durable events
+
+SQLite applies migrations **006**/**007** for per-run event sequence compatibility and the owner retention index. It does **not** provide cross-process subscribe/LISTEN; use PostgreSQL for distributed reconnect.
 
 ## Security and performance notes
 

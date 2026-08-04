@@ -1,4 +1,4 @@
-import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolEffectDeclaration, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { WorkToolError } from "./errors.js";
 import { normalizeCalendarPage, normalizeFilePage, normalizeMailMessage, normalizeMailPage, normalizeTaskPage } from "./normalize.js";
 import type {
@@ -56,21 +56,44 @@ function assertExternalAllowed(options: WorkToolsOptions, addresses: readonly st
 
 type WorkAdapter = Microsoft365Adapter | GoogleWorkspaceAdapter;
 
+const WORK_OBSERVATION_EFFECT = { kind: "none", idempotency: "none" } as const satisfies ToolEffectDeclaration;
+const WORK_MUTATION_EFFECT = { kind: "external_mutation", idempotency: "tool_managed" } as const satisfies ToolEffectDeclaration;
+const MUTATING_TOOL_NAMES = new Set([
+  "m365_mail_draft_send",
+  "m365_calendar_draft_add",
+  "m365_file_draft_upload",
+  "m365_file_draft_share",
+  "m365_todo_draft_add",
+  "m365_todo_draft_complete",
+  "gws_mail_draft_send",
+  "gws_calendar_draft_add",
+  "gws_file_draft_upload",
+  "gws_file_draft_share",
+  "gws_task_draft_add",
+  "gws_task_draft_complete",
+  "gws_docs_draft_create",
+  "gws_sheets_draft_create",
+  "gws_slides_draft_create",
+]);
+
 async function executeApprovedMutation(
   options: WorkToolsOptions,
   adapter: WorkAdapter,
   op: string,
   payload: JsonObject,
   context: ToolExecutionContext,
-  idempotencyKey: string | undefined,
 ): Promise<unknown> {
   const draft = adapter.createDraft(op as never, payload);
   const approved = options.approval ? await options.approval.isApproved({ draftId: draft.draftId, op, identity: adapter.identity }) : false;
   if (!approved) return { draftId: draft.draftId, status: "pending_approval", untrusted: true };
 
-  const store = idempotencyKey ? options.idempotencyStore : undefined;
-  const claim = store ? await store.begin({ identity: adapter.identity, key: idempotencyKey!, op, signal: context.signal }) : undefined;
-  if (claim?.outcome === "existing") return existingMutationResult(claim.record);
+  const idempotencyKey = context.idempotencyKey;
+  const store = options.idempotencyStore;
+  if (!idempotencyKey || !store) {
+    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "approved mutation requires core idempotency key and store");
+  }
+  const claim = await store.begin({ identity: adapter.identity, key: idempotencyKey, op, signal: context.signal });
+  if (claim.outcome === "existing") return existingMutationResult(claim.record);
 
   let result: { draftId: string; resourceId?: string };
   try {
@@ -82,22 +105,22 @@ async function executeApprovedMutation(
       ...(typeof (value as { id?: string })?.id === "string" ? { resourceId: (value as { id: string }).id } : {}),
     };
   } catch (error) {
-    if (claim?.record.claimToken) {
+    if (claim.record.claimToken) {
       const input = {
         identity: adapter.identity,
-        key: idempotencyKey!,
+        key: idempotencyKey,
         op,
         claimToken: claim.record.claimToken,
         expectedVersion: claim.record.version,
       };
       const failure = classifiedFailure(error);
-      if (failure) await store!.fail({ ...input, ...failure });
-      else await store!.markUnknown({ ...input, failure: { code: "ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN" } });
+      if (failure) await store.fail({ ...input, ...failure });
+      else await store.markUnknown({ ...input, failure: { code: "ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN" } });
     }
     throw error;
   }
-  if (claim?.record.claimToken) {
-    await store!.complete({
+  if (claim.record.claimToken) {
+    await store.complete({
       identity: adapter.identity,
       key: idempotencyKey!,
       op,
@@ -190,7 +213,7 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
           context,
           "m365_mail_draft_send",
           provider,
-          await executeApprovedMutation(options, m365, "mail.send", payload, context, optString(args, "idempotencyKey")),
+          await executeApprovedMutation(options, m365, "mail.send", payload, context),
         );
       },
     });
@@ -237,14 +260,7 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
           context,
           "m365_calendar_draft_add",
           provider,
-          await executeApprovedMutation(
-            options,
-            m365,
-            "calendar.add" satisfies Microsoft365Op,
-            args,
-            context,
-            optString(args, "idempotencyKey"),
-          ),
+          await executeApprovedMutation(options, m365, "calendar.add" satisfies Microsoft365Op, args, context),
         ),
     });
   }
@@ -271,12 +287,7 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
         ["folderUrl", "filePath"],
       ),
       execute: async (args, context) =>
-        result(
-          context,
-          "m365_file_draft_upload",
-          provider,
-          await executeApprovedMutation(options, m365, "file.add", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "m365_file_draft_upload", provider, await executeApprovedMutation(options, m365, "file.add", args, context)),
     });
   }
   if (m365.allowedOps.has("file.share")) {
@@ -298,14 +309,7 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
           context,
           "m365_file_draft_share",
           provider,
-          await executeApprovedMutation(
-            options,
-            m365,
-            "file.share",
-            { ...args, scope: "organization" },
-            context,
-            optString(args, "idempotencyKey"),
-          ),
+          await executeApprovedMutation(options, m365, "file.share", { ...args, scope: "organization" }, context),
         ),
     });
   }
@@ -332,12 +336,7 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
         ["title"],
       ),
       execute: async (args, context) =>
-        result(
-          context,
-          "m365_todo_draft_add",
-          provider,
-          await executeApprovedMutation(options, m365, "todo.add", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "m365_todo_draft_add", provider, await executeApprovedMutation(options, m365, "todo.add", args, context)),
     });
   }
   if (m365.allowedOps.has("todo.complete")) {
@@ -354,12 +353,7 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
         ["id"],
       ),
       execute: async (args, context) =>
-        result(
-          context,
-          "m365_todo_draft_complete",
-          provider,
-          await executeApprovedMutation(options, m365, "todo.complete", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "m365_todo_draft_complete", provider, await executeApprovedMutation(options, m365, "todo.complete", args, context)),
     });
   }
 }
@@ -415,12 +409,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
           ...(optString(args, "bcc") ? { bcc: optString(args, "bcc") } : {}),
           ...(optString(args, "from") ? { from: optString(args, "from") } : {}),
         };
-        return result(
-          context,
-          "gws_mail_draft_send",
-          provider,
-          await executeApprovedMutation(options, gws, "mail.send", payload, context, optString(args, "idempotencyKey")),
-        );
+        return result(context, "gws_mail_draft_send", provider, await executeApprovedMutation(options, gws, "mail.send", payload, context));
       },
     });
   }
@@ -465,14 +454,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
           context,
           "gws_calendar_draft_add",
           provider,
-          await executeApprovedMutation(
-            options,
-            gws,
-            "calendar.add" satisfies GoogleWorkspaceOp,
-            args,
-            context,
-            optString(args, "idempotencyKey"),
-          ),
+          await executeApprovedMutation(options, gws, "calendar.add" satisfies GoogleWorkspaceOp, args, context),
         ),
     });
   }
@@ -510,12 +492,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
         ["name", "filePath"],
       ),
       execute: async (args, context) =>
-        result(
-          context,
-          "gws_file_draft_upload",
-          provider,
-          await executeApprovedMutation(options, gws, "file.add", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "gws_file_draft_upload", provider, await executeApprovedMutation(options, gws, "file.add", args, context)),
     });
   }
   if (gws.allowedOps.has("file.share")) {
@@ -537,12 +514,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
         if (reqString(args, "type") === "user") {
           assertExternalAllowed(options, [reqString(args, "emailAddress")]);
         }
-        return result(
-          context,
-          "gws_file_draft_share",
-          provider,
-          await executeApprovedMutation(options, gws, "file.share", args, context, optString(args, "idempotencyKey")),
-        );
+        return result(context, "gws_file_draft_share", provider, await executeApprovedMutation(options, gws, "file.share", args, context));
       },
     });
   }
@@ -568,12 +540,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
         ["title"],
       ),
       execute: async (args, context) =>
-        result(
-          context,
-          "gws_task_draft_add",
-          provider,
-          await executeApprovedMutation(options, gws, "task.add", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "gws_task_draft_add", provider, await executeApprovedMutation(options, gws, "task.add", args, context)),
     });
   }
   if (gws.allowedOps.has("task.complete")) {
@@ -589,12 +556,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
         ["id"],
       ),
       execute: async (args, context) =>
-        result(
-          context,
-          "gws_task_draft_complete",
-          provider,
-          await executeApprovedMutation(options, gws, "task.complete", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "gws_task_draft_complete", provider, await executeApprovedMutation(options, gws, "task.complete", args, context)),
     });
   }
   if (gws.allowedOps.has("docs.create")) {
@@ -603,12 +565,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
       description: "Draft a Google Doc create (capability-gated); requires approval.",
       parameters: objectSchema({ title: { type: "string" }, idempotencyKey: { type: "string" } }, ["title"]),
       execute: async (args, context) =>
-        result(
-          context,
-          "gws_docs_draft_create",
-          provider,
-          await executeApprovedMutation(options, gws, "docs.create", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "gws_docs_draft_create", provider, await executeApprovedMutation(options, gws, "docs.create", args, context)),
     });
   }
   if (gws.allowedOps.has("sheets.create")) {
@@ -617,12 +574,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
       description: "Draft a Google Sheet create (capability-gated); requires approval.",
       parameters: objectSchema({ title: { type: "string" }, idempotencyKey: { type: "string" } }, ["title"]),
       execute: async (args, context) =>
-        result(
-          context,
-          "gws_sheets_draft_create",
-          provider,
-          await executeApprovedMutation(options, gws, "sheets.create", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "gws_sheets_draft_create", provider, await executeApprovedMutation(options, gws, "sheets.create", args, context)),
     });
   }
   if (gws.allowedOps.has("slides.create")) {
@@ -631,12 +583,7 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
       description: "Draft a Google Slides create (capability-gated); requires approval.",
       parameters: objectSchema({ title: { type: "string" }, idempotencyKey: { type: "string" } }, ["title"]),
       execute: async (args, context) =>
-        result(
-          context,
-          "gws_slides_draft_create",
-          provider,
-          await executeApprovedMutation(options, gws, "slides.create", args, context, optString(args, "idempotencyKey")),
-        ),
+        result(context, "gws_slides_draft_create", provider, await executeApprovedMutation(options, gws, "slides.create", args, context)),
     });
   }
 }
@@ -645,5 +592,8 @@ export function createWorkTools(options: WorkToolsOptions): readonly ToolDefinit
   const tools: ToolDefinition[] = [];
   if (options.microsoft365) pushM365Tools(tools, options, options.microsoft365);
   if (options.googleWorkspace) pushGwsTools(tools, options, options.googleWorkspace);
-  return tools;
+  return tools.map((tool) => ({
+    ...tool,
+    effect: MUTATING_TOOL_NAMES.has(tool.name) ? WORK_MUTATION_EFFECT : WORK_OBSERVATION_EFFECT,
+  }));
 }

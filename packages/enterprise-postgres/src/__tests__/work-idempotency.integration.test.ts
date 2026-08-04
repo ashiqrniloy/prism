@@ -27,7 +27,7 @@ function identity(tenantId = "tenant"): AgentIdentity {
 }
 
 function context(): ToolExecutionContext {
-  return { sessionId: "session", runId: "run", toolCallId: "call" };
+  return { sessionId: "session", runId: "run", toolCallId: "call", idempotencyKey: `prism:tool-effect:v1:${"a".repeat(64)}` };
 }
 
 describeIntegration("enterprise PostgreSQL work idempotency", () => {

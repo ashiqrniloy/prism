@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import { Pool } from "pg";
-import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES } from "../ddl.js";
+import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl } from "../ddl.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
 import { qualifyTable, quoteIdentifier } from "../identifiers.js";
@@ -42,10 +42,38 @@ describeIntegration("enterprise PostgreSQL migrations", () => {
       ENTERPRISE_INDEX_NAMES,
     ]);
     assert.deepEqual(indexes.rows.map((row) => String(row.indexname)).sort(), [...ENTERPRISE_INDEX_NAMES].sort());
-    const history = await pool.query(`SELECT name, version, checksum FROM ${qualifyTable(schema, "prism_enterprise_migrations")}`);
-    assert.equal(history.rowCount, 1);
-    assert.equal(history.rows[0]?.name, "001_enterprise_state");
-    assert.match(String(history.rows[0]?.checksum), /^[a-f0-9]{64}$/);
+    const history = await pool.query(
+      `SELECT name, version, checksum FROM ${qualifyTable(schema, "prism_enterprise_migrations")} ORDER BY applied_at ASC, id ASC`,
+    );
+    assert.equal(history.rowCount, 2);
+    assert.deepEqual(
+      history.rows.map((row) => `${row.name}:${row.version}`),
+      ["001_enterprise_state:1", "002_tool_effects:2"],
+    );
+    for (const row of history.rows) assert.match(String(row.checksum), /^[a-f0-9]{64}$/);
+  });
+
+  it("upgrades a checksum-valid v1 schema to tool effects without rewriting v1 history", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    await pool.query(buildEnterpriseMigration001Ddl(schema));
+    await pool.query(
+      `INSERT INTO ${qualifyTable(schema, "prism_enterprise_migrations")} (id, name, version, checksum, applied_at)
+       VALUES ($1, '001_enterprise_state', '1', $2, clock_timestamp())`,
+      [randomUUID(), createHash("sha256").update(buildEnterpriseMigration001Ddl("prism"), "utf8").digest("hex")],
+    );
+    await createPostgresEnterpriseState({ pool, schema });
+    const history = await pool.query(
+      `SELECT name, version FROM ${qualifyTable(schema, "prism_enterprise_migrations")} ORDER BY applied_at, id`,
+    );
+    assert.deepEqual(
+      history.rows.map((row) => `${row.name}:${row.version}`),
+      ["001_enterprise_state:1", "002_tool_effects:2"],
+    );
+    assert.equal(
+      (await pool.query("SELECT 1 FROM pg_tables WHERE schemaname = $1 AND tablename = 'prism_tool_effects'", [schema])).rowCount,
+      1,
+    );
   });
 
   it("fails closed for migration checksum and catalog drift", async () => {
@@ -61,7 +89,7 @@ describeIntegration("enterprise PostgreSQL migrations", () => {
     const catalogSchema = uniqueSchema();
     const catalogPool = createPool();
     await createPostgresEnterpriseState({ pool: catalogPool, schema: catalogSchema });
-    await catalogPool.query(`DROP INDEX ${quoteIdentifier(catalogSchema)}.${quoteIdentifier("prism_evaluations_owner_run_created_idx")}`);
+    await catalogPool.query(`DROP INDEX ${quoteIdentifier(catalogSchema)}.${quoteIdentifier("prism_tool_effects_expiry_idx")}`);
     await assert.rejects(
       () => createPostgresEnterpriseState({ pool: catalogPool, schema: catalogSchema }),
       (error: unknown) => error instanceof EnterprisePostgresError && error.code === "ERR_PRISM_ENTERPRISE_POSTGRES_SCHEMA",

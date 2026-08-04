@@ -50,6 +50,15 @@ const bridge = await connectMcpTools({
 
 Remote tool names are prefixed as `mcp:<serverId>:<toolName>` by default to avoid registry collisions. Use `connectMcpCapabilities()` for separate bounded resources/prompts plus explicit host roots/sampling/elicitation callbacks; missing capability calls throw `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`.
 
+MCP Apps requires explicit negotiation, not metadata guessing:
+
+```ts
+const bridge = await connectMcpTools({ serverId: "weather", transport, mcpApps: true });
+const resource = await bridge.apps!.readResource("ui://weather/card");
+```
+
+`mcpApps: true` advertises and requires `io.modelcontextprotocol/ui`. `bridge.tools` excludes app-only tools; `bridge.apps` preserves UI metadata, permits linked bounded HTML resource reads, and calls only same-server app-visible tools. Use `@arnilo/prism-ag-ui` to mount an authenticated proxy and separate-origin renderer sandbox; this package never renders HTML.
+
 ## Server exposure
 
 ```ts
@@ -80,6 +89,7 @@ Nothing is exposed by default. To expose a durable agent, pass `agentRuns: { sup
 - Discovery defaults to 20 pages/500 tools, finite metadata/schema budgets, and atomic refresh. Raw SDK list/call requests avoid compiling untrusted output schemas.
 - Every result branch (`content`, `structuredContent`, legacy `toolResult`) shares `maxResultBytes`, JSON depth, and property bounds before `ToolResult` retention.
 - Register returned tools only after reviewing server trust; core `PermissionPolicy` and `ToolValidator` still apply at dispatch.
+- MCP Apps keeps nested metadata over deprecated flat metadata, permits only linked `ui://` `text/html;profile=mcp-app` HTML5 bodies, and leaves iframe sandbox/CSP, app-call approval, and mutation recovery to the host/AG-UI adapter.
 - Server resources/prompts re-authorize every callback. Sampling/model choice, roots, credentials, and form/URL consent remain host-owned; Prism never opens elicitation URLs. Stateful sessions bind a non-secret principal ID and disclose mismatches only as 404.
 
 See [MCP client/server exposure](../../docs/mcp-tools.md) and [Tool execution primitives](../../docs/tool-execution-primitives.md).

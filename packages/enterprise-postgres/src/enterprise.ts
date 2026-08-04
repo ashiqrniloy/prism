@@ -6,6 +6,7 @@ import { validateIdentifier } from "./identifiers.js";
 import { applyEnterpriseMigrations } from "./migrations.js";
 import { createPostgresPolicyDecisionStore } from "./policy.js";
 import { createPostgresIdempotencyStore } from "./work-idempotency.js";
+import { createPostgresToolEffectStore } from "./tool-effects.js";
 import { createPostgresModelRouterStateStore } from "./model-router.js";
 import {
   DEFAULT_ENTERPRISE_POOL_MAX,
@@ -46,6 +47,7 @@ export async function createPostgresEnterpriseState(options: PostgresEnterpriseS
       policy: createPostgresPolicyDecisionStore(pool, schema),
       evaluations: createPostgresEvaluationStore(pool, schema),
       workIdempotency: createPostgresIdempotencyStore(pool, schema),
+      toolEffects: createPostgresToolEffectStore(pool, schema),
       modelRouter: createPostgresModelRouterStateStore(pool, schema),
       cleanup,
       async close() {

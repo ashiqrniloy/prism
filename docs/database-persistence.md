@@ -451,6 +451,8 @@ const dbStore: ProductionPersistenceStore = {
 - Cursor values and idempotency keys are host-defined and opaque to Prism.
 - First-party SQLite/PostgreSQL adapters expose `persistence.checkpoints` and `persistence.leases`, backed by package-owned `prism_checkpoints` / `prism_leases` tables. `@arnilo/prism-workflows` consumes them for durable resume, human suspension, multi-process coordination, Phase 11 schedule records/fire leases, shared state, and replay lineage; workflow code owns no SQL table. `suspended`/`denied`, schedules, state history, and replay lineage remain namespaces/categories plus bounded checkpoint JSON values, so Phases 8 and 11 need no database migration.
 
+Schema version **7** adds the exact-owner durable event retention index (`prism_agent_events_owner_timestamp_sequence_idx`). Distributed subscribe/LISTEN remains PostgreSQL-only via `persistence.events`.
+
 ## Security and performance notes
 
 - **No credentials in storage.** The contracts never include `CredentialResolver`, `AIProvider`, `ProviderResolver`, provider API keys, or credential values.

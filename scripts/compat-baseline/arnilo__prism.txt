@@ -1,6 +1,8 @@
 AGENT_RUN_STATE_NAMESPACE	export declare const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run"
 AGENT_RUN_STATE_SCHEMA_VERSION	export declare const AGENT_RUN_STATE_SCHEMA_VERSION: 1
 ARTIFACT_CHECKPOINT_NAMESPACE	export declare const ARTIFACT_CHECKPOINT_NAMESPACE = "prism.artifact"
+AgentEventSourceError	export declare class AgentEventSourceError extends Error
+AgentEventSourceErrorCode	export type { AgentEventSourceErrorCode } from "./agent-event-source.js"
 AgentIdentity	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
 AgentInput	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 AgentRunError	export declare class AgentRunError extends Error
@@ -226,7 +228,7 @@ ModelRegistry	export type { ModelRegistry, ModelRegistryOptions } from "./models
 ModelRegistryOptions	export type { ModelRegistry, ModelRegistryOptions } from "./models.js"
 NarrowIdentityOptions	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
 PARAMETERIZED_QUERY_GUIDANCE	export declare const PARAMETERIZED_QUERY_GUIDANCE = "Bind every user-supplied value (session ids, idempotency keys, tenant ids, timestamps, JSON payloads) as a query parameter. Quote/validate schema and table identifiers only
-PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 5
+PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 7
 PermissionDecision	export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js"
 PermissionDeniedError	export declare class PermissionDeniedError extends Error
 PermissionPolicy	export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js"
@@ -241,14 +243,14 @@ PromptInstruction	export type { AgentInput, AssembleProviderInputOptions, Defaul
 PromptTemplateOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 ProviderRegistry	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
 ProviderRegistryOptions	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
-ProviderResolver	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
+ProviderResolver	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
 ProviderTransportError	export declare class ProviderTransportError extends Error
 PutLegalHoldInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
-RealtimeCaps	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
-RealtimeEvent	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
-RealtimeSession	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
-RealtimeSessionFactory	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
-RealtimeSessionOptions	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
+RealtimeCaps	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+RealtimeEvent	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+RealtimeSession	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+RealtimeSessionFactory	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+RealtimeSessionOptions	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
 ReleaseLegalHoldInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ResolveActiveSkillsOptions	export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js"
 ResolveContextOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
@@ -267,9 +269,9 @@ RunFeedbackLimits	export type { MemoryRunFeedbackStoreOptions, PrepareRunFeedbac
 RunFeedbackRun	export type { MemoryRunFeedbackStoreOptions, PrepareRunFeedbackOptions, RunFeedbackLimits, RunFeedbackRun, RunFeedbackRunResolver, } from "./feedback.js"
 RunFeedbackRunResolver	export type { MemoryRunFeedbackStoreOptions, PrepareRunFeedbackOptions, RunFeedbackLimits, RunFeedbackRun, RunFeedbackRunResolver, } from "./feedback.js"
 RunGuardrailsOptions	export type { GuardrailRunResult, RunGuardrailsOptions, } from "./guardrails.js"
-RunLimitCounters	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
+RunLimitCounters	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
 RunLimitError	export declare class RunLimitError extends Error
-RunLimitName	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
+RunLimitName	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
 RunLimitTracker	export declare class RunLimitTracker
 RunLimitTrackerOptions	export type { RunLimitTrackerOptions } from "./run-limits.js"
 SESSION_APPEND_CONFLICT_CODE	export declare const SESSION_APPEND_CONFLICT_CODE: "session_append_conflict"
@@ -280,7 +282,7 @@ SESSION_SEARCH_WORKSPACE_METADATA_KEY	export declare const SESSION_SEARCH_WORKSP
 SKILL_DISCLOSURE_ERROR_CODE	export declare const SKILL_DISCLOSURE_ERROR_CODE: "skill_disclosure_exceeded"
 SKILL_LOAD_ERROR_CODE	export declare const SKILL_LOAD_ERROR_CODE: "skill_load_failed"
 SecretRedactor	export type { SecretRedactor } from "./redaction.js"
-SecureAgentOptions	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
+SecureAgentOptions	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
 SessionAppendConflictError	export declare class SessionAppendConflictError extends Error
 SessionBranch	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 SessionBranchOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
@@ -304,7 +306,18 @@ ThinkingLevel	export type { ThinkingCompatFamily, ThinkingLevel } from "./thinki
 ToolArgumentValidationError	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolArgumentValidationResult	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolArgumentValidator	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
-ToolCallAuthority	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, } from "./contracts.js"
+ToolCallAuthority	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectClassifier	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectDeclaration	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectError	export declare class ToolEffectError extends Error
+ToolEffectErrorCode	export type { ToolEffectErrorCode } from "./tool-effects.js"
+ToolEffectIdempotency	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectKey	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectKind	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectRecord	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectStatus	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectStore	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
+ToolEffectTransition	export type { ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, RunLimitCounters, RunLimitName, SecureAgentOptions, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, } from "./contracts.js"
 ToolFilter	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolFilterInput	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolParameterValidatorOptions	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
@@ -333,6 +346,7 @@ artifactStructuredOutputRequest	export declare function artifactStructuredOutput
 assembleProviderInput	export declare function assembleProviderInput(options: AssembleProviderInputOptions): Promise<ProviderRequest>
 assertAbortIsObserved	export declare function assertAbortIsObserved(options: ProviderAbortConformanceOptions): Promise<void>
 assertAdapterSchemaMatchesModel	export declare function assertAdapterSchemaMatchesModel(adapterTables: readonly string[], adapterIndexes: readonly string[], model?: PersistenceSchemaModel): void
+assertAgentEventSourceConforms	export declare function assertAgentEventSourceConforms(factory: AgentEventSourceConformanceFactory): Promise<void>
 assertAppliedPersistenceMigrations	export declare function assertAppliedPersistenceMigrations(contract: PersistenceMigrationContract, applied: readonly AppliedPersistenceMigration[]):
 assertCanRegister	export declare function assertCanRegister<K>(map: ReadonlyMap<K, unknown>, key: K, label: string, displayKey?: string, duplicate?: DuplicateRegistrationPolicy): void
 assertCompactionStrategyConforms	export declare function assertCompactionStrategyConforms(strategy: CompactionStrategy, options?: CompactionConformanceOptions): Promise<
@@ -370,6 +384,7 @@ assertTenantScopedQueryIsolation	export declare function assertTenantScopedQuery
 assertToolBlocked	export declare function assertToolBlocked(probe: ToolDispatchProbeOptions, expectedReason: string): Promise<void>
 assertToolCallDeltasReconstruct	export declare function assertToolCallDeltasReconstruct(events: readonly ProviderEvent[], expected: readonly ToolCallDeltaExpectation[]): readonly ToolCallContent[]
 assertToolDispatchConforms	export declare function assertToolDispatchConforms(registry: ToolRegistry, options: ToolConformanceOptions): Promise<void>
+assertToolEffectStoreConforms	export declare function assertToolEffectStoreConforms(factory: () => ToolEffectStore | Promise<ToolEffectStore>, options?: ToolEffectStoreConformanceOptions): Promise<void>
 assertTrusted	export declare function assertTrusted(policy: TrustPolicy | undefined, request: TrustRequest): Promise<void>
 assertUsageAccounting	export declare function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage
 authMethodKey	export declare function authMethodKey(method: AuthMethod): string
@@ -378,6 +393,7 @@ bytesToBase64	export declare function bytesToBase64(bytes: Uint8Array): string
 cacheHitRate	export declare function cacheHitRate(usage: Usage | undefined): number | undefined
 cacheSavings	export declare function cacheSavings(usage: Usage | undefined, model: ModelConfig): number | undefined
 cacheUsageReport	export declare function cacheUsageReport(usage: Usage | undefined, model?: ModelConfig): CacheUsageReport | undefined
+canonicalToolEffectJson	export declare function canonicalToolEffectJson(value: unknown): string
 capSkillCatalog	export declare function capSkillCatalog(skills: readonly Skill[]): readonly Skill[]
 checkExecution	export declare function checkExecution(policy: ExecutionPolicy | undefined, action: ExecutionAction): Promise<ExecutionDecision>
 checkPermission	export declare function checkPermission(policy: PermissionPolicy | undefined, request: PermissionRequest): Promise<PermissionDecision>
@@ -410,12 +426,14 @@ createInitProject	export declare function createInitProject(options: InitOptions
 createJsonlSessionStore	export declare function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStoreOptions): SessionStore
 createLoadSkillTool	export declare function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDefinition
 createLoadedSkillSet	export declare function createLoadedSkillSet(): LoadedSkillSet
+createMemoryAgentEventSource	export declare function createMemoryAgentEventSource(options?: AgentEventSourceOptions): AgentEventSource
 createMemoryCheckpointStore	export declare function createMemoryCheckpointStore(options?: MemoryCheckpointStoreOptions): CheckpointStore
 createMemoryCredentialStore	export declare function createMemoryCredentialStore(initial?: readonly CredentialRecord[], options?: MemoryCredentialStoreOptions): MemoryCredentialStore
 createMemoryLeaseStore	export declare function createMemoryLeaseStore(): LeaseStore
 createMemoryPersistenceLifecycle	export declare function createMemoryPersistenceLifecycle(): PersistenceLifecycleStore
 createMemoryRunFeedbackStore	export declare function createMemoryRunFeedbackStore(options: MemoryRunFeedbackStoreOptions): RunFeedbackStore
 createMemorySessionStore	export declare function createMemorySessionStore(initialEntries?: readonly SessionEntry[], options?: CreateMemorySessionStoreOptions): SessionStore
+createMemoryToolEffectStore	export declare function createMemoryToolEffectStore(options?:
 createMiddlewareRegistry	export declare function createMiddlewareRegistry(options?: MiddlewareRegistryOptions): MiddlewareRegistry
 createMockProvider	export declare function createMockProvider(events?: readonly ProviderEvent[], options?: MockProviderOptions): AIProvider
 createModelRegistry	export declare function createModelRegistry(models?: readonly ModelConfig[], options?: ModelRegistryOptions): ModelRegistry
@@ -446,6 +464,7 @@ defaultUserSettingsPath	export declare function defaultUserSettingsPath(appName?
 definePrismManifest	export declare function definePrismManifest(manifest: PrismManifest): PrismManifest
 defineProviderPackage	export declare function defineProviderPackage(providerPackage: ProviderPackage): ProviderPackage
 denialToErrorInfo	export declare function denialToErrorInfo(error: unknown): ErrorInfo
+deriveToolEffectKey	export declare function deriveToolEffectKey(input: Omit<ToolEffectKey, "key" | "signal">): string
 description	export declare const description = "Agent harness for AI providers, agents, sessions, and tools."
 discoverAgentBundles	export declare function discoverAgentBundles(options: DiscoverAgentBundlesOptions): Promise<readonly AgentBundle[]>
 discoverContributions	export declare function discoverContributions(options: DiscoveryOptions): Promise<readonly DiscoveredContribution[]>
@@ -608,6 +627,7 @@ runPromptMode	export declare function runPromptMode(session: AgentSession, optio
 runRpcServer	export declare function runRpcServer(options: RpcServerOptions): Promise<void>
 runRunLedgerConformance	export declare function runRunLedgerConformance(factory: RunLedgerConformanceFactory, options?: RunLedgerConformanceOptions): Promise<void>
 runSessionStoreConformance	export declare function runSessionStoreConformance(factory: SessionStoreConformanceFactory, options?: SessionStoreConformanceOptions): Promise<void>
+runToolEffectStoreConformance	export declare function runToolEffectStoreConformance(factory: () => ToolEffectStore | Promise<ToolEffectStore>, options?: ToolEffectStoreConformanceOptions): Promise<void>
 sanitizeCacheKey	export declare function sanitizeCacheKey(value: string | undefined, maxLength: number): string | undefined
 saveAgentRunState	export declare function saveAgentRunState(input:
 selectSkillsForPrompt	export declare function selectSkillsForPrompt(skills: readonly Skill[], context?: SkillRenderContext): readonly Skill[]
@@ -631,11 +651,12 @@ thinkingCompatFor	export declare function thinkingCompatFor(family: ThinkingComp
 thinkingFamilyForModel	export declare function thinkingFamilyForModel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): ThinkingCompatFamily
 toolCallContent	export declare function toolCallContent(id: string, name: string, args?: JsonObject): ToolCallContent
 toolCallFromArgumentsText	export declare function toolCallFromArgumentsText(id: string, name: string, argumentsText: string): ToolCallContent
+toolEffectArgumentsHash	export declare function toolEffectArgumentsHash(argumentsValue: JsonObject): string
 tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): ParseJsonObjectArgumentsResult
 usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System instructions\n --context <text> Context text\n --compact <entries> Auto-compaction threshold\n 
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.0.23"
+version	export declare const version = "0.0.24"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

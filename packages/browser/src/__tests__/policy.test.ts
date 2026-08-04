@@ -10,6 +10,7 @@ import {
   BrowserError,
   buildBrowserExecutionAction,
   classifyBrowserOperation,
+  classifyBrowserToolEffect,
   classifyBrowserUrl,
   classifyHost,
   createBrowserManager,
@@ -113,6 +114,8 @@ describe("browser Task 6 policy", () => {
     assert.equal(classifyBrowserOperation("upload").risk, "high");
     assert.equal(classifyBrowserOperation("download_release").effect, "high_impact");
     assert.equal(classifyBrowserOperation("select_page", { pageKind: "popup" }).operation, "select_popup");
+    assert.deepEqual(classifyBrowserToolEffect("snapshot"), { kind: "none", idempotency: "none" });
+    assert.deepEqual(classifyBrowserToolEffect("click"), { kind: "external_mutation", idempotency: "unsupported" });
 
     const action = buildBrowserExecutionAction({
       operation: "upload",

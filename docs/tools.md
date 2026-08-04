@@ -237,6 +237,8 @@ await session.run(input, {
 - Prism does not sandbox host tools and does not include built-in app tools.
 - Contribution registration and registry/filter calls do not perform provider calls, credential resolution, resource loading, network, filesystem discovery, or tool execution.
 - Dispatch performs explicit in-memory checks and executes only the selected host-active tool; it adds no retries, queues, timers, or new dependencies.
+- When `effectStore` is configured, dispatch claims before side effects and never auto-replays `unknown` outcomes (see [tool effects](tool-effects.md)).
+- When `effectStore` is configured, dispatch claims before side effects and never auto-replays `unknown` outcomes (see [tool effects](tool-effects.md)).
 
 ## JSON Schema validator limits
 
@@ -265,6 +267,8 @@ createJsonSchemaToolArgumentValidator({
 - [Observational memory compaction package](compaction-observational-memory.md): optional exact-id recall tool factory.
 - [Tool execution primitives](tool-execution-primitives.md): JSON Schema adapter, parallelism, MCP bridge, and execution-policy designs.
 - [MCP client bridge](mcp-tools.md): optional remote tool mapping plus separate bounded resource/prompt facades; non-tool MCP capabilities never bypass tool dispatch by masquerading as `ToolDefinition`.
+- [Recoverable tool effects](tool-effects.md): optional `tool.effect` + `effectStore` claim/CAS recovery around dispatch.
+- [Recoverable tool effects](tool-effects.md): optional `tool.effect` + `effectStore` claim/CAS recovery around dispatch.
 - [Coding agent tools](coding-agent-tools.md): optional first-party `@arnilo/prism-coding-agent` `shell`/`read`/`write`/`edit` tools a host registers into this harness.
 
 `DispatchToolCallOptions.trust` and `.permission` run before validation or `execute()`; denial emits `tool_execution_blocked`. Middleware cannot bypass either guard. `AgentConfig.validator`/`RunOptions.validate` run after these guards; their output is redacted through the active `SecretRedactor`. `createSecureAgent()` requires all three seams plus non-empty schemas and durable pre-tool approval. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

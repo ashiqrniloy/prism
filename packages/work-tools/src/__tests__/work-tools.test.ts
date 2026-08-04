@@ -7,6 +7,8 @@ import {
   buildMicrosoft365Argv,
   createGoogleWorkspaceCliAdapter,
   createMemoryIdempotencyStore,
+  DEFAULT_GWS_OPS,
+  DEFAULT_M365_OPS,
   createMicrosoft365CliAdapter,
   createWorkTools,
   normalizeMailPage,
@@ -25,8 +27,8 @@ const identity: AgentIdentity = {
   verified: true,
 };
 
-function ctx(): ToolExecutionContext {
-  return { sessionId: "s1", runId: "r1", toolCallId: "tc-1" };
+function ctx(idempotencyKey = "prism:tool-effect:v1:work-test"): ToolExecutionContext {
+  return { sessionId: "s1", runId: "r1", toolCallId: "tc-1", idempotencyKey };
 }
 
 function fakeRunner(handler: (argv: readonly string[]) => WorkCliExecResult | Promise<WorkCliExecResult>) {
@@ -249,8 +251,85 @@ describe("createWorkTools", () => {
     }).find((tool) => tool.name === "m365_mail_draft_send")!;
     const args = { to: "a@contoso.com", subject: "Hi", bodyContents: "Body", idempotencyKey: "unknown-1" };
     await assert.rejects(async () => send.execute(args, ctx()), /transport lost/);
-    assert.equal((await store.get({ identity, key: "unknown-1", op: "mail.send" }))?.status, "unknown");
+    assert.equal((await store.get({ identity, key: "prism:tool-effect:v1:work-test", op: "mail.send" }))?.status, "unknown");
     await assert.rejects(async () => send.execute(args, ctx()), /requires reconciliation/);
+  });
+
+  it("requires a configured store for approved mutations and ignores model idempotencyKey", async () => {
+    let calls = 0;
+    const adapter = createMicrosoft365CliAdapter({
+      binary: "/usr/bin/m365",
+      identity,
+      configDir: "/tmp/prism-m365-test",
+      runner: fakeRunner((argv) => {
+        if (argv[0] === "version") return { exitCode: 0, stdout: '"v11.7.0"', stderr: "" };
+        calls += 1;
+        return { exitCode: 0, stdout: "", stderr: "" };
+      }),
+    });
+    const args = { to: "a@contoso.com", subject: "Hi", bodyContents: "Body", idempotencyKey: "model-key" };
+    const missingStore = createWorkTools({
+      microsoft365: adapter,
+      approval: { isApproved: () => true },
+      externalRecipients: { allow: () => true },
+    }).find((tool) => tool.name === "m365_mail_draft_send")!;
+    await assert.rejects(async () => missingStore.execute(args, ctx("core-key")), /core idempotency key and store/);
+    assert.equal(calls, 0);
+
+    const store = createMemoryIdempotencyStore();
+    const send = createWorkTools({
+      microsoft365: adapter,
+      idempotencyStore: store,
+      approval: { isApproved: () => true },
+      externalRecipients: { allow: () => true },
+    }).find((tool) => tool.name === "m365_mail_draft_send")!;
+    await send.execute(args, ctx("core-key"));
+    assert.equal(await store.get({ identity, key: "model-key", op: "mail.send" }), undefined);
+    assert.equal((await store.get({ identity, key: "core-key", op: "mail.send" }))?.status, "completed");
+    assert.equal(calls, 1);
+  });
+
+  it("declares every connector read as observation and every mutation as tool-managed", () => {
+    const runner = fakeRunner(() => ({ exitCode: 0, stdout: "[]", stderr: "" }));
+    const tools = createWorkTools({
+      microsoft365: createMicrosoft365CliAdapter({
+        binary: "/usr/bin/m365",
+        identity,
+        configDir: "/tmp/m365-effects",
+        allowedOps: DEFAULT_M365_OPS,
+        runner,
+      }),
+      googleWorkspace: createGoogleWorkspaceCliAdapter({
+        binary: "/usr/bin/gws",
+        identity,
+        configDir: "/tmp/gws-effects",
+        allowedOps: DEFAULT_GWS_OPS,
+        runner,
+      }),
+    });
+    const mutations = new Set([
+      "m365_mail_draft_send",
+      "m365_calendar_draft_add",
+      "m365_file_draft_upload",
+      "m365_file_draft_share",
+      "m365_todo_draft_add",
+      "m365_todo_draft_complete",
+      "gws_mail_draft_send",
+      "gws_calendar_draft_add",
+      "gws_file_draft_upload",
+      "gws_file_draft_share",
+      "gws_task_draft_add",
+      "gws_task_draft_complete",
+      "gws_docs_draft_create",
+      "gws_sheets_draft_create",
+      "gws_slides_draft_create",
+    ]);
+    for (const tool of tools) {
+      assert.deepEqual(
+        tool.effect,
+        mutations.has(tool.name) ? { kind: "external_mutation", idempotency: "tool_managed" } : { kind: "none", idempotency: "none" },
+      );
+    }
   });
 
   it("does not expose model-controlled command surface", () => {

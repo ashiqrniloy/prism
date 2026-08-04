@@ -16,6 +16,8 @@ import {
   buildMigration003Ddl,
   buildMigration004Ddl,
   buildMigration005Ddl,
+  buildMigration006Ddl,
+  buildMigration007Ddl,
 } from "./ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
@@ -40,6 +42,8 @@ export async function applyPostgresMigrations(pool: Pool, schema: string): Promi
       else if (step.name === "003_run_feedback") await client.query(buildMigration003Ddl(schema));
       else if (step.name === "004_session_search") await client.query(buildMigration004Ddl(schema));
       else if (step.name === "005_lifecycle_hold_quota") await client.query(buildMigration005Ddl(schema));
+      else if (step.name === "006_agent_event_source") await client.query(buildMigration006Ddl(schema));
+      else if (step.name === "007_agent_event_retention_index") await client.query(buildMigration007Ddl(schema));
       else throw new Error(`Unknown migration step: ${step.name}`);
       await client.query(
         `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)
@@ -104,47 +108,45 @@ async function backfillLegacyChecksums(source: Queryable, schema: string): Promi
 
 async function readPostgresSchemaShape(source: Queryable, schema: string): Promise<PersistenceSchemaShape> {
   const tableNames = createPersistenceSchemaModel().tables.map((table) => table.name);
-  const [columnsResult, constraintsResult, indexesResult] = await Promise.all([
-    source.query(
-      `SELECT table_name, column_name, data_type, is_nullable, column_default, ordinal_position
-       FROM information_schema.columns
-       WHERE table_schema = $1 AND table_name = ANY($2::text[])
-       ORDER BY table_name, ordinal_position`,
-      [schema, tableNames],
-    ),
-    source.query(
-      `SELECT table_class.relname AS table_name, constraint_row.contype,
-              array_agg(column_row.attname ORDER BY key_row.ordinality) FILTER (WHERE column_row.attname IS NOT NULL) AS columns,
-              reference_class.relname AS references_table,
-              array_agg(reference_column.attname ORDER BY key_row.ordinality) FILTER (WHERE reference_column.attname IS NOT NULL) AS references_columns
-       FROM pg_constraint constraint_row
-       JOIN pg_class table_class ON table_class.oid = constraint_row.conrelid
-       JOIN pg_namespace namespace_row ON namespace_row.oid = table_class.relnamespace
-       LEFT JOIN pg_class reference_class ON reference_class.oid = constraint_row.confrelid
-       LEFT JOIN LATERAL unnest(constraint_row.conkey) WITH ORDINALITY AS key_row(attribute_number, ordinality) ON true
-       LEFT JOIN pg_attribute column_row ON column_row.attrelid = table_class.oid AND column_row.attnum = key_row.attribute_number
-       LEFT JOIN LATERAL unnest(constraint_row.confkey) WITH ORDINALITY AS reference_key(attribute_number, ordinality) ON reference_key.ordinality = key_row.ordinality
-       LEFT JOIN pg_attribute reference_column ON reference_column.attrelid = reference_class.oid AND reference_column.attnum = reference_key.attribute_number
-       WHERE namespace_row.nspname = $1 AND table_class.relname = ANY($2::text[]) AND constraint_row.contype IN ('p', 'u', 'f')
-       GROUP BY table_class.relname, constraint_row.contype, reference_class.relname, constraint_row.oid
-       ORDER BY table_class.relname, constraint_row.oid`,
-      [schema, tableNames],
-    ),
-    source.query(
-      `SELECT index_class.relname AS name, table_class.relname AS table_name, index_row.indisunique AS unique,
-              array_agg(column_row.attname ORDER BY key_row.ordinality) AS columns
-       FROM pg_index index_row
-       JOIN pg_class index_class ON index_class.oid = index_row.indexrelid
-       JOIN pg_class table_class ON table_class.oid = index_row.indrelid
-       JOIN pg_namespace namespace_row ON namespace_row.oid = table_class.relnamespace
-       JOIN LATERAL unnest(index_row.indkey) WITH ORDINALITY AS key_row(attribute_number, ordinality) ON true
-       JOIN pg_attribute column_row ON column_row.attrelid = table_class.oid AND column_row.attnum = key_row.attribute_number
-       WHERE namespace_row.nspname = $1 AND index_class.relname = ANY($2::text[])
-       GROUP BY index_class.relname, table_class.relname, index_row.indisunique
-       ORDER BY index_class.relname`,
-      [schema, ADAPTER_INDEX_NAMES],
-    ),
-  ]);
+  const columnsResult = await source.query(
+    `SELECT table_name, column_name, data_type, is_nullable, column_default, ordinal_position
+     FROM information_schema.columns
+     WHERE table_schema = $1 AND table_name = ANY($2::text[])
+     ORDER BY table_name, ordinal_position`,
+    [schema, tableNames],
+  );
+  const constraintsResult = await source.query(
+    `SELECT table_class.relname AS table_name, constraint_row.contype,
+            array_agg(column_row.attname ORDER BY key_row.ordinality) FILTER (WHERE column_row.attname IS NOT NULL) AS columns,
+            reference_class.relname AS references_table,
+            array_agg(reference_column.attname ORDER BY key_row.ordinality) FILTER (WHERE reference_column.attname IS NOT NULL) AS references_columns
+     FROM pg_constraint constraint_row
+     JOIN pg_class table_class ON table_class.oid = constraint_row.conrelid
+     JOIN pg_namespace namespace_row ON namespace_row.oid = table_class.relnamespace
+     LEFT JOIN pg_class reference_class ON reference_class.oid = constraint_row.confrelid
+     LEFT JOIN LATERAL unnest(constraint_row.conkey) WITH ORDINALITY AS key_row(attribute_number, ordinality) ON true
+     LEFT JOIN pg_attribute column_row ON column_row.attrelid = table_class.oid AND column_row.attnum = key_row.attribute_number
+     LEFT JOIN LATERAL unnest(constraint_row.confkey) WITH ORDINALITY AS reference_key(attribute_number, ordinality) ON reference_key.ordinality = key_row.ordinality
+     LEFT JOIN pg_attribute reference_column ON reference_column.attrelid = reference_class.oid AND reference_column.attnum = reference_key.attribute_number
+     WHERE namespace_row.nspname = $1 AND table_class.relname = ANY($2::text[]) AND constraint_row.contype IN ('p', 'u', 'f')
+     GROUP BY table_class.relname, constraint_row.contype, reference_class.relname, constraint_row.oid
+     ORDER BY table_class.relname, constraint_row.oid`,
+    [schema, tableNames],
+  );
+  const indexesResult = await source.query(
+    `SELECT index_class.relname AS name, table_class.relname AS table_name, index_row.indisunique AS unique,
+            array_agg(column_row.attname ORDER BY key_row.ordinality) AS columns
+     FROM pg_index index_row
+     JOIN pg_class index_class ON index_class.oid = index_row.indexrelid
+     JOIN pg_class table_class ON table_class.oid = index_row.indrelid
+     JOIN pg_namespace namespace_row ON namespace_row.oid = table_class.relnamespace
+     JOIN LATERAL unnest(index_row.indkey) WITH ORDINALITY AS key_row(attribute_number, ordinality) ON true
+     JOIN pg_attribute column_row ON column_row.attrelid = table_class.oid AND column_row.attnum = key_row.attribute_number
+     WHERE namespace_row.nspname = $1 AND index_class.relname = ANY($2::text[])
+     GROUP BY index_class.relname, table_class.relname, index_row.indisunique
+     ORDER BY index_class.relname`,
+    [schema, ADAPTER_INDEX_NAMES],
+  );
   const tableMap = new Map<
     string,
     {

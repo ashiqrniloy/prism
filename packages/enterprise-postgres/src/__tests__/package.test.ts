@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import type { Pool } from "pg";
 import { createEnterpriseStateCleanup } from "../cleanup.js";
 import { decodeBoundedJson, encodeBoundedJson } from "../codecs.js";
-import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl } from "../ddl.js";
+import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl, buildEnterpriseMigration002Ddl } from "../ddl.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
 import {
@@ -17,6 +17,7 @@ import {
 import { applyEnterpriseMigrations, assertEnterpriseMigrationHistory } from "../migrations.js";
 
 const migrationChecksum = createHash("sha256").update(buildEnterpriseMigration001Ddl("prism"), "utf8").digest("hex");
+const toolEffectsMigrationChecksum = createHash("sha256").update(buildEnterpriseMigration002Ddl("prism"), "utf8").digest("hex");
 
 describe("enterprise PostgreSQL package", () => {
   it("has inert public import and strict identifier/config validation", async () => {
@@ -31,7 +32,7 @@ describe("enterprise PostgreSQL package", () => {
   });
 
   it("declares every fixed table/index and canonical migration checksum", () => {
-    const ddl = buildEnterpriseMigration001Ddl("prism");
+    const ddl = `${buildEnterpriseMigration001Ddl("prism")}\n${buildEnterpriseMigration002Ddl("prism")}`;
     for (const table of ENTERPRISE_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"\\."${table}"`));
     }
@@ -40,12 +41,19 @@ describe("enterprise PostgreSQL package", () => {
     assert.match(ddl, /account_key TEXT NOT NULL/);
     assert.match(ddl, /user_key TEXT NOT NULL/);
     assert.equal(migrationChecksum.length, 64);
+    assert.equal(toolEffectsMigrationChecksum.length, 64);
     assert.throws(
       () => assertEnterpriseMigrationHistory([{ name: "001_enterprise_state", version: "1", checksum: "wrong" }]),
       (error: unknown) => error instanceof EnterprisePostgresError && error.code === "ERR_PRISM_ENTERPRISE_POSTGRES_MIGRATION",
     );
     assert.doesNotThrow(() =>
       assertEnterpriseMigrationHistory([{ name: "001_enterprise_state", version: "1", checksum: migrationChecksum }]),
+    );
+    assert.doesNotThrow(() =>
+      assertEnterpriseMigrationHistory([
+        { name: "001_enterprise_state", version: "1", checksum: migrationChecksum },
+        { name: "002_tool_effects", version: "2", checksum: toolEffectsMigrationChecksum },
+      ]),
     );
     assert.throws(() => assertEnterpriseMigrationHistory([{ name: "unknown", version: "1", checksum: migrationChecksum }]));
     assert.throws(() => assertEnterpriseMigrationHistory([{ name: "001_enterprise_state", version: "2", checksum: migrationChecksum }]));
@@ -112,6 +120,7 @@ describe("enterprise PostgreSQL package", () => {
     assert.equal(ended, 0);
     assert.equal(typeof state.policy.append, "function");
     assert.equal(typeof state.evaluations.query, "function");
+    assert.equal(typeof state.toolEffects.begin, "function");
     assert.equal(typeof state.modelRouter.consumeRate, "function");
     const owned = await createPostgresEnterpriseState({ connectionString: "postgres://127.0.0.1:1/prism", skipMigrations: true });
     await assert.doesNotReject(() => owned.close());
@@ -129,7 +138,7 @@ describe("enterprise PostgreSQL package", () => {
     const cleanup = createEnterpriseStateCleanup(pool, "prism");
     const tenantId = `tenant'; DROP TABLE prism_work_idempotency; --`;
     await cleanup({ tenantId, userId: "user", principalId: "agent", limit: 1 });
-    assert.equal(queries.length, 6);
+    assert.equal(queries.length, 8);
     for (const query of queries) {
       assert.equal(query.text.includes(tenantId), false);
       assert.equal(query.values[0], tenantId);

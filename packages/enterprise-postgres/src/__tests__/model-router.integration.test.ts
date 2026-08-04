@@ -84,7 +84,9 @@ describeIntegration("enterprise PostgreSQL model-router state", () => {
       first.modelRouter.addUsage({ key: hostile, tokens: 3, costUsd: 0.3, windowMs: 1_000, now: 0 }),
       second.modelRouter.addUsage({ key: hostile, tokens: 4, costUsd: 0.4, windowMs: 1_000, now: 0 }),
     ]);
-    assert.deepEqual(await second.modelRouter.readBudget({ key: hostile, windowMs: 1_000, now: 0 }), { tokens: 10, costUsd: 1 });
+    const sharedBudget = await second.modelRouter.readBudget({ key: hostile, windowMs: 1_000, now: 0 });
+    assert.equal(sharedBudget.tokens, 10);
+    assert.ok(Math.abs(sharedBudget.costUsd - 1) < 1e-12);
 
     const budgets = qualifyTable(schema, "prism_model_router_budgets");
     await firstPool.query(`UPDATE ${rates} SET window_started_at = clock_timestamp() - INTERVAL '2 seconds'`);

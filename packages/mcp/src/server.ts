@@ -88,6 +88,7 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
           validate: options.validate,
           permission: options.permission,
           redactor: options.redactor,
+          effectStore: options.effectStore,
           ownership: authorization.ownership,
           identity: authorization.identity,
           guardrails: options.guardrails,

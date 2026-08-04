@@ -2,6 +2,7 @@
  * Observation vs side-effect classification for browser tools.
  * Maps actions to ExecutionAction metadata for host ExecutionPolicy/approval.
  */
+import type { ToolEffectDeclaration } from "@arnilo/prism";
 import type { BrowserActionName } from "./types.js";
 
 export type BrowserRisk = "low" | "medium" | "high";
@@ -97,6 +98,16 @@ export function classifyBrowserOperation(
     risk: "medium",
     requiresSideEffectHook: true,
   };
+}
+
+/** Browser mutations are external effects: browser state must reload+verify, never replay. */
+export function classifyBrowserToolEffect(
+  operation: string,
+  details: Parameters<typeof classifyBrowserOperation>[1] = {},
+): ToolEffectDeclaration {
+  return classifyBrowserOperation(operation, details).effect === "observation"
+    ? { kind: "none", idempotency: "none" }
+    : { kind: "external_mutation", idempotency: "unsupported" };
 }
 
 export function isSideEffectAction(action: BrowserActionName): boolean {

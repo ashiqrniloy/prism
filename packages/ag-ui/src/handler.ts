@@ -1,8 +1,10 @@
-import { type AGUIEvent, EventSchemas, EventType } from "@ag-ui/core";
-import type { AgentEvent, AgentRunLifecycle, AgentSession, SecretRedactor } from "@arnilo/prism";
+import { type AGUIEvent, type AgentCapabilities, AgentCapabilitiesSchema, EventSchemas, EventType, type Interrupt } from "@ag-ui/core";
+import type { AgentEvent, AgentRunLifecycle, AgentRunStatusResult, AgentSession, Message, SecretRedactor } from "@arnilo/prism";
 import { type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js";
+import type { AgUiA2AAdapter } from "./a2a.js";
 import { AgUiError } from "./errors.js";
-import { type ParsedAgUiInput, parseAgUiInput } from "./input.js";
+import type { AgUiMcpAdapter } from "./mcp.js";
+import { assertBoundedJson, defaultAgUiInput, type ParsedAgUiInput, parseAgUiInput } from "./input.js";
 import { type AgUiLimitOptions, type ResolvedAgUiLimits, resolveAgUiLimits } from "./limits.js";
 import type { AgUiProjection } from "./projection.js";
 import type { AgUiReplay, AgUiReplayRequest, CoWorkReplay } from "./replay.js";
@@ -23,14 +25,81 @@ export interface AgUiAuthorizationInput {
 
 export interface AgUiRunResolutionRequest<Authorization> extends AgUiReplayRequest<Authorization> {}
 
+/** Host-approved client tool declaration. It is never converted to a Prism ToolDefinition by this adapter. */
+export interface AgUiFrontendToolHandoff {
+  readonly name: string;
+  readonly execution: "client";
+}
+
+export interface AgUiFrontendToolPolicyInput<Authorization> {
+  readonly request: ParsedAgUiInput;
+  readonly authorization: Authorization;
+  readonly signal: AbortSignal;
+}
+
+export interface AgUiInputProjection {
+  /** Host-selected Prism input. Preserve message/tool-result IDs in `Message.id`/content when continuing a client tool. */
+  readonly messages: string | Message | readonly Message[];
+  /** Host-selected client-side tool handoff list. Names must be a subset of request tools. */
+  readonly frontendTools?: readonly AgUiFrontendToolHandoff[];
+}
+
+export interface AgUiInputProjectorInput<Authorization> extends AgUiFrontendToolPolicyInput<Authorization> {
+  readonly frontendTools: readonly AgUiFrontendToolHandoff[];
+}
+
+/** Optional full-input adapter. Omit it to keep legacy last-text/default-deny behavior. */
+export interface AgUiInputOptions<Authorization> {
+  readonly project?: (
+    input: AgUiInputProjectorInput<Authorization>,
+  ) => AgUiInputProjection | undefined | Promise<AgUiInputProjection | undefined>;
+  /** Explicitly accepts client-side tool handoffs; omitted means all frontend tools are denied. */
+  readonly frontendTools?: (
+    input: AgUiFrontendToolPolicyInput<Authorization>,
+  ) => readonly AgUiFrontendToolHandoff[] | undefined | Promise<readonly AgUiFrontendToolHandoff[] | undefined>;
+}
+
+export interface AgUiPreparedInput {
+  readonly messages: string | Message | readonly Message[];
+  readonly frontendTools: readonly AgUiFrontendToolHandoff[];
+  /** Host-reviewed remote MCP tools. `sessionFactory` decides how to combine them with local tools. */
+  readonly serverTools: readonly import("@arnilo/prism").ToolDefinition[];
+}
+
+export interface AgUiInterruptResume<Authorization> {
+  readonly request: ParsedAgUiInput;
+  readonly authorization: Authorization;
+  readonly run: AgUiRunReference;
+  readonly status: AgentRunStatusResult;
+  readonly expectedInterruptId: string;
+  readonly signal: AbortSignal;
+}
+
+/** Host policy for an aggregate AG-UI interrupt. It must resolve to core's one CAS-protected decision. */
+export interface AgUiInterruptOptions<Authorization> {
+  readonly resume?: (input: AgUiInterruptResume<Authorization>) =>
+    | { readonly decision: "approve" | "deny"; readonly expectedVersion?: number }
+    | Promise<{
+        readonly decision: "approve" | "deny";
+        readonly expectedVersion?: number;
+      }>;
+}
+
+export interface AgUiHandler {
+  (request: Request): Promise<Response>;
+  /** Schema-validated snapshot; unsupported transports and edit approvals are never advertised. */
+  readonly capabilities: AgentCapabilities;
+}
+
 export interface CreateAgUiHandlerOptions<Authorization extends AgUiAuthorization = AgUiAuthorization> {
   /** Called only after official input parsing. Return false to hide the selected thread/run. */
   readonly authorize: (input: AgUiAuthorizationInput) => Authorization | false | Promise<Authorization | false>;
-  /** Host-selected session; client input never selects tools, state, or capabilities. */
+  /** Host-selected session; client input never selects tools, state, identity, ownership, or capabilities. */
   readonly sessionFactory: (input: {
     readonly threadId: string;
     readonly authorization: Authorization;
     readonly signal: AbortSignal;
+    readonly input: AgUiPreparedInput;
   }) => AgentSession | Promise<AgentSession>;
   readonly lifecycle?: AgentRunLifecycle;
   /** Required for durable AG-UI resume; binds protocol selectors to internal checkpoint IDs. */
@@ -39,6 +108,16 @@ export interface CreateAgUiHandlerOptions<Authorization extends AgUiAuthorizatio
   ) => AgUiRunReference | undefined | Promise<AgUiRunReference | undefined>;
   /** Optional durable event-page adapter used only when `?cursor=` is supplied. */
   readonly replay?: AgUiReplay<Authorization>;
+  /** Explicit full-input policy. Omit it to preserve the text-only/default-deny boundary. */
+  readonly input?: AgUiInputOptions<Authorization>;
+  /** Optional reviewed MCP bridge adapter. Its selected tools are passed only to `sessionFactory`. */
+  readonly mcp?: AgUiMcpAdapter<Authorization>;
+  /** Optional verified remote A2A mode. When configured it replaces local `sessionFactory` only for this handler. */
+  readonly a2a?: AgUiA2AAdapter<Authorization>;
+  /** Optional multiple-interrupt resolver; edits always deny because core cannot mutate a persisted call. */
+  readonly interrupts?: AgUiInterruptOptions<Authorization>;
+  /** Host capability declaration, narrowed to implemented handler/projector features. */
+  readonly capabilities?: AgentCapabilities;
   /** Persist this host correlation before the interrupt becomes visible to the client. */
   readonly onSuspended?: (input: {
     readonly threadId: string;
@@ -60,15 +139,21 @@ export interface CreateAgUiHandlerOptions<Authorization extends AgUiAuthorizatio
 /** Framework-free, host-authorized AG-UI Web handler. */
 export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUiAuthorization>(
   options: CreateAgUiHandlerOptions<Authorization>,
-): (request: Request) => Promise<Response> {
+): AgUiHandler {
   const limits = resolveAgUiLimits(options.limits);
-  return async (request) => {
+  const capabilities = resolveAgUiCapabilities(options);
+  const handler = async (request: Request): Promise<Response> => {
     const owned = requestSignal(request, limits.requestTimeoutMs);
     try {
       if (request.method !== "POST") return complete(owned, failure(405, "ERR_PRISM_AG_UI_METHOD", "Method not allowed"));
-      if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
+      if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
         return complete(owned, failure(415, "ERR_PRISM_AG_UI_CONTENT_TYPE", "Content-Type must be application/json"));
+      }
       const input = parseAgUiInput(await readJson(request, limits.maxRequestBytes, owned.signal), limits);
+      // Preserve the legacy boundary: unsupported state/tools fail before authorization/session lookup.
+      if (!options.input?.project && input.resume.length === 0 && new URL(request.url).searchParams.get("cursor") === null) {
+        defaultAgUiInput(input, limits);
+      }
       const authorization = await options.authorize({
         request,
         threadId: input.threadId,
@@ -77,7 +162,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
       });
       if (!authorization) return complete(owned, failure(403, "ERR_PRISM_AG_UI_FORBIDDEN", "Forbidden"));
 
-      if (input.resume.length > 0)
+      if (input.resume.length > 0) {
         return sse(
           withCoWork(
             await resumeSource(input, authorization, options, limits, owned.signal),
@@ -90,6 +175,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
           owned,
           limits,
         );
+      }
       const cursor = new URL(request.url).searchParams.get("cursor") ?? undefined;
       if (cursor !== undefined) {
         if (!options.replay) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay is not configured");
@@ -106,9 +192,16 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
           limits,
         );
       }
-      if (input.userText === undefined) throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "A user message is required");
+      const prepared = await prepareInput(input, authorization, options, limits, owned.signal);
       return sse(
-        withCoWork(startSource(input, authorization, options, limits, owned.signal), input, authorization, options, limits, owned.signal),
+        withCoWork(
+          startSource(input, prepared, authorization, options, limits, owned.signal),
+          input,
+          authorization,
+          options,
+          limits,
+          owned.signal,
+        ),
         owned,
         limits,
       );
@@ -117,18 +210,161 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
       return errorResponse(error);
     }
   };
+  return Object.assign(handler, { capabilities });
 }
 
-async function* startSource<Authorization extends AgUiAuthorization>(
+/** Creates the validated declaration attached to every handler. */
+export function resolveAgUiCapabilities<Authorization extends AgUiAuthorization = AgUiAuthorization>(
+  options: Pick<
+    CreateAgUiHandlerOptions<Authorization>,
+    "capabilities" | "input" | "interrupts" | "lifecycle" | "projection" | "replay" | "resolveRun"
+  >,
+): AgentCapabilities {
+  const parsed = AgentCapabilitiesSchema.safeParse(options.capabilities ?? {});
+  if (!parsed.success) throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Invalid AG-UI capability declaration");
+  const requested = parsed.data;
+  if (requested.transport?.websocket || requested.transport?.httpBinary || requested.transport?.pushNotifications) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Unsupported AG-UI transport was declared");
+  }
+  if (requested.transport?.resumable && !options.replay) throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "resumable requires replay");
+  if (requested.tools?.clientProvided && !options.input?.frontendTools) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "clientProvided tools require input.frontendTools");
+  }
+  if (requested.state?.snapshots && !options.projection?.state && !options.projection?.stateSnapshot) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "state snapshots require a state projector");
+  }
+  if (requested.state?.deltas && !options.projection?.stateDelta) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "state deltas require projection.stateDelta");
+  }
+  if (
+    (requested.reasoning?.supported || requested.reasoning?.streaming || requested.reasoning?.encrypted) &&
+    !options.projection?.reasoning
+  ) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "reasoning capability requires projection.reasoning");
+  }
+  if (hasMultimodalInput(requested.multimodal) && !options.input?.project) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "multimodal input requires input.project");
+  }
+  if (requested.humanInTheLoop?.approveWithEdits) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "approveWithEdits is unsupported");
+  }
+  if (hasHitl(requested.humanInTheLoop) && (!options.lifecycle || !options.resolveRun)) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "human-in-the-loop capability requires lifecycle and resolveRun");
+  }
+  return AgentCapabilitiesSchema.parse({
+    ...requested,
+    transport: { ...requested.transport, streaming: true, resumable: requested.transport?.resumable ?? Boolean(options.replay) },
+    tools:
+      requested.tools || options.input?.frontendTools
+        ? { ...requested.tools, clientProvided: requested.tools?.clientProvided ?? Boolean(options.input?.frontendTools) }
+        : undefined,
+    state:
+      requested.state || options.projection?.state || options.projection?.stateSnapshot || options.projection?.stateDelta
+        ? {
+            ...requested.state,
+            snapshots: requested.state?.snapshots ?? Boolean(options.projection?.state || options.projection?.stateSnapshot),
+            deltas: requested.state?.deltas ?? Boolean(options.projection?.stateDelta),
+          }
+        : undefined,
+    reasoning:
+      requested.reasoning || options.projection?.reasoning
+        ? {
+            ...requested.reasoning,
+            supported: requested.reasoning?.supported ?? Boolean(options.projection?.reasoning),
+            streaming: requested.reasoning?.streaming ?? Boolean(options.projection?.reasoning),
+          }
+        : undefined,
+    humanInTheLoop:
+      requested.humanInTheLoop || (options.lifecycle && options.resolveRun)
+        ? {
+            ...requested.humanInTheLoop,
+            supported: requested.humanInTheLoop?.supported ?? Boolean(options.lifecycle && options.resolveRun),
+            approvals: requested.humanInTheLoop?.approvals ?? Boolean(options.lifecycle && options.resolveRun),
+            interrupts: requested.humanInTheLoop?.interrupts ?? Boolean(options.lifecycle && options.resolveRun),
+            approveWithEdits: false,
+          }
+        : undefined,
+  });
+}
+
+async function prepareInput<Authorization extends AgUiAuthorization>(
   input: ParsedAgUiInput,
   authorization: Authorization,
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
   signal: AbortSignal,
+): Promise<AgUiPreparedInput> {
+  if (!options.input?.project)
+    return {
+      messages: defaultAgUiInput(input, limits),
+      frontendTools: [],
+      serverTools: await prepareMcpTools(input, authorization, options, limits, signal),
+    };
+  const policyInput = { request: input, authorization, signal };
+  const frontendTools = input.tools.length === 0 ? [] : await options.input.frontendTools?.(policyInput);
+  if (input.tools.length > 0 && !frontendTools) throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "Frontend tools are unavailable");
+  const approved = validateFrontendTools(frontendTools ?? [], input, limits);
+  const projected = await options.input.project({ ...policyInput, frontendTools: approved });
+  if (!projected) throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "Input is unavailable");
+  assertBoundedJson(projected.messages, limits.maxInputTextBytes, limits, "projected messages");
+  const selected = projected.frontendTools === undefined ? approved : validateFrontendTools(projected.frontendTools, input, limits);
+  return {
+    messages: projected.messages,
+    frontendTools: selected,
+    serverTools: await prepareMcpTools(input, authorization, options, limits, signal),
+  };
+}
+
+async function prepareMcpTools<Authorization extends AgUiAuthorization>(
+  input: ParsedAgUiInput,
+  authorization: Authorization,
+  options: CreateAgUiHandlerOptions<Authorization>,
+  limits: ResolvedAgUiLimits,
+  signal: AbortSignal,
+): Promise<readonly import("@arnilo/prism").ToolDefinition[]> {
+  if (options.a2a) return [];
+  let tools: readonly import("@arnilo/prism").ToolDefinition[] = [];
+  try {
+    tools = (await options.mcp?.prepare({ request: input, authorization, signal, maxTools: limits.maxInputTools })) ?? [];
+  } catch {
+    throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "MCP tools are unavailable");
+  }
+  if (tools.length > limits.maxInputTools) throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Too many MCP tools");
+  return tools;
+}
+
+function validateFrontendTools(
+  handoffs: readonly AgUiFrontendToolHandoff[],
+  input: ParsedAgUiInput,
+  limits: ResolvedAgUiLimits,
+): readonly AgUiFrontendToolHandoff[] {
+  if (handoffs.length > limits.maxInputTools) throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Too many approved frontend tools");
+  const available = new Set(input.tools.map((tool) => tool.name));
+  const names = new Set<string>();
+  for (const handoff of handoffs) {
+    if (handoff?.execution !== "client" || typeof handoff.name !== "string" || !available.has(handoff.name) || names.has(handoff.name)) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Invalid frontend tool handoff");
+    }
+    names.add(handoff.name);
+  }
+  return handoffs.map((handoff) => ({ name: handoff.name, execution: "client" }));
+}
+
+async function* startSource<Authorization extends AgUiAuthorization>(
+  input: ParsedAgUiInput,
+  prepared: AgUiPreparedInput,
+  authorization: Authorization,
+  options: CreateAgUiHandlerOptions<Authorization>,
+  limits: ResolvedAgUiLimits,
+  signal: AbortSignal,
 ): AsyncGenerator<AGUIEvent> {
-  const session = await options.sessionFactory({ threadId: input.threadId, authorization, signal });
+  if (options.a2a) {
+    yield* options.a2a.stream({ request: input, authorization, signal, threadId: input.threadId, runId: input.runId });
+    return;
+  }
+  const session = await options.sessionFactory({ threadId: input.threadId, authorization, signal, input: prepared });
   yield* mapped(
-    session.stream(input.userText!, {
+    session.stream(prepared.messages, {
       ownership: authorization.ownership,
       redactor: options.redactor,
       signal,
@@ -154,11 +390,8 @@ async function resumeSource<Authorization extends AgUiAuthorization>(
   const protocolRunId = input.parentRunId ?? input.runId;
   const run = await resolveRun(options.resolveRun, { threadId: input.threadId, runId: protocolRunId, authorization, signal });
   const status = await options.lifecycle.status(run.ref, { ownership: authorization.ownership, agentId: run.agentId, signal });
-  const entry = input.resume.length === 1 ? input.resume[0]! : undefined;
-  if (!entry || status.state.status !== "suspended" || entry.interruptId !== interruptId(protocolRunId, status.version)) {
-    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume does not match the pending interrupt");
-  }
-  const decision = resumeDecision(entry);
+  if (status.state.status !== "suspended") throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume does not match the pending interrupt");
+  const decision = await resumeDecision(input, authorization, run, status, protocolRunId, options, signal);
   return mapped(
     options.lifecycle.resumeStream(
       run.ref,
@@ -179,6 +412,34 @@ async function resumeSource<Authorization extends AgUiAuthorization>(
   );
 }
 
+async function resumeDecision<Authorization extends AgUiAuthorization>(
+  input: ParsedAgUiInput,
+  authorization: Authorization,
+  run: AgUiRunReference,
+  status: AgentRunStatusResult,
+  protocolRunId: string,
+  options: CreateAgUiHandlerOptions<Authorization>,
+  signal: AbortSignal,
+): Promise<"approve" | "deny"> {
+  const expectedInterruptId = interruptId(protocolRunId, status.version);
+  if (hasEditedArgs(input.resume)) return "deny";
+  if (!options.interrupts?.resume) {
+    const entry = input.resume.length === 1 ? input.resume[0] : undefined;
+    if (!entry || entry.interruptId !== expectedInterruptId)
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume does not match the pending interrupt");
+    return simpleResumeDecision(entry);
+  }
+  const resolved = await options.interrupts.resume({ request: input, authorization, run, status, expectedInterruptId, signal });
+  if (
+    !resolved ||
+    (resolved.decision !== "approve" && resolved.decision !== "deny") ||
+    (resolved.expectedVersion !== undefined && resolved.expectedVersion !== status.version)
+  ) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Interrupt resolution is invalid");
+  }
+  return resolved.decision;
+}
+
 async function* replaySource<Authorization extends AgUiAuthorization>(
   input: ParsedAgUiInput,
   cursor: string,
@@ -187,12 +448,33 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
   limits: ResolvedAgUiLimits,
   signal: AbortSignal,
 ): AsyncGenerator<AGUIEvent> {
-  const page = await options.replay!.page({ threadId: input.threadId, runId: input.runId, cursor, authorization, signal });
+  const request = { threadId: input.threadId, runId: input.runId, cursor, authorization, signal };
   const mapper = mapperFor(input, options, limits);
+  if (options.replay!.subscribe) {
+    for await (const item of options.replay!.subscribe(request)) {
+      const mappedEvents = mapper.map(item.record.event);
+      if (mappedEvents.length === 0) {
+        yield tagged(
+          event({ type: EventType.CUSTOM, name: "prism.replay_cursor", value: { cursor: item.cursor } }),
+          item.record.id,
+          item.cursor,
+        );
+      } else {
+        for (const mappedEvent of mappedEvents) yield tagged(mappedEvent, item.record.id, item.cursor);
+      }
+      if (item.record.event.type === "agent_suspended") {
+        yield tagged(await interruptEvent(input, item.record.event, options, limits), item.record.id, item.cursor);
+        return;
+      }
+    }
+    return;
+  }
+
+  const page = await options.replay!.page(request);
   for (const record of page.records) {
-    for (const event of mapper.map(record.event)) yield tagged(event, record.id);
+    for (const mappedEvent of mapper.map(record.event)) yield tagged(mappedEvent, record.id);
     if (record.event.type === "agent_suspended") {
-      yield interruptEvent(input, record.event, options.redactor);
+      yield await interruptEvent(input, record.event, options, limits);
       return;
     }
   }
@@ -201,7 +483,12 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
     return;
   }
   if (page.terminal) return;
-  const session = await options.sessionFactory({ threadId: input.threadId, authorization, signal });
+  const session = await options.sessionFactory({
+    threadId: input.threadId,
+    authorization,
+    signal,
+    input: await prepareInput(input, authorization, options, limits, signal),
+  });
   if (session.id !== page.run.ref.sessionId) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay session mismatch");
   yield* mapped(
     filterRun(session.subscribe({ maxQueuedEvents: limits.maxQueuedEvents, overflow: "close" }), page.run.ref.runId),
@@ -234,7 +521,7 @@ async function* mapped<Authorization extends AgUiAuthorization>(
         authorization,
         signal,
       });
-      yield interruptEvent(input, prismEvent, options.redactor);
+      yield await interruptEvent(input, prismEvent, options, limits);
       return;
     }
   }
@@ -249,16 +536,14 @@ function mapperFor<Authorization extends AgUiAuthorization>(
     redactor: options.redactor,
     projection: options.projection,
     limits,
+    activity: options.mcp?.activity,
     threadId: () => input.threadId,
     runId: () => input.runId,
   };
   return createAgUiEventMapper(mapperOptions);
 }
 
-/**
- * Appends one bounded, redacted co-work page after the run stream. Pure read + map, so
- * resume/replay projects co-work state without duplicate side effects.
- */
+/** Appends one bounded, redacted co-work page after the run stream. */
 async function* withCoWork<Authorization extends AgUiAuthorization>(
   base: AsyncIterable<AGUIEvent>,
   input: ParsedAgUiInput,
@@ -292,7 +577,7 @@ async function resolveRun<Authorization extends AgUiAuthorization>(
   return run;
 }
 
-function resumeDecision(entry: { readonly status: string; readonly payload?: unknown }): "approve" | "deny" {
+function simpleResumeDecision(entry: { readonly status: string; readonly payload?: unknown }): "approve" | "deny" {
   if (entry.status === "cancelled") return "deny";
   const payload = entry.payload;
   if (
@@ -307,33 +592,54 @@ function resumeDecision(entry: { readonly status: string; readonly payload?: unk
   return (payload as { decision: "approve" | "deny" }).decision;
 }
 
-function interruptEvent(
+function hasEditedArgs(entries: readonly { readonly payload?: unknown }[]): boolean {
+  return entries.some(
+    (entry) =>
+      entry.payload &&
+      typeof entry.payload === "object" &&
+      !Array.isArray(entry.payload) &&
+      (Object.hasOwn(entry.payload, "editedArgs") || Object.hasOwn(entry.payload, "args")),
+  );
+}
+
+async function interruptEvent<Authorization extends AgUiAuthorization>(
   input: ParsedAgUiInput,
   eventValue: Extract<AgentEvent, { readonly type: "agent_suspended" }>,
-  redactor?: SecretRedactor,
-): AGUIEvent {
-  const interruption = redactor?.redact(eventValue.interruption) ?? eventValue.interruption;
+  options: CreateAgUiHandlerOptions<Authorization>,
+  limits: ResolvedAgUiLimits,
+): Promise<AGUIEvent> {
+  const interruption = options.redactor?.redact(eventValue.interruption) ?? eventValue.interruption;
+  const requiredId = interruptId(input.parentRunId ?? input.runId, eventValue.version);
+  let interrupts: readonly Interrupt[] | undefined;
+  try {
+    interrupts = options.projection?.interrupt?.({ ...eventValue, interruption });
+  } catch {
+    interrupts = undefined;
+  }
+  const fallback: readonly Interrupt[] = [
+    {
+      id: requiredId,
+      reason: boundedText(interruption.reason, limits.maxErrorBytes),
+      message: boundedText(interruption.reason, limits.maxErrorBytes),
+      ...(interruption.toolCallId ? { toolCallId: interruption.toolCallId } : {}),
+      responseSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["decision"],
+        properties: { decision: { enum: ["approve", "deny"] } },
+      },
+    },
+  ];
+  const selected = interrupts ?? fallback;
+  if (selected.length === 0 || selected.length > limits.maxInputInterrupts || !selected.some((interrupt) => interrupt.id === requiredId)) {
+    throw new AgUiError("ERR_PRISM_AG_UI_EVENT", "Interrupt projection must retain the current interrupt");
+  }
+  assertBoundedJson(selected, limits.maxStateBytes, limits, "interrupts");
   return event({
     type: EventType.RUN_FINISHED,
     threadId: input.threadId,
     runId: input.runId,
-    outcome: {
-      type: "interrupt",
-      interrupts: [
-        {
-          id: interruptId(input.parentRunId ?? input.runId, eventValue.version),
-          reason: boundedText(interruption.reason, 8 * 1024),
-          message: boundedText(interruption.reason, 8 * 1024),
-          ...(interruption.toolCallId ? { toolCallId: interruption.toolCallId } : {}),
-          responseSchema: {
-            type: "object",
-            additionalProperties: false,
-            required: ["decision"],
-            properties: { decision: { enum: ["approve", "deny"] } },
-          },
-        },
-      ],
-    },
+    outcome: { type: "interrupt", interrupts: selected },
   });
 }
 
@@ -347,8 +653,8 @@ function event(value: unknown): AGUIEvent {
   return parsed.data;
 }
 
-function tagged(value: AGUIEvent, id: string): AGUIEvent {
-  return event({ ...value, prismEventId: id });
+function tagged(value: AGUIEvent, id: string, cursor?: string): AGUIEvent {
+  return event({ ...value, prismEventId: id, ...(cursor === undefined ? {} : { prismCursor: cursor }) });
 }
 
 function sse(source: AsyncIterable<AGUIEvent>, owned: ReturnType<typeof requestSignal>, limits: ResolvedAgUiLimits): Response {
@@ -482,4 +788,12 @@ function boundedText(value: string, maxBytes: number): string {
     out += char;
   }
   return `${out}…`;
+}
+
+function hasMultimodalInput(value: AgentCapabilities["multimodal"] | undefined): boolean {
+  return Boolean(value?.input && Object.values(value.input).some((enabled) => enabled));
+}
+
+function hasHitl(value: AgentCapabilities["humanInTheLoop"] | undefined): boolean {
+  return Boolean(value && Object.entries(value).some(([key, enabled]) => key !== "approveWithEdits" && enabled));
 }

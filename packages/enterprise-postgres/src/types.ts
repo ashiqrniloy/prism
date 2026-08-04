@@ -1,4 +1,4 @@
-import type { OwnershipScope } from "@arnilo/prism";
+import type { OwnershipScope, ToolEffectStore } from "@arnilo/prism";
 import type { EvaluationStore } from "@arnilo/prism-evals";
 import type { ModelRouterStateStore } from "@arnilo/prism-model-router";
 import type { PolicyDecisionStore } from "@arnilo/prism-policy";
@@ -45,6 +45,8 @@ export interface PostgresEnterpriseState {
   readonly policy: PolicyDecisionStore;
   readonly evaluations: EvaluationStore;
   readonly workIdempotency: IdempotencyStore;
+  /** Durable generic effect claim/recovery store; work connectors retain workIdempotency. */
+  readonly toolEffects: ToolEffectStore;
   readonly modelRouter: ModelRouterStateStore;
   cleanup(input: EnterpriseStateCleanupInput): Promise<EnterpriseStateCleanupResult>;
   /** Ends only an adapter-owned pool. */

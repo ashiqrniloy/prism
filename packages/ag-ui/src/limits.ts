@@ -1,6 +1,6 @@
 import { AgUiError } from "./errors.js";
 
-/** Phase 7 frozen outbound projection caps. */
+/** Phase 7 frozen baseline transport caps. */
 export const DEFAULT_MAX_EVENT_BYTES = 64 * 1024;
 export const HARD_MAX_EVENT_BYTES = 1024 * 1024;
 export const DEFAULT_MAX_TEXT_BYTES = 64 * 1024;
@@ -26,6 +26,38 @@ export const HARD_MAX_QUEUED_EVENTS = 4096;
 export const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
 export const HARD_REQUEST_TIMEOUT_MS = 30 * 60_000;
 
+/** Full AG-UI request/projection caps. They can narrow but never exceed these hard limits. */
+export const DEFAULT_MAX_INPUT_TOOLS = 32;
+export const HARD_MAX_INPUT_TOOLS = 256;
+export const DEFAULT_MAX_INPUT_CONTEXTS = 32;
+export const HARD_MAX_INPUT_CONTEXTS = 256;
+export const DEFAULT_MAX_INPUT_INTERRUPTS = 8;
+export const HARD_MAX_INPUT_INTERRUPTS = 64;
+export const DEFAULT_MAX_INPUT_MEDIA_PARTS = 16;
+export const HARD_MAX_INPUT_MEDIA_PARTS = 64;
+export const DEFAULT_MAX_INPUT_MEDIA_BYTES = 64 * 1024;
+export const HARD_MAX_INPUT_MEDIA_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_INPUT_TOOL_BYTES = 16 * 1024;
+export const HARD_MAX_INPUT_TOOL_BYTES = 256 * 1024;
+export const DEFAULT_MAX_INPUT_CONTEXT_BYTES = 16 * 1024;
+export const HARD_MAX_INPUT_CONTEXT_BYTES = 256 * 1024;
+export const DEFAULT_MAX_STATE_BYTES = 64 * 1024;
+export const HARD_MAX_STATE_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_PATCH_OPERATIONS = 128;
+export const HARD_MAX_PATCH_OPERATIONS = 4096;
+export const DEFAULT_MAX_ACTIVITY_BYTES = 64 * 1024;
+export const HARD_MAX_ACTIVITY_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_REASONING_BYTES = 64 * 1024;
+export const HARD_MAX_REASONING_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_RAW_EVENT_BYTES = 64 * 1024;
+export const HARD_MAX_RAW_EVENT_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_JSON_DEPTH = 16;
+export const HARD_MAX_JSON_DEPTH = 64;
+export const DEFAULT_MAX_JSON_PROPERTIES = 128;
+export const HARD_MAX_JSON_PROPERTIES = 4096;
+export const DEFAULT_MAX_JSON_ARRAY_ITEMS = 512;
+export const HARD_MAX_JSON_ARRAY_ITEMS = 8192;
+
 export interface AgUiLimitOptions {
   readonly maxEventBytes?: number;
   readonly maxTextBytes?: number;
@@ -39,6 +71,21 @@ export interface AgUiLimitOptions {
   readonly maxStreamBytes?: number;
   readonly maxQueuedEvents?: number;
   readonly requestTimeoutMs?: number;
+  readonly maxInputTools?: number;
+  readonly maxInputContexts?: number;
+  readonly maxInputInterrupts?: number;
+  readonly maxInputMediaParts?: number;
+  readonly maxInputMediaBytes?: number;
+  readonly maxInputToolBytes?: number;
+  readonly maxInputContextBytes?: number;
+  readonly maxStateBytes?: number;
+  readonly maxPatchOperations?: number;
+  readonly maxActivityBytes?: number;
+  readonly maxReasoningBytes?: number;
+  readonly maxRawEventBytes?: number;
+  readonly maxJsonDepth?: number;
+  readonly maxJsonProperties?: number;
+  readonly maxJsonArrayItems?: number;
 }
 
 export interface ResolvedAgUiLimits {
@@ -54,6 +101,21 @@ export interface ResolvedAgUiLimits {
   readonly maxStreamBytes: number;
   readonly maxQueuedEvents: number;
   readonly requestTimeoutMs: number;
+  readonly maxInputTools: number;
+  readonly maxInputContexts: number;
+  readonly maxInputInterrupts: number;
+  readonly maxInputMediaParts: number;
+  readonly maxInputMediaBytes: number;
+  readonly maxInputToolBytes: number;
+  readonly maxInputContextBytes: number;
+  readonly maxStateBytes: number;
+  readonly maxPatchOperations: number;
+  readonly maxActivityBytes: number;
+  readonly maxReasoningBytes: number;
+  readonly maxRawEventBytes: number;
+  readonly maxJsonDepth: number;
+  readonly maxJsonProperties: number;
+  readonly maxJsonArrayItems: number;
 }
 
 export const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits = {
@@ -69,6 +131,21 @@ export const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits = {
   maxStreamBytes: DEFAULT_MAX_STREAM_BYTES,
   maxQueuedEvents: DEFAULT_MAX_QUEUED_EVENTS,
   requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+  maxInputTools: DEFAULT_MAX_INPUT_TOOLS,
+  maxInputContexts: DEFAULT_MAX_INPUT_CONTEXTS,
+  maxInputInterrupts: DEFAULT_MAX_INPUT_INTERRUPTS,
+  maxInputMediaParts: DEFAULT_MAX_INPUT_MEDIA_PARTS,
+  maxInputMediaBytes: DEFAULT_MAX_INPUT_MEDIA_BYTES,
+  maxInputToolBytes: DEFAULT_MAX_INPUT_TOOL_BYTES,
+  maxInputContextBytes: DEFAULT_MAX_INPUT_CONTEXT_BYTES,
+  maxStateBytes: DEFAULT_MAX_STATE_BYTES,
+  maxPatchOperations: DEFAULT_MAX_PATCH_OPERATIONS,
+  maxActivityBytes: DEFAULT_MAX_ACTIVITY_BYTES,
+  maxReasoningBytes: DEFAULT_MAX_REASONING_BYTES,
+  maxRawEventBytes: DEFAULT_MAX_RAW_EVENT_BYTES,
+  maxJsonDepth: DEFAULT_MAX_JSON_DEPTH,
+  maxJsonProperties: DEFAULT_MAX_JSON_PROPERTIES,
+  maxJsonArrayItems: DEFAULT_MAX_JSON_ARRAY_ITEMS,
 };
 
 export const HARD_AG_UI_LIMITS: ResolvedAgUiLimits = {
@@ -84,37 +161,36 @@ export const HARD_AG_UI_LIMITS: ResolvedAgUiLimits = {
   maxStreamBytes: HARD_MAX_STREAM_BYTES,
   maxQueuedEvents: HARD_MAX_QUEUED_EVENTS,
   requestTimeoutMs: HARD_REQUEST_TIMEOUT_MS,
+  maxInputTools: HARD_MAX_INPUT_TOOLS,
+  maxInputContexts: HARD_MAX_INPUT_CONTEXTS,
+  maxInputInterrupts: HARD_MAX_INPUT_INTERRUPTS,
+  maxInputMediaParts: HARD_MAX_INPUT_MEDIA_PARTS,
+  maxInputMediaBytes: HARD_MAX_INPUT_MEDIA_BYTES,
+  maxInputToolBytes: HARD_MAX_INPUT_TOOL_BYTES,
+  maxInputContextBytes: HARD_MAX_INPUT_CONTEXT_BYTES,
+  maxStateBytes: HARD_MAX_STATE_BYTES,
+  maxPatchOperations: HARD_MAX_PATCH_OPERATIONS,
+  maxActivityBytes: HARD_MAX_ACTIVITY_BYTES,
+  maxReasoningBytes: HARD_MAX_REASONING_BYTES,
+  maxRawEventBytes: HARD_MAX_RAW_EVENT_BYTES,
+  maxJsonDepth: HARD_MAX_JSON_DEPTH,
+  maxJsonProperties: HARD_MAX_JSON_PROPERTIES,
+  maxJsonArrayItems: HARD_MAX_JSON_ARRAY_ITEMS,
 };
 
 export function resolveAgUiLimits(options: AgUiLimitOptions = {}): ResolvedAgUiLimits {
-  return {
-    maxEventBytes: validate("maxEventBytes", options.maxEventBytes ?? DEFAULT_MAX_EVENT_BYTES),
-    maxTextBytes: validate("maxTextBytes", options.maxTextBytes ?? DEFAULT_MAX_TEXT_BYTES),
-    maxErrorBytes: validate("maxErrorBytes", options.maxErrorBytes ?? DEFAULT_MAX_ERROR_BYTES),
-    maxRequestBytes: validate("maxRequestBytes", options.maxRequestBytes ?? DEFAULT_MAX_REQUEST_BYTES),
-    maxInputMessages: validate("maxInputMessages", options.maxInputMessages ?? DEFAULT_MAX_INPUT_MESSAGES),
-    maxInputTextBytes: validate("maxInputTextBytes", options.maxInputTextBytes ?? DEFAULT_MAX_INPUT_TEXT_BYTES),
-    maxCursorBytes: validate("maxCursorBytes", options.maxCursorBytes ?? DEFAULT_MAX_CURSOR_BYTES),
-    maxReplayEvents: validate("maxReplayEvents", options.maxReplayEvents ?? DEFAULT_MAX_REPLAY_EVENTS),
-    maxStreamEvents: validate("maxStreamEvents", options.maxStreamEvents ?? DEFAULT_MAX_STREAM_EVENTS),
-    maxStreamBytes: validate("maxStreamBytes", options.maxStreamBytes ?? DEFAULT_MAX_STREAM_BYTES),
-    maxQueuedEvents: validate("maxQueuedEvents", options.maxQueuedEvents ?? DEFAULT_MAX_QUEUED_EVENTS),
-    requestTimeoutMs: validate("requestTimeoutMs", options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS),
-  };
+  return Object.fromEntries(
+    Object.entries(DEFAULT_AG_UI_LIMITS).map(([name, defaultValue]) => [
+      name,
+      validate(name as keyof ResolvedAgUiLimits, options[name as keyof AgUiLimitOptions] ?? defaultValue),
+    ]),
+  ) as unknown as ResolvedAgUiLimits;
 }
 
 function validate(name: keyof ResolvedAgUiLimits, value: number): number {
   const hard = HARD_AG_UI_LIMITS[name];
   const minimum =
-    name === "maxEventBytes" ||
-    name === "maxRequestBytes" ||
-    name === "maxInputTextBytes" ||
-    name === "maxCursorBytes" ||
-    name === "maxStreamBytes"
-      ? 1_024
-      : name === "maxTextBytes" || name === "maxErrorBytes"
-        ? 16
-        : 1;
+    name.endsWith("Bytes") || name === "requestTimeoutMs" ? (name === "maxTextBytes" || name === "maxErrorBytes" ? 16 : 1_024) : 1;
   if (!Number.isSafeInteger(value) || value < minimum || value > hard) {
     throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", `${name} must be a safe integer from ${minimum} through ${hard}`);
   }

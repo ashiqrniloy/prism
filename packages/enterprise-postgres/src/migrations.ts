@@ -1,13 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
-import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl } from "./ddl.js";
+import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl, buildEnterpriseMigration002Ddl } from "./ddl.js";
 import { EnterprisePostgresError, asEnterprisePostgresError } from "./errors.js";
 import { ENTERPRISE_MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
 interface EnterpriseMigration {
-  readonly name: "001_enterprise_state";
-  readonly version: "1";
+  readonly name: "001_enterprise_state" | "002_tool_effects";
+  readonly version: "1" | "2";
   readonly checksum: string;
+  readonly ddl: (schema: string) => string;
 }
 
 interface AppliedEnterpriseMigration {
@@ -38,11 +39,20 @@ interface ExpectedIndex {
 
 type Queryable = Pick<Pool, "query"> | PoolClient;
 
-const MIGRATION: EnterpriseMigration = {
-  name: "001_enterprise_state",
-  version: "1",
-  checksum: createHash("sha256").update(buildEnterpriseMigration001Ddl("prism"), "utf8").digest("hex"),
-};
+const MIGRATIONS: readonly EnterpriseMigration[] = [
+  {
+    name: "001_enterprise_state",
+    version: "1",
+    checksum: createHash("sha256").update(buildEnterpriseMigration001Ddl("prism"), "utf8").digest("hex"),
+    ddl: buildEnterpriseMigration001Ddl,
+  },
+  {
+    name: "002_tool_effects",
+    version: "2",
+    checksum: createHash("sha256").update(buildEnterpriseMigration002Ddl("prism"), "utf8").digest("hex"),
+    ddl: buildEnterpriseMigration002Ddl,
+  },
+];
 
 const OWNER_COLUMNS = [
   { name: "tenant_id", type: "text", nullable: false },
@@ -120,6 +130,29 @@ const EXPECTED_TABLES: readonly ExpectedTable[] = [
       { name: "expires_at", type: "timestamp with time zone", nullable: true },
     ],
     primaryKey: ["tenant_id", "account_key", "user_key", "principal_id", "idempotency_key"],
+  },
+  {
+    name: "prism_tool_effects",
+    columns: [
+      ...ROUTER_OWNER_COLUMNS,
+      { name: "effect_key", type: "text", nullable: false },
+      { name: "session_id", type: "text", nullable: false },
+      { name: "run_id", type: "text", nullable: false },
+      { name: "tool_call_id", type: "text", nullable: false },
+      { name: "tool_name", type: "text", nullable: false },
+      { name: "arguments_hash", type: "text", nullable: false },
+      { name: "status", type: "text", nullable: false },
+      { name: "attempt", type: "integer", nullable: false },
+      { name: "version", type: "integer", nullable: false },
+      { name: "claim_token", type: "text", nullable: true },
+      { name: "result", type: "jsonb", nullable: true },
+      { name: "result_ref", type: "text", nullable: true },
+      { name: "failure", type: "jsonb", nullable: true },
+      { name: "created_at", type: "timestamp with time zone", nullable: false },
+      { name: "updated_at", type: "timestamp with time zone", nullable: false },
+      { name: "expires_at", type: "timestamp with time zone", nullable: true },
+    ],
+    primaryKey: ["tenant_id", "account_key", "user_key", "principal_id", "effect_key"],
   },
   {
     name: "prism_model_router_budgets",
@@ -221,6 +254,18 @@ const EXPECTED_INDEXES: readonly ExpectedIndex[] = [
     partial: true,
   },
   {
+    name: "prism_tool_effects_expiry_idx",
+    table: "prism_tool_effects",
+    columns: [...ROUTER_OWNER_COLUMNS.map((column) => column.name), "status", "expires_at", "effect_key"],
+    partial: true,
+  },
+  {
+    name: "prism_tool_effects_cleanup_idx",
+    table: "prism_tool_effects",
+    columns: [...OWNER_COLUMNS.map((column) => column.name), "status", "updated_at", "effect_key"],
+    partial: true,
+  },
+  {
     name: "prism_model_router_budgets_expiry_idx",
     table: "prism_model_router_budgets",
     columns: [...ROUTER_OWNER_COLUMNS.map((column) => column.name), "expires_at"],
@@ -248,12 +293,12 @@ export async function applyEnterpriseMigrations(pool: Pool, schema: string): Pro
     await client.query("SELECT pg_advisory_xact_lock($1, $2)", [ENTERPRISE_MIGRATION_LOCK_NAMESPACE, schemaAdvisoryLockKey(schema)]);
     const applied = await listAppliedMigrations(client, schema);
     assertEnterpriseMigrationHistory(applied);
-    if (applied.length === 0) {
-      await client.query(buildEnterpriseMigration001Ddl(schema));
+    for (const migration of MIGRATIONS.slice(applied.length)) {
+      await client.query(migration.ddl(schema));
       await client.query(
         `INSERT INTO ${qualifyTable(schema, "prism_enterprise_migrations")} (id, name, version, checksum, applied_at)
          VALUES ($1, $2, $3, $4, clock_timestamp())`,
-        [randomUUID(), MIGRATION.name, MIGRATION.version, MIGRATION.checksum],
+        [randomUUID(), migration.name, migration.version, migration.checksum],
       );
     }
     await assertEnterpriseSchemaReady(client, schema);
@@ -273,10 +318,11 @@ export async function applyEnterpriseMigrations(pool: Pool, schema: string): Pro
 
 /** Verify ordered checksum-protected history. Exported for package-local migration tests only. */
 export function assertEnterpriseMigrationHistory(applied: readonly AppliedEnterpriseMigration[]): void {
-  if (applied.length !== 0 && applied.length !== 1) migrationError();
-  if (applied.length === 0) return;
-  const row = applied[0]!;
-  if (row.name !== MIGRATION.name || row.version !== MIGRATION.version || row.checksum !== MIGRATION.checksum) migrationError();
+  if (applied.length > MIGRATIONS.length) migrationError();
+  for (const [index, row] of applied.entries()) {
+    const expected = MIGRATIONS[index];
+    if (!expected || row.name !== expected.name || row.version !== expected.version || row.checksum !== expected.checksum) migrationError();
+  }
 }
 
 /** Verify required table/column/key/index catalog shape before runtime writes. */

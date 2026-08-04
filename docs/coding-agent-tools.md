@@ -491,6 +491,8 @@ Packed capability demo: `examples/coding-tools-capability-gaps.ts` (search modes
 - **`ToolsOptions`** and the per-tool option types are exported from the package barrel for host configuration.
 - No auto-discovery or manifest registration: import and register explicitly. This package registers no extensions and owns no globals (the mutation queue is a process-wide per-path map — see `ponytail:` note in the source).
 
+Read/list/search/glob are observation effects; write/edit/delete/move are optional local mutations; shell/check are unsupported external mutations. `reconcileCodingToolEffect` proves local postconditions or returns `unknown`. See [tool effects](tool-effects.md).
+
 ## Security and performance notes
 
 - **Host shell/filesystem access.** These tools run real commands and read/write/list/search/glob/delete/move real files. They provide **no sandbox**. Gate them with Prism `PermissionPolicy` / `ToolValidator` / trust policies before registering them for any provider turn. Shared `executionPolicy` applies to both full and read-only aggregators before filesystem/process side effects. See [Host security guide](host-security.md) and [Security/auth/trust](settings-auth-trust-security.md).

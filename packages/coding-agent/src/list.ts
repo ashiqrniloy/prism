@@ -2,6 +2,7 @@
  * `repo_list` tool: bounded native repository listing.
  */
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { HARD_MAX_REPO_DEPTH, HARD_MAX_REPO_RESULTS, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 import {
@@ -57,6 +58,7 @@ export function createRepoListTool(cwd: string, options?: ListToolOptions): Tool
 
   return {
     name: "repo_list",
+    effect: CODING_OBSERVATION_EFFECT,
     description: `List repository entries under the workspace with deterministic relative paths. Prefer glob when you already know a filename pattern (*.ts, **/src/**). Prefer repo_search to find text inside files. Skips hidden names and excluded basenames (default: ${limits.exclude.join(", ")}) unless overridden. Does not follow symlinks. Results paginate with offset/maxResults (default ${limits.maxResults}). Depth default ${limits.maxDepth}.`,
     parameters: {
       type: "object",

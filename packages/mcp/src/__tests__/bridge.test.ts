@@ -109,6 +109,42 @@ describe("attachMcpToolBridge", () => {
     assert.throws(() => bridge.tools, McpBridgeClosedError);
   });
 
+  it("requires host effect policy and never trusts remote descriptions", async () => {
+    const fixture = await createFixture([
+      { name: "read_claim", description: "read-only and idempotent", handler: async () => "ok" },
+      { name: "mutate", handler: async () => "ok" },
+    ]);
+    fixtures.push(fixture);
+    const defaultBridge = await attachMcpToolBridge(fixture.client, fixture.clientTransport, { serverId: "review" });
+    assert.deepEqual(
+      defaultBridge.tools.map((tool) => tool.effect),
+      [
+        { kind: "external_mutation", idempotency: "unsupported" },
+        { kind: "external_mutation", idempotency: "unsupported" },
+      ],
+    );
+    await defaultBridge.close();
+
+    const reviewed = await createFixture([
+      { name: "read_claim", description: "read-only and idempotent", handler: async () => "ok" },
+      { name: "mutate", handler: async () => "ok" },
+    ]);
+    fixtures.push(reviewed);
+    const bridge = await attachMcpToolBridge(reviewed.client, reviewed.clientTransport, {
+      serverId: "review",
+      effect: ({ remoteName }) =>
+        remoteName === "read_claim" ? { kind: "none", idempotency: "none" } : { kind: "external_mutation", idempotency: "required" },
+    });
+    assert.deepEqual(
+      bridge.tools.map((tool) => tool.effect),
+      [
+        { kind: "none", idempotency: "none" },
+        { kind: "external_mutation", idempotency: "required" },
+      ],
+    );
+    await bridge.close();
+  });
+
   it("returns tool errors from MCP isError responses", async () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     const server = new McpServer(
@@ -315,6 +351,102 @@ describe("attachMcpToolBridge", () => {
     assert.equal(result.error, undefined);
     assert.equal(result.content?.[0]?.type, "text");
     await bridge.close();
+  });
+});
+
+describe("MCP Apps bridge", () => {
+  it("negotiates, hides app-only tools, preserves nested metadata, and reads bounded HTML", async () => {
+    const client = {
+      getServerCapabilities: () => ({ extensions: { "io.modelcontextprotocol/ui": {} } }),
+      setNotificationHandler: () => undefined,
+      close: async () => undefined,
+      request: async (request: { method: string; params?: { uri?: string } }) => {
+        if (request.method === "tools/list")
+          return {
+            tools: [
+              {
+                name: "weather",
+                description: "weather",
+                inputSchema: { type: "object" },
+                _meta: { ui: { resourceUri: "ui://weather/view", visibility: ["model", "app"] }, "ui/resourceUri": "ui://ignored/flat" },
+              },
+              {
+                name: "refresh",
+                inputSchema: { type: "object" },
+                _meta: { ui: { resourceUri: "ui://weather/view", visibility: ["app"] } },
+              },
+            ],
+          };
+        if (request.method === "resources/list")
+          return {
+            resources: [
+              {
+                uri: "ui://weather/view",
+                name: "weather",
+                mimeType: "text/html;profile=mcp-app",
+                _meta: { ui: { csp: { connectDomains: ["https://list.example"] } } },
+              },
+            ],
+          };
+        if (request.method === "resources/read")
+          return {
+            contents: [
+              {
+                uri: request.params?.uri,
+                mimeType: "text/html;profile=mcp-app",
+                text: "<!doctype html><html><body>safe</body></html>",
+                _meta: { ui: { csp: { connectDomains: ["https://read.example"] }, prefersBorder: true } },
+              },
+            ],
+          };
+        if (request.method === "tools/call") return { content: [{ type: "text", text: "ok" }] };
+        throw new Error(`unexpected ${request.method}`);
+      },
+    } as unknown as Client;
+    const bridge = await attachMcpToolBridge(
+      client,
+      { close: async () => undefined } as unknown as import("@modelcontextprotocol/sdk/shared/transport.js").Transport,
+      {
+        serverId: "weather",
+        mcpApps: true,
+      },
+    );
+    assert.deepEqual(
+      bridge.tools.map((tool) => tool.name),
+      ["mcp:weather:weather"],
+    );
+    assert.deepEqual(
+      bridge.apps?.tools.map((tool) => [tool.name, tool.resourceUri, tool.visibility]),
+      [
+        ["weather", "ui://weather/view", ["model", "app"]],
+        ["refresh", "ui://weather/view", ["app"]],
+      ],
+    );
+    const listed = await bridge.apps!.listResources();
+    assert.equal(listed[0]?.uri, "ui://weather/view");
+    const resource = await bridge.apps!.readResource("ui://weather/view");
+    assert.equal(resource.html.includes("<html"), true);
+    assert.deepEqual(resource.ui?.csp?.connectDomains, ["https://read.example"]);
+    const result = await bridge.apps!.callTool("refresh", {}, executionContext);
+    assert.equal(result.name, "mcp:weather:refresh");
+  });
+
+  it("requires a remote MCP Apps extension acknowledgement", async () => {
+    const client = {
+      getServerCapabilities: () => ({}),
+      setNotificationHandler: () => undefined,
+    } as unknown as Client;
+    await assert.rejects(
+      attachMcpToolBridge(
+        client,
+        { close: async () => undefined } as unknown as import("@modelcontextprotocol/sdk/shared/transport.js").Transport,
+        {
+          serverId: "weather",
+          mcpApps: true,
+        },
+      ),
+      /not negotiated/,
+    );
   });
 });
 

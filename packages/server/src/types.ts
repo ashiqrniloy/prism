@@ -1,4 +1,14 @@
-import type { Agent, AgentIdentity, AgentRunLifecycle, AgentSession, OwnershipScope, RunOptions, SecretRedactor } from "@arnilo/prism";
+import type {
+  Agent,
+  AgentEventSource,
+  AgentIdentity,
+  AgentRunLifecycle,
+  AgentRunRef,
+  AgentSession,
+  OwnershipScope,
+  RunOptions,
+  SecretRedactor,
+} from "@arnilo/prism";
 import type { RunWorkflowOptions, WorkflowCheckpointAdapter, WorkflowDefinition, WorkflowSchedules } from "@arnilo/prism-workflows";
 import type { PrismDrainController } from "./drain.js";
 import type { PrismServerLimits } from "./limits.js";
@@ -9,6 +19,7 @@ export type PrismServerOperation =
   | "agent.stream"
   | "agent.status"
   | "agent.resume"
+  | "agent.events"
   | "workflow.run"
   | "workflow.stream"
   | "workflow.status"
@@ -41,9 +52,19 @@ export type PrismServerAuthorizer = (
   input: PrismServerAuthorizationInput,
 ) => false | PrismServerAuthorization | Promise<false | PrismServerAuthorization>;
 
+export interface PrismAgentEventResolutionInput {
+  readonly runId: string;
+  readonly authorization: PrismServerAuthorization;
+  readonly signal: AbortSignal;
+}
+
 export interface PrismAgentExposure {
   readonly sessionFactory: (authorization: PrismServerAuthorization) => AgentSession | Promise<AgentSession>;
   readonly runOptions?: Omit<RunOptions, "ownership" | "signal" | "redactor">;
+  /** Optional durable cross-replica event source. Requires resolveRun. */
+  readonly events?: AgentEventSource;
+  /** Resolves an authorized public run selector to exact internal session/run IDs. */
+  readonly resolveRun?: (input: PrismAgentEventResolutionInput) => AgentRunRef | undefined | Promise<AgentRunRef | undefined>;
 }
 
 /** Explicit durable status/resume capability. Omit it to expose no agent lifecycle routes. */

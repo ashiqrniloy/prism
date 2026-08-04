@@ -71,7 +71,7 @@ describe("tooling gates fail on violations", () => {
     const inventory = JSON.parse(readFileSync("scripts/enterprise-postgres-sql-inventory.json", "utf8"));
     assert.deepEqual(inventory.requestPath.verbs, ["SELECT", "INSERT", "UPDATE", "DELETE"]);
     assert.ok(inventory.requestPath.forbidden.includes("DROP"));
-    const requestSources = ["policy", "evaluations", "work-idempotency", "model-router", "cleanup"]
+    const requestSources = ["policy", "evaluations", "work-idempotency", "tool-effects", "model-router", "cleanup"]
       .map((name) => readFileSync(`packages/enterprise-postgres/src/${name}.ts`, "utf8"))
       .join("\n");
     assert.doesNotMatch(requestSources, /\b(?:CREATE|ALTER|DROP|TRUNCATE|GRANT)\s+(?:SCHEMA|TABLE|INDEX)\b/);

@@ -4,6 +4,7 @@ import {
   type Agent,
   type AIProvider,
   createAgent,
+  createMemoryToolEffectStore,
   createMockProvider,
   createSecretRedactor,
   providerDone,
@@ -87,6 +88,60 @@ describe("createSupervisor", () => {
     await narrowed.delegate({ childId: "child", input: "original" });
     assert.match(seenInput, /modified/);
     assert.equal(executed, 0);
+  });
+
+  it("propagates parent identity and effect store into child tool dispatch", async () => {
+    const identity = {
+      tenantId: "tenant",
+      userId: "user",
+      principal: { kind: "user" as const, id: "user" },
+      scopes: ["tool:execute"],
+      issuedAt: "2026-08-04T00:00:00.000Z",
+      verified: true as const,
+    };
+    const effectStore = createMemoryToolEffectStore();
+    let childIdentity = "";
+    let seenKey = "";
+    let effectSessionId = "";
+    let effectRunId = "";
+    const supervisor = createSupervisor({
+      id: "root",
+      ownership,
+      identity,
+      effectStore,
+      children: {
+        child: {
+          createAgent: (context) => {
+            childIdentity = context.identity?.principal.id ?? "";
+            assert.strictEqual(context.effectStore, effectStore);
+            return createAgent({
+              model: { provider: "mock", model: "test" },
+              provider: createMockProvider([
+                providerToolCall({ type: "tool_call", id: "effect-1", name: "mutate", arguments: {} }),
+                providerDone(),
+              ]),
+              tools: [
+                {
+                  name: "mutate",
+                  effect: { kind: "external_mutation", idempotency: "required" },
+                  execute: (_args, execution) => {
+                    seenKey = execution.idempotencyKey ?? "";
+                    effectSessionId = execution.sessionId;
+                    effectRunId = execution.runId;
+                    return { toolCallId: execution.toolCallId, name: "mutate", value: "done" };
+                  },
+                },
+              ],
+            });
+          },
+        },
+      },
+    });
+    await supervisor.delegate({ childId: "child", input: "run" });
+    assert.equal(childIdentity, "user");
+    assert.match(seenKey, /^prism:tool-effect:v1:[a-f0-9]{64}$/);
+    assert.equal(effectSessionId, "root-1-session");
+    assert.ok(effectRunId.length > 0);
   });
 
   it("enforces nested cycle, depth, and active-child limits before execution", async () => {

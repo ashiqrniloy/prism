@@ -6,6 +6,14 @@
  */
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { type CodingCheckToolOptions, createCodingCheckTool, type NamedCheckDefinition } from "./checks.js";
+import {
+  classifyGitApplyEffect,
+  classifyGitBranchEffect,
+  classifyGitWorktreeEffect,
+  CODING_LOCAL_EFFECT,
+  CODING_OBSERVATION_EFFECT,
+  CODING_UNSUPPORTED_EFFECT,
+} from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
   type ArtifactWriter,
@@ -69,6 +77,7 @@ export function createGitStatusTool(cwd: string, options?: GitToolsOptions): Too
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_status",
+    effect: CODING_OBSERVATION_EFFECT,
     description:
       "Return structured Git status (porcelain v2) including branch metadata and dirty-state. Does not follow shell; paths are repository-relative.",
     parameters: {
@@ -118,6 +127,7 @@ export function createGitDiffTool(cwd: string, options?: GitToolsOptions): ToolD
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_diff",
+    effect: CODING_OBSERVATION_EFFECT,
     description:
       "Return a bounded unified diff (--no-ext-diff --no-textconv). Large diffs truncate inline and may spill through the host artifact writer.",
     parameters: {
@@ -176,6 +186,7 @@ export function createGitBranchTool(cwd: string, options?: GitToolsOptions): Too
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_branch",
+    effect: classifyGitBranchEffect,
     description: "Validate, list, create, or switch branches. Switch refuses a dirty worktree unless createCheckpoint=true.",
     exclusive: true,
     parameters: {
@@ -250,6 +261,7 @@ export function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): T
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_worktree",
+    effect: classifyGitWorktreeEffect,
     description: "List, add, or remove Git worktrees within finite caps. Prefer disposable worktrees for mutating transactions.",
     exclusive: true,
     parameters: {
@@ -315,6 +327,7 @@ export function createGitApplyTool(cwd: string, options?: GitToolsOptions): Tool
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_apply",
+    effect: classifyGitApplyEffect,
     description:
       "Check, apply, or reverse a unified patch. Always runs apply --check first for apply/reverse. Dirty trees require createCheckpoint=true; failures restore the checkpoint or clean tree.",
     exclusive: true,
@@ -386,6 +399,7 @@ export function createGitCommitTool(cwd: string, options?: GitToolsOptions): Too
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_commit",
+    effect: CODING_LOCAL_EFFECT,
     description:
       "Stage and commit explicit paths only (never `git add -A`). Refuses dirty unrelated worktrees unless createCheckpoint=true. Uses --no-verify and a temp message file; never pushes.",
     exclusive: true,
@@ -449,6 +463,7 @@ export function createGitPrHandoffTool(cwd: string, options?: GitToolsOptions): 
   const getOps = opsFactory(cwd, options);
   return {
     name: "git_pr_handoff",
+    effect: CODING_UNSUPPORTED_EFFECT,
     description:
       "Build a bounded host-owned PR handoff payload (base/head/commits/paths/diffstat/checks/artifact). Never pushes, authenticates, or opens a PR.",
     exclusive: true,

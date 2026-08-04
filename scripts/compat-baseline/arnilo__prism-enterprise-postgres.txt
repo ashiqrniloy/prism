@@ -2,7 +2,7 @@ DEFAULT_ENTERPRISE_POOL_MAX	export declare const DEFAULT_ENTERPRISE_POOL_MAX = 1
 DEFAULT_ENTERPRISE_SCHEMA	export declare const DEFAULT_ENTERPRISE_SCHEMA = "prism"
 ENTERPRISE_INDEX_NAMES	export declare const ENTERPRISE_INDEX_NAMES: readonly ["prism_policy_decisions_owner_created_idx", "prism_policy_decisions_owner_policy_created_idx", "prism_policy_decisions_owner_outcome_created_idx", "prism_evaluations_owner_created_idx", "prism_evaluations_owner_scorer_created_idx", "prism_evaluations_owner_session_created_idx", "prism_evaluations_owner_run_created_idx", "prism_evaluations_owner_experiment_created_idx", "prism_evaluations_owner_dataset_item_created_idx", "prism_work_idempoten
 ENTERPRISE_MIGRATION_LOCK_NAMESPACE	export declare const ENTERPRISE_MIGRATION_LOCK_NAMESPACE = 1701737586
-ENTERPRISE_TABLE_NAMES	export declare const ENTERPRISE_TABLE_NAMES: readonly ["prism_enterprise_migrations", "prism_policy_decisions", "prism_evaluations", "prism_work_idempotency", "prism_model_router_budgets", "prism_model_router_rates", "prism_model_router_circuits"]
+ENTERPRISE_TABLE_NAMES	export declare const ENTERPRISE_TABLE_NAMES: readonly ["prism_enterprise_migrations", "prism_policy_decisions", "prism_evaluations", "prism_work_idempotency", "prism_tool_effects", "prism_model_router_budgets", "prism_model_router_rates", "prism_model_router_circuits"]
 EnterprisePostgresError	export declare class EnterprisePostgresError extends Error
 EnterpriseStateCleanupInput	export type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult, PostgresEnterpriseState, PostgresEnterpriseStateOptions, } from "./types.js"
 EnterpriseStateCleanupResult	export type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult, PostgresEnterpriseState, PostgresEnterpriseStateOptions, } from "./types.js"
@@ -15,12 +15,15 @@ assertEnterpriseMigrationHistory	export declare function assertEnterpriseMigrati
 assertEnterpriseSchemaReady	export declare function assertEnterpriseSchemaReady(source: Queryable, schema: string): Promise<void>
 boundsError	export declare function boundsError(message: string): never
 buildEnterpriseMigration001Ddl	export declare function buildEnterpriseMigration001Ddl(schema: string): string
+buildEnterpriseMigration002Ddl	export declare function buildEnterpriseMigration002Ddl(schema: string): string
+cleanupExpiredPostgresToolEffects	export declare function cleanupExpiredPostgresToolEffects(pool: Pool, schema: string, input: CleanupScope): Promise<
 createEnterpriseStateCleanup	export declare function createEnterpriseStateCleanup(pool: Pool, schema: string): (input: EnterpriseStateCleanupInput) => Promise<EnterpriseStateCleanupResult>
 createPostgresEnterpriseState	export declare function createPostgresEnterpriseState(options: PostgresEnterpriseStateOptions): Promise<PostgresEnterpriseState>
 createPostgresEvaluationStore	export declare function createPostgresEvaluationStore(pool: Pool, schema: string): EvaluationStore
 createPostgresIdempotencyStore	export declare function createPostgresIdempotencyStore(pool: Pool, schema: string): IdempotencyStore
 createPostgresModelRouterStateStore	export declare function createPostgresModelRouterStateStore(pool: Pool, schema: string): ModelRouterStateStore
 createPostgresPolicyDecisionStore	export declare function createPostgresPolicyDecisionStore(pool: Pool, schema: string): PolicyDecisionStore
+createPostgresToolEffectStore	export declare function createPostgresToolEffectStore(pool: Pool, schema: string): ToolEffectStore
 decodeBoundedJson	export declare function decodeBoundedJson(value: unknown, maxBytes: number, label: string): unknown
 decodeRecordCursor	export declare function decodeRecordCursor(cursor: string, owner: StoreOwner, order: "asc" | "desc"): Pick<RecordCursor, "createdAt" | "id">
 deepFreeze	export declare function deepFreeze<T>(value: T): T

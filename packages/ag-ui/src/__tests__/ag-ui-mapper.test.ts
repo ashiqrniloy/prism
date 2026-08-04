@@ -117,6 +117,68 @@ describe("@arnilo/prism-ag-ui", () => {
     assert.deepEqual(failed.map({ type: "future" } as unknown as AgentEvent), []);
   });
 
+  it("maps every current standard event family through explicit host projections", () => {
+    const mapper = createAgUiEventMapper({
+      projection: {
+        stateSnapshot: () => ({ stage: "snapshot" }),
+        stateDelta: () => [{ op: "add", path: "/stage", value: "delta" }],
+        messages: () => [{ id: "snapshot-user", role: "user", content: "safe" }],
+        activity: (event) =>
+          event.type === "turn_started"
+            ? { type: "snapshot", messageId: "activity-1", activityType: "turn", content: { status: "started" } }
+            : event.type === "turn_finished"
+              ? {
+                  type: "delta",
+                  messageId: "activity-1",
+                  activityType: "turn",
+                  patch: [{ op: "replace", path: "/status", value: "finished" }],
+                }
+              : undefined,
+        reasoning: ({ text }) => ({ text: `summary:${text}`, encryptedValue: "host-encrypted" }),
+        raw: (event) => ({ event: { type: event.type }, source: "prism" }),
+        custom: (event) => ({ name: "host.event", value: { type: event.type } }),
+      },
+    });
+    const events = [
+      ...mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" }),
+      ...mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 }),
+      ...mapper.map({ type: "message_started", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
+      ...mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "thinking", text: "safe" } }),
+      ...mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "text", text: "answer" } }),
+      ...mapper.map({ type: "message_finished", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
+      ...mapper.map({ type: "turn_finished", sessionId: "s1", runId: "r1", turn: 1 }),
+      ...mapper.map({ type: "agent_finished", sessionId: "s1", runId: "r1" }),
+    ];
+    for (const mapped of events) assert.equal(EventSchemas.safeParse(mapped).success, true);
+    for (const type of [
+      EventType.RUN_STARTED,
+      EventType.RUN_FINISHED,
+      EventType.STEP_STARTED,
+      EventType.STEP_FINISHED,
+      EventType.TEXT_MESSAGE_START,
+      EventType.TEXT_MESSAGE_CONTENT,
+      EventType.TEXT_MESSAGE_END,
+      EventType.STATE_SNAPSHOT,
+      EventType.STATE_DELTA,
+      EventType.MESSAGES_SNAPSHOT,
+      EventType.ACTIVITY_SNAPSHOT,
+      EventType.ACTIVITY_DELTA,
+      EventType.REASONING_START,
+      EventType.REASONING_MESSAGE_START,
+      EventType.REASONING_MESSAGE_CONTENT,
+      EventType.REASONING_MESSAGE_END,
+      EventType.REASONING_END,
+      EventType.REASONING_ENCRYPTED_VALUE,
+      EventType.RAW,
+      EventType.CUSTOM,
+    ]) {
+      assert.ok(
+        events.some((event) => event.type === type),
+        `missing ${type}`,
+      );
+    }
+  });
+
   it("enforces finite limits and truncates oversized text before schema output", () => {
     assert.equal(packageName, "@arnilo/prism-ag-ui");
     assert.throws(() => resolveAgUiLimits({ maxEventBytes: 1_000 }), /maxEventBytes/);

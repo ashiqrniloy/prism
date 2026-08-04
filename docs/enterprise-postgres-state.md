@@ -10,8 +10,10 @@
 | Evaluations | `evaluations` | `EvaluationStore` append/query records with exact owner pages. |
 | Work mutations | `workIdempotency` | Atomic claim/CAS lifecycle for connector effects. |
 | Model routing | `modelRouter` | Shared rate, budget, and circuit state for router replicas. |
+| Tool effects | `toolEffects` | Durable `ToolEffectStore` claim/CAS for recoverable tool side effects (migration 002). |
+| Tool effects | `toolEffects` | Durable `ToolEffectStore` claim/CAS for recoverable tool side effects (migration 002). |
 
-`createPostgresEnterpriseState()` opens a host-supplied or adapter-owned `pg` pool, verifies/applies the fixed checksum-protected `001_enterprise_state` migration, and returns those stores plus explicit cleanup and close operations. Importing it performs no I/O. It is separate from session/run persistence in [`@arnilo/prism-session-store-postgres`](postgres-persistence.md).
+`createPostgresEnterpriseState()` opens a host-supplied or adapter-owned `pg` pool, verifies/applies checksum-protected enterprise migrations (`001_enterprise_state`, `002_tool_effects`), and returns those stores plus explicit cleanup and close operations. Importing it performs no I/O. It is separate from session/run persistence in [`@arnilo/prism-session-store-postgres`](postgres-persistence.md).
 
 ## When to use it
 
@@ -55,6 +57,8 @@ interface PostgresEnterpriseState {
   readonly evaluations: EvaluationStore;
   readonly workIdempotency: IdempotencyStore;
   readonly modelRouter: ModelRouterStateStore;
+  readonly toolEffects: ToolEffectStore;
+  readonly toolEffects: ToolEffectStore;
   cleanup(input: EnterpriseStateCleanupInput): Promise<EnterpriseStateCleanupResult>;
   close(): Promise<void>;
 }

@@ -1,4 +1,10 @@
-import type { AgentEventRecord, ProductionPersistenceStore } from "@arnilo/prism";
+import type {
+  AgentEventRecord,
+  AgentEventSource,
+  DurableAgentEventRecord,
+  OwnershipScope,
+  ProductionPersistenceStore,
+} from "@arnilo/prism";
 import { AgUiError } from "./errors.js";
 import type { ResolvedAgUiLimits } from "./limits.js";
 import type { AgUiRunReference, CoWorkContext, CoWorkEvent } from "./types.js";
@@ -18,8 +24,16 @@ export interface AgUiReplayPage {
   readonly run: AgUiRunReference;
 }
 
+export interface AgUiReplayEvent {
+  readonly record: DurableAgentEventRecord;
+  readonly cursor: string;
+  readonly run: AgUiRunReference;
+}
+
 export interface AgUiReplay<Authorization> {
   page(input: AgUiReplayRequest<Authorization>): Promise<AgUiReplayPage>;
+  /** Optional durable replay-to-live stream. When present, handler never opens a local session for replay. */
+  subscribe?(input: AgUiReplayRequest<Authorization>): AsyncIterable<AgUiReplayEvent>;
 }
 
 export interface PersistenceAgUiReplayOptions<Authorization> {
@@ -62,7 +76,68 @@ export function createPersistenceAgUiReplay<Authorization>(
 }
 
 function terminal(record: AgentEventRecord): boolean {
-  return record.event.type === "agent_finished" || record.event.type === "agent_denied" || record.event.type === "error";
+  return (
+    record.event.type === "agent_finished" ||
+    record.event.type === "agent_denied" ||
+    record.event.type === "run_limit_exceeded" ||
+    record.event.type === "error"
+  );
+}
+
+export interface AgentEventSourceAgUiReplayOptions<Authorization> {
+  /** Host authorization binds untrusted AG-UI thread/run selectors to internal IDs. */
+  readonly resolveRun: (input: AgUiReplayRequest<Authorization>) => AgUiRunReference | undefined | Promise<AgUiRunReference | undefined>;
+  readonly ownership: (authorization: Authorization) => OwnershipScope;
+  readonly limits?: Pick<ResolvedAgUiLimits, "maxCursorBytes" | "maxReplayEvents">;
+}
+
+/** Adapts one durable source for both pages and gap-free replay-to-live follow. */
+export function createAgentEventSourceAgUiReplay<Authorization>(
+  source: AgentEventSource,
+  options: AgentEventSourceAgUiReplayOptions<Authorization>,
+): AgUiReplay<Authorization> {
+  const limits = options.limits ?? { maxCursorBytes: 4 * 1024, maxReplayEvents: 100 };
+  const resolve = async (input: AgUiReplayRequest<Authorization>) => {
+    input.signal?.throwIfAborted();
+    if (input.cursor && Buffer.byteLength(input.cursor, "utf8") > limits.maxCursorBytes) {
+      throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Replay cursor exceeds maxCursorBytes");
+    }
+    const run = await options.resolveRun(input);
+    if (!run || !run.ref.sessionId) throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "Run is unavailable");
+    return { run, sessionId: run.ref.sessionId, ownership: options.ownership(input.authorization) };
+  };
+  return {
+    async page(input) {
+      const { run, sessionId, ownership } = await resolve(input);
+      const page = await source.page({
+        ownership,
+        sessionId,
+        runId: run.ref.runId,
+        after: input.cursor,
+        limit: limits.maxReplayEvents,
+        signal: input.signal,
+      });
+      return { records: page.items.map((item) => item.record), nextCursor: page.nextCursor, terminal: page.terminal, run };
+    },
+    subscribe(input) {
+      return {
+        async *[Symbol.asyncIterator]() {
+          const { run, sessionId, ownership } = await resolve(input);
+          for await (const item of source.subscribe({
+            ownership,
+            sessionId,
+            runId: run.ref.runId,
+            after: input.cursor,
+            limit: limits.maxReplayEvents,
+            signal: input.signal,
+          })) {
+            if (!item.record.redacted) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay record is unavailable");
+            yield { ...item, run };
+          }
+        },
+      };
+    },
+  };
 }
 
 export interface CoWorkReplayRequest<Authorization> {

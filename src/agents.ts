@@ -52,6 +52,7 @@ import type {
   TextContent,
   ToolCallContent,
   ToolDefinition,
+  ToolEffectStore,
   ToolRegistry,
   Usage,
   UsageRecord,
@@ -274,6 +275,7 @@ class RuntimeAgentSession implements AgentSession {
   private activeRedactor?: SecretRedactor;
   private activeProvider?: AIProvider;
   private activeLedger?: RunLedger;
+  private activeEffectStore?: ToolEffectStore;
   private activeOwnership?: OwnershipScope;
   private activeIdentity?: AgentIdentity;
   private activeIdempotencyKey?: string;
@@ -376,6 +378,7 @@ class RuntimeAgentSession implements AgentSession {
       (options.redactor !== undefined ||
         options.ownership !== undefined ||
         options.validate !== undefined ||
+        options.effectStore !== undefined ||
         options.runState !== undefined)
     ) {
       throw new AgentRunStateError("Secure agent defaults cannot be replaced per run");
@@ -391,8 +394,8 @@ class RuntimeAgentSession implements AgentSession {
     }
     if (durableOptions) {
       validateRunStateOptions(durableOptions);
-      if (options.model || options.guardrails || options.loop)
-        throw new AgentRunStateError("Durable runs require model, guardrails, and loop on AgentConfig for fingerprinting");
+      if (options.model || options.guardrails || options.loop || options.effectStore)
+        throw new AgentRunStateError("Durable runs require model, guardrails, loop, and effect store on AgentConfig for fingerprinting");
       const configuredLoop = this.agent.config.loop;
       if (configuredLoop && !isBuiltInLoop(configuredLoop)) throw new AgentRunStateError("Custom AgentLoopStrategy is not durable");
     }
@@ -411,6 +414,7 @@ class RuntimeAgentSession implements AgentSession {
     this.pendingSoftInterrupt = false;
     this.activeRedactor = options.redactor ?? this.agent.config.redactor;
     this.activeLedger = options.runLedger ?? this.agent.config.runLedger;
+    this.activeEffectStore = options.effectStore ?? this.agent.config.effectStore;
     this.activeOwnership = options.ownership ?? this.agent.config.ownership;
     this.activeIdentity = resolveRunIdentity(options.identity, this.agent.config.identity, this.activeOwnership);
     if (this.activeIdentity && !this.activeOwnership) this.activeOwnership = ownershipFromIdentity(this.activeIdentity);
@@ -639,6 +643,7 @@ class RuntimeAgentSession implements AgentSession {
             trust: this.agent.config.trust,
             redactor: this.activeRedactor,
             ledger: this.activeLedger,
+            effectStore: this.activeEffectStore,
             ownership: this.activeOwnership,
             identity: this.activeIdentity,
             guardrails: this.activeGuardrails,
@@ -787,6 +792,7 @@ class RuntimeAgentSession implements AgentSession {
         }
       } finally {
         this.activeLedger = undefined;
+        this.activeEffectStore = undefined;
         this.activeOwnership = undefined;
         this.activeIdentity = undefined;
         this.activeIdempotencyKey = undefined;

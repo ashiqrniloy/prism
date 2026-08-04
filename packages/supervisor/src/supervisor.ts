@@ -1,6 +1,8 @@
 import {
   AgentRunError,
   type AgentRunResult,
+  assertIdentityActive,
+  assertIdentityMatchesOwnership,
   createAgent,
   createEventMultiplexer,
   type PermissionPolicy,
@@ -18,6 +20,10 @@ interface ChainContext {
 
 export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
   requireOwnership(options.ownership);
+  if (options.identity) {
+    assertIdentityActive(options.identity);
+    assertIdentityMatchesOwnership(options.identity, options.ownership);
+  }
   const id = options.id ?? "supervisor";
   if (!ID.test(id)) throw new SupervisorValidationError("Supervisor id is invalid");
   const children = Object.entries(options.children);
@@ -102,6 +108,8 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
               depth,
               path,
               ownership: options.ownership,
+              identity: options.identity,
+              effectStore: options.effectStore,
               resourceId,
               threadId,
               permission: preliminaryPermission,
@@ -116,6 +124,8 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         ...childAgent.config,
         permission: intersectPolicies(preliminaryPermission, childAgent.config.permission),
         ownership: options.ownership,
+        identity: options.identity ?? childAgent.config.identity,
+        effectStore: options.effectStore ?? childAgent.config.effectStore,
         redactor: options.redactor ?? childAgent.config.redactor,
       });
       const session = agent.createSession({

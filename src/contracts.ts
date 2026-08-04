@@ -393,6 +393,8 @@ export interface RunOptions {
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
+  /** Optional durable recovery store. Per-run value overrides this agent default. */
+  readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
   /** Host-verified identity; when set, must project onto `ownership` without widening. */
   readonly identity?: import("./identity.js").AgentIdentity;
@@ -475,6 +477,8 @@ export interface AgentConfig {
   readonly systemPrompt?: SystemPromptConfig;
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
+  /** Optional durable recovery store. */
+  readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
   /** Host-verified identity default for sessions created from this agent. */
   readonly identity?: import("./identity.js").AgentIdentity;
@@ -865,12 +869,27 @@ export type AgentEvent =
       readonly result: ArtifactValidation;
     };
 
+export type ToolEffectKind = "none" | "local_mutation" | "external_mutation";
+
+export type ToolEffectIdempotency = "none" | "optional" | "required" | "tool_managed" | "unsupported";
+
+/** Static or validated-argument classification of one tool call's side-effect behavior. */
+export interface ToolEffectDeclaration {
+  readonly kind: ToolEffectKind;
+  readonly idempotency: ToolEffectIdempotency;
+}
+
+/** Runs after argument validation. It must be synchronous, deterministic, bounded, and side-effect-free. */
+export type ToolEffectClassifier = (args: JsonObject, context: ToolExecutionContext) => ToolEffectDeclaration;
+
 export interface ToolDefinition {
   readonly name: string;
   readonly description?: string;
   readonly parameters?: JsonObject;
   /** Force any provider turn containing this tool to dispatch sequentially. */
   readonly exclusive?: boolean;
+  /** Optional side-effect declaration. Omitted tools retain legacy unmanaged dispatch. */
+  readonly effect?: ToolEffectDeclaration | ToolEffectClassifier;
   execute(args: JsonObject, context: ToolExecutionContext): Promise<ToolResult> | ToolResult;
 }
 
@@ -889,6 +908,8 @@ export interface ToolExecutionContext {
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Host-verified identity for this tool invocation, when enterprise identity is active. */
   readonly identity?: import("./identity.js").AgentIdentity;
+  /** Core-derived stable effect key. Never accept a model-supplied key as authority. */
+  readonly idempotencyKey?: string;
   progress?(progress?: unknown, metadata?: Readonly<Record<string, unknown>>): void | Promise<void>;
 }
 
@@ -899,6 +920,78 @@ export interface ToolResult {
   readonly value?: unknown;
   readonly error?: ErrorInfo;
   readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export type ToolEffectStatus = "pending" | "dispatched" | "completed" | "failed_retryable" | "failed_terminal" | "unknown";
+
+export interface ToolEffectRecord extends OwnershipScope {
+  readonly key: string;
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly toolCallId: string;
+  readonly toolName: string;
+  readonly argumentsHash: string;
+  readonly status: ToolEffectStatus;
+  readonly attempt: number;
+  readonly version: number;
+  readonly claimToken?: string;
+  readonly result?: ToolResult;
+  readonly resultRef?: string;
+  readonly failure?: { readonly code: string; readonly reference?: string };
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly expiresAt?: string;
+}
+
+export interface ToolEffectKey {
+  readonly identity: import("./identity.js").AgentIdentity;
+  readonly ownership: OwnershipScope;
+  readonly key: string;
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly toolCallId: string;
+  readonly toolName: string;
+  readonly argumentsHash: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface ToolEffectTransition extends ToolEffectKey {
+  readonly claimToken: string;
+  readonly expectedVersion: number;
+}
+
+/** Durable claim/CAS store for recoverable tool effects. */
+export interface ToolEffectStore {
+  get(input: ToolEffectKey): Promise<ToolEffectRecord | undefined>;
+  begin(
+    input: ToolEffectKey & { readonly claimTtlMs?: number; readonly maxAttempts?: number },
+  ): Promise<{ readonly outcome: "acquired" | "existing"; readonly record: ToolEffectRecord }>;
+  markDispatched(input: ToolEffectTransition): Promise<ToolEffectRecord>;
+  complete(input: ToolEffectTransition & { readonly result?: ToolResult; readonly resultRef?: string }): Promise<ToolEffectRecord>;
+  fail(
+    input: ToolEffectTransition & {
+      readonly status: "failed_retryable" | "failed_terminal";
+      readonly failure: { readonly code: string; readonly reference?: string };
+    },
+  ): Promise<ToolEffectRecord>;
+  markUnknown(
+    input: ToolEffectTransition & { readonly failure?: { readonly code: string; readonly reference?: string } },
+  ): Promise<ToolEffectRecord>;
+  resolveUnknown(
+    input: ToolEffectKey & {
+      readonly expectedVersion: number;
+      readonly status: "completed" | "failed_retryable" | "failed_terminal";
+      readonly result?: ToolResult;
+      readonly resultRef?: string;
+      readonly failure?: { readonly code: string; readonly reference?: string };
+    },
+  ): Promise<ToolEffectRecord>;
+  cleanup(input: {
+    readonly ownership: OwnershipScope;
+    readonly before: string;
+    readonly limit?: number;
+    readonly signal?: AbortSignal;
+  }): Promise<{ readonly deleted: number }>;
 }
 
 export interface CommandDefinition {
@@ -1626,12 +1719,71 @@ export interface AgentEventRecord extends OwnershipScope {
   readonly id: string;
   readonly sessionId: string;
   readonly runId?: string;
+  /** Durable sources allocate positive, strictly increasing per-run positions. */
+  readonly sequence?: number;
   readonly entryId?: string;
   readonly type: AgentEventType;
   readonly timestamp: string;
   readonly event: AgentEvent;
   readonly redacted: boolean;
   readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** An event record returned by an {@link AgentEventSource}. */
+export interface DurableAgentEventRecord extends AgentEventRecord {
+  readonly runId: string;
+  readonly sequence: number;
+}
+
+export interface AgentEventEnvelope {
+  readonly record: DurableAgentEventRecord;
+  /** Opaque cursor immediately after `record`. */
+  readonly cursor: string;
+}
+
+export interface AgentEventSourcePage {
+  readonly items: readonly AgentEventEnvelope[];
+  readonly nextCursor?: string;
+  /** True only after every event preceding a terminal event has been returned. */
+  readonly terminal: boolean;
+}
+
+/** Exact-owned, per-run durable event read. `after` is exclusive. */
+export interface AgentEventSourceRead {
+  readonly ownership: OwnershipScope;
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly after?: string;
+  readonly limit?: number;
+  readonly signal?: AbortSignal;
+}
+
+export interface AgentEventSourceCleanup {
+  readonly ownership: OwnershipScope;
+  readonly before: string;
+  readonly limit?: number;
+  readonly signal?: AbortSignal;
+}
+
+export interface AgentEventSourceOptions {
+  readonly maxEventBytes?: number;
+  readonly maxPageSize?: number;
+  readonly maxCursorBytes?: number;
+  readonly maxQueuedEvents?: number;
+  readonly maxSubscribers?: number;
+  readonly pollIntervalMs?: number;
+  readonly reconnectInitialMs?: number;
+  readonly reconnectMaxMs?: number;
+  readonly maxRetainedEventsPerRun?: number;
+  readonly maxRetentionAgeMs?: number;
+}
+
+/** Optional durable event capability. `RunLedger` remains a write-only contract. */
+export interface AgentEventSource {
+  append(record: AgentEventRecord): Promise<DurableAgentEventRecord>;
+  page(input: AgentEventSourceRead): Promise<AgentEventSourcePage>;
+  subscribe(input: AgentEventSourceRead): AsyncIterable<AgentEventEnvelope>;
+  cleanup(input: AgentEventSourceCleanup): Promise<{ readonly deleted: number }>;
 }
 
 export type ToolCallStatus = "started" | "finished" | "error" | "blocked";
@@ -1929,6 +2081,8 @@ export interface ProductionPersistenceStore {
   readonly leases?: LeaseStore;
   /** Optional immutable run/trace feedback storage capability. */
   readonly feedback?: RunFeedbackStore;
+  /** Optional durable, cross-replica-capable event source. */
+  readonly events?: AgentEventSource;
   querySessions(query: SessionQuery): Promise<PersistencePage<SessionRecord>>;
   queryBranches(query: BranchQuery): Promise<PersistencePage<BranchRecord>>;
   queryEntries(query: SessionEntryQuery): Promise<PersistencePage<SessionEntry>>;

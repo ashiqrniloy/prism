@@ -34,6 +34,22 @@ describe("performance budget gate", () => {
         assert.ok(Number.isFinite(median[field]) && median[field] > 0, `${name}.${field} must be a positive number`);
       }
     }
+    const phase7 = budgets.phase7Postgres;
+    assert.deepEqual(phase7.fixture, {
+      tenants: 10,
+      principalsPerTenant: 10,
+      eventsPerOwner: 1000,
+      producers: 16,
+      subscribers: 16,
+      warmups: 100,
+      measuredOperations: 1000,
+      sustainedStreamEvents: 10000,
+      cleanupBatch: 100,
+      reconnectSamples: 20,
+    });
+    for (const [name, ceiling] of Object.entries(phase7.p95CeilingsMs)) {
+      assert.ok(Number.isFinite(ceiling) && ceiling >= 50 && ceiling <= 2000, `${name} must use an approved Phase 7 ceiling`);
+    }
     const enterprise = budgets.enterprisePostgres;
     assert.deepEqual(enterprise.fixture, {
       tenants: 10,
@@ -51,6 +67,37 @@ describe("performance budget gate", () => {
     assert.equal(enterpriseScenarios.length, 10, "expected ten protected enterprise PostgreSQL ceilings");
     for (const [name, ceiling] of enterpriseScenarios) {
       assert.ok(Number.isFinite(ceiling) && ceiling >= 50 && ceiling <= 100, `${name} must use the approved 50ms/100ms ceiling`);
+    }
+  });
+
+  it("checks the recorded protected Phase 7 PostgreSQL evidence", () => {
+    const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.24.json", "utf8"));
+    assert.equal(evidence.version, "0.0.24");
+    assert.deepEqual(evidence.fixture, budgets.phase7Postgres.fixture);
+    for (const [name, ceiling] of Object.entries(budgets.phase7Postgres.p95CeilingsMs)) {
+      const result = evidence.results.find((entry) => entry.name === name);
+      assert.ok(result, `missing Phase 7 result for ${name}`);
+      assert.ok(result.p95Ms <= ceiling, `${name} p95 exceeded its frozen ceiling`);
+      assert.ok(result.throughputPerSecond > 0, `${name} throughput missing`);
+    }
+    assert.deepEqual(evidence.plans.map((plan) => plan.name).sort(), [
+      "effect-expiry-cleanup",
+      "effect-key-lookup",
+      "event-replay",
+      "event-retention-cleanup",
+      "event-sequence-allocation",
+    ]);
+    assert.ok(evidence.plans.every((plan) => plan.sequentialScan === false && plan.indexes.length > 0));
+    assert.equal(evidence.sustainedStream.events, 10000);
+    assert.equal(evidence.sustainedStream.subscribers, 16);
+    assert.equal(evidence.sustainedStream.deliveries, 160000);
+    assert.ok(evidence.sustainedStream.throughputPerSecond > 0);
+    for (const table of ["prism_agent_events", "prism_tool_effects"]) {
+      assert.equal(
+        evidence.storageBeforeCleanup[table].rows - evidence.storageAfterCleanup[table].rows,
+        evidence.fixture.cleanupBatch,
+        `${table} cleanup did not remove one full batch`,
+      );
     }
   });
 
