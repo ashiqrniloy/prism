@@ -6,12 +6,17 @@
     "Apache-2.0",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    "0BSD",
+    "(Apache-2.0 AND BSD-3-Clause)",
     "(AFL-2.1 OR BSD-3-Clause)",
     "(BSD-2-Clause OR MIT OR Apache-2.0)",
     "(MIT OR WTFPL)"
   ],
   "overrides": {
-    "@ag-ui/core@0.0.57": "MIT"
+    "@ag-ui/core@0.0.57": "MIT",
+    "@ag-ui/client@0.0.57": "MIT",
+    "@ag-ui/encoder@0.0.57": "MIT",
+    "@ag-ui/proto@0.0.57": "MIT"
   },
   "deniedFragments": ["AGPL", "GPL", "LGPL", "SSPL", "BUSL", "Commons-Clause"]
 }
