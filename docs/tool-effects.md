@@ -56,7 +56,7 @@ const tool = {
   description: "Send mail",
   parameters: { type: "object", properties: {} },
   effect: { kind: "external_mutation", idempotency: "required" },
-  execute: async (_args, context) => ({ toolCallId: context.toolCallId, name: "mail.send", isError: false, value: { sent: true } }),
+  execute: async (_args, context) => ({ toolCallId: context.toolCallId, name: "mail.send", value: { sent: true } }),
 };
 
 const agent = createAgent({ model, provider, tools: [tool], effectStore });

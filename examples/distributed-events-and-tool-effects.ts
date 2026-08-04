@@ -70,7 +70,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     effect: { kind: "external_mutation", idempotency: "required" },
     async execute(_args, context) {
       executions += 1;
-      return { toolCallId: context.toolCallId, name: "mail.send", isError: false, value: { messageId: "msg-1" } };
+      return { toolCallId: context.toolCallId, name: "mail.send", value: { messageId: "msg-1" } };
     },
   };
   const effectStore = createMemoryToolEffectStore();
@@ -144,8 +144,8 @@ export async function demo(): Promise<Record<string, unknown>> {
     executions,
     firstMessageId: messageId(first),
     duplicateMessageId: messageId(duplicate),
-    unknownIsError: unknownResult.isError === true,
-    unknownReplayIsError: unknownReplay.isError === true,
+    unknownIsError: unknownResult.error !== undefined,
+    unknownReplayIsError: unknownReplay.error !== undefined,
     unknownStatus: unknown.status,
     resolvedStatus: resolved.status,
     notExactlyOnce: true,
