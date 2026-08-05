@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.25] - 2026-08-06
+
+### Added
+- Durable child approvals: `checkpoints` + `definitionRevision` on supervisor; `resumeNestedRun` routes hashed attributed decisions without widening child permission.
+
+### Changed
+- Released with exact 0.0.25 graph.
+
+See [migration guide](../../docs/migration.md) for the 0.0.24 → 0.0.25 notes.
+
 ## [0.0.24] - 2026-08-04
 
 ### Added

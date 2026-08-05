@@ -8,13 +8,17 @@ import type {
   AgentRunStatusResult,
   CheckpointRecord,
   CheckpointStore,
+  JsonValue,
   Message,
   ModelConfig,
+  NestedRunRef,
   OwnershipScope,
+  RunDecision,
   RunLimitCounters,
+  StickyDecision,
   ToolCallContent,
 } from "./contracts.js";
-import { AgentRunStateError } from "./contracts.js";
+import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
 import type { SecretRedactor } from "./redaction.js";
 
 export const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run";
@@ -24,12 +28,66 @@ export const HARD_MAX_AGENT_RUN_STATE_BYTES = 1024 * 1024;
 const MAX_DEPTH = 32;
 const MAX_PROPERTIES = 256;
 
+/** One gated tool call awaiting or holding a decision inside a suspended durable run. */
+export interface PendingToolCall {
+  readonly call: ToolCallContent;
+  readonly status: "ready" | "dispatched";
+  readonly approvalId: string;
+  /** Decision persisted by a partial batch; applied when the run finally resumes. */
+  readonly decision?: RunDecision;
+}
+
 export interface StoredAgentRunState extends AgentRunState {
   readonly input?: readonly Message[];
+  /** Legacy single gated call (pre-0.0.25 checkpoints). New states write `pendingCalls`. */
   readonly pending?: { readonly call: ToolCallContent; readonly status: "ready" | "dispatched" };
+  /** Gated calls of the current suspension, in provider-turn order. */
+  readonly pendingCalls?: readonly PendingToolCall[];
+  /** Suspended nested runs (supervisor children) whose pending decisions surface at this root. */
+  readonly nestedRuns?: readonly NestedRunRef[];
+  /** Run-scoped sticky decisions; exact scope match, dropped at any terminal status. */
+  readonly stickyDecisions?: readonly StickyDecision[];
   readonly interruptBeforeTool?: boolean;
   readonly counters: RunLimitCounters;
   readonly deadlineAt: string;
+  /** Loop-local durable state captured by the strategy's snapshot hook at suspension. */
+  readonly loopState?: { readonly name: string; readonly revision: string; readonly snapshot: JsonValue };
+}
+
+/** Revision stamps of the built-in loops; custom strategies declare their own `revision`. */
+export const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>> = {
+  "single-shot": "1",
+  "generate-validate-revise": "1",
+};
+
+/** Validate a strategy snapshot as JSON-compatible and package it for the durable envelope. */
+export function boundedLoopSnapshot(name: string, revision: string, snapshot: JsonValue): StoredAgentRunState["loopState"] {
+  try {
+    assertJsonValue(snapshot, 0);
+  } catch (error) {
+    if (error instanceof AgentLoopStateError) throw error;
+    throw new AgentLoopStateError("ERR_PRISM_LOOP_SNAPSHOT", "Loop snapshot must be JSON-compatible", { cause: error });
+  }
+  return { name, revision, snapshot };
+}
+
+function assertJsonValue(value: unknown, depth: number): asserts value is JsonValue {
+  if (depth > MAX_DEPTH) throw new AgentLoopStateError("ERR_PRISM_LOOP_SNAPSHOT", `Loop snapshot exceeds depth ${MAX_DEPTH}`);
+  switch (typeof value) {
+    case "string":
+    case "boolean":
+      return;
+    case "number":
+      if (!Number.isFinite(value)) throw new AgentLoopStateError("ERR_PRISM_LOOP_SNAPSHOT", "Loop snapshot numbers must be finite");
+      return;
+    case "object": {
+      if (value === null) return;
+      for (const item of Object.values(value)) assertJsonValue(item, depth + 1);
+      return;
+    }
+    default:
+      throw new AgentLoopStateError("ERR_PRISM_LOOP_SNAPSHOT", "Loop snapshot must be JSON-compatible");
+  }
 }
 
 export function agentFingerprint(agent: Agent, revision: string): string {
@@ -62,10 +120,11 @@ export function agentFingerprint(agent: Agent, revision: string): string {
       effect: typeof tool.effect === "function" ? "classifier" : tool.effect,
     })),
     guardrails: guardrails.map((guardrail) => ({ name: guardrail.name, stage: guardrail.stage, revision: guardrail.revision })),
+    // Loop revision participates so a loop change without a definitionRevision bump fails closed.
     loop:
       typeof config.loop === "object" && config.loop && "strategy" in config.loop
-        ? config.loop.strategy
-        : (config.loop?.name ?? "single-shot"),
+        ? { name: config.loop.strategy, revision: BUILT_IN_LOOP_REVISIONS[config.loop.strategy] ?? null }
+        : { name: config.loop?.name ?? "single-shot", revision: config.loop?.revision ?? BUILT_IN_LOOP_REVISIONS["single-shot"] },
   });
   return createHash("sha256").update(value).digest("hex");
 }
@@ -133,6 +192,8 @@ export function publicState(state: StoredAgentRunState): AgentRunState {
   const {
     input: _input,
     pending: _pending,
+    pendingCalls: _pendingCalls,
+    nestedRuns: _nestedRuns,
     interruptBeforeTool: _interruptBeforeTool,
     counters: _counters,
     deadlineAt: _deadlineAt,
@@ -154,6 +215,7 @@ export function initialAgentRunState(input: {
   readonly interruption?: AgentRunInterruption;
   readonly messages?: readonly Message[];
   readonly pending?: StoredAgentRunState["pending"];
+  readonly pendingCalls?: StoredAgentRunState["pendingCalls"];
   readonly interruptBeforeTool?: boolean;
 }): StoredAgentRunState {
   validateRunStateOptions(input.options);
@@ -170,6 +232,7 @@ export function initialAgentRunState(input: {
     interruption: input.interruption,
     input: input.messages,
     pending: input.pending,
+    pendingCalls: input.pendingCalls,
     interruptBeforeTool: input.interruptBeforeTool,
     counters: input.counters,
     deadlineAt: input.deadlineAt,
@@ -193,6 +256,60 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
     !state.deadlineAt
   ) {
     throw new AgentRunStateError("Malformed agent run state");
+  }
+  if (
+    state.pendingCalls !== undefined &&
+    (!Array.isArray(state.pendingCalls) ||
+      state.pendingCalls.some(
+        (entry) =>
+          !entry ||
+          typeof entry !== "object" ||
+          !(entry as PendingToolCall).call ||
+          typeof (entry as PendingToolCall).approvalId !== "string" ||
+          ((entry as PendingToolCall).status !== "ready" && (entry as PendingToolCall).status !== "dispatched"),
+      ))
+  ) {
+    throw new AgentRunStateError("Malformed agent run pending calls");
+  }
+  if (
+    state.stickyDecisions !== undefined &&
+    (!Array.isArray(state.stickyDecisions) ||
+      state.stickyDecisions.some(
+        (entry) =>
+          !entry ||
+          typeof entry !== "object" ||
+          !(entry as StickyDecision).scope ||
+          ((entry as StickyDecision).outcome !== "allow_for_run" && (entry as StickyDecision).outcome !== "reject_for_run"),
+      ))
+  ) {
+    throw new AgentRunStateError("Malformed agent run sticky decisions");
+  }
+  if (
+    state.nestedRuns !== undefined &&
+    (!Array.isArray(state.nestedRuns) ||
+      state.nestedRuns.some(
+        (entry) =>
+          !entry ||
+          typeof entry !== "object" ||
+          typeof (entry as NestedRunRef).runId !== "string" ||
+          typeof (entry as NestedRunRef).toolCallId !== "string" ||
+          !Array.isArray((entry as NestedRunRef).path) ||
+          !Array.isArray((entry as NestedRunRef).approvals) ||
+          (entry as NestedRunRef).approvals.some(
+            (approval) => typeof approval?.id !== "string" || typeof approval?.childApprovalId !== "string",
+          ),
+      ))
+  ) {
+    throw new AgentRunStateError("Malformed agent run nested runs");
+  }
+  if (
+    state.loopState !== undefined &&
+    (typeof state.loopState !== "object" ||
+      typeof state.loopState.name !== "string" ||
+      typeof state.loopState.revision !== "string" ||
+      !("snapshot" in state.loopState))
+  ) {
+    throw new AgentRunStateError("Malformed agent run loop state");
   }
   // Load bounds against the hard cap, not the default: the configured maxStateBytes is a
   // save-side policy knob, while the load-side bound is only a DoS ceiling. States saved

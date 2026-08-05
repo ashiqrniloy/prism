@@ -101,6 +101,27 @@ describe("performance budget gate", () => {
     }
   });
 
+  it("checks the recorded Phase 8 durable-loop / HITL / A2UI evidence", () => {
+    const phase8 = budgets.phase8LoopsHitl;
+    assert.deepEqual(phase8.fixture, {
+      warmups: 20,
+      measuredOperations: 100,
+      pendingDecisions: 32,
+      snapshotBytes: 250000,
+      a2uiOpsPerMessage: 64,
+    });
+    const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.25.json", "utf8"));
+    assert.equal(evidence.version, "0.0.25");
+    assert.deepEqual(evidence.fixture, phase8.fixture);
+    assert.deepEqual(evidence.ceilingsMs, phase8.p95CeilingsMs);
+    for (const [name, ceiling] of Object.entries(phase8.p95CeilingsMs)) {
+      const result = evidence.results.find((entry) => entry.name === name);
+      assert.ok(result, `missing Phase 8 result for ${name}`);
+      assert.ok(result.p95Ms <= ceiling, `${name} p95 ${result.p95Ms} exceeded ceiling ${ceiling}`);
+      assert.ok(result.throughputPerSecond > 0, `${name} throughput missing`);
+    }
+  });
+
   it("checks the recorded protected enterprise PostgreSQL evidence", () => {
     const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.23.json", "utf8"));
     assert.equal(evidence.version, "0.0.23");

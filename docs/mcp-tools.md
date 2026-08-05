@@ -150,6 +150,8 @@ Duplicate prefixed names throw `McpToolNameCollisionError` at refresh time.
 | `maxJsonDepth` / `maxJsonProperties` | 64 / 10,000 (hard 128 / 100,000) | Bound schema and result JSON walks |
 | `signal` | none | Abort connect/list and trigger close on connect abort |
 
+MCP elicitation maps onto the shared decision model: `mcpElicitationDecision(approvalId, params)` converts an untrusted `ElicitRequest` (message ≤ 2 KiB, schema ≤ 16 KiB) into a kind-`elicitation` pending decision, and `mcpElicitationResultFromDecision(decision, { humanInteraction })` maps a decision back to a protocol result — `reject_*` declines, `allow_*` accepts with the payload and fails closed unless the host proved explicit human interaction. Wire behavior is unchanged; the marker never reaches protocol output.
+
 ### Stdio transport
 
 ```ts

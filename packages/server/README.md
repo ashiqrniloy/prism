@@ -24,7 +24,7 @@ const response = await handler(new Request("https://api.example.test/prism/agent
 }));
 ```
 
-Routes: direct/SSE agent run, cross-replica durable event reconnect through object agent exposures with `events` + `resolveRun`, explicitly selected durable agent status/resume through `agentRuns`, direct/SSE workflow run, durable workflow enqueue/status/cancel/resume/replay, and optional ownership-scoped schedule create/list/pause/resume/trigger/delete. `agentRuns` uses core `createAgentRunLifecycle()`; no lifecycle route exists by default. All bodies, responses, events, queues, concurrency, and timeouts are bounded.
+Routes: direct/SSE agent run, cross-replica durable event reconnect through object agent exposures with `events` + `resolveRun`, explicitly selected durable agent status/resume through `agentRuns`, direct/SSE workflow run, durable workflow enqueue/status/cancel/resume/replay, and optional ownership-scoped schedule create/list/pause/resume/trigger/delete. `agentRuns` uses core `createAgentRunLifecycle()`; no lifecycle route exists by default. Agent resume accepts legacy binary `decision` or batch `decisions: RunDecision[]` (exactly one). All bodies, responses, events, queues, concurrency, and timeouts are bounded.
 
 Optional 0.0.14 co-work handlers (mount beside the API handler): `createConversationHandler` (durable user-scoped conversation threads with reconnectable redacted replay — `createConversationService`) and `createArtifactHandler` (artifact revisions, approve/reject review, expiring authorized delivery links — `createArtifactService` over the existing checkpoint store). Both are ownership-scoped and fail closed without authorization.
 

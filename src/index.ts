@@ -15,7 +15,7 @@ export type {
   AgentRunLifecycleStreamRequest,
 } from "./agent-run-lifecycle.js";
 export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
-export type { StoredAgentRunState } from "./agent-run-state.js";
+export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
 export {
   AGENT_RUN_STATE_NAMESPACE,
   AGENT_RUN_STATE_SCHEMA_VERSION,
@@ -118,7 +118,17 @@ export {
 } from "./context-budget.js";
 export type * from "./contracts.js";
 export type {
+  ApprovalOutcome,
+  DecisionScope,
+  NestedRunApproval,
+  NestedRunOutcome,
+  NestedRunRef,
+  PendingDecision,
+  PendingDecisionKind,
   ProviderResolver,
+  ResumeNestedRun,
+  RunDecision,
+  StickyDecision,
   RealtimeCaps,
   RealtimeEvent,
   RealtimeSession,
@@ -137,10 +147,27 @@ export type {
   ToolEffectStatus,
   ToolEffectStore,
   ToolEffectTransition,
+  ToolElicitationRequest,
 } from "./contracts.js";
 export {
+  AgentDecisionError,
+  AgentDelegationSuspendedError,
+  AgentLoopStateError,
+  MAX_ATTRIBUTION_DEPTH,
   AgentRunError,
   AgentRunStateError,
+  DEFAULT_MAX_PENDING_DECISIONS,
+  DEFAULT_MAX_STICKY_DECISIONS,
+  HARD_MAX_PENDING_DECISIONS,
+  HARD_MAX_STICKY_DECISIONS,
+  MAX_ACTION_CONSTRAINT_BYTES,
+  MAX_ACTION_CONSTRAINTS,
+  MAX_DECISION_REASON_BYTES,
+  MAX_ELICITATION_BYTES,
+  HARD_MAX_ACTION_CONSTRAINT_BYTES,
+  HARD_MAX_ACTION_CONSTRAINTS,
+  HARD_MAX_DECISION_REASON_BYTES,
+  HARD_MAX_ELICITATION_BYTES,
   assertSessionMetadataKey,
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
@@ -520,5 +547,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.0.24";
+export const version = "0.0.25";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

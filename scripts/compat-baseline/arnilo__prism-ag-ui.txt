@@ -1,3 +1,7 @@
+A2UI_ACTIVITY_TYPE	export declare const A2UI_ACTIVITY_TYPE = "a2ui-surface"
+A2UI_ERROR_EVENT	export declare const A2UI_ERROR_EVENT = "prism.a2ui.error"
+A2UI_OPERATIONS_KEY	export declare const A2UI_OPERATIONS_KEY = "a2ui_operations"
+A2UI_VERSION	export declare const A2UI_VERSION = "v0.9"
 AgUiActivityDelta	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiActivitySnapshot	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiAuthorization	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
@@ -11,6 +15,10 @@ CoWorkContext	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, 
 CoWorkEvent	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 CoWorkKind	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 DEFAULT_AG_UI_LIMITS	export declare const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits
+DEFAULT_MAX_A2UI_COMPONENT_DEPTH	export declare const DEFAULT_MAX_A2UI_COMPONENT_DEPTH = 32
+DEFAULT_MAX_A2UI_OPERATION_BYTES	export declare const DEFAULT_MAX_A2UI_OPERATION_BYTES: number
+DEFAULT_MAX_A2UI_OPS_PER_MESSAGE	export declare const DEFAULT_MAX_A2UI_OPS_PER_MESSAGE = 64
+DEFAULT_MAX_A2UI_SURFACES_PER_RUN	export declare const DEFAULT_MAX_A2UI_SURFACES_PER_RUN = 16
 DEFAULT_MAX_ACTIVITY_BYTES	export declare const DEFAULT_MAX_ACTIVITY_BYTES: number
 DEFAULT_MAX_CURSOR_BYTES	export declare const DEFAULT_MAX_CURSOR_BYTES: number
 DEFAULT_MAX_ERROR_BYTES	export declare const DEFAULT_MAX_ERROR_BYTES: number
@@ -28,6 +36,7 @@ DEFAULT_MAX_JSON_ARRAY_ITEMS	export declare const DEFAULT_MAX_JSON_ARRAY_ITEMS =
 DEFAULT_MAX_JSON_DEPTH	export declare const DEFAULT_MAX_JSON_DEPTH = 16
 DEFAULT_MAX_JSON_PROPERTIES	export declare const DEFAULT_MAX_JSON_PROPERTIES = 128
 DEFAULT_MAX_PATCH_OPERATIONS	export declare const DEFAULT_MAX_PATCH_OPERATIONS = 128
+DEFAULT_MAX_PROJECTOR_MESSAGES	export declare const DEFAULT_MAX_PROJECTOR_MESSAGES = 128
 DEFAULT_MAX_QUEUED_EVENTS	export declare const DEFAULT_MAX_QUEUED_EVENTS = 128
 DEFAULT_MAX_RAW_EVENT_BYTES	export declare const DEFAULT_MAX_RAW_EVENT_BYTES: number
 DEFAULT_MAX_REASONING_BYTES	export declare const DEFAULT_MAX_REASONING_BYTES: number
@@ -39,6 +48,10 @@ DEFAULT_MAX_STREAM_EVENTS	export declare const DEFAULT_MAX_STREAM_EVENTS = 10000
 DEFAULT_MAX_TEXT_BYTES	export declare const DEFAULT_MAX_TEXT_BYTES: number
 DEFAULT_REQUEST_TIMEOUT_MS	export declare const DEFAULT_REQUEST_TIMEOUT_MS = 120000
 HARD_AG_UI_LIMITS	export declare const HARD_AG_UI_LIMITS: ResolvedAgUiLimits
+HARD_MAX_A2UI_COMPONENT_DEPTH	export declare const HARD_MAX_A2UI_COMPONENT_DEPTH = 64
+HARD_MAX_A2UI_OPERATION_BYTES	export declare const HARD_MAX_A2UI_OPERATION_BYTES: number
+HARD_MAX_A2UI_OPS_PER_MESSAGE	export declare const HARD_MAX_A2UI_OPS_PER_MESSAGE = 512
+HARD_MAX_A2UI_SURFACES_PER_RUN	export declare const HARD_MAX_A2UI_SURFACES_PER_RUN = 64
 HARD_MAX_ACTIVITY_BYTES	export declare const HARD_MAX_ACTIVITY_BYTES: number
 HARD_MAX_CURSOR_BYTES	export declare const HARD_MAX_CURSOR_BYTES: number
 HARD_MAX_ERROR_BYTES	export declare const HARD_MAX_ERROR_BYTES: number
@@ -56,6 +69,7 @@ HARD_MAX_JSON_ARRAY_ITEMS	export declare const HARD_MAX_JSON_ARRAY_ITEMS = 8192
 HARD_MAX_JSON_DEPTH	export declare const HARD_MAX_JSON_DEPTH = 64
 HARD_MAX_JSON_PROPERTIES	export declare const HARD_MAX_JSON_PROPERTIES = 4096
 HARD_MAX_PATCH_OPERATIONS	export declare const HARD_MAX_PATCH_OPERATIONS = 4096
+HARD_MAX_PROJECTOR_MESSAGES	export declare const HARD_MAX_PROJECTOR_MESSAGES = 1024
 HARD_MAX_QUEUED_EVENTS	export declare const HARD_MAX_QUEUED_EVENTS = 4096
 HARD_MAX_RAW_EVENT_BYTES	export declare const HARD_MAX_RAW_EVENT_BYTES: number
 HARD_MAX_REASONING_BYTES	export declare const HARD_MAX_REASONING_BYTES: number
@@ -67,8 +81,11 @@ HARD_MAX_STREAM_EVENTS	export declare const HARD_MAX_STREAM_EVENTS = 100000
 HARD_MAX_TEXT_BYTES	export declare const HARD_MAX_TEXT_BYTES: number
 HARD_REQUEST_TIMEOUT_MS	export declare const HARD_REQUEST_TIMEOUT_MS: number
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxBytes: number, limits: Pick<ResolvedAgUiLimits, "maxJsonDepth" | "maxJsonProperties" | "maxJsonArrayItems">, name: string): void
+composeAgUiProjections	export declare function composeAgUiProjections(...projections: readonly (AgUiProjection | undefined)[]): AgUiProjection
 createAcpEventMapper	export declare function createAcpEventMapper(options?: AcpEventMapperOptions): AcpEventMapper
+createActivityFromToolProgressProjection	export declare function createActivityFromToolProgressProjection(options?: CreateActivityFromToolProgressProjectionOptions): AgUiProjection
 createAgUiA2AAdapter	export declare function createAgUiA2AAdapter<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiA2AAdapterOptions<Authorization>): AgUiA2AAdapter<Authorization>
+createAgUiA2UiPainter	export declare function createAgUiA2UiPainter(options: AgUiA2UiOptions, limits: ResolvedAgUiLimits, redactor?: SecretRedactor): AgUiA2UiPainter
 createAgUiEventMapper	export declare function createAgUiEventMapper(options?: AgUiEventMapperOptions): AgUiEventMapper
 createAgUiHandler	export declare function createAgUiHandler<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiHandlerOptions<Authorization>): AgUiHandler
 createAgUiMcpAdapter	export declare function createAgUiMcpAdapter<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiMcpAdapterOptions<Authorization>): AgUiMcpAdapter<Authorization>
@@ -76,14 +93,19 @@ createAgUiMcpAppHandler	export declare function createAgUiMcpAppHandler<Authoriz
 createAgUiMcpAppSandbox	export declare function createAgUiMcpAppSandbox(resource: Pick<McpAppResource, "ui">): AgUiMcpAppSandbox
 createAgentEventSourceAgUiReplay	export declare function createAgentEventSourceAgUiReplay<Authorization>(source: AgentEventSource, options: AgentEventSourceAgUiReplayOptions<Authorization>): AgUiReplay<Authorization>
 createCoWorkReplay	export declare function createCoWorkReplay<Authorization>(options: CoWorkReplayOptions<Authorization>): CoWorkReplay<Authorization>
+createMessagesFromSessionProjection	export declare function createMessagesFromSessionProjection(options?: CreateMessagesFromSessionProjectionOptions): AgUiProjection
 createPersistenceAgUiReplay	export declare function createPersistenceAgUiReplay<Authorization>(store: Pick<ProductionPersistenceStore, "queryEvents">, options: PersistenceAgUiReplayOptions<Authorization>): AgUiReplay<Authorization>
 createPrismAcpAgent	export declare function createPrismAcpAgent<Authorization extends AcpAuthorization = AcpAuthorization>(options: CreatePrismAcpAgentOptions<Authorization>): AgentApp
+createStateFromStoreProjection	export declare function createStateFromStoreProjection(store: AgUiStateStore, options?: CreateStateFromStoreProjectionOptions): AgUiProjection
 defaultAgUiInput	export declare function defaultAgUiInput(input: ParsedAgUiInput, limits: ResolvedAgUiLimits): string
+extractAgUiA2UiActions	export declare function extractAgUiA2UiActions(input: ParsedAgUiInput, limits: ResolvedAgUiLimits, maxPayloadBytes?: number): readonly AgUiA2UiAction[]
+jsonDiff	export declare function jsonDiff(from: unknown, to: unknown, path?: string): unknown[]
 packageName	export declare const packageName = "@arnilo/prism-ag-ui"
 parseAgUiInput	export declare function parseAgUiInput(value: unknown, limits: ResolvedAgUiLimits): ParsedAgUiInput
 projectAgUiJson	export declare function projectAgUiJson(value: unknown, maxBytes: number, limits: ResolvedAgUiLimits, name: string): unknown | undefined
 projectAgUiPatch	export declare function projectAgUiPatch(value: readonly unknown[] | undefined, maxOperations: number, maxBytes: number, limits: ResolvedAgUiLimits, name: string): readonly unknown[] | undefined
 projectCoWorkEvent	export declare function projectCoWorkEvent(event: CoWorkEvent, options: CoWorkProjectionOptions): Record<string, unknown> | undefined
+resolveAgUiA2UiLimits	export declare function resolveAgUiA2UiLimits(options?: AgUiA2UiLimitOptions): ResolvedAgUiA2UiLimits
 resolveAgUiCapabilities	export declare function resolveAgUiCapabilities<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: Pick<CreateAgUiHandlerOptions<Authorization>, "capabilities" | "input" | "interrupts" | "lifecycle" | "projection" | "replay" | "resolveRun">): AgentCapabilities
 resolveAgUiLimits	export declare function resolveAgUiLimits(options?: AgUiLimitOptions): ResolvedAgUiLimits
 type AcpAuthorization	export { type AcpAuthorization, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
@@ -94,6 +116,10 @@ type AgUiA2AAdapter	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInpu
 type AgUiA2APartProjectionInput	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
 type AgUiA2ASelection	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
 type AgUiA2ASelectionInput	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type AgUiA2UiAction	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
+type AgUiA2UiLimitOptions	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
+type AgUiA2UiOptions	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
+type AgUiA2UiPainter	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
 type AgUiAuthorizationInput	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
 type AgUiErrorCode	export { AgUiError, type AgUiErrorCode } from "./errors.js"
 type AgUiEventMapper	export { type AgUiEventMapper, type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js"
@@ -119,6 +145,7 @@ type AgUiReplayEvent	export { type AgentEventSourceAgUiReplayOptions, type AgUiR
 type AgUiReplayPage	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
 type AgUiReplayRequest	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
 type AgUiRunResolutionRequest	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
+type AgUiStateStore	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
 type AgentEventSourceAgUiReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
 type CoWorkProjectionOptions	export { type CoWorkProjectionOptions, projectAgUiJson, projectAgUiPatch, projectCoWorkEvent } from "./projection.js"
 type CoWorkReplay	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
@@ -126,10 +153,14 @@ type CoWorkReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type A
 type CoWorkReplayPage	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
 type CoWorkReplayRequest	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
 type CoWorkSource	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type CreateActivityFromToolProgressProjectionOptions	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
 type CreateAgUiA2AAdapterOptions	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
 type CreateAgUiHandlerOptions	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
 type CreateAgUiMcpAdapterOptions	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
 type CreateAgUiMcpAppHandlerOptions	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
+type CreateMessagesFromSessionProjectionOptions	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
 type CreatePrismAcpAgentOptions	export { type AcpAuthorization, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
+type CreateStateFromStoreProjectionOptions	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
 type PersistenceAgUiReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type ResolvedAgUiA2UiLimits	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
 type ResolvedAgUiLimits	export { type AgUiLimitOptions, DEFAULT_AG_UI_LIMITS, DEFAULT_MAX_ACTIVITY_BYTES, DEFAULT_MAX_CURSOR_BYTES, DEFAULT_MAX_ERROR_BYTES, DEFAULT_MAX_EVENT_BYTES, DEFAULT_MAX_INPUT_CONTEXT_BYTES, DEFAULT_MAX_INPUT_CONTEXTS, DEFAULT_MAX_INPUT_INTERRUPTS, DEFAULT_MAX_INPUT_MEDIA_BYTES, DEFAULT_MAX_INPUT_MEDIA_PARTS, DEFAULT_MAX_INPUT_MESSAGES, DEFAULT_MAX_INPUT_TEXT_BYTES, DEFAULT_MAX_INPUT_TOOL_BYTES, DEFAULT_MAX_INPUT_TOOLS, DEFAULT_MAX_JSON_ARRAY_ITEMS, DEFAULT_MAX_JSON_DEPTH, DEFAULT_MAX_JSON_PROPE

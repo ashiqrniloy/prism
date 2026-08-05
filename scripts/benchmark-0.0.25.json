@@ -1,0 +1,55 @@
+{
+  "version": "0.0.25",
+  "generatedAt": "2026-08-05T16:21:54.875Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics",
+    "memoryBytes": 65977401344,
+    "network": false
+  },
+  "fixture": {
+    "warmups": 20,
+    "measuredOperations": 100,
+    "pendingDecisions": 32,
+    "snapshotBytes": 250000,
+    "a2uiOpsPerMessage": 64
+  },
+  "ceilingsMs": {
+    "decisionApply": 5,
+    "stickyMatch": 5,
+    "snapshotCaptureRestore": 20,
+    "a2uiPaint": 10
+  },
+  "results": [
+    {
+      "name": "decisionApply",
+      "operations": 100,
+      "p50Ms": 3.209,
+      "p95Ms": 3.913,
+      "throughputPerSecond": 300.37
+    },
+    {
+      "name": "stickyMatch",
+      "operations": 100,
+      "p50Ms": 0.224,
+      "p95Ms": 0.407,
+      "throughputPerSecond": 3828.55
+    },
+    {
+      "name": "snapshotCaptureRestore",
+      "operations": 100,
+      "p50Ms": 4.483,
+      "p95Ms": 6.742,
+      "throughputPerSecond": 203.94
+    },
+    {
+      "name": "a2uiPaint",
+      "operations": 100,
+      "p50Ms": 0.19,
+      "p95Ms": 0.348,
+      "throughputPerSecond": 4573.68
+    }
+  ]
+}

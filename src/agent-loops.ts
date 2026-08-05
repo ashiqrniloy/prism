@@ -6,6 +6,7 @@ import type {
   ArtifactRepairer,
   ArtifactValidation,
   ArtifactValidator,
+  JsonValue,
   LoopContext,
   Message,
   ProviderRequest,
@@ -15,6 +16,7 @@ import type {
   ToolResult,
   Usage,
 } from "./contracts.js";
+import { AgentLoopStateError } from "./contracts.js";
 import { createId } from "./ids.js";
 import type { AgentInput } from "./input.js";
 import { inputMessages } from "./input.js";
@@ -41,6 +43,8 @@ function toolResultMessage(result: ToolResult): Message {
 // fires artifact_* events here as a noop seam — single-shot emits zero.
 export const singleShotLoop: AgentLoopStrategy = {
   name: "single-shot",
+  // Durable via the runtime's pending-call mechanism; no loop-local state to snapshot.
+  revision: "1",
   async run(ctx: LoopContext): Promise<Usage | undefined> {
     let usage: Usage | undefined;
     let toolRounds = 0;
@@ -106,16 +110,39 @@ export function generateValidateReviseLoop(opts: {
   const max = opts.maxRevisions ?? 3;
   const repairer = opts.repairer ?? defaultRepairer<unknown>();
   const finalOnly = opts.structuredOutputTiming === "final-turn-only" && opts.toolCalls === "bounded";
+  // ponytail: per-run state hoisted to factory scope so snapshot/restore can capture it;
+  // resolveLoop invokes this factory once per run, so there is no cross-run leakage.
+  let attempts = 0;
+  let artifactPhase = !finalOnly;
+  let savedSchema: StructuredOutputOptions | undefined;
+  let pendingHistory: Message[] = [];
   return {
     name: "generate-validate-revise",
+    revision: "1",
+    snapshot(): JsonValue {
+      return {
+        attempts,
+        artifactPhase,
+        savedSchema: savedSchema ?? null,
+        pendingHistory,
+      } as unknown as JsonValue;
+    },
+    restore(snapshot: JsonValue): void {
+      const state = snapshot as { attempts?: unknown; artifactPhase?: unknown; savedSchema?: unknown };
+      if (typeof state.attempts !== "number" || !Number.isInteger(state.attempts) || typeof state.artifactPhase !== "boolean") {
+        throw new AgentLoopStateError("ERR_PRISM_LOOP_SNAPSHOT", "generate-validate-revise snapshot drift");
+      }
+      attempts = state.attempts;
+      artifactPhase = state.artifactPhase;
+      savedSchema = (state.savedSchema ?? undefined) as StructuredOutputOptions | undefined;
+      // Repair messages were appended to the session before suspension, so the rebuilt
+      // history already carries them; re-applying pendingHistory would duplicate them.
+      pendingHistory = [];
+    },
     async run(ctx: LoopContext): Promise<Usage | undefined> {
       let usage: Usage | undefined;
       let nextInput: AgentInput = ctx.input;
-      let pendingHistory: Message[] = [];
       let toolRounds = 0;
-      let attempts = 0;
-      let artifactPhase = !finalOnly;
-      let savedSchema: StructuredOutputOptions | undefined;
 
       for (let turn = 1; attempts <= max; turn += 1) {
         throwIfAborted(ctx.signal);
@@ -260,7 +287,7 @@ export function dispatchableToolCalls(calls: readonly ToolCallContent[]): readon
 /** Dispatch tool calls with bounded concurrency; append transcript rows in call order. */
 export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[], ctx: LoopContext): Promise<void> {
   if (calls.length === 0) return;
-  ctx.chargeToolRound?.(calls);
+  await ctx.chargeToolRound?.(calls);
   const concurrency = calls.some((call) => ctx.isToolCallExclusive?.(call)) ? 1 : Math.max(1, Math.min(ctx.toolConcurrency, calls.length));
   if (concurrency === 1) {
     for (const call of calls) {
@@ -270,7 +297,7 @@ export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[]
     return;
   }
 
-  const results: ToolResult[] = new Array(calls.length);
+  const results: (ToolResult | undefined)[] = new Array(calls.length);
   let nextIndex = 0;
   const workers = Array.from({ length: concurrency }, async () => {
     for (;;) {
@@ -284,11 +311,15 @@ export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[]
   await Promise.all(workers);
   for (const result of results) {
     throwIfAborted(ctx.signal);
+    if (!result) continue;
     await appendToolResultMessage(result, ctx);
   }
 }
 
 async function appendToolResultMessage(result: ToolResult, ctx: LoopContext): Promise<void> {
+  // Approval-gated calls return a marker instead of a real result; the transcript must not
+  // record a phantom tool_result for a call that never dispatched.
+  if ((result.metadata as { approvalPending?: unknown } | undefined)?.approvalPending === true) return;
   const message = toolResultMessage(result);
   ctx.history.push(message);
   await ctx.appendMessage(message);

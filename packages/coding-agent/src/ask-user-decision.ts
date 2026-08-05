@@ -379,6 +379,35 @@ export function createAskUserDecisionTool(options: AskUserDecisionToolOptions): 
       required: ["question", "options"],
       additionalProperties: false,
     } as JsonObject,
+    // Shared elicitation mapping (Phase 8): a durable gated run surfaces this call as a
+    // kind:"elicitation" pending decision; the answer payload resolves it without executing ask().
+    // The full UX payload (question + options with pros/cons) rides on the schema's extension key.
+    elicitation: (args) => {
+      let parsed: {
+        question: string;
+        options: AskUserDecisionOption[];
+        selectionMode: AskUserDecisionSelectionMode;
+        allowCustom: boolean;
+      };
+      try {
+        parsed = parseAskUserDecisionArgs(args as Record<string, unknown>, limits);
+      } catch {
+        return undefined; // malformed args fall back to plain tool approval; execute reports the parse error
+      }
+      return {
+        schema: {
+          ...askUserDecisionResumeSchema(parsed),
+          "x-prism-ask-user-decision": toAskUserDecisionSuspendData(parsed),
+        } as unknown as JsonObject,
+        reason: parsed.question,
+        validate: (payload) => {
+          resolveAskUserDecisionAnswer(payload as unknown as AskUserDecisionAnswer, parsed.selectionMode, parsed.options, {
+            allowCustom: parsed.allowCustom,
+            maxCustomTextBytes: limits.maxCustomTextBytes,
+          });
+        },
+      };
+    },
     async execute(args, context: ToolExecutionContext): Promise<ToolResult> {
       const toolCallId = context.toolCallId;
       if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");

@@ -118,7 +118,15 @@ Optional steer hooks on `LoopContext` (0.0.11): `hasPendingSteers?()` / `applyPe
 
 ## Durable runs
 
-`RunOptions.runState` supports only built-in loop options (`single-shot` and `generate-validate-revise`). A custom `AgentLoopStrategy` has arbitrary in-memory cursor state, so durable configuration rejects it before provider work. Built-in suspension occurs only before an input provider call or immediately before a tool side effect; completed provider turns remain in `SessionStore` history and are not repeated after `resumeAgentRun()`.
+`RunOptions.runState` supports the built-in loop options (`single-shot` and `generate-validate-revise`) and custom strategies that opt into durable state. `single-shot` is durable via the runtime's pending-call mechanism and carries no loop-local state. `generate-validate-revise` snapshots `{ attempts, artifactPhase, savedSchema, pendingHistory }` at `revision: "1"`. A custom `AgentLoopStrategy` must declare both snapshot hooks or durable configuration rejects it with `AgentLoopStateError` (`ERR_PRISM_LOOP_NOT_DURABLE`) before any provider call:
+
+| Member | Purpose |
+| --- | --- |
+| `revision?: string` | Host-authored loop revision. Joins the durable-run fingerprint, so a loop change without a `definitionRevision` bump fails closed on resume. |
+| `snapshot?(): JsonValue` | Capture loop-local resumable state at suspension. Must be JSON-compatible; core redacts it and bounds it inside the durable run-state envelope (`maxStateBytes`, depth 32). A non-JSON value fails the run with `ERR_PRISM_LOOP_SNAPSHOT`. |
+| `restore?(snapshot): void` | Rehydrate from the captured snapshot; must throw on drift. Called once before `run(ctx)` on resume. Also available as `ctx.restoredLoopState`. |
+
+The snapshot is stored as `loopState: { name, revision, snapshot }` on the durable run state and cleared when the run reaches a terminal status. On resume, a name/revision mismatch between the stored `loopState` and the resolved strategy fails closed (`ERR_PRISM_LOOP_REVISION`), and the fingerprint check independently rejects any loop drift. Suspension occurs only before an input provider call or immediately before a tool side effect; completed provider turns remain in `SessionStore` history and are not repeated after `resumeAgentRun()`.
 
 ## Outputs / response / events
 

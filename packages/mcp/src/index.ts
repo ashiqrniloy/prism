@@ -13,6 +13,13 @@ export {
   mcpCallError,
   summarizeMcpContent,
 } from "./content.js";
+export {
+  MAX_MCP_ELICITATION_MESSAGE_BYTES,
+  MAX_MCP_ELICITATION_SCHEMA_BYTES,
+  mcpElicitationDecision,
+  mcpElicitationResultFromDecision,
+} from "./elicitation.js";
+export type { McpElicitationDecisionOptions } from "./elicitation.js";
 export type { McpClientLimitsInput, ResolvedMcpClientLimits } from "./limits.js";
 export {
   DEFAULT_MAX_CAPABILITY_BYTES,

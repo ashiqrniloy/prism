@@ -2,8 +2,10 @@ import type {
   Agent,
   AgentIdentity,
   AgentRunResult,
+  CheckpointStore,
   OwnershipScope,
   PermissionPolicy,
+  ResumeNestedRun,
   SecretRedactor,
   ToolEffectStore,
 } from "@arnilo/prism";
@@ -120,10 +122,24 @@ export interface CreateSupervisorOptions {
   readonly limits?: SupervisorLimits;
   readonly hooks?: SupervisorHooks;
   readonly redactor?: SecretRedactor;
+  /**
+   * Durable child runs: with `checkpoints` + `definitionRevision`, every child runs with
+   * `interruptBeforeTool`; a child that suspends on pending decisions throws
+   * `AgentDelegationSuspendedError` so the hosting root run can surface them.
+   */
+  readonly checkpoints?: CheckpointStore;
+  /** Host-authored revision shared by child durable runs; bump on policy/definition change. */
+  readonly definitionRevision?: string;
 }
 
 export interface Supervisor {
   delegate(request: DelegationRequest): Promise<AgentRunResult>;
+  /**
+   * Routes root-run decisions back to the suspended child. Pass as `resumeNestedRun` in the
+   * root run's `runState` (sticky auto-apply) and every `resumeAgentRun` options object.
+   * Throws when `checkpoints`/`definitionRevision` are not configured.
+   */
+  readonly resumeNestedRun: ResumeNestedRun;
   subscribe(): AsyncIterable<SupervisorEvent>;
   readonly activeChildren: number;
 }

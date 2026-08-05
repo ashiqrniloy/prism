@@ -235,7 +235,8 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     await options.beforeExecute?.(mediatedCall, tool!, context);
   } catch (error) {
     await failBeforeEffect(effect, isSuspended(error) ? "failed_retryable" : "failed_terminal");
-    if (isSuspended(error)) throw error;
+    // Loop-state contract errors (snapshot capture) are terminal run errors, not tool errors.
+    if (isSuspended(error) || isLoopStateError(error) || isDelegationSuspended(error)) throw error;
     return blocked(mediatedCall, context, "execution_denied", errorToErrorInfo(error, secrets), options, startedAt);
   }
 
@@ -298,6 +299,12 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     return completedResult;
   } catch (error) {
     if (completedResult) return completedResult;
+    // Nested-run suspensions must propagate to the run loop, never become tool errors.
+    if (isDelegationSuspended(error)) {
+      if (effect && (effect.dispatched || dispatchAttempted)) await unknownEffectResult(effect, mediatedCall);
+      else await failBeforeEffect(effect, "failed_retryable");
+      throw error;
+    }
     if (effect && (effect.dispatched || dispatchAttempted)) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
     await failBeforeEffect(effect, "failed_terminal");
     if (error instanceof GuardrailError) throw error;
@@ -384,7 +391,7 @@ async function prepareToolEffect(
   };
 }
 
-function resolveToolEffectDeclaration(
+export function resolveToolEffectDeclaration(
   tool: ToolDefinition,
   args: JsonObject,
   context: ToolExecutionContext,
@@ -486,6 +493,14 @@ function effectErrorResult(call: ToolCallContent, code: import("./tool-effects.j
 
 function isSuspended(error: unknown): boolean {
   return (error as { code?: unknown })?.code === "ERR_PRISM_AGENT_RUN_SUSPENDED";
+}
+
+function isLoopStateError(error: unknown): boolean {
+  return typeof (error as { code?: unknown })?.code === "string" && (error as { code: string }).code.startsWith("ERR_PRISM_LOOP_");
+}
+
+function isDelegationSuspended(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === "ERR_PRISM_DELEGATION_SUSPENDED";
 }
 
 async function checkCall(call: ToolCallContent, options: DispatchToolCallOptions, startedAt: string): Promise<ToolResult | undefined> {

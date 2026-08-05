@@ -1,5 +1,6 @@
 import { type AGUIEvent, EventSchemas, EventType } from "@ag-ui/core";
 import type { AgentEvent, ErrorInfo, SecretRedactor, ThinkingContent, ToolCallContent, ToolResult, Usage } from "@arnilo/prism";
+import { type AgUiA2UiOptions, createAgUiA2UiPainter } from "./a2ui.js";
 import { AgUiError } from "./errors.js";
 import { type AgUiLimitOptions, resolveAgUiLimits } from "./limits.js";
 import { type AgUiActivitySnapshot, type AgUiProjection, projectAgUiJson, projectAgUiPatch, projectCoWorkEvent } from "./projection.js";
@@ -10,6 +11,8 @@ export interface AgUiEventMapperOptions {
   readonly projection?: AgUiProjection;
   /** Adapter-owned activity proven safe by a selected protocol bridge. */
   readonly activity?: (event: AgentEvent) => AgUiActivitySnapshot | undefined;
+  /** Opt-in A2UI painting middleware. Absent = inert (0.0.24 behavior). */
+  readonly a2ui?: AgUiA2UiOptions;
   readonly limits?: AgUiLimitOptions;
   /** Emits safe named CUSTOM lifecycle metadata; default false. */
   readonly includeCustomEvents?: boolean;
@@ -35,6 +38,7 @@ const TRUNCATION = "… [truncated]";
 /** Maps one ordered Prism event stream to safe, schema-validated AG-UI events. */
 export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgUiEventMapper {
   const limits = resolveAgUiLimits(options.limits);
+  const a2ui = options.a2ui ? createAgUiA2UiPainter(options.a2ui, limits, options.redactor) : undefined;
   const activeTools = new Map<string, ActiveTool>();
   const activeSteps = new Set<string>();
   let activeMessage: string | undefined;
@@ -316,6 +320,12 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
             reasoning(events, event.content, event);
             break;
           }
+          if (event.content.type === "tool_call_delta") {
+            if (a2ui) {
+              for (const painted of a2ui.onToolCallDelta(event.content)) emit(events, painted);
+            }
+            break;
+          }
           if (event.content.type !== "text") break;
           if (!activeMessage) {
             activeMessage = id(undefined, `${event.runId}:message-${++messageSequence}`);
@@ -354,6 +364,9 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           break;
         case "tool_execution_finished":
           finishTool(events, event.result.toolCallId, event.result.name, "completed", event.result);
+          if (a2ui) {
+            for (const painted of a2ui.onToolFinished(event.result)) emit(events, painted);
+          }
           break;
         case "tool_execution_error":
           finishTool(events, event.call.id, event.call.name, "failed");

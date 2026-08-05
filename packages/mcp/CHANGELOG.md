@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.25] - 2026-08-06
+
+### Added
+- `mcpElicitationDecision` / `mcpElicitationResultFromDecision` map MCP elicitation onto the shared pending-decision model (humanInteraction fail-closed).
+
+### Changed
+- Released with exact 0.0.25 graph.
+
+See [migration guide](../../docs/migration.md) for the 0.0.24 → 0.0.25 notes.
+
 ## [0.0.24] - 2026-08-04
 
 ### Added

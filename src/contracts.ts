@@ -552,7 +552,38 @@ export interface SubscribeOptions {
 
 export type AgentRunStatus = "succeeded" | "failed" | "aborted" | "suspended" | "denied";
 
-export type AgentRunInterruptionKind = "input_guardrail" | "tool_approval";
+export type AgentRunInterruptionKind = "input_guardrail" | "tool_approval" | "elicitation";
+
+export type ApprovalOutcome = "allow_once" | "allow_for_run" | "reject_once" | "reject_for_run";
+
+export type PendingDecisionKind = "tool_approval" | "elicitation";
+
+/** Redacted match scope for one pending or sticky decision; never contains raw tool arguments. */
+export interface DecisionScope {
+  readonly toolName?: string;
+  readonly effectKind?: ToolEffectKind;
+  /** Redacted principal reference (tenant/kind/id); never a credential. */
+  readonly identity?: string;
+  /** Bounded argument-value constraints; deep-equal matched per key. */
+  readonly actionConstraints?: Readonly<Record<string, JsonValue>>;
+  /** SHA-256 of canonical JSON arguments; present instead of raw arguments. */
+  readonly argumentsHash?: string;
+}
+
+/** One redacted, unresolved approval request inside a suspended durable run. */
+export interface PendingDecision {
+  /** Unique within the run; nested runs use supervisor-prefixed ids. */
+  readonly approvalId: string;
+  readonly kind: PendingDecisionKind;
+  readonly toolCallId?: string;
+  readonly scope: DecisionScope;
+  /** Bounded, redacted. */
+  readonly reason: string;
+  /** Typed payload contract for elicitation decisions. */
+  readonly elicitationSchema?: JsonObject;
+  /** Delegation chain, root-first; core-written, never client-supplied. */
+  readonly attribution?: { readonly path: readonly string[] };
+}
 
 /** Redacted safe-boundary descriptor; never contains tool arguments. */
 export interface AgentRunInterruption {
@@ -560,7 +591,119 @@ export interface AgentRunInterruption {
   readonly reason: string;
   readonly toolCallId?: string;
   readonly toolName?: string;
+  /** All unresolved approval requests of this suspension; absent for legacy single approvals. */
+  readonly pendingDecisions?: readonly PendingDecision[];
 }
+
+/** One host decision applied to one pending approval request. */
+export interface RunDecision {
+  readonly approvalId: string;
+  readonly outcome: ApprovalOutcome;
+  /** Bounded to 2 KiB; redacted. */
+  readonly reason?: string;
+  /** Revalidated (schema, guardrails, policy) before dispatch; produces a new arguments hash. */
+  readonly modifiedArguments?: JsonObject;
+  /** Elicitation payload; validated against the pending decision's elicitationSchema. */
+  readonly elicitation?: JsonObject;
+}
+
+/** Run-scoped sticky decision; exact scope match, rechecked against policy, dropped at run end. */
+export interface StickyDecision {
+  readonly scope: DecisionScope;
+  readonly outcome: "allow_for_run" | "reject_for_run";
+  readonly reason?: string;
+  readonly decidedAt: string;
+  /** Delegation path when the sticky was created for a nested-run decision. */
+  readonly attribution?: { readonly path: readonly string[] };
+}
+
+/** Root-visible link between one nested approval and the child-run approval id. */
+export interface NestedRunApproval {
+  /** Root-visible approval id (hashed, non-enumerating across runs). */
+  readonly id: string;
+  /** Approval id as the nested run recorded it. */
+  readonly childApprovalId: string;
+}
+
+/** Root-visible link between a suspended nested run and the tool call that hosted it. */
+export interface NestedRunRef {
+  readonly runId: string;
+  readonly sessionId?: string;
+  readonly toolCallId: string;
+  /** Redacted delegation path (child ids, root first). */
+  readonly path: readonly string[];
+  readonly approvals: readonly NestedRunApproval[];
+  /** Decisions persisted by a partial batch, keyed by root-visible approval id. */
+  readonly decisions?: Readonly<Record<string, RunDecision>>;
+}
+
+/** Outcome of resuming a nested run through the host-supplied hook. */
+export type NestedRunOutcome =
+  | { readonly status: "suspended"; readonly pendingDecisions: readonly PendingDecision[] }
+  | { readonly status: "completed"; readonly value?: JsonValue }
+  | { readonly status: "failed"; readonly code: string; readonly message: string };
+
+/**
+ * Host hook that resumes a nested run (supervisor child) with child-visible decisions.
+ * Used both when a nested suspension first surfaces (sticky auto-apply) and when root
+ * decisions route back to the child on resume.
+ */
+export type ResumeNestedRun = (
+  nested: { readonly ref: AgentRunRef; readonly toolCallId: string; readonly path: readonly string[] },
+  decisions: readonly RunDecision[],
+) => Promise<NestedRunOutcome>;
+
+/**
+ * Thrown by a delegated-run host (e.g. the supervisor) when a nested run suspends on
+ * pending decisions inside a tool execution. Core converts it into a root suspension
+ * with attributed, root-visible approval ids; the dispatching wrapper attaches `toolCall`.
+ */
+export class AgentDelegationSuspendedError extends Error {
+  readonly code = "ERR_PRISM_DELEGATION_SUSPENDED";
+  toolCall?: ToolCallContent;
+  constructor(
+    readonly ref: AgentRunRef,
+    readonly pendingDecisions: readonly PendingDecision[],
+    /** Redacted delegation path (child ids) used when decisions carry no attribution. */
+    readonly path?: readonly string[],
+  ) {
+    super("Delegated run suspended");
+    this.name = "AgentDelegationSuspendedError";
+  }
+}
+
+/** Shared decision-contract violations. Unknown and foreign approval ids share one non-enumerating error. */
+export class AgentDecisionError extends Error {
+  constructor(
+    readonly code:
+      | "ERR_PRISM_DECISION_STALE"
+      | "ERR_PRISM_DECISION_UNKNOWN"
+      | "ERR_PRISM_DECISION_DUPLICATE"
+      | "ERR_PRISM_DECISION_SCOPE"
+      | "ERR_PRISM_DECISION_INVALID"
+      | "ERR_PRISM_DECISION_LIMIT",
+    message: string,
+    options?: { readonly cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = "AgentDecisionError";
+  }
+}
+
+export const DEFAULT_MAX_PENDING_DECISIONS = 32;
+export const HARD_MAX_PENDING_DECISIONS = 128;
+export const DEFAULT_MAX_STICKY_DECISIONS = 64;
+export const HARD_MAX_STICKY_DECISIONS = 256;
+export const MAX_DECISION_REASON_BYTES = 2 * 1024;
+export const HARD_MAX_DECISION_REASON_BYTES = 8 * 1024;
+export const MAX_ELICITATION_BYTES = 16 * 1024;
+export const HARD_MAX_ELICITATION_BYTES = 64 * 1024;
+export const MAX_ACTION_CONSTRAINTS = 32;
+export const HARD_MAX_ACTION_CONSTRAINTS = 64;
+/** Maximum delegation attribution depth for surfaced nested pending decisions. */
+export const MAX_ATTRIBUTION_DEPTH = 8;
+export const MAX_ACTION_CONSTRAINT_BYTES = 4 * 1024;
+export const HARD_MAX_ACTION_CONSTRAINT_BYTES = 16 * 1024;
 
 export interface AgentRunStateOptions {
   readonly checkpoints: CheckpointStore;
@@ -570,6 +713,8 @@ export interface AgentRunStateOptions {
   readonly interruptBeforeTool?: boolean;
   readonly maxStateBytes?: number;
   readonly fencingToken?: number;
+  /** Enables sticky auto-apply when a nested suspension first surfaces during this run. */
+  readonly resumeNestedRun?: ResumeNestedRun;
 }
 
 /** Versioned, redacted checkpoint payload. Treat as opaque except status/version/interruption. */
@@ -588,8 +733,11 @@ export interface AgentRunState {
 }
 
 export interface AgentRunResume {
-  readonly decision: "approve" | "deny";
   readonly expectedVersion: number;
+  /** Legacy single-approval path; `approve` allows all pending once, `deny` terminates the run denied. */
+  readonly decision?: "approve" | "deny";
+  /** Batch decision path; exactly one of decision/decisions. Applied as one atomic CAS transition. */
+  readonly decisions?: readonly RunDecision[];
 }
 
 export interface AgentRunResumeOptions {
@@ -598,6 +746,8 @@ export interface AgentRunResumeOptions {
   readonly definitionRevision: string;
   readonly ownership?: OwnershipScope;
   readonly fencingToken?: number;
+  /** Routes root decisions for nested-run approvals back to the child (e.g. supervisor). */
+  readonly resumeNestedRun?: ResumeNestedRun;
 }
 
 /** Bounded, abortable options for `resumeAgentRunStream()`. */
@@ -620,6 +770,18 @@ export class AgentRunStateError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AgentRunStateError";
+  }
+}
+
+/** Durable-loop contract violations: hook-less custom strategy on a durable run, invalid snapshot, or revision drift. */
+export class AgentLoopStateError extends Error {
+  constructor(
+    readonly code: "ERR_PRISM_LOOP_NOT_DURABLE" | "ERR_PRISM_LOOP_SNAPSHOT" | "ERR_PRISM_LOOP_REVISION",
+    message: string,
+    options?: { readonly cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = "AgentLoopStateError";
   }
 }
 
@@ -882,6 +1044,20 @@ export interface ToolEffectDeclaration {
 /** Runs after argument validation. It must be synchronous, deterministic, bounded, and side-effect-free. */
 export type ToolEffectClassifier = (args: JsonObject, context: ToolExecutionContext) => ToolEffectDeclaration;
 
+/**
+ * Elicitation contract declared by a tool. When a durable gated run suspends on this tool,
+ * the pending decision has kind `elicitation` and carries this schema as its payload contract;
+ * the resume decision's `elicitation` payload resolves the call without executing it.
+ */
+export interface ToolElicitationRequest {
+  /** Typed payload contract; bounded to HARD_MAX_ELICITATION_BYTES when serialized. */
+  readonly schema: JsonObject;
+  /** Human-facing reason (e.g. the question); bounded to MAX_DECISION_REASON_BYTES. */
+  readonly reason?: string;
+  /** Answer-shape validation beyond structural schema checks; throw to reject the payload. */
+  readonly validate?: (payload: JsonObject) => void;
+}
+
 export interface ToolDefinition {
   readonly name: string;
   readonly description?: string;
@@ -890,6 +1066,8 @@ export interface ToolDefinition {
   readonly exclusive?: boolean;
   /** Optional side-effect declaration. Omitted tools retain legacy unmanaged dispatch. */
   readonly effect?: ToolEffectDeclaration | ToolEffectClassifier;
+  /** Optional elicitation contract for durable gating; return undefined to fall back to plain tool approval. */
+  readonly elicitation?: (args: JsonObject, context: ToolExecutionContext) => ToolElicitationRequest | undefined;
   execute(args: JsonObject, context: ToolExecutionContext): Promise<ToolResult> | ToolResult;
 }
 
@@ -2261,8 +2439,13 @@ export interface LoopContext {
   /** Maximum independent tool calls dispatched concurrently per provider turn. Default `1`. */
   readonly toolConcurrency: number;
   assemble(nextInput: AgentInput, toolResults?: readonly ToolResult[], turn?: number): Promise<ProviderRequest>;
-  /** Charges a complete tool round before any call in it can start. */
-  chargeToolRound?(calls: readonly ToolCallContent[]): void;
+  /**
+   * Charges a complete tool round before any call in it can start. On durable interrupt
+   * runs this is also the round-level approval gate: it collects every gated call of the
+   * round into one suspension. Loops must await it; dispatch without it falls back to
+   * per-call single-decision suspensions.
+   */
+  chargeToolRound?(calls: readonly ToolCallContent[]): void | Promise<void>;
   generate(request: ProviderRequest): Promise<ProviderTurnResult>;
   dispatchToolCall(call: ToolCallContent): Promise<ToolResult>;
   isToolCallExclusive?(call: ToolCallContent): boolean;
@@ -2272,11 +2455,24 @@ export interface LoopContext {
   hasPendingSteers?(): boolean;
   /** Drain pending steers into history/session. Returns true when any were applied. */
   applyPendingSteers?(): Promise<boolean>;
+  /** Snapshot captured at the last suspension when the strategy declared snapshot/restore. Present only on resume. */
+  readonly restoredLoopState?: JsonValue;
 }
 
 export interface AgentLoopStrategy {
   readonly name: string;
+  /** Host-authored loop revision. Joins the durable-run fingerprint when snapshot hooks are present. */
+  readonly revision?: string;
   run(ctx: LoopContext): Promise<Usage | undefined>;
+  /**
+   * Capture loop-local resumable state at suspension. Must return a JSON-compatible value;
+   * core bounds and redacts it inside the durable run-state envelope. Declare together with
+   * `restore`; a custom strategy without both hooks is rejected before any provider call on
+   * durable runs (`AgentLoopStateError` / `ERR_PRISM_LOOP_NOT_DURABLE`).
+   */
+  snapshot?(): JsonValue;
+  /** Rehydrate from a previously captured snapshot; must throw on drift. Called before `run` on resume. */
+  restore?(snapshot: JsonValue): void;
 }
 
 export type AgentLoopOptions =

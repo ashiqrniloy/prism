@@ -50,6 +50,22 @@
       "reconnectCatchup": 2000
     }
   },
+  "phase8LoopsHitl": {
+    "$comment": "Release 0.0.25 network-free durable-loop / HITL / A2UI evidence. Practical pending cap is DEFAULT_MAX_PENDING_DECISIONS (32); hard 128 is a batch-reject ceiling. Snapshot fixture ~250 KiB. Ceilings match Task 0 freeze.",
+    "fixture": {
+      "warmups": 20,
+      "measuredOperations": 100,
+      "pendingDecisions": 32,
+      "snapshotBytes": 250000,
+      "a2uiOpsPerMessage": 64
+    },
+    "p95CeilingsMs": {
+      "decisionApply": 5,
+      "stickyMatch": 5,
+      "snapshotCaptureRestore": 20,
+      "a2uiPaint": 10
+    }
+  },
   "enterprisePostgres": {
     "$comment": "Release 0.0.23 protected PostgreSQL benchmark. Fixed fixture: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row explicit cleanup batches. All ceilings are milliseconds and intentionally match Phase 6's 50ms indexed-point and 100ms page/cleanup ceilings.",
     "fixture": {

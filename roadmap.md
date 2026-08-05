@@ -2,7 +2,7 @@
 
 Updated: 2026-08-04
 Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed)
-Status: Phase 7 complete; Phase 8+ pending exit gates
+Status: Phase 8 complete; Phase 9+ pending exit gates
 
 ## Objectives
 
@@ -668,7 +668,7 @@ Status: Phase 7 complete; Phase 8+ pending exit gates
 - Docs: `docs/tool-effects.md`, migration `0.0.23 → 0.0.24`, example `examples/distributed-events-and-tool-effects.ts`.
 - Publishable graph remains **47** manifests at **0.0.24**.
 
-- [ ] Phase 8 — Release 0.0.25: durable custom loops and complete human-in-the-loop semantics
+- [x] Phase 8 — Release 0.0.25: durable custom loops and complete human-in-the-loop semantics
   - Objectives:
     - Make custom loop extensibility compatible with durable suspension/resume.
     - Replace sequential binary approval limitations with one shared richer approval/elicitation model.
@@ -732,6 +732,13 @@ Status: Phase 7 complete; Phase 8+ pending exit gates
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
   - Exit Gate:
     - Durable custom-loop, approval matrix, nested delegation, all protocol mapping, security, state-size, compatibility, and full release tests pass.
+
+### Phase 8 completion evidence — 2026-08-06
+
+- Durable custom-loop `revision`/`snapshot`/`restore`; shared pending-decision / sticky HITL; nested supervisor attributions; protocol batch resume (AG-UI/ACP/MCP/coding/server).
+- Opt-in A2UI painting + standard AG-UI projectors; network-free `scripts/phase8-conformance.test.mjs` and checked `scripts/benchmark-0.0.25.json` under Task 0 ceilings (decision 3.913 / sticky 0.407 / snapshot 6.742 / a2ui 0.348 ms p95).
+- Docs: migration `0.0.24 → 0.0.25`, examples `durable-loops-and-approvals.ts` / `ag-ui-a2ui.ts`.
+- Publishable graph remains **47** manifests at **0.0.25**.
 
 - [ ] Phase 9 — Release 0.0.26: coding intelligence, managed processes, forge, and safe egress primitives
   - Objectives:

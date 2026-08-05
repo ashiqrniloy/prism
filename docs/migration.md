@@ -1,5 +1,29 @@
 # Migration guide
 
+## 0.0.24 → 0.0.25 durable custom loops and human-in-the-loop (intentional pre-1.0 contract changes)
+
+Release **0.0.25** makes custom loops durable and replaces sequential binary approvals with one shared pending-decision model. Protocol adapters (AG-UI, ACP, MCP, coding `ask_user_decision`, server resume, supervisor nesting) map onto that model. Opt-in A2UI painting and standard AG-UI projectors ship in `@arnilo/prism-ag-ui`. Publishable graph stays **47** manifests.
+
+1. **Custom loops on durable runs need hooks.** Built-in `single-shot` / `generate-validate-revise` stay durable. A custom `AgentLoopStrategy` on `runState` must expose `snapshot` + `restore` (and usually `revision`) or the run fails closed with `AgentLoopStateError` / `ERR_PRISM_LOOP_NOT_DURABLE` before any provider call. Snapshots must be JSON-compatible and fit the run-state byte/depth caps (`ERR_PRISM_LOOP_SNAPSHOT`).
+2. **Fingerprint loop entry shape changed.** Durable fingerprints now store `{ name, revision }` instead of a bare loop name string. Persisted **0.0.24** runs fail closed on **0.0.25** resume (fingerprint mismatch / `ERR_PRISM_LOOP_REVISION`). Finish or abandon in-flight 0.0.24 durable runs before upgrading, or rebuild from a fresh suspension under 0.0.25.
+3. **Batch resume.** `AgentRunResume` accepts either legacy `{ decision: "approve" | "deny" }` or `{ decisions: RunDecision[] }` — exactly one. Outcomes: `allow_once` / `allow_for_run` / `reject_once` / `reject_for_run`, optional `reason`, `modifiedArguments`, `elicitation`. One CAS transition applies the whole batch; partial batches re-suspend with remaining pendings. Sticky decisions expire at run end and match exact scope (tool/effect/identity/arguments hash + nested attribution path).
+4. **Elicitation.** Tools may declare an `elicitation` hook; coding `ask_user_decision` uses it on durable gates. MCP hosts use `mcpElicitationDecision` / `mcpElicitationResultFromDecision` with required `humanInteraction: true` on accept.
+5. **Nested approvals.** Supervisors with `checkpoints` + `definitionRevision` surface child approvals to the root as hashed attributed ids; `resumeNestedRun` routes decisions without widening child permission. Root sticky decisions are path-scoped.
+6. **AG-UI / ACP / server.** Interrupts carry redacted `pendingDecisions` in metadata; resume may return a batch. ACP permission offers four outcomes (`allow_always` → `allow_for_run`, `reject_always` → `reject_for_run`); cancelled stays terminal deny. Server `/resume` validates the same shapes at the boundary.
+7. **Opt-in generative UI.** `createAgUiHandler({ a2ui })` paints A2UI v0.9 surfaces; A2UI actions return through existing `input.project` (not an automatic tool loopback). Standard projectors (`createMessagesFromSessionProjection`, `createStateFromStoreProjection`, `createActivityFromToolProgressProjection`, `composeAgUiProjections`) are explicit opt-in.
+
+```ts
+await resumeAgentRun(checkpoints, {
+  runId,
+  decisions: [
+    { approvalId: "a1", outcome: "allow_for_run" },
+    { approvalId: "a2", outcome: "reject_once", reason: "external recipient" },
+  ],
+}, { ownership, expectedVersion });
+```
+
+Examples: `node examples/durable-loops-and-approvals.ts`, `node examples/ag-ui-a2ui.ts`. Hosts that never set `runState` / interrupt gates keep prior behavior aside from the fingerprint shape for any already-persisted durable runs.
+
 ## 0.0.23 → 0.0.24 distributed events and recoverable tool effects (intentional pre-1.0 contract changes)
 
 Release **0.0.24** adds a replaceable durable `AgentEventSource`, recoverable `ToolEffectStore`, full AG-UI 0.0.57 compatibility, and AG-UI fronting for MCP / MCP Apps / remote A2A. Core remains dependency-free; PostgreSQL adapters and effect stores stay opt-in. Delivery is at-least-once with consumer deduplication — not exactly-once.

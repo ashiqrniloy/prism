@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.25] - 2026-08-06
+
+### Added
+- Opt-in A2UI painting middleware (`a2ui` handler option) and standard projectors (`createMessagesFromSessionProjection`, `createStateFromStoreProjection`, `createActivityFromToolProgressProjection`, `composeAgUiProjections`).
+- Batch interrupt/resume via shared `RunDecision[]`; ACP four-outcome permission mapping.
+
+### Changed
+- Publishable graph remains **47** manifests at **0.0.25**; peers and lockfile move together.
+
+See [migration guide](../../docs/migration.md) for the 0.0.24 → 0.0.25 notes.
+
 ## [0.0.24] - 2026-08-04
 
 ### Added

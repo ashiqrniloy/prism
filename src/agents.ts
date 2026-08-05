@@ -1,8 +1,11 @@
-import { resolveLoop, resolveToolConcurrency } from "./agent-loops.js";
+import { createHash } from "node:crypto";
+import { resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 import {
   agentFingerprint,
+  boundedLoopSnapshot,
   initialAgentRunState,
   loadAgentRunState,
+  type PendingToolCall,
   publicState,
   type StoredAgentRunState,
   saveAgentRunState,
@@ -28,11 +31,16 @@ import type {
   CompactionOptions,
   CompactionResult,
   ContentBlock,
+  DecisionScope,
   ErrorInfo,
   Guardrails,
+  JsonObject,
   LoopContext,
   Message,
+  NestedRunOutcome,
+  NestedRunRef,
   OwnershipScope,
+  PendingDecision,
   ProviderEvent,
   ProviderRequest,
   ProviderRequestPolicy,
@@ -40,6 +48,8 @@ import type {
   ProviderTurnResult,
   RetryMiddlewarePayload,
   RetryOptions,
+  ResumeNestedRun,
+  RunDecision,
   RunLedger,
   RunOptions,
   RunRecord,
@@ -49,15 +59,35 @@ import type {
   Skill,
   SteerOptions,
   SubscribeOptions,
+  StickyDecision,
   TextContent,
   ToolCallContent,
   ToolDefinition,
+  ToolExecutionContext,
   ToolEffectStore,
   ToolRegistry,
+  ToolResult,
   Usage,
   UsageRecord,
 } from "./contracts.js";
-import { AgentRunError, AgentRunStateError, DEFAULT_MAX_PENDING_STEER_BYTES, DEFAULT_MAX_PENDING_STEERS } from "./contracts.js";
+import {
+  AgentDecisionError,
+  AgentDelegationSuspendedError,
+  AgentLoopStateError,
+  AgentRunError,
+  AgentRunStateError,
+  DEFAULT_MAX_PENDING_DECISIONS,
+  HARD_MAX_ELICITATION_BYTES,
+  HARD_MAX_PENDING_DECISIONS,
+  MAX_ATTRIBUTION_DEPTH,
+  DEFAULT_MAX_PENDING_STEER_BYTES,
+  DEFAULT_MAX_PENDING_STEERS,
+  DEFAULT_MAX_STICKY_DECISIONS,
+  MAX_ACTION_CONSTRAINT_BYTES,
+  MAX_ACTION_CONSTRAINTS,
+  MAX_DECISION_REASON_BYTES,
+  MAX_ELICITATION_BYTES,
+} from "./contracts.js";
 import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "./guardrails.js";
 import { type AgentIdentity, identityTelemetryAttributes, ownershipFromIdentity, resolveRunIdentity } from "./identity.js";
 import { createId } from "./ids.js";
@@ -89,7 +119,8 @@ import { createLoadedSkillSet, resolveSkillsDisclosure } from "./skill-disclosur
 import { resolveToolResultFold } from "./tool-result-fold.js";
 import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "./structured-output.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
-import { createToolRegistry, dispatchToolCall } from "./tools.js";
+import { createToolRegistry, dispatchToolCall, resolveToolEffectDeclaration } from "./tools.js";
+import { canonicalToolEffectJson, toolEffectArgumentsHash } from "./tool-effects.js";
 
 export function createAgent(config: AgentConfig): Agent {
   return {
@@ -152,10 +183,19 @@ type PreparedAgentRunResume =
       readonly ownership?: OwnershipScope;
     }
   | {
+      readonly kind: "resuspend";
+      readonly session: RuntimeAgentSession;
+      readonly result: AgentRunResult;
+      readonly interruption: import("./contracts.js").AgentRunInterruption;
+      readonly version: number;
+      readonly ownership?: OwnershipScope;
+    }
+  | {
       readonly kind: "approve";
       readonly session: RuntimeAgentSession;
       readonly state: StoredAgentRunState;
       readonly runState: AgentRunStateOptions;
+      readonly decisions?: ReadonlyMap<string, RunDecision>;
       readonly ownership?: OwnershipScope;
     };
 
@@ -179,11 +219,98 @@ async function prepareAgentRunResume(
     throw new AgentRunStateError("Stale or non-suspended agent run resume");
   }
   const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
+  if (resume.decision !== undefined && resume.decisions !== undefined) {
+    throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Resume accepts exactly one of decision or decisions");
+  }
+  const pendingDecisions = pendingDecisionsOf(state);
+  // Legacy approve maps to allow-once on every pending decision; legacy deny keeps its
+  // terminal-denied behavior. Batch decisions are validated and applied atomically below.
+  const resolved =
+    resume.decisions !== undefined
+      ? await resolveRunDecisions({ agent, state, decisions: resume.decisions, signal })
+      : resume.decision === "approve" && pendingDecisions
+        ? await resolveRunDecisions({
+            agent,
+            state,
+            decisions: pendingDecisions.map((pending) => ({ approvalId: pending.approvalId, outcome: "allow_once" as const })),
+            signal,
+          })
+        : undefined;
+  if (resume.decision === undefined && resume.decisions === undefined) {
+    throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Resume requires a decision or decisions");
+  }
+  if (resolved && resolved.remaining.length > 0) {
+    throwIfAbortedSignal(signal);
+    const single = resolved.remaining.length === 1 ? resolved.remaining[0]! : undefined;
+    const interruption: import("./contracts.js").AgentRunInterruption = {
+      kind: state.interruption?.kind ?? "tool_approval",
+      reason: `${resolved.remaining.length} approval request(s) remain`,
+      ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
+      ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
+      pendingDecisions: resolved.remaining,
+    };
+    const resuspended = await saveAgentRunState({
+      checkpoints: options.checkpoints,
+      state: {
+        ...state,
+        status: "suspended",
+        interruption,
+        pending: undefined,
+        // Decided approvals persist on their entries so a partial batch never loses them;
+        // they dispatch (or synthesize their result) when the run finally resumes.
+        pendingCalls: state.pendingCalls?.map((entry) => {
+          const decision = resolved.decisionsById.get(entry.approvalId);
+          return decision ? { ...entry, decision } : entry;
+        }),
+        // Decided nested approvals persist on their nested-run entries, keyed by
+        // root-visible approval id, so a partial batch never loses them either.
+        nestedRuns: state.nestedRuns?.map((entry) => {
+          const decided = entry.approvals.filter((approval) => resolved.decisionsById.has(approval.id));
+          if (decided.length === 0) return entry;
+          return {
+            ...entry,
+            decisions: {
+              ...entry.decisions,
+              ...Object.fromEntries(decided.map((approval) => [approval.id, resolved.decisionsById.get(approval.id)!])),
+            },
+          };
+        }),
+        stickyDecisions: resolved.stickyDecisions,
+      },
+      expectedVersion: record.version,
+      ownership: options.ownership,
+      fencingToken: options.fencingToken,
+    });
+    return {
+      kind: "resuspend",
+      session,
+      interruption,
+      version: resuspended.record.version,
+      ownership: options.ownership,
+      result: {
+        sessionId: state.sessionId,
+        runId: state.runId,
+        status: "suspended",
+        leafId: state.leafId,
+        text: "",
+        content: [],
+        runState: publicState(resuspended.state),
+        interruption,
+      },
+    };
+  }
   if (resume.decision === "deny") {
     throwIfAbortedSignal(signal);
     const denied = await saveAgentRunState({
       checkpoints: options.checkpoints,
-      state: { ...state, status: "denied" },
+      state: {
+        ...state,
+        status: "denied",
+        loopState: undefined,
+        pendingCalls: undefined,
+        nestedRuns: undefined,
+        stickyDecisions: undefined,
+      },
       expectedVersion: record.version,
       ownership: options.ownership,
       fencingToken: options.fencingToken,
@@ -206,7 +333,9 @@ async function prepareAgentRunResume(
       },
     };
   }
-  if (state.pending?.status === "dispatched") throw new AgentRunStateError("Ambiguous dispatched tool requires operator resolution");
+  if (state.pending?.status === "dispatched" || state.pendingCalls?.some((entry) => entry.status === "dispatched")) {
+    throw new AgentRunStateError("Ambiguous dispatched tool requires operator resolution");
+  }
   const configured = agent.config.runState;
   if (configured && (configured.checkpoints !== options.checkpoints || configured.definitionRevision !== options.definitionRevision)) {
     throw new AgentRunStateError("Agent durable run-state configuration mismatch on resume");
@@ -214,7 +343,12 @@ async function prepareAgentRunResume(
   throwIfAbortedSignal(signal);
   const claimed = await saveAgentRunState({
     checkpoints: options.checkpoints,
-    state: { ...state, status: "running", interruption: undefined },
+    state: {
+      ...state,
+      status: "running",
+      interruption: undefined,
+      stickyDecisions: resolved?.stickyDecisions ?? state.stickyDecisions,
+    },
     expectedVersion: record.version,
     ownership: options.ownership,
     fencingToken: options.fencingToken,
@@ -223,14 +357,251 @@ async function prepareAgentRunResume(
     kind: "approve",
     session,
     state: claimed.state,
+    decisions: resolved?.decisionsById,
     ownership: options.ownership,
     runState: configured ?? {
       checkpoints: options.checkpoints,
       definitionRevision: options.definitionRevision,
       interruptBeforeTool: state.interruptBeforeTool,
       fencingToken: options.fencingToken,
+      resumeNestedRun: options.resumeNestedRun,
     },
   };
+}
+
+/** Pending decisions of a suspended state, synthesizing the legacy single-approval shape. */
+function pendingDecisionsOf(state: StoredAgentRunState): readonly PendingDecision[] | undefined {
+  if (state.interruption?.pendingDecisions) return state.interruption.pendingDecisions;
+  if (state.pending) {
+    return [
+      {
+        approvalId: state.pending.call.id,
+        kind: "tool_approval",
+        toolCallId: state.pending.call.id,
+        scope: { toolName: state.pending.call.name },
+        reason: state.interruption?.reason ?? "Tool side effect requires approval",
+      },
+    ];
+  }
+  return undefined;
+}
+
+interface ResolvedRunDecisions {
+  readonly decisionsById: ReadonlyMap<string, RunDecision>;
+  readonly stickyDecisions: readonly StickyDecision[];
+  readonly remaining: readonly PendingDecision[];
+}
+
+/**
+ * Validate one decision batch against the suspended state. Fail-closed and atomic: any
+ * invalid entry rejects the whole batch before any CAS, leaving state and version untouched.
+ * Unknown and foreign approval ids share one non-enumerating error.
+ */
+async function resolveRunDecisions(input: {
+  readonly agent: Agent;
+  readonly state: StoredAgentRunState;
+  readonly decisions: readonly RunDecision[];
+  readonly signal?: AbortSignal;
+}): Promise<ResolvedRunDecisions> {
+  const { agent, state, decisions } = input;
+  if (decisions.length === 0) throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Decision batch must not be empty");
+  if (decisions.length > HARD_MAX_PENDING_DECISIONS) {
+    throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Decision batch exceeds ${HARD_MAX_PENDING_DECISIONS} entries`);
+  }
+  const pending = pendingDecisionsOf(state);
+  if (!pending?.length) throw new AgentDecisionError("ERR_PRISM_DECISION_UNKNOWN", "No pending approval decisions for this run");
+  const byId = new Map(pending.map((entry) => [entry.approvalId, entry]));
+  const seen = new Set<string>();
+  const decisionsById = new Map<string, RunDecision>();
+  const stickies: StickyDecision[] = [];
+  const decidedAt = new Date().toISOString();
+  const { registry } = activeTools(agent.config.tools);
+  for (const decision of decisions) {
+    if (seen.has(decision.approvalId)) {
+      throw new AgentDecisionError("ERR_PRISM_DECISION_DUPLICATE", "Duplicate approval decision in batch");
+    }
+    seen.add(decision.approvalId);
+    const target = byId.get(decision.approvalId);
+    if (!target) throw new AgentDecisionError("ERR_PRISM_DECISION_UNKNOWN", "Unknown approval decision");
+    if (decision.reason !== undefined && Buffer.byteLength(decision.reason, "utf8") > MAX_DECISION_REASON_BYTES) {
+      throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Decision reason exceeds ${MAX_DECISION_REASON_BYTES} bytes`);
+    }
+    if (
+      decision.outcome !== "allow_once" &&
+      decision.outcome !== "allow_for_run" &&
+      decision.outcome !== "reject_once" &&
+      decision.outcome !== "reject_for_run"
+    ) {
+      throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Unknown approval outcome");
+    }
+    if (decision.modifiedArguments !== undefined) {
+      if (target.kind !== "tool_approval" || !target.toolCallId) {
+        throw new AgentDecisionError("ERR_PRISM_DECISION_SCOPE", "Modified arguments apply only to tool approvals");
+      }
+      await validateModifiedArguments(agent, registry, state, target, decision.modifiedArguments, input.signal);
+    }
+    if (decision.elicitation !== undefined) {
+      if (target.kind !== "elicitation") {
+        throw new AgentDecisionError("ERR_PRISM_DECISION_SCOPE", "Elicitation payload applies only to elicitation decisions");
+      }
+      await validateElicitationPayload(agent, state, target, decision.elicitation, input.signal);
+    }
+    decisionsById.set(decision.approvalId, decision);
+    if (decision.outcome === "allow_for_run" || decision.outcome === "reject_for_run") {
+      stickies.push({
+        // A decision with modified arguments must not stick to the original arguments hash:
+        // the modification is one-off, so the sticky scope matches by name/effect/identity only.
+        scope: decision.modifiedArguments !== undefined ? { ...target.scope, argumentsHash: undefined } : target.scope,
+        outcome: decision.outcome,
+        ...(decision.reason !== undefined ? { reason: decision.reason } : {}),
+        // Root-owned sticky scope includes the delegation path for nested decisions.
+        ...(target.attribution ? { attribution: target.attribution } : {}),
+        decidedAt,
+      });
+    }
+  }
+  const stickyDecisions = [...(state.stickyDecisions ?? []), ...stickies];
+  if (stickyDecisions.length > DEFAULT_MAX_STICKY_DECISIONS) {
+    throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Sticky decisions exceed ${DEFAULT_MAX_STICKY_DECISIONS} per run`);
+  }
+  return {
+    decisionsById,
+    stickyDecisions,
+    remaining: pending.filter((entry) => !seen.has(entry.approvalId)),
+  };
+}
+
+/** Decision-time revalidation of modified arguments: schema, then input guardrails. Policy and trust re-run at dispatch. */
+async function validateModifiedArguments(
+  agent: Agent,
+  registry: ToolRegistry,
+  state: StoredAgentRunState,
+  target: PendingDecision,
+  modified: JsonObject,
+  signal?: AbortSignal,
+): Promise<void> {
+  const invalid = (message: string, cause?: unknown) => new AgentDecisionError("ERR_PRISM_DECISION_INVALID", message, { cause });
+  if (JSON.stringify(modified) === undefined || Buffer.byteLength(JSON.stringify(modified), "utf8") > MAX_ELICITATION_BYTES) {
+    throw invalid("Modified arguments must be a bounded JSON object");
+  }
+  const call =
+    state.pendingCalls?.find((entry) => entry.approvalId === target.approvalId)?.call ??
+    (state.pending && state.pending.call.id === target.toolCallId ? state.pending.call : undefined);
+  const toolName = target.scope.toolName ?? call?.name ?? "";
+  const tool = registry.get(toolName);
+  const context = { sessionId: state.sessionId, runId: state.runId, toolCallId: target.toolCallId ?? "", signal };
+  if (agent.config.validator && tool) {
+    const validation = await agent.config.validator(tool, modified, context);
+    if (validation) throw invalid("Modified arguments failed schema validation");
+  }
+  const value: ToolCallContent = call
+    ? { ...call, arguments: modified }
+    : { type: "tool_call", id: target.toolCallId ?? "", name: toolName, arguments: modified };
+  const guarded = await runGuardrails({
+    stage: "tool_input",
+    guardrails: agent.config.guardrails,
+    value,
+    context: {
+      sessionId: state.sessionId,
+      runId: state.runId,
+      toolCallId: target.toolCallId,
+      toolName,
+      metadata: {},
+      signal,
+    },
+    redactor: agent.config.redactor,
+  });
+  if (guarded.terminal) throw invalid("Modified arguments blocked by guardrail");
+}
+
+/**
+ * Resolve a tool's declared elicitation contract for a gated call. A throwing hook falls back to
+ * plain tool approval: malformed model args then surface as a tool error after approval, never
+ * as a run failure at the gate. Output is bounded before it enters the pending-decision record.
+ */
+function toolElicitationRequest(
+  tool: ToolDefinition | undefined,
+  args: JsonObject,
+  context: ToolExecutionContext,
+): { schema: JsonObject; reason?: string } | undefined {
+  if (!tool?.elicitation) return undefined;
+  let request: { readonly schema: JsonObject; readonly reason?: string; readonly validate?: (payload: JsonObject) => void } | undefined;
+  try {
+    request = tool.elicitation(args, context);
+  } catch {
+    return undefined;
+  }
+  if (!request) return undefined;
+  const schemaText = JSON.stringify(request.schema);
+  if (schemaText === undefined || Buffer.byteLength(schemaText, "utf8") > HARD_MAX_ELICITATION_BYTES) return undefined;
+  const reason = request.reason;
+  if (reason !== undefined && Buffer.byteLength(reason, "utf8") > MAX_DECISION_REASON_BYTES) return { schema: request.schema };
+  return { schema: request.schema, ...(reason !== undefined ? { reason } : {}) };
+}
+
+/** Elicitation payload check: bounded JSON object, schema-required keys, host validator when configured. */
+async function validateElicitationPayload(
+  agent: Agent,
+  state: StoredAgentRunState,
+  target: PendingDecision,
+  payload: JsonObject,
+  signal?: AbortSignal,
+): Promise<void> {
+  const invalid = (message: string) => new AgentDecisionError("ERR_PRISM_DECISION_INVALID", message);
+  const text = JSON.stringify(payload);
+  if (text === undefined || Buffer.byteLength(text, "utf8") > MAX_ELICITATION_BYTES) {
+    throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Elicitation payload exceeds ${MAX_ELICITATION_BYTES} bytes`);
+  }
+  const schema = target.elicitationSchema;
+  if (schema) {
+    const required = (schema as { required?: unknown }).required;
+    if (Array.isArray(required)) {
+      for (const key of required) {
+        if (typeof key === "string" && !Object.hasOwn(payload, key)) throw invalid(`Elicitation payload missing required key ${key}`);
+      }
+    }
+    if (agent.config.validator) {
+      const tool: ToolDefinition = {
+        name: target.scope.toolName ?? "elicitation",
+        parameters: schema,
+        execute: () => ({ toolCallId: "", name: "elicitation" }),
+      };
+      const context = { sessionId: state.sessionId, runId: state.runId, toolCallId: target.toolCallId ?? "elicitation", signal };
+      const validation = await agent.config.validator(tool, payload, context);
+      if (validation) throw invalid("Elicitation payload failed schema validation");
+    }
+  }
+  // Tool-declared answer-shape validation, re-derived from the current registry (never persisted).
+  const call = state.pendingCalls?.find((entry) => entry.call.id === target.toolCallId)?.call;
+  const tool = call ? activeTools(agent.config.tools).registry.get(call.name) : undefined;
+  const validate =
+    tool?.elicitation && call
+      ? safeToolElicitationValidate(tool, call.arguments, {
+          sessionId: state.sessionId,
+          runId: state.runId,
+          toolCallId: target.toolCallId ?? "elicitation",
+          signal,
+        })
+      : undefined;
+  if (validate) {
+    try {
+      validate(payload);
+    } catch (error) {
+      throw invalid(error instanceof Error ? error.message : "Elicitation payload rejected by tool validation");
+    }
+  }
+}
+
+function safeToolElicitationValidate(
+  tool: ToolDefinition,
+  args: JsonObject,
+  context: ToolExecutionContext,
+): ((payload: JsonObject) => void) | undefined {
+  try {
+    return tool.elicitation!(args, context)?.validate;
+  } catch {
+    return undefined;
+  }
 }
 
 async function executePreparedAgentRunResume(prepared: PreparedAgentRunResume, signal?: AbortSignal): Promise<AgentRunResult> {
@@ -238,7 +609,11 @@ async function executePreparedAgentRunResume(prepared: PreparedAgentRunResume, s
     await prepared.session.recordDurableDenial(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
     return prepared.result;
   }
-  return prepared.session.resumeDurable(prepared.state, prepared.runState, prepared.ownership, signal);
+  if (prepared.kind === "resuspend") {
+    await prepared.session.recordDurableResumption(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
+    return prepared.result;
+  }
+  return prepared.session.resumeDurable(prepared.state, prepared.runState, prepared.ownership, signal, prepared.decisions);
 }
 
 class AgentRunSuspended extends Error {
@@ -252,10 +627,47 @@ class AgentRunSuspended extends Error {
   }
 }
 
+/** Root-visible nested approval id: hashed so it stays bounded and non-enumerating at any depth. */
+function nestedApprovalId(runId: string, childApprovalId: string): string {
+  return `sub_${createHash("sha256").update(`${runId}:${childApprovalId}`).digest("hex")}`;
+}
+
+function pathsEqual(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function decisionScopesEqual(a: DecisionScope, b: DecisionScope): boolean {
+  if (a.toolName !== b.toolName || a.argumentsHash !== b.argumentsHash || a.effectKind !== b.effectKind || a.identity !== b.identity)
+    return false;
+  if (a.actionConstraints === undefined || b.actionConstraints === undefined) return a.actionConstraints === b.actionConstraints;
+  const keys = Object.keys(a.actionConstraints);
+  return (
+    keys.length === Object.keys(b.actionConstraints).length &&
+    keys.every(
+      (key) =>
+        key in b.actionConstraints! &&
+        canonicalToolEffectJson(a.actionConstraints![key]!) === canonicalToolEffectJson(b.actionConstraints![key]!),
+    )
+  );
+}
+
+function nestedOutcomeToolResult(
+  outcome: Exclude<NestedRunOutcome, { status: "suspended" }>,
+  toolCallId: string,
+  name: string,
+): ToolResult {
+  return outcome.status === "completed"
+    ? { toolCallId, name, ...(outcome.value !== undefined ? { value: outcome.value } : {}) }
+    : { toolCallId, name, error: { code: outcome.code, message: outcome.message } };
+}
+
 interface ActiveDurableRun {
   readonly options: AgentRunStateOptions;
   state?: StoredAgentRunState;
   version: number;
+  /** Validated decisions driving the pending-call replay on a resumed run. */
+  readonly decisions?: ReadonlyMap<string, RunDecision>;
 }
 
 class RuntimeAgentSession implements AgentSession {
@@ -284,6 +696,9 @@ class RuntimeAgentSession implements AgentSession {
   private activeLimits?: RunLimitTracker;
   private activeLimitOutputBuffer = false;
   private activeDurable?: ActiveDurableRun;
+  private activeLoop?: import("./contracts.js").AgentLoopStrategy;
+  /** Gated calls of the current tool round awaiting one collected suspension. */
+  private activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   private activeLoopTurn = 1;
   private readonly loadedSkills = createLoadedSkillSet();
   private ledgerChain: Promise<void> = Promise.resolve();
@@ -344,12 +759,34 @@ class RuntimeAgentSession implements AgentSession {
     runState: AgentRunStateOptions,
     ownership?: OwnershipScope,
     signal?: AbortSignal,
+    decisions?: ReadonlyMap<string, RunDecision>,
   ): Promise<AgentRunResult> {
     return this.runInternal(state.input ?? [], { runState, ownership, signal }, state.runId, {
       options: runState,
       state,
       version: state.version!,
+      decisions,
     });
+  }
+
+  async recordDurableResumption(
+    runId: string,
+    interruption: import("./contracts.js").AgentRunInterruption,
+    version: number,
+    ownership?: OwnershipScope,
+  ): Promise<void> {
+    this.activeLedger = this.agent.config.runLedger;
+    this.activeOwnership = ownership ?? this.agent.config.ownership;
+    this.activeRedactor = this.agent.config.redactor;
+    try {
+      this.emit({ type: "agent_suspended", sessionId: this.id, runId, interruption, version });
+      await this.drainLedger();
+    } finally {
+      this.activeLedger = undefined;
+      this.activeOwnership = undefined;
+      this.activeRedactor = undefined;
+      this.closeSubscribers();
+    }
   }
 
   async recordDurableDenial(
@@ -397,7 +834,12 @@ class RuntimeAgentSession implements AgentSession {
       if (options.model || options.guardrails || options.loop || options.effectStore)
         throw new AgentRunStateError("Durable runs require model, guardrails, loop, and effect store on AgentConfig for fingerprinting");
       const configuredLoop = this.agent.config.loop;
-      if (configuredLoop && !isBuiltInLoop(configuredLoop)) throw new AgentRunStateError("Custom AgentLoopStrategy is not durable");
+      if (configuredLoop && !isDurableLoop(configuredLoop)) {
+        throw new AgentLoopStateError(
+          "ERR_PRISM_LOOP_NOT_DURABLE",
+          "Custom AgentLoopStrategy on a durable run requires snapshot and restore hooks",
+        );
+      }
     }
     if (this.activeRun) {
       const error = new Error("Agent session already has an active run");
@@ -421,6 +863,7 @@ class RuntimeAgentSession implements AgentSession {
     this.activeIdempotencyKey = options.idempotencyKey ?? this.agent.config.idempotencyKey;
     this.activeGuardrails = mergeGuardrails(this.agent.config.guardrails, options.guardrails);
     this.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
+    this.activeGatedRound = undefined;
     if (resumed) this.invalidateSnapshot();
 
     const model = options.model ?? this.agent.config.model;
@@ -524,6 +967,7 @@ class RuntimeAgentSession implements AgentSession {
       const instructionInjectors = options.instructionInjectors ?? this.agent.config.instructionInjectors ?? [];
       const inputLayout = options.inputLayout ?? this.agent.config.inputLayout;
       const loop = resolveLoop(options, this.agent.config);
+      this.activeLoop = loop;
       const toolConcurrency = resolveToolConcurrency(options, this.agent.config);
 
       this.activeLoopTurn = 1;
@@ -545,6 +989,131 @@ class RuntimeAgentSession implements AgentSession {
         };
         await this.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, this.activeRedactor));
       };
+      // Suspends the run when a round recorded gated calls. Fires at the next provider turn
+      // (generate) or after the loop ends, so ungated round siblings dispatch first.
+      const suspendGatedRound = async (): Promise<void> => {
+        const gated = this.activeGatedRound;
+        if (!gated?.size) return;
+        const entries = [...gated.values()];
+        const decisions = entries.map((gatedCall) => gatedCall.decision);
+        const single = decisions.length === 1 ? decisions[0]! : undefined;
+        const interruption: import("./contracts.js").AgentRunInterruption = {
+          kind: single?.kind === "elicitation" ? "elicitation" : "tool_approval",
+          reason: single ? single.reason : `${decisions.length} tool side effects require approval`,
+          ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
+          ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
+          pendingDecisions: decisions,
+        };
+        throw new AgentRunSuspended(
+          await this.suspendDurable({ runId, model, limits, interruption, pendingCalls: entries.map((gatedCall) => gatedCall.entry) }),
+          interruption,
+        );
+      };
+      // Suspends on a nested run's pending decisions, merging any still-ready round entries
+      // (with their decisions attached) so a nested signal mid-replay never drops own work.
+      const suspendNested = async (nested: {
+        entry: NestedRunRef;
+        toolCall: ToolCallContent;
+        pending: PendingDecision[];
+      }): Promise<never> => {
+        const state = this.activeDurable?.state;
+        const kept = (state?.pendingCalls ?? [])
+          .filter((entry) => entry.status === "ready")
+          .map((entry) => {
+            const decision = entry.decision ?? resumed?.decisions?.get(entry.approvalId);
+            return decision ? { ...entry, decision } : entry;
+          });
+        const gated = [...(this.activeGatedRound?.values() ?? [])];
+        const pendingCalls: PendingToolCall[] = [
+          ...kept,
+          ...gated.map((gatedCall) => gatedCall.entry),
+          { call: nested.toolCall, status: "ready", approvalId: `nr_${nested.entry.runId}` },
+        ];
+        const keptIds = new Set(kept.map((entry) => entry.approvalId));
+        const decisions: PendingDecision[] = [
+          ...(state?.interruption?.pendingDecisions ?? []).filter((pending) => keptIds.has(pending.approvalId)),
+          ...gated.map((gatedCall) => gatedCall.decision),
+          ...nested.pending,
+        ];
+        if (decisions.length > HARD_MAX_PENDING_DECISIONS) {
+          throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Pending decisions exceed ${HARD_MAX_PENDING_DECISIONS} per run`);
+        }
+        const single = decisions.length === 1 ? decisions[0]! : undefined;
+        const interruption: import("./contracts.js").AgentRunInterruption = {
+          kind: single?.kind ?? "tool_approval",
+          reason: single ? single.reason : `${decisions.length} approval request(s) need a decision`,
+          ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
+          ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
+          pendingDecisions: decisions,
+        };
+        throw new AgentRunSuspended(
+          await this.suspendDurable({
+            runId,
+            model,
+            limits,
+            interruption,
+            pendingCalls,
+            nestedRuns: [...(state?.nestedRuns ?? []), nested.entry],
+          }),
+          interruption,
+        );
+      };
+      // Converts a nested-run suspension into either root-visible pending decisions (hashed,
+      // attributed approval ids) or — when a root sticky covers every surfaced decision and a
+      // hook is available — an immediate child resume loop ending in a synthesized tool result.
+      const applyNestedRun = async (input: {
+        ref: AgentRunRef;
+        toolCall: ToolCallContent;
+        path: readonly string[];
+        pending: readonly PendingDecision[];
+        hook?: ResumeNestedRun;
+      }): Promise<{ toolResult: ToolResult } | { entry: NestedRunRef; pending: PendingDecision[] }> => {
+        let current = input.pending;
+        // ponytail: sticky auto-apply only when the whole surfaced set is covered; mixed sets
+        // surface to the host. Hook round-trips capped at 4 per suspension event.
+        for (let depth = 0; ; depth += 1) {
+          const attributed = current.map((decision) => {
+            const id = nestedApprovalId(input.ref.runId, decision.approvalId);
+            return {
+              id,
+              childApprovalId: decision.approvalId,
+              decision: { ...decision, approvalId: id, attribution: decision.attribution ?? { path: input.path } },
+            };
+          });
+          if (attributed.some(({ decision }) => (decision.attribution?.path.length ?? 0) > MAX_ATTRIBUTION_DEPTH)) {
+            throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Attribution path exceeds ${MAX_ATTRIBUTION_DEPTH} entries`);
+          }
+          const allSticky = attributed.length > 0 && attributed.every(({ decision }) => this.matchNestedSticky(decision) !== undefined);
+          if (!input.hook || !allSticky || depth >= 4) {
+            return {
+              entry: {
+                runId: input.ref.runId,
+                ...(input.ref.sessionId ? { sessionId: input.ref.sessionId } : {}),
+                toolCallId: input.toolCall.id,
+                path: attributed[0]?.decision.attribution?.path ?? input.path,
+                approvals: attributed.map(({ id, childApprovalId }) => ({ id, childApprovalId })),
+              },
+              pending: attributed.map(({ decision }) => decision),
+            };
+          }
+          const outcome = await input.hook(
+            { ref: input.ref, toolCallId: input.toolCall.id, path: input.path },
+            attributed.map(({ childApprovalId, decision }) => {
+              const sticky = this.matchNestedSticky(decision)!;
+              return {
+                approvalId: childApprovalId,
+                outcome: sticky.outcome,
+                ...(sticky.reason !== undefined ? { reason: sticky.reason } : {}),
+              };
+            }),
+          );
+          if (outcome.status === "suspended") {
+            current = outcome.pendingDecisions;
+            continue;
+          }
+          return { toolResult: nestedOutcomeToolResult(outcome, input.toolCall.id, input.toolCall.name) };
+        }
+      };
       // ponytail: LoopContext binds existing private helpers; loop orchestrates only.
       let assembledTurn = false;
       let artifactFinished = false;
@@ -559,6 +1128,7 @@ class RuntimeAgentSession implements AgentSession {
         inputMessages,
         maxToolRounds,
         toolConcurrency,
+        restoredLoopState: resumed?.state?.loopState?.snapshot,
         assemble: async (nextInput, toolResults, turn) => {
           limits.charge("maxTurns");
           const request = await assembleProviderInput({
@@ -595,8 +1165,27 @@ class RuntimeAgentSession implements AgentSession {
         },
         chargeToolRound: (calls) => {
           if (calls.length > 0) limits.charge("maxToolRounds");
+          const durable = this.activeDurable;
+          if (!durable || !durable.options.interruptBeforeTool || calls.length === 0) return;
+          // Round-level gate: record one pending decision per uncovered gated call. Ungated
+          // and sticky-allowed calls still dispatch; the suspension fires at the next provider
+          // turn (or run end) via suspendGatedRound. Per-call beforeExecute is the backstop
+          // for loops that dispatch without charging a round.
+          for (const call of calls) {
+            if (this.matchStickyDecision(call, registry)) continue;
+            const approvalId = randomId("approval");
+            this.activeGatedRound ??= new Map();
+            this.activeGatedRound.set(call.id, {
+              entry: { call, status: "ready", approvalId },
+              decision: this.buildPendingDecision(call, approvalId, registry, runId, metadata, controller.signal),
+            });
+          }
+          if (this.activeGatedRound && this.activeGatedRound.size > DEFAULT_MAX_PENDING_DECISIONS) {
+            throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Pending decisions exceed ${DEFAULT_MAX_PENDING_DECISIONS} per run`);
+          }
         },
         generate: async (request) => {
+          await suspendGatedRound();
           if (!assembledTurn) limits.charge("maxTurns");
           assembledTurn = false;
           const policyResult = await this.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
@@ -620,68 +1209,107 @@ class RuntimeAgentSession implements AgentSession {
           }
         },
         isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
-        dispatchToolCall: (call) =>
-          dispatchToolCall({
-            call,
-            registry,
-            context: {
-              sessionId: this.id,
-              runId,
+        dispatchToolCall: async (call) => {
+          const sticky = this.matchStickyDecision(call, registry);
+          if (sticky?.outcome === "reject_for_run") {
+            return {
               toolCallId: call.id,
-              signal: controller.signal,
-              metadata: {
-                ...metadata,
-                loadedSkills: this.loadedSkills,
-                activeTools: tools,
-                activeSkillNames: activeSkills.map((skill) => skill.name),
+              name: call.name,
+              error: { code: "approval_rejected", message: sticky.reason ?? "Rejected for this run" },
+            };
+          }
+          if (this.activeGatedRound?.has(call.id)) {
+            // Gated this round: never dispatched. The marker is skipped by
+            // dispatchToolCallsInOrder so the transcript stays free of phantom results.
+            return { toolCallId: call.id, name: call.name, metadata: { approvalPending: true } };
+          }
+          try {
+            return await dispatchToolCall({
+              call,
+              registry,
+              context: {
+                sessionId: this.id,
+                runId,
+                toolCallId: call.id,
+                signal: controller.signal,
+                metadata: {
+                  ...metadata,
+                  loadedSkills: this.loadedSkills,
+                  activeTools: tools,
+                  activeSkillNames: activeSkills.map((skill) => skill.name),
+                },
+                identity: this.activeIdentity,
               },
+              middleware: this.agent.config.middleware,
+              emit: (event) => this.emit(event),
+              permission: this.agent.config.permission,
+              trust: this.agent.config.trust,
+              redactor: this.activeRedactor,
+              ledger: this.activeLedger,
+              effectStore: this.activeEffectStore,
+              ownership: this.activeOwnership,
               identity: this.activeIdentity,
-            },
-            middleware: this.agent.config.middleware,
-            emit: (event) => this.emit(event),
-            permission: this.agent.config.permission,
-            trust: this.agent.config.trust,
-            redactor: this.activeRedactor,
-            ledger: this.activeLedger,
-            effectStore: this.activeEffectStore,
-            ownership: this.activeOwnership,
-            identity: this.activeIdentity,
-            guardrails: this.activeGuardrails,
-            limitTracker: limits,
-            beforeExecute: async (mediatedCall) => {
-              const durable = this.activeDurable;
-              if (!durable) return;
-              const pending = durable.state?.pending;
-              if (pending?.call.id === mediatedCall.id && pending.status === "ready") {
-                await this.persistDurable({
-                  ...durable.state!,
-                  status: "running",
-                  pending: { ...pending, status: "dispatched" },
-                  interruption: undefined,
-                });
-                return;
-              }
-              if (!durable.options.interruptBeforeTool) return;
-              const interruption = {
-                kind: "tool_approval" as const,
-                reason: "Tool side effect requires approval",
-                toolCallId: mediatedCall.id,
-                toolName: mediatedCall.name,
-              };
-              throw new AgentRunSuspended(
-                await this.suspendDurable({
-                  runId,
-                  model,
-                  limits,
+              guardrails: this.activeGuardrails,
+              limitTracker: limits,
+              beforeExecute: async (mediatedCall) => {
+                const durable = this.activeDurable;
+                if (!durable) return;
+                const pendingCalls = durable.state?.pendingCalls;
+                const matched = pendingCalls?.find((entry) => entry.call.id === mediatedCall.id && entry.status === "ready");
+                if (matched) {
+                  await this.persistDurable({
+                    ...durable.state!,
+                    status: "running",
+                    pendingCalls: pendingCalls!.map((entry) => (entry === matched ? { ...entry, status: "dispatched" as const } : entry)),
+                    interruption: undefined,
+                  });
+                  return;
+                }
+                const pending = durable.state?.pending;
+                if (pending?.call.id === mediatedCall.id && pending.status === "ready") {
+                  await this.persistDurable({
+                    ...durable.state!,
+                    status: "running",
+                    pending: { ...pending, status: "dispatched" },
+                    interruption: undefined,
+                  });
+                  return;
+                }
+                if (!durable.options.interruptBeforeTool) return;
+                if (this.matchStickyDecision(mediatedCall, registry)?.outcome === "allow_for_run") return;
+                // Backstop for loops that dispatch without awaiting chargeToolRound: suspend on
+                // the first uncovered gated call with a single pending decision.
+                const approvalId = randomId("approval");
+                const decision = this.buildPendingDecision(mediatedCall, approvalId, registry, runId, metadata, controller.signal);
+                const interruption: import("./contracts.js").AgentRunInterruption = {
+                  kind: "tool_approval",
+                  reason: decision.reason,
+                  toolCallId: mediatedCall.id,
+                  toolName: mediatedCall.name,
+                  pendingDecisions: [decision],
+                };
+                throw new AgentRunSuspended(
+                  await this.suspendDurable({
+                    runId,
+                    model,
+                    limits,
+                    interruption,
+                    pending: { call: mediatedCall, status: "ready" },
+                    pendingCalls: [{ call: mediatedCall, status: "ready", approvalId }],
+                  }),
                   interruption,
-                  pending: { call: mediatedCall, status: "ready" },
-                }),
-                interruption,
-              );
-            },
-            // ponytail: RunOptions wins; array-compose deferred (roadmap: compose-later).
-            validate,
-          }),
+                );
+              },
+              // ponytail: RunOptions wins; array-compose deferred (roadmap: compose-later).
+              validate,
+            });
+          } catch (error) {
+            // Link the suspension signal to the hosting call so the root suspension can
+            // synthesize this call's tool_result when the nested run later terminates.
+            if (error instanceof AgentDelegationSuspendedError && !error.toolCall) error.toolCall = call;
+            throw error;
+          }
+        },
         appendMessage: (message) => this.appendMessage(message, runId),
         hasPendingSteers: () => this.pendingSteers.length > 0,
         applyPendingSteers: () => this.applyPendingSteers(runId, metadata, controller.signal),
@@ -700,8 +1328,7 @@ class RuntimeAgentSession implements AgentSession {
         },
       };
 
-      if (resumed?.state?.pending?.status === "ready") {
-        const result = await ctx.dispatchToolCall(resumed.state.pending.call);
+      const replayToolResult = async (result: ToolResult) => {
         await ctx.appendMessage({
           role: "tool",
           content: [
@@ -710,8 +1337,168 @@ class RuntimeAgentSession implements AgentSession {
           ],
           metadata: result.metadata,
         });
+      };
+      // Handles a nested-run suspension signal: sticky auto-apply appends a synthesized
+      // tool_result and returns; anything else re-suspends the root (throws AgentRunSuspended).
+      const handleNestedSignal = async (error: AgentDelegationSuspendedError): Promise<void> => {
+        const durableOptions = this.activeDurable?.options;
+        if (!durableOptions || !error.toolCall) {
+          throw new AgentDecisionError(
+            "ERR_PRISM_DECISION_INVALID",
+            "Nested-run suspension requires durable run state and a hosting tool call",
+          );
+        }
+        if (error.pendingDecisions.length === 0) {
+          throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Nested-run suspension carried no pending decisions");
+        }
+        const applied = await applyNestedRun({
+          ref: error.ref,
+          toolCall: error.toolCall,
+          path: error.path ?? [],
+          pending: error.pendingDecisions,
+          hook: durableOptions.resumeNestedRun,
+        });
+        if ("toolResult" in applied) {
+          await replayToolResult(applied.toolResult);
+          return;
+        }
+        await suspendNested({ entry: applied.entry, toolCall: error.toolCall, pending: applied.pending });
+      };
+      // Route decided nested-run approvals back to their children before replaying own calls.
+      // Undecided or re-suspended children re-suspend the root with the surfaced remainder.
+      let resumePendingCalls = resumed?.state?.pendingCalls;
+      if (resumed?.state?.nestedRuns?.length) {
+        const nestedRuns = resumed.state.nestedRuns;
+        const hook = this.activeDurable?.options.resumeNestedRun;
+        const oldPending = resumed.state.interruption?.pendingDecisions ?? [];
+        const nestedApprovalIds = new Set(nestedRuns.flatMap((entry) => entry.approvals.map((approval) => approval.id)));
+        const remainingNested: NestedRunRef[] = [];
+        const surfacedPending: PendingDecision[] = [];
+        const resolvedToolCallIds = new Set<string>();
+        for (const entry of nestedRuns) {
+          const grouped: RunDecision[] = [];
+          for (const approval of entry.approvals) {
+            const decision = entry.decisions?.[approval.id] ?? resumed.decisions?.get(approval.id);
+            if (decision) grouped.push({ ...decision, approvalId: approval.childApprovalId });
+          }
+          if (grouped.length === 0) {
+            remainingNested.push(entry);
+            surfacedPending.push(...oldPending.filter((pending) => entry.approvals.some((approval) => approval.id === pending.approvalId)));
+            continue;
+          }
+          if (!hook) {
+            throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Nested-run decisions require a resumeNestedRun hook");
+          }
+          const toolCall = resumePendingCalls?.find((pending) => pending.call.id === entry.toolCallId)?.call;
+          if (!toolCall) throw new AgentRunStateError("Nested run link is missing its tool call");
+          const ref: AgentRunRef = { runId: entry.runId, ...(entry.sessionId ? { sessionId: entry.sessionId } : {}) };
+          const outcome = await hook({ ref, toolCallId: entry.toolCallId, path: entry.path }, grouped);
+          if (outcome.status !== "suspended") {
+            await replayToolResult(nestedOutcomeToolResult(outcome, entry.toolCallId, toolCall.name));
+            resolvedToolCallIds.add(entry.toolCallId);
+            continue;
+          }
+          const applied = await applyNestedRun({ ref, toolCall, path: entry.path, pending: outcome.pendingDecisions, hook });
+          if ("toolResult" in applied) {
+            await replayToolResult(applied.toolResult);
+            resolvedToolCallIds.add(entry.toolCallId);
+          } else {
+            remainingNested.push(applied.entry);
+            surfacedPending.push(...applied.pending);
+          }
+        }
+        resumePendingCalls = resumePendingCalls
+          ?.filter((entry) => !resolvedToolCallIds.has(entry.call.id))
+          .map((entry) => {
+            const decision = resumed.decisions?.get(entry.approvalId);
+            return decision && !entry.decision ? { ...entry, decision } : entry;
+          });
+        if (this.activeDurable?.state) {
+          this.activeDurable.state = {
+            ...this.activeDurable.state,
+            pendingCalls: resumePendingCalls?.length ? resumePendingCalls : undefined,
+            nestedRuns: remainingNested.length ? remainingNested : undefined,
+          };
+        }
+        const remainingOwn = oldPending.filter(
+          (pending) =>
+            !nestedApprovalIds.has(pending.approvalId) &&
+            !resumed.decisions?.has(pending.approvalId) &&
+            !resumePendingCalls?.some((entry) => entry.approvalId === pending.approvalId && entry.decision !== undefined),
+        );
+        if (remainingOwn.length > 0 || surfacedPending.length > 0) {
+          const pendingDecisions = [...remainingOwn, ...surfacedPending];
+          const single = pendingDecisions.length === 1 ? pendingDecisions[0]! : undefined;
+          const interruption: import("./contracts.js").AgentRunInterruption = {
+            kind: single?.kind ?? "tool_approval",
+            reason: `${pendingDecisions.length} approval request(s) remain`,
+            ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
+            ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
+            pendingDecisions,
+          };
+          throw new AgentRunSuspended(
+            await this.suspendDurable({
+              runId,
+              model,
+              limits,
+              interruption,
+              pendingCalls: resumePendingCalls,
+              nestedRuns: remainingNested,
+            }),
+            interruption,
+          );
+        }
       }
-      const loopUsage = await loop.run(ctx);
+      if (resumePendingCalls?.length) {
+        for (const entry of resumePendingCalls) {
+          if (entry.status !== "ready") continue;
+          const decision = entry.decision ?? resumed?.decisions?.get(entry.approvalId);
+          if (decision && (decision.outcome === "reject_once" || decision.outcome === "reject_for_run")) {
+            await replayToolResult({
+              toolCallId: entry.call.id,
+              name: entry.call.name,
+              error: { code: "approval_rejected", message: decision.reason ?? "Approval rejected" },
+            });
+            continue;
+          }
+          if (decision?.elicitation !== undefined) {
+            // Elicitation acceptance resolves the suspended call with the validated payload.
+            await replayToolResult({ toolCallId: entry.call.id, name: entry.call.name, value: decision.elicitation });
+            continue;
+          }
+          const call = decision?.modifiedArguments ? { ...entry.call, arguments: decision.modifiedArguments } : entry.call;
+          try {
+            await replayToolResult(await ctx.dispatchToolCall(call));
+          } catch (error) {
+            if (!(error instanceof AgentDelegationSuspendedError)) throw error;
+            await handleNestedSignal(error);
+          }
+        }
+      } else if (resumed?.state?.pending?.status === "ready") {
+        await replayToolResult(await ctx.dispatchToolCall(resumed.state.pending.call));
+      }
+
+      const resumedLoopState = resumed?.state?.loopState;
+      if (resumedLoopState) {
+        if (loop.name !== resumedLoopState.name || (loop.revision ?? "1") !== resumedLoopState.revision) {
+          throw new AgentLoopStateError(
+            "ERR_PRISM_LOOP_REVISION",
+            `Loop ${resumedLoopState.name} revision ${resumedLoopState.revision} does not match the resumed durable run`,
+          );
+        }
+        loop.restore?.(resumedLoopState.snapshot);
+      }
+      let loopUsage: Usage | undefined;
+      while (true) {
+        try {
+          loopUsage = await loop.run(ctx);
+          await suspendGatedRound();
+          break;
+        } catch (error) {
+          if (!(error instanceof AgentDelegationSuspendedError)) throw error;
+          await handleNestedSignal(error);
+        }
+      }
       if (loop.name === "generate-validate-revise" && !artifactFinished) {
         throw Object.assign(new Error(artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"), {
           name: "ArtifactFailed",
@@ -733,7 +1520,16 @@ class RuntimeAgentSession implements AgentSession {
       }
       await this.drainLedger();
       const runState = this.activeDurable?.state
-        ? await this.persistDurable({ ...this.activeDurable.state, status: "succeeded", pending: undefined, interruption: undefined })
+        ? await this.persistDurable({
+            ...this.activeDurable.state,
+            status: "succeeded",
+            pending: undefined,
+            pendingCalls: undefined,
+            nestedRuns: undefined,
+            stickyDecisions: undefined,
+            interruption: undefined,
+            loopState: undefined,
+          })
         : undefined;
       this.emit({ type: "agent_finished", sessionId: this.id, runId, usage });
       return this.buildRunResult({ runId, status: "succeeded", usage, runState });
@@ -749,7 +1545,15 @@ class RuntimeAgentSession implements AgentSession {
       const breach = error instanceof RunLimitError ? error.breach : limits.breach;
       runStatus = breach ? "failed" : controller.signal.aborted ? "aborted" : "failed";
       const runState = this.activeDurable?.state
-        ? await this.persistDurable({ ...this.activeDurable.state, status: runStatus, interruption: undefined })
+        ? await this.persistDurable({
+            ...this.activeDurable.state,
+            status: runStatus,
+            interruption: undefined,
+            loopState: undefined,
+            pendingCalls: undefined,
+            nestedRuns: undefined,
+            stickyDecisions: undefined,
+          })
         : undefined;
       const result = this.buildRunResult({
         runId,
@@ -764,6 +1568,8 @@ class RuntimeAgentSession implements AgentSession {
     } finally {
       if (this.activeRun === controller) this.activeRun = undefined;
       this.activeRunId = undefined;
+      this.activeLoop = undefined;
+      this.activeGatedRound = undefined;
       this.activeProviderTurnAbort = undefined;
       this.pendingSoftInterrupt = false;
       this.pendingSteers = [];
@@ -873,9 +1679,16 @@ class RuntimeAgentSession implements AgentSession {
     readonly interruption: import("./contracts.js").AgentRunInterruption;
     readonly messages?: readonly Message[];
     readonly pending?: StoredAgentRunState["pending"];
+    readonly pendingCalls?: readonly PendingToolCall[];
+    /** Full replacement when provided; otherwise the recorded nested runs are preserved. */
+    readonly nestedRuns?: readonly NestedRunRef[];
   }): Promise<AgentRunState> {
     const durable = this.activeDurable;
     if (!durable) throw new AgentRunStateError("Durable interruption is not configured");
+    // Capture loop-local state before persisting the suspension. Undefined before the loop
+    // starts (input-guardrail suspensions) and for snapshot-less built-ins.
+    const loop = this.activeLoop;
+    const loopState = loop?.snapshot ? boundedLoopSnapshot(loop.name, loop.revision ?? "1", loop.snapshot()) : undefined;
     const state =
       durable.state ??
       initialAgentRunState({
@@ -891,6 +1704,7 @@ class RuntimeAgentSession implements AgentSession {
         interruption: input.interruption,
         messages: input.messages,
         pending: input.pending,
+        pendingCalls: input.pendingCalls,
         interruptBeforeTool: durable.options.interruptBeforeTool,
       });
     return this.persistDurable({
@@ -900,8 +1714,101 @@ class RuntimeAgentSession implements AgentSession {
       interruption: input.interruption,
       ...(input.messages ? { input: input.messages } : {}),
       ...(input.pending ? { pending: input.pending } : {}),
+      ...(input.pendingCalls ? { pendingCalls: input.pendingCalls } : {}),
+      nestedRuns: input.nestedRuns ?? state.nestedRuns,
+      ...(loopState ? { loopState } : {}),
       counters: input.limits.snapshot(),
     });
+  }
+
+  /** First attributed sticky whose scope and delegation path exactly match a nested decision. */
+  private matchNestedSticky(decision: PendingDecision): StickyDecision | undefined {
+    const stickies = this.activeDurable?.state?.stickyDecisions;
+    return stickies?.find(
+      (sticky) =>
+        sticky.attribution !== undefined &&
+        pathsEqual(sticky.attribution.path, decision.attribution?.path) &&
+        decisionScopesEqual(sticky.scope, decision.scope),
+    );
+  }
+
+  /** First sticky decision whose scope exactly matches this call, if any. */
+  private matchStickyDecision(call: ToolCallContent, registry: ToolRegistry): StickyDecision | undefined {
+    const stickies = this.activeDurable?.state?.stickyDecisions;
+    if (!stickies?.length) return undefined;
+    const identityRef = decisionIdentityRef(this.activeIdentity);
+    let argumentsHash: string | undefined;
+    let effectKind: import("./contracts.js").ToolEffectKind | undefined;
+    let effectResolved = false;
+    return stickies.find((sticky) => {
+      if (sticky.attribution !== undefined) return false; // nested-run stickies match decisions, not calls
+      const scope = sticky.scope;
+      if (scope.toolName !== undefined && scope.toolName !== call.name) return false;
+      if (scope.identity !== undefined && scope.identity !== identityRef) return false;
+      if (scope.argumentsHash !== undefined) {
+        argumentsHash ??= toolEffectArgumentsHash(call.arguments);
+        if (scope.argumentsHash !== argumentsHash) return false;
+      }
+      if (scope.effectKind !== undefined) {
+        if (!effectResolved) {
+          effectResolved = true;
+          const tool = registry.get(call.name);
+          effectKind = tool?.effect
+            ? resolveToolEffectDeclaration(tool, call.arguments, { sessionId: this.id, runId: "", toolCallId: call.id })?.kind
+            : undefined;
+        }
+        if (scope.effectKind !== effectKind) return false;
+      }
+      if (scope.actionConstraints) {
+        for (const [key, value] of Object.entries(scope.actionConstraints)) {
+          const actual = (call.arguments as Record<string, unknown>)[key];
+          if (canonicalToolEffectJson(actual === undefined ? null : actual) !== canonicalToolEffectJson(value)) return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  /** Redacted pending-decision descriptor for one gated call; never carries raw arguments. */
+  private buildPendingDecision(
+    call: ToolCallContent,
+    approvalId: string,
+    registry: ToolRegistry,
+    runId: string,
+    metadata: Readonly<Record<string, unknown>>,
+    signal: AbortSignal,
+  ): PendingDecision {
+    const tool = registry.get(call.name);
+    const declaration = tool?.effect
+      ? resolveToolEffectDeclaration(tool, call.arguments, {
+          sessionId: this.id,
+          runId,
+          toolCallId: call.id,
+          signal,
+          metadata,
+        })
+      : undefined;
+    const identityRef = decisionIdentityRef(this.activeIdentity);
+    const elicitation = toolElicitationRequest(tool, call.arguments, {
+      sessionId: this.id,
+      runId,
+      toolCallId: call.id,
+      signal,
+      metadata,
+    });
+    return {
+      approvalId,
+      kind: elicitation ? "elicitation" : "tool_approval",
+      toolCallId: call.id,
+      scope: {
+        toolName: call.name,
+        argumentsHash: toolEffectArgumentsHash(call.arguments),
+        ...(declaration && declaration.kind !== "none" ? { effectKind: declaration.kind } : {}),
+        ...(identityRef ? { identity: identityRef } : {}),
+      },
+      reason: elicitation?.reason ?? "Tool side effect requires approval",
+      ...(elicitation ? { elicitationSchema: elicitation.schema } : {}),
+    };
   }
 
   private async persistDurable(state: StoredAgentRunState): Promise<AgentRunState> {
@@ -1544,8 +2451,20 @@ function mergeCompaction(
   return agent || undefined;
 }
 
-function isBuiltInLoop(loop: import("./contracts.js").AgentLoopStrategy | import("./contracts.js").AgentLoopOptions): boolean {
-  return typeof loop === "object" && loop !== null && "strategy" in loop;
+/** Compact redacted principal reference used in decision scopes; never a credential. */
+function decisionIdentityRef(identity: AgentIdentity | undefined): string | undefined {
+  return identity ? `${identity.tenantId}:${identity.principal.kind}:${identity.principal.id}` : undefined;
+}
+
+/**
+ * Durable-run gate: built-in option forms and the single-shot singleton are durable via the
+ * pending-call mechanism; a custom strategy must declare both snapshot and restore hooks.
+ */
+function isDurableLoop(loop: import("./contracts.js").AgentLoopStrategy | import("./contracts.js").AgentLoopOptions): boolean {
+  if (typeof loop !== "object" || loop === null) return true;
+  if ("strategy" in loop) return true;
+  if (loop === singleShotLoop) return true;
+  return typeof loop.snapshot === "function" && typeof loop.restore === "function";
 }
 
 function mergeGuardrails(agent: Guardrails | undefined, run: Guardrails | undefined): Guardrails | undefined {

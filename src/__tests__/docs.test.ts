@@ -1014,7 +1014,7 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.24 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.25 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
@@ -1025,7 +1025,7 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.24] - 2026-08-04"), `${dir}/CHANGELOG.md missing finalized 0.0.24 section`);
+      assert.ok(changelog.includes("## [0.0.25] - 2026-08-06"), `${dir}/CHANGELOG.md missing finalized 0.0.25 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -2367,6 +2367,8 @@ describe("docs", () => {
       "examples/workflow-event-sink.ts",
       "examples/workflow-rpc-cancel.ts",
       "examples/workflow-distributed-coordinator.ts",
+      "examples/ag-ui-a2ui.ts",
+      "examples/durable-loops-and-approvals.ts",
     ];
     const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
     for (const file of demos) {
@@ -3285,5 +3287,51 @@ describe("docs", () => {
     assert.ok(security.includes("unknown") && security.includes("AgentEventSource"));
     assert.ok(existsSync("examples/distributed-events-and-tool-effects.ts"), "missing distributed events example");
     assert.ok(effects.includes("not exactly-once"));
+  });
+
+  it("phase8 durable loops HITL and A2UI docs cover snapshot decisions projectors migration and examples", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const loops = readFileSync("docs/agent-loops.md", "utf8");
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    const agUi = readFileSync("docs/ag-ui.md", "utf8");
+    const supervisors = readFileSync("docs/supervisors.md", "utf8");
+    const mcp = readFileSync("docs/mcp-tools.md", "utf8");
+    const coding = readFileSync("docs/coding-security.md", "utf8");
+    const server = readFileSync("docs/server.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    assert.ok(index.includes("0.0.25") && index.includes("agent-loops.md") && index.includes("(ag-ui.md)"));
+    for (const token of [
+      "snapshot",
+      "restore",
+      "revision",
+      "ERR_PRISM_LOOP_NOT_DURABLE",
+      "ERR_PRISM_LOOP_SNAPSHOT",
+      "ERR_PRISM_LOOP_REVISION",
+    ])
+      assert.ok(loops.includes(token), `agent-loops.md missing ${token}`);
+    for (const token of ["pendingDecisions", "allow_for_run", "reject_for_run", "sticky", "elicitation"])
+      assert.ok(runtime.includes(token), `agent-session-runtime.md missing ${token}`);
+    for (const token of [
+      "a2ui",
+      "createMessagesFromSessionProjection",
+      "createStateFromStoreProjection",
+      "createActivityFromToolProgressProjection",
+      "composeAgUiProjections",
+      "pendingDecisions",
+      "input.project",
+    ])
+      assert.ok(agUi.includes(token), `ag-ui.md missing ${token}`);
+    assert.ok(supervisors.includes("Durable child approvals") && supervisors.includes("resumeNestedRun"));
+    assert.ok(mcp.includes("mcpElicitationDecision") && mcp.includes("humanInteraction"));
+    assert.ok(coding.includes("ask_user_decision") && coding.includes("elicitation"));
+    assert.ok(server.includes("decisions") && server.includes("approvalId"));
+    assert.ok(migration.includes("0.0.24 → 0.0.25 durable custom loops and human-in-the-loop"));
+    assert.ok(performance.includes("benchmark-0.0.25") && performance.includes("3.913"));
+    assert.ok(readiness.includes("0.0.25") && readiness.includes("Phase 8"));
+    assert.ok(existsSync("examples/durable-loops-and-approvals.ts"), "missing durable loops example");
+    assert.ok(existsSync("examples/ag-ui-a2ui.ts"), "missing A2UI example");
+    assert.ok(existsSync("scripts/benchmark-0.0.25.json"), "missing Phase 8 benchmark evidence");
   });
 });

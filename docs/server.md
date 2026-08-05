@@ -109,6 +109,7 @@ const handler = createPrismHandler({
 - Workflow exposure requires its existing `WorkflowCheckpointAdapter`; no server-owned database exists.
 - Schedule exposure is optional and may be one service or an authorization-selected resolver. Returned service ownership must exactly match authorized tenant/account/user scope; otherwise request is forbidden.
 - `PrismWorkflowExposure.runOptions` can supply agent/tool/policy/resume-validator wiring. Server-owned ownership, signal, checkpoint, redactor, run ID, and event bus fields cannot be overridden.
+- The agent resume endpoint (`/prism/agents/{id}/runs/{runId}/resume`) accepts `{ decision: "approve" | "deny" }` or `{ decisions: [{ approvalId, outcome, reason?, modifiedArguments?, elicitation? }] }` next to `expectedVersion` — exactly one of `decision`/`decisions`. Entries are validated at the boundary (count ≤ 128, four outcomes, bounded reason/payloads) and core applies them atomically under the run's CAS; unknown ids, stale versions, and malformed batches fail closed without touching the run.
 - Host/origin checks and CORS headers activate only when their allow-lists are configured. Hosts still own reverse-proxy trust and canonical host handling.
 
 Default/hard ceilings:

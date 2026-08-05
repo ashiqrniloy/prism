@@ -1,12 +1,16 @@
 import {
+  AgentDelegationSuspendedError,
   AgentRunError,
   type AgentRunResult,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
   createAgent,
   createEventMultiplexer,
+  type NestedRunOutcome,
   type PermissionPolicy,
   type PermissionRequest,
+  resumeAgentRun,
+  type ResumeNestedRun,
 } from "@arnilo/prism";
 import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorValidationError } from "./errors.js";
 import { narrowSupervisorLimits, resolveSupervisorLimits } from "./limits.js";
@@ -18,8 +22,24 @@ interface ChainContext {
   readonly signal?: AbortSignal;
 }
 
+const DELEGATION_NAMESPACE = "prism.supervisor-delegation";
+
+/** Durable mapping that lets `resumeNestedRun` rebuild a suspended child after a restart. */
+interface DelegationMapping {
+  readonly childId: string;
+  readonly delegationId: string;
+  readonly threadId: string;
+  readonly path: readonly string[];
+  readonly version: number;
+  /** Redacted delegation input, needed to re-run the before-hook at resume. */
+  readonly input: string;
+}
+
 export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
   requireOwnership(options.ownership);
+  if (options.checkpoints && !options.definitionRevision?.trim()) {
+    throw new SupervisorValidationError("definitionRevision is required when checkpoints are configured");
+  }
   if (options.identity) {
     assertIdentityActive(options.identity);
     assertIdentityMatchesOwnership(options.identity, options.ownership);
@@ -146,6 +166,16 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
             ownership: options.ownership,
             redactor: options.redactor,
             metadata: { ...request.metadata, supervisorId: id, delegationId, resourceId, threadId, depth },
+            ...(options.checkpoints
+              ? {
+                  runState: {
+                    checkpoints: options.checkpoints,
+                    definitionRevision: options.definitionRevision!,
+                    interruptBeforeTool: true,
+                    resumeNestedRun,
+                  },
+                }
+              : {}),
           }),
           controller.signal,
         );
@@ -163,12 +193,31 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         }
         throw error;
       }
+      if (result.status === "suspended") {
+        // Child approvals surface on the hosting root run: persist the rebuild mapping, then
+        // signal core with the child's pending decisions (core hashes/attributes the ids).
+        const pending = result.interruption?.pendingDecisions;
+        const version = result.runState?.version;
+        if (!pending?.length || version === undefined) {
+          throw new SupervisorError("Child run suspended without a pending-decision set");
+        }
+        await saveMapping(result.runId, {
+          childId: request.childId,
+          delegationId,
+          threadId,
+          path,
+          version,
+          input,
+        });
+        throw new AgentDelegationSuspendedError({ runId: result.runId, sessionId: result.sessionId }, pending, path);
+      }
       const totalTokens = result.usage?.totalTokens ?? (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0);
       events.publish({ type: "delegation_finished", childId: request.childId, delegationId, depth, status: result.status, totalTokens });
       await complete(toCompletion(result, request.childId, delegationId, depth, options));
       completionSent = true;
       return result;
     } catch (error) {
+      if (error instanceof AgentDelegationSuspendedError) throw error;
       if (!(error instanceof SupervisorDeniedError && completionSent)) {
         const result = error instanceof AgentRunError ? error.result : undefined;
         const message = safeError(error, options);
@@ -195,6 +244,101 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     }
   }
 
+  async function saveMapping(runId: string, mapping: DelegationMapping): Promise<void> {
+    const existing = await options.checkpoints!.loadCheckpoint({ namespace: DELEGATION_NAMESPACE, key: runId });
+    await options.checkpoints!.saveCheckpoint({
+      namespace: DELEGATION_NAMESPACE,
+      key: runId,
+      version: (existing?.version ?? 0) + 1,
+      expectedVersion: existing?.version,
+      value: mapping,
+    });
+  }
+
+  const resumeNestedRun: ResumeNestedRun = async (nested, decisions): Promise<NestedRunOutcome> => {
+    const checkpoints = options.checkpoints;
+    if (!checkpoints || !options.definitionRevision) {
+      throw new SupervisorValidationError("Nested-run resume requires supervisor checkpoints and definitionRevision");
+    }
+    const record = await checkpoints.loadCheckpoint({ namespace: DELEGATION_NAMESPACE, key: nested.ref.runId });
+    const mapping = record?.value as DelegationMapping | undefined;
+    // Non-enumerating: unknown and foreign run ids share one error.
+    if (!mapping || typeof mapping.childId !== "string" || typeof mapping.version !== "number") {
+      throw new SupervisorDeniedError("Unknown delegated run");
+    }
+    const child = options.children[mapping.childId];
+    if (!child) throw new SupervisorDeniedError("Unknown delegated run");
+    const depth = mapping.path.length;
+    const controller = new AbortController();
+    let limits = narrowSupervisorLimits(baseLimits, child.limits);
+    let hookPermission: PermissionPolicy | undefined;
+    // The before-hook re-runs at resume so its narrowing applies exactly as it did to the
+    // original run; hooks must be idempotent (same contract as core resume guardrails).
+    if (options.hooks?.before) {
+      const decision = await options.hooks.before(
+        Object.freeze({
+          childId: mapping.childId,
+          delegationId: mapping.delegationId,
+          depth,
+          path: mapping.path,
+          input: mapping.input,
+          limits,
+          metadata: undefined,
+          signal: controller.signal,
+        }),
+      );
+      if (decision.allowed === false) {
+        return { status: "failed", code: "delegation_denied", message: safeError(decision.reason ?? "Delegation denied", options) };
+      }
+      limits = narrowSupervisorLimits(limits, decision.limits);
+      hookPermission = decision.permission;
+    }
+    const resourceId = `${id}/${mapping.delegationId}/${mapping.childId}`;
+    const permission = intersectPolicies(options.permission, child.permission, hookPermission, toolBudgetPolicy(limits.maxToolCalls));
+    const childAgent = await child.createAgent(
+      Object.freeze({
+        childId: mapping.childId,
+        delegationId: mapping.delegationId,
+        depth,
+        path: mapping.path,
+        ownership: options.ownership,
+        identity: options.identity,
+        effectStore: options.effectStore,
+        resourceId,
+        threadId: mapping.threadId,
+        permission,
+        signal: controller.signal,
+        delegate: (nestedRequest: DelegationRequest) => delegate(nestedRequest, { path: mapping.path, signal: controller.signal }),
+      }),
+    );
+    const agent = createAgent({
+      ...childAgent.config,
+      permission: intersectPolicies(permission, childAgent.config.permission),
+      ownership: options.ownership,
+      identity: options.identity ?? childAgent.config.identity,
+      effectStore: options.effectStore ?? childAgent.config.effectStore,
+      redactor: options.redactor ?? childAgent.config.redactor,
+    });
+    const result = await resumeAgentRun(
+      agent,
+      { runId: nested.ref.runId, ...(nested.ref.sessionId ? { sessionId: nested.ref.sessionId } : {}) },
+      { decisions, expectedVersion: mapping.version },
+      { checkpoints, definitionRevision: options.definitionRevision, ownership: options.ownership, resumeNestedRun },
+    );
+    if (result.status === "suspended") {
+      await saveMapping(nested.ref.runId, { ...mapping, version: result.runState?.version ?? mapping.version });
+      return { status: "suspended", pendingDecisions: result.interruption?.pendingDecisions ?? [] };
+    }
+    if (result.status === "succeeded") {
+      return { status: "completed", value: options.redactor?.redact(result.text) ?? result.text };
+    }
+    return {
+      status: "failed",
+      code: result.status === "denied" ? "delegation_denied" : "delegation_failed",
+      message: safeError(result.error?.message ?? `Delegated run ${result.status}`, options),
+    };
+  };
+
   async function complete(value: DelegationCompletion): Promise<void> {
     if (!options.hooks?.after) return;
     try {
@@ -212,6 +356,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
 
   return {
     delegate: (request) => delegate(request),
+    resumeNestedRun,
     subscribe: () => events.subscribe(),
     get activeChildren() {
       return activeChildren;

@@ -55,7 +55,9 @@ node examples/durable-coding-workflow.ts
 node examples/coding-goal-verify.ts
 node examples/coding-tools-capability-gaps.ts
 node examples/agent-durable-approval.ts
+node examples/durable-loops-and-approvals.ts
 node examples/ag-ui-server.ts
+node examples/ag-ui-a2ui.ts
 node examples/ag-ui-mcp-apps.ts
 node examples/secure-agent.ts
 node examples/enterprise-identity.ts
@@ -81,7 +83,9 @@ Each demo prints a single JSON line with its result.
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
 - `artifact-review-delivery.ts` — **demo**: artifact attach/revise/approve review + expiring authorized delivery link over an in-memory checkpoint store.
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
+- `durable-loops-and-approvals.ts` — **demo**: durable custom-loop snapshot + parallel batch approvals (network-free).
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
+- `ag-ui-a2ui.ts` — opt-in A2UI painting middleware: tool-result `a2ui_operations` → `a2ui-surface` ACTIVITY_SNAPSHOT.
 - `ag-ui-mcp-apps.ts` — **demo**: authenticated single-bridge MCP Apps resource proxy plus separate-origin sandbox/CSP configuration (network-free).
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.

@@ -35,7 +35,8 @@ npm install @arnilo/prism @arnilo/prism-ag-ui
 | `lifecycle` + `resolveRun` | Optional durable status/resume path. Required only for a resumed interruption. |
 | `interrupts.resume` | Optional host aggregate-policy callback for multiple AG-UI interrupts; it returns one current-version core approve/deny decision. |
 | `replay` | Optional page adapter or `createAgentEventSourceAgUiReplay(source, options)` for gap-free distributed replay/live follow. |
-| `projection` | Explicit safe tool/state/messages/activity/reasoning/raw/custom/interrupt projection. Omit each callback for default deny. |
+| `projection` | Explicit safe tool/state/messages/activity/reasoning/raw/custom/interrupt projection. Omit each callback for default deny. Prefer `composeAgUiProjections(createMessagesFromSessionProjection(...), createStateFromStoreProjection(...), createActivityFromToolProgressProjection(), host)` for standard families. |
+| `a2ui` | Opt-in A2UI painting middleware (`{ catalogId, mode, renderToolName?, allowedCatalogIds?, limits? }`). Detects `a2ui_operations` tool results and/or streams from `render_a2ui` args; paints `a2ui-surface` activity events. Absent = inert. |
 | `capabilities` | Optional host declaration narrowed to implemented SSE/projector/lifecycle features; read `handler.capabilities`. |
 | `redactor`, `limits` | Host redaction and narrowing-only finite caps. |
 
@@ -104,6 +105,43 @@ All identity, authorization, session/thread mapping, durable checkpoint lookup, 
 `AgUiProjection` is an allow-list. Without a callback, raw tool arguments/results/progress, arbitrary state/patches/transcripts/activity/reasoning/raw events, paths, ACP locations/diffs/terminals/raw I/O, and frontend-supplied tools remain absent. Reasoning signatures do not become AG-UI encrypted values automatically: a host must explicitly provide an already client-encrypted opaque value. `input.project` is also an allow-list: do not merge client state/forwarded props into ownership, identity, tools, permissions, provider options, or media fetch policy.
 
 Co-work projection reuses the same allow-list: `AgUiProjection.coWork(event)` may return a curated, JSON-serializable payload for a co-work event; absent it, the redacted event fields are exposed. Wire `coWorkContext` to derive thread/artifact/identity from the authorized request (never client JSON) and `coWork` to a `createCoWorkReplay()` over your durable artifact/draft/snapshot stores. The handler projects one bounded page after the run; mount a dedicated cursor-paged co-work endpoint when full pagination is needed.
+
+Durable interrupts carry the shared decision batch: the fallback interrupt includes the redacted `pendingDecisions` under `metadata` and its `responseSchema` accepts either the legacy `{ decision: "approve" | "deny" }` or a `{ decisions: [{ approvalId, outcome, reason?, modifiedArguments?, elicitation? }] }` batch. All batch entries are shape- and cap-validated at the boundary (count ≤ 128, ids ≤ 128 chars, four outcomes, reason ≤ 8 KiB, payloads ≤ 64 KiB) and core re-validates each against the recorded pending set under the single CAS. `interrupts.resume` may return the batch form (`{ decisions, expectedVersion? }`); legacy `editedArgs` resume payloads still deny. ACP permission prompts offer the four outcomes (`allow_once` / `allow_always` / `reject_once` / `reject_always`) and map them onto the batch; a cancelled prompt stays deny-closed.
+
+### Standard projectors (opt-in)
+
+Three batteries-included factories return `AgUiProjection` fragments. Compose with host projectors via `composeAgUiProjections(...fragments)` — **first defined callback wins** (left to right); `undefined` fragments are skipped. Absent factories keep 0.0.24 default-deny.
+
+```ts
+createAgUiHandler({
+  projection: composeAgUiProjections(
+    createMessagesFromSessionProjection({ getMessages: () => authorizedAgUiMessages, redact }),
+    createStateFromStoreProjection(runStateStore),
+    createActivityFromToolProgressProjection(),
+    hostCustom,
+  ),
+});
+```
+
+| Factory | Emits | Notes |
+| --- | --- | --- |
+| `createMessagesFromSessionProjection` | `MESSAGES_SNAPSHOT` | Host `getMessages()` for authorized history, or live `message_finished` accumulation. Caps 128/1024. Redact drops closed. |
+| `createStateFromStoreProjection(store)` | `STATE_SNAPSHOT` on `agent_started`; RFC 6902 `STATE_DELTA` (add/replace/remove) when `store.get()` changes | Host store; optional `subscribe` only marks dirty — no Prism watcher. Oversized/throw → drop closed. |
+| `createActivityFromToolProgressProjection` | `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` from `tool_execution_progress` | Default `activityType: "tool-progress"`. Missing progress+metadata → drop closed. |
+
+### A2UI painting middleware (opt-in)
+
+`createAgUiHandler({ a2ui: { catalogId, mode } })` paints A2UI v0.9 surfaces without a host `projection.activity` callback:
+
+| Mode | Source | Paint |
+| --- | --- | --- |
+| `fixed-schema` | Tool result `{ a2ui_operations: [...] }` | First batch with `createSurface` → `ACTIVITY_SNAPSHOT` (`activityType: "a2ui-surface"`); later batches → `ACTIVITY_DELTA` |
+| `streaming` | `tool_call_delta` args of `renderToolName` (default `render_a2ui`) | Progressive `ACTIVITY_SNAPSHOT` with `replace: true` only when complete ops extractable — never partial JSON |
+| `both` | Both paths; streamed surfaces are not re-painted from the final envelope |
+
+Host `catalogId` is stamped when absent; model-supplied ids outside `allowedCatalogIds` (default `[catalogId]`) are overwritten. Invalid ops emit one bounded `CUSTOM` event `prism.a2ui.error` and paint nothing. Caps: 64/512 ops per message, 64 KiB/1 MiB per op, 16/64 surfaces per run, depth 32/64.
+
+User actions arrive as untrusted `AgUiA2UiAction` values on `input.project({ a2uiActions })` (from `forwardedProps.a2uiAction` or activity/tool-result shapes). Without `input.project` they stay default-deny — Prism never synthesizes a `log_a2ui_event` tool call (documented divergence from official `@ag-ui/a2ui-middleware`). Example: `examples/ag-ui-a2ui.ts`.
 
 ## Security and performance notes
 

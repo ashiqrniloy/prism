@@ -194,6 +194,70 @@ describe("createPrismHandler", () => {
     assert.equal((await noExposure(new Request(`https://example.test/prism/agents/support/runs/${started.runId}`))).status, 404);
   });
 
+  it("accepts a shared decision batch on the agent resume endpoint under the same CAS rules", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const store = createMemorySessionStore();
+    let calls = 0;
+    let turn = 0;
+    const agent = createAgent({
+      id: "batch-support",
+      model: { provider: "mock", model: "offline" },
+      provider: {
+        id: "mock",
+        async *generate() {
+          if (++turn === 1) {
+            yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: 1 }) };
+            yield { type: "tool_call" as const, call: toolCallContent("call-2", "write", { value: 2 }) };
+            yield providerDone();
+            return;
+          }
+          yield providerTextDelta("finished");
+          yield providerDone();
+        },
+      },
+      store,
+      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    });
+    const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
+    const handler = createPrismHandler({
+      agents: { "batch-support": agent },
+      agentRuns: { "batch-support": { lifecycle } },
+      authorize: () => authorization,
+    });
+    const suspended = await handler(jsonRequest("/prism/agents/batch-support/runs", { input: "go" }));
+    const started = (await suspended.json()) as { status: string; runId: string; runState: { version: number } };
+    assert.equal(started.status, "suspended");
+    const status = await handler(new Request(`https://example.test/prism/agents/batch-support/runs/${started.runId}`));
+    const publicState = JSON.parse(await status.text()) as {
+      version: number;
+      state: { interruption?: { pendingDecisions?: readonly { approvalId: string }[] } };
+    };
+    const pending = publicState.state.interruption!.pendingDecisions!;
+    assert.equal(pending.length, 2);
+
+    const resumed = await handler(
+      jsonRequest(`/prism/agents/batch-support/runs/${started.runId}/resume`, {
+        expectedVersion: publicState.version,
+        decisions: pending.map((decision) => ({ approvalId: decision.approvalId, outcome: "allow_once" })),
+      }),
+    );
+    assert.equal(resumed.status, 200, await resumed.clone().text());
+    assert.equal(((await resumed.json()) as { status: string }).status, "succeeded");
+    assert.equal(calls, 2);
+
+    // Boundary rejects malformed batches without touching the run.
+    for (const body of [
+      { expectedVersion: publicState.version, decisions: [] },
+      { expectedVersion: publicState.version, decisions: [{ outcome: "allow_once" }] },
+      { expectedVersion: publicState.version, decisions: [{ approvalId: "a", outcome: "sideways" }] },
+      { expectedVersion: publicState.version, decision: "approve", decisions: [{ approvalId: "a", outcome: "allow_once" }] },
+    ]) {
+      const bad = await handler(jsonRequest(`/prism/agents/batch-support/runs/${started.runId}/resume`, body));
+      assert.equal(bad.status, 400, JSON.stringify(body));
+    }
+  });
+
   it("runs, loads, resumes, and cancels durable workflow checkpoints", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({

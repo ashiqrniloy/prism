@@ -6,17 +6,18 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
-## Release 0.0.24 distributed events and tool effects
+## Release 0.0.25 durable loops and human-in-the-loop
 
-`node scripts/benchmark-0.0.24.mjs` is an explicit protected PostgreSQL benchmark behind `PRISM_TEST_POSTGRES_URL`. Checked `scripts/benchmark-0.0.24.json` (Node v24.18.0/Linux x64, PostgreSQL 16.14): 10 tenants × 10 principals × 1,000 events/owner, 16 producers/subscribers, 100 warmups, 1,000 measured ops, 10,000-event sustained replay, 100-row cleanup.
+`node scripts/benchmark-0.0.25.mjs` is network-free (in-memory checkpoint store). Checked `scripts/benchmark-0.0.25.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops, 32 pending decisions, ~250 KiB snapshot, 64 A2UI ops/message.
 
 | Scenario | Recorded p95 ms | Ceiling |
 | --- | ---: | ---: |
-| Event append / page | 1.502 / 3.103 | 50 / 100 |
-| Effect claim+transition / cleanup | 3.084 / 3.242 | 50 / 100 |
-| Event cleanup / reconnect catch-up | 1.370 / 7.883 | 100 / 2000 |
+| Decision apply (batch CAS) | 3.913 | 5 |
+| Sticky match | 0.407 | 5 |
+| Snapshot capture/restore | 6.742 | 20 |
+| A2UI paint | 0.348 | 10 |
 
-Sustained replay delivered 160,000 subscriber-events at 101.34 events/s. Five `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans used named indexes with no sequential scans. Process conformance (`scripts/phase7-conformance.test.mjs`) covers 16-process producers, `LISTEN` backend kill + poll catch-up, and pending/dispatched effect crash windows. Values are environment evidence, not universal SLOs.
+Conformance: `scripts/phase8-conformance.test.mjs` (8 network-free cases). Values are environment evidence, not universal SLOs.
 
 ## Release 0.0.24 distributed events and tool effects
 

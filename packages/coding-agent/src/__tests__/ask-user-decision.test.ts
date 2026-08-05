@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createMemoryCheckpointStore } from "@arnilo/prism";
+import {
+  AgentDecisionError,
+  createAgent,
+  createMemoryCheckpointStore,
+  createMemorySessionStore,
+  providerDone,
+  providerTextDelta,
+  resumeAgentRun,
+  toolCallContent,
+} from "@arnilo/prism";
 import { createWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-workflows";
 import {
   ASK_USER_DECISION_SUSPEND_REASON,
@@ -404,4 +413,75 @@ test("blocking ask() callback mode unchanged when ask provided", async () => {
   });
   assert.equal(result.error, undefined);
   assert.equal(result.metadata?.selectedId, "sqlite");
+});
+
+test("durable gating surfaces ask_user_decision as a shared elicitation decision", async () => {
+  const checkpoints = createMemoryCheckpointStore();
+  let asked = 0;
+  const tool = createAskUserDecisionTool({
+    ask: async () => {
+      asked += 1;
+      return { selectedId: "sqlite" };
+    },
+  });
+  let turn = 0;
+  const agent = createAgent({
+    id: "ask-demo",
+    model: { provider: "mock", model: "demo" },
+    store: createMemorySessionStore(),
+    provider: {
+      id: "mock",
+      async *generate() {
+        turn += 1;
+        if (turn === 1) {
+          yield { type: "tool_call" as const, call: toolCallContent("call-ask", ASK_USER_DECISION_TOOL_NAME, validArgs) };
+          yield providerDone();
+          return;
+        }
+        yield providerTextDelta("finished");
+        yield providerDone();
+      },
+    },
+    tools: [tool],
+  });
+  const runState = { checkpoints, definitionRevision: "1", interruptBeforeTool: true as const };
+  const first = await agent.createSession({ id: "ask-d1" }).run("go", { runState });
+
+  assert.equal(first.status, "suspended");
+  assert.equal(first.interruption?.kind, "elicitation");
+  const pending = first.interruption?.pendingDecisions?.[0];
+  assert.equal(pending?.kind, "elicitation");
+  assert.equal(pending?.reason, validArgs.question);
+  // Choice/pros-cons UX payload preserved on the schema's extension key.
+  const ux = pending?.elicitationSchema?.["x-prism-ask-user-decision"] as { options?: unknown[] } | undefined;
+  assert.equal(ux?.options?.length, 2);
+
+  const ref = { runId: first.runId, sessionId: first.sessionId };
+  const options = { checkpoints, definitionRevision: "1" };
+  // Unknown option id fails the batch closed (tool validate fn, re-derived at resume).
+  await assert.rejects(
+    () =>
+      resumeAgentRun(
+        agent,
+        ref,
+        {
+          expectedVersion: first.runState!.version!,
+          decisions: [{ approvalId: pending!.approvalId, outcome: "allow_once", elicitation: { selectedId: "nope" } }],
+        },
+        options,
+      ),
+    (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
+  );
+  // Valid answer resolves the call without executing the blocking ask() path.
+  const result = await resumeAgentRun(
+    agent,
+    ref,
+    {
+      expectedVersion: first.runState!.version!,
+      decisions: [{ approvalId: pending!.approvalId, outcome: "allow_once", elicitation: { selectedId: "sqlite" } }],
+    },
+    options,
+  );
+  assert.equal(result.status, "succeeded");
+  assert.equal(asked, 0);
 });

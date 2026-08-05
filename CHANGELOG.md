@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.0.25] - 2026-08-06
+
+### Added
+- Durable custom `AgentLoopStrategy` hooks: optional `revision` / `snapshot` / `restore`; `AgentLoopStateError` fail-closed codes; fingerprint includes loop `{name,revision}`.
+- Shared pending-decision model: parallel approvals, batch CAS `decisions`, sticky allow/reject for run, modified arguments, elicitation; nested supervisor attribution.
+- Protocol mappings: AG-UI/ACP/server batch resume, MCP elicitation helpers, coding `ask_user_decision` elicitation hook.
+- Opt-in A2UI painting middleware + standard AG-UI projectors (`messages`/`state`/`activity`).
+- Network-free Phase 8 conformance + `benchmark-0.0.25.json` evidence; examples `durable-loops-and-approvals.ts`, `ag-ui-a2ui.ts`.
+
+### Changed
+- Publishable graph remains **47** manifests at **0.0.25**.
+- Fingerprint loop entry shape `string` → `{name,revision}` (0.0.24 persisted durable runs fail closed on resume).
+
+### Breaking (minor, pre-1.0)
+- Custom loops on durable runs need snapshot/restore hooks or `ERR_PRISM_LOOP_NOT_DURABLE`.
+- Resume prefers `decisions: RunDecision[]`; legacy binary `decision` remains but is exclusive with the batch path.
+- ACP permission offers four outcomes; `reject_once` is blocked-continue (cancelled stays terminal deny).
+
+See [docs/migration.md](docs/migration.md) for the 0.0.24 → 0.0.25 guide.
+
 ## [0.0.24] - 2026-08-04
 
 ### Added

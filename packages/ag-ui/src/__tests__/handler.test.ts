@@ -312,6 +312,105 @@ describe("createAgUiHandler", () => {
     assert.equal(writes, 1);
   });
 
+  it("carries the shared decision batch through interrupt metadata and resume input", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    let writes = 0;
+    let turn = 0;
+    let suspended: AgentRunRef | undefined;
+    const agent = createAgent({
+      id: "batch-agent",
+      model: { provider: "mock", model: "mock" },
+      store: createMemorySessionStore(),
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      provider: {
+        id: "mock",
+        async *generate() {
+          if (++turn === 1) {
+            yield { type: "tool_call" as const, call: toolCallContent("write-b1", "write", { value: 1 }) };
+            yield { type: "tool_call" as const, call: toolCallContent("write-b2", "write", { value: 2 }) };
+          } else {
+            yield providerTextDelta("batch done");
+          }
+          yield providerDone();
+        },
+      },
+      tools: [
+        { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-b1", name: "write", value: ++writes }) },
+      ],
+    });
+    const lifecycle = createAgentRunLifecycle({
+      checkpoints,
+      resolveAgent: () => ({ agent, definitionRevision: "1" }),
+    });
+    let receivedDecisions: readonly { readonly approvalId: string; readonly outcome: string }[] | undefined;
+    const handler = createAgUiHandler({
+      authorize: () => authorization,
+      sessionFactory: () => agent.createSession({ id: "batch-session" }),
+      lifecycle: {
+        ...lifecycle,
+        resumeStream: ((
+          ref: AgentRunRef,
+          resume: { decisions?: readonly { readonly approvalId: string; readonly outcome: string }[] },
+          options: unknown,
+        ) => {
+          receivedDecisions = resume.decisions;
+          return lifecycle.resumeStream(ref, resume as never, options as never);
+        }) as never,
+      },
+      resolveRun: () => (suspended ? { ref: suspended, agentId: "batch-agent" } : undefined),
+      onSuspended: ({ run }) => {
+        suspended = run.ref;
+      },
+    });
+
+    const interrupted = await events(await handler(request(body())));
+    const finish = interrupted.at(-1);
+    assert.equal(finish.type, EventType.RUN_FINISHED);
+    assert.equal(finish.outcome.type, "interrupt");
+    // The fallback interrupt carries the batch in metadata for the client.
+    const batch = (finish.outcome.interrupts[0].metadata as { pendingDecisions?: readonly { approvalId: string }[] }).pendingDecisions;
+    assert.equal(batch?.length, 2);
+    assert.equal(writes, 0);
+
+    const resumed = await events(
+      await handler(
+        request(
+          body({
+            runId: "run-2",
+            parentRunId: "run-1",
+            messages: [],
+            resume: [
+              {
+                interruptId: finish.outcome.interrupts[0].id,
+                status: "resolved",
+                payload: { decisions: batch!.map((decision) => ({ approvalId: decision.approvalId, outcome: "allow_once" })) },
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+    assert.equal(receivedDecisions?.length, 2);
+    assert.equal(receivedDecisions?.[0]?.outcome, "allow_once");
+    assert.equal(writes, 2);
+    assert.ok(resumed.some((item) => item.type === EventType.TEXT_MESSAGE_CONTENT && item.delta === "batch done"));
+
+    // Malformed batch input fails closed at the boundary.
+    const bad = await handler(
+      request(
+        body({
+          runId: "run-3",
+          parentRunId: "run-1",
+          messages: [],
+          resume: [
+            { interruptId: finish.outcome.interrupts[0].id, status: "resolved", payload: { decisions: [{ outcome: "allow_once" }] } },
+          ],
+        }),
+      ),
+    );
+    assert.equal(bad.status, 400);
+  });
+
   it("projects multiple bounded interrupts through one durable CAS decision", async () => {
     const checkpoints = createMemoryCheckpointStore();
     let writes = 0;
@@ -401,11 +500,11 @@ describe("createAgUiHandler", () => {
         },
         version: 1,
       }),
-      async resume(_ref: AgentRunRef, value: { decision: string }) {
+      async resume(_ref: AgentRunRef, value: { decision?: string }) {
         decision = value.decision;
         return { sessionId: "session-1", runId: "stored-run", status: "denied" as const, text: "", content: [] };
       },
-      async *resumeStream(_ref: AgentRunRef, value: { decision: string }) {
+      async *resumeStream(_ref: AgentRunRef, value: { decision?: string }) {
         decision = value.decision;
         yield {
           type: "agent_denied" as const,

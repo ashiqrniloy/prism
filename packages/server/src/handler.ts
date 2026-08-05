@@ -6,8 +6,12 @@ import {
   type AgentSession,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
+  HARD_MAX_DECISION_REASON_BYTES,
+  HARD_MAX_ELICITATION_BYTES,
+  HARD_MAX_PENDING_DECISIONS,
   type JsonObject,
   type Message,
+  type RunDecision,
 } from "@arnilo/prism";
 import {
   cancelWorkflowRun,
@@ -673,17 +677,73 @@ function isMessage(value: unknown): value is Message {
   return ["system", "user", "assistant", "tool"].includes(String(item.role)) && Array.isArray(item.content);
 }
 
-function readAgentResume(body: JsonObject): { readonly decision: "approve" | "deny"; readonly expectedVersion: number } {
-  if (Object.keys(body).some((key) => key !== "decision" && key !== "expectedVersion")) {
-    throw new PrismServerError("Invalid agent resume body", 400, "ERR_PRISM_SERVER_RESUME");
+const RUN_DECISION_OUTCOMES = new Set(["allow_once", "allow_for_run", "reject_once", "reject_for_run"]);
+const RUN_DECISION_KEYS = new Set(["approvalId", "outcome", "reason", "modifiedArguments", "elicitation"]);
+
+/** Boundary validation for a client-supplied decision batch; core re-validates under CAS. */
+function readAgentDecisions(value: unknown): readonly RunDecision[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > HARD_MAX_PENDING_DECISIONS) {
+    throw new PrismServerError("decisions must be a non-empty bounded array", 400, "ERR_PRISM_SERVER_RESUME");
   }
-  if (body.decision !== "approve" && body.decision !== "deny") {
-    throw new PrismServerError("decision must be approve or deny", 400, "ERR_PRISM_SERVER_RESUME");
+  return value.map((entry): RunDecision => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new PrismServerError("decision entry must be an object", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    const row = entry as Record<string, unknown>;
+    if (Object.keys(row).some((key) => !RUN_DECISION_KEYS.has(key))) {
+      throw new PrismServerError("decision entry has unknown keys", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    if (typeof row.approvalId !== "string" || row.approvalId.length === 0 || row.approvalId.length > 128) {
+      throw new PrismServerError("decision approvalId is invalid", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    if (typeof row.outcome !== "string" || !RUN_DECISION_OUTCOMES.has(row.outcome)) {
+      throw new PrismServerError("decision outcome is invalid", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    if (
+      row.reason !== undefined &&
+      (typeof row.reason !== "string" || Buffer.byteLength(row.reason, "utf8") > HARD_MAX_DECISION_REASON_BYTES)
+    ) {
+      throw new PrismServerError("decision reason exceeds limits", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    for (const key of ["modifiedArguments", "elicitation"] as const) {
+      const field = row[key];
+      if (field === undefined) continue;
+      if (!field || typeof field !== "object" || Array.isArray(field)) {
+        throw new PrismServerError(`decision ${key} must be an object`, 400, "ERR_PRISM_SERVER_RESUME");
+      }
+      const text = JSON.stringify(field);
+      if (text === undefined || Buffer.byteLength(text, "utf8") > HARD_MAX_ELICITATION_BYTES) {
+        throw new PrismServerError(`decision ${key} exceeds limits`, 400, "ERR_PRISM_SERVER_RESUME");
+      }
+    }
+    return entry as RunDecision;
+  });
+}
+
+function readAgentResume(
+  body: JsonObject,
+):
+  | { readonly decision: "approve" | "deny"; readonly expectedVersion: number }
+  | { readonly decisions: readonly RunDecision[]; readonly expectedVersion: number } {
+  if (Object.keys(body).some((key) => key !== "decision" && key !== "decisions" && key !== "expectedVersion")) {
+    throw new PrismServerError("Invalid agent resume body", 400, "ERR_PRISM_SERVER_RESUME");
   }
   if (!Number.isSafeInteger(body.expectedVersion) || Number(body.expectedVersion) < 1) {
     throw new PrismServerError("expectedVersion must be a positive safe integer", 400, "ERR_PRISM_SERVER_RESUME");
   }
-  return { decision: body.decision, expectedVersion: Number(body.expectedVersion) };
+  if (body.decision !== undefined && body.decisions !== undefined) {
+    throw new PrismServerError("provide exactly one of decision or decisions", 400, "ERR_PRISM_SERVER_RESUME");
+  }
+  if (body.decision !== undefined) {
+    if (body.decision !== "approve" && body.decision !== "deny") {
+      throw new PrismServerError("decision must be approve or deny", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    return { decision: body.decision, expectedVersion: Number(body.expectedVersion) };
+  }
+  if (body.decisions === undefined) {
+    throw new PrismServerError("provide decision or decisions", 400, "ERR_PRISM_SERVER_RESUME");
+  }
+  return { decisions: readAgentDecisions(body.decisions), expectedVersion: Number(body.expectedVersion) };
 }
 
 function readResume(body: JsonObject): WorkflowResumeRequest {

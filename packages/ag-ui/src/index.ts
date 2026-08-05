@@ -1,5 +1,27 @@
 export { type AgUiEventMapper, type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js";
 export {
+  A2UI_ACTIVITY_TYPE,
+  A2UI_ERROR_EVENT,
+  A2UI_OPERATIONS_KEY,
+  A2UI_VERSION,
+  type AgUiA2UiAction,
+  type AgUiA2UiLimitOptions,
+  type AgUiA2UiOptions,
+  type AgUiA2UiPainter,
+  type ResolvedAgUiA2UiLimits,
+  createAgUiA2UiPainter,
+  DEFAULT_MAX_A2UI_COMPONENT_DEPTH,
+  DEFAULT_MAX_A2UI_OPERATION_BYTES,
+  DEFAULT_MAX_A2UI_OPS_PER_MESSAGE,
+  DEFAULT_MAX_A2UI_SURFACES_PER_RUN,
+  extractAgUiA2UiActions,
+  HARD_MAX_A2UI_COMPONENT_DEPTH,
+  HARD_MAX_A2UI_OPERATION_BYTES,
+  HARD_MAX_A2UI_OPS_PER_MESSAGE,
+  HARD_MAX_A2UI_SURFACES_PER_RUN,
+  resolveAgUiA2UiLimits,
+} from "./a2ui.js";
+export {
   type AgUiA2AAdapter,
   type AgUiA2APartProjectionInput,
   type AgUiA2ASelection,
@@ -109,6 +131,19 @@ export type {
   AgUiReasoningProjection,
 } from "./projection.js";
 export { type CoWorkProjectionOptions, projectAgUiJson, projectAgUiPatch, projectCoWorkEvent } from "./projection.js";
+export {
+  type AgUiStateStore,
+  type CreateActivityFromToolProgressProjectionOptions,
+  type CreateMessagesFromSessionProjectionOptions,
+  type CreateStateFromStoreProjectionOptions,
+  composeAgUiProjections,
+  createActivityFromToolProgressProjection,
+  createMessagesFromSessionProjection,
+  createStateFromStoreProjection,
+  DEFAULT_MAX_PROJECTOR_MESSAGES,
+  HARD_MAX_PROJECTOR_MESSAGES,
+  jsonDiff,
+} from "./projectors.js";
 export {
   type AgentEventSourceAgUiReplayOptions,
   type AgUiReplay,
