@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@types/pg": "^8.11.11"
+    "@types/pg": "^8.20.3"
   },
   "engines": {
     "node": ">=20"
