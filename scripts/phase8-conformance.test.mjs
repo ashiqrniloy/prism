@@ -425,7 +425,7 @@ describe("Phase 8 conformance", () => {
     assert.equal(executed, 0);
   });
 
-  it("A2UI fixed-schema paint and standard projectors validate against EventSchemas", () => {
+  it("A2UI fixed-schema paint and standard projectors validate against EventSchemas", async () => {
     const mapper = createAgUiEventMapper({
       a2ui: { catalogId, mode: "fixed-schema" },
       projection: composeAgUiProjections(
@@ -439,10 +439,10 @@ describe("Phase 8 conformance", () => {
       ),
     });
 
-    const start = mapper.map({ type: "agent_started", sessionId: "s", runId: "r" });
+    const start = await mapper.map({ type: "agent_started", sessionId: "s", runId: "r" });
     for (const event of start) assert.equal(EventSchemas.safeParse(event).success, true, event.type);
 
-    const painted = mapper.map({
+    const painted = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -465,7 +465,7 @@ describe("Phase 8 conformance", () => {
     assert.ok(snapshot);
     assert.equal(EventSchemas.safeParse(snapshot).success, true);
 
-    const progress = mapper.map({
+    const progress = await mapper.map({
       type: "tool_execution_progress",
       sessionId: "s",
       runId: "r",
@@ -477,7 +477,7 @@ describe("Phase 8 conformance", () => {
     assert.ok(activity);
     assert.equal(EventSchemas.safeParse(activity).success, true);
 
-    const bad = createAgUiEventMapper({ a2ui: { catalogId, mode: "fixed-schema" } }).map({
+    const bad = await createAgUiEventMapper({ a2ui: { catalogId, mode: "fixed-schema" } }).map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",

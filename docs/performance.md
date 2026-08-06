@@ -19,6 +19,22 @@ This page states Prism runtime limits that keep slow consumers and long sessions
 
 Conformance: `scripts/phase8-conformance.test.mjs` (8 network-free cases). Values are environment evidence, not universal SLOs.
 
+## Release 0.0.26 coding intelligence, processes, forge, and egress
+
+`node scripts/benchmark-0.0.26.mjs` is network-free (fake LSP/forge/proxy, synthetic 100k-file repo, real process spill). Checked `scripts/benchmark-0.0.26.json` (Node v24.18.0/Linux x64): 5 warmups, 20 measured ops, 100k enumeration files, 1 GiB process spill, 1,000 LSP diagnostics, 100 forge pages × 100 items, 64 MiB proxy download.
+
+| Scenario | Recorded p95 ms | Ceiling |
+| --- | ---: | ---: |
+| Git-aware enumeration (100k-file repo, ≤ 2 git invocations, 10k results cap) | 299.166 | 2,000 |
+| Process chunk page (50 KiB pages over 1 GiB spill, 64 MiB retained) | 0.051 | 10 |
+| LSP diagnostic normalization (1,000 diagnostics at hard per-file cap) | 0.210 | 100 |
+| Forge pagination (100 pages × 100 check-runs, deduped) | 144.233 | 10,000 |
+| Proxy download (64 MiB at default response cap, resident buffering ≤ 2× maxBytes) | 93.667 | 30,000 |
+| Renderer stream (1,000-op A2UI surface as 16×64-op batches + full tree render) | 2.000 | 100 |
+| AG-UI mapper sync path (4,000 events through the async pipeline, sync hooks only) | 30.924 | 100 |
+
+Conformance: `scripts/phase9-conformance.test.mjs` (8 network-free cases: composed enumeration → LSP rename → process → forge → egress, symlink/ignore escape, LSP URI escape, process ownership, forge cross-tenant + token hygiene, egress private/metadata bypass, limit ladder, packed example). Values are environment evidence, not universal SLOs.
+
 ## Release 0.0.24 distributed events and tool effects
 
 `node scripts/benchmark-0.0.24.mjs` is an explicit protected PostgreSQL benchmark behind `PRISM_TEST_POSTGRES_URL`. Checked `scripts/benchmark-0.0.24.json` (Node v24.18.0/Linux x64, PostgreSQL 16.14): 10 tenants × 10 principals × 1,000 events/owner, 16 producers/subscribers, 100 warmups, 1,000 measured ops, 10,000-event sustained replay, 100-row cleanup.

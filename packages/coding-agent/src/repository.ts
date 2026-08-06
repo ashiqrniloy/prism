@@ -331,7 +331,7 @@ export function compileSearchPattern(
   };
 }
 
-interface WalkLimits {
+export interface RepositoryWalkLimits {
   maxDepth: number;
   maxEntries: number;
   maxFiles: number;
@@ -341,11 +341,14 @@ interface WalkLimits {
   deadlineAt?: number;
 }
 
-type WalkEvent =
+export type RepositoryWalkEvent =
   | { type: "entry"; entry: RepoListEntry; absolutePath: string; depth: number }
   | { type: "limit"; truncatedBy: "entries" | "files" | "depth" };
 
-async function* walkRepository(rootReal: string, startAbsolute: string, limits: WalkLimits): AsyncGenerator<WalkEvent> {
+/** Injectable enumerator for list/search/glob. Default is the native opendir walker. */
+export type RepositoryWalk = (rootReal: string, startAbsolute: string, limits: RepositoryWalkLimits) => AsyncGenerator<RepositoryWalkEvent>;
+
+async function* walkRepository(rootReal: string, startAbsolute: string, limits: RepositoryWalkLimits): AsyncGenerator<RepositoryWalkEvent> {
   const queue: Array<{ absolute: string; relative: string; depth: number }> = [
     {
       absolute: startAbsolute,
@@ -442,7 +445,11 @@ async function* walkRepository(rootReal: string, startAbsolute: string, limits: 
   }
 }
 
-async function listLocal(request: RepositoryListRequest, defaults: ResolvedRepositoryLimits): Promise<RepositoryListResult> {
+async function listLocal(
+  request: RepositoryListRequest,
+  defaults: ResolvedRepositoryLimits,
+  walk: RepositoryWalk,
+): Promise<RepositoryListResult> {
   const resolved = await resolveRepoPath(request.root, request.path);
   const maxResults = validateCodingLimit("maxResults", request.maxResults ?? defaults.maxResults, HARD_MAX_REPO_RESULTS);
   const offset = validateCodingLimitAllowZero("offset", request.offset ?? 0, HARD_MAX_REPO_ENTRIES);
@@ -489,7 +496,7 @@ async function listLocal(request: RepositoryListRequest, defaults: ResolvedRepos
   }
 
   try {
-    for await (const event of walkRepository(resolved.rootReal, resolved.absolute, {
+    for await (const event of walk(resolved.rootReal, resolved.absolute, {
       maxDepth,
       maxEntries: defaults.maxEntries,
       maxFiles: defaults.maxFiles,
@@ -674,7 +681,11 @@ async function searchFileLines(
   }
 }
 
-async function searchLocal(request: RepositorySearchRequest, defaults: ResolvedRepositoryLimits): Promise<RepositorySearchResult> {
+async function searchLocal(
+  request: RepositorySearchRequest,
+  defaults: ResolvedRepositoryLimits,
+  walk: RepositoryWalk,
+): Promise<RepositorySearchResult> {
   const mode = request.mode ?? "literal";
   if (mode !== "literal") {
     throw new RepositoryError(`unsupported search mode: ${String(mode)} (literal only)`);
@@ -733,7 +744,7 @@ async function searchLocal(request: RepositorySearchRequest, defaults: ResolvedR
       scannedFiles = 1;
       await runFile(resolved.absolute, resolved.relative);
     } else if (startStat.isDirectory()) {
-      for await (const event of walkRepository(resolved.rootReal, resolved.absolute, {
+      for await (const event of walk(resolved.rootReal, resolved.absolute, {
         maxDepth: defaults.maxDepth,
         maxEntries: defaults.maxEntries,
         maxFiles: defaults.maxFiles,
@@ -811,7 +822,11 @@ async function searchLocal(request: RepositorySearchRequest, defaults: ResolvedR
   };
 }
 
-async function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepositoryLimits): Promise<RepositoryGlobResult> {
+async function globLocal(
+  request: RepositoryGlobRequest,
+  defaults: ResolvedRepositoryLimits,
+  walk: RepositoryWalk,
+): Promise<RepositoryGlobResult> {
   try {
     validateGlobPattern(request.pattern, defaults.maxPatternBytes);
   } catch (error) {
@@ -877,7 +892,7 @@ async function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepos
   }
 
   try {
-    for await (const event of walkRepository(resolved.rootReal, resolved.absolute, {
+    for await (const event of walk(resolved.rootReal, resolved.absolute, {
       maxDepth,
       maxEntries: defaults.maxEntries,
       maxFiles: defaults.maxFiles,
@@ -934,11 +949,14 @@ async function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepos
 }
 
 /** Local filesystem repository operations (default backend). */
-export function createLocalRepositoryOperations(limits?: RepositoryLimitOptions): RepositoryOperations {
+export function createLocalRepositoryOperations(
+  limits?: RepositoryLimitOptions,
+  walk: RepositoryWalk = walkRepository,
+): RepositoryOperations {
   const resolved = resolveRepositoryLimits(limits);
   return {
-    list: (request) => listLocal(request, resolved),
-    search: (request) => searchLocal(request, resolved),
-    glob: (request) => globLocal(request, resolved),
+    list: (request) => listLocal(request, resolved, walk),
+    search: (request) => searchLocal(request, resolved, walk),
+    glob: (request) => globLocal(request, resolved, walk),
   };
 }

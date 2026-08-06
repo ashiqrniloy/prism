@@ -1,14 +1,29 @@
 {
-  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark-0.0.23.mjs.",
+  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark-0.0.23.mjs.",
   "root": {
-    "packedBytes": { "baseline": 645024, "tolerance": 0.05 },
-    "unpackedBytes": { "baseline": 2269194, "tolerance": 0.05 },
-    "fileCount": { "baseline": 290, "tolerance": 0.05 }
+    "packedBytes": {
+      "baseline": 678541,
+      "tolerance": 0.05
+    },
+    "unpackedBytes": {
+      "baseline": 2388118,
+      "tolerance": 0.05
+    },
+    "fileCount": {
+      "baseline": 293,
+      "tolerance": 0.05
+    }
   },
   "aggregate": {
     "$comment": "Historical 0.0.22 reference sum across 46 publishable manifests; 0.0.23 has 47 and must be remeasured before changing this non-fast-gated baseline.",
-    "packedBytes": { "baseline": 1217694, "tolerance": 0.1 },
-    "unpackedBytes": { "baseline": 4820895, "tolerance": 0.1 }
+    "packedBytes": {
+      "baseline": 1217694,
+      "tolerance": 0.1
+    },
+    "unpackedBytes": {
+      "baseline": 4820895,
+      "tolerance": 0.1
+    }
   },
   "startup": {
     "$comment": "Cold-process `import('./dist/index.js')` wall time. Baseline ~37ms; the ceiling is a non-flaky sanity bound that catches catastrophic startup regression, not a tight per-machine target.",
@@ -19,16 +34,40 @@
     "$comment": "Network-free scenario medians from scripts/benchmark-0.0.15.mjs (100 iterations), reused unchanged by benchmark-0.0.16.mjs (0.0.16 added no performance-affecting code). Throughput regression = measured < baseline*(1-tolerance); latency regression = measured > baseline*(1+tolerance).",
     "tolerance": 0.25,
     "scenarios": {
-      "openai-hosted-continuation": { "throughputPerSecond": 5386.0, "p50Ms": 0.1317, "p95Ms": 0.2907 },
-      "openai-realtime-envelope": { "throughputPerSecond": 880.3, "p50Ms": 1.1293, "p95Ms": 1.2399 },
-      "ai-sdk-v4-stream-mapping": { "throughputPerSecond": 22403.0, "p50Ms": 0.023, "p95Ms": 0.0734 },
-      "provider-package-metadata": { "throughputPerSecond": 55829.2, "p50Ms": 0.0065, "p95Ms": 0.0394 },
-      "rag-parse-replace-rerank-retrieve": { "throughputPerSecond": 4800.3, "p50Ms": 0.1432, "p95Ms": 0.4064 },
-      "memory-retention-export-rebuild": { "throughputPerSecond": 8763.2, "p50Ms": 0.0686, "p95Ms": 0.1892 }
+      "openai-hosted-continuation": {
+        "throughputPerSecond": 5386.0,
+        "p50Ms": 0.1317,
+        "p95Ms": 0.2907
+      },
+      "openai-realtime-envelope": {
+        "throughputPerSecond": 880.3,
+        "p50Ms": 1.1293,
+        "p95Ms": 1.2399
+      },
+      "ai-sdk-v4-stream-mapping": {
+        "throughputPerSecond": 22403.0,
+        "p50Ms": 0.023,
+        "p95Ms": 0.0734
+      },
+      "provider-package-metadata": {
+        "throughputPerSecond": 55829.2,
+        "p50Ms": 0.0065,
+        "p95Ms": 0.0394
+      },
+      "rag-parse-replace-rerank-retrieve": {
+        "throughputPerSecond": 4800.3,
+        "p50Ms": 0.1432,
+        "p95Ms": 0.4064
+      },
+      "memory-retention-export-rebuild": {
+        "throughputPerSecond": 8763.2,
+        "p50Ms": 0.0686,
+        "p95Ms": 0.1892
+      }
     }
   },
   "phase7Postgres": {
-    "$comment": "Release 0.0.24 protected durable event/effect evidence. Fixture stays fixed: 10 tenants × 10 principals × 1,000 events/owner, 16 producer clients, 16 subscribers, 100 warmups, 1,000 append/page/effect measurements, 10,000 sustained replay events, and 100-row cleanup batches.",
+    "$comment": "Release 0.0.24 protected durable event/effect evidence. Fixture stays fixed: 10 tenants \u00d7 10 principals \u00d7 1,000 events/owner, 16 producer clients, 16 subscribers, 100 warmups, 1,000 append/page/effect measurements, 10,000 sustained replay events, and 100-row cleanup batches.",
     "fixture": {
       "tenants": 10,
       "principalsPerTenant": 10,
@@ -66,8 +105,31 @@
       "a2uiPaint": 10
     }
   },
+  "phase9": {
+    "$comment": "Release 0.0.26 network-free Phase 9 evidence (plan 009 Task 7). Enumeration: 100k-file synthetic repo, \u2264 2 git invocations per list, results capped at 10k. Process: 1 GiB produced, 64 MiB retained + spill, 50 KiB chunk pages. LSP: 1000-diagnostic normalization at the hard per-file cap. Forge: 100 pages x 100 check-runs, no duplication. Proxy: 64 MiB download at the default response cap, resident buffering \u2264 2x maxBytes. Ceilings match Task 0 freeze. Renderer: 1,000-op A2UI surface stream as 16 snapshot batches of 64 ops + full tree render through the default catalog (Task 14) Sync-path AG-UI mapper: 4,000 events (text/tool/result/message) through the async pipeline with sync hooks only (Task 15).",
+    "fixture": {
+      "warmups": 5,
+      "measuredOperations": 20,
+      "enumerationFiles": 100000,
+      "processSpillBytes": 1073741824,
+      "lspDiagnostics": 1000,
+      "forgePages": 100,
+      "proxyDownloadBytes": 67108864,
+      "rendererOps": 1000,
+      "mapperEvents": 4000
+    },
+    "p95CeilingsMs": {
+      "enumerationList": 2000,
+      "processChunkPage": 10,
+      "lspDiagnosticNormalize": 100,
+      "forgePagination": 10000,
+      "proxyDownload": 30000,
+      "rendererStreamOps": 100,
+      "agUiMapperSync": 100
+    }
+  },
   "enterprisePostgres": {
-    "$comment": "Release 0.0.23 protected PostgreSQL benchmark. Fixed fixture: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row explicit cleanup batches. All ceilings are milliseconds and intentionally match Phase 6's 50ms indexed-point and 100ms page/cleanup ceilings.",
+    "$comment": "Release 0.0.23 protected PostgreSQL benchmark. Fixed fixture: 10 tenants \u00d7 10 principals \u00d7 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row explicit cleanup batches. All ceilings are milliseconds and intentionally match Phase 6's 50ms indexed-point and 100ms page/cleanup ceilings.",
     "fixture": {
       "tenants": 10,
       "principalsPerTenant": 10,

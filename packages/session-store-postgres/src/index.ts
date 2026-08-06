@@ -7,3 +7,8 @@ export {
   reopenPostgresPersistence,
 } from "./persistence.js";
 export type { PostgresPersistenceOptions } from "./types.js";
+export {
+  createPostgresAgentEventSource,
+  type ClosablePostgresAgentEventSource,
+  type PostgresAgentEventSourceOptions,
+} from "./event-source.js";

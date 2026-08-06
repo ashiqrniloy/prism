@@ -126,7 +126,7 @@ async function forward<Authorization extends AcpAuthorization>(
 ): Promise<void> {
   const mapper = createAcpEventMapper({ redactor: options.redactor, projection: options.projection, limits: options.limits });
   for await (const event of source) {
-    for (const update of mapper.map(event)) await notify(client, sessionId, update, budget, limits);
+    for (const update of await mapper.map(event)) await notify(client, sessionId, update, budget, limits);
     if (event.type !== "agent_suspended") continue;
     const response = await permission(client, sessionId, event, budget, limits);
     const decision = decisionFor(response, event.interruption);

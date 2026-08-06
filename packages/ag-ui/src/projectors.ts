@@ -14,10 +14,10 @@ export interface AgUiStateStore {
 
 export interface CreateMessagesFromSessionProjectionOptions {
   /**
-   * Host-owned authorized AG-UI transcript (sync). Prefer this for full session history.
-   * Absent → accumulate from `message_finished` events in the live stream.
+   * Host-owned authorized AG-UI transcript. May be async — e.g. `async () => (await session.entries()).map(entryToAgUiMessage)`.
+   * Prefer this for full session history. Absent → accumulate from `message_finished` events in the live stream.
    */
-  readonly getMessages?: () => readonly AgUiMessage[];
+  readonly getMessages?: () => readonly AgUiMessage[] | Promise<readonly AgUiMessage[]>;
   readonly redact?: (message: AgUiMessage) => AgUiMessage | undefined;
   readonly maxMessages?: number;
 }
@@ -57,13 +57,13 @@ export function createMessagesFromSessionProjection(options: CreateMessagesFromS
   };
 
   return {
-    messages(event) {
+    async messages(event) {
       if (options.getMessages) {
         if (event.type !== "agent_started" && event.type !== "message_finished" && event.type !== "agent_finished") {
           return undefined;
         }
         try {
-          return project(options.getMessages());
+          return project(await options.getMessages());
         } catch {
           return undefined;
         }

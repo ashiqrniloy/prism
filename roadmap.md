@@ -2,7 +2,7 @@
 
 Updated: 2026-08-04
 Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed)
-Status: Phase 8 complete; Phase 9+ pending exit gates
+Status: Phase 9 complete (2026-08-06); Phase 10+ pending exit gates
 
 ## Objectives
 
@@ -740,10 +740,12 @@ Status: Phase 8 complete; Phase 9+ pending exit gates
 - Docs: migration `0.0.24 → 0.0.25`, examples `durable-loops-and-approvals.ts` / `ag-ui-a2ui.ts`.
 - Publishable graph remains **47** manifests at **0.0.25**.
 
-- [ ] Phase 9 — Release 0.0.26: coding intelligence, managed processes, forge, and safe egress primitives
+- [x] Phase 9 — Release 0.0.26: coding intelligence, managed processes, forge, and safe egress primitives (complete 2026-08-06; Tasks 0–15 shipped)
   - Objectives:
     - Supply coding capabilities editors and autonomous coding loops need before exposing them through ACP.
     - Keep each capability optional and built over existing repository, execution-policy, sandbox, event, credential, and approval primitives.
+    - Cover deferred Synapta FRs: FR-3 reasoning encrypted-value helper, FR-4 MCP Apps UI-initiated mutation retry through `ToolEffectStore`, FR-5 NATS JetStream `AgentEventSource`, FR-6/FR-7 durable `AgentEventSource` root export + placement answer.
+    - Cover the remaining Phase 8 deferred AG-UI interop items: A2A server-side exposure (remote A2A clients invoke a local AG-UI-fronted agent, Task 13), a reference framework-free frontend renderer for AG-UI/A2UI surfaces (Task 14), and async `AgUiProjection` hooks so hosts can call `session.entries()` directly (Task 15).
   - Acceptance Criteria:
     - Functional: repository listing/search can use Git tracked/unignored file enumeration and nested ignore rules while retaining a bounded native fallback outside Git repositories.
     - Functional: an optional language-intelligence contract supports workspace symbols, definitions, references, diagnostics, hover, and rename/workspace edits through a host-selected LSP client/server.
@@ -751,9 +753,12 @@ Status: Phase 8 complete; Phase 9+ pending exit gates
     - Functional: process sessions integrate with sandbox workspace, identity, execution policy, output accumulator, run cancellation, durable metadata, and unknown-outcome semantics without pretending processes survive host/container loss.
     - Functional: one reference forge adapter supports issue context, authenticated push, pull-request create/update, review comments, check/status retrieval, and bounded handoff reconciliation; GitHub is the first implementation unless adoption evidence selects another forge.
     - Functional: one reference allow-list egress composition supports exact host/port/protocol policy, DNS resolution/rebinding defense, redirects, request/response byte and time limits, package-registry/source-host presets, audit, and contained-proxy attestation.
+    - Functional: the durable `AgentEventSource` is importable from the `@arnilo/prism-session-store-postgres` root (FR-6) with a documented placement/migration answer (FR-7); a NATS JetStream sibling adapter provides durable consumer, per-subject replay, and at-least-once delivery with stable event IDs (FR-5).
+    - Functional: AG-UI hosts get a bounded reasoning encrypted-value helper (FR-3) and MCP Apps UI-initiated mutations are recorded in `ToolEffectStore` for idempotent retry and unknown-outcome reconciliation (FR-4).
+    - Functional: a server-side A2A adapter fronts a local AG-UI agent so remote A2A 1.0 clients can start and stream runs with AG-UI authorization/projection/replay semantics (Task 13); a reference framework-free renderer consumes AG-UI streams and renders A2UI v0.9 surfaces from a host catalog without executing remote HTML (Task 14); `AgUiProjection` hooks accept async values so hosts can call `session.entries()` directly (Task 15).
     - Performance: Git enumeration, LSP messages, diagnostics, process output, forge pagination, and proxy traffic have finite counts/bytes/time/concurrency; benchmarks cover large repositories, long-running output, and network backpressure.
     - Code Quality: a primitive review precedes implementation; no parser framework, process scheduler, generic forge abstraction beyond proven common operations, or in-package firewall is invented.
-    - Security: ignored/private paths stay excluded unless host-approved; LSP servers and commands are host-selected; process input/output is bounded/redacted; forge scopes are least privilege; credentials never enter model context/argv; egress defaults to none and exact allow rules.
+    - Security: ignored/private paths stay excluded unless host-approved; LSP servers and commands are host-selected; process input/output is bounded/redacted; forge scopes are least privilege; credentials never enter model context/argv; egress defaults to none and exact allow rules; encrypted values are never inferred from signatures; MCP Apps effects and NATS subjects are ownership-scoped.
   - Approach:
     - Documentation Reviewed:
       - `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/host-security.md`, `docs/browser-automation.md`, structured Git and repository operation sources.
@@ -793,7 +798,7 @@ Status: Phase 8 complete; Phase 9+ pending exit gates
     - Proxy exact allow/deny, DNS rebinding, redirects, private metadata IPs, package download size/time, TLS, audit, and sandbox attestation.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes; repository, language, process, forge, egress, tools, events, and configuration surfaces expand.
-    - Docs pages to create/edit: `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/host-security.md`, `docs/browser-automation.md`, new `docs/language-intelligence.md`, new `docs/process-sessions.md`, new `docs/forge-integration.md`, `docs/migration.md`.
+    - Docs pages to create/edit: `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/host-security.md`, `docs/browser-automation.md`, new `docs/language-intelligence.md`, new `docs/process-sessions.md`, new `docs/forge-integration.md`, `docs/ag-ui.md` (FR-3/FR-4), `docs/agent-events.md` (FR-5/FR-7), `docs/migration.md` (FR-6/FR-7).
     - `docs/index.md` update: yes; add Language intelligence, Process sessions, Forge integration; update Coding tools/security.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
   - Exit Gate:

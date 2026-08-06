@@ -86,8 +86,8 @@ const agUi = await workspace("@arnilo/prism-ag-ui", "packages/ag-ui/dist/index.j
 const compaction = await workspace("@arnilo/prism-compaction-llm", "packages/compaction-llm/dist/index.js");
 const mapper = agUi.createAgUiEventMapper();
 
-await measure("ag-ui-mapper", "in-process", () => {
-  const events = mapper.map({
+await measure("ag-ui-mapper", "in-process", async () => {
+  const events = await mapper.map({
     type: "message_delta",
     sessionId: "bench-thread",
     runId: "bench-run",

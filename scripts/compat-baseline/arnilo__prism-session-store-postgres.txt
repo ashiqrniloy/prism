@@ -23,5 +23,7 @@ qualifyTable	export declare function qualifyTable(schema: string, table: string)
 quoteIdentifier	export declare function quoteIdentifier(name: string): string
 reopenPostgresPersistence	export declare function reopenPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence>
 schemaAdvisoryLockKey	export declare function schemaAdvisoryLockKey(schema: string): number
+type ClosablePostgresAgentEventSource	export { createPostgresAgentEventSource, type ClosablePostgresAgentEventSource, type PostgresAgentEventSourceOptions, } from "./event-source.js"
+type PostgresAgentEventSourceOptions	export { createPostgresAgentEventSource, type ClosablePostgresAgentEventSource, type PostgresAgentEventSourceOptions, } from "./event-source.js"
 validateIdentifier	export declare function validateIdentifier(name: string): void
 verifyMigrationIdempotency	export declare function verifyMigrationIdempotency(pool: Pool, schema: string): Promise<void>

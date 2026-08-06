@@ -13,6 +13,11 @@
 | `createSandboxCodingTools` / `createSandboxReadOnlyTools` | Thin wrappers that return `tools` only (compat); still require `workspaceMode`. |
 | `createSandboxFilesystemOperations` / `createSandboxRepositoryOperations` | Optional execFile-backed FS/list/search backends for a disposable sandbox tree. |
 | `createDockerSandbox(options)` | Creates one disposable non-root Docker container with read-only root/source, bounded tmpfs workspace, typed `execFile`, import/export, and stop/kill/cleanup. |
+| `SandboxProcessHandle` | Optional long-running process handle (`write`/`signal`/`kill`/`release`/`wait`) returned by `DisposableSandbox.startProcess?`. |
+| `createEgressPolicy(options)` | Deny-all allow-list policy: exact host/port/protocol rules plus frozen `npm-registry` / `github` presets; SHA-256 fingerprint. |
+| `createAllowListEgressProxy(options)` | HTTP forward proxy + CONNECT tunnel enforcing the policy: pinned DNS (rebinding defense), private/metadata IP denial, redirect re-validation + hop cap, byte/time caps, per-decision audit, attestation for sandbox composition. |
+| `composeEgressSandboxNetwork(attestation, name)` | Validated custom Docker network carrying proxy attestation; recorded as `prism.egress.*` container labels. |
+| `assertEgressAttestation(attestation)` | Fail-closed validation of proxy attestation evidence. |
 | `assertPathInsideRoots`, `isPathInsideReal` | Symlink-aware path containment helpers. |
 | `evaluateCommandRules`, `hasShellMetacharacters` | Command classification helpers. |
 
@@ -27,6 +32,32 @@ import type { ExecutionAction, ExecutionPolicy, ExecutionDecision } from "@arnil
 Use this package when coding tools need path scoping, human approval, command rules, or a pluggable sandbox backend. Wire the returned policy through `createCodingTools(cwd, { executionPolicy })` or per-tool `executionPolicy` options.
 
 Use `createDockerSandbox()` when the host wants a production-reference containment boundary. Prism does **not** claim OS-level isolation unless the host constructs this adapter (or supplies an equivalent custom `DisposableSandbox`). Default policy denies shell/write/edit/delete/move without an `approve` callback and rejects paths outside configured roots. Coding shell definitions are marked `exclusive: true`, matching the approval policy's shell decision, so a single-shot turn containing shell work runs sequentially even when `toolConcurrency > 1`. Non-shell turns retain configured parallelism.
+
+Use `createEgressPolicy()` + `createAllowListEgressProxy()` when a coding agent needs outbound network access under an explicit allow list: package installs, forge API calls, or source fetches — never unrestricted egress. The proxy is inert until `start()`; nothing binds or resolves on import or construction.
+
+## Allow-list egress composition
+
+`createEgressPolicy({ allow, presets })` builds a deny-all policy. Rules are exact `{ host, port, protocol }` triples — no wildcards, no CIDR, no regex. Presets (`npm-registry`, `github`) expand to explicit rule lists at construction. The policy exposes a stable SHA-256 `fingerprint` over the canonical rule set.
+
+```ts
+import { createEgressPolicy, createAllowListEgressProxy } from "@arnilo/prism-coding-security";
+
+const policy = createEgressPolicy({
+  allow: [{ host: "api.github.com", port: 443, protocol: "https" }],
+  presets: ["npm-registry"],
+});
+const proxy = createAllowListEgressProxy({ policy, audit: (record) => host.recordEgress(record) });
+const endpoint = await proxy.start(); // 127.0.0.1:0 by default; bind a reachable interface for containers
+```
+
+Every request is checked against the policy before any DNS or connect. HTTPS goes through CONNECT tunnels with TLS passed through untouched — no interception, no MITM. DNS answers are resolved once, pinned, and the connected socket's remote address is verified against the pinned set (rebinding defense); private/link-local/metadata ranges (`10/8`, `172.16/12`, `192.168/16`, `127/8`, `169.254/16` incl. `169.254.169.254`, CGNAT, ULA, `::1`, `fe80::/10`) are denied unless the matching rule sets `allowPrivate: true`. Plain-HTTP redirects are followed up to `redirectHops` with every hop re-validated against policy; redirects to unlisted hosts or non-http targets fail closed. Request/response bytes and total transfer time are capped; oversized or slow-loris transfers are cut with `ERR_PRISM_EGRESS_LIMIT`. Every allow/deny writes an `EgressAuditRecord` (id, ts, decision, host, port, protocol, reason, bytes, duration, client address) — never headers, bodies, or tokens. `reloadPolicy()` is the only way to change rules and bumps `policyVersion`; `attestation()` returns `{ proxyEndpoint, denyDirectEgress: true, policyFingerprint, policyVersion, startedAt }` for sandbox composition.
+
+Sandbox composition: `composeEgressSandboxNetwork(proxy.attestation(), networkName)` returns a custom `DockerNetworkConfig` whose attestation is validated and recorded as `prism.egress.endpoint` / `prism.egress.fingerprint` / `prism.egress.policyVersion` / `prism.egress.denyDirect=1` container labels. The adapter records evidence; the host must actually restrict the Docker network so the proxy is the only reachable path (e.g., a dedicated network with only the proxy container attached). A custom network without valid attestation fails closed for egress claims, mirroring `assertBrowserSandboxNetwork`.
+
+```ts
+const network = composeEgressSandboxNetwork(proxy.attestation(), "egress-net");
+const sandbox = await createDockerSandbox({ docker, image, sourceRoot, user, network, limits });
+```
 
 ## Inputs / request
 
@@ -72,7 +103,7 @@ Use `createDockerSandbox()` when the host wants a production-reference containme
 
 `createSandboxCodingComposition()` returns `{ tools, composition }` where `SandboxCodingComposition` carries `workspaceMode`, `containmentClaim`, `mixedWiringAllowed`, `warnings`, `workspaceRoot`, and optional `treeIdentity` (from `importIdentity` / `lastExportIdentity`). `containmentClaim` is `true` only for sandbox mode with tree backends bound and mixed wiring denied. Host mode and escape-hatch mixed wiring always set `containmentClaim: false` — never treat host mode as contained execution.
 
-`createDockerSandbox()` returns a `DisposableSandbox`: typed `execFile(file, args)`, shell-compatible `exec`, `status`, cooperative `stop`, forced `kill`, and idempotent `close`. Import may surface `importIdentity`; successful export updates `lastExportIdentity`. `close({ export })` can stream a bounded workspace tar plus SHA-256/entry/byte metadata through a host callback; checkpoints should retain only host artifact references/hashes, never whole workspaces.
+`createDockerSandbox()` returns a `DisposableSandbox`: typed `execFile(file, args)`, shell-compatible `exec`, `status`, cooperative `stop`, forced `kill`, and idempotent `close`. Import may surface `importIdentity`; successful export updates `lastExportIdentity`. `close({ export })` can stream a bounded workspace tar plus SHA-256/entry/byte metadata through a host callback; checkpoints should retain only host artifact references/hashes, never whole workspaces. Optional `startProcess?(SandboxExecFileRequest)` returns a `SandboxProcessHandle` for long-running work consumed by coding-agent `createProcessSessions({ sandbox })`; absence means one-shot-only — ProcessSessions fails closed with `ERR_PRISM_PROCESS_UNSUPPORTED` (no native fallback). The Docker reference adapter does not implement `startProcess` yet; capability is detected, never assumed. See [Process sessions](process-sessions.md).
 
 ## Request/response example
 
@@ -151,11 +182,14 @@ Containment resolves symlinks and rejects paths outside roots. Command rules are
 
 Docker sandbox containment—not command regexes—enforces filesystem/network/process boundaries for the reference adapter. Network defaults to none; a custom Docker network still requires a host firewall/proxy for DNS/egress claims. Import rejects symlink escapes, devices, FIFOs, and sockets; export counts entries/bytes and hashes before host retention. Secrets in `secrets` are redacted from adapter errors and never exported as environment metadata. Unified workspace mode reuses existing sandbox/repo/coding hard caps and does not introduce unbounded host↔container sync loops. Host mode and `allowMixedWorkspaceWiring` never claim disposable containment. Durable workflow denial/cancellation is terminal and attributable; approved resume still fails if roots, command rules, read-only mode, or other policy changed while suspended. Cache keys are fixed-size SHA-256 digests of selected identity plus action shape; caches remain process-local, retain at most 1,000 decisions with oldest-entry eviction, and have no default/global mode. Path checks and cache lookup are local; sandbox latency belongs to the supplied adapter and Docker daemon.
 
+The egress proxy is a policy enforcer, not a firewall: it cannot stop a container whose Docker network reaches the internet directly. Egress attestation (`denyDirectEgress: true`) is a claim the host must make true by network topology; the adapter records it as evidence and fails closed when it is absent or malformed. The proxy performs no TLS interception, no DNS rebinding of its own beyond pinning, and no content filtering; audit records contain no secrets. Frozen caps: 32 concurrent connections (hard 256), 64 MiB request/response bytes (hard 1 GiB), 600 s transfer time (hard 1 h), 128 rules (hard 1,024), 5 redirect hops (hard 10).
+
 ## Related APIs
 
 - [Coding agent tools](coding-agent-tools.md): durable plan/todo Markdown helpers and `state.coding` checkpoint metadata for restart/resume without a second runtime
 - [Workflows](workflows.md): `runWorkflow` / `resumeWorkflow` / `startWorkflowBackground` composition for coding tasks
 - [Host security guide](host-security.md)
 - [Performance limits](performance.md)
+- [Forge integration](forge-integration.md): GitHub adapter whose mutations can be routed through the egress proxy
 - [Tool execution primitives](tool-execution-primitives.md)
 - [Security/auth/trust](settings-auth-trust-security.md)

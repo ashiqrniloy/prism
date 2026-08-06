@@ -1,11 +1,13 @@
-import type { JsonObject, ToolExecutionContext } from "@arnilo/prism";
+import type { JsonObject, ToolEffectKey, ToolEffectStore, ToolEffectTransition, ToolExecutionContext } from "@arnilo/prism";
 import type { McpAppResource, McpAppsBridge } from "@arnilo/prism-mcp";
 import { AgUiError } from "./errors.js";
+import { deriveAppEffectKey, hashJson, type AgUiMcpAppEffectContext } from "./effect-recovery.js";
 import { assertBoundedJson } from "./input.js";
 import { DEFAULT_AG_UI_LIMITS } from "./limits.js";
 import type { AgUiAuthorization } from "./types.js";
 
 const DEFAULT_MAX_APP_REQUEST_BYTES = 64 * 1024;
+const APP_EFFECT_CLAIM_TTL_MS = 5 * 60_000;
 
 export interface AgUiMcpAppSandbox {
   /** Required iframe sandbox tokens for the separate-origin MCP Apps proxy. */
@@ -72,6 +74,16 @@ export interface CreateAgUiMcpAppHandlerOptions<Authorization extends AgUiAuthor
   ) => boolean | Promise<boolean>;
   /** Exact browser origins permitted to call this proxy. */
   readonly allowedOrigins: readonly string[];
+  /** Optional durable claim/CAS store: records every approved UI mutation for idempotent retry (FR-4). */
+  readonly effectStore?: ToolEffectStore;
+  /**
+   * Optional identity/ownership for effect recording. Absent, the handler falls
+   * back to `authorization.ownership` and `context.identity`; when neither
+   * yields ownership, the call fails closed. Ignored when `effectStore` is absent.
+   */
+  readonly effectContext?: (
+    input: AgUiMcpAppCallContext<Authorization> & { readonly context: ToolExecutionContext },
+  ) => AgUiMcpAppEffectContext | false | Promise<AgUiMcpAppEffectContext | false>;
   readonly maxRequestBytes?: number;
   /** Host-owned sandbox/renderer configuration returned during `ui/initialize`. */
   readonly initialize?: (input: { readonly authorization: Authorization; readonly signal: AbortSignal }) => Record<string, unknown>;
@@ -179,15 +191,117 @@ async function dispatchAppMessage<Authorization extends AgUiAuthorization>(
     if (!(await options.approveToolCall({ ...input, arguments: args }))) return appError(403, id, -32001, "Unavailable");
     const context = await options.context(input);
     if (!context) return appError(403, id, -32001, "Unavailable");
-    // ponytail: Task 4 adds generic effect recovery; this proxy never retries an approved app mutation.
-    const called = await options.apps.callTool(tool.name, args, context);
-    return result({
-      content: called.content ?? [],
-      ...(called.value === undefined ? {} : { structuredContent: called.value }),
-      ...(called.error === undefined ? {} : { isError: true }),
+    if (!options.effectStore) {
+      // 0.0.25 parity: no effect recording; the proxy never retries an approved app mutation.
+      const called = await options.apps.callTool(tool.name, args, context);
+      return result({
+        content: called.content ?? [],
+        ...(called.value === undefined ? {} : { structuredContent: called.value }),
+        ...(called.error === undefined ? {} : { isError: true }),
+      });
+    }
+    const effectContext = await resolveEffectContext(options, { ...input, context });
+    if (!effectContext) return appError(403, id, -32001, "Unavailable");
+    const argumentsHash = hashJson(args);
+    const key = deriveAppEffectKey({
+      ownership: effectContext.ownership,
+      sessionId: context.sessionId,
+      runId: context.runId,
+      toolName: tool.name,
+      argumentsHash,
     });
+    const base: ToolEffectKey = {
+      identity: effectContext.identity,
+      ownership: effectContext.ownership,
+      key,
+      sessionId: context.sessionId,
+      runId: context.runId,
+      toolCallId: context.toolCallId,
+      toolName: tool.name,
+      argumentsHash,
+    };
+    const { outcome, record } = await options.effectStore.begin({ ...base, claimTtlMs: APP_EFFECT_CLAIM_TTL_MS });
+    if (outcome === "existing") {
+      if (record.status === "completed" && record.result) {
+        // Idempotent retry: the UI mutation already landed; replay the recorded result.
+        return result({
+          content: record.result.content ?? [],
+          ...(record.result.value === undefined ? {} : { structuredContent: record.result.value }),
+          ...(record.result.error === undefined ? {} : { isError: true }),
+        });
+      }
+      if (record.status === "failed_terminal" || record.status === "failed_retryable") {
+        return appError(409, id, -32001, `App tool previously failed (${record.failure?.code ?? "unknown"}); reconcile before retry`);
+      }
+      return appError(409, id, -32001, "App tool outcome unknown; reconcile before retry");
+    }
+    if (!record.claimToken) return appError(409, id, -32001, "App tool claim is not usable; reconcile before retry");
+    const transition: ToolEffectTransition = { ...base, claimToken: record.claimToken, expectedVersion: record.version };
+    const dispatched = await options.effectStore.markDispatched(transition);
+    const current = { ...transition, expectedVersion: dispatched.version };
+    try {
+      const called = await options.apps.callTool(tool.name, args, context);
+      if (signal.aborted || context.signal?.aborted) {
+        // Transport/abort loss while in flight: the client never saw the outcome; host reconciles.
+        try {
+          await options.effectStore.markUnknown({ ...current, failure: { code: "ERR_PRISM_AG_UI_ABORTED" } });
+        } catch {
+          // Host reconciles via reconcileAppEffect.
+        }
+        throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "MCP Apps call aborted");
+      }
+      await options.effectStore.complete({
+        ...current,
+        result: {
+          toolCallId: context.toolCallId,
+          name: tool.name,
+          content: called.content ?? [],
+          ...(called.value === undefined ? {} : { value: called.value }),
+        },
+      });
+      return result({
+        content: called.content ?? [],
+        ...(called.value === undefined ? {} : { structuredContent: called.value }),
+        ...(called.error === undefined ? {} : { isError: true }),
+      });
+    } catch (error) {
+      if (signal.aborted || context.signal?.aborted) {
+        // Transport/abort loss: the mutation may or may not have landed; host reconciles.
+        try {
+          await options.effectStore.markUnknown({ ...current, failure: { code: "ERR_PRISM_AG_UI_ABORTED" } });
+        } catch {
+          // Host reconciles via reconcileAppEffect.
+        }
+      } else {
+        try {
+          await options.effectStore.fail({
+            ...current,
+            status: "failed_retryable",
+            failure: { code: "ERR_PRISM_AG_UI_CALL_FAILED" },
+          });
+        } catch {
+          // Host reconciles via reconcileAppEffect.
+        }
+      }
+      throw error;
+    }
   }
   return appError(404, id, -32601, "Method unavailable");
+}
+
+async function resolveEffectContext<Authorization extends AgUiAuthorization>(
+  options: CreateAgUiMcpAppHandlerOptions<Authorization>,
+  input: AgUiMcpAppCallContext<Authorization> & { readonly context: ToolExecutionContext },
+): Promise<AgUiMcpAppEffectContext | false> {
+  if (options.effectContext) {
+    const resolved = await options.effectContext(input);
+    if (!resolved) return false;
+    return resolved;
+  }
+  const ownership = input.authorization.ownership;
+  const identity = input.context.identity;
+  if (!ownership || !identity) return false;
+  return { ownership, identity };
 }
 
 function parseEnvelope(value: unknown, serverId: string): AppEnvelope {

@@ -1,4 +1,5 @@
 export { type AgUiEventMapper, type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js";
+export { type AgUiA2AServer, type AgUiA2AServerTaskInput, type CreateAgUiA2AServerOptions, createAgUiA2AServer } from "./a2a-server.js";
 export {
   A2UI_ACTIVITY_TYPE,
   A2UI_ERROR_EVENT,
@@ -31,6 +32,10 @@ export {
 } from "./a2a.js";
 export { AgUiError, type AgUiErrorCode } from "./errors.js";
 export {
+  type CreateReasoningEncryptedValueOptions,
+  createReasoningEncryptedValue,
+} from "./encrypted-value.js";
+export {
   type AgUiMcpAppAuthorizationInput,
   type AgUiMcpAppCallContext,
   type AgUiMcpAppSandbox,
@@ -38,6 +43,13 @@ export {
   createAgUiMcpAppHandler,
   createAgUiMcpAppSandbox,
 } from "./mcp-apps.js";
+export {
+  type AgUiMcpAppEffectContext,
+  type ReconcileAppEffectInput,
+  deriveAppEffectKey,
+  hashJson,
+  reconcileAppEffect,
+} from "./effect-recovery.js";
 export {
   type AgUiMcpAdapter,
   type AgUiMcpPrepareInput,
@@ -127,6 +139,7 @@ export type {
   AgUiActivitySnapshot,
   AgUiCustomProjection,
   AgUiProjection,
+  Awaitable,
   AgUiRawProjection,
   AgUiReasoningProjection,
 } from "./projection.js";
@@ -161,5 +174,21 @@ export {
   type PersistenceAgUiReplayOptions,
 } from "./replay.js";
 export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js";
+
+// Task 14: reference renderer subpath (@arnilo/prism-ag-ui/renderer).
+// Type-only re-exports; runtime DOM code stays behind the subpath so the main
+// entry remains runtime-agnostic.
+export type {
+  A2UiCatalog,
+  A2UiComponentModel,
+  A2UiComponentRenderer,
+  A2UiRenderContext,
+  A2UiRenderError,
+  A2UiRenderer,
+  A2UiSurfaceModel,
+  CreateA2UiRendererOptions,
+  Dom,
+  DomNode,
+} from "./renderer/index.js";
 
 export const packageName = "@arnilo/prism-ag-ui";

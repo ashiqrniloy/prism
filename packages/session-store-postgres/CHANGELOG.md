@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.26] - 2026-08-06
+
+### Added
+- Root re-exports `createPostgresAgentEventSource`, `ClosablePostgresAgentEventSource`, and `PostgresAgentEventSourceOptions` (FR-6) — the durable `AgentEventSource` is now importable from the package root without a `dist/...` subpath; `persistence.events` remains the canonical bundled path, unchanged.
+
+### Changed
+- Placement answer (FR-7): the durable event source stays in this package for the 0.0.26 line; PostgreSQL `LISTEN`/`NOTIFY` remains the reference durable implementation. See [agent events](../../docs/agent-events.md).
+
 ## [0.0.25] - 2026-08-06
 
 ### Changed

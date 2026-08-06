@@ -1014,18 +1014,18 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.25 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.26 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 47, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 48, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.25] - 2026-08-06"), `${dir}/CHANGELOG.md missing finalized 0.0.25 section`);
+      assert.ok(changelog.includes("## [0.0.26] - 2026-08-06"), `${dir}/CHANGELOG.md missing finalized 0.0.26 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -2263,9 +2263,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, forty first-party capability packages, and six pure-manifest family/profile packages",
+      "one core package, forty-one first-party capability packages, and six pure-manifest family/profile packages",
       "all eleven `@arnilo/prism-provider-*` packages",
-      "All 47 manifests (41 code packages + 6 family/profile packages)",
+      "All 48 manifests (42 code packages + 6 family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -3062,7 +3062,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 47, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 48, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {
@@ -3178,12 +3178,11 @@ describe("docs", () => {
           "No PDF / document reader",
           "No trash / recycle daemon",
           "No PTY / interactive process control",
-          "No LSP / language-server tools",
           "nine default coding tools",
           "coding-tools-capability-gaps.ts",
         ],
       ],
-      ["index.md", index, ["glob", "delete", "move", "outputMode", "No PDF/trash/PTY/LSP"]],
+      ["index.md", index, ["glob", "delete", "move", "outputMode", "No PDF/trash/PTY"]],
       [
         "coding-agent README",
         readme,
@@ -3329,9 +3328,91 @@ describe("docs", () => {
     assert.ok(server.includes("decisions") && server.includes("approvalId"));
     assert.ok(migration.includes("0.0.24 → 0.0.25 durable custom loops and human-in-the-loop"));
     assert.ok(performance.includes("benchmark-0.0.25") && performance.includes("3.913"));
-    assert.ok(readiness.includes("0.0.25") && readiness.includes("Phase 8"));
+    assert.ok(readiness.includes("0.0.26") && readiness.includes("Phase 9"));
     assert.ok(existsSync("examples/durable-loops-and-approvals.ts"), "missing durable loops example");
     assert.ok(existsSync("examples/ag-ui-a2ui.ts"), "missing A2UI example");
     assert.ok(existsSync("scripts/benchmark-0.0.25.json"), "missing Phase 8 benchmark evidence");
+  });
+
+  it("phase9 coding intelligence processes forge egress docs cover migration limits examples and evidence", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const tools = readFileSync("docs/coding-agent-tools.md", "utf8");
+    const security = readFileSync("docs/coding-security.md", "utf8");
+    const hostSecurity = readFileSync("docs/host-security.md", "utf8");
+    const language = readFileSync("docs/language-intelligence.md", "utf8");
+    const process = readFileSync("docs/process-sessions.md", "utf8");
+    const forge = readFileSync("docs/forge-integration.md", "utf8");
+    const agentEvents = readFileSync("docs/agent-events.md", "utf8");
+    const agUi = readFileSync("docs/ag-ui.md", "utf8");
+    const a2aDoc = readFileSync("docs/a2a.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    assert.ok(index.includes("0.0.26") && index.includes("language-intelligence.md") && index.includes("forge-integration.md"));
+    for (const token of [
+      "createGitAwareRepositoryOperations",
+      "git ls-files",
+      "includeIgnored",
+      "ERR_PRISM_EGRESS_LIMIT",
+      "composeEgressSandboxNetwork",
+      "prism.egress.*",
+    ])
+      assert.ok(tools.includes(token) || security.includes(token) || hostSecurity.includes(token), `coding docs missing ${token}`);
+    for (const token of [
+      "createLanguageIntelligence",
+      "rename",
+      "atomic",
+      "ERR_PRISM_LSP_UNSUPPORTED",
+      "ERR_PRISM_LSP_WORKSPACE",
+      "ERR_PRISM_LSP_TIMEOUT",
+      "maxServers",
+    ])
+      assert.ok(language.includes(token), `language-intelligence.md missing ${token}`);
+    for (const token of [
+      "createProcessSessions",
+      "ownership",
+      "expired",
+      "unknown",
+      "startProcess",
+      "readRaw",
+      "ERR_PRISM_PROCESS_PTY_UNSUPPORTED",
+    ])
+      assert.ok(process.includes(token), `process-sessions.md missing ${token}`);
+    for (const token of [
+      "createGitHubForge",
+      "ToolEffectStore",
+      "idempotency",
+      "fetch?",
+      "never argv",
+      "checks",
+      "ERR_PRISM_FORGE_OWNERSHIP",
+      "GIT_CONFIG",
+      "reconcileHandoff",
+    ])
+      assert.ok(forge.includes(token), `forge-integration.md missing ${token}`);
+    assert.ok(migration.includes("0.0.25 → 0.0.26 coding intelligence, managed processes, forge, and safe egress"));
+    assert.ok(migration.includes("createPostgresAgentEventSource"), "migration missing FR-6 root-export note");
+    assert.ok(migration.includes("reference durable implementation"), "migration missing FR-7 placement answer");
+    assert.ok(agentEvents.includes("createPostgresAgentEventSource") && agentEvents.includes("reference durable implementation"), "agent-events.md missing FR-6/FR-7 answer");
+    assert.ok(agentEvents.includes("createNatsAgentEventSource") && agentEvents.includes("at-least-once"), "agent-events.md missing FR-5 NATS adapter");
+    assert.ok(agUi.includes("createReasoningEncryptedValue") && agUi.includes("never infers an encrypted value"), "ag-ui.md missing FR-3 helper");
+    assert.ok(agUi.includes("reconcileAppEffect") && agUi.includes("never auto-retries"), "ag-ui.md missing FR-4 effect recovery");
+    assert.ok(
+      a2aDoc.includes("createAgUiA2AServer") && a2aDoc.includes("TASK_STATE_INPUT_REQUIRED"),
+      "a2a.md missing Task 13 server-side exposure",
+    );
+    assert.ok(
+      agUi.includes("createA2UiRenderer") && agUi.includes("never executes remote HTML"),
+      "ag-ui.md missing Task 14 renderer section",
+    );
+    assert.ok(
+      agUi.includes("Awaitable<T>") && agUi.includes("session.entries()"),
+      "ag-ui.md missing Task 15 async projection hooks",
+    );
+    assert.ok(performance.includes("benchmark-0.0.26") && performance.includes("299.166"));
+    assert.ok(readiness.includes("0.0.26") && readiness.includes("Phase 9"));
+    assert.ok(existsSync("examples/phase9-coding-intelligence.ts"), "missing Phase 9 example");
+    assert.ok(existsSync("scripts/benchmark-0.0.26.json"), "missing Phase 9 benchmark evidence");
+    assert.ok(existsSync("scripts/phase9-freeze-manifest.json"), "missing Phase 9 freeze manifest");
   });
 });

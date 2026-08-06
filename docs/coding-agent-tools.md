@@ -23,6 +23,10 @@
 | `createCodingCheckTool(cwd, options)` | Named host-declared checks; model selects only a name. |
 | `createAskUserDecisionTool(options)` | Opt-in user decision tool (`ask_user_decision`); host supplies `ask` callback. Not in default aggregators. |
 | `createLocalRepositoryOperations(limits?)` | Default streaming Node filesystem backend for list/search/glob. |
+| `createGitAwareRepositoryOperations(cwd, options?)` | Optional Git `ls-files` ignore-aware enumeration with native fallback; host-only `includeIgnored`. |
+| `createLanguageIntelligence(options)` | Optional host-activated LSP language intelligence (symbols/definitions/references/diagnostics/hover/rename); see [Language intelligence](language-intelligence.md). |
+| `createProcessSessions(options)` | Optional managed long-running process sessions (start/output/input/wait/signal/kill/release); see [Process sessions](process-sessions.md). |
+| `createGitHubForge(options)` | Optional reference GitHub forge adapter (issue context, push, PR create/update, review comments, checks, handoff reconcile) with `ToolEffectStore` idempotency; see [Forge integration](forge-integration.md). |
 | `createGitOperations(options)` | Typed Git operations backend (argument arrays, safe config, finite output). |
 | `buildCodingCheckpointMetadata` / `validateCodingCheckpointMetadata` / `assertCodingResumeAllowed` | Bounded durable coding-task metadata for workflow `state.coding` (no second runtime). |
 | `writeCodingPlanFile` / `readCodingPlanFile` / `createCodingPlanMarkdown` / `parseCodingPlanTodos` | Workspace plan/todo Markdown helpers with finite byte/todo caps and hash verification. |
@@ -89,12 +93,14 @@ const tools = createCodingTools(workspaceRoot, {
 
 ### Phase 4 non-goals (0.0.21)
 
-These are **out of scope** for this package release (see roadmap Phase 9 / later):
+These are **out of scope** for the 0.0.21 package baseline (see roadmap Phase 9 / later for LSP and process work):
 
 - **No PDF / document reader** — text and supported images only via `read`.
 - **No trash / recycle daemon** — `delete` / `move` are permanent; host undo is not automatic.
-- **No PTY / interactive process control** — `shell` is one-shot exec with bounded capture.
-- **No LSP / language-server tools** — use host-owned tools if needed.
+- **No PTY / interactive process control in `shell`** — `shell` stays one-shot; optional `createProcessSessions` covers long-running attach/input (PTY still unsupported — see [Process sessions](process-sessions.md)).
+- **LSP language-server tools** — not in default aggregators; optional `createLanguageIntelligence` is Phase 9 (see [Language intelligence](language-intelligence.md)).
+- **Managed process sessions** — not in default aggregators; optional `createProcessSessions` is Phase 9 (see [Process sessions](process-sessions.md)).
+- **GitHub forge adapter** — not in default aggregators; optional `createGitHubForge` is Phase 9 (see [Forge integration](forge-integration.md)); no octokit dependency, no multi-forge abstraction.
 - **No recursive directory delete** — `delete` refuses non-empty directories.
 - **No brace-expansion globs** — `glob` supports only `*`, `?`, and `**`.
 
@@ -225,6 +231,23 @@ A BOM is stripped before matching and re-prepended on write; original line endin
 ### `repo_list`
 
 List repository entries with deterministic relative paths. Uses Node `opendir`/`lstat` only — no glob dependency. Prefer `glob` when you already know a filename pattern. Prefer `repo_search` to find text inside files. Does not follow symlinks; rejects path escapes outside the workspace root. Hidden names and excluded basenames (default `.git`, `node_modules`, `dist`) are skipped unless `includeHidden` is set / host `exclude` is overridden.
+
+#### Git-aware enumeration
+
+`createGitAwareRepositoryOperations(cwd, options?)` is an optional `RepositoryOperations` backend that enumerates via fixed `git ls-files --cached --others --exclude-standard -z` (honors nested `.gitignore`, `$GIT_DIR/info/exclude`, and exclude-standard rules). Inject it through `ToolsOptions.repository.operations` (or per-tool `repository.operations`).
+
+- **Detection:** cached `git rev-parse --is-inside-work-tree`. Outside a Git work tree, or when detection fails, delegates to `options.fallback` (default: `createLocalRepositoryOperations`).
+- **Fail closed:** after successful detection, `ls-files` errors throw `RepositoryError` — no silent mid-session fallback.
+- **Ignored paths:** stay excluded unless the host sets `includeIgnored: true` (factory option only; never a model-facing tool argument). Tracked-but-ignored files remain visible via `--cached` (Git semantics).
+- **Bounds:** at most two Git invocations per operation; stdout capped by `DEFAULT_MAX_LS_FILES_OUTPUT_BYTES` (8 MiB, hard 64 MiB). Existing repo depth/entry/file/result/time caps still apply. No per-file Git spawn; no hand-rolled ignore parser; argv is never model-supplied.
+- **Security:** `.git` internals never listed; paths re-checked against the workspace root; symlink escapes match native fail-closed behavior.
+
+```ts
+import { createCodingTools, createGitAwareRepositoryOperations } from "@arnilo/prism-coding-agent";
+
+const operations = createGitAwareRepositoryOperations(cwd); // native fallback outside Git
+const tools = createCodingTools(cwd, { repository: { operations } });
+```
 
 **Inputs:**
 
@@ -530,6 +553,9 @@ Every configurable value is a positive safe integer (context may be zero); Prism
 
 ## Related APIs
 
+- [Language intelligence](language-intelligence.md): optional host-activated LSP contract (`createLanguageIntelligence`) — symbols/definitions/references/diagnostics/hover/rename.
+- [Process sessions](process-sessions.md): optional managed long-running processes (`createProcessSessions`) — start/output/input/wait/signal/kill/release.
+- [Forge integration](forge-integration.md): optional GitHub adapter (`createGitHubForge`) — issue context, authenticated push, PR create/update, review comments, checks, bounded handoff reconcile; effect-store idempotency, no duplicate PRs/comments on retry, tokens never in argv/logs/events.
 - [Tools](tools.md): the host-owned tool harness — `createToolRegistry`, `dispatchToolCall`, filtering, and the `ToolDefinition` contract these factories satisfy.
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolResult`, `ToolExecutionContext`, `ContentBlock`, and `JsonObject` shapes.
 - [Host security guide](host-security.md): fail-closed checklist for permission policies, tool validation, and trust boundaries that must gate these tools.

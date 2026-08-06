@@ -5,7 +5,7 @@ import { type AgentEvent, createSecretRedactor } from "@arnilo/prism";
 import { createAgUiEventMapper, packageName, resolveAgUiLimits } from "../index.js";
 
 describe("@arnilo/prism-ag-ui", () => {
-  it("maps a redacted message, safe tool lifecycle, usage, and finish through official schemas", () => {
+  it("maps a redacted message, safe tool lifecycle, usage, and finish through official schemas", async () => {
     const mapper = createAgUiEventMapper({
       redactor: createSecretRedactor(["secret", "/host/workspace"]),
       includeCustomEvents: true,
@@ -16,27 +16,27 @@ describe("@arnilo/prism-ag-ui", () => {
       },
     });
     const events = [
-      ...mapper.map({ type: "agent_started", sessionId: "thread-1", runId: "run-1" }),
-      ...mapper.map({
+      ...await mapper.map({ type: "agent_started", sessionId: "thread-1", runId: "run-1" }),
+      ...await mapper.map({
         type: "message_started",
         sessionId: "thread-1",
         runId: "run-1",
         message: { id: "message-1", role: "assistant", content: [] },
       }),
-      ...mapper.map({ type: "message_delta", sessionId: "thread-1", runId: "run-1", content: { type: "text", text: "hello secret" } }),
-      ...mapper.map({
+      ...await mapper.map({ type: "message_delta", sessionId: "thread-1", runId: "run-1", content: { type: "text", text: "hello secret" } }),
+      ...await mapper.map({
         type: "message_finished",
         sessionId: "thread-1",
         runId: "run-1",
         message: { id: "message-1", role: "assistant", content: [] },
       }),
-      ...mapper.map({
+      ...await mapper.map({
         type: "tool_execution_started",
         sessionId: "thread-1",
         runId: "run-1",
         call: { type: "tool_call", id: "tool-1", name: "read", arguments: { path: "/host/workspace/secret" } },
       }),
-      ...mapper.map({
+      ...await mapper.map({
         type: "tool_execution_progress",
         sessionId: "thread-1",
         runId: "run-1",
@@ -44,14 +44,14 @@ describe("@arnilo/prism-ag-ui", () => {
         name: "read",
         progress: { path: "/host/workspace" },
       }),
-      ...mapper.map({
+      ...await mapper.map({
         type: "tool_execution_finished",
         sessionId: "thread-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "read", value: "secret" },
         metadata: { durationMs: 1, status: "finished" },
       }),
-      ...mapper.map({
+      ...await mapper.map({
         type: "provider_turn_finished",
         sessionId: "thread-1",
         runId: "run-1",
@@ -59,7 +59,7 @@ describe("@arnilo/prism-ag-ui", () => {
         metadata: { providerId: "fake", model: { provider: "fake", model: "fake" } },
         usage: { inputTokens: 3, outputTokens: 5 },
       }),
-      ...mapper.map({ type: "agent_finished", sessionId: "thread-1", runId: "run-1" }),
+      ...await mapper.map({ type: "agent_finished", sessionId: "thread-1", runId: "run-1" }),
     ];
 
     for (const event of events) assert.equal(EventSchemas.safeParse(event).success, true);
@@ -85,11 +85,11 @@ describe("@arnilo/prism-ag-ui", () => {
     assert.equal(events.at(-1)?.type, EventType.RUN_FINISHED);
   });
 
-  it("closes active sequences before suspension/error and never maps unknown events", () => {
+  it("closes active sequences before suspension/error and never maps unknown events", async () => {
     const mapper = createAgUiEventMapper();
-    mapper.map({ type: "agent_started", sessionId: "session-1", runId: "run-1" });
-    mapper.map({ type: "message_started", sessionId: "session-1", runId: "run-1", message: { role: "assistant", content: [] } });
-    const suspended = mapper.map({
+    await mapper.map({ type: "agent_started", sessionId: "session-1", runId: "run-1" });
+    await mapper.map({ type: "message_started", sessionId: "session-1", runId: "run-1", message: { role: "assistant", content: [] } });
+    const suspended = await mapper.map({
       type: "agent_suspended",
       sessionId: "session-1",
       runId: "run-1",
@@ -103,8 +103,8 @@ describe("@arnilo/prism-ag-ui", () => {
     assert.deepEqual((suspended.at(-1) as { snapshot: unknown }).snapshot, { prism: { run: { status: "suspended", version: 3 } } });
 
     const failed = createAgUiEventMapper();
-    failed.map({ type: "message_started", sessionId: "session-1", runId: "run-1", message: { role: "assistant", content: [] } });
-    const error = failed.map({
+    await failed.map({ type: "message_started", sessionId: "session-1", runId: "run-1", message: { role: "assistant", content: [] } });
+    const error = await failed.map({
       type: "error",
       sessionId: "session-1",
       runId: "run-1",
@@ -114,10 +114,10 @@ describe("@arnilo/prism-ag-ui", () => {
       error.map((event) => event.type),
       [EventType.TEXT_MESSAGE_END, EventType.RUN_ERROR],
     );
-    assert.deepEqual(failed.map({ type: "future" } as unknown as AgentEvent), []);
+    assert.deepEqual(await failed.map({ type: "future" } as unknown as AgentEvent), []);
   });
 
-  it("maps every current standard event family through explicit host projections", () => {
+  it("maps every current standard event family through explicit host projections", async () => {
     const mapper = createAgUiEventMapper({
       projection: {
         stateSnapshot: () => ({ stage: "snapshot" }),
@@ -140,14 +140,14 @@ describe("@arnilo/prism-ag-ui", () => {
       },
     });
     const events = [
-      ...mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" }),
-      ...mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 }),
-      ...mapper.map({ type: "message_started", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
-      ...mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "thinking", text: "safe" } }),
-      ...mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "text", text: "answer" } }),
-      ...mapper.map({ type: "message_finished", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
-      ...mapper.map({ type: "turn_finished", sessionId: "s1", runId: "r1", turn: 1 }),
-      ...mapper.map({ type: "agent_finished", sessionId: "s1", runId: "r1" }),
+      ...await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" }),
+      ...await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 }),
+      ...await mapper.map({ type: "message_started", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
+      ...await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "thinking", text: "safe" } }),
+      ...await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "text", text: "answer" } }),
+      ...await mapper.map({ type: "message_finished", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
+      ...await mapper.map({ type: "turn_finished", sessionId: "s1", runId: "r1", turn: 1 }),
+      ...await mapper.map({ type: "agent_finished", sessionId: "s1", runId: "r1" }),
     ];
     for (const mapped of events) assert.equal(EventSchemas.safeParse(mapped).success, true);
     for (const type of [
@@ -179,12 +179,12 @@ describe("@arnilo/prism-ag-ui", () => {
     }
   });
 
-  it("enforces finite limits and truncates oversized text before schema output", () => {
+  it("enforces finite limits and truncates oversized text before schema output", async () => {
     assert.equal(packageName, "@arnilo/prism-ag-ui");
     assert.throws(() => resolveAgUiLimits({ maxEventBytes: 1_000 }), /maxEventBytes/);
     assert.throws(() => resolveAgUiLimits({ maxErrorBytes: 65_537 }), /maxErrorBytes/);
     const mapper = createAgUiEventMapper();
-    const events = mapper.map({
+    const events = await mapper.map({
       type: "message_delta",
       sessionId: "session-1",
       runId: "run-1",

@@ -22,6 +22,7 @@ import type {
 } from "./sandbox.js";
 import { type DockerSandboxLimitOptions, type ResolvedDockerSandboxLimits, resolveDockerSandboxLimits } from "./sandbox-limits.js";
 import { createImportTarStream, SandboxTarError, summarizeTarStream } from "./sandbox-tar.js";
+import { EgressError, type EgressAttestation } from "./egress/index.js";
 
 const IMAGE_DIGEST_RE = /@sha256:[a-f0-9]{64}$/i;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -47,7 +48,51 @@ export type DockerNetworkConfig =
         readonly proxyEndpoint: string;
         readonly denyDirectEgress: true;
       };
+      /**
+       * Optional allow-list egress attestation from `EgressProxy.attestation()`.
+       * Records proxy enforcement evidence in container labels; the host must
+       * actually restrict the network so the proxy is the only reachable path.
+       */
+      readonly egress?: EgressAttestation;
     };
+
+/** Validate an allow-list egress attestation; fails closed on malformed evidence. */
+export function assertEgressAttestation(attestation: EgressAttestation): EgressAttestation {
+  if (!attestation || typeof attestation !== "object") {
+    throw new EgressError("ERR_PRISM_EGRESS_ATTESTATION", "egress attestation must be an object");
+  }
+  if (attestation.denyDirectEgress !== true) {
+    throw new EgressError("ERR_PRISM_EGRESS_ATTESTATION", "egress attestation requires denyDirectEgress: true");
+  }
+  if (typeof attestation.policyFingerprint !== "string" || !/^[a-f0-9]{64}$/.test(attestation.policyFingerprint)) {
+    throw new EgressError("ERR_PRISM_EGRESS_ATTESTATION", "egress attestation requires a sha256 policyFingerprint");
+  }
+  if (!Number.isSafeInteger(attestation.policyVersion) || attestation.policyVersion < 0) {
+    throw new EgressError("ERR_PRISM_EGRESS_ATTESTATION", "egress attestation requires a non-negative integer policyVersion");
+  }
+  if (typeof attestation.startedAt !== "string" || Number.isNaN(Date.parse(attestation.startedAt))) {
+    throw new EgressError("ERR_PRISM_EGRESS_ATTESTATION", "egress attestation requires a valid startedAt timestamp");
+  }
+  let proxy: URL;
+  try {
+    proxy = new URL(attestation.proxyEndpoint);
+  } catch {
+    throw new EgressError("ERR_PRISM_EGRESS_ATTESTATION", "egress attestation proxyEndpoint is not a valid URL");
+  }
+  if (proxy.protocol !== "http:" && proxy.protocol !== "https:") {
+    throw new EgressError("ERR_PRISM_EGRESS_ATTESTATION", "egress attestation proxyEndpoint must be http(s)");
+  }
+  return attestation;
+}
+
+/** Compose a custom sandbox network carrying validated egress attestation. */
+export function composeEgressSandboxNetwork(attestation: EgressAttestation, name: string): DockerNetworkConfig {
+  assertEgressAttestation(attestation);
+  if (typeof name !== "string" || name.length === 0 || /[\s\\]/.test(name)) {
+    throw new DockerSandboxError("custom network requires a non-empty name without whitespace");
+  }
+  return { mode: "custom", name, egress: attestation };
+}
 
 /** Fail closed unless the sandbox network is none or carries browser egress attestation. */
 export function assertBrowserSandboxNetwork(network: DockerNetworkConfig | undefined): void {
@@ -154,6 +199,7 @@ function validateNetwork(network: DockerNetworkConfig | undefined): DockerNetwor
   if (network.mode !== "custom" || !network.name || /[\s\\]/.test(network.name)) {
     throw new DockerSandboxError("custom network requires a non-empty name without whitespace");
   }
+  if (network.egress) assertEgressAttestation(network.egress);
   return network;
 }
 
@@ -208,7 +254,15 @@ function buildCreateArgs(input: {
   ];
 
   if (input.network.mode === "none") args.push("--network=none");
-  else args.push(`--network=${input.network.name}`);
+  else {
+    args.push(`--network=${input.network.name}`);
+    if (input.network.egress) {
+      args.push("--label", `prism.egress.endpoint=${input.network.egress.proxyEndpoint}`);
+      args.push("--label", `prism.egress.fingerprint=${input.network.egress.policyFingerprint}`);
+      args.push("--label", `prism.egress.policyVersion=${input.network.egress.policyVersion}`);
+      args.push("--label", "prism.egress.denyDirect=1");
+    }
+  }
 
   for (const [key, value] of Object.entries(input.labels)) {
     args.push("--label", `${key}=${value}`);

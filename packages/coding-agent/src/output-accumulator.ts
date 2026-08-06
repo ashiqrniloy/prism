@@ -1,6 +1,6 @@
 /** Streaming UTF-8 output retention with bounded memory and spill storage. */
 import { randomBytes } from "node:crypto";
-import { closeSync, openSync, writeSync } from "node:fs";
+import { closeSync, openSync, readSync, writeSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -171,6 +171,48 @@ export class OutputAccumulator {
 
   getTotalRawBytes(): number {
     return this.totalRawBytes;
+  }
+
+  /**
+   * Cursor-paged raw bytes for process sessions.
+   * Reads from spill file when present, otherwise from in-memory chunks.
+   */
+  readRaw(cursor: number, maxBytes: number): { readonly data: Buffer; readonly nextCursor: number } {
+    if (!Number.isSafeInteger(cursor) || cursor < 0) {
+      throw new Error("cursor must be a non-negative safe integer");
+    }
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
+      throw new Error("maxBytes must be a positive safe integer");
+    }
+    const total = this.totalRawBytes;
+    if (cursor >= total) return { data: Buffer.alloc(0), nextCursor: cursor };
+    const length = Math.min(maxBytes, total - cursor);
+    if (this.tempFilePath) {
+      const fd = openSync(this.tempFilePath, "r");
+      try {
+        const data = Buffer.alloc(length);
+        const n = readSync(fd, data, 0, length, cursor);
+        return { data: n === length ? data : data.subarray(0, n), nextCursor: cursor + n };
+      } finally {
+        closeSync(fd);
+      }
+    }
+    const data = Buffer.alloc(length);
+    let offset = 0;
+    let skipped = 0;
+    for (const chunk of this.rawChunks) {
+      if (offset >= length) break;
+      if (skipped + chunk.length <= cursor) {
+        skipped += chunk.length;
+        continue;
+      }
+      const start = Math.max(0, cursor - skipped);
+      const take = Math.min(chunk.length - start, length - offset);
+      chunk.copy(data, offset, start, start + take);
+      offset += take;
+      skipped += chunk.length;
+    }
+    return { data: offset === length ? data : data.subarray(0, offset), nextCursor: cursor + offset };
   }
 
   isOutputLimitExceeded(): boolean {

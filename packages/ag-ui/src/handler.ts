@@ -517,7 +517,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
   const mapper = mapperFor(input, options, limits);
   if (options.replay!.subscribe) {
     for await (const item of options.replay!.subscribe(request)) {
-      const mappedEvents = mapper.map(item.record.event);
+      const mappedEvents = await mapper.map(item.record.event);
       if (mappedEvents.length === 0) {
         yield tagged(
           event({ type: EventType.CUSTOM, name: "prism.replay_cursor", value: { cursor: item.cursor } }),
@@ -537,7 +537,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
 
   const page = await options.replay!.page(request);
   for (const record of page.records) {
-    for (const mappedEvent of mapper.map(record.event)) yield tagged(mappedEvent, record.id);
+    for (const mappedEvent of await mapper.map(record.event)) yield tagged(mappedEvent, record.id);
     if (record.event.type === "agent_suspended") {
       yield await interruptEvent(input, record.event, options, limits);
       return;
@@ -575,7 +575,7 @@ async function* mapped<Authorization extends AgUiAuthorization>(
 ): AsyncGenerator<AGUIEvent> {
   const mapper = mapperFor(input, options, limits);
   for await (const prismEvent of source) {
-    yield* mapper.map(prismEvent);
+    yield* await mapper.map(prismEvent);
     if (prismEvent.type === "agent_suspended") {
       const run = { ref: { runId: prismEvent.runId, sessionId: prismEvent.sessionId } };
       await options.onSuspended?.({
@@ -623,7 +623,7 @@ async function* withCoWork<Authorization extends AgUiAuthorization>(
   const context = options.coWorkContext?.(input, authorization) ?? { threadId: input.threadId };
   const mapper = mapperFor(input, options, limits);
   const page = await options.coWork.page({ context, authorization, signal });
-  for (const event of page.events) yield* mapper.mapCoWork(event);
+  for (const event of page.events) yield* await mapper.mapCoWork(event);
 }
 
 async function* filterRun(source: AsyncIterable<AgentEvent>, runId: string): AsyncGenerator<AgentEvent> {
@@ -682,7 +682,7 @@ async function interruptEvent<Authorization extends AgUiAuthorization>(
   const requiredId = interruptId(input.parentRunId ?? input.runId, eventValue.version);
   let interrupts: readonly Interrupt[] | undefined;
   try {
-    interrupts = options.projection?.interrupt?.({ ...eventValue, interruption });
+    interrupts = await options.projection?.interrupt?.({ ...eventValue, interruption });
   } catch {
     interrupts = undefined;
   }

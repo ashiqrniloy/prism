@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-provider-azure",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "description": "Azure OpenAI / Foundry enterprise provider for Prism (host Entra workload identity).",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.25"
+    "@arnilo/prism": "0.0.26"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

@@ -30,10 +30,10 @@ const events: Record<string, CoWorkEvent> = {
 };
 
 describe("co-work event projection", () => {
-  it("maps every co-work kind to a schema-valid, named AG-UI CUSTOM event", () => {
+  it("maps every co-work kind to a schema-valid, named AG-UI CUSTOM event", async () => {
     const mapper = createAgUiEventMapper();
     for (const [name, event] of Object.entries(events)) {
-      const mapped = mapper.mapCoWork(event);
+      const mapped = await mapper.mapCoWork(event);
       assert.equal(mapped.length, 1, name);
       assert.equal(EventSchemas.safeParse(mapped[0]).success, true, name);
       assert.equal(mapped[0].type, EventType.CUSTOM, name);
@@ -42,45 +42,45 @@ describe("co-work event projection", () => {
     }
   });
 
-  it("redacts secrets and never emits local filesystem paths", () => {
+  it("redacts secrets and never emits local filesystem paths", async () => {
     const mapper = createAgUiEventMapper({ redactor: createSecretRedactor(["sekret", "/home/arn"]) });
-    const leaked = mapper.mapCoWork({ kind: "browser.snapshot", snapshotId: "s", summary: "file at /home/arn/secret with sekret token" });
+    const leaked = await mapper.mapCoWork({ kind: "browser.snapshot", snapshotId: "s", summary: "file at /home/arn/secret with sekret token" });
     const output = JSON.stringify(leaked);
     assert.ok(!output.includes("sekret"));
     assert.ok(!output.includes("/home/arn"));
   });
 
-  it("fails closed on malformed co-work events (unknown kind, missing fields)", () => {
+  it("fails closed on malformed co-work events (unknown kind, missing fields)", async () => {
     const mapper = createAgUiEventMapper();
-    assert.deepEqual(mapper.mapCoWork({ kind: "bogus" } as unknown as CoWorkEvent), []);
-    assert.deepEqual(mapper.mapCoWork({ kind: "artifact.progress", artifactId: "", version: 1, status: "x" }), []);
-    assert.deepEqual(mapper.mapCoWork({ kind: "artifact.progress", artifactId: "a", version: Number.NaN, status: "x" }), []);
-    assert.deepEqual(mapper.mapCoWork({ kind: "browser.snapshot", snapshotId: "s" } as unknown as CoWorkEvent), []);
+    assert.deepEqual(await mapper.mapCoWork({ kind: "bogus" } as unknown as CoWorkEvent), []);
+    assert.deepEqual(await mapper.mapCoWork({ kind: "artifact.progress", artifactId: "", version: 1, status: "x" }), []);
+    assert.deepEqual(await mapper.mapCoWork({ kind: "artifact.progress", artifactId: "a", version: Number.NaN, status: "x" }), []);
+    assert.deepEqual(await mapper.mapCoWork({ kind: "browser.snapshot", snapshotId: "s" } as unknown as CoWorkEvent), []);
   });
 
-  it("drops oversized co-work payloads instead of truncating into a leak", () => {
+  it("drops oversized co-work payloads instead of truncating into a leak", async () => {
     const limits = resolveAgUiLimits({ maxTextBytes: 1024 });
-    const payload = projectCoWorkEvent(
+    const payload = await projectCoWorkEvent(
       { kind: "browser.snapshot", snapshotId: "s", summary: "x".repeat(64 * 1024) },
       { maxBytes: limits.maxTextBytes },
     );
     assert.equal(payload, undefined);
   });
 
-  it("applies the host coWork projection hook before redaction", () => {
+  it("applies the host coWork projection hook before redaction", async () => {
     const mapper = createAgUiEventMapper({ projection: { coWork: (event) => ({ kind: event.kind, curated: true }) } });
-    const mapped = mapper.mapCoWork(events.snapshot);
+    const mapped = await mapper.mapCoWork(events.snapshot);
     assert.equal(mapped[0].value.curated, true);
     assert.equal(mapped[0].value.summary, undefined);
   });
 
-  it("ACP mapper projects co-work events to safe session updates (parity)", () => {
+  it("ACP mapper projects co-work events to safe session updates (parity)", async () => {
     const mapper = createAcpEventMapper({ redactor: createSecretRedactor(["sekret"]) });
-    const mapped = mapper.mapCoWork({ kind: "artifact.approval.requested", artifactId: "art-1", version: 2, reason: "sekret reason" });
+    const mapped = await mapper.mapCoWork({ kind: "artifact.approval.requested", artifactId: "art-1", version: 2, reason: "sekret reason" });
     assert.equal(mapped.length, 1);
     assert.equal(mapped[0].sessionUpdate, "agent_message_chunk");
     assert.ok(!JSON.stringify(mapped).includes("sekret"));
-    assert.deepEqual(mapper.mapCoWork({ kind: "nope" } as unknown as CoWorkEvent), []);
+    assert.deepEqual(await mapper.mapCoWork({ kind: "nope" } as unknown as CoWorkEvent), []);
   });
 });
 

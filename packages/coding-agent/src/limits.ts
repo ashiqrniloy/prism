@@ -59,6 +59,9 @@ export const DEFAULT_MAX_GIT_MESSAGE_BYTES = 64 * 1024;
 export const HARD_MAX_GIT_MESSAGE_BYTES = 256 * 1024;
 export const DEFAULT_MAX_GIT_OUTPUT_BYTES = 4 * 1024 * 1024;
 export const HARD_MAX_GIT_OUTPUT_BYTES = 64 * 1024 * 1024;
+/** Phase 9 freeze: `git ls-files` stdout cap for ignore-aware enumeration. */
+export const DEFAULT_MAX_LS_FILES_OUTPUT_BYTES = 8 * 1024 * 1024;
+export const HARD_MAX_LS_FILES_OUTPUT_BYTES = 64 * 1024 * 1024;
 export const DEFAULT_MAX_GIT_DIFF_LINES = 10_000;
 export const HARD_MAX_GIT_DIFF_LINES = 100_000;
 export const DEFAULT_MAX_GIT_CHANGED_FILES = 1_000;
@@ -101,6 +104,47 @@ export const DEFAULT_MAX_CHECK_SUMMARY_BYTES = 1_024;
 export const HARD_MAX_CHECK_SUMMARY_BYTES = 8_192;
 export const DEFAULT_MAX_CODING_CHECKPOINT_BYTES = 64 * 1024;
 export const HARD_MAX_CODING_CHECKPOINT_BYTES = 512 * 1024;
+
+/** Phase 9 freeze: language-intelligence / LSP client caps. */
+export const DEFAULT_MAX_LSP_MESSAGE_BYTES = 4 * 1024 * 1024;
+export const HARD_MAX_LSP_MESSAGE_BYTES = 32 * 1024 * 1024;
+export const DEFAULT_MAX_LSP_DIAGNOSTICS_PER_FILE = 200;
+export const HARD_MAX_LSP_DIAGNOSTICS_PER_FILE = 1_000;
+export const DEFAULT_MAX_LSP_PENDING_REQUESTS = 32;
+export const HARD_MAX_LSP_PENDING_REQUESTS = 128;
+export const DEFAULT_MAX_LSP_RESULTS_PER_QUERY = 500;
+export const HARD_MAX_LSP_RESULTS_PER_QUERY = 5_000;
+export const DEFAULT_MAX_LSP_TIMEOUT_MS = 30_000;
+export const HARD_MAX_LSP_TIMEOUT_MS = 120_000;
+export const DEFAULT_MAX_LSP_SERVERS = 4;
+export const HARD_MAX_LSP_SERVERS = 8;
+/** Freeze: restart budget is fixed at 3 (not host-configurable above). */
+export const LSP_RESTARTS_PER_SERVER = 3;
+
+/** Phase 9 freeze: managed process-session caps. */
+export const DEFAULT_MAX_PROCESS_SESSIONS = 8;
+export const HARD_MAX_PROCESS_SESSIONS = 32;
+export const DEFAULT_MAX_PROCESS_INPUT_BYTES = 64 * 1024;
+export const HARD_MAX_PROCESS_INPUT_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_PROCESS_LIFETIME_MS = 4 * 60 * 60 * 1000;
+export const HARD_MAX_PROCESS_LIFETIME_MS = 24 * 60 * 60 * 1000;
+export const DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES = 50 * 1024;
+export const HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES = 1024 * 1024;
+/** Total output reuses existing accumulator ceilings (64 MiB / 1 GiB). */
+export const DEFAULT_MAX_PROCESS_TOTAL_OUTPUT_BYTES = DEFAULT_MAX_TOTAL_OUTPUT_BYTES;
+export const HARD_MAX_PROCESS_TOTAL_OUTPUT_BYTES = HARD_MAX_TOTAL_OUTPUT_BYTES;
+
+/** Forge (GitHub adapter) defaults and hard caps (Phase 9 Task 5). */
+export const DEFAULT_MAX_FORGE_PAGES_PER_OPERATION = 10;
+export const HARD_MAX_FORGE_PAGES_PER_OPERATION = 100;
+export const DEFAULT_MAX_FORGE_PAYLOAD_BYTES = 1024 * 1024;
+export const HARD_MAX_FORGE_PAYLOAD_BYTES = 8 * 1024 * 1024;
+export const DEFAULT_MAX_FORGE_COMMENTS_PER_REVIEW = 100;
+export const HARD_MAX_FORGE_COMMENTS_PER_REVIEW = 1000;
+export const DEFAULT_MAX_FORGE_REQUEST_CONCURRENCY = 4;
+export const HARD_MAX_FORGE_REQUEST_CONCURRENCY = 8;
+export const DEFAULT_MAX_FORGE_REQUEST_TIMEOUT_MS = 30_000;
+export const HARD_MAX_FORGE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Validate one configurable coding resource limit. Invalid values fail instead of clamping. */
 export function validateCodingLimit(name: string, value: number, hardCap: number): number {

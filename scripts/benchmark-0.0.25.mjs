@@ -235,7 +235,7 @@ function measureA2uiPaint() {
   for (let n = 0; n < WARMUPS + ITERATIONS; n += 1) {
     const mapper = createAgUiEventMapper({ a2ui: { catalogId, mode: "fixed-schema" } });
     const start = performance.now();
-    mapper.map({
+    await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: `r-${n}`,

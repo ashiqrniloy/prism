@@ -54,7 +54,27 @@ ACP maps assistant text to `agent_message_chunk`, safe tool lifecycle to `tool_c
 
 Selected MCP tools use normal `TOOL_CALL_*` core dispatch. Linked Apps add safe `mcp-apps` activity; app-only tools stay model-hidden. The separate reauthorizing Apps proxy allow-lists initialize/ping/logging/tool/resource calls for one bridge; its sandbox helper returns CSP/iframe config and never executes HTML.
 
-`createAgUiA2AAdapter()` maps verified task text/activity. Non-text/tool/A2UI parts need host `projectPart`; non-streaming fallback accepts only a terminal task, otherwise host follows saved correlation.
+### UI-initiated mutation retry through `ToolEffectStore` (FR-4)
+
+`createAgUiMcpAppHandler` accepts an optional `effectStore` (Phase 7 `ToolEffectStore`) plus `effectContext` (identity/ownership; falls back to `authorization.ownership` + `context.identity`). Every approved `tools/call` then records `begin` → `markDispatched` → `complete`/`fail`/`markUnknown` in the store; effect keys derive from identity + ownership + tool name + arguments hash (`deriveAppEffectKey`). The proxy **never auto-retries** — the host decides:
+
+```ts
+import { createAgUiMcpAppHandler, reconcileAppEffect } from "@arnilo/prism-ag-ui";
+
+const handler = createAgUiMcpAppHandler({
+  apps, authorize, context, approveToolCall, allowedOrigins,
+  effectStore, // optional: records UI mutations for idempotent retry
+  effectContext: ({ authorization, context }) => ({ identity: context.identity, ownership: authorization.ownership }),
+});
+
+// After transport/abort loss the record is `unknown`; the host verifies the
+// actual outcome and resolves it (claim/CAS), then the UI can retry idempotently:
+await reconcileAppEffect({ effectStore, identity, ownership, sessionId, runId, toolName, arguments: args, outcome: "completed", result });
+```
+
+A retried call whose record is `completed` replays the recorded result without re-dispatching; `failed_retryable`/`failed_terminal`/`dispatched`/`unknown` records fail closed with a `409` until the host reconciles. Wrong-owner or unresolvable identity/ownership fails closed; absent `effectStore` keeps 0.0.25 behavior exactly.
+
+`createAgUiA2AAdapter()` maps verified task text/activity. Non-text/tool/A2UI parts need host `projectPart`; non-streaming fallback accepts only a terminal task, otherwise host follows saved correlation. `createAgUiA2AServer()` fronts a local AG-UI agent as an A2A 1.0 server for remote A2A clients (reverse direction; see [A2A interoperability](a2a.md)).
 
 Co-work uses bounded, redacted `CUSTOM prism.cowork.*` events through `mapCoWork()` / `createCoWorkReplay()`; see [Work artifacts and review](work-artifacts-and-review.md).
 
@@ -104,6 +124,23 @@ All identity, authorization, session/thread mapping, durable checkpoint lookup, 
 
 `AgUiProjection` is an allow-list. Without a callback, raw tool arguments/results/progress, arbitrary state/patches/transcripts/activity/reasoning/raw events, paths, ACP locations/diffs/terminals/raw I/O, and frontend-supplied tools remain absent. Reasoning signatures do not become AG-UI encrypted values automatically: a host must explicitly provide an already client-encrypted opaque value. `input.project` is also an allow-list: do not merge client state/forwarded props into ownership, identity, tools, permissions, provider options, or media fetch policy.
 
+### Reasoning encrypted-value helper (FR-3)
+
+`createReasoningEncryptedValue({ encrypt, content, event, maxBytes? })` produces the `encryptedValue` fragment for the `reasoning` projection callback (AG-UI `REASONING_ENCRYPTED_VALUE`):
+
+```ts
+import { createReasoningEncryptedValue } from "@arnilo/prism-ag-ui";
+
+const mapper = createAgUiEventMapper({
+  projection: {
+    reasoning: (content, event) =>
+      createReasoningEncryptedValue({ encrypt: hostEncryptForClient, content, event }),
+  },
+});
+```
+
+`encrypt` is host-owned (client key) and receives the redacted `ThinkingContent` and the Prism event; return `undefined` to decline. The helper is synchronous and pure like the other projection callbacks: it never infers an encrypted value from a Prism reasoning signature, fails closed (returns `undefined`) when `encrypt` is missing, throws, or returns a non-string, and truncates output to `maxBytes` (default `DEFAULT_MAX_REASONING_BYTES`, clamped to `HARD_MAX_REASONING_BYTES`). The mapper additionally caps the emitted value at the resolved `maxReasoningBytes` limit.
+
 Co-work projection reuses the same allow-list: `AgUiProjection.coWork(event)` may return a curated, JSON-serializable payload for a co-work event; absent it, the redacted event fields are exposed. Wire `coWorkContext` to derive thread/artifact/identity from the authorized request (never client JSON) and `coWork` to a `createCoWorkReplay()` over your durable artifact/draft/snapshot stores. The handler projects one bounded page after the run; mount a dedicated cursor-paged co-work endpoint when full pagination is needed.
 
 Durable interrupts carry the shared decision batch: the fallback interrupt includes the redacted `pendingDecisions` under `metadata` and its `responseSchema` accepts either the legacy `{ decision: "approve" | "deny" }` or a `{ decisions: [{ approvalId, outcome, reason?, modifiedArguments?, elicitation? }] }` batch. All batch entries are shape- and cap-validated at the boundary (count ≤ 128, ids ≤ 128 chars, four outcomes, reason ≤ 8 KiB, payloads ≤ 64 KiB) and core re-validates each against the recorded pending set under the single CAS. `interrupts.resume` may return the batch form (`{ decisions, expectedVersion? }`); legacy `editedArgs` resume payloads still deny. ACP permission prompts offer the four outcomes (`allow_once` / `allow_always` / `reject_once` / `reject_always`) and map them onto the batch; a cancelled prompt stays deny-closed.
@@ -115,7 +152,11 @@ Three batteries-included factories return `AgUiProjection` fragments. Compose wi
 ```ts
 createAgUiHandler({
   projection: composeAgUiProjections(
-    createMessagesFromSessionProjection({ getMessages: () => authorizedAgUiMessages, redact }),
+    // async transcript source: AgentSession.entries() is async
+    createMessagesFromSessionProjection({
+      getMessages: async () => (await session.entries()).map(entryToAgUiMessage),
+      redact,
+    }),
     createStateFromStoreProjection(runStateStore),
     createActivityFromToolProgressProjection(),
     hostCustom,
@@ -123,9 +164,11 @@ createAgUiHandler({
 });
 ```
 
+Every `AgUiProjection` callback may return a promise (types are `Awaitable<T>` — Task 15, 0.0.26), so projectors can call async host APIs like `session.entries()` directly. Sync-only hosts keep exact prior behavior: sync return values short-circuit, hooks are awaited strictly in event order (never `Promise.all`), and a rejected hook fails closed per event (omitted value, stream continues) exactly like today's sync throw handling. `createMessagesFromSessionProjection({ getMessages })` accepts an async transcript source and emits `MESSAGES_SNAPSHOT` from it at `agent_started` and `message_finished` (no sync `getMessages` needed for full session history); `agent_finished` is terminal and the mapper projects nothing after it, so the final snapshot arrives at the last `message_finished`.
+
 | Factory | Emits | Notes |
 | --- | --- | --- |
-| `createMessagesFromSessionProjection` | `MESSAGES_SNAPSHOT` | Host `getMessages()` for authorized history, or live `message_finished` accumulation. Caps 128/1024. Redact drops closed. |
+| `createMessagesFromSessionProjection` | `MESSAGES_SNAPSHOT` | Host `getMessages()` for authorized history (sync or async), or live `message_finished` accumulation. Caps 128/1024. Redact drops closed. |
 | `createStateFromStoreProjection(store)` | `STATE_SNAPSHOT` on `agent_started`; RFC 6902 `STATE_DELTA` (add/replace/remove) when `store.get()` changes | Host store; optional `subscribe` only marks dirty — no Prism watcher. Oversized/throw → drop closed. |
 | `createActivityFromToolProgressProjection` | `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` from `tool_execution_progress` | Default `activityType: "tool-progress"`. Missing progress+metadata → drop closed. |
 
@@ -143,9 +186,27 @@ Host `catalogId` is stamped when absent; model-supplied ids outside `allowedCata
 
 User actions arrive as untrusted `AgUiA2UiAction` values on `input.project({ a2uiActions })` (from `forwardedProps.a2uiAction` or activity/tool-result shapes). Without `input.project` they stay default-deny — Prism never synthesizes a `log_a2ui_event` tool call (documented divergence from official `@ag-ui/a2ui-middleware`). Example: `examples/ag-ui-a2ui.ts`.
 
+### Reference frontend renderer (Task 14, 0.0.26)
+
+`@arnilo/prism-ag-ui/renderer` ships a framework-free client renderer for AG-UI/A2UI surfaces: it consumes an AG-UI event stream (SSE via `@ag-ui/client`, or any `AsyncIterable`) and renders `a2ui-surface` activity snapshots/deltas into DOM surfaces from a host component catalog. No framework dependency, no host build step, no jsdom (tests use an in-memory DOM stub).
+
+```ts
+import { createA2UiRenderer } from "@arnilo/prism-ag-ui/renderer";
+
+const renderer = createA2UiRenderer({
+  stream: agUiEventStream,        // SSE or AsyncIterable of AGUIEvent
+  catalog: myComponents,          // optional; defaults to Text/Container/Column/Row/Button
+  onAction: (action) => sendA2UiAction(action), // optional: Button clicks etc.
+  onError: (error) => console.warn(error.code, error.message),
+});
+const surface = await renderer.surface("chat"); // detached DOM node, kept in sync
+```
+
+The core is a DOM-free state machine (`reduceA2UiOps`): operations become a surface/component model (adjacency list with `id`/`component`/flat props, A2UI v0.9 JSON-Pointer data model, `deleteSurface`); a thin binding layer renders the model through catalog component renderers (framework-free `(props, ctx, dom) => node` functions). Snapshots replace a surface's model (streaming mode sends cumulative ops); RFC 6902 deltas append. The same frozen caps as the server painter are enforced client-side: 64/512 ops per message, 64 KiB/1 MiB per op, 16/64 surfaces per run, depth 32/64. Invalid or oversized ops drop closed with one bounded `prism.a2ui.error` event (host logging via `onError`); unknown catalog components render an explicit placeholder. The renderer never executes remote HTML: only `createElement`/`createTextNode`/`appendChild`, no HTML-string assignment, no dynamic code evaluation. Data bindings `{"path": "/pointer"}` resolve against the per-surface data model; `deleteSurface` detaches content. The main `@arnilo/prism-ag-ui` entry stays runtime-agnostic — DOM code lives only behind the `renderer` subpath (type-only re-exports). Hosts embedding it should follow the MCP Apps CSP/sandbox guidance (`docs/ag-ui-adoption.md`) for iframe/worker placement.
+
 ## Security and performance notes
 
-Authorize every start/replay/resume/proxy/follow. Treat protocol fields, MCP metadata/HTML, and A2A cards/parts as untrusted; persist run/task correlation before output and redact streams. MCP Apps requires extension acknowledgement, exact proxy origin, same-bridge visibility, approval, `ui://` HTML/MIME bounds, and sandbox CSP. It never retries UI mutations; Task 4 adds recovery.
+Authorize every start/replay/resume/proxy/follow. Treat protocol fields, MCP metadata/HTML, and A2A cards/parts as untrusted; persist run/task correlation before output and redact streams. MCP Apps requires extension acknowledgement, exact proxy origin, same-bridge visibility, approval, `ui://` HTML/MIME bounds, and sandbox CSP. It never retries UI mutations; with an `effectStore` it records them for host-driven idempotent retry and unknown-outcome reconciliation (FR-4).
 
 Defaults / hard caps: request 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 256 tools/contexts, 8 / 64 interrupts, 16 / 64 media parts, and 64 KiB / 1 MiB text/state/media; frontend tool/context payloads 16 KiB / 256 KiB; projected event/state/activity/reasoning/raw values 64 KiB / 1 MiB; patches 128 / 4096 operations; JSON depth 16 / 64, properties 128 / 4096, arrays 512 / 8192; cursor 4 / 16 KiB; replay page 100 / 500 records; queue 128 / 4096 events; stream 10,000 / 100,000 events and 10 / 64 MiB; wall time 120 seconds / 30 minutes. Overflow yields a bounded error/closed stream, not an unbounded queue. SSE is declared; WebSocket/protobuf/push are not. Reconnect is at-least-once, so clients de-duplicate stable event/message/tool IDs.
 

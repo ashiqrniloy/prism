@@ -60,6 +60,18 @@ export interface SandboxAdapter {
  * Disposable sandbox lifecycle used by the Docker/OCI reference adapter.
  * Extends the shell-only `SandboxAdapter` with typed exec, status, and cleanup.
  */
+/**
+ * Long-running process handle inside a disposable sandbox.
+ * Optional on {@link DisposableSandbox.startProcess}; absence = one-shot-only adapter.
+ */
+export interface SandboxProcessHandle {
+  write(data: Uint8Array): Promise<void>;
+  signal(name: string): Promise<void>;
+  kill(): Promise<void>;
+  release(): Promise<void>;
+  wait(options?: { timeoutMs?: number; signal?: AbortSignal }): Promise<{ exitCode: number | null }>;
+}
+
 export interface DisposableSandbox extends SandboxAdapter {
   readonly id: string;
   /** Present after workspace import; content hash only (no secrets). */
@@ -71,6 +83,11 @@ export interface DisposableSandbox extends SandboxAdapter {
   stop(options?: { graceMs?: number; signal?: AbortSignal }): Promise<void>;
   kill(options?: { signal?: AbortSignal }): Promise<void>;
   close(options?: SandboxCloseOptions): Promise<SandboxExportMetadata | undefined>;
+  /**
+   * Optional long-running process capability. Detected, never assumed.
+   * Absence → ProcessSessions.start over this sandbox fails closed with ERR_PRISM_PROCESS_UNSUPPORTED.
+   */
+  startProcess?(request: SandboxExecFileRequest): Promise<SandboxProcessHandle>;
 }
 
 export class SandboxExecutionError extends Error {

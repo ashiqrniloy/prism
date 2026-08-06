@@ -1,0 +1,146 @@
+{
+  "$comment": "Phase 9 (0.0.26) Task 0 public API freeze manifest. Machine-checkable source of truth consumed by Tasks 1-7 tests: every implementation export name, error code, event type, preset, and cap must match this file exactly. Amendment requires a recorded Task 0 freeze amendment in plans/009.",
+  "release": "0.0.26",
+  "packages": {
+    "@arnilo/prism-coding-agent": {
+      "modules": {
+        "git-aware-repository": {
+          "exports": ["createGitAwareRepositoryOperations", "GitAwareRepositoryOptions"],
+          "errorCodes": ["ERR_PRISM_REPOSITORY"]
+        },
+        "language": {
+          "exports": [
+            "createLanguageIntelligence",
+            "LanguageIntelligence",
+            "LanguageServerSpec",
+            "LanguageIntelligenceLimits",
+            "LanguageLocation",
+            "LanguageSymbol",
+            "LanguageDiagnostic",
+            "LanguageWorkspaceEdit",
+            "LanguageIntelligenceError"
+          ],
+          "errorCodes": [
+            "ERR_PRISM_LSP_FRAMING",
+            "ERR_PRISM_LSP_SERVER",
+            "ERR_PRISM_LSP_TIMEOUT",
+            "ERR_PRISM_LSP_LIMIT",
+            "ERR_PRISM_LSP_UNSUPPORTED",
+            "ERR_PRISM_LSP_WORKSPACE"
+          ]
+        },
+        "process": {
+          "exports": [
+            "createProcessSessions",
+            "ProcessSessions",
+            "ProcessSession",
+            "ProcessSessionState",
+            "ProcessStartRequest",
+            "ProcessOutputChunk",
+            "ProcessExitResult",
+            "CodingProcessEvent",
+            "ProcessSessionError"
+          ],
+          "states": ["starting", "running", "exited", "killed", "released", "expired", "unknown"],
+          "events": [
+            "process_started",
+            "process_exited",
+            "process_killed",
+            "process_released",
+            "process_expired",
+            "process_unknown"
+          ],
+          "errorCodes": [
+            "ERR_PRISM_PROCESS_POLICY",
+            "ERR_PRISM_PROCESS_OWNERSHIP",
+            "ERR_PRISM_PROCESS_STATE",
+            "ERR_PRISM_PROCESS_LIMIT",
+            "ERR_PRISM_PROCESS_PTY_UNSUPPORTED",
+            "ERR_PRISM_PROCESS_UNSUPPORTED"
+          ]
+        },
+        "forge": {
+          "exports": [
+            "createGitHubForge",
+            "ForgeOperations",
+            "ForgeIssueContext",
+            "ForgePullRequest",
+            "ForgeCheck",
+            "ForgeHandoffReport",
+            "ForgeError"
+          ],
+          "errorCodes": [
+            "ERR_PRISM_FORGE_AUTH",
+            "ERR_PRISM_FORGE_API",
+            "ERR_PRISM_FORGE_STALE",
+            "ERR_PRISM_FORGE_RATE_LIMIT",
+            "ERR_PRISM_FORGE_LIMIT",
+            "ERR_PRISM_FORGE_OWNERSHIP"
+          ]
+        }
+      }
+    },
+    "@arnilo/prism-coding-security": {
+      "modules": {
+        "egress": {
+          "exports": [
+            "createEgressPolicy",
+            "createAllowListEgressProxy",
+            "EgressRule",
+            "EgressPolicy",
+            "EgressPreset",
+            "EgressProxy",
+            "EgressAuditRecord",
+            "EgressError"
+          ],
+          "presets": ["npm-registry", "github"],
+          "errorCodes": [
+            "ERR_PRISM_EGRESS_DENIED",
+            "ERR_PRISM_EGRESS_DNS",
+            "ERR_PRISM_EGRESS_LIMIT",
+            "ERR_PRISM_EGRESS_POLICY",
+            "ERR_PRISM_EGRESS_ATTESTATION"
+          ]
+        },
+        "sandbox": {
+          "exports": ["SandboxProcessHandle"],
+          "notes": "DisposableSandbox gains additive optional startProcess capability; absence fails closed."
+        }
+      }
+    }
+  },
+  "caps": {
+    "gitEnumeration": { "lsFilesOutputBytes": { "default": 8388608, "hard": 67108864 }, "invocationsPerEnumeration": 2 },
+    "lsp": {
+      "messageBytes": { "default": 4194304, "hard": 33554432 },
+      "diagnosticsPerFile": { "default": 200, "hard": 1000 },
+      "pendingRequests": { "default": 32, "hard": 128 },
+      "resultsPerQuery": { "default": 500, "hard": 5000 },
+      "requestTimeoutMs": { "default": 30000, "hard": 120000 },
+      "restartsPerServer": 3,
+      "serversPerWorkspace": { "default": 4, "hard": 8 }
+    },
+    "process": {
+      "sessionsPerRun": { "default": 8, "hard": 32 },
+      "inputWriteBytes": { "default": 65536, "hard": 1048576 },
+      "sessionLifetimeMs": { "default": 14400000, "hard": 86400000 },
+      "outputChunkBytes": { "default": 51200, "hard": 1048576 },
+      "totalOutputBytes": { "default": 67108864, "hard": 1073741824 }
+    },
+    "forge": {
+      "pagesPerOperation": { "default": 10, "hard": 100 },
+      "payloadBytes": { "default": 1048576, "hard": 8388608 },
+      "commentsPerReview": { "default": 100, "hard": 1000 },
+      "requestConcurrency": { "default": 4, "hard": 8 },
+      "requestTimeoutMs": { "default": 30000, "hard": 120000 }
+    },
+    "egress": {
+      "concurrentConnections": { "default": 32, "hard": 256 },
+      "requestBytes": { "default": 67108864, "hard": 1073741824 },
+      "responseBytes": { "default": 67108864, "hard": 1073741824 },
+      "transferTimeMs": { "default": 600000, "hard": 3600000 },
+      "rulesPerPolicy": { "default": 128, "hard": 1024 },
+      "redirectHops": { "default": 5, "hard": 10 }
+    }
+  }
+}

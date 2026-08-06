@@ -39,6 +39,30 @@ const handler = createA2AHandler({
 
 Parts, messages, artifacts, histories, metadata, and aggregate responses are untrusted. Rich content remains in A2A task/message/artifact contracts for host mapping; it is never promoted to system instructions or automatically loaded as a Prism resource.
 
+## AG-UI server-side exposure (Task 13, 0.0.26)
+
+`createAgUiA2AServer()` in `@arnilo/prism-ag-ui` fronts one host-selected **local AG-UI agent** as an A2A 1.0 server, the reverse direction of `createAgUiA2AAdapter()`: remote A2A clients start and stream local runs through the same AG-UI input allow-list and event mapper as the AG-UI SSE path (same projection, redaction, and byte caps). It reuses this package's `createA2AHandler` transport/lifecycle; it creates no second runtime, task store, or worker. Requires the optional `@arnilo/prism-supervisor` peer (imported lazily; plain `@arnilo/prism-ag-ui` imports keep working without it).
+
+```ts
+import { createAgentEventSourceAgUiReplay, createAgUiA2AServer } from "@arnilo/prism-ag-ui";
+
+const server = await createAgUiA2AServer({
+  card: agentCard,                                   // A2A agent card (streaming: true)
+  authorize: (input) => authorizeA2A(input),         // A2A auth → { ownership } (also the AG-UI authorization)
+  sessionFactory: ({ threadId, authorization, signal, input }) =>
+    createAgUiSession(authorization, input),         // same shape as createAgUiHandler
+  input: { project: projectAgUiInput },              // AG-UI full-input allow-list
+  projection, redactor, a2ui, limits,                // AG-UI mapper options
+  durable: {                                         // optional: GetTask/SubscribeToTask after a run finishes
+    source: persistence.events,                      // durable AgentEventSource
+    resolveTask: async ({ id, authorization }) => ({ task, run }), // host-owned task→run correlation
+  },
+});
+// host mounts: new Request(url, init) → server(request)
+```
+
+Semantics: `SendMessage` runs the local agent to completion and returns a terminal task with collected text artifacts; `SendStreamingMessage` (client `returnImmediately: true`) streams text/activity/state as bounded A2A artifact updates, then a terminal task. `agent_suspended` closes the stream with `TASK_STATE_INPUT_REQUIRED`; continuation stays host-owned (AG-UI resume). `GetTask`/`ListTasks`/`CancelTask` cover a bounded in-memory registry of tasks started on this instance; with `durable`, `SubscribeToTask`/`GetTask` also resolve host-correlated runs and replay the durable source with cursor event ids (at-least-once; clients dedupe by `eventId`). Text parts become the AG-UI user message; raw/data/url parts stay disabled unless `parts` selects them, and then arrive only in `forwardedProps.a2a` for `input.project`. Task ids default to `task-<uuid>`; hosts may own them via `selectTaskId`. `tasks` may be supplied to replace the built-in lifecycle entirely. A2A remains separately mounted — no route is added to `createPrismHandler()`.
+
 ## Implementation example
 
 ```ts

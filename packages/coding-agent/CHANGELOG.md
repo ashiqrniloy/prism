@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.26] - 2026-08-06
+
+### Added
+- `createGitHubForge(options)` — reference GitHub adapter: issue context, authenticated push (`GIT_CONFIG_*` credential injection, never argv), PR create/update, review comments, checks/status, bounded `reconcileHandoff`; every mutation gated by `ExecutionPolicy` and recorded in `ToolEffectStore` (retry never duplicates PRs/comments); typed `ERR_PRISM_FORGE_*` codes; frozen `DEFAULT_MAX_FORGE_*` / `HARD_MAX_FORGE_*` caps; no octokit dependency.
+- `createGitAwareRepositoryOperations(cwd, options?)` — ignore-aware enumeration via fixed `git ls-files` with native walker fallback; host-only `includeIgnored`; `DEFAULT_MAX_LS_FILES_OUTPUT_BYTES` / `HARD_MAX_LS_FILES_OUTPUT_BYTES`.
+- `createLanguageIntelligence(options)` — host-selected LSP 3.17 client (Content-Length framing); symbols/definitions/references/diagnostics/hover/rename; lazy spawn; `ERR_PRISM_LSP_*`; frozen `DEFAULT_MAX_LSP_*` / `HARD_MAX_LSP_*` caps.
+- `createProcessSessions(options)` — managed process sessions (start/output/input/wait/signal/kill/release); optional sandbox `startProcess` backend + `reconcile`/sandbox-loss → `unknown`; ownership/identity + expiry sweep; `CodingProcessEvent`; `ERR_PRISM_PROCESS_*`; frozen `DEFAULT_MAX_PROCESS_*` / `HARD_MAX_PROCESS_*` caps; `OutputAccumulator.readRaw` for cursor paging.
+- `CreateGitHubForgeOptions.fetch?` — host-injectable fetch (defaults to `globalThis.fetch`); enables routing forge traffic through an egress proxy and mock-fetch tests.
+
 ## [0.0.25] - 2026-08-06
 
 ### Added

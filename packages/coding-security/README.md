@@ -25,6 +25,14 @@ const sandbox = await createDockerSandbox({
   network: { mode: "none" },
 });
 
+// Allow-list egress (deny-all; inert until start):
+import { createEgressPolicy, createAllowListEgressProxy, composeEgressSandboxNetwork } from "@arnilo/prism-coding-security";
+const egressPolicy = createEgressPolicy({ presets: ["npm-registry"], allow: [{ host: "api.github.com", port: 443, protocol: "https" }] });
+const proxy = createAllowListEgressProxy({ policy: egressPolicy, audit: (record) => host.recordEgress(record) });
+await proxy.start();
+const network = composeEgressSandboxNetwork(proxy.attestation(), "egress-net");
+// Host must restrict the network so the proxy is the only reachable path.
+
 // Required workspaceMode. Sandbox: shell + FS share one disposable tree.
 const { tools, composition } = createSandboxCodingComposition(workspaceRoot, {
   workspaceMode: "sandbox",

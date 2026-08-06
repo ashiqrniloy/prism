@@ -26,9 +26,9 @@ function updateComponents(surfaceId: string, components: unknown[]) {
 }
 
 describe("A2UI painting middleware", () => {
-  it("is inert without a2ui option (0.0.24 parity)", () => {
+  it("is inert without a2ui option (0.0.24 parity)", async () => {
     const mapper = createAgUiEventMapper();
-    const events = mapper.map({
+    const events = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -47,11 +47,11 @@ describe("A2UI painting middleware", () => {
     );
   });
 
-  it("fixed-schema paints ACTIVITY_SNAPSHOT then ACTIVITY_DELTA and stamps catalogId", () => {
+  it("fixed-schema paints ACTIVITY_SNAPSHOT then ACTIVITY_DELTA and stamps catalogId", async () => {
     const mapper = createAgUiEventMapper({
       a2ui: { catalogId, mode: "fixed-schema" },
     });
-    const first = mapper.map({
+    const first = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -75,7 +75,7 @@ describe("A2UI painting middleware", () => {
     }
     assert.equal(EventSchemas.safeParse(snapshot).success, true);
 
-    const second = mapper.map({
+    const second = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -98,11 +98,11 @@ describe("A2UI painting middleware", () => {
     }
   });
 
-  it("fails closed on delta-before-create, unknown version, and oversized ops", () => {
+  it("fails closed on delta-before-create, unknown version, and oversized ops", async () => {
     const mapper = createAgUiEventMapper({
       a2ui: { catalogId, mode: "fixed-schema", limits: { maxOperationsPerMessage: 2 } },
     });
-    const beforeCreate = mapper.map({
+    const beforeCreate = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -119,7 +119,7 @@ describe("A2UI painting middleware", () => {
     );
     assert.ok(beforeCreate.some((event) => event.type === EventType.CUSTOM && event.name === A2UI_ERROR_EVENT));
 
-    const badVersion = mapper.map({
+    const badVersion = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -136,7 +136,7 @@ describe("A2UI painting middleware", () => {
     );
     assert.ok(badVersion.some((event) => event.type === EventType.CUSTOM && event.name === A2UI_ERROR_EVENT));
 
-    const oversized = mapper.map({
+    const oversized = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -160,11 +160,11 @@ describe("A2UI painting middleware", () => {
     assert.ok(oversized.some((event) => event.type === EventType.CUSTOM && event.name === A2UI_ERROR_EVENT));
   });
 
-  it("overwrites model-invented catalog ids outside the allow-list", () => {
+  it("overwrites model-invented catalog ids outside the allow-list", async () => {
     const mapper = createAgUiEventMapper({
       a2ui: { catalogId, mode: "fixed-schema", allowedCatalogIds: [catalogId] },
     });
-    const events = mapper.map({
+    const events = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
@@ -181,11 +181,11 @@ describe("A2UI painting middleware", () => {
     assert.equal(ops[0]!.createSurface.catalogId, catalogId);
   });
 
-  it("streaming paints progressive replace snapshots only when complete ops extractable", () => {
+  it("streaming paints progressive replace snapshots only when complete ops extractable", async () => {
     const mapper = createAgUiEventMapper({
       a2ui: { catalogId, mode: "streaming", renderToolName: "render_a2ui" },
     });
-    const partial = mapper.map({
+    const partial = await mapper.map({
       type: "message_delta",
       sessionId: "s",
       runId: "r",
@@ -202,7 +202,7 @@ describe("A2UI painting middleware", () => {
       false,
     );
 
-    const complete = mapper.map({
+    const complete = await mapper.map({
       type: "message_delta",
       sessionId: "s",
       runId: "r",
@@ -220,7 +220,7 @@ describe("A2UI painting middleware", () => {
     assert.equal(EventSchemas.safeParse(snapshot).success, true);
   });
 
-  it("extracts untrusted a2ui actions for input.project and rejects malformed ones", () => {
+  it("extracts untrusted a2ui actions for input.project and rejects malformed ones", async () => {
     const limits = resolveAgUiLimits();
     const input = parseAgUiInput(
       {
@@ -368,16 +368,16 @@ describe("A2UI painting middleware", () => {
     assert.match(body, /demo/);
   });
 
-  it("drops duplicate createSurface for an existing surface", () => {
+  it("drops duplicate createSurface for an existing surface", async () => {
     const mapper = createAgUiEventMapper({ a2ui: { catalogId, mode: "fixed-schema" } });
-    mapper.map({
+    await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",
       result: { toolCallId: "t1", name: "paint", value: { a2ui_operations: [createSurface("s1", catalogId)] } },
       metadata: { durationMs: 1, status: "finished" },
     });
-    const dup = mapper.map({
+    const dup = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s",
       runId: "r",

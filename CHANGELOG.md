@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.0.26] - 2026-08-06
+
+### Added
+- Git-aware repository enumeration (`createGitAwareRepositoryOperations`): fixed `git ls-files` with native fallback, host-only `includeIgnored`, frozen ls-files output caps.
+- Language intelligence (`createLanguageIntelligence`): host-selected LSP 3.17 client over bounded JSON-RPC — symbols/definitions/references/diagnostics/hover/rename; lazy spawn; policy-gated atomic rename; `ERR_PRISM_LSP_*` codes.
+- Managed process sessions (`createProcessSessions`): start/output/input/wait/signal/kill/release, ownership + expiry sweep, optional sandbox `startProcess` backend with sandbox-loss → `unknown` reconciliation; `OutputAccumulator.readRaw` cursor paging.
+- Reference GitHub forge adapter (`createGitHubForge`): issue context, authenticated push (`GIT_CONFIG_*` credential injection, never argv), PR create/update, review comments, checks/status, bounded `reconcileHandoff`; `ToolEffectStore` idempotency (retry never duplicates); host-injectable `fetch` option.
+- Allow-list egress (`@arnilo/prism-coding-security`): deny-all `createEgressPolicy` with frozen presets, `createAllowListEgressProxy` (CONNECT tunnel, pinned-DNS rebinding defense, private/metadata IP denial, redirect re-validation, byte/time caps, audit records), `composeEgressSandboxNetwork` attestation labels.
+- Network-free Phase 9 conformance + `benchmark-0.0.26.json` evidence; composed example `phase9-coding-intelligence.ts`.
+- AG-UI reasoning encrypted-value helper (`createReasoningEncryptedValue`, FR-3) and MCP Apps UI-initiated mutation retry through `ToolEffectStore` (`reconcileAppEffect`, FR-4).
+- Durable `AgentEventSource` root export in `@arnilo/prism-session-store-postgres` (FR-6) and new NATS JetStream sibling adapter `@arnilo/prism-session-store-nats` (FR-5): per-run subjects, per-subject replay, durable pull consumers with explicit acks (at-least-once), idempotent append, resumable cursors, ownership-scoped page/subscribe/cleanup.
+- A2A server-side exposure (Task 13): `createAgUiA2AServer` in `@arnilo/prism-ag-ui` fronts a local AG-UI agent as an A2A 1.0 server over supervisor's `createA2AHandler` — remote clients run and stream the agent through the AG-UI input allow-list and event mapper, with a bounded live task registry and optional durable replay.
+- Reference frontend renderer (Task 14): new `@arnilo/prism-ag-ui/renderer` subpath export — `createA2UiRenderer` consumes an AG-UI event stream and renders A2UI v0.9 surfaces into DOM from a host component catalog; DOM-free core with the server-side A2UI caps enforced client-side, fail-closed drops, explicit placeholders for unknown components, and no remote HTML execution.
+- Async `AgUiProjection` hooks (Task 15): all hook returns are `Awaitable<T>`; the AG-UI and ACP mappers await hooks in event order with per-event fail-closed, so projectors can call `session.entries()` directly — `createMessagesFromSessionProjection` now accepts an async `getMessages` transcript source. Sync-only hosts keep exact prior behavior.
+
+### Changed
+- Publishable graph grows to **48** manifests at **0.0.26** (new `@arnilo/prism-session-store-nats`).
+
+### Breaking (none)
+- All Phase 9 additions are opt-in factories; no existing export, event, or persisted shape changed. See [migration guide](docs/migration.md) `0.0.25 → 0.0.26`.
+
 ## [0.0.25] - 2026-08-06
 
 ### Added

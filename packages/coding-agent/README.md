@@ -103,11 +103,11 @@ const askUser = createAskUserDecisionTool({
 
 ### Phase 4 non-goals
 
-No PDF reader, trash daemon, PTY, or LSP tools in 0.0.21. See [coding agent tools docs](https://github.com/ashiqrniloy/prism/blob/main/docs/coding-agent-tools.md).
+No PDF reader, trash daemon, or PTY in 0.0.21. Phase 9 optionals: `createLanguageIntelligence`, `createProcessSessions`, `createGitHubForge`. See [coding agent tools docs](https://github.com/ashiqrniloy/prism/blob/main/docs/coding-agent-tools.md), [language intelligence](https://github.com/ashiqrniloy/prism/blob/main/docs/language-intelligence.md), [process sessions](https://github.com/ashiqrniloy/prism/blob/main/docs/process-sessions.md), and [forge integration](https://github.com/ashiqrniloy/prism/blob/main/docs/forge-integration.md).
 
 ## Exports
 
-Factories: `createShellTool`, `createReadTool`, `createWriteTool`, `createEditTool`, `createRepoListTool`, `createRepoSearchTool`, `createGlobTool`, `createDeleteTool`, `createMoveTool`, `createCodingTools`, `createReadOnlyTools`, `createAllTools`, `createGitTools`, `createCodingCheckTool`, `createAskUserDecisionTool`, `createLocalBashOperations`, `createLocalRepositoryOperations`, `createGitOperations`, `createReadPathSet`.
+Factories: `createShellTool`, `createReadTool`, `createWriteTool`, `createEditTool`, `createRepoListTool`, `createRepoSearchTool`, `createGlobTool`, `createDeleteTool`, `createMoveTool`, `createCodingTools`, `createReadOnlyTools`, `createAllTools`, `createGitTools`, `createCodingCheckTool`, `createAskUserDecisionTool`, `createLocalBashOperations`, `createLocalRepositoryOperations`, `createGitAwareRepositoryOperations`, `createLanguageIntelligence`, `createProcessSessions`, `createGitHubForge`, `createGitOperations`, `createReadPathSet`.
 
 Helpers: `detectSupportedImageMimeType`, `detectSupportedImageMimeTypeFromFile`, `getShellConfig`, `killProcessTree`, `waitForChildProcess`, `withFileMutationQueue`, `resolveRepositoryLimits`, `matchGlobPattern`, `validateGlobPattern`, `writeCodingPlanFile`, `readCodingPlanFile`, `buildCodingCheckpointMetadata`, `validateCodingCheckpointMetadata`, `assertCodingResumeAllowed`, `fingerprintJson`, `runCodingGoalVerify`, `createCodingGoalVerifyWorkflow`, `suspendAskUserDecision`, `createAskUserDecisionResumeValidator`, `validateAskUserDecisionResume`, `validateAskUserDecisionAgentResume`. Default/hard coding, repository, Git, and plan/checkpoint limit constants are exported for host configuration.
 

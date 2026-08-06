@@ -23,9 +23,9 @@ export interface AgUiEventMapperOptions {
 }
 
 export interface AgUiEventMapper {
-  map(event: AgentEvent): readonly AGUIEvent[];
+  map(event: AgentEvent): Promise<readonly AGUIEvent[]>;
   /** Projects one co-work event to safe AG-UI CUSTOM events; malformed input yields none. */
-  mapCoWork(event: CoWorkEvent): readonly AGUIEvent[];
+  mapCoWork(event: CoWorkEvent): Promise<readonly AGUIEvent[]>;
 }
 
 interface ActiveTool {
@@ -79,7 +79,7 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
     for (const stepName of activeSteps) emit(events, { type: EventType.STEP_FINISHED, stepName });
     activeSteps.clear();
   };
-  const startTool = (events: AGUIEvent[], call: ToolCallContent | Pick<ActiveTool, "id" | "name">): ActiveTool => {
+  const startTool = async (events: AGUIEvent[], call: ToolCallContent | Pick<ActiveTool, "id" | "name">): Promise<ActiveTool> => {
     const sourceId = call.id;
     const current = activeTools.get(sourceId);
     if (current) return current;
@@ -92,14 +92,14 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
       parentMessageId: activeMessage,
     });
     if ("arguments" in call) {
-      const args = projectedText(() => options.projection?.toolArguments?.(call), limits.maxTextBytes);
+      const args = await projectedText(() => options.projection?.toolArguments?.(call), limits.maxTextBytes);
       if (args !== undefined) emit(events, { type: EventType.TOOL_CALL_ARGS, toolCallId: tool.id, delta: args });
     }
     return tool;
   };
-  const finishTool = (events: AGUIEvent[], sourceId: string, name: string, status: string, result?: ToolResult): void => {
-    const tool = startTool(events, { id: sourceId, name });
-    const projectedResult = result ? projectedText(() => options.projection?.toolResult?.(result), limits.maxTextBytes) : undefined;
+  const finishTool = async (events: AGUIEvent[], sourceId: string, name: string, status: string, result?: ToolResult): Promise<void> => {
+    const tool = await startTool(events, { id: sourceId, name });
+    const projectedResult = result ? await projectedText(() => options.projection?.toolResult?.(result), limits.maxTextBytes) : undefined;
     emit(events, {
       type: EventType.TOOL_CALL_RESULT,
       toolCallId: tool.id,
@@ -110,8 +110,8 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
     emit(events, { type: EventType.TOOL_CALL_END, toolCallId: tool.id });
     activeTools.delete(sourceId);
   };
-  const statusState = (events: AGUIEvent[], event: AgentEvent, status: string, version?: number): void => {
-    const addition = projectedJson(() => options.projection?.state?.(event), limits.maxStateBytes, "state");
+  const statusState = async (events: AGUIEvent[], event: AgentEvent, status: string, version?: number): Promise<void> => {
+    const addition = await projectedJson(() => options.projection?.state?.(event), limits.maxStateBytes, "state");
     emit(events, {
       type: EventType.STATE_SNAPSHOT,
       snapshot: {
@@ -119,9 +119,9 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
       },
     });
   };
-  const custom = (events: AGUIEvent[], name: string, value: unknown): void => {
+  const custom = async (events: AGUIEvent[], name: string, value: unknown): Promise<void> => {
     if (!options.includeCustomEvents) return;
-    const safe = projectedJson(() => value, limits.maxTextBytes, "custom");
+    const safe = await projectedJson(() => value, limits.maxTextBytes, "custom");
     if (safe !== undefined) emit(events, { type: EventType.CUSTOM, name, value: safe });
   };
   const error = (events: AGUIEvent[], info: ErrorInfo, code = "PRISM_ERROR"): void => {
@@ -133,26 +133,26 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
     });
     terminal = true;
   };
-  const projectedText = (callback: () => unknown, maxBytes: number): string | undefined => {
+  const projectedText = async (callback: () => unknown, maxBytes: number): Promise<string | undefined> => {
     try {
-      const value = callback();
+      const value = await callback();
       return typeof value === "string" ? text(value, maxBytes) : undefined;
     } catch {
       return undefined;
     }
   };
-  const projectedJson = (callback: () => unknown, maxBytes: number, name: string): unknown => {
+  const projectedJson = async (callback: () => unknown, maxBytes: number, name: string): Promise<unknown> => {
     try {
-      const value = callback();
+      const value = await callback();
       return projectAgUiJson(options.redactor?.redact(value) ?? value, maxBytes, limits, name);
     } catch {
       return undefined;
     }
   };
-  const reasoning = (events: AGUIEvent[], content: ThinkingContent, event: AgentEvent): void => {
-    let projected: ReturnType<NonNullable<AgUiProjection["reasoning"]>> | undefined;
+  const reasoning = async (events: AGUIEvent[], content: ThinkingContent, event: AgentEvent): Promise<void> => {
+    let projected: Awaited<ReturnType<NonNullable<AgUiProjection["reasoning"]>>> | undefined;
     try {
-      projected = options.projection?.reasoning?.(content, event);
+      projected = await options.projection?.reasoning?.(content, event);
     } catch {
       return;
     }
@@ -171,7 +171,7 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
     if (encryptedValue)
       emit(events, { type: EventType.REASONING_ENCRYPTED_VALUE, subtype: "message", entityId: messageId, encryptedValue });
   };
-  const extras = (events: AGUIEvent[], event: AgentEvent): void => {
+  const extras = async (events: AGUIEvent[], event: AgentEvent): Promise<void> => {
     let adapterActivity: AgUiActivitySnapshot | undefined;
     try {
       adapterActivity = options.activity?.(event);
@@ -190,24 +190,24 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
         });
       }
     }
-    const snapshot = projectedJson(() => options.projection?.stateSnapshot?.(event), limits.maxStateBytes, "stateSnapshot");
+    const snapshot = await projectedJson(() => options.projection?.stateSnapshot?.(event), limits.maxStateBytes, "stateSnapshot");
     if (snapshot !== undefined) emit(events, { type: EventType.STATE_SNAPSHOT, snapshot });
 
     let delta: readonly unknown[] | undefined;
     try {
-      delta = options.projection?.stateDelta?.(event);
+      delta = await options.projection?.stateDelta?.(event);
     } catch {
       delta = undefined;
     }
     const statePatch = projectAgUiPatch(delta, limits.maxPatchOperations, limits.maxStateBytes, limits, "stateDelta");
     if (statePatch !== undefined) emit(events, { type: EventType.STATE_DELTA, delta: statePatch });
 
-    const messages = projectedJson(() => options.projection?.messages?.(event), limits.maxStateBytes, "messages");
+    const messages = await projectedJson(() => options.projection?.messages?.(event), limits.maxStateBytes, "messages");
     if (Array.isArray(messages)) emit(events, { type: EventType.MESSAGES_SNAPSHOT, messages });
 
-    let activity: ReturnType<NonNullable<AgUiProjection["activity"]>> | undefined;
+    let activity: Awaited<ReturnType<NonNullable<AgUiProjection["activity"]>>> | undefined;
     try {
-      activity = options.projection?.activity?.(event);
+      activity = await options.projection?.activity?.(event);
     } catch {
       activity = undefined;
     }
@@ -234,9 +234,9 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
       }
     }
 
-    let raw: ReturnType<NonNullable<AgUiProjection["raw"]>> | undefined;
+    let raw: Awaited<ReturnType<NonNullable<AgUiProjection["raw"]>>> | undefined;
     try {
-      raw = options.projection?.raw?.(event);
+      raw = await options.projection?.raw?.(event);
     } catch {
       raw = undefined;
     }
@@ -245,9 +245,9 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
       if (value !== undefined) emit(events, { type: EventType.RAW, event: value, ...(raw.source ? { source: text(raw.source) } : {}) });
     }
 
-    let projectedCustom: ReturnType<NonNullable<AgUiProjection["custom"]>> | undefined;
+    let projectedCustom: Awaited<ReturnType<NonNullable<AgUiProjection["custom"]>>> | undefined;
     try {
-      projectedCustom = options.projection?.custom?.(event);
+      projectedCustom = await options.projection?.custom?.(event);
     } catch {
       projectedCustom = undefined;
     }
@@ -258,9 +258,9 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
   };
 
   return {
-    mapCoWork(input) {
+    async mapCoWork(input) {
       const events: AGUIEvent[] = [];
-      const payload = projectCoWorkEvent(input, {
+      const payload = await projectCoWorkEvent(input, {
         redactor: options.redactor,
         projection: options.projection,
         maxBytes: limits.maxTextBytes,
@@ -269,7 +269,7 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
       emit(events, { type: EventType.CUSTOM, name: `prism.cowork.${input.kind}`, value: payload });
       return events;
     },
-    map(input) {
+    async map(input) {
       if (terminal) return [];
       const event = options.redactor?.redact(input) ?? input;
       const events: AGUIEvent[] = [];
@@ -288,14 +288,14 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           terminal = true;
           break;
         case "agent_suspended":
-          close(events);
-          statusState(events, event, "suspended", event.version);
+          await close(events);
+          await statusState(events, event, "suspended", event.version);
           break;
         case "agent_resumed":
-          statusState(events, event, "running", event.version);
+          await statusState(events, event, "running", event.version);
           break;
         case "agent_denied":
-          statusState(events, event, "denied", event.version);
+          await statusState(events, event, "denied", event.version);
           error(events, { message: "Run denied", code: "AGENT_DENIED" }, "AGENT_DENIED");
           break;
         case "turn_started": {
@@ -317,7 +317,7 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           break;
         case "message_delta":
           if (event.content.type === "thinking") {
-            reasoning(events, event.content, event);
+            await reasoning(events, event.content, event);
             break;
           }
           if (event.content.type === "tool_call_delta") {
@@ -344,7 +344,7 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
             for (const block of event.message.content) {
               if (block.type === "text")
                 emit(events, { type: EventType.TEXT_MESSAGE_CONTENT, messageId: activeMessage, delta: text(block.text) });
-              if (block.type === "thinking") reasoning(events, block, event);
+              if (block.type === "thinking") await reasoning(events, block, event);
             }
           }
           closeReasoning(events);
@@ -353,36 +353,36 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           messageHasDelta = false;
           break;
         case "tool_execution_started":
-          startTool(events, event.call);
+          await startTool(events, event.call);
           break;
         case "tool_execution_progress":
-          custom(events, "prism.tool_progress", {
+          await custom(events, "prism.tool_progress", {
             toolCallId: id(event.toolCallId, "tool"),
             name: text(event.name),
             status: "in_progress",
           });
           break;
         case "tool_execution_finished":
-          finishTool(events, event.result.toolCallId, event.result.name, "completed", event.result);
+          await finishTool(events, event.result.toolCallId, event.result.name, "completed", event.result);
           if (a2ui) {
             for (const painted of a2ui.onToolFinished(event.result)) emit(events, painted);
           }
           break;
         case "tool_execution_error":
-          finishTool(events, event.call.id, event.call.name, "failed");
+          await finishTool(events, event.call.id, event.call.name, "failed");
           break;
         case "tool_execution_blocked":
-          finishTool(events, event.toolCallId, event.name, "blocked");
+          await finishTool(events, event.toolCallId, event.name, "blocked");
           break;
         case "provider_turn_finished":
-          if (event.usage) custom(events, "prism.usage", usage(event.usage));
+          if (event.usage) await custom(events, "prism.usage", usage(event.usage));
           if (event.error) error(events, event.error);
           break;
         case "compaction_started":
-          custom(events, "prism.compaction", { status: "started" });
+          await custom(events, "prism.compaction", { status: "started" });
           break;
         case "compaction_finished":
-          custom(events, "prism.compaction", { status: "finished" });
+          await custom(events, "prism.compaction", { status: "finished" });
           break;
         case "error":
           error(events, event.error);
@@ -390,7 +390,7 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
         default:
           break;
       }
-      if (!terminal) extras(events, event);
+      if (!terminal) await extras(events, event);
       return events;
     },
   };
@@ -403,7 +403,7 @@ function usage(value: Usage): Record<string, number> {
   >;
 }
 
-function truncateUtf8(value: string, maxBytes: number): string {
+export function truncateUtf8(value: string, maxBytes: number): string {
   if (Buffer.byteLength(value) <= maxBytes) return value;
   const suffixBytes = Buffer.byteLength(TRUNCATION);
   const budget = Math.max(0, maxBytes - suffixBytes);

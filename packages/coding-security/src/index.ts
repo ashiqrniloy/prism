@@ -18,10 +18,59 @@ export type {
 } from "./docker-sandbox.js";
 export {
   assertBrowserSandboxNetwork,
+  assertEgressAttestation,
+  composeEgressSandboxNetwork,
   createDockerSandbox,
   DockerSandboxError,
 } from "./docker-sandbox.js";
-export { assertPathInsideRoots, isPathInside, isPathInsideReal } from "./path-containment.js";
+export {
+  assertPathInsideRoots,
+  isPathInside,
+  isPathInsideReal,
+} from "./path-containment.js";
+export {
+  assertPinned,
+  createAllowListEgressProxy,
+  createEgressPolicy,
+  EGRESS_PRESETS,
+  EgressError,
+  isMetadataAddress,
+  isPrivateAddress,
+  normalizeAddress,
+  resolveEgressLimits,
+  resolvePinned,
+} from "./egress/index.js";
+export type {
+  AddressResolver,
+  CreateAllowListEgressProxyOptions,
+  CreateEgressPolicyOptions,
+  EgressAttestation,
+  EgressAuditRecord,
+  EgressErrorCode,
+  EgressLimitOptions,
+  EgressPolicy,
+  EgressPreset,
+  EgressProtocol,
+  EgressProxy,
+  EgressProxyEndpoint,
+  EgressProxyStats,
+  EgressRule,
+  ResolvedEgressLimits,
+} from "./egress/index.js";
+export {
+  DEFAULT_MAX_EGRESS_CONCURRENT_CONNECTIONS,
+  DEFAULT_MAX_EGRESS_REDIRECT_HOPS,
+  DEFAULT_MAX_EGRESS_REQUEST_BYTES,
+  DEFAULT_MAX_EGRESS_RESPONSE_BYTES,
+  DEFAULT_MAX_EGRESS_RULES,
+  DEFAULT_MAX_EGRESS_TRANSFER_TIME_MS,
+  HARD_MAX_EGRESS_CONCURRENT_CONNECTIONS,
+  HARD_MAX_EGRESS_REDIRECT_HOPS,
+  HARD_MAX_EGRESS_REQUEST_BYTES,
+  HARD_MAX_EGRESS_RESPONSE_BYTES,
+  HARD_MAX_EGRESS_RULES,
+  HARD_MAX_EGRESS_TRANSFER_TIME_MS,
+} from "./egress/limits.js";
 export type {
   DisposableSandbox,
   SandboxAdapter,
@@ -29,6 +78,7 @@ export type {
   SandboxExecFileRequest,
   SandboxExecRequest,
   SandboxExportMetadata,
+  SandboxProcessHandle,
   SandboxStatus,
   SandboxStatusState,
 } from "./sandbox.js";

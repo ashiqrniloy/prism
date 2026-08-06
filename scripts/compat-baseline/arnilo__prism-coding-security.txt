@@ -1,3 +1,4 @@
+AddressResolver	export type { AddressResolver } from "./dns-pin.js"
 ApprovalCacheScope	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
 CodingApprovalFn	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
 CodingApprovalPolicyOptions	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
@@ -5,13 +6,21 @@ CodingApprovalRequest	export type { ApprovalCacheScope, CodingApprovalFn, Coding
 CommandRule	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
 CommandRuleAction	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
 CommandRuleEvaluation	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
+CreateAllowListEgressProxyOptions	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
 CreateDockerSandboxOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
+CreateEgressPolicyOptions	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
 DEFAULT_CLEANUP_DEADLINE_MS	export declare const DEFAULT_CLEANUP_DEADLINE_MS = 30000
 DEFAULT_CPUS	export declare const DEFAULT_CPUS = 2
 DEFAULT_DOWNLOAD_BYTES	export declare const DEFAULT_DOWNLOAD_BYTES: number
 DEFAULT_IDLE_TIMEOUT_MS	export declare const DEFAULT_IDLE_TIMEOUT_MS: number
 DEFAULT_MAX_COMMANDS	export declare const DEFAULT_MAX_COMMANDS = 100
 DEFAULT_MAX_CONCURRENT_EXECS	export declare const DEFAULT_MAX_CONCURRENT_EXECS = 1
+DEFAULT_MAX_EGRESS_CONCURRENT_CONNECTIONS	export declare const DEFAULT_MAX_EGRESS_CONCURRENT_CONNECTIONS = 32
+DEFAULT_MAX_EGRESS_REDIRECT_HOPS	export declare const DEFAULT_MAX_EGRESS_REDIRECT_HOPS = 5
+DEFAULT_MAX_EGRESS_REQUEST_BYTES	export declare const DEFAULT_MAX_EGRESS_REQUEST_BYTES: number
+DEFAULT_MAX_EGRESS_RESPONSE_BYTES	export declare const DEFAULT_MAX_EGRESS_RESPONSE_BYTES: number
+DEFAULT_MAX_EGRESS_RULES	export declare const DEFAULT_MAX_EGRESS_RULES = 128
+DEFAULT_MAX_EGRESS_TRANSFER_TIME_MS	export declare const DEFAULT_MAX_EGRESS_TRANSFER_TIME_MS = 600000
 DEFAULT_MAX_ENV_BYTES	export declare const DEFAULT_MAX_ENV_BYTES: number
 DEFAULT_MAX_ENV_NAMES	export declare const DEFAULT_MAX_ENV_NAMES = 64
 DEFAULT_MAX_EXPORT_BYTES	export declare const DEFAULT_MAX_EXPORT_BYTES: number
@@ -26,7 +35,7 @@ DEFAULT_STOP_GRACE_MS	export declare const DEFAULT_STOP_GRACE_MS = 5000
 DEFAULT_TMP_BYTES	export declare const DEFAULT_TMP_BYTES: number
 DEFAULT_WALL_TIME_MS	export declare const DEFAULT_WALL_TIME_MS: number
 DEFAULT_WORKSPACE_BYTES	export declare const DEFAULT_WORKSPACE_BYTES: number
-DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 DockerCliError	export declare class DockerCliError extends Error
 DockerCliRequest	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
 DockerCliResult	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
@@ -34,12 +43,31 @@ DockerNetworkConfig	export type { CreateDockerSandboxOptions, DockerNetworkConfi
 DockerRunner	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
 DockerSandboxError	export declare class DockerSandboxError extends Error
 DockerSandboxLimitOptions	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
+EGRESS_PRESETS	export declare const EGRESS_PRESETS: Record<EgressPreset, readonly EgressRule[]>
+EgressAttestation	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressAuditRecord	export type { EgressAuditRecord, EgressErrorCode } from "./types.js"
+EgressError	export declare class EgressError extends Error
+EgressErrorCode	export type { EgressAuditRecord, EgressErrorCode } from "./types.js"
+EgressLimitOptions	export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js"
+EgressPolicy	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+EgressPreset	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+EgressProtocol	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+EgressProxy	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressProxyEndpoint	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressProxyStats	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressRule	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
 HARD_CLEANUP_DEADLINE_MS	export declare const HARD_CLEANUP_DEADLINE_MS = 120000
 HARD_CPUS	export declare const HARD_CPUS = 8
 HARD_DOWNLOAD_BYTES	export declare const HARD_DOWNLOAD_BYTES: number
 HARD_IDLE_TIMEOUT_MS	export declare const HARD_IDLE_TIMEOUT_MS: number
 HARD_MAX_COMMANDS	export declare const HARD_MAX_COMMANDS = 256
 HARD_MAX_CONCURRENT_EXECS	export declare const HARD_MAX_CONCURRENT_EXECS = 8
+HARD_MAX_EGRESS_CONCURRENT_CONNECTIONS	export declare const HARD_MAX_EGRESS_CONCURRENT_CONNECTIONS = 256
+HARD_MAX_EGRESS_REDIRECT_HOPS	export declare const HARD_MAX_EGRESS_REDIRECT_HOPS = 10
+HARD_MAX_EGRESS_REQUEST_BYTES	export declare const HARD_MAX_EGRESS_REQUEST_BYTES: number
+HARD_MAX_EGRESS_RESPONSE_BYTES	export declare const HARD_MAX_EGRESS_RESPONSE_BYTES: number
+HARD_MAX_EGRESS_RULES	export declare const HARD_MAX_EGRESS_RULES = 1024
+HARD_MAX_EGRESS_TRANSFER_TIME_MS	export declare const HARD_MAX_EGRESS_TRANSFER_TIME_MS = 3600000
 HARD_MAX_ENV_BYTES	export declare const HARD_MAX_ENV_BYTES: number
 HARD_MAX_ENV_NAMES	export declare const HARD_MAX_ENV_NAMES = 256
 HARD_MAX_EXPORT_BYTES	export declare const HARD_MAX_EXPORT_BYTES: number
@@ -55,31 +83,38 @@ HARD_TMP_BYTES	export declare const HARD_TMP_BYTES: number
 HARD_WALL_TIME_MS	export declare const HARD_WALL_TIME_MS: number
 HARD_WORKSPACE_BYTES	export declare const HARD_WORKSPACE_BYTES: number
 ResolvedDockerSandboxLimits	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
+ResolvedEgressLimits	export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js"
 SANDBOX_FS_SCRIPTS	export declare const SANDBOX_FS_SCRIPTS: Readonly<
-SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxCodingComposition	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 SandboxCodingCompositionError	export declare class SandboxCodingCompositionError extends Error
 SandboxCodingCompositionResult	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 SandboxCodingToolsOptions	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
-SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxExecutionError	export declare class SandboxExecutionError extends Error
-SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxFsError	export declare class SandboxFsError extends Error
 SandboxFsOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
+SandboxProcessHandle	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxRepositoryOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
-SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxTarError	export declare class SandboxTarError extends Error
 WorkspaceMode	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 assertAbsoluteExecutable	export declare function assertAbsoluteExecutable(path: string, label: string): Promise<string>
 assertBrowserSandboxNetwork	export declare function assertBrowserSandboxNetwork(network: DockerNetworkConfig | undefined): void
+assertEgressAttestation	export declare function assertEgressAttestation(attestation: EgressAttestation): EgressAttestation
 assertPathInsideRoots	export declare function assertPathInsideRoots(roots: readonly string[], target: string): Promise<boolean>
+assertPinned	export declare function assertPinned(host: string, remoteAddress: string | undefined, pinned: readonly string[]): void
 assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: string, absolutePath: string): string
 buildDockerCreateArgsForTest	export declare function buildDockerCreateArgsForTest(options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">): string[]
+composeEgressSandboxNetwork	export declare function composeEgressSandboxNetwork(attestation: EgressAttestation, name: string): DockerNetworkConfig
+createAllowListEgressProxy	export declare function createAllowListEgressProxy(options: CreateAllowListEgressProxyOptions): EgressProxy
 createCodingApprovalPolicy	export declare function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions): ExecutionPolicy
 createDockerSandbox	export declare function createDockerSandbox(options: CreateDockerSandboxOptions): Promise<DisposableSandbox>
+createEgressPolicy	export declare function createEgressPolicy(options?: CreateEgressPolicyOptions): EgressPolicy
 createImportTarStream	export declare function createImportTarStream(sourceRoot: string, bounds: TarBounds): Readable
 createSandboxBashOperations	export declare function createSandboxBashOperations(adapter: SandboxAdapter): BashOperations
 createSandboxCodingComposition	export declare function createSandboxCodingComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult
@@ -92,9 +127,14 @@ createSecretRedactor	export declare function createSecretRedactor(secrets?: read
 dockerOutputText	export declare function dockerOutputText(runner: DockerRunner, request: Omit<DockerCliRequest, "collectStdout">): Promise<string>
 evaluateCommandRules	export declare function evaluateCommandRules(command: string, rules: readonly CommandRule[] | undefined, options?:
 hasShellMetacharacters	export declare function hasShellMetacharacters(command: string): boolean
+isMetadataAddress	export declare function isMetadataAddress(address: string): boolean
 isPathInside	export declare function isPathInside(root: string, target: string): boolean
 isPathInsideReal	export declare function isPathInsideReal(root: string, target: string): Promise<boolean>
+isPrivateAddress	export declare function isPrivateAddress(address: string): boolean
+normalizeAddress	export declare function normalizeAddress(address: string): string
 resolveDockerSandboxLimits	export declare function resolveDockerSandboxLimits(input?: DockerSandboxLimitOptions): ResolvedDockerSandboxLimits
+resolveEgressLimits	export declare function resolveEgressLimits(input?: EgressLimitOptions): ResolvedEgressLimits
+resolvePinned	export declare function resolvePinned(host: string, resolve?: AddressResolver): Promise<readonly string[]>
 resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
 runDockerCli	export declare function runDockerCli(request: DockerCliRequest): Promise<DockerCliResult>
 sha256Hex	export declare function sha256Hex(data: Buffer | string): string

@@ -110,8 +110,8 @@ export function createAgUiA2UiPainter(options: AgUiA2UiOptions, limits: Resolved
     type: EventType.CUSTOM,
     name: A2UI_ERROR_EVENT,
     value: {
-      code: truncate(code, 128),
-      message: truncate(message, Math.min(limits.maxErrorBytes, 2_048)),
+      code: truncateA2UiText(code, 128),
+      message: truncateA2UiText(message, Math.min(limits.maxErrorBytes, 2_048)),
     },
   });
 
@@ -132,7 +132,7 @@ export function createAgUiA2UiPainter(options: AgUiA2UiOptions, limits: Resolved
     }
     const validated: Record<string, unknown>[] = [];
     for (const item of rawOps) {
-      const op = validateOp(item, a2uiLimits, limits);
+      const op = validateA2UiOp(item, a2uiLimits, limits);
       if (!op) return [errorEvent("ERR_PRISM_A2UI_OP", "Invalid A2UI operation")];
       validated.push(op);
     }
@@ -311,7 +311,7 @@ function readOperations(value: unknown): unknown[] | null | undefined {
   return Array.isArray(ops) ? ops : null;
 }
 
-function validateOp(value: unknown, a2uiLimits: ResolvedAgUiA2UiLimits, limits: ResolvedAgUiLimits): Record<string, unknown> | undefined {
+export function validateA2UiOp(value: unknown, a2uiLimits: ResolvedAgUiA2UiLimits, limits: ResolvedAgUiLimits): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const op = value as Record<string, unknown>;
   if (op.version !== A2UI_VERSION && op.version !== "v1.0") return undefined;
@@ -552,7 +552,7 @@ function clamp(value: number, min: number, hard: number, name: string): number {
   return value;
 }
 
-function truncate(value: string, maxBytes: number): string {
+export function truncateA2UiText(value: string, maxBytes: number): string {
   if (Buffer.byteLength(value) <= maxBytes) return value;
   let bytes = 0;
   let end = 0;

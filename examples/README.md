@@ -54,6 +54,7 @@ node examples/workflow-schedules-replay.ts
 node examples/durable-coding-workflow.ts
 node examples/coding-goal-verify.ts
 node examples/coding-tools-capability-gaps.ts
+node examples/phase9-coding-intelligence.ts
 node examples/agent-durable-approval.ts
 node examples/durable-loops-and-approvals.ts
 node examples/ag-ui-server.ts
@@ -155,6 +156,7 @@ Each demo prints a single JSON line with its result.
 - `durable-coding-workflow.ts` — **demo**: durable coding plan/todos as workspace Markdown, workflow `state.coding` checkpoint metadata, approval suspend/resume with fingerprint/hash revalidation, background cancel, and host-owned PR handoff (no network).
 - `coding-goal-verify.ts` — **demo**: `runCodingGoalVerify` thin goal→verify helper (failing check → suspend → approve → bounded handoff; no Goal table / network).
 - `coding-tools-capability-gaps.ts` — **demo**: `outputMode`, `glob`, read-before-write, `delete`/`move` smoke (network-free).
+- `phase9-coding-intelligence.ts` — **demo**: composed Phase 9 scenario (network-free): Git-aware enumeration, approved LSP rename, managed process session, idempotent forge PR (fake GitHub), and allow-list egress (github+registry presets).
 - `tsconfig.json` — typecheck-only config.
 
 **demo** = the file has a runnable `main()`; the others are compile-checked

@@ -122,6 +122,26 @@ describe("performance budget gate", () => {
     }
   });
 
+  it("checks the recorded Phase 9 coding-intelligence / process / forge / egress evidence", () => {
+    const phase9 = budgets.phase9;
+    const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.26.json", "utf8"));
+    assert.equal(evidence.version, "0.0.26");
+    assert.deepEqual(evidence.fixture, phase9.fixture);
+    assert.deepEqual(evidence.ceilingsMs, phase9.p95CeilingsMs);
+    for (const [name, ceiling] of Object.entries(phase9.p95CeilingsMs)) {
+      const result = evidence.results.find((entry) => entry.name === name);
+      assert.ok(result, `missing Phase 9 result for ${name}`);
+      assert.ok(result.p95Ms <= ceiling, `${name} p95 ${result.p95Ms} exceeded ceiling ${ceiling}`);
+      assert.ok(result.throughputPerSecond > 0, `${name} throughput missing`);
+    }
+    const enumeration = evidence.results.find((entry) => entry.name === "enumerationList");
+    assert.equal(enumeration.gitInvocationsPerList, 1, "enumeration must use ≤ 2 git invocations");
+    const forge = evidence.results.find((entry) => entry.name === "forgePagination");
+    assert.equal(forge.pages, 100, "forge pagination must cover 100 pages");
+    const proxy = evidence.results.find((entry) => entry.name === "proxyDownload");
+    assert.ok(proxy.residentDeltaBytes <= 2 * 64 * 1024 ** 2, "proxy resident buffering must stay ≤ 2× maxBytes");
+  });
+
   it("checks the recorded protected enterprise PostgreSQL evidence", () => {
     const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.23.json", "utf8"));
     assert.equal(evidence.version, "0.0.23");

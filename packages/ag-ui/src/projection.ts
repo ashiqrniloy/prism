@@ -36,34 +36,37 @@ export interface AgUiCustomProjection {
   readonly value: unknown;
 }
 
-/** Host-owned allow-list. All callbacks receive redacted Prism values and must be synchronous/pure. */
+/** Value or promise of it; hooks may call async host APIs like `session.entries()`. */
+export type Awaitable<T> = T | Promise<T>;
+
+/** Host-owned allow-list. All callbacks receive redacted Prism values. Sync hooks keep exact behavior; async hooks are awaited in event order (never `Promise.all`). */
 export interface AgUiProjection {
   /** Return a safe display string to expose tool arguments; absent means omit them. */
-  toolArguments?(call: ToolCallContent): string | undefined;
+  toolArguments?(call: ToolCallContent): Awaitable<string | undefined>;
   /** Return a safe display string to expose a tool result; absent means status only. */
-  toolResult?(result: ToolResult): string | undefined;
+  toolResult?(result: ToolResult): Awaitable<string | undefined>;
   /** Legacy run-status state addition used for suspension/resume snapshots. */
-  state?(event: AgentEvent): unknown;
+  state?(event: AgentEvent): Awaitable<unknown>;
   /** Return a complete safe state replacement for a `STATE_SNAPSHOT`. */
-  stateSnapshot?(event: AgentEvent): unknown;
+  stateSnapshot?(event: AgentEvent): Awaitable<unknown>;
   /** Return an RFC 6902 patch for a `STATE_DELTA`; absent means no delta. */
-  stateDelta?(event: AgentEvent): readonly unknown[] | undefined;
+  stateDelta?(event: AgentEvent): Awaitable<readonly unknown[] | undefined>;
   /** Return a complete safe transcript for `MESSAGES_SNAPSHOT`; host preserves AG-UI message IDs. */
-  messages?(event: AgentEvent): readonly AgUiMessage[] | undefined;
+  messages?(event: AgentEvent): Awaitable<readonly AgUiMessage[] | undefined>;
   /** Return one safe activity snapshot or delta. */
-  activity?(event: AgentEvent): AgUiActivitySnapshot | AgUiActivityDelta | undefined;
+  activity?(event: AgentEvent): Awaitable<AgUiActivitySnapshot | AgUiActivityDelta | undefined>;
   /** Explicitly reveal a safe reasoning summary or pre-encrypted client value. */
-  reasoning?(content: ThinkingContent, event: AgentEvent): AgUiReasoningProjection | undefined;
+  reasoning?(content: ThinkingContent, event: AgentEvent): Awaitable<AgUiReasoningProjection | undefined>;
   /** Explicitly expose a bounded raw event wrapper. */
-  raw?(event: AgentEvent): AgUiRawProjection | undefined;
+  raw?(event: AgentEvent): Awaitable<AgUiRawProjection | undefined>;
   /** Explicitly expose one bounded named `CUSTOM` value. */
-  custom?(event: AgentEvent): AgUiCustomProjection | undefined;
+  custom?(event: AgentEvent): Awaitable<AgUiCustomProjection | undefined>;
   /** Return safe interrupt additions. Core decision/CAS fields remain adapter-owned. */
-  interrupt?(event: Extract<AgentEvent, { readonly type: "agent_suspended" }>): readonly Interrupt[] | undefined;
+  interrupt?(event: Extract<AgentEvent, { readonly type: "agent_suspended" }>): Awaitable<readonly Interrupt[] | undefined>;
   /** Return a safe, JSON-serializable co-work payload; absent exposes the redacted event fields. */
-  coWork?(event: CoWorkEvent): unknown;
+  coWork?(event: CoWorkEvent): Awaitable<unknown>;
   /** Reserved for host-owned path projection in handlers; mapper never exposes paths itself. */
-  path?(value: string): string | undefined;
+  path?(value: string): Awaitable<string | undefined>;
 }
 
 const COWORK_KINDS: readonly CoWorkKind[] = [
@@ -109,12 +112,15 @@ export function projectAgUiPatch(
  * Validates, host-projects, redacts, and byte-caps one co-work event into a safe JSON
  * payload shared by the AG-UI and ACP mappers. Malformed or oversized events fail closed
  * (undefined) so they are dropped rather than leaked. Pure: no side effects, so replay
- * from a cursor never duplicates work.
+ * from a cursor never duplicates work. The `coWork` hook may be async and is awaited.
  */
-export function projectCoWorkEvent(event: CoWorkEvent, options: CoWorkProjectionOptions): Record<string, unknown> | undefined {
+export async function projectCoWorkEvent(
+  event: CoWorkEvent,
+  options: CoWorkProjectionOptions,
+): Promise<Record<string, unknown> | undefined> {
   if (!isCoWorkEvent(event)) return undefined;
   try {
-    const shaped = options.projection?.coWork?.(event) ?? event;
+    const shaped = (await options.projection?.coWork?.(event)) ?? event;
     const redacted = options.redactor?.redact(shaped) ?? shaped;
     const serialized = JSON.stringify(redacted);
     if (serialized === undefined || Buffer.byteLength(serialized, "utf8") > options.maxBytes) return undefined;

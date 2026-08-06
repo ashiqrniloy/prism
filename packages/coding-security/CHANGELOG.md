@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.26] - 2026-08-06
+
+### Added
+- Allow-list egress: `createEgressPolicy` (deny-all exact host/port/protocol rules, frozen `npm-registry`/`github` presets, SHA-256 fingerprint), `createAllowListEgressProxy` (HTTP forward proxy + CONNECT tunnel, pinned-DNS rebinding defense, private/metadata IP denial, redirect re-validation + hop cap, request/response byte + transfer-time caps, per-decision `EgressAuditRecord`, `reloadPolicy`, `attestation`), `composeEgressSandboxNetwork` / `assertEgressAttestation` (attestation recorded as `prism.egress.*` container labels), `ERR_PRISM_EGRESS_*` codes, frozen `DEFAULT/HARD_MAX_EGRESS_*` caps. TLS passes through without interception; proxy inert until `start()`.
+- Optional `DisposableSandbox.startProcess` / `SandboxProcessHandle` for long-running process sessions (fail closed when absent; Docker adapter not yet capable).
+
 ## [0.0.25] - 2026-08-06
 
 ### Changed

@@ -1,0 +1,11 @@
+FakeJetStream	export declare class FakeJetStream implements NatsJetStream
+createNatsAgentEventSource	export declare function createNatsAgentEventSource(options: NatsAgentEventSourceOptions): ClosableNatsAgentEventSource
+createNatsJetStream	export declare function createNatsJetStream(connection: NatsConnection): Promise<NatsJetStream>
+type ClosableNatsAgentEventSource	export { createNatsAgentEventSource, type ClosableNatsAgentEventSource, type NatsAgentEventSourceOptions, } from "./event-source.js"
+type NatsAgentEventSourceOptions	export { createNatsAgentEventSource, type ClosableNatsAgentEventSource, type NatsAgentEventSourceOptions, } from "./event-source.js"
+type NatsJetStream	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"
+type NatsJetStreamConsumer	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"
+type NatsJetStreamConsumerConfig	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"
+type NatsJetStreamMessage	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"
+type NatsJetStreamPublishAck	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"
+type NatsJetStreamStoredMessage	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"

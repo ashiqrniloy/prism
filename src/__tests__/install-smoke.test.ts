@@ -132,7 +132,7 @@ before(() => {
   }
 
   // 3. Dynamic-import every documented specifier from the fresh install.
-  const specs = [...coreSpecifiers(), ...packages.filter((p) => !p.isCore && !p.isMeta).map((p) => p.name), "@arnilo/prism-ag-ui/acp"];
+  const specs = [...coreSpecifiers(), ...packages.filter((p) => !p.isCore && !p.isMeta).map((p) => p.name), "@arnilo/prism-ag-ui/acp", "@arnilo/prism-ag-ui/renderer"];
   writeFileSync(
     join(consumer, "smoke.mjs"),
     `const specs = ${JSON.stringify(specs)};\n` +
@@ -244,7 +244,7 @@ console.log("PACKED INTEGRATION OK");
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Compose every 0.0.25 optional capability family from packed public imports.
+  // 5. Compose every 0.0.26 optional capability family from packed public imports.
   writeFileSync(
     join(consumer, "composition.mjs"),
     `
@@ -353,7 +353,15 @@ const card = { name: "Packed", description: "Packed test agent", supportedInterf
 const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: () => servedAgent().createSession() }, authorize: () => ({ ownership }) });
 const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
 assert.equal((await a2a.send("hello")).text, "served");
-console.log("PACKED 0.0.25 COMPOSITION OK");
+
+// FR-6: durable AgentEventSource resolves from the packed package root (no dist/... subpath).
+const { createPostgresAgentEventSource } = await import("@arnilo/prism-session-store-postgres");
+assert.equal(typeof createPostgresAgentEventSource, "function");
+const postgresSource = createPostgresAgentEventSource({ pool: {}, schema: "prism" });
+assert.equal(typeof postgresSource.append, "function");
+assert.equal(typeof postgresSource.close, "function");
+await postgresSource.close();
+console.log("PACKED 0.0.26 COMPOSITION OK");
 `,
   );
   const composition = run("node", ["composition.mjs"], consumer);
@@ -396,7 +404,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("packed 0.0.25 optional capabilities compose through public imports", () => {
+  it("packed 0.0.26 optional capabilities compose through public imports", () => {
     assert.equal(result.compositionStatus, 0, result.compositionOut);
   });
 
@@ -410,16 +418,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.25.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.0.26.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.0.25.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.0.26.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.0.25.tgz"),
-      `expected 'arnilo-prism-0.0.25.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.0.26.tgz"),
+      `expected 'arnilo-prism-0.0.26.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.0.25.tgz", "arnilo-prism-compaction-0.0.25.tgz", "arnilo-prism-all-0.0.25.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.0.26.tgz", "arnilo-prism-compaction-0.0.26.tgz", "arnilo-prism-all-0.0.26.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

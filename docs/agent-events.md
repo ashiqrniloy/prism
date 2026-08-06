@@ -22,6 +22,31 @@ Event records preserve emission order within a run because the runtime drains pe
 
 `AgentEventSource` (`createMemoryAgentEventSource` / `persistence.events` on PostgreSQL) appends, pages, and subscribes with opaque ownership-bound cursors. `subscribe` registers wake interest before replaying history so replay-to-live handoff has no gap. Delivery is at-least-once; consumers dedupe `record.id`. PostgreSQL uses transactional sequence allocation plus `LISTEN`/`NOTIFY` wakeups with polling fallback. Transport adapters (server SSE `Last-Event-ID`, AG-UI, A2A `afterEventId`) map source envelopes only — they do not invent private replay loops. This is not exactly-once.
 
+### Placement (FR-7 answer, 0.0.26)
+
+The durable `AgentEventSource` **stays in `@arnilo/prism-session-store-postgres`** for the 0.0.26 line and is importable from the package root (FR-6):
+
+```ts
+import { createPostgresAgentEventSource } from "@arnilo/prism-session-store-postgres";
+const source = createPostgresAgentEventSource({ pool, schema: "prism", cursorSecret });
+```
+
+PostgreSQL `LISTEN`/`NOTIFY` remains the **reference durable implementation**; `createPostgresPersistence` still bundles the same source as `persistence.events` (the canonical path — no behavior change). The standalone root export exists for consumers that want a durable source without full persistence. The migration path from the 0.0.24/0.0.25 API is: `persistence.events` and `createPostgresAgentEventSource` both keep working unchanged; a future relocation (if any) ships a replacement export with a deprecation note before removing the old one. See [migration](migration.md) `0.0.25 → 0.0.26` and the FR-6/FR-7 record `prism-agent-event-source-export-and-location.md`.
+
+### NATS JetStream adapter (FR-5)
+
+`@arnilo/prism-session-store-nats` ships a sibling durable `AgentEventSource` over NATS JetStream for JetStream backbones (Postgres remains the reference implementation):
+
+```ts
+import { connect } from "@nats-io/transport-node";
+import { createNatsAgentEventSource, createNatsJetStream } from "@arnilo/prism-session-store-nats";
+
+const nc = await connect({ servers: process.env.NATS_URL });
+const source = createNatsAgentEventSource({ connection: await createNatsJetStream(nc), stream: "prism_agent_events" });
+```
+
+One subject per run (`prism.agent-events.<tenant>.<session>.<run>`); the JetStream per-subject sequence is the per-run event sequence. `append` is idempotent by `record.id` within the stream's dedupe window; `page`/`subscribe` replay per subject from HMAC-signed cursors; `subscribe` uses a durable pull consumer with explicit acks (at-least-once, 30s redelivery, dedupe by `record.id`); `cleanup` deletes ownership-scoped messages older than `before`. The host provisions the stream (subjects `prism.agent-events.>`, retention limits, dedupe window). Inert on import; network-free tests use an in-memory fake of the narrow `NatsJetStream` seam.
+
 ## Inputs / request
 
 ```ts

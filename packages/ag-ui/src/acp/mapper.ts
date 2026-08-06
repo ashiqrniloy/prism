@@ -12,9 +12,9 @@ export interface AcpEventMapperOptions {
 }
 
 export interface AcpEventMapper {
-  map(event: AgentEvent): readonly SessionUpdate[];
+  map(event: AgentEvent): Promise<readonly SessionUpdate[]>;
   /** Projects one co-work event to a safe ACP session update; malformed input yields none. */
-  mapCoWork(event: CoWorkEvent): readonly SessionUpdate[];
+  mapCoWork(event: CoWorkEvent): Promise<readonly SessionUpdate[]>;
 }
 
 /** Maps redacted Prism lifecycle events to stable ACP v1 session updates. */
@@ -25,8 +25,8 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
 
   const text = (value: string, maxBytes = limits.maxTextBytes) =>
     truncate(options.redactor?.redact(value) ?? value, Math.min(maxBytes, limits.maxEventBytes));
-  const tool = (call: PrismToolCall) => {
-    const input = projected(() => options.projection?.toolArguments?.(call));
+  const tool = async (call: PrismToolCall) => {
+    const input = await projected(() => options.projection?.toolArguments?.(call));
     return {
       toolCallId: text(call.id),
       title: text(call.name),
@@ -35,8 +35,8 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
       ...(input ? { content: [content(input)] } : {}),
     };
   };
-  const finish = (id: string, name: string, status: "completed" | "failed", result?: ToolResult): SessionUpdate => {
-    const output = result ? projected(() => options.projection?.toolResult?.(result)) : undefined;
+  const finish = async (id: string, name: string, status: "completed" | "failed", result?: ToolResult): Promise<SessionUpdate> => {
+    const output = result ? await projected(() => options.projection?.toolResult?.(result)) : undefined;
     return {
       sessionUpdate: "tool_call_update",
       toolCallId: text(id),
@@ -45,9 +45,9 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
       ...(output ? { content: [content(output)] } : {}),
     };
   };
-  const projected = (callback: () => string | undefined): string | undefined => {
+  const projected = async (callback: () => string | undefined | Promise<string | undefined>): Promise<string | undefined> => {
     try {
-      const value = callback();
+      const value = await callback();
       return typeof value === "string" ? text(value) : undefined;
     } catch {
       return undefined;
@@ -55,8 +55,8 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
   };
 
   return {
-    mapCoWork(input) {
-      const payload = projectCoWorkEvent(input, {
+    async mapCoWork(input) {
+      const payload = await projectCoWorkEvent(input, {
         redactor: options.redactor,
         projection: options.projection,
         maxBytes: limits.maxTextBytes,
@@ -64,7 +64,7 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
       if (payload === undefined) return [];
       return [message(`prism:cowork:${input.kind}`, truncate(JSON.stringify(payload), limits.maxTextBytes))];
     },
-    map(input) {
+    async map(input) {
       const event = options.redactor?.redact(input) ?? input;
       switch (event.type) {
         case "message_started":
@@ -88,17 +88,17 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
           return updates;
         }
         case "tool_execution_started":
-          return [{ sessionUpdate: "tool_call", ...tool(event.call) }];
+          return [{ sessionUpdate: "tool_call", ...(await tool(event.call)) }];
         case "tool_execution_progress":
           return [
             { sessionUpdate: "tool_call_update", toolCallId: text(event.toolCallId), title: text(event.name), status: "in_progress" },
           ];
         case "tool_execution_finished":
-          return [finish(event.result.toolCallId, event.result.name, "completed", event.result)];
+          return [await finish(event.result.toolCallId, event.result.name, "completed", event.result)];
         case "tool_execution_error":
-          return [finish(event.call.id, event.call.name, "failed")];
+          return [await finish(event.call.id, event.call.name, "failed")];
         case "tool_execution_blocked":
-          return [finish(event.toolCallId, event.name, "failed")];
+          return [await finish(event.toolCallId, event.name, "failed")];
         case "provider_turn_finished":
           if (event.error) return [error(event.error, text)];
           return event.usage ? [usage(event.usage)] : [];

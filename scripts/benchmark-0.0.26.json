@@ -1,0 +1,91 @@
+{
+  "version": "0.0.26",
+  "generatedAt": "2026-08-06T19:10:33.072Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics",
+    "memoryBytes": 65977401344,
+    "network": false
+  },
+  "fixture": {
+    "warmups": 5,
+    "measuredOperations": 20,
+    "enumerationFiles": 100000,
+    "processSpillBytes": 1073741824,
+    "lspDiagnostics": 1000,
+    "forgePages": 100,
+    "proxyDownloadBytes": 67108864,
+    "rendererOps": 1000,
+    "mapperEvents": 4000
+  },
+  "ceilingsMs": {
+    "enumerationList": 2000,
+    "processChunkPage": 10,
+    "lspDiagnosticNormalize": 100,
+    "forgePagination": 10000,
+    "proxyDownload": 30000,
+    "rendererStreamOps": 100,
+    "agUiMapperSync": 100
+  },
+  "results": [
+    {
+      "name": "enumerationList",
+      "operations": 20,
+      "p50Ms": 279.043,
+      "p95Ms": 297.316,
+      "throughputPerSecond": 3.55,
+      "gitInvocationsPerList": 1
+    },
+    {
+      "name": "processChunkPage",
+      "operations": 1311,
+      "p50Ms": 0.027,
+      "p95Ms": 0.047,
+      "throughputPerSecond": 30932.19,
+      "retainedBytes": 67108864
+    },
+    {
+      "name": "lspDiagnosticNormalize",
+      "operations": 20,
+      "p50Ms": 0.14,
+      "p95Ms": 0.198,
+      "throughputPerSecond": 6604.22
+    },
+    {
+      "name": "forgePagination",
+      "operations": 20,
+      "p50Ms": 139.672,
+      "p95Ms": 144.006,
+      "throughputPerSecond": 7.13,
+      "pages": 100,
+      "itemsPerPage": 100
+    },
+    {
+      "name": "proxyDownload",
+      "operations": 20,
+      "p50Ms": 75.529,
+      "p95Ms": 91.754,
+      "throughputPerSecond": 12.89,
+      "bytes": 67108864,
+      "residentDeltaBytes": 37027840
+    },
+    {
+      "name": "rendererStreamOps",
+      "operations": 20,
+      "p50Ms": 1.532,
+      "p95Ms": 1.636,
+      "throughputPerSecond": 641.52,
+      "ops": 1000
+    },
+    {
+      "name": "agUiMapperSync",
+      "operations": 20,
+      "p50Ms": 30.597,
+      "p95Ms": 32.608,
+      "throughputPerSecond": 32.63,
+      "events": 4000
+    }
+  ]
+}

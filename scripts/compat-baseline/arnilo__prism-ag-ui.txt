@@ -2,18 +2,30 @@ A2UI_ACTIVITY_TYPE	export declare const A2UI_ACTIVITY_TYPE = "a2ui-surface"
 A2UI_ERROR_EVENT	export declare const A2UI_ERROR_EVENT = "prism.a2ui.error"
 A2UI_OPERATIONS_KEY	export declare const A2UI_OPERATIONS_KEY = "a2ui_operations"
 A2UI_VERSION	export declare const A2UI_VERSION = "v0.9"
-AgUiActivityDelta	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
-AgUiActivitySnapshot	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+A2UiCatalog	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+A2UiComponentModel	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+A2UiComponentRenderer	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+A2UiReduceResult	export type { A2UiComponentModel, A2UiRenderError, A2UiSurfaceModel, A2UiReduceResult, } from "./core.js"
+A2UiRenderContext	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+A2UiRenderError	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+A2UiRenderer	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+A2UiSurfaceModel	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+A2UiSurfaceState	export declare class A2UiSurfaceState implements A2UiSurfaceModel
+AgUiActivityDelta	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, Awaitable, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiActivitySnapshot	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, Awaitable, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiAuthorization	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
-AgUiCustomProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiCustomProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, Awaitable, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiError	export declare class AgUiError extends Error
-AgUiProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
-AgUiRawProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
-AgUiReasoningProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, Awaitable, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiRawProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, Awaitable, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
+AgUiReasoningProjection	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, Awaitable, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 AgUiRunReference	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
+Awaitable	export type { AgUiActivityDelta, AgUiActivitySnapshot, AgUiCustomProjection, AgUiProjection, Awaitable, AgUiRawProjection, AgUiReasoningProjection, } from "./projection.js"
 CoWorkContext	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 CoWorkEvent	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
 CoWorkKind	export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js"
+CreateA2UiRendererOptions	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+DEFAULT_A2UI_CATALOG	export declare const DEFAULT_A2UI_CATALOG: A2UiCatalog
 DEFAULT_AG_UI_LIMITS	export declare const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits
 DEFAULT_MAX_A2UI_COMPONENT_DEPTH	export declare const DEFAULT_MAX_A2UI_COMPONENT_DEPTH = 32
 DEFAULT_MAX_A2UI_OPERATION_BYTES	export declare const DEFAULT_MAX_A2UI_OPERATION_BYTES: number
@@ -47,6 +59,8 @@ DEFAULT_MAX_STREAM_BYTES	export declare const DEFAULT_MAX_STREAM_BYTES: number
 DEFAULT_MAX_STREAM_EVENTS	export declare const DEFAULT_MAX_STREAM_EVENTS = 10000
 DEFAULT_MAX_TEXT_BYTES	export declare const DEFAULT_MAX_TEXT_BYTES: number
 DEFAULT_REQUEST_TIMEOUT_MS	export declare const DEFAULT_REQUEST_TIMEOUT_MS = 120000
+Dom	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
+DomNode	export type { A2UiCatalog, A2UiComponentModel, A2UiComponentRenderer, A2UiRenderContext, A2UiRenderError, A2UiRenderer, A2UiSurfaceModel, CreateA2UiRendererOptions, Dom, DomNode, } from "./renderer/index.js"
 HARD_AG_UI_LIMITS	export declare const HARD_AG_UI_LIMITS: ResolvedAgUiLimits
 HARD_MAX_A2UI_COMPONENT_DEPTH	export declare const HARD_MAX_A2UI_COMPONENT_DEPTH = 64
 HARD_MAX_A2UI_OPERATION_BYTES	export declare const HARD_MAX_A2UI_OPERATION_BYTES: number
@@ -80,11 +94,14 @@ HARD_MAX_STREAM_BYTES	export declare const HARD_MAX_STREAM_BYTES: number
 HARD_MAX_STREAM_EVENTS	export declare const HARD_MAX_STREAM_EVENTS = 100000
 HARD_MAX_TEXT_BYTES	export declare const HARD_MAX_TEXT_BYTES: number
 HARD_REQUEST_TIMEOUT_MS	export declare const HARD_REQUEST_TIMEOUT_MS: number
+RenderA2UiSurfaceOptions	export type { A2UiCatalog, A2UiComponentRenderer, A2UiRenderContext, Dom, DomNode, RenderA2UiSurfaceOptions } from "./bind.js"
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxBytes: number, limits: Pick<ResolvedAgUiLimits, "maxJsonDepth" | "maxJsonProperties" | "maxJsonArrayItems">, name: string): void
 composeAgUiProjections	export declare function composeAgUiProjections(...projections: readonly (AgUiProjection | undefined)[]): AgUiProjection
+createA2UiRenderer	export declare function createA2UiRenderer(options: CreateA2UiRendererOptions): A2UiRenderer
 createAcpEventMapper	export declare function createAcpEventMapper(options?: AcpEventMapperOptions): AcpEventMapper
 createActivityFromToolProgressProjection	export declare function createActivityFromToolProgressProjection(options?: CreateActivityFromToolProgressProjectionOptions): AgUiProjection
 createAgUiA2AAdapter	export declare function createAgUiA2AAdapter<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiA2AAdapterOptions<Authorization>): AgUiA2AAdapter<Authorization>
+createAgUiA2AServer	export declare function createAgUiA2AServer(options: CreateAgUiA2AServerOptions): Promise<AgUiA2AServer>
 createAgUiA2UiPainter	export declare function createAgUiA2UiPainter(options: AgUiA2UiOptions, limits: ResolvedAgUiLimits, redactor?: SecretRedactor): AgUiA2UiPainter
 createAgUiEventMapper	export declare function createAgUiEventMapper(options?: AgUiEventMapperOptions): AgUiEventMapper
 createAgUiHandler	export declare function createAgUiHandler<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: CreateAgUiHandlerOptions<Authorization>): AgUiHandler
@@ -96,18 +113,28 @@ createCoWorkReplay	export declare function createCoWorkReplay<Authorization>(opt
 createMessagesFromSessionProjection	export declare function createMessagesFromSessionProjection(options?: CreateMessagesFromSessionProjectionOptions): AgUiProjection
 createPersistenceAgUiReplay	export declare function createPersistenceAgUiReplay<Authorization>(store: Pick<ProductionPersistenceStore, "queryEvents">, options: PersistenceAgUiReplayOptions<Authorization>): AgUiReplay<Authorization>
 createPrismAcpAgent	export declare function createPrismAcpAgent<Authorization extends AcpAuthorization = AcpAuthorization>(options: CreatePrismAcpAgentOptions<Authorization>): AgentApp
+createReasoningEncryptedValue	export declare function createReasoningEncryptedValue(options: CreateReasoningEncryptedValueOptions): AgUiReasoningProjection | undefined
 createStateFromStoreProjection	export declare function createStateFromStoreProjection(store: AgUiStateStore, options?: CreateStateFromStoreProjectionOptions): AgUiProjection
 defaultAgUiInput	export declare function defaultAgUiInput(input: ParsedAgUiInput, limits: ResolvedAgUiLimits): string
+deriveAppEffectKey	export declare function deriveAppEffectKey(input: AppEffectKeyInput): string
 extractAgUiA2UiActions	export declare function extractAgUiA2UiActions(input: ParsedAgUiInput, limits: ResolvedAgUiLimits, maxPayloadBytes?: number): readonly AgUiA2UiAction[]
+hashJson	export declare function hashJson(value: unknown): string
 jsonDiff	export declare function jsonDiff(from: unknown, to: unknown, path?: string): unknown[]
 packageName	export declare const packageName = "@arnilo/prism-ag-ui"
 parseAgUiInput	export declare function parseAgUiInput(value: unknown, limits: ResolvedAgUiLimits): ParsedAgUiInput
 projectAgUiJson	export declare function projectAgUiJson(value: unknown, maxBytes: number, limits: ResolvedAgUiLimits, name: string): unknown | undefined
 projectAgUiPatch	export declare function projectAgUiPatch(value: readonly unknown[] | undefined, maxOperations: number, maxBytes: number, limits: ResolvedAgUiLimits, name: string): readonly unknown[] | undefined
-projectCoWorkEvent	export declare function projectCoWorkEvent(event: CoWorkEvent, options: CoWorkProjectionOptions): Record<string, unknown> | undefined
+projectCoWorkEvent	export declare function projectCoWorkEvent(event: CoWorkEvent, options: CoWorkProjectionOptions): Promise<Record<string, unknown> | undefined>
+readA2UiBatch	export declare function readA2UiBatch(event: AGUIEvent):
+reconcileAppEffect	export declare function reconcileAppEffect(input: ReconcileAppEffectInput): Promise<ToolEffectRecord | undefined>
+reduceA2UiOps	export declare function reduceA2UiOps(surfaces: Map<string, A2UiSurfaceState>, ops: readonly unknown[], a2uiLimits: ResolvedAgUiA2UiLimits, base?: ResolvedAgUiLimits, replace?: boolean): A2UiReduceResult
+renderA2UiSurface	export declare function renderA2UiSurface(surface: A2UiSurfaceModel, catalog: A2UiCatalog, dom: Dom, options?: RenderA2UiSurfaceOptions): DomNode
 resolveAgUiA2UiLimits	export declare function resolveAgUiA2UiLimits(options?: AgUiA2UiLimitOptions): ResolvedAgUiA2UiLimits
 resolveAgUiCapabilities	export declare function resolveAgUiCapabilities<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: Pick<CreateAgUiHandlerOptions<Authorization>, "capabilities" | "input" | "interrupts" | "lifecycle" | "projection" | "replay" | "resolveRun">): AgentCapabilities
 resolveAgUiLimits	export declare function resolveAgUiLimits(options?: AgUiLimitOptions): ResolvedAgUiLimits
+resolvePointer	export declare function resolvePointer(root: unknown, pointer: string): unknown
+truncateA2UiText	export declare function truncateA2UiText(value: string, maxBytes: number): string
+truncateUtf8	export declare function truncateUtf8(value: string, maxBytes: number): string
 type AcpAuthorization	export { type AcpAuthorization, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
 type AcpEventMapper	export { type AcpEventMapper, type AcpEventMapperOptions, createAcpEventMapper } from "./mapper.js"
 type AcpEventMapperOptions	export { type AcpEventMapper, type AcpEventMapperOptions, createAcpEventMapper } from "./mapper.js"
@@ -116,6 +143,8 @@ type AgUiA2AAdapter	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInpu
 type AgUiA2APartProjectionInput	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
 type AgUiA2ASelection	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
 type AgUiA2ASelectionInput	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type AgUiA2AServer	export { type AgUiA2AServer, type AgUiA2AServerTaskInput, type CreateAgUiA2AServerOptions, createAgUiA2AServer } from "./a2a-server.js"
+type AgUiA2AServerTaskInput	export { type AgUiA2AServer, type AgUiA2AServerTaskInput, type CreateAgUiA2AServerOptions, createAgUiA2AServer } from "./a2a-server.js"
 type AgUiA2UiAction	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
 type AgUiA2UiLimitOptions	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
 type AgUiA2UiOptions	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
@@ -136,6 +165,7 @@ type AgUiLimitOptions	export { type AgUiLimitOptions, DEFAULT_AG_UI_LIMITS, DEFA
 type AgUiMcpAdapter	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
 type AgUiMcpAppAuthorizationInput	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
 type AgUiMcpAppCallContext	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
+type AgUiMcpAppEffectContext	export { type AgUiMcpAppEffectContext, type ReconcileAppEffectInput, deriveAppEffectKey, hashJson, reconcileAppEffect, } from "./effect-recovery.js"
 type AgUiMcpAppSandbox	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
 type AgUiMcpPrepareInput	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
 type AgUiMcpToolSelectionInput	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
@@ -155,12 +185,16 @@ type CoWorkReplayRequest	export { type AgentEventSourceAgUiReplayOptions, type A
 type CoWorkSource	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
 type CreateActivityFromToolProgressProjectionOptions	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
 type CreateAgUiA2AAdapterOptions	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
+type CreateAgUiA2AServerOptions	export { type AgUiA2AServer, type AgUiA2AServerTaskInput, type CreateAgUiA2AServerOptions, createAgUiA2AServer } from "./a2a-server.js"
 type CreateAgUiHandlerOptions	export { type AgUiAuthorizationInput, type AgUiFrontendToolHandoff, type AgUiFrontendToolPolicyInput, type AgUiHandler, type AgUiInputOptions, type AgUiInputProjection, type AgUiInputProjectorInput, type AgUiInterruptOptions, type AgUiInterruptResume, type AgUiPreparedInput, type AgUiRunResolutionRequest, type CreateAgUiHandlerOptions, createAgUiHandler, resolveAgUiCapabilities, } from "./handler.js"
 type CreateAgUiMcpAdapterOptions	export { type AgUiMcpAdapter, type AgUiMcpPrepareInput, type AgUiMcpToolSelectionInput, type CreateAgUiMcpAdapterOptions, createAgUiMcpAdapter, } from "./mcp.js"
 type CreateAgUiMcpAppHandlerOptions	export { type AgUiMcpAppAuthorizationInput, type AgUiMcpAppCallContext, type AgUiMcpAppSandbox, type CreateAgUiMcpAppHandlerOptions, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, } from "./mcp-apps.js"
 type CreateMessagesFromSessionProjectionOptions	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
 type CreatePrismAcpAgentOptions	export { type AcpAuthorization, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
+type CreateReasoningEncryptedValueOptions	export { type CreateReasoningEncryptedValueOptions, createReasoningEncryptedValue, } from "./encrypted-value.js"
 type CreateStateFromStoreProjectionOptions	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
 type PersistenceAgUiReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
+type ReconcileAppEffectInput	export { type AgUiMcpAppEffectContext, type ReconcileAppEffectInput, deriveAppEffectKey, hashJson, reconcileAppEffect, } from "./effect-recovery.js"
 type ResolvedAgUiA2UiLimits	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
 type ResolvedAgUiLimits	export { type AgUiLimitOptions, DEFAULT_AG_UI_LIMITS, DEFAULT_MAX_ACTIVITY_BYTES, DEFAULT_MAX_CURSOR_BYTES, DEFAULT_MAX_ERROR_BYTES, DEFAULT_MAX_EVENT_BYTES, DEFAULT_MAX_INPUT_CONTEXT_BYTES, DEFAULT_MAX_INPUT_CONTEXTS, DEFAULT_MAX_INPUT_INTERRUPTS, DEFAULT_MAX_INPUT_MEDIA_BYTES, DEFAULT_MAX_INPUT_MEDIA_PARTS, DEFAULT_MAX_INPUT_MESSAGES, DEFAULT_MAX_INPUT_TEXT_BYTES, DEFAULT_MAX_INPUT_TOOL_BYTES, DEFAULT_MAX_INPUT_TOOLS, DEFAULT_MAX_JSON_ARRAY_ITEMS, DEFAULT_MAX_JSON_DEPTH, DEFAULT_MAX_JSON_PROPE
+validateA2UiOp	export declare function validateA2UiOp(value: unknown, a2uiLimits: ResolvedAgUiA2UiLimits, limits: ResolvedAgUiLimits): Record<string, unknown> | undefined

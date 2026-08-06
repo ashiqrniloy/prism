@@ -1,6 +1,6 @@
 # @arnilo/prism-session-store-postgres
 
-Optional PostgreSQL adapter implementing Prism `SessionStore`, `RunLedger`, `ProductionPersistenceStore`, owned `RunFeedbackStore`, generic `CheckpointStore`, and atomic `LeaseStore` over [`pg`](https://node-postgres.com/).
+Optional PostgreSQL adapter implementing Prism `SessionStore`, `RunLedger`, `ProductionPersistenceStore`, owned `RunFeedbackStore`, generic `CheckpointStore`, and atomic `LeaseStore` over [`pg`](https://node-postgres.com/). Also re-exports the durable `AgentEventSource` (`createPostgresAgentEventSource`) from the package root — the reference durable implementation (PostgreSQL `LISTEN`/`NOTIFY`), also bundled as `persistence.events`.
 
 ## Install
 
@@ -42,6 +42,10 @@ Open holds its existing per-schema advisory transaction lock while validating or
 | `schema` | `"prism"` | PostgreSQL schema for Prism tables (validated/quoted) |
 | `poolMax` | `10` | Maximum pool size when creating a pool from `connectionString` |
 | `poolConfig` | — | Additional `pg` pool options (TLS, idle timeout, etc.) |
+
+## Standalone durable event source
+
+`createPostgresAgentEventSource({ pool, schema, cursorSecret? })` returns a `ClosablePostgresAgentEventSource` (append/page/subscribe/close) without full persistence. `cursorSecret` must be reused across replicas to make cursors resumable. `createPostgresPersistence` bundles the same source as `persistence.events` — the canonical path; the root export exists for consumers that want only the source. See [agent events](../../docs/agent-events.md) for the placement answer (FR-7).
 
 ## Conformance
 
