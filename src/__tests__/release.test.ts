@@ -119,7 +119,7 @@ test("partial publish writes resumable report and publish arguments are explicit
     JSON.parse(readFileSync(reportPath, "utf8")).packages.map((entry: { status: string }) => entry.status),
     ["published", "failed"],
   );
-  assert.deepEqual(publishArgs(release.packages[0], true), [
+  assert.deepEqual(publishArgs(release.packages[0], true, true), [
     "publish",
     ".",
     "--access",
@@ -129,6 +129,7 @@ test("partial publish writes resumable report and publish arguments are explicit
     "latest",
     "--dry-run",
   ]);
+  assert.ok(!publishArgs(release.packages[0], true, false).includes("--provenance"), "local publish must not request provenance");
   assert.equal(publishArgs(release.packages[1])[1], "./packages/addon");
 });
 

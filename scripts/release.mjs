@@ -114,8 +114,9 @@ function saveReport(path, report) {
   writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`);
 }
 
-export function publishArgs(pkg, dryRun = false) {
-  const args = ["publish", pkg.path === "." ? "." : `./${pkg.path}`, "--access", "public", "--provenance", "--tag", "latest"];
+export function publishArgs(pkg, dryRun = false, provenance = process.env.GITHUB_ACTIONS === "true") {
+  const args = ["publish", pkg.path === "." ? "." : `./${pkg.path}`, "--access", "public", "--tag", "latest"];
+  if (provenance) args.splice(4, 0, "--provenance");
   if (dryRun) args.push("--dry-run");
   return args;
 }
