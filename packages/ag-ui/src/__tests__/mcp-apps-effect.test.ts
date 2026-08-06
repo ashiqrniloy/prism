@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AgentIdentity, ToolEffectRecord, ToolEffectStore } from "@arnilo/prism";
+import type { AgentIdentity, ToolEffectStore } from "@arnilo/prism";
 import { createMemoryToolEffectStore } from "@arnilo/prism";
 import type { McpAppsBridge } from "@arnilo/prism-mcp";
 import { deriveAppEffectKey, hashJson, reconcileAppEffect } from "../effect-recovery.js";
@@ -55,7 +55,11 @@ function handlerOptions(store: ToolEffectStore | undefined, callTool: McpAppsBri
   };
 }
 
-function call(handler: (request: Request) => Promise<Response>, method = "tools/call", params: Record<string, unknown> = { name: "mutate", arguments: { id: 1 } }) {
+function call(
+  handler: (request: Request) => Promise<Response>,
+  method = "tools/call",
+  params: Record<string, unknown> = { name: "mutate", arguments: { id: 1 } },
+) {
   return handler(
     new Request("https://proxy.test/mcp", {
       method: "POST",
@@ -139,7 +143,10 @@ describe("MCP Apps effect recording (FR-4)", () => {
       new Request("https://proxy.test/mcp", {
         method: "POST",
         headers: { "content-type": "application/json", origin: "https://ui.test" },
-        body: JSON.stringify({ serverId: "app", message: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "mutate", arguments: { id: 1 } } } }),
+        body: JSON.stringify({
+          serverId: "app",
+          message: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "mutate", arguments: { id: 1 } } },
+        }),
         signal: controller.signal,
       }),
     ).then((response) => response.status);
@@ -147,7 +154,13 @@ describe("MCP Apps effect recording (FR-4)", () => {
     controller.abort();
     release?.();
     assert.equal(await pending, 400);
-    const key = deriveAppEffectKey({ ownership, sessionId: "session", runId: "run", toolName: "mutate", argumentsHash: hashJson({ id: 1 }) });
+    const key = deriveAppEffectKey({
+      ownership,
+      sessionId: "session",
+      runId: "run",
+      toolName: "mutate",
+      argumentsHash: hashJson({ id: 1 }),
+    });
     const base = {
       identity,
       ownership,
@@ -200,7 +213,13 @@ describe("MCP Apps effect recording (FR-4)", () => {
     const records = await store.get({
       identity: otherIdentity,
       ownership: otherOwnership,
-      key: deriveAppEffectKey({ ownership: otherOwnership, sessionId: "session", runId: "run", toolName: "mutate", argumentsHash: hashJson({ id: 1 }) }),
+      key: deriveAppEffectKey({
+        ownership: otherOwnership,
+        sessionId: "session",
+        runId: "run",
+        toolName: "mutate",
+        argumentsHash: hashJson({ id: 1 }),
+      }),
       sessionId: "session",
       runId: "run",
       toolCallId: "call-1",
@@ -249,7 +268,13 @@ describe("MCP Apps effect recording (FR-4)", () => {
     });
     assert.equal(missing, undefined);
     // A dispatched (in-flight) record is not reconciled.
-    const key = deriveAppEffectKey({ ownership, sessionId: "session", runId: "run", toolName: "mutate", argumentsHash: hashJson({ id: 1 }) });
+    const key = deriveAppEffectKey({
+      ownership,
+      sessionId: "session",
+      runId: "run",
+      toolName: "mutate",
+      argumentsHash: hashJson({ id: 1 }),
+    });
     const base = {
       identity,
       ownership,

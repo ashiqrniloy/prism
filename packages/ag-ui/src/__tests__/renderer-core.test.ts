@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import { EventType, type AGUIEvent } from "@ag-ui/core";
 import { describe, it } from "node:test";
-import {
-  A2UiSurfaceState,
-  readA2UiBatch,
-  reduceA2UiOps,
-  resolvePointer,
-  type A2UiSurfaceModel,
-} from "../renderer/core.js";
+import { A2UiSurfaceState, readA2UiBatch, reduceA2UiOps, resolvePointer, type A2UiSurfaceModel } from "../renderer/core.js";
 import { resolveAgUiA2UiLimits } from "../a2ui.js";
 import { DEFAULT_AG_UI_LIMITS } from "../limits.js";
 
@@ -29,7 +23,11 @@ function deleteSurface(surfaceId: string): Record<string, unknown> {
   return op("deleteSurface", { surfaceId });
 }
 
-function reduce(ops: readonly unknown[], replace = false, extra: { maxSurfacesPerRun?: number; maxOperationsPerMessage?: number; maxComponentDepth?: number } = {}) {
+function reduce(
+  ops: readonly unknown[],
+  replace = false,
+  extra: { maxSurfacesPerRun?: number; maxOperationsPerMessage?: number; maxComponentDepth?: number } = {},
+) {
   const surfaces = new Map<string, A2UiSurfaceState>();
   const result = reduceA2UiOps(surfaces, ops, resolveAgUiA2UiLimits(extra), DEFAULT_AG_UI_LIMITS, replace);
   return { surfaces, result };
@@ -82,7 +80,12 @@ describe("A2UI renderer core", () => {
     assert.equal(result.error, undefined);
     const surface = surfaces.get("s")!;
     assert.deepEqual(surface.dataModel, { user: { name: "bob" } });
-    const second = reduceA2UiOps(surfaces, [updateComponents("s", [{ id: "root", component: "Text", text: "b" }])], limits, DEFAULT_AG_UI_LIMITS);
+    const second = reduceA2UiOps(
+      surfaces,
+      [updateComponents("s", [{ id: "root", component: "Text", text: "b" }])],
+      limits,
+      DEFAULT_AG_UI_LIMITS,
+    );
     assert.equal(second.error, undefined);
     assert.equal(surfaces.get("s")!.components.size, 1, "upsert, not duplicate");
     assert.equal(surfaces.get("s")!.components.get("root")!.props.text, "b");
@@ -117,8 +120,17 @@ describe("A2UI renderer core", () => {
   });
 
   it("appends ops on delta batches", () => {
-    const { surfaces } = reduce([createSurface("s"), updateComponents("s", [{ id: "root", component: "Column", children: ["a"] }]), updateComponents("s", [{ id: "a", component: "Text", text: "x" }])]);
-    const result = reduceA2UiOps(surfaces, [updateComponents("s", [{ id: "b", component: "Text", text: "y" }])], limits, DEFAULT_AG_UI_LIMITS);
+    const { surfaces } = reduce([
+      createSurface("s"),
+      updateComponents("s", [{ id: "root", component: "Column", children: ["a"] }]),
+      updateComponents("s", [{ id: "a", component: "Text", text: "x" }]),
+    ]);
+    const result = reduceA2UiOps(
+      surfaces,
+      [updateComponents("s", [{ id: "b", component: "Text", text: "y" }])],
+      limits,
+      DEFAULT_AG_UI_LIMITS,
+    );
     assert.equal(result.error, undefined);
     assert.equal(surfaces.get("s")!.components.size, 3);
   });
@@ -180,8 +192,19 @@ describe("A2UI renderer core", () => {
     assert.equal(readA2UiBatch(snapshot("s", [createSurface("s")]))!.replace, true);
     assert.deepEqual(readA2UiBatch(delta("s", updateComponents("s", [{ id: "a", component: "Text" }])))!.ops.length, 1);
     assert.equal(readA2UiBatch(delta("s", updateComponents("s", [{ id: "a", component: "Text" }])))!.replace, false);
-    assert.equal(readA2UiBatch({ type: EventType.ACTIVITY_SNAPSHOT, messageId: "m", activityType: "other", content: { a: 1 }, replace: true }), undefined);
-    assert.equal(readA2UiBatch({ type: EventType.ACTIVITY_DELTA, messageId: "m", activityType: "a2ui-surface", patch: [{ op: "replace", path: "/a2ui_operations/0", value: 1 }] }), undefined);
+    assert.equal(
+      readA2UiBatch({ type: EventType.ACTIVITY_SNAPSHOT, messageId: "m", activityType: "other", content: { a: 1 }, replace: true }),
+      undefined,
+    );
+    assert.equal(
+      readA2UiBatch({
+        type: EventType.ACTIVITY_DELTA,
+        messageId: "m",
+        activityType: "a2ui-surface",
+        patch: [{ op: "replace", path: "/a2ui_operations/0", value: 1 }],
+      }),
+      undefined,
+    );
     assert.equal(readA2UiBatch({ type: EventType.TEXT_MESSAGE_START, messageId: "m", role: "assistant" }), undefined);
   });
 

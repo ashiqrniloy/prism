@@ -1,12 +1,5 @@
 import { createHash } from "node:crypto";
-import type {
-  AgentIdentity,
-  OwnershipScope,
-  ToolEffectKey,
-  ToolEffectRecord,
-  ToolEffectStore,
-  ToolResult,
-} from "@arnilo/prism";
+import type { AgentIdentity, OwnershipScope, ToolEffectKey, ToolEffectRecord, ToolEffectStore, ToolResult } from "@arnilo/prism";
 
 /** Host-supplied identity/ownership for UI-initiated effect recording. */
 export interface AgUiMcpAppEffectContext {
@@ -51,7 +44,9 @@ export function deriveAppEffectKey(input: AppEffectKeyInput): string {
 }
 
 export function hashJson(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(canonical(value)))
+    .digest("hex");
 }
 
 /**

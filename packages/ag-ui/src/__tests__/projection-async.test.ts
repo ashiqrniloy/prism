@@ -7,24 +7,26 @@ import { createAgUiEventMapper } from "../index.js";
 import { composeAgUiProjections, createMessagesFromSessionProjection } from "../projectors.js";
 
 /** entries()-shaped async transcript source (AgentSession.entries() is async). */
-const asyncEntries = (messages: { id: string; role: "user" | "assistant"; text: string }[]) =>
-  async () =>
-    messages.map((message) => ({ id: message.id, role: message.role, content: message.text }));
+const asyncEntries = (messages: { id: string; role: "user" | "assistant"; text: string }[]) => async () =>
+  messages.map((message) => ({ id: message.id, role: message.role, content: message.text }));
 
 const agentStarted = { type: "agent_started" as const, sessionId: "s1", runId: "r1" };
 
 const snapshotOf = (events: readonly unknown[]) =>
-  events.find((event) => (event as { type?: string }).type === EventType.MESSAGES_SNAPSHOT) as
-    | { messages: { id: string }[] }
-    | undefined;
+  events.find((event) => (event as { type?: string }).type === EventType.MESSAGES_SNAPSHOT) as { messages: { id: string }[] } | undefined;
 
 describe("async AgUiProjection hooks (Task 15)", () => {
   it("emits MESSAGES_SNAPSHOT from an async getMessages at agent_started and message_finished", async () => {
     const entries: { id: string; role: "user" | "assistant"; text: string }[] = [{ id: "u1", role: "user", text: "hi" }];
-    const projection = createMessagesFromSessionProjection({ getMessages: async () => entries.map((e) => ({ id: e.id, role: e.role, content: e.text })) });
+    const projection = createMessagesFromSessionProjection({
+      getMessages: async () => entries.map((e) => ({ id: e.id, role: e.role, content: e.text })),
+    });
     const mapper = createAgUiEventMapper({ projection });
     const started = snapshotOf(await mapper.map(agentStarted));
-    assert.deepEqual(started?.messages.map((m) => m.id), ["u1"]);
+    assert.deepEqual(
+      started?.messages.map((m) => m.id),
+      ["u1"],
+    );
     entries.push({ id: "a1", role: "assistant", text: "done" });
     const refreshed = snapshotOf(
       await mapper.map({
@@ -34,7 +36,10 @@ describe("async AgUiProjection hooks (Task 15)", () => {
         message: { id: "a1", role: "assistant", content: [{ type: "text", text: "done" }] },
       }),
     );
-    assert.deepEqual(refreshed?.messages.map((m) => m.id), ["u1", "a1"]);
+    assert.deepEqual(
+      refreshed?.messages.map((m) => m.id),
+      ["u1", "a1"],
+    );
   });
 
   it("async getMessages rejection drops the snapshot closed and the stream continues", async () => {
@@ -120,8 +125,15 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     };
     const mapper = createAgUiEventMapper({ projection: flaky });
     const started = await mapper.map(agentStarted);
-    assert.equal(started.some((event) => event.type === EventType.STATE_SNAPSHOT), false, "throwing async hook dropped");
-    assert.ok(started.some((event) => event.type === EventType.MESSAGES_SNAPSHOT), "sibling hook still projected");
+    assert.equal(
+      started.some((event) => event.type === EventType.STATE_SNAPSHOT),
+      false,
+      "throwing async hook dropped",
+    );
+    assert.ok(
+      started.some((event) => event.type === EventType.MESSAGES_SNAPSHOT),
+      "sibling hook still projected",
+    );
   });
 
   it("caps still apply to awaited values (oversized async messages drop closed)", async () => {
@@ -152,7 +164,8 @@ describe("async AgUiProjection hooks (Task 15)", () => {
       call,
     });
     assert.equal(started[0]?.sessionUpdate, "tool_call");
-    assert.equal((started[0]?.content as { content: { text: string } }[])[0]?.content.text, "safe write_file");
+    const contents = started[0]?.content as { content: { text: string } }[] | undefined;
+    assert.equal(contents?.[0]?.content.text, "safe write_file");
     const finished = await mapper.map({
       type: "tool_execution_finished",
       sessionId: "s1",
@@ -160,10 +173,7 @@ describe("async AgUiProjection hooks (Task 15)", () => {
       result: { toolCallId: "t1", name: "write_file", value: "SECRET" },
       metadata: { durationMs: 1, status: "finished" },
     });
-    assert.equal(
-      (finished[0] as { content?: { content: { text: string } }[] }).content?.[0]?.content.text,
-      "safe result",
-    );
+    assert.equal((finished[0] as { content?: { content: { text: string } }[] }).content?.[0]?.content.text, "safe result");
   });
 
   it("sync-only hooks keep exact behavior through the async pipeline", async () => {

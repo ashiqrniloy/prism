@@ -25,9 +25,7 @@ export interface CreateReasoningEncryptedValueOptions {
  * pure like the other projection callbacks; the mapper additionally caps the
  * emitted value at the resolved `maxReasoningBytes` limit.
  */
-export function createReasoningEncryptedValue(
-  options: CreateReasoningEncryptedValueOptions,
-): AgUiReasoningProjection | undefined {
+export function createReasoningEncryptedValue(options: CreateReasoningEncryptedValueOptions): AgUiReasoningProjection | undefined {
   const { encrypt, content, event } = options;
   if (typeof encrypt !== "function") return undefined;
   let value: string | undefined;

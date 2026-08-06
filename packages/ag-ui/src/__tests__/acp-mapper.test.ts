@@ -8,30 +8,35 @@ describe("createAcpEventMapper", () => {
     const mapper = createAcpEventMapper({ redactor: createSecretRedactor(["SECRET"]) });
     const call = toolCallContent("tool-1", "write_file", { path: "/private/SECRET.txt", contents: "SECRET" });
     const output = [
-      ...await mapper.map({
+      ...(await mapper.map({
         type: "message_started",
         sessionId: "session-1",
         runId: "run-1",
         message: { id: "message-1", role: "assistant", content: [] },
-      }),
-      ...await mapper.map({ type: "message_delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "hello SECRET" } }),
-      ...await mapper.map({ type: "tool_execution_started", sessionId: "session-1", runId: "run-1", call }),
-      ...await mapper.map({
+      })),
+      ...(await mapper.map({
+        type: "message_delta",
+        sessionId: "session-1",
+        runId: "run-1",
+        content: { type: "text", text: "hello SECRET" },
+      })),
+      ...(await mapper.map({ type: "tool_execution_started", sessionId: "session-1", runId: "run-1", call })),
+      ...(await mapper.map({
         type: "tool_execution_finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "write_file", value: { path: "/private/SECRET.txt" } },
         metadata: { durationMs: 1, status: "finished" },
-      }),
-      ...await mapper.map({
+      })),
+      ...(await mapper.map({
         type: "provider_turn_finished",
         sessionId: "session-1",
         runId: "run-1",
         turn: 1,
         metadata: { providerId: "mock", model: { provider: "mock", model: "mock" } },
         usage: { inputTokens: 2, outputTokens: 3 },
-      }),
-      ...await mapper.map({ type: "error", sessionId: "session-1", runId: "run-1", error: { message: "SECRET failed" } }),
+      })),
+      ...(await mapper.map({ type: "error", sessionId: "session-1", runId: "run-1", error: { message: "SECRET failed" } })),
     ];
 
     assert.deepEqual(
@@ -63,13 +68,15 @@ describe("createAcpEventMapper", () => {
     const mapper = createAcpEventMapper({ projection: { toolArguments: () => "safe input", toolResult: () => "safe output" } });
     const call = toolCallContent("tool-1", "write", { secret: "hidden" });
     const started = (await mapper.map({ type: "tool_execution_started", sessionId: "session-1", runId: "run-1", call }))[0]!;
-    const finished = (await mapper.map({
-      type: "tool_execution_finished",
-      sessionId: "session-1",
-      runId: "run-1",
-      result: { toolCallId: "tool-1", name: "write", value: "hidden" },
-      metadata: { durationMs: 1, status: "finished" },
-    }))[0]!;
+    const finished = (
+      await mapper.map({
+        type: "tool_execution_finished",
+        sessionId: "session-1",
+        runId: "run-1",
+        result: { toolCallId: "tool-1", name: "write", value: "hidden" },
+        metadata: { durationMs: 1, status: "finished" },
+      })
+    )[0]!;
     assert.deepEqual(started, {
       sessionUpdate: "tool_call",
       toolCallId: "tool-1",

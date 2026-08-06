@@ -219,7 +219,7 @@ async function measureSnapshot() {
   return summarize("snapshotCaptureRestore", samples);
 }
 
-function measureA2uiPaint() {
+async function measureA2uiPaint() {
   const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
   const ops = [{ version: "v0.9", createSurface: { surfaceId: "bench" } }];
   for (let i = 0; i < A2UI_OPS - 1; i += 1) {
@@ -251,7 +251,7 @@ function measureA2uiPaint() {
 const decisionApply = await measureDecisionApply();
 const stickyMatch = await measureStickyMatch();
 const snapshotCaptureRestore = await measureSnapshot();
-const a2uiPaint = measureA2uiPaint();
+const a2uiPaint = await measureA2uiPaint();
 
 const results = [decisionApply, stickyMatch, snapshotCaptureRestore, a2uiPaint];
 const report = {

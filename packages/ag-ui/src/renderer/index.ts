@@ -7,7 +7,7 @@
  */
 import { type AGUIEvent } from "@ag-ui/core";
 import { AgUiError } from "../errors.js";
-import { type AgUiA2UiLimitOptions, resolveAgUiA2UiLimits, type ResolvedAgUiA2UiLimits } from "../a2ui.js";
+import { type AgUiA2UiLimitOptions, resolveAgUiA2UiLimits } from "../a2ui.js";
 import { DEFAULT_AG_UI_LIMITS } from "../limits.js";
 import { renderA2UiSurface, DEFAULT_A2UI_CATALOG, type A2UiCatalog, type Dom, type DomNode } from "./bind.js";
 import { A2UiSurfaceState, readA2UiBatch, reduceA2UiOps, type A2UiRenderError, type A2UiSurfaceModel } from "./core.js";
@@ -149,4 +149,3 @@ function browserDom(): Dom {
     createTextNode: (text) => doc.createTextNode(text) as unknown as DomNode,
   };
 }
-

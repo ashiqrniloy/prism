@@ -6,7 +6,6 @@
 import { EventType, type AGUIEvent } from "@ag-ui/core";
 import {
   A2UI_ACTIVITY_TYPE,
-  A2UI_ERROR_EVENT,
   A2UI_OPERATIONS_KEY,
   A2UI_VERSION,
   validateA2UiOp,
@@ -156,7 +155,6 @@ export function reduceA2UiOps(
     if ("deleteSurface" in op) {
       const body = op.deleteSurface as { surfaceId: string };
       if (surfaces.delete(body.surfaceId)) touched.add(body.surfaceId); // safe no-op when absent
-      continue;
     }
   }
 
@@ -214,7 +212,10 @@ export function resolvePointer(root: unknown, pointer: string): unknown {
 }
 
 function setAtPointer(root: unknown, pointer: string, value: unknown): unknown {
-  const tokens = pointer.slice(1).split("/").map((t) => t.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const tokens = pointer
+    .slice(1)
+    .split("/")
+    .map((t) => t.replace(/~1/g, "/").replace(/~0/g, "~"));
   if (tokens.length === 1 && tokens[0] === "") return value; // "/" replaces the whole model
   if (root === null || root === undefined || typeof root !== "object" || Array.isArray(root)) root = {};
   let current: unknown = root;

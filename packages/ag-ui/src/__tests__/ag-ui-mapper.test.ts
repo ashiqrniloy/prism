@@ -16,50 +16,55 @@ describe("@arnilo/prism-ag-ui", () => {
       },
     });
     const events = [
-      ...await mapper.map({ type: "agent_started", sessionId: "thread-1", runId: "run-1" }),
-      ...await mapper.map({
+      ...(await mapper.map({ type: "agent_started", sessionId: "thread-1", runId: "run-1" })),
+      ...(await mapper.map({
         type: "message_started",
         sessionId: "thread-1",
         runId: "run-1",
         message: { id: "message-1", role: "assistant", content: [] },
-      }),
-      ...await mapper.map({ type: "message_delta", sessionId: "thread-1", runId: "run-1", content: { type: "text", text: "hello secret" } }),
-      ...await mapper.map({
+      })),
+      ...(await mapper.map({
+        type: "message_delta",
+        sessionId: "thread-1",
+        runId: "run-1",
+        content: { type: "text", text: "hello secret" },
+      })),
+      ...(await mapper.map({
         type: "message_finished",
         sessionId: "thread-1",
         runId: "run-1",
         message: { id: "message-1", role: "assistant", content: [] },
-      }),
-      ...await mapper.map({
+      })),
+      ...(await mapper.map({
         type: "tool_execution_started",
         sessionId: "thread-1",
         runId: "run-1",
         call: { type: "tool_call", id: "tool-1", name: "read", arguments: { path: "/host/workspace/secret" } },
-      }),
-      ...await mapper.map({
+      })),
+      ...(await mapper.map({
         type: "tool_execution_progress",
         sessionId: "thread-1",
         runId: "run-1",
         toolCallId: "tool-1",
         name: "read",
         progress: { path: "/host/workspace" },
-      }),
-      ...await mapper.map({
+      })),
+      ...(await mapper.map({
         type: "tool_execution_finished",
         sessionId: "thread-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "read", value: "secret" },
         metadata: { durationMs: 1, status: "finished" },
-      }),
-      ...await mapper.map({
+      })),
+      ...(await mapper.map({
         type: "provider_turn_finished",
         sessionId: "thread-1",
         runId: "run-1",
         turn: 1,
         metadata: { providerId: "fake", model: { provider: "fake", model: "fake" } },
         usage: { inputTokens: 3, outputTokens: 5 },
-      }),
-      ...await mapper.map({ type: "agent_finished", sessionId: "thread-1", runId: "run-1" }),
+      })),
+      ...(await mapper.map({ type: "agent_finished", sessionId: "thread-1", runId: "run-1" })),
     ];
 
     for (const event of events) assert.equal(EventSchemas.safeParse(event).success, true);
@@ -140,14 +145,24 @@ describe("@arnilo/prism-ag-ui", () => {
       },
     });
     const events = [
-      ...await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" }),
-      ...await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 }),
-      ...await mapper.map({ type: "message_started", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
-      ...await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "thinking", text: "safe" } }),
-      ...await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "text", text: "answer" } }),
-      ...await mapper.map({ type: "message_finished", sessionId: "s1", runId: "r1", message: { id: "m1", role: "assistant", content: [] } }),
-      ...await mapper.map({ type: "turn_finished", sessionId: "s1", runId: "r1", turn: 1 }),
-      ...await mapper.map({ type: "agent_finished", sessionId: "s1", runId: "r1" }),
+      ...(await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" })),
+      ...(await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 })),
+      ...(await mapper.map({
+        type: "message_started",
+        sessionId: "s1",
+        runId: "r1",
+        message: { id: "m1", role: "assistant", content: [] },
+      })),
+      ...(await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "thinking", text: "safe" } })),
+      ...(await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "text", text: "answer" } })),
+      ...(await mapper.map({
+        type: "message_finished",
+        sessionId: "s1",
+        runId: "r1",
+        message: { id: "m1", role: "assistant", content: [] },
+      })),
+      ...(await mapper.map({ type: "turn_finished", sessionId: "s1", runId: "r1", turn: 1 })),
+      ...(await mapper.map({ type: "agent_finished", sessionId: "s1", runId: "r1" })),
     ];
     for (const mapped of events) assert.equal(EventSchemas.safeParse(mapped).success, true);
     for (const type of [

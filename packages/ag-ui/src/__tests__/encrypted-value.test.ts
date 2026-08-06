@@ -36,7 +36,13 @@ describe("createReasoningEncryptedValue", () => {
   it("fails closed on missing, throwing, or non-string encrypt", async () => {
     assert.equal(createReasoningEncryptedValue({ encrypt: undefined as never, content, event }), undefined);
     assert.equal(
-      createReasoningEncryptedValue({ encrypt: () => { throw new Error("boom"); }, content, event }),
+      createReasoningEncryptedValue({
+        encrypt: () => {
+          throw new Error("boom");
+        },
+        content,
+        event,
+      }),
       undefined,
     );
     assert.equal(createReasoningEncryptedValue({ encrypt: () => 42 as never, content, event }), undefined);
@@ -46,7 +52,10 @@ describe("createReasoningEncryptedValue", () => {
   it("never infers an encrypted value from the reasoning signature; passes encrypt output verbatim", async () => {
     const seen: Array<[ThinkingContent, AgentEvent]> = [];
     const result = createReasoningEncryptedValue({
-      encrypt: (c, e) => { seen.push([c, e]); return "opaque-ciphertext"; },
+      encrypt: (c, e) => {
+        seen.push([c, e]);
+        return "opaque-ciphertext";
+      },
       content,
       event,
     });

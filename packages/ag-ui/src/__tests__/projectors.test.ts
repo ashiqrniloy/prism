@@ -35,7 +35,9 @@ describe("standard AG-UI projectors", () => {
     );
     // unchanged transcript → no second snapshot
     assert.equal(
-      await (await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 })).some((e) => e.type === EventType.MESSAGES_SNAPSHOT),
+      await (await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 })).some(
+        (e) => e.type === EventType.MESSAGES_SNAPSHOT,
+      ),
       false,
     );
   });
@@ -172,15 +174,15 @@ describe("standard AG-UI projectors", () => {
   it("default mapper stays inert without opt-in projectors", async () => {
     const mapper = createAgUiEventMapper();
     const events = [
-      ...await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" }),
-      ...await mapper.map({
+      ...(await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" })),
+      ...(await mapper.map({
         type: "tool_execution_progress",
         sessionId: "s1",
         runId: "r1",
         toolCallId: "t1",
         name: "read",
         progress: { pct: 1 },
-      }),
+      })),
     ];
     assert.equal(
       events.some(

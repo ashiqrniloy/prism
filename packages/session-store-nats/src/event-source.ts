@@ -243,7 +243,12 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
     }
   }
 
-  async function createConsumer(name: string, subject: string, ackPolicy: "explicit" | "all", startSeq: number): Promise<NatsJetStreamConsumer> {
+  async function createConsumer(
+    name: string,
+    subject: string,
+    ackPolicy: "explicit" | "all",
+    startSeq: number,
+  ): Promise<NatsJetStreamConsumer> {
     await options.connection.addConsumer(stream, {
       name,
       filter_subject: subject,

@@ -128,7 +128,12 @@ export const DEFAULT_A2UI_CATALOG: A2UiCatalog = {
     node.appendChild(dom.createTextNode(label === null || label === undefined ? "" : String(label)));
     const actionName = typeof props.actionName === "string" ? props.actionName : typeof props.name === "string" ? props.name : "click";
     node.addEventListener("click", () => {
-      ctx.emitAction({ type: "a2ui-action", surfaceId: ctx.surfaceId, actionName, ...(props.payload === undefined ? {} : { payload: props.payload }) });
+      ctx.emitAction({
+        type: "a2ui-action",
+        surfaceId: ctx.surfaceId,
+        actionName,
+        ...(props.payload === undefined ? {} : { payload: props.payload }),
+      });
     });
     return node;
   },

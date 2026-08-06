@@ -70,7 +70,15 @@ describe("AG-UI protocol fronting", () => {
       callTool: async () => ({ toolCallId: "unused", name: "mcp:weather:get" }),
     };
     const bridge: McpToolBridge = {
-      tools: [{ ...remote, execute: (args, context) => ((calls += 1), remote.execute(args, context)) }],
+      tools: [
+        {
+          ...remote,
+          execute: (args, context) => {
+            calls += 1;
+            return remote.execute(args, context);
+          },
+        },
+      ],
       apps,
       refresh: async () => undefined,
       close: async () => undefined,

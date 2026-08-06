@@ -68,19 +68,34 @@ function model(surfaceId: string, components: unknown[], dataModel?: unknown): A
 }
 
 function snapshot(surfaceId: string, ops: unknown[]): AGUIEvent {
-  return { type: EventType.ACTIVITY_SNAPSHOT, messageId: `a2ui-surface-${surfaceId}-tool`, activityType: "a2ui-surface", content: { a2ui_operations: ops }, replace: true };
+  return {
+    type: EventType.ACTIVITY_SNAPSHOT,
+    messageId: `a2ui-surface-${surfaceId}-tool`,
+    activityType: "a2ui-surface",
+    content: { a2ui_operations: ops },
+    replace: true,
+  };
 }
 function delta(surfaceId: string, ...adds: unknown[]): AGUIEvent {
-  return { type: EventType.ACTIVITY_DELTA, messageId: `a2ui-surface-${surfaceId}-tool`, activityType: "a2ui-surface", patch: adds.map((value) => ({ op: "add", path: "/a2ui_operations/-", value })) };
+  return {
+    type: EventType.ACTIVITY_DELTA,
+    messageId: `a2ui-surface-${surfaceId}-tool`,
+    activityType: "a2ui-surface",
+    patch: adds.map((value) => ({ op: "add", path: "/a2ui_operations/-", value })),
+  };
 }
 
 describe("A2UI renderer binding", () => {
   it("renders the default catalog with text, containers, and data bindings", () => {
-    const surface = model("chat", [
-      { id: "root", component: "Column", children: ["title", "body"] },
-      { id: "title", component: "Text", text: { path: "/title" } },
-      { id: "body", component: "Text", text: "plain" },
-    ], { title: "Bound!" });
+    const surface = model(
+      "chat",
+      [
+        { id: "root", component: "Column", children: ["title", "body"] },
+        { id: "title", component: "Text", text: { path: "/title" } },
+        { id: "body", component: "Text", text: "plain" },
+      ],
+      { title: "Bound!" },
+    );
     const node = renderA2UiSurface(surface, DEFAULT_A2UI_CATALOG, stubDom) as StubNode;
     assert.equal(node.attrs.get("data-surface-id"), "chat");
     assert.equal(node.text, "Bound!plain");
@@ -142,7 +157,10 @@ describe("A2UI renderer binding", () => {
         { version: "v0.9", createSurface: { surfaceId: "chat", catalogId: "catalog" } },
         { version: "v0.9", updateComponents: { surfaceId: "chat", components: [{ id: "root", component: "Text", text: "one" }] } },
       ]),
-      delta("chat", { version: "v0.9", updateComponents: { surfaceId: "chat", components: [{ id: "root", component: "Text", text: "two" }] } }),
+      delta("chat", {
+        version: "v0.9",
+        updateComponents: { surfaceId: "chat", components: [{ id: "root", component: "Text", text: "two" }] },
+      }),
       delta("chat", { version: "v0.9", deleteSurface: { surfaceId: "chat" } }),
     ];
     const renderer = createA2UiRenderer({ stream: asyncGenerator(events), dom: stubDom, onError: () => assert.fail("no errors expected") });
@@ -175,7 +193,10 @@ describe("A2UI renderer binding", () => {
     await tick();
     await tick();
     assert.equal(mount.text, "ok", "valid batch applied, invalid batch dropped whole");
-    assert.deepEqual(errors.map((e) => e.code), ["ERR_PRISM_A2UI_OP", "ERR_PRISM_A2UI_OP"]);
+    assert.deepEqual(
+      errors.map((e) => e.code),
+      ["ERR_PRISM_A2UI_OP", "ERR_PRISM_A2UI_OP"],
+    );
     await renderer.dispose();
   });
 

@@ -311,7 +311,11 @@ function readOperations(value: unknown): unknown[] | null | undefined {
   return Array.isArray(ops) ? ops : null;
 }
 
-export function validateA2UiOp(value: unknown, a2uiLimits: ResolvedAgUiA2UiLimits, limits: ResolvedAgUiLimits): Record<string, unknown> | undefined {
+export function validateA2UiOp(
+  value: unknown,
+  a2uiLimits: ResolvedAgUiA2UiLimits,
+  limits: ResolvedAgUiLimits,
+): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const op = value as Record<string, unknown>;
   if (op.version !== A2UI_VERSION && op.version !== "v1.0") return undefined;

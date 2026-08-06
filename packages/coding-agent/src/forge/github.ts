@@ -8,8 +8,6 @@ import type {
   CreateGitHubForgeOptions,
   ForgeCheck,
   ForgeErrorCode,
-  ForgeHandoffReport,
-  ForgeIssueContext,
   ForgeOperations,
   ForgePullRequest,
   ResolvedForgeLimits,

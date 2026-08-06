@@ -36,9 +36,7 @@ type SupervisorA2AError = typeof import("@arnilo/prism-supervisor").A2AError;
  * in-memory registry covers tasks started on this instance, and an optional durable
  * source replays finished runs.
  */
-export interface AgUiA2AServer {
-  (request: Request): Promise<Response>;
-}
+export type AgUiA2AServer = (request: Request) => Promise<Response>;
 
 export interface AgUiA2AServerTaskInput {
   readonly message: A2AMessage;
@@ -130,11 +128,7 @@ export async function createAgUiA2AServer(options: CreateAgUiA2AServerOptions): 
     redactor: options.redactor,
     exposure: {
       sessionFactory: () => {
-        throw new supervisor.A2AError(
-          "Direct text exposure is unavailable; the task lifecycle is active",
-          500,
-          "ERR_PRISM_A2A_CONFIG",
-        );
+        throw new supervisor.A2AError("Direct text exposure is unavailable; the task lifecycle is active", 500, "ERR_PRISM_A2A_CONFIG");
       },
     },
     tasks,
@@ -175,7 +169,15 @@ function createBuiltinTasks(
       const abort = () => controller.abort(signal.reason ?? new Error("A2A task aborted"));
       if (signal.aborted) abort();
       else signal.addEventListener("abort", abort, { once: true });
-      const entry: LiveTask = { taskId, contextId, controller, events: undefined, startedAt: Date.now(), terminal: undefined, consumed: false };
+      const entry: LiveTask = {
+        taskId,
+        contextId,
+        controller,
+        events: undefined,
+        startedAt: Date.now(),
+        terminal: undefined,
+        consumed: false,
+      };
       register(entry);
       const run = runPipeline(entry, message, authorization, options, agUiLimits, a2aLimits);
       entry.events = run;
@@ -340,7 +342,9 @@ function mapAgUiToA2A(
     case EventType.TEXT_MESSAGE_CONTENT: {
       const id = artifactId("msg", event.messageId);
       accumulate(id, event.delta, false);
-      return { artifactUpdate: { taskId, contextId, artifact: { artifactId: id, parts: [{ text: partText(event.delta) }] }, append: true } };
+      return {
+        artifactUpdate: { taskId, contextId, artifact: { artifactId: id, parts: [{ text: partText(event.delta) }] }, append: true },
+      };
     }
     case EventType.ACTIVITY_SNAPSHOT: {
       const id = artifactId("activity", event.messageId);
@@ -447,7 +451,8 @@ function a2aMessageToAgUiInput(message: A2AMessage, threadId: string, runId: str
     context: [],
     state: {},
     // JSON round-trip drops undefined-valued keys (e.g. absent mediaType/filename) that the AG-UI bounded check rejects.
-    forwardedProps: nonText.length > 0 ? { a2a: { messageId: message.messageId, parts: nonText.map((part) => JSON.parse(JSON.stringify(part))) } } : {},
+    forwardedProps:
+      nonText.length > 0 ? { a2a: { messageId: message.messageId, parts: nonText.map((part) => JSON.parse(JSON.stringify(part))) } } : {},
   };
   return parseAgUiInput(input, limits);
 }

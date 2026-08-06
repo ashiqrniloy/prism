@@ -3393,9 +3393,18 @@ describe("docs", () => {
     assert.ok(migration.includes("0.0.25 → 0.0.26 coding intelligence, managed processes, forge, and safe egress"));
     assert.ok(migration.includes("createPostgresAgentEventSource"), "migration missing FR-6 root-export note");
     assert.ok(migration.includes("reference durable implementation"), "migration missing FR-7 placement answer");
-    assert.ok(agentEvents.includes("createPostgresAgentEventSource") && agentEvents.includes("reference durable implementation"), "agent-events.md missing FR-6/FR-7 answer");
-    assert.ok(agentEvents.includes("createNatsAgentEventSource") && agentEvents.includes("at-least-once"), "agent-events.md missing FR-5 NATS adapter");
-    assert.ok(agUi.includes("createReasoningEncryptedValue") && agUi.includes("never infers an encrypted value"), "ag-ui.md missing FR-3 helper");
+    assert.ok(
+      agentEvents.includes("createPostgresAgentEventSource") && agentEvents.includes("reference durable implementation"),
+      "agent-events.md missing FR-6/FR-7 answer",
+    );
+    assert.ok(
+      agentEvents.includes("createNatsAgentEventSource") && agentEvents.includes("at-least-once"),
+      "agent-events.md missing FR-5 NATS adapter",
+    );
+    assert.ok(
+      agUi.includes("createReasoningEncryptedValue") && agUi.includes("never infers an encrypted value"),
+      "ag-ui.md missing FR-3 helper",
+    );
     assert.ok(agUi.includes("reconcileAppEffect") && agUi.includes("never auto-retries"), "ag-ui.md missing FR-4 effect recovery");
     assert.ok(
       a2aDoc.includes("createAgUiA2AServer") && a2aDoc.includes("TASK_STATE_INPUT_REQUIRED"),
@@ -3405,10 +3414,7 @@ describe("docs", () => {
       agUi.includes("createA2UiRenderer") && agUi.includes("never executes remote HTML"),
       "ag-ui.md missing Task 14 renderer section",
     );
-    assert.ok(
-      agUi.includes("Awaitable<T>") && agUi.includes("session.entries()"),
-      "ag-ui.md missing Task 15 async projection hooks",
-    );
+    assert.ok(agUi.includes("Awaitable<T>") && agUi.includes("session.entries()"), "ag-ui.md missing Task 15 async projection hooks");
     assert.ok(performance.includes("benchmark-0.0.26") && performance.includes("299.166"));
     assert.ok(readiness.includes("0.0.26") && readiness.includes("Phase 9"));
     assert.ok(existsSync("examples/phase9-coding-intelligence.ts"), "missing Phase 9 example");

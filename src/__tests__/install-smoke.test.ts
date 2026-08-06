@@ -132,7 +132,12 @@ before(() => {
   }
 
   // 3. Dynamic-import every documented specifier from the fresh install.
-  const specs = [...coreSpecifiers(), ...packages.filter((p) => !p.isCore && !p.isMeta).map((p) => p.name), "@arnilo/prism-ag-ui/acp", "@arnilo/prism-ag-ui/renderer"];
+  const specs = [
+    ...coreSpecifiers(),
+    ...packages.filter((p) => !p.isCore && !p.isMeta).map((p) => p.name),
+    "@arnilo/prism-ag-ui/acp",
+    "@arnilo/prism-ag-ui/renderer",
+  ];
   writeFileSync(
     join(consumer, "smoke.mjs"),
     `const specs = ${JSON.stringify(specs)};\n` +

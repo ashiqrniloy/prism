@@ -44,7 +44,11 @@ describe("co-work event projection", () => {
 
   it("redacts secrets and never emits local filesystem paths", async () => {
     const mapper = createAgUiEventMapper({ redactor: createSecretRedactor(["sekret", "/home/arn"]) });
-    const leaked = await mapper.mapCoWork({ kind: "browser.snapshot", snapshotId: "s", summary: "file at /home/arn/secret with sekret token" });
+    const leaked = await mapper.mapCoWork({
+      kind: "browser.snapshot",
+      snapshotId: "s",
+      summary: "file at /home/arn/secret with sekret token",
+    });
     const output = JSON.stringify(leaked);
     assert.ok(!output.includes("sekret"));
     assert.ok(!output.includes("/home/arn"));
@@ -76,7 +80,12 @@ describe("co-work event projection", () => {
 
   it("ACP mapper projects co-work events to safe session updates (parity)", async () => {
     const mapper = createAcpEventMapper({ redactor: createSecretRedactor(["sekret"]) });
-    const mapped = await mapper.mapCoWork({ kind: "artifact.approval.requested", artifactId: "art-1", version: 2, reason: "sekret reason" });
+    const mapped = await mapper.mapCoWork({
+      kind: "artifact.approval.requested",
+      artifactId: "art-1",
+      version: 2,
+      reason: "sekret reason",
+    });
     assert.equal(mapped.length, 1);
     assert.equal(mapped[0].sessionUpdate, "agent_message_chunk");
     assert.ok(!JSON.stringify(mapped).includes("sekret"));

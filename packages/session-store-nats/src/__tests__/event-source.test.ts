@@ -60,7 +60,10 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     assert.equal(jetstream.messages.size, 1);
     // Same id, different content → input error.
     await assert.rejects(
-      source.append({ ...original, event: { type: "message_delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "different" } } }),
+      source.append({
+        ...original,
+        event: { type: "message_delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "different" } },
+      }),
       (error: AgentEventSourceError) => error.code === "ERR_PRISM_AGENT_EVENT_SOURCE_INPUT",
     );
     await source.close();
@@ -70,7 +73,12 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     const jetstream = new FakeJetStream();
     const source = makeSource(jetstream);
     await source.append(record());
-    await source.append(record({ runId: "run-2", event: { type: "message_delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "other" } } }));
+    await source.append(
+      record({
+        runId: "run-2",
+        event: { type: "message_delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "other" } },
+      }),
+    );
     const page = await source.page({ ...read, limit: 10 });
     assert.equal(page.items.length, 1);
     assert.equal(page.items[0].record.runId, "run-1");
@@ -83,7 +91,12 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     await source.append(record());
     const page = await source.page({ ...read, limit: 10 });
     assert.equal(page.items.length, 1);
-    const otherAccount = await source.page({ ownership: { tenantId: "tenant", accountId: "other", userId: "user" }, sessionId: "session-1", runId: "run-1", limit: 10 });
+    const otherAccount = await source.page({
+      ownership: { tenantId: "tenant", accountId: "other", userId: "user" },
+      sessionId: "session-1",
+      runId: "run-1",
+      limit: 10,
+    });
     assert.equal(otherAccount.items.length, 0);
     const otherTenant = await source.page({ ownership: otherOwnership, sessionId: "session-1", runId: "run-1", limit: 10 });
     assert.equal(otherTenant.items.length, 0);
@@ -154,7 +167,13 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     const source = makeSource(jetstream);
     const old = await source.append(record({ timestamp: "2026-01-01T00:00:00.000Z" }));
     await source.append(record({ timestamp: "2026-08-01T00:00:00.000Z" }));
-    await source.append(record({ timestamp: "2026-01-01T00:00:00.000Z", runId: "run-2", event: { type: "message_delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "x" } } }));
+    await source.append(
+      record({
+        timestamp: "2026-01-01T00:00:00.000Z",
+        runId: "run-2",
+        event: { type: "message_delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "x" } },
+      }),
+    );
     const result = await source.cleanup({ ownership, before: "2026-06-01T00:00:00.000Z", limit: 10 });
     // Ownership-scoped (not session-scoped): both January events are deleted.
     assert.equal(result.deleted, 2);
@@ -169,7 +188,10 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     const jetstream = new FakeJetStream();
     const source = makeSource(jetstream, { limits: { maxSubscribers: 1 } });
     const first = source.subscribe(read);
-    assert.throws(() => source.subscribe(read), (error: AgentEventSourceError) => error.code === "ERR_PRISM_AGENT_EVENT_SOURCE_OVERFLOW");
+    assert.throws(
+      () => source.subscribe(read),
+      (error: AgentEventSourceError) => error.code === "ERR_PRISM_AGENT_EVENT_SOURCE_OVERFLOW",
+    );
     await first[Symbol.asyncIterator]().return?.(undefined);
     await source.close();
     assert.throws(
@@ -181,7 +203,10 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
   it("rejects non-redacted records and NATS-unsafe identifiers", async () => {
     const jetstream = new FakeJetStream();
     const source = makeSource(jetstream);
-    await assert.rejects(source.append(record({ redacted: false })), (error: AgentEventSourceError) => error.code === "ERR_PRISM_AGENT_EVENT_SOURCE_INPUT");
+    await assert.rejects(
+      source.append(record({ redacted: false })),
+      (error: AgentEventSourceError) => error.code === "ERR_PRISM_AGENT_EVENT_SOURCE_INPUT",
+    );
     await assert.rejects(
       source.append(record({ sessionId: "bad session" })),
       (error: AgentEventSourceError) => error.code === "ERR_PRISM_AGENT_EVENT_SOURCE_INPUT",

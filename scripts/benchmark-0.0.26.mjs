@@ -74,9 +74,15 @@ class BenchNode {
   nodeType = 1;
   textContent = null;
   children = [];
-  appendChild(child) { this.children.push(child); }
-  replaceChildren(...children) { this.children = [...children]; }
-  removeChild(child) { this.children = this.children.filter((c) => c !== child); }
+  appendChild(child) {
+    this.children.push(child);
+  }
+  replaceChildren(...children) {
+    this.children = [...children];
+  }
+  removeChild(child) {
+    this.children = this.children.filter((c) => c !== child);
+  }
   setAttribute() {}
   addEventListener() {}
 }
@@ -92,11 +98,12 @@ const benchDom = {
 
 /** 1,000-op A2UI surface stream: one snapshot batch + a rendered tree. */
 function measureRendererStreamOps() {
-  const ops = [
-    { version: "v0.9", createSurface: { surfaceId: "bench", catalogId: "catalog" } },
-  ];
+  const ops = [{ version: "v0.9", createSurface: { surfaceId: "bench", catalogId: "catalog" } }];
   for (let i = 0; i < RENDERER_OPS - 1; i += 1) {
-    ops.push({ version: "v0.9", updateComponents: { surfaceId: "bench", components: [{ id: `c${i}`, component: "Text", text: `value ${i}` }] } });
+    ops.push({
+      version: "v0.9",
+      updateComponents: { surfaceId: "bench", components: [{ id: `c${i}`, component: "Text", text: `value ${i}` }] },
+    });
   }
   const a2uiLimits = resolveAgUiA2UiLimits({});
   const run = () => {
@@ -135,7 +142,12 @@ async function measureAgUiMapperSync() {
   const events = [];
   for (let i = 0; i < MAPPER_EVENTS; i += 1) {
     events.push({ type: "message_delta", sessionId: "s", runId: "r", content: { type: "text", text: `delta ${i}` } });
-    events.push({ type: "tool_execution_started", sessionId: "s", runId: "r", call: { id: `t${i}`, name: "read", arguments: { path: `/x/${i}` } } });
+    events.push({
+      type: "tool_execution_started",
+      sessionId: "s",
+      runId: "r",
+      call: { id: `t${i}`, name: "read", arguments: { path: `/x/${i}` } },
+    });
     events.push({
       type: "tool_execution_finished",
       sessionId: "s",
