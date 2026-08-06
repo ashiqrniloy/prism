@@ -166,6 +166,10 @@ Optional live smoke tests stay separate from SDK readiness because they require 
 PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present
 ```
 
+### GitHub Actions pipeline (0.0.26+)
+
+`.github/workflows/release.yml` is the single pipeline: **push to `main`** runs CI (`verify` = `npm run sdk:ready`, `node20-compat`, `postgres-integration`, `supply-chain`), **push of a `v*` tag** additionally runs `codeql-release` and the `publish` job (deterministic `release:publish` in dependency order with provenance attestation). `security.yml` adds CodeQL/dependency-review/SBOM on push and PR; `live-canaries.yml` and `sandbox-browser.yml` are scheduled. All actions are SHA-pinned (2026-08-06 fix: CodeQL pins were invalid 404 refs and `workflow_dispatch` was missing — re-verified every pin against its upstream repo). Prerequisites outside the repo: Actions enabled in repository settings, and the `NPM_TOKEN` secret (with `id-token: write` for provenance). To re-cut a tag after a fix commit, delete and recreate it (`git push origin :v0.0.26 && git push origin v0.0.26`) so the tag creation event fires.
+
 ### 0.0.26 publish handoff
 
 **Decision: GO after protected operator prerequisites below.** Release **0.0.26** (Phase 9, plan 009) ships Git-aware repository enumeration, host-selected LSP language intelligence, managed process sessions (sandbox-backed, ownership-scoped), a reference GitHub forge adapter with idempotent handoff, and an allow-list egress proxy with DNS-rebinding defense and Docker sandbox attestation. Publishable graph grows to **48** manifests (new `@arnilo/prism-session-store-nats`). See [migration](migration.md) `0.0.25 → 0.0.26`, [language intelligence](language-intelligence.md), [process sessions](process-sessions.md), [forge integration](forge-integration.md), and [coding security](coding-security.md).

@@ -1381,6 +1381,8 @@ describe("docs", () => {
     }
     assert.ok(release.includes("templates/init"), "release-and-install.md missing templates/init");
     assert.ok(release.includes("prism init"), "release-and-install.md missing prism init");
+    assert.ok(release.includes("GitHub Actions pipeline"), "release-and-install.md missing GitHub Actions pipeline section");
+    assert.ok(release.includes("NPM_TOKEN"), "release-and-install.md missing NPM_TOKEN prerequisite");
     assert.ok(readme.includes("prism init"), "README.md missing prism init");
   });
 
