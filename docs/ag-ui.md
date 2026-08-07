@@ -5,7 +5,7 @@
 `@arnilo/prism-ag-ui` is an optional, framework-free protocol adapter over Prism's existing redacted `AgentEvent`, session, durable-run, and persistence seams.
 
 - Root export maps Prism events to AG-UI `@ag-ui/core` **0.0.57** events and offers `createAgUiHandler()` (`Request` → SSE `Response`), compatible `createPersistenceAgUiReplay()` pages, distributed `createAgentEventSourceAgUiReplay()` follow, and explicit `createAgUiMcpAdapter()` / `createAgUiMcpAppHandler()` / `createAgUiA2AAdapter()` protocol handshakes.
-- `@arnilo/prism-ag-ui/acp` uses stable `@agentclientprotocol/sdk` **1.3.0** root exports for `createAcpEventMapper()` and `createPrismAcpAgent()`.
+- `@arnilo/prism-ag-ui/acp` is the stable ACP **v1** sibling: `createAcpEventMapper()` and `createPrismAcpAgent()` over `@agentclientprotocol/sdk` **1.3.0** root exports. ACP is a protocol adapter — sessions, modes, MCP, fs/terminal, lifecycle mapping, and caps live on the host seams. See [ACP coding-host interop](acp.md) for the full reference; this page covers AG-UI only.
 - Core remains protocol-free. `resumeAgentRunStream()` / `AgentRunLifecycle.resumeStream()` are generic durable-resume streams shared by adapters.
 
 ## When to use it
@@ -50,7 +50,7 @@ A Prism durable `agent_suspended` returns `RUN_FINISHED` with core interrupt id 
 
 `createPersistenceAgUiReplay()` remains a compatible page adapter. `createAgentEventSourceAgUiReplay()` resolves exact ownership/run once per open, then consumes the shared durable source through terminal or live follow; it never attaches replica-local `session.subscribe()`. Every record must already be redacted. Mapped events carry stable `prismEventId` and bounded opaque `prismCursor`; records with no standard mapping emit `CUSTOM prism.replay_cursor`, so clients can persist progress. Terminal replay never creates a session or reruns a provider/tool.
 
-ACP maps assistant text to `agent_message_chunk`, safe tool lifecycle to `tool_call`/`tool_call_update`, provider usage to `usage_update`, and durable suspension to `session/request_permission`. Only `allow_once` approves; reject, cancellation, unknown outcomes, and request failure deny. It advertises only close-session capability—no terminal, filesystem, MCP, editor state, location, diff, or raw input/output capability.
+ACP maps assistant text to `agent_message_chunk`, safe tool lifecycle to `tool_call`/`tool_call_update` (locations/diffs only from projection allow-lists), provider usage to `usage_update`, and durable suspension to `session/request_permission` with the four shared outcomes — plus, per the client's advertised capabilities, editor-buffer fs, terminal, prompt media, modes/config options, lifecycle events, and elicitation. Advertisement is a pure function of the wired seams: no seam, no capability, no method. Only `allow_once` approves; reject, cancellation, unknown outcomes, and request failure deny. See [ACP coding-host interop](acp.md).
 
 Selected MCP tools use normal `TOOL_CALL_*` core dispatch. Linked Apps add safe `mcp-apps` activity; app-only tools stay model-hidden. The separate reauthorizing Apps proxy allow-lists initialize/ping/logging/tool/resource calls for one bridge; its sandbox helper returns CSP/iframe config and never executes HTML.
 
@@ -116,7 +116,7 @@ const handle = createAgUiHandler({
 const response = await handle(request); // adapt this Web Response in host framework
 ```
 
-See runnable network-free [`examples/ag-ui-server.ts`](../examples/ag-ui-server.ts). For ACP, construct `createPrismAcpAgent({ authorize, sessionFactory, lifecycle })` and connect the returned stable SDK agent through the host's ACP transport.
+See runnable network-free [`examples/ag-ui-server.ts`](../examples/ag-ui-server.ts). For ACP, construct `createPrismAcpAgent({ authorize, sessionFactory, lifecycle, ...seams })` and connect the returned stable SDK agent through the host's ACP transport — see [`examples/acp-coding-host.ts`](../examples/acp-coding-host.ts) and [ACP coding-host interop](acp.md).
 
 ## Extension and configuration notes
 
@@ -218,6 +218,7 @@ Defaults / hard caps: request 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 25
 - [Web-standard server handler](server.md): generic Prism HTTP API, separate from AG-UI.
 - [A2A interoperability](a2a.md): remote agent-to-agent tasks, not frontend protocol mapping.
 - [AG-UI adoption evaluation](ag-ui-adoption.md): official 0.0.57 event/input matrix and shipped explicit MCP/MCP Apps/A2A handshakes.
+- [ACP coding-host interop](acp.md): the full ACP reference — seam-based capability advertisement, session modes/config, MCP select, fs/terminal adapters, lifecycle mapping, elicitation, and caps.
 - [MCP bridge/server](mcp-tools.md): `mcpApps` negotiation, bounded resources, and remote tool trust.
 - [A2A interoperability](a2a.md): verified rich task client and remote task lifecycle.
 - [Host security guide](host-security.md): authorization, ownership, redaction, and credential boundaries.

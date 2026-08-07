@@ -49,6 +49,23 @@ export { createCodingCheckTool } from "./checks.js";
 export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js";
 export { createDeleteTool } from "./delete.js";
 export type {
+  CodingLifecycleEvent,
+  CodingLifecycleLimits,
+  CodingLifecycleEmitter,
+  CreateCodingLifecycleEmitterOptions,
+  FileChangeOp,
+  FileChangedEvent,
+  WorktreeChangedEvent,
+  PermissionDeniedEvent,
+  ConfigurationChangedEvent,
+  ResolvedCodingLifecycleLimits,
+} from "./lifecycle.js";
+export {
+  createCodingLifecycleEmitter,
+  CodingLifecycleError,
+  resolveCodingLifecycleLimits,
+} from "./lifecycle.js";
+export type {
   CodingArtifactKind,
   CodingArtifactRef,
   CodingCheckpointLimitOptions,

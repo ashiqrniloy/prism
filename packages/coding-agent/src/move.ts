@@ -7,6 +7,7 @@ import type { MutationStat } from "./delete.js";
 import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
+import type { CodingLifecycleEvent } from "./lifecycle.js";
 import { resolveContainedMutationPath } from "./mutation-path.js";
 
 const accessAsync = promisify(access);
@@ -21,6 +22,8 @@ export interface MoveOperations {
 export interface MoveToolOptions {
   executionPolicy?: ExecutionPolicy;
   operations?: MoveOperations;
+  /** Optional consumer-gated lifecycle listener (file_changed / permission_denied). */
+  onEvent?: (event: CodingLifecycleEvent) => void;
 }
 
 const defaultMoveOperations: MoveOperations = {
@@ -104,6 +107,7 @@ export function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefi
           },
           toolCallId,
           "move",
+          (denied) => options?.onEvent?.({ type: "permission_denied", ...denied }),
         );
         if (!policyCheck.allowed) return policyCheck.result;
         const allowedFrom = policyCheck.action.paths?.[0] ?? fromPath;
@@ -148,6 +152,7 @@ export function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefi
 
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
           await ops.rename(allowedFrom, allowedTo, { signal: context.signal });
+          options?.onEvent?.({ type: "file_changed", path: allowedTo, op: "move", toolCallId });
 
           return {
             toolCallId,

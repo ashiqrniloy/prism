@@ -242,4 +242,4 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 - [Observability](observability.md): `ProviderTurnMetadata`; optional adapter builds one parented GenAI span tree from metadata-only lifecycle events and ignores message/progress deltas.
 - [Tools](tools.md): `tool_execution_*` variants.
 - [Compaction and retry policies](compaction-and-retry.md): `compaction_*` and `retry_scheduled` variants.
-- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional redacted mapping of this stream; durable replay is ledger-backed and at-least-once, never a live-subscriber substitute.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional redacted mapping of this stream; durable replay is ledger-backed and at-least-once, never a live-subscriber substitute. [ACP coding-host interop](acp.md) additionally maps `CodingLifecycleEvent`s from `@arnilo/prism-coding-agent` (`file_changed`, `worktree_changed`, `permission_denied`, `configuration_changed`; process events reuse `CodingProcessEvent`) into ACP session updates — locations/diff blocks only through projection allow-lists, terminal chunks under `process.outputChunkBytes`.

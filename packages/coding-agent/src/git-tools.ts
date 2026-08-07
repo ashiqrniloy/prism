@@ -15,6 +15,7 @@ import {
   CODING_UNSUPPORTED_EFFECT,
 } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
+import type { CodingLifecycleEvent } from "./lifecycle.js";
 import {
   type ArtifactWriter,
   type CreateGitOperationsOptions,
@@ -36,6 +37,8 @@ export interface GitToolsOptions {
   /** Optional named checks included by `createGitTools` when provided. */
   readonly checks?: Readonly<Record<string, NamedCheckDefinition>>;
   readonly checkOptions?: Omit<CodingCheckToolOptions, "checks" | "executionPolicy">;
+  /** Optional consumer-gated lifecycle listener (worktree_changed / permission_denied). */
+  readonly onEvent?: (event: CodingLifecycleEvent) => void;
 }
 
 function errorResult(toolName: string, toolCallId: string, message: string): ToolResult {
@@ -296,6 +299,7 @@ export function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): T
         },
         toolCallId,
         "git_worktree",
+        (denied) => options?.onEvent?.({ type: "permission_denied", ...denied }),
       );
       if (!policy.allowed) return policy.result;
       try {
@@ -306,6 +310,9 @@ export function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): T
           force,
           signal: context.signal,
         });
+        if (action !== "list") {
+          options?.onEvent?.({ type: "worktree_changed", action, path: result.path ?? path ?? "", toolCallId });
+        }
         const text =
           action === "list"
             ? result.worktrees.map((w) => `${w.path}\t${w.branch ?? ""}\t${w.head ?? ""}`).join("\n") || "(no worktrees)"

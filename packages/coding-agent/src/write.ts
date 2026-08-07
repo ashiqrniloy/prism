@@ -22,6 +22,7 @@ import { atomicWriteUtf8File } from "./atomic-write.js";
 import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
+import type { CodingLifecycleEvent } from "./lifecycle.js";
 import { DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
 import { refuseReadBeforeWrite, type ReadBeforeWriteOptions } from "./read-path-set.js";
@@ -44,6 +45,8 @@ export interface WriteToolOptions extends ReadBeforeWriteOptions {
   operations?: WriteOperations;
   /** Maximum UTF-8 input bytes accepted before any filesystem mutation (default 8 MiB). */
   maxInputBytes?: number;
+  /** Optional consumer-gated lifecycle listener (file_changed / permission_denied). */
+  onEvent?: (event: CodingLifecycleEvent) => void;
 }
 
 const defaultWriteOperations: WriteOperations = {
@@ -119,6 +122,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
           },
           toolCallId,
           "write",
+          (denied) => options?.onEvent?.({ type: "permission_denied", ...denied }),
         );
         if (!policyCheck.allowed) return policyCheck.result;
         const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
@@ -135,6 +139,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
           await ops.mkdir(dir, { signal: context.signal });
           if (context.signal?.aborted) return errorResult(toolCallId, "Operation aborted");
           await ops.writeFile(allowedPath, content, { maxBytes: maxInputBytes, signal: context.signal });
+          options?.onEvent?.({ type: "file_changed", path: allowedPath, op: "write", toolCallId });
 
           const lines = countLines(content);
           return {

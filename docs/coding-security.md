@@ -193,3 +193,4 @@ The egress proxy is a policy enforcer, not a firewall: it cannot stop a containe
 - [Forge integration](forge-integration.md): GitHub adapter whose mutations can be routed through the egress proxy
 - [Tool execution primitives](tool-execution-primitives.md)
 - [Security/auth/trust](settings-auth-trust-security.md)
+- [ACP coding-host interop](acp.md): when an ACP client supplies fs/terminal methods and MCP servers, the same containment story applies at the protocol boundary — client paths/dirs pass host seams, MCP servers need host `select` approval (never auto-connect), updates are redacted and capped, and mode switches only narrow or host-authorized widen.

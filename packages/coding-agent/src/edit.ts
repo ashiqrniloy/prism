@@ -37,6 +37,7 @@ import {
 } from "./edit-diff.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
+import type { CodingLifecycleEvent } from "./lifecycle.js";
 import {
   DEFAULT_MAX_EDIT_FILE_BYTES,
   DEFAULT_MAX_EDIT_INPUT_BYTES,
@@ -90,6 +91,8 @@ export interface EditToolOptions extends ReadBeforeWriteOptions {
   maxInputBytes?: number;
   /** Maximum replacements per call (default 100). */
   maxEdits?: number;
+  /** Optional consumer-gated lifecycle listener (file_changed / permission_denied). */
+  onEvent?: (event: CodingLifecycleEvent) => void;
 }
 
 const defaultEditOperations: EditOperations = {
@@ -227,6 +230,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
           },
           toolCallId,
           "edit",
+          (denied) => options?.onEvent?.({ type: "permission_denied", ...denied }),
         );
         if (!policyCheck.allowed) return policyCheck.result;
         const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
@@ -280,6 +284,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
           const finalContent = bom + restoreLineEndings(newContent, originalEnding);
           await ops.writeFile(allowedPath, finalContent, { signal: context.signal });
+          options?.onEvent?.({ type: "file_changed", path: allowedPath, op: "edit", toolCallId });
 
           const diffResult = generateDiffString(baseContent, newContent);
           const patch = generateUnifiedPatch(prepared.path, baseContent, newContent);

@@ -1,0 +1,59 @@
+{
+  "version": "0.0.27",
+  "generatedAt": "2026-08-07T14:31:20.970Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "local",
+    "network": false
+  },
+  "fixture": {
+    "warmups": 20,
+    "measuredOperations": 100
+  },
+  "ceilingsMs": {
+    "fsReadWriteRoundTripMs": 250,
+    "modeSwitchMs": 250,
+    "terminalChunkAckMs": 1000,
+    "promptFirstUpdateMs": 2000,
+    "promptEndMs": 30000
+  },
+  "results": [
+    {
+      "name": "fsReadWriteRoundTripMs",
+      "operations": 100,
+      "p50Ms": 0.177,
+      "p95Ms": 0.321,
+      "throughputPerSecond": 4615.2
+    },
+    {
+      "name": "terminalChunkAckMs",
+      "operations": 100,
+      "p50Ms": 0.078,
+      "p95Ms": 0.17,
+      "throughputPerSecond": 9944.4
+    },
+    {
+      "name": "modeSwitchMs",
+      "operations": 100,
+      "p50Ms": 0.336,
+      "p95Ms": 0.61,
+      "throughputPerSecond": 2169.5
+    },
+    {
+      "name": "promptFirstUpdateMs",
+      "operations": 100,
+      "p50Ms": 0.123,
+      "p95Ms": 0.245,
+      "throughputPerSecond": 6701.9
+    },
+    {
+      "name": "promptEndMs",
+      "operations": 100,
+      "p50Ms": 0.146,
+      "p95Ms": 0.308,
+      "throughputPerSecond": 5729
+    }
+  ]
+}

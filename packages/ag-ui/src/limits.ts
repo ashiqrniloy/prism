@@ -58,6 +58,30 @@ export const HARD_MAX_JSON_PROPERTIES = 4096;
 export const DEFAULT_MAX_JSON_ARRAY_ITEMS = 512;
 export const HARD_MAX_JSON_ARRAY_ITEMS = 8192;
 
+/** Phase 10 frozen ACP session-lifecycle caps (scripts/phase10-freeze-manifest.json caps.acp). */
+export const DEFAULT_MAX_ACP_SESSIONS = 32;
+export const HARD_MAX_ACP_SESSIONS = 128;
+export const DEFAULT_MAX_ACP_ADDITIONAL_DIRECTORIES = 8;
+export const HARD_MAX_ACP_ADDITIONAL_DIRECTORIES = 32;
+export const DEFAULT_MAX_ACP_ADDITIONAL_DIRECTORY_PATH_BYTES = 4 * 1024;
+export const HARD_MAX_ACP_ADDITIONAL_DIRECTORY_PATH_BYTES = 16 * 1024;
+export const DEFAULT_MAX_ACP_MCP_SERVERS_PER_SESSION = 8;
+export const HARD_MAX_ACP_MCP_SERVERS_PER_SESSION = 32;
+export const DEFAULT_MAX_ACP_MCP_SERVER_CONFIG_BYTES = 16 * 1024;
+export const HARD_MAX_ACP_MCP_SERVER_CONFIG_BYTES = 256 * 1024;
+export const DEFAULT_MAX_ACP_MCP_HEADER_VALUE_BYTES = 4 * 1024;
+export const HARD_MAX_ACP_MCP_HEADER_VALUE_BYTES = 64 * 1024;
+export const DEFAULT_MAX_ACP_SESSION_LIST_PAGE = 20;
+export const HARD_MAX_ACP_SESSION_LIST_PAGE = 100;
+export const DEFAULT_MAX_ACP_MODES_PER_SESSION = 16;
+export const HARD_MAX_ACP_MODES_PER_SESSION = 64;
+export const DEFAULT_MAX_ACP_CONFIG_OPTIONS = 16;
+export const HARD_MAX_ACP_CONFIG_OPTIONS = 64;
+export const DEFAULT_MAX_ACP_DIFF_BYTES = 64 * 1024;
+export const HARD_MAX_ACP_DIFF_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_ACP_LOCATIONS_PER_UPDATE = 32;
+export const HARD_MAX_ACP_LOCATIONS_PER_UPDATE = 128;
+
 export interface AgUiLimitOptions {
   readonly maxEventBytes?: number;
   readonly maxTextBytes?: number;
@@ -86,6 +110,18 @@ export interface AgUiLimitOptions {
   readonly maxJsonDepth?: number;
   readonly maxJsonProperties?: number;
   readonly maxJsonArrayItems?: number;
+  /** ACP in-memory session registry bound (acp.sessions). */
+  readonly acpSessions?: number;
+  readonly acpAdditionalDirectories?: number;
+  readonly acpAdditionalDirectoryPathBytes?: number;
+  readonly acpMcpServersPerSession?: number;
+  readonly acpMcpServerConfigBytes?: number;
+  readonly acpMcpHeaderValueBytes?: number;
+  readonly acpSessionListPage?: number;
+  readonly acpModesPerSession?: number;
+  readonly acpConfigOptions?: number;
+  readonly acpDiffBytes?: number;
+  readonly acpLocationsPerUpdate?: number;
 }
 
 export interface ResolvedAgUiLimits {
@@ -116,6 +152,17 @@ export interface ResolvedAgUiLimits {
   readonly maxJsonDepth: number;
   readonly maxJsonProperties: number;
   readonly maxJsonArrayItems: number;
+  readonly acpSessions: number;
+  readonly acpAdditionalDirectories: number;
+  readonly acpAdditionalDirectoryPathBytes: number;
+  readonly acpMcpServersPerSession: number;
+  readonly acpMcpServerConfigBytes: number;
+  readonly acpMcpHeaderValueBytes: number;
+  readonly acpSessionListPage: number;
+  readonly acpModesPerSession: number;
+  readonly acpConfigOptions: number;
+  readonly acpDiffBytes: number;
+  readonly acpLocationsPerUpdate: number;
 }
 
 export const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits = {
@@ -146,6 +193,17 @@ export const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits = {
   maxJsonDepth: DEFAULT_MAX_JSON_DEPTH,
   maxJsonProperties: DEFAULT_MAX_JSON_PROPERTIES,
   maxJsonArrayItems: DEFAULT_MAX_JSON_ARRAY_ITEMS,
+  acpSessions: DEFAULT_MAX_ACP_SESSIONS,
+  acpAdditionalDirectories: DEFAULT_MAX_ACP_ADDITIONAL_DIRECTORIES,
+  acpAdditionalDirectoryPathBytes: DEFAULT_MAX_ACP_ADDITIONAL_DIRECTORY_PATH_BYTES,
+  acpMcpServersPerSession: DEFAULT_MAX_ACP_MCP_SERVERS_PER_SESSION,
+  acpMcpServerConfigBytes: DEFAULT_MAX_ACP_MCP_SERVER_CONFIG_BYTES,
+  acpMcpHeaderValueBytes: DEFAULT_MAX_ACP_MCP_HEADER_VALUE_BYTES,
+  acpSessionListPage: DEFAULT_MAX_ACP_SESSION_LIST_PAGE,
+  acpModesPerSession: DEFAULT_MAX_ACP_MODES_PER_SESSION,
+  acpConfigOptions: DEFAULT_MAX_ACP_CONFIG_OPTIONS,
+  acpDiffBytes: DEFAULT_MAX_ACP_DIFF_BYTES,
+  acpLocationsPerUpdate: DEFAULT_MAX_ACP_LOCATIONS_PER_UPDATE,
 };
 
 export const HARD_AG_UI_LIMITS: ResolvedAgUiLimits = {
@@ -176,6 +234,17 @@ export const HARD_AG_UI_LIMITS: ResolvedAgUiLimits = {
   maxJsonDepth: HARD_MAX_JSON_DEPTH,
   maxJsonProperties: HARD_MAX_JSON_PROPERTIES,
   maxJsonArrayItems: HARD_MAX_JSON_ARRAY_ITEMS,
+  acpSessions: HARD_MAX_ACP_SESSIONS,
+  acpAdditionalDirectories: HARD_MAX_ACP_ADDITIONAL_DIRECTORIES,
+  acpAdditionalDirectoryPathBytes: HARD_MAX_ACP_ADDITIONAL_DIRECTORY_PATH_BYTES,
+  acpMcpServersPerSession: HARD_MAX_ACP_MCP_SERVERS_PER_SESSION,
+  acpMcpServerConfigBytes: HARD_MAX_ACP_MCP_SERVER_CONFIG_BYTES,
+  acpMcpHeaderValueBytes: HARD_MAX_ACP_MCP_HEADER_VALUE_BYTES,
+  acpSessionListPage: HARD_MAX_ACP_SESSION_LIST_PAGE,
+  acpModesPerSession: HARD_MAX_ACP_MODES_PER_SESSION,
+  acpConfigOptions: HARD_MAX_ACP_CONFIG_OPTIONS,
+  acpDiffBytes: HARD_MAX_ACP_DIFF_BYTES,
+  acpLocationsPerUpdate: HARD_MAX_ACP_LOCATIONS_PER_UPDATE,
 };
 
 export function resolveAgUiLimits(options: AgUiLimitOptions = {}): ResolvedAgUiLimits {

@@ -210,7 +210,7 @@ Every durable `AgentEventSource` page/subscribe and tool-effect claim rechecks e
 ## Related APIs
 
 - [Web-standard server handler](server.md): remote agent/workflow route, ownership, limits, abort, and deployment boundary.
-- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): authorize every protocol selector/operation; full AG-UI input/output only through bounded host allow-lists; exact interrupt/version resume; redacted, ownership-scoped replay.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): authorize every protocol selector/operation; full AG-UI input/output only through bounded host allow-lists; exact interrupt/version resume; redacted, ownership-scoped replay. [ACP coding-host interop](acp.md): untrusted client fs/terminal/paths/MCP configs are boundary-validated (caps + host seams); client MCP servers never auto-connect; mode switches only narrow or host-authorized widen; updates are redacted and never carry raw tool I/O.
 - [Supervisor delegation](supervisors.md): local child permission/memory/budget boundary.
 - [A2A interoperability](a2a.md): remote card/auth/origin/signature boundary.
 - [Settings, auth, trust, and security controls](settings-auth-trust-security.md): low-level helpers and boundary hardening table.

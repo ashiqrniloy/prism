@@ -1,0 +1,328 @@
+{
+  "$comment": "Phase 10 (0.0.27) Task 0 public API freeze manifest. Machine-checkable source of truth consumed by Tasks 1-8 tests: every implementation export name, error code, event type, capability matrix cell, and cap must match this file exactly. Amendment requires a recorded Task 0 freeze amendment in plans/010.",
+  "release": "0.0.27",
+  "sdk": {
+    "name": "@agentclientprotocol/sdk",
+    "version": "1.3.0",
+    "protocolVersion": 1,
+    "notes": "Stable v1 only. Experimental v2 / UNSTABLE fields excluded (see exclusions)."
+  },
+  "placement": {
+    "decision": "No new publishable package. Extend @arnilo/prism-ag-ui/acp subpath for all protocol adapter surface; add a lifecycle events module to @arnilo/prism-coding-agent for the shared typed events. 47 publishable manifests at freeze; package count must stay 47 through the release gate.",
+    "packageCount": 47,
+    "agentInfo": {
+      "name": "Prism",
+      "versionSource": "@arnilo/prism-ag-ui package.json version via JSON import attribute (import pkg from \"../package.json\" with { type: \"json\" }); packages/ag-ui/tsconfig.json gains resolveJsonModule. Replaces stale hard-coded \"0.0.12\"."
+    }
+  },
+  "packages": {
+    "@arnilo/prism-ag-ui": {
+      "modules": {
+        "acp": {
+          "existingExports": [
+            "createPrismAcpAgent",
+            "CreatePrismAcpAgentOptions",
+            "AcpAuthorization",
+            "AcpSessionBinding",
+            "createAcpEventMapper",
+            "AcpEventMapper",
+            "AcpEventMapperOptions"
+          ],
+          "newExports": [
+            "resolveAcpAgentCapabilities",
+            "AcpCapabilitiesOptions",
+            "AcpSessionMode",
+            "AcpConfigOption",
+            "AcpCodingSeams",
+            "AcpSessionStoreSeams",
+            "AcpMcpSeams",
+            "projectAcpPrompt",
+            "AcpPromptResult",
+            "AcpLifecycleMapper",
+            "AcpCodingContext",
+            "AcpClientFilesystem",
+            "AcpClientFilesystemOptions",
+            "createAcpClientFilesystem",
+            "AcpClientTerminal",
+            "AcpClientTerminals",
+            "AcpClientTerminalsOptions",
+            "createAcpClientTerminals",
+            "AcpError",
+            "AcpErrorCode",
+            "AcpSessionSummary",
+            "AcpModesSeam",
+            "AcpConfigOptionsSeam",
+            "AcpPromptMedia",
+            "AcpPromptOptions"
+          ],
+          "errorCodes": [
+            "ERR_PRISM_ACP_INPUT",
+            "ERR_PRISM_ACP_LIMIT",
+            "ERR_PRISM_ACP_POLICY",
+            "ERR_PRISM_ACP_CAPABILITY",
+            "ERR_PRISM_ACP_MCP"
+          ],
+          "newOptionKeys": [
+            "coding",
+            "modes",
+            "configOptions",
+            "sessions",
+            "mcp",
+            "capabilities",
+            "name"
+          ],
+          "dependencyAdditions": [
+            "@arnilo/prism-coding-agent (0.0.26, workspace) — terminal chunk caps reuse Phase 9 process.outputChunkBytes constants; also serves Task 7 lifecycle mapping"
+          ]
+        }
+      }
+    },
+    "@arnilo/prism-coding-agent": {
+      "modules": {
+        "lifecycle": {
+          "exports": [
+            "CodingLifecycleEvent",
+            "FileChangedEvent",
+            "WorktreeChangedEvent",
+            "PermissionDeniedEvent",
+            "ConfigurationChangedEvent",
+            "CodingLifecycleEmitter",
+            "createCodingLifecycleEmitter",
+            "CodingLifecycleLimits",
+            "CodingLifecycleError",
+            "resolveCodingLifecycleLimits",
+            "ResolvedCodingLifecycleLimits"
+          ],
+          "errorCodes": [
+            "ERR_PRISM_LIFECYCLE_LIMIT"
+          ],
+          "events": [
+            "process_started",
+            "process_exited",
+            "process_killed",
+            "file_changed",
+            "worktree_changed",
+            "permission_denied",
+            "configuration_changed"
+          ],
+          "deferredEvents": [
+            "check_started",
+            "check_finished",
+            "task_created",
+            "task_completed",
+            "compaction_started",
+            "compaction_finished",
+            "subagent_started",
+            "subagent_stopped"
+          ],
+          "notes": "process_started/process_exited/process_killed reuse the shipped CodingProcessEvent union (no new shape). Deferred events have no consumer in 0.0.27: ACP SDK 1.3.0 exposes no update kind for checks, tasks, compaction, or subagents, and no other host requested them. Deferred kinds MUST NOT be exported."
+        }
+      }
+    }
+  },
+  "capabilityMatrix": {
+    "$comment": "Advertise iff host wiring provides the seam; absent seam -> key omitted from initialize (never an empty stub that implies support). Client-side capabilities are read from the initialize request and gate later client method use.",
+    "agentCapabilities": {
+      "loadSession": {
+        "advertiseWhen": "sessions.load seam supplied",
+        "handler": "session/load"
+      },
+      "promptCapabilities.image": {
+        "advertiseWhen": "prompt.media policy seam supplied"
+      },
+      "promptCapabilities.audio": {
+        "advertiseWhen": "prompt.media policy seam supplied"
+      },
+      "promptCapabilities.embeddedContext": {
+        "advertiseWhen": "prompt.embedded policy seam supplied"
+      },
+      "mcpCapabilities.http": {
+        "advertiseWhen": "mcp.select seam supplied and bridge supports http transport"
+      },
+      "mcpCapabilities.sse": {
+        "advertiseWhen": "mcp.select seam supplied and bridge supports sse transport"
+      },
+      "mcpCapabilities.acp": {
+        "advertiseWhen": "NEVER (UNSTABLE)"
+      },
+      "sessionCapabilities.list": {
+        "advertiseWhen": "sessions.list seam supplied",
+        "handler": "session/list"
+      },
+      "sessionCapabilities.delete": {
+        "advertiseWhen": "sessions.delete seam supplied",
+        "handler": "session/delete"
+      },
+      "sessionCapabilities.additionalDirectories": {
+        "advertiseWhen": "sessions.additionalDirectories policy seam supplied"
+      },
+      "sessionCapabilities.resume": {
+        "advertiseWhen": "sessions.resume seam supplied",
+        "handler": "session/resume"
+      },
+      "sessionCapabilities.close": {
+        "advertiseWhen": "ALWAYS (existing behavior)",
+        "handler": "session/close"
+      },
+      "sessionCapabilities.fork": {
+        "advertiseWhen": "NEVER (UNSTABLE)"
+      },
+      "auth": {
+        "advertiseWhen": "NEVER (no logout seam in scope)"
+      },
+      "providers": {
+        "advertiseWhen": "NEVER (UNSTABLE)"
+      },
+      "nes": {
+        "advertiseWhen": "NEVER (UNSTABLE)"
+      },
+      "positionEncoding": {
+        "advertiseWhen": "NEVER (UNSTABLE)"
+      }
+    },
+    "clientCapabilities": {
+      "fs.readTextFile": "agent may call fs/read_text_file only when true",
+      "fs.writeTextFile": "agent may call fs/write_text_file only when true",
+      "terminal": "agent may call terminal/* only when true",
+      "session.configOptions.boolean": "agent returns configOptions and accepts session/set_config_option only when present",
+      "elicitation": "agent maps elicitation pending decisions to elicitation/create only when present (UNSTABLE on the wire; checked at initialize, never advertised agent-side)",
+      "plan": "never consumed (UNSTABLE)",
+      "auth": "never consumed (UNSTABLE)",
+      "nes": "never consumed (UNSTABLE)",
+      "positionEncodings": "never consumed (UNSTABLE)"
+    },
+    "alwaysBaseline": "session/new, session/prompt, session/cancel, session/update, session/close (ACP baseline + close). Prompt text + resource_link content blocks always accepted; other prompt content types only under promptCapabilities."
+  },
+  "lifecycleEventMapping": {
+    "$comment": "Consumer-gated: only events with a consumer in 0.0.27 ship. Consumers = ACP event mapper + optional host CodingLifecycleEmitter callback. All mappings redacted, ownership-scoped, byte/count capped.",
+    "process_started": "tool_call_update (kind execute) when toolCallId present; else projection-gated agent_message_chunk",
+    "process_exited": "tool_call_update (status completed/failed) when toolCallId present; else projection-gated agent_message_chunk",
+    "process_killed": "tool_call_update (status failed) when toolCallId present; else projection-gated agent_message_chunk",
+    "file_changed": "tool_call_update with locations:[{path}] when toolCallId present (no toolCallId -> dropped); diff content block only when projection supplies a safe diff, capped by acp.diffBytes",
+    "worktree_changed": "projection-gated agent_message_chunk",
+    "permission_denied": "tool_call_update (status failed); never includes raw tool args",
+    "configuration_changed": "session/update config_option_update carrying the full bounded option set (ConfigOptionUpdate verified in SDK 1.3.0); Task 7 verifies wire gating and falls back to agent_message_chunk if the SDK rejects the update kind for a client",
+    "deferred": "check_started, check_finished, task_created, task_completed, compaction_started, compaction_finished, subagent_started, subagent_stopped -> no ACP update kind, no consumer; not shipped"
+  },
+  "permissionMatrix": {
+    "$comment": "Phase 8 shared approval contract is NOT widened. ACP options map onto the existing four outcomes; unrecognized option ids and cancelled requests deny-closed.",
+    "allow-once": "allow_once",
+    "allow-for-run": "allow_for_run",
+    "reject-once": "reject_once",
+    "reject-for-run": "reject_for_run",
+    "cancelled": "deny",
+    "unknownOptionId": "deny",
+    "stickyBehavior": "unchanged from Phase 8 StickyDecision (allow_for_run/reject_for_run persist for the run only)",
+    "elicitation": "pending decisions with kind \"elicitation\" map to elicitation/create + elicitation/complete only when clientCapabilities.elicitation present; otherwise stay on the shared interruption path used by AG-UI"
+  },
+  "caps": {
+    "$comment": "default/hard pairs. Existing AG-UI limits and Phase 9 process caps are reused where they already cover the surface (no duplicate knobs).",
+    "acp": {
+      "sessions": {
+        "default": 32,
+        "hard": 128,
+        "notes": "Fixes today's unbounded in-memory ACP session registry (Map with no cap)."
+      },
+      "diffBytes": {
+        "default": 65536,
+        "hard": 1048576
+      },
+      "locationsPerUpdate": {
+        "default": 32,
+        "hard": 128
+      },
+      "additionalDirectories": {
+        "default": 8,
+        "hard": 32
+      },
+      "additionalDirectoryPathBytes": {
+        "default": 4096,
+        "hard": 16384
+      },
+      "mcpServersPerSession": {
+        "default": 8,
+        "hard": 32
+      },
+      "mcpServerConfigBytes": {
+        "default": 16384,
+        "hard": 262144
+      },
+      "mcpHeaderValueBytes": {
+        "default": 4096,
+        "hard": 65536
+      },
+      "configOptions": {
+        "default": 16,
+        "hard": 64
+      },
+      "modesPerSession": {
+        "default": 16,
+        "hard": 64
+      },
+      "sessionListPage": {
+        "default": 20,
+        "hard": 100
+      },
+      "promptMediaParts": {
+        "default": 16,
+        "hard": 64,
+        "notes": "Reuses AgUiLimitOptions maxInputMediaParts; media bytes reuse maxInputMediaBytes 65536/1048576."
+      }
+    },
+    "reusedLimits": {
+      "maxEventBytes": "65536/1048576 (AgUiLimitOptions)",
+      "maxTextBytes": "65536/1048576 (AgUiLimitOptions)",
+      "maxInputMessages": "128/1024 (AgUiLimitOptions)",
+      "maxInputTextBytes": "65536/1048576 (AgUiLimitOptions)",
+      "maxStreamEvents": "10000/100000 (AgUiLimitOptions)",
+      "maxStreamBytes": "10485760/67108864 (AgUiLimitOptions)",
+      "maxQueuedEvents": "128/4096 (AgUiLimitOptions, overflow close)",
+      "terminalChunkBytes": "51200/1048576 (Phase 9 process.outputChunkBytes; ACP terminal output forwards ProcessSession chunks, no new knob)"
+    },
+    "lifecycle": {
+      "maxEventBytes": {
+        "default": 16384,
+        "hard": 65536
+      },
+      "maxPathBytes": {
+        "default": 4096,
+        "hard": 16384
+      },
+      "maxReasonBytes": {
+        "default": 1024,
+        "hard": 16384
+      },
+      "maxToolNameBytes": {
+        "default": 256,
+        "hard": 4096
+      },
+      "maxConfigKeys": {
+        "default": 64,
+        "hard": 256
+      }
+    }
+  },
+  "p95Targets": {
+    "$comment": "Local, network-free, recorded by scripts/benchmark-0.0.27.mjs into scripts/budgets.json phase10 section (Task 8). Machine-dependent ceilings.",
+    "fsReadWriteRoundTripMs": 250,
+    "modeSwitchMs": 250,
+    "terminalChunkAckMs": 1000,
+    "promptFirstUpdateMs": 2000,
+    "promptEndMs": 30000
+  },
+  "securityInvariants": {
+    "clientInputs": "All client-provided paths, cwd, additionalDirectories, MCP servers, config options, and prompt content blocks are untrusted and policy-checked through existing execution policy, ownership, sandbox/workspace mode, and approval before any effect.",
+    "capabilityNegotiation": "Capability advertisement is a pure function of wired seams; it can never activate a tool, path, or server that the host did not supply.",
+    "modes": "Modes only narrow tool availability, write policy, approval policy, prompt contributions, and language/forge capability, or widen with explicit host authorization; they never change tenant/identity and never bypass the policy evaluator. Unknown mode ids fail closed.",
+    "secrets": "Credentials never appear in ACP payloads or logs; redaction runs before mapping; permission-denial events never include raw tool args.",
+    "mcp": "Experimental acp MCP transport rejected even if a client sends it; stdio/http/sse configs require host select/authorize before bridge connect.",
+    "capExclusions": "providers, nes, positionEncoding, sessionCapabilities.fork, mcpCapabilities.acp, client plan/auth/nes/positionEncodings, agent auth/logout: never advertised or consumed."
+  },
+  "testFixtures": {
+    "capabilityMatrixCases": "one conformance case per matrix cell: advertise on/off matches method presence/absence and deny behavior",
+    "lifecycleEventCases": "one fixture per shipped event: producer emits exact frozen shape; mapper emits frozen update; deferred kinds absent from exports",
+    "permissionCases": "four outcomes + cancelled + unknown option id + sticky run persistence + elicitation capability on/off",
+    "limitLadderCases": "at/below/above every frozen cap value",
+    "securityCases": "path escape, symlink, untrusted MCP config, mode widen attempt, secret redaction, cap-excluded field sent by client"
+  }
+}

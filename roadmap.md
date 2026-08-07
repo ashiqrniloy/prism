@@ -2,7 +2,7 @@
 
 Updated: 2026-08-04
 Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed)
-Status: Phase 9 complete (2026-08-06); Phase 10+ pending exit gates
+Status: Phase 10 complete (2026-08-07); Phase 11+ pending exit gates
 
 ## Objectives
 
@@ -804,7 +804,11 @@ Status: Phase 9 complete (2026-08-06); Phase 10+ pending exit gates
   - Exit Gate:
     - Primitive review accepted; network-free and protected GitHub/LSP/sandbox/proxy suites pass; large-repository/process/network benchmarks meet frozen budgets; full release gate passes.
 
-- [ ] Phase 10 — Release 0.0.27: complete ACP coding-host interoperability and lifecycle events
+- [x] Phase 10 — Release 0.0.27: complete ACP coding-host interoperability and lifecycle events (complete 2026-08-07; Tasks 0–10 shipped)
+  - Completion evidence:
+    - Freeze manifest `scripts/phase10-freeze-manifest.json` (Task 0): capability advertise-when matrix, 7 shipped + 8 deferred lifecycle events, 4-outcome permission matrix, frozen caps (default/hard), p95 targets, security invariants; still matched by the shipped exports at 0.0.27.
+    - Task 1–9 shipped: `CodingLifecycleEvent` emitter + tool/policy wiring in `@arnilo/prism-coding-agent`; ACP adapter in `@arnilo/prism-ag-ui/acp` (truthful seam-based `initialize`, session load/resume/list/delete, modes/config overlays, client fs/terminal adapters, MCP select gate, rich prompt content, locations/diffs via projection allow-lists, lifecycle → update mapping, elicitation routing); network-free `scripts/phase10-conformance.test.mjs` 7/7 in `npm test`; operator-gated real-transport smoke; `examples/acp-coding-host.ts`; `benchmark-0.0.27.json` under freeze p95 ceilings; `docs/acp.md` + migration `0.0.26 → 0.0.27`.
+    - Exit gate: `npm run sdk:ready` green (typecheck incl. examples, lint, format, full test suite, coverage, pack dry-run, release gate for 0.0.27), `npm audit --audit-level moderate` clean, compat baselines regenerated (only additive ag-ui/coding-agent deltas), freeze exports verified, `git diff --check` clean, 48-manifest exact graph at 0.0.27.
   - Objectives:
     - Make Prism usable as a complete ACP coding agent without implementing a second coding runtime.
     - Map Phase 8 approval and Phase 9 filesystem/process/language/forge capabilities through negotiated ACP features.
@@ -846,7 +850,7 @@ Status: Phase 9 complete (2026-08-06); Phase 10+ pending exit gates
       - Coding-security/process/language/forge adapters only for shared contract integration.
       - Real-client example and optional protected interoperability workflow.
     - References:
-      - Current ACP adapter advertises only close-session capability and maps only allow-once/reject-once.
+      - Current ACP adapter truthfully advertises only configured seams and maps the shared four-outcome decision model; see `docs/acp.md`.
       - Existing AgentEvent mapper, session lifecycle, durable resume, coding tools, and MCP client bridge.
   - Test Cases to Write:
     - Initialization capability matrix for every configured/absent feature.

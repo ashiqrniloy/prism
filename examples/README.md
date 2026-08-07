@@ -157,6 +157,7 @@ Each demo prints a single JSON line with its result.
 - `coding-goal-verify.ts` — **demo**: `runCodingGoalVerify` thin goal→verify helper (failing check → suspend → approve → bounded handoff; no Goal table / network).
 - `coding-tools-capability-gaps.ts` — **demo**: `outputMode`, `glob`, read-before-write, `delete`/`move` smoke (network-free).
 - `phase9-coding-intelligence.ts` — **demo**: composed Phase 9 scenario (network-free): Git-aware enumeration, approved LSP rename, managed process session, idempotent forge PR (fake GitHub), and allow-list egress (github+registry presets).
+- `acp-coding-host.ts` — **demo**: `createPrismAcpAgent` hosting seams (session store, MCP select, modes, config options, prompt media policy, client fs adapter, lifecycle emitter) with an in-process SDK client round trip (network-free).
 - `tsconfig.json` — typecheck-only config.
 
 **demo** = the file has a runnable `main()`; the others are compile-checked

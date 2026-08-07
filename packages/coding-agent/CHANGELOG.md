@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.27] - 2026-08-07
+
+### Added
+- `createCodingLifecycleEmitter(options?)` — consumer-gated coding lifecycle events (Phase 10): ships `process_*` (reuses `CodingProcessEvent`) plus `file_changed`, `worktree_changed`, `permission_denied`, `configuration_changed`; synchronous bounded `emit`/`on`; drops unknown/oversized events without breaking producer paths; invalid limits fail closed with `CodingLifecycleError` (`ERR_PRISM_LIFECYCLE_LIMIT`); frozen `DEFAULT_LIFECYCLE_MAX_*` / `HARD_LIFECYCLE_MAX_*` caps.
+- `onEvent` option on `createWriteTool` / `createEditTool` / `createMoveTool` / `createDeleteTool` / `createGitWorktreeTool` — tools emit `file_changed` (write/edit/move/delete) and `worktree_changed` (add/remove) after successful mutation, and `permission_denied` via the shared `enforceExecutionPolicy` deny hook (never raw tool arguments).
+- `enforceExecutionPolicy(..., onDenied?)` — optional callback invoked once per policy denial (additive; existing callers unaffected).
+
 ## [0.0.26] - 2026-08-06
 
 ### Added

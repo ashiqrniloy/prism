@@ -36,9 +36,15 @@ CodingFingerprints	export type { CodingArtifactKind, CodingArtifactRef, CodingCh
 CodingGoalVerifyApproval	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
 CodingGoalVerifyError	export declare class CodingGoalVerifyError extends Error
 CodingHandoffSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingLifecycleEmitter	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
+CodingLifecycleError	export declare class CodingLifecycleError extends Error
+CodingLifecycleEvent	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
+CodingLifecycleLimits	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
 CodingProcessEvent	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
 CodingTaskStatus	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
 CodingTodoItem	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+ConfigurationChangedEvent	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
+CreateCodingLifecycleEmitterOptions	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
 CreateGitHubForgeOptions	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 CreateGitOperationsOptions	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
 CreateGitRunnerOptions	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
@@ -47,6 +53,11 @@ CreateProcessSessionsOptions	export type { CodingProcessEvent, CreateProcessSess
 DEFAULT_BINARY_SNIFF_BYTES	export declare const DEFAULT_BINARY_SNIFF_BYTES = 8192
 DEFAULT_CHECK_TIMEOUT_MS	export declare const DEFAULT_CHECK_TIMEOUT_MS: number
 DEFAULT_GIT_TIMEOUT_MS	export declare const DEFAULT_GIT_TIMEOUT_MS = 120000
+DEFAULT_LIFECYCLE_MAX_CONFIG_KEYS	export declare const DEFAULT_LIFECYCLE_MAX_CONFIG_KEYS = 64
+DEFAULT_LIFECYCLE_MAX_EVENT_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_EVENT_BYTES = 16384
+DEFAULT_LIFECYCLE_MAX_PATH_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_PATH_BYTES = 4096
+DEFAULT_LIFECYCLE_MAX_REASON_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_REASON_BYTES = 1024
+DEFAULT_LIFECYCLE_MAX_TOOL_NAME_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_TOOL_NAME_BYTES = 256
 DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES = 512
 DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES = 2048
 DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES = 512
@@ -119,6 +130,8 @@ Edit	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from
 EditOperations	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
 EditToolDetails	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
 EditToolOptions	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+FileChangeOp	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
+FileChangedEvent	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
 ForgeCheck	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 ForgeCredential	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 ForgeCredentialResolver	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
@@ -145,6 +158,11 @@ GitToolsOptions	export type { GitToolsOptions } from "./git-tools.js"
 GlobToolOptions	export type { GlobToolOptions } from "./glob.js"
 HARD_CHECK_TIMEOUT_MS	export declare const HARD_CHECK_TIMEOUT_MS: number
 HARD_GIT_TIMEOUT_MS	export declare const HARD_GIT_TIMEOUT_MS = 600000
+HARD_LIFECYCLE_MAX_CONFIG_KEYS	export declare const HARD_LIFECYCLE_MAX_CONFIG_KEYS = 256
+HARD_LIFECYCLE_MAX_EVENT_BYTES	export declare const HARD_LIFECYCLE_MAX_EVENT_BYTES = 65536
+HARD_LIFECYCLE_MAX_PATH_BYTES	export declare const HARD_LIFECYCLE_MAX_PATH_BYTES = 16384
+HARD_LIFECYCLE_MAX_REASON_BYTES	export declare const HARD_LIFECYCLE_MAX_REASON_BYTES = 16384
+HARD_LIFECYCLE_MAX_TOOL_NAME_BYTES	export declare const HARD_LIFECYCLE_MAX_TOOL_NAME_BYTES = 4096
 HARD_MAX_ASK_USER_DECISION_BULLET_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_BULLET_BYTES = 2048
 HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES = 8192
 HARD_MAX_ASK_USER_DECISION_LABEL_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_LABEL_BYTES = 2048
@@ -229,6 +247,7 @@ MoveToolOptions	export type { MoveOperations, MoveToolOptions } from "./move.js"
 MutationStat	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
 NamedCheckDefinition	export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js"
 OutputAccumulator	export declare class OutputAccumulator
+PermissionDeniedEvent	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
 PrHandoff	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
 ProcessExitResult	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
 ProcessOutputChunk	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
@@ -266,6 +285,7 @@ RepositoryWalkLimits	export type { RepoEntryKind, RepoListEntry, RepositoryGlobR
 ResolvedAskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedAskUserDecisionLimits	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedCodingCheckpointLimits	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+ResolvedCodingLifecycleLimits	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
 ResolvedForgeLimits	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 ResolvedGitLimits	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
 ResolvedProcessSessionLimits	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
@@ -279,6 +299,7 @@ ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext
 SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 TransformImage	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 TransformImageInput	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+WorktreeChangedEvent	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
 WriteOperations	export type { WriteOperations, WriteToolOptions } from "./write.js"
 WriteToolOptions	export type { WriteOperations, WriteToolOptions } from "./write.js"
 applyEditsToNormalizedContent	export declare function applyEditsToNormalizedContent(normalizedContent: string, edits: Edit[], path: string): AppliedEditsResult
@@ -303,6 +324,7 @@ createBoundGitRunner	export declare function createBoundGitRunner(options?: Crea
 createCodingArtifactRef	export declare function createCodingArtifactRef(input:
 createCodingCheckTool	export declare function createCodingCheckTool(cwd: string, options: CodingCheckToolOptions): ToolDefinition
 createCodingGoalVerifyWorkflow	export declare function createCodingGoalVerifyWorkflow(options:
+createCodingLifecycleEmitter	export declare function createCodingLifecycleEmitter(options?: CreateCodingLifecycleEmitterOptions): CodingLifecycleEmitter
 createCodingPlanMarkdown	export declare function createCodingPlanMarkdown(input:
 createCodingTools	export declare function createCodingTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
 createDeleteTool	export declare function createDeleteTool(cwd: string, options?: DeleteToolOptions): ToolDefinition
@@ -337,7 +359,7 @@ detectLineEnding	export declare function detectLineEnding(content: string): "\r\
 detectSupportedImageMimeType	export declare function detectSupportedImageMimeType(buffer: Buffer): string | null
 detectSupportedImageMimeTypeFromFile	export declare function detectSupportedImageMimeTypeFromFile(filePath: string): Promise<string | null>
 encodeLspFrame	export declare function encodeLspFrame(message: unknown): Buffer
-enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string): Promise<
+enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string, /** Called once on policy denial so one site emits lifecycle permission_denied for every tool. */ onDenied?: (input:
 expandPath	export declare function expandPath(filePath: string): string
 fingerprintJson	export declare function fingerprintJson(value: unknown): string
 formatSize	export declare function formatSize(bytes: number): string
@@ -365,6 +387,7 @@ refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "
 resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
 resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits
 resolveCodingCheckpointLimits	export declare function resolveCodingCheckpointLimits(options?: CodingCheckpointLimitOptions): ResolvedCodingCheckpointLimits
+resolveCodingLifecycleLimits	export declare function resolveCodingLifecycleLimits(limits?: CodingLifecycleLimits): ResolvedCodingLifecycleLimits
 resolveContainedMutationPath	export declare function resolveContainedMutationPath(root: string, inputPath: string, options?:
 resolveForgeLimits	export declare function resolveForgeLimits(options?: ForgeLimits): ResolvedForgeLimits
 resolveGitLimits	export declare function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits

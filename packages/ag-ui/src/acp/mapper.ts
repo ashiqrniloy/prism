@@ -1,9 +1,98 @@
-import type { SessionUpdate, ToolCallContent, ToolKind } from "@agentclientprotocol/sdk";
+import type { SessionUpdate, ToolCallContent, ToolCallLocation, ToolKind } from "@agentclientprotocol/sdk";
 import type { AgentEvent, ErrorInfo, ToolCallContent as PrismToolCall, SecretRedactor, ToolResult, Usage } from "@arnilo/prism";
+import type { CodingLifecycleEvent, FileChangedEvent } from "@arnilo/prism-coding-agent";
 import { type AgUiLimitOptions, resolveAgUiLimits } from "../limits.js";
 import { type AgUiProjection, projectCoWorkEvent } from "../projection.js";
 import type { CoWorkEvent } from "../types.js";
 
+/**
+ * Maps shipped `CodingLifecycleEvent` values to stable ACP v1 session updates
+ * (freeze `lifecycleEventMapping`). Deny-by-default: process/worktree events
+ * surface only through the shared projection allow-list; `file_changed` needs
+ * the event's toolCallId; diffs need the `fileDiff` allow-list hook and are
+ * byte-capped at `acpDiffBytes`. `configuration_changed` returns [] — the
+ * agent wires it to `config_option_update` (it owns the host configOptions
+ * seam and the per-session current values). Never raw file bodies, args, or
+ * secrets; all text passes the shared redactor.
+ */
+export function createAcpLifecycleMapper(options: AcpEventMapperOptions = {}): AcpLifecycleMapper {
+  const limits = resolveAgUiLimits(options.limits);
+  const text = (value: string, maxBytes = limits.maxTextBytes) =>
+    truncate(options.redactor?.redact(value) ?? value, Math.min(maxBytes, limits.maxEventBytes));
+  const projectedText = async (event: CodingLifecycleEvent): Promise<string | undefined> => {
+    try {
+      const value = await options.projection?.lifecycle?.(event);
+      return typeof value === "string" ? text(value) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const projectedDiff = async (event: FileChangedEvent): Promise<ToolCallContent | undefined> => {
+    try {
+      const value = await options.projection?.fileDiff?.(event);
+      if (!value || typeof value !== "object") return undefined;
+      const path = value.path;
+      const newText = value.newText;
+      if (typeof path !== "string" || path.length === 0 || typeof newText !== "string") return undefined;
+      const oldText = value.oldText;
+      const diff: ToolCallContent = {
+        type: "diff",
+        path: text(path),
+        ...(typeof oldText === "string" && oldText.length > 0 ? { oldText: text(oldText) } : {}),
+        newText: text(newText),
+      };
+      return Buffer.byteLength(JSON.stringify(diff), "utf8") <= limits.acpDiffBytes ? diff : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  return {
+    async map(event) {
+      switch (event.type) {
+        case "file_changed": {
+          if (!event.toolCallId) return [];
+          const diff = await projectedDiff(event);
+          return [
+            {
+              sessionUpdate: "tool_call_update",
+              toolCallId: text(event.toolCallId),
+              ...(diff ? { content: [diff] } : {}),
+              locations: [{ path: text(event.path) }],
+            },
+          ];
+        }
+        case "worktree_changed":
+        case "process_started":
+        case "process_exited":
+        case "process_killed": {
+          const value = await projectedText(event);
+          if (value === undefined) return [];
+          const messageId =
+            event.type === "worktree_changed" ? `prism:worktree:${event.path}` : `prism:process:${event.sessionId}:${event.processId}`;
+          return [{ sessionUpdate: "agent_message_chunk", messageId: text(messageId), content: { type: "text", text: value } }];
+        }
+        case "permission_denied": {
+          const toolCallId = event.toolCallId ?? (event.approvalId ? `prism:denied:${event.approvalId}` : undefined);
+          if (!toolCallId) return [];
+          return [{ sessionUpdate: "tool_call_update", toolCallId: text(toolCallId), title: text(event.toolName), status: "failed" }];
+        }
+        case "configuration_changed":
+          // Agent-wired: needs the host configOptions seam + per-session values (config_option_update).
+          return [];
+        default:
+          // process_released/expired/unknown are not shipped lifecycle mappings (freeze deferred).
+          return [];
+      }
+    },
+  };
+}
+
+export interface AcpLifecycleMapper {
+  /** Maps one coding lifecycle event to safe ACP session updates; empty when the event carries no consumer-safe update. */
+  map(event: CodingLifecycleEvent): Promise<readonly SessionUpdate[]>;
+}
+
+/** Options shared by the event and lifecycle mappers (redactor, projection allow-list, limits). */
 export interface AcpEventMapperOptions {
   readonly redactor?: SecretRedactor;
   /** Shared host allow-list; tool text is omitted unless explicitly projected. */
@@ -37,18 +126,61 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
   };
   const finish = async (id: string, name: string, status: "completed" | "failed", result?: ToolResult): Promise<SessionUpdate> => {
     const output = result ? await projected(() => options.projection?.toolResult?.(result)) : undefined;
+    const locations = result ? await projectedLocations(result) : undefined;
+    const diff = result ? await projectedDiff(result) : undefined;
     return {
       sessionUpdate: "tool_call_update",
       toolCallId: text(id),
       title: text(name),
       status,
-      ...(output ? { content: [content(output)] } : {}),
+      ...(output || diff ? { content: [...(output ? [content(output)] : []), ...(diff ? [diff] : [])] } : {}),
+      ...(locations ? { locations } : {}),
     };
   };
   const projected = async (callback: () => string | undefined | Promise<string | undefined>): Promise<string | undefined> => {
     try {
       const value = await callback();
       return typeof value === "string" ? text(value) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  /** Host allow-list for file locations: count-capped at acpLocationsPerUpdate, entries validated. */
+  const projectedLocations = async (result: ToolResult): Promise<ToolCallLocation[] | undefined> => {
+    try {
+      const value = await options.projection?.toolLocations?.(result);
+      if (!value) return undefined;
+      const capped = value.slice(0, limits.acpLocationsPerUpdate);
+      const entries: ToolCallLocation[] = [];
+      for (const entry of capped) {
+        if (typeof entry !== "object" || entry === null) continue;
+        const path = entry.path;
+        if (typeof path !== "string" || path.length === 0) continue;
+        const line = entry.line;
+        if (line !== undefined && line !== null && (!Number.isInteger(line) || line < 0)) continue;
+        entries.push({ path: text(path), ...(line === undefined || line === null ? {} : { line }) });
+      }
+      return entries.length > 0 ? entries : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  /** Host allow-list for file diffs: single diff, redacted, byte-capped at acpDiffBytes. */
+  const projectedDiff = async (result: ToolResult): Promise<ToolCallContent | undefined> => {
+    try {
+      const value = await options.projection?.toolDiff?.(result);
+      if (!value || typeof value !== "object") return undefined;
+      const path = value.path;
+      const newText = value.newText;
+      if (typeof path !== "string" || path.length === 0 || typeof newText !== "string") return undefined;
+      const oldText = value.oldText;
+      const diff: ToolCallContent = {
+        type: "diff",
+        path: text(path),
+        ...(typeof oldText === "string" && oldText.length > 0 ? { oldText: text(oldText) } : {}),
+        newText: text(newText),
+      };
+      return Buffer.byteLength(JSON.stringify(diff), "utf8") <= limits.acpDiffBytes ? diff : undefined;
     } catch {
       return undefined;
     }

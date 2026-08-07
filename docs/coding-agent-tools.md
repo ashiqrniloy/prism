@@ -560,4 +560,5 @@ Every configurable value is a positive safe integer (context may be zero); Prism
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolResult`, `ToolExecutionContext`, `ContentBlock`, and `JsonObject` shapes.
 - [Host security guide](host-security.md): fail-closed checklist for permission policies, tool validation, and trust boundaries that must gate these tools.
 - [Tool conformance](tool-conformance.md): assertions for the tool-dispatch blocked-reason matrix these tools participate in.
+- [ACP coding-host interop](acp.md): host editors drive these tools through stable ACP v1 — client fs/terminal adapters, `CodingLifecycleEvent` emission (`file_changed` etc. via the `onEvent` options), and permission/elicitation through the shared four-outcome decision model.
 - [LLM compaction package](compaction-llm.md): optional `createCodingCompactionStrategy()` retains bounded paths, patch intent, checks, plan/todo state, blockers, and next verification—not complete diffs or raw command output.

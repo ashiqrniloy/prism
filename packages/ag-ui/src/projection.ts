@@ -1,5 +1,6 @@
 import type { Message as AgUiMessage, Interrupt } from "@ag-ui/core";
 import type { AgentEvent, SecretRedactor, ThinkingContent, ToolCallContent, ToolResult } from "@arnilo/prism";
+import type { CodingLifecycleEvent, FileChangedEvent } from "@arnilo/prism-coding-agent";
 import { assertBoundedJson } from "./input.js";
 import type { ResolvedAgUiLimits } from "./limits.js";
 import type { CoWorkEvent, CoWorkKind } from "./types.js";
@@ -45,6 +46,14 @@ export interface AgUiProjection {
   toolArguments?(call: ToolCallContent): Awaitable<string | undefined>;
   /** Return a safe display string to expose a tool result; absent means status only. */
   toolResult?(result: ToolResult): Awaitable<string | undefined>;
+  /** Return safe file locations for a tool-call update; absent means no locations. */
+  toolLocations?(result: ToolResult): Awaitable<readonly { path: string; line?: number }[] | undefined>;
+  /** Return one safe file diff for a tool-call update; absent means no diff. */
+  toolDiff?(result: ToolResult): Awaitable<{ path: string; oldText?: string; newText: string } | undefined>;
+  /** Return safe display text for a coding lifecycle event (worktree/process fallbacks); absent means omit the update. */
+  lifecycle?(event: CodingLifecycleEvent): Awaitable<string | undefined>;
+  /** Return one safe file diff for a `file_changed` lifecycle event; absent means locations only. */
+  fileDiff?(event: FileChangedEvent): Awaitable<{ path: string; oldText?: string; newText: string } | undefined>;
   /** Legacy run-status state addition used for suspension/resume snapshots. */
   state?(event: AgentEvent): Awaitable<unknown>;
   /** Return a complete safe state replacement for a `STATE_SNAPSHOT`. */

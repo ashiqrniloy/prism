@@ -241,6 +241,7 @@ Official Exa/Firecrawl MCP servers may be tested only as explicit hardened proto
 - [Host security guide](host-security.md): permission, trust, validation checklist
 - [Web-standard server handler](server.md): agent/workflow HTTP routes and shared remote-boundary rules
 - Package README: [`@arnilo/prism-mcp`](../packages/mcp/README.md)
+- [ACP coding-host interop](acp.md): ACP clients may attach MCP servers to sessions — bounded configs (8/32 servers, 16 KiB/256 KiB config, 4 KiB/64 KiB header values), http/sse only when advertised, stdio accepted behind the gate, UNSTABLE `acp` always rejected, and every server approved by host `mcp.select` before the bridge connects.
 
 ## Testing
 

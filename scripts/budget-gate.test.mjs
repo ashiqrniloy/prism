@@ -142,6 +142,20 @@ describe("performance budget gate", () => {
     assert.ok(proxy.residentDeltaBytes <= 2 * 64 * 1024 ** 2, "proxy resident buffering must stay ≤ 2× maxBytes");
   });
 
+  it("checks the recorded Phase 10 ACP evidence", () => {
+    const phase10 = budgets.phase10;
+    const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.27.json", "utf8"));
+    assert.equal(evidence.version, "0.0.27");
+    assert.deepEqual(evidence.fixture, phase10.fixture);
+    assert.deepEqual(evidence.ceilingsMs, phase10.p95CeilingsMs);
+    for (const [name, ceiling] of Object.entries(phase10.p95CeilingsMs)) {
+      const result = evidence.results.find((entry) => entry.name === name);
+      assert.ok(result, `missing Phase 10 result for ${name}`);
+      assert.ok(result.p95Ms <= ceiling, `${name} p95 ${result.p95Ms} exceeded ceiling ${ceiling}`);
+      assert.ok(result.throughputPerSecond > 0, `${name} throughput missing`);
+    }
+  });
+
   it("checks the recorded protected enterprise PostgreSQL evidence", () => {
     const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.23.json", "utf8"));
     assert.equal(evidence.version, "0.0.23");

@@ -3,6 +3,7 @@ import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext,
 import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
+import type { CodingLifecycleEvent } from "./lifecycle.js";
 import { resolveContainedMutationPath } from "./mutation-path.js";
 
 export interface MutationStat {
@@ -22,6 +23,8 @@ export interface DeleteOperations {
 export interface DeleteToolOptions {
   executionPolicy?: ExecutionPolicy;
   operations?: DeleteOperations;
+  /** Optional consumer-gated lifecycle listener (file_changed / permission_denied). */
+  onEvent?: (event: CodingLifecycleEvent) => void;
 }
 
 const defaultDeleteOperations: DeleteOperations = {
@@ -92,6 +95,7 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
           },
           toolCallId,
           "delete",
+          (denied) => options?.onEvent?.({ type: "permission_denied", ...denied }),
         );
         if (!policyCheck.allowed) return policyCheck.result;
         const allowedPath = policyCheck.action.paths?.[0] ?? absolutePath;
@@ -113,6 +117,7 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
 
           if (st.isFile() || st.isSymbolicLink()) {
             await ops.unlink(allowedPath, { signal: context.signal });
+            options?.onEvent?.({ type: "file_changed", path: allowedPath, op: "delete", toolCallId });
             return {
               toolCallId,
               name: "delete",
@@ -127,6 +132,7 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
               return errorResult(toolCallId, `Directory is not empty: ${path}. Recursive delete is not supported.`);
             }
             await ops.rmdir(allowedPath, { signal: context.signal });
+            options?.onEvent?.({ type: "file_changed", path: allowedPath, op: "delete", toolCallId });
             return {
               toolCallId,
               name: "delete",

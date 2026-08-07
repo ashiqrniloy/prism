@@ -35,7 +35,7 @@ const response = await handle(request);
 
 `@arnilo/prism-ag-ui/acp` exposes stable ACP v1 `createAcpEventMapper()` and `createPrismAcpAgent()` using `@agentclientprotocol/sdk@1.3.0` root exports only. It streams text, safe tool status, usage, and durable `session/request_permission` approvals through Prism sessions/lifecycle.
 
-It does not expose experimental ACP v2, terminal, filesystem, MCP, editor state, locations, diffs, raw tool I/O, or automatic permissions. Permission prompts offer four outcomes (`allow_once` / `allow_always` / `reject_once` / `reject_always`) mapped onto the shared batch decision model; cancel stays deny-closed.
+Since 0.0.27 the agent is a full coding-host adapter: capability advertisement is a pure function of the host seams (sessions load/list/delete/resume/dirs, prompt media/embedded, MCP http/sse), client-advertised fs/terminal methods are wrapped as coding seams, modes and config options are host overlays, `CodingLifecycleEvent`s map to session updates (locations/diffs only through projection allow-lists), and all-elicitation suspensions surface as `elicitation/create` when the client advertises it. It does not expose experimental ACP v2 or UNSTABLE fields (providers, nes, positionEncoding, fork, `mcpCapabilities.acp`/auth). Permission prompts offer four outcomes (`allow_once` / `allow_always` / `reject_once` / `reject_always`) mapped onto the shared batch decision model; cancel stays deny-closed. See [docs/acp.md](../../docs/acp.md) for the full reference.
 
 ## Limits and security
 

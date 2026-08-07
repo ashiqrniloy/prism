@@ -1014,7 +1014,7 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.26 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.27 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
@@ -1025,7 +1025,7 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.26] - 2026-08-06"), `${dir}/CHANGELOG.md missing finalized 0.0.26 section`);
+      assert.ok(changelog.includes("## [0.0.27] - 2026-08-07"), `${dir}/CHANGELOG.md missing finalized 0.0.27 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -2345,6 +2345,7 @@ describe("docs", () => {
       "examples/neuralwatt-agent-run.ts",
       "examples/compaction.ts",
       "examples/coding-compaction.ts",
+      "examples/acp-coding-host.ts",
       "examples/observational-memory-recall-status-view.ts",
       "examples/observational-memory-lifecycle.ts",
       "examples/skills-progressive-disclosure.ts",
@@ -3330,7 +3331,7 @@ describe("docs", () => {
     assert.ok(server.includes("decisions") && server.includes("approvalId"));
     assert.ok(migration.includes("0.0.24 → 0.0.25 durable custom loops and human-in-the-loop"));
     assert.ok(performance.includes("benchmark-0.0.25") && performance.includes("3.913"));
-    assert.ok(readiness.includes("0.0.26") && readiness.includes("Phase 9"));
+    assert.ok(readiness.includes("0.0.27") && readiness.includes("Phase 10"));
     assert.ok(existsSync("examples/durable-loops-and-approvals.ts"), "missing durable loops example");
     assert.ok(existsSync("examples/ag-ui-a2ui.ts"), "missing A2UI example");
     assert.ok(existsSync("scripts/benchmark-0.0.25.json"), "missing Phase 8 benchmark evidence");
@@ -3418,9 +3419,67 @@ describe("docs", () => {
     );
     assert.ok(agUi.includes("Awaitable<T>") && agUi.includes("session.entries()"), "ag-ui.md missing Task 15 async projection hooks");
     assert.ok(performance.includes("benchmark-0.0.26") && performance.includes("299.166"));
-    assert.ok(readiness.includes("0.0.26") && readiness.includes("Phase 9"));
+    assert.ok(readiness.includes("0.0.27") && readiness.includes("Phase 10"));
     assert.ok(existsSync("examples/phase9-coding-intelligence.ts"), "missing Phase 9 example");
     assert.ok(existsSync("scripts/benchmark-0.0.26.json"), "missing Phase 9 benchmark evidence");
     assert.ok(existsSync("scripts/phase9-freeze-manifest.json"), "missing Phase 9 freeze manifest");
+    assert.ok(existsSync("examples/acp-coding-host.ts"), "missing Phase 10 ACP example");
+    assert.ok(existsSync("scripts/benchmark-0.0.27.json"), "missing Phase 10 benchmark evidence");
+    assert.ok(existsSync("scripts/phase10-conformance.test.mjs"), "missing Phase 10 conformance suite");
+  });
+
+  it("phase10 acp docs cover seam-based capabilities migration security and package notes", () => {
+    const acp = readFileSync("docs/acp.md", "utf8");
+    const agUi = readFileSync("docs/ag-ui.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const packageReadme = readFileSync("packages/ag-ui/README.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const packageChangelog = readFileSync("packages/ag-ui/CHANGELOG.md", "utf8");
+    for (const token of [
+      "createPrismAcpAgent",
+      "createAcpEventMapper",
+      "loadSession",
+      "sessionCapabilities",
+      "promptCapabilities",
+      "mcpCapabilities",
+      "ERR_PRISM_ACP_INPUT",
+      "ERR_PRISM_ACP_LIMIT",
+      "ERR_PRISM_ACP_POLICY",
+      "ERR_PRISM_ACP_CAPABILITY",
+      "ERR_PRISM_ACP_MCP",
+      "allow_once",
+      "allow_for_run",
+      "reject_once",
+      "reject_for_run",
+      "elicitation",
+      "acpDiffBytes",
+      "acpLocationsPerUpdate",
+      "Mode switches",
+      "never auto-connected",
+      "UNSTABLE",
+      "close",
+    ]) {
+      assert.ok(acp.includes(token), `docs/acp.md missing ${token}`);
+    }
+    assert.ok(
+      acp.includes("## What it does") && acp.includes("## When to use it") && acp.includes("## Security and performance notes"),
+      "docs/acp.md missing prism-wiki sections",
+    );
+    assert.ok(agUi.includes("(acp.md)"), "docs/ag-ui.md must link docs/acp.md");
+    assert.ok(!agUi.includes("only close-session capability"), "docs/ag-ui.md still claims close-session-only ACP");
+    assert.ok(index.includes("(acp.md)") && index.includes("ACP coding-host interop"), "docs/index.md missing ACP entry");
+    assert.ok(migration.includes("0.0.26 → 0.0.27"), "docs/migration.md missing 0.0.27 section");
+    assert.ok(packageReadme.includes("docs/acp.md"), "packages/ag-ui/README.md missing ACP doc link");
+    assert.ok(changelog.includes("0.0.27") && packageChangelog.includes("0.0.27"), "changelogs missing 0.0.27");
+    for (const [file, token] of [
+      ["docs/agent-events.md", "(acp.md)"],
+      ["docs/coding-agent-tools.md", "(acp.md)"],
+      ["docs/coding-security.md", "(acp.md)"],
+      ["docs/mcp-tools.md", "(acp.md)"],
+      ["docs/host-security.md", "(acp.md)"],
+    ]) {
+      assert.ok(readFileSync(file, "utf8").includes(token), `${file} missing ACP pointer`);
+    }
   });
 });

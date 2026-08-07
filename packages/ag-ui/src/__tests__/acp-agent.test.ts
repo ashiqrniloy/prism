@@ -21,6 +21,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { createPrismAcpAgent } from "../acp/index.js";
+import packageJson from "../../package.json" with { type: "json" };
 
 const authorization = { ownership: { userId: "user-1" } };
 
@@ -30,6 +31,31 @@ describe("createPrismAcpAgent", () => {
     assert.equal(typeof exports.createAcpEventMapper, "function");
     assert.equal(typeof exports.createPrismAcpAgent, "function");
     assert.equal("experimental" in exports, false);
+  });
+
+  it("initialize advertises wired seams truthfully and the package version", async () => {
+    const acpAgent = createPrismAcpAgent({
+      authorize: () => authorization,
+      sessionFactory: () => ({ session: { id: "x", async *stream() {} } as unknown as AgentSession }),
+      lifecycle: {} as AgentRunLifecycle,
+      sessions: { list: () => [{ sessionId: "s1", cwd: "/w" }] },
+      mcp: { select: () => true, transports: ["sse"] },
+      capabilities: { prompt: { embedded: () => true } },
+    });
+    const acpClient = client();
+    await acpClient.connectWith(acpAgent, async (connection) => {
+      const initialized = await connection.request(methods.agent.initialize, {
+        protocolVersion: PROTOCOL_VERSION,
+        clientCapabilities: { fs: { readTextFile: true }, terminal: true },
+      });
+      assert.equal(initialized.protocolVersion, PROTOCOL_VERSION);
+      assert.deepEqual(initialized.agentCapabilities, {
+        sessionCapabilities: { close: {}, list: {} },
+        mcpCapabilities: { sse: true },
+        promptCapabilities: { embeddedContext: true },
+      });
+      assert.deepEqual(initialized.agentInfo, { name: "Prism", version: packageJson.version });
+    });
   });
 
   it("uses stable ACP builders to stream Prism output and resume one durable approval", async () => {

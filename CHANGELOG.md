@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.27] - 2026-08-07
+
+### Added
+- ACP coding-host interop (`@arnilo/prism-ag-ui/acp`, stable ACP v1 over `@agentclientprotocol/sdk@1.3.0`): capability advertisement is a pure function of host seams (`loadSession`/`sessionCapabilities.*`/`promptCapabilities.*`/`mcpCapabilities.*`; `close` always; UNSTABLE cells never advertised), session persistence (`session/load|resume|list|delete`, bounded registry), session modes and config options as host overlays (`set_mode`, `set_config_option`, `current_mode_update`, `config_option_update`), client fs/terminal adapters (`AcpClientFilesystem`/`AcpClientTerminals`), MCP servers only behind host `select`, rich prompt content (`projectAcpPrompt`: media + embedded resources under live policy), tool-call locations/diffs via projection allow-lists, `CodingLifecycleEvent` → ACP update mapping, four-outcome approvals with elicitation (`elicitation/create` when advertised), and `AcpError` codes `ERR_PRISM_ACP_INPUT/LIMIT/POLICY/CAPABILITY/MCP`. Frozen caps in `resolveAgUiLimits` (`caps.acp`/`caps.lifecycle` groups).
+- Phase 10 evidence: network-free `scripts/phase10-conformance.test.mjs` (in `npm test`), operator-gated real-transport smoke (`scripts/acp-client-smoke.mjs` + fixture), `examples/acp-coding-host.ts`, `scripts/benchmark-0.0.27.mjs` + `scripts/benchmark-0.0.27.json` evidence, `scripts/budgets.json` `phase10` gate.
+- Docs: new [docs/acp.md](docs/acp.md) ACP reference; migration `0.0.26 → 0.0.27`; `docs/ag-ui.md` ACP summary + link; ACP pointers across agent-events/coding-agent-tools/coding-security/mcp-tools/host-security; package README.
+
+### Changed
+- `@arnilo/prism-ag-ui` depends on `@arnilo/prism-coding-agent` (workspace) for Phase 9 output-chunk caps and lifecycle types; publishable graph stays **48** manifests.
+
+### Breaking (advertise/surface for ACP hosts only)
+- `initialize` advertisement now reflects wired seams (previously minimal close-session); new session methods are registered only with their seams; `session/resume` of a live session rejects; `agentInfo.version` now comes from the package.json. Core, AG-UI, and coding-agent behavior unchanged. See [migration guide](docs/migration.md) `0.0.26 → 0.0.27`.
+
 ## [0.0.26] - 2026-08-06
 
 ### Added

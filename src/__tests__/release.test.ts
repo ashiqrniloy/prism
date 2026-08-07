@@ -31,18 +31,18 @@ function fixture() {
 
 const missing = async () => new Response("not found", { status: 404 });
 
-test("0.0.26 release graph is exact, publishable, and documented", () => {
-  const version = "0.0.26";
+test("0.0.27 release graph is exact, publishable, and documented", () => {
+  const version = "0.0.27";
   const release = loadRelease(process.cwd());
   assert.equal(release.packages.length, 48);
   assert.doesNotThrow(() => validateRelease(release, version));
   for (const pkg of release.packages) {
     const changelog = readFileSync(join(process.cwd(), pkg.path, "CHANGELOG.md"), "utf8");
-    assert.ok(changelog.includes(`## [${version}] - 2026-08-06`), `${pkg.manifest.name} missing ${version} changelog`);
+    assert.ok(changelog.includes(`## [${version}] - 2026-08-07`), `${pkg.manifest.name} missing ${version} changelog`);
   }
   const docs = readFileSync(join(process.cwd(), "docs/release-and-install.md"), "utf8");
-  assert.ok(docs.includes("### 0.0.26 publish handoff"));
-  assert.ok(docs.includes("47 publishable manifests") || docs.includes("**47** manifests"));
+  assert.ok(docs.includes("### 0.0.27 publish handoff"));
+  assert.ok(docs.includes("48 publishable manifests") || docs.includes("**48** manifests"));
 });
 
 function published(manifest: unknown) {

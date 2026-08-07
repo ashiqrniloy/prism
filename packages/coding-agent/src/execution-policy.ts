@@ -6,6 +6,8 @@ export async function enforceExecutionPolicy(
   action: ExecutionAction,
   toolCallId: string,
   toolName: string,
+  /** Called once on policy denial so one site emits lifecycle permission_denied for every tool. */
+  onDenied?: (input: { readonly toolCallId: string; readonly toolName: string; readonly reason: string }) => void,
 ): Promise<{ allowed: true; action: ExecutionAction } | { allowed: false; result: ToolResult }> {
   if (!policy) return { allowed: true, action };
   try {
@@ -18,6 +20,7 @@ export async function enforceExecutionPolicy(
         : error instanceof Error
           ? error.message
           : String(error);
+    onDenied?.({ toolCallId, toolName, reason: message });
     return {
       allowed: false,
       result: {
