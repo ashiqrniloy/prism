@@ -10,7 +10,8 @@
     "(Apache-2.0 AND BSD-3-Clause)",
     "(AFL-2.1 OR BSD-3-Clause)",
     "(BSD-2-Clause OR MIT OR Apache-2.0)",
-    "(MIT OR WTFPL)"
+    "(MIT OR WTFPL)",
+    "Unlicense"
   ],
   "overrides": {
     "@ag-ui/core@0.0.57": "MIT",

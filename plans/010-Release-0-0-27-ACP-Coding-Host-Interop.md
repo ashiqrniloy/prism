@@ -479,13 +479,23 @@ Docs placement (confirmed): split ACP into `docs/acp.md`; keep thin cross-link f
     - Docs/readiness: `docs/0.1.0-readiness.md` current line 0.0.27 / Phase 10; `roadmap.md` Phase 10 marked complete with evidence; `plans/README.md` 010 → complete (2026-08-07).
     - Publish remains operator-gated per convention: signed `v0.0.27` tag + publish dry-run from a clean single-flight checkout (handoff checklist in `docs/release-and-install.md`).
 
+- [x] Task 11 — Synapta FR: export the DOM-free A2UI core from `@arnilo/prism-ag-ui/renderer` (release update in 0.0.27)
+  - Completion Record (2026-08-07):
+    - Request: `prism-a2ui-renderer-core-export.md` (filed against 0.0.26) — hosts drive the surface state machine directly; workaround was a relative `dist/` import (the pattern FR-6 made unnecessary) or a `model()`-only pump blocked because `surface()` is the only consumer trigger.
+    - Chosen option 1 (value re-exports from the existing `./renderer` subpath; no new subpath, mirroring the FR-6 export precedent): `packages/ag-ui/src/renderer/index.ts` now re-exports the full DOM-free core value surface — `A2UiSurfaceState`, `reduceA2UiOps`, `readA2UiBatch`, `resolvePointer`, `A2UI_VERSION` (identical to `dist/renderer/core.js` exports). `createA2UiRenderer` behavior and frozen A2UI limits untouched; root entry stays runtime-agnostic (renderer types only).
+    - Test: `packages/ag-ui/src/__tests__/renderer-core-export.test.ts` (2 tests) imports from the subpath entry, asserts the 5 values + unchanged `createA2UiRenderer`, and drives a DOM-free snapshot reduce round trip + `resolvePointer`.
+    - Freeze manifest: `scripts/phase10-freeze-manifest.json` gained `modules.renderer` (existing `createA2UiRenderer`, newExports = the 5 core values) so the 0.0.27 surface record stays machine-checkable.
+    - Docs: `docs/ag-ui.md` Task 14 section documents the core-value exports (with the root-entry type-only clarification); `docs.test.ts` Task 14 tripwire extended with the "framework hosts can drive the validated surface state machine" token; package README needed no change (already advertised the DOM-free core).
+    - Changelogs: `packages/ag-ui/CHANGELOG.md` 0.0.27 and root `CHANGELOG.md` 0.0.27 bullets added.
+    - Verification: ag-ui build clean; ag-ui suites pass (renderer 15/15 incl. the 2 new); release gate for 0.0.27 re-run with `--update-baseline` (baseline deltas stay additive for ag-ui only); full `npm test` green; `git diff --check` clean. Request file `prism-a2ui-renderer-core-export.md` removed after shipping (precedent: FR-6 file was removed post-ship).
+
 ## Exit Gate
 
 - Task 0 freeze accepted; capability matrix, lifecycle-event consumer list, and caps recorded in `scripts/phase10-freeze-manifest.json`.
 - Network-free ACP conformance + permission/mode/security tests green; optional real-client smoke per freeze policy (operator-gated, fails closed).
 - Payload/performance budgets green; package compatibility and full release gate pass for **0.0.27**.
 - `docs/acp.md` published; `docs/index.md` + migration truthful; no ACP-only runtime introduced.
-- **Gate evidence (2026-08-07):** workspace at 0.0.27 (48 manifests, lockfile/ranges agree); compat baselines regenerated (only additive ag-ui/coding-agent deltas + `prism` version literal); `npm run sdk:ready` RC=0; `npm audit --audit-level=moderate` 0; scan-secrets 0 findings; SBOM 220/11; `git diff --check` clean; freeze manifest matched by public exports; phase10 budget gate green (benchmark p95 ≪ ceilings); release:check → 48/48 available. Tag/publish stay operator-gated (signed `v0.0.27` from a clean single-flight checkout).
+- **Gate evidence (2026-08-07):** workspace at 0.0.27 (48 manifests, lockfile/ranges agree); compat baselines regenerated (only additive ag-ui/coding-agent deltas + `prism` version literal); `npm run sdk:ready` RC=0; `npm audit --audit-level=moderate` 0; scan-secrets 0 findings; SBOM 227/12 (Unlicense allow-listed for tweetnacl); `git diff --check` clean; freeze manifest matched by public exports; phase10 budget gate green (benchmark p95 ≪ ceilings); release:check → 48/48 available. Task 11 (A2UI renderer core export, Synapta FR) shipped in 0.0.27 after the gate evidence. Tag/publish stay operator-gated (signed `v0.0.27` from a clean single-flight checkout).
 
 ## Compromises Made
 

@@ -9,6 +9,8 @@
 
 ### Changed
 - `@arnilo/prism-ag-ui` depends on `@arnilo/prism-coding-agent` (workspace) for Phase 9 output-chunk caps and lifecycle types; publishable graph stays **48** manifests.
+- SBOM license policy allows `Unlicense` (tweetnacl via `@nats-io/nkeys`); readiness SBOM evidence refreshed (227 packages / 12 licenses).
+- `@arnilo/prism-ag-ui/renderer` now exports the DOM-free A2UI core values (`A2UiSurfaceState`, `reduceA2UiOps`, `readA2UiBatch`, `resolvePointer`, `A2UI_VERSION`) — Synapta FR, hosts can drive the surface state machine without mounting; `createA2UiRenderer` behavior and frozen A2UI caps unchanged.
 
 ### Breaking (advertise/surface for ACP hosts only)
 - `initialize` advertisement now reflects wired seams (previously minimal close-session); new session methods are registered only with their seams; `session/resume` of a live session rejects; `agentInfo.version` now comes from the package.json. Core, AG-UI, and coding-agent behavior unchanged. See [migration guide](docs/migration.md) `0.0.26 → 0.0.27`.

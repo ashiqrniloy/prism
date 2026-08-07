@@ -3417,6 +3417,10 @@ describe("docs", () => {
       agUi.includes("createA2UiRenderer") && agUi.includes("never executes remote HTML"),
       "ag-ui.md missing Task 14 renderer section",
     );
+    assert.ok(
+      agUi.includes("framework hosts can drive the validated surface state machine"),
+      "ag-ui.md missing renderer core export note",
+    );
     assert.ok(agUi.includes("Awaitable<T>") && agUi.includes("session.entries()"), "ag-ui.md missing Task 15 async projection hooks");
     assert.ok(performance.includes("benchmark-0.0.26") && performance.includes("299.166"));
     assert.ok(readiness.includes("0.0.27") && readiness.includes("Phase 10"));
