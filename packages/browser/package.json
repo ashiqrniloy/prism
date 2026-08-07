@@ -27,7 +27,7 @@
   },
   "peerDependencies": {
     "@arnilo/prism": "0.0.27",
-    "playwright-core": "1.61.0"
+    "playwright-core": "1.62.1"
   },
   "peerDependenciesMeta": {
     "playwright-core": {
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-evals": "file:../evals",
-    "playwright-core": "1.61.0"
+    "playwright-core": "1.62.1"
   },
   "engines": {
     "node": ">=20"
