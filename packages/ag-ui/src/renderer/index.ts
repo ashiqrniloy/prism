@@ -10,7 +10,15 @@ import { AgUiError } from "../errors.js";
 import { type AgUiA2UiLimitOptions, resolveAgUiA2UiLimits } from "../a2ui.js";
 import { DEFAULT_AG_UI_LIMITS } from "../limits.js";
 import { renderA2UiSurface, DEFAULT_A2UI_CATALOG, type A2UiCatalog, type Dom, type DomNode } from "./bind.js";
-import { A2UiSurfaceState, readA2UiBatch, reduceA2UiOps, resolvePointer, A2UI_VERSION, type A2UiRenderError, type A2UiSurfaceModel } from "./core.js";
+import {
+  A2UiSurfaceState,
+  readA2UiBatch,
+  reduceA2UiOps,
+  resolvePointer,
+  A2UI_VERSION,
+  type A2UiRenderError,
+  type A2UiSurfaceModel,
+} from "./core.js";
 export type {
   A2UiComponentModel,
   A2UiRenderError,

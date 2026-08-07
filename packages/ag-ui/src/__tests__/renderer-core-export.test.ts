@@ -31,13 +31,15 @@ describe("A2UI renderer subpath core exports", () => {
 
   it("drives the surface state machine DOM-free via the subpath entry", () => {
     const surfaces = new Map<string, A2UiSurfaceState>();
-    const batch = readA2UiBatch(event([
-      { version: "v0.9", createSurface: { surfaceId: "chat", catalogId: "catalog" } },
-      {
-        version: "v0.9",
-        updateComponents: { surfaceId: "chat", components: [{ id: "c1", component: "Text", props: { text: "hello" } }] },
-      },
-    ]));
+    const batch = readA2UiBatch(
+      event([
+        { version: "v0.9", createSurface: { surfaceId: "chat", catalogId: "catalog" } },
+        {
+          version: "v0.9",
+          updateComponents: { surfaceId: "chat", components: [{ id: "c1", component: "Text", props: { text: "hello" } }] },
+        },
+      ]),
+    );
     assert.ok(batch);
     const result = reduceA2UiOps(surfaces, batch.ops, limits, DEFAULT_AG_UI_LIMITS, batch.replace);
     assert.equal(result.error, undefined);
