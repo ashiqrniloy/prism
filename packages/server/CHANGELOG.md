@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.28] - 2026-08-08
+
+### Added
+- `createArtifactService` accepts an optional `bodies: ArtifactBodyStore` (core contract from `@arnilo/prism`): when wired, `deliveryLink` resolves through `bodies.presign` and returns an additional bounded-TTL presigned `url` beside the signed link/token; revisions without a recorded `size` fail closed at delivery. `attach`/`revise` accept an optional `size` (validated non-negative safe integer) recorded on the revision.
+- New `@arnilo/prism-server/artifact-bodies` subpath: `createS3ArtifactBodyStore` — reference S3-compatible `ArtifactBodyStore` (AWS S3, MinIO, Cloudflare R2) with hand-rolled SigV4 presigning over native fetch + WebCrypto (validated against the official AWS sig-v4-test-suite get-vanilla vector), path-style addressing, single-chunk PUT with exact Content-Length and verified `x-amz-content-sha256`, ownership verification on every operation, size/SHA-256/MIME verification on put and get (fail closed), legal-hold-aware idempotent delete (host `isHeld` callback), host-resolved credentials (never inline), optional host-owned client-side KMS callback, bounded concurrent transfers, and no bucket/path/key disclosure in errors. `S3ArtifactBodyError` carries frozen `ERR_PRISM_S3_*` codes; limits `maxBodyBytes` 64 MiB/512 MiB, `maxConcurrentTransfers` 4/16, `presignTtlMs` 10 min/24 h, `maxRefBytes` 256 B/1 KiB.
+
 ## [0.0.27] - 2026-08-07
 
 ### Changed

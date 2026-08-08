@@ -1,0 +1,57 @@
+{
+  "name": "@arnilo/prism-openapi-tools",
+  "version": "0.0.28",
+  "description": "Optional OpenAPI 3.1 tools adapter for Prism: compile host-selected operations into bounded ToolDefinitions.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "0.0.28"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@types/node": "^22.15.29"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-openapi-tools"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-openapi-tools#readme",
+  "keywords": [
+    "prism",
+    "openapi",
+    "tools",
+    "adapter"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

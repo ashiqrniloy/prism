@@ -1,3 +1,5 @@
+export type { McpClientAuth, McpClientAuthOptions, McpClientAuthState, McpOAuthLimitsInput, McpOAuthRegistrationStrategy } from "./auth.js";
+export { createMcpClientAuth, McpOAuthError } from "./auth.js";
 export { attachMcpToolBridge, connectMcpTools, listAllMcpTools, mapMcpToolsToDefinitions } from "./bridge.js";
 export { attachMcpCapabilities, connectMcpCapabilities, createMcpCapabilityClient } from "./capabilities.js";
 export {
@@ -13,13 +15,13 @@ export {
   mcpCallError,
   summarizeMcpContent,
 } from "./content.js";
+export type { McpElicitationDecisionOptions } from "./elicitation.js";
 export {
   MAX_MCP_ELICITATION_MESSAGE_BYTES,
   MAX_MCP_ELICITATION_SCHEMA_BYTES,
   mcpElicitationDecision,
   mcpElicitationResultFromDecision,
 } from "./elicitation.js";
-export type { McpElicitationDecisionOptions } from "./elicitation.js";
 export type { McpClientLimitsInput, ResolvedMcpClientLimits } from "./limits.js";
 export {
   DEFAULT_MAX_CAPABILITY_BYTES,
@@ -56,7 +58,7 @@ export {
 } from "./limits.js";
 export { assertValidServerId, defaultMcpNamePrefix, formatMcpToolName } from "./names.js";
 export { createPrismMcpServer, createPrismMcpWebHandler } from "./server.js";
-export { createMcpTransport } from "./transport.js";
+export { createMcpOAuthFetch, createMcpOAuthTransport, createMcpTransport } from "./transport.js";
 export type {
   AttachMcpToolBridgeOptions,
   ConnectMcpCapabilitiesOptions,
@@ -67,14 +69,15 @@ export type {
   McpAppsBridge,
   McpAppTool,
   McpCapabilityBridge,
+  McpProtectedResource,
   McpRoot,
-  McpUiResourceMetadata,
   McpStdioTransport,
   McpStreamableHttpTransport,
   McpToolBridge,
   McpToolEffectPolicy,
   McpToolEffectPolicyInput,
   McpTransportConfig,
+  McpUiResourceMetadata,
   PrismMcpAgentRunExposure,
   PrismMcpAuthorization,
   PrismMcpAuthorizationInput,

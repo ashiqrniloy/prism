@@ -287,9 +287,9 @@ describe("Prism MCP server", () => {
   });
 
   it("provides a bounded web-standard Streamable HTTP handler", async () => {
-    const server = createPrismMcpServer({ authorize: () => ({ allowed: true }) });
-    open.push(server);
-    const handler = await createPrismMcpWebHandler(server, { maxRequestBytes: 256 });
+    // Stateless handlers need a server factory: a fresh McpServer per request.
+    const factory = () => createPrismMcpServer({ authorize: () => ({ allowed: true }) });
+    const handler = await createPrismMcpWebHandler(factory, { maxRequestBytes: 256 });
 
     const tooLarge = await handler(
       new Request("https://example.test/mcp", {

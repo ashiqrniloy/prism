@@ -87,6 +87,39 @@ await agent.createSession().run("Summarize inbox", {
 
 Server / MCP / A2A authorize callbacks may include the same `identity` beside `ownership`. Handlers assert activity and ownership match before admitting work.
 
+## OIDC/JWKS verifier adapter (`@arnilo/prism-credentials-node/oidc`)
+
+Optional `createOidcIdentityVerifier` turns a pinned issuer/audience and pinned JWKS URL into a core `IdentityVerifier` — one bounded reference adapter for hosts that already authenticate callers with OIDC JWTs (Entra, Keycloak, Auth0, …). Native `fetch` + WebCrypto only; no JOSE dependency.
+
+| Option | Meaning |
+| --- | --- |
+| `issuer` / `audience` | Exact `iss` and accepted `aud` value(s); anything else fails closed |
+| `jwksUrl` | Host-pinned JWKS URL; SSRF-checked (`assertSsrfAllowedUrl`), never discovered at runtime, never followed through redirects |
+| `mapClaims` | Bounded claims → `tenantId`, `principal`, `scopes`, optional account/user/sponsor/owner/refs/metadata |
+| `algorithms` | `RS256`/`ES256` default; hosts may only narrow |
+| `clockSkewMs` | Bounded `exp`/`nbf` slack (default 30 s) |
+| `isRevoked` | Optional revocation callback; `true` or a thrown error fails closed |
+| `limits` | Bounded JWKS/claims knobs; `identity` reuses core identity caps |
+
+```ts
+import { createOidcIdentityVerifier } from "@arnilo/prism-credentials-node/oidc";
+
+const verifier = createOidcIdentityVerifier({
+  issuer: "https://id.example.com/tenant",
+  audience: "prism-api",
+  jwksUrl: "https://id.example.com/tenant/.well-known/jwks.json",
+  mapClaims: (claims) => ({
+    tenantId: String(claims.tid),
+    principal: { kind: "user", id: String(claims.sub) },
+    scopes: Array.isArray(claims.scp) ? claims.scp.map(String) : [],
+  }),
+});
+
+const identity = await verifier.verify({ token }); // -> AgentIdentity (verified: true)
+```
+
+Fail-closed reasons (`IdentityError.reason`): `ERR_PRISM_OIDC_ISSUER_MISMATCH`, `AUDIENCE_MISMATCH`, `ALGORITHM`, `SIGNATURE`, `EXPIRED`, `NOT_YET_VALID`, `JWKS_FETCH`, `JWKS_KEY_MISSING`, `JWKS_PARSE`, `CLAIMS_BOUNDS`, `REVOKED`, `TENANT_MAPPING`. JWKS is cached (bounded entries/TTL, single-flight refetch, one bounded refetch on unknown `kid`); a parse/bounds failure on refresh fails closed while a transport failure keeps serving the last valid keys. SSRF denials surface the core `MediaContentError` (`ssrf_denied`). Tokens/claims never appear in errors, logs, or telemetry.
+
 ## Extension and configuration notes
 
 Identity is optional. Hosts that only set `ownership` keep prior behavior. When identity is present, run start and tool dispatch assert it before side effects. Workflows forward `RunWorkflowOptions.identity` into agent nodes. Credential values stay behind `CredentialResolver` keys listed in `credentialRefs`.

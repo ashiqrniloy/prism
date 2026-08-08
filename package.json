@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
   "main": "./dist/index.js",
@@ -141,7 +141,7 @@
     "clean": "rm -rf dist packages/*/dist",
     "build": "npm run clean && npm run build:core && npm run build --workspaces --if-present",
     "typecheck": "npm run build && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
-    "test": "npm run build && node --test dist/__tests__/*.test.js && node --test scripts/release-gate.test.mjs scripts/tooling-gate.test.mjs scripts/budget-gate.test.mjs scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs && npm run test --workspaces --if-present",
+    "test": "npm run build && node --test dist/__tests__/*.test.js && node --test scripts/release-gate.test.mjs scripts/tooling-gate.test.mjs scripts/budget-gate.test.mjs scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase11-freeze.test.mjs && npm run test --workspaces --if-present",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=60 --test-coverage-functions=70 --test-coverage-branches=75 --test-coverage-exclude='**/__tests__/**' --test-coverage-exclude='**/node_modules/**' --test-coverage-exclude='**/scripts/**' --test-coverage-exclude='**/packages/**' --test-coverage-exclude='**/examples/**' dist/__tests__/*.test.js",
     "lint": "biome lint .",
     "format": "biome format --write .",

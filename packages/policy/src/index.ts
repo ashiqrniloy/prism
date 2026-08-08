@@ -4,6 +4,8 @@ export { createPolicyEvaluator, evaluateAndAppend } from "./evaluator.js";
 export type { ExportPolicyDecisionsOptions } from "./export.js";
 export { exportPolicyDecisions } from "./export.js";
 export { DEFAULT_POLICY_LIMITS, HARD_POLICY_LIMITS, resolvePolicyLimits } from "./limits.js";
+export type { OpaDecisionDocument, OpaPolicyEvaluatorOptions } from "./opa.js";
+export { createOpaPolicyEvaluator } from "./opa.js";
 export type { PreparePolicyDecisionOptions } from "./prepare.js";
 export {
   assertNoUnrestrictedPayload,

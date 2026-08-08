@@ -156,6 +156,20 @@ describe("performance budget gate", () => {
     }
   });
 
+  it("checks the recorded Phase 11 enterprise adapter evidence", () => {
+    const phase11 = budgets.phase11;
+    const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.28.json", "utf8"));
+    assert.equal(evidence.version, "0.0.28");
+    assert.deepEqual(evidence.fixture, phase11.fixture);
+    assert.deepEqual(evidence.ceilingsMs, phase11.p95CeilingsMs);
+    for (const [name, ceiling] of Object.entries(phase11.p95CeilingsMs)) {
+      const result = evidence.results.find((entry) => entry.name === name);
+      assert.ok(result, `missing Phase 11 result for ${name}`);
+      assert.ok(result.p95Ms <= ceiling, `${name} p95 ${result.p95Ms} exceeded ceiling ${ceiling}`);
+      assert.ok(result.throughputPerSecond > 0, `${name} throughput missing`);
+    }
+  });
+
   it("checks the recorded protected enterprise PostgreSQL evidence", () => {
     const evidence = JSON.parse(readFileSync("scripts/benchmark-0.0.23.json", "utf8"));
     assert.equal(evidence.version, "0.0.23");

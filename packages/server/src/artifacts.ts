@@ -3,6 +3,8 @@ import {
   type AgentIdentity,
   ARTIFACT_CHECKPOINT_NAMESPACE,
   type ArtifactApproval,
+  type ArtifactBodyRef,
+  type ArtifactBodyStore,
   type ArtifactCitation,
   type ArtifactDeliveryToken,
   ArtifactError,
@@ -131,6 +133,8 @@ export interface ArtifactAttachInput extends ArtifactServiceInput {
   readonly uri: string;
   readonly mime: string;
   readonly hash: string;
+  /** Expected body byte length; required when a blob store is wired for delivery. */
+  readonly size?: number;
   /** Explicit id makes attach idempotent (get-or-create). Generated when omitted. */
   readonly id?: string;
   readonly title?: string;
@@ -156,6 +160,8 @@ export interface ArtifactReviseInput extends ArtifactRefInput {
   /** Defaults to the previous revision's mime when omitted. */
   readonly mime?: string;
   readonly hash: string;
+  /** Expected body byte length; required when a blob store is wired for delivery. */
+  readonly size?: number;
   readonly changeNote?: string;
   readonly producerRunId?: string;
   readonly citations?: readonly ArtifactCitation[];
@@ -196,6 +202,8 @@ export interface ArtifactDeliveryInput extends ArtifactRefInput {
 export interface ArtifactDeliveryResult {
   readonly link: string;
   readonly token: ArtifactDeliveryToken;
+  /** Presigned blob-store delivery URL; present only when a body store is wired. */
+  readonly url?: string;
 }
 
 export type ArtifactDecisionEvent =
@@ -222,6 +230,8 @@ export interface CreateArtifactServiceOptions {
   /** Host HMAC key material for signing/verifying delivery links. */
   readonly linkSecret: string;
   readonly limits?: ArtifactLimits;
+  /** Optional blob store: delivery links then resolve through `bodies.presign`. */
+  readonly bodies?: ArtifactBodyStore;
   /** Audit seam (redacted refs only); hosts bridge to @arnilo/prism-policy. */
   readonly onDecision?: (event: ArtifactDecisionEvent) => void | Promise<void>;
 }
@@ -309,6 +319,7 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
       uri: string;
       mime: string;
       hash: string;
+      size?: number;
       changeNote?: string;
       producerRunId?: string;
       citations?: readonly ArtifactCitation[];
@@ -319,6 +330,9 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
     const uri = assertSafeUri(input.uri, limits.uriBytes);
     assertBounded(input.mime, limits.mimeBytes, "mime_too_large");
     assertBounded(input.hash, limits.hashBytes, "hash_too_large");
+    if (input.size !== undefined && (!Number.isSafeInteger(input.size) || input.size < 0)) {
+      throw new ArtifactError("size is invalid", "invalid_input");
+    }
     if (input.changeNote !== undefined) assertBounded(input.changeNote, limits.noteBytes, "change_note_too_large");
     if (input.producerRunId !== undefined) assertId(input.producerRunId, "producerRunId");
     const citations = normalizeCitations(input.citations, limits);
@@ -328,6 +342,7 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
       uri,
       mime: input.mime,
       hash: input.hash,
+      ...(input.size === undefined ? {} : { size: input.size }),
       ...(input.changeNote === undefined ? {} : { changeNote: input.changeNote }),
       ...(input.producerRunId === undefined ? {} : { producerRunId: input.producerRunId }),
       ...(citations === undefined ? {} : { citations }),
@@ -477,9 +492,8 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
       const latest = record.revisions[record.revisions.length - 1];
       const version = input.version ?? record.lastValidatedVersion ?? latest?.version;
       if (version === undefined) throw new ArtifactError("Artifact has no revisions", "invalid_input");
-      if (!record.revisions.some((revision) => revision.version === version)) {
-        throw new ArtifactError("Revision not found", "not_found");
-      }
+      const revision = record.revisions.find((item) => item.version === version);
+      if (!revision) throw new ArtifactError("Revision not found", "not_found");
       const ttlSeconds = bounded(input.ttlSeconds, limits.deliveryLinkTtlSeconds, limits.deliveryLinkTtlSeconds, "ttlSeconds");
       const now = Date.now();
       const token: ArtifactDeliveryToken = {
@@ -490,7 +504,31 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
         issuedAt: new Date(now).toISOString(),
         expiresAt: new Date(now + ttlSeconds * 1000).toISOString(),
       };
-      return { link: signArtifactDeliveryLink(token, options.linkSecret), token };
+      const result: ArtifactDeliveryResult = { link: signArtifactDeliveryLink(token, options.linkSecret), token };
+      if (options.bodies) {
+        // Delivery resolves through the blob store: presign the exact revision's body.
+        // A revision without a recorded size cannot be addressed; fail closed.
+        if (revision.size === undefined) {
+          throw new ArtifactError("Revision has no recorded size; cannot resolve a body reference", "invalid_input");
+        }
+        const ref: ArtifactBodyRef = {
+          artifactId: record.id,
+          threadId: input.threadId,
+          version,
+          mime: revision.mime,
+          size: revision.size,
+          // Artifact hashes conventionally carry a `sha256:` prefix; the body
+          // ref contract is bare 64-char hex, so normalize before addressing.
+          hash: revision.hash.startsWith("sha256:") ? revision.hash.slice("sha256:".length) : revision.hash,
+          ...input.ownership,
+        };
+        const url = await options.bodies.presign(ref, {
+          ttlMs: ttlSeconds * 1000,
+          ...(input.signal === undefined ? {} : { signal: input.signal }),
+        });
+        return { ...result, url };
+      }
+      return result;
     },
   };
 
@@ -671,6 +709,7 @@ export function createArtifactHandler(options: CreateArtifactHandlerOptions): Pr
             uri: readString(body.uri, "uri"),
             mime: readString(body.mime, "mime"),
             hash: readString(body.hash, "hash"),
+            ...(body.size === undefined ? {} : { size: readNonNegativeInt(String(body.size), "size") }),
             ...(body.id === undefined ? {} : { id: readString(body.id, "id") }),
             ...(body.title === undefined ? {} : { title: readString(body.title, "title") }),
             ...(body.changeNote === undefined ? {} : { changeNote: readString(body.changeNote, "changeNote") }),
@@ -700,6 +739,7 @@ export function createArtifactHandler(options: CreateArtifactHandlerOptions): Pr
             artifactId: route.artifactId,
             uri: readString(body.uri, "uri"),
             hash: readString(body.hash, "hash"),
+            ...(body.size === undefined ? {} : { size: readNonNegativeInt(String(body.size), "size") }),
             ...(body.mime === undefined ? {} : { mime: readString(body.mime, "mime") }),
             ...(body.changeNote === undefined ? {} : { changeNote: readString(body.changeNote, "changeNote") }),
             ...(body.producerRunId === undefined ? {} : { producerRunId: readString(body.producerRunId, "producerRunId") }),
@@ -987,5 +1027,12 @@ function readPositiveInt(value: string | null, name: string): number {
   const parsed = value === null ? NaN : Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1)
     throw new PrismServerError(`${name} must be a positive safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
+  return parsed;
+}
+
+function readNonNegativeInt(value: string, name: string): number {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0)
+    throw new PrismServerError(`${name} must be a non-negative safe integer`, 400, "ERR_PRISM_SERVER_INPUT");
   return parsed;
 }

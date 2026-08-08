@@ -14,8 +14,17 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import * as z from "zod/v4";
 import { measureBoundedJson } from "./json-bounds.js";
-import type { CreatePrismMcpServerOptions, CreatePrismMcpWebHandlerOptions, PrismMcpAuthorization, PrismMcpWebHandler } from "./types.js";
+import { isLoopbackHostname } from "./transport.js";
+import type {
+  CreatePrismMcpServerOptions,
+  CreatePrismMcpWebHandlerOptions,
+  McpProtectedResource,
+  PrismMcpAuthorization,
+  PrismMcpWebHandler,
+} from "./types.js";
 import { McpBridgeError } from "./types.js";
+
+const WELL_KNOWN_OAUTH_PROTECTED_RESOURCE = "/.well-known/oauth-protected-resource";
 
 const DEFAULT_MAX_SERVER_RESULT_BYTES = 1024 * 1024;
 const HARD_MAX_SERVER_RESULT_BYTES = 8 * 1024 * 1024;
@@ -337,9 +346,10 @@ function assertAuthorizedIdentity(authorization: PrismMcpAuthorization): PrismMc
 }
 
 export async function createPrismMcpWebHandler(
-  server: McpServer,
+  server: McpServer | (() => McpServer | Promise<McpServer>),
   options: CreatePrismMcpWebHandlerOptions = {},
 ): Promise<PrismMcpWebHandler> {
+  const createServer = typeof server === "function" ? server : () => server;
   const maxRequestBytes = bounded(options.maxRequestBytes, DEFAULT_MAX_HTTP_REQUEST_BYTES, HARD_MAX_HTTP_REQUEST_BYTES, "maxRequestBytes");
   const maxResponseBytes = bounded(
     options.maxResponseBytes,
@@ -357,9 +367,10 @@ export async function createPrismMcpWebHandler(
   const stateful = options.sessionIdGenerator !== undefined;
   if (stateful && (!options.resolveIdentity || !options.allowedOrigins?.length))
     throw new McpBridgeError("Stateful MCP sessions require resolveIdentity and exact allowedOrigins");
+  const protectedResource = options.protectedResource === undefined ? undefined : normalizeProtectedResource(options.protectedResource);
   const maxSessions = bounded(options.maxSessions, 32, 512, "maxSessions");
   const sessions = new Map<string, string>();
-  const transport = new WebStandardStreamableHTTPServerTransport({
+  const transportOptions = {
     sessionIdGenerator: stateful
       ? () => {
           if (sessions.size >= maxSessions) throw new McpBridgeError("ERR_PRISM_MCP_SESSION_LIMIT: MCP session limit reached");
@@ -372,8 +383,19 @@ export async function createPrismMcpWebHandler(
     allowedHosts: options.allowedHosts ? [...options.allowedHosts] : undefined,
     allowedOrigins: options.allowedOrigins ? [...options.allowedOrigins] : undefined,
     enableDnsRebindingProtection: Boolean(options.allowedHosts?.length || options.allowedOrigins?.length),
-  });
-  await server.connect(transport);
+  } as const;
+  // Stateless transports cannot be reused across requests (SDK enforces this),
+  // and one Protocol can hold only one transport at a time (an open SSE GET
+  // would block concurrent POSTs), so stateless operation requires a fresh
+  // McpServer per request. Stateful transports keep session state and are shared.
+  const sharedTransport = stateful ? new WebStandardStreamableHTTPServerTransport(transportOptions) : undefined;
+  const sharedMcpServer = stateful ? await createServer() : undefined;
+  if (sharedMcpServer && sharedTransport) await sharedMcpServer.connect(sharedTransport);
+  if (!stateful && typeof server !== "function") {
+    throw new McpBridgeError(
+      "Stateless MCP web handlers require a server factory (() => McpServer): SDK stateless transports cannot be reused across requests",
+    );
+  }
   let activeRequests = 0;
 
   return async (request) => {
@@ -382,14 +404,28 @@ export async function createPrismMcpWebHandler(
     const controller = linkedController(request.signal);
     const timeout = setTimeout(() => controller.controller.abort(new Error("MCP HTTP request timed out")), requestTimeoutMs);
     try {
+      if (protectedResource) {
+        const pathname = new URL(request.url).pathname;
+        if (pathname === WELL_KNOWN_OAUTH_PROTECTED_RESOURCE) {
+          if (request.method !== "GET") return httpError(405, "Method not allowed");
+          return Response.json(
+            {
+              authorization_servers: protectedResource.authorizationServers,
+              resource: protectedResource.resource,
+              ...(protectedResource.scopesSupported !== undefined ? { scopes_supported: protectedResource.scopesSupported } : {}),
+            },
+            { headers: { "content-type": "application/json", "cache-control": "no-store" } },
+          );
+        }
+      }
       const authInfo = await awaitWithSignal(Promise.resolve(options.resolveAuthInfo?.(request)), controller.signal);
       const identity = options.resolveIdentity
         ? await awaitWithSignal(Promise.resolve(options.resolveIdentity(request, authInfo)), controller.signal)
         : undefined;
-      if (options.resolveIdentity && !identity) return httpError(401, "Unauthorized");
+      if (options.resolveIdentity && !identity) return unauthorized(protectedResource, request);
       const identityId = identity ? identity.id : undefined;
       if (identityId !== undefined && (!validCapabilityId(identityId) || Buffer.byteLength(identityId, "utf8") > 256))
-        return httpError(401, "Unauthorized");
+        return unauthorized(protectedResource, request);
       const requestedSession = request.headers.get("mcp-session-id") ?? undefined;
       if (requestedSession && sessions.get(requestedSession) !== identityId) return httpError(404, "MCP session not found");
       const parsedBody = request.method === "POST" ? await readBoundedJson(request, maxRequestBytes, controller.signal) : undefined;
@@ -398,7 +434,19 @@ export async function createPrismMcpWebHandler(
         headers: request.headers,
         signal: controller.signal,
       });
-      const response = await awaitWithSignal(transport.handleRequest(transportRequest, { parsedBody, authInfo }), controller.signal);
+      const transport = sharedTransport ?? new WebStandardStreamableHTTPServerTransport(transportOptions);
+      const mcpServer = sharedMcpServer ?? (await createServer());
+      if (!sharedMcpServer) await mcpServer.connect(transport);
+      let response: Response;
+      try {
+        response = await awaitWithSignal(transport.handleRequest(transportRequest, { parsedBody, authInfo }), controller.signal);
+      } catch (error) {
+        if (!sharedTransport) {
+          void transport.close();
+          void mcpServer.close();
+        }
+        throw error;
+      }
       const createdSession = response.headers.get("mcp-session-id") ?? undefined;
       if (createdSession && identityId) {
         const existing = sessions.get(createdSession);
@@ -406,7 +454,38 @@ export async function createPrismMcpWebHandler(
         sessions.set(createdSession, identityId);
       }
       if (request.method === "DELETE" && requestedSession && response.status < 400) sessions.delete(requestedSession);
-      return boundResponse(response, maxResponseBytes);
+      const bounded = await boundResponse(response, maxResponseBytes);
+      if (!stateful) {
+        // Close the per-request server/transport once the response body is
+        // consumed; a client disconnect cancels the stream and closes it too.
+        const closeTransport = () => {
+          void transport.close();
+          void mcpServer.close();
+        };
+        const body = bounded.body;
+        if (!body) {
+          closeTransport();
+          return bounded;
+        }
+        const reader = body.getReader();
+        const relay = new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            const next = await reader.read();
+            if (next.done) {
+              controller.close();
+              closeTransport();
+              return;
+            }
+            controller.enqueue(next.value);
+          },
+          cancel(reason) {
+            void reader.cancel(reason);
+            closeTransport();
+          },
+        });
+        return new Response(relay, { status: bounded.status, statusText: bounded.statusText, headers: bounded.headers });
+      }
+      return bounded;
     } catch (error) {
       if (error instanceof McpHttpError) return httpError(error.status, error.message);
       return httpError(controller.signal.aborted ? 408 : 500, controller.signal.aborted ? "MCP request timed out" : "MCP request failed");
@@ -569,6 +648,10 @@ async function readBoundedJson(request: Request, maxBytes: number, signal: Abort
 
 async function boundResponse(response: Response, maxBytes: number): Promise<Response> {
   if (!response.body) return response;
+  // Server-sent-event responses are long-lived and unbounded; buffering them
+  // would stall the handler forever. Relay them as-is (the stateless relay
+  // below still forwards chunks and closes on client disconnect).
+  if ((response.headers.get("content-type") ?? "").includes("text/event-stream")) return response;
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -629,6 +712,66 @@ function bounded(value: number | undefined, fallback: number, cap: number, name:
 
 function httpError(status: number, message: string): Response {
   return Response.json({ error: { message } }, { status });
+}
+
+/** 401 challenge: RFC 9728 resource metadata pointer (and scope when declared). */
+function unauthorized(protectedResource: ReturnType<typeof normalizeProtectedResource> | undefined, request: Request): Response {
+  if (!protectedResource) return httpError(401, "Unauthorized");
+  const origin = new URL(request.url).origin;
+  const challenge = `Bearer resource_metadata="${origin}${WELL_KNOWN_OAUTH_PROTECTED_RESOURCE}"`;
+  return Response.json(
+    { error: { message: "Unauthorized" } },
+    { status: 401, headers: { "content-type": "application/json", "www-authenticate": challenge } },
+  );
+}
+
+function normalizeProtectedResource(input: McpProtectedResource): {
+  readonly authorizationServers: readonly string[];
+  readonly resource: string;
+  readonly scopesSupported?: readonly string[];
+} {
+  if (!Array.isArray(input.authorizationServers) || input.authorizationServers.length < 1 || input.authorizationServers.length > 8) {
+    throw new McpBridgeError("protectedResource.authorizationServers must contain 1..8 URLs");
+  }
+  const authorizationServers = input.authorizationServers.map((value) => validateProtectedResourceUrl(value, "authorization server"));
+  if (typeof input.resource !== "string") {
+    throw new McpBridgeError("protectedResource.resource is required (RFC 9728)");
+  }
+  const resource = validateProtectedResourceUrl(input.resource, "protected resource");
+  let scopesSupported: readonly string[] | undefined;
+  if (input.scopesSupported !== undefined) {
+    if (!Array.isArray(input.scopesSupported) || input.scopesSupported.length < 1 || input.scopesSupported.length > 64) {
+      throw new McpBridgeError("protectedResource.scopesSupported must contain 1..64 scopes");
+    }
+    for (const scope of input.scopesSupported) {
+      if (typeof scope !== "string" || !scope.trim() || Buffer.byteLength(scope, "utf8") > 128) {
+        throw new McpBridgeError("protectedResource.scopesSupported contains an invalid scope");
+      }
+    }
+    if (Buffer.byteLength(JSON.stringify(input.scopesSupported), "utf8") > 8 * 1024) {
+      throw new McpBridgeError("protectedResource.scopesSupported exceeds 8 KiB");
+    }
+    scopesSupported = [...input.scopesSupported];
+  }
+  return {
+    authorizationServers,
+    resource,
+    ...(scopesSupported !== undefined ? { scopesSupported } : {}),
+  };
+}
+
+function validateProtectedResourceUrl(value: string, label: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new McpBridgeError(`${label} URL is invalid`);
+  }
+  if (url.username || url.password || url.hash) throw new McpBridgeError(`${label} URL must not embed credentials or fragments`);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLoopbackHostname(url.hostname))) {
+    throw new McpBridgeError(`${label} URL must use https: (plaintext loopback is allowed)`);
+  }
+  return url.href;
 }
 
 class McpHttpError extends Error {

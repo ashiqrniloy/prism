@@ -1,0 +1,353 @@
+{
+  "$comment": "Phase 11 (0.0.28) Task 0 public API freeze manifest. Machine-checkable source of truth consumed by Tasks 1-6: every new export name, subpath, cap (default/hard), p95 ceiling, placement decision, and security invariant must match this file exactly. Amendment requires a recorded Task 0 freeze amendment in plans/011. Validated by scripts/phase11-freeze.test.mjs.",
+  "release": "0.0.28",
+  "baseline": "0.0.27 (Phase 10 exit gate passed 2026-08-07)",
+  "placement": {
+    "$comment": "Adapter-over-primitives confirmed: every adapter composes existing IdentityVerifier, PolicyEvaluator/evaluateAndAppend, OAuthProvider/OAuthCredentialStore, credential resolver chain, SsrfPolicy (assertSsrfAllowedUrl, src/content.ts), SecretRedactor, MCP bridge/server limits, ArtifactService, and PersistenceLifecycleStore (legal hold + retention). Core gains only the ArtifactBodyStore contract (proven missing: metadata lives in checkpoints, bodies never do).",
+    "decision": "Four placements: (1) OIDC verifier as @arnilo/prism-credentials-node/oidc subpath (Node-only network adapter; reuses limits/errors/redaction patterns). (2) OPA evaluator as @arnilo/prism-policy/opa subpath (recorded through existing evaluateAndAppend durable ledger; enterprise-postgres createPostgresPolicyDecisionStore unchanged). (3) MCP OAuth extends @arnilo/prism-mcp (client auth option on connectMcpTools/attachMcpToolBridge; server protected-resource metadata; reuse @modelcontextprotocol/sdk@1.30.0 client/auth.js + server/auth OAuthServerProvider). (4) OpenAPI tools as new minimal package @arnilo/prism-openapi-tools (work-tools and web-tools are vendor-connector scoped: Google/M365 and Brave/Exa/Firecrawl; core stays network-free). Artifact blob contract goes to core src/artifacts.ts; reference S3 adapter as @arnilo/prism-server/artifact-bodies subpath.",
+    "packageCountAtFreeze": 47,
+    "packageCountPlanned": 48,
+    "newPackages": [
+      {
+        "name": "@arnilo/prism-openapi-tools",
+        "createdInTask": 4,
+        "dependencies": "none (native fetch only)",
+        "budget": "packed-bytes baseline measured and recorded in scripts/budgets.json phase11 section at Task 6 (requires built package); budget-gate entry added there"
+      }
+    ],
+    "modules": {
+      "@arnilo/prism-credentials-node/oidc": {
+        "newExports": [
+          "createOidcIdentityVerifier",
+          "OidcIdentityVerifierOptions",
+          "OidcIdentityVerifierResult",
+          "OidcAlgorithm",
+          "OidcClaims"
+        ],
+        "reusedSeams": "IdentityVerifier, AgentIdentity, IdentityError (reasons frozen below), resolveIdentityLimits (maxScopes 64/256, maxScopeBytes 128/512, maxMetadataBytes 4/16 KiB, maxCredentialRefBytes 256/2 KiB, maxPrincipalIdBytes 256/2 KiB), SsrfPolicy via assertSsrfAllowedUrl on pinned jwksUrl",
+        "errorReasons": [
+          "ERR_PRISM_OIDC_ISSUER_MISMATCH",
+          "ERR_PRISM_OIDC_AUDIENCE_MISMATCH",
+          "ERR_PRISM_OIDC_ALGORITHM",
+          "ERR_PRISM_OIDC_SIGNATURE",
+          "ERR_PRISM_OIDC_EXPIRED",
+          "ERR_PRISM_OIDC_NOT_YET_VALID",
+          "ERR_PRISM_OIDC_JWKS_FETCH",
+          "ERR_PRISM_OIDC_JWKS_KEY_MISSING",
+          "ERR_PRISM_OIDC_JWKS_PARSE",
+          "ERR_PRISM_OIDC_CLAIMS_BOUNDS",
+          "ERR_PRISM_OIDC_REVOKED",
+          "ERR_PRISM_OIDC_TENANT_MAPPING"
+        ]
+      },
+      "@arnilo/prism-policy/opa": {
+        "newExports": [
+          "createOpaPolicyEvaluator",
+          "OpaPolicyEvaluatorOptions",
+          "OpaDecisionDocument"
+        ],
+        "reusedSeams": "PolicyEvaluator, PolicyEvaluateRequest/Result, evaluateAndAppend, createPostgresPolicyDecisionStore (durable Phase 6 ledger), PolicyLimits (decision 8/64 KiB, reason/evidence ref 1/8 KiB)",
+        "errorCodes": [
+          "ERR_PRISM_OPA_TIMEOUT",
+          "ERR_PRISM_OPA_TRANSPORT",
+          "ERR_PRISM_OPA_RESPONSE_PARSE",
+          "ERR_PRISM_OPA_RESPONSE_BOUNDS",
+          "ERR_PRISM_OPA_DECISION_MAPPING",
+          "ERR_PRISM_OPA_VERSION_MISMATCH"
+        ]
+      },
+      "@arnilo/prism-mcp": {
+        "extendOnly": true,
+        "newExports": [
+          "McpClientAuthOptions",
+          "McpClientAuthState",
+          "McpProtectedResource",
+          "McpOAuthRegistrationStrategy",
+          "McpOAuthLimitsInput",
+          "McpClientAuth",
+          "McpOAuthError",
+          "createMcpClientAuth",
+          "createMcpOAuthFetch",
+          "createMcpOAuthTransport"
+        ],
+        "reusedSeams": "@modelcontextprotocol/sdk@1.30.0 client/auth.js (auth, OAuthClientProvider, discoverOAuthProtectedResourceMetadata, discoverAuthorizationServerMetadata, discoverOAuthServerInfo, startAuthorization, prepareAuthorizationCodeRequest, selectResourceURL, extractWWWAuthenticateParams, OAuthDiscoveryState) and server/auth (OAuthServerProvider, OAuthTokenVerifier, AuthInfo); createOAuthCredentialStoreAdapter + createOAuth2PkceVerifier/computeOAuth2S256Challenge from credentials-node; assertSsrfAllowedUrl",
+        "clientAuthStrategy": "host-chosen: static client credentials or RFC 7591 DCR callback (registerClient). Token audience binding via RFC 8707 resource parameter + selectResourceURL; tokens never sent to a different origin.",
+        "errorCodes": [
+          "ERR_PRISM_MCP_OAUTH_DISCOVERY",
+          "ERR_PRISM_MCP_OAUTH_ORIGIN",
+          "ERR_PRISM_MCP_OAUTH_AUDIENCE",
+          "ERR_PRISM_MCP_OAUTH_SSRF",
+          "ERR_PRISM_MCP_OAUTH_STATE",
+          "ERR_PRISM_MCP_OAUTH_TOKEN_STORE"
+        ]
+      },
+      "@arnilo/prism-openapi-tools": {
+        "newExports": [
+          "createOpenApiTools",
+          "OpenApiToolsOptions",
+          "OpenApiToolError",
+          "OpenApiLimits",
+          "ResolvedOpenApiLimits",
+          "DEFAULT_OPENAPI_LIMITS",
+          "HARD_OPENAPI_LIMITS",
+          "resolveOpenApiLimits",
+          "OpenApiCredentialResolver",
+          "OpenApiPolicyCheck",
+          "OpenApiPagination"
+        ],
+        "reusedSeams": "ToolDefinition, ToolResult, ToolExecutionContext, SecretRedactor, approval + idempotency metadata (Phase 7/8 tool effect contracts)",
+        "errorCodes": [
+          "ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS",
+          "ERR_PRISM_OPENAPI_OPERATION_UNKNOWN",
+          "ERR_PRISM_OPENAPI_SERVER_DRIFT",
+          "ERR_PRISM_OPENAPI_SCHEMA_BOUNDS",
+          "ERR_PRISM_OPENAPI_RESPONSE_BOUNDS",
+          "ERR_PRISM_OPENAPI_RETRY_EXHAUSTED"
+        ]
+      },
+      "@arnilo/prism": {
+        "coreContract": "ArtifactBodyStore (put/get/delete/presign by opaque reference, ownership-scoped) + ArtifactBodyRef, ArtifactBodyStoreError, ARTIFACT_BODY_* constants in src/artifacts.ts; types only, storage-free",
+        "newExports": [
+          "ArtifactBodyStore",
+          "ArtifactBodyRef",
+          "ArtifactBodyStoreError",
+          "ArtifactBodyErrorCode",
+          "ArtifactBodyPresignOptions",
+          "ArtifactBodyTransferOptions",
+          "ARTIFACT_BODY_ERROR_CODES"
+        ],
+        "reusedSeams": "ArtifactRecord/ArtifactDeliveryToken, PersistenceLifecycleStore legal hold + retention sweep, OwnershipScope",
+        "errorCodes": [
+          "ERR_PRISM_ARTIFACT_BODY_OWNERSHIP",
+          "ERR_PRISM_ARTIFACT_BODY_HASH_MISMATCH",
+          "ERR_PRISM_ARTIFACT_BODY_SIZE_MISMATCH",
+          "ERR_PRISM_ARTIFACT_BODY_MIME_MISMATCH",
+          "ERR_PRISM_ARTIFACT_BODY_HELD",
+          "ERR_PRISM_ARTIFACT_BODY_STORE"
+        ]
+      },
+      "@arnilo/prism-server/artifact-bodies": {
+        "newExports": [
+          "createS3ArtifactBodyStore",
+          "S3ArtifactBodyStoreOptions",
+          "S3Credentials",
+          "S3ArtifactBodyError",
+          "S3ArtifactBodyErrorCode",
+          "ArtifactBodyLimits",
+          "ResolvedArtifactBodyLimits",
+          "DEFAULT_ARTIFACT_BODY_LIMITS",
+          "HARD_ARTIFACT_BODY_LIMITS",
+          "resolveArtifactBodyLimits",
+          "s3ObjectKey"
+        ],
+        "reusedSeams": "createArtifactService options gain optional bodies: ArtifactBodyStore; delivery links resolve through bodies.presign",
+        "errorCodes": [
+          "ERR_PRISM_S3_PRESIGN",
+          "ERR_PRISM_S3_UPLOAD",
+          "ERR_PRISM_S3_DOWNLOAD",
+          "ERR_PRISM_S3_DELETE",
+          "ERR_PRISM_S3_CREDENTIALS"
+        ]
+      }
+    },
+    "objectStore": {
+      "selection": "S3-compatible object store (AWS S3, MinIO, Cloudflare R2) as the single reference adapter; host contract via ArtifactBodyStore covers other stores.",
+      "signing": "Hand-rolled SigV4 presigning over native fetch + WebCrypto (crypto.subtle). Single-chunk presigned PUT/GET with exact Content-Length and x-amz-content-sha256 = verified SHA-256 hex (size + hash already verified before upload, so no chunked transfer needed). Path-style addressing; no accelerate endpoints. @aws-sdk/client-s3 rejected at freeze: ~1 MB install, license/SBOM surface, and the presign edge cases it covers (chunked upload, accelerate) are excluded by the single-chunk design.",
+      "encryption": "Host-owned client-side encryption/KMS callback (kms?: (op: 'encrypt'|'decrypt', body: Uint8Array) => Promise<Uint8Array>) mirroring credentials-node HostKms envelope pattern; never inline keys.",
+      "retention": "delete refuses while resource under legal hold (isResourceHeld / PersistenceLifecycleStore); retention sweep deletes bodies with metadata; body delete is idempotent."
+    }
+  },
+  "caps": {
+    "$comment": "default/hard pairs. Existing frozen caps are reused where they already cover the surface (no duplicate knobs); reuse entries name the source.",
+    "oidc": {
+      "maxJwksKeys": {
+        "default": 32,
+        "hard": 128
+      },
+      "maxJwkBytes": {
+        "default": 8192,
+        "hard": 65536
+      },
+      "jwksCacheTtlMs": {
+        "default": 600000,
+        "hard": 3600000
+      },
+      "jwksFetchTimeoutMs": {
+        "default": 5000,
+        "hard": 30000
+      },
+      "jwksRefetchOnUnknownKid": {
+        "default": 1,
+        "hard": 1
+      },
+      "maxTokenBytes": {
+        "default": 16384,
+        "hard": 262144
+      },
+      "maxClaims": {
+        "default": 64,
+        "hard": 256
+      },
+      "maxClaimBytes": {
+        "default": 4096,
+        "hard": 16384
+      },
+      "clockSkewMs": {
+        "default": 30000,
+        "hard": 300000
+      },
+      "algorithms": {
+        "kind": "enum",
+        "default": [
+          "RS256",
+          "ES256"
+        ],
+        "hard": "host may only narrow, never widen"
+      }
+    },
+    "policy": {
+      "timeoutMs": {
+        "default": 2000,
+        "hard": 30000
+      },
+      "maxInputBytes": {
+        "default": 16384,
+        "hard": 262144
+      },
+      "maxResponseBytes": {
+        "default": 65536,
+        "hard": 1048576
+      },
+      "maxRetries": {
+        "default": 0,
+        "hard": 2
+      },
+      "reuse": {
+        "decisionBytes": "PolicyLimits 8/64 KiB (packages/policy/src/limits.ts)",
+        "reasonBytes": "PolicyLimits 1/8 KiB",
+        "evidenceRefBytes": "PolicyLimits 1/8 KiB"
+      }
+    },
+    "mcpOauth": {
+      "maxRedirects": {
+        "default": 0,
+        "hard": 0,
+        "notes": "discovery/token endpoints never redirect; exact-origin compare"
+      },
+      "discoveryBytes": {
+        "default": 65536,
+        "hard": 262144
+      },
+      "discoveryCacheEntries": {
+        "default": 16,
+        "hard": 64
+      },
+      "discoveryCacheTtlMs": {
+        "default": 600000,
+        "hard": 3600000
+      },
+      "tokenRecordBytes": {
+        "default": 16384,
+        "hard": 65536
+      },
+      "stateBytes": {
+        "default": 4096,
+        "hard": 16384
+      },
+      "handshakeTimeoutMs": {
+        "default": 60000,
+        "hard": 300000
+      },
+      "reuse": {
+        "maxScopes": "IdentityLimits 64/256"
+      }
+    },
+    "openapi": {
+      "maxDocumentBytes": {
+        "default": 2097152,
+        "hard": 16777216
+      },
+      "maxOperations": {
+        "default": 256,
+        "hard": 1024
+      },
+      "maxSchemaDepth": {
+        "default": 32,
+        "hard": 128
+      },
+      "maxRefs": {
+        "default": 1024,
+        "hard": 8192
+      },
+      "maxBodyBytes": {
+        "default": 1048576,
+        "hard": 16777216
+      },
+      "maxResponseBytes": {
+        "default": 1048576,
+        "hard": 16777216
+      },
+      "maxPages": {
+        "default": 20,
+        "hard": 100,
+        "notes": "mirrors MCP list-page cap"
+      },
+      "maxPaginationItems": {
+        "default": 1000,
+        "hard": 10000
+      },
+      "maxRetries": {
+        "default": 0,
+        "hard": 3
+      }
+    },
+    "artifacts": {
+      "maxBodyBytes": {
+        "default": 67108864,
+        "hard": 536870912
+      },
+      "maxConcurrentTransfers": {
+        "default": 4,
+        "hard": 16
+      },
+      "maxRefBytes": {
+        "default": 256,
+        "hard": 1024
+      },
+      "presignTtlMs": {
+        "default": 600000,
+        "hard": 86400000
+      },
+      "reuse": {
+        "hashBytes": "ArtifactService limits 256/1 KiB (packages/server/src/artifacts.ts)",
+        "mimeBytes": "ArtifactService limits 128/512 B",
+        "deliveryLinkTtlSeconds": "ArtifactService limits 300/86400"
+      }
+    }
+  },
+  "p95Targets": {
+    "$comment": "Ceilings for network-free fake-server fixtures (fake OIDC provider, fake OPA, fake authorization server, hostile OpenAPI origin, fake object store). Machine-dependent; recorded as evidence by scripts/phase11-conformance.test.mjs (Task 6) into scripts/budgets.json phase11 section. Existing benchmarkMedians tolerance 0.25 unchanged.",
+    "oidcVerifyCacheHitMs": 5,
+    "oidcVerifyCacheMissMs": 100,
+    "policyDecisionMs": 100,
+    "mcpDiscoveryRoundTripMs": 250,
+    "mcpAuthHandshakeMs": 2000,
+    "openapiToolCallMs": 1000,
+    "artifactPut1MiBMs": 2000,
+    "artifactPresignMs": 100
+  },
+  "securityInvariants": {
+    "oidc": "Fail closed on unknown issuer/audience/algorithm/key; alg:none and non-allowlisted algorithms rejected; exp/nbf with bounded clock skew; unknown kid triggers exactly one bounded JWKS refetch then failure; JWKS URL host-pinned and SSRF-checked (assertSsrfAllowedUrl); oversized claims fail closed; tokens/claims never logged; IdentityError messages carry no token material; revocation callback error fails closed.",
+    "policy": "Policy endpoint URL host-pinned and SSRF-checked; raw prompts/tool args/JWTs never enter the OPA input document; credential values never in input; timeout/malformed/oversized/stale-version responses fail closed (default outcome deny); decision recorded through existing redacted durable ledger.",
+    "mcpOauth": "Tokens are bound to the resource they were issued for (RFC 8707 + selectResourceURL); sending a token to a different origin/audience refused (confused-deputy denial); zero redirects on discovery/token endpoints; SSRF policy on every discovery endpoint; https-only except explicit host loopback-http opt-in; tokens never enter prompts, telemetry, persisted discovery records, or errors; refresh tokens only in credentials-node encrypted/keychain stores.",
+    "openapi": "Only host-listed operationIds compile; server origin pinned (servers-array drift rejected); schema refs/cycles/size bounded; no raw method/path passthrough; responses treated as untrusted (redaction + bounds before context); side-effect tools carry approval + idempotency metadata; credentials only via host resolver callback.",
+    "artifacts": "Ownership/tenant verified on every read/delete; upload hash/size/MIME mismatch fails closed; legal hold blocks delete (hold wins over retention); credentials only via host resolver; bucket/path/key never disclosed in errors, telemetry, or artifact records; presigned URLs bounded TTL and scope."
+  },
+  "testFixtures": {
+    "oidcCases": "valid RS256/ES256; expired; future nbf; wrong issuer/audience; alg:none + non-allowlisted; unknown-kid rotation (refetch once then fail); JWKS outage warm/cold cache; JWKS cache poisoning; oversized claims; revocation true/false/throw; tenant mapping without tenantId; cache-hit/miss p95",
+    "policyCases": "allow/deny/modify/approval mapping; malformed/oversized/timeout; stale version; evidence bounds; fail-closed default vs escalate; durable ledger row (memory + postgres store); credentials-not-in-input",
+    "mcpOauthCases": "metadata discovery via WWW-Authenticate + well-known; PKCE/state round trip; scope challenge; refresh; revocation; audience mismatch denial; confused-deputy passthrough denial; SSRF private-IP metadata; redirect policy; exact origin; discovery cache TTL/poisoning; DCR success/denial; server metadata shape",
+    "openapiCases": "operation allow-list; server override denial; ref/cycle/size hostile docs; pagination/retry bounds; side-effect approval + idempotency; credential/redaction in output; hostile response bodies",
+    "artifactCases": "put/get/delete; hash/size/MIME mismatch; wrong tenant; legal hold blocks delete; retention sweep; signed link expiry; encryption callback; partial-failure rollback; object-store outage; presign tamper; concurrency caps"
+  }
+}

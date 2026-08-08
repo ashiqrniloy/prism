@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-server",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "description": "Optional framework-free Web Request-to-Response handler for explicitly selected Prism agents and workflows.",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./artifact-bodies": {
+      "types": "./dist/artifact-bodies.d.ts",
+      "default": "./dist/artifact-bodies.js"
     }
   },
   "files": [
@@ -25,8 +29,8 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.27",
-    "@arnilo/prism-workflows": "0.0.27"
+    "@arnilo/prism": "0.0.28",
+    "@arnilo/prism-workflows": "0.0.28"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

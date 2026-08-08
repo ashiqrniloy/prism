@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-policy",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "description": "Optional policy-decision ledger and cursor-paginated audit export for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./opa": {
+      "types": "./dist/opa.d.ts",
+      "default": "./dist/opa.js"
     }
   },
   "files": [
@@ -21,11 +25,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/__tests__/policy.test.js",
+    "test": "node --test dist/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.0.27"
+    "@arnilo/prism": "0.0.28"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

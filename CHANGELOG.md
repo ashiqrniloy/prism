@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.28] - 2026-08-08
+
+### Added
+- Phase 11 enterprise adapter seams (plan 011), all optional and fail-closed; hosts that wire none keep exact prior behavior.
+- `@arnilo/prism-credentials-node/oidc`: `createOidcIdentityVerifier` — OIDC/JWKS identity verification over native WebCrypto (RS256/ES256), host-pinned SSRF-checked JWKS URL with bounded single-flight cache and exactly one refetch on unknown `kid`, bounded clock skew/claims, host revocation callback; fail-closed `IdentityError` reasons `ERR_PRISM_OIDC_*`.
+- `@arnilo/prism-policy/opa`: `createOpaPolicyEvaluator` — OPA REST decision adapter for the durable Phase 6 policy ledger; default deny on timeout/transport failure (`onFailure`), bounded input/response/retries, redacted mapped reasons/evidence, optional bundle-revision pin (`requirePolicyVersion`); frozen codes `ERR_PRISM_OPA_*`.
+- MCP OAuth (0.0.28) in `@arnilo/prism-mcp`: `createMcpOAuthTransport`/`createMcpOAuthFetch`/`createMcpClientAuth` reusing `@modelcontextprotocol/sdk` auth helpers — RFC 9728/8414 discovery with bounded SSRF-checked zero-redirect fetch, PKCE interactive flow, RFC 8707 resource-bound audience validation (confused-deputy defense), RFC 7009 revocation, host-owned `McpClientAuthState` persistence; server side gains `protectedResource` metadata route + `WWW-Authenticate` challenges. Frozen codes `ERR_PRISM_MCP_OAUTH_*`.
+- New package `@arnilo/prism-openapi-tools`: `createOpenApiTools` compiles host-listed OpenAPI 3.1 `operationId`s at setup into bounded `ToolDefinition`s — pinned origin (drift fails closed), resolved/bounded schemas, mutation operations get `external_mutation` + `idempotency: required` (approval/idempotency via the core run loop), bounded body/response/retries/pagination, host credential resolver, untrusted redacted output. Frozen codes `ERR_PRISM_OPENAPI_*`.
+- Artifact body contract + reference adapter: core `ArtifactBodyStore`/`ArtifactBodyRef`/`ArtifactBodyStoreError` (storage-free types, frozen `ERR_PRISM_ARTIFACT_BODY_*`), optional `size` on `ArtifactRevision`, `createArtifactService` `bodies` option with presigned `url` on delivery links (fail closed without recorded size); `@arnilo/prism-server/artifact-bodies` ships `createS3ArtifactBodyStore` — hand-rolled SigV4 over native fetch/WebCrypto, verified hash/size/mime on put/get, legal-hold-aware delete, bounded presign TTL, optional host KMS callback (`ERR_PRISM_S3_*`).
+- Phase 11 evidence: network-free `scripts/phase11-conformance.test.mjs` (in `npm test`: composed OIDC → OPA ledger → MCP OAuth tool → OpenAPI side effect → artifact body + signed delivery; adapter-absent baseline; hostile origins and limit ladder; redaction sweep), `scripts/benchmark-0.0.28.mjs` + `scripts/benchmark-0.0.28.json` evidence, `scripts/budgets.json` `phase11` gate, `scripts/phase11-freeze-manifest.json` schema-gated by `scripts/phase11-freeze.test.mjs`.
+- Docs: new [docs/openapi-tools.md](docs/openapi-tools.md); OIDC verifier section in [docs/agent-identity.md](docs/agent-identity.md); OPA section in [docs/policy-and-audit.md](docs/policy-and-audit.md); MCP OAuth section in [docs/mcp-tools.md](docs/mcp-tools.md); artifact body store section in [docs/work-artifacts-and-review.md](docs/work-artifacts-and-review.md); migration `0.0.27 → 0.0.28`; Phase 11 p95 evidence in [docs/performance.md](docs/performance.md); protected live-canary slot recorded as a blocked release gate in [docs/0.1.0-readiness.md](docs/0.1.0-readiness.md).
+
+### Changed
+- `createPrismMcpWebHandler` accepts `McpServer | (() => McpServer | Promise<McpServer>)`; stateless operation now requires a factory (a shared stateless transport threw on the second request). SSE (`text/event-stream`) responses are relayed instead of buffered, so streaming responses no longer stall the handler.
+- Publishable graph stays **48** manifests (includes the new `@arnilo/prism-openapi-tools`); core remains dependency-free and every new seam is opt-in.
+- Version bumped to exact `0.0.28` across the root, all workspace manifests, and the lockfile; compatibility baselines refreshed (additive surfaces only).
+
 ## [0.0.27] - 2026-08-07
 
 ### Added

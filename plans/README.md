@@ -14,5 +14,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [008-Release-0-0-25-Durable-Loops-and-Human-in-the-Loop.md](008-Release-0-0-25-Durable-Loops-and-Human-in-the-Loop.md) | Phase 8 — Release 0.0.25 | complete |
 | [009-Release-0-0-26-Coding-Intelligence-Processes-Forge-Egress.md](009-Release-0-0-26-Coding-Intelligence-Processes-Forge-Egress.md) | Phase 9 — Release 0.0.26 | complete (2026-08-06) |
 | [010-Release-0-0-27-ACP-Coding-Host-Interop.md](010-Release-0-0-27-ACP-Coding-Host-Interop.md) | Phase 10 — Release 0.0.27 | complete (2026-08-07) |
+| [011-Release-0-0-28-Enterprise-Auth-Policy-McpOauth-Api-Artifacts.md](011-Release-0-0-28-Enterprise-Auth-Policy-McpOauth-Api-Artifacts.md) | Phase 11 — Release 0.0.28 | complete (2026-08-08) |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

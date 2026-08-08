@@ -117,6 +117,37 @@ Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permi
 - Evaluate/append are O(fields) and network-free in-package; remote WORM I/O stays in the host sink/adapter.
 - Export never full-scans: page size is capped; raise hard caps only with Phase 8 freeze + tests + docs updates.
 
+## OPA external policy adapter (`@arnilo/prism-policy/opa`, 0.0.28)
+
+Optional `createOpaPolicyEvaluator` evaluates `PolicyEvaluateRequest`s against a host-pinned OPA REST endpoint (`POST /v1/data/<path>` with `{"input": <document>}`) and returns a core `PolicyEvaluator` for `evaluateAndAppend`. Native `fetch` only; no OPA SDK dependency.
+
+| Option | Meaning |
+| --- | --- |
+| `url` / `policyId` / `policyVersion` | Pinned decision URL + immutable ledger attribution |
+| `mapInput` | Input builder (default: redacted actor refs — tenant/account/user/principal/sponsor/scopes + action + resource; never prompts, tool args, JWTs, or credentials; `context` omitted by design) |
+| `mapDecision` | Decision mapper (default: boolean, `{allow}`, or `{outcome, reason?, evidenceRefs?, expiresAt?}`) |
+| `onFailure` | `deny` (default) returns a recorded deny result on OPA failures; `escalate` rethrows the `PolicyError` |
+| `requirePolicyVersion` | Sends `provenance=true` and requires a matching OPA bundle revision (stale/missing fails closed) |
+| `timeoutMs` / `maxInputBytes` / `maxResponseBytes` / `maxRetries` | Bounded caps (2 s/30 s, 16/256 KiB, 64 KiB/1 MiB, 0/2 retries — only timeout/transport/5xx retried) |
+| `redactor` | `SecretRedactor` applied to OPA-provided `reason`/`evidenceRefs` before they leave the adapter |
+| `ssrf` | `SsrfPolicy` for the endpoint; denials surface `MediaContentError` (`ssrf_denied`) |
+
+```ts
+import { createOpaPolicyEvaluator } from "@arnilo/prism-policy/opa";
+import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
+import { evaluateAndAppend } from "@arnilo/prism-policy";
+
+const evaluator = createOpaPolicyEvaluator({
+  url: "https://opa.internal:8181/v1/data/prism/allow",
+  policyId: "opa-prism",
+  policyVersion: "2026-08-01",
+});
+const state = await createPostgresEnterpriseState({ pool, schema: "prism" });
+await evaluateAndAppend(request, { store: state.policy, evaluator, id: crypto.randomUUID() });
+```
+
+Fail-closed codes: `ERR_PRISM_OPA_TIMEOUT`, `ERR_PRISM_OPA_TRANSPORT`, `ERR_PRISM_OPA_RESPONSE_PARSE`, `ERR_PRISM_OPA_RESPONSE_BOUNDS`, `ERR_PRISM_OPA_DECISION_MAPPING`, `ERR_PRISM_OPA_VERSION_MISMATCH`. Redirects are never followed; response bodies are read with a hard cap; caller aborts propagate (never converted to a policy outcome); timeout/parse/bounds/version failures record a deny row through `evaluateAndAppend`, so the durable Phase 6 ledger captures them unchanged.
+
 ## PostgreSQL enterprise state (0.0.23)
 
 For durable multi-replica policy decisions, construct [`createPostgresEnterpriseState`](enterprise-postgres-state.md) and pass its `policy` store to the existing helpers. PostgreSQL keeps the same append/query contract, requires tenant scope and verified identity at append, binds owner data into opaque cursors, validates record bounds on read, and rejects duplicate ids. Memory and JSONL remain development/reference adapters, not production WORM or cross-replica stores.

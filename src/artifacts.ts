@@ -29,6 +29,8 @@ export interface ArtifactRevision {
   readonly mime: string;
   /** Host-computed content hash for integrity compare. */
   readonly hash: string;
+  /** Expected body byte length; required when a blob store is wired for delivery. */
+  readonly size?: number;
   readonly changeNote?: string;
   /** Run that produced this revision, if any. */
   readonly producerRunId?: string;
@@ -72,6 +74,78 @@ export interface ArtifactDeliveryToken extends OwnershipScope {
   readonly version: number;
   readonly issuedAt: string;
   readonly expiresAt: string;
+}
+
+/**
+ * Opaque, ownership-scoped reference to one artifact body revision. The store derives its
+ * internal object key from these fields; hosts never see or store bucket/path/key internals.
+ * `size` is the expected byte length and `hash` the expected SHA-256 hex; both are verified
+ * on every put/get (fail closed on mismatch).
+ */
+export interface ArtifactBodyRef extends OwnershipScope {
+  readonly artifactId: string;
+  readonly threadId: string;
+  readonly version: number;
+  readonly mime: string;
+  /** Expected body byte length; verified against the actual body on put and get. */
+  readonly size: number;
+  /** Expected SHA-256 hex digest of the body; verified on put and get. */
+  readonly hash: string;
+}
+
+/** Transfer options shared by put/get/delete. */
+export interface ArtifactBodyTransferOptions {
+  readonly signal?: AbortSignal;
+}
+
+/** Presign options: bounded TTL for the returned delivery URL. */
+export interface ArtifactBodyPresignOptions extends ArtifactBodyTransferOptions {
+  /** Bounded by the store's presignTtlMs cap; defaults to the store default. */
+  readonly ttlMs?: number;
+}
+
+/**
+ * Host-owned blob storage contract (Phase 11 / 0.0.28). Core exports the contract only;
+ * the reference S3-compatible adapter lives in `@arnilo/prism-server/artifact-bodies`.
+ * Implementations must verify ownership on every operation, verify hash/size/MIME on
+ * put/get (fail closed), refuse delete under legal hold, and never disclose bucket/path/key
+ * in errors, telemetry, or records. All failures surface typed errors, never silent success.
+ */
+export interface ArtifactBodyStore {
+  /** Store a body; verifies size + SHA-256 hash against the ref before persisting. */
+  put(ref: ArtifactBodyRef, body: Uint8Array | ReadableStream<Uint8Array>, options?: ArtifactBodyTransferOptions): Promise<void>;
+  /** Retrieve a body; verifies size, MIME, and SHA-256 hash before returning bytes. */
+  get(ref: ArtifactBodyRef, options?: ArtifactBodyTransferOptions): Promise<ReadableStream<Uint8Array>>;
+  /** Delete a body; idempotent. Refuses while the resource is under legal hold. */
+  delete(ref: ArtifactBodyRef, options?: ArtifactBodyTransferOptions): Promise<void>;
+  /** Return a bounded-TTL, single-object delivery URL (never a bucket listing or wildcard). */
+  presign(ref: ArtifactBodyRef, options?: ArtifactBodyPresignOptions): Promise<string>;
+}
+
+/** Frozen ArtifactBodyStore failure reasons (fail-closed posture). */
+export type ArtifactBodyErrorCode = "OWNERSHIP" | "HASH_MISMATCH" | "SIZE_MISMATCH" | "MIME_MISMATCH" | "HELD" | "STORE";
+
+/** Well-known error codes for ArtifactBodyStore failures. */
+export const ARTIFACT_BODY_ERROR_CODES: Readonly<Record<ArtifactBodyErrorCode, `ERR_PRISM_ARTIFACT_BODY_${ArtifactBodyErrorCode}`>> = {
+  OWNERSHIP: "ERR_PRISM_ARTIFACT_BODY_OWNERSHIP",
+  HASH_MISMATCH: "ERR_PRISM_ARTIFACT_BODY_HASH_MISMATCH",
+  SIZE_MISMATCH: "ERR_PRISM_ARTIFACT_BODY_SIZE_MISMATCH",
+  MIME_MISMATCH: "ERR_PRISM_ARTIFACT_BODY_MIME_MISMATCH",
+  HELD: "ERR_PRISM_ARTIFACT_BODY_HELD",
+  STORE: "ERR_PRISM_ARTIFACT_BODY_STORE",
+};
+
+/** Typed ArtifactBodyStore failure; `code` is one of the frozen ERR_PRISM_ARTIFACT_BODY_* codes. */
+export class ArtifactBodyStoreError extends Error {
+  readonly code: `ERR_PRISM_ARTIFACT_BODY_${ArtifactBodyErrorCode}`;
+  constructor(
+    message: string,
+    readonly reason: ArtifactBodyErrorCode,
+  ) {
+    super(message);
+    this.name = "ArtifactBodyStoreError";
+    this.code = ARTIFACT_BODY_ERROR_CODES[reason];
+  }
 }
 
 /** Well-known checkpoint namespace for artifact records. */

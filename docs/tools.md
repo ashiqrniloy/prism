@@ -257,6 +257,7 @@ createJsonSchemaToolArgumentValidator({
 
 ## Related APIs
 
+- [OpenAPI tools adapter](openapi-tools.md): optional `@arnilo/prism-openapi-tools` `createOpenApiTools` — compile host-selected OpenAPI 3.1 operationIds into bounded `ToolDefinition`s (allow-list only, pinned origin, resolved/bounded schemas, approval + effect-store idempotency on mutations, bounded body/response/retries/pagination, host credential resolver, untrusted output).
 - [Agent/session runtime](agent-session-runtime.md): dispatches complete provider tool calls through the host-active tool harness and returns tool results on the next provider turn.
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, and tool `AgentEvent` contracts.
 - [Contribution registries](contribution-registries.md): inert extension/package tool contribution storage.

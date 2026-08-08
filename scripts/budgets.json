@@ -67,7 +67,7 @@
     }
   },
   "phase7Postgres": {
-    "$comment": "Release 0.0.24 protected durable event/effect evidence. Fixture stays fixed: 10 tenants × 10 principals × 1,000 events/owner, 16 producer clients, 16 subscribers, 100 warmups, 1,000 append/page/effect measurements, 10,000 sustained replay events, and 100-row cleanup batches.",
+    "$comment": "Release 0.0.24 protected durable event/effect evidence. Fixture stays fixed: 10 tenants \u00d7 10 principals \u00d7 1,000 events/owner, 16 producer clients, 16 subscribers, 100 warmups, 1,000 append/page/effect measurements, 10,000 sustained replay events, and 100-row cleanup batches.",
     "fixture": {
       "tenants": 10,
       "principalsPerTenant": 10,
@@ -106,7 +106,7 @@
     }
   },
   "phase9": {
-    "$comment": "Release 0.0.26 network-free Phase 9 evidence (plan 009 Task 7). Enumeration: 100k-file synthetic repo, ≤ 2 git invocations per list, results capped at 10k. Process: 1 GiB produced, 64 MiB retained + spill, 50 KiB chunk pages. LSP: 1000-diagnostic normalization at the hard per-file cap. Forge: 100 pages x 100 check-runs, no duplication. Proxy: 64 MiB download at the default response cap, resident buffering ≤ 2x maxBytes. Ceilings match Task 0 freeze. Renderer: 1,000-op A2UI surface stream as 16 snapshot batches of 64 ops + full tree render through the default catalog (Task 14) Sync-path AG-UI mapper: 4,000 events (text/tool/result/message) through the async pipeline with sync hooks only (Task 15).",
+    "$comment": "Release 0.0.26 network-free Phase 9 evidence (plan 009 Task 7). Enumeration: 100k-file synthetic repo, \u2264 2 git invocations per list, results capped at 10k. Process: 1 GiB produced, 64 MiB retained + spill, 50 KiB chunk pages. LSP: 1000-diagnostic normalization at the hard per-file cap. Forge: 100 pages x 100 check-runs, no duplication. Proxy: 64 MiB download at the default response cap, resident buffering \u2264 2x maxBytes. Ceilings match Task 0 freeze. Renderer: 1,000-op A2UI surface stream as 16 snapshot batches of 64 ops + full tree render through the default catalog (Task 14) Sync-path AG-UI mapper: 4,000 events (text/tool/result/message) through the async pipeline with sync hooks only (Task 15).",
     "fixture": {
       "warmups": 5,
       "measuredOperations": 20,
@@ -129,7 +129,7 @@
     }
   },
   "enterprisePostgres": {
-    "$comment": "Release 0.0.23 protected PostgreSQL benchmark. Fixed fixture: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row explicit cleanup batches. All ceilings are milliseconds and intentionally match Phase 6's 50ms indexed-point and 100ms page/cleanup ceilings.",
+    "$comment": "Release 0.0.23 protected PostgreSQL benchmark. Fixed fixture: 10 tenants \u00d7 10 principals \u00d7 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row explicit cleanup batches. All ceilings are milliseconds and intentionally match Phase 6's 50ms indexed-point and 100ms page/cleanup ceilings.",
     "fixture": {
       "tenants": 10,
       "principalsPerTenant": 10,
@@ -167,6 +167,23 @@
       "terminalChunkAckMs": 1000,
       "promptFirstUpdateMs": 2000,
       "promptEndMs": 30000
+    }
+  },
+  "phase11": {
+    "$comment": "Release 0.0.28 network-free enterprise adapter evidence (plan 011 Task 6). OIDC/JWKS verify, OPA decision, MCP OAuth discovery + handshake, OpenAPI tool call, and S3-compatible artifact put/presign against in-process fakes and loopback fixture servers. Ceilings match the Task 0 freeze p95Targets.",
+    "fixture": {
+      "warmups": 20,
+      "measuredOperations": 100
+    },
+    "p95CeilingsMs": {
+      "oidcVerifyCacheHitMs": 5,
+      "oidcVerifyCacheMissMs": 100,
+      "policyDecisionMs": 100,
+      "mcpDiscoveryRoundTripMs": 250,
+      "mcpAuthHandshakeMs": 2000,
+      "openapiToolCallMs": 1000,
+      "artifactPut1MiBMs": 2000,
+      "artifactPresignMs": 100
     }
   }
 }

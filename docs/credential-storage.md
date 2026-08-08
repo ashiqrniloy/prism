@@ -17,6 +17,8 @@ Factories:
 - `createOAuthCredentialStoreAdapter(store)`
 - `rotateEncryptedCredentialStorePassphrase(options)`
 
+The `@arnilo/prism-credentials-node/oidc` subpath adds the optional OIDC/JWKS identity verifier (`createOidcIdentityVerifier`) — pinned issuer/audience/JWKS verification over native `fetch` + WebCrypto (see [Agent identity](agent-identity.md)).
+
 Core `@arnilo/prism` remains storage-free. Hosts choose a backend explicitly at startup; there is no global credential singleton and no silent fallback from keychain to plaintext file storage.
 
 ## When to use it

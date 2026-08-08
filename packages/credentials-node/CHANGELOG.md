@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.28] - 2026-08-08
+
+### Added
+- `@arnilo/prism-credentials-node/oidc` subpath: `createOidcIdentityVerifier` — optional OIDC/JWKS identity verifier (plan 011 Task 1) over native `fetch` + WebCrypto (no JOSE dependency): pinned issuer/audience, allowlisted RS256/ES256 (host may only narrow), bounded exp/nbf clock skew, kid key selection with single-flight bounded JWKS cache and exactly one refetch on unknown kid, host revocation callback (fail closed on true/throw), bounded claims + reused core identity limits, host `mapClaims` → `AgentIdentity`. Fail-closed `IdentityError` reasons `ERR_PRISM_OIDC_*` (frozen in `scripts/phase11-freeze-manifest.json`); SSRF-checked pinned JWKS URL (redirects never followed; denials surface `MediaContentError` `ssrf_denied`).
+
 ## [0.0.27] - 2026-08-07
 
 ### Changed

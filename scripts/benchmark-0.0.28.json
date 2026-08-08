@@ -1,0 +1,83 @@
+{
+  "version": "0.0.28",
+  "generatedAt": "2026-08-08T18:45:49.696Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "local",
+    "network": false
+  },
+  "fixture": {
+    "warmups": 20,
+    "measuredOperations": 100
+  },
+  "ceilingsMs": {
+    "oidcVerifyCacheHitMs": 5,
+    "oidcVerifyCacheMissMs": 100,
+    "policyDecisionMs": 100,
+    "mcpDiscoveryRoundTripMs": 250,
+    "mcpAuthHandshakeMs": 2000,
+    "openapiToolCallMs": 1000,
+    "artifactPut1MiBMs": 2000,
+    "artifactPresignMs": 100
+  },
+  "results": [
+    {
+      "name": "oidcVerifyCacheHitMs",
+      "operations": 100,
+      "p50Ms": 0.091,
+      "p95Ms": 0.178,
+      "throughputPerSecond": 9592.5
+    },
+    {
+      "name": "oidcVerifyCacheMissMs",
+      "operations": 100,
+      "p50Ms": 0.171,
+      "p95Ms": 0.366,
+      "throughputPerSecond": 5292.8
+    },
+    {
+      "name": "policyDecisionMs",
+      "operations": 100,
+      "p50Ms": 0.038,
+      "p95Ms": 0.063,
+      "throughputPerSecond": 24642.3
+    },
+    {
+      "name": "mcpDiscoveryRoundTripMs",
+      "operations": 100,
+      "p50Ms": 1.301,
+      "p95Ms": 2.196,
+      "throughputPerSecond": 706.9
+    },
+    {
+      "name": "mcpAuthHandshakeMs",
+      "operations": 100,
+      "p50Ms": 4.469,
+      "p95Ms": 6.359,
+      "throughputPerSecond": 221.5
+    },
+    {
+      "name": "openapiToolCallMs",
+      "operations": 100,
+      "p50Ms": 0.012,
+      "p95Ms": 0.023,
+      "throughputPerSecond": 69420.5
+    },
+    {
+      "name": "artifactPut1MiBMs",
+      "operations": 100,
+      "p50Ms": 6.175,
+      "p95Ms": 11.81,
+      "throughputPerSecond": 143
+    },
+    {
+      "name": "artifactPresignMs",
+      "operations": 100,
+      "p50Ms": 0.229,
+      "p95Ms": 0.63,
+      "throughputPerSecond": 3480.4
+    }
+  ]
+}

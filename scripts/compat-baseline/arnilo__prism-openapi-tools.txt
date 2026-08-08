@@ -1,0 +1,16 @@
+DEFAULT_OPENAPI_LIMITS	export declare const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits
+HARD_OPENAPI_LIMITS	export declare const HARD_OPENAPI_LIMITS: ResolvedOpenApiLimits
+OpenApiCredentialInput	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiCredentialResolver	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
+OpenApiPagination	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiPolicyCheck	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiToolError	export declare class OpenApiToolError extends Error
+OpenApiToolsOptions	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+ResolvedOpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
+compileOpenApiDocument	export declare function compileOpenApiDocument(input:
+createOpenApiTools	export declare function createOpenApiTools(options: OpenApiToolsOptions): readonly ToolDefinition[]
+executeOpenApiOperation	export declare function executeOpenApiOperation(options: ExecuteOpenApiOperationOptions): Promise<ToolResult>
+packageName	export declare const packageName = "@arnilo/prism-openapi-tools"
+resolveOpenApiLimits	export declare function resolveOpenApiLimits(input?: OpenApiLimits): ResolvedOpenApiLimits
+type OpenApiToolErrorCode	export { OpenApiToolError, type OpenApiToolErrorCode } from "./errors.js"

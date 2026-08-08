@@ -1014,18 +1014,18 @@ describe("docs", () => {
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
-  it("every publishable package ships current README and 0.0.27 changelog documentation", () => {
+  it("every publishable package ships current README and 0.0.28 changelog documentation", () => {
     const dirs = [".", ...readdirSync("packages").map((name) => join("packages", name))]
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 48, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 49, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.0.27] - 2026-08-07"), `${dir}/CHANGELOG.md missing finalized 0.0.27 section`);
+      assert.ok(changelog.includes("## [0.0.28] - 2026-08-08"), `${dir}/CHANGELOG.md missing finalized 0.0.28 section`);
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -3065,7 +3065,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 48, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 49, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

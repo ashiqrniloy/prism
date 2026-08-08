@@ -6,6 +6,23 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.0.28 enterprise auth, policy, MCP OAuth, API, and artifact adapters
+
+`node scripts/benchmark-0.0.28.mjs` is network-free (in-process fake JWKS/OPA/API fetches plus loopback fixture servers for the authorization server, Prism MCP server, and S3-compatible object store). Checked `scripts/benchmark-0.0.28.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops per seam.
+
+| Scenario | Recorded p95 ms | Ceiling |
+| --- | ---: | ---: |
+| OIDC verify (warm JWKS cache) | 0.178 | 5 |
+| OIDC verify (TTL-expired JWKS refetch) | 0.366 | 100 |
+| OPA policy decision (fake endpoint) | 0.063 | 100 |
+| MCP OAuth discovery round trip | 2.196 | 250 |
+| MCP OAuth interactive handshake (PKCE + token + authorized connect) | 6.359 | 2,000 |
+| OpenAPI tool call (compiled operation, fake API) | 0.023 | 1,000 |
+| Artifact 1 MiB body put (fake object store) | 11.810 | 2,000 |
+| Artifact presign | 0.630 | 100 |
+
+Conformance: `scripts/phase11-conformance.test.mjs` (5 network-free cases: composed OIDC → OPA ledger → MCP OAuth tool → OpenAPI side effect → artifact body + signed delivery, adapter-absent baseline, hostile origins and limit ladder, redaction sweep). Values are environment evidence, not universal SLOs.
+
 ## Release 0.0.25 durable loops and human-in-the-loop
 
 `node scripts/benchmark-0.0.25.mjs` is network-free (in-memory checkpoint store). Checked `scripts/benchmark-0.0.25.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops, 32 pending decisions, ~250 KiB snapshot, 64 A2UI ops/message.

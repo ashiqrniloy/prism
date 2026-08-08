@@ -228,6 +228,43 @@ MCP output is untrusted. Register bridge tools through core dispatch with a `Sec
 
 Discovery validation is atomic: cursor/page/tool/name/description/schema failures reject `refresh()` and preserve the previous immutable tool-array reference. The bridge intentionally uses raw SDK `request()` for `tools/list` and `tools/call`; this avoids eager Ajv compilation/validation of untrusted remote output schemas. Host `ToolValidator` remains the argument-validation owner.
 
+## MCP OAuth (0.0.28)
+
+Optional RFC 9728/8414 OAuth client and server wiring for Streamable HTTP transports.
+
+**Client** — pass `auth` to the transport/bridge options:
+
+```ts
+import { createMcpClientAuth } from "@arnilo/prism-mcp";
+
+const auth = createMcpClientAuth(
+  {
+    state, // required persistence seam: load/save tokens, discovery, client info, code verifier
+    strategy: { kind: "static", clientId: "prism", clientSecret: "..." }, // or { kind: "dcr", clientMetadata }
+    redirectUri: "http://localhost:33418/callback",
+    onRedirectRequired: (url) => openBrowser(url), // interactive flows
+  },
+  { serverUrl: "https://mcp.example.com/api", fetch },
+);
+```
+
+The flow reuses the MCP SDK's `auth()` helper (401 → protected-resource metadata → RFC 8414 discovery → PKCE S256 → token exchange/refresh) wrapped in Prism policy: discovery URLs are SSRF-checked, https-only (loopback http opt-in), DNS-pinned, zero-redirect, and byte-bounded; RFC 8707 resource binding is enforced on every token request (`ERR_PRISM_MCP_OAUTH_AUDIENCE` on origin drift); issuer origin must match the discovered authorization server (`ERR_PRISM_MCP_OAUTH_ORIGIN`); bearer tokens are only ever attached to the allow-listed server origin. `McpClientAuthState` has no default implementation — production hosts back it with an encrypted/keychain store (refresh tokens must not live in plaintext persistence).
+
+**Server** — advertise protected-resource metadata and challenge unauthenticated requests:
+
+```ts
+const handler = await createPrismMcpWebHandler(factory, {
+  protectedResource: {
+    authorizationServers: ["https://as.example.com/"],
+    resource: "https://mcp.example.com/mcp", // required (RFC 9728)
+    scopesSupported: ["mcp"],
+  },
+  resolveIdentity, // host-owned token verification stays here
+});
+```
+
+The handler serves `GET /.well-known/oauth-protected-resource` and returns `401 WWW-Authenticate: Bearer resource_metadata="<origin>/.well-known/oauth-protected-resource"` on rejected requests. Token verification remains entirely host-owned via `resolveIdentity`; Prism only advertises and challenges.
+
 ## Vendor web MCP prototype boundary
 
 Official Exa/Firecrawl MCP servers may be tested only as explicit hardened prototypes: pin endpoint/origin/auth, inspect declared capabilities, allow-list individual tools/resources, retain all MCP bounds, and never expose generic remote passthrough. Production web research uses direct host-selected `@arnilo/prism-web-tools` adapters so provider choice, credentials, schema, and costs remain outside model control.

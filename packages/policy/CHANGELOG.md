@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.28] - 2026-08-08
+
+### Added
+- `@arnilo/prism-policy/opa` subpath: `createOpaPolicyEvaluator` — OPA REST decision adapter (plan 011 Task 2) over native `fetch` (no OPA SDK): host-pinned SSRF-checked `POST /v1/data/<path>` with `{"input": <document>}`; default input carries redacted actor refs only (prompts/tool args/JWTs/credentials never included; unrestricted payload keys rejected); boolean / `{allow}` / `{outcome, reason?, evidenceRefs?, expiresAt?}` decision mapping; bounded caps (timeout 2/30 s, input 16/256 KiB, response 64 KiB/1 MiB, retries 0/2, timeout/transport/5xx only); fail-closed default `onFailure: "deny"` (recorded deny rows) vs `"escalate"`; optional `requirePolicyVersion` bundle-revision pin via `provenance=true`; optional `SecretRedactor` on OPA-provided reason/evidence refs; caller aborts propagate. Frozen codes `ERR_PRISM_OPA_*`; decisions flow unchanged through `evaluateAndAppend` into durable Phase 6 stores.
+
 ## [0.0.27] - 2026-08-07
 
 ### Changed

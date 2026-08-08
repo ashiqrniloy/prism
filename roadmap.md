@@ -2,7 +2,7 @@
 
 Updated: 2026-08-04
 Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed)
-Status: Phase 10 complete (2026-08-07); Phase 11+ pending exit gates
+Status: Phase 11 complete (2026-08-08); Phase 12+ pending exit gates
 
 ## Objectives
 
@@ -866,7 +866,7 @@ Status: Phase 10 complete (2026-08-07); Phase 11+ pending exit gates
   - Exit Gate:
     - Stable ACP SDK conformance, real-client smoke, all capability/permission/mode/security tests, payload/performance budgets, package compatibility, and full release gate pass.
 
-- [ ] Phase 11 — Release 0.0.28: enterprise authentication, policy, MCP OAuth, API, and artifact adapters
+- [x] Phase 11 — Release 0.0.28: enterprise authentication, policy, MCP OAuth, API, and artifact adapters (complete 2026-08-08; Tasks 0–6 shipped)
   - Objectives:
     - Reduce repeated security-critical host plumbing while preserving host ownership of users, login UX, policy authorship, credentials, and storage topology.
     - Provide one bounded reference adapter for each confirmed enterprise integration seam.

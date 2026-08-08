@@ -17,6 +17,7 @@ import type {
   ToolValidator,
 } from "@arnilo/prism";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { McpClientAuthOptions } from "./auth.js";
 
 export interface McpStdioTransport {
   readonly type: "stdio";
@@ -39,6 +40,8 @@ export interface McpStreamableHttpTransport {
   readonly sessionId?: string;
   /** Test/host DNS seam; every returned address is still validated and one address is pinned. */
   readonly resolveHostname?: MediaHostnameResolver;
+  /** Optional OAuth client integration (RFC 9728 discovery, PKCE, refresh, RFC 8707 binding). */
+  readonly auth?: McpClientAuthOptions;
 }
 
 export type McpTransportConfig = McpStdioTransport | McpStreamableHttpTransport;
@@ -125,6 +128,16 @@ export interface PrismMcpRequestIdentity {
   readonly ownership?: OwnershipScope;
 }
 
+/** RFC 9728 OAuth 2.0 protected-resource metadata advertised by a Prism MCP server. */
+export interface McpProtectedResource {
+  /** Authorization server URL(s) clients must use (RFC 8414 discovery target). */
+  readonly authorizationServers: readonly string[];
+  /** RFC 8707 resource indicator; usually the MCP server's own URL. */
+  readonly resource?: string;
+  /** Scope values the server may require. */
+  readonly scopesSupported?: readonly string[];
+}
+
 export interface CreatePrismMcpWebHandlerOptions {
   readonly resolveAuthInfo?: (request: Request) => AuthInfo | undefined | Promise<AuthInfo | undefined>;
   /** Required for stateful sessions; binds every session request to one validated host principal. */
@@ -132,6 +145,8 @@ export interface CreatePrismMcpWebHandlerOptions {
     request: Request,
     authInfo: AuthInfo | undefined,
   ) => PrismMcpRequestIdentity | false | Promise<PrismMcpRequestIdentity | false>;
+  /** When set, serves RFC 9728 protected-resource metadata and challenges unauthenticated requests. */
+  readonly protectedResource?: McpProtectedResource;
   readonly sessionIdGenerator?: () => string;
   readonly maxSessions?: number;
   readonly allowedHosts?: readonly string[];

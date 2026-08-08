@@ -40,6 +40,7 @@ CreatePrismHandlerOptions	export type { CreatePrismHandlerOptions, PrismAgentEve
 CreatePrismHealthHandlerOptions	export type { CreatePrismHealthHandlerOptions } from "./health.js"
 CreatePrismReplayHandlerOptions	export type { CreatePrismEventReplayOptions, CreatePrismReplayHandlerOptions, PrismAgentEventReplay, PrismEventReplay, PrismEventReplayRequest, } from "./replay.js"
 DEFAULT_ARTIFACTS_PER_THREAD	export declare const DEFAULT_ARTIFACTS_PER_THREAD = 64
+DEFAULT_ARTIFACT_BODY_LIMITS	export declare const DEFAULT_ARTIFACT_BODY_LIMITS: ResolvedArtifactBodyLimits
 DEFAULT_ARTIFACT_CITATIONS	export declare const DEFAULT_ARTIFACT_CITATIONS = 32
 DEFAULT_ARTIFACT_CITATION_BYTES	export declare const DEFAULT_ARTIFACT_CITATION_BYTES: number
 DEFAULT_ARTIFACT_HASH_BYTES	export declare const DEFAULT_ARTIFACT_HASH_BYTES = 256
@@ -76,6 +77,7 @@ DEFAULT_MAX_STREAM_BYTES	export declare const DEFAULT_MAX_STREAM_BYTES: number
 DEFAULT_MAX_STREAM_EVENTS	export declare const DEFAULT_MAX_STREAM_EVENTS = 10000
 DEFAULT_REQUEST_TIMEOUT_MS	export declare const DEFAULT_REQUEST_TIMEOUT_MS = 120000
 HARD_ARTIFACTS_PER_THREAD	export declare const HARD_ARTIFACTS_PER_THREAD = 256
+HARD_ARTIFACT_BODY_LIMITS	export declare const HARD_ARTIFACT_BODY_LIMITS: ResolvedArtifactBodyLimits
 HARD_ARTIFACT_CITATIONS	export declare const HARD_ARTIFACT_CITATIONS = 128
 HARD_ARTIFACT_CITATION_BYTES	export declare const HARD_ARTIFACT_CITATION_BYTES: number
 HARD_ARTIFACT_HASH_BYTES	export declare const HARD_ARTIFACT_HASH_BYTES = 1024
@@ -141,6 +143,10 @@ ResolvedArtifactLimits	export type { ArtifactAttachInput, ArtifactAuthorizationI
 ResolvedConversationLimits	export type { ConversationAuthorizationInput, ConversationAuthorizer, ConversationBranchInput, ConversationContinueInput, ConversationCreateInput, ConversationExportInput, ConversationExportPage, ConversationLimits, ConversationListInput, ConversationOperation, ConversationRefInput, ConversationReplayInput, ConversationReplayPage, ConversationService, ConversationServiceInput, ConversationServiceStore, ConversationSessionFactoryInput, CreateConversationHandlerOptions, CreateConversationServiceOp
 ResolvedPrismDeploymentLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
 ResolvedPrismServerLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
+S3ArtifactBodyError	export declare class S3ArtifactBodyError extends Error
+awsUriEncode	export declare function awsUriEncode(value: string): string
+canonicalHeaders	export declare function canonicalHeaders(headers: Readonly<Record<string, string>>, signedHeaders: readonly string[]): string
+canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
 createArtifactHandler	export declare function createArtifactHandler(options: CreateArtifactHandlerOptions): PrismRequestHandler
 createArtifactService	export declare function createArtifactService(store: CheckpointStore, options: CreateArtifactServiceOptions): ArtifactService
 createConversationHandler	export declare function createConversationHandler(options: CreateConversationHandlerOptions): PrismRequestHandler
@@ -153,11 +159,18 @@ createPrismEventReplay	export declare function createPrismEventReplay(store: Pic
 createPrismHandler	export declare function createPrismHandler(options: CreatePrismHandlerOptions): PrismRequestHandler
 createPrismHealthHandler	export declare function createPrismHealthHandler(options?: CreatePrismHealthHandlerOptions): PrismRequestHandler
 createPrismReplayHandler	export declare function createPrismReplayHandler(options: CreatePrismReplayHandlerOptions): import("./types.js").PrismRequestHandler
+createS3ArtifactBodyStore	export declare function createS3ArtifactBodyStore(options: S3ArtifactBodyStoreOptions): ArtifactBodyStore
 isAdmitOperation	export declare function isAdmitOperation(operation: string): boolean
 packageName	export declare const packageName = "@arnilo/prism-server"
+presignV4	export declare function presignV4(input: SigV4PresignInput): Promise<string>
+resolveArtifactBodyLimits	export declare function resolveArtifactBodyLimits(input?: ArtifactBodyLimits): ResolvedArtifactBodyLimits
 resolveArtifactLimits	export declare function resolveArtifactLimits(input?: ArtifactLimits): ResolvedArtifactLimits
 resolveConversationLimits	export declare function resolveConversationLimits(input?: ConversationLimits): ResolvedConversationLimits
 resolvePrismDeploymentLimits	export declare function resolvePrismDeploymentLimits(input?: PrismDeploymentLimits): ResolvedPrismDeploymentLimits
 resolvePrismServerLimits	export declare function resolvePrismServerLimits(input?: PrismServerLimits): ResolvedPrismServerLimits
+s3ObjectKey	export declare function s3ObjectKey(ref: ArtifactBodyRef): string
+sha256Hex	export declare function sha256Hex(data: Uint8Array): Promise<string>
 signArtifactDeliveryLink	export declare function signArtifactDeliveryLink(token: ArtifactDeliveryToken, secret: string): string
+signRequestV4	export declare function signRequestV4(input: SigV4RequestSignInput): Promise<
+signV4	export declare function signV4(input: SigV4SignInput): Promise<SigV4Signature>
 verifyArtifactDeliveryLink	export declare function verifyArtifactDeliveryLink(link: string, secret: string, maxBytes?: number): ArtifactDeliveryToken

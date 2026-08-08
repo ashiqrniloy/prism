@@ -3,7 +3,16 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
-import { ArtifactError, type ArtifactRecord, type CheckpointStore, createMemoryCheckpointStore, createSecretRedactor } from "@arnilo/prism";
+import {
+  type ArtifactBodyRef,
+  type ArtifactBodyStore,
+  ArtifactBodyStoreError,
+  ArtifactError,
+  type ArtifactRecord,
+  type CheckpointStore,
+  createMemoryCheckpointStore,
+  createSecretRedactor,
+} from "@arnilo/prism";
 import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 import {
   type ArtifactService,
@@ -32,6 +41,7 @@ function makeService(
     store?: CheckpointStore;
     limits?: Parameters<typeof createArtifactService>[1]["limits"];
     onDecision?: Parameters<typeof createArtifactService>[1]["onDecision"];
+    bodies?: ArtifactBodyStore;
   } = {},
 ): { store: CheckpointStore; service: ArtifactService } {
   const store = options.store ?? createMemoryCheckpointStore();
@@ -40,6 +50,7 @@ function makeService(
     linkSecret: LINK_SECRET,
     ...(options.limits === undefined ? {} : { limits: options.limits }),
     ...(options.onDecision === undefined ? {} : { onDecision: options.onDecision }),
+    ...(options.bodies === undefined ? {} : { bodies: options.bodies }),
   });
   return { store, service };
 }
@@ -49,6 +60,7 @@ const attachInput = {
   uri: "https://blob.example/doc-v1",
   mime: "text/markdown",
   hash: "sha256:aaa",
+  size: 1234,
 };
 
 describe("createArtifactService", () => {
@@ -358,6 +370,89 @@ describe("artifact delivery links", () => {
       RangeError,
     );
   });
+
+  it("resolves delivery through the body store when wired", async () => {
+    const presigned: Array<{ ref: ArtifactBodyRef; ttlMs: number }> = [];
+    const bodies: ArtifactBodyStore = {
+      put: async () => {},
+      get: async () => new ReadableStream(),
+      delete: async () => {},
+      presign: async (ref, options) => {
+        presigned.push({ ref, ttlMs: options?.ttlMs ?? 0 });
+        return `https://presigned.example/${ref.artifactId}/${ref.version}`;
+      },
+    };
+    const { service } = makeService({ bodies });
+    const record = await service.attach({ ...attachInput, ownership, identity, id: "art-fixed" });
+    const { link, token, url } = await service.deliveryLink({ ownership, threadId: "thread-1", artifactId: record.id, ttlSeconds: 60 });
+    assert.ok(url, "delivery link must carry a presigned url when a body store is wired");
+    assert.equal(url, "https://presigned.example/art-fixed/1");
+    assert.equal(presigned.length, 1);
+    assert.equal(presigned[0].ttlMs, 60_000);
+    assert.equal(presigned[0].ref.artifactId, record.id);
+    assert.equal(presigned[0].ref.threadId, "thread-1");
+    assert.equal(presigned[0].ref.version, 1);
+    assert.equal(presigned[0].ref.mime, "text/markdown");
+    assert.equal(presigned[0].ref.size, 1234);
+    // The body ref carries the bare sha-256 hex digest; the service strips the
+    // conventional `sha256:` revision-hash prefix when addressing a body.
+    assert.equal(presigned[0].ref.hash, "aaa");
+    assert.equal(presigned[0].ref.tenantId, "tenant-1");
+    assert.equal(link, signArtifactDeliveryLink(token, LINK_SECRET));
+  });
+
+  it("omits the presigned url when no body store is wired", async () => {
+    const { service } = makeService();
+    const record = await service.attach({ ...attachInput, ownership });
+    const { url } = await service.deliveryLink({ ownership, threadId: "thread-1", artifactId: record.id });
+    assert.equal(url, undefined);
+  });
+
+  it("fails closed when a wired body store cannot presign", async () => {
+    const bodies: ArtifactBodyStore = {
+      put: async () => {},
+      get: async () => new ReadableStream(),
+      delete: async () => {},
+      presign: async () => {
+        throw new ArtifactBodyStoreError("object store unreachable", "STORE");
+      },
+    };
+    const { service } = makeService({ bodies });
+    const record = await service.attach({ ...attachInput, ownership });
+    await assert.rejects(
+      () => service.deliveryLink({ ownership, threadId: "thread-1", artifactId: record.id }),
+      (error: unknown) => error instanceof ArtifactBodyStoreError && error.reason === "STORE",
+    );
+  });
+
+  it("fails closed when a wired body store cannot address a revision without size", async () => {
+    const bodies: ArtifactBodyStore = {
+      put: async () => {},
+      get: async () => new ReadableStream(),
+      delete: async () => {},
+      presign: async () => "https://presigned.example/x",
+    };
+    const { service } = makeService({ bodies });
+    const record = await service.attach({ ...attachInput, ownership, size: undefined });
+    await assert.rejects(
+      () => service.deliveryLink({ ownership, threadId: "thread-1", artifactId: record.id }),
+      (error: unknown) => error instanceof ArtifactError && error.reason === "invalid_input",
+    );
+  });
+
+  it("validates size on attach and revise", async () => {
+    const { service } = makeService();
+    await assert.rejects(
+      () => service.attach({ ...attachInput, ownership, size: -1 }),
+      (error: unknown) => error instanceof ArtifactError && error.reason === "invalid_input",
+    );
+    const record = await service.attach({ ...attachInput, ownership });
+    await assert.rejects(
+      () =>
+        service.revise({ ownership, threadId: "thread-1", artifactId: record.id, uri: "https://blob.example/v2", hash: "h", size: 1.5 }),
+      (error: unknown) => error instanceof ArtifactError && error.reason === "invalid_input",
+    );
+  });
 });
 
 describe("createArtifactHandler", () => {
@@ -387,7 +482,7 @@ describe("createArtifactHandler", () => {
     assert.equal(got.status, 200);
 
     const revised = await h(
-      jsonRequest(`/prism/artifacts/thread-1/${record.id}/revise`, { uri: "https://blob.example/doc-v2", hash: "sha256:bbb" }),
+      jsonRequest(`/prism/artifacts/thread-1/${record.id}/revise`, { uri: "https://blob.example/doc-v2", hash: "sha256:bbb", size: 5678 }),
     );
     assert.equal(revised.status, 200);
 

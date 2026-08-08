@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.28] - 2026-08-08
+
+### Changed
+- Released with exact 0.0.28 graph.
+
 ## [0.0.27] - 2026-08-07
 
 ### Added

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.28] - 2026-08-08
+
+### Added
+- MCP OAuth client/server integration (RFC 9728 + RFC 8414 discovery, PKCE, token refresh, RFC 7591 DCR, RFC 8707 resource binding, RFC 7009 revocation): `createMcpClientAuth`, `McpClientAuthOptions`, `McpClientAuthState` persistence seam, `McpOAuthRegistrationStrategy` (static | dcr), `McpOAuthError` (ERR_PRISM_MCP_OAUTH_*), `createMcpOAuthFetch`/`createMcpOAuthTransport` (SSRF-checked, DNS-pinned, redirect-free, byte-bounded discovery fetch; bearer tokens never leave the allowed server origin), `protectedResource` option on `createPrismMcpWebHandler` serving `/.well-known/oauth-protected-resource` with `WWW-Authenticate` challenges on unauthenticated requests.
+- `createPrismMcpWebHandler` stateless mode now requires a server factory and creates a fresh SDK transport per request (SDK stateless transports cannot be reused); `McpProtectedResource.resource` is required (RFC 9728, SDK PRM schema).
+
 ## [0.0.27] - 2026-08-07
 
 ### Changed

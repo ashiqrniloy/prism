@@ -4,7 +4,7 @@
 
 Prism is published as one core package, forty-one first-party capability packages, and six pure-manifest family/profile packages (**48** publishable manifests total). This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget. The measurable 1.0 readiness gates (command-per-gate) live in [`0.1.0-readiness.md`](./0.1.0-readiness.md).
 
-Core `@arnilo/prism` ships runtime, CLI, templates, and docs. Every code package has a required `@arnilo/prism@0.0.27` peer; profiles are pure manifests. Installation activates no provider, listener, database, browser, credential, or tool capability.
+Core `@arnilo/prism` ships runtime, CLI, templates, and docs. Every code package has a required `@arnilo/prism@0.0.28` peer; profiles are pure manifests. Installation activates no provider, listener, database, browser, credential, or tool capability.
 
 Current **48** publishable manifests:
 
@@ -15,7 +15,7 @@ Current **48** publishable manifests:
 `@arnilo/prism-provider-alibaba`, `@arnilo/prism-provider-anthropic`, `@arnilo/prism-provider-azure`, `@arnilo/prism-provider-bedrock`, `@arnilo/prism-provider-google`, `@arnilo/prism-provider-kimi`
 `@arnilo/prism-provider-neuralwatt`, `@arnilo/prism-provider-ollama`, `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-opencode-go`, `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-vertex`
 `@arnilo/prism-provider-zai`, `@arnilo/prism-rag`, `@arnilo/prism-server`, `@arnilo/prism-session-store-codecs`, `@arnilo/prism-session-store-nats`, `@arnilo/prism-session-store-postgres`, `@arnilo/prism-session-store-sqlite`
-`@arnilo/prism-supervisor`, `@arnilo/prism-tool-validator-json-schema`, `@arnilo/prism-web-tools`, `@arnilo/prism-work-tools`, `@arnilo/prism-workflows`
+`@arnilo/prism-openapi-tools`, `@arnilo/prism-supervisor`, `@arnilo/prism-tool-validator-json-schema`, `@arnilo/prism-web-tools`, `@arnilo/prism-work-tools`, `@arnilo/prism-workflows`
 
 Core ships `dist`, docs, templates, and `CHANGELOG.md`; code packages ship compiled output, README, license, and changelog. Family/profile packages ship manifest, README, and changelog. `@arnilo/prism-providers` includes all eleven `@arnilo/prism-provider-*` packages.
 
@@ -45,9 +45,9 @@ Consumers install the core package for the runtime and add first-party packages 
 | Run the default (network-free) test suite | `npm test` |
 | Dry-run pack core + every package | `npm run pack:dry-run` |
 | Local mirror of the release verify gate | `npm run release:dry-run` |
-| Validate clean tag/version/ranges and reject registry collisions | `npm run release:check -- --version 0.0.27` |
-| Preview deterministic publish order | `npm run release:publish -- --version 0.0.27 --dry-run --allow-dirty --allow-untagged` |
-| Resume interrupted tagged publication | `npm run release:publish -- --version 0.0.27 --resume --report release-artifacts/publish-report.json` |
+| Validate clean tag/version/ranges and reject registry collisions | `npm run release:check -- --version 0.0.28` |
+| Preview deterministic publish order | `npm run release:publish -- --version 0.0.28 --dry-run --allow-dirty --allow-untagged` |
+| Resume interrupted tagged publication | `npm run release:publish -- --version 0.0.28 --resume --report release-artifacts/publish-report.json` |
 | Protected PostgreSQL enterprise suite | `PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres` |
 | Full SDK readiness gate (typecheck + offline tests + pack) | `npm run sdk:ready` |
 
@@ -87,7 +87,7 @@ A packed tarball contains only public compiled output and release files:
 - Code packages ship `README.md`, `LICENSE`, and `CHANGELOG.md`; family/profile packages ship `README.md` and `CHANGELOG.md`.
 - The core tarball additionally ships the full `docs/` directory (the docs hub) and `templates/init/` used by `prism init`.
 - `dist/cli.js` and the `bin` link in core.
-- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.0.27.tgz`; first-party packages produce `arnilo-prism-provider-<name>-0.0.27.tgz` / `arnilo-prism-compaction-<name>-0.0.27.tgz` / `arnilo-prism-coding-agent-0.0.27.tgz`; family/profile packages produce `arnilo-prism-{providers,compaction,base,code,sdk,all}-0.0.27.tgz`. The CLI bin name `prism` is unaffected by the package name (`npx prism` still works; npm allows the bin field to differ from the package name).
+- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.0.28.tgz`; first-party packages produce `arnilo-prism-provider-<name>-0.0.28.tgz` / `arnilo-prism-compaction-<name>-0.0.28.tgz` / `arnilo-prism-coding-agent-0.0.28.tgz`; family/profile packages produce `arnilo-prism-{providers,compaction,base,code,sdk,all}-0.0.28.tgz`. The CLI bin name `prism` is unaffected by the package name (`npx prism` still works; npm allows the bin field to differ from the package name).
 
 Excluded from every tarball by `files` negation:
 
@@ -106,9 +106,9 @@ Excluded from every tarball by `files` negation:
   "name": "host-app",
   "type": "module",
   "dependencies": {
-    "@arnilo/prism": "0.0.27",
-    "@arnilo/prism-enterprise-postgres": "0.0.27",
-    "@arnilo/prism-provider-openai": "0.0.27"
+    "@arnilo/prism": "0.0.28",
+    "@arnilo/prism-enterprise-postgres": "0.0.28",
+    "@arnilo/prism-provider-openai": "0.0.28"
   }
 }
 ```
@@ -151,11 +151,11 @@ For SDK readiness, run the same one-command gate directly. It composes existing 
 npm run sdk:ready
 ```
 
-Release publication derives all **48** manifests from the workspace once, validates exact `0.0.27` manifest/lockfile/internal ranges, then uses deterministic dependency order. `release:check` requires a clean commit tagged `v0.0.27` and rejects any existing registry version. `release:publish --resume` skips only registry versions whose internal dependency fingerprint matches the local manifest; conflicting versions fail closed. Each attempted package is written immediately to the JSON report, so a failed job can rerun safely. `--dry-run` performs registry availability checks and invokes `npm publish --dry-run` with explicit public access, provenance, and `latest` tag, but does not publish.
+Release publication derives all **48** manifests from the workspace once, validates exact `0.0.28` manifest/lockfile/internal ranges, then uses deterministic dependency order. `release:check` requires a clean commit tagged `v0.0.28` and rejects any existing registry version. `release:publish --resume` skips only registry versions whose internal dependency fingerprint matches the local manifest; conflicting versions fail closed. Each attempted package is written immediately to the JSON report, so a failed job can rerun safely. `--dry-run` performs registry availability checks and invokes `npm publish --dry-run` with explicit public access, provenance, and `latest` tag, but does not publish.
 
 ```bash
-npm run release:check -- --version 0.0.27
-npm run release:publish -- --version 0.0.27 --dry-run --allow-dirty --allow-untagged
+npm run release:check -- --version 0.0.28
+npm run release:publish -- --version 0.0.28 --dry-run --allow-dirty --allow-untagged
 ```
 
 `--allow-dirty` and `--allow-untagged` exist only for local preview; real publication and CI never pass them. npm registry calls occur only in these release preflight/publication commands, never build/test/package discovery.
@@ -168,7 +168,28 @@ PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present
 
 ### GitHub Actions pipeline (0.0.27+)
 
-`.github/workflows/release.yml` is the single pipeline: **push to `main`** runs CI (`verify` = `npm run sdk:ready`, `node20-compat`, `postgres-integration`, `supply-chain`), **push of a `v*` tag** additionally runs `codeql-release` and the `publish` job (deterministic `release:publish` in dependency order with provenance attestation). `security.yml` adds CodeQL/dependency-review/SBOM on push and PR; `live-canaries.yml` and `sandbox-browser.yml` are scheduled. All actions are SHA-pinned (2026-08-06 fix: CodeQL pins were invalid 404 refs and `workflow_dispatch` was missing — re-verified every pin against its upstream repo). Prerequisites outside the repo: Actions enabled in repository settings, and the `NPM_TOKEN` secret (with `id-token: write` for provenance). To re-cut a tag after a fix commit, delete and recreate it (`git push origin :v0.0.27 && git push origin v0.0.27`) so the tag creation event fires.
+`.github/workflows/release.yml` is the single pipeline: **push to `main`** runs CI (`verify` = `npm run sdk:ready`, `node20-compat`, `postgres-integration`, `supply-chain`), **push of a `v*` tag** additionally runs `codeql-release` and the `publish` job (deterministic `release:publish` in dependency order with provenance attestation). `security.yml` adds CodeQL/dependency-review/SBOM on push and PR; `live-canaries.yml` and `sandbox-browser.yml` are scheduled. All actions are SHA-pinned (2026-08-06 fix: CodeQL pins were invalid 404 refs and `workflow_dispatch` was missing — re-verified every pin against its upstream repo). Prerequisites outside the repo: Actions enabled in repository settings, and the `NPM_TOKEN` secret (with `id-token: write` for provenance). To re-cut a tag after a fix commit, delete and recreate it (`git push origin :v0.0.28 && git push origin v0.0.28`) so the tag creation event fires.
+
+### 0.0.28 publish handoff
+
+**Decision: GO after protected operator prerequisites below.** Release **0.0.28** (Phase 11, plan 011) ships the optional enterprise adapter seams: OIDC/JWKS identity verification (`@arnilo/prism-credentials-node/oidc`), OPA policy evaluation into the durable ledger (`@arnilo/prism-policy/opa`), MCP OAuth client/server support (`@arnilo/prism-mcp`), host-selected OpenAPI operations as effect-gated tools (`@arnilo/prism-openapi-tools`), and an S3-compatible artifact body store behind the new core body contract (`@arnilo/prism-server/artifact-bodies`). Every seam is opt-in and fail-closed; hosts that wire none keep exact prior behavior. Publishable graph stays **48** manifests. See [migration](migration.md) `0.0.27 → 0.0.28`.
+
+```bash
+git diff --check
+npm ci
+npm run sdk:ready
+node --test scripts/phase11-conformance.test.mjs
+node scripts/benchmark-0.0.28.mjs > scripts/benchmark-0.0.28.json
+node --test scripts/budget-gate.test.mjs scripts/tooling-gate.test.mjs
+node scripts/scan-secrets.mjs && node scripts/verify-sbom.mjs
+npm audit --audit-level=moderate
+npm run release:gate -- --version 0.0.28 --allow-break --allow-dirty --allow-untagged
+npm run release:check -- --version 0.0.28 --allow-dirty --allow-untagged --report /tmp/prism-0.0.28-preflight.json
+npm run release:publish -- --version 0.0.28 --dry-run --allow-dirty --allow-untagged --report /tmp/prism-0.0.28-dry-run.json
+git tag -s v0.0.28 -m "Prism 0.0.28"
+git verify-tag v0.0.28
+git push origin v0.0.28
+```
 
 ### 0.0.27 publish handoff
 
@@ -288,7 +309,7 @@ Older 0.0.10–0.0.15 handoffs are summarized in [migration](migration.md); hist
 
 ## Extension and configuration notes
 
-- **Required `@arnilo/prism` peer.** Every first-party code package declares a non-optional `@arnilo/prism@0.0.27` peer (`peerDependenciesMeta` must not mark `@arnilo/prism` optional; other peers such as `playwright-core` may be optional). The range stays pinned to `0.0.27` for the current 0.x release and will widen to `^1.0.0` at the 1.x stable release. Inside the workspace each package also declares `"@arnilo/prism": "file:../.."` in `devDependencies` so `npm install` resolves the peer locally; that devDependency is stripped from consumer installs and is not a runtime dependency.
+- **Required `@arnilo/prism` peer.** Every first-party code package declares a non-optional `@arnilo/prism@0.0.28` peer (`peerDependenciesMeta` must not mark `@arnilo/prism` optional; other peers such as `playwright-core` may be optional). The range stays pinned to `0.0.28` for the current 0.x release and will widen to `^1.0.0` at the 1.x stable release. Inside the workspace each package also declares `"@arnilo/prism": "file:../.."` in `devDependencies` so `npm install` resolves the peer locally; that devDependency is stripped from consumer installs and is not a runtime dependency.
 - **Public access.** All 48 manifests (42 code packages + 6 family/profile packages) declare `"publishConfig": { "access": "public" }`; the publisher also passes `--access public` explicitly because scoped packages otherwise default to restricted on first publish.
 - **Map retention knob.** Source maps are emitted locally but stripped from tarballs by `!dist/**/*.map`. Removing that `files` negation ships maps in releases (larger tarballs, better consumer stack traces).
 - **Release workflow.** `.github/workflows/release.yml` has six jobs. `verify` runs network-free SDK readiness on Node 24; `node20-compat` builds/imports every public root `exports` default target on Node 20 for declared `engines.node >=20` (docs examples need Node >=22.6 native TypeScript stripping); `postgres-integration` uses `pgvector/pgvector:pg16`; `supply-chain` runs high-severity audit, SPDX/license policy, and tracked-source secret scanning; and tag-only `codeql-release` runs SAST. Tag-only `publish` needs all five gates, preserves clean exact-tag/version/topological publication, and alone receives `NPM_TOKEN`, `id-token: write`, and `attestations: write`. Before npm publish it packs all current tarballs, generates checksums plus SPDX, scans unpacked public artifacts, creates GitHub attestations for tarballs and SBOM, then retains artifacts for 30 days. Registry state remains the resumable journal. Local `npm run release:dry-run` remains network-free SDK readiness; local PostgreSQL coverage is `PRISM_TEST_POSTGRES_URL=... npm run test:postgres`.

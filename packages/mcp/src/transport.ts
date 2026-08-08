@@ -6,6 +6,7 @@ import { assertSsrfAllowedUrl, type MediaHostAddress, type MediaHostnameResolver
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { createMcpClientAuth, type McpClientAuth, McpOAuthError, type ResolvedMcpOAuthLimits, resolveMcpOAuthLimits } from "./auth.js";
 import { DEFAULT_MAX_HTTP_RESPONSE_BYTES, HARD_MAX_HTTP_RESPONSE_BYTES, validateMcpLimit } from "./limits.js";
 import type { McpStreamableHttpTransport, McpTransportConfig } from "./types.js";
 import { McpBridgeError } from "./types.js";
@@ -22,6 +23,7 @@ export function createMcpTransport(config: McpTransportConfig): Transport {
       });
     case "streamable-http": {
       const url = validateEndpoint(config);
+      if (config.auth) return createMcpOAuthTransport(config).transport;
       return new StreamableHTTPClientTransport(url, {
         requestInit: config.requestInit,
         sessionId: config.sessionId,
@@ -33,6 +35,97 @@ export function createMcpTransport(config: McpTransportConfig): Transport {
       throw new McpBridgeError(`Unsupported MCP transport: ${(exhaustive as { type: string }).type}`);
     }
   }
+}
+
+/** OAuth-aware Streamable HTTP transport plus the auth handle (finishAuth/revoke). */
+export function createMcpOAuthTransport(config: McpStreamableHttpTransport): {
+  readonly transport: Transport;
+  readonly auth: McpClientAuth;
+} {
+  if (!config.auth) throw new McpBridgeError("createMcpOAuthTransport requires an auth option");
+  const url = validateEndpoint(config);
+  const limits = resolveMcpOAuthLimits(config.auth.limits);
+  const oauthFetch = createMcpOAuthFetch(config, limits);
+  const auth = createMcpClientAuth(config.auth, { serverUrl: url, fetch: oauthFetch, limits });
+  return {
+    transport: new StreamableHTTPClientTransport(url, {
+      requestInit: config.requestInit,
+      sessionId: config.sessionId,
+      authProvider: auth.provider,
+      fetch: oauthFetch,
+    }),
+    auth,
+  };
+}
+
+/**
+ * Fetch seam for OAuth-enabled transports: requests against allow-listed
+ * server origins keep the existing pinned secure policy; every other origin
+ * (authorization server metadata, token/revocation endpoints) is treated as a
+ * discovery endpoint — SSRF-checked, https-only (loopback opt-in), DNS-pinned,
+ * redirect-free, byte-bounded, and stripped of any bearer credentials.
+ */
+export function createMcpOAuthFetch(
+  config: McpStreamableHttpTransport,
+  limits: ResolvedMcpOAuthLimits = resolveMcpOAuthLimits(config.auth?.limits),
+): typeof globalThis.fetch {
+  const allowedOrigins = resolveAllowedOrigins(config.allowedOrigins, config.allowLoopbackHttp === true);
+  const secureFetch = createSecureMcpFetch(config);
+  const resolver = config.resolveHostname ?? defaultResolver;
+  const allowLoopback = config.allowLoopbackHttp === true;
+
+  return async (input, init) => {
+    const url = input instanceof URL ? new URL(input.href) : new URL(typeof input === "string" ? input : input.url);
+    if (allowedOrigins.has(url.origin)) return secureFetch(url, init);
+    return oauthDiscoveryFetch(url, init, { resolver, allowLoopback, limits });
+  };
+}
+
+async function oauthDiscoveryFetch(
+  url: URL,
+  init: RequestInit | undefined,
+  context: {
+    readonly resolver: NonNullable<McpStreamableHttpTransport["resolveHostname"]>;
+    readonly allowLoopback: boolean;
+    readonly limits: ResolvedMcpOAuthLimits;
+  },
+): Promise<Response> {
+  if (url.username || url.password) throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_SSRF", "OAuth discovery URL must not embed credentials");
+  if (url.hash) throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_SSRF", "OAuth discovery URL must not contain a fragment");
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_SSRF", `OAuth discovery URL must use https: (got ${url.protocol})`);
+  }
+  if (url.protocol === "http:" && !(context.allowLoopback && isLoopbackHostname(url.hostname))) {
+    throw new McpOAuthError(
+      "ERR_PRISM_MCP_OAUTH_SSRF",
+      "Plaintext OAuth discovery is allowed only for an explicitly enabled loopback endpoint",
+    );
+  }
+  if (!(context.allowLoopback && isLoopbackHostname(url.hostname))) {
+    try {
+      assertSsrfAllowedUrl(url.href);
+    } catch (error) {
+      throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_SSRF", "OAuth discovery URL is not public", { cause: error });
+    }
+  }
+  // Discovery GETs never carry bearer credentials, even if the host configured
+  // requestInit headers (confused-deputy defense); token/revocation POSTs keep
+  // their own client authentication (Basic/secret_post) intact.
+  const headers = new Headers(init?.headers);
+  if ((init?.method ?? "GET") === "GET") {
+    headers.delete("authorization");
+    headers.delete("proxy-authorization");
+  }
+  const signal = init?.signal
+    ? AbortSignal.any([init.signal, AbortSignal.timeout(context.limits.handshakeTimeoutMs)])
+    : AbortSignal.timeout(context.limits.handshakeTimeoutMs);
+  const address = await resolvePinnedAddress(url, context.resolver, signal, context.allowLoopback);
+  const response = await requestPinned(url, address, { ...init, headers, signal, redirect: "manual" });
+  if (response.status >= 300 && response.status < 400) {
+    await response.body?.cancel();
+    throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_DISCOVERY", `OAuth discovery redirects are not allowed (status ${response.status})`);
+  }
+  return boundResponse(response, context.limits.discoveryBytes);
 }
 
 /** Fetch seam used for every SDK POST/GET/DELETE, including sessions and reconnects. */
@@ -124,7 +217,7 @@ function validateRequestUrl(url: URL, allowedOrigins: ReadonlySet<string>, allow
   }
 }
 
-async function resolvePinnedAddress(
+export async function resolvePinnedAddress(
   url: URL,
   resolver: MediaHostnameResolver,
   signal: AbortSignal | null | undefined,
@@ -157,11 +250,11 @@ async function resolvePinnedAddress(
   return { address: normalizeHostname(selected.address), family: selected.family };
 }
 
-async function defaultResolver(hostname: string): Promise<readonly MediaHostAddress[]> {
+export async function defaultResolver(hostname: string): Promise<readonly MediaHostAddress[]> {
   return dnsLookup(hostname, { all: true, verbatim: true }) as Promise<readonly MediaHostAddress[]>;
 }
 
-async function requestPinned(url: URL, address: MediaHostAddress, init: RequestInit): Promise<Response> {
+export async function requestPinned(url: URL, address: MediaHostAddress, init: RequestInit): Promise<Response> {
   const body = await requestBody(init.body);
   const headers = new Headers(init.headers);
   const method = init.method ?? "GET";
@@ -228,7 +321,7 @@ async function requestBody(body: BodyInit | null | undefined): Promise<Uint8Arra
   throw new McpBridgeError("MCP HTTP request body type is not supported by the pinned transport");
 }
 
-function boundResponse(response: Response, maxBytes: number): Response {
+export function boundResponse(response: Response, maxBytes: number): Response {
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
     void response.body?.cancel();
@@ -275,7 +368,7 @@ function boundResponse(response: Response, maxBytes: number): Response {
   return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
-async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | null | undefined): Promise<T> {
+export async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | null | undefined): Promise<T> {
   if (!signal) return promise;
   signal.throwIfAborted();
   return new Promise<T>((resolve, reject) => {
@@ -285,19 +378,19 @@ async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | null | un
   });
 }
 
-function normalizeHostname(value: string): string {
+export function normalizeHostname(value: string): string {
   return value
     .toLowerCase()
     .replace(/^\[|\]$/g, "")
     .replace(/\.$/, "");
 }
 
-function isLoopbackHostname(value: string): boolean {
+export function isLoopbackHostname(value: string): boolean {
   const hostname = normalizeHostname(value);
   return hostname === "localhost" || hostname.endsWith(".localhost") || isLoopbackAddress(hostname);
 }
 
-function isLoopbackAddress(value: string): boolean {
+export function isLoopbackAddress(value: string): boolean {
   const address = normalizeHostname(value);
   if (address === "::1") return true;
   if (isIP(address) !== 4) return false;
