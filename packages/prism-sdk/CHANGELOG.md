@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.0] - 2026-08-09
+
+### Changed
+- Released with exact 0.1.0 graph.
+
 ## [0.0.28] - 2026-08-08
 
 ### Changed

@@ -2,7 +2,7 @@
 
 Updated: 2026-08-04
 Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed)
-Status: Phase 11 complete (2026-08-08); Phase 12+ pending exit gates
+Status: Phase 11 complete (2026-08-08); Phase 12 complete (plan 012 Tasks 0–7, 2026-08-09; 0.1.0 publication operator-gated — see `plans/012-Release-0-1-0-Production-Readiness.md`)
 
 ## Objectives
 
@@ -937,7 +937,7 @@ Status: Phase 11 complete (2026-08-08); Phase 12+ pending exit gates
   - Exit Gate:
     - Fake-server conformance and protected OIDC/policy/MCP/object-store integration suites pass; security threat fixtures, cache/resource budgets, audit/SBOM/license, package compatibility, and full release gate pass.
 
-- [ ] Phase 12 — Release 0.1.0: production-readiness candidate and operational proof
+- [x] Phase 12 — Release 0.1.0: production-readiness candidate and operational proof
   - Objectives:
     - Prove the completed enterprise and coding harness surface works together under supported production topologies.
     - Freeze a truthful compatibility, security, capacity, and operator-support contract for 0.1.x.

@@ -1,0 +1,154 @@
+{
+  "$comment": "Phase 12 (0.1.0) Task 0 release-contract freeze manifest. Machine-checkable source of truth consumed by Tasks 1-7 of plans/012-Release-0-1-0-Production-Readiness.md: support matrix, unsupported combinations, capacity ceilings, release policy, and feature-freeze deviation log. Amendment requires a recorded deviation entry below plus a plan 012 Task 0 freeze record update. Validated by scripts/phase12-freeze.test.mjs.",
+  "release": "0.1.0",
+  "baseline": "0.0.28 (Phase 11 exit gate passed 2026-08-08)",
+  "featureFreeze": {
+    "active": true,
+    "allowedChanges": [
+      "blocker fixes",
+      "regression fixes",
+      "documentation",
+      "release tooling and evidence scripts"
+    ],
+    "forbiddenChanges": [
+      "new packages",
+      "new public exports or subpaths",
+      "new schema migrations",
+      "new runtime dependencies",
+      "phase 13 candidate capabilities"
+    ],
+    "deviations": [
+      {
+        "id": "dev-001",
+        "date": "2026-08-08",
+        "scope": "capacity.rootPackedBytes baseline",
+        "change": "rootPackedBytes baseline regenerated 678541 -> 713454 (limit 5% tolerance) because plan 012 Tasks 1-5 added ~35 KB of release-evidence files (packed-install journey fixtures, restart-recovery worker/driver/evidence, benchmark-0.1.0 envelope script/test/evidence) to scripts/ which is packed into the root tarball",
+        "rationale": "the new files are frozen-contract evidence mandated by plan 012 itself (allowed featureFreeze category 'release tooling and evidence scripts'); the ceiling is regenerated, not loosened: 5% tolerance and all other ceilings are unchanged, and the budget-gate still enforces the regenerated baseline with the same tolerance",
+        "task": "plan 012 Task 5"
+      }
+    ]
+  },
+  "support": {
+    "node": {
+      "$comment": "Matches engines.node >=20 and release.yml legs: verify on Node 24, node20-compat public import smoke on Node 20. Docs examples need Node >=22.6 for native TypeScript stripping.",
+      "supported": [
+        "20",
+        "24"
+      ],
+      "measuredInCi": [
+        "20",
+        "24"
+      ],
+      "enginesRange": ">=20",
+      "docsExamplesMinimum": "22.6"
+    },
+    "postgres": {
+      "$comment": "CI disposable suite runs pgvector/pgvector:pg16; pg16 is the only measured server line at freeze. Range claims require an added protected leg per plan 012 Task 1.",
+      "supportedMajorVersions": [
+        16
+      ],
+      "ciImage": "pgvector/pgvector:pg16",
+      "driver": "pg@^8.22.0",
+      "schemaVersion": 7,
+      "extensions": [
+        "pgvector (required by @arnilo/prism-memory path only)"
+      ]
+    },
+    "platforms": {
+      "measured": [
+        "linux-x64"
+      ],
+      "untestedStatement": "All other OS/arch combinations are untested; hosts must run npm run sdk:ready on their target platform before production adoption."
+    },
+    "protocolSdks": {
+      "$comment": "Exact pins verified against package manifests by scripts/phase12-freeze.test.mjs.",
+      "@modelcontextprotocol/sdk": "1.30.0",
+      "@agentclientprotocol/sdk": "1.3.0",
+      "@ag-ui/core": "0.0.57",
+      "@nats-io/jetstream": "^3.4.0",
+      "@nats-io/transport-node": "^3.4.0"
+    },
+    "providers": "Every published @arnilo/prism-provider-* package plus OpenAI-compatible transport; each carries its own conformance suite. Provider list frozen at the 0.0.28 manifest graph."
+  },
+  "unsupported": [
+    "Node below 20 (engines floor)",
+    "PostgreSQL server versions not in support.postgres.supportedMajorVersions",
+    "ACP v2 experimental APIs (stable v1 only)",
+    "Cedar policy engine (OPA only)",
+    "Redis/Kafka queues or backplanes (PostgreSQL/NATS event sources only)",
+    "additional forges beyond GitHub",
+    "additional object stores beyond the S3-compatible reference adapter",
+    "remote-browser vendors, hosted cloud, Studio/control plane, channel catalogs"
+  ],
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "auditLevelAtFreeze": "high (tightened to moderate in Task 6)",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "signedTag": "v0.1.0",
+    "compatPromise": "additive-only declaration deltas vs scripts/compat-baseline across 0.1.x patch releases",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "capacity": {
+    "$comment": "Inherited ceilings from phases 7-11 benchmark/freeze manifests; Task 5 revalidates all of them in scripts/benchmark-0.1.0.mjs. Loosening any ceiling requires a featureFreeze.deviations entry with rationale.",
+    "medianTolerance": 0.25,
+    "ceilingsMs": {
+      "decisionApply": 5,
+      "stickyMatch": 5,
+      "snapshotCaptureRestore": 20,
+      "a2uiPaint": 10,
+      "enumerationList": 2000,
+      "processChunkPage": 10,
+      "lspDiagnosticNormalize": 100,
+      "forgePagination": 10000,
+      "proxyDownload": 30000,
+      "rendererStreamOps": 100,
+      "agUiMapperSync": 100,
+      "fsReadWriteRoundTripMs": 250,
+      "modeSwitchMs": 250,
+      "terminalChunkAckMs": 1000,
+      "promptFirstUpdateMs": 2000,
+      "promptEndMs": 30000,
+      "oidcVerifyCacheHitMs": 5,
+      "oidcVerifyCacheMissMs": 100,
+      "policyDecisionMs": 100,
+      "mcpDiscoveryRoundTripMs": 250,
+      "mcpAuthHandshakeMs": 2000,
+      "openapiToolCallMs": 1000,
+      "artifactPut1MiBMs": 2000,
+      "artifactPresignMs": 100
+    },
+    "startupImportMsCeiling": 250,
+    "rootPackedBytes": {
+      "baseline": 713454,
+      "tolerance": 0.05
+    },
+    "rootFileCount": {
+      "baseline": 293,
+      "tolerance": 0.05
+    },
+    "postgresEvidence": {
+      "pointOpP95Ms": 50,
+      "cursorCleanupPageP95Ms": 100,
+      "reconnectP95Ms": 2000
+    },
+    "e2eJourneyFixtureMsCeiling": 120000
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip",
+    "auditFixPolicy": "zero moderate-or-higher findings with fixable paths at bump, or each finding dispositioned in plan 012 Task 6",
+    "threatSuites": [
+      "scripts/phase7-conformance.test.mjs (events/idempotency/cross-tenant)",
+      "scripts/phase8-conformance.test.mjs (loops/approval)",
+      "scripts/phase9-conformance.test.mjs (repo/process/forge/egress)",
+      "scripts/phase10-conformance.test.mjs (ACP capability/permission matrix)",
+      "scripts/phase11-conformance.test.mjs (OIDC/policy/MCP-OAuth/OpenAPI/artifact threat fixtures)"
+    ],
+    "supplyChain": [
+      "npm audit --audit-level=moderate",
+      "CodeQL javascript-typescript (tag-only release.yml leg)",
+      "scripts/scan-secrets.mjs on tracked sources and unpacked tarballs",
+      "scripts/verify-sbom.mjs against security/license-policy.json",
+      "tarball content allow/deny checks via release.mjs gate"
+    ]
+  }
+}

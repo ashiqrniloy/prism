@@ -6,6 +6,88 @@ Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate t
 
 This page states Prism runtime limits that keep slow consumers and long sessions from becoming unbounded memory or latency problems.
 
+## Release 0.1.0 capacity envelopes (frozen performance contract)
+
+`scripts/benchmark-0.1.0.mjs` composes the six phase benchmark scripts
+(0.0.23–0.0.28) into one 0.1.0 capacity envelope; the merged evidence is
+checked in as `scripts/benchmark-0.1.0.json` and re-gated on every `npm test`
+by `scripts/benchmark-0.1.0.test.mjs` against the Task 0 freeze-manifest
+capacity contract (`scripts/phase12-freeze-manifest.json`): a row that drifts
+above its frozen p95 ceiling, a startup import above 250 ms, or a root pack
+row beyond its ±5% diet tolerance fails the gate.
+
+**Methodology.** Each leg is the same fixture as the phase benchmark that
+introduced it (warmups and measured operations per leg are recorded in the
+JSON `legs` array): in-process fakes and loopback fixture servers for the
+network-free legs, disposable PostgreSQL 16 schema for the protected legs.
+Measured on Node v24.18.0 / Linux x64 (local hardware; values are environment
+evidence, not universal SLOs). Regenerate with:
+
+```bash
+node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json
+PRISM_TEST_POSTGRES_URL="postgresql://…" node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json  # adds protected legs
+```
+
+**Pass/fail thresholds.** Network-free rows fail above the frozen ceiling in
+the table below; protected PostgreSQL rows fail above their per-phase
+budgets.json ceilings (50/100 ms per the approved budget contract); startup
+import fails above `startupImportMsCeiling` (250 ms); root packed bytes and
+file count fail above baseline × 1.05. Labels: **network-free** = runs in
+`npm test` evidence, no network; **protected** = requires live PostgreSQL.
+
+| Envelope | Recorded p95 ms | Ceiling ms | Source leg | Label |
+| --- | ---: | ---: | --- | --- |
+| oidcVerifyCacheHitMs | 0.151 | 5 | enterprise adapters (0.0.28) | network-free |
+| oidcVerifyCacheMissMs | 0.351 | 100 | enterprise adapters (0.0.28) | network-free |
+| policyDecisionMs | 0.052 | 100 | enterprise adapters (0.0.28) | network-free |
+| mcpDiscoveryRoundTripMs | 1.563 | 250 | enterprise adapters (0.0.28) | network-free |
+| mcpAuthHandshakeMs | 6.909 | 2,000 | enterprise adapters (0.0.28) | network-free |
+| openapiToolCallMs | 0.011 | 1,000 | enterprise adapters (0.0.28) | network-free |
+| artifactPut1MiBMs | 9.337 | 2,000 | enterprise adapters (0.0.28) | network-free |
+| artifactPresignMs | 0.381 | 100 | enterprise adapters (0.0.28) | network-free |
+| decisionApply | 4.484 | 5 | durable loops/HITL (0.0.25) | network-free |
+| stickyMatch | 0.343 | 5 | durable loops/HITL (0.0.25) | network-free |
+| snapshotCaptureRestore | 7.814 | 20 | durable loops/HITL (0.0.25) | network-free |
+| a2uiPaint | 0.330 | 10 | durable loops/HITL (0.0.25) | network-free |
+| enumerationList | 363.610 | 2,000 | coding/process/forge/egress (0.0.26) | network-free |
+| processChunkPage | 0.048 | 10 | coding/process/forge/egress (0.0.26) | network-free |
+| lspDiagnosticNormalize | 0.610 | 100 | coding/process/forge/egress (0.0.26) | network-free |
+| forgePagination | 144.868 | 10,000 | coding/process/forge/egress (0.0.26) | network-free |
+| proxyDownload | 86.879 | 30,000 | coding/process/forge/egress (0.0.26) | network-free |
+| rendererStreamOps | 1.647 | 100 | coding/process/forge/egress (0.0.26) | network-free |
+| agUiMapperSync | 33.059 | 100 | coding/process/forge/egress (0.0.26) | network-free |
+| fsReadWriteRoundTripMs | 0.210 | 250 | ACP (0.0.27) | network-free |
+| modeSwitchMs | 0.185 | 250 | ACP (0.0.27) | network-free |
+| terminalChunkAckMs | 0.049 | 1,000 | ACP (0.0.27) | network-free |
+| promptFirstUpdateMs | 0.082 | 2,000 | ACP (0.0.27) | network-free |
+| promptEndMs | 0.094 | 30,000 | ACP (0.0.27) | network-free |
+| policyAppend | 0.684 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| policyQuery | 1.274 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| evaluationAppend | 0.721 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| evaluationQuery | 0.918 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| workClaimComplete | 1.938 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| workContention | 5.002 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| routerRateContention | 17.582 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| routerBudgetContention | 6.018 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| routerCircuitContention | 27.098 | 50 | enterprise PostgreSQL (0.0.23) | protected |
+| cleanupBatch | 3.509 | 100 | enterprise PostgreSQL (0.0.23) | protected |
+| eventAppend | 1.553 | 50 | distributed events (0.0.24) | protected |
+| eventPage | 3.187 | 50 | distributed events (0.0.24) | protected |
+| effectClaimTransition | 2.642 | 50 | distributed events (0.0.24) | protected |
+| eventCleanup | 1.255 | 100 | distributed events (0.0.24) | protected |
+| effectCleanup | 3.174 | 100 | distributed events (0.0.24) | protected |
+| reconnectCatchup | 8.374 | 100 | distributed events (0.0.24) | protected |
+
+Install/startup rows (same helpers as the budget gate — no duplicate
+measurement): startup import 41.7 ms (ceiling 250 ms); root packed 711,755
+bytes vs baseline 678,541 (+5%, tolerance 5%); root file count 295 vs 293
+(+5%). Storage-growth rows and query plans from the protected legs are in the
+recorded JSON (`storageBeforeCleanup` / `storageAfterCleanup` per leg).
+
+Conformance companions: `scripts/phase8–11-conformance.test.mjs` plus the
+Task 3 packed-install journeys and Task 4 restart-recovery evidence (see
+[`docs/0.1.0-readiness.md`](./0.1.0-readiness.md)).
+
 ## Release 0.0.28 enterprise auth, policy, MCP OAuth, API, and artifact adapters
 
 `node scripts/benchmark-0.0.28.mjs` is network-free (in-process fake JWKS/OPA/API fetches plus loopback fixture servers for the authorization server, Prism MCP server, and S3-compatible object store). Checked `scripts/benchmark-0.0.28.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops per seam.

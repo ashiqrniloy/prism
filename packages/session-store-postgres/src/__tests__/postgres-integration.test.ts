@@ -2,10 +2,23 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
-import { assertPersistenceQueryPaginationConforms, assertTenantScopedQueryIsolation } from "@arnilo/prism/testing/persistence-schema";
+import {
+  assertPersistenceQueryPaginationConforms,
+  assertTenantScopedQueryIsolation,
+  createPersistenceMigrationContract,
+} from "@arnilo/prism/testing/persistence-schema";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 import { Pool } from "pg";
+import {
+  buildMigration001Ddl,
+  buildMigration002Ddl,
+  buildMigration003Ddl,
+  buildMigration004Ddl,
+  buildMigration005Ddl,
+  buildMigration006Ddl,
+  buildMigration007Ddl,
+} from "../ddl.js";
 import { qualifyTable, quoteIdentifier } from "../identifiers.js";
 import { createPostgresPersistence } from "../persistence.js";
 
@@ -183,6 +196,97 @@ describeIntegration("createPostgresPersistence integration", () => {
     );
     await pool.query(`DROP INDEX ${quoteIdentifier(schema)}.${quoteIdentifier("prism_usage_session_scope_recorded_idx")}`);
     await assert.rejects(createPostgresPersistence({ pool, schema }), /missing required index/);
+  });
+
+  it("upgrades an older shipped schema (v6) to the current contract without rewriting history", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    const contract = createPersistenceMigrationContract();
+    // Simulate a store shipped before the v7 retention index: apply DDL for steps 001-006
+    // and seed checksum-protected migration history rows exactly as the adapter would.
+    const ddlBuilders = [
+      buildMigration001Ddl,
+      buildMigration002Ddl,
+      buildMigration003Ddl,
+      buildMigration004Ddl,
+      buildMigration005Ddl,
+      buildMigration006Ddl,
+    ];
+    for (let index = 0; index < 6; index += 1) {
+      const step = contract.steps[index]!;
+      await pool.query(ddlBuilders[index]!(schema));
+      await pool.query(
+        `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [randomUUID(), step.name, String(step.version), new Date(Date.now() + step.version).toISOString(), "test-seed", step.checksum],
+      );
+    }
+
+    const upgraded = await createPostgresPersistence({ pool, schema });
+    const rows = (await upgraded.queryMigrations({})).items;
+    assert.deepEqual(
+      rows.map((row) => row.name),
+      contract.steps.map((step) => step.name),
+    );
+    assert.equal(
+      rows.every((row) => typeof row.checksum === "string" && row.checksum.length === 64 && row.checksum !== ""),
+      true,
+      "upgraded history must keep intact SHA-256 checksums",
+    );
+
+    // Idempotent re-run: reopening must not rewrite or duplicate history.
+    const reopened = await createPostgresPersistence({ pool, schema });
+    assert.deepEqual((await reopened.queryMigrations({})).items, rows);
+    await reopened.close();
+    await upgraded.close();
+  });
+
+  it("refuses foreign or corrupt migration history with no partial apply", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    const contract = createPersistenceMigrationContract();
+    const ddlBuilders = [
+      buildMigration001Ddl,
+      buildMigration002Ddl,
+      buildMigration003Ddl,
+      buildMigration004Ddl,
+      buildMigration005Ddl,
+      buildMigration006Ddl,
+    ];
+    for (let index = 0; index < 6; index += 1) {
+      const step = contract.steps[index]!;
+      await pool.query(ddlBuilders[index]!(schema));
+      await pool.query(
+        `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [randomUUID(), step.name, String(step.version), new Date(Date.now() + step.version).toISOString(), "test-seed", step.checksum],
+      );
+    }
+    // Foreign row: a migration the contract does not know.
+    await pool.query(
+      `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), "999_foreign", "999", new Date(Date.now() + 999).toISOString(), "test-seed", "0".repeat(64)],
+    );
+    await assert.rejects(createPostgresPersistence({ pool, schema }), /does not match|unknown rows/);
+    // No partial apply: history is unchanged and no v7 retention index was created.
+    const history = await pool.query(`SELECT name FROM ${qualifyTable(schema, "prism_migrations")} ORDER BY applied_at ASC, id ASC`);
+    assert.equal(history.rowCount, 7);
+    const index = await pool.query(`SELECT 1 FROM pg_indexes WHERE schemaname = $1 AND indexname = 'prism_agent_events_retention_idx'`, [
+      schema,
+    ]);
+    assert.equal(index.rowCount, 0, "refused migration must not apply partial DDL");
+
+    // Corrupt checksum on a known row is also refused, leaving history untouched.
+    const corruptSchema = uniqueSchema();
+    const corruptPool = createPool();
+    await createPostgresPersistence({ pool: corruptPool, schema: corruptSchema });
+    await corruptPool.query(`UPDATE ${qualifyTable(corruptSchema, "prism_migrations")} SET checksum = 'deadbeef'`);
+    await assert.rejects(createPostgresPersistence({ pool: corruptPool, schema: corruptSchema }), /checksum mismatch/);
+    const after = await corruptPool.query(
+      `SELECT checksum FROM ${qualifyTable(corruptSchema, "prism_migrations")} WHERE name = '001_init'`,
+    );
+    assert.equal(after.rows[0]?.checksum, "deadbeef", "refused migration must not rewrite corrupt history");
   });
 
   it("honors entry pagination cursors without overlap", async () => {

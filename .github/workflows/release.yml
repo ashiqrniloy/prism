@@ -120,7 +120,7 @@ jobs:
           node-version: "24"
           cache: "npm"
       - run: npm ci
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=moderate
       - run: |
           mkdir -p security-artifacts
           npm sbom --sbom-format spdx > security-artifacts/sbom.spdx.json

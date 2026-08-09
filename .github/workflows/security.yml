@@ -61,7 +61,7 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=moderate
       - name: generate and verify SPDX SBOM
         run: |
           mkdir -p security-artifacts

@@ -99,16 +99,31 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
       const timestamp = now();
       const ttl = claimTtl(input.claimTtlMs);
       const attempts = maxAttempts(input.maxAttempts);
-      if (!existing) return { outcome: "acquired", record: save(claim(input, 1, timestamp, ttl), input.identity) };
+      if (!existing)
+        return {
+          outcome: "acquired",
+          record: save(claim(input, 1, timestamp, ttl), input.identity),
+        };
       if (existing.status === "failed_retryable" && existing.attempt < attempts) {
-        return { outcome: "acquired", record: save(claim(input, existing.attempt + 1, timestamp, ttl, existing), input.identity) };
+        return {
+          outcome: "acquired",
+          record: save(claim(input, existing.attempt + 1, timestamp, ttl, existing), input.identity),
+        };
       }
       return { outcome: "existing", record: existing };
     },
 
     async markDispatched(input) {
       const record = requireClaim(current(input), input, ["pending"]);
-      return save({ ...record, status: "dispatched", version: record.version + 1, updatedAt: timestamp(now()) }, input.identity);
+      return save(
+        {
+          ...record,
+          status: "dispatched",
+          version: record.version + 1,
+          updatedAt: timestamp(now()),
+        },
+        input.identity,
+      );
     },
 
     async complete(input) {
@@ -307,7 +322,10 @@ function validateFailure(failure: { readonly code: string; readonly reference?: 
   readonly reference?: string;
 } {
   validateText(failure.code, 128, "effect failure code");
-  return Object.freeze({ ...failure, ...(failure.reference === undefined ? {} : { reference: validateReference(failure.reference) }) });
+  return Object.freeze({
+    ...failure,
+    ...(failure.reference === undefined ? {} : { reference: validateReference(failure.reference) }),
+  });
 }
 
 function assertRecordSize(record: ToolEffectRecord): void {

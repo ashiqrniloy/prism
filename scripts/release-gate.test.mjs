@@ -13,6 +13,7 @@ import {
   parseSurface,
   serializeSurface,
 } from "./release-gates.mjs";
+import { publishArgs } from "./release.mjs";
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "prism-gate-"));
@@ -68,6 +69,34 @@ export * as ns from "./mod.js";
     assert.throws(() => assertTarballAllowDeny("pkg", ["dist/index.js.map"]), /denied paths/);
     assert.throws(() => assertTarballAllowDeny("pkg", ["dist/__tests__/x.test.js"]), /denied paths/);
     assert.ok(assertTarballAllowDeny("pkg", ["dist/index.js", "docs/index.md", "README.md", "CHANGELOG.md"]));
+  });
+
+  it("tarball deny list rejects unexpected file types and credential material", () => {
+    for (const path of [
+      "dist/native.node",
+      "vendor/libcrypto.so",
+      "bin/tool.exe",
+      "dist/credentials.pem",
+      "config/service-account.key",
+      "cert/server.p12",
+    ]) {
+      assert.throws(() => assertTarballAllowDeny("pkg", [path]), /denied paths/, `${path} must be denied`);
+    }
+    assert.ok(assertTarballAllowDeny("pkg", ["dist/index.d.ts", "package.json", "LICENSE"]));
+  });
+
+  it("publish provenance flag is mandatory in CI and detectable when missing in dry run", () => {
+    const pkg = { path: ".", manifest: { name: "@arnilo/prism" } };
+    const ci = publishArgs(pkg, false, true);
+    assert.ok(ci.includes("--provenance"), "CI publish must request npm provenance");
+    const ciDryRun = publishArgs(pkg, true, true);
+    assert.ok(ciDryRun.includes("--provenance"), "CI dry-run must keep the provenance flag so the gate is observable");
+    // Negative fixture: provenance suppressed in CI (e.g. tampered invocation)
+    // is detectable — the flag is absent from the dry-run argument list.
+    const suppressed = publishArgs(pkg, true, false);
+    assert.ok(!suppressed.includes("--provenance"), "suppressed provenance must be visible in dry-run args");
+    const local = publishArgs(pkg, false, false);
+    assert.ok(!local.includes("--provenance"), "local publish without OIDC must not claim provenance");
   });
 
   it("baseline names are filesystem-safe", () => {

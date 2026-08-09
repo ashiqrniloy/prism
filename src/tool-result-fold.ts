@@ -51,7 +51,12 @@ export function resolveToolResultFold(
   assertPositiveInt(minAgeTurns, "minAgeTurns", 1, 1_024);
   assertPositiveInt(minBytes, "minBytes", 1, 32 * 1024 * 1024);
   assertPositiveInt(maxSummaryBytes, "maxSummaryBytes", 1, HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES);
-  return { minAgeTurns, minBytes, maxSummaryBytes, summarize: options.summarize };
+  return {
+    minAgeTurns,
+    minBytes,
+    maxSummaryBytes,
+    summarize: options.summarize,
+  };
 }
 
 /** Projection-only fold for history tool messages; does not mutate the input array. */
@@ -83,7 +88,10 @@ export async function foldToolResults(
   if (results.length === 0) return results;
   const out: ToolResult[] = [];
   for (const result of results) {
-    const folded = await foldToolResultValue(result, options, { ...context, toolResultTurn: context.turn });
+    const folded = await foldToolResultValue(result, options, {
+      ...context,
+      toolResultTurn: context.turn,
+    });
     out.push(folded);
   }
   return out;
@@ -108,7 +116,11 @@ async function foldToolResultMessage(
       ...message,
       content: message.content.map((part) =>
         part.type === "tool_result"
-          ? { ...part, result: foldedToolResultHeader(block.name, block.toolCallId, summary), error: undefined }
+          ? {
+              ...part,
+              result: foldedToolResultHeader(block.name, block.toolCallId, summary),
+              error: undefined,
+            }
           : part,
       ),
       metadata: { ...message.metadata, prismFolded: true },
@@ -141,7 +153,9 @@ async function foldToolResultValue(
 
 async function maybeFold<T>(input: {
   readonly options: ResolvedToolResultFoldOptions;
-  readonly context: FoldToolResultsContext & { readonly toolResultTurn: number };
+  readonly context: FoldToolResultsContext & {
+    readonly toolResultTurn: number;
+  };
   readonly toolCallId: string;
   readonly toolName: string;
   readonly text: string;

@@ -4,7 +4,7 @@
 
 Prism is published as one core package, forty-one first-party capability packages, and six pure-manifest family/profile packages (**48** publishable manifests total). This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget. The measurable 1.0 readiness gates (command-per-gate) live in [`0.1.0-readiness.md`](./0.1.0-readiness.md).
 
-Core `@arnilo/prism` ships runtime, CLI, templates, and docs. Every code package has a required `@arnilo/prism@0.0.28` peer; profiles are pure manifests. Installation activates no provider, listener, database, browser, credential, or tool capability.
+Core `@arnilo/prism` ships runtime, CLI, templates, and docs. Every code package has a required `@arnilo/prism@0.1.0` peer; profiles are pure manifests. Installation activates no provider, listener, database, browser, credential, or tool capability.
 
 Current **48** publishable manifests:
 
@@ -45,9 +45,9 @@ Consumers install the core package for the runtime and add first-party packages 
 | Run the default (network-free) test suite | `npm test` |
 | Dry-run pack core + every package | `npm run pack:dry-run` |
 | Local mirror of the release verify gate | `npm run release:dry-run` |
-| Validate clean tag/version/ranges and reject registry collisions | `npm run release:check -- --version 0.0.28` |
-| Preview deterministic publish order | `npm run release:publish -- --version 0.0.28 --dry-run --allow-dirty --allow-untagged` |
-| Resume interrupted tagged publication | `npm run release:publish -- --version 0.0.28 --resume --report release-artifacts/publish-report.json` |
+| Validate clean tag/version/ranges and reject registry collisions | `npm run release:check -- --version 0.1.0` |
+| Preview deterministic publish order | `npm run release:publish -- --version 0.1.0 --dry-run --allow-dirty --allow-untagged` |
+| Resume interrupted tagged publication | `npm run release:publish -- --version 0.1.0 --resume --report release-artifacts/publish-report.json` |
 | Protected PostgreSQL enterprise suite | `PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres` |
 | Full SDK readiness gate (typecheck + offline tests + pack) | `npm run sdk:ready` |
 
@@ -87,7 +87,7 @@ A packed tarball contains only public compiled output and release files:
 - Code packages ship `README.md`, `LICENSE`, and `CHANGELOG.md`; family/profile packages ship `README.md` and `CHANGELOG.md`.
 - The core tarball additionally ships the full `docs/` directory (the docs hub) and `templates/init/` used by `prism init`.
 - `dist/cli.js` and the `bin` link in core.
-- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.0.28.tgz`; first-party packages produce `arnilo-prism-provider-<name>-0.0.28.tgz` / `arnilo-prism-compaction-<name>-0.0.28.tgz` / `arnilo-prism-coding-agent-0.0.28.tgz`; family/profile packages produce `arnilo-prism-{providers,compaction,base,code,sdk,all}-0.0.28.tgz`. The CLI bin name `prism` is unaffected by the package name (`npx prism` still works; npm allows the bin field to differ from the package name).
+- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.1.0.tgz`; first-party packages produce `arnilo-prism-provider-<name>-0.1.0.tgz` / `arnilo-prism-compaction-<name>-0.1.0.tgz` / `arnilo-prism-coding-agent-0.1.0.tgz`; family/profile packages produce `arnilo-prism-{providers,compaction,base,code,sdk,all}-0.1.0.tgz`. The CLI bin name `prism` is unaffected by the package name (`npx prism` still works; npm allows the bin field to differ from the package name).
 
 Excluded from every tarball by `files` negation:
 
@@ -106,9 +106,9 @@ Excluded from every tarball by `files` negation:
   "name": "host-app",
   "type": "module",
   "dependencies": {
-    "@arnilo/prism": "0.0.28",
-    "@arnilo/prism-enterprise-postgres": "0.0.28",
-    "@arnilo/prism-provider-openai": "0.0.28"
+    "@arnilo/prism": "0.1.0",
+    "@arnilo/prism-enterprise-postgres": "0.1.0",
+    "@arnilo/prism-provider-openai": "0.1.0"
   }
 }
 ```
@@ -151,11 +151,11 @@ For SDK readiness, run the same one-command gate directly. It composes existing 
 npm run sdk:ready
 ```
 
-Release publication derives all **48** manifests from the workspace once, validates exact `0.0.28` manifest/lockfile/internal ranges, then uses deterministic dependency order. `release:check` requires a clean commit tagged `v0.0.28` and rejects any existing registry version. `release:publish --resume` skips only registry versions whose internal dependency fingerprint matches the local manifest; conflicting versions fail closed. Each attempted package is written immediately to the JSON report, so a failed job can rerun safely. `--dry-run` performs registry availability checks and invokes `npm publish --dry-run` with explicit public access, provenance, and `latest` tag, but does not publish.
+Release publication derives all **48** manifests from the workspace once, validates exact `0.1.0` manifest/lockfile/internal ranges, then uses deterministic dependency order. `release:check` requires a clean commit tagged `v0.1.0` and rejects any existing registry version. `release:publish --resume` skips only registry versions whose internal dependency fingerprint matches the local manifest; conflicting versions fail closed. Each attempted package is written immediately to the JSON report, so a failed job can rerun safely. `--dry-run` performs registry availability checks and invokes `npm publish --dry-run` with explicit public access, provenance, and `latest` tag, but does not publish.
 
 ```bash
-npm run release:check -- --version 0.0.28
-npm run release:publish -- --version 0.0.28 --dry-run --allow-dirty --allow-untagged
+npm run release:check -- --version 0.1.0
+npm run release:publish -- --version 0.1.0 --dry-run --allow-dirty --allow-untagged
 ```
 
 `--allow-dirty` and `--allow-untagged` exist only for local preview; real publication and CI never pass them. npm registry calls occur only in these release preflight/publication commands, never build/test/package discovery.
@@ -170,7 +170,41 @@ PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present
 
 `.github/workflows/release.yml` is the single pipeline: **push to `main`** runs CI (`verify` = `npm run sdk:ready`, `node20-compat`, `postgres-integration`, `supply-chain`), **push of a `v*` tag** additionally runs `codeql-release` and the `publish` job (deterministic `release:publish` in dependency order with provenance attestation). `security.yml` adds CodeQL/dependency-review/SBOM on push and PR; `live-canaries.yml` and `sandbox-browser.yml` are scheduled. All actions are SHA-pinned (2026-08-06 fix: CodeQL pins were invalid 404 refs and `workflow_dispatch` was missing — re-verified every pin against its upstream repo). Prerequisites outside the repo: Actions enabled in repository settings, and the `NPM_TOKEN` secret (with `id-token: write` for provenance). To re-cut a tag after a fix commit, delete and recreate it (`git push origin :v0.0.28 && git push origin v0.0.28`) so the tag creation event fires.
 
-### 0.0.28 publish handoff
+### 0.1.0 publish handoff (plan 012 Task 7)
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.0** (Phase 12, plan 012) is the release-candidate hardening cut of the **0.0.28** graph: no new packages, public exports, schema migrations, or runtime dependencies (freeze manifest `scripts/phase12-freeze-manifest.json`). Publishable graph stays **48** manifests at exact **0.1.0**. Store compatibility with 0.0.28: **compatible, no migration** ([migration](migration.md) `0.0.28 → 0.1.0`); the full `0.0.17 → 0.1.0` upgrade matrix is in the same page. All evidence for the tree under publication is recorded in [0.1.0 readiness](0.1.0-readiness.md) (capacity envelopes, restart-recovery, e2e journeys, threat-suites leg, audit at moderate).
+
+```bash
+# Operator prerequisites (each a named blocked gate — none may be skipped):
+#  1. protected live-canary matrix green (live-canaries.yml, canary-report.json retained)
+#  2. PostgreSQL + keychain protected suites green (test:postgres, keychain suite)
+#  3. CodeQL SAST green on the release commit (security.yml / release.yml codeql-release)
+#  4. npm OIDC trusted publishing identity authenticated (NPM_TOKEN with id-token, provenance)
+
+git diff --check
+npm ci
+npm run sdk:ready            # includes typecheck, lint, format, full test, coverage, pack, release:gate
+npm run security:threat-suites
+PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres   # Phase 7 + Phase 12 restart-recovery
+node --test scripts/benchmark-0.1.0.test.mjs   # frozen 0.1.0 capacity envelope contract
+node scripts/scan-secrets.mjs && node scripts/verify-sbom.mjs
+npm audit --audit-level=moderate
+npm run release:check -- --version 0.1.0 --report /tmp/prism-0.1.0-preflight.json
+npm run release:publish -- --version 0.1.0 --dry-run --allow-dirty --allow-untagged --report /tmp/prism-0.1.0-dry-run.json
+#   run the dry-run twice and diff the reports: deterministic, byte-identical
+
+# Sign the release on the clean tagged tree (operator GPG key):
+git tag -s v0.1.0 -m "Prism 0.1.0"
+git verify-tag v0.1.0
+git push origin v0.1.0        # tag push triggers release.yml publish job (provenance, attestations)
+
+# Real publication never bypasses the gates: release.mjs refuses
+# --allow-dirty/--allow-untagged without --dry-run.
+```
+
+**Rollback notes.** `release:publish --version 0.1.0 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.0` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.0` is store-compatible with `0.0.28` in both directions (no migration ran), so an operator may defer adoption of `0.1.0` without a database rollback.
+
+### 0.0.28 publish handoff (historical)
 
 **Decision: GO after protected operator prerequisites below.** Release **0.0.28** (Phase 11, plan 011) ships the optional enterprise adapter seams: OIDC/JWKS identity verification (`@arnilo/prism-credentials-node/oidc`), OPA policy evaluation into the durable ledger (`@arnilo/prism-policy/opa`), MCP OAuth client/server support (`@arnilo/prism-mcp`), host-selected OpenAPI operations as effect-gated tools (`@arnilo/prism-openapi-tools`), and an S3-compatible artifact body store behind the new core body contract (`@arnilo/prism-server/artifact-bodies`). Every seam is opt-in and fail-closed; hosts that wire none keep exact prior behavior. Publishable graph stays **48** manifests. See [migration](migration.md) `0.0.27 → 0.0.28`.
 
@@ -281,6 +315,27 @@ git push origin v0.0.22
 
 Release-specific migration detail lives in [migration](migration.md). The current handoff plus the retained protected matrix below supersede 0.0.16–0.0.21 command transcripts.
 
+### Release-integrity evidence matrix (0.0.18 → 0.1.0)
+
+Phase 12 Task 2 (plan 012) closes roadmap defect #4: every release from 0.0.18 onward has a signed tag or a **documented publication-evidence pointer**. Tags below were created as lightweight refs (no GPG signature was available in this environment); each release therefore carries a documented evidence pointer: the roadmap phase completion evidence, benchmark JSON, conformance suite, and/or migration section that records what shipped. The 0.1.0 cut requires the **signed** tag + provenance publication procedure (operator action, see [0.1.0 readiness](0.1.0-readiness.md) "Remaining for 1.0").
+
+| Release | Tag | Evidence pointer |
+| --- | --- | --- |
+| 0.0.18 | `v0.0.18` (lightweight, at `f627752`) | Roadmap Phase 1 completion evidence; `docs/migration.md` `0.0.17 → 0.0.18`; docs tripwire Phase 1 |
+| 0.0.19 | `v0.0.19` (lightweight, at `7574e50`) | Roadmap Phase 2 completion evidence; migration `0.0.18 → 0.0.19` |
+| 0.0.20 | `v0.0.20` (lightweight, at `b2cdb2e`) | Roadmap Phase 3 completion evidence; migration `0.0.19 → 0.0.20` |
+| 0.0.21 | **no tag** | Roadmap Phase 4 completion evidence (workspace 0.0.21 / 44 manifests, sdk:ready green); migration `0.0.20 → 0.0.21` |
+| 0.0.22 | `v0.0.22` (lightweight, at `f9902ed`) | Roadmap Phase 5 completion evidence; 0.0.22 publish handoff above; migration `0.0.21 → 0.0.22` |
+| 0.0.23 | `v0.0.23` (lightweight, at `1401b6b`) | Roadmap Phase 6 completion evidence; 0.0.23 publish handoff above; `scripts/benchmark-0.0.23.json`; migration `0.0.22 → 0.0.23` |
+| 0.0.24 | `v0.0.24` (lightweight, at `55c4b0e`) | Roadmap Phase 7 completion evidence; 0.0.24 publish handoff above; `scripts/benchmark-0.0.24.json`; `scripts/phase7-conformance.test.mjs`; migration `0.0.23 → 0.0.24` |
+| 0.0.25 | `v0.0.25` (lightweight, at `24d7ac0`) | Roadmap Phase 8 completion evidence; `scripts/benchmark-0.0.25.json`; `scripts/phase8-conformance.test.mjs`; migration `0.0.24 → 0.0.25` |
+| 0.0.26 | `v0.0.26` (lightweight, at `77fac7e`) | Roadmap Phase 9 completion evidence; `scripts/benchmark-0.0.26.json`; `scripts/phase9-conformance.test.mjs`; migration `0.0.25 → 0.0.26` |
+| 0.0.27 | `v0.0.27` (lightweight, at `9d49625`) | Roadmap Phase 10 completion evidence; `scripts/benchmark-0.0.27.json`; `scripts/phase10-conformance.test.mjs`; migration `0.0.26 → 0.0.27` |
+| 0.0.28 | **no tag (HEAD is 0.0.28 scope)** | Roadmap Phase 11 completion evidence; 0.0.28 publish handoff above; `scripts/benchmark-0.0.28.json`; `scripts/phase11-conformance.test.mjs`; migration `0.0.27 → 0.0.28` |
+| 0.1.0 | `v0.1.0` **signed** (operator action at publication) | Phase 12 plan 012 records; `node scripts/release.mjs publish --version 0.1.0 --dry-run --allow-untagged` semantics verified (dry-run proceeds untagged; real publication refuses `--allow-untagged`/`--allow-dirty`) |
+
+Machine check: `git tag --points-at <commit>` and the roadmap phase completion blocks above are the evidence trail; `node scripts/release.mjs check --version 0.1.0` validates the exact version graph at bump time (plan 012 Task 7).
+
 ### 0.0.15 protected live-canary matrix
 
 Default `npm test`, `npm run sdk:ready`, and `benchmark-0.0.15` are network-free. Run live rows only from a protected scheduled/release environment (or an explicitly authorized operator workstation); never place credentials in fixtures, benchmark JSON, pull-request jobs, or package scripts. Use least-privilege keys, one bounded request, and retain only redacted aggregate status. A blank **checked-in gate** means Prism deliberately has no generic credential fixture: host owns that provider/account compatibility probe.
@@ -306,6 +361,43 @@ The scheduled/manual `live-canaries` workflow uses protected environment `live-c
 ### Historical release notes
 
 Older 0.0.10–0.0.15 handoffs are summarized in [migration](migration.md); historical 43-package evidence remains there. The publishable package catalog includes `@arnilo/prism-provider-alibaba`, `@arnilo/prism-provider-ollama`, and `@arnilo/prism-session-store-codecs`; current publication uses the 47-manifest handoff above.
+
+## 0.1.x compatibility and support matrix
+
+Frozen by Phase 12 Task 0 in `scripts/phase12-freeze-manifest.json` (schema gate `node --test scripts/phase12-freeze.test.mjs`; docs agreement tripwired in the docs test suite). Any change requires a recorded freeze deviation in plan 012.
+
+### Supported and measured
+
+| Dimension | Supported | Measured evidence |
+| --- | --- | --- |
+| Node | 20, 24 (`engines.node >=20`) | `release.yml`: `verify` runs SDK readiness on Node 24; `node20-compat` builds and imports every public root export on Node 20. Docs examples need Node >=22.6 native TypeScript stripping. Node 22 is engines-supported but not measured in CI at freeze. |
+| PostgreSQL | 16 | `release.yml` `postgres-integration` job with image `pgvector/pgvector:pg16`; driver `pg@^8.22.0`; schema version 6. The pgvector extension is required only by the `@arnilo/prism-memory` path. Range claims beyond 16 need an added protected leg before they may be documented. |
+| Platform | linux-x64 | Every CI leg runs on `ubuntu-latest` (x64). All other OS/arch combinations are untested: run `npm run sdk:ready` on the target platform before production adoption. |
+| Providers | every published `@arnilo/prism-provider-*` plus the OpenAI-compatible transport | Per-package conformance suites in the default network-free `npm test`; live canaries stay credential-gated (`PRISM_LIVE_PROVIDER_TESTS=1`). |
+| Protocol SDKs | exact pins below | MCP 38-test suite, AG-UI/ACP/A2A protocol conformance, NATS JetStream event-source conformance. |
+
+| Package | Frozen pin |
+| --- | --- |
+| `@modelcontextprotocol/sdk` | `1.30.0` |
+| `@agentclientprotocol/sdk` | `1.3.0` |
+| `@ag-ui/core` | `0.0.57` |
+| `@nats-io/jetstream` | `^3.4.0` |
+| `@nats-io/transport-node` | `^3.4.0` |
+
+### Unsupported combinations
+
+- Node below 20 (engines floor).
+- PostgreSQL server majors outside the supported list (only 16 measured at freeze).
+- ACP v2 experimental APIs — stable v1 only.
+- Cedar policy engine — OPA adapter only.
+- Redis/Kafka queues or backplanes — PostgreSQL and NATS JetStream event sources only.
+- Forges beyond GitHub.
+- Object stores beyond the S3-compatible reference adapter.
+- Remote-browser vendors, hosted cloud, Studio/control plane, and channel catalogs (Phase 13 demand-gated).
+
+### Security-support boundary
+
+Audit fixes, dependency updates, and security patches land only for the supported lines above. The 0.1.0 audit target is moderate-or-higher (`releasePolicy.auditLevelTarget` in the freeze manifest); since plan 012 Task 6 both `security.yml` and the `release.yml` supply-chain job enforce `npm audit --audit-level=moderate` (0 vulnerabilities at every severity recorded for the 0.1.0 tree). Unsupported combinations receive no fixes. Supply-chain gates are listed in [host security](host-security.md).
 
 ## Extension and configuration notes
 
@@ -340,6 +432,8 @@ Older 0.0.10–0.0.15 handoffs are summarized in [migration](migration.md); hist
 - **Sandbox/browser protected workflow.** `.github/workflows/sandbox-browser.yml` is scheduled/manual only in protected `sandbox-browser` environment. It runs network-free adversarial eval fixtures by default, optionally enables digest-pinned Docker and Playwright gates via repository variables (`PRISM_TEST_DOCKER_IMAGE`, `PRISM_ENABLE_PLAYWRIGHT_GATE`), receives no provider/npm/OIDC secrets, and uploads only a redacted aggregate status artifact (7-day retention).
 - **Release attestations.** Tag publication uses GitHub OIDC with only `contents: read`, `id-token: write`, and `attestations: write` at the publish job. `actions/attest-build-provenance` attests every `.tgz` and `sbom.spdx.json` before npm publication; npm still receives `--provenance`. Verify downloaded attestations with GitHub CLI and npm signatures on the release host.
 - **Install smoke is offline.** The install-smoke test packs core + every package into a temp dir and installs tarballs with `--offline --no-audit --no-fund` into a fresh project. External dependencies are satisfied from the lockfile-backed npm cache prepared by `npm ci`; any attempted uncached registry fetch fails the gate.
+- **Packed-install e2e journeys (plan 012 Task 3).** `scripts/e2e-enterprise-journey.test.mjs` and `scripts/e2e-coding-journey.test.mjs` pack the first-party packages for their journey, install the exact tarballs into a fresh consumer project, and run the journey script inside that consumer — public exports only, no workspace-relative resolution (asserted per run). The **enterprise journey** composes OIDC identity → OPA policy decision (durable ledger) → agent run with durable events (memory, or real PostgreSQL when `PRISM_TEST_POSTGRES_URL` is set) → batched approval → OpenAPI side effect with idempotency → artifact upload + signed delivery, with policy-deny and hash-mismatch fail-closed injections. The **coding journey** composes an ACP editor session (init capability negotiation, session new + load/resume) → bounded coding tools (git-aware list/search, glob, read-before-write write, delete, move) → sandboxed process session → forge handoff with idempotent PR creation, with execution-policy and read-before-write denial paths. Each fixture asserts the installed version matches the packed manifest graph and stays within the frozen `e2eJourneyFixtureMsCeiling` (120 s in `scripts/phase12-freeze-manifest.json`).
+- **Protected restart-recovery leg (plan 012 Task 4).** `scripts/phase12-restart-recovery.test.mjs` (run by `npm run test:postgres` after the Phase 7 suite) spawns two real processes against one PostgreSQL schema: replica A runs a durable agent, suspends on a batched tool approval, appends durable events and is then SIGKILLed by the driver; replica B reconnects and resumes. Operators re-run the leg with `PRISM_TEST_POSTGRES_URL="postgresql://…" npm run test:postgres` against a disposable PostgreSQL 16 (e.g. `pgvector/pgvector:pg16`). Without the URL the gate records a named `BLOCKED GATE` failure instead of skipping. Reconnect p95 and 16-worker append contention p95 are asserted against the frozen `reconnectP95Ms` / `pointOpP95Ms` ceilings; set `PRISM_PHASE12_RECORD_EVIDENCE=1` to refresh the checked-in evidence file `scripts/phase12-restart-recovery.json`.
 - **Offline test budget.** The default `npm test` (no `PRISM_LIVE_PROVIDER_TESTS`) is pinned at **< 60s on Node 20** with a measured local baseline of ~45s (build ~18s + network-free tests/workspace tests/packaging smoke ~27s). The full CI `sdk:ready` gate runs on Node 24 because docs tests execute `examples/*.ts` via native TypeScript stripping. `npm run sdk:ready` also runs typecheck and pack dry-run, so it is allowed to exceed the `npm test` budget while remaining network-free. The CI `sdk:ready` step has `timeout-minutes: 5` as a hang backstop; the separate Node 20 compatibility step has `timeout-minutes: 3`. The budget was raised from 30s after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests; optimize before raising it again.
 
 ### 0.0.12 release-candidate verification — 2026-07-22

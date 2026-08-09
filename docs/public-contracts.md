@@ -439,6 +439,53 @@ Phase 7 contracts: `AgentEventSource`, `ToolEffectDeclaration`/`ToolEffectStore`
 - Use `unknown`/metadata fields for host data, but validate at trust boundaries before executing tools or loading resources.
 - App-specific tool categories and business domains do not belong in public contracts.
 
+## Frozen 0.1.x contract (plan 012 Task 7)
+
+Release 0.1.0 freezes the public contract surface for the 0.1.x line. The
+freeze is recorded in `scripts/phase12-freeze-manifest.json` and machine-checked
+on every `npm test` by the release gates; this section states what is frozen.
+
+**Declaration/exports surface.** Every publishable package's generated `.d.ts`
+export surface is diffed against checked-in baselines in
+`scripts/compat-baseline/` (one file per package, regenerated at 0.1.0). The
+gate fails on any removed export or changed declaration and allows additive
+exports only. **0.1.x patch promise:** additive-only declaration deltas vs the
+0.1.0 baselines, enforced by `node scripts/release.mjs gate`; a genuine break
+requires `--allow-break` plus a `docs/migration.md` entry naming the version.
+
+**Events.** The `AgentEvent` union (`agent_*`/`artifact_*`/`tool_*` variants),
+the durable `AgentEventRecord`/`DurableAgentEventRecord` shapes
+(`turn_started`, `turn_finished`, `tool_execution_started`, `message_finished`;
+run-scoped strictly increasing sequences; `redacted: true` on appends), and
+`AgentEventSource` page/cursor semantics (opaque ownership-bound cursors,
+terminal pages, at-least-once delivery) are frozen as shipped in 0.1.0. See
+[docs/agent-events.md](agent-events.md).
+
+**Protocol payloads.** AG-UI/A2UI surface state and operation payloads, ACP
+(`@arnilo/prism-ag-ui/acp`) capability advertisement and session payloads,
+MCP tool/resource/prompt payloads and OAuth discovery exchanges, A2A messages,
+and provider request/response envelopes are frozen at the 0.1.0 pins recorded
+in the freeze-manifest `support.protocol` table (`@agentclientprotocol/sdk`,
+`@modelcontextprotocol/sdk`, A2A 1.0, AG-UI 0.4.x, OpenAPI 3.1 subset).
+
+**Migration checksums.** The PostgreSQL persistence contract
+(`createPersistenceMigrationContract`, 7 steps `001_init` …
+`007_agent_event_retention_index`, sha256-checksummed rows in
+`prism_migrations`) is frozen; `assertAppliedPersistenceMigrations` fails
+closed on unknown history, incomplete legacy checksums, name mismatch, or
+checksum mismatch. Enterprise state DDL (`enterprise-postgres`) is covered by
+its own checksum contract. See [docs/database-persistence.md](database-persistence.md)
+and [docs/migration.md](migration.md).
+
+**Compatibility promise.** 0.1.x patch releases: additive exports only, no
+schema migration steps, no default-behavior changes, no new runtime
+dependencies, store compatibility maintained with 0.1.0 (persisted data
+remains readable; no upgrade step required). 0.1.0 itself is store-compatible
+with 0.0.28 (no migration) and the `0.0.17 → 0.1.0` upgrade matrix in
+[docs/migration.md](migration.md) documents every intermediate line
+(compatible / tested migration / tested refusal). The 1.x line may break the
+0.1.x surface; any break ships with a migration-guide entry first.
+
 ## Related APIs
 
 - [Input and prompt assembly](input-and-prompt-assembly.md): prompt template expansion and default input builder for strings, messages, history, attachments, resources, summaries, and tool results.

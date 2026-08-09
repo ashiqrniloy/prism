@@ -1,5 +1,28 @@
 # Migration guide
 
+## 0.0.28 → 0.1.0 release-candidate hardening (no migration)
+
+Release **0.1.0** (Phase 12) is a release-candidate hardening cut of the **0.0.28** graph: no new packages, public exports, schema migrations, or runtime dependencies (frozen in `scripts/phase12-freeze-manifest.json`; deviations require a recorded plan 012 Task 0 entry). No persisted shape, event schema, or default behavior changed. **Store compatibility: compatible** — session-store and enterprise PostgreSQL schemas stay at the checksum-protected contract shipped in 0.0.24–0.0.28; no upgrade or rollback step exists for 0.0.28 → 0.1.0. No breaking defaults. 0.1.x patch releases promise additive-only declaration deltas vs `scripts/compat-baseline` (enforced by `node scripts/release.mjs gate`).
+
+## 0.0.17 → 0.1.0 upgrade matrix
+
+| Release line | What changed | Store compatibility | Breaking defaults |
+| --- | --- | --- | --- |
+| 0.0.18 | `repo_search` literal-only, atomic write/edit, context-budget eviction, MCP SDK 1.30.0 | compatible (no persisted shape change) | default `inputLayout` → `cache_aware` |
+| 0.0.19 | observational-memory lifecycle, nested OM settings | compatible (no persisted shape change) | none |
+| 0.0.20 | skills progressive disclosure, `load_skill` | compatible (no persisted shape change) | `SkillRegistry` activates **zero** skills unless `activateAllSkills`; disclosure default `progressive` |
+| 0.0.21 | coding-tool capability gaps (`outputMode`, `glob`, delete/move, read-before-write) | compatible (no persisted shape change) | none |
+| 0.0.22 | Caveman/Ponytail behavior packages | compatible (no persisted shape change) | none |
+| 0.0.23 | enterprise-postgres state adapters | **tested migration** (enterprise migration 001, checksum-protected, per-schema advisory lock) | none |
+| 0.0.24 | durable `AgentEventSource`, `ToolEffectStore` | **tested migration** (session-store 006/007; enterprise 002; backup before upgrade) | none |
+| 0.0.25 | durable custom loops, batched approvals | **tested refusal** — persisted 0.0.24 runs fail closed on 0.0.25 resume (fingerprint `{name, revision}`) | durable-loop fingerprint shape |
+| 0.0.26 | coding intelligence, process sessions, forge, egress | compatible (no persisted shape change) | none |
+| 0.0.27 | ACP coding-host interop | compatible (no persisted shape change) | none |
+| 0.0.28 | OIDC/OPA/MCP-OAuth/OpenAPI/artifact adapters | compatible (no persisted shape change) | none |
+| 0.1.0 | RC hardening | compatible (no migration) | none |
+
+Verification: `PRISM_TEST_POSTGRES_URL=... npm run test:postgres` runs the disposable PostgreSQL suites including the upgrade-chain and refusal tests below; `node scripts/release.mjs gate` enforces the additive-only compat promise. Each release-line section below documents its changes in detail.
+
 ## 0.0.27 → 0.0.28 enterprise auth, policy, MCP OAuth, API, and artifact adapters (additive)
 
 Release **0.0.28** (Phase 11) adds five optional enterprise adapter seams: an OIDC/JWKS identity verifier, an OPA policy evaluator with durable ledger entries, MCP OAuth client/server support, host-selected OpenAPI operations compiled into effect-gated tools, and an S3-compatible artifact body store behind a new core body contract. Everything is **additive and opt-in** — hosts that wire none of it keep exact prior behavior (the Phase 11 conformance suite asserts the adapter-absent baseline). Publishable graph stays **48** manifests.

@@ -16,7 +16,10 @@ export function loadRelease(root = process.cwd()) {
       if (entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json"))) paths.push(`packages/${entry.name}`);
     }
   }
-  const packages = paths.map((path) => ({ path, manifest: JSON.parse(readFileSync(join(root, path, "package.json"), "utf8")) }));
+  const packages = paths.map((path) => ({
+    path,
+    manifest: JSON.parse(readFileSync(join(root, path, "package.json"), "utf8")),
+  }));
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const release = { root, packages, byName };
   release.validate = (version) => validateRelease(release, version);
@@ -71,6 +74,33 @@ export function topologicalOrder(release) {
     }
   }
   return order;
+}
+
+export function bumpRelease(release, from, to) {
+  const changed = [];
+  for (const pkg of release.packages) {
+    const manifest = pkg.manifest;
+    if (manifest.version !== from) continue; // only touch manifests at the old version
+    manifest.version = to;
+    for (const field of DEPENDENCY_FIELDS) {
+      for (const [name, range] of Object.entries(manifest[field] ?? {})) {
+        if (release.byName.has(name) && range === from) manifest[field][name] = to;
+      }
+    }
+    writeFileSync(join(release.root, pkg.path, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    changed.push(pkg.manifest.name);
+  }
+  return changed;
+}
+
+export function regenerateLockfile(root) {
+  const result = spawnSync("npm", ["install", "--package-lock-only", "--ignore-scripts"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: "inherit",
+    env: process.env,
+  });
+  if (result.status !== 0) throw new Error("npm install --package-lock-only failed after version bump");
 }
 
 export function assertGitState(root, version, { allowDirty = false, allowUntagged = false } = {}) {
@@ -133,7 +163,12 @@ export async function runRelease({
   publisher,
 }) {
   const order = validateRelease(release, version);
-  const report = { version, dryRun, order: order.map((pkg) => pkg.manifest.name), packages: [] };
+  const report = {
+    version,
+    dryRun,
+    order: order.map((pkg) => pkg.manifest.name),
+    packages: [],
+  };
   const publish =
     publisher ??
     ((pkg) => {
@@ -162,7 +197,10 @@ export async function runRelease({
     } else {
       try {
         await publish(pkg);
-        report.packages.push({ name: pkg.manifest.name, status: dryRun ? "dry-run" : "published" });
+        report.packages.push({
+          name: pkg.manifest.name,
+          status: dryRun ? "dry-run" : "published",
+        });
       } catch (error) {
         report.packages.push({ name: pkg.manifest.name, status: "failed" });
         saveReport(reportPath, report);
@@ -185,17 +223,19 @@ function parseArgs(argv) {
     else if (arg === "--allow-break") options.allowBreak = true;
     else if (arg === "--update-baseline") options.updateBaseline = true;
     else if (arg === "--skip-tarball") options.skipTarball = true;
+    else if (arg === "--from") options.from = argv[++i];
+    else if (arg === "--to") options.to = argv[++i];
     else if (["--version", "--root", "--registry", "--report"].includes(arg))
       options[arg.slice(2).replace("report", "reportPath")] = argv[++i];
     else throw new Error(`unknown argument: ${arg}`);
   }
-  if (!["check", "publish", "gate"].includes(options.mode))
-    throw new Error("usage: release.mjs <check|publish|gate> --version <version> [--resume] [--dry-run]");
+  if (!["check", "publish", "gate", "bump"].includes(options.mode))
+    throw new Error("usage: release.mjs <check|publish|gate|bump> --version <version> [--resume] [--dry-run]");
   if (options.mode === "gate") {
     options.version ??= JSON.parse(readFileSync(join(resolve(options.root ?? process.cwd()), "package.json"), "utf8")).version;
     return options;
   }
-  if (!options.version) throw new Error("--version is required");
+  if (options.mode !== "bump" && !options.version) throw new Error("--version is required");
   if (options.mode === "publish" && !options.dryRun && (options.allowDirty || options.allowUntagged)) {
     throw new Error("real publication cannot bypass clean tagged git checks");
   }
@@ -206,6 +246,13 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const root = resolve(options.root ?? process.cwd());
   const release = loadRelease(root);
+  if (options.mode === "bump") {
+    if (!options.from || !options.to) throw new Error("bump requires --from <version> --to <version>");
+    const changed = bumpRelease(release, options.from, options.to);
+    regenerateLockfile(root);
+    console.log(`bumped ${changed.length} manifests from ${options.from} to ${options.to}: ${changed.join(", ")}`);
+    return;
+  }
   if (options.mode === "gate") {
     const report = runGates({
       release,
@@ -218,7 +265,11 @@ async function main() {
     return;
   }
   assertGitState(root, options.version, options);
-  const report = await runRelease({ ...options, release, reportPath: options.reportPath ? resolve(root, options.reportPath) : undefined });
+  const report = await runRelease({
+    ...options,
+    release,
+    reportPath: options.reportPath ? resolve(root, options.reportPath) : undefined,
+  });
   console.log(JSON.stringify(report, null, 2));
 }
 

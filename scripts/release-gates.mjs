@@ -15,6 +15,9 @@ export const TARBALL_DENY_PATTERNS = [
   /(^|\/)docs\/review-coverage-/,
   /(^|\/)__tests__\//,
   /\.map$/,
+  // Unexpected file types: binaries, native modules, and credential material
+  // must never ship in a published artifact (plan 012 Task 6 negative fixture).
+  /\.(exe|dll|so|dylib|node|a|o|pem|key|p12|pfx|cer|jks|keystore)$/i,
 ];
 
 export function baselineName(manifestName) {
@@ -147,7 +150,11 @@ export function diffSurface(current, baseline) {
     else if (current.get(name) !== signature) changed.push(name);
   }
   for (const name of current.keys()) if (!baseline.has(name)) added.push(name);
-  return { removed: removed.sort(), changed: changed.sort(), added: added.sort() };
+  return {
+    removed: removed.sort(),
+    changed: changed.sort(),
+    added: added.sort(),
+  };
 }
 
 export function migrationMentionsVersion(root, version) {
@@ -242,5 +249,9 @@ export function runGates({ release, version, allowBreak = false, updateBaseline 
   }
 
   if (errors.length) throw new Error(errors.join("\n"));
-  return { version, updated: updateBaseline, packages: release.packages.length };
+  return {
+    version,
+    updated: updateBaseline,
+    packages: release.packages.length,
+  };
 }

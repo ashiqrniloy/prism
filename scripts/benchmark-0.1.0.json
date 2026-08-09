@@ -1,0 +1,957 @@
+{
+  "version": "0.1.0",
+  "generatedAt": "2026-08-08T22:20:08.139Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "local",
+    "network": false,
+    "protected": true
+  },
+  "contract": {
+    "ceilingsMs": {
+      "decisionApply": 5,
+      "stickyMatch": 5,
+      "snapshotCaptureRestore": 20,
+      "a2uiPaint": 10,
+      "enumerationList": 2000,
+      "processChunkPage": 10,
+      "lspDiagnosticNormalize": 100,
+      "forgePagination": 10000,
+      "proxyDownload": 30000,
+      "rendererStreamOps": 100,
+      "agUiMapperSync": 100,
+      "fsReadWriteRoundTripMs": 250,
+      "modeSwitchMs": 250,
+      "terminalChunkAckMs": 1000,
+      "promptFirstUpdateMs": 2000,
+      "promptEndMs": 30000,
+      "oidcVerifyCacheHitMs": 5,
+      "oidcVerifyCacheMissMs": 100,
+      "policyDecisionMs": 100,
+      "mcpDiscoveryRoundTripMs": 250,
+      "mcpAuthHandshakeMs": 2000,
+      "openapiToolCallMs": 1000,
+      "artifactPut1MiBMs": 2000,
+      "artifactPresignMs": 100
+    },
+    "startupImportMsCeiling": 250,
+    "rootPackedBytes": {
+      "baseline": 713454,
+      "tolerance": 0.05
+    },
+    "rootFileCount": {
+      "baseline": 293,
+      "tolerance": 0.05
+    },
+    "medianTolerance": 0.25
+  },
+  "installSize": {
+    "startupImportMs": 41.714682,
+    "rootPackedBytes": 711755,
+    "rootFileCount": 295
+  },
+  "legs": [
+    {
+      "source": "benchmark-0.0.25.mjs",
+      "phase": 8,
+      "protected": false,
+      "status": "run",
+      "fixture": {
+        "warmups": 20,
+        "measuredOperations": 100,
+        "pendingDecisions": 32,
+        "snapshotBytes": 250000,
+        "a2uiOpsPerMessage": 64
+      },
+      "results": [
+        {
+          "name": "decisionApply",
+          "p50Ms": 3.337,
+          "p95Ms": 4.484,
+          "throughputPerSecond": 286.34,
+          "operations": 100,
+          "source": "benchmark-0.0.25.mjs",
+          "protected": false
+        },
+        {
+          "name": "stickyMatch",
+          "p50Ms": 0.245,
+          "p95Ms": 0.343,
+          "throughputPerSecond": 3616.94,
+          "operations": 100,
+          "source": "benchmark-0.0.25.mjs",
+          "protected": false
+        },
+        {
+          "name": "snapshotCaptureRestore",
+          "p50Ms": 4.713,
+          "p95Ms": 7.814,
+          "throughputPerSecond": 187.1,
+          "operations": 100,
+          "source": "benchmark-0.0.25.mjs",
+          "protected": false
+        },
+        {
+          "name": "a2uiPaint",
+          "p50Ms": 0.206,
+          "p95Ms": 0.33,
+          "throughputPerSecond": 4333.58,
+          "operations": 100,
+          "source": "benchmark-0.0.25.mjs",
+          "protected": false
+        }
+      ]
+    },
+    {
+      "source": "benchmark-0.0.26.mjs",
+      "phase": 9,
+      "protected": false,
+      "status": "run",
+      "fixture": {
+        "warmups": 5,
+        "measuredOperations": 20,
+        "enumerationFiles": 100000,
+        "processSpillBytes": 1073741824,
+        "lspDiagnostics": 1000,
+        "forgePages": 100,
+        "proxyDownloadBytes": 67108864,
+        "rendererOps": 1000,
+        "mapperEvents": 4000
+      },
+      "results": [
+        {
+          "name": "enumerationList",
+          "p50Ms": 297.237,
+          "p95Ms": 363.61,
+          "throughputPerSecond": 3.24,
+          "operations": 20,
+          "source": "benchmark-0.0.26.mjs",
+          "protected": false
+        },
+        {
+          "name": "processChunkPage",
+          "p50Ms": 0.019,
+          "p95Ms": 0.048,
+          "throughputPerSecond": 37008.24,
+          "operations": 1311,
+          "source": "benchmark-0.0.26.mjs",
+          "protected": false
+        },
+        {
+          "name": "lspDiagnosticNormalize",
+          "p50Ms": 0.112,
+          "p95Ms": 0.61,
+          "throughputPerSecond": 4516.39,
+          "operations": 20,
+          "source": "benchmark-0.0.26.mjs",
+          "protected": false
+        },
+        {
+          "name": "forgePagination",
+          "p50Ms": 139.975,
+          "p95Ms": 144.868,
+          "throughputPerSecond": 7.14,
+          "operations": 20,
+          "source": "benchmark-0.0.26.mjs",
+          "protected": false
+        },
+        {
+          "name": "proxyDownload",
+          "p50Ms": 74.773,
+          "p95Ms": 86.879,
+          "throughputPerSecond": 13.23,
+          "operations": 20,
+          "source": "benchmark-0.0.26.mjs",
+          "protected": false
+        },
+        {
+          "name": "rendererStreamOps",
+          "p50Ms": 1.56,
+          "p95Ms": 1.647,
+          "throughputPerSecond": 634.56,
+          "operations": 20,
+          "source": "benchmark-0.0.26.mjs",
+          "protected": false
+        },
+        {
+          "name": "agUiMapperSync",
+          "p50Ms": 30.657,
+          "p95Ms": 33.059,
+          "throughputPerSecond": 32.26,
+          "operations": 20,
+          "source": "benchmark-0.0.26.mjs",
+          "protected": false
+        }
+      ]
+    },
+    {
+      "source": "benchmark-0.0.27.mjs",
+      "phase": 10,
+      "protected": false,
+      "status": "run",
+      "fixture": {
+        "warmups": 20,
+        "measuredOperations": 100
+      },
+      "results": [
+        {
+          "name": "fsReadWriteRoundTripMs",
+          "p50Ms": 0.06,
+          "p95Ms": 0.21,
+          "throughputPerSecond": 11489.8,
+          "operations": 100,
+          "source": "benchmark-0.0.27.mjs",
+          "protected": false
+        },
+        {
+          "name": "terminalChunkAckMs",
+          "p50Ms": 0.021,
+          "p95Ms": 0.049,
+          "throughputPerSecond": 36831.5,
+          "operations": 100,
+          "source": "benchmark-0.0.27.mjs",
+          "protected": false
+        },
+        {
+          "name": "modeSwitchMs",
+          "p50Ms": 0.09,
+          "p95Ms": 0.185,
+          "throughputPerSecond": 7085,
+          "operations": 100,
+          "source": "benchmark-0.0.27.mjs",
+          "protected": false
+        },
+        {
+          "name": "promptFirstUpdateMs",
+          "p50Ms": 0.057,
+          "p95Ms": 0.082,
+          "throughputPerSecond": 17564,
+          "operations": 100,
+          "source": "benchmark-0.0.27.mjs",
+          "protected": false
+        },
+        {
+          "name": "promptEndMs",
+          "p50Ms": 0.067,
+          "p95Ms": 0.094,
+          "throughputPerSecond": 15099.7,
+          "operations": 100,
+          "source": "benchmark-0.0.27.mjs",
+          "protected": false
+        }
+      ]
+    },
+    {
+      "source": "benchmark-0.0.28.mjs",
+      "phase": 11,
+      "protected": false,
+      "status": "run",
+      "fixture": {
+        "warmups": 20,
+        "measuredOperations": 100
+      },
+      "results": [
+        {
+          "name": "oidcVerifyCacheHitMs",
+          "p50Ms": 0.096,
+          "p95Ms": 0.151,
+          "throughputPerSecond": 9464.2,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        },
+        {
+          "name": "oidcVerifyCacheMissMs",
+          "p50Ms": 0.174,
+          "p95Ms": 0.351,
+          "throughputPerSecond": 4987.9,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        },
+        {
+          "name": "policyDecisionMs",
+          "p50Ms": 0.034,
+          "p95Ms": 0.052,
+          "throughputPerSecond": 28145.9,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        },
+        {
+          "name": "mcpDiscoveryRoundTripMs",
+          "p50Ms": 1.048,
+          "p95Ms": 1.563,
+          "throughputPerSecond": 886.2,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        },
+        {
+          "name": "mcpAuthHandshakeMs",
+          "p50Ms": 3.921,
+          "p95Ms": 6.909,
+          "throughputPerSecond": 238.5,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        },
+        {
+          "name": "openapiToolCallMs",
+          "p50Ms": 0.008,
+          "p95Ms": 0.011,
+          "throughputPerSecond": 114674,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        },
+        {
+          "name": "artifactPut1MiBMs",
+          "p50Ms": 5.569,
+          "p95Ms": 9.337,
+          "throughputPerSecond": 164.2,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        },
+        {
+          "name": "artifactPresignMs",
+          "p50Ms": 0.198,
+          "p95Ms": 0.381,
+          "throughputPerSecond": 4421.1,
+          "operations": 100,
+          "source": "benchmark-0.0.28.mjs",
+          "protected": false
+        }
+      ]
+    },
+    {
+      "source": "benchmark-0.0.23.mjs",
+      "phase": 6,
+      "protected": true,
+      "status": "run",
+      "fixture": {
+        "tenants": 10,
+        "principalsPerTenant": 10,
+        "recordsPerOwner": 1000,
+        "policyRows": 100000,
+        "evaluationRows": 100000,
+        "routerKeys": 10000,
+        "clients": 16,
+        "warmups": 100,
+        "measuredOperations": 1000,
+        "cleanupBatch": 100
+      },
+      "storageBeforeCleanup": {
+        "prism_policy_decisions": {
+          "rows": 101100,
+          "bytes": 68526080
+        },
+        "prism_evaluations": {
+          "rows": 101100,
+          "bytes": 98148352
+        },
+        "prism_work_idempotency": {
+          "rows": 3300,
+          "bytes": 1941504
+        },
+        "prism_model_router_budgets": {
+          "rows": 11100,
+          "bytes": 4153344
+        },
+        "prism_model_router_rates": {
+          "rows": 121100,
+          "bytes": 76324864
+        },
+        "prism_model_router_circuits": {
+          "rows": 11100,
+          "bytes": 3547136
+        }
+      },
+      "storageAfterCleanup": {
+        "prism_policy_decisions": {
+          "rows": 101100,
+          "bytes": 68526080
+        },
+        "prism_evaluations": {
+          "rows": 101100,
+          "bytes": 98148352
+        },
+        "prism_work_idempotency": {
+          "rows": 3300,
+          "bytes": 1941504
+        },
+        "prism_model_router_budgets": {
+          "rows": 11100,
+          "bytes": 4153344
+        },
+        "prism_model_router_rates": {
+          "rows": 11100,
+          "bytes": 76324864
+        },
+        "prism_model_router_circuits": {
+          "rows": 11100,
+          "bytes": 3547136
+        }
+      },
+      "results": [
+        {
+          "name": "policyAppend",
+          "p50Ms": 0.459,
+          "p95Ms": 0.684,
+          "throughputPerSecond": 2021.13,
+          "operations": 1000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "policyQuery",
+          "p50Ms": 0.733,
+          "p95Ms": 1.274,
+          "throughputPerSecond": 1231.97,
+          "operations": 1000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "evaluationAppend",
+          "p50Ms": 0.486,
+          "p95Ms": 0.721,
+          "throughputPerSecond": 1905.96,
+          "operations": 1000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "evaluationQuery",
+          "p50Ms": 0.485,
+          "p95Ms": 0.918,
+          "throughputPerSecond": 1794.76,
+          "operations": 1000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "workClaimComplete",
+          "p50Ms": 1.387,
+          "p95Ms": 1.938,
+          "throughputPerSecond": 690.29,
+          "operations": 1000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "workContention",
+          "p50Ms": 3.126,
+          "p95Ms": 5.002,
+          "throughputPerSecond": 3222.11,
+          "operations": 16000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "routerRateContention",
+          "p50Ms": 8.436,
+          "p95Ms": 17.582,
+          "throughputPerSecond": 1318.46,
+          "operations": 16000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "routerBudgetContention",
+          "p50Ms": 3.528,
+          "p95Ms": 6.018,
+          "throughputPerSecond": 2333.97,
+          "operations": 16000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "routerCircuitContention",
+          "p50Ms": 14.289,
+          "p95Ms": 27.098,
+          "throughputPerSecond": 290.04,
+          "operations": 16000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        },
+        {
+          "name": "cleanupBatch",
+          "p50Ms": 2.481,
+          "p95Ms": 3.509,
+          "throughputPerSecond": 38675.87,
+          "operations": 100000,
+          "source": "benchmark-0.0.23.mjs",
+          "protected": true
+        }
+      ]
+    },
+    {
+      "source": "benchmark-0.0.24.mjs",
+      "phase": 7,
+      "protected": true,
+      "status": "run",
+      "fixture": {
+        "tenants": 10,
+        "principalsPerTenant": 10,
+        "eventsPerOwner": 1000,
+        "producers": 16,
+        "subscribers": 16,
+        "warmups": 100,
+        "measuredOperations": 1000,
+        "sustainedStreamEvents": 10000,
+        "cleanupBatch": 100,
+        "reconnectSamples": 20
+      },
+      "storageBeforeCleanup": {
+        "prism_agent_events": {
+          "rows": 101200,
+          "bytes": 54894592
+        },
+        "prism_agent_event_streams": {
+          "rows": 102,
+          "bytes": 81920
+        },
+        "prism_tool_effects": {
+          "rows": 1200,
+          "bytes": 1359872
+        }
+      },
+      "storageAfterCleanup": {
+        "prism_agent_events": {
+          "rows": 101100,
+          "bytes": 54894592
+        },
+        "prism_agent_event_streams": {
+          "rows": 102,
+          "bytes": 81920
+        },
+        "prism_tool_effects": {
+          "rows": 1100,
+          "bytes": 1359872
+        }
+      },
+      "results": [
+        {
+          "name": "eventAppend",
+          "p50Ms": 1.099,
+          "p95Ms": 1.553,
+          "throughputPerSecond": 876.97,
+          "operations": 1000,
+          "source": "benchmark-0.0.24.mjs",
+          "protected": true
+        },
+        {
+          "name": "eventPage",
+          "p50Ms": 2.232,
+          "p95Ms": 3.187,
+          "throughputPerSecond": 424.45,
+          "operations": 1000,
+          "source": "benchmark-0.0.24.mjs",
+          "protected": true
+        },
+        {
+          "name": "effectClaimTransition",
+          "p50Ms": 1.94,
+          "p95Ms": 2.642,
+          "throughputPerSecond": 494.21,
+          "operations": 1000,
+          "source": "benchmark-0.0.24.mjs",
+          "protected": true
+        },
+        {
+          "name": "eventCleanup",
+          "p50Ms": 1.255,
+          "p95Ms": 1.255,
+          "throughputPerSecond": 796.08,
+          "operations": 1,
+          "source": "benchmark-0.0.24.mjs",
+          "protected": true
+        },
+        {
+          "name": "effectCleanup",
+          "p50Ms": 3.174,
+          "p95Ms": 3.174,
+          "throughputPerSecond": 314.98,
+          "operations": 1,
+          "source": "benchmark-0.0.24.mjs",
+          "protected": true
+        },
+        {
+          "name": "reconnectCatchup",
+          "p50Ms": 6.334,
+          "p95Ms": 8.374,
+          "throughputPerSecond": 152.72,
+          "operations": 20,
+          "source": "benchmark-0.0.24.mjs",
+          "protected": true
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "name": "decisionApply",
+      "p50Ms": 3.337,
+      "p95Ms": 4.484,
+      "throughputPerSecond": 286.34,
+      "operations": 100,
+      "source": "benchmark-0.0.25.mjs",
+      "protected": false
+    },
+    {
+      "name": "stickyMatch",
+      "p50Ms": 0.245,
+      "p95Ms": 0.343,
+      "throughputPerSecond": 3616.94,
+      "operations": 100,
+      "source": "benchmark-0.0.25.mjs",
+      "protected": false
+    },
+    {
+      "name": "snapshotCaptureRestore",
+      "p50Ms": 4.713,
+      "p95Ms": 7.814,
+      "throughputPerSecond": 187.1,
+      "operations": 100,
+      "source": "benchmark-0.0.25.mjs",
+      "protected": false
+    },
+    {
+      "name": "a2uiPaint",
+      "p50Ms": 0.206,
+      "p95Ms": 0.33,
+      "throughputPerSecond": 4333.58,
+      "operations": 100,
+      "source": "benchmark-0.0.25.mjs",
+      "protected": false
+    },
+    {
+      "name": "enumerationList",
+      "p50Ms": 297.237,
+      "p95Ms": 363.61,
+      "throughputPerSecond": 3.24,
+      "operations": 20,
+      "source": "benchmark-0.0.26.mjs",
+      "protected": false
+    },
+    {
+      "name": "processChunkPage",
+      "p50Ms": 0.019,
+      "p95Ms": 0.048,
+      "throughputPerSecond": 37008.24,
+      "operations": 1311,
+      "source": "benchmark-0.0.26.mjs",
+      "protected": false
+    },
+    {
+      "name": "lspDiagnosticNormalize",
+      "p50Ms": 0.112,
+      "p95Ms": 0.61,
+      "throughputPerSecond": 4516.39,
+      "operations": 20,
+      "source": "benchmark-0.0.26.mjs",
+      "protected": false
+    },
+    {
+      "name": "forgePagination",
+      "p50Ms": 139.975,
+      "p95Ms": 144.868,
+      "throughputPerSecond": 7.14,
+      "operations": 20,
+      "source": "benchmark-0.0.26.mjs",
+      "protected": false
+    },
+    {
+      "name": "proxyDownload",
+      "p50Ms": 74.773,
+      "p95Ms": 86.879,
+      "throughputPerSecond": 13.23,
+      "operations": 20,
+      "source": "benchmark-0.0.26.mjs",
+      "protected": false
+    },
+    {
+      "name": "rendererStreamOps",
+      "p50Ms": 1.56,
+      "p95Ms": 1.647,
+      "throughputPerSecond": 634.56,
+      "operations": 20,
+      "source": "benchmark-0.0.26.mjs",
+      "protected": false
+    },
+    {
+      "name": "agUiMapperSync",
+      "p50Ms": 30.657,
+      "p95Ms": 33.059,
+      "throughputPerSecond": 32.26,
+      "operations": 20,
+      "source": "benchmark-0.0.26.mjs",
+      "protected": false
+    },
+    {
+      "name": "fsReadWriteRoundTripMs",
+      "p50Ms": 0.06,
+      "p95Ms": 0.21,
+      "throughputPerSecond": 11489.8,
+      "operations": 100,
+      "source": "benchmark-0.0.27.mjs",
+      "protected": false
+    },
+    {
+      "name": "terminalChunkAckMs",
+      "p50Ms": 0.021,
+      "p95Ms": 0.049,
+      "throughputPerSecond": 36831.5,
+      "operations": 100,
+      "source": "benchmark-0.0.27.mjs",
+      "protected": false
+    },
+    {
+      "name": "modeSwitchMs",
+      "p50Ms": 0.09,
+      "p95Ms": 0.185,
+      "throughputPerSecond": 7085,
+      "operations": 100,
+      "source": "benchmark-0.0.27.mjs",
+      "protected": false
+    },
+    {
+      "name": "promptFirstUpdateMs",
+      "p50Ms": 0.057,
+      "p95Ms": 0.082,
+      "throughputPerSecond": 17564,
+      "operations": 100,
+      "source": "benchmark-0.0.27.mjs",
+      "protected": false
+    },
+    {
+      "name": "promptEndMs",
+      "p50Ms": 0.067,
+      "p95Ms": 0.094,
+      "throughputPerSecond": 15099.7,
+      "operations": 100,
+      "source": "benchmark-0.0.27.mjs",
+      "protected": false
+    },
+    {
+      "name": "oidcVerifyCacheHitMs",
+      "p50Ms": 0.096,
+      "p95Ms": 0.151,
+      "throughputPerSecond": 9464.2,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "oidcVerifyCacheMissMs",
+      "p50Ms": 0.174,
+      "p95Ms": 0.351,
+      "throughputPerSecond": 4987.9,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "policyDecisionMs",
+      "p50Ms": 0.034,
+      "p95Ms": 0.052,
+      "throughputPerSecond": 28145.9,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "mcpDiscoveryRoundTripMs",
+      "p50Ms": 1.048,
+      "p95Ms": 1.563,
+      "throughputPerSecond": 886.2,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "mcpAuthHandshakeMs",
+      "p50Ms": 3.921,
+      "p95Ms": 6.909,
+      "throughputPerSecond": 238.5,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "openapiToolCallMs",
+      "p50Ms": 0.008,
+      "p95Ms": 0.011,
+      "throughputPerSecond": 114674,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "artifactPut1MiBMs",
+      "p50Ms": 5.569,
+      "p95Ms": 9.337,
+      "throughputPerSecond": 164.2,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "artifactPresignMs",
+      "p50Ms": 0.198,
+      "p95Ms": 0.381,
+      "throughputPerSecond": 4421.1,
+      "operations": 100,
+      "source": "benchmark-0.0.28.mjs",
+      "protected": false
+    },
+    {
+      "name": "policyAppend",
+      "p50Ms": 0.459,
+      "p95Ms": 0.684,
+      "throughputPerSecond": 2021.13,
+      "operations": 1000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "policyQuery",
+      "p50Ms": 0.733,
+      "p95Ms": 1.274,
+      "throughputPerSecond": 1231.97,
+      "operations": 1000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "evaluationAppend",
+      "p50Ms": 0.486,
+      "p95Ms": 0.721,
+      "throughputPerSecond": 1905.96,
+      "operations": 1000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "evaluationQuery",
+      "p50Ms": 0.485,
+      "p95Ms": 0.918,
+      "throughputPerSecond": 1794.76,
+      "operations": 1000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "workClaimComplete",
+      "p50Ms": 1.387,
+      "p95Ms": 1.938,
+      "throughputPerSecond": 690.29,
+      "operations": 1000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "workContention",
+      "p50Ms": 3.126,
+      "p95Ms": 5.002,
+      "throughputPerSecond": 3222.11,
+      "operations": 16000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "routerRateContention",
+      "p50Ms": 8.436,
+      "p95Ms": 17.582,
+      "throughputPerSecond": 1318.46,
+      "operations": 16000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "routerBudgetContention",
+      "p50Ms": 3.528,
+      "p95Ms": 6.018,
+      "throughputPerSecond": 2333.97,
+      "operations": 16000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "routerCircuitContention",
+      "p50Ms": 14.289,
+      "p95Ms": 27.098,
+      "throughputPerSecond": 290.04,
+      "operations": 16000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "cleanupBatch",
+      "p50Ms": 2.481,
+      "p95Ms": 3.509,
+      "throughputPerSecond": 38675.87,
+      "operations": 100000,
+      "source": "benchmark-0.0.23.mjs",
+      "protected": true
+    },
+    {
+      "name": "eventAppend",
+      "p50Ms": 1.099,
+      "p95Ms": 1.553,
+      "throughputPerSecond": 876.97,
+      "operations": 1000,
+      "source": "benchmark-0.0.24.mjs",
+      "protected": true
+    },
+    {
+      "name": "eventPage",
+      "p50Ms": 2.232,
+      "p95Ms": 3.187,
+      "throughputPerSecond": 424.45,
+      "operations": 1000,
+      "source": "benchmark-0.0.24.mjs",
+      "protected": true
+    },
+    {
+      "name": "effectClaimTransition",
+      "p50Ms": 1.94,
+      "p95Ms": 2.642,
+      "throughputPerSecond": 494.21,
+      "operations": 1000,
+      "source": "benchmark-0.0.24.mjs",
+      "protected": true
+    },
+    {
+      "name": "eventCleanup",
+      "p50Ms": 1.255,
+      "p95Ms": 1.255,
+      "throughputPerSecond": 796.08,
+      "operations": 1,
+      "source": "benchmark-0.0.24.mjs",
+      "protected": true
+    },
+    {
+      "name": "effectCleanup",
+      "p50Ms": 3.174,
+      "p95Ms": 3.174,
+      "throughputPerSecond": 314.98,
+      "operations": 1,
+      "source": "benchmark-0.0.24.mjs",
+      "protected": true
+    },
+    {
+      "name": "reconnectCatchup",
+      "p50Ms": 6.334,
+      "p95Ms": 8.374,
+      "throughputPerSecond": 152.72,
+      "operations": 20,
+      "source": "benchmark-0.0.24.mjs",
+      "protected": true
+    }
+  ]
+}
