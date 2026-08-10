@@ -2,18 +2,20 @@
 /**
  * Release 0.1.0 capacity envelope (plan 012 Task 5).
  *
- * Composes the six phase benchmark scripts (0.0.23-0.0.28) into one frozen
- * performance contract: each phase script already measures its envelopes with
- * its own fixtures, so this script reuses them as child processes (no new
- * benchmark framework) and merges their reports. Every row is then checked
- * against the Task 0 freeze-manifest ceilings (scripts/phase12-freeze-manifest.json
- * capacity block); startup/install-size rows reuse the shared budget-gate
- * helpers (scripts/budget-gates.mjs) so nothing is measured twice.
+ * Composes the six benchmark scenarios through the parameterized runner
+ * (scripts/benchmark.mjs) into one frozen performance contract: each scenario
+ * measures its envelope with its own fixtures, so this script reuses them as
+ * child processes (no new benchmark framework) and merges their reports.
+ * Every row is then checked against the Task 0 freeze-manifest ceilings
+ * (scripts/phase12-freeze-manifest.json capacity block); startup/install-size
+ * rows reuse the shared budget-gate helpers (scripts/budget-gates.mjs) so
+ * nothing is measured twice.
  *
- * Legs 0.0.25/0.0.26/0.0.27/0.0.28 are network-free and always run. Legs
- * 0.0.23/0.0.24 need live PostgreSQL and run only when PRISM_TEST_POSTGRES_URL
- * is set; without it those rows are recorded as skipped (protected) and the
- * network-free contract still gates.
+ * Scenarios phase8-loops-hitl/phase9-coding/phase10-acp/phase11-auth are
+ * network-free and always run. Scenarios phase6-postgres/phase7-postgres need
+ * live PostgreSQL and run only when PRISM_TEST_POSTGRES_URL is set; without it
+ * those rows are recorded as skipped (protected) and the network-free contract
+ * still gates.
  *
  * Usage:
  *   node scripts/benchmark-0.1.0.mjs                       # report to stdout
@@ -36,37 +38,37 @@ const protectedUrl = process.env.PRISM_TEST_POSTGRES_URL;
 
 const LEGS = [
   {
-    source: "benchmark-0.0.25.mjs",
+    scenario: "phase8-loops-hitl",
     phase: 8,
     protected: false,
     fixtures: budgets.phase8LoopsHitl,
   },
   {
-    source: "benchmark-0.0.26.mjs",
+    scenario: "phase9-coding",
     phase: 9,
     protected: false,
     fixtures: budgets.phase9,
   },
   {
-    source: "benchmark-0.0.27.mjs",
+    scenario: "phase10-acp",
     phase: 10,
     protected: false,
     fixtures: budgets.phase10,
   },
   {
-    source: "benchmark-0.0.28.mjs",
+    scenario: "phase11-auth",
     phase: 11,
     protected: false,
     fixtures: budgets.phase11,
   },
   {
-    source: "benchmark-0.0.23.mjs",
+    scenario: "phase6-postgres",
     phase: 6,
     protected: true,
     fixtures: budgets.enterprisePostgres,
   },
   {
-    source: "benchmark-0.0.24.mjs",
+    scenario: "phase7-postgres",
     phase: 7,
     protected: true,
     fixtures: budgets.phase7Postgres,
@@ -76,7 +78,7 @@ const LEGS = [
 function runLeg(leg) {
   if (leg.protected && !protectedUrl) {
     return {
-      source: leg.source,
+      scenario: leg.scenario,
       phase: leg.phase,
       protected: true,
       status: "skipped",
@@ -84,16 +86,16 @@ function runLeg(leg) {
       results: [],
     };
   }
-  const run = spawnSync(process.execPath, [join(here, leg.source)], {
+  const run = spawnSync(process.execPath, [join(here, "benchmark.mjs"), "--scenario", leg.scenario], {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
   });
   if (run.status !== 0) {
-    throw new Error(`${leg.source} failed (exit ${run.status}):\n${run.stderr || run.stdout}`);
+    throw new Error(`${leg.scenario} failed (exit ${run.status}):\n${run.stderr || run.stdout}`);
   }
   const report = JSON.parse(run.stdout);
   return {
-    source: leg.source,
+    scenario: leg.scenario,
     phase: leg.phase,
     protected: leg.protected,
     status: "run",
@@ -106,7 +108,7 @@ function runLeg(leg) {
       p95Ms: row.p95Ms,
       throughputPerSecond: row.throughputPerSecond,
       operations: row.operations,
-      source: leg.source,
+      scenario: leg.scenario,
       protected: leg.protected,
     })),
   };

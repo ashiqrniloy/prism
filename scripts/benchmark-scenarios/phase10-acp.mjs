@@ -7,11 +7,11 @@
  * `createPrismAcpAgent` + SDK in-process transport; the client answers fs and
  * terminal methods from memory, so nothing leaves the process.
  *
- * Usage: node scripts/benchmark-0.0.27.mjs > scripts/benchmark-0.0.27.json
+ * Usage: node scripts/benchmark.mjs --scenario phase10-acp
  */
 import { performance } from "node:perf_hooks";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import { createPrismAcpAgent } from "../packages/ag-ui/dist/acp/index.js";
+import { createPrismAcpAgent } from "../../packages/ag-ui/dist/acp/index.js";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);

@@ -1,8 +1,4 @@
 import type {
-  AgentRunRef,
-  AgentRunResume,
-  AgentRunResumeOptions,
-  AgentRunResumeStreamOptions,
   AgentSession,
   AIProvider,
   CompactionStrategy,
@@ -20,9 +16,6 @@ import type { ObservationalMemoryFlushOptions, ObservationalMemoryRuntime, Obser
 import { createObservationalMemoryRuntime } from "./runtime.js";
 import {
   type ObservationalMemoryContextSettingsInput,
-  type ObservationalMemoryDropperSettingsInput,
-  type ObservationalMemoryObservationSettingsInput,
-  type ObservationalMemoryReflectionSettingsInput,
   type ObservationalMemoryRetrievalSettingsInput,
   type ObservationalMemorySettings,
   type ObservationalMemorySettingsInput,

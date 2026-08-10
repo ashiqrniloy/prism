@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import { createSecretRedactor, toolCallContent } from "@arnilo/prism";
+import { createSecretRedactor } from "@arnilo/prism";
 import type { AgentSession } from "@arnilo/prism";
 import { createAcpEventMapper, createPrismAcpAgent, type CreatePrismAcpAgentOptions } from "../acp/index.js";
 
@@ -250,7 +250,6 @@ describe("ACP mapper diff and locations (Task 6)", () => {
         toolLocations: () => [{ path: "/x.ts" }],
       },
     });
-    const call = toolCallContent("tool-1", "write", { path: "/x.ts" });
     const output = await mapper.map(finished({ toolCallId: "tool-1", name: "write", value: 7 }));
     const update = output[0] as { sessionUpdate: string; locations?: unknown; content?: Array<{ content?: { text?: string } }> };
     assert.equal(update.sessionUpdate, "tool_call_update");

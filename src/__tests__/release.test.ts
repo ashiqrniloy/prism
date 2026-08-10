@@ -31,8 +31,8 @@ function fixture() {
 
 const missing = async () => new Response("not found", { status: 404 });
 
-test("0.1.2 release graph is exact, publishable, and documented", () => {
-  const version = "0.1.2";
+test("0.1.3 release graph is exact, publishable, and documented", () => {
+  const version = "0.1.3";
   const release = loadRelease(process.cwd());
   assert.equal(release.packages.length, 49);
   assert.doesNotThrow(() => validateRelease(release, version));
@@ -41,7 +41,7 @@ test("0.1.2 release graph is exact, publishable, and documented", () => {
     assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${pkg.manifest.name} missing 0.1.0 changelog`);
   }
   const changelog = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
-  assert.ok(changelog.includes("## [0.1.2] - 2026-08-10"), "root changelog missing 0.1.2 entry");
+  assert.ok(changelog.includes("## [0.1.3] - 2026-08-10"), "root changelog missing 0.1.3 entry");
   for (const pkg of ["packages/provider-alibaba"]) {
     const path = join(process.cwd(), pkg, "CHANGELOG.md");
     assert.ok(readFileSync(path, "utf8").includes("## [0.1.2] - 2026-08-10"), `${pkg} changelog missing 0.1.2 entry`);

@@ -715,6 +715,12 @@ export interface AgentRunStateOptions {
   readonly fencingToken?: number;
   /** Enables sticky auto-apply when a nested suspension first surfaces during this run. */
   readonly resumeNestedRun?: ResumeNestedRun;
+  /**
+   * Opt-in (plan 015 Task 4): persist the session's loaded-skill names in the run-state
+   * checkpoint and restore them on resume. Names only — bodies reload via `load_skill`.
+   * Default off: checkpoint shape is identical to 0.1.2.
+   */
+  readonly persistSessionState?: boolean;
 }
 
 /** Versioned, redacted checkpoint payload. Treat as opaque except status/version/interruption. */
@@ -748,6 +754,8 @@ export interface AgentRunResumeOptions {
   readonly fencingToken?: number;
   /** Routes root decisions for nested-run approvals back to the child (e.g. supervisor). */
   readonly resumeNestedRun?: ResumeNestedRun;
+  /** Opt-in (plan 015 Task 4): restore persisted loaded-skill names into the resumed session catalog. */
+  readonly persistSessionState?: boolean;
 }
 
 /** Bounded, abortable options for `resumeAgentRunStream()`. */

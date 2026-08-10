@@ -1,5 +1,9 @@
 # Migration guide
 
+## 0.1.2 → 0.1.3 dead-code and deprecation hygiene (additive, no migration)
+
+Release **0.1.3** (plan 015) is the dead-code and deprecation hygiene patch on the frozen 0.1.x line: benchmark-runner consolidation (one parameterized `scripts/benchmark.mjs --scenario <name>` replaces the per-version runners; 16 orphaned `benchmark-0.0.{8..16}` runner/test files removed, all `benchmark-*.json` evidence kept), the 12 `docs/review-coverage-2026-07-*.md` evidence files archived to the tarball-excluded `docs/_evidence/`, a non-blocking unused-code sweep (`npm run sweep:unused`, always exits 0, report to `scripts/unused-sweep-report.txt`), and opt-in checkpoint persistence (`persistSessionState: true` on durable run/resume options persists the loaded-skill name catalog ≤64 names in the run-state checkpoint and restores it on resume — bodies re-resolve from the live registry; `createReadPathSetPersistence` in `@arnilo/prism-coding-agent` persists the read-before-write path set through the host `CheckpointStore`, ≤1024 paths, ownership-scoped). **Store compatibility: compatible** — the persisted run-state schema stays at version 1 (the optional `sessionState` field is absent by default, so 0.1.2 checkpoints parse unchanged and opt-out checkpoints are byte-identical); no upgrade or rollback step exists (rollback = restore the 0.1.2 manifests/tag; stores never change). Declaration surface is additive-only vs the frozen 0.1.x contract (`scripts/compat-baseline` regenerated at 0.1.3 with zero breaking deltas, enforced by `node scripts/release.mjs gate`). No breaking defaults.
+
 ## 0.1.0 → 0.1.1 post-release hardening (additive, no migration)
 
 Release **0.1.1** (plan 013) is a hardening patch on the frozen 0.1.x line: five scoped fixes — build single-flight (`npm run clean` removed from `npm run build`, standalone), deterministic MCP SSE relay test (`relayStatelessBody` internal export in `@arnilo/prism-mcp`, not in the package entry surface), combined core + workspace coverage summary (`scripts/coverage-summary.mjs`), canonical manifest-count narrative (49 publishable manifests = root + 48 workspace packages), and ACP modes/config ownership-scoped persistence guidance (the agent never persists `modeId`/`configValues`; host stores MUST key by `sessions.ownership`). **Store compatibility: compatible** — no persisted shape, event schema, or default behavior changed; the 0.0.28 → 0.1.0 → 0.1.1 lines all stay on the same checksum-protected contract, so no upgrade or rollback step exists (rollback = restore the 0.1.0 manifests/tag; stores never change). Declaration surface is additive-only vs the frozen 0.1.x contract (`scripts/compat-baseline` regenerated at 0.1.1 with zero breaking deltas, enforced by `node scripts/release.mjs gate`). No breaking defaults.
@@ -261,7 +265,7 @@ Prism 0.0.6 preserves documented 0.0.3 agent construction except for two intenti
 
 ## 0.0.15 → 0.0.16 simplification, shared survivors, and release gates (additive, pre-release)
 
-Release **0.0.16** is a simplification/readiness release: no runtime behavior changes, no package retired, and the only public-surface change is one additive export plus one internal package. The published root tarball is smaller and the release now runs offline pre-publish gates. See [Phase 11 evidence](review-coverage-2026-07-26-phase-11.md).
+Release **0.0.16** is a simplification/readiness release: no runtime behavior changes, no package retired, and the only public-surface change is one additive export plus one internal package. The published root tarball is smaller and the release now runs offline pre-publish gates. See [Phase 11 evidence](_evidence/review-coverage-2026-07-26-phase-11.md).
 
 ### New shared export: `resolveRedactor` (additive)
 
@@ -318,7 +322,7 @@ RAG retrieval now optionally accepts host-owned `Reranker`; it receives redacted
 
 ## 0.0.13 → 0.0.14 personal/work-agent conversations, co-work review, and channel/device gates (additive, pre-release)
 
-Release **0.0.14** is strictly additive: every surface extends a shipped package and reuses the AG-UI adapter shipped in 0.0.12. The only new packages are two optional provider adapters (41 → 43 manifests): `@arnilo/prism-provider-alibaba` and `@arnilo/prism-provider-ollama`, both enrolled via the `@arnilo/prism-providers` family. No permission broadening — channel/device/co-work features cannot widen consent, memory, network, file, browser, connector, or tool permissions (roadmap gate 8). See [Phase 9 evidence](review-coverage-2026-07-25-phase-9.md).
+Release **0.0.14** is strictly additive: every surface extends a shipped package and reuses the AG-UI adapter shipped in 0.0.12. The only new packages are two optional provider adapters (41 → 43 manifests): `@arnilo/prism-provider-alibaba` and `@arnilo/prism-provider-ollama`, both enrolled via the `@arnilo/prism-providers` family. No permission broadening — channel/device/co-work features cannot widen consent, memory, network, file, browser, connector, or tool permissions (roadmap gate 8). See [Phase 9 evidence](_evidence/review-coverage-2026-07-25-phase-9.md).
 
 | Surface | Before (0.0.13) | After (0.0.14) |
 | --- | --- | --- |
@@ -350,7 +354,7 @@ Optional `@arnilo/prism-policy` records allow/deny/modify/approval decisions wit
 | Model governance | Host wraps resolver ad hoc | Optional `@arnilo/prism-model-router` before provider I/O |
 | Work connectors | n/a | Optional `@arnilo/prism-work-tools` M365 + GWS; draft-then-approve; hard-coded CLI argv |
 
-**Deferred to 0.0.14+:** conversation storage/service, Studio/control plane, internal auth DB, Redis/SQS queue adapters, local Office binaries. See [Phase 8 evidence](review-coverage-2026-07-23-phase-8.md).
+**Deferred to 0.0.14+:** conversation storage/service, Studio/control plane, internal auth DB, Redis/SQS queue adapters, local Office binaries. See [Phase 8 evidence](_evidence/review-coverage-2026-07-23-phase-8.md).
 
 Benchmark placeholder: `node scripts/benchmark-0.0.13.mjs` (release Task 10). Caps documented in [Performance limits](performance.md).
 
@@ -378,7 +382,7 @@ Release **0.0.12** adds optional `@arnilo/prism-ag-ui` (root AG-UI and stable `.
 
 **Host actions:** install the optional package only when a frontend protocol is needed; keep authorization, session/thread/run mapping, durable correlation, storage, redaction, and projection in the host. Reject frontend tools and state unless an explicit host policy accepts them. For a durable approval, persist protocol-run correlation before exposing the exact `${runId}:${version}` interrupt, then resume through the lifecycle with current ownership/version. Configure a redacted `ProductionPersistenceStore` before enabling replay. Use `createCodingCompactionStrategy()` only when the host already supplies a summary provider/model.
 
-AG-UI defaults/hard caps: request 64 KiB/1 MiB; projected event 64 KiB/1 MiB; replay page 100/500; subscriber queue 128/4096; stream 10k/100k events and 10/64 MiB; wall time 120 seconds/30 minutes. Benchmark results remain a release-gate placeholder: `node scripts/benchmark-0.0.12.mjs` lands in Task 8. See [Frontend interoperability](ag-ui.md), [LLM compaction package](compaction-llm.md), and [Phase 7 evidence](review-coverage-2026-07-22-phase-7.md).
+AG-UI defaults/hard caps: request 64 KiB/1 MiB; projected event 64 KiB/1 MiB; replay page 100/500; subscriber queue 128/4096; stream 10k/100k events and 10/64 MiB; wall time 120 seconds/30 minutes. Benchmark results remain a release-gate placeholder: `node scripts/benchmark-0.0.12.mjs` lands in Task 8. See [Frontend interoperability](ag-ui.md), [LLM compaction package](compaction-llm.md), and [Phase 7 evidence](_evidence/review-coverage-2026-07-22-phase-7.md).
 
 ## 0.0.10 → 0.0.11 coding harness fundamentals (additive)
 
@@ -394,7 +398,7 @@ Release **0.0.11** adds SessionIndex/search, assembler `contextBudget`, native A
 | Ask user | n/a | Opt-in `createAskUserDecisionTool`; durable `suspendAskUserDecision` (no new agent interruption kinds) |
 | Structured output + tools | Native schema attached every GVR provider turn | Opt-in `structuredOutputTiming: "final-turn-only"` (default `"every-turn"`): tool-eligible turns omit schema; artifact/revision turns schema-on / tools-off |
 
-**Host actions:** reopen SQLite/Postgres stores so migration 004 applies; set `metadata.workspaceRoot` when filtering by workspace; wire Anthropic/Google packages explicitly; do not expect JSONL search. Benchmarks: `scripts/benchmark-0.0.11.mjs` (lands with release Task 13). See [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md).
+**Host actions:** reopen SQLite/Postgres stores so migration 004 applies; set `metadata.workspaceRoot` when filtering by workspace; wire Anthropic/Google packages explicitly; do not expect JSONL search. Benchmarks: `scripts/benchmark-0.0.11.mjs` (lands with release Task 13). See [Phase 6 evidence](_evidence/review-coverage-2026-07-22-phase-6.md).
 
 ## 0.0.9 / 0.0.96 → 0.0.10 coding workspace modes (breaking composition)
 

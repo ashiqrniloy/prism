@@ -206,6 +206,19 @@ const write = createWriteTool(cwd, { requireReadBeforeWrite: true, readPathSet: 
 const edit = createEditTool(cwd, { requireReadBeforeWrite: true, readPathSet: readPaths });
 ```
 
+Since 0.1.3 (plan 015 Task 4) hosts may opt in to persisting the set across restarts via the host-owned `CheckpointStore`:
+
+```ts
+import { createReadPathSet, createReadPathSetPersistence } from "@arnilo/prism-coding-agent";
+
+const readPaths = createReadPathSet();
+const persistence = createReadPathSetPersistence({ checkpoints, key: sessionId, ownership });
+await persistence.restore(readPaths); // on session attach (returns restored count)
+await persistence.save(readPaths);    // after reads, before session close
+```
+
+Names only (paths are bounded at 1024 entries / 1024 chars each; larger sets fail closed with no partial write). Records live under the `prism.coding-agent.read-path-set` namespace keyed by session id, and `ownership` is part of the trust boundary: restoring under a different tenant/user throws instead of leaking paths. Default is **off** — the set stays in-memory unless the host wires the helper explicitly.
+
 ### `edit`
 
 Precise text replacement in an existing file via exact-then-fuzzy matching.

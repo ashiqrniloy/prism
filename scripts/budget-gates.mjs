@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Shared performance-budget helpers (plan 079, Task 8). Used by
-// scripts/budget-gate.test.mjs (fast gate) and scripts/benchmark-0.0.16.mjs
+// scripts/budget-gate.test.mjs (fast gate) and scripts/benchmark.mjs
 // (release evidence). Mirrors the scripts/release-gates.mjs pattern.
 
 export function loadBudgets(file = new URL("./budgets.json", import.meta.url)) {

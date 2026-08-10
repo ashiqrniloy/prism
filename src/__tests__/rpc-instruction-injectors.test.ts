@@ -46,12 +46,6 @@ function textOf(request: ProviderRequest): string {
     .join("\n");
 }
 
-async function _runRpc(input: string, factory: { createSession(id?: string): any }): Promise<unknown[]> {
-  const stdout = new MemoryWritable();
-  await runRpcServer({ stdin: Readable.from(input), stdout, createSession: factory.createSession });
-  return stdout.lines();
-}
-
 describe("rpc instructionInjectors (Phase 30 Task 8)", () => {
   it("prompt with instructionInjectors names resolves them against the registry", async () => {
     const captured: ProviderRequest[] = [];

@@ -4,7 +4,6 @@ import {
   type AgentEventEnvelope,
   type AgentEventRecord,
   type AgentEventSource,
-  type AgentEventSourceCleanup,
   type AgentEventSourceOptions,
   type AgentEventSourcePage,
   type AgentEventSourceRead,

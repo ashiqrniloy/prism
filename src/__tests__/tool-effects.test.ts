@@ -78,7 +78,7 @@ describe("ToolEffectStore", () => {
     let now = Date.parse("2026-08-04T00:00:00.000Z");
     const store = createMemoryToolEffectStore({ now: () => now });
     const pendingKey = effectKey("prism:tool-effect:v1:pending");
-    const pending = await store.begin({ ...pendingKey, claimTtlMs: 1 });
+    await store.begin({ ...pendingKey, claimTtlMs: 1 });
     now += 2;
     assert.equal((await store.get(pendingKey))?.status, "failed_retryable");
     assert.equal((await store.begin(pendingKey)).outcome, "acquired");

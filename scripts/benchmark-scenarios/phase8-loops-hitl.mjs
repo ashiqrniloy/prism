@@ -5,7 +5,7 @@
  * A2UI paint ≤ 10 ms / 64 ops. Fixture uses practical gate max (32 pending) — hard 128 is
  * a batch reject ceiling, not a collectable pending count under DEFAULT_MAX_PENDING_DECISIONS.
  *
- * Usage: node scripts/benchmark-0.0.25.mjs > scripts/benchmark-0.0.25.json
+ * Usage: node scripts/benchmark.mjs --scenario phase8-loops-hitl
  */
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
@@ -18,8 +18,8 @@ import {
   providerTextDelta,
   resumeAgentRun,
   toolCallContent,
-} from "../dist/index.js";
-import { createAgUiEventMapper } from "../packages/ag-ui/dist/index.js";
+} from "../../dist/index.js";
+import { createAgUiEventMapper } from "../../packages/ag-ui/dist/index.js";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);

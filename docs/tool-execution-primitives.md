@@ -4,7 +4,7 @@
 
 This page freezes the reusable tool validation, parallel dispatch, MCP bridge, and coding execution-policy designs for Plan 055. It inventories existing `@arnilo/prism` tool harness seams, `@arnilo/prism-coding-agent` behavior, extension/contribution boundaries, and the MCP mapping surface Tasks 1–6 will implement against.
 
-Implementation is **shipped** for JSON Schema tool argument validation (Plan 055 Task 1), parallel single-shot tool dispatch (Task 2), the MCP client bridge (Task 3), coding execution policy (Task 4), and bounded image reads (Task 5). Task 6 verification evidence is recorded in [review coverage](review-coverage-2026-07-14.md).
+Implementation is **shipped** for JSON Schema tool argument validation (Plan 055 Task 1), parallel single-shot tool dispatch (Task 2), the MCP client bridge (Task 3), coding execution policy (Task 4), and bounded image reads (Task 5). Task 6 verification evidence is recorded in [review coverage](_evidence/review-coverage-2026-07-14.md).
 
 ## When to use it
 
@@ -360,7 +360,7 @@ Core remains dependency-free: validators, MCP bridges, coding policy, sandboxes,
 - [Host security guide](host-security.md): permission, trust, validation checklist
 - [Coding agent tools](coding-agent-tools.md): first-party tool package behavior and limits
 - [Extensions](extensions.md): inert tool contributions
-- [Review coverage (2026-07-14)](review-coverage-2026-07-14.md): finding → plan traceability
+- [Review coverage (2026-07-14)](_evidence/review-coverage-2026-07-14.md): finding → plan traceability
 
 ## Task ownership map
 

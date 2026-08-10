@@ -188,7 +188,7 @@ describe("createPrismAcpAgent coding seams", () => {
   });
 
   it("bounds fs and terminal payloads before and after client calls", async () => {
-    const { acpAgent, acpClient, captured } = wire({});
+    const { acpAgent, captured } = wire({});
     const acpClientWithLimits = client({ name: "test-client" })
       .onRequest(methods.client.fs.readTextFile, () => ({ content: "y".repeat(70_000) }))
       .onRequest(methods.client.fs.writeTextFile, ({ params }) => {

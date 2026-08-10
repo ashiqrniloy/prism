@@ -5,7 +5,7 @@ Working evidence page for Plan 067. Freezes the 2026-07-14 P0–P2 re-verificati
 **Evidence frozen:** 2026-07-17 (offline inventory; no live provider calls).
 **Priority rule:** official provider documentation wins; Pi (`badlogic/pi-mono`) is secondary when official docs are silent or ambiguous.
 
-Related: [2026-07-14 coverage](review-coverage-2026-07-14.md) (0.0.4), [2026-07-15 coverage](review-coverage-2026-07-15.md) (0.0.5), [provider caching](provider-caching.md), [provider packages](provider-packages.md).
+Related: [2026-07-14 coverage](review-coverage-2026-07-14.md) (0.0.4), [2026-07-15 coverage](review-coverage-2026-07-15.md) (0.0.5), [provider caching](../provider-caching.md), [provider packages](../provider-packages.md).
 
 ## Status legend
 
@@ -101,7 +101,7 @@ Use Pi only to fill gaps or cross-check wire shapes after official docs.
 - AI SDK: no discovery export.
 - Prefer **package-local** helpers. Do **not** add a core model-discovery registry or OpenAI-compatible mega-mapper in Task 3. Extract a shared HTTP/list helper later only if ≥2 packages share identical parsing (unlikely: OpenRouter/NeuralWatt/OpenAI response shapes and cache/cost mapping diverge).
 - Discovery may populate `ModelConfig.cache` / `ModelConfig.cost` from live metadata when officially documented; static catalogs must not invent those fields.
-- Docs: [Provider packages — Caller-gated model discovery](provider-packages.md#caller-gated-model-discovery), [Provider caching — Discovery and live cache/cost metadata](provider-caching.md#discovery-and-live-cache-cost-metadata), [Provider conformance — Model discovery checklist](provider-conformance.md#model-discovery-checklist).
+- Docs: [Provider packages — Caller-gated model discovery](../provider-packages.md#caller-gated-model-discovery), [Provider caching — Discovery and live cache/cost metadata](../provider-caching.md#discovery-and-live-cache-cost-metadata), [Provider conformance — Model discovery checklist](../provider-conformance.md#model-discovery-checklist).
 
 ## Shared thinking / per-turn override (Task 4 decision — frozen)
 
@@ -112,7 +112,7 @@ Use Pi only to fill gaps or cross-check wire shapes after official docs.
 | Shared helpers | Core `applyThinkingLevel` / `thinkingCompatFor` / `thinkingFamilyForModel` → official compat fields; **not** a second options tree |
 | Families | `openai_reasoning` (`reasoning.effort`), `reasoning_effort`, `thinking_type` (`thinking.type`), `noop` (host-owned) — only shapes shared by ≥2 packages (or explicit no-op) |
 | Use-case wiring | LLM compaction + OM workers map `thinkingLevel` into `compat` via helpers (no longer inert `extra.thinkingLevel`) |
-| Docs | [Thinking and reasoning](thinking-and-reasoning.md) |
+| Docs | [Thinking and reasoning](../thinking-and-reasoning.md) |
 
 **Decision (2026-07-17):** Implement thin core helpers; keep unique knobs (NeuralWatt budgets/kwargs, Kimi keep/all, Z.AI `tool_stream`) package-local. Core must not name forbidden provider literals (`openrouter`/`zai`/`kimi`/…). Hosts pick a family explicitly when inference is ambiguous. Per-provider first-class field hardening remains Tasks 6–12.
 
@@ -130,7 +130,7 @@ Use Pi only to fill gaps or cross-check wire shapes after official docs.
 | Structured output | Reuses session/run model | Yes | Same as run |
 | Memory / RAG embedders | Host `Embedder` — separate from chat LLM | N/A (not chat) | N/A |
 
-**Decision (2026-07-17):** Core exports `UseCaseModelBinding`, `resolveUseCaseModel`, `resolveUseCaseModelBinding`, `useCaseCredentialProviderId`. Docs: [use-case-model-selection.md](use-case-model-selection.md). OM behavior change: session fallback when `sessionModel` supplied and worker model omitted; `requireExplicitModel` preserves historical `missing_model` skip.
+**Decision (2026-07-17):** Core exports `UseCaseModelBinding`, `resolveUseCaseModel`, `resolveUseCaseModelBinding`, `useCaseCredentialProviderId`. Docs: [use-case-model-selection.md](../use-case-model-selection.md). OM behavior change: session fallback when `sessionModel` supplied and worker model omitted; `requireExplicitModel` preserves historical `missing_model` skip.
 
 Desired Plan 067 outcome: every use-case accepts `{ provider, model, thinking }` with **explicit session-model fallback** when no use-case default is set — **done** for OM + LLM compaction; other sites documented as already-separate.
 

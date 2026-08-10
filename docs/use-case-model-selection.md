@@ -106,4 +106,4 @@ createLlmCompactionStrategy({
 - [LLM compaction package](compaction-llm.md)
 - [Agent/session runtime](agent-session-runtime.md) — `RunOptions.model` / `model_change`
 - [Working and semantic memory](working-and-semantic-memory.md) — `Embedder` (non-chat)
-- Evidence matrix: [Review coverage (2026-07-17 provider validation)](review-coverage-2026-07-17-provider-validation.md)
+- Evidence matrix: [Review coverage (2026-07-17 provider validation)](_evidence/review-coverage-2026-07-17-provider-validation.md)

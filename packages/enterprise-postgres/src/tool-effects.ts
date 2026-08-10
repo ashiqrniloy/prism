@@ -23,7 +23,6 @@ const MAX_REFERENCE_BYTES = 1024;
 const MAX_RECORD_BYTES = 128 * 1024;
 
 const ACTIVE_STATUSES = new Set<ToolEffectStatus>(["pending", "dispatched"]);
-const TERMINAL_STATUSES = new Set<ToolEffectStatus>(["completed", "failed_terminal"]);
 const STATUSES = new Set<ToolEffectStatus>(["pending", "dispatched", "completed", "failed_retryable", "failed_terminal", "unknown"]);
 const RECORD_COLUMNS = `tenant_id, account_key, user_key, principal_id, effect_key, session_id, run_id, tool_call_id, tool_name, arguments_hash,
   status, attempt, version, claim_token, result::text AS result, result_ref, failure::text AS failure, created_at, updated_at, expires_at`;
@@ -94,7 +93,7 @@ export function createPostgresToolEffectStore(pool: Pool, schema: string): ToolE
         const updated = await pool.query(
           `UPDATE ${table}
            SET status = 'dispatched', version = version + 1, updated_at = clock_timestamp()
-           WHERE ${where(context, 1)} AND status = 'pending' AND claim_token = $11 AND version = $12 AND expires_at > clock_timestamp()
+           WHERE ${where(1)} AND status = 'pending' AND claim_token = $11 AND version = $12 AND expires_at > clock_timestamp()
            RETURNING ${RECORD_COLUMNS}`,
           [...contextParams(context), input.claimToken, input.expectedVersion],
         );
@@ -116,7 +115,7 @@ export function createPostgresToolEffectStore(pool: Pool, schema: string): ToolE
           `UPDATE ${table}
            SET status = 'completed', version = version + 1, claim_token = NULL, result = $1::jsonb, result_ref = $2, failure = NULL,
                updated_at = clock_timestamp(), expires_at = clock_timestamp() + ${RETENTION_MS} * INTERVAL '1 millisecond'
-           WHERE ${where(context, 3)} AND status = 'dispatched' AND claim_token = $13 AND version = $14 AND expires_at > clock_timestamp()
+           WHERE ${where(3)} AND status = 'dispatched' AND claim_token = $13 AND version = $14 AND expires_at > clock_timestamp()
            RETURNING ${RECORD_COLUMNS}`,
           [result, resultRef, ...contextParams(context), input.claimToken, input.expectedVersion],
         );
@@ -136,7 +135,7 @@ export function createPostgresToolEffectStore(pool: Pool, schema: string): ToolE
            SET status = $1, version = version + 1, claim_token = NULL, result = NULL, result_ref = NULL, failure = $2::jsonb,
                updated_at = clock_timestamp(),
                expires_at = CASE WHEN $1 = 'failed_terminal' THEN clock_timestamp() + ${RETENTION_MS} * INTERVAL '1 millisecond' ELSE NULL END
-           WHERE ${where(context, 3)} AND status IN ('pending', 'dispatched') AND claim_token = $13 AND version = $14 AND expires_at > clock_timestamp()
+           WHERE ${where(3)} AND status IN ('pending', 'dispatched') AND claim_token = $13 AND version = $14 AND expires_at > clock_timestamp()
            RETURNING ${RECORD_COLUMNS}`,
           [status, failure, ...contextParams(context), input.claimToken, input.expectedVersion],
         );
@@ -157,7 +156,7 @@ export function createPostgresToolEffectStore(pool: Pool, schema: string): ToolE
           `UPDATE ${table}
            SET status = 'unknown', version = version + 1, claim_token = NULL, result = NULL, result_ref = NULL,
                failure = COALESCE($1::jsonb, failure), updated_at = clock_timestamp(), expires_at = NULL
-           WHERE ${where(context, 2)} AND status = 'dispatched' AND claim_token = $12 AND version = $13 AND expires_at > clock_timestamp()
+           WHERE ${where(2)} AND status = 'dispatched' AND claim_token = $12 AND version = $13 AND expires_at > clock_timestamp()
            RETURNING ${RECORD_COLUMNS}`,
           [failure, ...contextParams(context), input.claimToken, input.expectedVersion],
         );
@@ -186,7 +185,7 @@ export function createPostgresToolEffectStore(pool: Pool, schema: string): ToolE
            SET status = $1, version = version + 1, result = $2::jsonb, result_ref = $3, failure = COALESCE($4::jsonb, failure),
                updated_at = clock_timestamp(),
                expires_at = CASE WHEN $1 IN ('completed', 'failed_terminal') THEN clock_timestamp() + ${RETENTION_MS} * INTERVAL '1 millisecond' ELSE NULL END
-           WHERE ${where(context, 5)} AND status = 'unknown' AND version = $15
+           WHERE ${where(5)} AND status = 'unknown' AND version = $15
            RETURNING ${RECORD_COLUMNS}`,
           [status, result, resultRef, failure, ...contextParams(context), expectedVersion],
         );
@@ -297,7 +296,7 @@ async function reclaimRetryable(
     `UPDATE ${table}
      SET status = 'pending', attempt = attempt + 1, version = version + 1, claim_token = $1, result = NULL, result_ref = NULL, failure = NULL,
          updated_at = clock_timestamp(), expires_at = clock_timestamp() + $2 * INTERVAL '1 millisecond'
-     WHERE ${where(context, 3)} AND status = 'failed_retryable' AND attempt < $13
+     WHERE ${where(3)} AND status = 'failed_retryable' AND attempt < $13
      RETURNING ${RECORD_COLUMNS}`,
     [randomUUID(), claimTtlMs, ...contextParams(context), maxAttempts],
   );
@@ -311,7 +310,7 @@ async function expireClaim(pool: Pool, table: string, context: EffectContext): P
          version = version + 1, claim_token = NULL, result = NULL, result_ref = NULL,
          failure = COALESCE(failure, jsonb_build_object('code', 'ERR_PRISM_TOOL_EFFECT_EXPIRED')),
          updated_at = clock_timestamp(), expires_at = NULL
-     WHERE ${where(context, 1)} AND status IN ('pending', 'dispatched') AND expires_at <= clock_timestamp()`,
+     WHERE ${where(1)} AND status IN ('pending', 'dispatched') AND expires_at <= clock_timestamp()`,
     contextParams(context),
   );
 }
@@ -369,7 +368,7 @@ function contextParams(context: EffectContext): [string, string, string, string,
   ];
 }
 
-function where(context: EffectContext, start: number): string {
+function where(start: number): string {
   return `tenant_id = $${start} AND account_key = $${start + 1} AND user_key = $${start + 2} AND principal_id = $${start + 3}
     AND effect_key = $${start + 4} AND session_id = $${start + 5} AND run_id = $${start + 6} AND tool_call_id = $${start + 7}
     AND tool_name = $${start + 8} AND arguments_hash = $${start + 9}`;

@@ -130,7 +130,7 @@ Identity is optional. Hosts that only set `ownership` keep prior behavior. When 
 - Delegation only narrows scopes; tenant/account/user cannot widen on propagation.
 - Credential refs never expand to secrets in events, ledgers, or telemetry attributes.
 - Checks are O(fields) and network-free in core; remote auth stays in the host verifier.
-- Raising hard caps requires updating `docs/review-coverage-2026-07-23-phase-8.md`, tests, and docs.
+- Raising hard caps requires updating `docs/_evidence/review-coverage-2026-07-23-phase-8.md`, tests, and docs.
 
 ## Related APIs
 

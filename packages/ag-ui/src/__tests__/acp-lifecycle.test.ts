@@ -214,7 +214,7 @@ describe("ACP elicitation (Task 7)", () => {
     version: 1,
   };
 
-  function agentWith(overrides: { onElicitation?: (params: unknown) => unknown; onRequestPermission?: () => unknown } = {}): {
+  function agentWith(): {
     app: ReturnType<typeof createPrismAcpAgent>;
     resumed: unknown[];
     elicitationRequests: unknown[];

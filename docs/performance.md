@@ -165,7 +165,7 @@ The same run accepted 1,000 rate claims, accumulated 16,000 budget tokens, grant
 Release 0.0.16 is a simplification/readiness release: it added no performance-affecting code, so the six network-free scenario medians are held at the 0.0.15 baseline and the win is a smaller published artifact. Budgets live in `scripts/budgets.json` (measured baselines + tolerance) and are enforced two ways:
 
 - **Fast gate (every `npm test`)** — `scripts/budget-gate.test.mjs` re-packs the root tarball (`npm pack --dry-run --json`) and fails if packed bytes, unpacked bytes, or file count exceed baseline + 5%, and fails if cold-process `import('./dist/index.js')` exceeds the 250 ms sanity ceiling. Negative fixtures prove an inflated/regressed value fails.
-- **Release evidence runner** — `node scripts/benchmark-0.0.16.mjs` re-measures root pack + startup, spawns `benchmark-0.0.15.mjs` for the six scenario medians (reused unchanged), compares every value to `budgets.json` (throughput floor / latency ceiling at ±25%), prints the evidence report below, and exits non-zero on any regression.
+- **Release evidence runner** — `node scripts/benchmark-0.0.16.mjs` re-measures root pack + startup, spawns `benchmark-0.0.15.mjs` for the six scenario medians (reused unchanged), compares every value to `budgets.json` (throughput floor / latency ceiling at ±25%), prints the evidence report below, and exits non-zero on any regression. *(0.1.3, plan 015 Task 1: the per-version runners were consolidated into the parameterized runner `scripts/benchmark.mjs --scenario <name>`; the 0.0.16 evidence below is the historical record, budgets.json medians unchanged.)*
 
 **Artifact diet (the 0.0.16 finding).** The Task 1 tarball deny list dropped the historical `docs/review-coverage-*.md` (11 files, 283,022 bytes) from the root package: the root tarball went from **659,478 packed / 2,310,686 unpacked / 281 files** (0.0.15) to a budgeted **≈575,680 packed / 2,043,402 unpacked / 270 files**. The per-release `scripts/benchmark-0.0.*.mjs` history never shipped in artifacts (root `files` is `dist`/`docs`/`templates`/`CHANGELOG.md` only — zero `scripts/` entries packed), so no archive move was needed; `benchmark-0.0.16.mjs` consolidates the current evidence behind one budget-gating runner.
 
@@ -248,7 +248,7 @@ No network, credentials, provider summary call, durable database, or live subscr
 
 ## Release 0.0.11 session search / context budget / steer caps
 
-Finite caps (defaults / hard) — full matrix in [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md):
+Finite caps (defaults / hard) — full matrix in [Phase 6 evidence](_evidence/review-coverage-2026-07-22-phase-6.md):
 
 | Resource | Default / hard |
 | --- | --- |
@@ -315,7 +315,7 @@ Durable coding plan/checkpoint defaults/hard caps: plan Markdown 256 KiB/1 MiB; 
 
 Browser automation defaults/hard caps from `@arnilo/prism-browser`: pages 4/16; actions 100/256; queued actions 16/64; snapshot refs 2,000/10,000; depth 30/100; snapshot bytes 256 KiB/2 MiB; navigation 30 s/120 s; action 10 s/60 s; wait 30 s/120 s; run wall 20 min/30 min; popups 4/16; dialogs 16/64; listeners 64/256; action input 64 KiB/256 KiB; close grace 5 s/30 s; network requests 1,000/10,000 with 10/32 redirects per request and 8/32 WebSockets; screenshots 16/64 with 16/64 megapixels and 10 MiB/32 MiB encoded; uploads 8/32 files, 16 MiB/64 MiB each, 64 MiB/256 MiB aggregate; downloads 8/32 files, 32 MiB/256 MiB each, 64 MiB/512 MiB aggregate. Caps charge before context/page/action/queue/snapshot/network/artifact retention. Host supplies Playwright and egress proxy attestation; package import launches nothing.
 
-0.0.14 co-work defaults/hard caps (frozen in [Phase 9 evidence](review-coverage-2026-07-25-phase-9.md)): conversation thread list pages 50/200, active branches per thread 16/64, replay/export page 100/500 events; artifact revisions per artifact 32/128, artifacts per thread 64/256, metadata record 8/64 KiB, preview 16/64 KiB, citations 32/128 (2/8 KiB each), delivery-link TTL 5 min/24 h, delivery token 4/16 KiB, compare exactly 2 revisions; memory retention batch 500/5000; proactive capability TTL 24 h/31 d, capability token record 16 KiB; browser checkpoint URL 8 KiB/16 KiB, domain-state hash 256 B/1 KiB, host-data ref 2 KiB/8 KiB, 16/64 checkpoints per run; device stream chunk 1 MiB/8 MiB, concurrent device sessions per identity 1/4 (device wall/turns/tool calls consume shared `RunLimits`). All caps charge before persist/emit and fail closed on overflow. Benchmark placeholder: `node scripts/benchmark-0.0.14.mjs` (release Task 12) reports conversation replay, memory injection/consent, artifact revision/delivery, AG-UI co-work mapping, and connector refresh overhead against these budgets.
+0.0.14 co-work defaults/hard caps (frozen in [Phase 9 evidence](_evidence/review-coverage-2026-07-25-phase-9.md)): conversation thread list pages 50/200, active branches per thread 16/64, replay/export page 100/500 events; artifact revisions per artifact 32/128, artifacts per thread 64/256, metadata record 8/64 KiB, preview 16/64 KiB, citations 32/128 (2/8 KiB each), delivery-link TTL 5 min/24 h, delivery token 4/16 KiB, compare exactly 2 revisions; memory retention batch 500/5000; proactive capability TTL 24 h/31 d, capability token record 16 KiB; browser checkpoint URL 8 KiB/16 KiB, domain-state hash 256 B/1 KiB, host-data ref 2 KiB/8 KiB, 16/64 checkpoints per run; device stream chunk 1 MiB/8 MiB, concurrent device sessions per identity 1/4 (device wall/turns/tool calls consume shared `RunLimits`). All caps charge before persist/emit and fail closed on overflow. Benchmark placeholder: `node scripts/benchmark-0.0.14.mjs` (release Task 12) reports conversation replay, memory injection/consent, artifact revision/delivery, AG-UI co-work mapping, and connector refresh overhead against these budgets.
 
 Current surfaces:
 
@@ -499,7 +499,7 @@ Repository size at the same commit, counted from `src/` and `packages/` while ex
 
 Prism has no project generator before Phase 5, so a generated-Prism-project install/build size is **not applicable** at this baseline. The closest current install figure is the 72 MiB development workspace; it is not a scaffold target. The comparison Mastra default scaffold measured during the review used 439 MB `node_modules`, 300 MB build output, and 427 installed packages. Phase 5 must establish a real generated Prism project baseline and keep unselected storage, telemetry, eval, memory, server, and workflow dependencies absent.
 
-See [Review coverage — 2026-07-15](review-coverage-2026-07-15.md) for scope, primitive, package, and threat-boundary ownership.
+See [Review coverage — 2026-07-15](_evidence/review-coverage-2026-07-15.md) for scope, primitive, package, and threat-boundary ownership.
 
 ### 0.0.5 Phase 2 verification (2026-07-15)
 

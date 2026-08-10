@@ -1,13 +1,13 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-08-08T22:20:08.139Z",
+  "generatedAt": "2026-08-10T16:32:41.893Z",
   "environment": {
     "node": "v24.18.0",
     "platform": "linux",
     "arch": "x64",
     "cpu": "local",
     "network": false,
-    "protected": true
+    "protected": false
   },
   "contract": {
     "ceilingsMs": {
@@ -48,8 +48,8 @@
     "medianTolerance": 0.25
   },
   "installSize": {
-    "startupImportMs": 41.714682,
-    "rootPackedBytes": 711755,
+    "startupImportMs": 39.793468,
+    "rootPackedBytes": 728746,
     "rootFileCount": 295
   },
   "legs": [
@@ -102,7 +102,8 @@
           "source": "benchmark-0.0.25.mjs",
           "protected": false
         }
-      ]
+      ],
+      "scenario": "phase8-loops-hitl"
     },
     {
       "source": "benchmark-0.0.26.mjs",
@@ -184,7 +185,8 @@
           "source": "benchmark-0.0.26.mjs",
           "protected": false
         }
-      ]
+      ],
+      "scenario": "phase9-coding"
     },
     {
       "source": "benchmark-0.0.27.mjs",
@@ -241,7 +243,8 @@
           "source": "benchmark-0.0.27.mjs",
           "protected": false
         }
-      ]
+      ],
+      "scenario": "phase10-acp"
     },
     {
       "source": "benchmark-0.0.28.mjs",
@@ -325,7 +328,8 @@
           "source": "benchmark-0.0.28.mjs",
           "protected": false
         }
-      ]
+      ],
+      "scenario": "phase11-auth"
     },
     {
       "source": "benchmark-0.0.23.mjs",
@@ -487,7 +491,8 @@
           "source": "benchmark-0.0.23.mjs",
           "protected": true
         }
-      ]
+      ],
+      "scenario": "phase6-postgres"
     },
     {
       "source": "benchmark-0.0.24.mjs",
@@ -589,224 +594,225 @@
           "source": "benchmark-0.0.24.mjs",
           "protected": true
         }
-      ]
+      ],
+      "scenario": "phase7-postgres"
     }
   ],
   "results": [
     {
       "name": "decisionApply",
-      "p50Ms": 3.337,
-      "p95Ms": 4.484,
-      "throughputPerSecond": 286.34,
+      "p50Ms": 3.048,
+      "p95Ms": 3.672,
+      "throughputPerSecond": 318.42,
       "operations": 100,
-      "source": "benchmark-0.0.25.mjs",
+      "scenario": "phase8-loops-hitl",
       "protected": false
     },
     {
       "name": "stickyMatch",
-      "p50Ms": 0.245,
-      "p95Ms": 0.343,
-      "throughputPerSecond": 3616.94,
+      "p50Ms": 0.208,
+      "p95Ms": 0.277,
+      "throughputPerSecond": 4532.52,
       "operations": 100,
-      "source": "benchmark-0.0.25.mjs",
+      "scenario": "phase8-loops-hitl",
       "protected": false
     },
     {
       "name": "snapshotCaptureRestore",
-      "p50Ms": 4.713,
-      "p95Ms": 7.814,
-      "throughputPerSecond": 187.1,
+      "p50Ms": 4.324,
+      "p95Ms": 7.264,
+      "throughputPerSecond": 207.63,
       "operations": 100,
-      "source": "benchmark-0.0.25.mjs",
+      "scenario": "phase8-loops-hitl",
       "protected": false
     },
     {
       "name": "a2uiPaint",
-      "p50Ms": 0.206,
-      "p95Ms": 0.33,
-      "throughputPerSecond": 4333.58,
+      "p50Ms": 0.188,
+      "p95Ms": 0.306,
+      "throughputPerSecond": 4837.71,
       "operations": 100,
-      "source": "benchmark-0.0.25.mjs",
+      "scenario": "phase8-loops-hitl",
       "protected": false
     },
     {
       "name": "enumerationList",
-      "p50Ms": 297.237,
-      "p95Ms": 363.61,
-      "throughputPerSecond": 3.24,
+      "p50Ms": 269.456,
+      "p95Ms": 278.124,
+      "throughputPerSecond": 3.69,
       "operations": 20,
-      "source": "benchmark-0.0.26.mjs",
+      "scenario": "phase9-coding",
       "protected": false
     },
     {
       "name": "processChunkPage",
-      "p50Ms": 0.019,
-      "p95Ms": 0.048,
-      "throughputPerSecond": 37008.24,
+      "p50Ms": 0.026,
+      "p95Ms": 0.05,
+      "throughputPerSecond": 31016.13,
       "operations": 1311,
-      "source": "benchmark-0.0.26.mjs",
+      "scenario": "phase9-coding",
       "protected": false
     },
     {
       "name": "lspDiagnosticNormalize",
-      "p50Ms": 0.112,
-      "p95Ms": 0.61,
-      "throughputPerSecond": 4516.39,
+      "p50Ms": 0.114,
+      "p95Ms": 0.181,
+      "throughputPerSecond": 8351.75,
       "operations": 20,
-      "source": "benchmark-0.0.26.mjs",
+      "scenario": "phase9-coding",
       "protected": false
     },
     {
       "name": "forgePagination",
-      "p50Ms": 139.975,
-      "p95Ms": 144.868,
-      "throughputPerSecond": 7.14,
+      "p50Ms": 137.485,
+      "p95Ms": 142.915,
+      "throughputPerSecond": 7.23,
       "operations": 20,
-      "source": "benchmark-0.0.26.mjs",
+      "scenario": "phase9-coding",
       "protected": false
     },
     {
       "name": "proxyDownload",
-      "p50Ms": 74.773,
-      "p95Ms": 86.879,
-      "throughputPerSecond": 13.23,
+      "p50Ms": 71.073,
+      "p95Ms": 88.113,
+      "throughputPerSecond": 13.63,
       "operations": 20,
-      "source": "benchmark-0.0.26.mjs",
+      "scenario": "phase9-coding",
       "protected": false
     },
     {
       "name": "rendererStreamOps",
-      "p50Ms": 1.56,
-      "p95Ms": 1.647,
-      "throughputPerSecond": 634.56,
+      "p50Ms": 1.495,
+      "p95Ms": 1.654,
+      "throughputPerSecond": 639.76,
       "operations": 20,
-      "source": "benchmark-0.0.26.mjs",
+      "scenario": "phase9-coding",
       "protected": false
     },
     {
       "name": "agUiMapperSync",
-      "p50Ms": 30.657,
-      "p95Ms": 33.059,
-      "throughputPerSecond": 32.26,
+      "p50Ms": 28.901,
+      "p95Ms": 30.021,
+      "throughputPerSecond": 34.3,
       "operations": 20,
-      "source": "benchmark-0.0.26.mjs",
+      "scenario": "phase9-coding",
       "protected": false
     },
     {
       "name": "fsReadWriteRoundTripMs",
-      "p50Ms": 0.06,
-      "p95Ms": 0.21,
-      "throughputPerSecond": 11489.8,
+      "p50Ms": 0.054,
+      "p95Ms": 0.107,
+      "throughputPerSecond": 15271.8,
       "operations": 100,
-      "source": "benchmark-0.0.27.mjs",
+      "scenario": "phase10-acp",
       "protected": false
     },
     {
       "name": "terminalChunkAckMs",
-      "p50Ms": 0.021,
-      "p95Ms": 0.049,
-      "throughputPerSecond": 36831.5,
+      "p50Ms": 0.022,
+      "p95Ms": 0.048,
+      "throughputPerSecond": 34565.8,
       "operations": 100,
-      "source": "benchmark-0.0.27.mjs",
+      "scenario": "phase10-acp",
       "protected": false
     },
     {
       "name": "modeSwitchMs",
-      "p50Ms": 0.09,
-      "p95Ms": 0.185,
-      "throughputPerSecond": 7085,
+      "p50Ms": 0.112,
+      "p95Ms": 0.203,
+      "throughputPerSecond": 6400.4,
       "operations": 100,
-      "source": "benchmark-0.0.27.mjs",
+      "scenario": "phase10-acp",
       "protected": false
     },
     {
       "name": "promptFirstUpdateMs",
-      "p50Ms": 0.057,
-      "p95Ms": 0.082,
-      "throughputPerSecond": 17564,
+      "p50Ms": 0.031,
+      "p95Ms": 0.076,
+      "throughputPerSecond": 24952.7,
       "operations": 100,
-      "source": "benchmark-0.0.27.mjs",
+      "scenario": "phase10-acp",
       "protected": false
     },
     {
       "name": "promptEndMs",
-      "p50Ms": 0.067,
-      "p95Ms": 0.094,
-      "throughputPerSecond": 15099.7,
+      "p50Ms": 0.037,
+      "p95Ms": 0.087,
+      "throughputPerSecond": 21331.8,
       "operations": 100,
-      "source": "benchmark-0.0.27.mjs",
+      "scenario": "phase10-acp",
       "protected": false
     },
     {
       "name": "oidcVerifyCacheHitMs",
-      "p50Ms": 0.096,
-      "p95Ms": 0.151,
-      "throughputPerSecond": 9464.2,
+      "p50Ms": 0.102,
+      "p95Ms": 0.165,
+      "throughputPerSecond": 9277.4,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
       "name": "oidcVerifyCacheMissMs",
-      "p50Ms": 0.174,
-      "p95Ms": 0.351,
-      "throughputPerSecond": 4987.9,
+      "p50Ms": 0.154,
+      "p95Ms": 0.24,
+      "throughputPerSecond": 6037.7,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
       "name": "policyDecisionMs",
-      "p50Ms": 0.034,
-      "p95Ms": 0.052,
-      "throughputPerSecond": 28145.9,
+      "p50Ms": 0.033,
+      "p95Ms": 0.049,
+      "throughputPerSecond": 28810.7,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
       "name": "mcpDiscoveryRoundTripMs",
-      "p50Ms": 1.048,
-      "p95Ms": 1.563,
-      "throughputPerSecond": 886.2,
+      "p50Ms": 1.03,
+      "p95Ms": 1.74,
+      "throughputPerSecond": 885.8,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
       "name": "mcpAuthHandshakeMs",
-      "p50Ms": 3.921,
-      "p95Ms": 6.909,
-      "throughputPerSecond": 238.5,
+      "p50Ms": 3.405,
+      "p95Ms": 5.122,
+      "throughputPerSecond": 280.8,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
       "name": "openapiToolCallMs",
       "p50Ms": 0.008,
-      "p95Ms": 0.011,
-      "throughputPerSecond": 114674,
+      "p95Ms": 0.01,
+      "throughputPerSecond": 114955.5,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
       "name": "artifactPut1MiBMs",
-      "p50Ms": 5.569,
-      "p95Ms": 9.337,
-      "throughputPerSecond": 164.2,
+      "p50Ms": 5.442,
+      "p95Ms": 7.797,
+      "throughputPerSecond": 173.9,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
       "name": "artifactPresignMs",
-      "p50Ms": 0.198,
-      "p95Ms": 0.381,
-      "throughputPerSecond": 4421.1,
+      "p50Ms": 0.192,
+      "p95Ms": 0.257,
+      "throughputPerSecond": 4903,
       "operations": 100,
-      "source": "benchmark-0.0.28.mjs",
+      "scenario": "phase11-auth",
       "protected": false
     },
     {
@@ -815,8 +821,8 @@
       "p95Ms": 0.684,
       "throughputPerSecond": 2021.13,
       "operations": 1000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "policyQuery",
@@ -824,8 +830,8 @@
       "p95Ms": 1.274,
       "throughputPerSecond": 1231.97,
       "operations": 1000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "evaluationAppend",
@@ -833,8 +839,8 @@
       "p95Ms": 0.721,
       "throughputPerSecond": 1905.96,
       "operations": 1000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "evaluationQuery",
@@ -842,8 +848,8 @@
       "p95Ms": 0.918,
       "throughputPerSecond": 1794.76,
       "operations": 1000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "workClaimComplete",
@@ -851,8 +857,8 @@
       "p95Ms": 1.938,
       "throughputPerSecond": 690.29,
       "operations": 1000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "workContention",
@@ -860,8 +866,8 @@
       "p95Ms": 5.002,
       "throughputPerSecond": 3222.11,
       "operations": 16000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "routerRateContention",
@@ -869,8 +875,8 @@
       "p95Ms": 17.582,
       "throughputPerSecond": 1318.46,
       "operations": 16000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "routerBudgetContention",
@@ -878,8 +884,8 @@
       "p95Ms": 6.018,
       "throughputPerSecond": 2333.97,
       "operations": 16000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "routerCircuitContention",
@@ -887,8 +893,8 @@
       "p95Ms": 27.098,
       "throughputPerSecond": 290.04,
       "operations": 16000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "cleanupBatch",
@@ -896,8 +902,8 @@
       "p95Ms": 3.509,
       "throughputPerSecond": 38675.87,
       "operations": 100000,
-      "source": "benchmark-0.0.23.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase6-postgres"
     },
     {
       "name": "eventAppend",
@@ -905,8 +911,8 @@
       "p95Ms": 1.553,
       "throughputPerSecond": 876.97,
       "operations": 1000,
-      "source": "benchmark-0.0.24.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase7-postgres"
     },
     {
       "name": "eventPage",
@@ -914,8 +920,8 @@
       "p95Ms": 3.187,
       "throughputPerSecond": 424.45,
       "operations": 1000,
-      "source": "benchmark-0.0.24.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase7-postgres"
     },
     {
       "name": "effectClaimTransition",
@@ -923,8 +929,8 @@
       "p95Ms": 2.642,
       "throughputPerSecond": 494.21,
       "operations": 1000,
-      "source": "benchmark-0.0.24.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase7-postgres"
     },
     {
       "name": "eventCleanup",
@@ -932,8 +938,8 @@
       "p95Ms": 1.255,
       "throughputPerSecond": 796.08,
       "operations": 1,
-      "source": "benchmark-0.0.24.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase7-postgres"
     },
     {
       "name": "effectCleanup",
@@ -941,8 +947,8 @@
       "p95Ms": 3.174,
       "throughputPerSecond": 314.98,
       "operations": 1,
-      "source": "benchmark-0.0.24.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase7-postgres"
     },
     {
       "name": "reconnectCatchup",
@@ -950,8 +956,8 @@
       "p95Ms": 8.374,
       "throughputPerSecond": 152.72,
       "operations": 20,
-      "source": "benchmark-0.0.24.mjs",
-      "protected": true
+      "protected": true,
+      "scenario": "phase7-postgres"
     }
   ]
 }

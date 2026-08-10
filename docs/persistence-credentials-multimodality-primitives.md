@@ -300,4 +300,4 @@ See **Threat model summary** and **Performance notes** above. Cross-cutting rule
 - [Resource loading](resource-loading.md): `ResourceLoader` decode helpers
 - [Model registry](model-registry.md): `ModelCapabilities` metadata
 - [Provider conformance](provider-conformance.md): content preservation and secret leak checks
-- [Review coverage (2026-07-14)](review-coverage-2026-07-14.md): traceability for C-005, C-010, C-011
+- [Review coverage (2026-07-14)](_evidence/review-coverage-2026-07-14.md): traceability for C-005, C-010, C-011

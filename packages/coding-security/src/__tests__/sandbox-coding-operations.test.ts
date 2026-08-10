@@ -41,25 +41,6 @@ function fakeSandbox(): SandboxAdapter {
   };
 }
 
-function _fakeDisposable(): DisposableSandbox {
-  return {
-    id: "sb-test",
-    exec: async () => ({ exitCode: 0 }),
-    execFile: async () => ({ exitCode: 0 }),
-    status: async () => ({
-      id: "sb-test",
-      state: "running",
-      image: "test@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      startedAt: 0,
-      lastActivityAt: 0,
-      commandCount: 0,
-    }),
-    stop: async () => undefined,
-    kill: async () => undefined,
-    close: async () => undefined,
-  };
-}
-
 /** Minimal stubs — composition only checks that operations objects are present. */
 function stubTreeOps(): {
   read: ReadOperations;

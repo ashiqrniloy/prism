@@ -30,6 +30,7 @@ jobs:
       - name: build coding/browser packages
         run: |
           npm run build:core
+          npm run build -w @arnilo/prism-ag-ui
           npm run build -w @arnilo/prism-evals
           npm run build -w @arnilo/prism-workflows
           npm run build -w @arnilo/prism-coding-agent
@@ -60,7 +61,17 @@ jobs:
       - name: benchmark schema (network-free)
         env:
           PRISM_BENCH_ITERATIONS: "10"
-        run: node --test scripts/benchmark-0.0.9.test.mjs
+        run: node --test scripts/benchmark.test.mjs
+      - name: unused-code sweep (non-blocking report, plan 015 Task 3)
+        continue-on-error: true
+        run: npm run sweep:unused
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: unused-sweep-report-${{ github.run_id }}
+          path: scripts/unused-sweep-report.txt
+          if-no-files-found: warn
+          retention-days: 7
       - name: write redacted aggregate evidence
         if: always()
         run: |

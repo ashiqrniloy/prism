@@ -4,7 +4,6 @@ import {
   type AgentEventEnvelope,
   type AgentEventRecord,
   type AgentEventSource,
-  type AgentEventSourceCleanup,
   type AgentEventSourceOptions,
   type AgentEventSourcePage,
   type AgentEventSourceRead,
@@ -26,9 +25,7 @@ const DEFAULT_MAX_SUBSCRIBERS = 256;
 const HARD_MAX_SUBSCRIBERS = 4096;
 const DEFAULT_POLL_INTERVAL_MS = 1000;
 const HARD_POLL_INTERVAL_MS = 30_000;
-const DEFAULT_RECONNECT_INITIAL_MS = 100;
 const HARD_RECONNECT_INITIAL_MS = 5000;
-const DEFAULT_RECONNECT_MAX_MS = 5000;
 const HARD_RECONNECT_MAX_MS = 30_000;
 const DEFAULT_MAX_RETAINED_EVENTS_PER_RUN = 100_000;
 const HARD_MAX_RETAINED_EVENTS_PER_RUN = 1_000_000;

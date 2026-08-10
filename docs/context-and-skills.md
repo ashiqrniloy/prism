@@ -170,7 +170,7 @@ Catalog caps: **64** entries default / **256** hard; descriptions **512 B** defa
 ```ts
 import { assembleProviderInput, createLoadedSkillSet } from "@arnilo/prism";
 
-const loaded = createLoadedSkillSet(); // session-owned; not checkpoint-persisted in 0.0.20
+const loaded = createLoadedSkillSet(); // session-owned; opt-in checkpoint-persisted via runState.persistSessionState (names only) since 0.1.3
 const request = await assembleProviderInput({
   model,
   input: "Hi",
@@ -256,7 +256,7 @@ Use `activateAllCapabilities: true` only as a temporary all-skills/all-tools com
 - Skill registry lookup is `Map`-backed, and selection is linear in requested skills plus active tools. Strict duplicate mode adds one O(1) `Map.has()` check during registration only.
 - Progressive catalog render is O(active skills) with byte/count caps; `load_skill` lookup is O(1). Budget eviction over context/skills is O(n log n) worst case.
 - `load_skill` cannot grant tools; loaded instructions are untrusted text bounded by hard caps. `toolResultFold` summarizer output is untrusted and capped; failures keep raw tool results.
-- Loaded-skill names are session-scoped in memory only in 0.0.20 — not checkpoint-persisted; new sessions start catalog-only until reload.
+- Loaded-skill names are session-scoped. Since 0.1.3 (plan 015 Task 4) a durable run may opt in to persistence with `runState.persistSessionState: true` (and the same flag on resume options): the name catalog rides the run-state checkpoint (≤64 names, ≤256 chars each, charged against `maxStateBytes`) and is restored into the session `LoadedSkillSet` on resume, so progressive disclosure survives restart. **Bodies are never persisted** — they re-resolve from the live skill registry the next time the model loads the skill. Default off: checkpoint shape is identical to 0.1.2.
 - These helpers perform no provider calls, tool execution, resource loading, package discovery, filesystem/network access, retries, timers, or watchers by themselves.
 - Context and skill output is host/extension data. Do not include secrets unless the host explicitly accepts that prompt exposure.
 - Active tools remain host-supplied; skills and middleware do not activate tools or grant permissions. Use `duplicate: "error"` when loading third-party skills to prevent silent name shadowing.

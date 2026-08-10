@@ -17,7 +17,6 @@ import {
   buildMigration004Ddl,
   buildMigration005Ddl,
   buildMigration006Ddl,
-  buildMigration007Ddl,
 } from "../ddl.js";
 import { qualifyTable, quoteIdentifier } from "../identifiers.js";
 import { createPostgresPersistence } from "../persistence.js";

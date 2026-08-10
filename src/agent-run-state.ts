@@ -52,7 +52,17 @@ export interface StoredAgentRunState extends AgentRunState {
   readonly deadlineAt: string;
   /** Loop-local durable state captured by the strategy's snapshot hook at suspension. */
   readonly loopState?: { readonly name: string; readonly revision: string; readonly snapshot: JsonValue };
+  /**
+   * Opt-in session-level state (plan 015 Task 4): loaded-skill names only; bodies are
+   * never persisted and reload on demand from the live registry via `load_skill`.
+   * Absent by default (0.1.x checkpoints parse unchanged).
+   */
+  readonly sessionState?: { readonly loadedSkillNames?: readonly string[] };
 }
+
+/** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
+export const MAX_PERSISTED_SKILL_NAMES = 64;
+export const MAX_PERSISTED_SKILL_NAME_CHARS = 256;
 
 /** Revision stamps of the built-in loops; custom strategies declare their own `revision`. */
 export const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>> = {
@@ -318,6 +328,7 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
 }
 
 function boundState(state: StoredAgentRunState, maxBytes: number): StoredAgentRunState {
+  validateSessionState(state.sessionState);
   checkShape(state, 0);
   let text: string;
   try {
@@ -336,4 +347,22 @@ function checkShape(value: unknown, depth: number): void {
   if (!Array.isArray(value) && entries.length > MAX_PROPERTIES)
     throw new AgentRunStateError(`Agent run state exceeds ${MAX_PROPERTIES} properties`);
   for (const item of entries) checkShape(item, depth + 1);
+}
+
+/** Fail-closed validation of the opt-in session-state block (load and save sides). */
+function validateSessionState(sessionState: StoredAgentRunState["sessionState"]): void {
+  if (sessionState === undefined) return;
+  if (!sessionState || typeof sessionState !== "object") {
+    throw new AgentRunStateError("Malformed agent run session state");
+  }
+  const names = sessionState.loadedSkillNames;
+  if (names === undefined) return;
+  if (!Array.isArray(names) || names.length > MAX_PERSISTED_SKILL_NAMES) {
+    throw new AgentRunStateError(`Loaded-skill names exceed ${MAX_PERSISTED_SKILL_NAMES} entries`);
+  }
+  for (const name of names) {
+    if (typeof name !== "string" || name.length > MAX_PERSISTED_SKILL_NAME_CHARS) {
+      throw new AgentRunStateError(`Loaded-skill name exceeds ${MAX_PERSISTED_SKILL_NAME_CHARS} chars`);
+    }
+  }
 }

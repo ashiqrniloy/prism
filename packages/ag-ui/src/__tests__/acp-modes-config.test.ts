@@ -80,7 +80,7 @@ function makeAgent(overrides: Partial<CreatePrismAcpAgentOptions> = {}): {
 }
 
 async function connect(app: ReturnType<typeof createPrismAcpAgent>, run: (connection: ClientContext) => Promise<void>): Promise<void> {
-  const acpClient = client().onNotification(methods.client.session.update, ({ params }) => void 0);
+  const acpClient = client().onNotification(methods.client.session.update, () => void 0);
   await acpClient.connectWith(app, async (connection) => {
     await connection.request(methods.agent.initialize, {
       protocolVersion: PROTOCOL_VERSION,

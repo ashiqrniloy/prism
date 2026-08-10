@@ -126,7 +126,7 @@ const page = await store.searchSessions!({
 // Opt out: createMemorySessionStore([], { sessionSearchMode: "unsupported" })
 ```
 
-Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md).
+Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](_evidence/review-coverage-2026-07-22-phase-6.md).
 
 ## Session search (0.0.11)
 
@@ -144,7 +144,7 @@ const page = await store.searchSessions!({
 // Opt out: createMemorySessionStore([], { sessionSearchMode: "unsupported" })
 ```
 
-Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](review-coverage-2026-07-22-phase-6.md).
+Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](_evidence/review-coverage-2026-07-22-phase-6.md).
 
 ## Security and performance notes
 

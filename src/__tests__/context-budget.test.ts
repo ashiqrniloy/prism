@@ -268,7 +268,6 @@ describe("context budget", () => {
     const body = "i".repeat(400);
     const description = "short desc";
     const catalogText = `Skill big: ${description}`;
-    const bodyText = `Skill big:\n${body}`;
     const request = await assembleProviderInput({
       model,
       input: "ask",

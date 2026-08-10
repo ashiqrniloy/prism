@@ -47,7 +47,7 @@ Working evidence for Plan 076 Task 0. Freezes Phase 8 / Release **0.0.13** scope
 | Amazon Bedrock IAM | [Identity and access management for Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/security-iam.html) | Host supplies AWS credential callback (IRSA / instance role / assumed role). Package never embeds long-lived keys. |
 | Amazon Bedrock PrivateLink | [Interface VPC endpoints for Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/vpc-interface-endpoints.html) | Preserve region + optional VPC endpoint override; fail closed if residency policy rejects region. |
 | Google Vertex / ADC | [Authenticate to Vertex AI (generative)](https://cloud.google.com/vertex-ai/generative-ai/docs/start/authenticate); [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) | Host supplies ADC/workload credential callback. Separate from `@arnilo/prism-provider-google` consumer API-key package. |
-| OpenRouter routing metadata | Existing `openRouterRouting` compat fields; [OpenRouter provider docs](providers/openrouter.md) | Router may honor metadata only when policy/allow-list/residency permit; never bypass governance. |
+| OpenRouter routing metadata | Existing `openRouterRouting` compat fields; [OpenRouter provider docs](../providers/openrouter.md) | Router may honor metadata only when policy/allow-list/residency permit; never bypass governance. |
 
 ## Frozen package and API contract
 

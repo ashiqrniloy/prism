@@ -95,4 +95,4 @@ LLM compaction and observational memory accept `thinkingLevel?: string`. They ca
 - [Provider request policies](provider-request-policies.md) — `mergeProviderRequestOptions`
 - [Agent/session runtime](agent-session-runtime.md) — prior-reasoning preservation across turns
 - Per-provider pages under [docs/providers](providers/)
-- Evidence matrix: [Review coverage (2026-07-17 provider validation)](review-coverage-2026-07-17-provider-validation.md)
+- Evidence matrix: [Review coverage (2026-07-17 provider validation)](_evidence/review-coverage-2026-07-17-provider-validation.md)

@@ -51,7 +51,6 @@ export function buildObservationalMemoryContextBlocks(
   entries: readonly SessionEntry[],
   options: ObservationalMemoryContextOptions = {},
 ): readonly ContextBlock[] {
-  const keepRecentEntries = Math.max(0, options.keepRecentEntries ?? DEFAULT_KEEP_RECENT_ENTRIES);
   const recentEntries = selectRecentMessageEntries(entries, options);
   const firstKeptEntryId = recentEntries[0]?.id;
   const projection = buildObservationalMemoryProjection(entries, firstKeptEntryId);

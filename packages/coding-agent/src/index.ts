@@ -181,7 +181,13 @@ export {
   detectSupportedImageMimeTypeFromFile,
 } from "./read.js";
 export type { ReadPathSet } from "./read-path-set.js";
-export { createReadPathSet } from "./read-path-set.js";
+export {
+  createReadPathSet,
+  createReadPathSetPersistence,
+  DEFAULT_MAX_PERSISTED_READ_PATHS,
+  DEFAULT_MAX_PERSISTED_READ_PATH_CHARS,
+  READ_PATH_SET_NAMESPACE,
+} from "./read-path-set.js";
 export type {
   RepoEntryKind,
   RepoListEntry,

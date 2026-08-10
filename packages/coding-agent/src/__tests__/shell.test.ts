@@ -277,7 +277,6 @@ test("cwd is honored for relative paths", async () => {
     const r = await tool.execute({ command: "pwd" }, ctx());
     assert.equal(r.metadata?.exitCode, 0);
     // resolve symlinks (/tmp may be a symlink on macOS)
-    const { realpath } = await import("node:fs/promises");
     assert.equal(realpathSync(textOf(r).trim()), realpathSync(cwd));
   } finally {
     await rm(cwd, { recursive: true, force: true });

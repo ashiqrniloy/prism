@@ -6,11 +6,11 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { ExecutionPolicy, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
 import {
   type CodingLifecycleEvent,
   CodingLifecycleError,

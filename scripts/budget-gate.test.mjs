@@ -15,7 +15,7 @@ import {
 // Fast performance-budget gate (plan 079, Task 8). Runs in `npm test`: gates the
 // deterministic root artifact size and a non-flaky startup ceiling against
 // scripts/budgets.json. The six benchmark medians are gated by the release
-// evidence runner scripts/benchmark-0.0.16.mjs (timing is machine-dependent).
+// evidence runner scripts/benchmark.mjs (timing is machine-dependent).
 
 const budgets = loadBudgets();
 

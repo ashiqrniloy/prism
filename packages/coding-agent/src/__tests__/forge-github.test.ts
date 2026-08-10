@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type Server } from "node:http";
 import { test } from "node:test";
 import type { ExecutionPolicy } from "@arnilo/prism";
 import { createMemoryToolEffectStore } from "@arnilo/prism";

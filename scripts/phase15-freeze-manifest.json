@@ -1,0 +1,57 @@
+{
+  "$comment": "Phase 15 (0.1.3) Task 0 dead-code/deprecation-hygiene scope gate. Machine-checkable source of truth consumed by Tasks 1-5 of plans/015-Release-0-1-3-Dead-Code-Deprecation-Hygiene.md: the allowed hygiene changes (benchmark-runner consolidation + orphan deletion, review-doc archive, non-blocking unused-code sweep, opt-in checkpoint persistence for loaded-skill names + read-path set), the forbidden items (public-export removals, 0.1.4/0.1.5/0.1.6/0.2.0 work, evidence-JSON deletion, ponytail-comment removal), the additive-only compat promise, the audit/signed-tag/provenance policy, per-task evidence tokens, and the hygiene-freeze deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json and 0.1.3 changes none of it. Amendment requires a recorded deviation entry below. Validated by scripts/phase15-freeze.test.mjs. Baseline evidence for regression comparison at the Task 5 exit gate lives in scripts/phase15-baseline.json.",
+  "release": "0.1.3",
+  "line": "0.1.x",
+  "type": "dead-code-deprecation-hygiene",
+  "baseline": "0.1.2 (plan 014 exit gate passed 2026-08-10; signed tag v0.1.2; 49 publishable manifests)",
+  "hygieneFreeze": {
+    "active": true,
+    "allowedChanges": [
+      "benchmark-runner consolidation: one parameterized scripts/benchmark.mjs --scenario <name> absorbing the six live benchmark-0.0.23..0.0.28 legs; deletion of orphaned benchmark-0.0.{8,9,10,11,12,13,14,15,16}.mjs runners and benchmark-0.0.{10,11,12,13,14,15,16}.test.mjs; rewiring of the sandbox-browser.yml benchmark-schema leg off benchmark-0.0.9.test.mjs; comment-reference updates in budget-gates.mjs/budgets.json; all benchmark-*.json evidence files kept byte-identical",
+      "review-doc archive: git mv of the 12 docs/review-coverage-2026-07-*.md files into docs/_evidence/; package.json files exclusion swap (!docs/review-coverage-* -> !docs/_evidence); relative-link updates in docs/index.md, docs/migration.md, docs/performance.md, docs/0.1.0-readiness.md",
+      "unused-code sweep tooling: npm run sweep:unused (tsc --noUnusedLocals/--noUnusedParameters over core + workspace tsconfigs, zero-dep dead-export scan scripts/dead-exports.mjs), non-blocking (exit 0 always), CI step continue-on-error, report artifact; removal of confirmed internal (unexported) dead code only",
+      "opt-in checkpoint persistence for loaded-skill names (optional sessionState field on StoredAgentRunState, absent-by-default, bounded) and host-owned ReadPathSet persistence helper in packages/coding-agent; additive exports only",
+      "package.json scripts/files edits and release tooling and evidence scripts (phase15 freeze/baseline, docs tripwires)",
+      "docs updates: CHANGELOG.md 0.1.3 entry with removed-files list, docs/index.md navigation reconciliation, context-and-skills.md + coding-agent-tools.md opt-in persistence sections"
+    ],
+    "forbiddenChanges": [
+      "removal of any public export or @deprecated symbol (0.1.5 items: ProviderRequestOptions.timeoutMs/maxRetries/maxRetryDelayMs, AgentConfig.maxToolRounds alias, compaction-observational-memory pre-0.0.19 flat keys, read.ts transformImage flag, cli-init listInitProviders — that is the 0.1.5 breaking cut)",
+      "0.1.4 items: god-module split (src/agents.ts, src/contracts.ts)",
+      "0.1.6 items: durable ACP session store, native sandbox backend, pdf/office reader, recursive delete, brace glob, loaded-skill body persistence",
+      "0.1.7 items: prompt-cache telemetry, model-router policy, async agui hooks, prism providers add scaffold",
+      "0.2.0 items: live-canary matrix, live-nats suite, new OpenAI-compatible model providers, prism-providers umbrella membership fix, delegated-agent adapters, enterprise adapter breadth",
+      "new packages",
+      "new runtime or dev dependencies (sweep must stay zero-dep; knip rejected)",
+      "deletion or modification of any checked-in benchmark-*.json evidence file, freeze manifest, or historical docs narrative (migration.md/performance.md historical runner references stay as historical record)",
+      "deletion or rewriting of ponytail: comments (intentional documented shortcuts, not dead code)",
+      "breaking changes to the frozen 0.1.x support matrix or public contract surface"
+    ],
+    "deviations": []
+  },
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.1.2",
+    "promise": "additive-only declaration deltas vs scripts/compat-baseline across 0.1.x patch releases; zero breaking deltas at the 0.1.3 bump"
+  },
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.1.3 changes none of it",
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.1.3",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "tasks": {
+    "$comment": "per-task evidence tokens; 'done' when the task passes its checks, 'pending' until then. Task 0 sets itself done at freeze; Tasks 1-5 move to done as they land.",
+    "task0": "done (freeze record + scope gate + baseline evidence at scripts/phase15-baseline.json; benchmark inventory audited: 6 live legs, 9 orphan runners, 6 orphan tests, 1 workflow-referenced test, 6 evidence JSON kept, 3 current-runner files)",
+    "task1": "done (benchmark consolidation: scripts/benchmark.mjs parameterized runner + scenario registry; six live legs git-mv'd to scripts/benchmark-scenarios/{phase6-postgres,phase7-postgres,phase8-loops-hitl,phase9-coding,phase10-acp,phase11-auth}.mjs with relative imports fixed; benchmark-0.1.0.mjs composes scenarios through the runner (source field renamed to scenario); 16 orphaned benchmark-0.0.{8..16} runners/tests deleted; sandbox-browser.yml schema leg rewired to scripts/benchmark.test.mjs + ag-ui build added; stale comments in budget-gates.mjs/budget-gate.test.mjs/budgets.json updated; evidence JSON kept byte-identical; CHANGELOG 0.1.3 removed-files entry; benchmark.test.mjs 5/5 green; orchestrator run: 4 network-free legs run + 2 protected skipped, 24 rows, exit 0; orphan-deletion gate added to phase15-freeze.test.mjs)",
+    "task2": "done (review-doc archive: 12 docs/review-coverage-2026-07-*.md git mv'd to docs/_evidence/; package.json files exclusion swapped to !docs/_evidence; npm pack --dry-run 295 files, zero _evidence entries; index.md 12 entries collapsed to one archive entry; links updated in migration.md/performance.md/0.1.0-readiness.md + 10 more pages found by link sweep; moved files' internal links re-prefixed; docs.test.ts updated; phase15-freeze.test.mjs archive gate 18/18; npm test exit 0 core 1420/1420 gates 128/128)",
+    "task3": "done (unused-code sweep: scripts/sweep-unused.mjs zero-dep tsc-flags driver over root + 42 workspace tsconfigs, always exit 0, report to scripts/unused-sweep-report.txt gitignored; scripts/dead-exports.mjs zero-dep word-boundary export scan, 63 candidates all report-only (0.1.5 cut); 43 internal unused-code diagnostics removed across 22 test + 13 source files, 4 intentional compile-time assertions kept; package.json sweep:unused + sweep-unused.test.mjs 3/3 in npm test; sandbox-browser.yml continue-on-error step + artifact; release.yml untouched; freeze gate-isolation test 19/19; npm test exit 0 core 1420/1420 gates 132/132)",
+    "task4": "done (opt-in checkpoint persistence: core StoredAgentRunState optional sessionState {loadedSkillNames} (schema v1, absent-by-default, caps 64 names x 256 chars, validated fail-closed on save+load in boundState), persistSessionState?: boolean on AgentRunStateOptions/AgentRunResumeOptions/AgentRunLifecycleRequest, resume re-adds names via session.restoreLoadedSkills (bodies re-resolve from the live registry), persistDurable injects names only when the flag is on (off = 0.1.2 byte-identical shape); coding-agent createReadPathSetPersistence({checkpoints,key,ownership}) exported from index (caps 1024 paths x 1024 chars, CAS read-modify-write, cross-tenant restore fails closed, malformed payload refused); tests: agent-run-state 2 new (parse round-trip/malformed, save overflow no partial write), agent-run-lifecycle 2 new (resume restores catalog + renders body, flag-off keeps 0.1.2 shape), coding-agent read-path-set-persistence 3 new; freeze gate test 20/20; docs updated (context-and-skills x2, coding-agent-tools read-before-write section, agent-session-runtime checkpoint section)",
+    "task5": "done (docs finalization + changelog + bump + exit gate: root CHANGELOG 0.1.3 entry covers Tasks 1-4 (runner consolidation + removed files, docs/_evidence archive, non-blocking sweep, opt-in persistence); docs/index.md current line 0.1.3 + plan 015 description; docs/release-and-install.md 0.1.3 publish handoff (plan 015 Task 5) with operator prerequisites and rollback notes; docs/migration.md 0.1.2->0.1.3 section (additive, no migration; schema v1 unchanged); scripted bump 0.1.2->0.1.3 across 49 manifests + lockfile (release.mjs bump); version-sensitive pins updated (src/index.ts const, index.test.ts, release.test.ts graph test, docs.test.ts root-manifest assert + new 0.1.3 tripwire + superseded 0.1.2 tripwire index assert dropped per plan 013/014 precedent, install-smoke.test.ts, packaging.test.ts, 12 workspace index.test.ts); compat baseline regenerated additive-only (0 breaking deltas; 6 Task 4 exports + version literal; stale-dist rerun captured the version const); benchmark evidence regenerated via the parameterized runner (40 rows: 24 fresh network-free + 16 previously measured protected rows from the byte-identical postgres legs, all legs status run, evidence gate green); exit gate: npm test exit 0 (core 1425/1425, gates 133/133, workspaces green), sdk:ready rc=0 (biome format applied to 8 new/edited files first), npm audit 0 moderate, publish dry-run 49/49 byte-identical across two runs, release:check blocked on dirty tree (environmental, plan 013/014 precedent; green at clean tagged v0.1.3); baseline exitGate block recorded in scripts/phase15-baseline.json; freeze test exit-gate leg 21/21; publication remains the operator handoff (signed tag + npm OIDC), not executed)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip (inherited from scripts/phase12-freeze-manifest.json)",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.1.3",
+    "persistencePolicy": "Task 4 checkpoint persistence is opt-in (default off, no checkpoint size growth) and ownership-scoped (cross-branch/cross-tenant restore fails closed); skill bodies and file contents are never persisted, names/paths only"
+  }
+}

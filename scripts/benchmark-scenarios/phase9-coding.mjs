@@ -7,7 +7,7 @@
  * pagination bounded with no per-page duplication; proxy 64 MiB download
  * completes within byte/time caps with resident buffering ≤ 2× maxBytes.
  *
- * Usage: node scripts/benchmark-0.0.26.mjs > scripts/benchmark-0.0.26.json
+ * Usage: node scripts/benchmark.mjs --scenario phase9-coding
  */
 import { spawn } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
@@ -23,14 +23,14 @@ import {
   createGitHubForge,
   createLanguageIntelligence,
   createProcessSessions,
-} from "../packages/coding-agent/dist/index.js";
-import { createAllowListEgressProxy, createEgressPolicy } from "../packages/coding-security/dist/index.js";
-import { createMemoryToolEffectStore } from "../dist/index.js";
-import { resolveAgUiA2UiLimits } from "../packages/ag-ui/dist/a2ui.js";
-import { DEFAULT_AG_UI_LIMITS } from "../packages/ag-ui/dist/limits.js";
-import { createAgUiEventMapper } from "../packages/ag-ui/dist/ag-ui-mapper.js";
-import { A2UiSurfaceState, reduceA2UiOps } from "../packages/ag-ui/dist/renderer/core.js";
-import { renderA2UiSurface, DEFAULT_A2UI_CATALOG } from "../packages/ag-ui/dist/renderer/bind.js";
+} from "../../packages/coding-agent/dist/index.js";
+import { createAllowListEgressProxy, createEgressPolicy } from "../../packages/coding-security/dist/index.js";
+import { createMemoryToolEffectStore } from "../../dist/index.js";
+import { resolveAgUiA2UiLimits } from "../../packages/ag-ui/dist/a2ui.js";
+import { DEFAULT_AG_UI_LIMITS } from "../../packages/ag-ui/dist/limits.js";
+import { createAgUiEventMapper } from "../../packages/ag-ui/dist/ag-ui-mapper.js";
+import { A2UiSurfaceState, reduceA2UiOps } from "../../packages/ag-ui/dist/renderer/core.js";
+import { renderA2UiSurface, DEFAULT_A2UI_CATALOG } from "../../packages/ag-ui/dist/renderer/bind.js";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 5);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 20);
@@ -41,7 +41,7 @@ const FORGE_PAGES = 100;
 const PROXY_DOWNLOAD_BYTES = 64 * 1024 ** 2; // 64 MiB, exactly the default response cap
 const RENDERER_OPS = 1_000; // 1,000-op A2UI surface stream (Task 14 renderer)
 const MAPPER_EVENTS = 1_000; // 1,000-event sync-projection mapper stream (Task 15 sync path)
-const FAKE_LSP = fileURLToPath(new URL("../packages/coding-agent/src/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
+const FAKE_LSP = fileURLToPath(new URL("../../packages/coding-agent/src/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
 
 const ceilings = {
   enumerationList: 2_000,

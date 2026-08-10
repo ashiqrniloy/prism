@@ -468,4 +468,86 @@ describe("durable agent runs", () => {
       "system prompt change must change the fingerprint",
     );
   });
+
+  it("sessionState (plan 015 Task 4): absent parses, round-trips, malformed fails closed", () => {
+    const base = (): StoredAgentRunState => ({
+      schemaVersion: AGENT_RUN_STATE_SCHEMA_VERSION,
+      agentId: "session-state-demo",
+      definitionRevision: "1",
+      fingerprint: "fp",
+      runId: "run-1",
+      sessionId: "session-1",
+      model: { provider: "mock", model: "demo" },
+      status: "suspended",
+      counters: {
+        turns: 1,
+        providerAttempts: 1,
+        toolRounds: 1,
+        toolCalls: 1,
+        wallTimeMs: 1,
+        requestBytes: 1,
+        responseBytes: 1,
+        inputTokens: 1,
+        outputTokens: 1,
+        totalTokens: 1,
+        cost: 0,
+      },
+      deadlineAt: new Date().toISOString(),
+    });
+    // 0.1.2-shaped checkpoints have no sessionState key and must keep parsing.
+    const legacy = parseAgentRunState(base());
+    assert.equal(legacy.sessionState, undefined);
+    // Round-trip with names.
+    const withNames = parseAgentRunState({ ...base(), sessionState: { loadedSkillNames: ["brief", "review"] } });
+    assert.deepEqual(withNames.sessionState?.loadedSkillNames, ["brief", "review"]);
+    assert.deepEqual(parseAgentRunState({ ...base(), sessionState: {} }).sessionState, {});
+    // Malformed blocks fail closed with AgentRunStateError.
+    for (const bad of [
+      { loadedSkillNames: "brief" },
+      { loadedSkillNames: ["brief", 7] },
+      { loadedSkillNames: new Array(65).fill("x") },
+      { loadedSkillNames: ["a".repeat(257)] },
+      { loadedSkillNames: ["ok", undefined] },
+      "brief",
+    ]) {
+      assert.throws(() => parseAgentRunState({ ...base(), sessionState: bad as never }), AgentRunStateError);
+    }
+  });
+
+  it("saveAgentRunState fails closed on an oversized sessionState (plan 015 Task 4)", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const state: StoredAgentRunState = {
+      schemaVersion: AGENT_RUN_STATE_SCHEMA_VERSION,
+      agentId: "session-state-save",
+      definitionRevision: "1",
+      fingerprint: "fp",
+      runId: "run-save",
+      sessionId: "session-save",
+      model: { provider: "mock", model: "demo" },
+      status: "suspended",
+      counters: {
+        turns: 1,
+        providerAttempts: 1,
+        toolRounds: 1,
+        toolCalls: 1,
+        wallTimeMs: 1,
+        requestBytes: 1,
+        responseBytes: 1,
+        inputTokens: 1,
+        outputTokens: 1,
+        totalTokens: 1,
+        cost: 0,
+      },
+      deadlineAt: new Date().toISOString(),
+    };
+    await assert.rejects(
+      saveAgentRunState({
+        checkpoints,
+        state: { ...state, sessionState: { loadedSkillNames: new Array(65).fill("x") } },
+        expectedVersion: 0,
+      }),
+      AgentRunStateError,
+    );
+    assert.equal((await checkpoints.listCheckpoints()).items.length, 0, "no partial write on overflow");
+  });
 });

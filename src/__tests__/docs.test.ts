@@ -215,7 +215,9 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     for (const page of markdownFiles("docs")) {
       const relative = page.replace(/^docs\//, "");
-      if (["index.md", "api-page-template.md"].includes(relative)) continue;
+      // archived evidence (docs/_evidence/) is tarball-excluded and linked as one
+      // archive entry, not per-file navigation (plan 015 Task 2)
+      if (["index.md", "api-page-template.md"].includes(relative) || relative.startsWith("_evidence/")) continue;
       const escaped = relative.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const links = index.match(new RegExp(`\\(${escaped}(?:#[^)]+)?\\)`, "g")) ?? [];
       assert.equal(links.length, 1, `${page} must have exactly one docs/index.md navigation link`);
@@ -265,7 +267,6 @@ describe("docs", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
     const contracts = readFileSync("docs/public-contracts.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
     assert.ok(migration.includes("## 0.1.0 → 0.1.1 post-release hardening"), "migration.md missing 0.1.1 section");
     assert.ok(release.includes("### 0.1.1 publish handoff (plan 013 Task 6)"), "release page missing 0.1.1 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.1 handoff missing rollback notes");
@@ -280,13 +281,22 @@ describe("docs", () => {
     }
   });
 
-  it("plan 014 Task 6 freeze: 0.1.2 Alibaba enrichment and publish handoff are documented", () => {
+  it("plan 015 Task 5 freeze: 0.1.3 hygiene release and publish handoff are documented", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
+    const performance = readFileSync("docs/performance.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    assert.ok(release.includes("### 0.1.3 publish handoff (plan 015 Task 5)"), "release page missing 0.1.3 handoff");
+    assert.ok(release.includes("**Rollback notes.**"), "0.1.3 handoff missing rollback notes");
+    assert.ok(index.includes("current **0.1.3**"), "index.md current-line entry not at 0.1.3");
+    assert.ok(changelog.includes("## [0.1.3] - 2026-08-10"), "root changelog missing 0.1.3 entry");
+    assert.ok(performance.includes("scripts/benchmark.mjs"), "performance.md points at the parameterized runner");
+  });
+  it("plan 014 Task 6 freeze: 0.1.2 Alibaba enrichment and publish handoff are documented", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
     const alibaba = readFileSync("docs/providers/alibaba.md", "utf8");
     assert.ok(release.includes("### 0.1.2 publish handoff (plan 014 Task 6)"), "release page missing 0.1.2 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.2 handoff missing rollback notes");
-    assert.ok(index.includes("current **0.1.2**"), "index.md current-line entry not at 0.1.2");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.2] - 2026-08-10"), "root changelog missing 0.1.2 entry");
     assert.ok(
       readFileSync("packages/provider-alibaba/CHANGELOG.md", "utf8").includes("## [0.1.2] - 2026-08-10"),
@@ -361,7 +371,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.1.2", "root manifest must be at 0.1.2");
+    assert.equal(pkg.version, "0.1.3", "root manifest must be at 0.1.3");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -439,7 +449,7 @@ describe("docs", () => {
   });
 
   it("phase 4 evidence freezes coding/browser scope, owners, limits, and Office exclusion", () => {
-    const evidence = readFileSync("docs/review-coverage-2026-07-20-phase-4.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/review-coverage-2026-07-20-phase-4.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
 
     for (const heading of [
@@ -464,7 +474,7 @@ describe("docs", () => {
   });
 
   it("phase 5 evidence freezes workspace modes, owners, reused limits, and 0.0.11+ exclusions", () => {
-    const evidence = readFileSync("docs/review-coverage-2026-07-21-phase-5.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/review-coverage-2026-07-21-phase-5.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
 
     for (const heading of [
@@ -496,11 +506,11 @@ describe("docs", () => {
     }
     assert.ok(evidence.includes("Default / hard cap"), "Phase 5 limits missing default/hard-cap columns");
     assert.ok(evidence.includes("No new core primitive"), "Phase 5 evidence missing core-primitive ban");
-    assert.ok(index.includes("(review-coverage-2026-07-21-phase-5.md)"), "docs/index.md missing Phase 5 review coverage link");
+    assert.ok(index.includes("(_evidence/)"), "docs/index.md missing review coverage archive entry");
   });
 
   it("phase 6 evidence freezes SessionIndex, contextBudget, providers, owners, limits, and 0.0.12+ exclusions", () => {
-    const evidence = readFileSync("docs/review-coverage-2026-07-22-phase-6.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/review-coverage-2026-07-22-phase-6.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
 
     for (const heading of [
@@ -547,11 +557,11 @@ describe("docs", () => {
       evidence.includes("system/AGENTS") && evidence.includes("history/tool results"),
       "Phase 6 evidence missing eviction priority order",
     );
-    assert.ok(index.includes("(review-coverage-2026-07-22-phase-6.md)"), "docs/index.md missing Phase 6 review coverage link");
+    assert.ok(index.includes("(_evidence/)"), "docs/index.md missing review coverage archive entry");
   });
 
   it("phase 7 evidence freezes interoperability scope, protocol revisions, bounds, and OAuth policy", () => {
-    const evidence = readFileSync("docs/review-coverage-2026-07-22-phase-7.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/review-coverage-2026-07-22-phase-7.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
 
     for (const heading of [
@@ -598,11 +608,11 @@ describe("docs", () => {
     for (const forbidden of ["createAnthropicSubscriptionOAuthProvider", "createGeminiCliOAuthProvider", 'kind: "oauth"']) {
       assert.ok(!providerIndexes.includes(forbidden), `unsupported OAuth registration leaked: ${forbidden}`);
     }
-    assert.ok(index.includes("(review-coverage-2026-07-22-phase-7.md)"), "docs/index.md missing Phase 7 review coverage link");
+    assert.ok(index.includes("(_evidence/)"), "docs/index.md missing review coverage archive entry");
   });
 
   it("phase 8 evidence freezes enterprise identity, packages, limits, and 0.0.14+/0.1.x exclusions", () => {
-    const evidence = readFileSync("docs/review-coverage-2026-07-23-phase-8.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/review-coverage-2026-07-23-phase-8.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
 
     for (const heading of [
@@ -660,7 +670,7 @@ describe("docs", () => {
     assert.ok(existsSync("packages/provider-azure"), "provider-azure must exist after Task 4");
     assert.ok(existsSync("packages/provider-bedrock"), "provider-bedrock must exist after Task 4");
     assert.ok(existsSync("packages/provider-vertex"), "provider-vertex must exist after Task 4");
-    assert.ok(index.includes("(review-coverage-2026-07-23-phase-8.md)"), "docs/index.md missing Phase 8 review coverage link");
+    assert.ok(index.includes("(_evidence/)"), "docs/index.md missing review coverage archive entry");
     assert.ok(
       index.includes("providers/azure.md") && index.includes("providers/bedrock.md") && index.includes("providers/vertex.md"),
       "docs/index.md missing enterprise provider links",
@@ -672,7 +682,7 @@ describe("docs", () => {
   });
 
   it("phase 9 evidence freezes conversations, artifacts, consent, co-work, device gating, and 0.1.x exclusions", () => {
-    const evidence = readFileSync("docs/review-coverage-2026-07-25-phase-9.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/review-coverage-2026-07-25-phase-9.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
 
     for (const heading of [
@@ -741,11 +751,11 @@ describe("docs", () => {
     ]) {
       assert.ok(existsSync(seam), `Phase 9 must extend existing seam: ${seam}`);
     }
-    assert.ok(index.includes("(review-coverage-2026-07-25-phase-9.md)"), "docs/index.md missing Phase 9 review coverage link");
+    assert.ok(index.includes("(_evidence/)"), "docs/index.md missing review coverage archive entry");
   });
 
   it("phase 10 evidence freezes provider/memory/RAG parity, 43->43 manifests, neutral provider seams, and 0.1.x exclusions", () => {
-    const evidence = readFileSync("docs/review-coverage-2026-07-26-phase-10.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/review-coverage-2026-07-26-phase-10.md", "utf8");
 
     for (const heading of [
       "## 1. Capability traceability (every Phase 10 roadmap criterion → Task owner)",
@@ -927,17 +937,12 @@ describe("docs", () => {
       "Release 0.0.16 performance budgets and artifact diet",
       "scripts/budgets.json",
       "scripts/budget-gate.test.mjs",
-      "benchmark-0.0.16.mjs",
+      "scripts/benchmark.mjs",
       "575,680",
     ]) {
       assert.ok(performance.includes(token), `performance docs missing ${token}`);
     }
-    for (const file of [
-      "scripts/budgets.json",
-      "scripts/budget-gates.mjs",
-      "scripts/budget-gate.test.mjs",
-      "scripts/benchmark-0.0.16.mjs",
-    ]) {
+    for (const file of ["scripts/budgets.json", "scripts/budget-gates.mjs", "scripts/budget-gate.test.mjs", "scripts/benchmark.mjs"]) {
       assert.ok(existsSync(file), `missing ${file}`);
     }
     const testScript = JSON.parse(readFileSync("package.json", "utf8")).scripts.test as string;
@@ -3109,12 +3114,9 @@ describe("docs", () => {
 
   it("2026-07-17 provider validation matrix lists all packages and P0-P2 ids and is indexed", () => {
     const index = readFileSync("docs/index.md", "utf8");
-    assert.ok(
-      index.includes("(review-coverage-2026-07-17-provider-validation.md)"),
-      "docs/index.md does not link the 2026-07-17 provider validation matrix",
-    );
+    assert.ok(index.includes("(_evidence/)"), "docs/index.md does not link the review coverage archive");
 
-    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-17-provider-validation.md", "utf8");
     for (const pkg of [
       "provider-openai",
       "provider-kimi",
@@ -3169,7 +3171,7 @@ describe("docs", () => {
     const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
     const packages = readFileSync("docs/provider-packages.md", "utf8");
     const conformance = readFileSync("docs/provider-conformance.md", "utf8");
-    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-17-provider-validation.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
     const compaction = readFileSync("docs/compaction-llm.md", "utf8");
 
@@ -3196,7 +3198,7 @@ describe("docs", () => {
   it("use_case_model_selection_contract_is_documented", () => {
     const page = readFileSync("docs/use-case-model-selection.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-17-provider-validation.md", "utf8");
     const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
     const compaction = readFileSync("docs/compaction-llm.md", "utf8");
     const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
@@ -3224,7 +3226,7 @@ describe("docs", () => {
     const conformance = readFileSync("docs/provider-conformance.md", "utf8");
     const packages = readFileSync("docs/provider-packages.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-17-provider-validation.md", "utf8");
 
     for (const phrase of [
       "no Prism-side model catalog",
@@ -3254,7 +3256,7 @@ describe("docs", () => {
     const caching = readFileSync("docs/provider-caching.md", "utf8");
     const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
     const useCases = readFileSync("docs/use-case-model-selection.md", "utf8");
-    const coverage = readFileSync("docs/review-coverage-2026-07-17-provider-validation.md", "utf8");
+    const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-17-provider-validation.md", "utf8");
     const providerMatrix =
       coverage.split("## Provider package validation matrix\n")[1]?.split("\n## Frozen official evidence sources")[0] ?? "";
 
@@ -3278,18 +3280,13 @@ describe("docs", () => {
       "Memory / RAG",
     ])
       assert.ok(useCases.includes(site), `use-case-model-selection.md missing ${site}`);
-    for (const page of [
-      "provider-caching.md",
-      "thinking-and-reasoning.md",
-      "use-case-model-selection.md",
-      "review-coverage-2026-07-17-provider-validation.md",
-    ])
+    for (const page of ["provider-caching.md", "thinking-and-reasoning.md", "use-case-model-selection.md"])
       assert.ok(index.includes(`(${page})`), `docs/index.md missing ${page}`);
   });
 
   it("0.0.4 release scope matrix has owners/evidence and completed predecessors", () => {
     // Historical plans 053–057 deleted with the plan archive; evidence matrix + package count remain the live gates.
-    const coverage = readFileSync("docs/review-coverage-2026-07-14.md", "utf8");
+    const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-14.md", "utf8");
     const section = coverage.split("## Frozen 0.0.4 release scope\n")[1]?.split("\n### Performance")[0];
     assert.ok(section, "review coverage missing frozen release scope matrix");
     const rows = section.split("\n").filter((line) => line.startsWith("| ") && !line.startsWith("| ---"));

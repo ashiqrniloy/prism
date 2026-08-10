@@ -273,7 +273,7 @@ Every migrated provider must pass this shared matrix (implemented in Task 1 test
 - [OpenAI-compatible provider](providers/openai-compatible.md): reference adapter subpath
 - [Structured output](structured-output.md): artifact loop fallback
 - [Provider request policies](provider-request-policies.md): cache and request hooks
-- [Review coverage (2026-07-14)](review-coverage-2026-07-14.md): finding → plan traceability
+- [Review coverage (2026-07-14)](_evidence/review-coverage-2026-07-14.md): finding → plan traceability
 
 ## Task ownership map
 

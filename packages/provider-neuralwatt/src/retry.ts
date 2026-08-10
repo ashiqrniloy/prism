@@ -32,8 +32,6 @@ export interface NeuralWattRetryDecision {
   readonly strategy?: NeuralWattRetryStrategy;
 }
 
-/** Non-retryable NeuralWatt client status codes. */
-const _NON_RETRYABLE_STATUSES = new Set([400, 401, 402, 403, 404]);
 /** Retryable NeuralWatt server/rate-limit status codes. */
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503]);
 

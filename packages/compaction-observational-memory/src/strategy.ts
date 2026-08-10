@@ -1,11 +1,4 @@
-import {
-  type CompactionEntryData,
-  type CompactionResult,
-  type CompactionStrategy,
-  createSessionEntry,
-  redactSecrets,
-  type SessionEntry,
-} from "@arnilo/prism";
+import { type CompactionEntryData, type CompactionResult, type CompactionStrategy, createSessionEntry, redactSecrets } from "@arnilo/prism";
 import { activeObservations } from "./ledger.js";
 import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-bounds.js";
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails } from "./projection.js";

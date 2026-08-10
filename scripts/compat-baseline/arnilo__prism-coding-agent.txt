@@ -97,6 +97,8 @@ DEFAULT_MAX_LSP_RESULTS_PER_QUERY	export declare const DEFAULT_MAX_LSP_RESULTS_P
 DEFAULT_MAX_LSP_SERVERS	export declare const DEFAULT_MAX_LSP_SERVERS = 4
 DEFAULT_MAX_LSP_TIMEOUT_MS	export declare const DEFAULT_MAX_LSP_TIMEOUT_MS = 30000
 DEFAULT_MAX_LS_FILES_OUTPUT_BYTES	export declare const DEFAULT_MAX_LS_FILES_OUTPUT_BYTES: number
+DEFAULT_MAX_PERSISTED_READ_PATHS	export declare const DEFAULT_MAX_PERSISTED_READ_PATHS = 1024
+DEFAULT_MAX_PERSISTED_READ_PATH_CHARS	export declare const DEFAULT_MAX_PERSISTED_READ_PATH_CHARS = 1024
 DEFAULT_MAX_PLAN_BYTES	export declare const DEFAULT_MAX_PLAN_BYTES: number
 DEFAULT_MAX_PROCESS_INPUT_BYTES	export declare const DEFAULT_MAX_PROCESS_INPUT_BYTES: number
 DEFAULT_MAX_PROCESS_LIFETIME_MS	export declare const DEFAULT_MAX_PROCESS_LIFETIME_MS: number
@@ -261,6 +263,7 @@ ProcessSessionMetadata	export type { CodingProcessEvent, CreateProcessSessionsOp
 ProcessSessionState	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
 ProcessSessions	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
 ProcessStartRequest	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
+READ_PATH_SET_NAMESPACE	export declare const READ_PATH_SET_NAMESPACE: "prism.coding-agent.read-path-set"
 ReadOperations	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 ReadPathSet	export type { ReadPathSet } from "./read-path-set.js"
 ReadTextOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
@@ -349,6 +352,7 @@ createMoveTool	export declare function createMoveTool(cwd: string, options?: Mov
 createProcessSessions	export declare function createProcessSessions(options: CreateProcessSessionsOptions): ProcessSessions
 createReadOnlyTools	export declare function createReadOnlyTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
 createReadPathSet	export declare function createReadPathSet(): ReadPathSet
+createReadPathSetPersistence	export declare function createReadPathSetPersistence(options: CreateReadPathSetPersistenceOptions): ReadPathSetPersistence
 createReadTool	export declare function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition
 createRepoListTool	export declare function createRepoListTool(cwd: string, options?: ListToolOptions): ToolDefinition
 createRepoSearchTool	export declare function createRepoSearchTool(cwd: string, options?: SearchToolOptions): ToolDefinition

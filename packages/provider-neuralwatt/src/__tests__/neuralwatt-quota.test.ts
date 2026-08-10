@@ -7,10 +7,6 @@ function json(status: number, body: object): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
-function _mockJsonFetch(status: number, body: object): typeof fetch {
-  return (async () => json(status, body)) as typeof fetch;
-}
-
 function mockTextFetch(status: number, body: string): typeof fetch {
   return (async () => new Response(body, { status })) as typeof fetch;
 }

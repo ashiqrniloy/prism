@@ -83,8 +83,6 @@ import {
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
   DEFAULT_MAX_STICKY_DECISIONS,
-  MAX_ACTION_CONSTRAINT_BYTES,
-  MAX_ACTION_CONSTRAINTS,
   MAX_DECISION_REASON_BYTES,
   MAX_ELICITATION_BYTES,
 } from "./contracts.js";
@@ -219,6 +217,11 @@ async function prepareAgentRunResume(
     throw new AgentRunStateError("Stale or non-suspended agent run resume");
   }
   const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
+  // Opt-in session-state restore (plan 015 Task 4): names only; bodies re-resolve from
+  // the live registry the next time the model (re)loads them via load_skill.
+  if (options.persistSessionState && state.sessionState?.loadedSkillNames) {
+    session.restoreLoadedSkills(state.sessionState.loadedSkillNames);
+  }
   if (resume.decision !== undefined && resume.decisions !== undefined) {
     throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Resume accepts exactly one of decision or decisions");
   }
@@ -701,6 +704,11 @@ class RuntimeAgentSession implements AgentSession {
   private activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   private activeLoopTurn = 1;
   private readonly loadedSkills = createLoadedSkillSet();
+
+  /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
+  restoreLoadedSkills(names: readonly string[]): void {
+    for (const name of names) this.loadedSkills.add(name);
+  }
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
   private snapshotGeneration = 0;
@@ -1814,9 +1822,12 @@ class RuntimeAgentSession implements AgentSession {
   private async persistDurable(state: StoredAgentRunState): Promise<AgentRunState> {
     const durable = this.activeDurable;
     if (!durable) throw new AgentRunStateError("Durable run state is not configured");
+    const persisted = durable.options.persistSessionState
+      ? { ...state, sessionState: { loadedSkillNames: this.loadedSkills.list() } }
+      : state;
     const saved = await saveAgentRunState({
       checkpoints: durable.options.checkpoints,
-      state,
+      state: persisted,
       expectedVersion: durable.version,
       ownership: this.activeOwnership,
       fencingToken: durable.options.fencingToken,

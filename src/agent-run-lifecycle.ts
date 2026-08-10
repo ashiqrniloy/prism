@@ -34,6 +34,8 @@ export interface AgentRunLifecycleRequest {
   readonly signal?: AbortSignal;
   /** Adapter-selected capability; stored runs for another agent are non-enumerable. */
   readonly agentId?: string;
+  /** Opt-in (plan 015 Task 4): restore persisted loaded-skill names on resume. */
+  readonly persistSessionState?: boolean;
 }
 
 /** Bounded live-event options for a durable lifecycle resume. */
@@ -70,6 +72,7 @@ export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): Agen
         ownership: request.ownership,
         fencingToken: options.fencingToken,
         definitionRevision: resolved.definitionRevision,
+        persistSessionState: request.persistSessionState,
       });
     },
     async *resumeStream(ref, resume, request = {}) {
@@ -86,6 +89,7 @@ export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): Agen
         signal: request.signal,
         maxQueuedEvents: request.maxQueuedEvents,
         overflow: request.overflow,
+        persistSessionState: request.persistSessionState,
       });
     },
   };

@@ -9,7 +9,7 @@
  * idempotent; credentials only via the host resolver; bucket/path/key never appear in
  * errors, telemetry, or artifact records (the object key is derived from the ref).
  */
-import { type ArtifactBodyRef, type ArtifactBodyStore, ArtifactBodyStoreError, type ArtifactBodyTransferOptions } from "@arnilo/prism";
+import { type ArtifactBodyRef, type ArtifactBodyStore, ArtifactBodyStoreError } from "@arnilo/prism";
 import { presignV4, sha256Hex, signRequestV4 } from "./artifact-bodies-s3.js";
 
 /** Host-resolved S3 credentials; never inline, never logged. */

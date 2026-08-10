@@ -8,7 +8,7 @@
  * Everything runs against in-process fakes and loopback fixture servers;
  * nothing leaves the machine.
  *
- * Usage: node scripts/benchmark-0.0.28.mjs > scripts/benchmark-0.0.28.json
+ * Usage: node scripts/benchmark.mjs --scenario phase11-auth
  */
 import { createHash, subtle } from "node:crypto";
 import { createServer } from "node:http";

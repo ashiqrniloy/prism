@@ -187,7 +187,6 @@ class PrismOAuthClientProvider implements OAuthClientProvider {
   readonly #options: McpClientAuthOptions;
   readonly #limits: ResolvedMcpOAuthLimits;
   readonly #now: () => number;
-  readonly #serverUrl: string;
   #discoveryCache?: { readonly state: OAuthDiscoveryState; readonly savedAt: number };
   #discoveryLoaded = false;
 
@@ -198,7 +197,6 @@ class PrismOAuthClientProvider implements OAuthClientProvider {
     this.#options = options;
     this.#limits = context.limits;
     this.#now = options.now ?? Date.now;
-    this.#serverUrl = String(context.serverUrl);
   }
 
   get redirectUrl(): string | URL | undefined {

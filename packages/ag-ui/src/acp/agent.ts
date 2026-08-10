@@ -36,10 +36,8 @@ import { type AcpClientFilesystem } from "./fs-client.js";
 import { createAcpEventMapper, createAcpLifecycleMapper } from "./mapper.js";
 import { validateMcpServers } from "./mcp-config.js";
 import {
-  type AcpConfigOption,
   type AcpConfigOptionsSeam,
   type AcpModesSeam,
-  type AcpSessionMode,
   initialConfigValues,
   initialModeId,
   toSessionConfigOptions,
@@ -299,7 +297,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     app = app.onRequest(methods.agent.session.load, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
-      const inputs = await resolveSessionInputs(context.params, options, limits, context.signal);
+      await resolveSessionInputs(context.params, options, limits, context.signal);
       const binding = await options.sessions!.load!({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,
@@ -315,7 +313,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     app = app.onRequest(methods.agent.session.resume, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
-      const inputs = await resolveSessionInputs(context.params, options, limits, context.signal);
+      await resolveSessionInputs(context.params, options, limits, context.signal);
       const binding = await options.sessions!.resume!({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,

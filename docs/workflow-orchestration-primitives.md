@@ -579,4 +579,4 @@ await session.run("Hi", { signal: AbortSignal.timeout(60_000) });
 - [Tool execution primitives](tool-execution-primitives.md): `ExecutionPolicy` and approval pattern.
 - [Host security guide](host-security.md): fail-closed checklist for workflow hosts.
 - [Performance limits](performance.md): subscriber queue defaults workflow tightens.
-- [Review coverage (2026-07-14)](review-coverage-2026-07-14.md): C-009/C-012 traceability.
+- [Review coverage (2026-07-14)](_evidence/review-coverage-2026-07-14.md): C-009/C-012 traceability.

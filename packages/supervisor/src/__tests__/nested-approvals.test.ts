@@ -198,7 +198,7 @@ describe("nested-agent approval propagation", () => {
                 {
                   name: "write",
                   parameters: {},
-                  execute: (args: JsonObject, context: { toolCallId: string }) => {
+                  execute: (_args, context: { toolCallId: string }) => {
                     executed.push(context.toolCallId);
                     return { toolCallId: context.toolCallId, name: "write", value: "done" };
                   },

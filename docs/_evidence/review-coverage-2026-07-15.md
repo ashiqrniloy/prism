@@ -145,7 +145,7 @@ A cron-expression parser is also excluded: Phase 11 provides one-time timestamps
 
 ## Frozen baseline summary
 
-Detailed commands and measurements are in [Performance limits](performance.md#005-phase-0-baseline-2026-07-15).
+Detailed commands and measurements are in [Performance limits](../performance.md#005-phase-0-baseline-2026-07-15).
 
 | Area | Frozen value |
 | --- | --- |
@@ -186,8 +186,8 @@ Results:
 
 ## Related pages
 
-- [Roadmap](../roadmap.md): executable Phase 0-14 plan and release gate.
+- [Roadmap](../../roadmap.md): executable Phase 0-14 plan and release gate.
 - [Review coverage — 2026-07-14](review-coverage-2026-07-14.md): evidence for capabilities already shipped before this review.
-- [Performance limits](performance.md): dated baseline details and existing runtime limits.
-- [Host security](host-security.md): current host responsibilities pending the Phase 1-2 corrections.
-- [Release and install](release-and-install.md): current package graph and deterministic publication process.
+- [Performance limits](../performance.md): dated baseline details and existing runtime limits.
+- [Host security](../host-security.md): current host responsibilities pending the Phase 1-2 corrections.
+- [Release and install](../release-and-install.md): current package graph and deterministic publication process.
