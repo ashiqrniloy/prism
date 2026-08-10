@@ -1,0 +1,146 @@
+{
+  "$comment": "0.1.3 baseline evidence captured at plan 016 Task 0 freeze (2026-08-10) for regression comparison at the Task 4 exit gate. Tree state at capture: HEAD at v0.1.3 (91c55fc) + uncommitted plan 016 Task 0 files (plans/016-Release-0-1-4-God-Module-Split.md, plans/README.md index row, scripts/phase16-freeze-manifest.json, scripts/phase16-freeze.test.mjs, scripts/phase16-baseline.json, package.json test-script wiring). This is the PRE-SPLIT snapshot: src/agents.ts (2576 lines, 4 public exports) and src/contracts.ts (2549 lines, 295 exports) are still god-modules. dist/agents.js (111049 bytes) holds the runtime bulk; dist/contracts.js (9420 bytes) is small because contracts.ts is type-only (interfaces erased at runtime); dist/contracts.d.ts (98825 bytes) holds the declaration bulk. Tasks 1/2 split these two files behind barrel re-exports; Task 3 measures the after-split shrinkage against the splitBaseline block here. Coverage is not captured at Task 0 (the plan scopes Task 0 to split-relevant metrics: test pass count, dist sizes, module counts, reachability, compat status, audit); the Task 4 exit gate records coverage then. The npm test pass count (core 1425, script gates 134) is the post-plan-015, pre-plan-016-wiring 0.1.3 state.",
+  "captured": "2026-08-10",
+  "release": "0.1.3",
+  "node": "v24.18.0",
+  "platform": "linux-x64",
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<16 files> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1425,
+    "corePass": 1425,
+    "coreFail": 0,
+    "scriptGates": 134,
+    "scriptGatesPass": 134,
+    "scriptGatesFail": 0,
+    "scriptGateSuites": 16,
+    "workspaces": "all green (exit 0)"
+  },
+  "audit": {
+    "command": "npm audit --audit-level=moderate",
+    "level": "moderate",
+    "vulnerabilities": 0
+  },
+  "releaseGate": {
+    "command": "node scripts/release.mjs gate --version 0.1.3",
+    "version": "0.1.3",
+    "packages": 49,
+    "breakingDeltas": 0,
+    "updated": false,
+    "result": "green; compat baseline exists at 0.1.3, 0 breaking declaration deltas"
+  },
+  "releaseCheck": {
+    "command": "node scripts/release.mjs check --version 0.1.3",
+    "version": "0.1.3",
+    "status": "blocked: dirty git tree (uncommitted plan 016 Task 0 files); green at clean v0.1.3 per plan 015 Task 5 (release:check clean-checkout green, release:publish --dry-run 49/49 twice byte-identical)"
+  },
+  "manifestCount": {
+    "publishable": 49,
+    "workspacePackages": 48,
+    "rootPackage": "@arnilo/prism",
+    "categories": {
+      "provider": 14,
+      "prism": 9,
+      "capability": 25
+    },
+    "canonicalStatement": "49 publishable manifests = root @arnilo/prism + 48 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 25 capability packages)",
+    "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
+  },
+  "splitBaseline": {
+    "$comment": "Pre-split dist/source snapshot for the Task 3 tree-shaking comparison. Captured 2026-08-10 before any Task 1/2 edit. agents.ts/contracts.ts are still god-modules (unsplit). The reachability scan is a zero-dep static relative-import graph BFS (ponytail: a real bundler with actual consumer code is the true tree-shake measure; this is an upper-bound proxy reported, not gated). Task 3 re-measures after the split and compares against these numbers.",
+    "captured": "2026-08-10",
+    "distAgentsJsBytes": 111049,
+    "distContractsJsBytes": 9420,
+    "distAgentsDtsBytes": 908,
+    "distContractsDtsBytes": 98825,
+    "distJsCount": 64,
+    "distDtsCount": 64,
+    "reachableFromAgentsJs": 32,
+    "reachableFromContractsJs": 1,
+    "agentsTsLines": 2576,
+    "contractsTsLines": 2549,
+    "agentsTsExports": 4,
+    "contractsTsExports": 295,
+    "agentsTsPublicExports": [
+      "createAgent",
+      "createAgentSession",
+      "resumeAgentRun",
+      "resumeAgentRunStream"
+    ],
+    "agentsJsDirectImports": [
+      "agent-loops.js",
+      "agent-run-state.js",
+      "compaction.js",
+      "contracts.js",
+      "guardrails.js",
+      "identity.js",
+      "ids.js",
+      "input.js",
+      "observability.js",
+      "provider-events.js",
+      "provider-request-policy.js",
+      "redaction.js",
+      "retry.js",
+      "run-ledger.js",
+      "run-limits.js",
+      "session-stores.js",
+      "skill-disclosure.js",
+      "skills.js",
+      "structured-output.js",
+      "system-prompts.js",
+      "tool-effects.js",
+      "tool-result-fold.js",
+      "tools.js"
+    ],
+    "preSplitState": "src/agents.ts (2576 lines, 4 public exports) and src/contracts.ts (2549 lines, 295 exports) are god-modules (unsplit). dist/agents.js (111049 bytes) holds the runtime bulk (RuntimeAgentSession class + free functions); dist/contracts.js (9420 bytes) is small because contracts.ts is type-only; dist/contracts.d.ts (98825 bytes) holds the declaration bulk. dist/agents.d.ts is tiny (908 bytes) because agents.ts has only 4 public exports (internal class/helpers are not exported). Tasks 1/2 split these behind barrels; Task 3 measures after-split shrinkage of dist/agents.js and dist/contracts.d.ts and the rise in dist module count."
+  },
+  "treeShake": {
+    "measured": "2026-08-10",
+    "agentsJsBytes": 982,
+    "contractsJsBytes": 418,
+    "distJsCount": 70,
+    "distDtsCount": 70,
+    "reachableFromAgentsJs": 39,
+    "reachableFromContractsJs": 4,
+    "agentsJsShrunk": true,
+    "contractsJsShrunk": true,
+    "moduleCountRose": true,
+    "reachabilityNoWorse": false
+  },
+  "exitGate": {
+    "$comment": "0.1.4 exit gate evidence (plan 016 Task 6): recorded after Tasks 0-5 landed; green = full npm test + sdk:ready + audit + pack determinism + release:gate at 0.1.4.",
+    "recordedAt": "2026-08-10T20:22:06.353Z",
+    "green": true,
+    "npmTest": {
+      "exitCode": 0,
+      "coreTests": 1426,
+      "corePass": 1426,
+      "coreFail": 0,
+      "scriptGates": 153,
+      "scriptGatesPass": 153,
+      "scriptGatesFail": 0
+    },
+    "sdkReady": {
+      "exitCode": 0
+    },
+    "audit": {
+      "vulnerabilities": 0,
+      "level": "moderate"
+    },
+    "packDryRun": {
+      "packages": 49,
+      "deterministic": true,
+      "sha256": "d20ac85be2b1e38a40f3fce8fa56a18ab1fb602616523047ef0cd76f64103173"
+    },
+    "releaseGate": {
+      "version": "0.1.4",
+      "packages": 49,
+      "errors": 0
+    },
+    "lockfilePackageNamesHash": "ad109cdd826967d3777b655bbdfcbc131bca63f4fb8ddf33e9f029c7ada0f437",
+    "benchmarkEvidence": {
+      "sha256": "1a921c68c7d30c80ec41451c8515c88a70361395d2a384cc66b76338ebac4bac",
+      "note": "scripts/benchmark-0.1.0.json untouched by the split (no runtime path changed)"
+    }
+  }
+}

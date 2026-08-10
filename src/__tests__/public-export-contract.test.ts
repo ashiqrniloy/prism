@@ -753,18 +753,30 @@ describe("public-export contract (build-time, pre-pack)", () => {
 
   it("root SDK contract type surface keeps important implementer contracts", () => {
     const indexDts = readFileSync(join(repoRoot, "dist/index.d.ts"), "utf8");
-    const contractsDts = readFileSync(join(repoRoot, "dist/contracts.d.ts"), "utf8");
+    // 0.1.4 split: the declarations live in the split contract d.ts modules, resolved through
+    // the contracts.d.ts barrel; scan the union so the check is layout-agnostic.
+    const contractsDts = [
+      "dist/contracts.d.ts",
+      "dist/contracts-core.d.ts",
+      "dist/contracts-run-state.d.ts",
+      "dist/contracts-protocol.d.ts",
+    ]
+      .map((p) => readFileSync(join(repoRoot, p), "utf8"))
+      .join("\n");
     assert.ok(indexDts.includes('export type * from "./contracts.js"'), "root index.d.ts must re-export contract types");
     const missing = REQUIRED_SDK_CONTRACT_TYPES.filter(
       (name) => !new RegExp(`export\\s+(?:interface|type|class)\\s+${name}\\b`).test(contractsDts),
     );
-    assert.deepEqual(missing, [], `dist/contracts.d.ts is missing SDK contract types: ${missing.join(", ")}`);
+    assert.deepEqual(missing, [], `dist/contracts*.d.ts is missing SDK contract types: ${missing.join(", ")}`);
   });
 
   it("phase39_public_protocol_exports_and_types_do_not_drift", async () => {
     const prism = (await import("../index.js")) as Record<string, unknown>;
     assert.equal(typeof prism.providerToolCallDelta, "function");
-    assert.ok(readFileSync(join(repoRoot, "src/contracts.ts"), "utf8").includes("export interface ToolCallDeltaContent"));
+    const contractsSrc = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
+      .map((p) => readFileSync(join(repoRoot, p), "utf8"))
+      .join("\n");
+    assert.ok(contractsSrc.includes("export interface ToolCallDeltaContent"));
     assert.ok(readFileSync(join(repoRoot, "src/index.ts"), "utf8").includes('export type * from "./contracts.js"'));
     assert.deepEqual(readPkg(".").exports?.["./testing/provider-conformance"], {
       types: "./dist/testing/provider-conformance.d.ts",

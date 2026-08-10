@@ -133,6 +133,8 @@ const clone = await session.clone({ id: "s2" });
 
 ## Extension and configuration notes
 
+**Internal file structure (0.1.4).** Since 0.1.4 the runtime is spread across sibling modules behind the `src/agents.ts` barrel: `src/agent-session.ts` (the `RuntimeAgentSession` class, session factories, and shared session helpers), `src/agent-run-lifecycle.ts` (resume lifecycle: `resumeAgentRun`/`resumeAgentRunStream`), `src/agent-approval.ts` (pending-decision and approval helpers), `src/agent-tool-dispatch.ts` (elicitation and tool-policy helpers), `src/agent-run-state.ts` (run-state persistence + agent fingerprint), and `src/agent-loops.ts`/`src/compaction.ts`. The public import surface is unchanged — `createAgent`/`createAgentSession`/`resumeAgentRun`/`resumeAgentRunStream` still resolve from the package entry.
+
 The runtime calls `assembleProviderInput()` on every turn and uses only runtime-consumed values supplied on `AgentConfig`: `instructions`, `systemPrompt`, `inputBuilder`, `promptBuilder`, `inputLayout`, `context`, selected `skills`, active `tools`, `middleware`, `resourceLoader`, metadata, `compaction`, `retry`, and `RunOptions.model`/`systemPrompt`/`inputLayout`/`compaction`/`retry`. Contributions remain inert until a host passes selected values into the agent config.
 
 `AgentConfig` no longer accepts inert `extensions`, `settings`, or `credentials` fields. Load extensions with `createExtensionKernel()` before building config; read settings in the host before passing concrete runtime options; resolve credentials at the provider edge and pass exact secret values to redaction when needed.

@@ -554,5 +554,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.1.3";
+export const version = "0.1.4";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

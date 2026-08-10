@@ -18,7 +18,14 @@ import type { BrowserLimitOptions } from "./limits.js";
 import { type BrowserManager, type CreateBrowserManagerOptions, createBrowserManager } from "./manager.js";
 import type { BrowserNetworkPolicy } from "./network.js";
 import { buildBrowserExecutionAction, classifyBrowserOperation, classifyBrowserToolEffect } from "./policy.js";
-import type { BrowserActionName, BrowserActRequest, PlaywrightBrowser } from "./types.js";
+import type {
+  BrowserActionName,
+  BrowserActRequest,
+  BrowserCdpOptions,
+  BrowserEvaluateRequest,
+  BrowserObserveResult,
+  PlaywrightBrowser,
+} from "./types.js";
 import type { BrowserUploadOptions } from "./uploads.js";
 
 export interface BrowserToolsOptions {
@@ -29,6 +36,8 @@ export interface BrowserToolsOptions {
   readonly networkPolicy?: BrowserNetworkPolicy;
   readonly uploads?: BrowserUploadOptions;
   readonly downloads?: BrowserDownloadOptions;
+  /** CDP capability gating (default "auto": enabled on Chromium hosts). */
+  readonly cdp?: BrowserCdpOptions;
   readonly beforeSideEffect?: CreateBrowserManagerOptions["beforeSideEffect"];
 }
 
@@ -47,6 +56,10 @@ const ACTION_NAMES = new Set<BrowserActionName>([
   "upload",
   "screenshot",
   "download_release",
+  "block_urls",
+  "unblock_urls",
+  "throttle",
+  "emulate",
 ]);
 
 function errorResult(toolName: string, toolCallId: string, message: string): ToolResult {
@@ -76,6 +89,7 @@ function resolveManager(options: BrowserToolsOptions = {}): BrowserManager {
     networkPolicy: options.networkPolicy,
     uploads: options.uploads,
     downloads: options.downloads,
+    cdp: options.cdp,
     beforeSideEffect: options.beforeSideEffect,
   };
   return createBrowserManager(managerOptions);
@@ -143,6 +157,17 @@ function parseActRequest(args: JsonObject): BrowserActRequest {
     ...(typeof args.timeoutMs === "number" ? { timeoutMs: args.timeoutMs } : {}),
     ...(args.dialogResponse === "accept" || args.dialogResponse === "dismiss" ? { dialogResponse: args.dialogResponse } : {}),
     ...(typeof args.promptText === "string" ? { promptText: args.promptText } : {}),
+    ...(Array.isArray(args.patterns) ? { patterns: args.patterns.map(String) } : {}),
+    ...(args.offline === true ? { offline: true } : {}),
+    ...(typeof args.latencyMs === "number" ? { latencyMs: args.latencyMs } : {}),
+    ...(typeof args.downloadKbps === "number" ? { downloadKbps: args.downloadKbps } : {}),
+    ...(typeof args.uploadKbps === "number" ? { uploadKbps: args.uploadKbps } : {}),
+    ...(args.reset === true ? { reset: true } : {}),
+    ...(typeof args.width === "number" ? { width: args.width } : {}),
+    ...(typeof args.height === "number" ? { height: args.height } : {}),
+    ...(args.mobile === true ? { mobile: true } : {}),
+    ...(typeof args.deviceScaleFactor === "number" ? { deviceScaleFactor: args.deviceScaleFactor } : {}),
+    ...(typeof args.userAgent === "string" ? { userAgent: args.userAgent } : {}),
   };
   return request;
 }
@@ -253,7 +278,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
         dialogResponse: args.dialogResponse === "accept" || args.dialogResponse === "dismiss" ? args.dialogResponse : undefined,
       }),
     description:
-      "Perform one ordered browser action (navigate/click/type/fill/select/check/uncheck/scroll/wait/dialog/select_page/upload/screenshot/download_release). Prefer snapshot refs or role/label/testId targets; raw CSS/XPath/evaluate are unsupported. Mutations require ExecutionPolicy approval.",
+      "Perform one ordered browser action (navigate/click/type/fill/select/check/uncheck/scroll/wait/dialog/select_page/upload/screenshot/download_release, plus CDP block_urls/unblock_urls/throttle/emulate on Chromium hosts). Prefer snapshot refs or role/label/testId targets; raw CSS/XPath targets are supported as { css } / { xpath } and require ExecutionPolicy approval like other mutations. Mutations require ExecutionPolicy approval.",
     exclusive: true,
     parameters: {
       type: "object",
@@ -264,7 +289,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
         },
         target: {
           type: "object",
-          description: "ref | role(+name) | label | testId | text target",
+          description: "ref | role(+name) | label | testId | text | css | xpath target",
           additionalProperties: true,
         },
         snapshotId: { type: "string" },
@@ -290,6 +315,17 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
         timeoutMs: { type: "number" },
         dialogResponse: { type: "string", enum: ["accept", "dismiss"] },
         promptText: { type: "string" },
+        patterns: { type: "array", items: { type: "string" }, description: "URL patterns to block (block_urls)" },
+        offline: { type: "boolean", description: "throttle: go offline" },
+        latencyMs: { type: "number", description: "throttle: latency in ms (0..120000)" },
+        downloadKbps: { type: "number", description: "throttle: download throughput kbps (0..1000000)" },
+        uploadKbps: { type: "number", description: "throttle: upload throughput kbps (0..1000000)" },
+        reset: { type: "boolean", description: "throttle/emulate: reset to defaults" },
+        width: { type: "number", description: "emulate: viewport width px" },
+        height: { type: "number", description: "emulate: viewport height px" },
+        mobile: { type: "boolean", description: "emulate: mobile viewport" },
+        deviceScaleFactor: { type: "number", description: "emulate: device scale factor (0.01..10)" },
+        userAgent: { type: "string", description: "emulate: user-agent override (only when explicitly supplied)" },
       },
       required: ["action"],
       additionalProperties: false,
@@ -386,7 +422,130 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
     },
   };
 
-  return [browserOpen, browserSnapshot, browserAct, browserClose];
+  const browserEvaluate: ToolDefinition = {
+    name: "browser_evaluate",
+    effect: () => classifyBrowserToolEffect("evaluate"),
+    description:
+      "Evaluate a bounded JavaScript expression in the page context via Chrome DevTools Protocol (Chromium hosts; cdp mode auto/on). Arbitrary code execution: requires ExecutionPolicy approval and the side-effect hook. Result is JSON-serializable and capped at maxEvaluateResultBytes; expression capped at maxActionInputBytes.",
+    exclusive: true,
+    parameters: {
+      type: "object",
+      properties: {
+        pageId: { type: "string", description: "Optional page id; defaults to the active page" },
+        expression: { type: "string", description: "JavaScript expression to evaluate in the page context" },
+        awaitPromise: { type: "boolean", description: "Await promise resolution before returning" },
+        timeoutMs: { type: "number", description: "Per-action timeout, clamped to actionTimeoutMs" },
+      },
+      required: ["expression"],
+      additionalProperties: false,
+    } as JsonObject,
+    async execute(args, context: ToolExecutionContext): Promise<ToolResult> {
+      const toolCallId = context.toolCallId;
+      if (context.signal?.aborted) return errorResult("browser_evaluate", toolCallId, "Operation aborted");
+      const expression = typeof args.expression === "string" ? args.expression : undefined;
+      if (!expression) return errorResult("browser_evaluate", toolCallId, "expression is required");
+      const request: BrowserEvaluateRequest = {
+        expression,
+        ...(typeof args.pageId === "string" ? { pageId: args.pageId } : {}),
+        ...(args.awaitPromise === true ? { awaitPromise: true } : {}),
+        ...(typeof args.timeoutMs === "number" ? { timeoutMs: args.timeoutMs } : {}),
+      };
+      const gate = await enforceBrowserPolicy(policy, toolCallId, "browser_evaluate", {
+        operation: "evaluate",
+        pageKind: "main",
+        metadata: {
+          runId: context.runId,
+          sessionId: context.sessionId,
+          pageId: request.pageId,
+          expressionBytes: Buffer.byteLength(expression, "utf8"),
+        },
+      });
+      if (!gate.allowed) return gate.result;
+      try {
+        const result = await manager.evaluate(context.runId, request, { signal: context.signal });
+        const valueText =
+          result.value !== undefined
+            ? `value=${typeof result.value === "string" ? result.value : JSON.stringify(result.value)}`
+            : "value=undefined";
+        const lines = [
+          `evaluate page=${result.pageId} url=${result.url || "(blank)"}`,
+          result.truncated ? `${valueText} (truncated)` : valueText,
+        ];
+        if (result.exception) lines.push(`exception=${result.exception}`);
+        return {
+          toolCallId,
+          name: "browser_evaluate",
+          content: [{ type: "text", text: lines.join("\n") }],
+          value: result,
+          metadata: {
+            trust: "untrusted_external",
+            pageId: result.pageId,
+            ...(result.truncated ? { truncated: true } : {}),
+            ...(result.exception !== undefined ? { exception: true } : {}),
+          },
+        };
+      } catch (error) {
+        return errorResult("browser_evaluate", toolCallId, messageOf(error));
+      }
+    },
+  };
+
+  const browserObserve: ToolDefinition = {
+    name: "browser_observe",
+    effect: { kind: "none", idempotency: "none" },
+    description:
+      "Drain bounded console and network observations since the previous call (CDP Runtime/Network domains; Chromium hosts). Never captures request/response bodies, cookies, or auth headers. Entries are untrusted external content.",
+    exclusive: true,
+    parameters: {
+      type: "object",
+      properties: {
+        pageId: { type: "string", description: "Optional page id; defaults to the active page" },
+      },
+      additionalProperties: false,
+    } as JsonObject,
+    async execute(args, context: ToolExecutionContext): Promise<ToolResult> {
+      const toolCallId = context.toolCallId;
+      if (context.signal?.aborted) return errorResult("browser_observe", toolCallId, "Operation aborted");
+      const pageId = typeof args.pageId === "string" ? args.pageId : undefined;
+      const gate = await enforceBrowserPolicy(policy, toolCallId, "browser_observe", {
+        operation: "observe",
+        metadata: { runId: context.runId, sessionId: context.sessionId, pageId },
+      });
+      if (!gate.allowed) return gate.result;
+      try {
+        const result: BrowserObserveResult = await manager.observe(context.runId, { pageId, signal: context.signal });
+        const lines = [
+          `observe page=${result.pageId} url=${result.url || "(blank)"} console=${result.console.length} network=${result.network.length}`,
+        ];
+        for (const entry of result.console.slice(0, 50)) {
+          lines.push(`console [${entry.seq}] ${entry.type}: ${entry.args.join(" ").slice(0, 200)}`);
+        }
+        for (const entry of result.network.slice(0, 50)) {
+          const detail =
+            entry.phase === "response"
+              ? `status=${entry.status}`
+              : entry.phase === "failed"
+                ? `error=${entry.errorText ?? "unknown"}`
+                : `method=${entry.method ?? "?"}`;
+          lines.push(`network [${entry.seq}] ${entry.phase} ${detail} ${entry.url.slice(0, 200)}`);
+        }
+        const remaining = Math.max(0, result.console.length - 50) + Math.max(0, result.network.length - 50);
+        if (remaining > 0) lines.push(`(${remaining} more entries in value)`);
+        if (result.truncated) lines.push("(ring truncated: earliest entries evicted)");
+        return {
+          toolCallId,
+          name: "browser_observe",
+          content: [{ type: "text", text: lines.join("\n") }],
+          value: result,
+          metadata: { trust: "untrusted_external", pageId: result.pageId, truncated: result.truncated },
+        };
+      } catch (error) {
+        return errorResult("browser_observe", toolCallId, messageOf(error));
+      }
+    },
+  };
+
+  return [browserOpen, browserSnapshot, browserAct, browserClose, browserEvaluate, browserObserve];
 }
 
 export function getBrowserManagerFromTools(options: BrowserToolsOptions): BrowserManager {

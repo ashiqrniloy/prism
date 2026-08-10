@@ -53,8 +53,20 @@ export function normalizeTarget(raw: unknown): BrowserTarget {
   }
   const obj = raw as Record<string, unknown>;
   const keys = Object.keys(obj);
-  if ("css" in obj || "xpath" in obj || "selector" in obj || "evaluate" in obj) {
-    throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "CSS/XPath/selector/evaluate targets are not supported");
+  if ("selector" in obj || "evaluate" in obj) {
+    throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "selector/evaluate targets are not supported");
+  }
+  if (typeof obj.css === "string") {
+    if (keys.some((k) => k !== "css")) {
+      throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "css target must only include css");
+    }
+    return { css: obj.css };
+  }
+  if (typeof obj.xpath === "string") {
+    if (keys.some((k) => k !== "xpath")) {
+      throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "xpath target must only include xpath");
+    }
+    return { xpath: obj.xpath };
   }
   if (typeof obj.ref === "string") {
     if (keys.some((k) => k !== "ref")) {
@@ -110,6 +122,12 @@ export async function resolveTargetLocator(
   }
   if ("testId" in target) {
     return page.getByTestId(target.testId);
+  }
+  if ("css" in target) {
+    return page.locator(target.css);
+  }
+  if ("xpath" in target) {
+    return page.locator(`xpath=${target.xpath}`);
   }
   return page.getByText(target.text, { exact: target.exact === true });
 }

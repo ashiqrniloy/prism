@@ -5,6 +5,18 @@
  */
 import { setTimeout as sleep } from "node:timers/promises";
 import {
+  cdpEmulationClearDeviceMetrics,
+  cdpEmulationSetDeviceMetrics,
+  cdpEmulationSetUserAgent,
+  cdpNetworkEmulateConditions,
+  cdpNetworkEnable,
+  cdpNetworkSetBlockedUrls,
+  cdpRuntimeEnable,
+  createPageCdpSession,
+  resolveCdpMode,
+  type CdpMode,
+} from "./cdp.js";
+import {
   type BrowserDownloadOptions,
   cleanupDownloads,
   createDownloadBudget,
@@ -13,7 +25,17 @@ import {
   releaseDownload,
 } from "./downloads.js";
 import { BrowserError } from "./errors.js";
-import { type BrowserLimitOptions, type ResolvedBrowserLimits, resolveBrowserLimits } from "./limits.js";
+import { evaluateInPage } from "./evaluate.js";
+import {
+  type BrowserLimitOptions,
+  type ResolvedBrowserLimits,
+  resolveBrowserLimits,
+  HARD_MAX_DEVICE_SCALE_FACTOR,
+  HARD_MAX_EMULATE_DIMENSION,
+  HARD_MAX_EMULATE_UA_BYTES,
+  HARD_MAX_THROTTLE_KBPS,
+  HARD_MAX_THROTTLE_LATENCY_MS,
+} from "./limits.js";
 import {
   assertBrowserUrlAllowed,
   type BrowserNetworkPolicy,
@@ -21,6 +43,7 @@ import {
   installNetworkRouting,
   type NetworkBudget,
 } from "./network.js";
+import { createObservationRing, installCdpObservation, type ObservationRing } from "./observe.js";
 import { classifyBrowserOperation, isSideEffectAction } from "./policy.js";
 import { captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget } from "./screenshot.js";
 import { captureAriaSnapshot, type LiveSnapshot, toSnapshotResult } from "./snapshot.js";
@@ -29,13 +52,18 @@ import type {
   BrowserActionName,
   BrowserActRequest,
   BrowserActResult,
+  BrowserCdpOptions,
   BrowserDownloadInfo,
+  BrowserEvaluateRequest,
+  BrowserEvaluateResult,
+  BrowserObserveResult,
   BrowserOpenResult,
   BrowserPageInfo,
   BrowserSnapshotResult,
   BrowserTarget,
   PlaywrightBrowser,
   PlaywrightBrowserContext,
+  PlaywrightCdpSession,
   PlaywrightDialog,
   PlaywrightDownload,
   PlaywrightPage,
@@ -45,10 +73,12 @@ import { approveUploadPaths, type BrowserUploadOptions, createUploadBudget, type
 export interface CreateBrowserManagerOptions {
   readonly browser: PlaywrightBrowser;
   readonly limits?: BrowserLimitOptions;
+  /** CDP capability gating (Tasks 4-5, 0.1.4): default "auto" — enabled on Chromium hosts. */
+  readonly cdp?: BrowserCdpOptions;
   /** Optional host hook invoked just before a mutating/high-impact action. */
   readonly beforeSideEffect?: (info: {
     runId: string;
-    action: BrowserActionName;
+    action: BrowserActionName | "evaluate" | "observe";
     url?: string;
     pageId?: string;
     origin?: string;
@@ -73,6 +103,17 @@ interface ManagedPage {
   closed: boolean;
 }
 
+/** Per-page CDP state: session, observation ring, network/emulation controls. */
+interface PageCdpState {
+  readonly session: PlaywrightCdpSession;
+  readonly ring: ObservationRing;
+  readonly unsubscribe: () => void;
+  domainsEnabled: boolean;
+  blockedPatterns: readonly string[] | undefined;
+  throttled: boolean;
+  emulated: boolean;
+}
+
 interface RunSession {
   readonly runId: string;
   readonly context: PlaywrightBrowserContext;
@@ -95,6 +136,7 @@ interface RunSession {
   readonly downloadBudget: DownloadBudget;
   readonly screenshotBudget: ScreenshotBudget;
   lastDownloadId: string | undefined;
+  readonly cdpPages: Map<string, PageCdpState>;
 }
 
 export interface BrowserManager {
@@ -102,6 +144,8 @@ export interface BrowserManager {
   open(runId: string, options?: { url?: string; signal?: AbortSignal }): Promise<BrowserOpenResult>;
   snapshot(runId: string, options?: { pageId?: string; signal?: AbortSignal }): Promise<BrowserSnapshotResult>;
   act(runId: string, request: BrowserActRequest, options?: { signal?: AbortSignal }): Promise<BrowserActResult>;
+  evaluate(runId: string, request: BrowserEvaluateRequest, options?: { signal?: AbortSignal }): Promise<BrowserEvaluateResult>;
+  observe(runId: string, options?: { pageId?: string; signal?: AbortSignal }): Promise<BrowserObserveResult>;
   closeRun(runId: string): Promise<void>;
   close(): Promise<void>;
   hasRun(runId: string): boolean;
@@ -130,6 +174,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
   }
   const limits = resolveBrowserLimits(options.limits);
   const networkPolicy = defaultNetworkPolicy(options.networkPolicy);
+  const cdpMode: CdpMode = resolveCdpMode(options.cdp);
   const runs = new Map<string, RunSession>();
   const creating = new Map<string, Promise<RunSession>>();
   let closed = false;
@@ -179,6 +224,55 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
         assertSessionUsable(session);
         chargeWallTime(session);
         return performAction(session, request, actOptions?.signal);
+      });
+    },
+
+    async evaluate(runId, request, evalOptions) {
+      assertManagerOpen();
+      const id = assertRunId(runId);
+      const session = runs.get(id);
+      if (!session) throw new BrowserError("ERR_PRISM_BROWSER_STATE", `No browser context for run ${id}`);
+      return enqueue(session, evalOptions?.signal, async () => {
+        assertSessionUsable(session);
+        chargeWallTime(session);
+        const page = resolvePage(session, request.pageId);
+        chargeAction(session);
+        await maybeSideEffect(session, "evaluate", { pageId: page.pageId });
+        const state = await ensurePageCdp(session, page);
+        const outcome = await evaluateInPage(state.session, request, limits);
+        return {
+          pageId: page.pageId,
+          url: safeUrl(page.page),
+          ...(outcome.value !== undefined ? { value: outcome.value } : {}),
+          ...(outcome.exception !== undefined ? { exception: outcome.exception } : {}),
+          ...(outcome.truncated ? { truncated: true } : {}),
+        };
+      });
+    },
+
+    async observe(runId, observeOptions) {
+      assertManagerOpen();
+      const id = assertRunId(runId);
+      const session = runs.get(id);
+      if (!session) throw new BrowserError("ERR_PRISM_BROWSER_STATE", `No browser context for run ${id}`);
+      return enqueue(session, observeOptions?.signal, async () => {
+        assertSessionUsable(session);
+        chargeWallTime(session);
+        const page = resolvePage(session, observeOptions?.pageId);
+        const state = await ensurePageCdp(session, page);
+        if (!state.domainsEnabled) {
+          await cdpRuntimeEnable(state.session);
+          await cdpNetworkEnable(state.session);
+          state.domainsEnabled = true;
+        }
+        const { console: consoleEntries, network, truncated } = state.ring.drain();
+        return {
+          pageId: page.pageId,
+          url: safeUrl(page.page),
+          console: consoleEntries,
+          network,
+          truncated,
+        };
       });
     },
 
@@ -274,6 +368,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
       downloadBudget: createDownloadBudget(),
       screenshotBudget: createScreenshotBudget(),
       lastDownloadId: undefined,
+      cdpPages: new Map(),
     };
 
     // Always install routing for defense-in-depth scheme/private denial.
@@ -601,6 +696,92 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
       return resultFor(session, action, page);
     }
 
+    // CDP-backed network/emulation control actions (0.1.4, plan 016 Task 4).
+    if (action === "block_urls" || action === "unblock_urls" || action === "throttle" || action === "emulate") {
+      const page = resolvePage(session, request.pageId);
+      chargeAction(session);
+      await maybeSideEffect(session, action, { pageId: page.pageId });
+      const state = await ensurePageCdp(session, page);
+      switch (action) {
+        case "block_urls": {
+          const patterns = request.patterns;
+          if (!patterns || patterns.length === 0) {
+            throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "block_urls requires patterns");
+          }
+          if (patterns.length > limits.maxBlockedUrlPatterns) {
+            throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `block_urls exceeds maxBlockedUrlPatterns ${limits.maxBlockedUrlPatterns}`);
+          }
+          for (const pattern of patterns) {
+            if (typeof pattern !== "string" || !pattern) {
+              throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "block_urls patterns must be non-empty strings");
+            }
+            assertInputBytes(pattern);
+          }
+          await cdpNetworkSetBlockedUrls(state.session, patterns);
+          state.blockedPatterns = [...patterns];
+          break;
+        }
+        case "unblock_urls":
+          await cdpNetworkSetBlockedUrls(state.session, []);
+          state.blockedPatterns = undefined;
+          break;
+        case "throttle": {
+          if (request.reset === true) {
+            await cdpNetworkEmulateConditions(state.session, {
+              offline: false,
+              latencyMs: 0,
+              downloadThroughputBps: -1,
+              uploadThroughputBps: -1,
+            });
+            state.throttled = false;
+            break;
+          }
+          const offline = request.offline === true;
+          const latencyMs = clampCdpNumber(request.latencyMs, 0, HARD_MAX_THROTTLE_LATENCY_MS, "latencyMs", 0);
+          const downloadKbps = clampCdpNumber(request.downloadKbps, 0, HARD_MAX_THROTTLE_KBPS, "downloadKbps", undefined);
+          const uploadKbps = clampCdpNumber(request.uploadKbps, 0, HARD_MAX_THROTTLE_KBPS, "uploadKbps", undefined);
+          await cdpNetworkEmulateConditions(state.session, {
+            offline,
+            latencyMs,
+            downloadThroughputBps: downloadKbps === undefined ? -1 : kbpsToBps(downloadKbps),
+            uploadThroughputBps: uploadKbps === undefined ? -1 : kbpsToBps(uploadKbps),
+          });
+          state.throttled = true;
+          break;
+        }
+        case "emulate": {
+          if (request.reset === true) {
+            await cdpEmulationClearDeviceMetrics(state.session);
+            state.emulated = false;
+            break;
+          }
+          const width = clampCdpNumber(request.width, 1, HARD_MAX_EMULATE_DIMENSION, "width", undefined);
+          const height = clampCdpNumber(request.height, 1, HARD_MAX_EMULATE_DIMENSION, "height", undefined);
+          if (width === undefined || height === undefined) {
+            throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "emulate requires width and height");
+          }
+          const deviceScaleFactor = clampCdpNumber(request.deviceScaleFactor, 0.01, HARD_MAX_DEVICE_SCALE_FACTOR, "deviceScaleFactor", 1);
+          await cdpEmulationSetDeviceMetrics(state.session, {
+            width,
+            height,
+            mobile: request.mobile === true,
+            deviceScaleFactor,
+          });
+          if (typeof request.userAgent === "string" && request.userAgent.length > 0) {
+            if (Buffer.byteLength(request.userAgent, "utf8") > HARD_MAX_EMULATE_UA_BYTES) {
+              throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `userAgent exceeds ${HARD_MAX_EMULATE_UA_BYTES} bytes`);
+            }
+            await cdpEmulationSetUserAgent(state.session, request.userAgent);
+          }
+          state.emulated = true;
+          break;
+        }
+      }
+      // Blocking/throttling/emulation change what loads and how it renders: refs are stale.
+      invalidateSnapshot(session);
+      return resultFor(session, action, page);
+    }
+
     // Locator-backed actions.
     const page = resolvePage(session, request.pageId);
     if (!request.target) {
@@ -656,6 +837,39 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
     return resultFor(session, action, page);
   }
 
+  async function ensurePageCdp(session: RunSession, page: ManagedPage): Promise<PageCdpState> {
+    if (cdpMode === "off") {
+      throw new BrowserError("ERR_PRISM_BROWSER_CDP_UNAVAILABLE", "CDP tools are disabled (cdp mode 'off')");
+    }
+    const existing = session.cdpPages.get(page.pageId);
+    if (existing) return existing;
+    const cdpSession = await createPageCdpSession(options.browser, session.context, page.page);
+    const ring = createObservationRing({
+      maxConsoleEntries: limits.maxConsoleEntries,
+      maxNetworkRequests: limits.maxNetworkRequests,
+    });
+    const unsubscribe = installCdpObservation(cdpSession, ring);
+    const state: PageCdpState = {
+      session: cdpSession,
+      ring,
+      unsubscribe,
+      domainsEnabled: false,
+      blockedPatterns: undefined,
+      throttled: false,
+      emulated: false,
+    };
+    session.cdpPages.set(page.pageId, state);
+    session.cleanup.push(() => {
+      try {
+        state.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      void cdpSession.detach?.().catch(() => undefined);
+    });
+    return state;
+  }
+
   async function resolveTargetForAction(session: RunSession, page: PlaywrightPage, target: BrowserTarget, snapshotId: string | undefined) {
     if ("ref" in target) {
       const live = session.snapshot;
@@ -680,7 +894,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
 
   async function maybeSideEffect(
     session: RunSession,
-    action: BrowserActionName,
+    action: BrowserActionName | "evaluate" | "observe",
     meta: {
       url?: string;
       pageId?: string;
@@ -774,6 +988,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
         /* ignore */
       }
     }
+    session.cdpPages.clear();
     const closePromise = session.context.close();
     const grace = sleep(limits.closeGraceMs);
     await Promise.race([closePromise.catch(() => undefined), grace]);
@@ -871,6 +1086,26 @@ function clampTimeout(value: number | undefined, hard: number): number {
   return value;
 }
 
+function clampCdpNumber(value: number | undefined, min: number, max: number, name: string, fallback: number): number;
+function clampCdpNumber(value: number | undefined, min: number, max: number, name: string, fallback: undefined): number | undefined;
+function clampCdpNumber(
+  value: number | undefined,
+  min: number,
+  max: number,
+  name: string,
+  fallback: number | undefined,
+): number | undefined {
+  if (value === undefined) return fallback;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
+    throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `${name} must be ${min}..${max}`);
+  }
+  return value;
+}
+
+function kbpsToBps(kbps: number): number {
+  return Math.round((kbps * 1_000) / 8);
+}
+
 function isActionName(value: string): value is BrowserActionName {
   return (
     value === "navigate" ||
@@ -886,6 +1121,10 @@ function isActionName(value: string): value is BrowserActionName {
     value === "select_page" ||
     value === "upload" ||
     value === "screenshot" ||
-    value === "download_release"
+    value === "download_release" ||
+    value === "block_urls" ||
+    value === "unblock_urls" ||
+    value === "throttle" ||
+    value === "emulate"
   );
 }

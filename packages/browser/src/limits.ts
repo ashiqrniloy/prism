@@ -64,6 +64,20 @@ export const HARD_MAX_DOWNLOAD_BYTES = 256 * 1024 * 1024;
 export const DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES = 64 * 1024 * 1024;
 export const HARD_MAX_DOWNLOAD_AGGREGATE_BYTES = 512 * 1024 * 1024;
 
+/** CDP (Task 4, 0.1.4): evaluate/observe/network-control bounds. */
+export const DEFAULT_MAX_EVALUATE_RESULT_BYTES = 64 * 1024;
+export const HARD_MAX_EVALUATE_RESULT_BYTES = 256 * 1024;
+export const DEFAULT_MAX_CONSOLE_ENTRIES = 200;
+export const HARD_MAX_CONSOLE_ENTRIES = 500;
+export const DEFAULT_MAX_BLOCKED_URL_PATTERNS = 32;
+export const HARD_MAX_BLOCKED_URL_PATTERNS = 128;
+/** Hard caps for CDP throttle/emulate inputs (validated at action time, not configurable). */
+export const HARD_MAX_THROTTLE_LATENCY_MS = 120_000;
+export const HARD_MAX_THROTTLE_KBPS = 1_000_000;
+export const HARD_MAX_EMULATE_DIMENSION = 16_384;
+export const HARD_MAX_DEVICE_SCALE_FACTOR = 10;
+export const HARD_MAX_EMULATE_UA_BYTES = 2_048;
+
 export interface BrowserLimitOptions {
   readonly maxPages?: number;
   readonly maxActions?: number;
@@ -92,6 +106,9 @@ export interface BrowserLimitOptions {
   readonly maxDownloads?: number;
   readonly maxDownloadBytes?: number;
   readonly maxDownloadAggregateBytes?: number;
+  readonly maxEvaluateResultBytes?: number;
+  readonly maxConsoleEntries?: number;
+  readonly maxBlockedUrlPatterns?: number;
 }
 
 export interface ResolvedBrowserLimits {
@@ -122,6 +139,9 @@ export interface ResolvedBrowserLimits {
   readonly maxDownloads: number;
   readonly maxDownloadBytes: number;
   readonly maxDownloadAggregateBytes: number;
+  readonly maxEvaluateResultBytes: number;
+  readonly maxConsoleEntries: number;
+  readonly maxBlockedUrlPatterns: number;
 }
 
 const DEFAULTS: ResolvedBrowserLimits = {
@@ -152,6 +172,9 @@ const DEFAULTS: ResolvedBrowserLimits = {
   maxDownloads: DEFAULT_MAX_DOWNLOADS,
   maxDownloadBytes: DEFAULT_MAX_DOWNLOAD_BYTES,
   maxDownloadAggregateBytes: DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES,
+  maxEvaluateResultBytes: DEFAULT_MAX_EVALUATE_RESULT_BYTES,
+  maxConsoleEntries: DEFAULT_MAX_CONSOLE_ENTRIES,
+  maxBlockedUrlPatterns: DEFAULT_MAX_BLOCKED_URL_PATTERNS,
 };
 
 const HARD: ResolvedBrowserLimits = {
@@ -182,6 +205,9 @@ const HARD: ResolvedBrowserLimits = {
   maxDownloads: HARD_MAX_DOWNLOADS,
   maxDownloadBytes: HARD_MAX_DOWNLOAD_BYTES,
   maxDownloadAggregateBytes: HARD_MAX_DOWNLOAD_AGGREGATE_BYTES,
+  maxEvaluateResultBytes: HARD_MAX_EVALUATE_RESULT_BYTES,
+  maxConsoleEntries: HARD_MAX_CONSOLE_ENTRIES,
+  maxBlockedUrlPatterns: HARD_MAX_BLOCKED_URL_PATTERNS,
 };
 
 export const DEFAULT_BROWSER_LIMITS = DEFAULTS;
@@ -224,5 +250,8 @@ export function resolveBrowserLimits(input: BrowserLimitOptions = {}): ResolvedB
     maxDownloads: validate("maxDownloads", input.maxDownloads ?? DEFAULTS.maxDownloads),
     maxDownloadBytes: validate("maxDownloadBytes", input.maxDownloadBytes ?? DEFAULTS.maxDownloadBytes),
     maxDownloadAggregateBytes: validate("maxDownloadAggregateBytes", input.maxDownloadAggregateBytes ?? DEFAULTS.maxDownloadAggregateBytes),
+    maxEvaluateResultBytes: validate("maxEvaluateResultBytes", input.maxEvaluateResultBytes ?? DEFAULTS.maxEvaluateResultBytes),
+    maxConsoleEntries: validate("maxConsoleEntries", input.maxConsoleEntries ?? DEFAULTS.maxConsoleEntries),
+    maxBlockedUrlPatterns: validate("maxBlockedUrlPatterns", input.maxBlockedUrlPatterns ?? DEFAULTS.maxBlockedUrlPatterns),
   };
 }

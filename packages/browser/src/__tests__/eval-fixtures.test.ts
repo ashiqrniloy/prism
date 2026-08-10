@@ -80,7 +80,11 @@ describe("browser adversarial eval fixtures", () => {
         { id: "side-effect-approval", input: { scenario: "mutation requires beforeSideEffect" }, expected: { pass: true } },
         { id: "private-target", input: { scenario: "private/loopback denied by default" }, expected: { pass: true } },
         { id: "upload-download-screenshot", input: { scenario: "artifact policy" }, expected: { pass: true } },
-        { id: "css-evaluate-rejected", input: { scenario: "css/xpath/evaluate targets denied" }, expected: { pass: true } },
+        {
+          id: "css-evaluate-rejected",
+          input: { scenario: "css/xpath targets allowed; selector/evaluate target keys denied" },
+          expected: { pass: true },
+        },
         { id: "prompt-injection-a11y", input: { scenario: "hostile accessible name stays text" }, expected: { pass: true } },
       ],
     });
@@ -245,23 +249,32 @@ describe("browser adversarial eval fixtures", () => {
     }
 
     {
-      let cssRejected = false;
-      let evalRejected = false;
+      let cssAccepted = false;
+      let selectorRejected = false;
+      let evalTargetRejected = false;
       try {
         normalizeTarget({ css: "div.x" });
+        cssAccepted = true;
       } catch {
-        cssRejected = true;
+        cssAccepted = false;
+      }
+      try {
+        normalizeTarget({ selector: "div.x" });
+      } catch {
+        selectorRejected = true;
       }
       try {
         normalizeTarget({ evaluate: "() => 1" });
       } catch {
-        evalRejected = true;
+        evalTargetRejected = true;
       }
+      // 0.1.4 CDP feature: raw css/xpath targets are supported; the selector/evaluate
+      // target keys stay denied (evaluate lives behind the policy-gated browser_evaluate tool).
       evaluations.push(
         ...(await scoreRun({
           result: resultOf("css-evaluate-rejected", {
-            pass: cssRejected && evalRejected,
-            detail: "selector-surface-denied",
+            pass: cssAccepted && selectorRejected && evalTargetRejected,
+            detail: "selector-surface-0.1.4",
           }),
           scorers: [outcomeScorer],
           item: { id: "css-evaluate-rejected", input: {}, expected: { pass: true } },

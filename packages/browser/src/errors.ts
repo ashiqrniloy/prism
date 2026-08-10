@@ -8,7 +8,9 @@ export type BrowserErrorCode =
   | "ERR_PRISM_BROWSER_CLOSED"
   | "ERR_PRISM_BROWSER_INPUT"
   | "ERR_PRISM_BROWSER_NETWORK"
-  | "ERR_PRISM_BROWSER_ARTIFACT";
+  | "ERR_PRISM_BROWSER_ARTIFACT"
+  | "ERR_PRISM_BROWSER_CDP_UNAVAILABLE"
+  | "ERR_PRISM_BROWSER_CDP";
 
 export class BrowserError extends Error {
   readonly code: BrowserErrorCode;

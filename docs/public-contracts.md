@@ -417,6 +417,8 @@ void credentials;
 
 ## Extension and configuration notes
 
+**Internal file structure (0.1.4).** Since 0.1.4 the contract declarations are spread across sibling modules behind the `src/contracts.ts` barrel: `src/contracts-core.ts` (JSON/content/core agent contracts plus the `SESSION_ENTRY_KINDS`/`session-store` values), `src/contracts-run-state.ts` (run-state and agent-session contracts including `AgentRunStatus` through `AgentSession`, decision/steer constants, and the error classes), and `src/contracts-protocol.ts` (pure protocol-payload types). The 295-name public surface is unchanged; this page groups the frozen contract by functionality rather than source file.
+
 - Contracts are host-owned and package-friendly. External packages can implement `AIProvider`, `ToolDefinition`, `CommandDefinition`, `AgentDefinition`, `InputBuilder`, `PromptBuilder`, `Middleware`, `ContextProvider`, `Skill`, `Extension`, config providers, data-only manifests, compaction strategies, store factories, resource loaders, settings providers, and credential resolvers.
 - `ExtensionAPI` is implemented by the extension kernel. It exposes explicit registries, ordered middleware registration, ordered event subscription/emission, and registration methods for Phase 2 contribution categories.
 - `AgentConfig.provider` can hold a direct provider instance for simple host wiring. Hosts that need config-driven selection should use `ModelConfig.provider` with explicit `createProviderRegistry()` / `createModelRegistry()` objects; Prism does not create a hidden global provider registry.

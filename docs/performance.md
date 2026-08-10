@@ -28,6 +28,16 @@ node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json
 PRISM_TEST_POSTGRES_URL="postgresql://…" node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json  # adds protected legs
 ```
 
+## 0.1.4 tree-shake measurement (static-reachability proxy)
+
+The 0.1.4 god-module split (agents/contracts → per-concern modules behind barrels) is
+measured by `scripts/phase16-tree-shake.mjs`: `dist/agents.js`/`dist/contracts.js` byte
+sizes, `dist/*.js` module count, and a static-import reachability count from the minimal
+entry proxy, recorded in `scripts/phase16-baseline.json` (task 3 of plan 016). Static
+graph reachability is an upper-bound proxy, not a real bundle — a byte-accurate
+tree-shake budget needs a bundler and actual consumer code, deferred behind a 0.1.7 DX
+demand gate.
+
 **Pass/fail thresholds.** Network-free rows fail above the frozen ceiling in
 the table below; protected PostgreSQL rows fail above their per-phase
 budgets.json ceilings (50/100 ms per the approved budget contract); startup

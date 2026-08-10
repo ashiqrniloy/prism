@@ -15,7 +15,7 @@ export interface BrowserOperationClass {
   readonly requiresSideEffectHook: boolean;
 }
 
-const OBSERVATION = new Set<string>(["open", "snapshot", "wait", "close"]);
+const OBSERVATION = new Set<string>(["open", "snapshot", "wait", "close", "observe"]);
 
 export function classifyBrowserOperation(
   operation: string,
@@ -25,6 +25,24 @@ export function classifyBrowserOperation(
     readonly pageKind?: "main" | "popup";
   } = {},
 ): BrowserOperationClass {
+  if (operation === "evaluate") {
+    // Arbitrary page-context code execution: highest-risk browser operation.
+    return {
+      operation,
+      effect: "high_impact",
+      risk: "high",
+      requiresSideEffectHook: true,
+    };
+  }
+  if (operation === "block_urls" || operation === "unblock_urls" || operation === "throttle" || operation === "emulate") {
+    // CDP network/emulation control changes what the page loads and how it renders.
+    return {
+      operation,
+      effect: "mutation",
+      risk: "medium",
+      requiresSideEffectHook: true,
+    };
+  }
   if (operation === "open" && details.hasUrl) {
     return {
       operation: "open_navigate",
@@ -110,7 +128,7 @@ export function classifyBrowserToolEffect(
     : { kind: "external_mutation", idempotency: "unsupported" };
 }
 
-export function isSideEffectAction(action: BrowserActionName): boolean {
+export function isSideEffectAction(action: BrowserActionName | "evaluate" | "observe"): boolean {
   return classifyBrowserOperation(action).requiresSideEffectHook;
 }
 

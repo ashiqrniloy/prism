@@ -8,7 +8,7 @@ describe("ponytail package scaffold", () => {
     assert.equal(pkg.name, "@arnilo/prism-ponytail");
     assert.deepEqual(pkg.exports["."], { types: "./dist/index.d.ts", default: "./dist/index.js" });
     assert.equal(pkg.sideEffects, false);
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.1.3");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.1.4");
     assert.equal(pkg.peerDependencies["@dietrichgebert/ponytail"], "^4.8.4");
     assert.equal(pkg.peerDependenciesMeta["@dietrichgebert/ponytail"].optional, true);
     assert.equal(pkg.scripts.postinstall, undefined);

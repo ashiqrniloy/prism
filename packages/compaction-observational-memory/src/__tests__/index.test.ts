@@ -18,7 +18,7 @@ describe("observational memory package skeleton", () => {
       "@arnilo/prism": "file:../..",
       "@arnilo/prism-provider-openai": "file:../provider-openai",
     });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.1.3");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.1.4");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

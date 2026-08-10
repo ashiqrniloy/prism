@@ -5,6 +5,7 @@ import { Readable } from "node:stream";
 import type {
   PlaywrightBrowser,
   PlaywrightBrowserContext,
+  PlaywrightCdpSession,
   PlaywrightDialog,
   PlaywrightDownload,
   PlaywrightLocator,
@@ -179,6 +180,23 @@ export class FakePage {
       const ref = selector.slice("aria-ref=".length);
       return new FakeLocator(this, () => this.elements.filter((el) => el.ref === ref));
     }
+    if (selector.startsWith("xpath=")) {
+      const xpath = selector.slice("xpath=".length);
+      const refMatch = /@ref=['"](e\d+)['"]/u.exec(xpath);
+      if (refMatch) {
+        const ref = refMatch[1]!;
+        return new FakeLocator(this, () => this.elements.filter((el) => el.ref === ref));
+      }
+      throw new Error(`Unsupported xpath in fake: ${xpath}`);
+    }
+    if (selector.startsWith("#")) {
+      const ref = selector.slice(1);
+      return new FakeLocator(this, () => this.elements.filter((el) => el.ref === ref));
+    }
+    if (selector.startsWith(".")) {
+      const name = selector.slice(1);
+      return new FakeLocator(this, () => this.elements.filter((el) => el.name === name));
+    }
     throw new Error(`Unsupported selector in fake: ${selector}`);
   }
   getByRole(role: string, options?: { name?: string | RegExp; exact?: boolean }): PlaywrightLocator {
@@ -282,6 +300,53 @@ export class FakeDownload implements PlaywrightDownload {
 
 type RouteHandler = (route: PlaywrightRoute) => unknown;
 
+export class FakeCdpSession implements PlaywrightCdpSession {
+  readonly sent: Array<{ method: string; params?: Record<string, unknown> }> = [];
+  detached = false;
+  /** Scripted responses per method; the next send of that method shifts one off. */
+  private readonly responses = new Map<string, Array<Record<string, unknown>>>();
+  private readonly emitter = new Emitter();
+
+  script(method: string, response: Record<string, unknown>): void {
+    const list = this.responses.get(method) ?? [];
+    list.push(response);
+    this.responses.set(method, list);
+  }
+
+  async send<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
+    this.sent.push({ method, params });
+    if (method === "Runtime.evaluate" && params && typeof params.expression === "string" && !this.responses.has("Runtime.evaluate")) {
+      // Default: evaluate the expression's own JSON text when no scripted response exists.
+      let value: unknown;
+      try {
+        value = JSON.parse(params.expression);
+      } catch {
+        value = params.expression;
+      }
+      return { result: { type: typeof value, value } } as T;
+    }
+    const list = this.responses.get(method);
+    if (list && list.length > 0) return list.shift() as T;
+    return {} as T;
+  }
+
+  on(event: string, handler: (params: Record<string, unknown>) => void): void {
+    this.emitter.on(event, handler as Handler);
+  }
+
+  off(event: string, handler: (params: Record<string, unknown>) => void): void {
+    this.emitter.off(event, handler as Handler);
+  }
+
+  async detach(): Promise<void> {
+    this.detached = true;
+  }
+
+  emit(event: string, params: Record<string, unknown>): void {
+    this.emitter.emit(event, params as never);
+  }
+}
+
 export class FakeContext {
   private readonly emitter = new Emitter();
   private readonly pageList: FakePage[] = [];
@@ -292,6 +357,7 @@ export class FakeContext {
   readonly createdWith: Record<string, unknown>;
   readonly abortedUrls: string[] = [];
   readonly continuedUrls: string[] = [];
+  readonly cdpSessions = new Map<FakePage, FakeCdpSession>();
 
   constructor(createdWith: Record<string, unknown> = {}) {
     this.createdWith = createdWith;
@@ -301,6 +367,11 @@ export class FakeContext {
     const page = new FakePage();
     this.pageList.push(page);
     return page as unknown as PlaywrightPage;
+  }
+  async newCDPSession(page: PlaywrightPage): Promise<PlaywrightCdpSession> {
+    const session = new FakeCdpSession();
+    this.cdpSessions.set(page as unknown as FakePage, session);
+    return session;
   }
   pages(): PlaywrightPage[] {
     return this.pageList as unknown as PlaywrightPage[];
@@ -371,6 +442,7 @@ export class FakeContext {
 export class FakeBrowser implements PlaywrightBrowser {
   readonly contexts: FakeContext[] = [];
   connected = true;
+  readonly cdpSessions: FakeCdpSession[] = [];
   async newContext(options?: Record<string, unknown>): Promise<PlaywrightBrowserContext> {
     const ctx = new FakeContext({ ...(options ?? {}) });
     this.contexts.push(ctx);
@@ -381,6 +453,11 @@ export class FakeBrowser implements PlaywrightBrowser {
   }
   version(): string {
     return "1.61.0-fake";
+  }
+  async newBrowserCDPSession(): Promise<PlaywrightCdpSession> {
+    const session = new FakeCdpSession();
+    this.cdpSessions.push(session);
+    return session;
   }
 }
 

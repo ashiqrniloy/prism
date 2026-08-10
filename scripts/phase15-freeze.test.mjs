@@ -279,9 +279,13 @@ test("sweep is non-blocking and isolated: sweep:unused exists, npm test never ru
 });
 
 test("opt-in checkpoint persistence (Task 4): seams present, opt-in default off, bounded, docs updated", () => {
-  const contracts = readFileSync(url("../src/contracts.ts"), "utf8");
+  // 0.1.4 split: contracts live in the split modules behind the contracts.ts barrel.
+  const contracts = ["contracts-core.ts", "contracts-run-state.ts", "contracts-protocol.ts"]
+    .map((f) => readFileSync(url(`../src/${f}`), "utf8"))
+    .join("\n");
   const runState = readFileSync(url("../src/agent-run-state.ts"), "utf8");
-  const agents = readFileSync(url("../src/agents.ts"), "utf8");
+  // 0.1.4 agents split: the session runtime moved to agent-session.ts.
+  const agents = readFileSync(url("../src/agent-session.ts"), "utf8");
   const lifecycle = readFileSync(url("../src/agent-run-lifecycle.ts"), "utf8");
   const rps = readFileSync(url("../packages/coding-agent/src/read-path-set.ts"), "utf8");
   const rpsIndex = readFileSync(url("../packages/coding-agent/src/index.ts"), "utf8");

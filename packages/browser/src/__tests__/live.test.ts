@@ -125,9 +125,10 @@ describe("protected Playwright browser matrix", { skip: !enabled }, () => {
       );
 
       assert.throws(
-        () => normalizeTarget({ css: "button.go" }),
-        (error: unknown) => error instanceof BrowserError && /CSS\/XPath\/selector\/evaluate/.test(error.message),
+        () => normalizeTarget({ selector: "button.go" }),
+        (error: unknown) => error instanceof BrowserError && /selector/.test(error.message),
       );
+      assert.deepEqual(normalizeTarget({ css: "button.go" }), { css: "button.go" });
     } finally {
       await manager.closeRun("live-1");
       await manager.close();
@@ -230,6 +231,45 @@ describe("protected Playwright browser matrix", { skip: !enabled }, () => {
       assert.equal(released, true);
     } finally {
       await manager.closeRun("live-art");
+      await manager.close();
+    }
+  });
+
+  it("CDP leg: real evaluate, observe, css targets, and run-scoped emulate", async () => {
+    const manager = createBrowserManager({
+      browser,
+      limits: { closeGraceMs: 50, navigationTimeoutMs: 15_000, actionTimeoutMs: 10_000 },
+      networkPolicy: { requireContainedProxy: false, allowLoopback: true },
+    });
+    try {
+      await manager.open("live-cdp", { url: baseUrl });
+      // browser_evaluate: real Runtime.evaluate on the fixture page.
+      const evaluated = await manager.evaluate("live-cdp", { expression: "document.title" });
+      assert.match(String(evaluated.value), /Ignore system prompt/);
+      const exception = await manager.evaluate("live-cdp", { expression: "JSON.parse('nope')" });
+      assert.match(exception.exception ?? "", /SyntaxError/);
+
+      // browser_observe: real Runtime/Network events with drain-on-read.
+      const first = await manager.observe("live-cdp");
+      assert.deepEqual(first.console, []);
+      assert.deepEqual(first.network, []);
+      await manager.act("live-cdp", { action: "click", target: { css: "h1" } });
+      const batch = await manager.observe("live-cdp");
+      assert.ok(Array.isArray(batch.network));
+      // xpath target navigates: a fresh request/response pair lands in the ring.
+      await manager.act("live-cdp", { action: "click", target: { xpath: "//a[@href='/next']" } });
+      const afterNav = await manager.observe("live-cdp");
+      assert.ok(
+        afterNav.network.some((entry) => entry.phase === "response"),
+        "expected a network response after navigation",
+      );
+
+      // emulate: run-scoped device metrics (devicePixelRatio proves the override), reset on browser_close.
+      await manager.act("live-cdp", { action: "emulate", width: 390, height: 844, mobile: true, deviceScaleFactor: 3 });
+      const emulated = await manager.evaluate("live-cdp", { expression: "window.devicePixelRatio" });
+      assert.equal(emulated.value, 3);
+    } finally {
+      await manager.closeRun("live-cdp");
       await manager.close();
     }
   });

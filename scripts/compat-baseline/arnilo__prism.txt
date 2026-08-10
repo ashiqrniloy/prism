@@ -16,6 +16,7 @@ AgentRunLifecycleOptions	export type { AgentRunLifecycle, AgentRunLifecycleAgent
 AgentRunLifecycleRequest	export type { AgentRunLifecycle, AgentRunLifecycleAgent, AgentRunLifecycleOptions, AgentRunLifecycleRequest, AgentRunLifecycleStreamRequest, } from "./agent-run-lifecycle.js"
 AgentRunLifecycleStreamRequest	export type { AgentRunLifecycle, AgentRunLifecycleAgent, AgentRunLifecycleOptions, AgentRunLifecycleRequest, AgentRunLifecycleStreamRequest, } from "./agent-run-lifecycle.js"
 AgentRunStateError	export declare class AgentRunStateError extends Error
+AgentRunSuspended	export declare class AgentRunSuspended extends Error
 ApplyCacheControlOptions	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
 ApplyRetentionInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ApplyRetentionResult	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
@@ -310,6 +311,7 @@ RunLimitError	export declare class RunLimitError extends Error
 RunLimitName	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 RunLimitTracker	export declare class RunLimitTracker
 RunLimitTrackerOptions	export type { RunLimitTrackerOptions } from "./run-limits.js"
+RuntimeAgentSession	export declare class RuntimeAgentSession implements AgentSession
 SESSION_APPEND_CONFLICT_CODE	export declare const SESSION_APPEND_CONFLICT_CODE: "session_append_conflict"
 SESSION_ENTRY_KINDS	export declare const SESSION_ENTRY_KINDS: readonly SessionEntryKind[]
 SESSION_ENTRY_SCHEMA_VERSION	export declare const SESSION_ENTRY_SCHEMA_VERSION = 1
@@ -370,6 +372,7 @@ TrustRequest	export type { PermissionDecision, PermissionPolicy, PermissionReque
 UnsupportedModalityError	export declare class UnsupportedModalityError extends Error
 UseCaseModelBinding	export type { ResolvedUseCaseModel, ResolveUseCaseModelInput, UseCaseModelBinding, } from "./use-case-model.js"
 acceptDeviceChunk	export declare function acceptDeviceChunk(policy: ResolvedDevicePolicy, bytes: number): DeviceChunkResult
+activeTools	export declare function activeTools(tools: AgentConfig["tools"]):
 agentFingerprint	export declare function agentFingerprint(agent: Agent, revision: string): string
 agentId	export declare function agentId(agent: Agent): string
 applyCacheControl	export declare function applyCacheControl(messages: readonly Message[], breakpoints: readonly PromptCacheBreakpoint[], options?: ApplyCacheControlOptions): readonly CacheControlledMessage[]
@@ -495,6 +498,8 @@ createStaticSettingsProvider	export declare function createStaticSettingsProvide
 createStaticTrustPolicy	export declare function createStaticTrustPolicy(decision: boolean | TrustDecision): TrustPolicy
 createToolParameterValidator	export declare function createToolParameterValidator(validator: ToolArgumentValidator, options?: ToolParameterValidatorOptions): ToolValidator
 createToolRegistry	export declare function createToolRegistry(tools?: readonly ToolDefinition[], options?: ToolRegistryOptions): ToolRegistry
+decisionIdentityRef	export declare function decisionIdentityRef(identity: AgentIdentity | undefined): string | undefined
+decisionScopesEqual	export declare function decisionScopesEqual(a: DecisionScope, b: DecisionScope): boolean
 decodeConversationReplayCursor	export declare function decodeConversationReplayCursor(encoded: string, expectedThreadId: string, maxBytes?: number): ConversationReplayCursor
 defaultProviderFilename	export declare function defaultProviderFilename(block: MediaContentBlock, fallback: string): string
 defaultTemplatesRoot	export declare function defaultTemplatesRoot(): string
@@ -575,6 +580,8 @@ mergeSystemPromptConfig	export declare function mergeSystemPromptConfig(config: 
 modelSupportsStructuredOutput	export declare function modelSupportsStructuredOutput(capabilities?: ModelCapabilities): boolean
 name	export declare const name = "prism"
 narrowIdentity	export declare function narrowIdentity(parent: AgentIdentity, options: NarrowIdentityOptions): AgentIdentity
+nestedApprovalId	export declare function nestedApprovalId(runId: string, childApprovalId: string): string
+nestedOutcomeToolResult	export declare function nestedOutcomeToolResult(outcome: Exclude<NestedRunOutcome,
 normalizeProviderRequestPolicyResult	export declare function normalizeProviderRequestPolicyResult(result: ProviderRequest | ProviderRequestPolicyResult): ProviderRequestPolicyResult
 normalizeThinkingLevel	export declare function normalizeThinkingLevel(level: string): ThinkingLevel | string | undefined
 openAIAudioFormat	export declare function openAIAudioFormat(mediaType: string): string
@@ -591,6 +598,9 @@ parseRetryAfterMs	export declare function parseRetryAfterMs(value: string | null
 parseRpcRequest	export declare function parseRpcRequest(value: unknown): RpcRequest
 parseSkillFile	export declare function parseSkillFile(text: string, path: string): Skill
 parseToolFile	export declare function parseToolFile(text: string, path: string): ToolDefinition
+pathsEqual	export declare function pathsEqual(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean
+pendingDecisionsOf	export declare function pendingDecisionsOf(state: StoredAgentRunState): readonly PendingDecision[] | undefined
+policyList	export declare function policyList(policies: ProviderRequestPolicy | readonly ProviderRequestPolicy[] | undefined): readonly ProviderRequestPolicy[]
 prepareRunFeedback	export declare function prepareRunFeedback(input: AppendRunFeedbackInput, options: PrepareRunFeedbackOptions): Promise<RunFeedbackRecord>
 providerContentDelta	export declare function providerContentDelta(content: ContentBlock): ProviderEvent
 providerContinuationRequired	export declare function providerContinuationRequired(cursor: string, reason?: string): ProviderEvent
@@ -642,6 +652,7 @@ resolveMediaContentBlocks	export declare function resolveMediaContentBlocks(bloc
 resolveProviderMediaBlock	export declare function resolveProviderMediaBlock(block: AudioContent | FileContent | DocumentContent, options?: ResolveMediaContentOptions): Promise<ResolvedMediaContent>
 resolveProviderMediaMessages	export declare function resolveProviderMediaMessages(messages: readonly Message[], model: ModelConfig, options?: ResolveMediaContentOptions): Promise<ReadonlyMap<MediaContentBlock, ResolvedMediaContent>>
 resolveRedactor	export declare function resolveRedactor(redactor?: SecretRedactor, secrets?: readonly (string | undefined)[]): SecretRedactor | undefined
+resolveRunDecisions	export declare function resolveRunDecisions(input:
 resolveRunIdentity	export declare function resolveRunIdentity(runIdentity: AgentIdentity | undefined, agentIdentity: AgentIdentity | undefined, ownership: OwnershipScope | undefined, options?: AssertIdentityActiveOptions): AgentIdentity | undefined
 resolveRunLimits	export declare function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">>
 resolveRunProviderOptions	export declare function resolveRunProviderOptions(runOptions: Pick<RunOptions, "providerOptions" | "loop">, config: Pick<AgentConfig, "providerOptions" | "loop">): ProviderRequestOptions | undefined
@@ -689,14 +700,17 @@ systemPromptContributionKey	export declare function systemPromptContributionKey(
 tenantScopedUniqueKey	export declare function tenantScopedUniqueKey(baseColumns: readonly string[], tenantColumn?: "tenant_id" | "account_id" | "user_id"): readonly string[]
 thinkingCompatFor	export declare function thinkingCompatFor(family: ThinkingCompatFamily, level: ThinkingLevel | string): JsonObject
 thinkingFamilyForModel	export declare function thinkingFamilyForModel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): ThinkingCompatFamily
+throwIfAbortedSignal	export declare function throwIfAbortedSignal(signal: AbortSignal | undefined): void
 toolCallContent	export declare function toolCallContent(id: string, name: string, args?: JsonObject): ToolCallContent
 toolCallFromArgumentsText	export declare function toolCallFromArgumentsText(id: string, name: string, argumentsText: string): ToolCallContent
 toolEffectArgumentsHash	export declare function toolEffectArgumentsHash(argumentsValue: JsonObject): string
+toolElicitationRequest	export declare function toolElicitationRequest(tool: ToolDefinition | undefined, args: JsonObject, context: ToolExecutionContext):
 tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): ParseJsonObjectArgumentsResult
 usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System instructions\n --context <text> Context text\n --compact <entries> Auto-compaction threshold\n 
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
+validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.1.3"
+version	export declare const version = "0.1.4"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

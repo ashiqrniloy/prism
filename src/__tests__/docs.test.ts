@@ -283,14 +283,24 @@ describe("docs", () => {
 
   it("plan 015 Task 5 freeze: 0.1.3 hygiene release and publish handoff are documented", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
     const performance = readFileSync("docs/performance.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     assert.ok(release.includes("### 0.1.3 publish handoff (plan 015 Task 5)"), "release page missing 0.1.3 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.3 handoff missing rollback notes");
-    assert.ok(index.includes("current **0.1.3**"), "index.md current-line entry not at 0.1.3");
     assert.ok(changelog.includes("## [0.1.3] - 2026-08-10"), "root changelog missing 0.1.3 entry");
     assert.ok(performance.includes("scripts/benchmark.mjs"), "performance.md points at the parameterized runner");
+  });
+  it("plan 016 Task 6 freeze: 0.1.4 god-module split and publish handoff are documented", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    assert.ok(release.includes("### 0.1.4 publish handoff (plan 016 Task 6)"), "release page missing 0.1.4 handoff");
+    assert.ok(release.includes("**Rollback notes.**"), "0.1.4 handoff missing rollback notes");
+    assert.ok(index.includes("current **0.1.4**"), "index.md current-line entry not at 0.1.4");
+    assert.ok(changelog.includes("## [0.1.4] - 2026-08-10"), "root changelog missing 0.1.4 entry");
+    assert.ok(migration.includes("## 0.1.3 → 0.1.4"), "migration.md missing 0.1.3 → 0.1.4 section");
+    assert.ok(migration.includes("no migration step"), "migration.md 0.1.4 section must state no migration step");
   });
   it("plan 014 Task 6 freeze: 0.1.2 Alibaba enrichment and publish handoff are documented", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -371,7 +381,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.1.3", "root manifest must be at 0.1.3");
+    assert.equal(pkg.version, "0.1.4", "root manifest must be at 0.1.4");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -2734,7 +2744,9 @@ describe("docs", () => {
   it("tools_docs_cover_runtime_validator_seam_and_per_run_tool_scoping", () => {
     const tools = readFileSync("docs/tools.md", "utf8");
     const rootExports = readFileSync("src/index.ts", "utf8");
-    const contracts = readFileSync("src/contracts.ts", "utf8");
+    const contracts = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
+      .map((p) => readFileSync(p, "utf8"))
+      .join("\n");
     const runOptions = contracts.match(/export interface RunOptions \{[\s\S]*?^\}/m)?.[0] ?? "";
 
     assert.match(rootExports, /\bToolValidator\b/, "src/index.ts does not export ToolValidator");
@@ -2765,7 +2777,9 @@ describe("docs", () => {
   it("context_and_skills_docs_cover_runtime_selection_and_activation", () => {
     const page = readFileSync("docs/context-and-skills.md", "utf8");
     const rootExports = readFileSync("src/index.ts", "utf8");
-    const contracts = readFileSync("src/contracts.ts", "utf8");
+    const contracts = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
+      .map((p) => readFileSync(p, "utf8"))
+      .join("\n");
 
     assert.match(rootExports, /\bresolveActiveSkills\b/, "src/index.ts does not export resolveActiveSkills");
     assert.ok(contracts.includes("activeSkills?: readonly string[]"), "RunOptions does not declare activeSkills");

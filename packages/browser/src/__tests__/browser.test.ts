@@ -54,10 +54,11 @@ describe("@arnilo/prism-browser", () => {
     assert.equal(capped.truncatedByRefs, true);
   });
 
-  it("normalizeTarget rejects css/xpath/evaluate", () => {
-    assert.throws(() => normalizeTarget({ css: ".x" }), /CSS/);
-    assert.throws(() => normalizeTarget({ xpath: "//a" }), /CSS/);
-    assert.throws(() => normalizeTarget({ evaluate: "1" }), /CSS/);
+  it("normalizeTarget accepts css/xpath but rejects selector/evaluate", () => {
+    assert.deepEqual(normalizeTarget({ css: ".x" }), { css: ".x" });
+    assert.deepEqual(normalizeTarget({ xpath: "//a" }), { xpath: "//a" });
+    assert.throws(() => normalizeTarget({ selector: ".x" }), /selector/);
+    assert.throws(() => normalizeTarget({ evaluate: "1" }), /selector/);
     assert.deepEqual(normalizeTarget({ ref: "e12" }), { ref: "e12" });
   });
 
@@ -191,7 +192,7 @@ describe("@arnilo/prism-browser", () => {
     await manager.close();
   });
 
-  it("createBrowserTools exports exactly four exclusive tools", async () => {
+  it("createBrowserTools exports exactly six exclusive tools", async () => {
     const browser = new FakeBrowser();
     const deny: ExecutionPolicy = {
       check: (action) => (action.operation === "click" ? { allowed: false, reason: "click denied" } : { allowed: true }),
@@ -199,7 +200,7 @@ describe("@arnilo/prism-browser", () => {
     const tools = createBrowserTools({ browser, executionPolicy: deny, limits: { closeGraceMs: 1 }, networkPolicy: testNetwork });
     assert.deepEqual(
       tools.map((t) => t.name),
-      ["browser_open", "browser_snapshot", "browser_act", "browser_close"],
+      ["browser_open", "browser_snapshot", "browser_act", "browser_close", "browser_evaluate", "browser_observe"],
     );
     assert.ok(tools.every((t) => t.exclusive === true));
 

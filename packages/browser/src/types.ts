@@ -18,14 +18,20 @@ export type BrowserActionName =
   | "select_page"
   | "upload"
   | "screenshot"
-  | "download_release";
+  | "download_release"
+  | "block_urls"
+  | "unblock_urls"
+  | "throttle"
+  | "emulate";
 
 export type BrowserTarget =
   | { readonly ref: string }
   | { readonly role: string; readonly name?: string; readonly exact?: boolean }
   | { readonly label: string; readonly exact?: boolean }
   | { readonly testId: string }
-  | { readonly text: string; readonly exact?: boolean };
+  | { readonly text: string; readonly exact?: boolean }
+  | { readonly css: string }
+  | { readonly xpath: string };
 
 export interface BrowserActRequest {
   readonly action: BrowserActionName;
@@ -44,6 +50,28 @@ export interface BrowserActRequest {
   readonly timeoutMs?: number;
   readonly dialogResponse?: "accept" | "dismiss";
   readonly promptText?: string;
+  /** CDP: URL patterns to block (block_urls) — bounded by maxBlockedUrlPatterns. */
+  readonly patterns?: readonly string[];
+  /** CDP: offline flag (throttle). */
+  readonly offline?: boolean;
+  /** CDP: network latency in ms (throttle), capped. */
+  readonly latencyMs?: number;
+  /** CDP: download throughput in kbps (throttle), capped. */
+  readonly downloadKbps?: number;
+  /** CDP: upload throughput in kbps (throttle), capped. */
+  readonly uploadKbps?: number;
+  /** CDP: reset current throttle/emulation (throttle/emulate). */
+  readonly reset?: boolean;
+  /** CDP: viewport width px (emulate), capped. */
+  readonly width?: number;
+  /** CDP: viewport height px (emulate), capped. */
+  readonly height?: number;
+  /** CDP: mobile viewport flag (emulate). */
+  readonly mobile?: boolean;
+  /** CDP: device scale factor (emulate), capped. */
+  readonly deviceScaleFactor?: number;
+  /** CDP: user-agent override (emulate); only applied when explicitly supplied. */
+  readonly userAgent?: string;
 }
 
 export interface SnapshotRefInfo {
@@ -174,6 +202,8 @@ export interface PlaywrightBrowserContext {
   unroute?(url: string | RegExp, handler?: (route: PlaywrightRoute) => unknown): Promise<void>;
   setDefaultTimeout?(timeout: number): void;
   setDefaultNavigationTimeout?(timeout: number): void;
+  /** CDP (Chromium only): page-level Chrome DevTools Protocol session. */
+  newCDPSession?(page: PlaywrightPage): Promise<PlaywrightCdpSession>;
 }
 
 export interface PlaywrightBrowser {
@@ -190,6 +220,27 @@ export interface PlaywrightBrowser {
   isConnected?(): boolean;
   version?(): string;
   close?(): Promise<void>;
+  /** CDP (Chromium only): browser-level Chrome DevTools Protocol session. */
+  newBrowserCDPSession?(): Promise<PlaywrightCdpSession>;
+}
+
+/**
+ * Structural Chrome DevTools Protocol session surface (playwright-core CDPSession).
+ * Hosts that want CDP tools must supply a Chromium-based Playwright Browser whose
+ * contexts expose newCDPSession(page); fakes in tests supply the same surface.
+ * No playwright import occurs at package load time.
+ */
+export interface PlaywrightCdpSession {
+  send<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T>;
+  on(event: string, handler: (params: Record<string, unknown>) => void): void;
+  off?(event: string, handler: (params: Record<string, unknown>) => void): void;
+  detach?(): Promise<void>;
+}
+
+/** CDP capability gating for browser tools. Default: "auto" (enabled on Chromium hosts). */
+export interface BrowserCdpOptions {
+  /** "auto": use CDP when the host browser exposes page CDP sessions (Chromium); "on": require it; "off": disable CDP tools. */
+  readonly mode?: "auto" | "on" | "off";
 }
 
 export interface BrowserOpenResult {
@@ -212,4 +263,54 @@ export interface BrowserActResult {
   readonly screenshotBytes?: number;
   /** Present for screenshot actions; bounded ImageContent (no storage/cookies). */
   readonly image?: import("@arnilo/prism").ImageContent;
+}
+
+export interface BrowserEvaluateRequest {
+  readonly pageId?: string;
+  /** JavaScript expression evaluated in the page context (bounded by maxActionInputBytes). */
+  readonly expression: string;
+  /** Await promise resolution before returning (Runtime.evaluate awaitPromise). */
+  readonly awaitPromise?: boolean;
+  /** Per-action timeout, clamped to actionTimeoutMs. */
+  readonly timeoutMs?: number;
+}
+
+export interface BrowserEvaluateResult {
+  readonly pageId: string;
+  readonly url: string;
+  /** JSON-serializable evaluated value (bounded by maxEvaluateResultBytes). */
+  readonly value?: unknown;
+  /** Bounded exception description when evaluation threw (page or serialization error). */
+  readonly exception?: string;
+  /** Result was truncated to the evaluate-result byte cap. */
+  readonly truncated?: boolean;
+}
+
+/** Bounded console observation entry (Runtime.consoleAPICalled / exceptionThrown). */
+export interface CdpConsoleEntry {
+  readonly seq: number;
+  readonly type: "log" | "error" | "warning" | "info" | "debug" | "exception" | "assert" | "other";
+  /** Bounded argument previews; never raw object graphs. */
+  readonly args: readonly string[];
+  readonly text?: string;
+}
+
+/** Bounded network observation entry (Network.requestWillBeSent / responseReceived / loadingFailed). */
+export interface CdpNetworkEntry {
+  readonly seq: number;
+  readonly phase: "request" | "response" | "failed";
+  readonly requestId: string;
+  readonly url: string;
+  readonly method?: string;
+  readonly status?: number;
+  readonly errorText?: string;
+}
+
+export interface BrowserObserveResult {
+  readonly pageId: string;
+  readonly url: string;
+  /** Entries since the previous observe call for this page (drain semantics). */
+  readonly console: readonly CdpConsoleEntry[];
+  readonly network: readonly CdpNetworkEntry[];
+  readonly truncated: boolean;
 }

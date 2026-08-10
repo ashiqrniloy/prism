@@ -28,7 +28,12 @@ const runtimeTextLower = runtimeText.toLowerCase();
 const allSrcFiles = sourceFiles("src", (path) => path.endsWith(".ts") && !path.includes("src/__tests__"));
 const allSrcText = allSrcFiles.map((path) => readFileSync(path, "utf8")).join("\n");
 
-const contractsText = readFileSync("src/contracts.ts", "utf8");
+// Contracts split at 0.1.4 into contracts-core / contracts-run-state / contracts-protocol
+// behind the contracts.ts barrel; boundary scans read the union of the split modules
+// (the barrel itself carries no declarations).
+const contractsText = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
+  .map((path) => readFileSync(path, "utf8"))
+  .join("\n");
 const toolsText = readFileSync("src/tools.ts", "utf8");
 
 const DOMAIN_TERMS = ["workflow", "node", "step"];
@@ -172,7 +177,15 @@ describe("core prompt-file boundaries", () => {
     ]);
     const offenders = allSrcFiles.filter((path) => /AGENTS\.md|SYSTEM\.md/.test(readFileSync(path, "utf8")) && !allowed.has(path));
     assert.deepEqual(offenders, [], `AGENTS.md/SYSTEM.md literals leaked outside loader+cli: ${offenders.join(", ")}`);
-    for (const core of ["src/agents.ts", "src/input.ts", "src/system-prompts.ts", "src/contracts.ts"]) {
+    for (const core of [
+      "src/agents.ts",
+      "src/input.ts",
+      "src/system-prompts.ts",
+      "src/contracts.ts",
+      "src/contracts-core.ts",
+      "src/contracts-run-state.ts",
+      "src/contracts-protocol.ts",
+    ]) {
       const text = readFileSync(core, "utf8");
       assert.equal(/AGENTS\.md/.test(text), false, `${core} mentions AGENTS.md`);
       assert.equal(/SYSTEM\.md/.test(text), false, `${core} mentions SYSTEM.md`);
@@ -180,7 +193,13 @@ describe("core prompt-file boundaries", () => {
   });
 
   it("core prompt modules import no node builtins", () => {
-    for (const core of ["src/system-prompts.ts", "src/contracts.ts"]) {
+    for (const core of [
+      "src/system-prompts.ts",
+      "src/contracts.ts",
+      "src/contracts-core.ts",
+      "src/contracts-run-state.ts",
+      "src/contracts-protocol.ts",
+    ]) {
       assert.equal(/from ["']node:/.test(readFileSync(core, "utf8")), false, `${core} imports a node:* builtin`);
     }
   });
