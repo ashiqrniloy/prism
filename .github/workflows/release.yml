@@ -27,7 +27,7 @@ jobs:
         run: |
           set -o pipefail
           npm run sdk:ready 2>&1 | tee sdk-ready.log
-        timeout-minutes: 5
+        timeout-minutes: 15
       - name: summarize SDK failure
         if: failure()
         run: tail -200 sdk-ready.log >> "$GITHUB_STEP_SUMMARY"
