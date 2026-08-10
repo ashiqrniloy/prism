@@ -312,7 +312,17 @@ test("exit-gate evidence (Task 5) is recorded in the baseline, green, and post-d
   const gate = baseline.exitGate;
   assert.ok(gate, "baseline has an exitGate block");
   assert.equal(gate.version, "0.1.3", "exit gate targets 0.1.3");
-  for (const key of ["docsTripwires", "npmTest", "coverage", "audit", "releaseGate", "releaseCheck", "sdkReady", "publishDryRun", "benchmark"]) {
+  for (const key of [
+    "docsTripwires",
+    "npmTest",
+    "coverage",
+    "audit",
+    "releaseGate",
+    "releaseCheck",
+    "sdkReady",
+    "publishDryRun",
+    "benchmark",
+  ]) {
     assert.ok(gate[key] && Object.keys(gate[key]).length > 0, `exitGate.${key} is populated`);
   }
   assert.equal(gate.npmTest.exitCode, 0);
