@@ -109,6 +109,32 @@ const agent = createPrismAcpAgent({
 - **Lifecycle wiring.** Pass your `createCodingLifecycleEmitter()` as `coding.lifecycle`; `file_changed` etc. then flow to streaming sessions. `configuration_changed` broadcasts `config_option_update` (agent-message fallback if the SDK rejects the kind).
 - **Stream budgets.** Every lifecycle update counts against the same per-run stream event/byte budget as prompt updates; overflowing closes the update, never the run.
 
+### Persistence and ownership
+
+- **The agent never persists `modeId`/`configValues`.** Defaults are recomputed per session from the `modes`/`configOptions` seams — a fresh `session/new`, `load`, or `resume` always starts from `defaultModeId` / option `defaultValue`, and the agent's per-session registry is in-memory only. Persisting mode/config across sessions is a **host** decision, and host-side persistence MUST be ownership-scoped.
+- **Host persistence MUST key by `sessions.ownership`.** `authorize` binds transport identity to ownership; a host store that persists `modeId`/`configValues` must refuse any restore whose stored ownership differs from the current session's ownership — a `sessionId` alone is never a sufficient key (session ids may collide across tenants). A cross-tenant restore rejects with `ERR_PRISM_ACP_INPUT` and never returns the other tenant's mode/config.
+- **Ownership-scoped restore (host-owned store).** The store is keyed by `sessionId` and records the owning `userId`; restore refuses on mismatch (this exact pattern is asserted in `packages/ag-ui/src/__tests__/acp-modes-config.test.ts`):
+
+  ```ts
+  // Host-owned store; the agent is never asked to persist anything.
+  class HostModeConfigStore {
+    private readonly entries = new Map<string, { userId: string; modeId?: string; configValues: Record<string, boolean | string> }>();
+    save(userId: string, sessionId: string, state: { modeId?: string; configValues: Record<string, boolean | string> }): void {
+      this.entries.set(sessionId, { userId, ...state });
+    }
+    restore(userId: string, sessionId: string): { modeId?: string; configValues: Record<string, boolean | string> } | undefined {
+      const entry = this.entries.get(sessionId);
+      if (entry && entry.userId !== userId) {
+        throw new AcpError("ERR_PRISM_ACP_INPUT", `mode/config load rejected: ownership mismatch for session '${sessionId}'`);
+      }
+      return entry; // absent or cross-tenant -> nothing restored, fail closed
+    }
+  }
+  ```
+
+  Because the agent recomputes defaults on every `load`/`resume`, a host that restores state re-applies it after load through the same gated seams (`session/set_mode`, `session/set_config_option` — both run the `apply`/`onChange` hooks) and must refuse cross-tenant loads at the `authorize` seam first (falsy `authorize` = `Unauthorized ACP session`, before any mode/config state is reachable).
+- **Agent-owned persistence is 0.2.0.** A durable, ownership-scoped ACP session store (agent-side persistence of mode/config and session state) is roadmap 0.2.0 Module E, demand-gated; on the 0.1.x line the agent stays a thin per-session registry. See the [Host security guide](host-security.md) fail-closed checklist for the ACP boundary rows.
+
 ## Security and performance notes
 
 - **Untrusted client input.** Client-supplied paths, `additionalDirectories`, MCP server configs, terminal env/args, and media are validated at the boundary: count/byte caps, ownership-scoped sessions, path policy via the `sessions.additionalDirectories` seam, MCP servers only through host `select` (never auto-connected), UNSTABLE `acp` transport always rejected.

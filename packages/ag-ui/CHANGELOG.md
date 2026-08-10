@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.1] - 2026-08-10
+
+### Changed
+- ACP modes/config persistence guidance ([docs/acp.md](../../docs/acp.md) "Persistence and ownership"): the agent never persists `modeId`/`configValues`; host stores MUST key by `sessions.ownership` and refuse cross-tenant restores (`ERR_PRISM_ACP_INPUT`). New tests in `src/__tests__/acp-modes-config.test.ts`: ownership-scoped host-store refusal, agent-stays-thin regression guard, cross-tenant `authorize`-seam refusal.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

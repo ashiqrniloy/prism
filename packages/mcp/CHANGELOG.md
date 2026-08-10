@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.1] - 2026-08-10
+
+### Changed
+- Stateless SSE relay extracted into `relayStatelessBody` (internal module export, not in the package entry surface) with deterministic unit + E2E tests (`src/__tests__/sse-relay.test.ts`); behavior-preserving.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

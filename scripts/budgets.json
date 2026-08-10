@@ -1,12 +1,12 @@
 {
-  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark-0.0.23.mjs.",
+  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Root packed/unpacked baselines corrected at 0.1.1 (plan 013 Task 4) to the published @arnilo/prism@0.1.0 registry artifact sizes (718738 packed / 2505460 unpacked) — the previously recorded 713454/2388118 were measured from an incomplete dist build. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark-0.0.23.mjs.",
   "root": {
     "packedBytes": {
-      "baseline": 713454,
+      "baseline": 718738,
       "tolerance": 0.05
     },
     "unpackedBytes": {
-      "baseline": 2388118,
+      "baseline": 2505460,
       "tolerance": 0.05
     },
     "fileCount": {

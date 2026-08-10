@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-enterprise-postgres",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Optional PostgreSQL enterprise state infrastructure for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,14 +26,14 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@arnilo/prism-evals": "0.1.0",
-    "@arnilo/prism-model-router": "0.1.0",
-    "@arnilo/prism-policy": "0.1.0",
-    "@arnilo/prism-work-tools": "0.1.0",
+    "@arnilo/prism-evals": "0.1.1",
+    "@arnilo/prism-model-router": "0.1.1",
+    "@arnilo/prism-policy": "0.1.1",
+    "@arnilo/prism-work-tools": "0.1.1",
     "pg": "^8.22.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.1.0"
+    "@arnilo/prism": "0.1.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

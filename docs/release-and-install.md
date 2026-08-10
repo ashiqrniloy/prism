@@ -2,11 +2,11 @@
 
 ## What it does
 
-Prism is published as one core package, forty-one first-party capability packages, and six pure-manifest family/profile packages (**48** publishable manifests total). This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget. The measurable 1.0 readiness gates (command-per-gate) live in [`0.1.0-readiness.md`](./0.1.0-readiness.md).
+Prism is published as **49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages** — 14 provider adapters, 9 `prism-*` family/profile packages, and 25 capability packages. (Regenerate the counts: `ls packages/*/package.json | wc -l` = 48 workspace; `ls -d packages/provider-*/ | wc -l` = 14; `ls -d packages/prism-*/ | wc -l` = 9; capability = 48 − 14 − 9 = 25; publishable = root + 48 = 49.) This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget. The measurable 1.0 readiness gates (command-per-gate) live in [`0.1.0-readiness.md`](./0.1.0-readiness.md).
 
 Core `@arnilo/prism` ships runtime, CLI, templates, and docs. Every code package has a required `@arnilo/prism@0.1.0` peer; profiles are pure manifests. Installation activates no provider, listener, database, browser, credential, or tool capability.
 
-Current **48** publishable manifests:
+Current **49** publishable manifests (root + 48 workspace packages):
 
 `@arnilo/prism`, `@arnilo/prism-ag-ui`, `@arnilo/prism-browser`, `@arnilo/prism-coding-agent`, `@arnilo/prism-coding-security`, `@arnilo/prism-compaction-llm`
 `@arnilo/prism-compaction-observational-memory`, `@arnilo/prism-credentials-node`, `@arnilo/prism-enterprise-postgres`, `@arnilo/prism-evals`, `@arnilo/prism-mcp`, `@arnilo/prism-memory`
@@ -42,6 +42,7 @@ Consumers install the core package for the runtime and add first-party packages 
 | Install bounded web research tools | `npm install @arnilo/prism @arnilo/prism-web-tools @arnilo/prism-tool-validator-json-schema` |
 | Install browser automation tools | `npm install @arnilo/prism @arnilo/prism-browser playwright-core@1.61.0` |
 | Build everything (core + workspaces) | `npm run build` |
+| Delete all build output (explicit one-shot, see build notes) | `npm run clean` |
 | Run the default (network-free) test suite | `npm test` |
 | Dry-run pack core + every package | `npm run pack:dry-run` |
 | Local mirror of the release verify gate | `npm run release:dry-run` |
@@ -51,7 +52,11 @@ Consumers install the core package for the runtime and add first-party packages 
 | Protected PostgreSQL enterprise suite | `PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres` |
 | Full SDK readiness gate (typecheck + offline tests + pack) | `npm run sdk:ready` |
 
-Public core import specifiers (from the root `exports` map):
+> **Build notes (0.1.1+).** `npm run build` no longer runs `npm run clean` first: concurrent builds/tests (`npm test`, `npm run typecheck`) are now race-free because the only destructive step was the `rm -rf` clean, and concurrent `tsc` is write-only and idempotent on identical input (two processes emitting the same files end byte-identical regardless of interleaving).
+>
+> `ponytail:` concurrent `tsc` is idempotent on identical input, so no single-flight lock is needed; orphaned `dist/` files from deleted sources fail loudly on the next `node --test` (broken imports) and are filtered from tarballs by the `files` allowlists; run `npm run clean` after source deletions or branch switches; `tsc --build` (0.2.0 Module F) auto-cleans orphans.
+
+Run `npm run clean` explicitly after deleting source files or switching branches: a deleted `src/__tests__/*.test.ts` leaves an orphan `dist/__tests__/*.test.js` (tsc never auto-cleans). If the orphan's import chain still resolves it keeps running as a stale test — silent staleness, which is exactly what the explicit clean prevents — and if the chain is broken the next `node --test dist/__tests__/*.test.js` fails loudly (`ERR_MODULE_NOT_FOUND`), never silently swallowed. A fresh `npm run clean && npm run build` and the new `npm run build` from a clean state produce byte-identical `dist/` (tsc overwrites per-file outputs).
 
 | Specifier | Resolves to |
 | --- | --- |
@@ -151,7 +156,7 @@ For SDK readiness, run the same one-command gate directly. It composes existing 
 npm run sdk:ready
 ```
 
-Release publication derives all **48** manifests from the workspace once, validates exact `0.1.0` manifest/lockfile/internal ranges, then uses deterministic dependency order. `release:check` requires a clean commit tagged `v0.1.0` and rejects any existing registry version. `release:publish --resume` skips only registry versions whose internal dependency fingerprint matches the local manifest; conflicting versions fail closed. Each attempted package is written immediately to the JSON report, so a failed job can rerun safely. `--dry-run` performs registry availability checks and invokes `npm publish --dry-run` with explicit public access, provenance, and `latest` tag, but does not publish.
+Release publication derives all **49** manifests from the workspace once, validates exact `0.1.0` manifest/lockfile/internal ranges, then uses deterministic dependency order. `release:check` requires a clean commit tagged `v0.1.0` and rejects any existing registry version. `release:publish --resume` skips only registry versions whose internal dependency fingerprint matches the local manifest; conflicting versions fail closed. Each attempted package is written immediately to the JSON report, so a failed job can rerun safely. `--dry-run` performs registry availability checks and invokes `npm publish --dry-run` with explicit public access, provenance, and `latest` tag, but does not publish.
 
 ```bash
 npm run release:check -- --version 0.1.0
@@ -172,7 +177,7 @@ PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present
 
 ### 0.1.0 publish handoff (plan 012 Task 7)
 
-**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.0** (Phase 12, plan 012) is the release-candidate hardening cut of the **0.0.28** graph: no new packages, public exports, schema migrations, or runtime dependencies (freeze manifest `scripts/phase12-freeze-manifest.json`). Publishable graph stays **48** manifests at exact **0.1.0**. Store compatibility with 0.0.28: **compatible, no migration** ([migration](migration.md) `0.0.28 → 0.1.0`); the full `0.0.17 → 0.1.0` upgrade matrix is in the same page. All evidence for the tree under publication is recorded in [0.1.0 readiness](0.1.0-readiness.md) (capacity envelopes, restart-recovery, e2e journeys, threat-suites leg, audit at moderate).
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.0** (Phase 12, plan 012) is the release-candidate hardening cut of the **0.0.28** graph: no new packages, public exports, schema migrations, or runtime dependencies (freeze manifest `scripts/phase12-freeze-manifest.json`). Publishable graph stays **49** publishable manifests (root + 48 workspace packages) at exact **0.1.0**. Store compatibility with 0.0.28: **compatible, no migration** ([migration](migration.md) `0.0.28 → 0.1.0`); the full `0.0.17 → 0.1.0` upgrade matrix is in the same page. All evidence for the tree under publication is recorded in [0.1.0 readiness](0.1.0-readiness.md) (capacity envelopes, restart-recovery, e2e journeys, threat-suites leg, audit at moderate).
 
 ```bash
 # Operator prerequisites (each a named blocked gate — none may be skipped):
@@ -204,9 +209,41 @@ git push origin v0.1.0        # tag push triggers release.yml publish job (prove
 
 **Rollback notes.** `release:publish --version 0.1.0 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.0` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.0` is store-compatible with `0.0.28` in both directions (no migration ran), so an operator may defer adoption of `0.1.0` without a database rollback.
 
+### 0.1.1 publish handoff (plan 013 Task 6)
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.1** (plan 013) is the post-release hardening patch on the frozen 0.1.x line: five scoped fixes — build single-flight (clean removed from `npm run build`; standalone `npm run clean`), deterministic MCP SSE relay test (`relayStatelessBody` internal export in `@arnilo/prism-mcp`, not in the package entry surface), combined core + workspace coverage summary (`scripts/coverage-summary.mjs`, appended to `test:coverage`), canonical manifest-count narrative (49 publishable manifests = root + 48 workspace packages), and ACP modes/config ownership-scoped persistence guidance (the agent never persists them; host stores MUST key by `sessions.ownership`). Publishable graph stays **49** manifests (root + 48 workspace) at exact **0.1.1**. Store compatibility with 0.1.0: **compatible, no migration** ([migration](migration.md) `0.1.0 → 0.1.1`); declaration surface additive-only vs the frozen 0.1.x contract (`scripts/compat-baseline` regenerated at 0.1.1 with zero breaking deltas).
+
+```bash
+# Operator prerequisites (each a named blocked gate — none may be skipped):
+#  1. protected live-canary matrix green (live-canaries.yml, canary-report.json retained)
+#  2. PostgreSQL + keychain protected suites green (test:postgres, keychain suite)
+#  3. CodeQL SAST green on the release commit (security.yml / release.yml codeql-release)
+#  4. npm OIDC trusted publishing identity authenticated (NPM_TOKEN with id-token, provenance)
+
+git diff --check
+npm ci
+npm run sdk:ready            # includes typecheck, lint, format, full test, coverage, pack, release:gate
+npm run security:threat-suites
+PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres   # Phase 7 + Phase 12 restart-recovery
+npm audit --audit-level=moderate
+npm run release:check -- --version 0.1.1 --report /tmp/prism-0.1.1-preflight.json
+npm run release:publish -- --version 0.1.1 --dry-run --allow-dirty --allow-untagged --report /tmp/prism-0.1.1-dry-run.json
+#   run the dry-run twice and diff the reports: deterministic, byte-identical
+
+# Sign the release on the clean tagged tree (operator GPG key):
+git tag -s v0.1.1 -m "Prism 0.1.1"
+git verify-tag v0.1.1
+git push origin v0.1.1        # tag push triggers release.yml publish job (provenance, attestations)
+
+# Real publication never bypasses the gates: release.mjs refuses
+# --allow-dirty/--allow-untagged without --dry-run.
+```
+
+**Rollback notes.** `release:publish --version 0.1.1 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.1` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.1` is store-compatible with `0.1.0` in **both directions** (no migration ran — same checksum-protected contract), so an operator may defer or roll back the patch without a database rollback.
+
 ### 0.0.28 publish handoff (historical)
 
-**Decision: GO after protected operator prerequisites below.** Release **0.0.28** (Phase 11, plan 011) ships the optional enterprise adapter seams: OIDC/JWKS identity verification (`@arnilo/prism-credentials-node/oidc`), OPA policy evaluation into the durable ledger (`@arnilo/prism-policy/opa`), MCP OAuth client/server support (`@arnilo/prism-mcp`), host-selected OpenAPI operations as effect-gated tools (`@arnilo/prism-openapi-tools`), and an S3-compatible artifact body store behind the new core body contract (`@arnilo/prism-server/artifact-bodies`). Every seam is opt-in and fail-closed; hosts that wire none keep exact prior behavior. Publishable graph stays **48** manifests. See [migration](migration.md) `0.0.27 → 0.0.28`.
+**Decision: GO after protected operator prerequisites below.** Release **0.0.28** (Phase 11, plan 011) ships the optional enterprise adapter seams: OIDC/JWKS identity verification (`@arnilo/prism-credentials-node/oidc`), OPA policy evaluation into the durable ledger (`@arnilo/prism-policy/opa`), MCP OAuth client/server support (`@arnilo/prism-mcp`), host-selected OpenAPI operations as effect-gated tools (`@arnilo/prism-openapi-tools`), and an S3-compatible artifact body store behind the new core body contract (`@arnilo/prism-server/artifact-bodies`). Every seam is opt-in and fail-closed; hosts that wire none keep exact prior behavior. Publishable graph stays **49** publishable manifests (root + 48 workspace packages; `prism-openapi-tools` joined the graph in this release). See [migration](migration.md) `0.0.27 → 0.0.28`.
 
 ```bash
 git diff --check
@@ -402,7 +439,7 @@ Audit fixes, dependency updates, and security patches land only for the supporte
 ## Extension and configuration notes
 
 - **Required `@arnilo/prism` peer.** Every first-party code package declares a non-optional `@arnilo/prism@0.0.28` peer (`peerDependenciesMeta` must not mark `@arnilo/prism` optional; other peers such as `playwright-core` may be optional). The range stays pinned to `0.0.28` for the current 0.x release and will widen to `^1.0.0` at the 1.x stable release. Inside the workspace each package also declares `"@arnilo/prism": "file:../.."` in `devDependencies` so `npm install` resolves the peer locally; that devDependency is stripped from consumer installs and is not a runtime dependency.
-- **Public access.** All 48 manifests (42 code packages + 6 family/profile packages) declare `"publishConfig": { "access": "public" }`; the publisher also passes `--access public` explicitly because scoped packages otherwise default to restricted on first publish.
+- **Public access.** All 49 manifests (root + 48 workspace packages: 42 code packages + 6 pure-manifest family/profile packages) declare `"publishConfig": { "access": "public" }`; the publisher also passes `--access public` explicitly because scoped packages otherwise default to restricted on first publish.
 - **Map retention knob.** Source maps are emitted locally but stripped from tarballs by `!dist/**/*.map`. Removing that `files` negation ships maps in releases (larger tarballs, better consumer stack traces).
 - **Release workflow.** `.github/workflows/release.yml` has six jobs. `verify` runs network-free SDK readiness on Node 24; `node20-compat` builds/imports every public root `exports` default target on Node 20 for declared `engines.node >=20` (docs examples need Node >=22.6 native TypeScript stripping); `postgres-integration` uses `pgvector/pgvector:pg16`; `supply-chain` runs high-severity audit, SPDX/license policy, and tracked-source secret scanning; and tag-only `codeql-release` runs SAST. Tag-only `publish` needs all five gates, preserves clean exact-tag/version/topological publication, and alone receives `NPM_TOKEN`, `id-token: write`, and `attestations: write`. Before npm publish it packs all current tarballs, generates checksums plus SPDX, scans unpacked public artifacts, creates GitHub attestations for tarballs and SBOM, then retains artifacts for 30 days. Registry state remains the resumable journal. Local `npm run release:dry-run` remains network-free SDK readiness; local PostgreSQL coverage is `PRISM_TEST_POSTGRES_URL=... npm run test:postgres`.
 - **Adding a package.** New workspace packages are picked up automatically by `npm run build --workspaces`, `npm test --workspaces`, `npm run pack:dry-run`, the packaging guard (`src/__tests__/packaging.test.ts`), and the install-smoke test (`src/__tests__/install-smoke.test.ts`) via the workspace glob; add the package to both tests' config arrays for explicit per-package assertions.
@@ -434,7 +471,7 @@ Audit fixes, dependency updates, and security patches land only for the supporte
 - **Install smoke is offline.** The install-smoke test packs core + every package into a temp dir and installs tarballs with `--offline --no-audit --no-fund` into a fresh project. External dependencies are satisfied from the lockfile-backed npm cache prepared by `npm ci`; any attempted uncached registry fetch fails the gate.
 - **Packed-install e2e journeys (plan 012 Task 3).** `scripts/e2e-enterprise-journey.test.mjs` and `scripts/e2e-coding-journey.test.mjs` pack the first-party packages for their journey, install the exact tarballs into a fresh consumer project, and run the journey script inside that consumer — public exports only, no workspace-relative resolution (asserted per run). The **enterprise journey** composes OIDC identity → OPA policy decision (durable ledger) → agent run with durable events (memory, or real PostgreSQL when `PRISM_TEST_POSTGRES_URL` is set) → batched approval → OpenAPI side effect with idempotency → artifact upload + signed delivery, with policy-deny and hash-mismatch fail-closed injections. The **coding journey** composes an ACP editor session (init capability negotiation, session new + load/resume) → bounded coding tools (git-aware list/search, glob, read-before-write write, delete, move) → sandboxed process session → forge handoff with idempotent PR creation, with execution-policy and read-before-write denial paths. Each fixture asserts the installed version matches the packed manifest graph and stays within the frozen `e2eJourneyFixtureMsCeiling` (120 s in `scripts/phase12-freeze-manifest.json`).
 - **Protected restart-recovery leg (plan 012 Task 4).** `scripts/phase12-restart-recovery.test.mjs` (run by `npm run test:postgres` after the Phase 7 suite) spawns two real processes against one PostgreSQL schema: replica A runs a durable agent, suspends on a batched tool approval, appends durable events and is then SIGKILLed by the driver; replica B reconnects and resumes. Operators re-run the leg with `PRISM_TEST_POSTGRES_URL="postgresql://…" npm run test:postgres` against a disposable PostgreSQL 16 (e.g. `pgvector/pgvector:pg16`). Without the URL the gate records a named `BLOCKED GATE` failure instead of skipping. Reconnect p95 and 16-worker append contention p95 are asserted against the frozen `reconnectP95Ms` / `pointOpP95Ms` ceilings; set `PRISM_PHASE12_RECORD_EVIDENCE=1` to refresh the checked-in evidence file `scripts/phase12-restart-recovery.json`.
-- **Offline test budget.** The default `npm test` (no `PRISM_LIVE_PROVIDER_TESTS`) is pinned at **< 60s on Node 20** with a measured local baseline of ~45s (build ~18s + network-free tests/workspace tests/packaging smoke ~27s). The full CI `sdk:ready` gate runs on Node 24 because docs tests execute `examples/*.ts` via native TypeScript stripping. `npm run sdk:ready` also runs typecheck and pack dry-run, so it is allowed to exceed the `npm test` budget while remaining network-free. The CI `sdk:ready` step has `timeout-minutes: 5` as a hang backstop; the separate Node 20 compatibility step has `timeout-minutes: 3`. The budget was raised from 30s after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests; optimize before raising it again.
+- **Offline test budget.** The default `npm test` (no `PRISM_LIVE_PROVIDER_TESTS`) is pinned at **< 60s on Node 20** with a measured local baseline of ~45s (build ~18s + network-free tests/workspace tests/packaging smoke ~27s). The full CI `sdk:ready` gate runs on Node 24 because docs tests execute `examples/*.ts` via native TypeScript stripping. `npm run sdk:ready` also runs typecheck, pack dry-run, and the coverage summary, so it is allowed to exceed the `npm test` budget while remaining network-free. `npm run test:coverage` additionally runs the combined coverage summary (`npm run coverage:summary`, ~25s local: core + each workspace suite once with `--experimental-test-coverage`; measured total ~70s on Node 24) — additive reporting only, the core gate stays the only hard threshold. The CI `sdk:ready` step has `timeout-minutes: 5` as a hang backstop; the separate Node 20 compatibility step has `timeout-minutes: 3`. The budget was raised from 30s after the default suite grew to include every first-party package, offline install smoke, packaging guards, docs examples, and workspace tests; optimize before raising it again.
 
 ### 0.0.12 release-candidate verification — 2026-07-22
 

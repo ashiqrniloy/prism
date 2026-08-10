@@ -233,6 +233,54 @@ describe("docs", () => {
     }
   });
 
+  // plan 013 Task 4: exactly one canonical manifest-count statement lives in
+  // docs/release-and-install.md; the stale off-by-one strings must not
+  // reappear anywhere except docs/migration.md (historical release records
+  // are kept verbatim). Authoritative source: node scripts/release.mjs check
+  // (49 manifests) + the freeze-test filesystem coherence assertions.
+  it("canonical manifest-count narrative: one statement, no stale counts", () => {
+    const canonical = readFileSync("docs/release-and-install.md", "utf8");
+    for (const token of [
+      "49 publishable manifests",
+      "48 workspace packages",
+      "14 provider adapters",
+      "9 `prism-*` family/profile packages",
+      "25 capability packages",
+      "ls packages/*/package.json | wc -l",
+    ]) {
+      assert.ok(canonical.includes(token), `release-and-install.md missing canonical token: ${token}`);
+    }
+    const stale = [/forty-one first-party capability/, /six pure-manifest family\/profile/, /48 publishable manifests/];
+    for (const file of ["README.md", ...markdownFiles("docs")]) {
+      if (file === "docs/migration.md") continue;
+      const text = readFileSync(file, "utf8");
+      for (const pattern of stale) {
+        assert.doesNotMatch(text, pattern, `${file} contains stale manifest-count string: ${pattern}`);
+      }
+    }
+  });
+
+  it("plan 013 Task 6 freeze: 0.1.1 hardening patch and publish handoff are documented", () => {
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    const contracts = readFileSync("docs/public-contracts.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(migration.includes("## 0.1.0 → 0.1.1 post-release hardening"), "migration.md missing 0.1.1 section");
+    assert.ok(release.includes("### 0.1.1 publish handoff (plan 013 Task 6)"), "release page missing 0.1.1 handoff");
+    assert.ok(release.includes("**Rollback notes.**"), "0.1.1 handoff missing rollback notes");
+    assert.ok(readiness.includes("## Current line (0.1.1)"), "readiness missing 0.1.1 current-line table");
+    assert.ok(contracts.includes("0.1.1 verification (plan 013 Task 6)"), "public-contracts missing 0.1.1 verification note");
+    assert.ok(index.includes("current **0.1.1**"), "index.md current-line entry not at 0.1.1");
+    assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.1] - 2026-08-10"), "root changelog missing 0.1.1 entry");
+    for (const pkg of ["packages/mcp", "packages/ag-ui"]) {
+      assert.ok(
+        readFileSync(join(pkg, "CHANGELOG.md"), "utf8").includes("## [0.1.1] - 2026-08-10"),
+        `${pkg}/CHANGELOG.md missing 0.1.1 entry`,
+      );
+    }
+  });
+
   it("phase 12 compatibility matrix agrees with the freeze manifest", () => {
     const manifest = JSON.parse(readFileSync("scripts/phase12-freeze-manifest.json", "utf8"));
     const doc = readFileSync("docs/release-and-install.md", "utf8");
@@ -297,7 +345,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.1.0", "root manifest must be at 0.1.0");
+    assert.equal(pkg.version, "0.1.1", "root manifest must be at 0.1.1");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -2426,9 +2474,9 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
-      "one core package, forty-one first-party capability packages, and six pure-manifest family/profile packages",
+      "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
       "all eleven `@arnilo/prism-provider-*` packages",
-      "All 48 manifests (42 code packages + 6 family/profile packages)",
+      "All 49 manifests (root + 48 workspace packages: 42 code packages + 6 pure-manifest family/profile packages)",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",
       "dist/index.js` + `dist/index.d.ts`",

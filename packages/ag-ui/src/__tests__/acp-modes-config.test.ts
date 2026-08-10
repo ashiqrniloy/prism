@@ -10,7 +10,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { client, methods, PROTOCOL_VERSION, type ClientContext } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
-import { createPrismAcpAgent, type AcpConfigOptionsSeam, type AcpModesSeam, type CreatePrismAcpAgentOptions } from "../acp/index.js";
+import {
+  createPrismAcpAgent,
+  AcpError,
+  type AcpConfigOptionsSeam,
+  type AcpModesSeam,
+  type CreatePrismAcpAgentOptions,
+} from "../acp/index.js";
 
 const authorization = { ownership: { userId: "user-1" } };
 const stream = { async *stream() {} } as unknown as AgentSession;
@@ -109,6 +115,29 @@ function rejectsWith(promise: Promise<unknown>, text: string): Promise<void> {
     assert.ok(String((error as { data?: { details?: unknown } }).data?.details).includes(text));
     return true;
   });
+}
+
+/**
+ * Plan 013 Task 5 — host-owned mode/config persistence, exactly as documented
+ * in docs/acp.md "Persistence and ownership": the agent never persists; a host
+ * that does MUST scope by ownership and refuse cross-tenant restores. Keyed by
+ * sessionId alone (session ids may collide across tenants); the ownership guard
+ * is what makes it safe. This fixture is the tested form of the docs example.
+ */
+class HostModeConfigStore {
+  private readonly entries = new Map<string, { userId: string; modeId?: string; configValues: Record<string, boolean | string> }>();
+
+  save(userId: string, sessionId: string, state: { modeId?: string; configValues: Record<string, boolean | string> }): void {
+    this.entries.set(sessionId, { userId, ...state });
+  }
+
+  restore(userId: string, sessionId: string): { modeId?: string; configValues: Record<string, boolean | string> } | undefined {
+    const entry = this.entries.get(sessionId);
+    if (entry && entry.userId !== userId) {
+      throw new AcpError("ERR_PRISM_ACP_INPUT", `mode/config load rejected: ownership mismatch for session '${sessionId}'`);
+    }
+    return entry; // absent or cross-tenant -> nothing restored, fail closed
+  }
 }
 
 describe("ACP session modes and config options (Task 5)", () => {
@@ -313,6 +342,83 @@ describe("ACP session modes and config options (Task 5)", () => {
       const resumed = await connection.request(methods.agent.session.resume, { sessionId: "r", cwd: "/w" });
       assert.equal(resumed.modes!.currentModeId, "review");
       assert.equal(resumed.configOptions!.length, 2);
+    });
+  });
+
+  it("host mode/config persistence is ownership-scoped: cross-tenant restore rejects, same-tenant restore applies", () => {
+    const store = new HostModeConfigStore();
+    store.save("tenant-a", "s1", { modeId: "edit", configValues: { verbose: true } });
+
+    // Same-tenant restore returns the tenant's own state.
+    assert.deepEqual(store.restore("tenant-a", "s1"), { userId: "tenant-a", modeId: "edit", configValues: { verbose: true } });
+
+    // The same sessionId under another tenant (session ids may collide across
+    // tenants) overwrites the entry; the ownership guard must refuse, never
+    // returning the other tenant's mode/config.
+    store.save("tenant-b", "s1", { modeId: "review", configValues: { verbose: false } });
+    assert.deepEqual(store.restore("tenant-b", "s1"), { userId: "tenant-b", modeId: "review", configValues: { verbose: false } });
+    assert.throws(
+      () => store.restore("tenant-a", "s1"),
+      (error: unknown) => {
+        assert.ok(error instanceof AcpError);
+        assert.equal(error.code, "ERR_PRISM_ACP_INPUT");
+        assert.match(error.message, /ownership mismatch/);
+        return true;
+      },
+      "cross-tenant restore must reject with ERR_PRISM_ACP_INPUT",
+    );
+
+    // Absent state restores as undefined: fail closed, nothing to apply.
+    assert.equal(store.restore("tenant-a", "s2"), undefined);
+  });
+
+  it("agent stays a thin per-session registry: a new session never inherits another session's mode/config", async () => {
+    let next = 0;
+    const { app, updates } = makeAgent({
+      sessionFactory: ({ sessionId }) => session(sessionId ?? `host-session-${++next}`),
+    });
+    await connectRecording(app, updates, async (connection, firstId) => {
+      await connection.request(methods.agent.session.setMode, { sessionId: firstId, modeId: "edit" });
+      await connection.request(methods.agent.session.setConfigOption, {
+        sessionId: firstId,
+        configId: "verbose",
+        type: "boolean",
+        value: true,
+      });
+
+      // A fresh session starts from the seams' defaults — no inherited mode/config.
+      const second = await connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [] });
+      assert.notEqual(second.sessionId, firstId);
+      assert.equal(second.modes!.currentModeId, "review", "defaults recomputed — no inherited mode");
+      const verbose = second.configOptions!.find((option) => option.id === "verbose")!;
+      assert.equal(verbose.currentValue, false, "defaults recomputed — no inherited config value");
+    });
+  });
+
+  it("cross-tenant session load fails closed at the authorize seam (host binds ownership)", async () => {
+    const owners = new Map<string, string>();
+    let tenant = "tenant-a";
+    const { app } = makeAgent({
+      authorize: ({ sessionId }) => {
+        // Host binds transport identity to ownership; a load/resume of a session
+        // owned by another tenant is refused before any mode/config state is reachable.
+        if (sessionId && owners.get(sessionId) !== tenant) return false;
+        return { ownership: { userId: tenant } };
+      },
+      sessions: { load: () => session("l") },
+    });
+
+    await connect(app, async (connection) => {
+      const created = await connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [] });
+      owners.set(created.sessionId, tenant);
+    });
+
+    tenant = "tenant-b";
+    await connect(app, async (connection) => {
+      await rejectsWith(
+        connection.request(methods.agent.session.load, { sessionId: "host-session", cwd: "/w", mcpServers: [] }),
+        "Unauthorized ACP session",
+      );
     });
   });
 });

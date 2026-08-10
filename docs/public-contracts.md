@@ -453,6 +453,13 @@ exports only. **0.1.x patch promise:** additive-only declaration deltas vs the
 0.1.0 baselines, enforced by `node scripts/release.mjs gate`; a genuine break
 requires `--allow-break` plus a `docs/migration.md` entry naming the version.
 
+**0.1.1 verification (plan 013 Task 6).** The 0.1.1 hardening patch re-ran the
+gate against the frozen contract: `scripts/compat-baseline` regenerated with
+zero breaking deltas — a single version-literal change in the `@arnilo/prism`
+entry and one additive internal export (`relayStatelessBody` in
+`@arnilo/prism-mcp`, not re-exported from the package entry surface). The
+additive-only promise holds; no contract text changes.
+
 **Events.** The `AgentEvent` union (`agent_*`/`artifact_*`/`tool_*` variants),
 the durable `AgentEventRecord`/`DurableAgentEventRecord` shapes
 (`turn_started`, `turn_finished`, `tool_execution_started`, `message_finished`;

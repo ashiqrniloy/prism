@@ -108,6 +108,7 @@ measureBoundedJson	export declare function measureBoundedJson(value: unknown, bo
 normalizeHostname	export declare function normalizeHostname(value: string): string
 packageName	export declare const packageName = "@arnilo/prism-mcp"
 raceAbort	export declare function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | null | undefined): Promise<T>
+relayStatelessBody	export declare function relayStatelessBody(body: ReadableStream<Uint8Array> | null, onClose: () => void): Response | null
 requestPinned	export declare function requestPinned(url: URL, address: MediaHostAddress, init: RequestInit): Promise<Response>
 resolveMcpClientLimits	export declare function resolveMcpClientLimits(input: McpClientLimitsInput, defaults:
 resolveMcpOAuthLimits	export declare function resolveMcpOAuthLimits(input?: McpOAuthLimitsInput): ResolvedMcpOAuthLimits

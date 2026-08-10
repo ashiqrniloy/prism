@@ -345,6 +345,38 @@ function assertAuthorizedIdentity(authorization: PrismMcpAuthorization): PrismMc
   return authorization;
 }
 
+/**
+ * Stateless-mode response relay: forwards a bounded (or SSE) response body
+ * chunk-by-chunk and calls onClose exactly once when the body completes or the
+ * consumer cancels. Returns null (after invoking onClose) when the body is
+ * null, matching the stateless no-body close path. Exported only for direct
+ * unit tests; not re-exported from the package entry, so it stays out of the
+ * public surface (the compat gate records it as an additive-only entry).
+ */
+export function relayStatelessBody(body: ReadableStream<Uint8Array> | null, onClose: () => void): Response | null {
+  if (!body) {
+    onClose();
+    return null;
+  }
+  const reader = body.getReader();
+  const relay = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const next = await reader.read();
+      if (next.done) {
+        controller.close();
+        onClose();
+        return;
+      }
+      controller.enqueue(next.value);
+    },
+    cancel(reason) {
+      void reader.cancel(reason);
+      onClose();
+    },
+  });
+  return new Response(relay);
+}
+
 export async function createPrismMcpWebHandler(
   server: McpServer | (() => McpServer | Promise<McpServer>),
   options: CreatePrismMcpWebHandlerOptions = {},
@@ -462,28 +494,13 @@ export async function createPrismMcpWebHandler(
           void transport.close();
           void mcpServer.close();
         };
-        const body = bounded.body;
-        if (!body) {
-          closeTransport();
-          return bounded;
-        }
-        const reader = body.getReader();
-        const relay = new ReadableStream<Uint8Array>({
-          async pull(controller) {
-            const next = await reader.read();
-            if (next.done) {
-              controller.close();
-              closeTransport();
-              return;
-            }
-            controller.enqueue(next.value);
-          },
-          cancel(reason) {
-            void reader.cancel(reason);
-            closeTransport();
-          },
+        const relayed = relayStatelessBody(bounded.body, closeTransport);
+        if (!relayed) return bounded;
+        return new Response(relayed.body, {
+          status: bounded.status,
+          statusText: bounded.statusText,
+          headers: bounded.headers,
         });
-        return new Response(relay, { status: bounded.status, statusText: bounded.statusText, headers: bounded.headers });
       }
       return bounded;
     } catch (error) {

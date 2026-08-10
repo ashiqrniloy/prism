@@ -5,7 +5,7 @@ import { description, name, version } from "../index.js";
 describe("prism", () => {
   it("should export name and version", () => {
     assert.equal(name, "prism");
-    assert.equal(version, "0.1.0");
+    assert.equal(version, "0.1.1");
     assert.equal(typeof description, "string");
   });
 });

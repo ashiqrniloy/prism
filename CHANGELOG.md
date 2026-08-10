@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.1] - 2026-08-10
+
+### Changed
+- **Release 0.1.1 (plan 013)** is the post-release hardening patch on the frozen 0.1.x line, five scoped fixes and no new public packages/exports (freeze manifest `scripts/phase13-freeze-manifest.json`): (1) **build single-flight** — `npm run clean` removed from `npm run build` (standalone `npm run clean`; concurrent tsc is idempotent, the destructive `rm -rf` race is gone); (2) **deterministic MCP SSE relay test** — `relayStatelessBody` extracted as an internal export in `@arnilo/prism-mcp` with unit + E2E coverage (`packages/mcp/src/__tests__/sse-relay.test.ts`), closing the plan 011 relay compromise for the stateless path; (3) **combined coverage summary** — `scripts/coverage-summary.mjs` runs the core gate + 41 workspace suites and prints one labeled table (appended to `test:coverage`); (4) **canonical manifest-count narrative** — 49 publishable manifests = root + 48 workspace (14 provider + 9 `prism-*` + 25 capability), one statement in [docs/release-and-install.md](docs/release-and-install.md) with a tripwire; (5) **ACP modes/config ownership-scoped persistence guidance** — the agent never persists `modeId`/`configValues`; host stores MUST key by `sessions.ownership` (cross-tenant restore rejects `ERR_PRISM_ACP_INPUT`), asserted in `acp-modes-config.test.ts`. Store compatibility with 0.1.0: **compatible, no migration**; declaration surface additive-only vs the frozen 0.1.x contract (see [docs/migration.md](docs/migration.md) `0.1.0 → 0.1.1`).
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

@@ -1,0 +1,62 @@
+{
+  "$comment": "Phase 13 (0.1.1) Task 0 hardening-patch scope gate. Machine-checkable source of truth consumed by Tasks 1-6 of plans/013-Release-0-1-1-Post-Release-Hardening.md: the five allowed 0.1.1 fixes, the forbidden 0.1.3+/0.2.0 items, the additive-only compat promise, the audit/signed-tag/provenance policy, per-task evidence tokens, and the hardening-freeze deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json and 0.1.1 changes none of it. Amendment requires a recorded deviation entry below. Validated by scripts/phase13-freeze.test.mjs. Baseline evidence for regression comparison at the Task 6 exit gate lives in scripts/phase13-baseline.json.",
+  "release": "0.1.1",
+  "line": "0.1.x",
+  "type": "hardening-patch",
+  "baseline": "0.1.0 (Phase 12 exit gate passed 2026-08-09; signed tag v0.1.0; 49 publishable manifests)",
+  "hardeningFreeze": {
+    "active": true,
+    "allowedChanges": [
+      "build single-flight (remove clean from npm run build; keep npm run clean standalone)",
+      "mcp sse relay deterministic test (extract relayStatelessBody helper + unit test)",
+      "combined coverage summary (core + workspace per-package, additive reporting only)",
+      "manifest-count narrative consolidation (one canonical 49/48 statement + docs tripwire)",
+      "acp modes/config ownership-scoped persistence guidance (docs + cross-tenant refusal test)",
+      "documentation",
+      "release tooling and evidence scripts"
+    ],
+    "forbiddenChanges": [
+      "new packages",
+      "new public exports or subpaths",
+      "new schema migrations",
+      "new runtime dependencies",
+      "new model providers (0.1.3+)",
+      "0.2.0 modules: delegated coding-agent adapters (cursor, antigravity)",
+      "0.2.0 modules: god-module split (agents.ts, contracts.ts)",
+      "0.2.0 modules: deprecated-option removal",
+      "0.2.0 modules: cedar policy adapter, second object store, openapi pagination",
+      "0.2.0 modules: durable acp session store, native sandbox backend",
+      "0.2.0 modules: pdf/office reader, recursive delete, brace glob",
+      "0.2.0 modules: prompt-cache telemetry, model-router policy, async agui hooks",
+      "live-canary matrix and live-nats suite (0.1.2)",
+      "prism-providers umbrella membership fix (0.1.3)"
+    ],
+    "deviations": []
+  },
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.1.0",
+    "promise": "additive-only declaration deltas vs scripts/compat-baseline across 0.1.x patch releases; zero breaking deltas at the 0.1.1 bump"
+  },
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.1.1 changes none of it",
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.1.1",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "tasks": {
+    "$comment": "per-task evidence tokens; 'done' when the task passes its checks, 'pending' until then. Task 0 sets itself done at freeze; Tasks 1-6 move to done as they land.",
+    "task0": "done (freeze record + scope gate + baseline evidence at scripts/phase13-baseline.json)",
+    "task1": "done (build single-flight: npm run build drops the clean prefix; concurrent build/test probe green, dist byte-identical, orphan self-check + clean guidance documented)",
+    "task2": "done (mcp sse relay deterministic test: relayStatelessBody extracted + 4 tests — chunk order/done-close, cancel-close, null-body, e2e stateless POST close-on-completion)",
+    "task3": "done (combined coverage summary: scripts/coverage-summary.mjs + coverage:summary script appended to test:coverage; 41 workspace suites + core reported, core gate only hard threshold)",
+    "task4": "done (canonical manifest-count statement in docs/release-and-install.md + tripwire in docs.test.ts; budgets.json baselines corrected to published 0.1.0 artifact sizes)",
+    "task5": "done (docs/acp.md Persistence and ownership subsection + ownership-scoped HostModeConfigStore pattern; acp-modes-config.test.ts 15/15: cross-tenant restore rejects, agent stays thin, authorize-seam refusal)",
+    "task6": "done (docs freeze 123/123 at 0.1.0 then 0.1.1; bump --from 0.1.0 --to 0.1.1 rewrote 49 manifests + lockfile; compat baseline regenerated: version literal + additive relayStatelessBody only; sdk:ready rc=0; audit 0; publish dry-run 49/49 twice byte-identical; exit evidence in phase13-baseline.json exitGate)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip (inherited from scripts/phase12-freeze-manifest.json)",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.1.1"
+  }
+}

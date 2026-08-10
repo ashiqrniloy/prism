@@ -1,1109 +1,314 @@
-# Prism Enterprise and Coding Harness Completion Roadmap
+# Prism Roadmap
 
-Updated: 2026-08-04
-Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed)
-Status: Phase 11 complete (2026-08-08); Phase 12 complete (plan 012 Tasks 0–7, 2026-08-09; 0.1.0 publication operator-gated — see `plans/012-Release-0-1-0-Production-Readiness.md`)
+Updated: 2026-08-09
+Baseline: `@arnilo/prism` **0.1.0** (Phase 12 release-candidate hardening; signed tag `v0.1.0` exists; npm OIDC publication remains an explicit operator action).
+Scope: a forward-looking roadmap split into a **0.1.x** stabilization/provider line and a **0.2.0** new-module line. This document fully replaces the prior phase-by-phase roadmap; completed phase evidence is preserved in `plans/001`–`plans/012`, `CHANGELOG.md`, and `docs/review-coverage-*`.
 
 ## Objectives
 
-- Repair confirmed release, documentation, dependency, repository-search, write-atomicity, and context-budget defects before expanding functionality.
-- Make skill and context assembly progressive: descriptions first, bodies on demand, priority-aware budgeting, and fail-safe skill activation defaults.
-- Close coding-tool capability gaps that raise agent error rates (search modes, glob, read-before-write, bounded delete/move) before heavier coding intelligence.
-- Make existing enterprise contracts production-usable across restarts and multiple replicas.
-- Provide durable event delivery, explicit side-effect recovery, and extensible checkpoint/resume semantics without adding a second runtime.
-- Complete observational memory as an explicitly activated, source-faithful lifecycle with recent exact messages, an incremental observation log, reflections, and bounded raw-source retrieval.
-- Complete coding-harness primitives for safe repository intelligence, long-running processes, editor interoperability, forge workflows, and controlled network access.
-- Add narrow enterprise integration adapters for OIDC/JWKS identity, external policy engines, MCP authorization, bounded OpenAPI operations, and artifact storage.
-- Wire the third-party Caveman and Ponytail behavior projects into optional Prism packages so a host can opt into their modes, skills, commands, and lifecycle hooks without Prism reimplementing them.
-- Reach a measurable 0.1.0 production-readiness floor backed by protected integration, security, compatibility, packaging, and performance evidence.
-- Preserve Prism as a host-owned harness: optional integrations stay outside dependency-free core and no hosted product/control plane is introduced.
+- Stabilize and harden the 0.1.0 surface: close the residual correctness, lifecycle, and tooling defects found in the post-0.1.0 review without widening the public contract on the patch line.
+- Grow the **provider** catalog on the 0.1.x patch line (model providers only) and keep the dependency-free core, explicit-activation, and additive-only patch promises intact.
+- Land **new modules** in 0.2.0 only, each behind a numbered plan with primitive review, threat model, measurable acceptance criteria, and an operational owner.
+- Make Cursor and Antigravity integrations honest: evaluate whether each can be used **for models only** vs. as a full delegated agent, and integrate accordingly.
+- Convert every compromise and deferred further-action recorded across `plans/001`–`plans/012` into either a closed entry, a 0.1.x hardening task, or a 0.2.0 candidate with explicit demand gates.
+- Preserve Prism as a host-owned harness: no hosted product, no control plane, no second runtime, no implicit activation.
 
 ## Expected Outcome
 
-- Every default and protected release gate passes from a clean checkout with no stale plan/review assumptions.
-- Coding write/edit paths are crash-safe; context budgets drop oldest history first; default input layout favors prompt-cache stability.
-- Active skills expose name+description to the model by default; full instruction bodies load on demand; runtime skill registries do not silently activate every registered skill.
-- Coding agents can glob files, search in files-only/count modes, optionally require read-before-write, and use bounded delete/move without shelling out to `rm`/`mv`.
-- Policy, evaluation, connector-idempotency, and model-governance state can survive process restarts and remain consistent across replicas.
-- Agent streams reconnect on another replica without rerunning completed work or depending on sticky sessions.
-- Tool side effects have explicit idempotency and unknown-outcome recovery semantics rather than an undocumented exactly-once implication.
-- Custom agent loops can participate in durable suspension/resume through versioned snapshot and restore hooks.
-- Observational memory runs through the agent lifecycle without manual flush/compact choreography, preserves exact recent messages and full raw history, and keeps every observation/reflection traceable to bounded current-branch source evidence.
-- Approvals support batches, partial decisions, rich rejection context, sticky run-scoped policy, elicitation, and nested-agent propagation.
-- Coding hosts can use bounded ignore-aware search, optional language intelligence, managed process sessions, forge operations, constrained egress, and complete ACP capability negotiation.
-- Enterprise hosts can adopt reference OIDC, policy, MCP OAuth, OpenAPI, and artifact-store adapters without moving authentication databases or business policy into Prism.
-- Hosts that opt in can load Caveman and Ponytail as Prism extensions that contribute modes, skills, commands, and prompt injection through existing contribution contracts, with no duplicated upstream content and no implicit activation.
-- 0.1.0 ships only after observational-memory, skills progressive disclosure, coding-tool safety, Node, PostgreSQL, keychain, provider, MCP, A2A, browser, sandbox, ACP, and supply-chain evidence is recorded.
+- 0.1.x releases ship only fixes, provider additions/enrichment, and doc/tooling hardening; every change is additive or non-breaking against the frozen `docs/public-contracts.md` 0.1.x surface, or carries a tested migration/refusal path.
+- New model providers added in 0.1.x reuse `createOpenAICompatibleProvider` (or the equivalent Anthropic/Google base) so each is a thin package with conformance + budget gates, not a bespoke runtime.
+- 0.2.0 ships new capability packages (delegated coding-agent adapters, Cedar/object-store/pagination adapters, durable ACP session store, native sandbox backend, document readers, build/CI hardening) only after primitive review and per-package plans.
+- Cursor and Antigravity are integrated as **delegated coding-agent adapters** (not model providers), because neither SDK exposes a model-only seam; the model-only pattern (proven by `@arnilo/prism-provider-ai-sdk`) is documented as unavailable for them and not forced.
+- Every deferred compromise from the 0.0.x phase plans is either closed with evidence, rolled into a 0.1.x task, or gated behind 0.2.0 demand.
+- All default and protected release gates keep passing from a clean checkout; `npm audit --audit-level=moderate` stays at 0; the public API compat baseline stays green.
 
-## Current Baseline and Confirmed Gaps
+## Current Baseline and Review Findings (2026-08-09)
+
+The codebase was reviewed end to end after the 0.1.0 cut. Findings below are the basis for the 0.1.x and 0.2.0 work. Strengths are preserved; defects and opportunities drive the milestones.
 
 ### Existing strengths to preserve
 
-- Dependency-free core runtime with explicit provider, tool, credential, extension, and persistence activation.
-- Durable sessions, run ledger, checkpoints, leases, workflow coordinator, schedules, conversations, memory consent, artifacts, and replay contracts.
-- Multi-tenant identity propagation, ownership assertions, policy records, model governance, retention, legal hold, quota, and audit/export seams.
-- Forty-four publishable packages covering providers, MCP, A2A, AG-UI/ACP, workflows, browser automation, coding tools/security, evaluations, observability, RAG, memory, work tools, and SQL persistence.
-- Docker reference containment, deny-by-default browser/network posture, bounded coding tools, structured Git operations, guardrails, run limits, and durable approval.
-- Full workspace package tests currently pass independently; core/package conformance coverage is substantial.
+- **Dependency-free core** with explicit activation: no provider, tool, credential, MCP server, LSP, process, network proxy, OIDC, policy, or object-store service starts by import or discovery.
+- **Neutral seams** that make adapters cheap: `AIProvider.generate(): AsyncIterable<ProviderEvent>`, `RealtimeSession`, `AgentEventSource`, `ToolEffectStore`, `PolicyEvaluator`, `IdentityVerifier`, `ArtifactBodyStore`, `AgentLoopStrategy` snapshot/restore, pending-decision/approval contract, `SkillRegistry` + progressive disclosure.
+- **OpenAI-compatible base reused** by alibaba, opencode-go, openrouter, zai, kimi, neuralwatt; **`@arnilo/prism-provider-ai-sdk`** wraps the Vercel AI SDK `LanguageModelV4` *model interface only* and ignores its agent harness — the proof that model-only adapters are possible when an SDK separates model from loop.
+- **Conformance-helper packages** (`testing/*-conformance`) keep adapter tests dependency-free and runner-agnostic; per-package suites own their coverage.
+- **Security posture**: deny-by-default sandbox/egress, atomic same-filesystem write/edit, literal-only repository search (no ReDoS), redaction at every boundary, audience-bound OAuth tokens with SSRF-checked discovery, hand-rolled SigV4 over native fetch (no `@aws-sdk/client-s3` bloat), supply-chain negative fixtures, `npm audit` clean (0 vulns, 317 locked deps at 0.1.0), CodeQL/SAST, npm provenance.
+- **Deliberate minimalism** is disciplined: `ponytail:` comments consistently name the ceiling and upgrade path of each shortcut; no speculative abstractions or single-implementation interfaces were introduced.
+- **Budget/benchmark gates** per release with frozen p95 ceilings and a single 0.1.0 envelope (`scripts/benchmark-0.1.0.mjs`/`.json`).
+- 48 publishable manifests (49 graph entries incl. root), four umbrella profiles (`prism-base`, `prism-code`, `prism-sdk`, `prism-all`, `prism-providers`).
 
-### Confirmed defects and release blockers
+### Architectural problems needing fixing
 
-1. `node --test dist/__tests__/docs.test.js` currently has nine failures:
-   - three pre-existing failures follow deletion of `plans/`, `code-reviews/`, and `bug-reports/`: a local link still targets deleted plan 072, one assertion requires `plans/README.md`, and one assertion scans a nonexistent `plans/` directory;
-   - six legacy phase-evidence assertions expect the roadmap content intentionally replaced by this document and must be retired or rewritten around maintained behavior/docs.
-2. `@modelcontextprotocol/sdk` is pinned to 1.29.0. `npm audit` reports two moderate findings through its HTTP stack; 1.30.0 is the available fix baseline.
-3. Root documentation contradicts shipped behavior:
-   - browser automation is described as a non-goal although `@arnilo/prism-browser` ships;
-   - provider-family counts do not match the fourteen provider adapters;
-   - readiness text still describes an older release state.
-4. HEAD is five commits beyond `v0.0.17`; current HEAD has no matching signed release tag or publication evidence.
-5. Protected PostgreSQL, keychain, provider, Docker/Playwright, CodeQL, provenance, and live protocol gates have not been recorded for current HEAD.
-6. Model-supplied JavaScript regular expressions execute synchronously in `packages/coding-agent/src/repository.ts`. Deadline checks cannot interrupt catastrophic backtracking inside `RegExp.exec()`.
-7. `write` and `edit` overwrite targets with non-atomic `fsWriteFile`; a crash mid-write can leave a truncated/corrupted source file.
-8. Context-budget history eviction pops newest messages first (`groups.history.pop()`), discarding the most relevant recent turn before older history.
-9. Default `inputLayout` is `legacy`, which places transient user input before stable attachments/tool results and defeats prompt-cache prefix stability unless hosts know to set `cache_aware`.
+1. **Umbrella provider membership is inconsistent.** `@arnilo/prism-providers` ships 11 providers but omits `provider-azure`, `provider-bedrock`, `provider-vertex` (those live only in `@arnilo/prism-all`). `@arnilo/prism-all` omits `provider-opencode-go` from its provider set. The split is undocumented and surprises hosts. → 0.1.x: unify membership or document the split; prefer one rule (e.g., `prism-providers` = every first-party model provider; `prism-all` = providers + every capability package).
+2. **`src/agents.ts` (2,565 lines) and `src/contracts.ts` (2,541 lines, ~250 exports) are god-modules.** They are cohesive but hard to navigate and limit tree-shaking. → 0.2.0: split by concern (run lifecycle / approval / dispatch / fingerprint; contracts vs run-state vs protocol payloads) behind **barrel re-exports that preserve the public import surface** so the compat baseline stays green.
+3. **Build clean races itself.** `npm run build` runs `clean` then `build:core` then `build --workspaces`; concurrent `npm test`/`build` invocations can delete `dist/` mid-run (noted in plans 007/008 as "release verification must be single-flight"). This is a real footgun beyond release. → 0.1.x: remove `clean` from `build`, rely on `tsc --build` incrementality + a dedicated `clean` script; or gate builds with a single-flight lockfile.
+4. **Headline coverage gate is core-only.** The aggregate coverage gate excludes `packages/**` and `examples/**` (plan 010 compromise). Per-package suites exist, but the headline number overstates total coverage. → 0.1.x: surface a combined coverage summary in `npm run test:coverage` without weakening the gate.
+5. **ACP sessions are not durable.** Modes/config report table defaults; the live task registry is in-memory (cap 512, FIFO), not persisted across restart (plans 010/012). → 0.2.0: durable ACP session store behind a host-owned seam.
+6. **Delegated-agent seams exist but are protocol-specific (A2A/ACP) with no generic "delegated coding host" contract.** Adding Cursor/Antigravity/Aider/Claude-Code-SDK as one-offs would duplicate the mapping. → 0.2.0: one generic delegated-agent contract + thin per-SDK adapters (see SDK evaluation).
+7. **Observational-memory residual gaps.** Loaded-skill bodies and `ReadPathSet` are session-scoped in-memory only — checkpoint resume does not restore them (plans 003/004). `wrapResumeRun`/`attach` use a `sessionId` registry with no core lifecycle hook (plan 002). → 0.1.x/0.2.0: checkpoint persistence for loaded-skill names + read-path set (demand-gated).
+8. **Live canary matrix is not recorded.** Real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS (DCR + refresh/revoke), real S3-compatible store incl. KMS, and real NATS JetStream are documented as blocked protected gates, but CI runs only fakes (plans 009/011/012). → 0.1.x: record the protected live-canary matrix as a named, env-gated, fail-loud gate.
 
-### Skill and context progressive disclosure (Phase 3 shipped in 0.0.20)
+### Elegance of implementation
 
-- **Shipped:** default `skillsDisclosure: "progressive"` renders `Skill <name>: <description>` catalog for active skills; full `instructions` only when eager or name ∈ session `LoadedSkillSet` after successful `load_skill`.
-- **Shipped:** `createLoadSkillTool` / `resolveSkillLoad` (`load_skill`); host must register tool; fail-closed on unknown name, inactive `toolNames`, oversize body, duplicate load.
-- **Shipped:** `SkillRegistry` without `RunOptions.activeSkills` / `RunOptions.skills` activates **zero** skills; `activateAllSkills: true` restores prior list-all migration path.
-- **Shipped:** `applyContextBudget` honors `ContextBlock.priority` (default 0); skills demote via `skill_body` omission before full `skills` drop.
-- **Shipped:** optional host-gated `toolResultFold` (projection-only; store untouched; off by default).
-- **Deferred (follow Phase 3 plan):** checkpoint persistence for loaded-skill names — session `LoadedSkillSet` is in-memory only; resume loses bodies unless host/model reloads.
-- **Reference:** `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md`, `docs/context-and-skills.md`, `examples/skills-progressive-disclosure.ts`.
+- High. Discriminated-union events (`ProviderEvent`, `RealtimeEvent`, `CodingLifecycleEvent`), per-provider cache-control factoring, the `createOpenAICompatibleProvider` reuse pattern, and the model-only `provider-ai-sdk` are textbook clean seams.
+- The `ponytail:` shortcut discipline (single-level scans, hand-rolled minimal glob, dependency-free conformance helpers, SigV4 over native fetch) is consistent and documented with ceilings — not accidental minimalism.
+- Minor: a few providers hand-roll small `upstream.ts`/cache modules; plan 005 deliberately deferred a shared internal package until a third behavior package appears (YAGNI) — keep as-is.
 
-### Coding tool capability gaps
+### Performance opportunities
 
-- `repo_search` has no `files_with_matches` or `count` output mode; “which files contain X” returns full match content and wastes tokens.
-- No bounded `glob`/pattern file-finder tool; agents fall back to `shell find` or manual `repo_list` filtering.
-- No optional read-before-write soft guard; models can overwrite files never read in the current session.
-- No bounded `delete`/`move` tools; destructive renames and deletes go through high-risk shell with no undo/confirmation shape.
-- No PDF/document reader in coding tools (demand-gated; agents must shell out today).
-- Fuzzy `edit` match success without an ambiguous-match warning to the model is an accepted tradeoff that must be documented loudly.
+- The per-version benchmark runners (0.0.8–0.0.28) and the consolidated 0.1.0 runner are good; no regression risk identified at 0.1.0 budgets.
+- Opportunities: (a) prompt-cache hit/miss telemetry surface per provider so hosts can tune `cache_aware` layout; (b) model-router cost/latency-aware routing and fallback chains (router state is durable since Phase 6 but selection policy is host-supplied); (c) tree-shaking gains from the `agents.ts`/`contracts.ts` split; (d) async `AgUiProjection` hooks so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority). All are 0.2.0.
 
-### Observational memory gaps
+### Setup and structure improvements
 
-- `createObservationalMemoryRuntime()` runs only when a host manually calls `flush()`; extension registration does not connect observation, reflection, or compaction to completed agent turns.
-- `compactAfterTokens` is resolved as a setting but is never consumed. Core auto-compaction uses `thresholdEntries` before provider input and neither invokes the observer nor honors the observational-memory token threshold.
-- Observation coverage starts after the last raw source id, so later flushes may feed observational-memory bookkeeping entries back to the observer and create recursive self-observation.
-- Reflection and drop coverage ids are recorded but unused; the same active observation pool may be reflected repeatedly, and a successful observer pass that emits no facts does not advance coverage.
-- Reflection recall resolves only active observations. Once normal pool reduction drops a supporting observation, its reflection can no longer recover that observation or its raw source evidence even though both remain in the append-only ledger.
-- Compaction's `fullFold` marker does not itself reduce or hard-bound rendered memory; failed/no-op reflection or dropping can leave summaries and folded payloads growing without an effective token ceiling.
-- `flush()` can append and checkout while a session run is active because no run-lifecycle guard or atomic session-owned custom append primitive coordinates it with the current branch.
-- One worker model/prompt serves observer, reflector, and dropper; the observer prompt is coding-specific despite the package being generic.
-- Recall is exact-id only and host-supplied entry loading must preserve current-branch ownership. There is no bounded raw-message paging mode comparable to Mastra's source retrieval.
-- Existing unit coverage passes, but the live suite is skipped and no end-to-end test proves completed turn → observation → reflection/compaction → next-turn memory → raw-source recall.
+- **Prune superseded evidence runners.** `scripts/benchmark-0.0.{8,9,10,11,12,13,14,15,16}.mjs` and `scripts/benchmark-0.0.{23,24,25,26,27,28}.mjs` plus their `*.test.mjs` are mostly no longer wired into `npm test` (which runs only `benchmark-0.1.0.test.mjs` and the phase/e2e gates). Some are still referenced by `budget-gates.mjs`/`budgets.json`/`phase10-freeze-manifest.json`/`benchmark-0.1.0.mjs`. → 0.1.x: audit which are still imported, drop the rest, keep the checked-in `*.json` evidence; replace per-version runners with one parameterized runner + versioned evidence JSON.
+- **Archive `docs/review-coverage-2026-07-*.md`** (12 phase-review files) into a single `docs/review-coverage-archive.md` or a `docs/_evidence/` folder; they are already excluded from the tarball but clutter `docs/`. → 0.1.x (doc hygiene, low risk).
+- **README/manifest-count narrative** still references "48 publishable vs 49 graph entries incl. root" in places; keep one canonical count in `docs/release-and-install.md` and have everything else link to it (plan 011 further action). → 0.1.x.
+- **DX: `prism providers add <name>` scaffold** that generates an OpenAI-compatible provider package from a template (manifest, `provider.ts`, `models.ts`, `cache.ts`, conformance test, `docs/providers/<name>.md`). → 0.1.x or 0.2.0.
 
-### Third-party integration gaps
+### Tools for coding agents and enterprise customers
 
-- Prism has no package that wires the upstream Caveman project (skills, commands, activation/config/mode-tracker hooks, rules, cavecrew agents) into its extension, skill, command, system-prompt, instruction-injector, and lifecycle contracts.
-- Prism has no package that wires the upstream Ponytail project (six skills, mode commands, activate/config/instructions/mode-tracker/subagent hooks, statusline) into the same contracts.
-- Both upstream projects ship pi/Claude/Codex adapters but no Prism adapter; a host who wants caveman terseness or ponytail laziness in a Prism harness must hand-wire prompts and skills today.
-- Any wiring must not reimplement upstream prompt fragments, skill bodies, hook logic, or rule text; it must load them from the installed upstream package and map them to Prism contributions.
+- **Coding agent** (strong): repository ops, `repo_search` output modes, bounded `glob`, `delete`/`move`, optional `requireReadBeforeWrite`, `ProcessSession`, language intelligence (LSP), GitHub forge, allow-list egress, ACP interop.
+- **Coding gaps to close**: no PDF/Office document reader (demand-gated); no recursive `delete`; no brace-expanding `glob`; no network-free native sandbox backend (Docker reference only); no durable ACP session store. → 0.2.0.
+- **Enterprise** (strong): OIDC/JWKS verifier, OPA policy adapter, MCP OAuth (RFC 9728/8414/7009, PKCE, audience-bound), OpenAPI tools, S3 artifact body store, durable `AgentEventSource` (Postgres LISTEN/NOTIFY + NATS JetStream), durable approvals, idempotency, retention/legal hold, audit.
+- **Enterprise gaps to close**: Cedar policy adapter (OPA only today), second artifact body adapter, OpenAPI pagination beyond cursor, MCP SSE relay automated test, live canary matrix. → 0.2.0 (demand-gated) except MCP SSE test and live canary matrix which are 0.1.x hardening.
 
-### Enterprise harness gaps
+### Dead code and deprecations
 
-- Policy decisions have memory/JSONL stores only.
-- Evaluation records have a memory store only.
-- Work-tool external mutation deduplication has a memory store only.
-- Model-router rate, budget, and circuit state is process-local.
-- Live AgentEvent broadcasting is process-local and cannot reconnect across replicas.
-- Workflow polling exists, but no durable shared agent event source/backplane exists.
-- Tool dispatch documents an ambiguous crash window after marking a tool dispatched and before learning its outcome.
-- Only built-in loop strategies support durable run state; custom loops cannot snapshot and restore.
-- `IdentityVerifier` is a host seam with no bounded OIDC/JWKS reference adapter.
-- `PolicyEvaluator` has no reference OPA or Cedar mapping.
-- MCP authorization is host-callback based but lacks full protected-resource metadata and OAuth/OIDC discovery support.
-- Internal enterprise REST APIs require custom tools; no bounded host-selected OpenAPI operation adapter exists.
-- Artifact metadata is durable, but production blob/object storage remains entirely host-written.
+- **Documented `@deprecated` surface** (candidates for a 0.2.0 breaking cut with migration notes): `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs` (inert in first-party providers), `AgentConfig` `maxToolRounds` alias (use `limits.maxToolRounds`), `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders` (retained only for tests).
+- **Orphaned benchmark runners** (see Setup): audit-and-prune in 0.1.x.
+- **No unused-export sweep exists.** → 0.1.x: add `tsc --noUnusedLocals`/`--noUnusedParameters` (non-blocking) or an `knip`-style scan to CI to surface truly dead exports without breaking the build.
+- `ponytail:` comments are intentional shortcuts, not dead code; keep.
 
-### Coding agent harness gaps
+### Refactoring needs
 
-- ACP advertises only close-session capability; filesystem, terminal, MCP configuration, loading, modes, extra directories, locations, diffs, rich prompt content, and sticky permission decisions are absent.
-- Repository traversal does not consume `.gitignore`/Git tracked-file semantics.
-- Repository intelligence has no symbols, definitions, references, diagnostics, rename, or optional LSP integration.
-- Shell is one-shot; there is no PTY or managed long-running/background process lifecycle.
-- Local Git operations stop at bounded PR handoff; no GitHub/GitLab/Bitbucket issue, push, pull-request, review, or checks adapter exists.
-- Sandbox networking is correctly deny-by-default, but no reference allow-list egress proxy/policy makes networked coding practical.
-- Generic middleware exists, but coding hosts lack typed file, worktree, process, check, configuration, and task lifecycle events and ACP modes.
-- Durable approval is binary and sequential rather than batched, partially resolvable, sticky, richly elicited, and nested-agent aware.
-- Near-term coding-tool progressive-disclosure and soft-safety gaps (search output modes, glob, read-before-write, bounded delete/move) are tracked under Phase 4; heavier intelligence remains Phase 9.
+- Split `agents.ts` and `contracts.ts` by concern behind barrel re-exports (0.2.0, compat-preserving).
+- Unify umbrella provider membership (0.1.x).
+- Consolidate benchmark scripts to one parameterized runner (0.1.x).
+- Remove inert deprecated provider options in a 0.2.0 breaking cut with `docs/migration.md`.
+- Extract a shared delegated-agent adapter base only when ≥2 delegated adapters ship (0.2.0); do not pre-extract.
+
+### Security review
+
+- **No active vulnerabilities.** `npm audit --audit-level=moderate` = 0; tree locked at 317 deps; CodeQL/SAST, provenance, SBOM/license, secret scan, and supply-chain negative fixtures are wired into `release.yml`.
+- **Residual controls to harden (not flaws, deferred gates)**:
+  - Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) untested in CI — fakes only. → 0.1.x.
+  - No real NATS JetStream server test suite (fake of the narrow seam only). → 0.1.x/0.2.0.
+  - No automated test holds an MCP SSE stream open (long-lived teardown rejected for CI); production relays but the path is untested. → 0.1.x.
+  - Hand-rolled SigV4 is single-chunk only (no multipart/accelerate) — upload size ceiling; upgrade path documented. → 0.2.0 (demand-gated).
+  - ACP modes/config are not persisted by the agent — a naive host could leak cross-session/cross-tenant mode state if it persists without ownership scoping. → 0.1.x: add a guidance note + ownership-scoped persistence example; 0.2.0: durable ACP session store.
+  - `requireReadBeforeWrite` state is session-scoped in-memory only — resume can overwrite unread files. Documented soft guard. → 0.2.0: checkpoint persistence.
+- **Delegated-agent streams (Cursor/Antigravity) emit tool args/results that may contain secrets.** Any adapter MUST route through Prism's `SecretRedactor` and treat SDK tool payloads as untrusted. → 0.2.0 (with the adapters).
+
+## SDK Evaluation: Models-Only vs. Full Harness
+
+The user asked whether the Cursor and Antigravity SDKs can be used **for models only** (consuming their model/streaming interface) instead of also adopting their agent harness. The reference proof that model-only is possible in principle is `@arnilo/prism-provider-ai-sdk`, which wraps the Vercel AI SDK's `LanguageModelV4` (model interface) and maps its stream to `ProviderEvent`, ignoring the AI SDK's `Agent`/`tool`/`streamText` harness. That works **only because** the AI SDK cleanly separates the model interface from its agent loop.
+
+### Cursor SDK (`@cursor/sdk`, TypeScript) — model-only: NOT possible
+
+- Cursor's own docs state: *"The Cursor SDK is an agent SDK, not a standalone model-inference or chat-completions API. Router picks models for Cursor agent runs that can reason over a workspace, call tools, run commands, and edit files. Cursor does not currently document a raw Router endpoint for arbitrary model calls."*
+- The only entry point is `Agent.create()` → `agent.send(prompt)` → `run.stream()` yielding `SDKMessage`/`InteractionUpdate` events (assistant text, `tool_call`, `thinking`, `usage`, `status`, `task`, `request`). That stream runs Cursor's full agent loop — tools, file edits, shell commands — either inline in Node (local) or in a Cursor-hosted VM (cloud).
+- There is no `LanguageModelV4`-equivalent pluggable model seam and no raw model endpoint to wrap as a Prism `AIProvider`.
+- **Integration path:** treat Cursor as a **delegated coding agent**, not a model provider. Wrap `Agent.create()`/`send()`/`stream()` in a 0.2.0 package that maps `SDKMessage`/`InteractionUpdate` → Prism `AgentEvent` through a generic delegated-agent contract, redacts tool payloads, and exposes it via the supervisor/delegated-agent seam (prompt in, structured events out). Use it for "let Cursor do this coding task and report back," never as the model behind Prism's own loop.
+
+### Antigravity SDK (Python) — model-only: NOT possible
+
+- Antigravity is a **Python** framework whose model layer is bound to **Gemini** (`GeminiAPIEndpoint` for the Gemini Developer API, `VertexEndpoint` for Vertex AI; default `gemini-3.6-flash`). There is no pluggable custom-language-model seam.
+- The agent loop runs in a **Go `localharness` binary** the Python SDK talks to over WebSocket + protobuf. The `Connection.send(prompt)`/`receive_steps()` interface is the **agent loop**, not a model API.
+- Prism **already ships** `@arnilo/prism-provider-google` (Gemini) and `@arnilo/prism-provider-vertex` — those *are* the models Antigravity uses. If the goal is only "use Antigravity's models in Prism," the SDK adds nothing; the providers already cover it.
+- **Integration path:** use Antigravity as a **delegated coding agent** (0.2.0), mirroring the existing `provider-opencode-go` Go-binary-bridge pattern: spawn the Python sidecar (or the Go `localharness` directly), map `Step` events → Prism `AgentEvent`, expose via the delegated-agent seam. Do not adopt the Antigravity harness as Prism's runtime.
+
+### Alibaba Cloud — already implemented; enrich, do not reimplement
+
+- `@arnilo/prism-provider-alibaba` already exists and ships OpenAI-compatible Chat Completions against Model Studio / DashScope (pay-as-you-go regional, workspace-dedicated, and Coding Plan endpoints), with `enable_thinking`, cache-control markers, multimodal image, and structured output.
+- **0.1.x work** = gap-fill within the existing provider: Bailian (Model Studio) endpoints for embeddings/rerank/text-to-SQL where OpenAI-compatible, async task polling, document/video input where supported, and conformance coverage. These stay provider-side (0.1.x), not new modules.
+- **0.2.0** = broader Alibaba Cloud platform adapters (Bailian rerank/embeddings into `@arnilo/prism-rag`, OSS as a second `ArtifactBodyStore`) as optional, demand-gated packages.
+
+### Conclusion
+
+The model-only pattern is **available for SDKs that separate model from loop** (AI SDK ✓). It is **not available** for Cursor or Antigravity, whose only public surface is the bundled agent loop. The honest integration is delegated-agent adapters (0.2.0 new modules), not model providers. Alibaba is enrichment on the 0.1.x provider line.
 
 ## Product Boundaries
 
-- **Harness, not hosted platform:** hosts own product UI, authentication UX, user directory, deployment, incident response, provider selection, business policy, and final storage topology.
-- **One runtime:** new durability, event, approval, coding, and protocol capabilities extend current sessions, ledgers, checkpoints, leases, workflows, tools, and events.
-- **Core stays dependency-free:** database drivers, OIDC/JWT libraries, policy engines, LSP clients, forge clients, PTY implementations, proxies, and object-store SDKs remain optional packages or host adapters.
-- **One reference implementation first:** ship PostgreSQL before Redis/Kafka, one forge before three, one policy engine before several, and one object store before an adapter catalog.
-- **Explicit activation:** no listener, worker, provider, credential resolver, indexer, LSP server, process session, network proxy, or remote service starts by import or discovery.
-- **No exactly-once claim:** side effects are at-least-once with idempotency and explicit unknown-outcome recovery.
-- **No regex-as-containment claim:** remove unsafe model-facing regex execution or isolate it in a terminable boundary.
-- **No automatic capability escalation:** ACP, MCP, OpenAPI, forge, network, and policy integrations expose only host-selected capabilities and recheck identity/policy at execution.
-- **No speculative product layer:** Studio, visual workflows, hosted cloud, managed observability, broad channels/devices, desktop control, and remote browser vendors stay demand-gated.
+- **Harness, not hosted platform.** Hosts own UI, auth UX, user directory, deployment, provider selection, business policy, and storage topology.
+- **One runtime.** New durability, events, approval, coding, protocol, and delegated-agent capabilities extend current sessions/ledgers/checkpoints/leases/workflows/tools/events — no second runtime.
+- **Core stays dependency-free.** DB drivers, OIDC/JWT libs, policy engines, LSP clients, forge clients, PTY impls, proxies, object-store SDKs, and delegated-agent SDKs stay in optional packages.
+- **One reference implementation first.** Postgres before Redis/Kafka; one forge before a catalog; one policy engine (OPA) before Cedar; one object store (S3) before a second; one delegated-agent base before a catalog.
+- **Explicit activation.** No listener, worker, provider, credential resolver, indexer, LSP server, process session, network proxy, delegated agent, or remote service starts by import or discovery.
+- **No exactly-once claim.** Side effects are at-least-once with idempotency and explicit unknown-outcome recovery.
+- **No regex-as-containment.** Repository search stays literal-only; any regex support is host-supplied and terminable.
+- **No automatic capability escalation.** ACP, MCP, OpenAPI, forge, network, policy, and delegated-agent integrations expose only host-selected capabilities and recheck identity/policy at execution.
+- **No speculative product layer.** Studio, visual workflows, hosted cloud, managed observability, broad channels/devices, desktop control, and remote-browser vendors stay demand-gated.
 
 ## Priority and Dependency Rules
 
-1. Phase 1 blocks every later phase.
-2. Phase 2 repairs observational-memory correctness and lifecycle integration before production topology work depends on memory behavior or compatibility.
-3. Phase 3 skills/context progressive disclosure precedes Caveman/Ponytail wiring so large skill bodies are not injected every turn by default.
-4. Phase 4 coding-tool capability gaps ship before heavier coding intelligence so agents reduce shell/`find`/`rm` error surface with bounded native tools.
-5. Phase 5 third-party behavior integrations are optional, ship off the 0.1.0 critical path, and must wire—never reimplement—their upstream packages through existing Prism contribution contracts; they consume Phase 3 skill progressive-disclosure contracts.
-6. Phase 6 production stores precede distributed delivery and idempotency so later state has durable implementations.
-7. Phase 7 event delivery and side-effect recovery precede richer approvals and editor reconnect semantics.
-8. Phase 8 durable extensibility and approval contracts precede ACP expansion so protocol decisions map to one shared model.
-9. Phase 9 coding primitives precede full ACP exposure; ACP must map existing primitives, not create a second filesystem/process/runtime.
-10. Phase 10 completes ACP and coding-host lifecycle behavior after the underlying coding capabilities exist.
-11. Phase 11 enterprise adapters consume durable stores, event delivery, approval, and idempotency from earlier phases.
-12. Phase 12 is a release-candidate hardening phase, not a feature catch-all.
-13. Phase 13 capabilities require named demand, an operational owner, threat model, measurable acceptance criteria, and their own numbered execution plan.
+1. 0.1.x hardening (defects, lifecycle, tooling, security gates) precedes new 0.1.x providers precedes 0.2.0 modules.
+2. New model providers on 0.1.x MUST reuse an existing OpenAI/Anthropic/Google-compatible base and ship conformance + budget gates; no bespoke runtime per provider.
+3. New modules in 0.2.0 require a numbered plan with primitive review, threat model, measurable acceptance criteria, and an operational owner; do not scaffold their packages or APIs early.
+4. Delegated-agent adapters (Cursor, Antigravity, future) share one generic delegated-agent contract extracted only after ≥2 adapters are planned; no premature abstraction.
+5. Breaking changes (removing deprecated inert options, splitting god-modules) land in 0.2.0 behind barrel re-exports and `docs/migration.md`; the 0.1.x compat baseline stays green.
+6. Demand-gated 0.2.0 candidates (Cedar, second object store, OpenAPI pagination, recursive delete, brace glob, PDF readers, native sandbox backend, multipart SigV4) need a named user before a plan.
+7. Every release records protected evidence (Postgres, live canaries, benchmarks) as a blocked gate when credentials are absent — never a silent skip.
 
-## Phase Planning Workflow
+## Versioning Policy
 
-1. This roadmap defines scope, order, and exit criteria. It is not an implementation log.
-2. Before implementation, create one numbered executable plan for the first incomplete phase only.
-3. That plan must inventory reusable primitives, freeze public API changes, list exact files, define adversarial tests first, and follow `.agents/skills/create-plan/references/prism-wiki.md`.
-4. Implement only the active phase. Later phases remain backlog; do not scaffold their packages or APIs early.
-5. Mark a phase complete only after its focused tests, `npm run sdk:ready`, release checks, documentation, and listed protected evidence pass.
-6. Record actual compromises and follow-up work in the phase plan and update this roadmap with concise completion evidence.
+- **0.1.x (patch line):** bug fixes, correctness/lifecycle/security/tooling hardening, doc hygiene, and **new model providers** / provider enrichment. Additive or non-breaking vs the frozen `docs/public-contracts.md` 0.1.x surface; any unavoidable breaking change carries a tested migration/refusal path and a `docs/migration.md` entry. Each 0.1.x cut runs the full release validation checklist.
+- **0.2.0 (minor):** new modules and capability packages, plus the compat-preserving god-module split and the deprecated-option removal. Additive public exports where possible; breaking changes documented with migration. 0.2.0 ships only after 0.1.x hardening is green and each module's plan passes its exit gate.
+- **1.0:** operator-gated, not automatic; requires the full protected matrix (Node 20+22+24, multi-Postgres, live canaries, all protocol pins) recorded and the 0.1.x contract stable through at least one patch cycle.
 
-## Tasks
+## Roadmap — 0.1.x Stabilization and Providers
 
-- [x] Phase 1 — Release 0.0.18: restore release integrity and close confirmed defects
-  - **Completion evidence (2026-07-30):** `plans/001-Release-0-0-18-Restore-Integrity.md` Tasks 0–9 done. `npm run sdk:ready` green; `npm audit --audit-level=moderate` 0 vulns; docs 105/105; coding-agent 204/204; MCP 38/38; `release:check --version 0.0.18` + 44-package pack dry-run pass. Shipped: MCP SDK 1.30.0, `repo_search` literal-only, atomic write/edit, oldest-first history eviction, `cache_aware` default layout, README/readiness alignment.
-  - Objectives:
-    - Restore all default release gates after historical planning/review content was intentionally deleted.
-    - Remove known dependency and synchronous-regex security exposure.
-    - Make root documentation and version/release provenance truthful.
-    - Close coding write/edit crash-corruption and context-assembly correctness bugs that affect every agent run.
-  - Acceptance Criteria:
-    - Functional: docs tests no longer require deleted directories; every local Markdown link resolves; no plan-history content is restored unless explicitly selected as maintained documentation.
-    - Functional: MCP package uses a non-vulnerable supported SDK version and preserves bounded tools/resources/prompts, Streamable HTTP, stateful sessions, authorization callbacks, and package exports.
-    - Functional: model-facing repository search cannot execute uninterruptible catastrophic JavaScript regular expressions on the main thread; literal search behavior remains compatible.
-    - Functional: `write` and `edit` persist via same-filesystem temp write + `rename` (or documented equivalent); a crash mid-write cannot leave a truncated target; abort still fails closed before rename.
-    - Functional: context-budget history eviction drops oldest history messages first while preserving instruction/summary prefix; newest turns are retained preferentially under pressure.
-    - Functional: default `inputLayout` is `cache_aware` (or an equally cache-stable layout); `legacy` remains explicitly selectable for hosts that require the prior order; migration notes call out the default change.
-    - Functional: README, docs index, package counts, browser status, readiness page, changelogs, runtime version, manifests, lockfile, and release scripts agree on supported behavior and target version.
-    - Performance: literal search and any retained regex backend remain within existing byte/file/match/time ceilings; atomic write adds no unbounded temp retention; SDK upgrade adds no unbounded HTTP/session state or material package-size regression.
-    - Code Quality: stale tests are removed or rewritten around current maintained artifacts rather than recreating deleted history; dependency and layout changes are minimal and isolated.
-    - Security: `npm audit --audit-level=moderate` has no known fixable MCP HTTP advisory; regex execution cannot block the main event loop indefinitely; write temp paths stay inside the approved workspace; tarball and secret scans remain clean.
-  - Approach:
-    - Documentation Reviewed:
-      - `src/__tests__/docs.test.ts`, `docs/release-and-install.md`, `docs/0.1.0-readiness.md`, `docs/mcp-tools.md`, `docs/coding-agent-tools.md`, `docs/context-and-skills.md`, `docs/agent-session-runtime.md`, `README.md`.
-      - MCP TypeScript SDK authorization and Streamable HTTP documentation: <https://github.com/modelcontextprotocol/typescript-sdk>.
-      - MCP authorization and security requirements: <https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization> and <https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices>.
-      - Node.js `fs.rename`/`writeFile` atomicity notes and worker/process APIs if regex mode is retained outside the main thread.
-      - `src/context-budget.ts`, `src/input.ts`, `src/agents.ts` for layout defaults and history eviction order.
-    - Options Considered:
-      - Restore deleted plans/reviews: preserves old tests but restores large unmaintained history; reject unless maintainers choose archival history as a product requirement.
-      - Keep synchronous regex with heuristic pattern validation: cannot prove bounded execution; reject.
-      - Remove model-facing regex mode and retain literal search: smallest secure default; preferred.
-      - Isolate regex in a terminable worker/backend: retain only if current users require regex mode and compatibility cost is accepted.
-      - Keep non-atomic overwrite and document risk: reject; crash corruption is a reliability defect.
-      - Keep newest-first history eviction for cache prefix: reject; front-drop preserves prefix equally while retaining recent relevance.
-      - Document `cache_aware` without changing default: insufficient; quiet footgun remains.
-    - Chosen Approach:
-      - Update docs tests to validate current maintained docs rather than deleted planning directories.
-      - Upgrade the MCP SDK by the smallest compatible version step and run package conformance before broader changes.
-      - Prefer deleting model-facing regex mode. If compatibility evidence blocks removal, require a host-supplied or terminable regex backend and never execute it synchronously in core tool flow.
-      - Implement same-directory temp + `fs.rename` for write/edit (and pluggable ops equivalents); document fuzzy-edit ambiguity tradeoff loudly.
-      - Change history eviction to drop from the front (oldest); add a focused regression test.
-      - Flip default `inputLayout` to `cache_aware`; keep `legacy` as an explicit opt-in.
-      - Correct documentation from generated/current package inventory where feasible instead of maintaining duplicate hand counts.
-    - API Notes and Examples:
-      ```ts
-      createRepoSearchTool(cwd, { modes: ["literal"] });
-      // Optional regex support, if retained, must be a host-supplied bounded backend.
-      const session = agent.createSession({ inputLayout: "legacy" }); // opt-in prior order
-      // write/edit: temp in same dir → rename; callers see identical ToolResult shape.
-      ```
-    - Files to Create/Edit (tentative):
-      - `src/__tests__/docs.test.ts`, broken docs link sources, `README.md`, `docs/index.md`, `docs/0.1.0-readiness.md`.
-      - `package.json`, `package-lock.json`, `packages/mcp/package.json`, MCP source/tests/docs only where SDK compatibility requires it.
-      - `packages/coding-agent/src/repository.ts`, `write.ts`, `edit.ts`, search/write/edit tool schema/tests/docs/changelog/migration notes.
-      - `src/context-budget.ts`, `src/input.ts`, `src/agents.ts`, focused context-budget and input-layout tests.
-      - Root/workspace manifests, changelogs, release metadata for 0.0.18.
-    - References:
-      - Current failures in compiled `dist/__tests__/docs.test.js`, sourced from `src/__tests__/docs.test.ts`.
-      - `packages/coding-agent/src/repository.ts:308-319`, `packages/coding-agent/src/write.ts`, `packages/coding-agent/src/edit.ts`.
-      - `src/context-budget.ts` history `pop()` eviction; `src/agents.ts` / `src/input.ts` `inputLayout ?? "legacy"`.
-      - `docs/mcp-tools.md` pinned-version and session behavior.
-  - Test Cases to Write:
-    - Docs tests from a checkout with no `plans/`, `code-reviews/`, or `bug-reports/` directories.
-    - MCP stateless/stateful session, auth isolation, origin, body, cursor, reconnect, and unsupported-capability regression tests after upgrade.
-    - Evil-regex fixture demonstrating main thread remains responsive or regex mode is rejected.
-    - Literal search Unicode, binary, symlink, abort, scan cap, match cap, and deadline regressions.
-    - Write/edit crash simulation: kill between temp write and rename leaves original intact; successful path replaces atomically; abort before rename leaves target unchanged.
-    - Context budget over-limit fixture: oldest history drops first; newest tool/user turns remain; instructions/summaries preserved.
-    - Default layout is `cache_aware`; explicit `legacy` restores prior message order; cache-prefix ordering regression for attachments/toolResults before input.
-    - README/package-count/browser/readiness assertions derived from current manifests/exports.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; repository regex mode may be removed or made host-supplied, MCP dependency behavior is updated, write/edit durability changes, default input layout changes, and release docs change.
-    - Docs pages to create/edit: `docs/coding-agent-tools.md`, `docs/mcp-tools.md`, `docs/context-and-skills.md`, `docs/agent-session-runtime.md`, `docs/migration.md`, `docs/0.1.0-readiness.md`, `docs/release-and-install.md`, `README.md`.
-    - `docs/index.md` update: yes; repair links and update Tools, MCP, Context/skills, Runtime, Release/install, and browser descriptions.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Compiled docs tests, relevant package tests, `npm run sdk:ready`, audit, package budget, secret/SBOM/license checks, Node 20/current imports, `git diff --check`, and 44-package dry-run pack all pass from a clean checkout.
+Each item is a candidate for one 0.1.x release. Order within the line is recommended; actual sequencing follows the per-release plan. New providers and provider enrichment are explicitly 0.1.x per the versioning policy.
 
-- [x] Phase 2 — Release 0.0.19: complete observational memory lifecycle and source-faithful retrieval
-  - **Completion evidence (2026-07-30):** `plans/002-Release-0-0-19-Observational-Memory.md` Tasks 0–7 done. `@arnilo/prism-compaction-observational-memory` 78/78 offline; `npm run sdk:ready` green; `release:check --version 0.0.19` + compat baseline updated; docs tripwire `phase2_observational_memory_docs_cover_four_layers_migration_and_lifecycle_example` green; `examples/observational-memory-lifecycle.ts` in demo gate. Shipped: `createObservationalMemory().attach()` post-run lifecycle, four-layer provider context, nested settings + legacy map, full-ledger reflection recall + branch paging, dual-model live canary (`PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1` + `OPENAI_API_KEY`, fails closed without key).
-  - Objectives:
-    - Upgrade `@arnilo/prism-compaction-observational-memory` from manually coordinated primitives into one explicitly activated session-memory composition.
-    - Match Mastra's useful four-part memory model: recent exact messages, an incremental observation log, reflections over that log, and retrieval of the exact raw sources behind compressed memory.
-    - Close every confirmed observational-memory correctness, coverage, lifecycle, configuration, branch-isolation, genericity, and resource-bound gap without adding a second session store or deleting raw history.
-  - Acceptance Criteria:
-    - Functional: one host activation connects completed agent turns to observation and connects configured token pressure to reflection and compaction; callers do not need to remember a separate `flush()` plus `session.compact()` sequence.
-    - Functional: observation processes only eligible unobserved user, assistant, and tool message entries from the current branch; observational-memory records, compaction records, and unrelated internal bookkeeping are excluded while durable scan coverage still advances across them.
-    - Functional: a successful observer pass advances coverage even when it finds no durable fact; restart, retry, and duplicate lifecycle delivery do not re-observe an already covered source range or append duplicate logical records.
-    - Functional: provider context contains a bounded exact recent-message window in original role/tool-call/tool-result order plus the active observation/reflection projection; older raw entries remain unchanged in the session store and are omitted only from normal provider context.
-    - Functional: observation records retain bounded source entry ids/ranges, timestamps, relevance, and deterministic lineage; reflection records retain complete supporting-observation lineage and process only observations newer than their durable coverage boundary unless an explicit full rebuild is requested.
-    - Functional: dropped observations disappear from active context but remain recoverable as historical support; recalling a reflection after its supporting observations are dropped still returns those observations and their available raw source entries with dropped/missing status.
-    - Functional: retrieval supports exact observation/reflection id lookup and bounded current-branch raw-message paging around a source cursor, including full-detail selection for text and tool-result parts; unknown, sibling-branch, wrong-session, and unauthorized sources fail closed.
-    - Functional: observer and reflector may use separate host-selected providers/models, instructions, thinking/model settings, token thresholds, and credential policies; pool reduction is an explicit policy, and any retained model-assisted dropper is separately configurable; legacy single-worker configuration has a documented compatibility mapping or migration error.
-    - Functional: every public setting has an observable effect or is removed. Observation-message, reflection-observation, recent-message, compaction, pool-target, and hard-block thresholds use one documented token-counting seam with a bounded deterministic fallback.
-    - Functional: lifecycle work cannot append or checkout concurrently with an active conflicting run; append/coverage updates are session-owned, parent/CAS checked, abortable, and safe across checkout, fork, clone, restart, and duplicate invocation.
-    - Functional: import and extension setup remain inert; no worker, provider request, tool, timer, or compaction starts until a host explicitly attaches/activates observational memory for an agent/session.
-    - Performance: source selection and ledger folding are O(branch entries); each worker input/output, rendered projection, folded payload, recent-message window, source page, cursor, tool result, turn count, and concurrent job count has soft/default and immutable hard caps.
-    - Performance: exceeding memory limits forces bounded synchronous reduction or fails with a typed result before provider input; `fullFold` cannot merely relabel an oversized payload, and compaction never emits an unbounded summary.
-    - Code Quality: a primitive review first determines whether existing middleware/events/session append/compaction contracts can provide safe post-run integration; only generic reusable core hooks are added if package-only composition cannot meet ordering and ownership requirements.
-    - Code Quality: observer instructions are domain-neutral by default and host-customizable; observation, reflection, dropping, rendering, retrieval, and lifecycle orchestration remain separately testable without duplicating the agent loop.
-    - Security: source loading and recall enforce current session branch and ownership, secrets are redacted before worker/provider/persistence/tool output, model-supplied ids are allow-listed against eligible source/support sets, and memory workers cannot activate arbitrary tools or credentials.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/compaction-observational-memory.md`, `docs/compaction-and-retry.md`, `docs/agent-session-runtime.md`, `docs/agent-events.md`, `docs/session-stores-and-branching.md`, `docs/context-and-skills.md`, and package README/changelog.
-      - Current package implementation: `runtime.ts`, `settings.ts`, `ledger.ts`, `projection.ts`, `strategy.ts`, `render.ts`, `recall.ts`, `tool.ts`, `serialize.ts`, extension, workers, and tests.
-      - Mastra Observational Memory guide and API reference: <https://github.com/mastra-ai/mastra/blob/main/docs/src/content/en/docs/memory/observational-memory.mdx> and <https://github.com/mastra-ai/mastra/blob/main/docs/src/content/en/reference/memory/observational-memory.mdx>.
-      - Mastra incremental observation/lifecycle sources: <https://github.com/mastra-ai/mastra/blob/main/packages/memory/src/processors/observational-memory/observational-memory.ts> and <https://github.com/mastra-ai/mastra/blob/main/packages/memory/src/processors/observational-memory/processor.ts>.
-    - Options Considered:
-      - Keep documented manual `flush()` and compaction choreography: leaves dead settings, race hazards, and easy host omission; reject as the default complete composition while retaining low-level primitives for advanced hosts.
-      - Start workers or timers during extension setup: violates Prism explicit-activation and import-safety boundaries; reject.
-      - Add a parallel memory database or delete compacted session entries: duplicates the session source of truth and weakens audit/raw recall; reject.
-      - Clone Mastra resource-scoped cross-thread memory and semantic search in this phase: broadens tenancy, consent, vector-store, and retention scope beyond the requested four-part floor; defer behind explicit host retrieval adapters and demand.
-      - Compose a host-activated controller over current session entries, compaction, tools, and the smallest safe generic lifecycle primitive proven necessary by review: chosen.
-    - Chosen Approach:
-      - Treat raw current-branch session message entries as immutable source of truth. Store only bounded append-only observation/reflection/drop/coverage records and standard compaction entries alongside them.
-      - Maintain two independent durable cursors: raw-source coverage for observation and observation-log coverage for reflection. Coverage advances on successful empty passes and excludes internal memory records without losing chronology.
-      - Build provider context from active reflections/observations followed by a configurable exact recent-message suffix; compaction changes projection only, never raw retention.
-      - Resolve recall from the full ledger, not only active observations. Return bounded source entries or selected message parts and explicitly report dropped and missing lineage.
-      - Preserve exact-id recall as the cheapest reliable path and add current-branch cursor paging for Mastra-style raw-source access. Keep thread listing, resource-wide sharing, and semantic search optional/demand-gated rather than silently widening scope.
-      - Make synchronous threshold behavior deterministic first. Background buffering, idle activation, or provider-change activation may be added only if they preserve the same durable coverage/CAS semantics and require no implicit scheduler.
-    - API Notes and Examples:
-      ```ts
-      // Illustrative; primitive review freezes final names and attachment shape.
-      const observationalMemory = createObservationalMemory({
-        observation: { provider, model: observerModel, messageTokens: 30_000 },
-        reflection: { provider, model: reflectorModel, observationTokens: 40_000 },
-        context: { recentMessages: 8, compactAfterTokens: 81_000 },
-        retrieval: { currentBranchMessages: true, pageLimit: 20 },
-      });
+### 0.1.1 — Post-release hardening and tooling fixes
 
-      const session = observationalMemory.attach(agent.createSession({ id: "session-1" }));
-      await session.run("Continue from our previous findings");
-      // Completed-turn observation and due compaction are coordinated automatically.
-      ```
-    - Files to Create/Edit (tentative):
-      - `packages/compaction-observational-memory/src/runtime.ts`, `settings.ts`, `types.ts`, `ledger.ts`, `projection.ts`, `strategy.ts`, `render.ts`, `recall.ts`, `tool.ts`, `serialize.ts`, `extension.ts`, workers, exports, and all package tests.
-      - `packages/compaction-observational-memory/README.md`, `CHANGELOG.md`, `package.json` only if exports/scripts change.
-      - Core `src/agents.ts`, `src/contracts.ts`, `src/middleware.ts`, contribution contracts, and focused tests only if primitive review proves a generic lifecycle/session-append gap.
-      - `docs/compaction-observational-memory.md`, `docs/compaction-and-retry.md`, `docs/agent-session-runtime.md`, `docs/agent-events.md`, `docs/index.md`, `docs/migration.md`, examples, and package/profile manifests if activation changes.
-    - References:
-      - `packages/compaction-observational-memory/src/runtime.ts:80-201` manual flush and worker thresholds.
-      - `packages/compaction-observational-memory/src/settings.ts` currently unused `compactAfterTokens`.
-      - `packages/compaction-observational-memory/src/recall.ts:36-37` active-only reflection support lookup.
-      - `packages/compaction-observational-memory/src/workers/observer.ts:50-51` coding-specific prompt and serialized source input.
-      - `src/agents.ts:503` and `src/agents.ts:1262-1269` entry-count auto-compaction timing.
-  - Test Cases to Write:
-    - End-to-end completed turn → threshold observation → due reflection/compaction → next-turn exact recent messages plus memory → observation and reflection raw-source recall.
-    - Threshold edge cases immediately below/at/above observation, reflection, compaction, pool target, and hard-block limits using the configured token counter and fallback.
-    - Observer receives only eligible unobserved messages after memory/compaction records; successful zero-observation pass advances durable coverage; restart and duplicate callback do not repeat work.
-    - Reflection consumes only uncovered active observations; repeated flush with no new observations makes no worker call; full rebuild is explicit and deterministic.
-    - Reflection recall after all supporting observations are dropped still returns support and raw evidence; missing/pruned sources and dropped state are reported without fabrication.
-    - Recent exact-message projection preserves user/assistant/tool-call/tool-result ordering, selected multimodal metadata, and configured count/token limits while old raw entries remain listable in storage.
-    - Current-branch message paging supports forward/backward bounded cursors and selected full-detail parts; sibling branch, wrong session/tenant, malformed cursor/id, oversized result, and unavailable source fail closed.
-    - Separate observer/reflector model/provider/instruction/credential settings route correctly; legacy mapping, missing credentials, timeout, abort, worker overflow, and redacted errors remain bounded.
-    - Concurrent run/observation/checkout/fork/clone and failed append/CAS scenarios preserve one valid branch and never move checkout to an unowned append.
-    - Oversized active pool, no-op reflector/dropper, huge tool result, and repeated compaction stay within summary/data/input/output hard caps.
-    - Import, extension setup, passive mode, and unattached configuration make zero provider calls and start no timers/workers.
-    - Protected live canary verifies one real observer model and one separately configured reflector model; absence of credentials is a blocked protected gate, not an unexplained skip.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; observational-memory lifecycle, settings, model selection, compaction timing, projection, retrieval tool, branch behavior, and possibly generic agent lifecycle hooks change.
-    - Docs pages to create/edit: `docs/compaction-observational-memory.md`, `docs/compaction-and-retry.md`, `docs/agent-session-runtime.md`, `docs/agent-events.md`, `docs/migration.md`, package README/changelog, and one complete four-layer example.
-    - `docs/index.md` update: yes; update Compaction/session memory with explicit Recent exact messages, Observation log, Reflections, and Raw-source retrieval descriptions.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`; every changed API page follows its required API-page sections.
-  - Exit Gate:
-    - Primitive review is accepted; package unit/integration/live tests, core lifecycle/compaction regressions, branch/ownership/adversarial/resource tests, packed public example, `npm run sdk:ready`, package budget, docs links, declarations, changelog/migration, and full release gate pass with no unexplained observational-memory skip.
+- [x] **Build single-flight / clean removal.** Remove `clean` from `npm run build`; rely on `tsc --build` incrementality + a dedicated `clean` script (or add a single-flight lockfile). Eliminates the concurrent-test/build `dist/` deletion race (plans 007/008).
+  - Acceptance: concurrent `npm run build` + `npm test` cannot corrupt `dist/`; `npm run clean` still exists; `sdk:ready` green.
+  - **Shipped (plan 013 Task 1).** `npm run build` drops the clean prefix (`build:core && build --workspaces --if-present`), `npm run clean` stays standalone; race reproduced pre-fix and re-probed post-fix; orphaned dist fails loud on next `node --test`; docs build notes added.
+- [x] **MCP SSE relay automated test.** Add a deterministic stateful SSE relay test through `createPrismMcpWebHandler` now that SSE is relayed unbuffered (plan 011 further action, medium). No long-lived stream held open in CI; bounded relay asserted.
+  - Acceptance: SSE relay path covered; no flaky teardown; `npm test` green.
+  - **Shipped (plan 013 Task 2).** `relayStatelessBody` extracted (internal export, not in the package entry surface) + 4 tests (chunk order/done-close, cancel-close, null-body, E2E stateless POST close-on-completion); cancel path unit-only by SDK design.
+- [x] **Combined coverage summary.** Surface a core+packages coverage summary in `npm run test:coverage` without weakening the core gate (plan 010 compromise).
+  - Acceptance: summary reports core + per-package coverage; gate thresholds unchanged.
+  - **Shipped (plan 013 Task 3).** `scripts/coverage-summary.mjs` (zero deps) — core gate (60/70/75) the only hard threshold + 41 workspace suites reported; ~25s workspace pass, ~70s total `test:coverage` on Node 24.
+- [x] **Manifest-count narrative consolidation.** One canonical manifest count in `docs/release-and-install.md`; README/docs link to it (plan 011 further action).
+  - Acceptance: no contradictory counts; docs tripwires green.
+  - **Shipped (plan 013 Task 4).** Canonical "49 publishable manifests = root + 48 workspace (14 provider + 9 prism-* + 25 capability)" with regenerate note; all reconciliations (incl. 0.0.27 kept at 48 as historically correct); tripwire; stale tarball-diet baselines corrected to the published artifact sizes.
+- [x] **ACP mode/config ownership guidance.** Add a `docs/acp.md` note + ownership-scoped persistence example so hosts do not leak cross-session/cross-tenant mode state when persisting (security review).
+  - Acceptance: guidance + example present; ownership-scoping asserted in a test fixture.
+  - **Shipped (plan 013 Task 5).** `docs/acp.md` "Persistence and ownership" subsection (agent never persists; host stores MUST key by `sessions.ownership`; cross-tenant restore rejects `ERR_PRISM_ACP_INPUT`); 3 new tests (host-store refusal, agent-stays-thin, authorize-seam refusal); host-security + index cross-links.
 
-- [x] Phase 3 — Release 0.0.20: skills and context progressive disclosure
-  - **Completion evidence (2026-07-31):** `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md` Tasks 0–7 done. Phase 3 core tests 159/159; full suite 1328/1328; `npm run sdk:ready` green; `release:check --version 0.0.20` + compat baseline updated; docs tripwire `phase3_progressive_disclosure_docs_cover_catalog_load_migration_and_example` green; `examples/skills-progressive-disclosure.ts` in demo gate. Shipped: default `skillsDisclosure: "progressive"` catalog, session `LoadedSkillSet` + `createLoadSkillTool` (`load_skill`), empty registry default + `activateAllSkills` migration opt-in, priority-aware context budget with `skill_body` demotion, optional host-gated `toolResultFold`.
-  - Objectives:
-    - Make skill assembly progressive: always expose name+description for selected skills; load full instruction bodies only on demand or when host opts into eager injection.
-    - Align runtime `SkillRegistry` activation with declarative safe defaults (no silent activate-all).
-    - Honor `ContextBlock.priority` during context-budget eviction; prefer dropping low-priority / bodies before high-priority descriptions.
-    - Optionally summarize stale large tool results between compaction cycles without inventing a second memory system.
-  - Acceptance Criteria:
-    - Functional: provider input for active skills includes a bounded `name: description` catalog every turn (or on first turn + when catalog changes); full `instructions` are not injected every turn unless the host selects eager mode or the skill was loaded for the run.
-    - Functional: a host-activated skill-load tool or equivalent `InstructionInjector`/`RunOptions` path loads a skill body by exact name into the current run; unknown names, inactive tools required by the skill, and oversized bodies fail closed with bounded errors.
-    - Functional: when `AgentConfig.skills` is a `SkillRegistry` and neither `RunOptions.activeSkills` nor `RunOptions.skills` is provided, default activation is empty (or requires explicit `activateAllSkills` / equivalent opt-in); declarative agents remain unchanged.
-    - Functional: `applyContextBudget` drops lowest-priority context/skill blocks first; when a skill body is present, eviction may demote to description-only before removing the skill entirely.
-    - Functional: optional mid-flight tool-result summarization (host-gated) replaces eligible aged tool messages with a one-line header + stable ref while preserving raw entries in the session store; disabled by default.
-    - Performance: description catalog size is O(active skills) with byte/count caps; skill-load is O(1) lookup; priority eviction is O(n log n) or better over block count; no provider call for summarization unless host supplies a summarizer and opt-in is set.
-    - Code Quality: reuse `Skill`, `InstructionInjector`, `ContextProvider`, and `ContextBlock` contracts; no parallel skill system; primitive review precedes any new contribution type.
-    - Security: skill-load cannot grant tools/permissions beyond host-active tools; loaded instructions are bounded/untrusted text; summarizer output is treated as untrusted and size-capped; no cross-session skill leakage.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/context-and-skills.md`, `docs/agent-session-runtime.md`, `docs/extensions.md`, `docs/migration.md`.
-      - `src/input.ts` (`skillMessages`, `assembleProviderInput`), `src/skills.ts` / `resolveRunSkills`, `src/context-budget.ts`, `src/contracts.ts` (`Skill`, `ContextBlock`).
-      - Claude Code / pi skill progressive-disclosure patterns as behavioral reference only (not a port requirement).
-    - Options Considered:
-      - Keep full instructions every turn and document the cost: rejected; Caveman/Ponytail make this acute.
-      - Route all heavy skills only through `InstructionInjector`: works for mode slices but leaves `Skill` progressive disclosure broken; incomplete alone.
-      - Description catalog + on-demand load tool + safe registry default + priority-aware eviction: chosen.
-      - Automatic LLM summarization of every old tool result: rejected as default; opt-in host summarizer only.
-    - Chosen Approach:
-      - Render skill catalog from `description` (fallback short placeholder if empty) for selected skills.
-      - Add opt-in `createLoadSkillTool` (or run-scoped load API) that materializes `instructions` into the active run contribution set.
-      - Change registry default to require explicit activation; migration flag for prior activate-all hosts.
-      - Sort context/skill eviction by ascending priority then LIFO; support description-only demotion.
-      - Optional tool-result fold behind a host callback and age/size thresholds; store retains raw history.
-    - API Notes and Examples:
-      ```ts
-      await session.run("…", {
-        activeSkills: ["ponytail"], // registry: only these; no implicit all
-        skillsDisclosure: "progressive", // default: catalog + load-on-demand
-      });
-      // Model sees: Skill ponytail: Forces the laziest solution…
-      // Model calls load_skill { name: "ponytail" } → instructions enter subsequent turns.
-      ```
-    - Files to Create/Edit (tentative):
-      - `src/input.ts`, `src/skills.ts`, `src/context-budget.ts`, `src/contracts.ts`, `src/agents.ts`, focused tests.
-      - Optional coding-agent or core skill-load tool export; docs/examples/migration.
-      - `docs/context-and-skills.md`, `docs/agent-session-runtime.md`, `docs/migration.md`, `docs/index.md`.
-    - References:
-      - `src/input.ts` skillMessages currently instructions-only; A2A card already uses `description`.
-      - `resolveRunSkills` activate-all when registry configured without `activeSkills`.
-      - `ContextBlock.priority` currently decorative in budget eviction.
-  - Test Cases to Write:
-    - Catalog includes name+description; instructions absent until load or eager opt-in.
-    - Skill-load exact name success; unknown name / inactive required tool / oversized body fail closed.
-    - Registry without activeSkills injects zero skill instructions by default; explicit activate-all restores prior behavior.
-    - Budget pressure drops low-priority blocks first; skill demotes to description before full drop.
-    - Eager mode regression: hosts that set eager injection still get full bodies every turn.
-    - Optional tool-result summarization: aged large tool message replaced in provider view; raw store entry intact; disabled default.
-    - Packed example with many skills stays under frozen prompt-prefix budget until load.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; skill activation defaults, prompt assembly, optional skill-load tool, context-budget eviction, migration for activate-all hosts.
-    - Docs pages to create/edit: `docs/context-and-skills.md`, `docs/agent-session-runtime.md`, `docs/migration.md`, examples, changelogs.
-    - `docs/index.md` update: yes; Context and skills entry must describe progressive disclosure and activation defaults.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Core skill/context/budget tests, migration note, packed progressive-disclosure example, `npm run sdk:ready`, docs links, and full release gate pass.
+**0.1.1 shipped (plan 013 complete).** Docs freeze (tripwires 123/123), scripted bump to 0.1.1 (49 manifests + lockfile), compat baseline regenerated (version literal + one additive internal export, 0 breaking deltas), `npm test` 1418/1418 + 94/94 gates, audit 0 moderate, `sdk:ready` rc=0, publish dry-run 49/49 twice byte-identical; exit-gate evidence in `scripts/phase13-baseline.json` (`exitGate`). Publication (commit, `release:check`, `git tag -s v0.1.1`, npm OIDC) is the operator handoff documented in `docs/release-and-install.md` (plan 013 Task 6).
 
-- [x] Phase 4 — Release 0.0.21: coding-tool capability gaps for least-error agent operation
-  - **Completion evidence (2026-07-31):** `plans/004-Release-0-0-21-Coding-Tool-Capability-Gaps.md` Tasks 0–7 done. Coding-agent 239 tests; coding-security approval/sandbox wired; `examples/coding-tools-capability-gaps.ts`; docs tripwire Phase 4; migration `0.0.20 → 0.0.21`; workspace **0.0.21** / 44 manifests; `npm run sdk:ready` green. Shipped: `repo_search` `outputMode`, bounded `glob`, optional `requireReadBeforeWrite`/`ReadPathSet`, bounded `delete`/`move`, aggregator 9/4, fuzzy-edit loud docs. Non-goals: PDF/trash/PTY/LSP/recursive delete/brace glob.
-  - **Prerequisite:** Phase 3 exit gate passed (2026-07-31).
-  - Objectives:
-    - Add bounded native tools that reduce shell/`find`/`rm`/`mv` round-trips and blind overwrites.
-    - Keep each addition optional, ExecutionPolicy-gated, and within existing coding-agent bounds.
-    - Defer PDF/document reading and PTY/process sessions to later demand-gated or Phase 9 work.
-  - Acceptance Criteria:
-    - Functional: `repo_search` supports `outputMode: "content" | "files_with_matches" | "count"` with identical path/policy/limit fail-closed behavior; files-only and count modes omit match body text from model content.
-    - Functional: bounded `glob` (or equivalent) tool finds paths by pattern with depth/entry/result/time caps, exclude list, symlink fail-closed, and pagination; no shell `find` required for common cases.
-    - Functional: optional `requireReadBeforeWrite` (session-scoped) rejects `write`/`edit` on paths not read earlier in the current branch/run unless host override/force flag is set; clear model-visible error.
-    - Functional: bounded `delete` and `move` tools enforce ExecutionPolicy, workspace containment, abort, and confirmation metadata; no trash daemon required—document host undo responsibility; refuse symlink escapes.
-    - Functional: fuzzy-edit ambiguous-match behavior is documented; when match confidence is below an existing guard threshold, the tool already fails—docs state the silent-fuzzy success tradeoff explicitly.
-    - Performance: glob/search modes stay within existing repository scan ceilings; delete/move are O(1) fs ops with path checks only; no background indexers.
-    - Code Quality: extend `RepositoryOperations` / coding tools rather than new packages; reuse path-utils, mutation queue, and ExecutionPolicy.
-    - Security: patterns cannot escape workspace; delete/move never follow symlinks out of root; read-before-write state is session-owned and not forgeable via model-supplied claims alone.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/host-security.md`.
-      - `packages/coding-agent/src/repository.ts`, `write.ts`, `edit.ts`, `path-utils.ts`, ExecutionPolicy contracts.
-    - Options Considered:
-      - Teach models to use shell for glob/delete/move: rejected; higher error and policy surface.
-      - Full trash/versioning subsystem: rejected; YAGNI until hosts demand it.
-      - Hard-require read-before-write always: too breaking; optional host flag chosen.
-      - Native bounded glob + search output modes + optional soft guard + delete/move tools: chosen.
-    - Chosen Approach:
-      - Add `outputMode` to search schema and serialization paths.
-      - Add `createGlobTool` with picomatch-free or already-available matcher if present; else minimal safe glob subset (no brace explosion); prefer stdlib/`path` + existing walk.
-      - Track read paths in session/run metadata for optional guard.
-      - Add delete/move tools with policy risk `high` and exclusive serialization via mutation queue.
-    - API Notes and Examples:
-      ```ts
-      createRepoSearchTool(cwd, { outputMode: "files_with_matches" });
-      createGlobTool(cwd, { pattern: "src/**/*.ts", maxResults: 200 });
-      createWriteTool(cwd, { requireReadBeforeWrite: true });
-      createDeleteTool(cwd); createMoveTool(cwd);
-      ```
-    - Files to Create/Edit (tentative):
-      - `packages/coding-agent/src/repository.ts`, new `glob.ts`, `delete.ts`/`move.ts` or single `fs-ops.ts`, `write.ts`, `edit.ts`, tool factories, tests, exports, README/CHANGELOG.
-      - `docs/coding-agent-tools.md`, `docs/migration.md`, `docs/index.md`.
-    - References:
-      - Full analysis B1 already Phase 1; this phase is D5–D8 only.
-      - Existing `repo_list` walker for glob reuse; `withFileMutationQueue` for delete/move.
-  - Test Cases to Write:
-    - Search content/files_with_matches/count parity on limits, binary skip, symlink deny, abort.
-    - Glob depth/result/exclude/symlink/hidden/pagination and ReDoS-safe pattern rejection if patterns compile to regex.
-    - Read-before-write: unread path denied; after read allowed; force override; cross-branch non-leak.
-    - Delete/move containment, policy deny, abort, exclusive queue with concurrent edit.
-    - Docs assert fuzzy-edit ambiguity tradeoff and non-goals (no PDF, no trash daemon).
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; coding tool schemas/factories and optional write guard.
-    - Docs pages to create/edit: `docs/coding-agent-tools.md`, `docs/migration.md`, package README/changelog.
-    - `docs/index.md` update: yes; Coding tools entry lists glob, search modes, delete/move, read-before-write option.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Coding-agent unit/integration tests, policy/adversarial path tests, `npm run sdk:ready`, docs links, and full release gate pass.
+### 0.1.2 — Protected live-canary matrix (operator-gated)
 
-- [x] Phase 5 — Release 0.0.22: third-party behavior integrations (Caveman, Ponytail)
-  - **Completion evidence (2026-07-31):** `plans/005-Release-0-0-22-Third-Party-Behavior-Integrations.md` Tasks 0–5 done. `@arnilo/prism-caveman` 19/19, `@arnilo/prism-ponytail` 20/20; `npm run sdk:ready` green; docs tripwire `phase5_third_party_behavior_docs_cover_caveman_ponytail_migration_and_example`; `examples/caveman-ponytail.ts` in demo gate. Shipped: upstream Caveman/Ponytail wiring, session `caveman-level`/`ponytail-mode` persistence, progressive catalog + injector slices, opt-in packages (not in code/sdk/all profiles). Workspace **0.0.22** / 46 manifests. Core `src/` unchanged.
-  - **Prerequisite:** Phase 3 progressive-disclosure contracts are live (`skillsDisclosure`, `createLoadedSkillSet`, `createLoadSkillTool`, `activateAllSkills`, priority budget + `skill_body` demotion). Phase 5 must **consume** these — not reimplement catalog/load/eviction.
-  - Objectives:
-    - Add `@arnilo/prism-caveman` and `@arnilo/prism-ponytail` as optional third-party integration packages that wire the upstream Caveman and Ponytail projects into a Prism-powered harness.
-    - Map every upstream hook, skill, command, rule, and mode-lifecycle behavior to Prism's existing extension, system-prompt, instruction-injector, skill, command, context-provider, settings, and middleware contracts.
-    - Never reimplement Caveman or Ponytail: load prompt fragments, skill bodies, hook logic, and rules from the installed upstream package and adapt them into Prism contributions.
-    - Keep both packages inert until a host explicitly loads the extension; no implicit prompt injection, mode activation, config write, timer, or status rendering.
-    - Consume Phase 3 progressive-disclosure skill contracts so large upstream SKILL.md bodies are cataloged by description and loaded on demand via `load_skill` (or via mode-scoped `InstructionInjector` slices), not injected every turn by default.
-  - Acceptance Criteria:
-    - Functional (Caveman): the extension registers the `caveman` skill and companion skills (`caveman-commit`, `caveman-review`, `caveman-stats`, `caveman-compress`, `caveman-help`, `cavecrew`) as Prism `Skill` contributions whose `instructions` are the upstream `SKILL.md` bodies and whose `toolNames` match upstream declarations.
-    - Functional (Caveman): the `/caveman`, `/caveman-commit`, `/caveman-review`, `/caveman-stats`, `/caveman-compress`, and `/caveman-init` commands are registered as Prism `CommandDefinition`s; `/caveman [lite|full|ultra|wenyan|wenyan-lite|wenyan-ultra|micro|off]` changes the active level, and `caveman-config`/`caveman-stats`/`caveman-compress` invoke the corresponding upstream skill behavior through Prism command dispatch.
-    - Functional (Caveman): upstream `caveman-activate`, `caveman-config`, and `caveman-mode-tracker` hooks map to Prism `session_start` (restore level from session custom entries or host config), `prompt_build`/`before_agent_start` (inject the active level's system-prompt fragment), and `input` middleware (detect `normal mode`/`stop caveman` deactivation); the active level persists as a session custom entry and is restored on resume.
-    - Functional (Ponytail): the extension registers `ponytail` and the five companion skills (`ponytail-audit`, `ponytail-debt`, `ponytail-gain`, `ponytail-help`, `ponytail-review`) as Prism `Skill` contributions sourced from upstream `SKILL.md`.
-    - Functional (Ponytail): the `/ponytail` command supports `lite|full|ultra|off`, `status`, and `default <mode>` subcommands, and `/ponytail-review`, `/ponytail-audit`, `/ponytail-gain`, `/ponytail-debt`, `/ponytail-help` alias commands are registered and dispatch the matching skill.
-    - Functional (Ponytail): upstream `ponytail-activate`, `ponytail-config`, `ponytail-instructions`, `ponytail-mode-tracker`, and `ponytail-subagent` hooks map to Prism lifecycle/middleware; the active mode's instructions are injected through an `InstructionInjector` that calls upstream `getPonytailInstructions` and `filterSkillBodyForMode`, and mode persists as a session custom entry restored on resume; `stop ponytail`/`normal mode` deactivation is honored.
-    - Functional (both): mode state is per-session via session custom entries (`ponytail-mode`, `caveman-level`) with a host-configurable default resolved through a `SettingsProvider` and/or bounded config file; no TUI status bar is rendered because Prism is a harness, not a terminal host—status is exposed as extension events/metadata for the host to render.
-    - Functional (both): prompt fragments, skill bodies, and rule text are loaded from the resolved upstream package (optional peer dependency where published, otherwise a host-supplied upstream path); if upstream is absent, `setup` fails closed with a bounded redacted error rather than registering empty contributions.
-    - Functional (both): registered skills participate in Phase 3 progressive disclosure — register upstream skills in a `SkillRegistry`, activate by name, default progressive catalog, host registers `createLoadSkillTool({ registry, loaded })` on the tool set; mode-specific slices continue to use `InstructionInjector` + upstream `filterSkillBodyForMode` / level fragments rather than `skillsDisclosure: "eager"` or dumping full SKILL.md every turn.
-    - Functional (both): a primitive review confirms Prism's existing `Extension`, `Skill`, `CommandDefinition`, `SystemPromptContribution`, `InstructionInjector`, `ContextProvider`, `SettingsProvider`, middleware, and session-custom-entry contracts suffice; no new core primitive is added unless the review proves a gap.
-    - Performance: injected prompt additions are bounded and sourced from upstream constants; skill/context resolution is O(registered skills); mode tracking is O(1) per turn; no timers, watchers, file watchers, or background workers start by default.
-    - Code Quality: each package is independently installable, tree-shakeable, side-effect-free on import, and contains no duplicated upstream prompt/skill/rule content; the compaction-observational-memory extension is the reference package pattern.
-    - Security: injected upstream content is treated as untrusted text and bounded before injection; config read/write is size-limited and confined to host-owned paths; no credential, network, or filesystem mutation beyond config persistence; mode persistence respects session ownership and redaction.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/extensions.md`, `docs/context-and-skills.md`, `docs/agent-session-runtime.md`, `docs/compaction-and-retry.md`, `docs/migration.md`, and package README/changelog patterns.
-      - Prism contracts: `Extension`, `ExtensionAPI`, `Skill`, `CommandDefinition`, `SystemPromptContribution`, `InstructionInjector`, `ContextProvider`, `SettingsProvider`, `MiddlewareHookName`, `ExtensionLifecycleEventName`, and session custom entries.
-      - Upstream Caveman repository: `skills/`, `commands/`, `src/hooks/`, `src/rules/`, `agents/`, and `plugins/caveman/` at <https://github.com/juliusbrussee/caveman>.
-      - Upstream Ponytail repository: `skills/`, `hooks/`, `commands/`, and `pi-extension/index.js` at <https://github.com/DietrichGebert/ponytail>.
-      - Installed pi adapters on this machine under `~/.pi/agent/git/.../ponytail/pi-extension/index.js` and `.../pi-caveman/extensions/caveman.ts` as the reference wiring for pi events, commands, mode tracking, and prompt injection.
-    - Options Considered:
-      - Reimplement Caveman/Ponytail prompts and skills inside Prism: rejected by constraint and because upstream evolves independently.
-      - Shell out to upstream install scripts/hook shells: rejected; Prism is a harness SDK, not a shell host, and hooks are JS modules.
-      - Vendor/fork upstream content into the Prism package: rejected; drift and maintenance burden.
-      - Declare upstream as optional peer dependency (Ponytail publishes `@dietrichgebert/ponytail`) or resolve a host-supplied upstream path (Caveman is not a published npm package), then import its prompt builders and load `SKILL.md`/rules via a resource loader and map them to Prism contributions: chosen.
-    - Chosen Approach:
-      - Each package exports `createCavemanExtension(options)` / `createPonytailExtension(options)` returning a Prism `Extension` whose `setup(api)` registers contributions by loading from the resolved upstream path.
-      - Skills: read upstream `SKILL.md`, strip frontmatter, register `Skill` with `instructions` and `toolNames`.
-      - Commands: register Prism `CommandDefinition`s that parse arguments, mutate mode state, persist a session custom entry, and dispatch alias commands to skill invocation.
-      - Prompt injection: register `SystemPromptContribution` and/or `InstructionInjector` that returns the upstream prompt fragment for the active level/mode; for Ponytail use upstream `getPonytailInstructions(mode)` and `filterSkillBodyForMode`.
-      - Lifecycle: subscribe `session_start` to restore mode from session entries or config default; `input` middleware to detect deactivation commands; persist mode via a host-supplied session append callback (session custom entry).
-      - Config: register a `SettingsProvider` and bounded file read/write for the default level/mode and status toggle, mirroring upstream config resolution order.
-      - No status bar rendering; expose mode/active state through extension events/metadata for the host.
-    - API Notes and Examples:
-      ```ts
-      import { createCavemanExtension } from "@arnilo/prism-caveman";
-      import { createPonytailExtension } from "@arnilo/prism-ponytail";
+- [ ] **Record the protected live-canary matrix** as a named, env-gated, fail-loud gate (plans 009/011/012 further actions, high priority): real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS incl. DCR + refresh/revoke, real S3-compatible store incl. KMS, real NATS JetStream server. Missing credentials are a blocked release gate, not a silent skip.
+  - Acceptance: `npm run test:live` (or equivalent) runs each canary; absent creds fail loud with `canary-report.json`; protected CI sets the env.
+- [ ] **Live NATS JetStream suite.** `PRISM_TEST_NATS_URL` gating + `test:nats` script against a real server, mirroring `test:postgres` (plan 009 further action). The fake-seam tests remain in `npm test`.
+  - Acceptance: real-server append/subscribe/reconnect/dedupe-window/durable-cursor covered; fake tests unchanged.
 
-      const caveman = createCavemanExtension({
-        upstreamPath: "/path/to/juliusbrussee-caveman", // or rely on optional peer dep
-        defaultLevel: "full",
-        showStatus: false, // host renders status from events
-      });
+### 0.1.3 — Provider catalog expansion (new providers)
 
-      const ponytail = createPonytailExtension({
-        upstreamPath: "/path/to/dietrichgebert-ponytail", // or optional peer dep @dietrichgebert/ponytail
-        defaultMode: "full",
-        quietStartup: true,
-      });
+- [ ] **New OpenAI-compatible model providers.** Add providers for ecosystems with OpenAI-compatible endpoints (e.g., xAI Grok, Mistral, DeepSeek, Groq, Together, Cohere, Fireworks, Cerebras, Friendli, NovitaAI) as thin packages over `createOpenAICompatibleProvider`, each with `models.ts`, cache support where available, conformance + budget gates, and `docs/providers/<name>.md`. Reuse the alibaba/opencode-go/openrouter/zai pattern; no bespoke runtimes.
+  - Acceptance: each provider passes `testing/provider-conformance`, `testing/provider-media` where multimodal, `budgets.json` package-size gate, and `docs/index.md` navigation; no new runtime dependencies in core.
+- [ ] **`prism-providers` umbrella membership fix.** Either include azure/bedrock/vertex in `@arnilo/prism-providers` (making it the canonical "all first-party model providers" umbrella) or document the `prism-providers` vs `prism-all` split in `docs/provider-packages.md` (architectural problem #1).
+  - Acceptance: membership is intentional and documented; `release.mjs check` + `pack:dry-run` green; no consumer breakage.
 
-      await kernel.load([caveman, ponytail]);
-      ```
-    - Files to Create/Edit (tentative):
-      - `packages/caveman/`: `src/extension.ts`, `src/skills.ts`, `src/commands.ts`, `src/mode.ts`, `src/config.ts`, `src/prompts.ts`, `src/index.ts`, `package.json`, `README.md`, `CHANGELOG.md`, `tsconfig.json`, tests, and docs.
-      - `packages/ponytail/`: same file set plus `src/instructions.ts` wrapping upstream `getPonytailInstructions`/`filterSkillBodyForMode`.
-      - `docs/caveman.md`, `docs/ponytail.md`, `docs/extensions.md`, `docs/context-and-skills.md`, `docs/index.md`, `docs/migration.md`.
-      - Root workspace manifests and optional profile inclusion only after install-size review; no core `src/` changes unless primitive review requires a generic lifecycle/session-append hook.
-    - References:
-      - `src/extensions.ts` (ExtensionAPI, createExtensionKernel), `src/contracts.ts` (Skill, CommandDefinition, SystemPromptContribution, InstructionInjector, ContextProvider, SettingsProvider, ExtensionLifecycleEventName), `src/middleware.ts` (MiddlewareHookName).
-      - `packages/compaction-observational-memory/src/extension.ts` as the reference optional-extension package pattern.
-      - Installed pi adapters: `~/.pi/agent/git/github.com/DietrichGebert/ponytail/pi-extension/index.js` and `~/.pi/agent/git/github.com/jonjonrankin/pi-caveman/extensions/caveman.ts`.
-      - Upstream repos: <https://github.com/juliusbrussee/caveman>, <https://github.com/DietrichGebert/ponytail>.
-    - Test Cases to Write:
-      - Upstream absent: `setup` fails closed with a bounded redacted error and registers no contributions.
-      - Caveman level set/restore/persist: `/caveman ultra` updates mode, persists a session custom entry, restores on `session_start`, and injects the `ultra` prompt fragment on `prompt_build`.
-      - Ponytail mode set/restore/persist: `/ponytail lite`, `status`, `default full`, session resume, and `InstructionInjector` returns the `lite` instructions with mode-specific skill filtering.
-      - Deactivation: `normal mode` and `stop caveman`/`stop ponytail` turn the mode off and stop injection without erasing session history.
-      - Skill registration bodies equal upstream `SKILL.md` content (no duplication, no truncation) for every Caveman and Ponytail skill.
-      - Alias commands dispatch the correct skill and are inert until the host selects them.
-      - No provider call, timer, file watcher, or network access occurs on import or extension setup.
-      - Config read/write is bounded, confined to host-owned paths, and survives restart only when the host supplies a writable path.
-      - Mode persistence respects session ownership and redaction; cross-session/cross-tenant mode leakage is impossible.
-      - Packed-install consumer loads both extensions through public exports only and observes opt-in prompt injection.
-    - Documentation/Wiki Assessment:
-      - Public API or behavior impacted: yes; two new optional packages export extension factories, skills, commands, prompt-injection, and settings behavior.
-      - Docs pages to create/edit: create `docs/caveman.md` and `docs/ponytail.md` following the Prism wiki API-page structure; edit `docs/extensions.md`, `docs/context-and-skills.md`, `docs/index.md`, `docs/migration.md`, and both package READMEs/changelogs.
-      - `docs/index.md` update: yes; add Caveman and Ponytail entries under a new Third-party integrations group and link them from Extensions/plugins and Context and skills.
-      - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Primitive review accepted; both package test suites, packed-install fixture, no-core-regression check, `npm run sdk:ready`, package budget, docs links/examples, declarations, changelog/migration, and full release gate pass with both extensions inert until explicitly loaded.
+### 0.1.4 — Alibaba Cloud provider enrichment
 
-- [x] Phase 6 — Release 0.0.23: production enterprise state adapters
-  - **Completion evidence (2026-08-03):** `plans/006-Release-0-0-23-Production-Enterprise-State-Adapters.md` Tasks 0–7 complete. Added `@arnilo/prism-enterprise-postgres` with checksum-protected migrations and durable policy/evaluation/work/router stores; work claim/CAS and async router-state contracts. `npm run sdk:ready`, Node 20 root-import smoke, disposable PostgreSQL suite (57 passing), protected benchmark/index evidence, and 47-package release preflight pass.
-  - Objectives:
-    - Make existing policy, evaluation, connector-idempotency, and model-governance contracts durable and replica-consistent.
-    - Reuse existing PostgreSQL lifecycle, ownership, migrations, codecs, and conformance patterns rather than creating a universal state abstraction.
-  - Acceptance Criteria:
-    - Functional: PostgreSQL implementations exist for `PolicyDecisionStore`, `EvaluationStore`, and work-tool `IdempotencyStore`; records survive restart and retain exact tenant/ownership filtering.
-    - Functional: model-router budget, rate, and circuit state uses a replaceable store with atomic cross-replica updates, expiry, bounded key cardinality, and deterministic eviction/cleanup semantics.
-    - Functional: work-tool idempotency can distinguish absent, in-progress, completed, failed-retryable, failed-terminal, and unknown outcomes without storing secrets or unrestricted payloads.
-    - Functional: schema migrations are versioned, checksum-protected, idempotent, and covered by the existing PostgreSQL migration/conformance approach.
-    - Performance: indexes support ownership/time/idempotency lookup without full-table scans; contention and cleanup benchmarks publish p95 latency and storage growth at agreed replica/key volumes.
-    - Code Quality: each adapter implements its existing domain contract; shared row codecs/ownership/cursor helpers are reused only where behavior is identical.
-    - Security: all queries require tenant ownership, unique constraints prevent cross-replica duplicate commits, sensitive model/tool content is not added to governance records, and SQL parameters are bound.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/policy-and-audit.md`, `docs/evaluations.md`, `docs/work-tools.md`, `docs/model-routing.md`, PostgreSQL session/run/checkpoint persistence docs and conformance tests.
-      - PostgreSQL transaction, unique constraint, `INSERT ... ON CONFLICT`, row-locking, advisory-lock, and expiry/index documentation for the supported server range.
-    - Options Considered:
-      - Add Redis first: new operational dependency before measured need; reject.
-      - Build one generic key/value state API: erases domain-specific atomicity and retention; reject.
-      - Add direct PostgreSQL adapters behind current contracts: chosen.
-    - Chosen Approach:
-      - Follow the current PostgreSQL package's migration and bounded-query patterns.
-      - Keep memory/file adapters for tests and single-process use, clearly labeled non-production.
-      - Add a narrow router-state contract only because router mutation semantics are not represented by an existing store.
-    - API Notes and Examples:
-      ```ts
-      const enterprise = await createPostgresEnterpriseState({ pool });
-      const policyStore = enterprise.policy;
-      const evaluationStore = enterprise.evaluations;
-      const idempotencyStore = enterprise.workIdempotency;
-      const router = createModelRouter({ stateStore: enterprise.modelRouter });
-      ```
-    - Files to Create/Edit (tentative):
-      - Existing policy, evals, work-tools, and model-router types/exports/tests/docs.
-      - PostgreSQL adapter files under the owning package or `session-store-postgres` only after package-boundary review.
-      - SQL migrations, codec/conformance helpers, package manifests/changelogs, profiles only if intentionally exposed.
-    - References:
-      - `packages/policy/src/store.ts`.
-      - `packages/evals/src/store.ts`.
-      - `packages/work-tools/src/idempotency.ts`.
-      - `packages/model-router/src/router.ts:163-165`.
-  - Test Cases to Write:
-    - Restart persistence and wrong-tenant denial for every store.
-    - Concurrent duplicate policy/evaluation/idempotency writes from multiple clients.
-    - Connector crash states and duplicate retry with the same idempotency key.
-    - Atomic router budget consumption, shared rate windows, circuit open/half-open/close, expiry, contention, and clock-boundary behavior.
-    - Migration from current schema, checksum drift, rollback/failure cleanup, and bounded pagination.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; new production adapters and router-state configuration.
-    - Docs pages to create/edit: `docs/policy-and-audit.md`, `docs/evaluations.md`, `docs/work-tools.md`, `docs/model-routing.md`, PostgreSQL/persistence docs, `docs/migration.md`, `docs/host-security.md`.
-    - `docs/index.md` update: yes; update Governance, Evaluations, Work tools, Model routing, and Persistence entries.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Network-free conformance, disposable PostgreSQL tests, restart/multi-client contention tests, migration checks, storage/performance budget, `npm run sdk:ready`, and package/release gates pass.
+- [ ] **Alibaba provider gap-fill.** Extend `@arnilo/prism-provider-alibaba` with Bailian endpoints where OpenAI-compatible (embeddings/rerank/text-to-SQL if exposed via chat), async task polling for long-running generation, document/video input where supported, and expanded conformance. Keep OpenAI-compatible base; no new runtime deps.
+  - Acceptance: new endpoints covered by conformance; `docs/providers/alibaba.md` updated; cache-control + `enable_thinking` regression green; budget gate green.
+- [ ] **Defer Alibaba Cloud platform adapters** (Bailian rerank/embeddings into RAG, OSS artifact store) to 0.2.0 as demand-gated optional packages.
 
-- [x] Phase 7 — Release 0.0.24: distributed event delivery and recoverable tool effects
-  - Objectives:
-    - Allow agent streams and subscriptions to reconnect across replicas without rerunning completed work.
-    - Define honest, durable side-effect semantics across tools, MCP, browser, work connectors, coding operations, and delegated agents.
-  - Acceptance Criteria:
-    - Functional: a replaceable durable AgentEvent source can append, page, subscribe, resume from cursor, and hand off from historical replay to live delivery without gaps or duplicates visible to consumers.
-    - Functional: a PostgreSQL reference implementation supports multiple producers/consumers, disconnect/reconnect, bounded polling or `LISTEN/NOTIFY` wakeups, consumer cancellation, and cleanup/retention.
-    - Functional: server SSE, AG-UI, A2A subscriptions, and authorized run replay can reconnect to a different replica through the shared event source; sticky sessions are optional optimization only.
-    - Functional: tool definitions may declare effect/idempotency behavior; dispatch supplies stable `runId`, `toolCallId`, and idempotency key and records pending/completed/failed/unknown outcomes around side effects.
-    - Functional: duplicate delivery returns a bounded persisted result/reference where safe; ambiguous outcomes require host resolution or tool-specific reconciliation and are never silently replayed.
-    - Performance: event append is amortized O(1); replay/subscription pages, cursor size, retained events, subscriber queue, polling interval, and notification fanout are capped; benchmarks cover sustained streams and reconnect p95.
-    - Code Quality: current event ledger, multiplexer, server replay, checkpoint, and work-tool idempotency contracts are extended rather than replaced; transport adapters do not implement private replay loops.
-    - Security: every event page/subscription and idempotency record rechecks exact ownership; cursors are opaque/bounded; stored outcomes are redacted and byte-limited; one tenant cannot observe timing or identifiers from another.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/agent-events.md`, `docs/agent-session-runtime.md`, `docs/server.md`, `docs/ag-ui.md`, `docs/a2a.md`, `docs/work-tools.md`, run-ledger and PostgreSQL persistence docs.
-      - PostgreSQL `LISTEN/NOTIFY` guidance and current SSE/AG-UI/A2A reconnect protocol requirements.
-    - Options Considered:
-      - Require sticky sessions: simple but no failover; reject as production completeness.
-      - Add Kafka/Redis immediately: operational expansion without evidence; reject.
-      - PostgreSQL event source over existing durable ledger plus notification/polling: chosen first reference implementation.
-      - Claim exactly-once side effects: impossible across arbitrary external systems; reject.
-    - Chosen Approach:
-      - Define cursor and replay/live handoff semantics at the shared event-source boundary.
-      - Use the durable ledger as source of truth; notifications wake consumers but never replace persisted events.
-      - Generalize work-tool idempotency into optional tool-effect metadata while retaining specialized reconciliation hooks.
-    - API Notes and Examples:
-      ```ts
-      const events = createPostgresAgentEventSource({ pool });
-      const stream = events.subscribe({ ownership, runId, after: cursor, signal });
+### 0.1.5 — Dead-code and deprecation hygiene
 
-      const tool = defineTool({
-        name: "mail.send",
-        effect: { kind: "external_mutation", idempotency: "required" },
-        execute: async (args, context) => send(args, context.idempotencyKey),
-      });
-      ```
-    - Files to Create/Edit (tentative):
-      - Core AgentEvent/run-ledger/tool contracts and dispatch implementation.
-      - PostgreSQL event source/idempotency persistence and conformance.
-      - Server, AG-UI, supervisor/A2A, MCP lifecycle, browser/work-tool adapters and tests.
-      - Event/idempotency docs, examples, benchmarks, migration notes.
-    - References:
-      - `docs/agent-session-runtime.md:173` and documented crash ambiguity at line 190.
-      - Existing event multiplexer, run ledger, lifecycle, and work-tool idempotency store.
-  - Test Cases to Write:
-    - Replica A disconnect followed by replica B replay/live subscription with no gap and deterministic deduplication.
-    - Subscriber overflow, slow consumer, cancellation, database outage/recovery, notification loss, retention boundary, and cursor tampering.
-    - Crash before dispatch mark, after mark/before side effect, during side effect, after external commit/before local completion, and after local completion.
-    - Tool-specific deduplication/reconciliation for mail, file, browser side effect, MCP tool, and custom tool fixtures.
-    - Cross-tenant run/cursor/idempotency isolation and redaction.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; new event-source, tool-effect, idempotency, cursor, and unknown-outcome behavior.
-    - Docs pages to create/edit: `docs/agent-events.md`, `docs/agent-session-runtime.md`, `docs/server.md`, `docs/ag-ui.md`, `docs/a2a.md`, `docs/mcp-tools.md`, `docs/work-tools.md`, `docs/browser-automation.md`, persistence docs, `docs/migration.md`.
-    - `docs/index.md` update: yes; update Runtime events, Server/API, Interop, Tools, and Persistence entries.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Multi-process PostgreSQL reconnect and crash-window suites pass; server/AG-UI/A2A/MCP conformance passes; event/idempotency benchmarks stay within approved budgets; full release gate passes.
+- [ ] **Prune superseded benchmark runners.** Audit `scripts/benchmark-0.0.*.mjs`/`*.test.mjs` references; drop the orphaned ones, keep the checked-in `*.json` evidence; introduce one parameterized benchmark runner + versioned evidence JSON (setup).
+  - Acceptance: `npm test` references only current runners; removed files listed in the release changelog; benchmark evidence preserved.
+- [ ] **Archive phase-review docs.** Move `docs/review-coverage-2026-07-*.md` into `docs/_evidence/` (excluded from tarball, linked from `docs/0.1.0-readiness.md`).
+  - Acceptance: `docs/` root cleaned; evidence links intact; docs tripwires green.
+- [ ] **Unused-export sweep (non-blocking).** Add a `tsc --noUnusedLocals`/`--noUnusedParameters` scan or an `knip`-style CI step that reports dead exports without failing the build.
+  - Acceptance: report produced; obvious dead exports removed or marked `ponytail:` intentional.
+- [ ] **Checkpoint persistence for loaded-skill names + ReadPathSet** (plans 003/004 further actions, demand-gated). If a host needs resume-without-model-reload, persist loaded-skill names and the read-path set in the checkpoint; bodies reload on resume via `load_skill`.
+  - Acceptance: resume restores loaded-skill catalog + read-before-write state; cross-branch non-leak test; opt-in to avoid size growth.
 
-### Phase 7 completion evidence — 2026-08-04
+## Roadmap — 0.2.0 New Modules
 
-- Durable `AgentEventSource` + PostgreSQL LISTEN/NOTIFY; recoverable `ToolEffectStore` across coding/browser/work/MCP/supervisor; AG-UI 0.0.57 + MCP Apps/A2A fronting.
-- Protected `scripts/phase7-conformance.test.mjs` and checked `scripts/benchmark-0.0.24.json` under Task 0 ceilings.
-- Docs: `docs/tool-effects.md`, migration `0.0.23 → 0.0.24`, example `examples/distributed-events-and-tool-effects.ts`.
-- Publishable graph remains **47** manifests at **0.0.24**.
+Each 0.2.0 module requires a numbered plan (primitive review, threat model, measurable acceptance, operational owner) before implementation. Listed in recommended order; demand gates noted.
 
-- [x] Phase 8 — Release 0.0.25: durable custom loops and complete human-in-the-loop semantics
-  - Objectives:
-    - Make custom loop extensibility compatible with durable suspension/resume.
-    - Replace sequential binary approval limitations with one shared richer approval/elicitation model.
-  - Acceptance Criteria:
-    - Functional: custom `AgentLoopStrategy` may opt into versioned, bounded, redacted `snapshot` and `restore` hooks; durable execution rejects unsupported strategies before provider work.
-    - Functional: loop revision and snapshot schema participate in agent fingerprint compatibility; resume fails closed on missing, changed, oversized, malformed, or unauthorized state.
-    - Functional: one run may expose multiple pending approvals from a provider turn or nested agent; callers can approve/reject individually or in a batch with expected version/CAS protection.
-    - Functional: decisions support allow once, allow for run, reject once, reject for run, optional modified arguments where policy permits, rich rejection reason, and typed elicitation payloads.
-    - Functional: nested agent/tool approvals surface to the root run and resume without losing attribution or approving unrelated pending work.
-    - Functional: sticky decisions are serialized in durable run state, scope-match exact tool/effect/identity/action constraints, expire at run end, and are rechecked against current policy on resume.
-    - Performance: snapshot/approval state remains within current hard state cap; matching and accounting are O(number of pending approvals) with an explicit finite maximum.
-    - Code Quality: workflows, coding `ask_user_decision`, MCP elicitation, ACP permissions, AG-UI interrupts, and browser/work-tool approval use shared contracts instead of protocol-specific approval models.
-    - Security: delegation cannot widen approval authority; modified arguments are revalidated through guardrails/schema/policy; stale/batch mismatch fails closed; secrets and rejected content are redacted.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/agent-loops.md`, `docs/agent-session-runtime.md`, `docs/workflows.md`, `docs/ag-ui.md`, `docs/mcp-tools.md`, coding approval/security docs.
-      - OpenAI Agents SDK human-in-the-loop and serialized run state: <https://openai.github.io/openai-agents-js/guides/human-in-the-loop/>.
-      - Microsoft Agent Framework checkpoint/restore concepts: <https://learn.microsoft.com/en-us/agent-framework/workflows/checkpoints>.
-      - ACP permission outcome and session-mode documentation: <https://agentclientprotocol.com/protocol/tool-calls>.
-    - Options Considered:
-      - Keep custom loops non-durable: contradicts extensible production harness goal; reject.
-      - Persist arbitrary loop objects/callbacks: unsafe and nonportable; reject.
-      - Versioned JSON-compatible snapshot hooks with hard bounds: chosen.
-      - Build separate approval stores per protocol: duplicates state and creates inconsistent authority; reject.
-    - Chosen Approach:
-      - Add the minimum optional durable hooks to the existing loop strategy contract.
-      - Generalize the existing run interruption record into a bounded pending-decision set with one CAS state transition path.
-      - Keep host UI rendering outside Prism; expose schemas and decisions only.
-    - API Notes and Examples:
-      ```ts
-      const loop: AgentLoopStrategy = {
-        revision: "2",
-        run,
-        snapshot: state => ({ cursor: state.cursor }),
-        restore: snapshot => ({ cursor: snapshot.cursor }),
-      };
+### 0.2.0 Module A — Delegated coding-agent adapters (Cursor, Antigravity)
 
-      await resumeAgentRun(checkpoint, {
-        decisions: [
-          { approvalId: "a1", outcome: "allow_for_run" },
-          { approvalId: "a2", outcome: "reject_once", reason: "external recipient" },
-        ],
-      }, { ownership, expectedVersion });
-      ```
-    - Files to Create/Edit (tentative):
-      - Core loop/run-state/checkpoint/fingerprint/approval/tool-dispatch types and tests.
-      - Workflow, AG-UI, ACP, MCP, browser, coding-agent, supervisor delegation, server resume adapters/tests.
-      - Migration docs and bounded examples.
-    - References:
-      - Existing durable run-state hard cap, checkpoint CAS, beforeExecute interrupt, workflow suspension, and coding elicitation helpers.
-  - Test Cases to Write:
-    - Custom loop suspend/restart/restore, schema/revision drift, state overflow, malformed snapshot, credential/callback rejection.
-    - Parallel tool approvals, partial batch, stale version, duplicate decision, sticky exact match/non-match, policy change, and expiry.
-    - Nested agent approval propagation and attribution.
-    - Modified-argument schema/guardrail/policy rerun.
-    - AG-UI, ACP, MCP, workflow, and server mapping parity.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; loop strategy, durable state, approval, resume, protocol event, and decision APIs change.
-    - Docs pages to create/edit: `docs/agent-loops.md`, `docs/agent-session-runtime.md`, `docs/workflows.md`, `docs/ag-ui.md`, `docs/mcp-tools.md`, `docs/coding-security.md`, `docs/server.md`, `docs/migration.md`.
-    - `docs/index.md` update: yes; update Agent loops, Runtime, Workflows, Interop, Security, and Server entries.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Durable custom-loop, approval matrix, nested delegation, all protocol mapping, security, state-size, compatibility, and full release tests pass.
+- [ ] **Generic delegated-agent contract** (primitive review first). Extract a minimal, dependency-free "delegated coding host" seam: prompt in → `AgentEvent` stream out, with redaction, ownership, approval/effect mapping, durable run correlation, and a host-owned cancellation signal. Reuse the supervisor/A2A event mapping and the `provider-opencode-go` Go-binary-bridge pattern as references. Extract only because ≥2 adapters (Cursor, Antigravity) are planned.
+- [ ] **`@arnilo/prism-cursor` adapter.** Wrap `@cursor/sdk` `Agent.create()`/`send()`/`stream()`; map `SDKMessage`/`InteractionUpdate` → Prism `AgentEvent`; redact tool args/results; honor `CURSOR_API_KEY` credential source; surface `requestId`/`runId` correlation; support local + cloud runtimes as host-selected options; never expose a model-only surface (none exists). Optional peer dependency on `@cursor/sdk`; fails closed if absent.
+- [ ] **`@arnilo/prism-antigravity` adapter.** Spawn the Antigravity Python sidecar (or the Go `localharness` binary) over WebSocket+protobuf; map `Step` events → Prism `AgentEvent`; redact payloads; honor `GEMINI_API_KEY`/Vertex credential sources; expose it as a delegated agent, not a model provider (Prism already has `provider-google`/`provider-vertex` for the models). Optional peer dependency / sidecar binary resolution; fails closed if absent.
+- [ ] **Docs + conformance.** `docs/delegated-agents.md`, `docs/providers/cursor.md`, `docs/providers/antigravity.md`; delegated-agent conformance helper in `testing/`; redaction + ownership + cancellation adversarial tests; budget gate.
+- [ ] **Acceptance (all three):** delegated agents run behind Prism's approval/policy/identity/effect contracts; tool payloads redacted; cross-tenant isolation; cancellation honored; no implicit activation; `sdk:ready` + release gate green. Document the SDK-evaluation decision (model-only not available) in `docs/delegated-agents.md`.
 
-### Phase 8 completion evidence — 2026-08-06
+### 0.2.0 Module B — God-module split (compat-preserving)
 
-- Durable custom-loop `revision`/`snapshot`/`restore`; shared pending-decision / sticky HITL; nested supervisor attributions; protocol batch resume (AG-UI/ACP/MCP/coding/server).
-- Opt-in A2UI painting + standard AG-UI projectors; network-free `scripts/phase8-conformance.test.mjs` and checked `scripts/benchmark-0.0.25.json` under Task 0 ceilings (decision 3.913 / sticky 0.407 / snapshot 6.742 / a2ui 0.348 ms p95).
-- Docs: migration `0.0.24 → 0.0.25`, examples `durable-loops-and-approvals.ts` / `ag-ui-a2ui.ts`.
-- Publishable graph remains **47** manifests at **0.0.25**.
+- [ ] **Split `src/agents.ts`** into run-lifecycle, approval/pending-decisions, tool dispatch, and fingerprint modules behind barrel re-exports in `src/agents.ts` so public imports are unchanged. Split `src/contracts.ts` into core contracts, run-state, and protocol-payload modules behind `src/contracts.ts` barrel.
+  - Acceptance: public import surface unchanged (compat baseline green); `agents.ts`/`contracts.ts` files become barrels; tree-shaking improves (measured); `sdk:ready` green.
 
-- [x] Phase 9 — Release 0.0.26: coding intelligence, managed processes, forge, and safe egress primitives (complete 2026-08-06; Tasks 0–15 shipped)
-  - Objectives:
-    - Supply coding capabilities editors and autonomous coding loops need before exposing them through ACP.
-    - Keep each capability optional and built over existing repository, execution-policy, sandbox, event, credential, and approval primitives.
-    - Cover deferred Synapta FRs: FR-3 reasoning encrypted-value helper, FR-4 MCP Apps UI-initiated mutation retry through `ToolEffectStore`, FR-5 NATS JetStream `AgentEventSource`, FR-6/FR-7 durable `AgentEventSource` root export + placement answer.
-    - Cover the remaining Phase 8 deferred AG-UI interop items: A2A server-side exposure (remote A2A clients invoke a local AG-UI-fronted agent, Task 13), a reference framework-free frontend renderer for AG-UI/A2UI surfaces (Task 14), and async `AgUiProjection` hooks so hosts can call `session.entries()` directly (Task 15).
-  - Acceptance Criteria:
-    - Functional: repository listing/search can use Git tracked/unignored file enumeration and nested ignore rules while retaining a bounded native fallback outside Git repositories.
-    - Functional: an optional language-intelligence contract supports workspace symbols, definitions, references, diagnostics, hover, and rename/workspace edits through a host-selected LSP client/server.
-    - Functional: a `ProcessSession` contract supports start, incremental output, input, status, wait, signal/kill, release, and bounded background lifetime; PTY behavior is optional and platform capability is explicit.
-    - Functional: process sessions integrate with sandbox workspace, identity, execution policy, output accumulator, run cancellation, durable metadata, and unknown-outcome semantics without pretending processes survive host/container loss.
-    - Functional: one reference forge adapter supports issue context, authenticated push, pull-request create/update, review comments, check/status retrieval, and bounded handoff reconciliation; GitHub is the first implementation unless adoption evidence selects another forge.
-    - Functional: one reference allow-list egress composition supports exact host/port/protocol policy, DNS resolution/rebinding defense, redirects, request/response byte and time limits, package-registry/source-host presets, audit, and contained-proxy attestation.
-    - Functional: the durable `AgentEventSource` is importable from the `@arnilo/prism-session-store-postgres` root (FR-6) with a documented placement/migration answer (FR-7); a NATS JetStream sibling adapter provides durable consumer, per-subject replay, and at-least-once delivery with stable event IDs (FR-5).
-    - Functional: AG-UI hosts get a bounded reasoning encrypted-value helper (FR-3) and MCP Apps UI-initiated mutations are recorded in `ToolEffectStore` for idempotent retry and unknown-outcome reconciliation (FR-4).
-    - Functional: a server-side A2A adapter fronts a local AG-UI agent so remote A2A 1.0 clients can start and stream runs with AG-UI authorization/projection/replay semantics (Task 13); a reference framework-free renderer consumes AG-UI streams and renders A2UI v0.9 surfaces from a host catalog without executing remote HTML (Task 14); `AgUiProjection` hooks accept async values so hosts can call `session.entries()` directly (Task 15).
-    - Performance: Git enumeration, LSP messages, diagnostics, process output, forge pagination, and proxy traffic have finite counts/bytes/time/concurrency; benchmarks cover large repositories, long-running output, and network backpressure.
-    - Code Quality: a primitive review precedes implementation; no parser framework, process scheduler, generic forge abstraction beyond proven common operations, or in-package firewall is invented.
-    - Security: ignored/private paths stay excluded unless host-approved; LSP servers and commands are host-selected; process input/output is bounded/redacted; forge scopes are least privilege; credentials never enter model context/argv; egress defaults to none and exact allow rules; encrypted values are never inferred from signatures; MCP Apps effects and NATS subjects are ownership-scoped.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/host-security.md`, `docs/browser-automation.md`, structured Git and repository operation sources.
-      - Language Server Protocol specification: <https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/>.
-      - Git pathspec/check-ignore/ls-files documentation: <https://git-scm.com/docs/git-ls-files> and <https://git-scm.com/docs/git-check-ignore>.
-      - GitHub App authentication and pull-request APIs: <https://docs.github.com/en/apps> and <https://docs.github.com/en/rest/pulls>.
-      - Docker networking/resource controls and selected proxy implementation documentation at plan time.
-    - Options Considered:
-      - Build a Tree-sitter/indexing platform first: large duplicate language ecosystem; reject.
-      - Use host-selected LSP servers through one bounded protocol client: chosen.
-      - Make shell emulate process sessions: cannot attach/input/release reliably; reject.
-      - Implement GitHub, GitLab, and Bitbucket together: adapter zoo; reject.
-      - Enable unrestricted sandbox networking: reject.
-    - Chosen Approach:
-      - Use structured Git commands for ignore-aware enumeration; retain current native walker as bounded fallback.
-      - Define generic reusable LSP/process primitives only after inventorying current tools/events/resources.
-      - Implement one forge and one egress reference composition with fake/local conformance before live canaries.
-    - API Notes and Examples:
-      ```ts
-      const repo = createGitAwareRepositoryOperations({ cwd, fallback: nativeRepository });
-      const language = createLanguageIntelligence({ transport: lspTransport, workspaceRoot });
-      const process = await sessions.start({ command: "npm", args: ["test", "--", "--watch"], pty: false });
-      const forge = createGitHubForge({ credentials, repository, approval, idempotencyStore });
-      ```
-    - Files to Create/Edit (tentative):
-      - Coding-agent repository/Git/process/language/forge contracts, tools, events, tests, exports, README.
-      - Coding-security sandbox process and egress composition, tests, docs.
-      - Optional package/subpath decisions finalized by primitive/package-size review; no new package by default.
-      - Fake LSP/forge/proxy fixtures, examples, benchmarks, live workflows.
-    - References:
-      - Existing `RepositoryOperations`, `createGitOperations`, `ExecutionPolicy`, `DisposableSandbox.execFile`, output accumulator, credentials, approvals, and event contracts.
-  - Test Cases to Write:
-    - Nested `.gitignore`, global/exclude rules, tracked ignored file, non-Git fallback, symlink and large repository bounds.
-    - LSP framing, malformed/oversized message, diagnostics cap, timeout/abort, workspace edit approval, server crash/restart.
-    - Process start/output/input/wait/kill/release, orphan cleanup, timeout, output spill, sandbox loss, wrong-owner access.
-    - Forge push/PR/review/check idempotency, stale branch/head, pagination, rate limit, token redaction, wrong repository/tenant, and restricted live GitHub App canary.
-    - Proxy exact allow/deny, DNS rebinding, redirects, private metadata IPs, package download size/time, TLS, audit, and sandbox attestation.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; repository, language, process, forge, egress, tools, events, and configuration surfaces expand.
-    - Docs pages to create/edit: `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/host-security.md`, `docs/browser-automation.md`, new `docs/language-intelligence.md`, new `docs/process-sessions.md`, new `docs/forge-integration.md`, `docs/ag-ui.md` (FR-3/FR-4), `docs/agent-events.md` (FR-5/FR-7), `docs/migration.md` (FR-6/FR-7).
-    - `docs/index.md` update: yes; add Language intelligence, Process sessions, Forge integration; update Coding tools/security.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Primitive review accepted; network-free and protected GitHub/LSP/sandbox/proxy suites pass; large-repository/process/network benchmarks meet frozen budgets; full release gate passes.
+### 0.2.0 Module C — Deprecated-option removal (breaking, documented)
 
-- [x] Phase 10 — Release 0.0.27: complete ACP coding-host interoperability and lifecycle events (complete 2026-08-07; Tasks 0–10 shipped)
-  - Completion evidence:
-    - Freeze manifest `scripts/phase10-freeze-manifest.json` (Task 0): capability advertise-when matrix, 7 shipped + 8 deferred lifecycle events, 4-outcome permission matrix, frozen caps (default/hard), p95 targets, security invariants; still matched by the shipped exports at 0.0.27.
-    - Task 1–9 shipped: `CodingLifecycleEvent` emitter + tool/policy wiring in `@arnilo/prism-coding-agent`; ACP adapter in `@arnilo/prism-ag-ui/acp` (truthful seam-based `initialize`, session load/resume/list/delete, modes/config overlays, client fs/terminal adapters, MCP select gate, rich prompt content, locations/diffs via projection allow-lists, lifecycle → update mapping, elicitation routing); network-free `scripts/phase10-conformance.test.mjs` 7/7 in `npm test`; operator-gated real-transport smoke; `examples/acp-coding-host.ts`; `benchmark-0.0.27.json` under freeze p95 ceilings; `docs/acp.md` + migration `0.0.26 → 0.0.27`.
-    - Exit gate: `npm run sdk:ready` green (typecheck incl. examples, lint, format, full test suite, coverage, pack dry-run, release gate for 0.0.27), `npm audit --audit-level moderate` clean, compat baselines regenerated (only additive ag-ui/coding-agent deltas), freeze exports verified, `git diff --check` clean, 48-manifest exact graph at 0.0.27.
-  - Objectives:
-    - Make Prism usable as a complete ACP coding agent without implementing a second coding runtime.
-    - Map Phase 8 approval and Phase 9 filesystem/process/language/forge capabilities through negotiated ACP features.
-  - Acceptance Criteria:
-    - Functional: ACP initialization truthfully advertises only configured filesystem, terminal/process, MCP, session-load/delete, additional-directory, prompt-content, elicitation, and configuration capabilities.
-    - Functional: client filesystem read/write and terminal operations map through existing coding operations, execution policy, ownership, sandbox/workspace mode, limits, and approval.
-    - Functional: session load/resume, mode switching, current-mode updates, extra workspace directories, locations, diffs/content updates, rich prompt content, and MCP server configuration are supported where the pinned stable ACP SDK specifies them.
-    - Functional: permission requests map allow once/for run and reject once/for run without widening the Phase 8 shared approval contract.
-    - Functional: typed coding lifecycle events cover file change, worktree create/remove, process start/exit, check start/finish, permission denial, configuration change, task create/complete, compaction, and subagent start/stop only where a current host/protocol consumer exists.
-    - Functional: modes can alter system prompt contributions, tool availability, workspace write policy, approval policy, and language/forge capability without changing tenant/identity or bypassing current policy.
-    - Performance: protocol payload, diff, location, terminal chunk, configuration, directory, event, and session counts/bytes are finite; slow clients use existing bounded queue/overflow behavior.
-    - Code Quality: ACP is a transport adapter over shared primitives; no ACP-only filesystem, terminal, session database, approval store, or event runtime is introduced.
-    - Security: all client-provided paths/directories/configuration/MCP servers are untrusted and policy-checked; capability negotiation cannot activate unavailable tools; modes only narrow or explicitly host-authorized-switch capability.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/ag-ui.md`, `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/agent-events.md`, `docs/mcp-tools.md`.
-      - ACP initialization, session modes, tool calls, filesystem, terminal, and session documentation: <https://agentclientprotocol.com/protocol/initialization>, <https://agentclientprotocol.com/protocol/session-modes>, and <https://agentclientprotocol.com/protocol/tool-calls>.
-      - Stable `@agentclientprotocol/sdk` API at implementation time; experimental v2 remains excluded unless promoted stable and separately reviewed.
-    - Options Considered:
-      - Expose ACP v2 experimental APIs now: unstable compatibility burden; reject until stable or required by a named editor.
-      - Implement editor features inside ACP package: duplicates coding primitives; reject.
-      - Extend stable ACP v1 adapter over shared coding/session contracts: chosen.
-    - Chosen Approach:
-      - Freeze a capability matrix against the pinned SDK and at least one real editor client.
-      - Add capabilities incrementally with conformance fixtures and truthful initialization responses.
-      - Emit typed shared coding events first, then map them to ACP updates.
-    - API Notes and Examples:
-      ```ts
-      const acp = createPrismAcpAgent({
-        sessions,
-        coding: { filesystem, processes, language, forge },
-        modes: [reviewMode, editMode],
-        mcpServers: hostSelectedServers,
-      });
-      ```
-    - Files to Create/Edit (tentative):
-      - `packages/ag-ui/src/acp/*`, ACP tests/fixtures/exports/docs/changelog.
-      - Core or coding-agent shared event/mode types only after primitive review.
-      - Coding-security/process/language/forge adapters only for shared contract integration.
-      - Real-client example and optional protected interoperability workflow.
-    - References:
-      - Current ACP adapter truthfully advertises only configured seams and maps the shared four-outcome decision model; see `docs/acp.md`.
-      - Existing AgentEvent mapper, session lifecycle, durable resume, coding tools, and MCP client bridge.
-  - Test Cases to Write:
-    - Initialization capability matrix for every configured/absent feature.
-    - Filesystem/terminal/MCP/session/mode/additional-directory/prompt-content round trips and denial paths.
-    - Diff/location mapping, output chunk bounds, reconnect/load after replica change, cancellation, and malformed client input.
-    - Sticky permission and partial batch approval mapping.
-    - Real stable ACP client smoke against read-only, edit, and sandboxed modes.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; ACP capabilities, events, modes, configuration, and coding-host behavior expand.
-    - Docs pages to create/edit: `docs/ag-ui.md`, `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/agent-events.md`, `docs/mcp-tools.md`, `docs/migration.md`; create `docs/acp.md` if ACP content no longer fits AG-UI page.
-    - `docs/index.md` update: yes; add/update ACP under Multi-agent/frontend interoperability and coding host integration.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Stable ACP SDK conformance, real-client smoke, all capability/permission/mode/security tests, payload/performance budgets, package compatibility, and full release gate pass.
+- [ ] Remove inert `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs`, `AgentConfig.maxToolRounds` alias, `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders`. Add `docs/migration.md` 0.1.x → 0.2.0 section with the removed symbols and replacements.
+  - Acceptance: removed symbols absent from `.d.ts`; migration notes present; compat baseline updated (intentional breaks recorded); `sdk:ready` green.
 
-- [x] Phase 11 — Release 0.0.28: enterprise authentication, policy, MCP OAuth, API, and artifact adapters (complete 2026-08-08; Tasks 0–6 shipped)
-  - Objectives:
-    - Reduce repeated security-critical host plumbing while preserving host ownership of users, login UX, policy authorship, credentials, and storage topology.
-    - Provide one bounded reference adapter for each confirmed enterprise integration seam.
-  - Acceptance Criteria:
-    - Functional: optional OIDC/JWKS identity verification validates pinned issuer, audience, signature, expiry/not-before, clock skew, algorithm, key rotation, revocation callback, tenant mapping, principal/scopes, and bounded claims before creating `AgentIdentity`.
-    - Functional: one external policy adapter maps Prism identity/action/resource/context to OPA or Cedar, validates bounded decisions, preserves policy id/version/reason/evidence, supports timeout/failure policy, and records the result through durable Phase 6 storage.
-    - Functional: MCP HTTP client/server integration supports protected-resource metadata, `WWW-Authenticate`, OAuth/OIDC authorization-server discovery, PKCE, client registration strategy chosen by host, scope challenges, token refresh/revocation, audience validation, and persisted bounded discovery state.
-    - Functional: MCP never passes through tokens issued for another resource and applies SSRF/origin/redirect policy to all discovery endpoints.
-    - Functional: optional OpenAPI tooling exposes only host-selected operation IDs with normalized JSON Schema, exact server origin, bounded body/pagination/retry, credential callbacks, approval/effect/idempotency metadata, and no generic arbitrary-request escape hatch.
-    - Functional: one production artifact blob adapter stores/reads/deletes bodies by opaque reference with ownership, hash/size/MIME verification, optional encryption/KMS callback, signed delivery integration, retention/legal hold, and no local-path disclosure.
-    - Functional: adapters compose with current credentials, identity, policy, event, approval, idempotency, redaction, retention, and audit contracts.
-    - Performance: JWKS/discovery/policy/schema caches are bounded with expiry; network requests, redirects, schemas, operations, bodies, pages, artifacts, and retries have finite limits and published p95 targets.
-    - Code Quality: adapters remain optional; core gains only reusable contracts proven missing by primitive review; vendor SDK dependencies are avoided when native fetch/crypto/current installed dependencies safely cover requirements.
-    - Security: fail closed on unknown issuer/audience/algorithm/key, policy timeout/malformed response, OAuth metadata SSRF, token audience mismatch, OpenAPI origin drift/schema abuse, and artifact hash/ownership mismatch; credentials never enter prompts, telemetry, persisted discovery, or errors.
-  - Approach:
-    - Documentation Reviewed:
-      - `docs/agent-identity.md`, `docs/policy-and-audit.md`, `docs/mcp-tools.md`, credential/OAuth docs, `docs/work-artifacts-and-review.md`, `docs/host-security.md`.
-      - OpenID Connect Discovery, JWT/JWK, OAuth 2.1/security best-current-practice, RFC 9728 protected-resource metadata, and MCP authorization/security specifications.
-      - Current OPA or Cedar SDK/HTTP decision documentation selected by named integration.
-      - OpenAPI 3.1 and chosen object-store API documentation.
-    - Options Considered:
-      - Build login UI, user directory, SAML, or SCIM into Prism: host/product scope; reject.
-      - Require every host to implement JWT/JWKS and MCP OAuth correctly: repeated security risk; reject.
-      - Ship OPA and Cedar together: unnecessary adapter breadth; select one from demand.
-      - Automatically expose complete OpenAPI documents: excessive authority and context; reject.
-      - Add multiple object stores: reject; one reference adapter plus host contract.
-    - Chosen Approach:
-      - Add optional Node packages/subpaths only after package and dependency review.
-      - Reuse MCP SDK OAuth helpers where compatible with Prism bounds and host credential policy.
-      - Compile only explicitly configured OpenAPI operations during host setup, never model-driven discovery.
-      - Keep artifact metadata in current stores and bodies in the selected blob adapter.
-    - API Notes and Examples:
-      ```ts
-      const identityVerifier = createOidcIdentityVerifier({
-        issuer: "https://id.example.com/tenant",
-        audience: "prism-api",
-        mapClaims,
-      });
+### 0.2.0 Module D — Enterprise adapter breadth (demand-gated)
 
-      const tools = createOpenApiTools({
-        document,
-        operations: ["getCustomer", "createCase"],
-        server: "https://api.example.com",
-        credentials,
-        policy,
-      });
-      ```
-    - Files to Create/Edit (tentative):
-      - Optional identity/OIDC adapter package or credentials-node subpath, tests/docs.
-      - Policy adapter package/subpath selected during plan, tests/docs.
-      - MCP auth client/server/discovery integration, credentials storage, fake authorization server, tests/docs.
-      - Optional OpenAPI tools package/subpath, schema normalization, tests/docs.
-      - Artifact blob contract/reference adapter and server artifact delivery integration.
-      - Manifests/profiles only after install-size and adoption review.
-    - References:
-      - Existing `IdentityVerifier`, `PolicyEvaluator`, OAuth provider/store, MCP SDK bridge/server, `ArtifactService`, lifecycle retention/legal hold, and signed delivery links.
-  - Test Cases to Write:
-    - OIDC valid/expired/future/revoked/wrong issuer/audience/algorithm/key, JWKS rotation/outage/cache poisoning, oversized claims, tenant mapping.
-    - Policy allow/deny/modify/approval, malformed/oversized/timeout, stale version, evidence bounds, fail-closed behavior, durable ledger.
-    - MCP metadata discovery, PKCE/state, scope challenge, refresh, callback, token audience, confused deputy, token passthrough denial, SSRF, redirect, exact origin, discovery cache.
-    - OpenAPI operation allow-list, server override denial, schema refs/cycles/size, pagination/retry, side-effect approval/idempotency, credential/redaction, hostile response.
-    - Artifact upload/download/delete, hash mismatch, wrong tenant, legal hold, retention, signed link, encryption callback, partial failure, and object-store outage.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; identity, policy, OAuth, MCP, OpenAPI tools, artifact storage, credential, and package surfaces expand.
-    - Docs pages to create/edit: `docs/agent-identity.md`, `docs/policy-and-audit.md`, `docs/mcp-tools.md`, credential/OAuth docs, `docs/work-artifacts-and-review.md`, `docs/host-security.md`, `docs/migration.md`; create adapter-specific pages following Prism wiki structure.
-    - `docs/index.md` update: yes; update Identity/governance, Security/auth/trust, MCP, Tools, Credentials, Artifacts, and Persistence entries.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Fake-server conformance and protected OIDC/policy/MCP/object-store integration suites pass; security threat fixtures, cache/resource budgets, audit/SBOM/license, package compatibility, and full release gate pass.
+- [ ] **Cedar policy adapter** beside OPA, behind the existing `PolicyEvaluator` seam (plan 011 further action). Demand gate: a named user/integration.
+- [ ] **Second `ArtifactBodyStore` adapter** (e.g., Alibaba OSS or Azure Blob) if a host demands it (plan 011 further action). Multipart SigV4 for the S3 adapter if upload-size ceiling is hit.
+- [ ] **OpenAPI pagination beyond cursor** (offset, Link headers) if hosts need it (plan 011 further action).
+  - Acceptance: each adapter passes its conformance + redaction + ownership tests; budget gate green; demand evidence recorded.
 
-- [x] Phase 12 — Release 0.1.0: production-readiness candidate and operational proof
-  - Objectives:
-    - Prove the completed enterprise and coding harness surface works together under supported production topologies.
-    - Freeze a truthful compatibility, security, capacity, and operator-support contract for 0.1.x.
-  - Acceptance Criteria:
-    - Functional: clean packed consumers complete enterprise and coding journeys using only public exports and documented package installations.
-    - Functional: multi-replica agent run/reconnect, durable custom loop, batched approval, ACP editor session, sandboxed coding process, forge handoff, OIDC identity, policy decision, MCP OAuth, OpenAPI side effect, artifact delivery, and restart recovery pass end to end.
-    - Functional: supported Node/PostgreSQL/provider/protocol/platform matrices and explicit unsupported combinations are documented and machine-checked where practical.
-    - Functional: upgrade/migration from 0.0.17 through each roadmap release preserves compatible stores or provides tested migration/refusal behavior.
-    - Performance: publish reproducible capacity envelopes for event throughput, reconnect latency, database contention/storage growth, policy/identity overhead, approval state, repository/LSP/process operations, ACP streaming, proxy egress, and package startup/install size.
-    - Code Quality: declaration/API compatibility, exact internal ranges, migration checksums, tarball allow/deny lists, docs links/examples, lint/format, coverage, and benchmark regressions are mandatory gates.
-    - Security: CodeQL/SAST, dependency review, moderate-or-higher audit policy, secret scan, SBOM/license, provenance, signed tag, tenant/protocol/sandbox/egress/OAuth threat suites, and protected live integrations pass with retained evidence.
-  - Approach:
-    - Documentation Reviewed:
-      - All public docs/package READMEs/changelogs and `docs/0.1.0-readiness.md`.
-      - Current Node LTS, PostgreSQL, npm trusted publishing/provenance, GitHub Actions security, and each pinned protocol/SDK compatibility document.
-    - Options Considered:
-      - Add remaining comparison-table features during RC: destabilizes evidence; reject.
-      - Release on network-free tests alone: insufficient for production claims; reject.
-      - Freeze features, run protected matrix, fix only blockers/regressions, and publish evidence: chosen.
-    - Chosen Approach:
-      - Update the readiness document to the concrete capabilities and limits delivered by Phases 1-11.
-      - Run repeatable end-to-end fixtures in single-process, multi-process PostgreSQL, and contained coding environments.
-      - Treat missing credentials/infrastructure as a blocked release gate, not a passing skip.
-    - API Notes and Examples:
-      ```bash
-      npm run sdk:ready
-      npm run test:postgres
-      npm run test:live
-      npm run test:sandbox-browser
-      npm run release:check -- --version 0.1.0
-      npm run release:publish -- --version 0.1.0 --dry-run --allow-untagged
-      ```
-    - Files to Create/Edit (tentative):
-      - Integration/e2e fixtures, protected workflows, benchmark scripts/results, release scripts, compatibility fixtures.
-      - `docs/0.1.0-readiness.md`, `docs/release-and-install.md`, `docs/migration.md`, `docs/performance.md`, `docs/index.md`, package READMEs/changelogs.
-      - Manifests/lockfile/runtime metadata for 0.1.0 only after all gates pass.
-    - References:
-      - Existing `sdk:ready`, `release:gate`, package budget, benchmark, provenance, live-canary, PostgreSQL, keychain, Docker/Playwright, and CodeQL workflows.
-  - Test Cases to Write:
-    - Packed-install enterprise application fixture and packed-install ACP coding-agent fixture.
-    - Replica/process/database restart at each event/tool/approval checkpoint.
-    - Node supported-version matrix and clean database migration matrix.
-    - Provider/protocol/browser/sandbox/forge/OIDC/policy/object-store credentialed canaries.
-    - Capacity/backpressure/failure-injection scenarios with frozen pass/fail thresholds.
-    - Supply-chain negative fixtures and deterministic publication dry-run.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes; readiness, support, compatibility, migration, performance, and release contracts are frozen.
-    - Docs pages to create/edit: all affected public docs, especially `docs/0.1.0-readiness.md`, `docs/release-and-install.md`, `docs/migration.md`, `docs/performance.md`, `docs/public-contracts.md`.
-    - `docs/index.md` update: yes; verify every public package/capability is discoverable and no retired/unsupported claim remains.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Every release validation item below passes on protected infrastructure; signed `v0.1.0`, npm OIDC provenance, and publication remain explicit operator actions after evidence review.
+### 0.2.0 Module E — Coding-agent capability closeouts (demand-gated)
 
-- [ ] Phase 13 — Demand-gated post-0.1 ecosystem and product expansion
-  - Acceptance Criteria:
-    - Functional: only capabilities with a named user, concrete integration, operational owner, and measurable success criteria enter an executable plan.
-    - Performance: each promoted item declares scale, latency, storage, cost, package-size, and operational budgets before implementation.
-    - Code Quality: promoted services consume stable Prism contracts and remain optional; no core dependency or second runtime is added for comparison-table parity.
-    - Security: every hosted/device/channel/remote-browser/new-database capability receives identity, tenancy, consent, egress, retention, audit, abuse, supply-chain, and incident-response review.
-  - Candidate Capabilities:
-    - Studio/control plane and visual workflow editor.
-    - Hosted cloud and managed observability.
-    - Slack/Teams/channel catalogs, voice/device vendors, and desktop OS control.
-    - Remote-browser/sandbox vendors.
-    - Additional forges after GitHub adoption evidence.
-    - Additional queues/backplanes after PostgreSQL event-source capacity evidence.
-    - Additional policy engines, object stores, databases, vector stores, providers, and framework-specific server adapters.
-    - Advanced GraphRAG/semantic chunking and cron-expression support.
-  - Approach:
-    - Documentation Reviewed:
-      - Adoption telemetry/issues, production benchmark results, incident reports, user integration requirements, and relevant vendor/protocol docs at promotion time.
-    - Options Considered:
-      - Prebuild a complete agent platform: rejected.
-      - Demand-gated primitive review and optional implementation: chosen.
-    - Chosen Approach:
-      - Promote one candidate at a time into its own numbered plan only after entry criteria pass.
-    - API Notes and Examples:
-      ```text
-      named demand → primitive review → threat model → measurable plan → optional implementation → conformance → release gate
-      ```
-    - Files to Create/Edit:
-      - None before promotion.
-  - Test Cases to Write:
-    - Defined by each promoted plan; no placeholder packages, exports, migrations, or tests.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: no until promotion.
-    - Docs pages to create/edit: none until promotion.
-    - `docs/index.md` update: no until a public capability ships.
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
-  - Exit Gate:
-    - Not applicable as a combined release; each promoted capability receives an independent gate.
+- [ ] **Durable ACP session store** + **native sandbox backend** (network-free) — host-owned seams revisited on demand with a threat model (plan 012 further action).
+- [ ] **PDF/Office document reader** as a bounded host-selected parser adapter (plans 004/roadmap non-goals).
+- [ ] **Recursive `delete`** and **brace-expanding `glob`** if pattern/usage demand justifies it (plan 004 further actions).
+- [ ] **Checkpoint persistence** for `ReadPathSet` + loaded-skill bodies if 0.1.5's names-only persistence is insufficient.
+  - Acceptance: each closeout behind its own plan with primitive review + threat model; budget/security gates green.
 
-## Cross-Phase Architecture Decisions
+### 0.2.0 Module F — Performance and DX
 
-### Skills and context progressive disclosure
+- [ ] **Prompt-cache telemetry surface** per provider (hit/miss, cache tokens) so hosts tune `cache_aware` layout.
+- [ ] **Model-router cost/latency-aware routing + fallback chains** (router state is durable; selection policy becomes host-configurable with a reference policy).
+- [ ] **Async `AgUiProjection` hooks** so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority).
+- [ ] **`prism providers add <name>` scaffold** (DX) generating an OpenAI-compatible provider package from a template with conformance + docs.
+  - Acceptance: telemetry/redaction/budget gates green; DX scaffold produces a passing provider package; no core deps added.
 
-- Skill catalogs expose `name` + `description` by default (`skillsDisclosure: "progressive"`); full `instructions` load on demand via session `LoadedSkillSet` + `load_skill` or via explicit `skillsDisclosure: "eager"`.
-- Runtime skill registries default to no active skills; `activateAllSkills: true` is the explicit host opt-in for prior list-all behavior.
-- Context-budget eviction honors `ContextBlock.priority` (missing = 0) and may demote skill bodies to description-only (`skill_body` omission) before full drop.
-- Mid-flight tool-result summarization is host-opt-in (`toolResultFold` + summarizer callback; off by default) and never the default memory system; observational memory and compaction remain the durable paths.
-- Loaded-skill state is session-scoped in-memory in 0.0.20; durable checkpoint restore of loaded names is a future 0.0.x follow-on if hosts need resume without model reload.
+### 0.2.0 Module G — Observability for delegated agents
 
-### Coding tools
+- [ ] OpenTelemetry spans for delegated-agent runs (Cursor/Antigravity) through the existing `observability-opentelemetry` package; redacted payloads; run/step/tool-call spans correlated by `requestId`/`runId`.
+  - Acceptance: spans emitted; payloads redacted; conformance green.
 
-- Native bounded operations precede shell for search modes, glob, delete, and move.
-- Write/edit durability is atomic on the same filesystem; optional read-before-write is host-gated soft safety, not a hard universal lock.
-- Fuzzy edit remains exact-then-fuzzy with documented ambiguity tradeoff; PDF/document readers stay demand-gated.
+## Consolidated Compromises (from plans 001–012)
 
-### Observational memory
+These design ceilings are inherited from the 0.0.x phase plans and remain in force on the 0.1.x line unless a 0.2.0 module explicitly lifts them. Each lists the ceiling and the upgrade path.
 
-- Raw current-branch session messages remain immutable source of truth; compaction changes provider projection, not retention.
-- Normal provider context combines bounded active observations/reflections with a bounded exact recent-message suffix.
-- Observation and reflection coverage are independent, durable, idempotent, and advance after successful empty processing.
-- Dropping controls active context only; source lineage remains available for bounded current-branch recall until host retention removes raw entries.
-- Activation is explicit and makes no import/setup side effects; semantic cross-thread/resource recall requires a separately authorized host adapter and measured demand.
+- **001 (0.0.18):** `repo_search` is literal-only (regex removed, not worker-isolated) — hosts needing regex supply a bounded backend. Atomic write/edit is same-filesystem temp+`rename` only — custom ops hosts must match durability. Default `inputLayout` flip to `cache_aware` is breaking — `legacy` is the explicit opt-in. Readiness evidence table still carries the 0.0.16 historical floor; operator refreshes at 1.0.
+- **002 (0.0.19):** Empty-pass coverage markers append only when the worker runs; the dropper runs only after a reflection records ≥1 fact. `wrapResumeRun`/`attach` use a `sessionId` registry — no core lifecycle hook added.
+- **003 (0.0.20):** Loaded-skill bodies are session-scoped in-memory only — checkpoint resume does not restore bodies unless the host/model reloads. `toolResultFold` is off by default. Root tarball budget baselines bumped ~6% for Phase 3 modules. Breaking registry empty-default + progressive catalog default require `activateAllSkills` / `skillsDisclosure: "eager"` migration.
+- **004 (0.0.21):** No PDF/Office reader, trash daemon, PTY/process sessions, LSP, recursive delete, or brace-expanding glob. Read-before-write is opt-in and session-scoped in-memory only. Fuzzy edit may succeed silently on a normalized match; multi-match fails closed (documented). Hand-rolled `*`/`?`/`**` glob matcher (no `fs.glob`, no picomatch).
+- **005 (0.0.22):** Each package duplicates a small `upstream.ts` (no shared internal package) — extract only if a third behavior package appears. `caveman-stats` dispatches skill metadata only (no Claude session-log hook). `caveman-init` returns guidance text (does not run `caveman-init.js`). `ponytail-subagent` hook is host metadata only (not wired). No TUI statusline shell scripts (Prism is a harness).
+- **006 (0.0.23):** Release preflight used `--allow-dirty --allow-untagged` on an implementation checkout (not a tagged publish). Protected PostgreSQL evidence recorded on disposable `postgres:16-alpine` / Node v24.18.0 Linux x64.
+- **007 (0.0.24):** Root tarball budget baselines raised to measured 0.0.24 sizes (still +5% gated). Example uses in-memory event/effect stores; protected PostgreSQL evidence is the real gate. Concurrent `npm test`/`build` can race root `clean` (single-flight required — see 0.1.1).
+- **008 (0.0.25):** A2UI stays a section in `docs/ag-ui.md` (not a standalone page). Hashed nested approval ids to stay under the 128-char id cap. FR-3/FR-4/FR-5 remained deferred P2 (FR-3/FR-4 shipped in 0.0.26; FR-5 NATS shipped in 0.0.26 fake-seam). Concurrent clean race (see 0.1.1). Full `sdk:ready` coverage/pack legs left for the operator clean-checkout cut.
+- **009 (0.0.26):** NATS tests are network-free over a fake of the narrow seam (no real server — see 0.1.2). NATS `append` idempotency is bounded by the stream dedupe window (not a permanent unique constraint); `cleanup` is O(limit) delete calls; `subscribe` resumes via cursors not durable-name reuse; stream provisioning is host-owned; `reconnectInitialMs`/`reconnectMaxMs` accepted but unused (the official client owns reconnection). A2A server-side exposure is non-generic: single in-memory stream consumer per live task; live task registry in-memory (cap 512, FIFO, no persistence); A2A parts `raw`/`data`/`url` disabled unless the host `parts` policy selects them.
+- **010 (0.0.27):** Experimental ACP SDK fields stay excluded (`providers`, `nes`, `positionEncoding`, `sessionCapabilities.fork`, `mcpCapabilities.acp`/`auth`); `elicitation` consumed client-side only, never advertised agent-side. Deferred lifecycle events (`check_*`, `task_*`, `compaction_*`, `subagent_*`) not shipped (no ACP update kind / consumer). Modes/config not persisted by the agent (table defaults). Lifecycle delivery is stream-scoped. Smoke is operator-gated and not in `npm test`. Coverage aggregate excludes `packages/**` and `examples/**` (see 0.1.1).
+- **011 (0.0.28):** Fake-server gate; live endpoints deferred (see 0.1.2). OPA only (no Cedar) and one object-store adapter (S3-compatible) — seams stay swappable. Hand-rolled SigV4 single-chunk presign/put/get (no `@aws-sdk/client-s3`, ~1 MB saved); multipart/accelerate/non-path-style out of scope (see 0.2.0 Module D). OpenAPI mutation idempotency is core-managed, not a per-adapter store. Test harnesses 405 on standalone GET SSE rather than relaying a long-lived stream (see 0.1.1). Discovery cache is single-entry with a TTL cap per provider instance.
+- **012 (0.1.0):** Signed `v0.1.0` tag is an operator action (no GPG key in the build env); dry-run + refusal paths are machine-verified, the signature is not. Clean-checkout `sdk:ready` verified against a local clone of HEAD + the working diff, not a pushed CI run. Compat baseline regenerated for the `0.1.0` version literal. `security:threat-suites` runs Phase 8–11 conformance as one named leg (Phase 7 tenant suite stays under `test:postgres`). Live canaries keep an env-gate silent-skip for local runs (protected workflows set the env — see 0.1.2).
 
-### Third-party behavior integrations
+## Consolidated Further Actions (from plans 001–012, status reconciled)
 
-- Integration packages wire upstream projects into Prism contributions; they never reimplement prompt fragments, skill bodies, hook logic, or rules.
-- Upstream content is loaded from the installed upstream package (optional peer dependency or host-supplied path) and treated as untrusted, bounded text before injection.
-- Mode state is per-session via session custom entries with a host-configurable default; no TUI status rendering is performed by Prism.
-- Both packages are optional, host-selected, and off the 0.1.0 critical path; loading them is explicit and produces no implicit provider, network, timer, or filesystem activity.
-- Caveman/Ponytail skill registration must use Phase 3 progressive disclosure: `SkillRegistry` + `activeSkills` / `activateAllSkills`, default progressive catalog, host-registered `createLoadSkillTool`; mode/level prompt slices stay on `InstructionInjector` paths — never bypass with eager full-body injection every turn.
+Closed items are marked **done**; open items are routed to a 0.1.x or 0.2.0 milestone.
 
-### Durable state
+- **001:** Phase 2 plan created — **done**. Operator publish of `v0.0.18` — **done** (tag exists). Phase 4 coding gaps — **done** (Phase 4 shipped 0.0.21).
+- **002:** Phase 3 execute — **done** (0.0.20).
+- **003:** Phase 4 next — **done**. Phase 5 Caveman/Ponytail consuming Phase 3 — **done** (0.0.22). Future 0.0.x checkpoint persistence for loaded-skill names — **→ 0.1.5**. Release handoff 0.0.20 — **done**.
+- **004:** Tag/publish 0.0.21 — **done**. Phase 5 next — **done**. Checkpoint persistence for `ReadPathSet`/loaded-skill names — **→ 0.1.5 / 0.2.0 Module E**. Recursive delete / brace glob if demand — **→ 0.2.0 Module E**.
+- **005:** Tag/publish 0.0.22 — **done**.
+- **006:** Commit, tag `v0.0.23`, clean preflight — **done**. Phase 7 next — **done** (0.0.24).
+- **007:** Cut signed `v0.0.24` + protected Postgres + publish dry-run — **done**. Non-destructive workspace rebuild path (concurrent cleans) — **→ 0.1.1**. Public `deriveToolEffectKey` export if hosts need offline key derivation — **demand-gated (0.2.0)**. Phase 8 builds on frozen seams — **done** (0.0.25).
+- **008:** Cut signed `v0.0.25` + `sdk:ready` + publish dry-run — **done**. FR-3 reasoning encrypted-value helper — **done** (0.0.26). FR-4 MCP Apps UI-initiated mutation retry — **done** (0.0.26). FR-5 NATS JetStream `AgentEventSource` — **done** (0.0.26, fake-seam; **live suite → 0.1.2**). Async `AgUiProjection` hooks — **→ 0.2.0 Module F**.
+- **009:** Live NATS integration suite — **→ 0.1.2**. FR-3/4/5/6/7 shipped 0.0.26 — **done**. Tasks 13–15 (A2A server-side exposure, frontend renderer, async `AgUiProjection`) — **done** in 0.0.26. Phase 10 ACP mapping — **done** (0.0.27). Operator handoff (48 manifests) — **done**.
+- **010:** (Plan left "to be filled after task completion.") Material deferred items recorded above: deferred lifecycle events, modes/config persistence, durable ACP session store — **→ 0.2.0 Module E**; MCP SSE relay test — **→ 0.1.1**; coverage summary — **→ 0.1.1**.
+- **011:** Record protected live-canary matrix — **→ 0.1.2**. MCP SSE coverage — **→ 0.1.1**. Cedar, second artifact adapter, OpenAPI pagination — **→ 0.2.0 Module D (demand-gated)**. Manifest-count narrative — **→ 0.1.1**.
+- **012:** Operator publication of 0.1.0 (signed tag + npm OIDC) — **tag exists; npm publish remains operator action**. Phase 13 demand evidence — **this roadmap's 0.2.0 demand gates**. Node 22 CI leg + multi-Postgres CI legs on-demand — **demand-gated**. Durable ACP session store + native sandbox backend — **→ 0.2.0 Module E (demand-gated)**.
 
-- Keep domain-specific stores and conformance suites.
-- Use PostgreSQL as first distributed reference because Prism already supports it.
-- Do not introduce Redis/Kafka or a generic distributed-state package until measured capacity demands it.
+## Proposed New Features (summary)
 
-### Events and delivery
-
-- Durable ledger remains source of truth.
-- Notifications are wakeups only; they never replace persisted ordering/replay.
-- Protocol adapters consume one event source and one cursor model.
-
-### Tools and side effects
-
-- Effects are at-least-once.
-- Stable idempotency identity is based on authorized run/tool-call context, not model-provided keys alone.
-- Unknown outcomes are first-class and require reconciliation or human resolution.
-- Argument modification re-enters validation, guardrails, policy, accounting, and approval checks.
-
-### Coding
-
-- Native bounded operations precede shell.
-- Phase 4 capability gaps (search modes, glob, read-before-write, delete/move) land before Phase 9 LSP/process/forge/egress.
-- Git/LSP/process/forge/egress capabilities remain explicit and separately permissioned.
-- ACP maps shared capabilities; it does not own a second filesystem, terminal, session, or approval implementation.
-- No index daemon, watcher, language server, process, or network service starts implicitly.
-
-### Enterprise integrations
-
-- Hosts own authentication UX, user directory, SAML/SCIM, policy source, credentials, and deployment.
-- Prism may verify OIDC/JWT, call a selected policy engine, perform MCP OAuth, bind selected OpenAPI operations, and store artifacts through optional adapters.
-- Tokens are audience-bound and never passed through to unrelated resources.
-- Remote metadata, schemas, policy results, and artifact references are untrusted and bounded.
+- **0.1.x:** new OpenAI-compatible model providers; Alibaba provider enrichment; build single-flight; MCP SSE relay test; live-canary + live-NATS protected gates; coverage summary; checkpoint persistence for loaded-skill names + `ReadPathSet`; dead-code/deprecation hygiene; `prism providers add` DX scaffold (candidate).
+- **0.2.0:** delegated coding-agent adapters (Cursor, Antigravity) behind a generic delegated-agent contract; god-module split; deprecated-option removal; Cedar/second-object-store/OpenAPI-pagination adapters; durable ACP session store + native sandbox backend; PDF/Office reader; recursive delete + brace glob; prompt-cache telemetry; cost/latency model routing + fallback chains; async `AgUiProjection` hooks; OTel spans for delegated agents.
+- **Demand-gated beyond 0.2.0 (Phase 13):** Studio/control plane and visual workflow editor; hosted cloud and managed observability; Slack/Teams/channel catalogs, voice/device, desktop OS control; remote-browser/sandbox vendors; additional forges after GitHub adoption; additional queues/backplanes after Postgres capacity evidence; additional policy engines/object stores/databases/vector stores/providers; advanced GraphRAG/semantic chunking; cron-expression scheduling. Each needs a named user, integration, operational owner, threat model, measurable acceptance, and its own numbered plan.
 
 ## Release Validation Checklist
 
-Every numbered release must satisfy:
+Every 0.1.x and 0.2.0 release must satisfy:
 
-- [ ] Active phase acceptance criteria and focused adversarial tests pass.
+- [ ] Active milestone acceptance criteria and focused adversarial tests pass.
 - [ ] `npm run sdk:ready` passes with zero unexplained failures/skips.
-- [ ] Node 20 and current-supported Node builds and public packed imports pass.
-- [ ] Relevant observational-memory, skills progressive-disclosure, coding-tool, PostgreSQL, keychain, provider, MCP, A2A, ACP, OIDC, policy, browser, sandbox, egress, forge, object-store, and work-connector protected suites pass where affected.
+- [ ] Node 20 and a current-supported Node build and public packed imports pass.
+- [ ] Relevant observational-memory, skills progressive-disclosure, coding-tool, PostgreSQL, keychain, provider, MCP, A2A, ACP, OIDC, policy, browser, sandbox, egress, forge, object-store, delegated-agent, and work-connector protected suites pass where affected.
 - [ ] Multi-process restart, failover, cursor, approval, idempotency, and unknown-outcome tests pass where affected.
 - [ ] `npm audit` policy, dependency tree, CodeQL/SAST, dependency review, secret scan, SBOM/license, provenance, and tarball-content checks pass.
 - [ ] Performance, storage growth, package size, startup, and install-size changes are measured against frozen budgets.
@@ -1113,31 +318,14 @@ Every numbered release must satisfy:
 - [ ] Release dry-run is deterministic; clean protected CI, signed tag, and npm OIDC publication evidence are recorded.
 - [ ] No blocker is converted into a skip or deferred only to preserve a release number/date.
 
-## Non-Goals Through 0.1.0
+## Non-Goals (carried forward)
 
 - Prism Studio, visual workflow builder, hosted cloud, or managed telemetry backend.
 - Built-in user database, login UI, SAML identity provider, or SCIM server.
 - Mandatory Kubernetes, Helm, Terraform, Redis, Kafka, SQS, or vendor control plane.
-- Automatic provider, credential, MCP server, OpenAPI operation, LSP server, forge, or network discovery.
-- Broad Slack/Teams/channel, voice/device, desktop-control, remote-browser, vector-store, object-store, policy-engine, or forge catalogs.
-- Local Office runtime or unrestricted SaaS/Graph/Discovery command shell.
-- Built-in Caveman or Ponytail prompt content, skill bodies, hook scripts, or rule text; the integration packages only wire upstream packages and never duplicate them.
-- Universal prompt registry, feature-flag service, skills marketplace, or peer-to-peer agent-team runtime.
-- Automatic resource-wide/cross-thread semantic observational-memory search without an explicitly configured retrieval adapter, ownership policy, consent model, and vector store.
-- Built-in PDF/Office document readers in coding tools without named demand and a bounded host-selected parser adapter.
+- Automatic provider, credential, MCP server, OpenAPI operation, LSP server, forge, delegated agent, or network discovery.
+- Broad Slack/Teams/channel, voice/device, desktop-control, remote-browser, vector-store, object-store, policy-engine, forge, or delegated-agent catalogs beyond the one-reference-first rule.
+- Built-in Caveman or Ponytail prompt content, skill bodies, hook scripts, or rule text (integration packages only wire upstream).
 - Exactly-once execution claims for arbitrary external side effects.
-
-## Compromises Made
-
-- **Phase 4 (0.0.21):** no PDF/trash/PTY/LSP; delete is non-recursive (empty dirs only); glob has no brace expansion; read-before-write is opt-in and not checkpoint-persisted; fuzzy edit may succeed silently on normalized match (documented tradeoff).
-- **Phase 3 (0.0.20):** loaded-skill bodies are session-scoped in-memory only — checkpoint resume does not restore loaded bodies unless host reloads; `toolResultFold` off by default; breaking registry empty-default + progressive catalog default require `activateAllSkills` / `skillsDisclosure: "eager"` migration for prior activate-all hosts; root tarball budget baselines bumped ~6% for Phase 3 modules.
-
-## Further Actions
-
-- Execute `plans/001-Release-0-0-18-Restore-Integrity.md` (Phase 1) — **complete** (exit gate 2026-07-30).
-- Execute `plans/002-Release-0-0-19-Observational-Memory.md` (Phase 2) — **complete** (exit gate 2026-07-30).
-- Execute `plans/003-Release-0-0-20-Skills-Progressive-Disclosure.md` (Phase 3) — **complete** (exit gate 2026-07-31).
-- Execute `plans/004-Release-0-0-21-Coding-Tool-Capability-Gaps.md` (Phase 4) — **complete** (exit gate 2026-07-31).
-- Execute `plans/006-Release-0-0-23-Production-Enterprise-State-Adapters.md` (Phase 6) — **complete** (exit gate 2026-08-03).
-- **Release handoff:** tag and publish `@arnilo/prism@0.0.23` from a clean checkout — `docs/release-and-install.md` 0.0.23 publish handoff.
-- **Phase 7 next:** create its numbered plan only when ready; do not scaffold later-phase APIs early.
+- Model-only usage of Cursor or Antigravity SDKs — neither exposes a model-only seam; they integrate as delegated agents, not providers.
+- A second agent runtime; all new capabilities extend the current sessions/ledgers/checkpoints/leases/workflows/tools/events.I wan
