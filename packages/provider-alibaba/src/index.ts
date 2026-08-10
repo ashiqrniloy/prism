@@ -42,6 +42,13 @@ export {
   withAlibabaCacheMarker,
 } from "./cache.js";
 export {
+  ALIBABA_EMBEDDING_BATCH_SIZE,
+  ALIBABA_EMBEDDING_DEFAULT_DIMENSIONS,
+  type AlibabaEmbedder,
+  type AlibabaEmbedderOptions,
+  createAlibabaEmbedder,
+} from "./embeddings.js";
+export {
   type AlibabaBasePreset,
   type AlibabaModelConfig,
   type AlibabaModelEntry,

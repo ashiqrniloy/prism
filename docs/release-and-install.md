@@ -241,6 +241,38 @@ git push origin v0.1.1        # tag push triggers release.yml publish job (prove
 
 **Rollback notes.** `release:publish --version 0.1.1 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.1` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.1` is store-compatible with `0.1.0` in **both directions** (no migration ran — same checksum-protected contract), so an operator may defer or roll back the patch without a database rollback.
 
+### 0.1.2 publish handoff (plan 014 Task 6)
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.2** (plan 014) is the Alibaba Cloud provider enrichment patch on the frozen 0.1.x line: `createAlibabaEmbedder` over the OpenAI-compatible `POST {base}/embeddings` (structural `Embedder`, no new dependency), video input via `video_url` content parts on Qwen-VL models (gated on the `file` input capability), a verified compatible-mode surface decision table in [providers/alibaba.md](providers/alibaba.md) (document input and rerank deferred as demand-gated follow-ups), and an opt-in `PRISM_LIVE_DASHSCOPE_KEY` live probe. Publishable graph stays **49** manifests (root + 48 workspace) at exact **0.1.2**. Store compatibility with 0.1.1: **compatible, no migration**; declaration surface additive-only vs the frozen 0.1.x contract (`scripts/compat-baseline` regenerated at 0.1.2 with zero breaking deltas).
+
+```bash
+# Operator prerequisites (each a named blocked gate — none may be skipped):
+#  1. protected live-canary matrix green (live-canaries.yml, canary-report.json retained)
+#  2. PostgreSQL + keychain protected suites green (test:postgres, keychain suite)
+#  3. CodeQL SAST green on the release commit (security.yml / release.yml codeql-release)
+#  4. npm OIDC trusted publishing identity authenticated (NPM_TOKEN with id-token, provenance)
+
+git diff --check
+npm ci
+npm run sdk:ready            # includes typecheck, lint, format, full test, coverage, pack, release:gate
+npm run security:threat-suites
+PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres   # Phase 7 + Phase 12 restart-recovery
+npm audit --audit-level=moderate
+npm run release:check -- --version 0.1.2 --report /tmp/prism-0.1.2-preflight.json
+npm run release:publish -- --version 0.1.2 --dry-run --allow-dirty --allow-untagged --report /tmp/prism-0.1.2-dry-run.json
+#   run the dry-run twice and diff the reports: deterministic, byte-identical
+
+# Sign the release on the clean tagged tree (operator GPG key):
+git tag -s v0.1.2 -m "Prism 0.1.2"
+git verify-tag v0.1.2
+git push origin v0.1.2        # tag push triggers release.yml publish job (provenance, attestations)
+
+# Real publication never bypasses the gates: release.mjs refuses
+# --allow-dirty/--allow-untagged without --dry-run.
+```
+
+**Rollback notes.** `release:publish --version 0.1.2 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.2` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.2` is store-compatible with `0.1.1` in **both directions** (no migration ran — same checksum-protected contract), so an operator may defer or roll back the patch without a database rollback.
+
 ### 0.0.28 publish handoff (historical)
 
 **Decision: GO after protected operator prerequisites below.** Release **0.0.28** (Phase 11, plan 011) ships the optional enterprise adapter seams: OIDC/JWKS identity verification (`@arnilo/prism-credentials-node/oidc`), OPA policy evaluation into the durable ledger (`@arnilo/prism-policy/opa`), MCP OAuth client/server support (`@arnilo/prism-mcp`), host-selected OpenAPI operations as effect-gated tools (`@arnilo/prism-openapi-tools`), and an S3-compatible artifact body store behind the new core body contract (`@arnilo/prism-server/artifact-bodies`). Every seam is opt-in and fail-closed; hosts that wire none keep exact prior behavior. Publishable graph stays **49** publishable manifests (root + 48 workspace packages; `prism-openapi-tools` joined the graph in this release). See [migration](migration.md) `0.0.27 → 0.0.28`.

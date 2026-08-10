@@ -271,7 +271,6 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.1 handoff missing rollback notes");
     assert.ok(readiness.includes("## Current line (0.1.1)"), "readiness missing 0.1.1 current-line table");
     assert.ok(contracts.includes("0.1.1 verification (plan 013 Task 6)"), "public-contracts missing 0.1.1 verification note");
-    assert.ok(index.includes("current **0.1.1**"), "index.md current-line entry not at 0.1.1");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.1] - 2026-08-10"), "root changelog missing 0.1.1 entry");
     for (const pkg of ["packages/mcp", "packages/ag-ui"]) {
       assert.ok(
@@ -279,6 +278,23 @@ describe("docs", () => {
         `${pkg}/CHANGELOG.md missing 0.1.1 entry`,
       );
     }
+  });
+
+  it("plan 014 Task 6 freeze: 0.1.2 Alibaba enrichment and publish handoff are documented", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const alibaba = readFileSync("docs/providers/alibaba.md", "utf8");
+    assert.ok(release.includes("### 0.1.2 publish handoff (plan 014 Task 6)"), "release page missing 0.1.2 handoff");
+    assert.ok(release.includes("**Rollback notes.**"), "0.1.2 handoff missing rollback notes");
+    assert.ok(index.includes("current **0.1.2**"), "index.md current-line entry not at 0.1.2");
+    assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.2] - 2026-08-10"), "root changelog missing 0.1.2 entry");
+    assert.ok(
+      readFileSync("packages/provider-alibaba/CHANGELOG.md", "utf8").includes("## [0.1.2] - 2026-08-10"),
+      "provider-alibaba/CHANGELOG.md missing 0.1.2 entry",
+    );
+    assert.ok(alibaba.includes("createAlibabaEmbedder"), "alibaba.md missing embeddings surface");
+    assert.ok(alibaba.includes("video_url"), "alibaba.md missing video input surface");
+    assert.ok(alibaba.includes("Rerank (deferred)"), "alibaba.md missing rerank deferral section");
   });
 
   it("phase 12 compatibility matrix agrees with the freeze manifest", () => {
@@ -345,7 +361,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.1.1", "root manifest must be at 0.1.1");
+    assert.equal(pkg.version, "0.1.2", "root manifest must be at 0.1.2");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1306,6 +1322,22 @@ describe("docs", () => {
         `${page} does not document any export from ${packageIndex}`,
       );
     }
+  });
+
+  it("plan 014 Task 1: alibaba compatible-mode surface decision record is present and complete", () => {
+    const page = readFileSync("docs/providers/alibaba.md", "utf8");
+    assert.ok(page.includes("Compatible-mode surface (verified 2026-08-10)"), "decision record section missing");
+    for (const token of [
+      "POST {base}/embeddings",
+      "video_url",
+      "compatible-api/v1/reranks",
+      "X-DashScope-Async",
+      "file-extract",
+      "Text-to-SQL",
+    ]) {
+      assert.ok(page.includes(token), `alibaba.md missing decision-record token: ${token}`);
+    }
+    assert.ok(page.includes("Deferred"), "decision record names deferrals");
   });
 
   it("phase 3 docs are linked from the docs index", () => {

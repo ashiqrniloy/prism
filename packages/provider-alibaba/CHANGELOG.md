@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.2] - 2026-08-10
+
+### Added
+- `createAlibabaEmbedder` over the OpenAI-compatible `POST {base}/embeddings` (text-embedding-v3/v4): structural `Embedder` shape (assignable to `@arnilo/prism-memory`'s without a dependency), inputs chunked at the DashScope cap (10/request), vectors in input order, empty input returns `[]` without a fetch, `dimensions` 64–2048 (default 1024) + `encoding_format` passthrough, key resolved per call and redacted from all errors.
+- Video input in chat serialization: `file` blocks with `video/*` media types map to compatible-mode `video_url` content parts on Qwen-VL models, gated on the `file` input capability; `mapAlibabaModel` advertises `["text", "image", "file"]` for the qwen-vl family.
+- Opt-in live probe: `PRISM_LIVE_DASHSCOPE_KEY=… npm run test:live --workspace @arnilo/prism-provider-alibaba` (skips when env absent; never in CI).
+
+### Deferred (documented in the verified decision table)
+- Document input: no OpenAI-compatible content part; compatible path is the OpenAI Files API `file-extract` + `fileid://` reference (qwen-long) — demand-gated follow-up.
+- Rerank: only workspace-dedicated `compatible-api/v1/reranks` exists (`qwen3-rerank`), not on the public presets — demand-gated follow-up.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

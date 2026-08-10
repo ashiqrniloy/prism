@@ -29,12 +29,38 @@ serialization, dynamic model discovery, and explicit/implicit cache accounting.
 Do not use it for automatic credential discovery, setup-time catalog fetches, or
 real-network tests (live tests stay opt-in).
 
+## Compatible-mode surface (verified 2026-08-10)
+
+Decision record for which DashScope / Model Studio surfaces are reachable through
+OpenAI-compatible endpoints on the package's public presets. Sources retrieved
+2026-08-10; links in the table. This table is the authority for what the package
+implements vs defers (plan 014 Task 1).
+
+| Surface | OpenAI-compatible? | Verified route | Decision |
+| --- | --- | --- | --- |
+| Embeddings | Yes | `POST {base}/embeddings` on all public presets (intl/beijing/us); `text-embedding-v3`/`v4`; dimensions 64–2048 (default 1024); max 10 inputs per request, 8,192 tokens each | Implemented in 0.1.2 (`createAlibabaEmbedder`) |
+| Video input | Yes | Chat content part `{"type":"video_url","video_url":{"url":…},"fps":2}` on Qwen-VL models; URL must be publicly reachable with correct `Content-Length`/`Content-Type`; `fps` 0.1–10 (default 2) | Implemented in 0.1.2 (video `file` blocks → `video_url`) |
+| Document input | Partial | OpenAI Files API `POST {base}/files` (`purpose: "file-extract"`, ≤150 MB) then reference `fileid://<id>` as a system message (qwen-long, ≤100 files); no document content part exists in compatible mode; `doc_url` parts are native-only (qwen-doc-turbo) | Deferred — upload + status lifecycle, not a serialization mapping; demand-gated follow-up |
+| Rerank | Partial | `POST {workspaceId}.{region}.maas.aliyuncs.com/compatible-api/v1/reranks` (`qwen3-rerank`, ≤500 documents, 4,000 tokens/item) — workspace-dedicated only, base path `compatible-api/v1` (not `compatible-mode/v1`); no rerank route on the public presets | Deferred — no route on public presets; workspace-dedicated route recorded for a future `baseUrl`-supplied reranker |
+| Text-to-SQL | n/a | No dedicated endpoint; SQL generation is a chat prompt use case on `chat/completions` | Nothing to implement — covered by the existing chat provider |
+| Async task polling | No | `X-DashScope-Async: enable` + `GET /api/v1/tasks/{id}` — native-only | Deferred (documented) |
+
+Sources:
+
+- OpenAI compatibility overview: <https://help.aliyun.com/en/model-studio/compatibility-of-openai-with-dashscope>
+- Embeddings (models, dimensions): <https://www.alibabacloud.com/help/en/model-studio/models>; batch limits: <https://docs.qwencloud.com/resources/faq-embedding-reranking>
+- Video input (`video_url` part): <https://help.aliyun.com/en/model-studio/qwen-api-via-openai-chat-completions>
+- Document input (file-extract): <https://help.aliyun.com/en/model-studio/long-context-qwen-long> and <https://help.aliyun.com/en/model-studio/openai-file-interface>; native `doc_url`: <https://help.aliyun.com/en/model-studio/data-mining-qwen-doc>
+- Rerank (`compatible-api/v1/reranks`): <https://www.alibabacloud.com/help/en/model-studio/rerank>
+- Async task polling (native): <https://help.aliyun.com/en/model-studio/asynchronous-call-api-reference>
+
 ## Inputs / request
 
 ```ts
 import {
   createAlibabaProviderPackage,
   createAlibabaProvider,
+  createAlibabaEmbedder,
   listAlibabaModels,
   defineAlibabaModel,
   alibabaBaseUrl,
@@ -42,6 +68,7 @@ import {
 
 createAlibabaProviderPackage(options: AlibabaProviderPackageOptions): ProviderPackage
 createAlibabaProvider(options?: AlibabaProviderOptions): AIProvider
+createAlibabaEmbedder(options: AlibabaEmbedderOptions): AlibabaEmbedder
 listAlibabaModels(options?: ListAlibabaModelsOptions): Promise<ModelConfig[]>
 defineAlibabaModel(config: AlibabaModelConfig): ModelConfig
 alibabaBaseUrl(options?: { baseUrl?: string; preset?: AlibabaBasePreset }): string
@@ -68,6 +95,70 @@ Base URLs resolved by preset:
 Workspace-dedicated endpoints
 (`https://{workspaceId}.{region}.maas.aliyuncs.com/compatible-mode/v1`) are supplied
 verbatim via `baseUrl`.
+
+## Embeddings
+
+`createAlibabaEmbedder()` calls the OpenAI-compatible `POST {base}/embeddings`
+(text-embedding-v3/v4) and returns a structural `Embedder` — assignable to
+`@arnilo/prism-memory`'s `Embedder` without importing it (the package stays
+dependency-free).
+
+```ts
+import { createAlibabaEmbedder } from "@arnilo/prism-provider-alibaba";
+
+const embedder = createAlibabaEmbedder({
+  apiKey: process.env.DASHSCOPE_API_KEY,
+  model: "text-embedding-v4",
+  dimensions: 1024, // 64–2048, default 1024
+});
+
+const vectors = await embedder.embed(["hello", "world"]); // number[2][1024]
+```
+
+- Inputs are chunked at `ALIBABA_EMBEDDING_BATCH_SIZE` (10) per request — the
+  DashScope cap (8,192 tokens per text) — and vectors are returned in input order.
+  Empty input returns `[]` without a fetch.
+- `dimensions` (64–2048, default 1024) and `encoding_format` (default `float`)
+  pass through on the wire; `baseUrl`/`preset`/`fetch`/`headers` mirror the
+  provider options.
+- Caller-gated like discovery: construction never fetches; the key is resolved per
+  call and redacted from all thrown errors; provider-owned headers
+  (`authorization`, `content-type`) cannot be overridden by caller headers.
+
+## Multimodal input
+
+Video input (0.1.2): a `file` content block with a `video/*` media type serializes
+to the compatible-mode `video_url` content part on Qwen-VL models:
+
+```ts
+// host side
+{ type: "file", mediaType: "video/mp4", url: "https://example.com/clip.mp4" }
+// wire shape emitted by serializeAlibabaMessage
+{ "type": "video_url", "video_url": { "url": "https://example.com/clip.mp4" } }
+```
+
+- Gated on the `file` input capability (no core `"video"` capability in 0.1.2);
+  `mapAlibabaModel()` advertises `["text", "image", "file"]` for the qwen-vl
+  family; `defineAlibabaModel` capability overrides still win.
+- `url` (publicly reachable, correct `Content-Length`/`Content-Type`) or base64
+  `data:` URL pass through; `resourceUri`-only blocks throw before fetch (the
+  provider never fetches). `fps` defaults upstream to 2.0.
+- Document input is **deferred**: compatible-mode chat has no document content
+  part — the compatible path is the OpenAI Files API (`purpose: file-extract`,
+  ≤150 MB) plus a `fileid://<id>` system-message reference (qwen-long, ≤100
+  files), an upload/status lifecycle outside serialization. `document` and
+  non-video `file` blocks keep failing before fetch.
+
+## Rerank (deferred)
+
+No OpenAI-compatible rerank route exists on the public presets, so 0.1.2 ships no
+reranker. The verified compatible route is workspace-dedicated only:
+`POST {workspaceId}.{region}.maas.aliyuncs.com/compatible-api/v1/reranks`
+(`qwen3-rerank`, ≤500 documents, 4,000 tokens/item; base path `compatible-api/v1`,
+not `compatible-mode/v1`). A future `createAlibabaReranker` over that route is
+demand-gated: implement when a caller supplies a workspace-dedicated `baseUrl` and
+needs rerank (structural `Reranker` shape from `@arnilo/prism-rag`, no new
+dependency). Multimodal rerank (`qwen3-vl-rerank`) is native-only and stays out.
 
 ## Outputs / response / events
 
@@ -163,6 +254,10 @@ await kernel.load([
 - The API key is resolved per request via `resolveCredentialValue` and sent only as
   `Authorization: Bearer`; keys are redacted from all thrown errors (including
   discovery failures). No local filesystem paths enter request payloads.
+- Opt-in live probe (never part of `npm test`/CI):
+  `PRISM_LIVE_DASHSCOPE_KEY=… npm run test:live --workspace @arnilo/prism-provider-alibaba`
+  exercises an embeddings round-trip against the real endpoint (model override via
+  `PRISM_LIVE_DASHSCOPE_MODEL`); absent env = documented skip, never a failure.
 - Caller-supplied `ProviderRequest.options.headers` can add non-owned headers, but
   provider-owned headers (`content-type`, `authorization`) are applied last and
   cannot be overridden.

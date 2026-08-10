@@ -17,5 +17,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [011-Release-0-0-28-Enterprise-Auth-Policy-McpOauth-Api-Artifacts.md](011-Release-0-0-28-Enterprise-Auth-Policy-McpOauth-Api-Artifacts.md) | Phase 11 — Release 0.0.28 | complete (2026-08-08) |
 | [012-Release-0-1-0-Production-Readiness.md](012-Release-0-1-0-Production-Readiness.md) | Phase 12 — Release 0.1.0 | in progress |
 | [013-Release-0-1-1-Post-Release-Hardening.md](013-Release-0-1-1-Post-Release-Hardening.md) | 0.1.x — Release 0.1.1 (post-release hardening) | in progress |
+| [014-Release-0-1-2-Alibaba-Provider-Enrichment.md](014-Release-0-1-2-Alibaba-Provider-Enrichment.md) | 0.1.x — Release 0.1.2 (Alibaba Cloud provider enrichment) | in progress |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

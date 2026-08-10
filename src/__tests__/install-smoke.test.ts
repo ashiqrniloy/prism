@@ -249,7 +249,7 @@ console.log("PACKED INTEGRATION OK");
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Compose every 0.1.1 optional capability family from packed public imports.
+  // 5. Compose every 0.1.2 optional capability family from packed public imports.
   writeFileSync(
     join(consumer, "composition.mjs"),
     `
@@ -366,7 +366,7 @@ const postgresSource = createPostgresAgentEventSource({ pool: {}, schema: "prism
 assert.equal(typeof postgresSource.append, "function");
 assert.equal(typeof postgresSource.close, "function");
 await postgresSource.close();
-console.log("PACKED 0.1.1 COMPOSITION OK");
+console.log("PACKED 0.1.2 COMPOSITION OK");
 `,
   );
   const composition = run("node", ["composition.mjs"], consumer);
@@ -409,7 +409,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("packed 0.1.1 optional capabilities compose through public imports", () => {
+  it("packed 0.1.2 optional capabilities compose through public imports", () => {
     assert.equal(result.compositionStatus, 0, result.compositionOut);
   });
 
@@ -423,16 +423,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.1.1.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.1.2.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.1.1.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.1.2.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.1.1.tgz"),
-      `expected 'arnilo-prism-0.1.1.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.1.2.tgz"),
+      `expected 'arnilo-prism-0.1.2.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.1.1.tgz", "arnilo-prism-compaction-0.1.1.tgz", "arnilo-prism-all-0.1.1.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.1.2.tgz", "arnilo-prism-compaction-0.1.2.tgz", "arnilo-prism-all-0.1.2.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

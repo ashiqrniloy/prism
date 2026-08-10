@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import { assertProviderStreamConforms, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertProviderStreamConforms,
+  assertSerializedRequestCoversContent,
+  assertToolCallDeltasReconstruct,
+} from "@arnilo/prism/testing/provider-conformance";
 import {
   alibabaBaseUrl,
   alibabaBody,
@@ -237,15 +241,126 @@ describe("@arnilo/prism-provider-alibaba", () => {
     assert.ok(message.includes("401"), "error must surface status");
   });
 
+  it("serialized_request_covers_video_content", () => {
+    const request: ProviderRequest = {
+      model: defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file"] } }),
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", mediaType: "video/mp4", data: "AAAA" },
+            { type: "text", text: "Summarize this video." },
+          ],
+        },
+      ],
+    };
+    const body = alibabaBody(request);
+    assertSerializedRequestCoversContent(request as any, body);
+  });
+
   it("map_alibaba_model_infers_capabilities_from_id", () => {
     const reasoning = mapAlibabaModel({ id: "qwq-plus", owned_by: "system", created: 1 });
     assert.equal(reasoning.capabilities?.reasoning, true);
     const vision = mapAlibabaModel({ id: "qwen-vl-max" });
-    assert.deepEqual(vision.capabilities?.input, ["text", "image"]);
+    assert.deepEqual(vision.capabilities?.input, ["text", "image", "file"]);
     const plain = mapAlibabaModel({ id: "qwen-plus" });
     assert.equal(plain.provider, "alibaba");
     assert.equal(plain.capabilities?.tools, true);
     assert.throws(() => mapAlibabaModel({ id: "" }), /missing id/);
+  });
+
+  it("video_file_blocks_serialize_to_video_url_parts_when_file_capability_declared", () => {
+    const body = alibabaBody({
+      model: defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file"] } }),
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", mediaType: "video/mp4", url: "https://example.com/clip.mp4" },
+            { type: "text", text: "Summarize this video." },
+          ],
+        },
+      ],
+    });
+    const content = (body.messages as any[])[0].content;
+    assert.deepEqual(content[0], { type: "video_url", video_url: { url: "https://example.com/clip.mp4" } });
+    assert.equal(content[1].type, "text");
+  });
+
+  it("video_blocks_require_the_file_input_capability_before_fetch", () => {
+    const model = defineAlibabaModel({ model: "qwen-plus" }); // text-only
+    assert.throws(
+      () =>
+        alibabaBody({
+          model,
+          messages: [{ role: "user", content: [{ type: "file", mediaType: "video/mp4", url: "https://example.com/clip.mp4" }] }],
+        }),
+      /does not declare file input capability/,
+    );
+  });
+
+  it("video_base64_data_urls_pass_through_and_resourceUri_only_blocks_throw", () => {
+    const model = defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file"] } });
+    const dataBody = alibabaBody({
+      model,
+      messages: [{ role: "user", content: [{ type: "file", mediaType: "video/mp4", data: "AAAA" }] }],
+    });
+    assert.deepEqual((dataBody.messages as any[])[0].content[0], {
+      type: "video_url",
+      video_url: { url: "data:video/mp4;base64,AAAA" },
+    });
+    assert.throws(
+      () =>
+        alibabaBody({
+          model,
+          messages: [{ role: "user", content: [{ type: "file", mediaType: "video/mp4", resourceUri: "file:///tmp/clip.mp4" }] }],
+        }),
+      /missing url or data/,
+    );
+  });
+
+  it("non_video_file_and_document_blocks_still_throw_before_fetch", () => {
+    const model = defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file"] } });
+    assert.throws(
+      () =>
+        alibabaBody({
+          model,
+          messages: [{ role: "user", content: [{ type: "file", mediaType: "application/pdf", url: "https://example.com/doc.pdf" }] }],
+        }),
+      /does not support file content blocks/,
+    );
+    assert.throws(
+      () =>
+        alibabaBody({
+          model,
+          messages: [{ role: "user", content: [{ type: "document", mediaType: "application/pdf", url: "https://example.com/doc.pdf" }] }],
+        }),
+      /does not support document content blocks/,
+    );
+  });
+
+  it("cache_marker_lands_on_the_last_content_block_with_video_parts", () => {
+    const cacheModel = defineAlibabaModel({
+      model: "qwen-vl-max",
+      cache: { kind: "cache_control" },
+      capabilities: { input: ["text", "image", "file"] },
+    });
+    const body = alibabaBody({
+      model: cacheModel,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", mediaType: "video/mp4", url: "https://example.com/clip.mp4" },
+            { type: "text", text: "Summarize." },
+          ],
+        },
+      ],
+      options: { cache: { breakpoints: [{ location: "last_user_message" }] } },
+    });
+    const content = (body.messages as any[])[0].content;
+    assert.deepEqual(content.at(-1).cache_control, { type: "ephemeral" });
+    assert.equal(content[0].cache_control, undefined);
   });
 
   it("list_alibaba_models_discovers_dynamically_with_auth_and_baseurl", async () => {

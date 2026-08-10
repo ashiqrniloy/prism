@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.2] - 2026-08-10
+
+### Changed
+- **Release 0.1.2 (plan 014)** is the Alibaba Cloud provider enrichment patch on the frozen 0.1.x line, additive-only vs 0.1.1 (freeze manifest `scripts/phase14-freeze-manifest.json`): (1) **embeddings** — `createAlibabaEmbedder` in `@arnilo/prism-provider-alibaba` over the OpenAI-compatible `POST {base}/embeddings` (text-embedding-v3/v4), a structural `Embedder` assignable to `@arnilo/prism-memory`'s without a dependency; inputs chunked at the DashScope cap (10/request), vectors in input order, dimensions 64–2048 (default 1024) + `encoding_format` passthrough, key resolved per call and redacted from errors; (2) **video input** — `file` blocks with `video/*` media types serialize to compatible-mode `video_url` content parts on Qwen-VL models, gated on the `file` input capability (`mapAlibabaModel` advertises `["text", "image", "file"]` for the qwen-vl family); (3) **documented deferrals** — document input (compatible path is the OpenAI Files API `file-extract` + `fileid://` reference, an upload/status lifecycle) and rerank (only workspace-dedicated `compatible-api/v1/reranks` exists, not on the public presets) are recorded in the verified decision table in [docs/providers/alibaba.md](docs/providers/alibaba.md) as demand-gated follow-ups; (4) **opt-in live probe** — `PRISM_LIVE_DASHSCOPE_KEY`-gated `test:live` script (skips when absent, never in CI). Store compatibility with 0.1.1: **compatible, no migration**; declaration surface additive-only vs the frozen 0.1.x contract.
+
 ## [0.1.1] - 2026-08-10
 
 ### Changed

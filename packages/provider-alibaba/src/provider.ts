@@ -131,7 +131,19 @@ export function serializeAlibabaMessage(message: CacheControlledMessage, capabil
       const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
       if (!url) throw new Error("Alibaba image block missing url or data");
       content.push(withAlibabaCacheMarker({ type: "image_url", image_url: { url } }, marker));
+    } else if (part.type === "file" && part.mediaType.startsWith("video/")) {
+      // Qwen-VL compatible-mode video input: `video_url` content part (public URL or
+      // base64 data URL). Gated on the `file` input capability (no core "video"
+      // capability in 0.1.2); `fps` defaults upstream to 2.0.
+      if (!capabilities.input?.includes("file")) {
+        throw new Error(`Alibaba ${message.role} message includes video but model does not declare file input capability`);
+      }
+      const url = part.url ?? (part.data ? `data:${part.mediaType};base64,${part.data}` : undefined);
+      if (!url) throw new Error("Alibaba video block missing url or data");
+      content.push(withAlibabaCacheMarker({ type: "video_url", video_url: { url } }, marker));
     } else if (part.type === "audio" || part.type === "file" || part.type === "document") {
+      // Document input has no OpenAI-compatible content part (Task 1 record: the
+      // compatible path is the OpenAI Files API file-extract + fileid:// reference).
       throw new Error(`Alibaba Chat Completions does not support ${part.type} content blocks`);
     } else if (part.type === "tool_call" || part.type === "tool_result") {
       throw new Error(`Alibaba ${part.type} blocks must use assistant/tool roles`);

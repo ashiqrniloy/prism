@@ -1,0 +1,139 @@
+{
+  "$comment": "0.1.1 baseline evidence captured at plan 014 Task 0 freeze (2026-08-10) for regression comparison at the Task 6 exit gate. Tree state at capture: HEAD at v0.1.1 + uncommitted plan 014 Task 0 files (roadmap.md resequencing, plans/014-Release-0-1-2-Alibaba-Provider-Enrichment.md, plans/README.md index row, scripts/phase14-freeze-manifest.json, scripts/phase14-freeze.test.mjs, scripts/phase14-baseline.json, package.json test-script wiring). Core coverage is core-only per the plan 010 compromise (packages/** and examples/** excluded). Provider-alibaba tarball sizes are the 0.1.1 published-shape dry-run measurement (7992 packed / 28702 unpacked / 12 files) — the Task 6 exit gate compares against these.",
+  "captured": "2026-08-10",
+  "release": "0.1.1",
+  "node": "v24.18.0",
+  "platform": "linux-x64",
+  "npmTest": {
+    "exitCode": 0,
+    "coreTests": 1418,
+    "corePass": 1418,
+    "coreFail": 0,
+    "scriptGates": 95,
+    "scriptGatesPass": 95
+  },
+  "coverage": {
+    "scope": "core only (node --test --experimental-test-coverage dist/__tests__/*.test.js; excludes **/__tests__/**, **/node_modules/**, **/scripts/**, **/packages/**, **/examples/**)",
+    "lines": 91.67,
+    "branches": 83.72,
+    "functions": 91.23,
+    "thresholds": {
+      "lines": 60,
+      "functions": 70,
+      "branches": 75
+    }
+  },
+  "audit": {
+    "command": "npm audit --audit-level=moderate",
+    "level": "moderate",
+    "vulnerabilities": 0
+  },
+  "releaseGate": {
+    "command": "node scripts/release.mjs gate --version 0.1.1",
+    "version": "0.1.1",
+    "packages": 49,
+    "breakingDeltas": 0,
+    "updated": false,
+    "result": "green; compat baseline exists, 0 breaking declaration deltas"
+  },
+  "releaseCheck": {
+    "command": "node scripts/release.mjs check --version 0.1.1",
+    "version": "0.1.1",
+    "status": "blocked: dirty git tree (uncommitted plan 014 Task 0 files); green at clean v0.1.1 per plan 013 Task 6 (release:check 49/49, release:publish --dry-run 49/49 twice byte-identical)"
+  },
+  "manifestCount": {
+    "publishable": 49,
+    "workspacePackages": 48,
+    "rootPackage": "@arnilo/prism",
+    "categories": {
+      "provider": 14,
+      "prism": 9,
+      "capability": 25
+    },
+    "canonicalStatement": "49 publishable manifests = root @arnilo/prism + 48 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 25 capability packages)",
+    "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
+  },
+  "providerAlibaba": {
+    "suite": "npm run test --workspace @arnilo/prism-provider-alibaba (node --test dist/__tests__/*.test.js)",
+    "suiteTests": 14,
+    "suitePass": 14,
+    "suiteFail": 0,
+    "tarball": "npm pack --dry-run --json in packages/provider-alibaba",
+    "tarballPackedBytes": 7992,
+    "tarballUnpackedBytes": 28702,
+    "tarballFileCount": 12
+  },
+  "exitGate": {
+    "$comment": "plan 014 Task 6 exit-gate evidence recorded after the 0.1.2 bump (release 0.1.2, baseline 0.1.1): docs tripwires green, npm test core + script gates + workspace suites, npm audit 0 moderate, release:gate --version 0.1.2 --update-baseline 49 packages 0 breaking deltas (expected delta: version literal 0.1.1->0.1.2 + additive provider-alibaba exports), sdk:ready rc=0, publish dry-run 49/49 twice byte-identical, provider-alibaba tarball within the frozen budget vs the 0.1.1 baseline above.",
+    "version": "0.1.2",
+    "docsTripwires": {
+      "suite": "node --test dist/__tests__/docs.test.js",
+      "tests": 125,
+      "pass": 125,
+      "fail": 0,
+      "note": "+1 vs 0.1.1: plan 014 Task 6 tripwire (0.1.2 handoff, index current line, root + provider-alibaba changelogs, alibaba.md surfaces)"
+    },
+    "npmTest": {
+      "exitCode": 0,
+      "coreTests": 1420,
+      "corePass": 1420,
+      "coreFail": 0,
+      "scriptGates": 110,
+      "scriptGatesPass": 110,
+      "workspaces": "all green (48/48, incl. provider-alibaba 30/30 with 1 live-probe skip)"
+    },
+    "coverage": {
+      "scope": "core only (unchanged from baseline; new 0.1.2 code lives in packages/provider-alibaba, excluded per the plan 010 compromise)",
+      "lines": 91.67,
+      "branches": 83.72,
+      "functions": 91.23,
+      "thresholds": {
+        "lines": 60,
+        "functions": 70,
+        "branches": 75
+      },
+      "gate": "green"
+    },
+    "audit": {
+      "command": "npm audit --audit-level=moderate",
+      "level": "moderate",
+      "vulnerabilities": 0
+    },
+    "releaseGate": {
+      "command": "node scripts/release.mjs gate --version 0.1.2 --update-baseline",
+      "version": "0.1.2",
+      "packages": 49,
+      "breakingDeltas": 0,
+      "updated": true,
+      "result": "green; compat baseline regenerated, 0 breaking declaration deltas (additive provider-alibaba exports only)"
+    },
+    "sdkReady": {
+      "command": "npm run sdk:ready",
+      "exitCode": 0,
+      "note": "typecheck + lint + format + full test + coverage + pack + release:gate; one biome format fix applied to embeddings.test.ts before the green run"
+    },
+    "publishDryRun": {
+      "command": "node scripts/release.mjs publish --version 0.1.2 --dry-run --allow-dirty --allow-untagged --report /tmp/prism-0.1.2-dry-run.json",
+      "packages": 49,
+      "status": "dry-run",
+      "determinism": "byte-identical across two runs"
+    },
+    "releaseCheck": {
+      "command": "node scripts/release.mjs check --version 0.1.2",
+      "status": "blocked: dirty git tree (uncommitted plan 014 task files); green at clean tagged v0.1.2 per plan 013 Task 6 precedent (release:check 49/49, publish dry-run 49/49 twice byte-identical)"
+    },
+    "providerAlibabaTarball": {
+      "command": "npm pack --dry-run --json in packages/provider-alibaba",
+      "packedBytes": 10296,
+      "unpackedBytes": 38032,
+      "fileCount": 14,
+      "baseline0_1_1": {
+        "packedBytes": 7992,
+        "unpackedBytes": 28702,
+        "fileCount": 12
+      },
+      "delta": "+2304 packed / +9330 unpacked / +2 files (embeddings.ts + embeddings.test.js + live.test.js + dist artifacts)",
+      "reason": "new embeddings module and its tests; no budgets.json per-package gate exists (root pack gate 726069/2530464/295 vs baseline 718738/2505460/293, tolerance 5% — green); per-package tarball gates deferred until a second package needs one"
+    }
+  }
+}

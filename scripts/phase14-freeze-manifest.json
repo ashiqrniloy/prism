@@ -1,0 +1,70 @@
+{
+  "$comment": "Phase 14 (0.1.2) Task 0 provider-enrichment scope gate. Machine-checkable source of truth consumed by Tasks 1-6 of plans/014-Release-0-1-2-Alibaba-Provider-Enrichment.md: the allowed provider-alibaba enrichment surfaces, the forbidden core/package/native-endpoint items, the additive-only compat promise, the audit/signed-tag/provenance policy, per-task evidence tokens, and the enrichment-freeze deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json and 0.1.2 changes none of it. Amendment requires a recorded deviation entry below. Validated by scripts/phase14-freeze.test.mjs. Baseline evidence for regression comparison at the Task 6 exit gate lives in scripts/phase14-baseline.json.",
+  "release": "0.1.2",
+  "line": "0.1.x",
+  "type": "provider-enrichment",
+  "baseline": "0.1.1 (plan 013 exit gate passed 2026-08-10; signed tag v0.1.1; 49 publishable manifests)",
+  "enrichmentFreeze": {
+    "active": true,
+    "allowedChanges": [
+      "provider-alibaba embeddings over POST {base}/embeddings (createAlibabaEmbedder, structural Embedder shape, no prism-memory dependency)",
+      "provider-alibaba document and video input in chat serialization (video_url/document content parts, capability-gated) + mapAlibabaModel capability inference",
+      "provider-alibaba rerank (createAlibabaReranker) ONLY if Task 1 verifies a documented OpenAI-compatible route; otherwise a recorded deferral",
+      "docs/providers/alibaba.md compatible-mode surface decision table + deferral notes (async task polling, native rerank/embedding services)",
+      "provider-alibaba conformance expansion, opt-in live probe script (env-gated, out of npm test), package README/CHANGELOG",
+      "release tooling and evidence scripts (phase14 freeze/baseline, docs tripwires)"
+    ],
+    "forbiddenChanges": [
+      "new packages",
+      "core public surface changes (src/** public exports, subpaths, contracts, MODEL_INPUT_CAPABILITIES)",
+      "new runtime dependencies",
+      "native DashScope endpoints (X-DashScope-Async task submission/polling, /api/v1/services/* rerank/embedding services, file-extract uploads outside the OpenAI shape)",
+      "async task polling for long-running generation",
+      "0.2.0 platform adapters: Bailian rerank/embeddings wired into @arnilo/prism-rag, OSS ArtifactBodyStore",
+      "0.1.3 items: dead-code and deprecation hygiene (benchmark-runner prune, review-doc archive, unused-export sweep, checkpoint persistence)",
+      "0.1.4 items: god-module split (agents.ts, contracts.ts)",
+      "0.1.5 items: deprecated-option removal (breaking cut)",
+      "0.1.6 items: coding-agent capability closeouts (durable ACP session store, native sandbox backend, pdf/office reader, recursive delete, brace glob)",
+      "0.1.7 items: performance and DX (prompt-cache telemetry, model-router policy, async agui hooks, prism providers add scaffold)",
+      "0.2.0 carried items: live-canary matrix, live-nats suite, new OpenAI-compatible model providers, prism-providers umbrella membership fix"
+    ],
+    "deviations": [
+      {
+        "task": "task1",
+        "change": "document input deferred: verification (2026-08-10) shows no OpenAI-compatible document content part exists; the compatible path is the OpenAI Files API (POST {base}/files, purpose=file-extract, <=150 MB) plus a fileid://<id> system-message reference (qwen-long, <=100 files) — an upload + status lifecycle, not a serialization mapping",
+        "rationale": "roadmap 0.1.2 names document/video input; video input ships (video_url part); document input is recorded in docs/providers/alibaba.md as a demand-gated follow-up rather than a half-surface upload lifecycle in 0.1.2"
+      },
+      {
+        "task": "task4",
+        "change": "rerank deferred: no OpenAI-compatible rerank route on the public presets (verified 2026-08-10); the compatible route is workspace-dedicated only (POST {workspaceId}.{region}.maas.aliyuncs.com/compatible-api/v1/reranks, qwen3-rerank, <=500 docs, 4000 tokens/item, base path compatible-api/v1)",
+        "rationale": "roadmap 0.1.2 names rerank as conditional on Task 1 verification; the defer branch is active — createAlibabaReranker over the workspace-dedicated route is recorded as a demand-gated future (caller-supplied baseUrl + rerank need)"
+      }
+    ]
+  },
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.1.1",
+    "promise": "additive-only declaration deltas vs scripts/compat-baseline across 0.1.x patch releases; zero breaking deltas at the 0.1.2 bump"
+  },
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.1.2 changes none of it",
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.1.2",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "tasks": {
+    "$comment": "per-task evidence tokens; 'done' when the task passes its checks, 'pending' until then. Task 0 sets itself done at freeze; Tasks 1-6 move to done as they land.",
+    "task0": "done (freeze record + scope gate + baseline evidence at scripts/phase14-baseline.json)",
+    "task1": "done (compatible-mode surface verified 2026-08-10: embeddings POST {base}/embeddings + video_url content part compatible on public presets; rerank only on workspace-dedicated compatible-api/v1/reranks (not public presets); document input = OpenAI Files API file-extract + fileid:// reference, no content part; text-to-SQL = chat use case, no dedicated endpoint; X-DashScope-Async polling native-only; decision record in docs/providers/alibaba.md + docs tripwire in docs.test.ts; document-input deferral logged in deviations)",
+    "task2": "done (createAlibabaEmbedder over POST {base}/embeddings: structural Embedder shape, no prism-memory dependency; chunked at ALIBABA_EMBEDDING_BATCH_SIZE=10 per DashScope cap, vectors in input order, empty input returns [] without fetch; dimensions 64-2048 default 1024 + encoding_format passthrough; key resolved per call, redacted errors, provider-owned headers win; 9 new tests in embeddings.test.ts, suite 23/23; docs + README updated)",
+    "task3": "done (video input in serializeAlibabaMessage: file blocks with video/* mediaType -> video_url content part, gated on the file input capability, url or base64 data URL pass-through, resourceUri-only throws before fetch; document and non-video file blocks still throw; mapAlibabaModel advertises [text, image, file] for qwen-vl family; 5 new serializer/inference tests, suite 28/28; docs Multimodal input section)",
+    "task4": "done (rerank deferred: Task 1 verified no OpenAI-compatible rerank route on the public presets; compatible route is workspace-dedicated POST {workspaceId}.{region}.maas.aliyuncs.com/compatible-api/v1/reranks (qwen3-rerank, <=500 docs, 4000 tokens/item, base path compatible-api/v1); createAlibabaReranker over that route recorded as demand-gated future; docs Rerank (deferred) section; deviation logged)",
+    "task5": "done (conformance expansion: assertSerializedRequestCoversContent over video content (data-URL canaries), abort-mid-embed rejection test; opt-in live probe live.test.ts gated on PRISM_LIVE_DASHSCOPE_KEY (model override PRISM_LIVE_DASHSCOPE_MODEL), describe.skip when absent, test:live script in package.json not wired into root npm test; docs + README live-probe instructions; suite 29/29 with 1 skip)",
+    "task6": "done (docs finalization: root + provider-alibaba CHANGELOGs 0.1.2 entries, release-and-install.md 0.1.2 publish handoff, docs/index.md current line 0.1.2, alibaba.md final pass; scripted bump 49 manifests + lockfile to 0.1.2; version-sensitive tests updated (index/release/install-smoke/docs/packaging + 12 workspace index tests); compat baseline regenerated 49 packages 0 breaking deltas; exit gate: npm test rc=0 core 1420/1420 gates 110/110 workspaces green, docs 125/125, audit 0 moderate, sdk:ready rc=0, publish dry-run 49/49 twice byte-identical, release:check blocked on dirty tree (environmental, plan 013 precedent), provider-alibaba tarball 10296/38032/14 vs 0.1.1 baseline 7992/28702/12 recorded with reason; exitGate evidence in phase14-baseline.json)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip (inherited from scripts/phase12-freeze-manifest.json)",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.1.2"
+  }
+}

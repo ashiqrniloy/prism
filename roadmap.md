@@ -1,8 +1,8 @@
 # Prism Roadmap
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 Baseline: `@arnilo/prism` **0.1.0** (Phase 12 release-candidate hardening; signed tag `v0.1.0` exists; npm OIDC publication remains an explicit operator action).
-Scope: a forward-looking roadmap split into a **0.1.x** stabilization/provider line and a **0.2.0** new-module line. This document fully replaces the prior phase-by-phase roadmap; completed phase evidence is preserved in `plans/001`–`plans/012`, `CHANGELOG.md`, and `docs/review-coverage-*`.
+Scope: a forward-looking roadmap split into a **0.1.x** stabilization/provider line and a **0.2.0** new-module line. **Resequencing (2026-08-10):** former 0.2.0 Modules B, C, E, and F are pulled forward into **0.1.4–0.1.7**; the former 0.1.2/0.1.3 candidates (protected live-canary matrix, live NATS suite, provider catalog expansion, umbrella membership fix) move to **0.2.0**. This document fully replaces the prior phase-by-phase roadmap; completed phase evidence is preserved in `plans/001`–`plans/012`, `CHANGELOG.md`, and `docs/review-coverage-*`.
 
 ## Objectives
 
@@ -15,9 +15,9 @@ Scope: a forward-looking roadmap split into a **0.1.x** stabilization/provider l
 
 ## Expected Outcome
 
-- 0.1.x releases ship only fixes, provider additions/enrichment, and doc/tooling hardening; every change is additive or non-breaking against the frozen `docs/public-contracts.md` 0.1.x surface, or carries a tested migration/refusal path.
+- 0.1.x releases ship fixes, provider additions/enrichment, and doc/tooling hardening; every change is additive or non-breaking against the frozen `docs/public-contracts.md` 0.1.x surface, or carries a tested migration/refusal path. The 0.1.4–0.1.7 pulled-forward modules are the explicit exception (see Versioning Policy), with 0.1.5 as the documented breaking cut.
 - New model providers added in 0.1.x reuse `createOpenAICompatibleProvider` (or the equivalent Anthropic/Google base) so each is a thin package with conformance + budget gates, not a bespoke runtime.
-- 0.2.0 ships new capability packages (delegated coding-agent adapters, Cedar/object-store/pagination adapters, durable ACP session store, native sandbox backend, document readers, build/CI hardening) only after primitive review and per-package plans.
+- 0.2.0 ships new capability packages (delegated coding-agent adapters, Cedar/object-store/pagination adapters, build/CI hardening) plus the carried-over protected-gate/provider-catalog candidates, only after primitive review and per-package plans.
 - Cursor and Antigravity are integrated as **delegated coding-agent adapters** (not model providers), because neither SDK exposes a model-only seam; the model-only pattern (proven by `@arnilo/prism-provider-ai-sdk`) is documented as unavailable for them and not forced.
 - Every deferred compromise from the 0.0.x phase plans is either closed with evidence, rolled into a 0.1.x task, or gated behind 0.2.0 demand.
 - All default and protected release gates keep passing from a clean checkout; `npm audit --audit-level=moderate` stays at 0; the public API compat baseline stays green.
@@ -40,13 +40,13 @@ The codebase was reviewed end to end after the 0.1.0 cut. Findings below are the
 ### Architectural problems needing fixing
 
 1. **Umbrella provider membership is inconsistent.** `@arnilo/prism-providers` ships 11 providers but omits `provider-azure`, `provider-bedrock`, `provider-vertex` (those live only in `@arnilo/prism-all`). `@arnilo/prism-all` omits `provider-opencode-go` from its provider set. The split is undocumented and surprises hosts. → 0.1.x: unify membership or document the split; prefer one rule (e.g., `prism-providers` = every first-party model provider; `prism-all` = providers + every capability package).
-2. **`src/agents.ts` (2,565 lines) and `src/contracts.ts` (2,541 lines, ~250 exports) are god-modules.** They are cohesive but hard to navigate and limit tree-shaking. → 0.2.0: split by concern (run lifecycle / approval / dispatch / fingerprint; contracts vs run-state vs protocol payloads) behind **barrel re-exports that preserve the public import surface** so the compat baseline stays green.
+2. **`src/agents.ts` (2,565 lines) and `src/contracts.ts` (2,541 lines, ~250 exports) are god-modules.** They are cohesive but hard to navigate and limit tree-shaking. → 0.1.4: split by concern (run lifecycle / approval / dispatch / fingerprint; contracts vs run-state vs protocol payloads) behind **barrel re-exports that preserve the public import surface** so the compat baseline stays green.
 3. **Build clean races itself.** `npm run build` runs `clean` then `build:core` then `build --workspaces`; concurrent `npm test`/`build` invocations can delete `dist/` mid-run (noted in plans 007/008 as "release verification must be single-flight"). This is a real footgun beyond release. → 0.1.x: remove `clean` from `build`, rely on `tsc --build` incrementality + a dedicated `clean` script; or gate builds with a single-flight lockfile.
 4. **Headline coverage gate is core-only.** The aggregate coverage gate excludes `packages/**` and `examples/**` (plan 010 compromise). Per-package suites exist, but the headline number overstates total coverage. → 0.1.x: surface a combined coverage summary in `npm run test:coverage` without weakening the gate.
-5. **ACP sessions are not durable.** Modes/config report table defaults; the live task registry is in-memory (cap 512, FIFO), not persisted across restart (plans 010/012). → 0.2.0: durable ACP session store behind a host-owned seam.
+5. **ACP sessions are not durable.** Modes/config report table defaults; the live task registry is in-memory (cap 512, FIFO), not persisted across restart (plans 010/012). → 0.1.6 (demand-gated): durable ACP session store behind a host-owned seam.
 6. **Delegated-agent seams exist but are protocol-specific (A2A/ACP) with no generic "delegated coding host" contract.** Adding Cursor/Antigravity/Aider/Claude-Code-SDK as one-offs would duplicate the mapping. → 0.2.0: one generic delegated-agent contract + thin per-SDK adapters (see SDK evaluation).
-7. **Observational-memory residual gaps.** Loaded-skill bodies and `ReadPathSet` are session-scoped in-memory only — checkpoint resume does not restore them (plans 003/004). `wrapResumeRun`/`attach` use a `sessionId` registry with no core lifecycle hook (plan 002). → 0.1.x/0.2.0: checkpoint persistence for loaded-skill names + read-path set (demand-gated).
-8. **Live canary matrix is not recorded.** Real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS (DCR + refresh/revoke), real S3-compatible store incl. KMS, and real NATS JetStream are documented as blocked protected gates, but CI runs only fakes (plans 009/011/012). → 0.1.x: record the protected live-canary matrix as a named, env-gated, fail-loud gate.
+7. **Observational-memory residual gaps.** Loaded-skill bodies and `ReadPathSet` are session-scoped in-memory only — checkpoint resume does not restore them (plans 003/004). `wrapResumeRun`/`attach` use a `sessionId` registry with no core lifecycle hook (plan 002). → 0.1.3/0.1.6: checkpoint persistence for loaded-skill names + read-path set (demand-gated).
+8. **Live canary matrix is not recorded.** Real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS (DCR + refresh/revoke), real S3-compatible store incl. KMS, and real NATS JetStream are documented as blocked protected gates, but CI runs only fakes (plans 009/011/012). → 0.2.0: record the protected live-canary matrix as a named, env-gated, fail-loud gate.
 
 ### Elegance of implementation
 
@@ -57,47 +57,47 @@ The codebase was reviewed end to end after the 0.1.0 cut. Findings below are the
 ### Performance opportunities
 
 - The per-version benchmark runners (0.0.8–0.0.28) and the consolidated 0.1.0 runner are good; no regression risk identified at 0.1.0 budgets.
-- Opportunities: (a) prompt-cache hit/miss telemetry surface per provider so hosts can tune `cache_aware` layout; (b) model-router cost/latency-aware routing and fallback chains (router state is durable since Phase 6 but selection policy is host-supplied); (c) tree-shaking gains from the `agents.ts`/`contracts.ts` split; (d) async `AgUiProjection` hooks so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority). All are 0.2.0.
+- Opportunities: (a) prompt-cache hit/miss telemetry surface per provider so hosts can tune `cache_aware` layout; (b) model-router cost/latency-aware routing and fallback chains (router state is durable since Phase 6 but selection policy is host-supplied); (c) tree-shaking gains from the `agents.ts`/`contracts.ts` split (0.1.4); (d) async `AgUiProjection` hooks so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority). (a), (b), and (d) are 0.1.7.
 
 ### Setup and structure improvements
 
-- **Prune superseded evidence runners.** `scripts/benchmark-0.0.{8,9,10,11,12,13,14,15,16}.mjs` and `scripts/benchmark-0.0.{23,24,25,26,27,28}.mjs` plus their `*.test.mjs` are mostly no longer wired into `npm test` (which runs only `benchmark-0.1.0.test.mjs` and the phase/e2e gates). Some are still referenced by `budget-gates.mjs`/`budgets.json`/`phase10-freeze-manifest.json`/`benchmark-0.1.0.mjs`. → 0.1.x: audit which are still imported, drop the rest, keep the checked-in `*.json` evidence; replace per-version runners with one parameterized runner + versioned evidence JSON.
-- **Archive `docs/review-coverage-2026-07-*.md`** (12 phase-review files) into a single `docs/review-coverage-archive.md` or a `docs/_evidence/` folder; they are already excluded from the tarball but clutter `docs/`. → 0.1.x (doc hygiene, low risk).
-- **README/manifest-count narrative** still references "48 publishable vs 49 graph entries incl. root" in places; keep one canonical count in `docs/release-and-install.md` and have everything else link to it (plan 011 further action). → 0.1.x.
-- **DX: `prism providers add <name>` scaffold** that generates an OpenAI-compatible provider package from a template (manifest, `provider.ts`, `models.ts`, `cache.ts`, conformance test, `docs/providers/<name>.md`). → 0.1.x or 0.2.0.
+- **Prune superseded evidence runners.** `scripts/benchmark-0.0.{8,9,10,11,12,13,14,15,16}.mjs` and `scripts/benchmark-0.0.{23,24,25,26,27,28}.mjs` plus their `*.test.mjs` are mostly no longer wired into `npm test` (which runs only `benchmark-0.1.0.test.mjs` and the phase/e2e gates). Some are still referenced by `budget-gates.mjs`/`budgets.json`/`phase10-freeze-manifest.json`/`benchmark-0.1.0.mjs`. → 0.1.3: audit which are still imported, drop the rest, keep the checked-in `*.json` evidence; replace per-version runners with one parameterized runner + versioned evidence JSON.
+- **Archive `docs/review-coverage-2026-07-*.md`** (12 phase-review files) into a single `docs/review-coverage-archive.md` or a `docs/_evidence/` folder; they are already excluded from the tarball but clutter `docs/`. → 0.1.3 (doc hygiene, low risk).
+- **README/manifest-count narrative** still references "48 publishable vs 49 graph entries incl. root" in places; keep one canonical count in `docs/release-and-install.md` and have everything else link to it (plan 011 further action). → done in 0.1.1 (plan 013 Task 4).
+- **DX: `prism providers add <name>` scaffold** that generates an OpenAI-compatible provider package from a template (manifest, `provider.ts`, `models.ts`, `cache.ts`, conformance test, `docs/providers/<name>.md`). → 0.1.7.
 
 ### Tools for coding agents and enterprise customers
 
 - **Coding agent** (strong): repository ops, `repo_search` output modes, bounded `glob`, `delete`/`move`, optional `requireReadBeforeWrite`, `ProcessSession`, language intelligence (LSP), GitHub forge, allow-list egress, ACP interop.
-- **Coding gaps to close**: no PDF/Office document reader (demand-gated); no recursive `delete`; no brace-expanding `glob`; no network-free native sandbox backend (Docker reference only); no durable ACP session store. → 0.2.0.
+- **Coding gaps to close**: no PDF/Office document reader (demand-gated); no recursive `delete`; no brace-expanding `glob`; no network-free native sandbox backend (Docker reference only); no durable ACP session store. → 0.1.6 (demand-gated).
 - **Enterprise** (strong): OIDC/JWKS verifier, OPA policy adapter, MCP OAuth (RFC 9728/8414/7009, PKCE, audience-bound), OpenAPI tools, S3 artifact body store, durable `AgentEventSource` (Postgres LISTEN/NOTIFY + NATS JetStream), durable approvals, idempotency, retention/legal hold, audit.
-- **Enterprise gaps to close**: Cedar policy adapter (OPA only today), second artifact body adapter, OpenAPI pagination beyond cursor, MCP SSE relay automated test, live canary matrix. → 0.2.0 (demand-gated) except MCP SSE test and live canary matrix which are 0.1.x hardening.
+- **Enterprise gaps to close**: Cedar policy adapter (OPA only today), second artifact body adapter, OpenAPI pagination beyond cursor, MCP SSE relay automated test, live canary matrix. → 0.2.0 (demand-gated) except the MCP SSE test (done in 0.1.1) and the live canary matrix (0.2.0).
 
 ### Dead code and deprecations
 
-- **Documented `@deprecated` surface** (candidates for a 0.2.0 breaking cut with migration notes): `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs` (inert in first-party providers), `AgentConfig` `maxToolRounds` alias (use `limits.maxToolRounds`), `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders` (retained only for tests).
-- **Orphaned benchmark runners** (see Setup): audit-and-prune in 0.1.x.
-- **No unused-export sweep exists.** → 0.1.x: add `tsc --noUnusedLocals`/`--noUnusedParameters` (non-blocking) or an `knip`-style scan to CI to surface truly dead exports without breaking the build.
+- **Documented `@deprecated` surface** (candidates for the 0.1.5 breaking cut with migration notes): `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs` (inert in first-party providers), `AgentConfig` `maxToolRounds` alias (use `limits.maxToolRounds`), `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders` (retained only for tests).
+- **Orphaned benchmark runners** (see Setup): audit-and-prune in 0.1.3.
+- **No unused-export sweep exists.** → 0.1.3: add `tsc --noUnusedLocals`/`--noUnusedParameters` (non-blocking) or an `knip`-style scan to CI to surface truly dead exports without breaking the build.
 - `ponytail:` comments are intentional shortcuts, not dead code; keep.
 
 ### Refactoring needs
 
-- Split `agents.ts` and `contracts.ts` by concern behind barrel re-exports (0.2.0, compat-preserving).
-- Unify umbrella provider membership (0.1.x).
-- Consolidate benchmark scripts to one parameterized runner (0.1.x).
-- Remove inert deprecated provider options in a 0.2.0 breaking cut with `docs/migration.md`.
+- Split `agents.ts` and `contracts.ts` by concern behind barrel re-exports (0.1.4, compat-preserving).
+- Unify umbrella provider membership (0.2.0).
+- Consolidate benchmark scripts to one parameterized runner (0.1.3).
+- Remove inert deprecated provider options in the 0.1.5 breaking cut with `docs/migration.md`.
 - Extract a shared delegated-agent adapter base only when ≥2 delegated adapters ship (0.2.0); do not pre-extract.
 
 ### Security review
 
 - **No active vulnerabilities.** `npm audit --audit-level=moderate` = 0; tree locked at 317 deps; CodeQL/SAST, provenance, SBOM/license, secret scan, and supply-chain negative fixtures are wired into `release.yml`.
 - **Residual controls to harden (not flaws, deferred gates)**:
-  - Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) untested in CI — fakes only. → 0.1.x.
-  - No real NATS JetStream server test suite (fake of the narrow seam only). → 0.1.x/0.2.0.
-  - No automated test holds an MCP SSE stream open (long-lived teardown rejected for CI); production relays but the path is untested. → 0.1.x.
+  - Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) untested in CI — fakes only. → 0.2.0.
+  - No real NATS JetStream server test suite (fake of the narrow seam only). → 0.2.0.
+  - No automated test holds an MCP SSE stream open (long-lived teardown rejected for CI); production relays but the path is untested. → shipped in 0.1.1 (plan 013 Task 2, bounded relay asserted).
   - Hand-rolled SigV4 is single-chunk only (no multipart/accelerate) — upload size ceiling; upgrade path documented. → 0.2.0 (demand-gated).
-  - ACP modes/config are not persisted by the agent — a naive host could leak cross-session/cross-tenant mode state if it persists without ownership scoping. → 0.1.x: add a guidance note + ownership-scoped persistence example; 0.2.0: durable ACP session store.
-  - `requireReadBeforeWrite` state is session-scoped in-memory only — resume can overwrite unread files. Documented soft guard. → 0.2.0: checkpoint persistence.
+  - ACP modes/config are not persisted by the agent — a naive host could leak cross-session/cross-tenant mode state if it persists without ownership scoping. → guidance note + ownership-scoped persistence example shipped in 0.1.1 (plan 013 Task 5); durable ACP session store → 0.1.6.
+  - `requireReadBeforeWrite` state is session-scoped in-memory only — resume can overwrite unread files. Documented soft guard. → 0.1.3/0.1.6: checkpoint persistence.
 - **Delegated-agent streams (Cursor/Antigravity) emit tool args/results that may contain secrets.** Any adapter MUST route through Prism's `SecretRedactor` and treat SDK tool payloads as untrusted. → 0.2.0 (with the adapters).
 
 ## SDK Evaluation: Models-Only vs. Full Harness
@@ -121,7 +121,7 @@ The user asked whether the Cursor and Antigravity SDKs can be used **for models 
 ### Alibaba Cloud — already implemented; enrich, do not reimplement
 
 - `@arnilo/prism-provider-alibaba` already exists and ships OpenAI-compatible Chat Completions against Model Studio / DashScope (pay-as-you-go regional, workspace-dedicated, and Coding Plan endpoints), with `enable_thinking`, cache-control markers, multimodal image, and structured output.
-- **0.1.x work** = gap-fill within the existing provider: Bailian (Model Studio) endpoints for embeddings/rerank/text-to-SQL where OpenAI-compatible, async task polling, document/video input where supported, and conformance coverage. These stay provider-side (0.1.x), not new modules.
+- **0.1.2 work** = gap-fill within the existing provider: Bailian (Model Studio) endpoints for embeddings/rerank/text-to-SQL where OpenAI-compatible, document/video input where supported, and conformance coverage. These stay provider-side, not new modules.
 - **0.2.0** = broader Alibaba Cloud platform adapters (Bailian rerank/embeddings into `@arnilo/prism-rag`, OSS as a second `ArtifactBodyStore`) as optional, demand-gated packages.
 
 ### Conclusion
@@ -142,23 +142,23 @@ The model-only pattern is **available for SDKs that separate model from loop** (
 
 ## Priority and Dependency Rules
 
-1. 0.1.x hardening (defects, lifecycle, tooling, security gates) precedes new 0.1.x providers precedes 0.2.0 modules.
+1. 0.1.x hardening (defects, lifecycle, tooling, security gates) precedes 0.1.x provider enrichment precedes the pulled-forward modules (0.1.4–0.1.7) precedes the remaining 0.2.0 modules.
 2. New model providers on 0.1.x MUST reuse an existing OpenAI/Anthropic/Google-compatible base and ship conformance + budget gates; no bespoke runtime per provider.
 3. New modules in 0.2.0 require a numbered plan with primitive review, threat model, measurable acceptance criteria, and an operational owner; do not scaffold their packages or APIs early.
 4. Delegated-agent adapters (Cursor, Antigravity, future) share one generic delegated-agent contract extracted only after ≥2 adapters are planned; no premature abstraction.
-5. Breaking changes (removing deprecated inert options, splitting god-modules) land in 0.2.0 behind barrel re-exports and `docs/migration.md`; the 0.1.x compat baseline stays green.
+5. Breaking changes (removing deprecated inert options, splitting god-modules) land behind barrel re-exports and `docs/migration.md` — pulled forward into 0.1.4/0.1.5 by the 2026-08-10 resequencing; every other 0.1.x release keeps the compat baseline green.
 6. Demand-gated 0.2.0 candidates (Cedar, second object store, OpenAPI pagination, recursive delete, brace glob, PDF readers, native sandbox backend, multipart SigV4) need a named user before a plan.
 7. Every release records protected evidence (Postgres, live canaries, benchmarks) as a blocked gate when credentials are absent — never a silent skip.
 
 ## Versioning Policy
 
-- **0.1.x (patch line):** bug fixes, correctness/lifecycle/security/tooling hardening, doc hygiene, and **new model providers** / provider enrichment. Additive or non-breaking vs the frozen `docs/public-contracts.md` 0.1.x surface; any unavoidable breaking change carries a tested migration/refusal path and a `docs/migration.md` entry. Each 0.1.x cut runs the full release validation checklist.
-- **0.2.0 (minor):** new modules and capability packages, plus the compat-preserving god-module split and the deprecated-option removal. Additive public exports where possible; breaking changes documented with migration. 0.2.0 ships only after 0.1.x hardening is green and each module's plan passes its exit gate.
+- **0.1.x (patch line):** bug fixes, correctness/lifecycle/security/tooling hardening, doc hygiene, and **new model providers** / provider enrichment. Additive or non-breaking vs the frozen `docs/public-contracts.md` 0.1.x surface; any unavoidable breaking change carries a tested migration/refusal path and a `docs/migration.md` entry. Each 0.1.x cut runs the full release validation checklist. **Exception (2026-08-10 resequencing):** 0.1.4–0.1.7 pull 0.2.0 Modules B, C, E, and F forward; 0.1.4 stays compat-preserving behind barrel re-exports, and 0.1.5 is a documented breaking cut (removed symbols recorded in `docs/migration.md`, compat baseline intentionally regenerated with the breaks recorded).
+- **0.2.0 (minor):** the remaining new modules and capability packages (delegated coding-agent adapters, enterprise adapter breadth, delegated-agent observability) plus the carried-over protected-gate and provider-catalog candidates; the compat-preserving god-module split and the deprecated-option removal ship earlier in 0.1.4/0.1.5. Additive public exports where possible; breaking changes documented with migration. 0.2.0 ships only after 0.1.x hardening is green and each module's plan passes its exit gate.
 - **1.0:** operator-gated, not automatic; requires the full protected matrix (Node 20+22+24, multi-Postgres, live canaries, all protocol pins) recorded and the 0.1.x contract stable through at least one patch cycle.
 
-## Roadmap — 0.1.x Stabilization and Providers
+## Roadmap — 0.1.x Line
 
-Each item is a candidate for one 0.1.x release. Order within the line is recommended; actual sequencing follows the per-release plan. New providers and provider enrichment are explicitly 0.1.x per the versioning policy.
+Each item is a candidate for one 0.1.x release. Order within the line is recommended; actual sequencing follows the per-release plan. New providers and provider enrichment are explicitly 0.1.x per the versioning policy. Per the 2026-08-10 resequencing, 0.1.4–0.1.7 carry the pulled-forward 0.2.0 Modules B, C, E, and F; the former 0.1.2/0.1.3 candidates (protected live-canary matrix, live NATS suite, provider catalog expansion, umbrella membership fix) move to 0.2.0.
 
 ### 0.1.1 — Post-release hardening and tooling fixes
 
@@ -180,27 +180,13 @@ Each item is a candidate for one 0.1.x release. Order within the line is recomme
 
 **0.1.1 shipped (plan 013 complete).** Docs freeze (tripwires 123/123), scripted bump to 0.1.1 (49 manifests + lockfile), compat baseline regenerated (version literal + one additive internal export, 0 breaking deltas), `npm test` 1418/1418 + 94/94 gates, audit 0 moderate, `sdk:ready` rc=0, publish dry-run 49/49 twice byte-identical; exit-gate evidence in `scripts/phase13-baseline.json` (`exitGate`). Publication (commit, `release:check`, `git tag -s v0.1.1`, npm OIDC) is the operator handoff documented in `docs/release-and-install.md` (plan 013 Task 6).
 
-### 0.1.2 — Protected live-canary matrix (operator-gated)
+### 0.1.2 — Alibaba Cloud provider enrichment
 
-- [ ] **Record the protected live-canary matrix** as a named, env-gated, fail-loud gate (plans 009/011/012 further actions, high priority): real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS incl. DCR + refresh/revoke, real S3-compatible store incl. KMS, real NATS JetStream server. Missing credentials are a blocked release gate, not a silent skip.
-  - Acceptance: `npm run test:live` (or equivalent) runs each canary; absent creds fail loud with `canary-report.json`; protected CI sets the env.
-- [ ] **Live NATS JetStream suite.** `PRISM_TEST_NATS_URL` gating + `test:nats` script against a real server, mirroring `test:postgres` (plan 009 further action). The fake-seam tests remain in `npm test`.
-  - Acceptance: real-server append/subscribe/reconnect/dedupe-window/durable-cursor covered; fake tests unchanged.
-
-### 0.1.3 — Provider catalog expansion (new providers)
-
-- [ ] **New OpenAI-compatible model providers.** Add providers for ecosystems with OpenAI-compatible endpoints (e.g., xAI Grok, Mistral, DeepSeek, Groq, Together, Cohere, Fireworks, Cerebras, Friendli, NovitaAI) as thin packages over `createOpenAICompatibleProvider`, each with `models.ts`, cache support where available, conformance + budget gates, and `docs/providers/<name>.md`. Reuse the alibaba/opencode-go/openrouter/zai pattern; no bespoke runtimes.
-  - Acceptance: each provider passes `testing/provider-conformance`, `testing/provider-media` where multimodal, `budgets.json` package-size gate, and `docs/index.md` navigation; no new runtime dependencies in core.
-- [ ] **`prism-providers` umbrella membership fix.** Either include azure/bedrock/vertex in `@arnilo/prism-providers` (making it the canonical "all first-party model providers" umbrella) or document the `prism-providers` vs `prism-all` split in `docs/provider-packages.md` (architectural problem #1).
-  - Acceptance: membership is intentional and documented; `release.mjs check` + `pack:dry-run` green; no consumer breakage.
-
-### 0.1.4 — Alibaba Cloud provider enrichment
-
-- [ ] **Alibaba provider gap-fill.** Extend `@arnilo/prism-provider-alibaba` with Bailian endpoints where OpenAI-compatible (embeddings/rerank/text-to-SQL if exposed via chat), async task polling for long-running generation, document/video input where supported, and expanded conformance. Keep OpenAI-compatible base; no new runtime deps.
+- [ ] **Alibaba provider gap-fill.** Extend `@arnilo/prism-provider-alibaba` with Bailian (Model Studio) endpoints where OpenAI-compatible (embeddings via `POST {base}/embeddings`; rerank only if a documented OpenAI-compatible route exists; text-to-SQL only if exposed via chat), document/video input where supported (compatible-mode `video_url`/document content parts), and expanded conformance. Native-only surfaces (async task polling via `X-DashScope-Async`, native rerank) are documented deferrals, not new runtime. Keep the OpenAI-compatible base; no new runtime deps.
   - Acceptance: new endpoints covered by conformance; `docs/providers/alibaba.md` updated; cache-control + `enable_thinking` regression green; budget gate green.
 - [ ] **Defer Alibaba Cloud platform adapters** (Bailian rerank/embeddings into RAG, OSS artifact store) to 0.2.0 as demand-gated optional packages.
 
-### 0.1.5 — Dead-code and deprecation hygiene
+### 0.1.3 — Dead-code and deprecation hygiene
 
 - [ ] **Prune superseded benchmark runners.** Audit `scripts/benchmark-0.0.*.mjs`/`*.test.mjs` references; drop the orphaned ones, keep the checked-in `*.json` evidence; introduce one parameterized benchmark runner + versioned evidence JSON (setup).
   - Acceptance: `npm test` references only current runners; removed files listed in the release changelog; benchmark evidence preserved.
@@ -211,9 +197,46 @@ Each item is a candidate for one 0.1.x release. Order within the line is recomme
 - [ ] **Checkpoint persistence for loaded-skill names + ReadPathSet** (plans 003/004 further actions, demand-gated). If a host needs resume-without-model-reload, persist loaded-skill names and the read-path set in the checkpoint; bodies reload on resume via `load_skill`.
   - Acceptance: resume restores loaded-skill catalog + read-before-write state; cross-branch non-leak test; opt-in to avoid size growth.
 
+### 0.1.4 — God-module split (compat-preserving)
+
+- [ ] **Split `src/agents.ts`** into run-lifecycle, approval/pending-decisions, tool dispatch, and fingerprint modules behind barrel re-exports in `src/agents.ts` so public imports are unchanged. Split `src/contracts.ts` into core contracts, run-state, and protocol-payload modules behind `src/contracts.ts` barrel.
+  - Acceptance: public import surface unchanged (compat baseline green); `agents.ts`/`contracts.ts` files become barrels; tree-shaking improves (measured); `sdk:ready` green.
+
+### 0.1.5 — Deprecated-option removal (breaking, documented)
+
+- [ ] Remove inert `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs`, `AgentConfig.maxToolRounds` alias, `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders`. Add `docs/migration.md` 0.1.4 → 0.1.5 section with the removed symbols and replacements.
+  - Acceptance: removed symbols absent from `.d.ts`; migration notes present; compat baseline updated (intentional breaks recorded); `sdk:ready` green.
+
+### 0.1.6 — Coding-agent capability closeouts (demand-gated)
+
+- [ ] **Durable ACP session store** + **native sandbox backend** (network-free) — host-owned seams revisited on demand with a threat model (plan 012 further action).
+- [ ] **PDF/Office document reader** as a bounded host-selected parser adapter (plans 004/roadmap non-goals).
+- [ ] **Recursive `delete`** and **brace-expanding `glob`** if pattern/usage demand justifies it (plan 004 further actions).
+- [ ] **Checkpoint persistence** for `ReadPathSet` + loaded-skill bodies if 0.1.3's names-only persistence is insufficient.
+  - Acceptance: each closeout behind its own plan with primitive review + threat model; budget/security gates green.
+
+### 0.1.7 — Performance and DX
+
+- [ ] **Prompt-cache telemetry surface** per provider (hit/miss, cache tokens) so hosts tune `cache_aware` layout.
+- [ ] **Model-router cost/latency-aware routing + fallback chains** (router state is durable; selection policy becomes host-configurable with a reference policy).
+- [ ] **Async `AgUiProjection` hooks** so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority).
+- [ ] **`prism providers add <name>` scaffold** (DX) generating an OpenAI-compatible provider package from a template with conformance + docs.
+  - Acceptance: telemetry/redaction/budget gates green; DX scaffold produces a passing provider package; no core deps added.
+
 ## Roadmap — 0.2.0 New Modules
 
-Each 0.2.0 module requires a numbered plan (primitive review, threat model, measurable acceptance, operational owner) before implementation. Listed in recommended order; demand gates noted.
+Each 0.2.0 module requires a numbered plan (primitive review, threat model, measurable acceptance, operational owner) before implementation. Listed in recommended order; demand gates noted. Per the 2026-08-10 resequencing, former Modules B, C, E, and F ship as 0.1.4–0.1.7; the carried-over 0.1.x protected-gate and provider-catalog candidates land first below.
+
+### 0.2.0 — Protected gates and provider catalog (carried from the 0.1.x line)
+
+- [ ] **Record the protected live-canary matrix** as a named, env-gated, fail-loud gate (plans 009/011/012 further actions, high priority): real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS incl. DCR + refresh/revoke, real S3-compatible store incl. KMS, real NATS JetStream server. Missing credentials are a blocked release gate, not a silent skip.
+  - Acceptance: `npm run test:live` (or equivalent) runs each canary; absent creds fail loud with `canary-report.json`; protected CI sets the env.
+- [ ] **Live NATS JetStream suite.** `PRISM_TEST_NATS_URL` gating + `test:nats` script against a real server, mirroring `test:postgres` (plan 009 further action). The fake-seam tests remain in `npm test`.
+  - Acceptance: real-server append/subscribe/reconnect/dedupe-window/durable-cursor covered; fake tests unchanged.
+- [ ] **New OpenAI-compatible model providers.** Add providers for ecosystems with OpenAI-compatible endpoints (e.g., xAI Grok, Mistral, DeepSeek, Groq, Together, Cohere, Fireworks, Cerebras, Friendli, NovitaAI) as thin packages over `createOpenAICompatibleProvider`, each with `models.ts`, cache support where available, conformance + budget gates, and `docs/providers/<name>.md`. Reuse the alibaba/opencode-go/openrouter/zai pattern; no bespoke runtimes.
+  - Acceptance: each provider passes `testing/provider-conformance`, `testing/provider-media` where multimodal, `budgets.json` package-size gate, and `docs/index.md` navigation; no new runtime dependencies in core.
+- [ ] **`prism-providers` umbrella membership fix.** Either include azure/bedrock/vertex in `@arnilo/prism-providers` (making it the canonical "all first-party model providers" umbrella) or document the `prism-providers` vs `prism-all` split in `docs/provider-packages.md` (architectural problem #1).
+  - Acceptance: membership is intentional and documented; `release.mjs check` + `pack:dry-run` green; no consumer breakage.
 
 ### 0.2.0 Module A — Delegated coding-agent adapters (Cursor, Antigravity)
 
@@ -223,38 +246,12 @@ Each 0.2.0 module requires a numbered plan (primitive review, threat model, meas
 - [ ] **Docs + conformance.** `docs/delegated-agents.md`, `docs/providers/cursor.md`, `docs/providers/antigravity.md`; delegated-agent conformance helper in `testing/`; redaction + ownership + cancellation adversarial tests; budget gate.
 - [ ] **Acceptance (all three):** delegated agents run behind Prism's approval/policy/identity/effect contracts; tool payloads redacted; cross-tenant isolation; cancellation honored; no implicit activation; `sdk:ready` + release gate green. Document the SDK-evaluation decision (model-only not available) in `docs/delegated-agents.md`.
 
-### 0.2.0 Module B — God-module split (compat-preserving)
-
-- [ ] **Split `src/agents.ts`** into run-lifecycle, approval/pending-decisions, tool dispatch, and fingerprint modules behind barrel re-exports in `src/agents.ts` so public imports are unchanged. Split `src/contracts.ts` into core contracts, run-state, and protocol-payload modules behind `src/contracts.ts` barrel.
-  - Acceptance: public import surface unchanged (compat baseline green); `agents.ts`/`contracts.ts` files become barrels; tree-shaking improves (measured); `sdk:ready` green.
-
-### 0.2.0 Module C — Deprecated-option removal (breaking, documented)
-
-- [ ] Remove inert `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs`, `AgentConfig.maxToolRounds` alias, `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders`. Add `docs/migration.md` 0.1.x → 0.2.0 section with the removed symbols and replacements.
-  - Acceptance: removed symbols absent from `.d.ts`; migration notes present; compat baseline updated (intentional breaks recorded); `sdk:ready` green.
-
 ### 0.2.0 Module D — Enterprise adapter breadth (demand-gated)
 
 - [ ] **Cedar policy adapter** beside OPA, behind the existing `PolicyEvaluator` seam (plan 011 further action). Demand gate: a named user/integration.
 - [ ] **Second `ArtifactBodyStore` adapter** (e.g., Alibaba OSS or Azure Blob) if a host demands it (plan 011 further action). Multipart SigV4 for the S3 adapter if upload-size ceiling is hit.
 - [ ] **OpenAPI pagination beyond cursor** (offset, Link headers) if hosts need it (plan 011 further action).
   - Acceptance: each adapter passes its conformance + redaction + ownership tests; budget gate green; demand evidence recorded.
-
-### 0.2.0 Module E — Coding-agent capability closeouts (demand-gated)
-
-- [ ] **Durable ACP session store** + **native sandbox backend** (network-free) — host-owned seams revisited on demand with a threat model (plan 012 further action).
-- [ ] **PDF/Office document reader** as a bounded host-selected parser adapter (plans 004/roadmap non-goals).
-- [ ] **Recursive `delete`** and **brace-expanding `glob`** if pattern/usage demand justifies it (plan 004 further actions).
-- [ ] **Checkpoint persistence** for `ReadPathSet` + loaded-skill bodies if 0.1.5's names-only persistence is insufficient.
-  - Acceptance: each closeout behind its own plan with primitive review + threat model; budget/security gates green.
-
-### 0.2.0 Module F — Performance and DX
-
-- [ ] **Prompt-cache telemetry surface** per provider (hit/miss, cache tokens) so hosts tune `cache_aware` layout.
-- [ ] **Model-router cost/latency-aware routing + fallback chains** (router state is durable; selection policy becomes host-configurable with a reference policy).
-- [ ] **Async `AgUiProjection` hooks** so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority).
-- [ ] **`prism providers add <name>` scaffold** (DX) generating an OpenAI-compatible provider package from a template with conformance + docs.
-  - Acceptance: telemetry/redaction/budget gates green; DX scaffold produces a passing provider package; no core deps added.
 
 ### 0.2.0 Module G — Observability for delegated agents
 
@@ -273,10 +270,10 @@ These design ceilings are inherited from the 0.0.x phase plans and remain in for
 - **006 (0.0.23):** Release preflight used `--allow-dirty --allow-untagged` on an implementation checkout (not a tagged publish). Protected PostgreSQL evidence recorded on disposable `postgres:16-alpine` / Node v24.18.0 Linux x64.
 - **007 (0.0.24):** Root tarball budget baselines raised to measured 0.0.24 sizes (still +5% gated). Example uses in-memory event/effect stores; protected PostgreSQL evidence is the real gate. Concurrent `npm test`/`build` can race root `clean` (single-flight required — see 0.1.1).
 - **008 (0.0.25):** A2UI stays a section in `docs/ag-ui.md` (not a standalone page). Hashed nested approval ids to stay under the 128-char id cap. FR-3/FR-4/FR-5 remained deferred P2 (FR-3/FR-4 shipped in 0.0.26; FR-5 NATS shipped in 0.0.26 fake-seam). Concurrent clean race (see 0.1.1). Full `sdk:ready` coverage/pack legs left for the operator clean-checkout cut.
-- **009 (0.0.26):** NATS tests are network-free over a fake of the narrow seam (no real server — see 0.1.2). NATS `append` idempotency is bounded by the stream dedupe window (not a permanent unique constraint); `cleanup` is O(limit) delete calls; `subscribe` resumes via cursors not durable-name reuse; stream provisioning is host-owned; `reconnectInitialMs`/`reconnectMaxMs` accepted but unused (the official client owns reconnection). A2A server-side exposure is non-generic: single in-memory stream consumer per live task; live task registry in-memory (cap 512, FIFO, no persistence); A2A parts `raw`/`data`/`url` disabled unless the host `parts` policy selects them.
+- **009 (0.0.26):** NATS tests are network-free over a fake of the narrow seam (no real server — see 0.2.0). NATS `append` idempotency is bounded by the stream dedupe window (not a permanent unique constraint); `cleanup` is O(limit) delete calls; `subscribe` resumes via cursors not durable-name reuse; stream provisioning is host-owned; `reconnectInitialMs`/`reconnectMaxMs` accepted but unused (the official client owns reconnection). A2A server-side exposure is non-generic: single in-memory stream consumer per live task; live task registry in-memory (cap 512, FIFO, no persistence); A2A parts `raw`/`data`/`url` disabled unless the host `parts` policy selects them.
 - **010 (0.0.27):** Experimental ACP SDK fields stay excluded (`providers`, `nes`, `positionEncoding`, `sessionCapabilities.fork`, `mcpCapabilities.acp`/`auth`); `elicitation` consumed client-side only, never advertised agent-side. Deferred lifecycle events (`check_*`, `task_*`, `compaction_*`, `subagent_*`) not shipped (no ACP update kind / consumer). Modes/config not persisted by the agent (table defaults). Lifecycle delivery is stream-scoped. Smoke is operator-gated and not in `npm test`. Coverage aggregate excludes `packages/**` and `examples/**` (see 0.1.1).
-- **011 (0.0.28):** Fake-server gate; live endpoints deferred (see 0.1.2). OPA only (no Cedar) and one object-store adapter (S3-compatible) — seams stay swappable. Hand-rolled SigV4 single-chunk presign/put/get (no `@aws-sdk/client-s3`, ~1 MB saved); multipart/accelerate/non-path-style out of scope (see 0.2.0 Module D). OpenAPI mutation idempotency is core-managed, not a per-adapter store. Test harnesses 405 on standalone GET SSE rather than relaying a long-lived stream (see 0.1.1). Discovery cache is single-entry with a TTL cap per provider instance.
-- **012 (0.1.0):** Signed `v0.1.0` tag is an operator action (no GPG key in the build env); dry-run + refusal paths are machine-verified, the signature is not. Clean-checkout `sdk:ready` verified against a local clone of HEAD + the working diff, not a pushed CI run. Compat baseline regenerated for the `0.1.0` version literal. `security:threat-suites` runs Phase 8–11 conformance as one named leg (Phase 7 tenant suite stays under `test:postgres`). Live canaries keep an env-gate silent-skip for local runs (protected workflows set the env — see 0.1.2).
+- **011 (0.0.28):** Fake-server gate; live endpoints deferred (see 0.2.0). OPA only (no Cedar) and one object-store adapter (S3-compatible) — seams stay swappable. Hand-rolled SigV4 single-chunk presign/put/get (no `@aws-sdk/client-s3`, ~1 MB saved); multipart/accelerate/non-path-style out of scope (see 0.2.0 Module D). OpenAPI mutation idempotency is core-managed, not a per-adapter store. Test harnesses 405 on standalone GET SSE rather than relaying a long-lived stream (see 0.1.1). Discovery cache is single-entry with a TTL cap per provider instance.
+- **012 (0.1.0):** Signed `v0.1.0` tag is an operator action (no GPG key in the build env); dry-run + refusal paths are machine-verified, the signature is not. Clean-checkout `sdk:ready` verified against a local clone of HEAD + the working diff, not a pushed CI run. Compat baseline regenerated for the `0.1.0` version literal. `security:threat-suites` runs Phase 8–11 conformance as one named leg (Phase 7 tenant suite stays under `test:postgres`). Live canaries keep an env-gate silent-skip for local runs (protected workflows set the env — see 0.2.0).
 
 ## Consolidated Further Actions (from plans 001–012, status reconciled)
 
@@ -284,21 +281,21 @@ Closed items are marked **done**; open items are routed to a 0.1.x or 0.2.0 mile
 
 - **001:** Phase 2 plan created — **done**. Operator publish of `v0.0.18` — **done** (tag exists). Phase 4 coding gaps — **done** (Phase 4 shipped 0.0.21).
 - **002:** Phase 3 execute — **done** (0.0.20).
-- **003:** Phase 4 next — **done**. Phase 5 Caveman/Ponytail consuming Phase 3 — **done** (0.0.22). Future 0.0.x checkpoint persistence for loaded-skill names — **→ 0.1.5**. Release handoff 0.0.20 — **done**.
-- **004:** Tag/publish 0.0.21 — **done**. Phase 5 next — **done**. Checkpoint persistence for `ReadPathSet`/loaded-skill names — **→ 0.1.5 / 0.2.0 Module E**. Recursive delete / brace glob if demand — **→ 0.2.0 Module E**.
+- **003:** Phase 4 next — **done**. Phase 5 Caveman/Ponytail consuming Phase 3 — **done** (0.0.22). Future 0.0.x checkpoint persistence for loaded-skill names — **→ 0.1.3**. Release handoff 0.0.20 — **done**.
+- **004:** Tag/publish 0.0.21 — **done**. Phase 5 next — **done**. Checkpoint persistence for `ReadPathSet`/loaded-skill names — **→ 0.1.3 / 0.1.6**. Recursive delete / brace glob if demand — **→ 0.1.6**.
 - **005:** Tag/publish 0.0.22 — **done**.
 - **006:** Commit, tag `v0.0.23`, clean preflight — **done**. Phase 7 next — **done** (0.0.24).
 - **007:** Cut signed `v0.0.24` + protected Postgres + publish dry-run — **done**. Non-destructive workspace rebuild path (concurrent cleans) — **→ 0.1.1**. Public `deriveToolEffectKey` export if hosts need offline key derivation — **demand-gated (0.2.0)**. Phase 8 builds on frozen seams — **done** (0.0.25).
-- **008:** Cut signed `v0.0.25` + `sdk:ready` + publish dry-run — **done**. FR-3 reasoning encrypted-value helper — **done** (0.0.26). FR-4 MCP Apps UI-initiated mutation retry — **done** (0.0.26). FR-5 NATS JetStream `AgentEventSource` — **done** (0.0.26, fake-seam; **live suite → 0.1.2**). Async `AgUiProjection` hooks — **→ 0.2.0 Module F**.
-- **009:** Live NATS integration suite — **→ 0.1.2**. FR-3/4/5/6/7 shipped 0.0.26 — **done**. Tasks 13–15 (A2A server-side exposure, frontend renderer, async `AgUiProjection`) — **done** in 0.0.26. Phase 10 ACP mapping — **done** (0.0.27). Operator handoff (48 manifests) — **done**.
-- **010:** (Plan left "to be filled after task completion.") Material deferred items recorded above: deferred lifecycle events, modes/config persistence, durable ACP session store — **→ 0.2.0 Module E**; MCP SSE relay test — **→ 0.1.1**; coverage summary — **→ 0.1.1**.
-- **011:** Record protected live-canary matrix — **→ 0.1.2**. MCP SSE coverage — **→ 0.1.1**. Cedar, second artifact adapter, OpenAPI pagination — **→ 0.2.0 Module D (demand-gated)**. Manifest-count narrative — **→ 0.1.1**.
-- **012:** Operator publication of 0.1.0 (signed tag + npm OIDC) — **tag exists; npm publish remains operator action**. Phase 13 demand evidence — **this roadmap's 0.2.0 demand gates**. Node 22 CI leg + multi-Postgres CI legs on-demand — **demand-gated**. Durable ACP session store + native sandbox backend — **→ 0.2.0 Module E (demand-gated)**.
+- **008:** Cut signed `v0.0.25` + `sdk:ready` + publish dry-run — **done**. FR-3 reasoning encrypted-value helper — **done** (0.0.26). FR-4 MCP Apps UI-initiated mutation retry — **done** (0.0.26). FR-5 NATS JetStream `AgentEventSource` — **done** (0.0.26, fake-seam; **live suite → 0.2.0**). Async `AgUiProjection` hooks — **→ 0.1.7**.
+- **009:** Live NATS integration suite — **→ 0.2.0**. FR-3/4/5/6/7 shipped 0.0.26 — **done**. Tasks 13–15 (A2A server-side exposure, frontend renderer, async `AgUiProjection`) — **done** in 0.0.26. Phase 10 ACP mapping — **done** (0.0.27). Operator handoff (48 manifests) — **done**.
+- **010:** (Plan left "to be filled after task completion.") Material deferred items recorded above: deferred lifecycle events, modes/config persistence, durable ACP session store — **→ 0.1.6**; MCP SSE relay test — **→ 0.1.1**; coverage summary — **→ 0.1.1**.
+- **011:** Record protected live-canary matrix — **→ 0.2.0**. MCP SSE coverage — **→ 0.1.1**. Cedar, second artifact adapter, OpenAPI pagination — **→ 0.2.0 Module D (demand-gated)**. Manifest-count narrative — **→ 0.1.1**.
+- **012:** Operator publication of 0.1.0 (signed tag + npm OIDC) — **tag exists; npm publish remains operator action**. Phase 13 demand evidence — **this roadmap's 0.2.0 demand gates**. Node 22 CI leg + multi-Postgres CI legs on-demand — **demand-gated**. Durable ACP session store + native sandbox backend — **→ 0.1.6 (demand-gated)**.
 
 ## Proposed New Features (summary)
 
-- **0.1.x:** new OpenAI-compatible model providers; Alibaba provider enrichment; build single-flight; MCP SSE relay test; live-canary + live-NATS protected gates; coverage summary; checkpoint persistence for loaded-skill names + `ReadPathSet`; dead-code/deprecation hygiene; `prism providers add` DX scaffold (candidate).
-- **0.2.0:** delegated coding-agent adapters (Cursor, Antigravity) behind a generic delegated-agent contract; god-module split; deprecated-option removal; Cedar/second-object-store/OpenAPI-pagination adapters; durable ACP session store + native sandbox backend; PDF/Office reader; recursive delete + brace glob; prompt-cache telemetry; cost/latency model routing + fallback chains; async `AgUiProjection` hooks; OTel spans for delegated agents.
+- **0.1.x:** Alibaba provider enrichment (0.1.2); dead-code/deprecation hygiene + checkpoint persistence for loaded-skill names + `ReadPathSet` (0.1.3); compat-preserving god-module split (0.1.4); deprecated-option removal — the documented breaking cut (0.1.5); coding-agent capability closeouts (0.1.6); performance and DX incl. prompt-cache telemetry, cost/latency routing, async `AgUiProjection` hooks, and the `prism providers add` scaffold (0.1.7). Shipped in 0.1.1: build single-flight, MCP SSE relay test, coverage summary, manifest-count consolidation, ACP ownership guidance.
+- **0.2.0:** protected live-canary matrix + live NATS suite; new OpenAI-compatible model providers + `prism-providers` umbrella membership fix; delegated coding-agent adapters (Cursor, Antigravity) behind a generic delegated-agent contract; Cedar/second-object-store/OpenAPI-pagination adapters; OTel spans for delegated agents.
 - **Demand-gated beyond 0.2.0 (Phase 13):** Studio/control plane and visual workflow editor; hosted cloud and managed observability; Slack/Teams/channel catalogs, voice/device, desktop OS control; remote-browser/sandbox vendors; additional forges after GitHub adoption; additional queues/backplanes after Postgres capacity evidence; additional policy engines/object stores/databases/vector stores/providers; advanced GraphRAG/semantic chunking; cron-expression scheduling. Each needs a named user, integration, operational owner, threat model, measurable acceptance, and its own numbered plan.
 
 ## Release Validation Checklist

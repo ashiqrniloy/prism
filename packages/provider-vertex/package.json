@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-provider-vertex",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Google Vertex AI enterprise provider for Prism (host ADC/workload identity; separate from consumer Google package).",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.1.1"
+    "@arnilo/prism": "0.1.2"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."
