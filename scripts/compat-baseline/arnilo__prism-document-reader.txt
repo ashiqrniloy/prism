@@ -1,0 +1,10 @@
+DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES: number
+DEFAULT_MAX_DOCUMENT_PAGES	export declare const DEFAULT_MAX_DOCUMENT_PAGES = 1000
+DEFAULT_MAX_DOCUMENT_TEXT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_TEXT_BYTES: number
+DocumentReaderError	export declare class DocumentReaderError extends Error
+HARD_MAX_DOCUMENT_BYTES	export declare const HARD_MAX_DOCUMENT_BYTES: number
+HARD_MAX_DOCUMENT_PAGES	export declare const HARD_MAX_DOCUMENT_PAGES = 10000
+HARD_MAX_DOCUMENT_TEXT_BYTES	export declare const HARD_MAX_DOCUMENT_TEXT_BYTES: number
+createDocumentReader	export declare function createDocumentReader(options?: CreateDocumentReaderOptions): Promise<DocumentReader>
+createDocxParser	export declare function createDocxParser(): Promise<DocumentParser>
+createPdfParser	export declare function createPdfParser(): Promise<DocumentParser>

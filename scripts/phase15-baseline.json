@@ -1,5 +1,5 @@
 {
-  "$comment": "0.1.2 baseline evidence captured at plan 015 Task 0 freeze (2026-08-10) for regression comparison at the Task 5 exit gate. Tree state at capture: HEAD at v0.1.2 (595fe5c) + uncommitted plan 015 Task 0 files (plans/015-Release-0-1-3-Dead-Code-Deprecation-Hygiene.md, plans/README.md index row, scripts/phase15-freeze-manifest.json, scripts/phase15-freeze.test.mjs, scripts/phase15-baseline.json, package.json test-script wiring). Core coverage is core-only per the plan 010 compromise (packages/** and examples/** excluded). Benchmark inventory is the Task 1 audit input: 6 live legs (absorbed by the parameterized runner), 10 orphan runners + 7 orphan tests (deleted), 1 workflow-referenced test (rewired), 7 evidence JSON (kept byte-identical).",
+  "$comment": "0.1.2 baseline evidence captured at plan 015 Task 0 freeze (2026-08-10) for regression comparison at the Task 5 exit gate. Tree state at capture: HEAD at v0.1.2 (595fe5c) + uncommitted plan 015 Task 0 files (plans/015-Release-0-1-3-Dead-Code-Deprecation-Hygiene.md, plans/README.md index row, scripts/phase15-freeze-manifest.json, scripts/phase15-freeze.test.mjs, scripts/phase15-baseline.json, package.json test-script wiring). Core coverage is core-only per the plan 010 compromise (packages/** and examples/** excluded). Benchmark inventory is the Task 1 audit input: 6 live legs (absorbed by the parameterized runner), 10 orphan runners + 7 orphan tests (deleted), 1 workflow-referenced test (rewired), 7 evidence JSON (kept byte-identical). [2026-08-11] manifestCount refreshed 48->49 workspace / 49->50 publishable: plan 018 doc-reader closeout shipped the optional @arnilo/prism-document-reader package into the working tree.",
   "captured": "2026-08-10",
   "release": "0.1.2",
   "node": "v24.18.0",
@@ -44,15 +44,15 @@
     "status": "blocked: dirty git tree (uncommitted plan 015 Task 0 files); green at clean v0.1.2 per plan 014 Task 6 (release:check 49/49, release:publish --dry-run 49/49 twice byte-identical)"
   },
   "manifestCount": {
-    "publishable": 49,
-    "workspacePackages": 48,
+    "publishable": 50,
+    "workspacePackages": 49,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 14,
       "prism": 9,
-      "capability": 25
+      "capability": 26
     },
-    "canonicalStatement": "49 publishable manifests = root @arnilo/prism + 48 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 25 capability packages)",
+    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages; the 0.1.6 plan 018 doc-reader closeout added @arnilo/prism-document-reader)",
     "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
   },
   "benchmarkInventory": {

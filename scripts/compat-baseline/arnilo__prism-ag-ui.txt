@@ -148,6 +148,7 @@ hashJson	export declare function hashJson(value: unknown): string
 initialConfigValues	export declare function initialConfigValues(seam: AcpConfigOptionsSeam | undefined): Map<string, boolean | string>
 initialModeId	export declare function initialModeId(seam: AcpModesSeam | undefined): string | undefined
 jsonDiff	export declare function jsonDiff(from: unknown, to: unknown, path?: string): unknown[]
+ownershipKey	export declare function ownershipKey(ownership: OwnershipScope): string
 packageName	export declare const packageName = "@arnilo/prism-ag-ui"
 parseAgUiInput	export declare function parseAgUiInput(value: unknown, limits: ResolvedAgUiLimits): ParsedAgUiInput
 projectAcpPrompt	export declare function projectAcpPrompt(prompt: readonly
@@ -191,6 +192,7 @@ type AcpPromptOptions	export { type AcpPromptMedia, type AcpPromptOptions, type 
 type AcpPromptResult	export { type AcpPromptMedia, type AcpPromptOptions, type AcpPromptResult, projectAcpPrompt } from "./prompt.js"
 type AcpSessionBinding	export { type AcpAuthorization, type AcpCodingContext, type AcpCodingSeams, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
 type AcpSessionMode	export { type AcpConfigOption, type AcpConfigOptionsSeam, type AcpModesSeam, type AcpSessionMode, } from "./modes.js"
+type AcpSessionStore	export { type AcpSessionStore, type PersistedAcpSession } from "./session-store.js"
 type AcpSessionStoreSeams	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, resolveAcpAgentCapabilities, } from "./capabilities.js"
 type AcpSessionSummary	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, resolveAcpAgentCapabilities, } from "./capabilities.js"
 type AgUiA2AAdapter	export { type AgUiA2AAdapter, type AgUiA2APartProjectionInput, type AgUiA2ASelection, type AgUiA2ASelectionInput, type CreateAgUiA2AAdapterOptions, createAgUiA2AAdapter, } from "./a2a.js"
@@ -247,6 +249,7 @@ type CreateMessagesFromSessionProjectionOptions	export { type AgUiStateStore, ty
 type CreatePrismAcpAgentOptions	export { type AcpAuthorization, type AcpCodingContext, type AcpCodingSeams, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"
 type CreateReasoningEncryptedValueOptions	export { type CreateReasoningEncryptedValueOptions, createReasoningEncryptedValue, } from "./encrypted-value.js"
 type CreateStateFromStoreProjectionOptions	export { type AgUiStateStore, type CreateActivityFromToolProgressProjectionOptions, type CreateMessagesFromSessionProjectionOptions, type CreateStateFromStoreProjectionOptions, composeAgUiProjections, createActivityFromToolProgressProjection, createMessagesFromSessionProjection, createStateFromStoreProjection, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES, jsonDiff, } from "./projectors.js"
+type PersistedAcpSession	export { type AcpSessionStore, type PersistedAcpSession } from "./session-store.js"
 type PersistenceAgUiReplayOptions	export { type AgentEventSourceAgUiReplayOptions, type AgUiReplay, type AgUiReplayEvent, type AgUiReplayPage, type AgUiReplayRequest, type CoWorkReplay, type CoWorkReplayOptions, type CoWorkReplayPage, type CoWorkReplayRequest, type CoWorkSource, createAgentEventSourceAgUiReplay, createCoWorkReplay, createPersistenceAgUiReplay, type PersistenceAgUiReplayOptions, } from "./replay.js"
 type ReconcileAppEffectInput	export { type AgUiMcpAppEffectContext, type ReconcileAppEffectInput, deriveAppEffectKey, hashJson, reconcileAppEffect, } from "./effect-recovery.js"
 type ResolvedAgUiA2UiLimits	export { A2UI_ACTIVITY_TYPE, A2UI_ERROR_EVENT, A2UI_OPERATIONS_KEY, A2UI_VERSION, type AgUiA2UiAction, type AgUiA2UiLimitOptions, type AgUiA2UiOptions, type AgUiA2UiPainter, type ResolvedAgUiA2UiLimits, createAgUiA2UiPainter, DEFAULT_MAX_A2UI_COMPONENT_DEPTH, DEFAULT_MAX_A2UI_OPERATION_BYTES, DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, DEFAULT_MAX_A2UI_SURFACES_PER_RUN, extractAgUiA2UiActions, HARD_MAX_A2UI_COMPONENT_DEPTH, HARD_MAX_A2UI_OPERATION_BYTES, HARD_MAX_A2UI_OPS_PER_MESSAGE, HARD_MAX_A2UI_SURFAC
@@ -256,3 +259,4 @@ validateConfigOptionValue	export declare function validateConfigOptionValue(opti
 validateConfigOptionsSeam	export declare function validateConfigOptionsSeam(seam: AcpConfigOptionsSeam | undefined, limits: ResolvedAgUiLimits): void
 validateMcpServers	export declare function validateMcpServers(servers: readonly McpServer[], seams: AcpMcpSeams | undefined, limits: ResolvedAgUiLimits, signal: AbortSignal): Promise<readonly McpServer[]>
 validateModeSeam	export declare function validateModeSeam(seam: AcpModesSeam | undefined, limits: ResolvedAgUiLimits): void
+validatePersistedSession	export declare function validatePersistedSession(entry: PersistedAcpSession): void

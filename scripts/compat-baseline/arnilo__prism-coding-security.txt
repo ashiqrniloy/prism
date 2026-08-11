@@ -9,6 +9,7 @@ CommandRuleEvaluation	export type { CommandRule, CommandRuleAction, CommandRuleE
 CreateAllowListEgressProxyOptions	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
 CreateDockerSandboxOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
 CreateEgressPolicyOptions	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+CreateNativeSandboxOptions	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 DEFAULT_CLEANUP_DEADLINE_MS	export declare const DEFAULT_CLEANUP_DEADLINE_MS = 30000
 DEFAULT_CPUS	export declare const DEFAULT_CPUS = 2
 DEFAULT_DOWNLOAD_BYTES	export declare const DEFAULT_DOWNLOAD_BYTES: number
@@ -82,8 +83,13 @@ HARD_STOP_GRACE_MS	export declare const HARD_STOP_GRACE_MS = 30000
 HARD_TMP_BYTES	export declare const HARD_TMP_BYTES: number
 HARD_WALL_TIME_MS	export declare const HARD_WALL_TIME_MS: number
 HARD_WORKSPACE_BYTES	export declare const HARD_WORKSPACE_BYTES: number
+NativeSandboxError	export declare class NativeSandboxError extends Error
+NativeSandboxLimitOptions	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
+NativeSpawnCommand	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
+NativeUnshareMode	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 ResolvedDockerSandboxLimits	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
 ResolvedEgressLimits	export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js"
+ResolvedNativeSandboxLimits	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 SANDBOX_FS_SCRIPTS	export declare const SANDBOX_FS_SCRIPTS: Readonly<
 SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
@@ -110,12 +116,14 @@ assertPathInsideRoots	export declare function assertPathInsideRoots(roots: reado
 assertPinned	export declare function assertPinned(host: string, remoteAddress: string | undefined, pinned: readonly string[]): void
 assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: string, absolutePath: string): string
 buildDockerCreateArgsForTest	export declare function buildDockerCreateArgsForTest(options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">): string[]
+buildNativeSpawnCommand	export declare function buildNativeSpawnCommand(request: SandboxExecRequest | SandboxExecFileRequest, options:
 composeEgressSandboxNetwork	export declare function composeEgressSandboxNetwork(attestation: EgressAttestation, name: string): DockerNetworkConfig
 createAllowListEgressProxy	export declare function createAllowListEgressProxy(options: CreateAllowListEgressProxyOptions): EgressProxy
 createCodingApprovalPolicy	export declare function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions): ExecutionPolicy
 createDockerSandbox	export declare function createDockerSandbox(options: CreateDockerSandboxOptions): Promise<DisposableSandbox>
 createEgressPolicy	export declare function createEgressPolicy(options?: CreateEgressPolicyOptions): EgressPolicy
 createImportTarStream	export declare function createImportTarStream(sourceRoot: string, bounds: TarBounds): Readable
+createNativeSandbox	export declare function createNativeSandbox(options: CreateNativeSandboxOptions): Promise<DisposableSandbox>
 createSandboxBashOperations	export declare function createSandboxBashOperations(adapter: SandboxAdapter): BashOperations
 createSandboxCodingComposition	export declare function createSandboxCodingComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult
 createSandboxCodingTools	export declare function createSandboxCodingTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[]
@@ -134,6 +142,7 @@ isPrivateAddress	export declare function isPrivateAddress(address: string): bool
 normalizeAddress	export declare function normalizeAddress(address: string): string
 resolveDockerSandboxLimits	export declare function resolveDockerSandboxLimits(input?: DockerSandboxLimitOptions): ResolvedDockerSandboxLimits
 resolveEgressLimits	export declare function resolveEgressLimits(input?: EgressLimitOptions): ResolvedEgressLimits
+resolveNativeSandboxLimits	export declare function resolveNativeSandboxLimits(input?: NativeSandboxLimitOptions): ResolvedNativeSandboxLimits
 resolvePinned	export declare function resolvePinned(host: string, resolve?: AddressResolver): Promise<readonly string[]>
 resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
 runDockerCli	export declare function runDockerCli(request: DockerCliRequest): Promise<DockerCliResult>

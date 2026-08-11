@@ -6,6 +6,92 @@ export const DEFAULT_LOAD_SKILL_TOOL_NAME = "load_skill" as const;
 export const SKILL_LOAD_ERROR_CODE = "skill_load_failed" as const;
 export const MAX_LOAD_SKILL_RESULT_BYTES = 512;
 
+// Bodies-mode persistence bounds (plan 018 Task 6 closeout `checkpoint-bodies`): the
+// checkpoint `maxStateBytes` ceiling is the documented outer bound (oversize refuses at
+// save with a recorded error); these caps bound the bodies payload itself on load.
+// ponytail: module constants, not tunable options — hosts tune maxStateBytes for the ceiling.
+export const MAX_PERSISTED_SKILL_BODIES = 64; // names-mode parity (MAX_PERSISTED_SKILL_NAMES)
+export const MAX_PERSISTED_SKILL_BODY_NAME_CHARS = 256; // names-mode parity
+export const MAX_PERSISTED_SKILL_BODY_BYTES = 262_144; // = HARD_MAX_SKILL_INSTRUCTION_BYTES (loader parity)
+export const HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES = 1024 * 1024; // = HARD_MAX_AGENT_RUN_STATE_BYTES
+
+/** One persisted loaded-skill body (plan 018 closeout `checkpoint-bodies`). */
+export interface LoadedSkillBodiesEntry {
+  readonly name: string;
+  readonly instructions: string;
+}
+
+/** Fail-closed shape/cap validation for a persisted bodies payload (load and save sides). */
+export function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[] {
+  if (!Array.isArray(value) || value.length > MAX_PERSISTED_SKILL_BODIES) {
+    throw new SkillLoadError(`Loaded-skill bodies exceed ${MAX_PERSISTED_SKILL_BODIES} entries`);
+  }
+  let totalBytes = 0;
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || typeof (entry as LoadedSkillBodiesEntry).name !== "string") {
+      throw new SkillLoadError("Malformed loaded-skill body entry: name must be a string");
+    }
+    const { name, instructions } = entry as LoadedSkillBodiesEntry;
+    if (name.length > MAX_PERSISTED_SKILL_BODY_NAME_CHARS) {
+      throw new SkillLoadError(`Loaded-skill body name exceeds ${MAX_PERSISTED_SKILL_BODY_NAME_CHARS} chars`);
+    }
+    if (typeof instructions !== "string") {
+      throw new SkillLoadError("Malformed loaded-skill body entry: instructions must be a string");
+    }
+    const bodyBytes = Buffer.byteLength(instructions, "utf8");
+    if (bodyBytes > MAX_PERSISTED_SKILL_BODY_BYTES) {
+      throw new SkillLoadError(`Loaded-skill body exceeds ${MAX_PERSISTED_SKILL_BODY_BYTES} bytes`);
+    }
+    totalBytes += Buffer.byteLength(name, "utf8") + bodyBytes;
+    if (totalBytes > HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES) {
+      throw new SkillLoadError(`Loaded-skill bodies exceed ${HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES} total bytes`);
+    }
+  }
+}
+
+/**
+ * Snapshot the exact instructions of every loaded skill (registry-independent).
+ * Loaded names without instructions are skipped (they render no body anyway);
+ * a restored body for a loaded name wins over the registry body.
+ */
+export function snapshotLoadedSkillBodies(
+  skills: readonly Skill[],
+  loaded: LoadedSkillSet,
+  restored?: ReadonlyMap<string, string>,
+): LoadedSkillBodiesEntry[] {
+  const byName = new Map(skills.map((skill) => [skill.name, skill]));
+  const entries: LoadedSkillBodiesEntry[] = [];
+  for (const name of loaded.list()) {
+    const instructions = restored?.get(name) ?? byName.get(name)?.instructions;
+    if (!instructions) continue;
+    entries.push({ name, instructions });
+  }
+  validateLoadedSkillBodies(entries); // refuses oversize with a recorded error (never truncates)
+  return entries;
+}
+
+/**
+ * Apply persisted bodies to the skills a resumed session will render: replace the
+ * instructions of known skills and append synthesized skills for names the live
+ * registry no longer serves, so the exact loaded text renders registry-independently.
+ */
+export function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[] {
+  validateLoadedSkillBodies(bodies);
+  if (bodies.length === 0) return skills;
+  const byName = new Map(skills.map((skill) => [skill.name, skill]));
+  const out = skills.map((skill) => {
+    const body = bodies.find((entry) => entry.name === skill.name);
+    return body ? { ...skill, instructions: body.instructions } : skill;
+  });
+  const known = new Set(skills.map((skill) => skill.name));
+  for (const entry of bodies) {
+    if (!known.has(entry.name)) {
+      out.push({ name: entry.name, instructions: entry.instructions });
+    }
+  }
+  return out;
+}
+
 export class SkillLoadError extends Error {
   readonly code = SKILL_LOAD_ERROR_CODE;
   constructor(message: string) {

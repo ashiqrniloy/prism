@@ -188,6 +188,17 @@ export interface AgentRunStateOptions {
    * Default off: checkpoint shape is identical to 0.1.2.
    */
   readonly persistSessionState?: boolean;
+  /**
+   * Opt-in (plan 018 Task 6 closeout `checkpoint-bodies`): alongside
+   * `persistSessionState`, persist the exact loaded-skill instructions
+   * (`{name, instructions}` pairs, redacted at the checkpoint boundary like all state)
+   * so resume re-renders them registry-independently — no `load_skill` round-trip, no
+   * drift when the live registry changed or lost the skill. Both the run and the resume
+   * options must set it. Bounds: ≤64 bodies, ≤256-char names, ≤262144-byte bodies,
+   * ≤1 MiB total; the `maxStateBytes` ceiling refuses oversize with a recorded error
+   * (never silently truncates). Default off: checkpoint shape is identical to 0.1.3.
+   */
+  readonly includeSkillBodies?: boolean;
 }
 
 /** Versioned, redacted checkpoint payload. Treat as opaque except status/version/interruption. */
@@ -223,6 +234,8 @@ export interface AgentRunResumeOptions {
   readonly resumeNestedRun?: ResumeNestedRun;
   /** Opt-in (plan 015 Task 4): restore persisted loaded-skill names into the resumed session catalog. */
   readonly persistSessionState?: boolean;
+  /** Opt-in (plan 018 Task 6): restore persisted loaded-skill bodies (requires `persistSessionState` too). */
+  readonly includeSkillBodies?: boolean;
 }
 
 /** Bounded, abortable options for `resumeAgentRunStream()`. */

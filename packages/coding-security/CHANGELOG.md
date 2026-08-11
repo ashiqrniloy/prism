@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.6] - 2026-08-11
+
+### Changed
+- **Network-free native sandbox backend** (plan 018 closeout `native-sandbox`): additive `createNativeSandbox({ root, limits })` — spawn + POSIX rlimits + existing path containment, zero new dependencies. Every command runs in a fresh network namespace via the OS `unshare` binary (plain or `--map-root-user`, preflighted once at creation; Linux-only, fail-closed elsewhere), chained `ulimit` caps (`-v`/`-t`/`-n`) with `|| exit 126`, argv-only `exec` (no shell interpolation), cwd containment, process-group kill on timeout/abort, env allow-list (host env never inherited), output cap, `close({export})` tar parity, and a documented honest boundary: egress denial + rlimits + cwd containment only — the process runs as the invoking OS user.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

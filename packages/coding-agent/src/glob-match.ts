@@ -1,15 +1,83 @@
 /**
- * Minimal glob matcher: `*`, `?`, and `**` only. No brace expansion, no regex.
+ * Minimal glob matcher: `*`, `?`, and `**` only. Brace expansion is an opt-in,
+ * bounded extension (see `expandGlobBraces`). No regex, no dependency.
  */
 
-export function validateGlobPattern(pattern: string, maxPatternBytes: number): void {
+export interface BraceExpansionOptions {
+  /** Max alternatives produced by expansion (default 128). */
+  maxAlternatives?: number;
+  /** Max total bytes across all expanded alternatives (default 4096). */
+  maxExpandedBytes?: number;
+}
+
+const DEFAULT_MAX_BRACE_ALTERNATIVES = 128;
+const DEFAULT_MAX_BRACE_EXPANDED_BYTES = 4_096;
+
+/**
+ * Expand `{a,b}` groups in a pattern (cartesian across multiple groups).
+ * Bounded: max alternatives and max total expanded bytes; unbalanced or nested
+ * braces fail closed. With no braces (or empty text), returns `[pattern]`.
+ */
+export function expandGlobBraces(pattern: string, options?: BraceExpansionOptions): string[] {
+  const maxAlternatives = options?.maxAlternatives ?? DEFAULT_MAX_BRACE_ALTERNATIVES;
+  const maxExpandedBytes = options?.maxExpandedBytes ?? DEFAULT_MAX_BRACE_EXPANDED_BYTES;
+  const results: string[] = [];
+
+  const go = (start: number, prefix: string): void => {
+    if (results.length >= maxAlternatives) {
+      throw new Error(`brace expansion exceeds ${maxAlternatives} alternative limit`);
+    }
+    const open = pattern.indexOf("{", start);
+    if (open === -1) {
+      const out = prefix + pattern.slice(start);
+      if (Buffer.byteLength(out, "utf8") > maxExpandedBytes) {
+        throw new Error(`brace expansion exceeds ${maxExpandedBytes} byte limit`);
+      }
+      results.push(out);
+      return;
+    }
+    let depth = 1;
+    let close = -1;
+    for (let i = open + 1; i < pattern.length; i++) {
+      const ch = pattern[i]!;
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          close = i;
+          break;
+        }
+      }
+    }
+    if (close === -1) throw new Error(`unbalanced brace expansion in pattern: ${pattern}`);
+    if (depth !== 0) throw new Error(`unbalanced brace expansion in pattern: ${pattern}`);
+    const body = pattern.slice(open + 1, close);
+    if (body.includes("{") || body.includes("}")) {
+      throw new Error(`nested brace expansion is not supported in pattern: ${pattern}`);
+    }
+    if (body.length === 0) throw new Error(`empty brace expansion in pattern: ${pattern}`);
+    for (const alt of body.split(",")) {
+      go(close + 1, prefix + pattern.slice(start, open) + alt);
+    }
+  };
+
+  go(0, "");
+  return results;
+}
+
+export function validateGlobPattern(pattern: string, maxPatternBytes: number, options?: { braceExpansion?: boolean }): void {
   const patternBytes = Buffer.byteLength(pattern, "utf8");
   if (patternBytes < 1) throw new Error("pattern must be non-empty");
   if (patternBytes > maxPatternBytes) {
     throw new Error(`pattern exceeds ${maxPatternBytes} byte pattern limit`);
   }
   if (pattern.includes("{") || pattern.includes("}")) {
-    throw new Error("brace expansion is not supported in glob patterns");
+    if (options?.braceExpansion === true) {
+      // Bounded expansion is validated by expandGlobBraces (alternatives + byte caps).
+      expandGlobBraces(pattern);
+      return;
+    }
+    throw new Error("brace expansion is not supported in glob patterns (set braceExpansion: true to enable the bounded expansion)");
   }
 }
 

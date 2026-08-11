@@ -20,6 +20,7 @@ import type {
 } from "./contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
 import type { SecretRedactor } from "./redaction.js";
+import { validateLoadedSkillBodies, type LoadedSkillBodiesEntry } from "./skill-load.js";
 
 export const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run";
 export const AGENT_RUN_STATE_SCHEMA_VERSION = 1 as const;
@@ -57,7 +58,10 @@ export interface StoredAgentRunState extends AgentRunState {
    * never persisted and reload on demand from the live registry via `load_skill`.
    * Absent by default (0.1.x checkpoints parse unchanged).
    */
-  readonly sessionState?: { readonly loadedSkillNames?: readonly string[] };
+  readonly sessionState?: {
+    readonly loadedSkillNames?: readonly string[];
+    readonly loadedSkillBodies?: readonly LoadedSkillBodiesEntry[];
+  };
 }
 
 /** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
@@ -354,6 +358,14 @@ function validateSessionState(sessionState: StoredAgentRunState["sessionState"])
   if (sessionState === undefined) return;
   if (!sessionState || typeof sessionState !== "object") {
     throw new AgentRunStateError("Malformed agent run session state");
+  }
+  const bodies = sessionState.loadedSkillBodies;
+  if (bodies !== undefined) {
+    try {
+      validateLoadedSkillBodies(bodies);
+    } catch (error) {
+      throw new AgentRunStateError(error instanceof Error ? error.message : String(error));
+    }
   }
   const names = sessionState.loadedSkillNames;
   if (names === undefined) return;

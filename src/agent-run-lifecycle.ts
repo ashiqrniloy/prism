@@ -42,6 +42,8 @@ export interface AgentRunLifecycleRequest {
   readonly agentId?: string;
   /** Opt-in (plan 015 Task 4): restore persisted loaded-skill names on resume. */
   readonly persistSessionState?: boolean;
+  /** Opt-in (plan 018 Task 6): restore persisted loaded-skill bodies on resume (requires `persistSessionState` too). */
+  readonly includeSkillBodies?: boolean;
 }
 
 /** Bounded live-event options for a durable lifecycle resume. */
@@ -79,6 +81,7 @@ export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): Agen
         fencingToken: options.fencingToken,
         definitionRevision: resolved.definitionRevision,
         persistSessionState: request.persistSessionState,
+        includeSkillBodies: request.includeSkillBodies,
       });
     },
     async *resumeStream(ref, resume, request = {}) {
@@ -96,6 +99,7 @@ export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): Agen
         maxQueuedEvents: request.maxQueuedEvents,
         overflow: request.overflow,
         persistSessionState: request.persistSessionState,
+        includeSkillBodies: request.includeSkillBodies,
       });
     },
   };
@@ -190,6 +194,11 @@ async function prepareAgentRunResume(
   // the live registry the next time the model (re)loads them via load_skill.
   if (options.persistSessionState && state.sessionState?.loadedSkillNames) {
     session.restoreLoadedSkills(state.sessionState.loadedSkillNames);
+  }
+  // Plan 018 Task 6 (closeout `checkpoint-bodies`): restore exact instructions so the
+  // resumed session renders them registry-independently (no load_skill round-trip).
+  if (options.persistSessionState && options.includeSkillBodies && state.sessionState?.loadedSkillBodies) {
+    session.restoreLoadedSkillBodies(state.sessionState.loadedSkillBodies);
   }
   if (resume.decision !== undefined && resume.decisions !== undefined) {
     throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Resume accepts exactly one of decision or decisions");

@@ -38,7 +38,7 @@ import {
   validateCodingLimit,
   validateCodingLimitAllowZero,
 } from "./limits.js";
-import { matchGlobPattern, validateGlobPattern } from "./glob-match.js";
+import { expandGlobBraces, matchGlobPattern, validateGlobPattern } from "./glob-match.js";
 import { resolveToCwd } from "./path-utils.js";
 
 export type RepoEntryKind = "file" | "directory" | "symlink" | "other";
@@ -161,6 +161,8 @@ export interface RepositoryGlobRequest {
   readonly maxDepth?: number;
   readonly maxResults?: number;
   readonly offset?: number;
+  /** Opt-in bounded `{a,b}` expansion (default false; expansion bounds in glob-match.ts). */
+  readonly braceExpansion?: boolean;
   readonly signal?: AbortSignal;
   readonly deadlineMs?: number;
 }
@@ -828,10 +830,13 @@ async function globLocal(
   walk: RepositoryWalk,
 ): Promise<RepositoryGlobResult> {
   try {
-    validateGlobPattern(request.pattern, defaults.maxPatternBytes);
+    validateGlobPattern(request.pattern, defaults.maxPatternBytes, { braceExpansion: request.braceExpansion === true });
   } catch (error) {
     throw new RepositoryError(error instanceof Error ? error.message : String(error));
   }
+  // Opt-in bounded brace expansion: textual alternatives only (never touches the
+  // filesystem); bounds enforced by expandGlobBraces (max alternatives / bytes).
+  const patterns = request.braceExpansion === true ? expandGlobBraces(request.pattern) : [request.pattern];
   const resolved = await resolveRepoPath(request.root, request.path);
   const maxResults = validateCodingLimit("maxResults", request.maxResults ?? defaults.maxResults, HARD_MAX_REPO_RESULTS);
   const offset = validateCodingLimitAllowZero("offset", request.offset ?? 0, HARD_MAX_REPO_ENTRIES);
@@ -846,8 +851,15 @@ async function globLocal(
   let truncated = false;
   let truncatedBy: RepositoryGlobResult["truncatedBy"] = null;
 
+  const matchesAnyPattern = (relativePath: string): boolean => {
+    for (const p of patterns) {
+      if (matchGlobPattern(p, relativePath)) return true;
+    }
+    return false;
+  };
+
   const maybeCollect = (relativePath: string): boolean => {
-    if (!matchGlobPattern(request.pattern, relativePath)) return false;
+    if (!matchesAnyPattern(relativePath)) return false;
     if (seen < offset) {
       seen++;
       return false;
@@ -868,7 +880,7 @@ async function globLocal(
       scannedEntries = 1;
       if (startStat.isFile()) {
         scannedFiles = 1;
-        if (matchGlobPattern(request.pattern, resolved.relative)) {
+        if (matchesAnyPattern(resolved.relative)) {
           if (offset === 0 && maxResults > 0) collected.push(resolved.relative);
           else if (offset === 0 && maxResults === 0) {
             truncated = true;

@@ -114,6 +114,12 @@ import {
 } from "./session-stores.js";
 import { resolveActiveSkills } from "./skills.js";
 import { createLoadedSkillSet, resolveSkillsDisclosure } from "./skill-disclosure.js";
+import {
+  applyRestoredSkillBodies,
+  snapshotLoadedSkillBodies,
+  validateLoadedSkillBodies,
+  type LoadedSkillBodiesEntry,
+} from "./skill-load.js";
 import { resolveToolResultFold } from "./tool-result-fold.js";
 import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "./structured-output.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
@@ -174,10 +180,21 @@ export class RuntimeAgentSession implements AgentSession {
   private activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   private activeLoopTurn = 1;
   private readonly loadedSkills = createLoadedSkillSet();
+  /** Plan 018 Task 6 (closeout `checkpoint-bodies`): persisted exact instructions, registry-independent. */
+  private restoredSkillBodies: readonly LoadedSkillBodiesEntry[] = [];
+  /** Skills of the current run (for the bodies snapshot); replaced at each run start. */
+  private activeRunSkills: readonly import("./contracts.js").Skill[] = [];
 
   /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
   restoreLoadedSkills(names: readonly string[]): void {
     for (const name of names) this.loadedSkills.add(name);
+  }
+
+  /** Plan 018 Task 6: restore persisted loaded-skill bodies (already validated fail-closed at load). */
+  restoreLoadedSkillBodies(bodies: readonly LoadedSkillBodiesEntry[]): void {
+    validateLoadedSkillBodies(bodies);
+    this.restoredSkillBodies = bodies;
+    for (const entry of bodies) this.loadedSkills.add(entry.name);
   }
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
@@ -396,6 +413,7 @@ export class RuntimeAgentSession implements AgentSession {
       await this.rebuildHistory();
       const { registry, tools } = activeTools(this.agent.config.tools);
       const activeSkills = this.resolveRunSkills(options, tools);
+      this.activeRunSkills = activeSkills; // for the durable bodies snapshot (plan 018 Task 6)
       if (options.model && JSON.stringify(options.model) !== JSON.stringify(this.agent.config.model)) {
         await this.appendEntry(
           createSessionEntry({
@@ -626,7 +644,7 @@ export class RuntimeAgentSession implements AgentSession {
             inputBuilder: this.agent.config.inputBuilder,
             promptBuilder: this.agent.config.promptBuilder,
             contextProviders,
-            skills: activeSkills,
+            skills: this.restoredSkillBodies.length ? applyRestoredSkillBodies(activeSkills, this.restoredSkillBodies) : activeSkills,
             skillsDisclosure: resolveSkillsDisclosure(options.skillsDisclosure, this.agent.config.skillsDisclosure),
             toolResultFold: resolveToolResultFold(options.toolResultFold, this.agent.config.toolResultFold),
             loadedSkills: this.loadedSkills,
@@ -1297,7 +1315,21 @@ export class RuntimeAgentSession implements AgentSession {
     const durable = this.activeDurable;
     if (!durable) throw new AgentRunStateError("Durable run state is not configured");
     const persisted = durable.options.persistSessionState
-      ? { ...state, sessionState: { loadedSkillNames: this.loadedSkills.list() } }
+      ? {
+          ...state,
+          sessionState: {
+            loadedSkillNames: this.loadedSkills.list(),
+            ...(durable.options.includeSkillBodies
+              ? {
+                  loadedSkillBodies: snapshotLoadedSkillBodies(
+                    this.activeRunSkills,
+                    this.loadedSkills,
+                    this.restoredSkillBodies.length ? new Map(this.restoredSkillBodies.map((e) => [e.name, e.instructions])) : undefined,
+                  ),
+                }
+              : {}),
+          },
+        }
       : state;
     const saved = await saveAgentRunState({
       checkpoints: durable.options.checkpoints,

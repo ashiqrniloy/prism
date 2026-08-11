@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6] - 2026-08-11
+
+### Changed
+- **Bounded PDF/Office document reader** (plan 018 closeout `doc-reader`): additive `documentReader` slot on `createReadTool` — `DocumentReader.extract` runs after image sniffing, magic-byte format gating (never extension sniffing), null fall-through to the 0.1.5 text path, input/page/text caps re-checked in the read flow; the optional peer package `@arnilo/prism-document-reader` supplies the concrete parsers.
+- **Recursive delete + brace-expanding glob** (plan 018 closeout `delete-glob`): `delete` gains per-call opt-in `recursive: true` (iterative post-order walk, symlink children unlinked never followed, fan-out cap 10,000 default / 100,000 hard, partial deletion reported never silent, `maxEntries` bound); `glob` gains host-selected and per-call `braceExpansion` (`{a,b}` textual expansion, max 128 alternatives / 4096 expanded bytes, unbalanced/nested/empty braces and overflow fail closed; default matcher semantics unchanged).
+- **Checkpoint persistence for loaded-skill bodies** (plan 018 closeout `checkpoint-bodies`): durable runs may set `includeSkillBodies: true` on BOTH run and resume options — the exact loaded-skill instructions ride the checkpoint so resume re-renders them registry-independently (no `load_skill` round-trip); names-only stays the default, 0.1.3 checkpoint shapes byte-identical, `maxStateBytes` refuses oversize bodies.
+
 ## [0.1.5] - 2026-08-11
 
 ### Changed

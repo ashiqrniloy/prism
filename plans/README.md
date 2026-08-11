@@ -21,5 +21,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [015-Release-0-1-3-Dead-Code-Deprecation-Hygiene.md](015-Release-0-1-3-Dead-Code-Deprecation-Hygiene.md) | 0.1.x — Release 0.1.3 (dead-code and deprecation hygiene) | in progress |
 | [016-Release-0-1-4-God-Module-Split.md](016-Release-0-1-4-God-Module-Split.md) | 0.1.x — Release 0.1.4 (god-module split, compat-preserving) | complete (2026-08-10) |
 | [017-Release-0-1-5-Deprecated-Option-Removal.md](017-Release-0-1-5-Deprecated-Option-Removal.md) | 0.1.x — Release 0.1.5 (deprecated-option removal, breaking/documented) | complete (2026-08-11) |
+| [018-Release-0-1-6-Coding-Agent-Capability-Closeouts.md](018-Release-0-1-6-Coding-Agent-Capability-Closeouts.md) | 0.1.x — Release 0.1.6 (coding-agent capability closeouts, demand-gated) | complete |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

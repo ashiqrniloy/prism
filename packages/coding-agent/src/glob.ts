@@ -21,6 +21,8 @@ export interface GlobToolOptions {
   maxDepth?: number;
   maxResults?: number;
   exclude?: readonly string[];
+  /** Host-selected default for bounded `{a,b}` brace expansion (default false). */
+  braceExpansion?: boolean;
 }
 
 function errorResult(toolCallId: string, message: string): ToolResult {
@@ -56,7 +58,7 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
   return {
     name: "glob",
     effect: CODING_OBSERVATION_EFFECT,
-    description: `Find workspace files by glob pattern without shell find. Supports * (segment), ? (one char), and ** (directories). Brace expansion is rejected. Skips hidden names and excluded basenames (default: ${limits.exclude.join(", ")}) unless overridden. Does not follow symlinks. Results paginate with offset/maxResults (default ${limits.maxResults}). Depth default ${limits.maxDepth}. Prefer repo_list to enumerate directories and repo_search to find text inside files.`,
+    description: `Find workspace files by glob pattern without shell find. Supports * (segment), ? (one char), and ** (directories). Brace expansion is rejected unless braceExpansion: true (bounded: max 128 alternatives / 4096 expanded bytes; unbalanced or nested braces are errors). Skips hidden names and excluded basenames (default: ${limits.exclude.join(", ")}) unless overridden. Does not follow symlinks. Results paginate with offset/maxResults (default ${limits.maxResults}). Depth default ${limits.maxDepth}. Prefer repo_list to enumerate directories and repo_search to find text inside files.`,
     parameters: {
       type: "object",
       properties: {
@@ -71,6 +73,10 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
         includeHidden: {
           type: "boolean",
           description: "Include dotfile/dotdir names (default false). Excluded basenames still apply.",
+        },
+        braceExpansion: {
+          type: "boolean",
+          description: "Opt-in bounded {a,b} brace expansion (default: host option, else false)",
         },
         maxDepth: {
           type: "number",
@@ -97,6 +103,7 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
 
       const path = typeof args.path === "string" ? args.path : undefined;
       const includeHidden = args.includeHidden === true;
+      const braceExpansion = args.braceExpansion === true || (args.braceExpansion === undefined && options?.braceExpansion === true);
       let maxDepth: number | undefined;
       let maxResults: number | undefined;
       let offset = 0;
@@ -124,6 +131,7 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
           metadata: {
             pattern,
             includeHidden,
+            braceExpansion,
             maxDepth,
             maxResults,
             offset,
@@ -143,6 +151,7 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
           pattern,
           path,
           includeHidden,
+          braceExpansion,
           exclude: limits.exclude,
           maxDepth: maxDepth ?? limits.maxDepth,
           maxResults: maxResults ?? limits.maxResults,

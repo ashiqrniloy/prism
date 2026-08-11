@@ -12,8 +12,8 @@
 | `createEditTool(cwd, options?)` | `edit` tool: precise exact-then-fuzzy text replacement in an existing file. |
 | `createRepoListTool(cwd, options?)` | `repo_list` tool: bounded deterministic repository listing. |
 | `createRepoSearchTool(cwd, options?)` | `repo_search` tool: bounded literal text search (`outputMode`: content / files_with_matches / count). |
-| `createGlobTool(cwd, options?)` | `glob` tool: bounded filename-pattern match (`*` / `?` / `**`; no brace expansion). |
-| `createDeleteTool(cwd, options?)` | `delete` tool: high-risk delete of a file or empty directory (no recursive delete, no trash). |
+| `createGlobTool(cwd, options?)` | `glob` tool: bounded filename-pattern match (`*` / `?` / `**`; opt-in bounded `{a,b}` brace expansion via `braceExpansion`). |
+| `createDeleteTool(cwd, options?)` | `delete` tool: high-risk delete of a file, empty directory, or (opt-in `recursive: true`) a directory tree (no trash). |
 | `createMoveTool(cwd, options?)` | `move` tool: high-risk rename/move within the workspace (`overwrite` default false). |
 | `createReadPathSet()` | Session-scoped path set for optional `requireReadBeforeWrite` soft guard. |
 | `createCodingTools(cwd, options?)` | Default nine tools (`shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`, `glob`, `delete`, `move`). |
@@ -101,8 +101,8 @@ These are **out of scope** for the 0.0.21 package baseline (see roadmap Phase 9 
 - **LSP language-server tools** — not in default aggregators; optional `createLanguageIntelligence` is Phase 9 (see [Language intelligence](language-intelligence.md)).
 - **Managed process sessions** — not in default aggregators; optional `createProcessSessions` is Phase 9 (see [Process sessions](process-sessions.md)).
 - **GitHub forge adapter** — not in default aggregators; optional `createGitHubForge` is Phase 9 (see [Forge integration](forge-integration.md)); no octokit dependency, no multi-forge abstraction.
-- **No recursive directory delete** — `delete` refuses non-empty directories.
-- **No brace-expansion globs** — `glob` supports only `*`, `?`, and `**`.
+- **No recursive directory delete by default** — `delete` refuses non-empty directories unless the per-call `recursive: true` flag is set (plan 018 closeout `delete-glob`; bounded fan-out, symlink children unlinked but never followed).
+- **No brace-expansion globs by default** — `glob` supports only `*`, `?`, and `**`; `{a,b}` expansion is opt-in (`braceExpansion`) and bounded (max 128 alternatives / 4096 expanded bytes, fail-closed).
 
 ## Inputs / request
 
@@ -153,6 +153,7 @@ Read a text or image file.
 | `transformImage` | — | Host callback `( { buffer, mimeType } ) => Promise<Buffer>` run after read, before base64. |
 | `maxLines` / `maxBytes` | 2000 / 50 KiB | Text page display limits (hard: 100,000 / 1 MiB). |
 | `maxScanBytes` | 64 MiB | Raw bytes scanned to reach one page (hard: 1 GiB). |
+| `documentReader` | — | Optional host-selected `DocumentReader` (see [Document reader](document-reader.md)): after the image sniff and before the text page, supported PDF/DOCX files are extracted as literal text with `metadata.document = { format, pages, truncatedBy }`. Additive; absent reader = unchanged 0.1.5 behavior. |
 | `operations` | local fs | Pluggable bounded `ReadOperations` backend. |
 | `executionPolicy` | — | Structured pre-execution policy (see [Coding security](coding-security.md)). |
 
@@ -171,6 +172,7 @@ const read = createReadTool(cwd, {
 | --- | --- | --- |
 | `truncation` | text reads | `TruncationResult`. |
 | `image` | image reads | `{ mimeType, resized, bytes }`. `resized` is `true` when `transformImage` ran. |
+| `document` | document reads | `{ format, pages, truncatedBy }` when a `documentReader` extracted the file. |
 
 > `autoResizeImages` was removed in 0.1.5; untyped callers now fail closed with a `TypeError` naming `transformImage` before any filesystem access.
 
@@ -299,7 +301,7 @@ Metadata includes `matches`, `truncated`, scan/skip counts; non-content modes al
 
 ### `glob`
 
-Find workspace files by filename pattern without shell `find`. Hand-rolled matcher: `*` (one path segment), `?` (one char), `**` (directories). Brace expansion (`{a,b}`) is **rejected**. Patterns match workspace-relative full paths (e.g. `src/util/a.ts`). Returns **files only** (directories traversed but not listed). Same exclude/hidden/depth/page/time caps as `repo_list`.
+Find workspace files by filename pattern without shell `find`. Hand-rolled matcher: `*` (one path segment), `?` (one char), `**` (directories). Brace expansion (`{a,b}`) is **rejected by default**; set `braceExpansion: true` (per call or as the host option) for bounded expansion — max 128 alternatives and 4096 total expanded bytes, unbalanced/nested/empty braces and overflow fail closed. Expansion is textual only (never touches the filesystem) and result patterns still match workspace-relative full paths under the same exclude/hidden/depth/page/time caps. Patterns match workspace-relative full paths (e.g. `src/util/a.ts`). Returns **files only** (directories traversed but not listed). Same exclude/hidden/depth/page/time caps as `repo_list`.
 
 **Inputs:**
 
@@ -308,6 +310,7 @@ Find workspace files by filename pattern without shell `find`. Hand-rolled match
 | `pattern` | `string` | Glob pattern (required). |
 | `path` | `string` | Workspace-relative start directory (default root). |
 | `includeHidden` | `boolean` | Default false. |
+| `braceExpansion` | `boolean` | Opt-in bounded `{a,b}` expansion (default: host option `createGlobTool(cwd, { braceExpansion })`, else false). |
 | `maxDepth` | `number` | Depth cap (default 32, hard 128). |
 | `maxResults` | `number` | Page size (default 1,000, hard 10,000). |
 | `offset` | `number` | Matches to skip (default 0). |
@@ -316,13 +319,15 @@ Find workspace files by filename pattern without shell `find`. Hand-rolled match
 
 ### `delete`
 
-High-risk: permanently delete a **single file or empty directory**. Non-empty directories fail closed (no recursive delete). Symlinks are unlinked as links (targets not followed for containment). **No trash daemon** — host undo is not automatic; gate with approval policy.
+High-risk: permanently delete a **single file or empty directory**, or — with the per-call opt-in `recursive: true` — a whole directory tree. Non-empty directories fail closed without the flag. The recursive walk never follows symlinks: symlink children are unlinked as links, so a link pointing outside the workspace root can never drag the deletion out (the outside target is untouched). Every entry counts against a per-call fan-out cap (`maxEntries`, default 10,000, hard 100,000); exceeding it stops with an error naming the cap (partial deletion is reported, never silent). **No trash daemon** — host undo is not automatic; gate with approval policy.
 
 **Inputs:**
 
 | Field | Type | Purpose |
 | --- | --- | --- |
-| `path` | `string` | File or empty directory to delete. Required. |
+| `path` | `string` | File, empty directory, or (with `recursive: true`) directory tree to delete. Required. |
+| `recursive` | `boolean` | Per-call opt-in recursive directory delete (default false). |
+| `maxEntries` | `number` | Per-call fan-out cap for recursive deletes (default 10,000, hard 100,000). |
 
 **Outputs:** confirmation with absolute path, or error (missing, non-empty dir, escape, abort).
 

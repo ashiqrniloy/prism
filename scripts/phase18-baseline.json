@@ -1,0 +1,175 @@
+{
+  "$comment": "0.1.6 Task 0 baseline evidence (plan 018, 2026-08-11): captured at HEAD fc914aa (signed v0.1.5 tag) with all five closeouts deferred. Seam hashes are the pre-change truth for the phase-18 state machine: while a closeout's task is pending its allowed files must stay byte-identical; a deferred closeout's files are immutable until demand evidence lands in phase18-freeze-manifest.json. The closeout inventory mirrors the manifest (same ids/tasks/status). exitGate records the Task 7 0.1.6 evidence once Tasks 1-7 land.",
+  "captured": "2026-08-11",
+  "release": "0.1.5",
+  "node": "v24.18.0",
+  "platform": "linux-x64",
+  "gitHead": "fc914aaf78a1bfd8d42ec2509d41f6ff49c2c77b",
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<18 files> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1428,
+    "corePass": 1428,
+    "coreFail": 0,
+    "scriptGates": 173,
+    "scriptGatesPass": 173,
+    "scriptGatesFail": 0,
+    "scriptGateSuites": 18,
+    "workspaces": "all green (exit 0)"
+  },
+  "audit": {
+    "command": "npm audit --audit-level=moderate",
+    "level": "moderate",
+    "vulnerabilities": 0
+  },
+  "releaseGate": {
+    "command": "node scripts/release.mjs gate --version 0.1.5",
+    "version": "0.1.5",
+    "packages": 49,
+    "breakingDeltas": 0,
+    "updated": false,
+    "result": "green; compat baseline exists at 0.1.5, 0 breaking declaration deltas"
+  },
+  "manifestCount": {
+    "publishable": 49,
+    "workspacePackages": 48,
+    "rootPackage": "@arnilo/prism",
+    "categories": {
+      "provider": 14,
+      "prism": 9,
+      "capability": 25
+    },
+    "canonicalStatement": "49 publishable manifests = root @arnilo/prism + 48 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 25 capability packages); a shipped doc-reader closeout grows this to 50 = root + 49 workspace",
+    "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
+  },
+  "closeouts": [
+    {
+      "id": "acp-session-store",
+      "task": "task2",
+      "status": "demanded",
+      "seamFiles": [
+        "packages/ag-ui/src/acp/agent.ts",
+        "packages/ag-ui/src/acp/capabilities.ts",
+        "packages/ag-ui/src/acp/errors.ts",
+        "packages/ag-ui/src/acp/fs-client.ts",
+        "packages/ag-ui/src/acp/index.ts",
+        "packages/ag-ui/src/acp/mapper.ts",
+        "packages/ag-ui/src/acp/mcp-config.ts",
+        "packages/ag-ui/src/acp/modes.ts",
+        "packages/ag-ui/src/acp/prompt.ts",
+        "packages/ag-ui/src/acp/terminal-client.ts"
+      ]
+    },
+    {
+      "id": "native-sandbox",
+      "task": "task3",
+      "status": "demanded",
+      "seamFiles": [
+        "packages/coding-security/src/index.ts",
+        "packages/coding-security/src/native-sandbox.ts"
+      ]
+    },
+    {
+      "id": "doc-reader",
+      "task": "task4",
+      "status": "demanded",
+      "seamFiles": [
+        "packages/coding-agent/src/read.ts",
+        "packages/coding-agent/src/bounded-file.ts",
+        "packages/document-reader/package.json",
+        "packages/document-reader/src/index.ts",
+        "packages/document-reader/src/__tests__/index.test.ts"
+      ]
+    },
+    {
+      "id": "delete-glob",
+      "task": "task5",
+      "status": "demanded",
+      "seamFiles": [
+        "packages/coding-agent/src/delete.ts",
+        "packages/coding-agent/src/glob.ts",
+        "packages/coding-agent/src/glob-match.ts"
+      ],
+      "demandEvidence": {
+        "user": "arn (operator)",
+        "date": "2026-08-11",
+        "integration": "operator instruction to complete plan 018 Task 5 with the delete-glob gate demanded; coding agents need a single-call recursive delete and brace-expanding glob as explicit opt-in flags (plan 004 further actions: only if pattern/usage demand justifies it; roadmap 0.1.6 demand-gated line)."
+      }
+    },
+    {
+      "id": "checkpoint-bodies",
+      "task": "task6",
+      "status": "demanded",
+      "seamFiles": [
+        "packages/coding-agent/src/coding-checkpoint.ts",
+        "packages/coding-agent/src/read-path-set.ts",
+        "src/skill-load.ts"
+      ],
+      "demandEvidence": {
+        "user": "arn (operator)",
+        "date": "2026-08-11",
+        "integration": "operator instruction to complete plan 018 Task 6 with the checkpoint-bodies gate demanded; 0.1.3 names-only persistence is insufficient for the resume flow: the restored body is whatever the live registry serves at resume (changed skill silently swaps instructions, removed skill renders nothing, offline registry cannot re-render), so bodies mode persists the exact loaded instructions and re-renders them registry-independently."
+      }
+    }
+  ],
+  "fileHashes": {
+    "packages/ag-ui/src/acp/agent.ts": "97fe373a426261dd5ac1c7d39f8c5e1ed47ebf274ba3e8e3a7abce6a2e71ead9",
+    "packages/ag-ui/src/acp/capabilities.ts": "7fa2f601d50b26902fa84b79dbeb28ac2ad3c37a94a64c55f18bde69fd6e039a",
+    "packages/ag-ui/src/acp/errors.ts": "9bfd62e41401ddae17ab1413964827524e0ed6967aabe1b5439b4ff304d3d375",
+    "packages/ag-ui/src/acp/fs-client.ts": "5d2099c81e40039c159c0cd711d9836e2e23c8c975981bc33537c18ab17574ca",
+    "packages/ag-ui/src/acp/index.ts": "afaa352c086c2592af7027ccfc0fde18158f3ded68676c5251f7b243cb382f27",
+    "packages/ag-ui/src/acp/mapper.ts": "c4fb3edc88980f8a595f6ccc3f1bb222783dc0c37c7a027da1ce351a5a491f31",
+    "packages/ag-ui/src/acp/mcp-config.ts": "79df531d9294885191211c0c52e17cbfa4c9518188b400c410e779b3a3057e2b",
+    "packages/ag-ui/src/acp/modes.ts": "0a62ba7b1b1d98bc5a785c09e1d6bec9b1b6503da68c92efb50178dee14d9c29",
+    "packages/ag-ui/src/acp/prompt.ts": "54d57fa6eb590a2d7b689142500be9232b915ad750887be7b5038b32f46f7c71",
+    "packages/ag-ui/src/acp/terminal-client.ts": "ee8c841748729c667f4c3b31c49ff00e2e5a9faab040f55b7d9ee7d1e57c7ab2",
+    "packages/coding-security/src/index.ts": "421bbed8991790ddc19ffacb6a44fcccb3b7ce3a8dfb19a33fe343173d79c17a",
+    "packages/coding-security/src/native-sandbox.ts": "absent",
+    "packages/coding-agent/src/read.ts": "d8e6916c2a1f73393e1e175549cad36dd79590169be1688af6f95cd4df43d988",
+    "packages/coding-agent/src/bounded-file.ts": "3b912e17b1b8bfb82e08d2edb3e41be5fd5b8cc17caf0fdd702fc2573e45f130",
+    "packages/document-reader/package.json": "absent",
+    "packages/document-reader/src/index.ts": "absent",
+    "packages/document-reader/src/__tests__/index.test.ts": "absent",
+    "packages/coding-agent/src/delete.ts": "ee50fbd262f4ae307be5d66b62aa345a592cd195a7e62175b13c55df5dd70af0",
+    "packages/coding-agent/src/glob.ts": "2d69132c4925f1178ec8649678b5fe02ca8d2b28d656e7b1849889e098825ce0",
+    "packages/coding-agent/src/glob-match.ts": "f375195e0a4529e8a1b7707522bf7589d14fdf4d759cd8b006b84e91a8175fc2",
+    "packages/coding-agent/src/coding-checkpoint.ts": "ff7c758562652a797c0dab557e388da89c5b0bd7c1124040488381eff3225e62",
+    "packages/coding-agent/src/read-path-set.ts": "f745ddb09b5ec1e2990aa1f7c8e133ceb76a13168bab2ea226924e0941adad45",
+    "src/skill-load.ts": "5eca2336b470242cd311f4a87170bee0981069efa9c7e52b3f0ebbf7f38f0c6f"
+  },
+  "exitGate": {
+    "$comment": "0.1.6 exit gate evidence (plan 018 Task 7): recorded after Tasks 0-6 landed; green = full npm test + sdk:ready + audit + pack determinism + plain release:gate at 0.1.6 (0 breaking declaration deltas, then version-literal baseline refresh with --update-baseline, no --allow-break).",
+    "recordedAt": "2026-08-11T21:20:00+00:00",
+    "green": true,
+    "npmTest": {
+      "exitCode": 0,
+      "coreTests": 1433,
+      "corePass": 1433,
+      "coreFail": 0,
+      "scriptGates": 190,
+      "scriptGatesPass": 190,
+      "scriptGatesFail": 0
+    },
+    "sdkReady": {
+      "exitCode": 0
+    },
+    "audit": {
+      "vulnerabilities": 0,
+      "level": "moderate"
+    },
+    "packDryRun": {
+      "packages": 50,
+      "deterministic": true,
+      "sha256": "b3be92e1c1c2ff47f3819540247be871923c467b9012c29f9b3204b4ae3331dd"
+    },
+    "releaseGate": {
+      "version": "0.1.6",
+      "packages": 50,
+      "errors": 0
+    },
+    "benchmarkEvidence": {
+      "note": "budget/benchmark gates green in npm test (190/190 script gates); docReader extraction envelope recorded in scripts/budgets.json (max-cap 1000-page 288 KB PDF ~162 ms / ~17 MB heap, 2000 ms ceiling, plan 018 Task 4); checkpoint-bodies overhead measured at ~0.07 ms vs ~0.01 ms names-only per save+load cycle (plan 018 Task 6, in-memory store)."
+    }
+  },
+  "exitGateVersion": "0.1.6"
+}

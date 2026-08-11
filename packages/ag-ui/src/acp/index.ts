@@ -16,6 +16,7 @@ export {
 } from "./capabilities.js";
 export { type AcpErrorCode, AcpError } from "./errors.js";
 export { type AcpClientFilesystem, type AcpClientFilesystemOptions, createAcpClientFilesystem } from "./fs-client.js";
+export { type AcpSessionStore, type PersistedAcpSession } from "./session-store.js";
 export {
   type AcpConfigOption,
   type AcpConfigOptionsSeam,

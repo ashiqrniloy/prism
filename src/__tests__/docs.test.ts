@@ -243,11 +243,11 @@ describe("docs", () => {
   it("canonical manifest-count narrative: one statement, no stale counts", () => {
     const canonical = readFileSync("docs/release-and-install.md", "utf8");
     for (const token of [
-      "49 publishable manifests",
-      "48 workspace packages",
+      "50 publishable manifests",
+      "49 workspace packages",
       "14 provider adapters",
       "9 `prism-*` family/profile packages",
-      "25 capability packages",
+      "26 capability packages",
       "ls packages/*/package.json | wc -l",
     ]) {
       assert.ok(canonical.includes(token), `release-and-install.md missing canonical token: ${token}`);
@@ -297,7 +297,7 @@ describe("docs", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     assert.ok(release.includes("### 0.1.4 publish handoff (plan 016 Task 6)"), "release page missing 0.1.4 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.4 handoff missing rollback notes");
-    assert.ok(index.includes("current **0.1.5**"), "index.md current-line entry not at 0.1.5");
+    assert.ok(index.includes("current **0.1.6**"), "index.md current-line entry not at 0.1.6");
     assert.ok(changelog.includes("## [0.1.4] - 2026-08-10"), "root changelog missing 0.1.4 entry");
     assert.ok(migration.includes("## 0.1.3 → 0.1.4"), "migration.md missing 0.1.3 → 0.1.4 section");
     assert.ok(migration.includes("no migration step"), "migration.md 0.1.4 section must state no migration step");
@@ -309,7 +309,7 @@ describe("docs", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
     assert.ok(release.includes("### 0.1.5 publish handoff (plan 017 Task 4)"), "release page missing 0.1.5 handoff");
-    assert.ok(index.includes("current **0.1.5**"), "index.md current-line entry not at 0.1.5");
+    assert.ok(index.includes("current **0.1.6**"), "index.md current-line entry not at 0.1.6");
     assert.ok(changelog.includes("## [0.1.5] - 2026-08-11"), "root changelog missing 0.1.5 entry");
     assert.ok(migration.includes("## 0.1.4 → 0.1.5"), "migration.md missing 0.1.4 → 0.1.5 section");
     // every removed symbol and its replacement appears in the breaking-cut section
@@ -422,7 +422,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.1.5", "root manifest must be at 0.1.5");
+    assert.equal(pkg.version, "0.1.6", "root manifest must be at 0.1.6");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1279,7 +1279,7 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 49, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 50, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -3355,7 +3355,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 49, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 50, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

@@ -475,15 +475,26 @@ export {
   resolveSkillsDisclosure,
   SkillDisclosureError,
 } from "./skill-disclosure.js";
-export type { CreateLoadSkillToolOptions, ResolveSkillLoadOptions } from "./skill-load.js";
+export type {
+  CreateLoadSkillToolOptions,
+  LoadedSkillBodiesEntry,
+  ResolveSkillLoadOptions,
+} from "./skill-load.js";
 export {
+  applyRestoredSkillBodies,
   createLoadSkillTool,
   DEFAULT_LOAD_SKILL_TOOL_NAME,
+  HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES,
   isSkillLoadError,
   MAX_LOAD_SKILL_RESULT_BYTES,
+  MAX_PERSISTED_SKILL_BODIES,
+  MAX_PERSISTED_SKILL_BODY_BYTES,
+  MAX_PERSISTED_SKILL_BODY_NAME_CHARS,
   resolveSkillLoad,
   SKILL_LOAD_ERROR_CODE,
   SkillLoadError,
+  snapshotLoadedSkillBodies,
+  validateLoadedSkillBodies,
 } from "./skill-load.js";
 export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js";
 export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
@@ -554,5 +565,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.1.5";
+export const version = "0.1.6";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

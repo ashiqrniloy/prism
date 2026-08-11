@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -117,6 +117,88 @@ test("delete policy deny", async () => {
     const result = await tool.execute({ path: "x.txt" }, ctx());
     assert.equal(result.error?.message, "denied");
     assert.equal(await readFile(join(cwd, "x.txt"), "utf8"), "x\n");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("delete recursive removes a nested tree (opt-in flag)", async () => {
+  const cwd = await tmp();
+  try {
+    await mkdir(join(cwd, "dist", "sub", "deep"), { recursive: true });
+    await writeFile(join(cwd, "dist", "a.js"), "a\n");
+    await writeFile(join(cwd, "dist", "sub", "b.js"), "b\n");
+    await writeFile(join(cwd, "dist", "sub", "deep", "c.js"), "c\n");
+    await writeFile(join(cwd, "keep.txt"), "keep\n");
+
+    const tool = createDeleteTool(cwd);
+    // Flagless still refuses (0.1.5 parity).
+    const refused = await tool.execute({ path: "dist" }, ctx());
+    assert.match(refused.error?.message ?? "", /not empty/);
+
+    const result = await tool.execute({ path: "dist", recursive: true }, ctx());
+    assert.equal(result.error, undefined);
+    assert.equal(result.metadata?.recursive, true);
+    assert.equal(result.metadata?.entriesDeleted, 5);
+    await assert.rejects(access(join(cwd, "dist")), /ENOENT/);
+    assert.equal(await readFile(join(cwd, "keep.txt"), "utf8"), "keep\n");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("delete recursive unlinks symlink children without following them (escape refused)", async () => {
+  const cwd = await tmp();
+  const outside = join(tmpdir(), `delmv-sym-${Date.now()}`);
+  try {
+    await mkdir(join(cwd, "tree"), { recursive: true });
+    await writeFile(join(cwd, "tree", "inside.txt"), "in\n");
+    await mkdir(outside, { recursive: true });
+    await writeFile(join(outside, "secret.txt"), "secret\n");
+    await symlink(join(outside, "secret.txt"), join(cwd, "tree", "link.txt"));
+    await symlink(outside, join(cwd, "tree", "linkdir"));
+
+    const result = await createDeleteTool(cwd).execute({ path: "tree", recursive: true }, ctx());
+    assert.equal(result.error, undefined);
+    await assert.rejects(access(join(cwd, "tree")), /ENOENT/);
+    // The outside target is untouched — traversal never followed the links.
+    assert.equal(await readFile(join(outside, "secret.txt"), "utf8"), "secret\n");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
+test("delete recursive enforces the per-call fan-out cap", async () => {
+  const cwd = await tmp();
+  try {
+    await mkdir(join(cwd, "big"), { recursive: true });
+    for (let i = 0; i < 10; i++) {
+      await writeFile(join(cwd, "big", `f${i}.txt`), "x\n");
+    }
+    const tool = createDeleteTool(cwd);
+    const result = await tool.execute({ path: "big", recursive: true, maxEntries: 3 }, ctx());
+    assert.match(result.error?.message ?? "", /fan-out cap of 3 entries/);
+    // First entries may be gone, but the cap error is loud and the dir survives.
+    const remaining = await readdir(join(cwd, "big"));
+    assert.ok(remaining.length > 0, "entries beyond the cap must survive");
+    // Invalid maxEntries values refuse.
+    const bad = await tool.execute({ path: "big", recursive: true, maxEntries: 0 }, ctx());
+    assert.match(bad.error?.message ?? "", /maxEntries must be an integer/);
+    const huge = await tool.execute({ path: "big", recursive: true, maxEntries: 100_001 }, ctx());
+    assert.match(huge.error?.message ?? "", /maxEntries must be an integer/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("delete recursive on a file ignores the flag (0.1.5 file path)", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "f.txt"), "x\n");
+    const result = await createDeleteTool(cwd).execute({ path: "f.txt", recursive: true }, ctx());
+    assert.equal(result.error, undefined);
+    await assert.rejects(access(join(cwd, "f.txt")), /ENOENT/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

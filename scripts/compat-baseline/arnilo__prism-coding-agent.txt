@@ -128,6 +128,8 @@ DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[
 DEFAULT_SHELL_TIMEOUT_SECONDS	export declare const DEFAULT_SHELL_TIMEOUT_SECONDS = 600
 DeleteOperations	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
 DeleteToolOptions	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
+DocumentReader	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
+DocumentReaderResult	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
 Edit	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
 EditOperations	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
 EditToolDetails	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
@@ -264,11 +266,11 @@ ProcessSessionState	export type { CodingProcessEvent, CreateProcessSessionsOptio
 ProcessSessions	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
 ProcessStartRequest	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessions, ProcessSessionState, ProcessStartRequest, ResolvedProcessSessionLimits, } from "./process/index.js"
 READ_PATH_SET_NAMESPACE	export declare const READ_PATH_SET_NAMESPACE: "prism.coding-agent.read-path-set"
-ReadOperations	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadOperations	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
 ReadPathSet	export type { ReadPathSet } from "./read-path-set.js"
-ReadTextOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
-ReadTextResult	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
-ReadToolOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadTextOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
+ReadTextResult	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
+ReadToolOptions	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
 RepoEntryKind	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, RepositoryWalk, RepositoryWalkEvent, RepositoryWalkLimits, } from "./repository.js"
 RepoListEntry	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, RepositoryWalk, RepositoryWalkEvent, RepositoryWalkLimits, } from "./repository.js"
 RepoSearchOutputMode	export type { RepoEntryKind, RepoListEntry, RepositoryGlobRequest, RepositoryGlobResult, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryOperations, RepoSearchOutputMode, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits, RepositoryWalk, RepositoryWalkEvent, RepositoryWalkLimits, } from "./repository.js"
@@ -300,8 +302,8 @@ SearchToolOptions	export type { SearchToolOptions } from "./search.js"
 ShellConfig	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
-TransformImage	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
-TransformImageInput	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+TransformImage	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
+TransformImageInput	export type { ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, DocumentReader, DocumentReaderResult, } from "./read.js"
 WorktreeChangedEvent	export type { CodingLifecycleEvent, CodingLifecycleLimits, CodingLifecycleEmitter, CreateCodingLifecycleEmitterOptions, FileChangeOp, FileChangedEvent, WorktreeChangedEvent, PermissionDeniedEvent, ConfigurationChangedEvent, ResolvedCodingLifecycleLimits, } from "./lifecycle.js"
 WriteOperations	export type { WriteOperations, WriteToolOptions } from "./write.js"
 WriteToolOptions	export type { WriteOperations, WriteToolOptions } from "./write.js"
@@ -364,6 +366,7 @@ detectSupportedImageMimeType	export declare function detectSupportedImageMimeTyp
 detectSupportedImageMimeTypeFromFile	export declare function detectSupportedImageMimeTypeFromFile(filePath: string): Promise<string | null>
 encodeLspFrame	export declare function encodeLspFrame(message: unknown): Buffer
 enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string, /** Called once on policy denial so one site emits lifecycle permission_denied for every tool. */ onDenied?: (input:
+expandGlobBraces	export declare function expandGlobBraces(pattern: string, options?: BraceExpansionOptions): string[]
 expandPath	export declare function expandPath(filePath: string): string
 fingerprintJson	export declare function fingerprintJson(value: unknown): string
 formatSize	export declare function formatSize(bytes: number): string
@@ -418,7 +421,7 @@ validateAskUserDecisionResume	export declare function validateAskUserDecisionRes
 validateCodingCheckpointMetadata	export declare function validateCodingCheckpointMetadata(value: unknown, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata
 validateCodingLimit	export declare function validateCodingLimit(name: string, value: number, hardCap: number): number
 validateCodingLimitAllowZero	export declare function validateCodingLimitAllowZero(name: string, value: number, hardCap: number): number
-validateGlobPattern	export declare function validateGlobPattern(pattern: string, maxPatternBytes: number): void
+validateGlobPattern	export declare function validateGlobPattern(pattern: string, maxPatternBytes: number, options?:
 verifyCodingArtifactBytes	export declare function verifyCodingArtifactBytes(ref: CodingArtifactRef, bytes: Buffer, limits?: CodingCheckpointLimitOptions): void
 waitForChildProcess	export declare function waitForChildProcess(child: ChildProcess): Promise<number | null>
 withFileMutationQueue	export declare function withFileMutationQueue<T>(filePath: string, fn: () => Promise<T>): Promise<T>

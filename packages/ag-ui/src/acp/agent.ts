@@ -15,7 +15,16 @@ import {
   type SessionModeState,
   type SessionUpdate,
 } from "@agentclientprotocol/sdk";
-import type { AgentEvent, AgentRunLifecycle, AgentSession, JsonObject, PendingDecision, RunDecision, SecretRedactor } from "@arnilo/prism";
+import type {
+  AgentEvent,
+  AgentRunLifecycle,
+  AgentSession,
+  JsonObject,
+  OwnershipScope,
+  PendingDecision,
+  RunDecision,
+  SecretRedactor,
+} from "@arnilo/prism";
 import type { CodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
 import packageJson from "../../package.json" with { type: "json" };
 import { type AgUiLimitOptions, resolveAgUiLimits } from "../limits.js";
@@ -36,6 +45,7 @@ import { type AcpClientFilesystem } from "./fs-client.js";
 import { createAcpEventMapper, createAcpLifecycleMapper } from "./mapper.js";
 import { validateMcpServers } from "./mcp-config.js";
 import {
+  type AcpConfigOption,
   type AcpConfigOptionsSeam,
   type AcpModesSeam,
   initialConfigValues,
@@ -47,6 +57,7 @@ import {
   validateModeSeam,
 } from "./modes.js";
 import { type AcpPromptResult, projectAcpPrompt } from "./prompt.js";
+import { type AcpSessionStore, type PersistedAcpSession, ownershipKey, validatePersistedSession } from "./session-store.js";
 import { type AcpClientTerminals } from "./terminal-client.js";
 
 export interface AcpAuthorization extends AgUiAuthorization {}
@@ -105,6 +116,8 @@ export interface CreatePrismAcpAgentOptions<Authorization extends AcpAuthorizati
   readonly limits?: AgUiLimitOptions;
   /** Host-owned session store; presence advertises the matching session capabilities. */
   readonly sessions?: AcpSessionStoreSeams;
+  /** Host-owned durable registry store (plan 018 Task 2); absent seam => in-memory 0.1.5 behavior. */
+  readonly sessionStore?: AcpSessionStore;
   /** MCP seams; presence of `select` plus `transports` advertises mcpCapabilities per transport. */
   readonly mcp?: AcpMcpSeams;
   /** Capability policy seams (prompt media/embedded gates). */
@@ -127,6 +140,12 @@ interface ActiveSession extends AcpSessionBinding {
   client?: AgentContext;
   /** Shared per-run notification budget; lifecycle updates count against it. */
   budget?: AcpStreamBudget;
+  /** Host-bound ownership at registration (phase 18 Task 2 persistence). */
+  ownership?: OwnershipScope;
+  /** Working directory at registration (phase 18 Task 2 persistence). */
+  cwd?: string;
+  /** Policy-checked additional roots at registration (phase 18 Task 2 persistence). */
+  additionalDirectories?: readonly string[];
 }
 
 type ElicitationPendingDecision = PendingDecision & { readonly kind: "elicitation" };
@@ -148,6 +167,85 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
   // ponytail: single-connection assumption — initialize may be called once per connection;
   // key by client identity if multi-client hosting ever needs per-connection gating.
   let clientCapabilities: ResolvedAcpClientCapabilities = resolveAcpClientCapabilities(undefined);
+
+  // Phase 18 Task 2: lazy restore of persisted registry entries. loadAll runs at most once;
+  // the merge is per-authorization so multi-tenant hosts restore each ownership's entries
+  // on that ownership's first touch (cross-tenant entries are never merged).
+  let loadPromise: Promise<PersistedAcpSession[]> | undefined;
+  // session ids restored by the durability seam (plan 018 Task 2); protocol load/resume of these is idempotent,
+  // while a duplicate load of an in-process-registered session keeps its frozen rejection.
+  const restoredIds = new Set<string>();
+  async function restore(authorization: Authorization, signal: AbortSignal): Promise<void> {
+    const store = options.sessionStore;
+    if (!store) return;
+    try {
+      loadPromise ??= store.loadAll(signal).then((entries) => [...entries]);
+      const entries = await loadPromise;
+      for (const entry of entries) {
+        if (sessions.has(entry.sessionId)) continue;
+        if (ownershipKey(entry.ownership) !== ownershipKey(authorization.ownership ?? {})) continue; // T1: never merge cross-tenant
+        try {
+          await restoreEntry(entry, authorization, signal);
+        } catch {
+          entries.splice(entries.indexOf(entry), 1); // T3/T5: corrupt, oversized, or cap-full entries fail closed (dropped, never merged)
+        }
+      }
+    } catch (error) {
+      loadPromise = undefined; // fail the request; a later request retries the store
+      throw error;
+    }
+  }
+  async function restoreEntry(entry: PersistedAcpSession, authorization: Authorization, signal: AbortSignal): Promise<void> {
+    validatePersistedSession(entry); // T3: shape/byte caps
+    if (options.modes && entry.modeId !== undefined && !options.modes.modes.some((m) => m.id === entry.modeId)) {
+      throw new AcpError("ERR_PRISM_ACP_INPUT", `unknown mode '${entry.modeId}'`); // T3/T8: unknown mode fails closed
+    }
+    if (!options.modes && entry.modeId !== undefined) throw new AcpError("ERR_PRISM_ACP_INPUT", "stored mode without modes seam");
+    const values = new Map<string, boolean | string>();
+    for (const [key, value] of Object.entries(entry.configValues)) {
+      const option = options.configOptions?.options.find((candidate) => candidate.id === key);
+      if (!option) throw new AcpError("ERR_PRISM_ACP_INPUT", `unknown config option '${key}'`); // T3/T8
+      values.set(key, validateConfigOptionValue(option, value)); // T3: invalid value fails closed
+    }
+    if (options.configOptions && values.size !== Object.keys(entry.configValues).length) {
+      throw new AcpError("ERR_PRISM_ACP_INPUT", "config values without matching options");
+    }
+    const binding = await options.sessionFactory({
+      authorization,
+      signal,
+      sessionId: entry.sessionId,
+      cwd: entry.cwd,
+      additionalDirectories: entry.additionalDirectories,
+      mcpServers: [], // MCP configs are never persisted; restore requires re-approval (fail closed)
+    });
+    const active: ActiveSession = { ...binding, configValues: values };
+    if (entry.modeId) active.modeId = entry.modeId;
+    active.ownership = entry.ownership;
+    active.cwd = entry.cwd;
+    active.additionalDirectories = entry.additionalDirectories;
+    registerSession(sessions, limits, active); // T5: registry cap enforced on restore too
+    restoredIds.add(entry.sessionId);
+  }
+  async function save(entry: PersistedAcpSession, signal: AbortSignal): Promise<void> {
+    const safe = options.redactor?.redact(entry) ?? entry; // T2: redaction at the store boundary
+    validatePersistedSession(safe);
+    await options.sessionStore!.save(safe); // store failure fails the request (host sees it)
+  }
+  const persist = (sessionId: string, active: ActiveSession, signal: AbortSignal): Promise<void> => {
+    if (!active.cwd) throw new AcpError("ERR_PRISM_ACP_INPUT", "session has no working directory");
+    return save(
+      {
+        sessionId,
+        ownership: active.ownership ?? {},
+        ...(active.modeId ? { modeId: active.modeId } : {}),
+        configValues: Object.fromEntries(active.configValues),
+        cwd: active.cwd,
+        additionalDirectories: active.additionalDirectories ?? [],
+        updatedAt: new Date().toISOString(),
+      },
+      signal,
+    );
+  };
 
   // Lifecycle -> session/update forwarding (freeze lifecycleEventMapping). Updates are
   // delivered only to sessions with an active prompt stream (no client handle otherwise)
@@ -226,7 +324,11 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       }
       const active: ActiveSession = { ...binding, configValues: initialConfigValues(options.configOptions) };
       active.modeId = initialModeId(options.modes);
+      active.ownership = authorization.ownership;
+      active.cwd = context.params.cwd;
+      active.additionalDirectories = inputs.additionalDirectories;
       registerSession(sessions, limits, active);
+      if (options.sessionStore && binding.session.id) await persist(binding.session.id, active, context.signal); // store failure fails the request; the live session survives in memory
       return {
         sessionId: binding.session.id,
         ...sessionState(active, options, clientCapabilities),
@@ -235,6 +337,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     .onRequest(methods.agent.session.prompt, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
+      await restore(authorization, context.signal);
       const current = session(sessions, context.params.sessionId);
       if (current.controller) throw new Error("ACP session already has an active prompt");
       const projected = await projectAcpPrompt(context.params.prompt, {
@@ -283,11 +386,16 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     })
     .onNotification(methods.agent.session.cancel, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
-      if (authorization) sessions.get(context.params.sessionId)?.controller?.abort(new Error("ACP session cancelled"));
+      if (authorization) {
+        await restore(authorization, context.signal);
+        sessions.get(context.params.sessionId)?.controller?.abort(new Error("ACP session cancelled"));
+      }
     })
     .onRequest(methods.agent.session.close, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
+      await restore(authorization, context.signal);
+      if (options.sessionStore) await options.sessionStore.evict(context.params.sessionId, context.signal); // evict first: a failed store write surfaces before the session is torn down
       const current = sessions.get(context.params.sessionId);
       current?.controller?.abort(new Error("ACP session closed"));
       sessions.delete(context.params.sessionId);
@@ -297,7 +405,10 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     app = app.onRequest(methods.agent.session.load, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
-      await resolveSessionInputs(context.params, options, limits, context.signal);
+      await restore(authorization, context.signal);
+      const inputs = await resolveSessionInputs(context.params, options, limits, context.signal);
+      const existing = sessions.get(context.params.sessionId);
+      if (existing && restoredIds.has(context.params.sessionId)) return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
       const binding = await options.sessions!.load!({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,
@@ -305,6 +416,9 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       });
       const active: ActiveSession = { ...binding, configValues: initialConfigValues(options.configOptions) };
       active.modeId = initialModeId(options.modes);
+      active.ownership = authorization.ownership;
+      active.cwd = context.params.cwd;
+      active.additionalDirectories = inputs.additionalDirectories;
       registerSession(sessions, limits, active);
       return sessionState(active, options, clientCapabilities);
     });
@@ -313,7 +427,10 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     app = app.onRequest(methods.agent.session.resume, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
-      await resolveSessionInputs(context.params, options, limits, context.signal);
+      await restore(authorization, context.signal);
+      const inputs = await resolveSessionInputs(context.params, options, limits, context.signal);
+      const existing = sessions.get(context.params.sessionId);
+      if (existing && restoredIds.has(context.params.sessionId)) return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
       const binding = await options.sessions!.resume!({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,
@@ -321,6 +438,9 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       });
       const active: ActiveSession = { ...binding, configValues: initialConfigValues(options.configOptions) };
       active.modeId = initialModeId(options.modes);
+      active.ownership = authorization.ownership;
+      active.cwd = context.params.cwd;
+      active.additionalDirectories = inputs.additionalDirectories;
       registerSession(sessions, limits, active);
       return sessionState(active, options, clientCapabilities);
     });
@@ -341,6 +461,8 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     app = app.onRequest(methods.agent.session.delete, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
+      await restore(authorization, context.signal);
+      if (options.sessionStore) await options.sessionStore.evict(context.params.sessionId, context.signal);
       await options.sessions!.delete!({ sessionId: context.params.sessionId, signal: context.signal });
       sessions.delete(context.params.sessionId);
       return {};
@@ -350,11 +472,13 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     app = app.onRequest(methods.agent.session.setMode, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
+      await restore(authorization, context.signal);
       const current = session(sessions, context.params.sessionId);
       const mode = options.modes!.modes.find((candidate) => candidate.id === context.params.modeId);
       if (!mode) throw new AcpError("ERR_PRISM_ACP_INPUT", `unknown mode '${context.params.modeId}'`);
       await mode.apply?.({ sessionId: context.params.sessionId, fromModeId: current.modeId, modeId: mode.id, signal: context.signal });
       current.modeId = mode.id;
+      if (options.sessionStore) await persist(context.params.sessionId, current, context.signal);
       await notify(
         context.client,
         context.params.sessionId,
@@ -369,6 +493,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     app = app.onRequest(methods.agent.session.setConfigOption, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
+      await restore(authorization, context.signal);
       const current = session(sessions, context.params.sessionId);
       if (!clientCapabilities.configOptionBoolean) {
         throw new AcpError("ERR_PRISM_ACP_CAPABILITY", "client did not advertise session.configOptions.boolean");
@@ -378,6 +503,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       const value = validateConfigOptionValue(option, context.params.value);
       await options.configOptions!.onChange?.({ sessionId: context.params.sessionId, configId: option.id, value, signal: context.signal });
       current.configValues.set(option.id, value);
+      if (options.sessionStore) await persist(context.params.sessionId, current, context.signal);
       const configOptions = toSessionConfigOptions(options.configOptions!, current.configValues);
       await notify(
         context.client,

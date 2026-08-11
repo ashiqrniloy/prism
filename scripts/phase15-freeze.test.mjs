@@ -291,7 +291,11 @@ test("opt-in checkpoint persistence (Task 4): seams present, opt-in default off,
   const rpsIndex = readFileSync(url("../packages/coding-agent/src/index.ts"), "utf8");
   // Core: opt-in flag on run/resume/lifecycle options, optional stored field, bounds.
   assert.ok(contracts.includes("persistSessionState?: boolean"), "persistSessionState option on core run options");
-  assert.ok(runState.includes("readonly sessionState?: { readonly loadedSkillNames?: readonly string[] }"), "optional stored sessionState");
+  // 0.1.3 token; the optional block gained the additive loadedSkillBodies field at 0.1.6 (plan 018 closeout
+  // checkpoint-bodies) — both fields stay optional and absent by default.
+  assert.ok(runState.includes("readonly sessionState?: {"), "optional stored sessionState");
+  assert.ok(runState.includes("readonly loadedSkillNames?: readonly string[]"), "stored skill-name catalog");
+  assert.ok(runState.includes("readonly loadedSkillBodies?: readonly LoadedSkillBodiesEntry[]"), "stored skill bodies (0.1.6)");
   assert.ok(runState.includes("MAX_PERSISTED_SKILL_NAMES = 64"), "skill-name count cap");
   assert.ok(runState.includes("MAX_PERSISTED_SKILL_NAME_CHARS = 256"), "skill-name char cap");
   assert.ok(agents.includes("restoreLoadedSkills"), "resume re-adds names into the session catalog");

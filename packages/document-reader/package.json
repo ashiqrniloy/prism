@@ -1,0 +1,62 @@
+{
+  "name": "@arnilo/prism-document-reader",
+  "version": "0.1.6",
+  "description": "Optional bounded PDF/Office literal-text extraction adapter for the Prism coding read tool (host-selected parser wiring, fails closed without its optional peer parsers).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "0.1.6",
+    "@arnilo/prism-coding-agent": "0.1.6",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "peerDependenciesMeta": {
+    "mammoth": {
+      "optional": true
+    },
+    "pdf-parse": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-coding-agent": "file:../coding-agent",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/document-reader"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

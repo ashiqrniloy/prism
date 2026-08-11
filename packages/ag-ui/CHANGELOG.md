@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.6] - 2026-08-11
+
+### Changed
+- **Durable ACP session store** (plan 018 closeout `acp-session-store`): additive host-owned `AcpSessionStore` seam on `CreatePrismAcpAgentOptions` (`save` on session/new + set_mode + set_config_option, lazy ownership-scoped `loadAll` once per agent instance, `evict` on close/delete). Persisted entry shape `{sessionId, ownership, modeId, configValues, cwd, additionalDirectories, updatedAt}` — never ephemeral stream state or pending decisions; restored entries re-validate modes/config options and cwd, drop corrupt/oversized entries fail-closed, keep the in-memory registry caps (32 default / 128 hard); cross-tenant restore refuses `ERR_PRISM_ACP_INPUT`; the whole entry rides the optional `SecretRedactor` at the save boundary. Absent seam = byte-identical 0.1.5 behavior.
+
 ## [0.1.1] - 2026-08-10
 
 ### Changed

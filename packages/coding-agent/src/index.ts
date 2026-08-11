@@ -173,6 +173,8 @@ export type {
   ReadToolOptions,
   TransformImage,
   TransformImageInput,
+  DocumentReader,
+  DocumentReaderResult,
 } from "./read.js";
 export {
   createReadTool,

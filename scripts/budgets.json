@@ -1,5 +1,5 @@
 {
-  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Root packed/unpacked baselines corrected at 0.1.1 (plan 013 Task 4) to the published @arnilo/prism@0.1.0 registry artifact sizes (718738 packed / 2505460 unpacked) — the previously recorded 713454/2388118 were measured from an incomplete dist build. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark.mjs --scenario phase6-postgres.",
+  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Root packed/unpacked baselines corrected at 0.1.1 (plan 013 Task 4) to the published @arnilo/prism@0.1.0 registry artifact sizes (718738 packed / 2505460 unpacked) \u2014 the previously recorded 713454/2388118 were measured from an incomplete dist build. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark.mjs --scenario phase6-postgres.",
   "root": {
     "packedBytes": {
       "baseline": 718738,
@@ -10,9 +10,10 @@
       "tolerance": 0.05
     },
     "fileCount": {
-      "baseline": 293,
+      "baseline": 307,
       "tolerance": 0.05
-    }
+    },
+    "$comment": " [2026-08-11] fileCount baseline refreshed 293 -> 307 (measured at HEAD fc914aa; 0.1.6 doc-reader closeout adds docs/document-reader.md)."
   },
   "aggregate": {
     "$comment": "Historical 0.0.22 reference sum across 46 publishable manifests; 0.0.23 has 47 and must be remeasured before changing this non-fast-gated baseline.",
@@ -31,7 +32,7 @@
     "importMsCeiling": 250
   },
   "benchmarkMedians": {
-    "$comment": "Network-free scenario medians measured by the pre-0.1.3 per-version runners (0.0.15, 100 iterations; reused unchanged by 0.0.16 — 0.0.16 added no performance-affecting code; both consolidated into scripts/benchmark.mjs in plan 015 Task 1). Throughput regression = measured < baseline*(1-tolerance); latency regression = measured > baseline*(1+tolerance).",
+    "$comment": "Network-free scenario medians measured by the pre-0.1.3 per-version runners (0.0.15, 100 iterations; reused unchanged by 0.0.16 \u2014 0.0.16 added no performance-affecting code; both consolidated into scripts/benchmark.mjs in plan 015 Task 1). Throughput regression = measured < baseline*(1-tolerance); latency regression = measured > baseline*(1+tolerance).",
     "tolerance": 0.25,
     "scenarios": {
       "openai-hosted-continuation": {
@@ -185,5 +186,11 @@
       "artifactPut1MiBMs": 2000,
       "artifactPresignMs": 100
     }
+  },
+  "docReader": {
+    "$comment": "plan 018 Task 4 (doc-reader) extraction envelope, measured 2026-08-11 on the dev host: 1000-page max-cap PDF fixture (288031 bytes) extracts in ~162ms with ~17MB heap delta via pdf-parse. The ceiling is a non-flaky sanity bound; max-page documents must either complete within it or refuse with the documented size/page error.",
+    "maxPagesBaseline": 1000,
+    "maxBytesBaseline": 33554432,
+    "extractMsCeiling": 2000
   }
 }

@@ -2,11 +2,11 @@
 
 ## What it does
 
-Prism is published as **49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages** — 14 provider adapters, 9 `prism-*` family/profile packages, and 25 capability packages. (Regenerate the counts: `ls packages/*/package.json | wc -l` = 48 workspace; `ls -d packages/provider-*/ | wc -l` = 14; `ls -d packages/prism-*/ | wc -l` = 9; capability = 48 − 14 − 9 = 25; publishable = root + 48 = 49.) This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget. The measurable 1.0 readiness gates (command-per-gate) live in [`0.1.0-readiness.md`](./0.1.0-readiness.md).
+Prism is published as **50 publishable manifests**: the root `@arnilo/prism` core package plus **49 workspace packages** — 14 provider adapters, 9 `prism-*` family/profile packages, and 26 capability packages. (Regenerate the counts: `ls packages/*/package.json | wc -l` = 49 workspace; `ls -d packages/provider-*/ | wc -l` = 14; `ls -d packages/prism-*/ | wc -l` = 9; capability = 49 − 14 − 9 = 26; publishable = root + 49 = 50.) The 50th manifest is the 0.1.6 plan 018 optional `@arnilo/prism-document-reader` package (bounded PDF/Office literal-text extraction for the coding read tool; ships only because its `doc-reader` closeout is demanded — a deferred closeout keeps the graph at 49). This page describes how they are packed, what each tarball contains, how to install them, the required `@arnilo/prism` peer dependency, the release workflow, and the offline test budget. The measurable 1.0 readiness gates (command-per-gate) live in [`0.1.0-readiness.md`](./0.1.0-readiness.md).
 
 Core `@arnilo/prism` ships runtime, CLI, templates, and docs. Every code package has a required `@arnilo/prism@0.1.0` peer; profiles are pure manifests. Installation activates no provider, listener, database, browser, credential, or tool capability.
 
-Current **49** publishable manifests (root + 48 workspace packages):
+Current **50** publishable manifests (root + 49 workspace packages):
 
 `@arnilo/prism`, `@arnilo/prism-ag-ui`, `@arnilo/prism-browser`, `@arnilo/prism-coding-agent`, `@arnilo/prism-coding-security`, `@arnilo/prism-compaction-llm`
 `@arnilo/prism-compaction-observational-memory`, `@arnilo/prism-credentials-node`, `@arnilo/prism-enterprise-postgres`, `@arnilo/prism-evals`, `@arnilo/prism-mcp`, `@arnilo/prism-memory`
@@ -15,7 +15,7 @@ Current **49** publishable manifests (root + 48 workspace packages):
 `@arnilo/prism-provider-alibaba`, `@arnilo/prism-provider-anthropic`, `@arnilo/prism-provider-azure`, `@arnilo/prism-provider-bedrock`, `@arnilo/prism-provider-google`, `@arnilo/prism-provider-kimi`
 `@arnilo/prism-provider-neuralwatt`, `@arnilo/prism-provider-ollama`, `@arnilo/prism-provider-openai`, `@arnilo/prism-provider-opencode-go`, `@arnilo/prism-provider-openrouter`, `@arnilo/prism-provider-vertex`
 `@arnilo/prism-provider-zai`, `@arnilo/prism-rag`, `@arnilo/prism-server`, `@arnilo/prism-session-store-codecs`, `@arnilo/prism-session-store-nats`, `@arnilo/prism-session-store-postgres`, `@arnilo/prism-session-store-sqlite`
-`@arnilo/prism-openapi-tools`, `@arnilo/prism-supervisor`, `@arnilo/prism-tool-validator-json-schema`, `@arnilo/prism-web-tools`, `@arnilo/prism-work-tools`, `@arnilo/prism-workflows`
+`@arnilo/prism-openapi-tools`, `@arnilo/prism-supervisor`, `@arnilo/prism-tool-validator-json-schema`, `@arnilo/prism-web-tools`, `@arnilo/prism-work-tools`, `@arnilo/prism-workflows`, `@arnilo/prism-document-reader`
 
 Core ships `dist`, docs, templates, and `CHANGELOG.md`; code packages ship compiled output, README, license, and changelog. Family/profile packages ship manifest, README, and changelog. `@arnilo/prism-providers` includes all eleven `@arnilo/prism-provider-*` packages.
 
@@ -178,7 +178,7 @@ PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present
 
 ### 0.1.0 publish handoff (plan 012 Task 7)
 
-**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.0** (Phase 12, plan 012) is the release-candidate hardening cut of the **0.0.28** graph: no new packages, public exports, schema migrations, or runtime dependencies (freeze manifest `scripts/phase12-freeze-manifest.json`). Publishable graph stays **49** publishable manifests (root + 48 workspace packages) at exact **0.1.0**. Store compatibility with 0.0.28: **compatible, no migration** ([migration](migration.md) `0.0.28 → 0.1.0`); the full `0.0.17 → 0.1.0` upgrade matrix is in the same page. All evidence for the tree under publication is recorded in [0.1.0 readiness](0.1.0-readiness.md) (capacity envelopes, restart-recovery, e2e journeys, threat-suites leg, audit at moderate).
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.0** (Phase 12, plan 012) is the release-candidate hardening cut of the **0.0.28** graph: no new packages, public exports, schema migrations, or runtime dependencies (freeze manifest `scripts/phase12-freeze-manifest.json`). At this line the canonical statement read **49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages** — 14 provider adapters, 9 `prism-*` family/profile packages, and 25 capability packages. Publishable graph stays **49** publishable manifests (root + 48 workspace packages) at exact **0.1.0**. Store compatibility with 0.0.28: **compatible, no migration** ([migration](migration.md) `0.0.28 → 0.1.0`); the full `0.0.17 → 0.1.0` upgrade matrix is in the same page. All evidence for the tree under publication is recorded in [0.1.0 readiness](0.1.0-readiness.md) (capacity envelopes, restart-recovery, e2e journeys, threat-suites leg, audit at moderate).
 
 ```bash
 # Operator prerequisites (each a named blocked gate — none may be skipped):
@@ -273,6 +273,32 @@ git push origin v0.1.2        # tag push triggers release.yml publish job (prove
 ```
 
 **Rollback notes.** `release:publish --version 0.1.2 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.2` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.2` is store-compatible with `0.1.1` in **both directions** (no migration ran — same checksum-protected contract), so an operator may defer or roll back the patch without a database rollback.
+
+### 0.1.6 publish handoff (plan 018 Task 7)
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.6** (plan 018) is the coding-agent capability-closeouts patch on the frozen 0.1.x line — **additive-only** vs 0.1.5 (plain compat gate at 0.1.6 passed with 0 breaking declaration deltas; the baseline text was regenerated with `--update-baseline` for the version literal only, no `--allow-break` anywhere). Five demand-gated closeouts shipped, each flipped to `demanded` by named demand evidence (operator `arn` for native-sandbox/doc-reader/delete-glob/checkpoint-bodies, user `Clay` for acp-session-store) before its task landed; the demand-gate registry (`scripts/phase18-freeze-manifest.json`) machine-checks demanded ⇒ implemented, deferred ⇒ untouched. Shipped: (1) **durable ACP session store** — `@arnilo/prism-ag-ui` `AcpSessionStore` host seam (`save`/`loadAll`/`evict`), persisted `{sessionId, ownership, modeId, configValues, cwd, additionalDirectories, updatedAt}`, lazy ownership-scoped restore, fail-closed drops, absent seam = 0.1.5 behavior; (2) **network-free native sandbox** — `createNativeSandbox` in `@arnilo/prism-coding-security` (fresh netns per command via the OS `unshare` binary, chained ulimits with `|| exit 126`, argv-only exec, cwd containment, process-group kill, env allow-list, Linux-only fail-closed); (3) **bounded PDF/Office document reader** — new optional package `@arnilo/prism-document-reader` (the 50th manifest, graph 49 → 50) with optional `pdf-parse`/`mammoth` peers fail-closed at creation, magic-byte gating, null fall-through, caps + redaction at the adapter boundary; (4) **recursive delete + brace-expanding glob** — per-call `recursive: true` with fan-out cap and symlink-unlink-not-follow, host-selected/per-call `braceExpansion` bounded to 128 alternatives / 4096 expanded bytes, fail-closed on overflow/malformed braces; (5) **checkpoint persistence for loaded-skill bodies** — opt-in `includeSkillBodies` on run + resume options (names-only stays default, 0.1.3 shapes byte-identical), ≤64 bodies / ≤256-char names / ≤262144-byte bodies / ≤1 MiB total, `maxStateBytes` refusal, redacted at rest, registry-independent resume render. Store compatibility with 0.1.5: **compatible, no migration** (additive-only; no persisted-shape change; `docs/migration.md` gains no entries). Exit gate green: npm test core 1,433/1,433 + 190 script gates (incl. phase18-freeze done-phase), `sdk:ready` exit 0, audit 0 moderate, pack dry-run 50/50 twice byte-identical, budget/benchmark gates green; evidence in `scripts/phase18-baseline.json` `exitGate`. Rollback = restore the 0.1.5 manifests/tag.
+
+```bash
+# Operator prerequisites recorded: clean tree at the v0.1.6 tag candidate, GPG key, npm OIDC publisher.
+npm test                                        # core + workspace suites + all script gates
+npm run sdk:ready                               # typecheck, lint, format, test, pack, release:gate
+node scripts/release.mjs gate --version 0.1.6   # plain additive gate, 0 breaking deltas
+npm run pack:dry-run                            # twice; diff reports — deterministic
+npm audit --audit-level=moderate
+npm run release:check -- --version 0.1.6 --report /tmp/prism-0.1.6-preflight.json
+npm run release:publish -- --version 0.1.6 --dry-run --allow-dirty --allow-untagged --report /tmp/prism-0.1.6-dry-run.json
+#   run the dry-run twice and diff the reports: deterministic, byte-identical
+
+# Sign the release on the clean tagged tree (operator GPG key):
+git tag -s v0.1.6 -m "Prism 0.1.6 — coding-agent capability closeouts (additive)"
+git verify-tag v0.1.6
+git push origin v0.1.6        # tag push triggers release.yml publish job (provenance, attestations)
+
+# Real publication never bypasses the gates: release.mjs refuses
+# --allow-dirty/--allow-untagged without --dry-run.
+```
+
+**Rollback notes.** `release:publish --version 0.1.6 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.6` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.6` is store-compatible with `0.1.5` in **both directions** (no migration ran — same checksum-protected contract), so an operator may defer or roll back the patch without a database rollback. The next line **0.1.7** continues the frozen 0.1.x additive promise; the 0.2.0 module line (delegated agents, agent-owned persistence, host-owned seam expansions) is the next documented cut.
 
 ### 0.1.5 publish handoff (plan 017 Task 4)
 

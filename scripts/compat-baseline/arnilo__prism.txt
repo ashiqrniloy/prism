@@ -70,7 +70,7 @@ ConversationError	export declare class ConversationError extends Error
 ConversationReplayCursor	export type { ConversationBranchRef, ConversationReplayCursor, ConversationThread, ConversationThreadState, } from "./conversations.js"
 ConversationThread	export type { ConversationBranchRef, ConversationReplayCursor, ConversationThread, ConversationThreadState, } from "./conversations.js"
 ConversationThreadState	export type { ConversationBranchRef, ConversationReplayCursor, ConversationThread, ConversationThreadState, } from "./conversations.js"
-CreateLoadSkillToolOptions	export type { CreateLoadSkillToolOptions, ResolveSkillLoadOptions } from "./skill-load.js"
+CreateLoadSkillToolOptions	export type { CreateLoadSkillToolOptions, LoadedSkillBodiesEntry, ResolveSkillLoadOptions, } from "./skill-load.js"
 CreateMemorySessionStoreOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CreateSessionEntryOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CredentialRecord	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
@@ -190,6 +190,7 @@ HARD_MAX_HOLD_REASON_BYTES	export declare const HARD_MAX_HOLD_REASON_BYTES: numb
 HARD_MAX_PENDING_DECISIONS	export declare const HARD_MAX_PENDING_DECISIONS = 128
 HARD_MAX_PENDING_STEERS	export declare const HARD_MAX_PENDING_STEERS = 32
 HARD_MAX_PENDING_STEER_BYTES	export declare const HARD_MAX_PENDING_STEER_BYTES: number
+HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES	export declare const HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES: number
 HARD_MAX_RUN_COST	export declare const HARD_MAX_RUN_COST = 10000
 HARD_MAX_SESSION_SEARCH_CURSOR_BYTES	export declare const HARD_MAX_SESSION_SEARCH_CURSOR_BYTES: number
 HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES	export declare const HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES = 5000
@@ -217,6 +218,7 @@ LegalHoldQuery	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeT
 LegalHoldRecord	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 LoadBinaryResourceOptions	export type { LoadBinaryResourceOptions } from "./resources.js"
 LoadedExtension	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+LoadedSkillBodiesEntry	export type { CreateLoadSkillToolOptions, LoadedSkillBodiesEntry, ResolveSkillLoadOptions, } from "./skill-load.js"
 LoadedSkillSet	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 MAX_ACTION_CONSTRAINTS	export declare const MAX_ACTION_CONSTRAINTS = 32
 MAX_ACTION_CONSTRAINT_BYTES	export declare const MAX_ACTION_CONSTRAINT_BYTES: number
@@ -227,6 +229,9 @@ MAX_FEEDBACK_ID_LENGTH	export declare const MAX_FEEDBACK_ID_LENGTH = 128
 MAX_FEEDBACK_TAG_LENGTH	export declare const MAX_FEEDBACK_TAG_LENGTH = 64
 MAX_GUARDRAIL_CONCURRENCY	export declare const MAX_GUARDRAIL_CONCURRENCY = 16
 MAX_LOAD_SKILL_RESULT_BYTES	export declare const MAX_LOAD_SKILL_RESULT_BYTES = 512
+MAX_PERSISTED_SKILL_BODIES	export declare const MAX_PERSISTED_SKILL_BODIES = 64
+MAX_PERSISTED_SKILL_BODY_BYTES	export declare const MAX_PERSISTED_SKILL_BODY_BYTES = 262144
+MAX_PERSISTED_SKILL_BODY_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_BODY_NAME_CHARS = 256
 MAX_PERSISTED_SKILL_NAMES	export declare const MAX_PERSISTED_SKILL_NAMES = 64
 MAX_PERSISTED_SKILL_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_NAME_CHARS = 256
 MODEL_INPUT_CAPABILITIES	export declare const MODEL_INPUT_CAPABILITIES: readonly ["text", "image", "audio", "file", "document"]
@@ -290,7 +295,7 @@ ResolveActiveSkillsOptions	export type { ResolveActiveSkillsOptions, SkillRegist
 ResolveContextOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 ResolveInstructionInjectorsOptions	export type { ResolveInstructionInjectorsOptions } from "./instruction-injection.js"
 ResolveMediaContentOptions	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
-ResolveSkillLoadOptions	export type { CreateLoadSkillToolOptions, ResolveSkillLoadOptions } from "./skill-load.js"
+ResolveSkillLoadOptions	export type { CreateLoadSkillToolOptions, LoadedSkillBodiesEntry, ResolveSkillLoadOptions, } from "./skill-load.js"
 ResolveUseCaseModelInput	export type { ResolvedUseCaseModel, ResolveUseCaseModelInput, UseCaseModelBinding, } from "./use-case-model.js"
 ResolvedDevicePolicy	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
 ResolvedIdentityLimits	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
@@ -379,6 +384,7 @@ applyContextBudget	export declare function applyContextBudget(options:
 applyExecutionDecision	export declare function applyExecutionDecision(action: ExecutionAction, decision: ExecutionDecision): ExecutionAction
 applyOpenAIChatStructuredOutput	export declare function applyOpenAIChatStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void
 applyOpenAIResponsesStructuredOutput	export declare function applyOpenAIResponsesStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void
+applyRestoredSkillBodies	export declare function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[]
 applyThinkingLevel	export declare function applyThinkingLevel(options: ProviderRequestOptions | undefined, level: ThinkingLevel | string, family?: ThinkingCompatFamily): ProviderRequestOptions
 artifactApprovalState	export declare function artifactApprovalState(record: ArtifactRecord): ArtifactApprovalState
 artifactCheckpointKey	export declare function artifactCheckpointKey(threadId: string, artifactId: string): string
@@ -692,6 +698,7 @@ singleShotLoop	export declare const singleShotLoop: AgentLoopStrategy
 skillHasRenderableBody	export declare function skillHasRenderableBody(skill: Skill, context?: SkillRenderContext): boolean
 skillMessages	export declare function skillMessages(skills: readonly Skill[] | undefined, context?: SkillRenderContext): Message[]
 skillPromptText	export declare function skillPromptText(skill: Skill, context?: SkillRenderContext): string | undefined
+snapshotLoadedSkillBodies	export declare function snapshotLoadedSkillBodies(skills: readonly Skill[], loaded: LoadedSkillSet, restored?: ReadonlyMap<string, string>): LoadedSkillBodiesEntry[]
 sniffMediaMimeType	export declare function sniffMediaMimeType(bytes: Uint8Array): string | undefined
 splitFrontmatter	export declare function splitFrontmatter(text: string, path: string):
 statusFromState	export declare function statusFromState(state: StoredAgentRunState, version: number): AgentRunStatusResult
@@ -708,8 +715,9 @@ tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(
 usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System instructions\n --context <text> Context text\n --compact <entries> Auto-compaction threshold\n 
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
+validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[]
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.1.5"
+version	export declare const version = "0.1.6"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

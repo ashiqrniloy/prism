@@ -12,6 +12,19 @@ export {
 } from "./command-rules.js";
 export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js";
 export { createSecretRedactor, DockerCliError } from "./docker-cli.js";
+export {
+  buildNativeSpawnCommand,
+  createNativeSandbox,
+  NativeSandboxError,
+} from "./native-sandbox.js";
+export type {
+  CreateNativeSandboxOptions,
+  NativeSandboxLimitOptions,
+  NativeSpawnCommand,
+  NativeUnshareMode,
+  ResolvedNativeSandboxLimits,
+} from "./native-sandbox.js";
+export { resolveNativeSandboxLimits } from "./native-sandbox.js";
 export type {
   CreateDockerSandboxOptions,
   DockerNetworkConfig,

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
   "main": "./dist/index.js",
@@ -134,6 +134,7 @@
     "packages/enterprise-postgres",
     "packages/browser",
     "packages/ag-ui",
+    "packages/document-reader",
     "packages/prism-*"
   ],
   "scripts": {
@@ -142,7 +143,7 @@
     "build": "npm run build:core && npm run build --workspaces --if-present",
     "typecheck": "npm run build && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
     "sweep:unused": "node scripts/sweep-unused.mjs",
-    "test": "npm run build && node --test dist/__tests__/*.test.js && node --test scripts/release-gate.test.mjs scripts/tooling-gate.test.mjs scripts/budget-gate.test.mjs scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase11-freeze.test.mjs scripts/phase12-freeze.test.mjs scripts/phase13-freeze.test.mjs scripts/phase14-freeze.test.mjs scripts/phase15-freeze.test.mjs scripts/phase16-freeze.test.mjs scripts/phase17-freeze.test.mjs scripts/benchmark-0.1.0.test.mjs scripts/sweep-unused.test.mjs scripts/e2e-enterprise-journey.test.mjs scripts/e2e-coding-journey.test.mjs && npm run test --workspaces --if-present",
+    "test": "npm run build && node --test dist/__tests__/*.test.js && node --test scripts/release-gate.test.mjs scripts/tooling-gate.test.mjs scripts/budget-gate.test.mjs scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase11-freeze.test.mjs scripts/phase12-freeze.test.mjs scripts/phase13-freeze.test.mjs scripts/phase14-freeze.test.mjs scripts/phase15-freeze.test.mjs scripts/phase16-freeze.test.mjs scripts/phase17-freeze.test.mjs scripts/phase18-freeze.test.mjs scripts/benchmark-0.1.0.test.mjs scripts/sweep-unused.test.mjs scripts/e2e-enterprise-journey.test.mjs scripts/e2e-coding-journey.test.mjs && npm run test --workspaces --if-present",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=60 --test-coverage-functions=70 --test-coverage-branches=75 --test-coverage-exclude='**/__tests__/**' --test-coverage-exclude='**/node_modules/**' --test-coverage-exclude='**/scripts/**' --test-coverage-exclude='**/packages/**' --test-coverage-exclude='**/examples/**' dist/__tests__/*.test.js && node scripts/coverage-summary.mjs",
     "coverage:summary": "node scripts/coverage-summary.mjs",
     "lint": "biome lint .",

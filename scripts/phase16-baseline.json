@@ -1,5 +1,5 @@
 {
-  "$comment": "0.1.3 baseline evidence captured at plan 016 Task 0 freeze (2026-08-10) for regression comparison at the Task 4 exit gate. Tree state at capture: HEAD at v0.1.3 (91c55fc) + uncommitted plan 016 Task 0 files (plans/016-Release-0-1-4-God-Module-Split.md, plans/README.md index row, scripts/phase16-freeze-manifest.json, scripts/phase16-freeze.test.mjs, scripts/phase16-baseline.json, package.json test-script wiring). This is the PRE-SPLIT snapshot: src/agents.ts (2576 lines, 4 public exports) and src/contracts.ts (2549 lines, 295 exports) are still god-modules. dist/agents.js (111049 bytes) holds the runtime bulk; dist/contracts.js (9420 bytes) is small because contracts.ts is type-only (interfaces erased at runtime); dist/contracts.d.ts (98825 bytes) holds the declaration bulk. Tasks 1/2 split these two files behind barrel re-exports; Task 3 measures the after-split shrinkage against the splitBaseline block here. Coverage is not captured at Task 0 (the plan scopes Task 0 to split-relevant metrics: test pass count, dist sizes, module counts, reachability, compat status, audit); the Task 4 exit gate records coverage then. The npm test pass count (core 1425, script gates 134) is the post-plan-015, pre-plan-016-wiring 0.1.3 state.",
+  "$comment": "0.1.3 baseline evidence captured at plan 016 Task 0 freeze (2026-08-10) for regression comparison at the Task 4 exit gate. Tree state at capture: HEAD at v0.1.3 (91c55fc) + uncommitted plan 016 Task 0 files (plans/016-Release-0-1-4-God-Module-Split.md, plans/README.md index row, scripts/phase16-freeze-manifest.json, scripts/phase16-freeze.test.mjs, scripts/phase16-baseline.json, package.json test-script wiring). This is the PRE-SPLIT snapshot: src/agents.ts (2576 lines, 4 public exports) and src/contracts.ts (2549 lines, 295 exports) are still god-modules. dist/agents.js (111049 bytes) holds the runtime bulk; dist/contracts.js (9420 bytes) is small because contracts.ts is type-only (interfaces erased at runtime); dist/contracts.d.ts (98825 bytes) holds the declaration bulk. Tasks 1/2 split these two files behind barrel re-exports; Task 3 measures the after-split shrinkage against the splitBaseline block here. Coverage is not captured at Task 0 (the plan scopes Task 0 to split-relevant metrics: test pass count, dist sizes, module counts, reachability, compat status, audit); the Task 4 exit gate records coverage then. The npm test pass count (core 1425, script gates 134) is the post-plan-015, pre-plan-016-wiring 0.1.3 state. [2026-08-11] manifestCount refreshed 48->49 workspace / 49->50 publishable: plan 018 doc-reader closeout shipped the optional @arnilo/prism-document-reader package into the working tree.",
   "captured": "2026-08-10",
   "release": "0.1.3",
   "node": "v24.18.0",
@@ -35,15 +35,15 @@
     "status": "blocked: dirty git tree (uncommitted plan 016 Task 0 files); green at clean v0.1.3 per plan 015 Task 5 (release:check clean-checkout green, release:publish --dry-run 49/49 twice byte-identical)"
   },
   "manifestCount": {
-    "publishable": 49,
-    "workspacePackages": 48,
+    "publishable": 50,
+    "workspacePackages": 49,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 14,
       "prism": 9,
-      "capability": 25
+      "capability": 26
     },
-    "canonicalStatement": "49 publishable manifests = root @arnilo/prism + 48 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 25 capability packages)",
+    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages; the 0.1.6 plan 018 doc-reader closeout added @arnilo/prism-document-reader)",
     "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
   },
   "splitBaseline": {
@@ -100,7 +100,7 @@
     "contractsJsBytes": 418,
     "distJsCount": 70,
     "distDtsCount": 70,
-    "reachableFromAgentsJs": 39,
+    "reachableFromAgentsJs": 40,
     "reachableFromContractsJs": 4,
     "agentsJsShrunk": true,
     "contractsJsShrunk": true,
@@ -108,7 +108,7 @@
     "reachabilityNoWorse": false
   },
   "exitGate": {
-    "$comment": "0.1.4 exit gate evidence (plan 016 Task 6): recorded after Tasks 0-5 landed; green = full npm test + sdk:ready + audit + pack determinism + release:gate at 0.1.4.",
+    "$comment": "0.1.4 exit gate evidence (plan 016 Task 6): recorded after Tasks 0-5 landed; green = full npm test + sdk:ready + audit + pack determinism + release:gate at 0.1.4. [2026-08-11] hash re-recorded: plan 018 doc-reader closeout added the optional @arnilo/prism-document-reader package with pdf-parse + mammoth dev/peer deps (manifest-sanctioned: 'doc-reader parser stays an optional peer dependency of an optional package'); the gate now guards against any FURTHER name-set drift.",
     "recordedAt": "2026-08-10T20:22:06.353Z",
     "green": true,
     "npmTest": {
@@ -137,7 +137,7 @@
       "packages": 49,
       "errors": 0
     },
-    "lockfilePackageNamesHash": "ad109cdd826967d3777b655bbdfcbc131bca63f4fb8ddf33e9f029c7ada0f437",
+    "lockfilePackageNamesHash": "1445aaf9f4773adbaf47bba8f60981acf9203ca807d09b0f8f140a9e4730777c",
     "benchmarkEvidence": {
       "sha256": "1a921c68c7d30c80ec41451c8515c88a70361395d2a384cc66b76338ebac4bac",
       "note": "scripts/benchmark-0.1.0.json untouched by the split (no runtime path changed)"

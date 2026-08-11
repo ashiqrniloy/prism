@@ -186,6 +186,32 @@ export interface ReadTextResult {
   readonly totalBytes?: number;
 }
 
+/**
+ * Optional host-selected document parser adapter (plan 018 closeout `doc-reader`).
+ *
+ * When wired into {@link ReadToolOptions.documentReader}, the read tool tries
+ * the reader after the image sniff and before the text page. The reader owns
+ * its bounds (input bytes, pages, output text); the read tool re-checks the
+ * output cap before returning. An unsupported buffer must return `null` so
+ * reads fall through to the 0.1.5 text path. No file-extension sniffing ever
+ * activates parsing — activation is explicit via this option.
+ */
+export interface DocumentReader {
+  /** Hard input size cap; reads refuse larger files before loading them. */
+  readonly maxInputBytes: number;
+  /** Hard cap on extracted literal text; the read tool refuses results beyond it. */
+  readonly maxTextBytes: number;
+  /** Extract literal text; return null when the buffer is not a supported document format. */
+  extract(input: { readonly buffer: Buffer; readonly path: string; readonly signal?: AbortSignal }): Promise<DocumentReaderResult | null>;
+}
+
+export interface DocumentReaderResult {
+  readonly text: string;
+  readonly format: string;
+  readonly pages: number;
+  readonly truncatedBy: "pages" | "bytes" | null;
+}
+
 export interface ReadOperations {
   /** Read a bounded binary file. Backends must honor `maxBytes` before retaining more data. */
   readFile: (absolutePath: string, options: { maxBytes: number; signal?: AbortSignal }) => Promise<Buffer>;
@@ -216,6 +242,11 @@ export interface ReadToolOptions {
   maxBytes?: number;
   /** When set, successful reads record the resolved absolute path for read-before-write guards. */
   readPathSet?: ReadPathSet;
+  /**
+   * Optional host-selected document reader (PDF/Office literal-text extraction).
+   * Additive: absent reader means exactly the 0.1.5 text/image behavior.
+   */
+  documentReader?: DocumentReader;
 }
 
 async function readLocalTextPage(path: string, options: ReadTextOptions): Promise<ReadTextResult> {
@@ -475,6 +506,39 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
             ],
             metadata: { image: { mimeType, resized, bytes: buffer.length } },
           };
+        }
+
+        const documentReader = options?.documentReader;
+        if (documentReader) {
+          const { size } = await ops.statFile(allowedPath, { signal: context.signal });
+          if (size > documentReader.maxInputBytes) {
+            return errorResult(toolCallId, `Document is ${formatSize(size)}, exceeds ${formatSize(documentReader.maxInputBytes)} limit.`);
+          }
+          const buffer = await ops.readFile(allowedPath, {
+            maxBytes: documentReader.maxInputBytes,
+            signal: context.signal,
+          });
+          if (buffer.length > documentReader.maxInputBytes) {
+            return errorResult(
+              toolCallId,
+              `Document is ${formatSize(buffer.length)}, exceeds ${formatSize(documentReader.maxInputBytes)} limit.`,
+            );
+          }
+          const extracted = await documentReader.extract({ buffer, path: allowedPath, signal: context.signal });
+          if (extracted) {
+            if (Buffer.byteLength(extracted.text, "utf8") > documentReader.maxTextBytes) {
+              throw new Error("DocumentReader.extract returned text beyond its maxTextBytes cap");
+            }
+            options?.readPathSet?.add(allowedPath);
+            return {
+              toolCallId,
+              name: "read",
+              content: [{ type: "text", text: extracted.text }],
+              metadata: {
+                document: { format: extracted.format, pages: extracted.pages, truncatedBy: extracted.truncatedBy },
+              },
+            };
+          }
         }
 
         const page = await ops.readText(allowedPath, {
