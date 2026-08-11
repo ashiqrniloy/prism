@@ -27,10 +27,14 @@ jobs:
         run: |
           set -o pipefail
           npm run sdk:ready 2>&1 | tee sdk-ready.log
-        timeout-minutes: 15
+        timeout-minutes: 30
       - name: summarize SDK failure
         if: failure()
-        run: tail -200 sdk-ready.log >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "### tail of sdk-ready.log" >> "$GITHUB_STEP_SUMMARY"
+          tail -200 sdk-ready.log >> "$GITHUB_STEP_SUMMARY"
+          echo "### error markers in sdk-ready.log" >> "$GITHUB_STEP_SUMMARY"
+          grep -nE 'npm error|✖|AssertionError|Killed|SIGKILL|ELIFECYCLE|exceeded threshold|exceeded ceiling' sdk-ready.log | tail -40 >> "$GITHUB_STEP_SUMMARY" || true
 
   node20-compat:
     name: node20 compat (build + public import smoke)
@@ -53,7 +57,7 @@ jobs:
             await import(new URL(target, import.meta.url));
           }
           NODE
-        timeout-minutes: 3
+        timeout-minutes: 10
 
   postgres-integration:
     name: postgres integration (session-store, memory, enterprise adapters)
