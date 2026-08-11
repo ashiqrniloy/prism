@@ -80,9 +80,6 @@ export function listInitProviders(templatesRoot?: string): readonly string[] {
   return Object.freeze([...loadProvidersCatalog(templatesRoot).keys()]);
 }
 
-/** @deprecated Prefer listInitProviders(); retained for tests that import the name. */
-export const INIT_PROVIDERS: readonly string[] = listInitProviders();
-
 export function getInitUsage(templatesRoot?: string): string {
   const providers = listInitProviders(templatesRoot).join("|");
   return `Usage: prism init <dir> [options]

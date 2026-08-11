@@ -102,12 +102,12 @@ describe("observational memory live tests", { skip: !LIVE }, () => {
       reflection: { provider: reflectorProvider, model: reflectorModel },
       credential: apiKey,
       overrides: {
-        observeAfterTokens: 1,
-        reflectAfterTokens: 1,
-        agentMaxTurns: 2,
         observation: {
+          messageTokens: 1,
           instruction: "Record every durable fact; include the canary token when present.",
         },
+        reflection: { observationTokens: 1 },
+        agentMaxTurns: 2,
       },
     });
 

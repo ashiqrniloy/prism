@@ -288,6 +288,13 @@ export class RuntimeAgentSession implements AgentSession {
   }
 
   private async runInternal(input: AgentInput, options: RunOptions, runId: string, resumed?: ActiveDurableRun): Promise<AgentRunResult> {
+    // 0.1.5 breaking cut: the deprecated RunOptions.maxToolRounds alias was removed. Reject
+    // untyped/legacy input fail-closed before any session mutation, provider call, or tool
+    // execution; silently honoring it would widen or mis-apply the intended tool-round cap.
+    const legacyMaxToolRounds = (options as { maxToolRounds?: unknown }).maxToolRounds;
+    if (legacyMaxToolRounds !== undefined) {
+      throw new TypeError("RunOptions.maxToolRounds was removed in 0.1.5; use RunOptions.limits.maxToolRounds instead");
+    }
     if (
       this.agent.config.secure &&
       (options.redactor !== undefined ||
@@ -298,10 +305,7 @@ export class RuntimeAgentSession implements AgentSession {
     ) {
       throw new AgentRunStateError("Secure agent defaults cannot be replaced per run");
     }
-    const requestedLimits =
-      options.maxToolRounds === undefined
-        ? options.limits
-        : { ...options.limits, maxToolRounds: Math.min(options.maxToolRounds, options.limits?.maxToolRounds ?? options.maxToolRounds) };
+    const requestedLimits = options.limits;
     const resolvedLimits = resolveRunLimits(this.agent.config.limits, requestedLimits);
     const durableOptions = options.runState ?? this.agent.config.runState;
     if (this.agent.config.runState && options.runState && this.agent.config.runState !== options.runState) {

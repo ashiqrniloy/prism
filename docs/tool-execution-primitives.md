@@ -91,7 +91,7 @@ Blocked reasons today: `unknown_tool`, `tool_denied`, `invalid_arguments`, `perm
 | Surface | Location | Behavior today |
 | --- | --- | --- |
 | `singleShotLoop` | `src/agent-loops.ts` | Sequential `for (const call of calls) await dispatchToolCall(call)` per provider turn |
-| `maxToolRounds` | `AgentConfig` / `RunOptions` → `LoopContext` | Default `1` in `RuntimeAgentSession.run()` |
+| `maxToolRounds` | `AgentConfig.limits` / `RunOptions.limits` → `LoopContext` | Default `1` in `RuntimeAgentSession.run()` |
 | Transcript ordering | `src/agent-loops.ts` | Tool results appended in call order (Plan 053 R-002 fix shipped) |
 | Parallelism | — | **None** — models may emit multiple calls; runtime executes one at a time |
 
@@ -290,10 +290,10 @@ export type TransformImage = (input: TransformImageInput) => Promise<Buffer>;
 export interface ReadToolOptions {
   readonly maxImageBytes?: number; // default DEFAULT_MAX_IMAGE_BYTES
   readonly transformImage?: TransformImage;
-  /** @deprecated Use transformImage instead; ignored when transformImage is absent. */
-  readonly autoResizeImages?: boolean;
 }
 ```
+
+`autoResizeImages` was removed in 0.1.5; the supported `transformImage` callback is the only resize path. Untyped callers passing the old key fail closed before any filesystem access.
 
 Reject oversize images by `stat` before full read where possible; re-check `buffer.length` after read and after `transformImage`. MIME from magic bytes only (existing behavior). `transformImage` is host-owned; base package stays free of image-processing deps. Implemented in `packages/coding-agent/src/read.ts`.
 

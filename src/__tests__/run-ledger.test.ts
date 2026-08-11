@@ -273,7 +273,7 @@ describe("RunLedger runtime wiring", () => {
     });
     const session = agent.createSession({ id: "s4" });
 
-    await session.run("count tokens", { maxToolRounds: 1 });
+    await session.run("count tokens", { limits: { maxToolRounds: 1 } });
 
     assert.deepEqual(
       usage.map(({ scope, turn, attempt, usage }) => ({ scope, turn, attempt, total: usage.totalTokens })),

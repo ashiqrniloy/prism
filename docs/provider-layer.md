@@ -129,7 +129,7 @@ const agent = createAgent({ model: { provider: own.id, model: "demo" }, provider
 - Provider event helpers return plain `ProviderEvent` objects.
 - `providerError()` converts unknown errors to redacted `ErrorInfo` through `errorToErrorInfo()` and preserves safe string/number `code` fields for retry classification.
 - `createMockProvider()` returns an `AIProvider` whose `generate()` yields the scripted events in order and checks `request.signal?.aborted` before each event.
-- The agent/session runtime passes its per-run abort signal as `ProviderRequest.signal`. `ProviderRequestOptions.structuredOutput` requests provider-native JSON-schema output when the model declares `capabilities.structuredOutput`; unsupported models fail before fetch. `ProviderRequestOptions.timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert hints in first-party providers; use `RunOptions.signal`/host abort controllers for timeouts and `AgentConfig.retry`/`RunOptions.retry` for retry.
+- The agent/session runtime passes its per-run abort signal as `ProviderRequest.signal`. `ProviderRequestOptions.structuredOutput` requests provider-native JSON-schema output when the model declares `capabilities.structuredOutput`; unsupported models fail before fetch. Timeouts are host-owned: pass `RunOptions.signal`/host abort controllers; retries are runtime-owned via `AgentConfig.retry`/`RunOptions.retry`. Provider-level timeout/retry hints were removed in 0.1.5.
 
 ## Request/response example
 

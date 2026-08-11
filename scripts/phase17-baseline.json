@@ -1,0 +1,390 @@
+{
+  "$comment": "0.1.5 exit-gate evidence (plan 017 Task 4, 2026-08-11): deprecated-option removal complete on the 0.1.4 baseline captured at plan 017 Task 0 (HEAD 9a79a6e; pre-removal hashes preserved in fileHashesTask0). Reviewed compat-baseline regeneration: arnilo__prism.txt dropped the INIT_PROVIDERS line (the documented break; interface-member removals are verified by the phase-17 direct declaration scanner, not baseline text), arnilo__prism-compaction-observational-memory.txt added assertNoRemovedFlatKeys (Task 2 internal export, additive), arnilo__prism-coding-agent.txt unchanged. Release graph at exact 0.1.5 (49 manifests); store compatibility: compatible, no persisted shape change; rollback = restore 0.1.4 manifests/tag.",
+  "captured": "2026-08-10",
+  "release": "0.1.4",
+  "node": "v24.18.0",
+  "platform": "linux-x64",
+  "gitHead": "9a79a6ed9cb2b8eca75585f68a372dca602b8536",
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<17 files> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1426,
+    "corePass": 1426,
+    "coreFail": 0,
+    "scriptGates": 153,
+    "scriptGatesPass": 153,
+    "scriptGatesFail": 0,
+    "scriptGateSuites": 16,
+    "workspaces": "all green (exit 0)"
+  },
+  "audit": {
+    "command": "npm audit --audit-level=moderate",
+    "level": "moderate",
+    "vulnerabilities": 0
+  },
+  "releaseGate": {
+    "command": "node scripts/release.mjs gate --version 0.1.4",
+    "version": "0.1.4",
+    "packages": 49,
+    "breakingDeltas": 0,
+    "updated": false,
+    "result": "green; compat baseline exists at 0.1.4, 0 breaking declaration deltas"
+  },
+  "manifestCount": {
+    "publishable": 49,
+    "workspacePackages": 48,
+    "rootPackage": "@arnilo/prism",
+    "categories": {
+      "provider": 14,
+      "prism": 9,
+      "capability": 25
+    },
+    "canonicalStatement": "49 publishable manifests = root @arnilo/prism + 48 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 25 capability packages)",
+    "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
+  },
+  "deprecatedInventory": [
+    {
+      "task": "task1",
+      "owner": "ProviderRequestOptions",
+      "file": "src/contracts-core.ts",
+      "line": 307,
+      "symbol": "timeoutMs",
+      "replacement": "ProviderRequest.signal / RunOptions.signal"
+    },
+    {
+      "task": "task1",
+      "owner": "ProviderRequestOptions",
+      "file": "src/contracts-core.ts",
+      "line": 309,
+      "symbol": "maxRetries",
+      "replacement": "AgentConfig.retry / RunOptions.retry"
+    },
+    {
+      "task": "task1",
+      "owner": "ProviderRequestOptions",
+      "file": "src/contracts-core.ts",
+      "line": 311,
+      "symbol": "maxRetryDelayMs",
+      "replacement": "AgentConfig.retry / RunOptions.retry"
+    },
+    {
+      "task": "task1",
+      "owner": "RunOptions",
+      "file": "src/contracts-protocol.ts",
+      "line": 67,
+      "symbol": "maxToolRounds",
+      "replacement": "RunOptions.limits.maxToolRounds"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 99,
+      "symbol": "observeAfterTokens",
+      "replacement": "observation.messageTokens"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 100,
+      "symbol": "reflectAfterTokens",
+      "replacement": "reflection.observationTokens"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 101,
+      "symbol": "compactAfterTokens",
+      "replacement": "context.compactAfterTokens"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 102,
+      "symbol": "keepRecentEntries",
+      "replacement": "context.recentMessages"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 103,
+      "symbol": "recentMessageMaxTokens",
+      "replacement": "context.recentMessageMaxTokens"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 104,
+      "symbol": "observationsPoolMaxTokens",
+      "replacement": "context.observationsPoolMaxTokens"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 105,
+      "symbol": "observationsPoolTargetTokens",
+      "replacement": "context.observationsPoolTargetTokens"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 106,
+      "symbol": "workerModel",
+      "replacement": "observation.model / reflection.model / dropper.model"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 107,
+      "symbol": "thinkingLevel",
+      "replacement": "observation.thinkingLevel / reflection.thinkingLevel / dropper.thinkingLevel"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemorySettingsInput",
+      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "line": 108,
+      "symbol": "requireExplicitModel",
+      "replacement": "observation.requireExplicitModel / reflection.requireExplicitModel / dropper.requireExplicitModel"
+    },
+    {
+      "task": "task2",
+      "owner": "CreateObservationalMemoryOptions",
+      "file": "packages/compaction-observational-memory/src/compose.ts",
+      "line": 67,
+      "symbol": "workerProvider",
+      "replacement": "observation.provider / reflection.provider / dropper.provider"
+    },
+    {
+      "task": "task2",
+      "owner": "CreateObservationalMemoryOptions",
+      "file": "packages/compaction-observational-memory/src/compose.ts",
+      "line": 69,
+      "symbol": "workerModel",
+      "replacement": "observation.model / reflection.model / dropper.model"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemoryRuntimeOptions",
+      "file": "packages/compaction-observational-memory/src/runtime.ts",
+      "line": 45,
+      "symbol": "workerProvider",
+      "replacement": "observation / reflection / dropper worker configs"
+    },
+    {
+      "task": "task2",
+      "owner": "ObservationalMemoryRuntimeOptions",
+      "file": "packages/compaction-observational-memory/src/runtime.ts",
+      "line": 47,
+      "symbol": "workerModel",
+      "replacement": "observation / reflection / dropper worker configs"
+    },
+    {
+      "task": "task3",
+      "owner": "ReadToolOptions",
+      "file": "packages/coding-agent/src/read.ts",
+      "line": 210,
+      "symbol": "autoResizeImages",
+      "replacement": "transformImage"
+    },
+    {
+      "task": "task3",
+      "owner": "cli-init.ts (module const)",
+      "file": "src/cli-init.ts",
+      "line": 84,
+      "symbol": "INIT_PROVIDERS",
+      "replacement": "listInitProviders()"
+    }
+  ],
+  "preservedSurface": [
+    {
+      "symbol": "timeoutMs",
+      "owner": "ProviderRequestOptions",
+      "present": false,
+      "note": "not present at 0.1.4 (removed member list above); listed for completeness of the abort/retry replacement story"
+    },
+    {
+      "symbol": "signal",
+      "owner": "ProviderRequest",
+      "present": true,
+      "note": "supported abort path"
+    },
+    {
+      "symbol": "signal",
+      "owner": "RunOptions",
+      "present": true,
+      "note": "supported run-scoped abort path"
+    },
+    {
+      "symbol": "retry",
+      "owner": "AgentConfig",
+      "present": true,
+      "note": "supported retry path"
+    },
+    {
+      "symbol": "retry",
+      "owner": "RunOptions",
+      "present": true,
+      "note": "supported run-scoped retry path"
+    },
+    {
+      "symbol": "maxToolRounds",
+      "owner": "RunLimits",
+      "present": true,
+      "note": "active limit; nested in limits"
+    },
+    {
+      "symbol": "limits",
+      "owner": "RunOptions",
+      "present": true,
+      "note": "active nested limits; replacement carrier for the removed alias"
+    },
+    {
+      "symbol": "maxToolRounds",
+      "owner": "LoopContext",
+      "present": true,
+      "note": "active loop-state field, out of scope"
+    },
+    {
+      "symbol": "transformImage",
+      "owner": "ReadToolOptions",
+      "present": true,
+      "note": "supported replacement for the removed autoResizeImages alias"
+    },
+    {
+      "symbol": "listInitProviders",
+      "owner": "src/cli-init.ts",
+      "present": true,
+      "note": "supported replacement for the removed INIT_PROVIDERS alias"
+    },
+    {
+      "symbol": "observation",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "nested settings group (active)"
+    },
+    {
+      "symbol": "reflection",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "nested settings group (active)"
+    },
+    {
+      "symbol": "dropper",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "nested settings group (active)"
+    },
+    {
+      "symbol": "context",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "nested settings group (active); recentMessageMaxTokens/compactAfterTokens/observationsPoolMaxTokens/observationsPoolTargetTokens nested members stay"
+    },
+    {
+      "symbol": "retrieval",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "nested settings group (active)"
+    },
+    {
+      "symbol": "agentMaxTurns",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "active top-level setting without a nested replacement"
+    },
+    {
+      "symbol": "passive",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "active top-level setting without a nested replacement"
+    },
+    {
+      "symbol": "debugLog",
+      "owner": "ObservationalMemorySettingsInput",
+      "present": true,
+      "note": "active top-level setting without a nested replacement"
+    },
+    {
+      "symbol": "sessionModel",
+      "owner": "ObservationalMemoryRuntimeOptions",
+      "present": true,
+      "note": "active worker fallback model"
+    },
+    {
+      "symbol": "overrides",
+      "owner": "CreateObservationalMemoryOptions",
+      "present": true,
+      "note": "active settings-provider override carrier"
+    }
+  ],
+  "fileHashes": {
+    "src/contracts-core.ts": "0b0aeff30f45ad54a0a782205f10bae4122045c59d6ec7668f2f4f40628d9aa9",
+    "src/contracts-protocol.ts": "521a1ad4ebbd94b4c49b4aff6e4c2f5b4bcfbe8b2749b77bd46ae41f2bcfb9e7",
+    "src/cli-init.ts": "d537a493a6bc2fefe9e917a17e7e97c2ec1bbd3449e500b8df4c862c7477f552",
+    "packages/coding-agent/src/read.ts": "d8e6916c2a1f73393e1e175549cad36dd79590169be1688af6f95cd4df43d988",
+    "packages/compaction-observational-memory/src/settings.ts": "004ab4caaa840305e14f596c1dfc93b77d1f891c3564409b417e339754664703",
+    "packages/compaction-observational-memory/src/compose.ts": "37538c04f4b410eea315e0923deba9664949a9c61d515e046477826bab8bdd46",
+    "packages/compaction-observational-memory/src/runtime.ts": "8f217985d4dc13e8f68a140002985a4fdf140b270af41c2989458a835b16590c",
+    "scripts/compat-baseline/arnilo__prism.txt": "fb40d202c51378ebdb182c10cb6b5b02ab8826dbbcdc235a2c1e0d9f35daa24d",
+    "scripts/compat-baseline/arnilo__prism-coding-agent.txt": "692b361cd53ca3a539691ea8d3212c71b0566c3be090a9345104989ad07f89a9",
+    "scripts/compat-baseline/arnilo__prism-compaction-observational-memory.txt": "7924151bb330ad9bccefd5420abb7028d072052c23ef4b6980b752a9e7a6aa09"
+  },
+  "exitGate": {
+    "$comment": "0.1.5 exit gate evidence (plan 017 Task 4): recorded after Tasks 0-3 landed; green = full npm test + sdk:ready + audit + pack determinism + release:gate at 0.1.5.",
+    "recordedAt": "2026-08-11T06:54:37.325943+00:00",
+    "green": true,
+    "npmTest": {
+      "exitCode": 0,
+      "coreTests": 1428,
+      "corePass": 1428,
+      "coreFail": 0,
+      "scriptGates": 173,
+      "scriptGatesPass": 173,
+      "scriptGatesFail": 0
+    },
+    "sdkReady": {
+      "exitCode": 0
+    },
+    "audit": {
+      "vulnerabilities": 0,
+      "level": "moderate"
+    },
+    "packDryRun": {
+      "packages": 49,
+      "deterministic": true,
+      "sha256": "4eb24fc7f2ad5f81fc4321655e4875d42ad00915073d6491f94670cd5174daaf"
+    },
+    "releaseGate": {
+      "version": "0.1.5",
+      "packages": 49,
+      "errors": 0
+    },
+    "lockfilePackageNamesHash": "ad109cdd826967d3777b655bbdfcbc131bca63f4fb8ddf33e9f029c7ada0f437",
+    "benchmarkEvidence": {
+      "sha256": "1a921c68c7d30c80ec41451c8515c88a70361395d2a384cc66b76338ebac4bac",
+      "note": "scripts/benchmark-0.1.0.json untouched by the removal (no runtime path changed beyond option resolution)"
+    }
+  },
+  "fileHashesTask0": {
+    "src/contracts-core.ts": "182782e9ec4029b09828e71c87f36dc53203f03b502538bd21d4e797e9c075f9",
+    "src/contracts-protocol.ts": "a645529ca235b136cb6f82ab2eec27341b0231f429cd7009c1c3b23246b529d6",
+    "src/cli-init.ts": "736e2821e14a527a26296c1e8f75c4d5c2ede1ae719a1c73707338015fc2d765",
+    "packages/coding-agent/src/read.ts": "a252f036a4482de337cd17fbfaf4d1ef4b5967dac273b6c2aa6a01a44dfa9046",
+    "packages/compaction-observational-memory/src/settings.ts": "5cd5415393c5a3081033645edcbf7621df568caad808728a0a75b123f4f6273d",
+    "packages/compaction-observational-memory/src/compose.ts": "d62f0096684e135d234ebb1b6641d9eb4707b3bc1de8747809f323c3460ef664",
+    "packages/compaction-observational-memory/src/runtime.ts": "01e6adfa85bfda6d0be6a978d19ac56a5db78aeea9cac352fac65b5b07cabd5e",
+    "scripts/compat-baseline/arnilo__prism.txt": "caea0f801f0621cfca4fbb77a666aa083519ad576c741c8c5a53c346ee6a3383",
+    "scripts/compat-baseline/arnilo__prism-coding-agent.txt": "692b361cd53ca3a539691ea8d3212c71b0566c3be090a9345104989ad07f89a9",
+    "scripts/compat-baseline/arnilo__prism-compaction-observational-memory.txt": "3a1378168140003666bd576377d976c332d7e936fccb172de351f7907145c063"
+  },
+  "exitGateVersion": "0.1.5"
+}

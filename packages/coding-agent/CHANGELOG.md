@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.5] - 2026-08-11
+
+### Changed
+- Removed `ReadToolOptions.autoResizeImages` (breaking, documented). The flag was inert without `transformImage`; untyped callers now fail closed with a `TypeError` naming `transformImage` before any path resolution or filesystem access. See [migration](../../docs/migration.md) `0.1.4 → 0.1.5`.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

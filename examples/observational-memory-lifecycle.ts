@@ -50,7 +50,7 @@ export async function demo() {
   const om = createObservationalMemory({
     observation: { provider: memoryWorkerProvider(store, "s1"), model: workerModel },
     context: { recentMessages: 4, compactAfterTokens: 999_999 },
-    overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+    overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 999_999 }, agentMaxTurns: 1 },
   });
   const attached = om.attach(baseSession, {
     appendEntry: (entry, options) => store.append(entry, options),

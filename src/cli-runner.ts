@@ -424,7 +424,7 @@ function defaultCreateSession(options: CliOptions): AgentSession {
 
 function runOptions(options: CliOptions): RunOptions {
   return {
-    maxToolRounds: options.maxToolRounds,
+    ...(options.maxToolRounds !== undefined ? { limits: { maxToolRounds: options.maxToolRounds } } : {}),
     compaction: options.compact ? { thresholdEntries: options.compact } : undefined,
     // ponytail: --discover is the explicit opt-in that activates discovered skills.
     ...(options.discover && !options.noDiscovery && options.discoveredSkills.length > 0

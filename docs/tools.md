@@ -161,7 +161,7 @@ Need different tools for one request? Build a short-lived agent/session with a n
 
 ### Artifact-loop tools
 
-`generate-validate-revise` treats provider tools as inert by default. Set `loop.toolCalls: "bounded"` and `RunOptions.maxToolRounds` only when an artifact needs a host-owned lookup before its next candidate. Each response with one-or-more calls consumes one shared round, dispatches calls sequentially through this exact `dispatchToolCall()` path, persists assistant-call then result transcript rows, and skips artifact parsing/validation for that response. A post-limit call executes nothing; the loop emits `artifact_failed` with `metadata.reason: "tool_round_limit"`. Tools do not consume `maxRevisions`, and tool schemas/context never grant authority.
+`generate-validate-revise` treats provider tools as inert by default. Set `loop.toolCalls: "bounded"` and `RunOptions.limits.maxToolRounds` only when an artifact needs a host-owned lookup before its next candidate. Each response with one-or-more calls consumes one shared round, dispatches calls sequentially through this exact `dispatchToolCall()` path, persists assistant-call then result transcript rows, and skips artifact parsing/validation for that response. A post-limit call executes nothing; the loop emits `artifact_failed` with `metadata.reason: "tool_round_limit"`. Tools do not consume `maxRevisions`, and tool schemas/context never grant authority.
 
 ### Runtime-supplied validators
 
@@ -220,7 +220,7 @@ Opt in through `loop.toolConcurrency` on `AgentConfig` / `RunOptions` (single-sh
 
 ```ts
 await session.run(input, {
-  maxToolRounds: 3,
+  limits: { maxToolRounds: 3 },
   loop: { strategy: "single-shot", toolConcurrency: 4 },
 });
 ```

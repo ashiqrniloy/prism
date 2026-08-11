@@ -1,5 +1,116 @@
 # Migration guide
 
+## 0.1.4 → 0.1.5 deprecated-option removal (documented breaking cut)
+
+Release **0.1.5** (plan 017) removes the deprecated compatibility surface that 0.1.x kept after 0.0.19: the inert provider timeout/retry knobs, the `maxToolRounds` run-option alias, the pre-0.0.19 observational-memory flat keys and worker aliases, the read-tool `autoResizeImages` flag, and the `INIT_PROVIDERS` constant. This is the **documented breaking cut** announced in the 0.1.4 migration section; every other 0.1.x release keeps the compat baseline green. Three roadmap labels from the original 0.1.5 task were corrected during planning and are honored here:
+
+1. **`RunOptions.maxToolRounds`** (not `AgentConfig.maxToolRounds`) is the removed alias → use `RunOptions.limits.maxToolRounds`. `AgentConfig.limits.maxToolRounds` and `RunLimits.maxToolRounds` stay supported.
+2. **`ReadToolOptions.autoResizeImages`** is the removed flag; `transformImage` is the supported replacement (the roadmap text had the direction reversed).
+3. **`INIT_PROVIDERS`** is the removed constant; `listInitProviders()` is the supported replacement that remains (the roadmap said to remove `listInitProviders`).
+
+### Removed symbols and replacements
+
+| Removed | Replaced by | Fail-closed behavior |
+| --- | --- | --- |
+| `ProviderRequestOptions.timeoutMs` | `ProviderRequest.signal` / `RunOptions.signal` (host-side abort) | removed from the type; untyped callers are refused with a `TypeError` naming the replacement before any provider call |
+| `ProviderRequestOptions.maxRetries` | `AgentConfig.retry` / `RunOptions.retry` | same |
+| `ProviderRequestOptions.maxRetryDelayMs` | `AgentConfig.retry` / `RunOptions.retry` | same |
+| `RunOptions.maxToolRounds` | `RunOptions.limits.maxToolRounds` | removed from the type; untyped `{ maxToolRounds }` run input is refused before the agent starts |
+| `ObservationalMemorySettingsInput.observeAfterTokens` | `observation.messageTokens` | flat key removed from the type; settings-provider JSON or untyped overrides carrying it throw a `TypeError` naming the nested replacement before any worker/provider call, compaction, or session append |
+| `ObservationalMemorySettingsInput.reflectAfterTokens` | `reflection.observationTokens` | same |
+| `ObservationalMemorySettingsInput.compactAfterTokens` | `context.compactAfterTokens` | same |
+| `ObservationalMemorySettingsInput.keepRecentEntries` | `context.recentMessages` | same |
+| `ObservationalMemorySettingsInput.recentMessageMaxTokens` | `context.recentMessageMaxTokens` | same |
+| `ObservationalMemorySettingsInput.observationsPoolMaxTokens` | `context.observationsPoolMaxTokens` | same |
+| `ObservationalMemorySettingsInput.observationsPoolTargetTokens` | `context.observationsPoolTargetTokens` | same |
+| `ObservationalMemorySettingsInput.workerModel` | `observation.model` / `reflection.model` / `dropper.model` | same |
+| `ObservationalMemorySettingsInput.thinkingLevel` | `observation.thinkingLevel` / `reflection.thinkingLevel` / `dropper.thinkingLevel` | same |
+| `ObservationalMemorySettingsInput.requireExplicitModel` | `observation.requireExplicitModel` / `reflection.requireExplicitModel` / `dropper.requireExplicitModel` | same |
+| `CreateObservationalMemoryOptions.workerProvider` / `workerModel` | `observation.provider` / `observation.model` (and the `reflection` / `dropper` equivalents) | removed from the type; the factories throw synchronously naming the replacement |
+| `ObservationalMemoryRuntimeOptions.workerProvider` / `workerModel` | `observation` / `reflection` / `dropper` worker configs | same |
+| `ReadToolOptions.autoResizeImages` | `transformImage` | removed from the type; `createReadTool` throws naming `transformImage` before any path resolution or filesystem access |
+| `INIT_PROVIDERS` (root export) | `listInitProviders()` | removed; init parsing, usage text, validation, and tests all use the function |
+
+### Before / after
+
+Provider knobs were inert in first-party providers (hosts were always expected to abort/retry at their own layer):
+
+```ts
+// 0.1.4
+const session = await agent.createSession();
+await session.run("Hi", {
+  provider: { timeoutMs: 30_000, maxRetries: 3, maxRetryDelayMs: 250 },
+});
+
+// 0.1.5
+const session = await agent.createSession();
+await session.run("Hi", {
+  retry: { maxAttempts: 3, baseDelayMs: 250 },
+  signal: AbortSignal.timeout(30_000),
+});
+```
+
+`maxToolRounds` moves into the limits group (the CLI flag `--max-tool-rounds` is unchanged and maps to the nested limit):
+
+```ts
+// 0.1.4
+await session.run("Hi", { maxToolRounds: 2 });
+
+// 0.1.5
+await session.run("Hi", { limits: { maxToolRounds: 2 } });
+```
+
+Observational-memory settings and workers become nested-only (0.0.19 already introduced the nested groups; the flat keys were kept for pre-1.0 hosts):
+
+```ts
+// 0.1.4
+createObservationalMemoryRuntime({
+  session,
+  appendEntry: (entry) => store.append(entry),
+  workerProvider,
+  sessionModel: agent.config.model,
+  overrides: { observeAfterTokens: 1, thinkingLevel: "low" },
+});
+
+// 0.1.5
+createObservationalMemoryRuntime({
+  session,
+  appendEntry: (entry) => store.append(entry),
+  observation: { provider: workerProvider, model: { provider: "neuralwatt", model: "glm-5.2-fast" } },
+  sessionModel: agent.config.model,
+  overrides: { observation: { messageTokens: 1, thinkingLevel: "low" } },
+});
+```
+
+The read tool keeps only the host-owned resize callback:
+
+```ts
+// 0.1.4
+createReadTool(cwd, { autoResizeImages: true });
+
+// 0.1.5
+createReadTool(cwd, {
+  transformImage: async ({ buffer, mimeType }) => resize(buffer, mimeType),
+});
+```
+
+### Dynamic-config refusal behavior
+
+Removed members are also removed from the runtime resolver paths, so **untyped** callers (plain JS, `as any`, settings-provider JSON, persisted run input) are caught before any side effect:
+
+- Provider request knobs and `maxToolRounds`: refused at the top of the run entry point (`runInternal`) with a `TypeError` naming `RunOptions.limits.maxToolRounds` (or the abort/retry replacement) — before the agent starts, no tool/provider call happens.
+- Observational-memory flat keys: `assertNoRemovedFlatKeys` runs before any worker/provider call, compaction, or session append; it names the first offending key and its nested replacement. The worker aliases are refused synchronously at both factory boundaries.
+- `autoResizeImages`: refused at `createReadTool` construction, before path resolution or `access`/`statFile`/`readFile`.
+- `INIT_PROVIDERS`: reads of the removed constant yield `undefined`; use `listInitProviders()`.
+
+### Store compatibility
+
+**Compatible — no persisted shape change.** None of the removals touch the session-store schema, run-state checkpoint shape, event schema, or default behavior: the removed options were inert aliases, and the nested replacements resolve to the same active values (e.g. `maxToolRounds` default 8 / hard cap 64 in `DEFAULT_RUN_LIMITS` / `HARD_RUN_LIMITS` are unchanged).
+
+### Rollback
+
+Restore the 0.1.4 manifests/tag (or revert this commit) — no data migration. Configs and code written against 0.1.5 nested forms also work on 0.1.4 (the nested members are not new in 0.1.5), but `@ts-expect-error`-free code must drop any removed-key usage first. Stores never change.
+
 ## 0.1.3 → 0.1.4 internal reorganization behind barrel re-exports (no migration)
 
 Release **0.1.4** (plan 016) is an **internal file reorganization behind barrel re-exports**: the root `src/agents.ts` and `src/contracts.ts` god-modules were split by concern into sibling modules (`contracts-core` / `contracts-run-state` / `contracts-protocol` behind the `contracts.ts` barrel; `agent-session` / `agent-run-lifecycle` / `agent-approval` / `agent-tool-dispatch` / `agent-run-state` / `agent-loops` / `compaction` behind the `agents.ts` barrel). **Public declaration surface unchanged** — the root entry surface is byte-identical to 0.1.3 (zero added/removed/changed on the public entry; the only union-surface additions are 14 internal cross-module helper exports that are not consumer-importable, see `scripts/compat-baseline/arnilo__prism.txt`). The optional `@arnilo/prism-browser` package extends additively with Chrome DevTools Protocol capabilities (0.1.4): `browser_evaluate`, `browser_observe`, and the `block_urls`/`unblock_urls`/`throttle`/`emulate` act actions on Chromium hosts, plus raw `{ css }`/`{ xpath }` targets — new exports and two optional structural interface members only, zero removals. **Store compatibility: compatible** — no persisted shape, event schema, or default behavior changed (no runtime path changed; the split is declaration-level). no migration step; rollback = restore the 0.1.3 manifests/tag (stores never change). The next line, **0.1.5**, is the documented **breaking cut** (deprecated-option removal); its migration section will list the removed symbols (the public-but-unused export candidates from `scripts/dead-exports.mjs`).

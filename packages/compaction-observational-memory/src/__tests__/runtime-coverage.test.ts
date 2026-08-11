@@ -68,9 +68,8 @@ describe("observational memory runtime coverage", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 999_999 }, agentMaxTurns: 1 },
     });
     await runtime.flush();
     const coveredCount = (await session.entries()).length;
@@ -99,9 +98,8 @@ describe("observational memory runtime coverage", () => {
     const secondRuntime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider: observingProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      observation: { provider: observingProvider, model: workerModel },
+      overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 999_999 }, agentMaxTurns: 1 },
     });
     await secondRuntime.flush();
     for (const id of coveredIds) assert.doesNotMatch(seenPrompt, new RegExp(id));
@@ -123,9 +121,8 @@ describe("observational memory runtime coverage", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 999_999 }, agentMaxTurns: 1 },
     });
     await runtime.flush();
     assert.equal(calls, 1);
@@ -155,9 +152,8 @@ describe("observational memory runtime coverage", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 999_999 }, agentMaxTurns: 1 },
     });
     await runtime.flush();
     const bookkeeping = await appendCustom(session, store, { type: "other.bookkeeping", value: 1 });
@@ -196,9 +192,14 @@ describe("observational memory runtime coverage", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 999_999, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      reflection: { provider: workerProvider, model: workerModel },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 1 },
+        context: { observationsPoolTargetTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
     });
     const first = await runtime.flush();
     assert.equal(first.observations, 1);
@@ -246,9 +247,14 @@ describe("observational memory runtime coverage", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 999_999, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      reflection: { provider: workerProvider, model: workerModel },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 1 },
+        context: { observationsPoolTargetTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
     });
     await runtime.flush();
     await runtime.flush({ fullReflectionRebuild: true });
@@ -281,9 +287,15 @@ describe("observational memory runtime coverage", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 1, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      reflection: { provider: workerProvider, model: workerModel },
+      dropper: { provider: workerProvider, model: workerModel },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 1 },
+        context: { observationsPoolTargetTokens: 1 },
+        agentMaxTurns: 1,
+      },
     });
     await runtime.flush();
     const ledger = foldObservationalMemoryLedger(await session.entries());

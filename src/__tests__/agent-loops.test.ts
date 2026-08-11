@@ -392,7 +392,7 @@ describe("agent loop strategies", () => {
         loop: { strategy: "single-shot", toolConcurrency: 2 },
       });
 
-      await agent.createSession().run("work", { maxToolRounds: 1 });
+      await agent.createSession().run("work", { limits: { maxToolRounds: 1 } });
       assert.equal(maxActive, 1);
     });
 
@@ -421,7 +421,7 @@ describe("agent loop strategies", () => {
       const reader = collect(session.subscribe());
       let ran = "init";
       await session.run("Hi", {
-        maxToolRounds: 1,
+        limits: { maxToolRounds: 1 },
         loop: {
           name: "counter",
           async run() {
@@ -1180,7 +1180,7 @@ describe("agent loop strategies", () => {
       const session = agent.createSession({ id: "s-bounded-artifact-tools" });
       const reader = collect(session.subscribe());
       await session.run("build", {
-        maxToolRounds: 1,
+        limits: { maxToolRounds: 1 },
         loop: { strategy: "generate-validate-revise", toolCalls: "bounded", validator: (value) => ({ ok: value === "good" }) },
       });
       const events = await reader;

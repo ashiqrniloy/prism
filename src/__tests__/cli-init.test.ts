@@ -6,7 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { createInitProject, defaultTemplatesRoot, INIT_PROVIDERS, parseInitArgs, runInitCommand } from "../cli-init.js";
+import { createInitProject, defaultTemplatesRoot, listInitProviders, parseInitArgs, runInitCommand } from "../cli-init.js";
 import { runCli } from "../cli-runner.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -92,8 +92,9 @@ describe("prism init", () => {
   });
 
   it("ships alibaba and ollama init entries that reference env keys only", () => {
-    assert.ok(INIT_PROVIDERS.includes("alibaba"), "INIT_PROVIDERS missing alibaba");
-    assert.ok(INIT_PROVIDERS.includes("ollama"), "INIT_PROVIDERS missing ollama");
+    const providers = listInitProviders();
+    assert.ok(providers.includes("alibaba"), "listInitProviders missing alibaba");
+    assert.ok(providers.includes("ollama"), "listInitProviders missing ollama");
     const catalog = JSON.parse(readFileSync(join(templatesRoot, "providers.json"), "utf8")) as Record<
       string,
       {
@@ -206,7 +207,7 @@ describe("prism init", () => {
   it("supports every provider flag and optional dependency matrix", async () => {
     const root = mkdtempSync(join(tmpdir(), "prism-init-matrix-"));
     try {
-      for (const provider of INIT_PROVIDERS) {
+      for (const provider of listInitProviders()) {
         const target = join(root, provider);
         await createInitProject(
           {

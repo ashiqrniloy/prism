@@ -126,7 +126,7 @@ describe("skill load", () => {
       tools: [loadSkill],
     });
 
-    await agent.createSession().run("Hi", { activeSkills: ["brief"], maxToolRounds: 1 });
+    await agent.createSession().run("Hi", { activeSkills: ["brief"], limits: { maxToolRounds: 1 } });
 
     assert.equal(requests.length, 2);
     const firstText = requests[0]!.messages

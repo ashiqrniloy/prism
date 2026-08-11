@@ -117,7 +117,7 @@ Important request shapes:
 | `PromptCacheHints` / `PromptCacheBreakpoint` | Structured provider cache intent and reusable prompt anchors. See [Provider caching](provider-caching.md). |
 | `ProviderPackage` | Inert provider package definition with docs metadata and explicit `setup(api)` registration. |
 | `ProviderRequest` | Normalized provider input: `model`, `messages`, optional `tools`, `context`, generic `options`, `metadata`, and `signal`. |
-| `ProviderRequestOptions` | Generic provider adapter hints: session id, legacy `cacheKey`/`cacheRetention`, structured `cache?: PromptCacheHints`, headers, compat, and opaque `extra`; `timeoutMs`, `maxRetries`, and `maxRetryDelayMs` are deprecated inert hints in first-party providers. |
+| `ProviderRequestOptions` | Generic provider adapter hints: session id, legacy `cacheKey`/`cacheRetention`, structured `cache?: PromptCacheHints`, headers, compat, and opaque `extra`. Provider-level timeout/retry hints were removed in 0.1.5; timeouts are host-owned (`RunOptions.signal`) and retries are runtime-owned (`AgentConfig.retry`/`RunOptions.retry`). |
 | `ProviderRequestPolicy` | Ordered pre-provider hook that can patch the request and return exact secrets for provider-error redaction. |
 | `ToolRegistry` | Host active tool registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `ToolExecutionContext` | Host tool execution context: session/run ids, tool call id, optional abort signal, metadata, and progress callback. |
@@ -131,7 +131,7 @@ Important request shapes:
 | `CredentialRequest` | Credential lookup request: credential `name`, optional provider id, and metadata. |
 | `OAuthProvider` | Host/package OAuth callbacks for login, optional refresh, and conversion to a `Credential`. |
 | `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
-| `RunOptions` | Per-run overrides: optional abort signal, model, input layout, max tool rounds, provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
+| `RunOptions` | Per-run overrides: optional abort signal, model, input layout, run limits (incl. `limits.maxToolRounds`), provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
 | `SubscribeOptions` / `SubscriberOverflowPolicy` | Live `AgentEvent` subscriber queue limit and overflow policy: `maxQueuedEvents`, `overflow: "close" \| "drop_oldest" \| "drop_newest"`. |
 | `resumeAgentRunStream` / `AgentRunResumeStreamOptions` | One durable-run event stream: existing checkpoint/resume options plus `signal` and bounded subscriber options. `AgentRunLifecycle.resumeStream()` adds host capability resolution; no protocol types enter core. |
 | `AgentConfig.loop` / `RunOptions.loop` | Replaceable per-run control loop: `singleShotLoop` default, `generate-validate-revise` options, or a custom `AgentLoopStrategy`. `RunOptions.loop` wins. See [Agent loops](agent-loops.md). |

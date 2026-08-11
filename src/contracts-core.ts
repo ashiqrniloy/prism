@@ -303,12 +303,6 @@ export interface ProviderRequestOptions {
   readonly cacheKey?: string;
   readonly cache?: PromptCacheHints;
   readonly headers?: Readonly<Record<string, string>>;
-  /** @deprecated Provider-level timeout is inert in first-party providers; pass an AbortSignal/RunOptions.signal instead. */
-  readonly timeoutMs?: number;
-  /** @deprecated Provider-level retry is inert in first-party providers; use AgentConfig.retry/RunOptions.retry instead. */
-  readonly maxRetries?: number;
-  /** @deprecated Provider-level retry is inert in first-party providers; use AgentConfig.retry/RunOptions.retry instead. */
-  readonly maxRetryDelayMs?: number;
   readonly compat?: JsonObject;
   readonly extra?: JsonObject;
   /** Provider-neutral JSON-schema structured output request. Requires model `capabilities.structuredOutput`. */

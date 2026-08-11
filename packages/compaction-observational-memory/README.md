@@ -30,4 +30,4 @@ await attached.session.run("Continue from prior work");
 
 Runnable network-free demo: `node examples/observational-memory-lifecycle.ts` (from repo root).
 
-See [docs/compaction-observational-memory.md](../../docs/compaction-observational-memory.md) and [docs/migration.md](../../docs/migration.md) (`0.0.18 → 0.0.19`).
+See [docs/compaction-observational-memory.md](../../docs/compaction-observational-memory.md) and [docs/migration.md](../../docs/migration.md) (`0.1.4 → 0.1.5` for the removed flat keys / worker aliases, `0.0.18 → 0.0.19` for the original nesting migration).

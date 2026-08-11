@@ -86,6 +86,7 @@ RunDropperOptions	export type { RunDropperOptions } from "./workers/dropper.js"
 RunObserverOptions	export type { RunObserverOptions } from "./workers/observer.js"
 RunReflectorOptions	export type { RunReflectorOptions } from "./workers/reflector.js"
 activeObservations	export declare function activeObservations(ledger: ObservationalMemoryLedger): readonly MemoryObservation[]
+assertNoRemovedFlatKeys	export declare function assertNoRemovedFlatKeys(input: unknown): void
 boundMemoryPayload	export declare function boundMemoryPayload(observations: readonly MemoryObservation[], reflections: readonly MemoryReflection[], droppedObservationIds: readonly string[], maxObservationTokens: number, maxPayloadBytes: number): BoundedMemoryPayload
 buildObservationalMemoryContextBlocks	export declare function buildObservationalMemoryContextBlocks(entries: readonly SessionEntry[], options?: ObservationalMemoryContextOptions): readonly ContextBlock[]
 buildObservationalMemoryProjection	export declare function buildObservationalMemoryProjection(entries: readonly SessionEntry[], firstKeptEntryId?: string): ObservationalMemoryProjection

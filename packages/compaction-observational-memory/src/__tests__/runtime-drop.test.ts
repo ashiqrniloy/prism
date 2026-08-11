@@ -50,9 +50,15 @@ describe("observational memory runtime dropper", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 1, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      reflection: { provider: workerProvider, model: workerModel },
+      dropper: { provider: workerProvider, model: workerModel },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 1 },
+        context: { observationsPoolTargetTokens: 1 },
+        agentMaxTurns: 1,
+      },
     });
     await runtime.flush();
     assert.equal(

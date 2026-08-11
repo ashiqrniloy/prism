@@ -205,7 +205,6 @@ HARD_MAX_SKILL_INSTRUCTION_BYTES	export declare const HARD_MAX_SKILL_INSTRUCTION
 HARD_MAX_STICKY_DECISIONS	export declare const HARD_MAX_STICKY_DECISIONS = 256
 HARD_RUN_LIMITS	export declare const HARD_RUN_LIMITS: Required<Omit<RunLimits, "maxCost">>
 HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
-INIT_PROVIDERS	export declare const INIT_PROVIDERS: readonly string[]
 IdentityError	export declare class IdentityError extends Error
 IdentityLimits	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
 IdentityVerifier	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
@@ -711,6 +710,6 @@ useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(
 validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.1.4"
+version	export declare const version = "0.1.5"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

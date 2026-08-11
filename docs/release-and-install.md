@@ -274,6 +274,38 @@ git push origin v0.1.2        # tag push triggers release.yml publish job (prove
 
 **Rollback notes.** `release:publish --version 0.1.2 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.2` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.2` is store-compatible with `0.1.1` in **both directions** (no migration ran — same checksum-protected contract), so an operator may defer or roll back the patch without a database rollback.
 
+### 0.1.5 publish handoff (plan 017 Task 4)
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.1.5** (plan 017) is the **documented breaking cut** on the frozen 0.1.x line — deprecated-option removal, with the removed-symbols list, replacements, before/after examples, dynamic-config refusal behavior, store compatibility, and rollback in the top `docs/migration.md` `0.1.4 → 0.1.5` section. Removed: `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs` (inert in first-party providers; abort/retry lives at the host layer — replacements `RunOptions.signal`/`AgentConfig.retry`/`RunOptions.retry`), `RunOptions.maxToolRounds` (→ `limits.maxToolRounds`; CLI `--max-tool-rounds` unchanged), `ObservationalMemorySettingsInput` pre-0.0.19 flat keys and top-level `workerProvider`/`workerModel` aliases (→ nested `observation`/`reflection`/`dropper` configs; `sessionModel` fallback unchanged), `ReadToolOptions.autoResizeImages` (→ `transformImage`), and `INIT_PROVIDERS` (→ `listInitProviders()`). Every removal **fails closed** for untyped callers with a `TypeError` naming the replacement before any provider call, tool call, filesystem access, compaction, or session append. Compat baselines were regenerated only after the reviewed `--allow-break` break report: `arnilo__prism.txt` (removed `INIT_PROVIDERS` const + `maxToolRounds`/provider-knob member lines — interface members are not baseline text, so the delta is the `INIT_PROVIDERS` line), `arnilo__prism-coding-agent.txt` (`autoResizeImages` is an interface member — baseline delta limited to statement/re-export text if any), `arnilo__prism-compaction-observational-memory.txt` (flat keys and worker aliases are interface members — no baseline line delta expected). Publishable graph stays **49** manifests (root + 48 workspace) at exact **0.1.5**. Store compatibility with 0.1.4: **compatible, no migration** (removed options were inert aliases; nested replacements resolve to the same active values; `DEFAULT_RUN_LIMITS.maxToolRounds` 8 / hard cap 64 unchanged); zero new dependencies (lockfile name-set unchanged).
+
+```bash
+# Operator prerequisites (each a named blocked gate — none may be skipped):
+#  1. protected live-canary matrix green (live-canaries.yml, canary-report.json retained)
+#  2. PostgreSQL + keychain protected suites green (test:postgres, keychain suite)
+#  3. CodeQL SAST green on the release commit (security.yml / release.yml codeql-release)
+#  4. npm OIDC trusted publishing identity authenticated (NPM_TOKEN with id-token, provenance)
+
+git diff --check
+npm ci
+npm run sdk:ready            # includes typecheck, lint, format, full test, coverage, pack, release:gate
+npm run security:threat-suites
+PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres   # Phase 7 + Phase 12 restart-recovery
+npm audit --audit-level=moderate
+npm run release:check -- --version 0.1.5 --report /tmp/prism-0.1.5-preflight.json
+npm run release:publish -- --version 0.1.5 --dry-run --allow-dirty --allow-untagged --report /tmp/prism-0.1.5-dry-run.json
+#   run the dry-run twice and diff the reports: deterministic, byte-identical
+
+# Sign the release on the clean tagged tree (operator GPG key):
+git tag -s v0.1.5 -m "Prism 0.1.5 — documented breaking cut: deprecated-option removal"
+git verify-tag v0.1.5
+git push origin v0.1.5        # tag push triggers release.yml publish job (provenance, attestations)
+
+# Real publication never bypasses the gates: release.mjs refuses
+# --allow-dirty/--allow-untagged without --dry-run.
+```
+
+**Rollback notes.** `release:publish --version 0.1.5 --resume --report release-artifacts/publish-report.json` resumes an interrupted publication and skips only registry versions whose internal dependency fingerprint matches the local manifest. A failed package aborts the run with its status written to the report; re-run after fixing the cause. npm cannot unpublish the `0.1.5` line after 72 hours — a post-publication defect ships as a `0.1.x` patch (additive-only compat promise, `release:gate` enforced), or as a documented break in the next line with a `docs/migration.md` entry. `0.1.5` is store-compatible with `0.1.4` in **both directions** (no migration ran — same checksum-protected contract), so an operator may defer or roll back the cut without a database rollback; code/config using removed keys must be migrated first (removed keys fail closed on 0.1.5).
+
 ### 0.1.4 publish handoff (plan 016 Task 6)
 
 **Decision: GO when the operator prerequisites below are recorded.** Release **0.1.4** (plan 016) is the internal god-module split, compat-preserving on the frozen 0.1.x line: `src/agents.ts` and `src/contracts.ts` reorganized by concern behind barrel re-exports (`contracts-core`/`contracts-run-state`/`contracts-protocol`; `agent-session`/`agent-run-lifecycle`/`agent-approval`/`agent-tool-dispatch` reusing `agent-run-state`/`agent-loops`/`compaction`) with a **byte-identical public entry surface** (0 added/0 removed/0 changed vs the 0.1.3 baseline; the 14 additive union-surface helpers are internal cross-module exports, not consumer-importable — deviation #1), measured tree-shaking improvement (111,049 → 982 B `dist/agents.js`, 9,420 → 418 B `dist/contracts.js`, module count 64 → 70; evidence in `scripts/phase16-baseline.json`), and additive **`@arnilo/prism-browser` Chrome DevTools Protocol capabilities** (Tasks 4-5): `browser_evaluate`, `browser_observe`, `block_urls`/`unblock_urls`/`throttle`/`emulate` act actions, and `{ css }`/`{ xpath }` targets on Chromium hosts — 41 added / 0 removed / 18 changed declaration texts (15 re-export-statement artifacts + 3 optional-member/signature widenings), the documented deviation #2 carve-out; root `arnilo__prism.txt` regenerated with zero breaking deltas. Publishable graph stays **49** manifests (root + 48 workspace) at exact **0.1.4**. Store compatibility with 0.1.3: **compatible, no migration**; zero new dependencies (lockfile name-set unchanged).

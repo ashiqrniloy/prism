@@ -1,0 +1,341 @@
+{
+  "$comment": "Phase 17 (0.1.5) Task 0 deprecated-option-removal scope gate. Machine-checkable source of truth consumed by Tasks 1-4 of plans/017-Release-0-1-5-Deprecated-Option-Removal.md: the exact removed symbols (ProviderRequestOptions.timeoutMs/maxRetries/maxRetryDelayMs; RunOptions.maxToolRounds; the ObservationalMemorySettingsInput pre-0.0.19 flat keys; the CreateObservationalMemoryOptions/ObservationalMemoryRuntimeOptions workerProvider/workerModel aliases; ReadToolOptions.autoResizeImages; src/cli-init.ts INIT_PROVIDERS) with per-symbol replacements and task ownership, the explicitly preserved surface (abort/retry runtime paths, nested run limits incl. RunLimits.maxToolRounds and CLI --max-tool-rounds, nested observational-memory settings/workers, transformImage, listInitProviders), the corrected roadmap labels (the deprecated alias is on RunOptions not AgentConfig; transformImage is the supported replacement of the autoResizeImages alias; listInitProviders is the supported replacement of the INIT_PROVIDERS alias), allowed/forbidden changes, the documented-breaking compat flow (pre-regeneration --allow-break review gate gated on docs/migration.md mentioning 0.1.5, then reviewed baseline regeneration of exactly the affected baseline files, then a normal gate), the audit/signed-tag/provenance policy, per-task evidence tokens, and the removal-freeze deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json and 0.1.5 changes none of it. Amendment requires a recorded deviation entry below. Validated by scripts/phase17-freeze.test.mjs. Baseline evidence for regression comparison at the Task 4 exit gate lives in scripts/phase17-baseline.json.",
+  "release": "0.1.5",
+  "line": "0.1.x",
+  "type": "deprecated-option-removal",
+  "baseline": "0.1.4 (plan 016 exit gate passed 2026-08-10; signed tag v0.1.4; 49 publishable manifests; audit 0 moderate; compat baselines current at 0.1.4)",
+  "removalFreeze": {
+    "active": true,
+    "correctedRoadmapLabels": [
+      "roadmap names AgentConfig.maxToolRounds: the deprecated alias actually lives on RunOptions.maxToolRounds (src/contracts-protocol.ts:66-67); AgentConfig.limits.maxToolRounds and RunOptions.limits.maxToolRounds are supported and preserved",
+      "roadmap names the read.ts transformImage flag as the removal target: transformImage is the active supported replacement; the deprecated member is ReadToolOptions.autoResizeImages (packages/coding-agent/src/read.ts:206-210) and is what gets removed",
+      "roadmap names cli-init listInitProviders as the removal target: listInitProviders() is the active supported API; the deprecated alias is the INIT_PROVIDERS const (src/cli-init.ts:83-84) and is what gets removed"
+    ],
+    "exactRemovals": [
+      {
+        "task": "task1",
+        "owner": "ProviderRequestOptions",
+        "file": "src/contracts-core.ts",
+        "line": 307,
+        "symbol": "timeoutMs",
+        "replacement": "ProviderRequest.signal / RunOptions.signal (AbortSignal); provider-level timeout is inert in first-party providers"
+      },
+      {
+        "task": "task1",
+        "owner": "ProviderRequestOptions",
+        "file": "src/contracts-core.ts",
+        "line": 309,
+        "symbol": "maxRetries",
+        "replacement": "AgentConfig.retry / RunOptions.retry (RetryOptions); provider-level retry is inert in first-party providers"
+      },
+      {
+        "task": "task1",
+        "owner": "ProviderRequestOptions",
+        "file": "src/contracts-core.ts",
+        "line": 311,
+        "symbol": "maxRetryDelayMs",
+        "replacement": "AgentConfig.retry / RunOptions.retry (RetryOptions); provider-level retry is inert in first-party providers"
+      },
+      {
+        "task": "task1",
+        "owner": "RunOptions",
+        "file": "src/contracts-protocol.ts",
+        "line": 67,
+        "symbol": "maxToolRounds",
+        "replacement": "RunOptions.limits.maxToolRounds (RunLimits); untyped legacy { maxToolRounds } run input must be refused before session/provider/tool side effects with a message naming limits.maxToolRounds"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 99,
+        "symbol": "observeAfterTokens",
+        "replacement": "observation.messageTokens"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 100,
+        "symbol": "reflectAfterTokens",
+        "replacement": "reflection.observationTokens"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 101,
+        "symbol": "compactAfterTokens",
+        "replacement": "context.compactAfterTokens (nested member is active and preserved)"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 102,
+        "symbol": "keepRecentEntries",
+        "replacement": "context.recentMessages"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 103,
+        "symbol": "recentMessageMaxTokens",
+        "replacement": "context.recentMessageMaxTokens (nested member is active and preserved)"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 104,
+        "symbol": "observationsPoolMaxTokens",
+        "replacement": "context.observationsPoolMaxTokens (nested member is active and preserved)"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 105,
+        "symbol": "observationsPoolTargetTokens",
+        "replacement": "context.observationsPoolTargetTokens (nested member is active and preserved)"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 106,
+        "symbol": "workerModel",
+        "replacement": "observation.model / reflection.model / dropper.model"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 107,
+        "symbol": "thinkingLevel",
+        "replacement": "observation.thinkingLevel / reflection.thinkingLevel / dropper.thinkingLevel (nested members are active and preserved)"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemorySettingsInput",
+        "file": "packages/compaction-observational-memory/src/settings.ts",
+        "line": 108,
+        "symbol": "requireExplicitModel",
+        "replacement": "observation.requireExplicitModel / reflection.requireExplicitModel / dropper.requireExplicitModel (nested members are active and preserved)"
+      },
+      {
+        "task": "task2",
+        "owner": "CreateObservationalMemoryOptions",
+        "file": "packages/compaction-observational-memory/src/compose.ts",
+        "line": 67,
+        "symbol": "workerProvider",
+        "replacement": "observation.provider / reflection.provider / dropper.provider"
+      },
+      {
+        "task": "task2",
+        "owner": "CreateObservationalMemoryOptions",
+        "file": "packages/compaction-observational-memory/src/compose.ts",
+        "line": 69,
+        "symbol": "workerModel",
+        "replacement": "observation.model / reflection.model / dropper.model"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemoryRuntimeOptions",
+        "file": "packages/compaction-observational-memory/src/runtime.ts",
+        "line": 45,
+        "symbol": "workerProvider",
+        "replacement": "observation / reflection / dropper worker configs"
+      },
+      {
+        "task": "task2",
+        "owner": "ObservationalMemoryRuntimeOptions",
+        "file": "packages/compaction-observational-memory/src/runtime.ts",
+        "line": 47,
+        "symbol": "workerModel",
+        "replacement": "observation / reflection / dropper worker configs"
+      },
+      {
+        "task": "task3",
+        "owner": "ReadToolOptions",
+        "file": "packages/coding-agent/src/read.ts",
+        "line": 210,
+        "symbol": "autoResizeImages",
+        "replacement": "transformImage (TransformImage callback); untyped legacy { autoResizeImages } read options must be refused before path resolution/filesystem access with a message naming transformImage"
+      },
+      {
+        "task": "task3",
+        "owner": "cli-init.ts (module const)",
+        "file": "src/cli-init.ts",
+        "line": 84,
+        "symbol": "INIT_PROVIDERS",
+        "replacement": "listInitProviders(templatesRoot?) \u2014 the active provider-list API used by init parsing, usage text, validation, and tests; the root compat baseline records INIT_PROVIDERS and listInitProviders as separate export lines, so baseline regeneration must remove only the INIT_PROVIDERS line"
+      }
+    ],
+    "preserved": [
+      {
+        "symbol": "ProviderRequest.signal",
+        "owner": "ProviderRequest",
+        "rationale": "supported abort path"
+      },
+      {
+        "symbol": "RunOptions.signal",
+        "owner": "RunOptions",
+        "rationale": "supported run-scoped abort path"
+      },
+      {
+        "symbol": "AgentConfig.retry",
+        "owner": "AgentConfig",
+        "rationale": "supported retry path"
+      },
+      {
+        "symbol": "RunOptions.retry",
+        "owner": "RunOptions",
+        "rationale": "supported run-scoped retry path"
+      },
+      {
+        "symbol": "RunLimits.maxToolRounds",
+        "owner": "RunLimits",
+        "rationale": "active limit; the deprecated RunOptions.maxToolRounds alias is what is removed"
+      },
+      {
+        "symbol": "AgentConfig.limits.maxToolRounds",
+        "owner": "AgentConfig.limits",
+        "rationale": "active nested limit"
+      },
+      {
+        "symbol": "RunOptions.limits.maxToolRounds",
+        "owner": "RunOptions.limits",
+        "rationale": "active nested limit; replacement for the removed alias"
+      },
+      {
+        "symbol": "LoopContext.maxToolRounds",
+        "owner": "LoopContext",
+        "rationale": "active loop-state field, out of scope"
+      },
+      {
+        "symbol": "--max-tool-rounds",
+        "owner": "src/cli-runner.ts",
+        "rationale": "CLI flag stays; maps to RunOptions.limits.maxToolRounds"
+      },
+      {
+        "symbol": "transformImage",
+        "owner": "ReadToolOptions",
+        "rationale": "supported replacement for the removed autoResizeImages alias"
+      },
+      {
+        "symbol": "TransformImage",
+        "owner": "packages/coding-agent index",
+        "rationale": "supported callback type"
+      },
+      {
+        "symbol": "listInitProviders",
+        "owner": "src/cli-init.ts",
+        "rationale": "supported replacement for the removed INIT_PROVIDERS alias"
+      },
+      {
+        "symbol": "observation",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "nested settings group (active)"
+      },
+      {
+        "symbol": "reflection",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "nested settings group (active)"
+      },
+      {
+        "symbol": "dropper",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "nested settings group (active)"
+      },
+      {
+        "symbol": "context",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "nested settings group (active); its own members recentMessageMaxTokens/compactAfterTokens/observationsPoolMaxTokens/observationsPoolTargetTokens stay"
+      },
+      {
+        "symbol": "retrieval",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "nested settings group (active)"
+      },
+      {
+        "symbol": "agentMaxTurns",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "active top-level setting without a nested replacement"
+      },
+      {
+        "symbol": "passive",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "active top-level setting without a nested replacement"
+      },
+      {
+        "symbol": "debugLog",
+        "owner": "ObservationalMemorySettingsInput",
+        "rationale": "active top-level setting without a nested replacement"
+      },
+      {
+        "symbol": "sessionModel",
+        "owner": "ObservationalMemoryRuntimeOptions",
+        "rationale": "active worker fallback model"
+      },
+      {
+        "symbol": "overrides",
+        "owner": "CreateObservationalMemoryOptions",
+        "rationale": "active settings-provider override; its flat keys are what Task 2 removes"
+      },
+      {
+        "symbol": "requireExplicitModel",
+        "owner": "CreateObservationalMemoryOptions",
+        "rationale": "active top-level option distinct from the deprecated flat settings key"
+      }
+    ],
+    "allowedChanges": [
+      "declaration/source removal of exactly the symbols in exactRemovals from their owner interfaces/modules, plus deletion of their compatibility plumbing (alias-merging in agent-session.ts, flat-key mapping/conflict branches and worker alias fallbacks in settings.ts/compose.ts/runtime.ts, autoResizeImages branches in read.ts, the INIT_PROVIDERS const in cli-init.ts)",
+      "runtime migration-refusal guards: untyped/legacy JavaScript or settings-provider input carrying a removed key fails before session mutation/provider invocation/tool execution/filesystem access/worker activity, with a message naming the removed key and its nested/run-limits replacement; removed run-limit aliases must never silently widen limits; removed image flags must never silently apply defaults",
+      "migration of all first-party callers, CLI/RPC mapping, examples, optional packages, and tests from removed aliases to replacements (RunOptions.limits.maxToolRounds, nested observational-memory settings/workers, transformImage, listInitProviders)",
+      "compile-time negative regression fixtures proving removed members fail to type-check and preserved replacements type-check",
+      "docs updates: docs/migration.md 0.1.4 -> 0.1.5 section with exact removal/replacement table and the three corrected roadmap labels, affected API pages (provider-layer/provider-packages/provider-conformance/provider-primitives/public-contracts/agent-session-runtime/agent-loops/tools/tool-execution-primitives/structured-output/coding-agent-tools/compaction-observational-memory/use-case-model-selection), CHANGELOG.md + affected package changelogs, docs/index.md current line -> 0.1.5, docs/release-and-install.md 0.1.5 operator handoff",
+      "version bump 0.1.4 -> 0.1.5 across 49 publishable manifests + lockfile + version-sensitive pins (src/index.ts version const, index.test.ts, release.test.ts graph test, docs.test.ts root-manifest assertion + plan 017 tripwire, install-smoke.test.ts, packaging.test.ts, workspace index.test.ts pins)",
+      "compat baseline flow: capture the deliberate-break report with release:gate --version 0.1.5 --allow-break (passes only because docs/migration.md mentions 0.1.5), review it against the exactRemovals/preserved lists, regenerate only the affected baselines (arnilo__prism.txt, arnilo__prism-coding-agent.txt, arnilo__prism-compaction-observational-memory.txt; any other baseline changed only by version/re-export text is recorded explicitly) with release:gate --version 0.1.5 --update-baseline, then a normal release:gate --version 0.1.5 without --allow-break passes clean",
+      "phase 17 freeze/baseline/tripwire scripts and package.json test-script wiring (scripts/phase17-freeze.test.mjs after scripts/phase16-freeze.test.mjs)"
+    ],
+    "forbiddenChanges": [
+      "removal, rename, or signature change of any preserved symbol (RunLimits.maxToolRounds, LoopContext.maxToolRounds, CLI --max-tool-rounds, RunOptions.limits, AgentConfig.limits, transformImage/TransformImage, listInitProviders, nested observational-memory settings groups and their active members, sessionModel, overrides, top-level agentMaxTurns/passive/debugLog/requireExplicitModel, ProviderRequest.signal, RunOptions.signal, AgentConfig.retry, RunOptions.retry)",
+      "any behavior change beyond alias removal: no default threshold, limit, narrowing, retry, timeout, worker-selection, or fallback changes; run-limit resolution stays on resolveRunLimits with identical narrowing/hard-cap enforcement",
+      "silent ignore of removed untyped/legacy input (must refuse with a replacement-naming error before side effects)",
+      "changing store, event, protocol, or persisted-shape compatibility (store/event/protocol compatibility is unchanged in 0.1.5)",
+      "new public exports, new packages, new package subpaths, or new runtime/dev dependencies (the dependency-free core and no-new-devDep promises hold)",
+      "0.1.6 items (durable ACP session store, native sandbox backend, pdf/office reader, recursive delete, brace-expanding glob, loaded-skill body persistence), 0.1.7 items (prompt-cache telemetry, model-router cost/latency routing, async AgUiProjection hooks, prism providers add scaffold), 0.2.0 items (protected live-canary matrix, live NATS suite, new OpenAI-compatible model providers, prism-providers umbrella membership fix, delegated-agent adapters, enterprise adapter breadth, OTel spans for delegated agents)",
+      "deletion or rewriting of ponytail: comments (intentional documented shortcuts move with their code)",
+      "breaking changes to the frozen 0.1.x support matrix or public contract surface beyond the recorded removals",
+      "regenerating compat baselines before the reviewed --allow-break break report exists, or regenerating baselines unrelated to the removals without recording the delta"
+    ],
+    "deviations": []
+  },
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.1.4",
+    "promise": "0.1.5 is the DOCUMENTED BREAKING CUT: the exactRemovals surface is intentionally removed and recorded in docs/migration.md section 0.1.4 -> 0.1.5 (migrationMentionsVersion is the gate that makes release:gate --version 0.1.5 --allow-break pass); the break report is captured with --allow-break and reviewed against exactRemovals/preserved before scripts/compat-baseline/arnilo__prism.txt, arnilo__prism-coding-agent.txt, and arnilo__prism-compaction-observational-memory.txt are regenerated (--update-baseline); after regeneration the normal release:gate --version 0.1.5 passes without --allow-break, so sdk:ready stays green on the reviewed baselines. All other compat baselines stay byte-identical except the version literal; any other text delta is recorded explicitly in the freeze deviations before regeneration."
+  },
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.1.5 changes none of it",
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.1.5",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "tasks": {
+    "$comment": "per-task evidence tokens; 'done' when the task passes its checks, 'pending' until then. Task 0 sets itself done at freeze; Tasks 1-4 move to done as they land. The phase17-freeze.test.mjs per-task removal state machine asserts: while taskN is pending, its removed symbols are PRESENT in the live owner scope (pre-removal truth); once taskN is done, they must be ABSENT from the owner scope while the preserved surface stays present.",
+    "task0": "done (freeze record + scope gate + baseline evidence at scripts/phase17-baseline.json; npm test exit 0 core 1426/1426 script gates 153/153 workspaces green; audit 0 moderate; release:gate 0.1.4 green 49 packages 0 breaking deltas; 49 publishable manifests; exact deprecated inventory + file hashes captured; package.json test script wired with scripts/phase17-freeze.test.mjs after scripts/phase16-freeze.test.mjs; HEAD 9a79a6e)",
+    "task1": "done (removed ProviderRequestOptions.timeoutMs/maxRetries/maxRetryDelayMs (contracts-core.ts) and RunOptions.maxToolRounds (contracts-protocol.ts); agent-session.ts runInternal guards legacy own-property maxToolRounds fail-closed before any session mutation/provider call/tool execution with TypeError naming RunOptions.limits.maxToolRounds, and resolves limits directly via resolveRunLimits (alias-merge deleted); rpc.ts maps the maxToolRounds RPC param into limits; cli-runner.ts maps --max-tool-rounds into RunOptions.limits.maxToolRounds; migrated all first-party callers/tests/examples to limits (agents.test.ts 15, agent-loops.test.ts 3 run-option usages \u2014 LoopContext stubs untouched, run-ledger, install-smoke, skill-load, observability-opentelemetry instrumentation, examples/neuralwatt-agent-run.ts); new refusal regression in agents.test.ts asserts TypeError naming limits.maxToolRounds plus zero events/zero session entries, with a @ts-expect-error compile-time negative fixture (unused-expect-error fails tsc if the alias returns); docs updated: provider-layer/provider-packages/provider-conformance/provider-primitives/public-contracts/agent-session-runtime/tools/tool-execution-primitives/agent-loops pages now advertise runtime replacements only; docs.test.ts provider-knob tripwire rewritten (knobs absent from the 6-file set, replacements present) and phase39 phrase list swaps timeoutMs for limits.maxToolRounds; npm test green)",
+    "task2": "done (removed ObservationalMemorySettingsInput pre-0.0.19 flat keys observeAfterTokens/reflectAfterTokens/compactAfterTokens/keepRecentEntries/recentMessageMaxTokens/observationsPoolMaxTokens/observationsPoolTargetTokens/workerModel/thinkingLevel/requireExplicitModel (settings.ts) plus top-level workerProvider/workerModel on CreateObservationalMemoryOptions (compose.ts) and ObservationalMemoryRuntimeOptions (runtime.ts); settings.ts resolveObservationalMemorySettings is nested-only with assertNoRemovedFlatKeys fail-closed TypeError naming key+replacement for settings-provider JSON and untyped overrides before any worker/provider call/compaction/session append; compose.ts and runtime.ts refuse the two worker aliases synchronously at the factory boundary and both re-check overrides; deleted compatibility branches (conflict(), flat fallback expressions, fallbackWorker, assertWorkerModelCompatibility); workers resolve only from observation/reflection/dropper configs plus sessionModel fallback; migrated all package tests (settings/attach/runtime/runtime-coverage/runtime-drop/worker-split/live) and examples/observational-memory-lifecycle.ts to nested configs; new refusal tests: 10 removed flat keys x overrides+settings-provider rejection naming replacement, compile-time @ts-expect-error negatives for all 10 flat members, worker-alias refusals on createObservationalMemory and createObservationalMemoryRuntime, nested parity test for former flat thresholds; docs updated (compaction-observational-memory.md nested-only + fail-closed note, use-case-model-selection.md per-worker examples, README/CHANGELOG migration pointers); phase17-freeze.test.mjs gained a Task 2 refusal-surface leg (messages present, no @deprecated marker left); npm test green)",
+    "task3": "done (removed ReadToolOptions.autoResizeImages from read.ts (declaration, loadImageBuffer option shape, no-op else-if branch, call site) and removed the eagerly-initialized INIT_PROVIDERS const from cli-init.ts; createReadTool now fails closed on an own autoResizeImages property with a TypeError naming transformImage before any path resolution or filesystem access (true and false values both rejected); listInitProviders(templatesRoot?) remains the single provider-list API used by init parsing/usage/validation and tests now call it directly (cli-init.test.ts ships-alibaba/ollama + matrix loop); read.test.ts replaced the deprecated no-op test with a compile-time @ts-expect-error negative + runtime refusal test; transformImage success/failure/post-transform-size tests unchanged; docs updated (coding-agent-tools.md row+note removed, tool-execution-primitives.md typed shape + fail-closed note, coding-agent CHANGELOG 0.1.5 entry); phase17-freeze.test.mjs gained a Task 3 refusal-surface leg and the compat-baseline leg now defers the INIT_PROVIDERS-absent assertion to Task 4 baseline regeneration; npm test green)",
+    "task4": "done (docs/migration.md top 0.1.4 -> 0.1.5 section with exact removal/replacement table (17 rows), before/after TS examples for all five families, dynamic-config refusal behavior, store compatibility (compatible; no persisted shape change), rollback (restore 0.1.4 manifests/tag; no data migration), and the three corrected roadmap labels explicitly recorded; docs/index.md current line 0.1.5 with breaking-cut migration summary and nested-only OM entry; docs/release-and-install.md gains the 0.1.5 operator publish handoff (signed v0.1.5 tag + npm OIDC, rollback notes); root CHANGELOG 0.1.5 entry + coding-agent and compaction-observational-memory entries (Task 2/3); release graph bumped 0.1.4 -> 0.1.5 across all 49 manifests + lockfile (npm install --package-lock-only), version literals (src/index.ts), packed-install names (install-smoke.test.ts), workspace pins (packaging.test.ts), and release/docs tripwires (release.test.ts, docs.test.ts plan-017 freeze + pkg.version + index current-line; index.md knob wording kept tripwire-clean); break evidence captured: plain gate at 0.1.5 fails with exactly the documented baseline-visible break (removed: INIT_PROVIDERS), --allow-break passes only because migration.md mentions 0.1.5, reviewed regen of arnilo__prism.txt (INIT_PROVIDERS line dropped) and arnilo__prism-compaction-observational-memory.txt (+assertNoRemovedFlatKeys additive internal export), arnilo__prism-coding-agent.txt unchanged, then plain gate green; interface-member removals verified by the phase-17 direct declaration scanner (freeze state-machine legs); full exit gate recorded in scripts/phase17-baseline.json exitGate: npm test core 1428/1428 + 173 script gates, sdk:ready exit 0, audit 0 moderate, pack dry-run 49/49 twice byte-identical (sha256 4eb24fc7...), release gate 0.1.5 clean, lockfile package name-set unchanged vs 0.1.4 (zero new dependencies), benchmark evidence untouched)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip (inherited from scripts/phase12-freeze-manifest.json)",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.1.5",
+    "removalPolicy": "every removed key that changes bounded behavior when honored (run limits, observational-memory thresholds/models, image flags) is refused fail-closed before side effects (session mutation, provider invocation, tool execution, filesystem access, worker activity) with a message naming the replacement \u2014 never silently ignored, never silently widened; secret redaction, credential resolution, approval/pending-decision, tool-dispatch, and cross-tenant isolation code paths are untouched and the existing adversarial suites pass unchanged; publication stays operator-gated"
+  }
+}

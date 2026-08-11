@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.5] - 2026-08-11
+
+### Changed
+- Removed pre-0.0.19 compatibility surface (breaking, documented): flat settings keys (`observeAfterTokens`, `reflectAfterTokens`, `compactAfterTokens`, `keepRecentEntries`, `recentMessageMaxTokens`, `observationsPoolMaxTokens`, `observationsPoolTargetTokens`, `workerModel`, `thinkingLevel`, `requireExplicitModel`) and top-level `workerProvider` / `workerModel` aliases. Removed keys fail closed with a `TypeError` naming the nested replacement. See [migration](../../docs/migration.md) `0.1.4 → 0.1.5`.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

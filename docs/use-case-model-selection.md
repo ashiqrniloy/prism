@@ -24,11 +24,11 @@ Prism separates the **session chat model** (`AgentConfig.model` / `RunOptions.mo
 ```ts
 import { resolveUseCaseModel, applyThinkingLevel, thinkingFamilyForModel } from "@arnilo/prism";
 
-// Prefer an explicit worker; otherwise inherit the session/agent model.
+// Prefer an explicit worker model; otherwise inherit the session/agent model.
 const resolved = resolveUseCaseModel({
-  configured: settings.workerModel,       // optional use-case ModelConfig
-  sessionModel: agent.config.model,       // host-supplied; AgentSession does not expose agent
-  thinkingLevel: settings.thinkingLevel,
+  configured: settings.observation?.model,  // optional per-worker ModelConfig
+  sessionModel: agent.config.model,         // host-supplied; AgentSession does not expose agent
+  thinkingLevel: settings.observation?.thinkingLevel,
 });
 if (!resolved) {
   // skip — neither configured nor session model (or requireExplicitModel)
@@ -52,7 +52,7 @@ Resolution is O(1) and network-free. It does not mutate session history.
 
 | Site | How hosts bind | Session fallback |
 | --- | --- | --- |
-| Observational memory | `workerModel` / settings `workerModel` + runtime `sessionModel` | Yes — pass `sessionModel: agent.config.model`; `requireExplicitModel` restores skip |
+| Observational memory | `observation.model` / `reflection.model` / `dropper.model` + runtime `sessionModel` | Yes — pass `sessionModel: agent.config.model`; `requireExplicitModel` restores skip |
 | LLM compaction | `summaryModel` with `model` as fallback slot | Yes — `resolveUseCaseModel({ configured: summaryModel, sessionModel: model })` |
 | `RunOptions.model` | Per-run override on the **session** | N/A — this *is* the session/run model (writes `model_change`) |
 | Declarative `AgentDefinition` | Definition `model` / registry resolve | Definition-scoped (independent agent) |
@@ -67,17 +67,18 @@ Resolution is O(1) and network-free. It does not mutate session history.
 createObservationalMemoryRuntime({
   session,
   appendEntry: (entry) => store.append(entry),
-  workerProvider,
-  sessionModel: agent.config.model, // enables fallback when workerModel unset
-  // workerModel: { provider: "neuralwatt", model: "glm-5.2-fast" }, // optional override
-  overrides: { thinkingLevel: "low", observeAfterTokens: 1 },
+  observation: { provider: workerProvider }, // optional per-worker model override below
+  sessionModel: agent.config.model, // enables fallback when no worker model is configured
+  // observation: { provider: workerProvider, model: { provider: "neuralwatt", model: "glm-5.2-fast" } },
+  overrides: { observation: { thinkingLevel: "low", messageTokens: 1 } },
 });
 ```
 
-- Default: no `workerModel` + `sessionModel` set → workers use the session model.
-- Explicit `workerModel` (or settings `workerModel`) always wins.
+- Default: no worker `model` + `sessionModel` set → workers use the session model.
+- Explicit per-worker `model` (or settings `observation.model` / `reflection.model` / `dropper.model`) always wins.
 - `requireExplicitModel: true` (runtime or settings) → `skipped: "missing_model"` when no worker model, even if `sessionModel` is set.
 - Neither worker nor session model → `skipped: "missing_model"`.
+- Top-level `workerProvider` / `workerModel` aliases were removed in 0.1.5; workers resolve only from the nested `observation` / `reflection` / `dropper` configs.
 - Default credential request uses the **resolved** model's `provider` id.
 
 ## LLM compaction

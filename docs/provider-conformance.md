@@ -17,7 +17,7 @@ Exported from `@arnilo/prism/testing/provider-conformance`:
 
 ## When to use it
 
-Use these helpers in provider package tests to check event order, terminal events, abort propagation via `ProviderRequest.signal`, streamed tool-call deltas, usage/cache accounting, request body content preservation, protected header ownership, and secret redaction. Do not treat deprecated `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs` as conformance requirements; first-party providers use runtime abort signals and `AgentConfig.retry`/`RunOptions.retry` instead.
+Use these helpers in provider package tests to check event order, terminal events, abort propagation via `ProviderRequest.signal`, streamed tool-call deltas, usage/cache accounting, request body content preservation, protected header ownership, and secret redaction. Provider-level timeout/retry hints were removed in 0.1.5; first-party providers use runtime abort signals and `AgentConfig.retry`/`RunOptions.retry` instead.
 
 Do not use them as a live integration runner, provider simulator, retry framework, credential loader, or test framework replacement.
 
@@ -65,7 +65,7 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`,
 
 - `collectProviderEvents()` returns provider events in stream order.
 - `assertProviderStreamConforms()` returns collected events after verifying the stream ends with `done` or `error`, terminal events are last, and optional text/usage expectations match.
-- `assertAbortIsObserved()` passes an already-aborted signal and expects provider generation to reject. This is the supported timeout primitive; use a host abort controller or `RunOptions.signal` rather than deprecated provider-level `timeoutMs`.
+- `assertAbortIsObserved()` passes an already-aborted signal and expects provider generation to reject. This is the supported timeout primitive; use a host abort controller or `RunOptions.signal`.
 - `assertToolCallDeltasReconstruct()` rebuilds streamed `tool_call_delta` fragments into tool calls and validates expected id/name/arguments. Malformed JSON with id+name present yields `argumentsError` (no throw); missing id/name throws typed `incomplete_delta`. The runtime uses the same reconstruction before tool execution when a provider streams deltas.
 - `assertUsageAccounting()` finds `usage` or `done.usage` and checks selected token fields including `cacheReadTokens` and `cacheWriteTokens`. This is the provider-neutral check for normalized cache read/write token extraction; every first-party provider package exercises it against server-specific fields (`cached_tokens`, `cache_read_input_tokens`, etc.).
 - `assertSerializedRequestCoversContent()` scans a serialized provider request body for primitive canaries from each Prism content block and fails if any supported block type is silently dropped. Provider-valid transcripts place assistant `tool_call` messages before matching role `tool` `tool_result` messages; runtime, cache-aware input layout, and observational-memory worker loops preserve that order before serialization.

@@ -60,9 +60,8 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry,
-      workerProvider,
-      workerModel,
-      overrides: { passive: true, observeAfterTokens: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      overrides: { passive: true, observation: { messageTokens: 1 } },
     });
     assert.equal((await runtime.flush()).skipped, "passive");
     assert.equal(calls, 0);
@@ -70,10 +69,9 @@ describe("observational memory runtime", () => {
     const gated = createObservationalMemoryRuntime({
       session,
       appendEntry,
-      workerProvider,
-      workerModel,
+      observation: { provider: workerProvider, model: workerModel },
       credentialRequest: { provider: "mock", name: "apiKey" },
-      overrides: { observeAfterTokens: 1 },
+      overrides: { observation: { messageTokens: 1 } },
     });
     assert.equal((await gated.flush()).skipped, "missing_credentials");
     assert.equal(calls, 0);
@@ -102,10 +100,16 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
+      observation: { provider: workerProvider, model: workerModel },
+      reflection: { provider: workerProvider, model: workerModel },
+      dropper: { provider: workerProvider, model: workerModel },
       secrets: ["secret-value"],
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 1, observationsPoolTargetTokens: 1, agentMaxTurns: 1 },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 1 },
+        context: { observationsPoolTargetTokens: 1 },
+        agentMaxTurns: 1,
+      },
     });
     const result = await runtime.flush();
     const entries = await session.entries();
@@ -128,12 +132,11 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
+      observation: { provider: workerProvider, model: workerModel },
       secrets: [secret],
       maxWorkerErrorBytes: 16,
       debug: (_message, data) => debug.push(data),
-      overrides: { observeAfterTokens: 1 },
+      overrides: { observation: { messageTokens: 1 } },
     });
     assert.equal((await runtime.flush()).skipped, "error");
     assert.equal((await session.entries()).at(-1)?.id, before);
@@ -147,8 +150,7 @@ describe("observational memory runtime", () => {
     const base = {
       session,
       appendEntry: (entry: SessionEntry) => store.append(entry),
-      workerProvider: createMockProvider([providerDone()]),
-      workerModel,
+      observation: { provider: createMockProvider([providerDone()]), model: workerModel },
     };
     const limits = [
       ["maxWorkerTurns", HARD_MAX_WORKER_TURNS],
@@ -175,8 +177,6 @@ describe("observational memory runtime", () => {
           session,
           store,
           appendEntry: async () => undefined,
-          workerProvider: createMockProvider([providerDone()]),
-          workerModel,
         } as any),
       /appendEntry bound to the owning session store/,
     );
@@ -198,9 +198,12 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => otherStore.append(entry),
-      workerProvider,
-      workerModel,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      observation: { provider: workerProvider, model: workerModel },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
     });
 
     assert.equal((await runtime.flush()).skipped, "error");
@@ -236,9 +239,13 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
+      observation: { provider: workerProvider },
       sessionModel: model,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
     });
     const result = await runtime.flush();
     assert.equal(result.skipped, undefined);
@@ -259,10 +266,13 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      workerModel,
+      observation: { provider: workerProvider, model: workerModel },
       sessionModel: model,
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
     });
     await runtime.flush();
     assert.equal(seenModel, "mock/memory");
@@ -281,10 +291,10 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
+      observation: { provider: workerProvider },
       sessionModel: model,
       requireExplicitModel: true,
-      overrides: { observeAfterTokens: 1 },
+      overrides: { observation: { messageTokens: 1 } },
     });
     assert.equal((await runtime.flush()).skipped, "missing_model");
     assert.equal(calls, 0);
@@ -303,8 +313,8 @@ describe("observational memory runtime", () => {
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider,
-      overrides: { observeAfterTokens: 1 },
+      observation: { provider: workerProvider },
+      overrides: { observation: { messageTokens: 1 } },
     });
     assert.equal((await runtime.flush()).skipped, "missing_model");
     assert.equal(calls, 0);
@@ -316,20 +326,22 @@ describe("observational memory runtime", () => {
     const withDefault = createObservationalMemoryRuntime({
       session,
       appendEntry: (entry) => store.append(entry),
-      workerProvider: {
-        id: "memory",
-        async *generate() {
-          yield providerToolCall(
-            toolCallContent("o", "record_observation", {
-              content: "ok",
-              relevance: "high",
-              sourceEntryIds: [(await session.entries())[0]?.id],
-            }),
-          );
-          yield providerDone();
+      observation: {
+        provider: {
+          id: "memory",
+          async *generate() {
+            yield providerToolCall(
+              toolCallContent("o", "record_observation", {
+                content: "ok",
+                relevance: "high",
+                sourceEntryIds: [(await session.entries())[0]?.id],
+              }),
+            );
+            yield providerDone();
+          },
         },
+        model: { provider: "worker-prov", model: "w1" },
       },
-      workerModel: { provider: "worker-prov", model: "w1" },
       sessionModel: model,
       credential: {
         async resolve(request) {
@@ -337,7 +349,11 @@ describe("observational memory runtime", () => {
           return { type: "api_key", value: "tok" };
         },
       },
-      overrides: { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
     });
     await withDefault.flush();
     assert.equal(defaultProvider, "worker-prov");

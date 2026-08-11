@@ -121,15 +121,45 @@ describe("observational memory worker split", () => {
     assert.deepEqual(seen, ["reflector:reflector-model"]);
   });
 
-  it("create_observational_memory_rejects_worker_model_with_nested_models", () => {
+  it("create_observational_memory_rejects_legacy_worker_aliases", () => {
     assert.throws(
       () =>
         createObservationalMemory({
+          // @ts-expect-error removed in 0.1.5; use observation.provider / reflection.provider / dropper.provider
           workerProvider: provider([providerDone()]),
-          workerModel: model,
-          observation: { provider: provider([providerDone()]), model: { provider: "mock", model: "x" } },
         }),
-      /workerModel cannot be combined with nested worker models/,
+      /"workerProvider" was removed in 0.1.5/,
+    );
+    assert.throws(
+      () =>
+        createObservationalMemory({
+          // @ts-expect-error removed in 0.1.5; use observation.model / reflection.model / dropper.model
+          workerModel: model,
+        }),
+      /"workerModel" was removed in 0.1.5/,
+    );
+  });
+
+  it("create_observational_memory_runtime_rejects_legacy_worker_aliases", () => {
+    assert.throws(
+      () =>
+        createObservationalMemoryRuntime({
+          session: {} as never,
+          appendEntry: async () => {},
+          // @ts-expect-error removed in 0.1.5; use observation.provider / reflection.provider / dropper.provider
+          workerProvider: provider([providerDone()]),
+        }),
+      /"workerProvider" was removed in 0.1.5/,
+    );
+    assert.throws(
+      () =>
+        createObservationalMemoryRuntime({
+          session: {} as never,
+          appendEntry: async () => {},
+          // @ts-expect-error removed in 0.1.5; use observation.model / reflection.model / dropper.model
+          workerModel: model,
+        }),
+      /"workerModel" was removed in 0.1.5/,
     );
   });
 });

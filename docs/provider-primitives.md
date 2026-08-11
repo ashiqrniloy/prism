@@ -33,7 +33,7 @@ Static scan of root `src/providers/` and `packages/provider-*/src/` before Plan 
 | Surface | Owner | Behavior today |
 | --- | --- | --- |
 | Runtime retry | `@arnilo/prism` `AgentConfig.retry` / `RunOptions.retry` | Classifies `ErrorInfo.code`; provider packages set numeric HTTP `code` on errors |
-| `ProviderRequestOptions.maxRetries` / `timeoutMs` | Contracts | **Deprecated / inert** in first-party providers |
+| `ProviderRequestOptions.maxRetries` / `timeoutMs` | Contracts | **Removed in 0.1.5**; use `RunOptions.signal` / `AgentConfig.retry` / `RunOptions.retry` |
 | NeuralWatt `classifyNeuralWattError` | `packages/provider-neuralwatt` | Parses `Retry-After`, `error.retry_after`, `retry_strategy`; no extra network calls |
 | Quota endpoint throttling | `packages/provider-neuralwatt/quota.ts` | Documents 1 rps limit; caller-owned cache |
 

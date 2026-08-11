@@ -19,6 +19,7 @@ import {
   type ObservationalMemoryRetrievalSettingsInput,
   type ObservationalMemorySettings,
   type ObservationalMemorySettingsInput,
+  assertNoRemovedFlatKeys,
   defaultObservationalMemorySettings,
   resolveObservationalMemorySettings,
 } from "./settings.js";
@@ -63,10 +64,6 @@ export interface CreateObservationalMemoryOptions {
   readonly dropper?: ObservationalMemoryDropperConfig;
   readonly context?: ObservationalMemoryContextConfig;
   readonly retrieval?: ObservationalMemoryRetrievalConfig;
-  /** @deprecated use observation.provider */
-  readonly workerProvider?: AIProvider;
-  /** @deprecated use observation.model / reflection.model */
-  readonly workerModel?: ModelConfig;
   readonly settings?: SettingsProvider;
   readonly overrides?: ObservationalMemorySettingsInput;
   readonly credential?: CredentialValueSource;
@@ -108,7 +105,18 @@ export interface ObservationalMemory {
 }
 
 export function createObservationalMemory(options: CreateObservationalMemoryOptions): ObservationalMemory {
-  assertWorkerModelCompatibility(options);
+  const legacyOptions = options as unknown as { workerProvider?: unknown; workerModel?: unknown };
+  if (legacyOptions.workerProvider !== undefined) {
+    throw new TypeError(
+      'Observational memory: "workerProvider" was removed in 0.1.5; use observation.provider / reflection.provider / dropper.provider instead',
+    );
+  }
+  if (legacyOptions.workerModel !== undefined) {
+    throw new TypeError(
+      'Observational memory: "workerModel" was removed in 0.1.5; use observation.model / reflection.model / dropper.model instead',
+    );
+  }
+  assertNoRemovedFlatKeys(options.overrides);
   const lifecycles = new Map<string, () => Promise<void>>();
   const runtimeWorkers = resolveRuntimeWorkers(options);
   const settingsOverrides = composeSettingsOverrides(options);
@@ -270,25 +278,18 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
   return memory;
 }
 
-function assertWorkerModelCompatibility(options: CreateObservationalMemoryOptions): void {
-  if (!options.workerModel) return;
-  if (options.observation?.model || options.reflection?.model || options.dropper?.model) {
-    throw new Error("Observational memory config conflict: workerModel cannot be combined with nested worker models");
-  }
-}
-
 function resolveRuntimeWorkers(options: CreateObservationalMemoryOptions): {
   readonly observation?: ObservationalMemoryWorkerRuntimeConfig;
   readonly reflection?: ObservationalMemoryWorkerRuntimeConfig;
   readonly dropper?: ObservationalMemoryWorkerRuntimeConfig;
 } {
-  const fallbackProvider = options.workerProvider ?? options.observation?.provider ?? options.reflection?.provider;
+  const fallbackProvider = options.observation?.provider ?? options.reflection?.provider;
   const toRuntime = (config?: ObservationalMemoryWorkerConfig): ObservationalMemoryWorkerRuntimeConfig | undefined => {
     const provider = config?.provider ?? fallbackProvider;
     if (!provider) return undefined;
     return {
       provider,
-      model: config?.model ?? options.workerModel,
+      model: config?.model,
       credential: config?.credential ?? options.credential,
       credentialRequest: config?.credentialRequest ?? options.credentialRequest,
       requireExplicitModel: config?.requireExplicitModel ?? options.requireExplicitModel,
@@ -345,7 +346,6 @@ function composeSettingsOverrides(options: CreateObservationalMemoryOptions): Ob
       ...options.overrides?.retrieval,
       pageLimit: options.retrieval?.pageLimit ?? options.overrides?.retrieval?.pageLimit,
     },
-    workerModel: options.workerModel ?? options.overrides?.workerModel,
   };
 }
 

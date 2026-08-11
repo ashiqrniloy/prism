@@ -119,8 +119,7 @@ describe("optional package setup boundaries", () => {
       createObservationalMemoryRuntime(options: {
         session: AgentSession;
         appendEntry(entry: unknown): Promise<void>;
-        workerProvider: AIProvider;
-        workerModel: ModelConfig;
+        observation: { provider: AIProvider; model: ModelConfig };
       }): { status(): { inFlight: boolean } };
       createObservationalMemoryExtension(options: {
         recallTool: { getEntries(): readonly unknown[] };
@@ -142,8 +141,7 @@ describe("optional package setup boundaries", () => {
       appendEntry: async () => {
         throw new Error("append should not run during construction");
       },
-      workerProvider,
-      workerModel: { provider: "mock", model: "memory" },
+      observation: { provider: workerProvider, model: { provider: "mock", model: "memory" } },
     });
     assert.equal(runtime.status().inFlight, false);
     await createExtensionKernel().load([

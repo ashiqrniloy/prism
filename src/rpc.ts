@@ -279,9 +279,10 @@ function runOptions(state: RpcState, params: Record<string, unknown> | undefined
   const names = stringArrayParam(params, "instructionInjectors");
   // ponytail: fail-closed — unknown name throws (caller surfaces as RPC error), matching CLI.
   const injectors = names.length ? resolveInstructionInjectors({ registry: state.instructionInjectors, names }) : undefined;
+  const maxToolRounds = numberParam(params, "maxToolRounds");
   return {
     model: modelParam(params) ?? state.model,
-    maxToolRounds: numberParam(params, "maxToolRounds"),
+    ...(maxToolRounds !== undefined ? { limits: { maxToolRounds } } : {}),
     ...(injectors ? { instructionInjectors: injectors } : {}),
   };
 }

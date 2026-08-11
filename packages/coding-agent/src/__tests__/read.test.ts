@@ -484,15 +484,15 @@ test("transformed image over maxImageBytes → error result", async () => {
   }
 });
 
-test("autoResizeImages without transformImage is ignored (deprecated no-op)", async () => {
+test("autoResizeImages is removed in 0.1.5: compile-time negative and fail-closed refusal", async () => {
   const cwd = await tmp();
   try {
     await writeFile(join(cwd, "px.png"), ONE_PX_PNG);
-    const tool = createReadTool(cwd, { autoResizeImages: true });
-    const r = await tool.execute({ path: "px.png" }, ctx());
-    assert.equal(r.error, undefined);
-    assert.equal(imageData(r), ONE_PX_PNG.toString("base64"));
-    assert.equal(image(r)?.resized, false);
+    const removed = '"autoResizeImages" was removed in 0.1.5; use "transformImage" instead';
+    // @ts-expect-error autoResizeImages was removed in 0.1.5; use transformImage instead.
+    assert.throws(() => createReadTool(cwd, { autoResizeImages: true }), new RegExp(removed));
+    // own-property refusal: false values are rejected too, before any path resolution or filesystem access
+    assert.throws(() => createReadTool(cwd, { autoResizeImages: false } as never), TypeError);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

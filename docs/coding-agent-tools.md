@@ -151,7 +151,6 @@ Read a text or image file.
 | --- | --- | --- |
 | `maxImageBytes` | `DEFAULT_MAX_IMAGE_BYTES` (10 MB) | Reject image reads larger than this many bytes. |
 | `transformImage` | — | Host callback `( { buffer, mimeType } ) => Promise<Buffer>` run after read, before base64. |
-| `autoResizeImages` | — | **Deprecated.** Ignored unless `transformImage` is also set (use `transformImage` instead). |
 | `maxLines` / `maxBytes` | 2000 / 50 KiB | Text page display limits (hard: 100,000 / 1 MiB). |
 | `maxScanBytes` | 64 MiB | Raw bytes scanned to reach one page (hard: 1 GiB). |
 | `operations` | local fs | Pluggable bounded `ReadOperations` backend. |
@@ -173,7 +172,7 @@ const read = createReadTool(cwd, {
 | `truncation` | text reads | `TruncationResult`. |
 | `image` | image reads | `{ mimeType, resized, bytes }`. `resized` is `true` when `transformImage` ran. |
 
-> `autoResizeImages` is deprecated. It has no effect without `transformImage`; use `transformImage` for host-owned resizing.
+> `autoResizeImages` was removed in 0.1.5; untyped callers now fail closed with a `TypeError` naming `transformImage` before any filesystem access.
 
 ### `write`
 

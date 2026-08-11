@@ -94,18 +94,7 @@ export interface ObservationalMemoryRetrievalSettingsInput {
   readonly pageLimit?: number;
 }
 
-/** @deprecated Pre-0.0.19 flat keys map to nested settings; conflicting flat+nested values throw. */
 export interface ObservationalMemorySettingsInput {
-  readonly observeAfterTokens?: number;
-  readonly reflectAfterTokens?: number;
-  readonly compactAfterTokens?: number;
-  readonly keepRecentEntries?: number;
-  readonly recentMessageMaxTokens?: number;
-  readonly observationsPoolMaxTokens?: number;
-  readonly observationsPoolTargetTokens?: number;
-  readonly workerModel?: ModelConfig;
-  readonly thinkingLevel?: string;
-  readonly requireExplicitModel?: boolean;
   readonly agentMaxTurns?: number;
   readonly passive?: boolean;
   readonly debugLog?: boolean;
@@ -137,73 +126,45 @@ export async function resolveObservationalMemorySettings(
   overrides: ObservationalMemorySettingsInput = {},
 ): Promise<ObservationalMemorySettings> {
   const fromProvider = (await settings?.get<ObservationalMemorySettingsInput>("observational-memory")) ?? {};
+  assertNoRemovedFlatKeys(fromProvider);
+  assertNoRemovedFlatKeys(overrides);
   const merged = { ...fromProvider, ...overrides };
-  conflict(merged.observeAfterTokens !== undefined && merged.observation?.messageTokens !== undefined, "observeAfterTokens");
-  conflict(merged.reflectAfterTokens !== undefined && merged.reflection?.observationTokens !== undefined, "reflectAfterTokens");
-  conflict(merged.compactAfterTokens !== undefined && merged.context?.compactAfterTokens !== undefined, "compactAfterTokens");
-  conflict(merged.keepRecentEntries !== undefined && merged.context?.recentMessages !== undefined, "keepRecentEntries");
-  conflict(merged.recentMessageMaxTokens !== undefined && merged.context?.recentMessageMaxTokens !== undefined, "recentMessageMaxTokens");
-  conflict(
-    merged.observationsPoolMaxTokens !== undefined && merged.context?.observationsPoolMaxTokens !== undefined,
-    "observationsPoolMaxTokens",
-  );
-  conflict(
-    merged.observationsPoolTargetTokens !== undefined && merged.context?.observationsPoolTargetTokens !== undefined,
-    "observationsPoolTargetTokens",
-  );
-  conflict(
-    merged.workerModel !== undefined &&
-      (merged.observation?.model !== undefined || merged.reflection?.model !== undefined || merged.dropper?.model !== undefined),
-    "workerModel",
-  );
   const poolTarget = positive(
-    merged.context?.observationsPoolTargetTokens ?? merged.observationsPoolTargetTokens,
+    merged.context?.observationsPoolTargetTokens,
     defaultObservationalMemorySettings.context.observationsPoolTargetTokens,
   );
   return {
     observation: {
-      messageTokens: positive(
-        merged.observation?.messageTokens ?? merged.observeAfterTokens,
-        defaultObservationalMemorySettings.observation.messageTokens,
-      ),
-      model: merged.observation?.model ?? merged.workerModel,
+      messageTokens: positive(merged.observation?.messageTokens, defaultObservationalMemorySettings.observation.messageTokens),
+      model: merged.observation?.model,
       instruction: merged.observation?.instruction,
-      thinkingLevel: merged.observation?.thinkingLevel ?? merged.thinkingLevel,
+      thinkingLevel: merged.observation?.thinkingLevel,
       providerOptions: merged.observation?.providerOptions,
-      requireExplicitModel: (merged.observation?.requireExplicitModel ?? merged.requireExplicitModel === true) ? true : undefined,
+      requireExplicitModel: merged.observation?.requireExplicitModel === true ? true : undefined,
     },
     reflection: {
-      observationTokens: positive(
-        merged.reflection?.observationTokens ?? merged.reflectAfterTokens,
-        defaultObservationalMemorySettings.reflection.observationTokens,
-      ),
-      model: merged.reflection?.model ?? merged.workerModel,
+      observationTokens: positive(merged.reflection?.observationTokens, defaultObservationalMemorySettings.reflection.observationTokens),
+      model: merged.reflection?.model,
       instruction: merged.reflection?.instruction,
-      thinkingLevel: merged.reflection?.thinkingLevel ?? merged.thinkingLevel,
+      thinkingLevel: merged.reflection?.thinkingLevel,
       providerOptions: merged.reflection?.providerOptions,
-      requireExplicitModel: (merged.reflection?.requireExplicitModel ?? merged.requireExplicitModel === true) ? true : undefined,
+      requireExplicitModel: merged.reflection?.requireExplicitModel === true ? true : undefined,
     },
     dropper: {
       targetTokens: positive(merged.dropper?.targetTokens ?? poolTarget, poolTarget),
       policy: merged.dropper?.policy === "lowest-relevance" ? "lowest-relevance" : "model",
-      model: merged.dropper?.model ?? merged.workerModel,
+      model: merged.dropper?.model,
       instruction: merged.dropper?.instruction,
-      thinkingLevel: merged.dropper?.thinkingLevel ?? merged.thinkingLevel,
+      thinkingLevel: merged.dropper?.thinkingLevel,
       providerOptions: merged.dropper?.providerOptions,
-      requireExplicitModel: (merged.dropper?.requireExplicitModel ?? merged.requireExplicitModel === true) ? true : undefined,
+      requireExplicitModel: merged.dropper?.requireExplicitModel === true ? true : undefined,
     },
     context: {
-      recentMessages: nonNegativeInt(
-        merged.context?.recentMessages ?? merged.keepRecentEntries,
-        defaultObservationalMemorySettings.context.recentMessages,
-      ),
-      recentMessageMaxTokens: optionalPositive(merged.context?.recentMessageMaxTokens ?? merged.recentMessageMaxTokens),
-      compactAfterTokens: positive(
-        merged.context?.compactAfterTokens ?? merged.compactAfterTokens,
-        defaultObservationalMemorySettings.context.compactAfterTokens,
-      ),
+      recentMessages: nonNegativeInt(merged.context?.recentMessages, defaultObservationalMemorySettings.context.recentMessages),
+      recentMessageMaxTokens: optionalPositive(merged.context?.recentMessageMaxTokens),
+      compactAfterTokens: positive(merged.context?.compactAfterTokens, defaultObservationalMemorySettings.context.compactAfterTokens),
       observationsPoolMaxTokens: positive(
-        merged.context?.observationsPoolMaxTokens ?? merged.observationsPoolMaxTokens,
+        merged.context?.observationsPoolMaxTokens,
         defaultObservationalMemorySettings.context.observationsPoolMaxTokens,
       ),
       observationsPoolTargetTokens: poolTarget,
@@ -217,8 +178,34 @@ export async function resolveObservationalMemorySettings(
   };
 }
 
-function conflict(active: boolean, key: string): void {
-  if (active) throw new Error(`Observational memory settings conflict: flat ${key} cannot be combined with nested override`);
+/** Pre-0.0.19 flat settings keys removed in 0.1.5, with their nested replacements. */
+const REMOVED_FLAT_KEYS: readonly { key: string; replacement: string }[] = [
+  { key: "observeAfterTokens", replacement: "observation.messageTokens" },
+  { key: "reflectAfterTokens", replacement: "reflection.observationTokens" },
+  { key: "compactAfterTokens", replacement: "context.compactAfterTokens" },
+  { key: "keepRecentEntries", replacement: "context.recentMessages" },
+  { key: "recentMessageMaxTokens", replacement: "context.recentMessageMaxTokens" },
+  { key: "observationsPoolMaxTokens", replacement: "context.observationsPoolMaxTokens" },
+  { key: "observationsPoolTargetTokens", replacement: "context.observationsPoolTargetTokens" },
+  { key: "workerModel", replacement: "observation.model / reflection.model / dropper.model" },
+  { key: "thinkingLevel", replacement: "observation.thinkingLevel / reflection.thinkingLevel / dropper.thinkingLevel" },
+  {
+    key: "requireExplicitModel",
+    replacement: "observation.requireExplicitModel / reflection.requireExplicitModel / dropper.requireExplicitModel",
+  },
+];
+
+/**
+ * Fail closed on settings-provider JSON or untyped option objects that still carry a removed flat key.
+ * Runs before any worker/provider call, compaction, or session append.
+ */
+export function assertNoRemovedFlatKeys(input: unknown): void {
+  if (input === null || typeof input !== "object") return;
+  for (const { key, replacement } of REMOVED_FLAT_KEYS) {
+    if ((input as Record<string, unknown>)[key] !== undefined) {
+      throw new TypeError(`Observational memory settings: "${key}" was removed in 0.1.5; use "${replacement}" instead`);
+    }
+  }
 }
 
 function positive(value: unknown, fallback: number): number {

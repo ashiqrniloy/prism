@@ -12,7 +12,12 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism";
-import { createObservationalMemory, createObservationalMemoryExtension, OBSERVATIONS_RECORDED } from "../index.js";
+import {
+  createObservationalMemory,
+  createObservationalMemoryExtension,
+  type ObservationalMemorySettingsInput,
+  OBSERVATIONS_RECORDED,
+} from "../index.js";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
@@ -27,11 +32,16 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
   };
 }
 
-function attachFixture(workerProvider: AIProvider, overrides: Record<string, unknown> = {}) {
+function attachFixture(worker: AIProvider, overrides: ObservationalMemorySettingsInput = {}) {
   const store = createMemorySessionStore();
   const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
   const baseSession = agent.createSession({ id: "s1" });
-  const om = createObservationalMemory({ workerProvider, workerModel, overrides });
+  const om = createObservationalMemory({
+    observation: { provider: worker, model: workerModel },
+    reflection: { provider: worker, model: workerModel },
+    dropper: { provider: worker, model: workerModel },
+    overrides,
+  });
   const attached = om.attach(baseSession, {
     appendEntry: (entry, options) => store.append(entry, options),
     sessionModel: model,
@@ -50,9 +60,9 @@ describe("observational memory attach", () => {
       },
     };
     const { attached } = attachFixture(worker, {
-      observeAfterTokens: 1,
-      reflectAfterTokens: 999_999,
-      compactAfterTokens: 999_999,
+      observation: { messageTokens: 1 },
+      reflection: { observationTokens: 999_999 },
+      context: { compactAfterTokens: 999_999 },
       agentMaxTurns: 1,
     });
     await attached.session.run("hello");
@@ -68,9 +78,9 @@ describe("observational memory attach", () => {
   it("attached_run_compacts_when_compact_after_tokens_reached", async () => {
     const worker = sequenceProvider([[providerDone()]]);
     const { attached } = attachFixture(worker, {
-      observeAfterTokens: 999_999,
-      reflectAfterTokens: 999_999,
-      compactAfterTokens: 1,
+      observation: { messageTokens: 999_999 },
+      reflection: { observationTokens: 999_999 },
+      context: { compactAfterTokens: 1 },
       agentMaxTurns: 1,
     });
     await attached.session.run("hello");
@@ -90,7 +100,7 @@ describe("observational memory attach", () => {
       },
     };
     await createExtensionKernel().load([createObservationalMemoryExtension()]);
-    createObservationalMemory({ workerProvider, workerModel });
+    createObservationalMemory({ observation: { provider: workerProvider, model: workerModel } });
     assert.equal(calls, 0);
   });
 
@@ -111,9 +121,8 @@ describe("observational memory attach", () => {
     const agent = createAgent({ model, provider: agentProvider, store });
     const baseSession = agent.createSession({ id: "s1" });
     const om = createObservationalMemory({
-      workerProvider: sequenceProvider([[providerDone()]]),
-      workerModel,
-      overrides: { observeAfterTokens: 1, agentMaxTurns: 1 },
+      observation: { provider: sequenceProvider([[providerDone()]]), model: workerModel },
+      overrides: { observation: { messageTokens: 1 }, agentMaxTurns: 1 },
     });
     const attached = om.attach(baseSession, {
       appendEntry: (entry, options) => store.append(entry, options),
@@ -128,7 +137,11 @@ describe("observational memory attach", () => {
 
   it("manual_flush_remains_available_on_attached_runtime", async () => {
     const worker = sequenceProvider([[providerDone()]]);
-    const { attached } = attachFixture(worker, { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 });
+    const { attached } = attachFixture(worker, {
+      observation: { messageTokens: 1 },
+      reflection: { observationTokens: 999_999 },
+      agentMaxTurns: 1,
+    });
     await attached.session.run("hello");
     const before = (await attached.session.entries()).length;
     const result = await attached.runtime.flush();
@@ -149,7 +162,11 @@ describe("observational memory attach", () => {
         providerDone(),
       ],
     ]);
-    const { attached } = attachFixture(worker, { observeAfterTokens: 1, reflectAfterTokens: 999_999, agentMaxTurns: 1 });
+    const { attached } = attachFixture(worker, {
+      observation: { messageTokens: 1 },
+      reflection: { observationTokens: 999_999 },
+      agentMaxTurns: 1,
+    });
     let providerCalls = 0;
     const originalGenerate = worker.generate.bind(worker);
     worker.generate = async function* (...args) {

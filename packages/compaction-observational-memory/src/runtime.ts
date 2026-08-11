@@ -17,7 +17,12 @@ import {
 } from "./coverage-helpers.js";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { type MemoryWorkerLimitOptions, type ResolvedMemoryWorkerLimits, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
-import { type ObservationalMemorySettings, type ObservationalMemorySettingsInput, resolveObservationalMemorySettings } from "./settings.js";
+import {
+  type ObservationalMemorySettings,
+  type ObservationalMemorySettingsInput,
+  assertNoRemovedFlatKeys,
+  resolveObservationalMemorySettings,
+} from "./settings.js";
 import { OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "./types.js";
 import { dropObservationsToTarget, runDropper } from "./workers/dropper.js";
 import { runObserver } from "./workers/observer.js";
@@ -41,10 +46,6 @@ export interface ObservationalMemoryRuntimeOptions {
   readonly observation?: ObservationalMemoryWorkerRuntimeConfig;
   readonly reflection?: ObservationalMemoryWorkerRuntimeConfig;
   readonly dropper?: ObservationalMemoryWorkerRuntimeConfig;
-  /** @deprecated use observation/reflection/dropper providers */
-  readonly workerProvider?: AIProvider;
-  /** @deprecated use observation/reflection/dropper models */
-  readonly workerModel?: ModelConfig;
   readonly sessionModel?: ModelConfig;
   readonly requireExplicitModel?: boolean;
   readonly providerOptions?: ProviderRequestOptions;
@@ -87,6 +88,18 @@ export interface ObservationalMemoryFlushResult {
 }
 
 export function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime {
+  const legacyOptions = options as unknown as { workerProvider?: unknown; workerModel?: unknown };
+  if (legacyOptions.workerProvider !== undefined) {
+    throw new TypeError(
+      'Observational memory: "workerProvider" was removed in 0.1.5; use observation.provider / reflection.provider / dropper.provider instead',
+    );
+  }
+  if (legacyOptions.workerModel !== undefined) {
+    throw new TypeError(
+      'Observational memory: "workerModel" was removed in 0.1.5; use observation.model / reflection.model / dropper.model instead',
+    );
+  }
+  assertNoRemovedFlatKeys(options.overrides);
   if ("store" in (options as object))
     throw new Error("Observational memory runtime requires appendEntry bound to the owning session store, not a separate store option");
   const configuredWorkerLimits = resolveMemoryWorkerLimits(runtimeLimitOptions(options));
@@ -254,7 +267,7 @@ async function resolveWorker(
   options: ObservationalMemoryRuntimeOptions,
   settings: ObservationalMemorySettings,
 ): Promise<ResolvedWorker | undefined> {
-  const runtime = options[kind] ?? fallbackWorker(options);
+  const runtime = options[kind];
   if (!runtime?.provider) return undefined;
   const workerSettings = settings[kind];
   const resolved = resolveUseCaseModel({
@@ -276,17 +289,6 @@ async function resolveWorker(
     thinkingLevel: resolved.thinkingLevel,
     credential,
     missingCredentials: Boolean(explicitRequest && !credential),
-  };
-}
-
-function fallbackWorker(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryWorkerRuntimeConfig | undefined {
-  if (!options.workerProvider) return undefined;
-  return {
-    provider: options.workerProvider,
-    model: options.workerModel,
-    credential: options.credential,
-    credentialRequest: options.credentialRequest,
-    requireExplicitModel: options.requireExplicitModel,
   };
 }
 

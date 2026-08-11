@@ -11,8 +11,7 @@
  *  - **Image resize is host-owned.** pi resizes images to ≤2000×2000 via a photon/WASM +
  *    `worker_threads` helper (`utils/image-process.js`); this package rejects oversize images by
  *    `stat`/`buffer.length` against `maxImageBytes` and accepts an optional `transformImage`
- *    callback for host-provided resizing. `autoResizeImages` is deprecated — it only takes effect
- *    when paired with `transformImage`.
+ *    callback for host-provided resizing.
  *  - Abort + all read failures return a Prism `error` result (pi throws/rejects). Prism's
  *    `dispatchToolCall` would catch a throw anyway, but returning a clean error result is predictable
  *    for direct-`execute` callers and matches the package's `shell` tool.
@@ -203,11 +202,6 @@ export interface ReadOperations {
 export interface ReadToolOptions {
   /** Structured pre-execution policy checked before filesystem access. */
   executionPolicy?: ExecutionPolicy;
-  /**
-   * @deprecated Use `transformImage` instead. When `transformImage` is absent this flag is ignored.
-   * When both are set, `transformImage` runs and `image.resized` is `true` on success.
-   */
-  autoResizeImages?: boolean;
   /** Reject image reads larger than this many bytes (default {@link DEFAULT_MAX_IMAGE_BYTES}). */
   maxImageBytes?: number;
   /** Maximum raw bytes scanned to reach one text page (default 64 MiB). */
@@ -358,7 +352,6 @@ async function loadImageBuffer(
   options: {
     maxImageBytes: number;
     transformImage?: TransformImage;
-    autoResizeImages?: boolean;
     signal?: AbortSignal;
   },
 ): Promise<{ buffer: Buffer; resized: boolean }> {
@@ -389,8 +382,6 @@ async function loadImageBuffer(
     if (buffer.length > options.maxImageBytes) {
       throw new Error(`Transformed image is ${formatSize(buffer.length)}, exceeds ${formatSize(options.maxImageBytes)} limit.`);
     }
-  } else if (options.autoResizeImages) {
-    // Deprecated flag without a transformer — intentionally ignored for backward compatibility.
   }
 
   return { buffer, resized };
@@ -406,6 +397,9 @@ function errorResult(toolCallId: string, message: string): ToolResult {
 }
 
 export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition {
+  if (options && "autoResizeImages" in options) {
+    throw new TypeError('Read tool: "autoResizeImages" was removed in 0.1.5; use "transformImage" instead.');
+  }
   const ops = options?.operations ?? defaultReadOperations;
   const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
   const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
@@ -469,7 +463,6 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
           const { buffer, resized } = await loadImageBuffer(allowedPath, mimeType, ops, {
             maxImageBytes,
             transformImage: options?.transformImage,
-            autoResizeImages: options?.autoResizeImages,
             signal: context.signal,
           });
           options?.readPathSet?.add(allowedPath);

@@ -63,6 +63,33 @@ async function take(iterable: AsyncIterable<AgentEvent>, count: number): Promise
 }
 
 describe("agent session runtime", () => {
+  it("rejects legacy RunOptions.maxToolRounds (removed 0.1.5 alias) before any side effects", async () => {
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+      tools: [
+        {
+          name: "echo",
+          execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
+        },
+      ],
+    });
+    const session = agent.createSession({ id: "legacy-alias" });
+
+    await assert.rejects(
+      // @ts-expect-error removed in 0.1.5; use RunOptions.limits.maxToolRounds instead (untyped-JS simulation)
+      session.run("Hi", { maxToolRounds: 1 }),
+      (err) =>
+        err instanceof TypeError &&
+        String(err.message).includes("RunOptions.maxToolRounds was removed in 0.1.5") &&
+        String(err.message).includes("limits.maxToolRounds"),
+    );
+
+    // fail-closed: rejection happens before any session append or provider call (the guard is the
+    // first statement of the run entry, so no events are emitted and no provider request is made)
+    assert.deepEqual(await session.entries(), [], "legacy alias rejection must not append session entries");
+  });
+
   it("streams mock provider text to subscriber", async () => {
     const agent = createAgent({
       model: { provider: "mock", model: "demo" },
@@ -282,7 +309,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     assert.equal(requests.length, 2);
@@ -323,7 +350,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession({ id: "delta-session" });
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     assert.equal(requests.length, 2);
@@ -399,7 +426,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession();
     const reader = collect(session.subscribe());
 
-    const result = await session.run("Hi", { maxToolRounds: 1 });
+    const result = await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     assert.equal(result.status, "succeeded");
@@ -496,7 +523,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     assert.equal(requests.length, 2);
@@ -539,7 +566,7 @@ describe("agent session runtime", () => {
     const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [boom] }).createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     await reader;
 
     const replay = requests[1]!;
@@ -593,7 +620,7 @@ describe("agent session runtime", () => {
     };
     const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
 
-    await agent.createSession().run("Hi", { maxToolRounds: 1 });
+    await agent.createSession().run("Hi", { limits: { maxToolRounds: 1 } });
 
     assert.equal(calls, 2);
   });
@@ -740,7 +767,7 @@ describe("agent session runtime", () => {
     ];
     const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools }).createSession({ id: "steer-turn" });
     const reader = collect(session.subscribe());
-    const run = session.run("Hi", { maxToolRounds: 2 });
+    const run = session.run("Hi", { limits: { maxToolRounds: 2 } });
     await toolGate;
     session.steer("Prefer SQLite");
     releaseTool();
@@ -820,7 +847,7 @@ describe("agent session runtime", () => {
     }).createSession({ id: "steer-blocked" });
     const reader = collect(session.subscribe());
     // Run-start input passes the guardrail ("Hi" is clean), so the run starts.
-    const run = session.run("Hi", { maxToolRounds: 2 });
+    const run = session.run("Hi", { limits: { maxToolRounds: 2 } });
     await toolGate;
     session.steer("blocked-steer");
     releaseTool();
@@ -2260,7 +2287,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     const blocked = events.find((event) => event.type === "tool_execution_blocked");
@@ -2303,7 +2330,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     await reader;
 
     assert.equal(executed.length, 1);
@@ -2335,7 +2362,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1, validate: () => undefined });
+    await session.run("Hi", { limits: { maxToolRounds: 1 }, validate: () => undefined });
     await reader;
 
     assert.equal(executed.length, 1);
@@ -2357,7 +2384,7 @@ describe("agent session runtime", () => {
     const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] }).createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     assert.equal(
@@ -2391,7 +2418,7 @@ describe("agent session runtime", () => {
     const session = agent.createSession();
     const reader = collect(session.subscribe());
 
-    await session.run("Hi", { maxToolRounds: 1 });
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     const blocked = events.find((event) => event.type === "tool_execution_blocked");

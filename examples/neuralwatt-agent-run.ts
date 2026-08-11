@@ -110,7 +110,7 @@ export async function demo() {
 
   const session = createAgentSession({ agent, id: "neuralwatt-demo" });
   const eventsPromise = collect(session.subscribe());
-  await session.run("Use a tool, then answer with cache-aware usage.", { inputLayout: "cache_aware", maxToolRounds: 1 });
+  await session.run("Use a tool, then answer with cache-aware usage.", { inputLayout: "cache_aware", limits: { maxToolRounds: 1 } });
   const events = await eventsPromise;
   const finished = [...events].reverse().find((event) => event.type === "agent_finished");
   const { energy, cost } = await telemetry();

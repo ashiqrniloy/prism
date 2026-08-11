@@ -52,7 +52,7 @@ test("provider_turn and tool spans record metadata without content", async () =>
     return collected;
   })();
 
-  await session.run("use echo", { maxToolRounds: 1 });
+  await session.run("use echo", { limits: { maxToolRounds: 1 } });
   detach();
   const events = await reader;
 

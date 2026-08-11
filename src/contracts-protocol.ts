@@ -63,8 +63,6 @@ export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly model?: ModelConfig;
   readonly providerSource?: ProviderResolver;
-  /** @deprecated Use `limits.maxToolRounds`. */
-  readonly maxToolRounds?: number;
   /** Run-scoped ceilings. When an agent config also sets limits, these can only narrow it. */
   readonly limits?: RunLimits;
   readonly providerOptions?: ProviderRequestOptions;

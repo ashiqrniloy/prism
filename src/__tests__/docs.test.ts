@@ -297,10 +297,51 @@ describe("docs", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     assert.ok(release.includes("### 0.1.4 publish handoff (plan 016 Task 6)"), "release page missing 0.1.4 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.4 handoff missing rollback notes");
-    assert.ok(index.includes("current **0.1.4**"), "index.md current-line entry not at 0.1.4");
+    assert.ok(index.includes("current **0.1.5**"), "index.md current-line entry not at 0.1.5");
     assert.ok(changelog.includes("## [0.1.4] - 2026-08-10"), "root changelog missing 0.1.4 entry");
     assert.ok(migration.includes("## 0.1.3 → 0.1.4"), "migration.md missing 0.1.3 → 0.1.4 section");
     assert.ok(migration.includes("no migration step"), "migration.md 0.1.4 section must state no migration step");
+  });
+  it("plan 017 Task 4 freeze: 0.1.5 deprecated-option removal, migration, and publish handoff are documented", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
+    assert.ok(release.includes("### 0.1.5 publish handoff (plan 017 Task 4)"), "release page missing 0.1.5 handoff");
+    assert.ok(index.includes("current **0.1.5**"), "index.md current-line entry not at 0.1.5");
+    assert.ok(changelog.includes("## [0.1.5] - 2026-08-11"), "root changelog missing 0.1.5 entry");
+    assert.ok(migration.includes("## 0.1.4 → 0.1.5"), "migration.md missing 0.1.4 → 0.1.5 section");
+    // every removed symbol and its replacement appears in the breaking-cut section
+    for (const [removed, replacement] of [
+      ["ProviderRequestOptions.timeoutMs", "RunOptions.signal"],
+      ["ProviderRequestOptions.maxRetries", "AgentConfig.retry"],
+      ["ProviderRequestOptions.maxRetryDelayMs", "RunOptions.retry"],
+      ["RunOptions.maxToolRounds", "limits.maxToolRounds"],
+      ["ObservationalMemorySettingsInput.observeAfterTokens", "observation.messageTokens"],
+      ["ObservationalMemorySettingsInput.reflectAfterTokens", "reflection.observationTokens"],
+      ["ObservationalMemorySettingsInput.compactAfterTokens", "context.compactAfterTokens"],
+      ["ObservationalMemorySettingsInput.keepRecentEntries", "context.recentMessages"],
+      ["ObservationalMemorySettingsInput.recentMessageMaxTokens", "context.recentMessageMaxTokens"],
+      ["ObservationalMemorySettingsInput.observationsPoolMaxTokens", "context.observationsPoolMaxTokens"],
+      ["ObservationalMemorySettingsInput.observationsPoolTargetTokens", "context.observationsPoolTargetTokens"],
+      ["ObservationalMemorySettingsInput.workerModel", "dropper.model"],
+      ["ObservationalMemorySettingsInput.thinkingLevel", "dropper.thinkingLevel"],
+      ["ObservationalMemorySettingsInput.requireExplicitModel", "dropper.requireExplicitModel"],
+      ["CreateObservationalMemoryOptions.workerProvider", "observation.provider"],
+      ["ReadToolOptions.autoResizeImages", "transformImage"],
+      ["INIT_PROVIDERS", "listInitProviders()"],
+    ]) {
+      assert.ok(migration.includes(removed), `migration 0.1.5 section missing removed symbol ${removed}`);
+      assert.ok(migration.includes(replacement), `migration 0.1.5 section missing replacement ${replacement}`);
+    }
+    // corrected roadmap labels are explicitly recorded
+    for (const label of ["RunOptions.maxToolRounds", "ReadToolOptions.autoResizeImages", "INIT_PROVIDERS"]) {
+      assert.ok(migration.includes(label), `migration 0.1.5 section must record corrected label ${label}`);
+    }
+    assert.ok(migration.includes("Compatible — no persisted shape change"), "migration 0.1.5 section missing store compatibility");
+    assert.ok(migration.includes("Restore the 0.1.4 manifests/tag"), "migration 0.1.5 section missing rollback");
+    assert.ok(om.includes("removed in 0.1.5"), "OM doc must note the removed flat keys / aliases");
   });
   it("plan 014 Task 6 freeze: 0.1.2 Alibaba enrichment and publish handoff are documented", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -381,7 +422,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.1.4", "root manifest must be at 0.1.4");
+    assert.equal(pkg.version, "0.1.5", "root manifest must be at 0.1.5");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -2200,15 +2241,12 @@ describe("docs", () => {
       .map((file) => readFileSync(file, "utf8"))
       .join("\n");
 
-    for (const phrase of [
-      "timeoutMs",
-      "maxRetries",
-      "maxRetryDelayMs",
-      "deprecated",
-      "RunOptions.signal",
-      "RunOptions.retry",
-      "AgentConfig.retry",
-    ]) {
+    // 0.1.5 breaking cut: the provider-level knobs are removed, not advertised;
+    // docs point at the runtime replacements instead.
+    for (const knob of ["timeoutMs", "maxRetries", "maxRetryDelayMs"]) {
+      assert.equal(docs.includes(knob), false, `docs still advertise removed provider knob ${knob}`);
+    }
+    for (const phrase of ["RunOptions.signal", "RunOptions.retry", "AgentConfig.retry", "limits.maxToolRounds", "removed in 0.1.5"]) {
       assert.ok(docs.includes(phrase), `provider timeout/retry migration docs missing ${phrase}`);
     }
     assert.equal(docs.includes("retry/timeouts"), false, "docs still advertise provider-level retry/timeouts as supported");
@@ -2242,7 +2280,7 @@ describe("docs", () => {
       "tool_call_delta",
       "turn_started",
       "turn_finished",
-      "timeoutMs",
+      "limits.maxToolRounds",
       "deprecated",
       "model.parameters.maxTokens",
       "appendEntry",
