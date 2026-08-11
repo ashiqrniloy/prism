@@ -207,6 +207,39 @@ function validateEnv(env: Readonly<Record<string, string>> | undefined, limits: 
   return out;
 }
 
+/** Pure run-request validation: NUL bytes are rejected in commands and execFile paths/args. */
+export function validateRunArgs(request: NativeRunRequest): void {
+  if (request.command !== undefined) {
+    if (typeof request.command !== "string" || request.command.includes("\0")) {
+      throw new NativeSandboxError("exec requires a command string without NUL");
+    }
+  } else {
+    if (!request.file || request.file.includes("\0")) {
+      throw new NativeSandboxError("execFile requires a non-empty file path without NUL");
+    }
+    if (!Array.isArray(request.args) || request.args.some((a) => typeof a !== "string" || a.includes("\0"))) {
+      throw new NativeSandboxError("execFile args must be a string array without NUL");
+    }
+  }
+}
+
+/**
+ * Validates the cwd (absolute, inside the root, symlink-safe) and the env
+ * allow-list; returns the resolved cwd and validated env. Pure against the
+ * filesystem, so it is testable without a network namespace.
+ */
+export async function validateCwdAndEnv(
+  request: NativeRunRequest,
+  root: string,
+  limits: ResolvedNativeSandboxLimits,
+): Promise<{ cwd: string; env: Record<string, string> }> {
+  const cwd = request.cwd ?? root;
+  if (!isAbsolute(cwd) || !(await assertPathInsideRoots([root], cwd))) {
+    throw new NativeSandboxError("cwd must be an absolute path inside the sandbox root");
+  }
+  return { cwd, env: validateEnv(request.env as Readonly<Record<string, string>> | undefined, limits) };
+}
+
 async function preflightUnshare(unshare: string): Promise<NativeUnshareMode> {
   for (const mode of ["plain", "maproot"] as const) {
     const args = mode === "plain" ? ["--net", "true"] : ["--net", "--map-root-user", "true"];
@@ -348,18 +381,7 @@ class NativeSandboxSession implements DisposableSandbox {
 
   private async run(request: NativeRunRequest): Promise<{ exitCode: number | null }> {
     this.assertActive();
-    if (request.command !== undefined) {
-      if (typeof request.command !== "string" || request.command.includes("\0")) {
-        throw new NativeSandboxError("exec requires a command string without NUL");
-      }
-    } else {
-      if (!request.file || request.file.includes("\0")) {
-        throw new NativeSandboxError("execFile requires a non-empty file path without NUL");
-      }
-      if (!Array.isArray(request.args) || request.args.some((a) => typeof a !== "string" || a.includes("\0"))) {
-        throw new NativeSandboxError("execFile args must be a string array without NUL");
-      }
-    }
+    validateRunArgs(request);
     if (this.commandCount >= this.opts.limits.maxCommands) {
       throw new NativeSandboxError(`sandbox exceeded maxCommands (${this.opts.limits.maxCommands})`);
     }
@@ -368,11 +390,7 @@ class NativeSandboxSession implements DisposableSandbox {
     this.touch();
     try {
       this.assertActive();
-      const cwd = request.cwd ?? this.opts.root;
-      if (!isAbsolute(cwd) || !(await assertPathInsideRoots([this.opts.root], cwd))) {
-        throw new NativeSandboxError("cwd must be an absolute path inside the sandbox root");
-      }
-      const extraEnv = validateEnv(request.env as Readonly<Record<string, string>> | undefined, this.opts.limits);
+      const { cwd, env: extraEnv } = await validateCwdAndEnv(request, this.opts.root, this.opts.limits);
       const baseEnv = Object.keys(this.opts.env).length > 0 ? this.opts.env : { PATH: process.env.PATH ?? "/usr/bin:/bin" };
       const command = buildNativeSpawnCommand(
         request.command !== undefined ? { command: request.command, cwd } : { file: request.file!, args: request.args!, cwd },

@@ -4,7 +4,14 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { buildNativeSpawnCommand, createNativeSandbox, NativeSandboxError, resolveNativeSandboxLimits } from "../index.js";
+import {
+  buildNativeSpawnCommand,
+  createNativeSandbox,
+  createSecretRedactor,
+  NativeSandboxError,
+  resolveNativeSandboxLimits,
+} from "../index.js";
+import { validateCwdAndEnv, validateRunArgs } from "../native-sandbox.js";
 
 const LIMITS = resolveNativeSandboxLimits();
 
@@ -90,41 +97,28 @@ test("T4: execFile passes file/args as argv — never shell-interpolated", () =>
 
 test("T5: host env is never inherited; env allow-list is validated and bounded", async () => {
   await withRoot(async (root) => {
-    const sb = await createNativeSandbox({ root });
-    try {
-      await assert.rejects(sb.exec({ command: "echo x", cwd: root, env: { "BAD NAME": "v" } }), /invalid env name/);
-      await assert.rejects(sb.exec({ command: "echo x", cwd: root, env: { a: "x".repeat(LIMITS.maxEnvBytes) } }), /exceeds maxEnvBytes/);
-    } finally {
-      await sb.close();
-    }
+    await assert.rejects(validateCwdAndEnv({ env: { "BAD NAME": "v" } }, root, LIMITS), /invalid env name/);
+    await assert.rejects(validateCwdAndEnv({ env: { a: "x".repeat(LIMITS.maxEnvBytes) } }, root, LIMITS), /exceeds maxEnvBytes/);
   });
 });
 
 test("T5: secrets are redacted from surfaced errors", async () => {
   await withRoot(async (root) => {
-    const sb = await createNativeSandbox({ root, secrets: ["super-secret"] });
-    try {
-      await assert.rejects(sb.exec({ command: "echo x", cwd: root, env: { "super-secret!": "v" } }), (error: unknown) => {
-        assert.ok(error instanceof NativeSandboxError);
-        assert.ok(!error.message.includes("super-secret"));
-        assert.ok(error.message.includes("[REDACTED]"));
-        return true;
-      });
-    } finally {
-      await sb.close();
-    }
+    const redact = createSecretRedactor(["super-secret"]);
+    await assert.rejects(validateCwdAndEnv({ env: { "super-secret!": "v" } }, root, LIMITS), (error: unknown) => {
+      assert.ok(error instanceof NativeSandboxError);
+      const surfaced = redact(error.message);
+      assert.ok(!surfaced.includes("super-secret"));
+      assert.ok(surfaced.includes("[REDACTED]"));
+      return true;
+    });
   });
 });
 
 test("T3: cwd must be an absolute path inside the sandbox root", async () => {
   await withRoot(async (root) => {
-    const sb = await createNativeSandbox({ root });
-    try {
-      await assert.rejects(sb.exec({ command: "echo x", cwd: "/etc" }), /inside the sandbox root/);
-      await assert.rejects(sb.exec({ command: "echo x", cwd: "relative" }), /inside the sandbox root/);
-    } finally {
-      await sb.close();
-    }
+    await assert.rejects(validateCwdAndEnv({ cwd: "/etc" }, root, LIMITS), /inside the sandbox root/);
+    await assert.rejects(validateCwdAndEnv({ cwd: "relative" }, root, LIMITS), /inside the sandbox root/);
   });
 });
 
@@ -133,29 +127,17 @@ test("T3: symlinked cwd resolving outside the root is rejected", async () => {
     const outside = await mkdtemp(join(tmpdir(), "prism-native-outside-"));
     try {
       await symlink(outside, join(root, "escape"));
-      const sb = await createNativeSandbox({ root });
-      try {
-        await assert.rejects(sb.exec({ command: "echo x", cwd: join(root, "escape") }), /inside the sandbox root/);
-      } finally {
-        await sb.close();
-      }
+      await assert.rejects(validateCwdAndEnv({ cwd: join(root, "escape") }, root, LIMITS), /inside the sandbox root/);
     } finally {
       await rm(outside, { recursive: true, force: true });
     }
   });
 });
 
-test("T4: NUL bytes are rejected in exec commands and execFile paths/args", async () => {
-  await withRoot(async (root) => {
-    const sb = await createNativeSandbox({ root });
-    try {
-      await assert.rejects(sb.exec({ command: "echo \u0000", cwd: root }), /without NUL/);
-      await assert.rejects(sb.execFile({ file: "/bin/echo\u0000", args: [] }), /without NUL/);
-      await assert.rejects(sb.execFile({ file: "/bin/echo", args: ["\u0000"] }), /without NUL/);
-    } finally {
-      await sb.close();
-    }
-  });
+test("T4: NUL bytes are rejected in exec commands and execFile paths/args", () => {
+  assert.throws(() => validateRunArgs({ command: "echo \u0000" }), /without NUL/);
+  assert.throws(() => validateRunArgs({ file: "/bin/echo\u0000", args: [] }), /without NUL/);
+  assert.throws(() => validateRunArgs({ file: "/bin/echo", args: ["\u0000"] }), /without NUL/);
 });
 
 test("T7: stop/kill transition state and terminate running work", { skip: !NETNS_OK }, async () => {

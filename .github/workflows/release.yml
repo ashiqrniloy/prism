@@ -26,32 +26,13 @@ jobs:
       - name: verify SDK readiness
         run: |
           set -o pipefail
-          # Phase-by-phase with explicit rc so a silent failure (no npm error
-          # output) still names the failing phase in sdk-ready.log.
-          phase() {
-            echo "== sdk:ready phase: $1"
-            shift
-            "$@"
-            rc=$?
-            echo "== sdk:ready phase rc=$rc"
-            [ "$rc" -eq 0 ] || exit 1
-          }
-          {
-            phase typecheck npm run typecheck
-            phase lint npm run lint
-            phase format:check npm run format:check
-            phase "npm test" npm test
-            phase test:coverage npm run test:coverage
-            phase pack:dry-run npm run pack:dry-run
-            phase release:gate npm run release:gate
-            echo "== sdk:ready all phases passed"
-          } 2>&1 | tee sdk-ready.log
+          npm run sdk:ready 2>&1 | tee sdk-ready.log
         timeout-minutes: 30
       - name: summarize SDK failure
         if: failure()
         run: |
-          echo "### last phases of sdk-ready.log" >> "$GITHUB_STEP_SUMMARY"
-          grep -nE '^== sdk:ready phase|npm error|✖|AssertionError|Killed|SIGKILL|ELIFECYCLE|exceeded threshold|exceeded ceiling' sdk-ready.log | tail -60 >> "$GITHUB_STEP_SUMMARY" || true
+          echo "### error markers in sdk-ready.log" >> "$GITHUB_STEP_SUMMARY"
+          grep -nE 'npm error|✖|AssertionError|Killed|SIGKILL|ELIFECYCLE|exceeded threshold|exceeded ceiling' sdk-ready.log | tail -60 >> "$GITHUB_STEP_SUMMARY" || true
           echo "### tail of sdk-ready.log" >> "$GITHUB_STEP_SUMMARY"
           tail -200 sdk-ready.log >> "$GITHUB_STEP_SUMMARY"
 
