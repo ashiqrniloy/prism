@@ -74,6 +74,8 @@ First-party providers map generic `ModelConfig.parameters.maxTokens` to real out
 
 ## First-party provider package skeletons
 
+Scaffold new OpenAI-compatible provider packages with `prism providers add <name>` (see [CLI/RPC](cli-rpc.md#prism-providers-add-017)): it generates the manifest, provider (`createOpenAICompatibleProvider`), starter models, cache-hint helpers, an offline conformance test, and a docs stub — mirroring the first-party skeleton conventions below. Scaffold output is host-chosen and never auto-registered.
+
 Phase 12 adds explicit npm workspaces for [`@arnilo/prism-provider-openai`](providers/openai.md), [`@arnilo/prism-provider-opencode-go`](providers/opencode-go.md), [`@arnilo/prism-provider-openrouter`](providers/openrouter.md), [`@arnilo/prism-provider-zai`](providers/zai.md), [`@arnilo/prism-provider-kimi`](providers/kimi.md), and [`@arnilo/prism-provider-neuralwatt`](providers/neuralwatt.md). Each package starts with a side-effect-free `create*ProviderPackage()` export, README, TypeScript build, network-free default tests, and real opt-in live smoke tests.
 
 Phase 6 also adds optional [`@arnilo/prism-provider-ai-sdk`](providers/ai-sdk.md), which adapts a host-owned AI SDK `LanguageModelV4` to Prism's `AIProvider`. It joins `@arnilo/prism-providers` as the seventh adapter while remaining independent from the six HTTP implementations.

@@ -57,6 +57,18 @@ export type {
   CacheUsageReport,
 } from "./cache-helpers.js";
 export { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "./cache-helpers.js";
+export type {
+  CacheTelemetry,
+  CacheTelemetryOptions,
+  CacheTelemetryReport,
+  CacheTelemetrySample,
+} from "./cache-telemetry.js";
+export {
+  CACHE_TELEMETRY_OVERFLOW_KEY,
+  CacheTelemetryError,
+  DEFAULT_CACHE_TELEMETRY_CAP,
+  createCacheTelemetry,
+} from "./cache-telemetry.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
 export type { DefaultCompactionStrategyOptions } from "./compaction.js";
@@ -565,5 +577,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.1.6";
+export const version = "0.1.7";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

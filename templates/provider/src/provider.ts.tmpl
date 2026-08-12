@@ -1,0 +1,23 @@
+import type { AIProvider, CredentialValueSource } from "@arnilo/prism";
+import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
+
+/** Default Chat Completions base URL for __PROVIDER_ID__ (override per provider docs). */
+export const __PROVIDER_UPPER___DEFAULT_BASE_URL = "__BASE_URL__";
+
+export interface __PROVIDER_PASCAL__ProviderOptions {
+  readonly id?: string;
+  readonly baseUrl?: string;
+  readonly apiKey?: CredentialValueSource;
+  readonly fetch?: typeof fetch;
+}
+
+export function create__PROVIDER_PASCAL__Provider(options: __PROVIDER_PASCAL__ProviderOptions = {}): AIProvider {
+  return createOpenAICompatibleProvider({
+    id: options.id ?? "__PROVIDER_ID__",
+    baseUrl: (options.baseUrl ?? __PROVIDER_UPPER___DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    doneUsage: true,
+    requestFailedPrefix: "__PROVIDER_PASCAL__ request failed",
+  });
+}

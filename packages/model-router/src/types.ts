@@ -95,6 +95,31 @@ export interface ModelRouteCandidate {
   readonly residency?: string;
 }
 
+/**
+ * Host-configurable candidate selection (0.1.7). The router calls {@link rank}
+ * after assembling the primary + fallback candidates and BEFORE the
+ * allow-list/residency/budget/rate/circuit checks; the policy therefore only
+ * reorders already-allowed candidates and can never widen governance. The
+ * returned list MUST be a permutation of the input; any other result fails
+ * closed with `ERR_PRISM_MODEL_ROUTER_POLICY`. Absent a `selection` option the
+ * router keeps the 0.1.6 ordered behavior byte-identically.
+ */
+export interface ModelRouterSelectionPolicy {
+  /** Short policy name recorded in diagnostics (cap 128). */
+  readonly name: string;
+  /** Reorder the candidates; must return a permutation of the input. */
+  rank(candidates: readonly ModelConfig[], request: ModelRouterResolveRequest): readonly ModelConfig[];
+  /** Optional outcome feedback fed by `router.recordOutcome` (e.g. latency EMAs). */
+  observe?(outcome: { readonly provider: string; readonly model: string; readonly success: boolean; readonly latencyMs?: number }): void;
+}
+
+export interface CostLatencySelectionOptions {
+  /** EMA smoothing in [0, 1]; 0 keeps the first sample, 1 uses only the latest. Default 0.5. */
+  readonly latencyWeight?: number;
+  /** Provider/model key length cap for the latency table. Default 512. */
+  readonly maxKeyLength?: number;
+}
+
 export interface CreateModelRouterOptions {
   readonly resolver: ProviderResolver;
   readonly allowList?: ModelRouterAllowList;
@@ -109,6 +134,8 @@ export interface CreateModelRouterOptions {
   readonly fallbacks?: readonly ModelConfig[];
   /** Honor `compat.openRouterRouting` only when true (default false). */
   readonly allowOpenRouterRouting?: boolean;
+  /** Optional host selection policy; absent keeps the 0.1.6 ordered behavior. */
+  readonly selection?: ModelRouterSelectionPolicy;
   readonly limits?: ModelRouterLimits;
   readonly now?: () => number;
   /** Optional audit/telemetry hook; receives redacted diagnostics only. */
@@ -155,6 +182,8 @@ export interface ModelRouterDiagnostics {
     principalKind?: string;
   }>;
   readonly openRouterRoutingHonored?: boolean;
+  /** Host selection policy name when one is configured. */
+  readonly selection?: string;
   readonly residency?: string;
   readonly region?: string;
 }
@@ -180,6 +209,8 @@ export interface ModelRouter {
     model: string;
     success: boolean;
     circuitProbeToken?: string;
+    /** Host-measured provider-call latency; feeds the selection policy EMA. */
+    latencyMs?: number;
   }): Promise<void>;
   createOpenRouterRoutingPolicy(): ProviderRequestPolicy;
 }

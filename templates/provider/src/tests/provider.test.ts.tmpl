@@ -1,0 +1,104 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { ProviderRequest } from "@arnilo/prism";
+import {
+  assertNoSecretLeak,
+  assertProviderOwnedHeadersWin,
+  assertProviderStreamConforms,
+  assertSerializedRequestCoversContent,
+  assertToolCallDeltasReconstruct,
+} from "@arnilo/prism/testing/provider-conformance";
+import { create__PROVIDER_PASCAL__Provider } from "../index.js";
+import { __PROVIDER_ID__Models } from "../models.js";
+
+const request: ProviderRequest = {
+  model: __PROVIDER_ID__Models[0],
+  messages: [
+    { role: "system", content: [{ type: "text", text: "developer instructions" }] },
+    { role: "user", content: [{ type: "text", text: "hi" }] },
+  ],
+  tools: [{ name: "lookup", parameters: { type: "object" }, execute: () => ({ toolCallId: "call_1", name: "lookup", content: [] }) }],
+};
+
+const API_KEY = "fake-__PROVIDER_ID__-key";
+
+describe("__PROVIDER_ID__ provider scaffold", () => {
+  it("streams text, usage, and done; owns its headers; leaks no secrets", async () => {
+    let captured: RequestInit | undefined;
+    const provider = create__PROVIDER_PASCAL__Provider({
+      apiKey: API_KEY,
+      fetch: (async (_input, init) => {
+        captured = init;
+        return ok(
+          sse([
+            { id: "chatcmpl-1", object: "chat.completion.chunk", choices: [{ index: 0, delta: { role: "assistant", content: "hi" } }] },
+            {
+              id: "chatcmpl-1",
+              object: "chat.completion.chunk",
+              choices: [{ index: 0, delta: {} }],
+              usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 },
+            },
+          ]),
+        );
+      }) as typeof fetch,
+    });
+    const events = await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        options: {
+          ...request.options,
+          headers: { authorization: "Bearer caller-key", "content-type": "text/plain", "x-caller": "kept" },
+        },
+      },
+      expect: { text: "hi", usage: { inputTokens: 5, outputTokens: 2, totalTokens: 7 } },
+    });
+    assertNoSecretLeak(events, [API_KEY]);
+    const headers = new Headers(captured?.headers);
+    assertProviderOwnedHeadersWin(headers, {
+      owned: { authorization: `Bearer ${API_KEY}`, "content-type": "application/json" },
+      caller: { authorization: "Bearer caller-key", "content-type": "text/plain", "x-caller": "kept" },
+    });
+  });
+
+  it("serializes request content and reconstructs tool-call deltas", async () => {
+    let body: unknown;
+    const provider = create__PROVIDER_PASCAL__Provider({
+      apiKey: API_KEY,
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(
+          sse([
+            {
+              id: "c1",
+              object: "chat.completion.chunk",
+              choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: "" } }] } }],
+            },
+            {
+              id: "c1",
+              object: "chat.completion.chunk",
+              choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: '{"q":"x"}' } }] } }],
+            },
+          ]),
+        );
+      }) as typeof fetch,
+    });
+    const events = await assertProviderStreamConforms({ provider, request });
+    assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "lookup", arguments: { q: "x" } }]);
+    assertSerializedRequestCoversContent(request, body);
+  });
+});
+
+function ok(body: ReadableStream<Uint8Array>): Response {
+  return new Response(body, { status: 200 });
+}
+
+function sse(events: readonly object[]): ReadableStream<Uint8Array> {
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
+}

@@ -1,0 +1,159 @@
+{
+  "$comment": "0.1.7 Task 0 baseline evidence (plan 019, 2026-08-11): captured at HEAD 2ebc08e (signed v0.1.6 tag) with all four items pending. Seam hashes are the pre-change truth for the phase-19 state machine: while an item's task is pending its allowed files must stay byte-identical; absent files must stay absent. The item inventory mirrors the manifest (same ids/tasks/scopes). preservedSurface hashes are immutable for the whole phase. asyncHooks records the Task 4 verification evidence once Task 4 lands. exitGate records the Task 6 0.1.7 evidence once Tasks 1-6 land.",
+  "captured": "2026-08-11",
+  "release": "0.1.6",
+  "node": "v24.18.0",
+  "platform": "linux-x64",
+  "gitHead": "2ebc08e778786717901a9be5511b93969d3d2308",
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<19 files> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1433,
+    "corePass": 1433,
+    "coreFail": 0,
+    "scriptGates": 190,
+    "scriptGatesPass": 190,
+    "scriptGatesFail": 0,
+    "scriptGateSuites": 19,
+    "workspaces": "all green (exit 0)"
+  },
+  "audit": {
+    "command": "npm audit --audit-level=moderate",
+    "level": "moderate",
+    "vulnerabilities": 0
+  },
+  "releaseGate": {
+    "command": "node scripts/release.mjs gate --version 0.1.6",
+    "version": "0.1.6",
+    "packages": 50,
+    "breakingDeltas": 0,
+    "updated": false,
+    "result": "green; compat baseline exists at 0.1.6, 0 breaking declaration deltas"
+  },
+  "manifestCount": {
+    "publishable": 50,
+    "workspacePackages": 49,
+    "rootPackage": "@arnilo/prism",
+    "categories": {
+      "provider": 14,
+      "prism": 9,
+      "capability": 26
+    },
+    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages); 0.1.7 adds no package, the count stays 50",
+    "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
+  },
+  "items": [
+    {
+      "id": "cache-telemetry",
+      "task": "task2",
+      "seamFiles": [
+        "src/cache-telemetry.ts",
+        "src/__tests__/cache-telemetry.test.ts",
+        "src/index.ts",
+        "docs/provider-caching.md"
+      ]
+    },
+    {
+      "id": "router-selection",
+      "task": "task3",
+      "seamFiles": [
+        "packages/model-router/src/selection.ts",
+        "packages/model-router/src/__tests__/selection.test.ts",
+        "packages/model-router/src/types.ts",
+        "packages/model-router/src/router.ts",
+        "packages/model-router/src/index.ts",
+        "docs/model-routing.md"
+      ]
+    },
+    {
+      "id": "async-hooks-closeout",
+      "task": "task4",
+      "seamFiles": [
+        "packages/ag-ui/src/__tests__/async-projection-closeout.test.ts"
+      ]
+    },
+    {
+      "id": "provider-scaffold",
+      "task": "task5",
+      "seamFiles": [
+        "src/cli-provider-add.ts",
+        "src/__tests__/cli-provider-add.test.ts",
+        "src/cli-runner.ts",
+        "templates/provider/package.json.tmpl",
+        "templates/provider/tsconfig.json.tmpl",
+        "templates/provider/README.md.tmpl",
+        "templates/provider/CHANGELOG.md.tmpl",
+        "templates/provider/src/index.ts.tmpl",
+        "templates/provider/src/provider.ts.tmpl",
+        "templates/provider/src/models.ts.tmpl",
+        "templates/provider/src/cache.ts.tmpl",
+        "templates/provider/src/tests/provider.test.ts.tmpl",
+        "templates/provider/docs/providers/NAME.md.tmpl",
+        "docs/cli-rpc.md",
+        "docs/provider-packages.md"
+      ]
+    }
+  ],
+  "preservedSurface": {
+    "src/cache-helpers.ts": "f5eceded5f0aa1db3bfffd1889558286bdb1980524d56239c92ff6d0d2268140",
+    "src/provider-events.ts": "3c522f5c1ada948136e0d7c76e13b26d7baf5e3091ebe53aa9da6f8c4a3f60ce",
+    "src/cli-init.ts": "d537a493a6bc2fefe9e917a17e7e97c2ec1bbd3449e500b8df4c862c7477f552",
+    "packages/model-router/src/state.ts": "f203ad170feb0bafa9178fd1ce346df1eae1ec75973b94a1a80dd5c87c4e3b29"
+  },
+  "fileHashes": {
+    "src/cache-telemetry.ts": "absent",
+    "src/__tests__/cache-telemetry.test.ts": "absent",
+    "src/index.ts": "2facc3ac0350d768b2cdf706aa72c93c3e6ad4faa70c174808db29926d2b81ca",
+    "docs/provider-caching.md": "ef004fcf17d24f7a79d2805c2b89c9eb76c3d9bba2ef8ad095cc4f3d3fa31d40",
+    "packages/model-router/src/selection.ts": "absent",
+    "packages/model-router/src/__tests__/selection.test.ts": "absent",
+    "packages/model-router/src/types.ts": "be3feeea51b0c81d11364cc0e2957adeb557f34e6009f51b18976eb91f6abfad",
+    "packages/model-router/src/router.ts": "7bc6ae2e10e68efa3067479e0200242a058c5be9be112f98aa817bc16f32434e",
+    "packages/model-router/src/index.ts": "1ace0d43d22e82faeada7fd0cb1daa0622a6777c5bb0f9b5a0aa250daa7fa8fb",
+    "docs/model-routing.md": "ab13c40572fdc54430cefc1d00f52d72f2468856110da8cc76104146f169c77f",
+    "packages/ag-ui/src/__tests__/async-projection-closeout.test.ts": "absent",
+    "src/cli-provider-add.ts": "absent",
+    "src/__tests__/cli-provider-add.test.ts": "absent",
+    "src/cli-runner.ts": "86daa13c87d3bdbc7eaa1f79641c2f0f7102e253a5b9a17130fa0fe3d268adad",
+    "templates/provider/package.json.tmpl": "absent",
+    "templates/provider/tsconfig.json.tmpl": "absent",
+    "templates/provider/README.md.tmpl": "absent",
+    "templates/provider/CHANGELOG.md.tmpl": "absent",
+    "templates/provider/src/index.ts.tmpl": "absent",
+    "templates/provider/src/provider.ts.tmpl": "absent",
+    "templates/provider/src/models.ts.tmpl": "absent",
+    "templates/provider/src/cache.ts.tmpl": "absent",
+    "templates/provider/src/tests/provider.test.ts.tmpl": "absent",
+    "templates/provider/docs/providers/NAME.md.tmpl": "absent",
+    "docs/cli-rpc.md": "51354e640f7f9e76f480e03f797de3750ddbac032cfae11a9db0c5d3412d10fd",
+    "docs/provider-packages.md": "076a0f8ac3987904e523724062cdb5af20dc5881b652246fa176c66a42240e0d"
+  },
+  "asyncHooks": {
+    "$comment": "Task 4 verification record (plan 019, 2026-08-12): roadmap item 3 (async AgUiProjection hooks) shipped as plan 009 Task 15 at 0.0.26; verification confirms the shipped surface matches the roadmap wording end to end with no gap, so the tentative regression test file stays absent and no code landed.",
+    "verified": true,
+    "gapFound": false,
+    "evidence": "plan 009 Task 15 provenance (0.0.26, done): Awaitable<T> = T | Promise<T> at packages/ag-ui/src/projection.ts:41 with all 17 hooks typed Awaitable (toolArguments, toolResult, toolLocations, toolDiff, lifecycle, fileDiff, state, stateSnapshot, stateDelta, messages, activity, reasoning, raw, custom, interrupt, coWork, path); mappers await hooks in event order with no Promise.all anywhere in the projection path (ag-ui-mapper.ts / acp mapper / handler.ts await sites; a slow hook delays only its own event, verified by the ordering test); rejection is fail-closed per event; createMessagesFromSessionProjection getMessages accepts '() => readonly AgUiMessage[] | Promise<readonly AgUiMessage[]>' (projectors.ts:20) with the session.entries() doc example at line 17 and emits MESSAGES_SNAPSHOT at agent_started/message_finished/agent_finished (projectors.ts:61-71); caps apply to awaited values (oversized async messages drop closed). Evidence run 2026-08-12 at HEAD 2ebc08e: packages/ag-ui npm test 187/187 pass across 28 suites including projection-async.test.ts (8 async-specific tests: async getMessages E2E with redaction, rejection drops snapshot + stream continues, mixed sync/async compose first-wins, in-order awaits never Promise.all, per-event fail-closed with sibling hooks still projected, caps on awaited values, ACP redaction parity, sync-only behavior preserved); docs tripwire green (docs/ag-ui.md present and linked from docs/index.md; README documents Awaitable hooks + async getMessages); roadmap.md item 3 checked off with 0.0.26 Task-15 provenance. No code changes landed (tentative test file absent by design)."
+  },
+  "exitGate": {
+    "$comment": "0.1.7 exit gate evidence (plan 019 Task 6): recorded after Tasks 0-6 land; green = full npm test + sdk:ready + audit + pack determinism + plain release:gate at 0.1.7 (0 breaking declaration deltas, then version-literal baseline refresh with --update-baseline, no --allow-break).",
+    "recordedAt": "2026-08-12T16:35:00+00:00",
+    "green": true,
+    "npmTest": {
+      "exitCode": 0,
+      "coreTests": 1451,
+      "corePass": 1451,
+      "coreFail": 0,
+      "scriptGates": 208,
+      "scriptGatesPass": 208,
+      "scriptGatesFail": 0,
+      "scriptGateSuites": 20,
+      "workspaces": "all exit 0 (some suites show pass < tests from skipped/conditional tests, not failures)"
+    },
+    "sdkReady": { "exitCode": 0, "notes": "typecheck + lint (61 warnings, 0 errors) + format:check (0 errors after biome format --write on the 6 plan-019 files) + npm test + coverage + pack dry-run + release:gate; biome.json deserialize deprecation notice only" },
+    "audit": { "vulnerabilities": 0, "level": "moderate" },
+    "packDryRun": { "packages": 50, "deterministic": true, "evidence": "two runs byte-identical (log sha256 2b8880823cfd6717b66b0612424c2ca7a9ff546a81c529c062c8e49c8c7425cb); 50 distinct 0.1.7 tarballs" },
+    "releaseGate": { "version": "0.1.7", "packages": 50, "errors": 0, "updated": false, "notes": "plain gate after --update-baseline; baseline refresh ran first and reported 0 removed / 16 added (cache-telemetry + scaffold exports) / changed = usage text + version literal (root) and 3 added / 17 barrel statement-text artifacts (model-router); no --allow-break anywhere" },
+    "benchmarkEvidence": "budget/benchmark gates green inside the 208 script gates; telemetry aggregator record() O(1) and report() O(distinct keys) with cap 256 (ponytail ceiling); router selection adds at most one O(n log n) sort per resolve with O(1) EMA updates and no extra state-store round trips; budgets.json root pack values re-baselined at Task 2 (756151 packed / 2627877 unpacked / 310 files, dated comment)"
+  },
+  "exitGateVersion": "0.1.7"
+}

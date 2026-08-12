@@ -1,0 +1,41 @@
+# __PACKAGE_NAME__
+
+__PROVIDER_ID__ provider package for Prism (OpenAI-compatible Chat Completions).
+
+## Quick start
+
+```bash
+npm install __PACKAGE_NAME__ @arnilo/prism
+```
+
+Wire the provider and models into your Prism host. The package registers an
+`api_key` auth method; hosts resolve the credential value — typically from the
+`__ENV_KEY__` environment variable:
+
+```ts
+import { createResolver } from "@arnilo/prism";
+import { create__PROVIDER_PASCAL__ProviderPackage } from "__PACKAGE_NAME__";
+
+const resolver = createResolver();
+resolver.registerProviderPackage(
+  create__PROVIDER_PASCAL__ProviderPackage({
+    apiKey: () => process.env.__ENV_KEY__,
+  }),
+);
+```
+
+## Models
+
+Starter catalog in `src/models.ts` (`__MODEL_ID__`). Replace with
+docs-verified model metadata (limits, costs, cache behavior) before publishing.
+
+## Conformance
+
+`npm test` builds the package and runs the offline conformance suite wired to
+`@arnilo/prism/testing/provider-conformance` (stream shape, tool-call delta
+reconstruction, header ownership, secret-leak redaction, serialized content
+coverage).
+
+## Docs
+
+See `docs/providers/__PROVIDER_ID__.md`.

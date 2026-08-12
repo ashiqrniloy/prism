@@ -220,6 +220,69 @@ Static featured catalogs remain offline bootstrap and must **not** invent pricin
 - Cache usage reports contain only usage counts and optional pricing/currency; they do not include prompt text, cache keys, headers, credentials, or provider payloads.
 - `applyCacheControl()` returns new message objects for stamped anchors and does not mutate input messages.
 
+## Cache telemetry
+
+### What it does
+
+`createCacheTelemetry()` is a dependency-free aggregator that turns the per-call
+`Usage.cacheReadTokens`/`cacheWriteTokens` counters into per-provider/model
+statistics hosts can use to tune the `cache_aware` input layout: request count,
+cache-read/write token totals, hit rate, and an estimated read-token savings
+when the model carries cost metadata.
+
+### When to use it
+
+Use it when you want to observe cache effectiveness per provider/model over a
+session, a day, or a run ledger. It is opt-in by construction: importing the
+module never collects anything — the host explicitly wires `record()` to its
+`usage` `ProviderEvent` stream or to run-ledger usage records.
+
+### Inputs / request
+
+| Input | Meaning |
+| --- | --- |
+| `usage` (`Usage`) | One usage record: `cacheReadTokens`, `cacheWriteTokens`, `inputTokens` are validated (non-negative safe integers; a violation throws `CacheTelemetryError` and mutates nothing). |
+| `model` (`ModelConfig?`) | Attribution key (`provider` + `model`). Omit it for provider-only aggregation into the `unknown` bucket. Cost metadata (`ModelCost.input`/`cacheRead`) enables `estimatedSavings`. |
+| `options.maxKeys` | Distinct provider/model keys before excess keys collapse into the `__overflow__` bucket (default `DEFAULT_CACHE_TELEMETRY_CAP` = 256). |
+
+### Outputs / response / events
+
+`report()` returns `{ samples, overflowed, totalRequests, totalCacheReadTokens,
+totalCacheWriteTokens }`. Each sample carries `provider`, `model`, `requests`,
+`cacheReadTokens`, `cacheWriteTokens`, `inputTokens`, `hitRate` (total reads /
+total input — the same math as `cacheHitRate()`), and `estimatedSavings` with
+`currency` only when the model has cost metadata. Samples are sorted by
+provider then model. `reset()` clears all samples; `size` reports the current
+distinct-key count.
+
+### Request/response example
+
+```ts
+import { createCacheTelemetry } from "@arnilo/prism";
+
+const telemetry = createCacheTelemetry();
+for await (const event of provider.generate(request)) {
+  if (event.type === "usage") telemetry.record(event.usage, request.model);
+}
+
+const report = telemetry.report();
+for (const sample of report.samples) {
+  console.log(sample.provider, sample.model, sample.hitRate, sample.cacheReadTokens);
+}
+```
+
+### Security and performance notes
+
+- Reports carry token counters, rates, currency, and provider/model names only
+  — never prompt content, cache keys, headers, credentials, or identity fields
+  (redaction-safe by construction).
+- Cardinality is bounded: beyond `maxKeys` distinct provider/model keys, excess
+  keys accumulate in a single `__overflow__` bucket; memory cannot grow with
+  hostile model names (`ponytail:` ceiling — upgrade to host-configurable caps
+  or LRU eviction only if a real deployment exceeds it).
+- `record()` is O(1) per usage event; `report()` is O(keys). No secrets or
+  cache keys are accepted or stored.
+
 ## Related APIs
 
 - [Input and prompt assembly](input-and-prompt-assembly.md): opt-in cache-aware ordering for stable provider payload prefixes.

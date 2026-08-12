@@ -148,4 +148,6 @@ resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidat
 runDockerCli	export declare function runDockerCli(request: DockerCliRequest): Promise<DockerCliResult>
 sha256Hex	export declare function sha256Hex(data: Buffer | string): string
 summarizeTarStream	export declare function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: TarBounds): Promise<TarExportSummary>
+validateCwdAndEnv	export declare function validateCwdAndEnv(request: NativeRunRequest, root: string, limits: ResolvedNativeSandboxLimits): Promise<
+validateRunArgs	export declare function validateRunArgs(request: NativeRunRequest): void
 validateSandboxLimit	export declare function validateSandboxLimit(name: string, value: number, hardCap: number): number

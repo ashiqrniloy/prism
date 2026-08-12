@@ -36,6 +36,38 @@ prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]
 
 Default generation installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one `@arnilo/prism-provider-*` package. Storage, telemetry, memory, and server packages are never added unless a later phase introduces an explicit flag for them. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
 
+### `prism providers add` (0.1.7)
+
+```bash
+prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]
+```
+
+Scaffolds an OpenAI-compatible provider package into `./<name>`: `package.json`
+(peer dep on `@arnilo/prism`, `sideEffects: false`, publish metadata mirroring
+first-party providers), `tsconfig.json`, `README.md`, `CHANGELOG.md`,
+`src/index.ts` (`defineProviderPackage` + auth-method registration),
+`src/provider.ts` (built on `createOpenAICompatibleProvider`),
+`src/models.ts` (starter `ModelConfig` list), `src/cache.ts` (cache-hint
+mapping helpers via the shared core helpers), `src/__tests__/provider.test.ts`
+(wired to `@arnilo/prism/testing/provider-conformance`), and a
+`docs/providers/<name>.md` stub.
+
+| Flag / arg | Purpose |
+| --- | --- |
+| `<name>` | npm-validated provider/package name (lowercase); also the target directory. |
+| `--base-url <url>` | Default Chat Completions base URL (default `https://api.example.com/v1`). |
+| `--env-key <name>` | Credential environment-var identifier, e.g. `ACME_API_KEY` (default `<NAME>_API_KEY`). |
+| `--model <id>` | Starter model id (default `<name>-large`). |
+| `--force` | Overwrite generated files when the destination already exists. |
+| `-h`, `--help` | Print providers-add usage. |
+
+Scaffold output is host-chosen: it is never auto-registered into repo
+workspaces, umbrellas, or any resolver. The generated conformance test is
+offline (mock fetch) and proves stream shape, tool-call delta reconstruction,
+header ownership, secret-leak redaction, and serialized-content coverage
+against the base provider. Replace the starter model metadata and the docs
+stub with docs-verified values before publishing.
+
 ### Run/RPC CLI flags
 
 | Flag | Purpose |
@@ -181,6 +213,7 @@ Suspended workflow resume parameters are `{ workflowId, runId, decision: "approv
 - JSONL is processed line by line with Node stdlib; no parser dependency, worker, watcher, or queue is added.
 - Unknown or malformed CLI/RPC input fails closed. Workflow resume validates decision and positive `expectedVersion`; ownership remains host-selected and checkpoint-enforced.
 - `prism init` refuses non-empty destinations without `--force`, keeps writes inside the destination root, and never executes downloaded code beyond the user's later `npm install`.
+- `prism providers add` validates the name against npm package-name rules (lowercase, no separators or `..`), refuses path traversal and symlinked directories escaping the destination, validates `--base-url` as an http(s) URL and `--env-key` as a shell-safe identifier, and writes placeholders only — generated code never contains secrets.
 - Generated `.env.example` values are placeholders only; `.gitignore` excludes `.env` and local store files.
 - Default generated install stays small (~27 MB with TypeScript tooling in a clean consumer install versus Mastra's measured 439 MB scaffold); unselected storage/telemetry/eval/workflow packages are omitted.
 - Branch handles (`handleId`, `sessionId`, `leafId`) are identifiers only; do not encode credentials, tokens, provider objects, or secrets into them.

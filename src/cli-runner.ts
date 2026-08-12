@@ -3,6 +3,7 @@ import { basename, dirname } from "node:path";
 import process from "node:process";
 import type { Readable, Writable } from "node:stream";
 import { type InitRuntime, initUsage, runInitCommand } from "./cli-init.js";
+import { providerAddUsage, runProviderAddCommand, type ProviderAddRuntime } from "./cli-provider-add.js";
 import type {
   AgentSession,
   ContributionFileKind,
@@ -90,12 +91,17 @@ export interface CliRuntime {
   readonly initTemplatesRoot?: string;
   /** Override version stamped by `prism init` (tests). */
   readonly initPackageVersion?: string;
+  /** Override provider-scaffold template root (tests). */
+  readonly providerTemplatesRoot?: string;
+  /** Override version stamped by `prism providers add` (tests). */
+  readonly providerPackageVersion?: string;
   /** Working directory for relative `prism init` destinations (tests). */
   readonly cwd?: string;
 }
 
 export const usage = `Usage: prism [--mode print|json|rpc] [-p prompt] [options]
        prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]
+       prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]
 
 Options:
   -p, --prompt <text>        Prompt to run in print/json mode
@@ -292,6 +298,16 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
     };
     return runInitCommand(argv.slice(1), initRuntime);
   }
+  if (argv[0] === "providers" && argv[1] === "add") {
+    const providerRuntime: ProviderAddRuntime = {
+      stdout: runtime.stdout,
+      stderr: runtime.stderr,
+      ...(runtime.providerTemplatesRoot !== undefined ? { templatesRoot: runtime.providerTemplatesRoot } : {}),
+      ...(runtime.providerPackageVersion !== undefined ? { packageVersion: runtime.providerPackageVersion } : {}),
+      ...(runtime.cwd !== undefined ? { cwd: runtime.cwd } : {}),
+    };
+    return runProviderAddCommand(argv.slice(2), providerRuntime);
+  }
 
   let options: CliOptions;
   try {
@@ -302,7 +318,7 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
   }
 
   if (options.help) {
-    write(runtime.stdout, `${usage}\n${initUsage}`);
+    write(runtime.stdout, `${usage}\n${initUsage}\n${providerAddUsage}`);
     return 0;
   }
 

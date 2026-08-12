@@ -1,0 +1,126 @@
+{
+  "$comment": "Phase 19 (0.1.7) Task 0 performance-and-dx scope gate. Machine-checkable source of truth consumed by Tasks 1-6 of plans/019-Release-0-1-7-Performance-and-DX.md: the four roadmap 0.1.7 items (prompt-cache telemetry surface per provider; model-router cost/latency-aware selection policy + fallback chains; async AgUiProjection hooks closeout \u2014 verification-only, shipped 0.0.26 Task 15; `prism providers add <name>` scaffold) each with an allowed-file scope and task ownership, the preserved surface that must stay byte-identical for the whole phase (cache-helpers math, cli-init machinery, usage event shape, memory router state), allowed/forbidden changes, the additive-only compat promise (no --allow-break; regeneration only after a clean plain gate at 0.1.7 proves 0 breaking deltas), the audit/signed-tag/provenance policy, per-task evidence tokens, and the deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json and 0.1.7 changes none of it. Amendment requires a recorded deviation entry below. Validated by scripts/phase19-freeze.test.mjs. Baseline evidence for regression comparison at the Task 6 exit gate lives in scripts/phase19-baseline.json.",
+  "release": "0.1.7",
+  "line": "0.1.x",
+  "type": "performance-and-dx",
+  "baseline": "0.1.6 (plan 018 exit gate passed 2026-08-11; signed tag v0.1.6; 50 publishable manifests; audit 0 moderate; compat baselines current at 0.1.6)",
+  "items": [
+    {
+      "id": "cache-telemetry",
+      "task": "task2",
+      "title": "Prompt-cache telemetry surface per provider (hit/miss, cache tokens)",
+      "allowedFiles": [
+        "src/cache-telemetry.ts",
+        "src/__tests__/cache-telemetry.test.ts",
+        "src/index.ts",
+        "docs/provider-caching.md"
+      ],
+      "rationale": "roadmap 0.1.7 item 1 / Performance opportunities (a): hosts need per-provider hit/miss + cache-token aggregation to tune the cache_aware input layout; builds on Usage.cacheReadTokens/cacheWriteTokens + cacheHitRate/cacheSavings/cacheUsageReport, which stay untouched (preserved surface)."
+    },
+    {
+      "id": "router-selection",
+      "task": "task3",
+      "title": "Model-router cost/latency-aware selection policy + fallback chains",
+      "allowedFiles": [
+        "packages/model-router/src/selection.ts",
+        "packages/model-router/src/__tests__/selection.test.ts",
+        "packages/model-router/src/types.ts",
+        "packages/model-router/src/router.ts",
+        "packages/model-router/src/index.ts",
+        "docs/model-routing.md"
+      ],
+      "rationale": "roadmap 0.1.7 item 2 / Performance opportunities (b): router state is durable since Phase 6 but candidate ordering is fixed (primary + ordered fallbacks); make selection host-configurable with a reference cost/latency policy, default behavior byte-identical; no ModelRouterStateStore or Postgres store contract change."
+    },
+    {
+      "id": "async-hooks-closeout",
+      "task": "task4",
+      "title": "Async AgUiProjection hooks verification (plan 008 closeout; no new code expected)",
+      "allowedFiles": [
+        "packages/ag-ui/src/__tests__/async-projection-closeout.test.ts"
+      ],
+      "rationale": "roadmap 0.1.7 item 3 / plan 008 further action: the Awaitable<T> hook surface + async getMessages already shipped in 0.0.26 Task 15 (projection.ts, projectors.ts, ag-ui-mapper.ts, docs/ag-ui.md); this item verifies and records evidence; the allowed file is the tentative regression-test landing spot, used ONLY if verification finds a gap (baseline.asyncHooks.gapFound)."
+    },
+    {
+      "id": "provider-scaffold",
+      "task": "task5",
+      "title": "prism providers add <name> scaffold (DX)",
+      "allowedFiles": [
+        "src/cli-provider-add.ts",
+        "src/__tests__/cli-provider-add.test.ts",
+        "src/cli-runner.ts",
+        "templates/provider/package.json.tmpl",
+        "templates/provider/tsconfig.json.tmpl",
+        "templates/provider/README.md.tmpl",
+        "templates/provider/CHANGELOG.md.tmpl",
+        "templates/provider/src/index.ts.tmpl",
+        "templates/provider/src/provider.ts.tmpl",
+        "templates/provider/src/models.ts.tmpl",
+        "templates/provider/src/cache.ts.tmpl",
+        "templates/provider/src/tests/provider.test.ts.tmpl",
+        "templates/provider/docs/providers/NAME.md.tmpl",
+        "docs/cli-rpc.md",
+        "docs/provider-packages.md"
+      ],
+      "rationale": "roadmap 0.1.7 item 4 / Setup and structure improvements: generate an OpenAI-compatible provider package from a template (manifest, provider.ts, models.ts, cache.ts, conformance test, docs/providers/<name>.md); reuses the cli-init template/catalog/force patterns, which stay untouched (preserved surface)."
+    }
+  ],
+  "preservedSurface": {
+    "active": true,
+    "rule": "These files implement the primitives 0.1.7 reuses (cache math, usage event, init machinery, router memory state). They are byte-immutable for the whole phase; a hash mismatch fails loud at any task state. Deviations require a recorded entry.",
+    "files": {
+      "src/cache-helpers.ts": "cacheHitRate/cacheSavings/cacheUsageReport math is reused by cache-telemetry, not reimplemented",
+      "src/provider-events.ts": "usage ProviderEvent shape unchanged; telemetry consumes it",
+      "src/cli-init.ts": "init template/catalog/force patterns are reused by the provider scaffold, not edited",
+      "packages/model-router/src/state.ts": "memory state store contract unchanged; selection policy never bypasses allow-list/residency/budget decisions"
+    }
+  },
+  "allowedChanges": [
+    "Task 1 primitive-review evidence for all four items (docs/_evidence/phase19-primitive-review.md, this plan file)",
+    "implementation of exactly the four roadmap items within their allowedFiles scopes, per this plan's Task 2-5 approach: dependency-free additive core exports, host-configurable router option with unchanged defaults, verification-only async-hooks closeout, static CLI templates with fail-closed validation",
+    "additive public exports for shipped items plus their docs (docs/provider-caching.md, docs/model-routing.md, docs/cli-rpc.md, docs/provider-packages.md, docs/index.md navigation entries per task with Task 6 final verification, CHANGELOG.md, docs/release-and-install.md only if the manifest count changes)",
+    "version bump 0.1.6 -> 0.1.7 across all manifests + lockfile + version-sensitive pins (additive; no new package, manifest count stays 50 publishable)",
+    "compat baseline flow: plain release:gate --version 0.1.7 must pass with 0 breaking declaration deltas; only then regenerate the version-literal baseline text with --update-baseline; NO --allow-break anywhere in 0.1.7",
+    "phase 19 freeze/baseline/tripwire scripts and package.json test-script wiring (scripts/phase19-freeze.test.mjs after scripts/phase18-freeze.test.mjs), plans/README.md index row",
+    "baseline evidence updates in scripts/phase19-baseline.json: asyncHooks verification record (Task 4) and exitGate evidence (Task 6)"
+  ],
+  "forbiddenChanges": [
+    "any modification of an item's allowedFiles while its owning task is pending (byte-immutable via baseline hashes; the freeze test fails loud)",
+    "any modification of the preservedSurface files at any point in the phase (cache math, usage event shape, cli-init machinery, memory router state)",
+    "behavior change to any default: router candidate order without a selection hook stays identical to 0.1.6, cache telemetry activates only when the host wires it, scaffold writes only what the host asks for",
+    "breaking changes against the post-0.1.6 public contract surface (additive-only release; no --allow-break, no interface member removal, no signature change)",
+    "new runtime or dev dependencies in the dependency-free core; router reference policy stays inside @arnilo/prism-model-router; templates are static files",
+    "durable latency statistics in the ModelRouterStateStore or Postgres store contract (in-memory EMA only in 0.1.7; durable upgrade is demand-gated)",
+    "0.2.0 items (protected live-canary matrix, live NATS suite, new OpenAI-compatible model providers, prism-providers umbrella membership fix, delegated-agent adapters, enterprise adapter breadth, OTel spans for delegated agents) and any new first-party provider package generated by the scaffold",
+    "deletion or rewriting of ponytail: comments (intentional documented shortcuts move with their code)",
+    "changes to the frozen 0.1.x support matrix (scripts/phase12-freeze-manifest.json)",
+    "compat baseline regeneration before a clean additive plain gate at 0.1.7 exists, or regenerating baselines with any breaking delta recorded or unrecorded"
+  ],
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.1.6",
+    "promise": "0.1.7 is ADDITIVE-ONLY: the post-0.1.6 surface stays green with zero breaking declaration deltas; release:gate --version 0.1.7 runs WITHOUT --allow-break and must report 0 breaking deltas; only then is the version-literal baseline text regenerated with --update-baseline. No new package is planned, so the release graph stays at 50 publishable manifests; the baseline records the additive exports only, no existing baseline line is removed."
+  },
+  "deviations": [],
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.1.7 changes none of it",
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.1.7",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "tasks": {
+    "$comment": "per-task evidence tokens; 'done' when the task passes its checks, 'pending' until then. Task 0 sets itself done at freeze; Tasks 1-5 move to done as they land; Task 6 (docs, changelog, bump, exit gate) lands last. The phase19-freeze.test.mjs state machine asserts: while an item's task is pending, its allowed files are byte-identical to the Task 0 baseline hashes (absent files stay absent); once a task is done, the item assertions replace the hashes (export present, docs page updated, evidence recorded); preservedSurface files are checked at every state.",
+    "task0": "done (freeze record + scope gate + baseline evidence at scripts/phase19-baseline.json; npm test exit 0 core 1433/1433 script gates 190/190 workspaces green; audit 0 moderate; release:gate 0.1.6 green 50 packages 0 breaking deltas; 50 publishable manifests = root + 49 workspace (14 provider + 9 prism + 26 capability); seam + preserved-surface hashes captured for all four items; package.json test script wired with scripts/phase19-freeze.test.mjs after scripts/phase18-freeze.test.mjs; plans/README.md row added; HEAD 2ebc08e)",
+    "task1": "done (primitive review at docs/_evidence/phase19-primitive-review.md: reuse-first inventory + gap analysis for all four items; three new seams proposed (cache-telemetry aggregator, ModelRouterSelectionPolicy + createCostLatencySelection, providers-add template tree), each shipping with its first consumer in the same task; no new primitive extracted for a single consumer; async-hooks item verified as already shipped in 0.0.26 Task 15, verification-only; per-item trust boundaries mapped to concrete test names in Tasks 2/3/5 and the contingency list in Task 4; preserved surface untouched; defaults byte-identical; decision record appended)",
+    "task2": "done (cache-telemetry aggregator: createCacheTelemetry + CacheTelemetry{Report,Sample,Options} + CacheTelemetryError + DEFAULT_CACHE_TELEMETRY_CAP + CACHE_TELEMETRY_OVERFLOW_KEY in src/cache-telemetry.ts, additive exports from src/index.ts; 9 tests green (aggregation correctness, read-only providers, savings with/without ModelCost, aggregate-math parity with cacheUsageReport, cardinality cap -> __overflow__, invalid-input typed rejection without partial mutation, redaction-safe shape, no collection until host wiring, unknown-bucket provider-only aggregation); docs/provider-caching.md Cache telemetry section + docs/index.md entry; O(1) record, no runtime coupling; task lands after Task 1)",
+    "task3": "done (router selection: ModelRouterSelectionPolicy {name, rank, observe?} + CostLatencySelectionOptions in packages/model-router/src/types.ts, additive CreateModelRouterOptions.selection + ModelRouterDiagnostics.selection + recordOutcome latencyMs (validated); permutation-only rank enforced fail-closed with ERR_PRISM_MODEL_ROUTER_POLICY (added/dropped/duplicated candidates reject); policy runs after candidate assembly and BEFORE governance checks so it can only reorder already-allowed candidates; reference createCostLatencySelection in selection.ts (unit-price ranking normalized by cost unit, unknown/invalid costs rank last preserving input order, in-memory EMA tie-break with latencyWeight smoothing 0/1 extremes, maxKeyLength cap, ponytail durable-stats comment); selection name recorded in diagnostics; default absent-selection behavior byte-identical (regression test); packages/model-router/src/__tests__/selection.test.ts 11 tests green incl. walk-order, policy confinement, latency validation, truncation redaction; package.json test script updated; docs/model-routing.md Selection policies section + docs/index.md entry; task lands after Task 1; no ModelRouterStateStore/Postgres contract change)",
+    "task4": "done (async-hooks verification, plan-008/009 closeout: baseline.asyncHooks {verified: true, gapFound: false} with full evidence — roadmap item 3 shipped as plan 009 Task 15 at 0.0.26; Awaitable<T> at projection.ts:41 with all 17 hooks Awaitable; mappers await in event order with no Promise.all; rejection fail-closed per event; createMessagesFromSessionProjection getMessages accepts async transcript and emits MESSAGES_SNAPSHOT at agent_started/message_finished/agent_finished; caps apply to awaited values; packages/ag-ui npm test 187/187 across 28 suites incl. projection-async.test.ts 8 async tests; docs tripwire green; tentative regression test file stays absent — no gap found, no new code)",
+    "task5": "done (provider scaffold: src/cli-provider-add.ts with ProviderAddUsageError, parse/run/create, validateProviderName (npm rules + traversal refusal), validateBaseUrl (http(s)), env-key identifier validation, lexical assertPathInside + realpath-based symlink-escape refusal, applyTokens leftover check, destination/overwrite semantics mirroring cli-init; runCli dispatches 'providers add' with providerTemplatesRoot/providerPackageVersion overrides; 10 templates under templates/provider/ (package.json peer dep + sideEffects false, tsconfig, README, CHANGELOG, src/index/provider/models/cache, conformance test, docs/providers/NAME.md stub) with token set PROVIDER_ID/UPPER/PASCAL/PACKAGE_NAME/PRISM_VERSION/BASE_URL/ENV_KEY/MODEL_ID; src/__tests__/cli-provider-add.test.ts 9 tests green incl. flags+defaults, npm-name/traversal validation, bad env-key/base-url exit 2 with nothing written, full file set + token substitution + no leftovers, overwrite/force semantics, symlink-escape refusal with nothing written outside, runCli dispatch, and the offline fixture run (temp dir inside repo, tsc typecheck + generated conformance test passes against the repo build); docs/cli-rpc.md 'prism providers add' section + security notes, docs/provider-packages.md scaffold pointer, docs/index.md CLI entry extended; task lands after Task 1; scaffold output host-chosen, never auto-registered)",
+    "task6": "done (docs finalization: CHANGELOG.md 0.1.7 entry listing all four items; docs/migration.md gains no entries (additive); docs/index.md current line -> 0.1.7 with the 0.1.7 narrative; docs/release-and-install.md 0.1.7 publish handoff section; scripted bump node scripts/release.mjs bump --from 0.1.6 --to 0.1.7 across all 50 manifests + lockfile; version-sensitive pins updated (src/index.ts version literal, release/install-smoke/packaging/docs/index test pins, 12 provider + package test pins, cli-provider-add + selection test pins); compat flow per the manifest: plain release:gate --version 0.1.7 reported 0 removed / 16 added (cache-telemetry + scaffold exports) / changed = usage text + version literal (root) and 3 added / 17 barrel statement-text artifacts (model-router) — reviewed additive, then --update-baseline regenerated and the plain gate passed (50 packages, 0 breaking deltas, no --allow-break anywhere); exit gate recorded in scripts/phase19-baseline.json: npm test core 1451/1451 + 208 script gates across 20 suites, sdk:ready exit 0 (biome format --write applied to the 6 plan-019 files), audit 0 moderate, pack dry-run 50/50 twice byte-identical (log sha256 2b888082...), release gate 0.1.7 clean; two pre-existing test-pin bugs fixed (release.test.ts hardcoded 0.1.7 date 2026-08-11 -> 2026-08-12; network-free guard raced the scaffold fixture dir — dot-dirs now skipped); zero new runtime dependencies)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip (inherited from scripts/phase12-freeze-manifest.json)",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.1.7",
+    "itemPolicy": "every shipped item preserves: explicit activation (cache telemetry aggregates only when the host wires it; selection policy applies only when the host configures it; the scaffold writes only to the host-chosen directory), redaction-safe reports and diagnostics (no prompt content, cache keys, identity fields, or latency samples leave through telemetry/report paths), fail-closed validation (scaffold name/path/env-key refusals before any write), and unchanged deny-by-default governance (a selection policy can never widen allow-list/residency/budget decisions); adversarial suites for each shipped item pass before its task token flips to done; publication stays operator-gated"
+  }
+}

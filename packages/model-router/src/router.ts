@@ -16,6 +16,7 @@ import type {
   ModelRouterDiagnostics,
   ModelRouterResolveRequest,
   ModelRouterResolveResult,
+  ModelRouterSelectionPolicy,
   ModelRouterStateKey,
   ModelRouterStateOwner,
 } from "./types.js";
@@ -27,6 +28,33 @@ const MEMORY_OWNER: ModelRouterStateOwner = { tenantId: "__prism_memory__", prin
 
 function modelKey(model: Pick<ModelConfig, "provider" | "model">): string {
   return `${model.provider}/${model.model}`;
+}
+
+/** The policy may only reorder: the ranked list must be a permutation of the input. */
+function isPermutation(ranked: readonly ModelConfig[], original: readonly ModelConfig[]): boolean {
+  if (ranked.length !== original.length) return false;
+  const counts = new Map<string, number>();
+  for (const candidate of original) {
+    const key = modelKey(candidate);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  for (const candidate of ranked) {
+    const key = modelKey(candidate);
+    const remaining = counts.get(key);
+    if (remaining === undefined || remaining === 0) return false;
+    counts.set(key, remaining - 1);
+  }
+  return true;
+}
+
+function assertSelectionPolicy(selection: ModelRouterSelectionPolicy | undefined): void {
+  if (!selection) return;
+  if (typeof selection.name !== "string" || selection.name.length === 0 || selection.name.length > 128) {
+    throw new ModelRouterError("selection.name must be a non-empty string up to 128 chars", "ERR_PRISM_MODEL_ROUTER_VALIDATION");
+  }
+  if (typeof selection.rank !== "function") {
+    throw new ModelRouterError("selection.rank must be a function", "ERR_PRISM_MODEL_ROUTER_VALIDATION");
+  }
 }
 
 function stateKey(identity: AgentIdentity | undefined, provider: string, model: string): ModelRouterStateKey {
@@ -108,6 +136,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
   const stateStore = options.stateStore ?? createMemoryModelRouterStateStore();
   const externalState = options.stateStore !== undefined;
   const openRouterPolicy = createOpenRouterGatePolicy(options.allowOpenRouterRouting === true);
+  assertSelectionPolicy(options.selection);
 
   if (!Number.isSafeInteger(failureThreshold) || failureThreshold < 1 || failureThreshold > MAX_STATE_INTEGER) {
     throw new ModelRouterError(
@@ -225,7 +254,18 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
     assertIdentity(request.identity, externalState);
     const t = now();
     const attempts: ModelRouterAttempt[] = [];
-    const candidates = [request.model, ...(request.fallbacks ?? options.fallbacks ?? [])].slice(0, limits.maxAttempts);
+    const assembled = [request.model, ...(request.fallbacks ?? options.fallbacks ?? [])].slice(0, limits.maxAttempts);
+    let candidates: readonly ModelConfig[] = assembled;
+    if (options.selection) {
+      const ranked = options.selection.rank(assembled, request);
+      if (!isPermutation(ranked, assembled)) {
+        throw new ModelRouterError(
+          `selection policy "${options.selection.name}" must return a permutation of the candidates`,
+          "ERR_PRISM_MODEL_ROUTER_POLICY",
+        ); // fail closed: a misbehaving policy can never add, drop, or duplicate candidates
+      }
+      candidates = ranked;
+    }
     let lastDeny: { reason: string; code: string } | undefined;
 
     for (const candidate of candidates) {
@@ -250,6 +290,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
             residency: request.residency,
             region: request.region,
             openRouterRoutingHonored: false,
+            ...(options.selection ? { selection: options.selection.name } : {}),
           });
           throw new ModelRouterError(error.message, error.code, diagnostics, error.details);
         }
@@ -284,6 +325,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
         residency: request.residency,
         region: request.region,
         openRouterRoutingHonored: honorOpenRouter && hasOpenRouterRouting(candidate),
+        ...(options.selection ? { selection: options.selection.name } : {}),
       });
       return {
         provider,
@@ -302,6 +344,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
       residency: request.residency,
       region: request.region,
       openRouterRoutingHonored: false,
+      ...(options.selection ? { selection: options.selection.name } : {}),
     });
     throw new ModelRouterError(
       lastDeny?.reason ?? "model router attempts exhausted",
@@ -340,6 +383,9 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
     },
     async recordOutcome(input) {
       assertIdentity(input.identity, true);
+      if (input.latencyMs !== undefined && !(Number.isFinite(input.latencyMs) && input.latencyMs >= 0)) {
+        throw new ModelRouterError("latencyMs must be finite non-negative", "ERR_PRISM_MODEL_ROUTER_LIMITS");
+      }
       await state(() =>
         stateStore.recordCircuitOutcome({
           key: stateKey(input.identity, input.provider, input.model),
@@ -351,6 +397,12 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
           now: now(),
         }),
       );
+      options.selection?.observe?.({
+        provider: input.provider,
+        model: input.model,
+        success: input.success,
+        ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
+      });
     },
     createOpenRouterRoutingPolicy() {
       return openRouterPolicy;

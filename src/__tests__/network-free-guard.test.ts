@@ -10,7 +10,7 @@ const guardFileName = "network-free-guard.test.ts";
 
 function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
-    if (skipDirs.has(entry)) continue;
+    if (skipDirs.has(entry) || entry.startsWith(".")) continue; // dot-dirs: VCS, tooling, transient fixtures (.scaffold-fixture-*)
     const path = join(dir, entry);
     const stat = statSync(path);
     if (stat.isDirectory()) {

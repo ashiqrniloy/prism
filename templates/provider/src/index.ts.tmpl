@@ -1,0 +1,33 @@
+import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { __PROVIDER_ID__Models } from "./models.js";
+import { create__PROVIDER_PASCAL__Provider } from "./provider.js";
+
+export interface __PROVIDER_PASCAL__ProviderPackageOptions {
+  readonly apiKey?: CredentialValueSource;
+  readonly fetch?: typeof fetch;
+  readonly baseUrl?: string;
+  readonly id?: string;
+  readonly models?: readonly ModelConfig[];
+}
+
+export function create__PROVIDER_PASCAL__ProviderPackage(options: __PROVIDER_PASCAL__ProviderPackageOptions = {}): ProviderPackage {
+  const providerId = options.id ?? "__PROVIDER_ID__";
+  return defineProviderPackage({
+    name: "__PACKAGE_NAME__",
+    description: "__PROVIDER_ID__ provider package for Prism.",
+    docs: { links: ["docs/providers/__PROVIDER_ID__.md"] },
+    setup(api) {
+      api.registerProvider(create__PROVIDER_PASCAL__Provider(options));
+      for (const model of options.models ?? __PROVIDER_ID__Models) api.registerModel({ ...model, provider: providerId });
+      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
+    },
+  });
+}
+
+export { __PROVIDER_ID__Models, type __PROVIDER_PASCAL__ModelConfig } from "./models.js";
+export { create__PROVIDER_PASCAL__Provider, __PROVIDER_UPPER___DEFAULT_BASE_URL, type __PROVIDER_PASCAL__ProviderOptions } from "./provider.js";
+export {
+  __PROVIDER_ID__PromptCacheKey,
+  __PROVIDER_ID__PromptCacheRetention,
+  __PROVIDER_UPPER___PROMPT_CACHE_KEY_MAX_LENGTH,
+} from "./cache.js";

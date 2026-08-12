@@ -40,6 +40,7 @@ AssertIdentityActiveOptions	export type { AgentIdentity, AssertIdentityActiveOpt
 AudioContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
 BUILT_IN_LOOP_REVISIONS	export declare const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>>
 BatchedRunLedgerOptions	export type { BatchedRunLedgerOptions } from "./run-ledger.js"
+CACHE_TELEMETRY_OVERFLOW_KEY	export declare const CACHE_TELEMETRY_OVERFLOW_KEY = "__overflow__"
 CHECKPOINT_CONFLICT_CODE	export declare const CHECKPOINT_CONFLICT_CODE = "ERR_PRISM_CHECKPOINT_CONFLICT"
 CONTEXT_BUDGET_ERROR_CODE	export declare const CONTEXT_BUDGET_ERROR_CODE: "context_budget_exceeded"
 CONTEXT_BUDGET_REPORT_METADATA_KEY	export declare const CONTEXT_BUDGET_REPORT_METADATA_KEY: "contextBudgetReport"
@@ -47,6 +48,11 @@ CONVERSATION_METADATA_KEY	export declare const CONVERSATION_METADATA_KEY = "pris
 CacheControlValue	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
 CacheControlledContentBlock	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
 CacheControlledMessage	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
+CacheTelemetry	export type { CacheTelemetry, CacheTelemetryOptions, CacheTelemetryReport, CacheTelemetrySample, } from "./cache-telemetry.js"
+CacheTelemetryError	export declare class CacheTelemetryError extends Error
+CacheTelemetryOptions	export type { CacheTelemetry, CacheTelemetryOptions, CacheTelemetryReport, CacheTelemetrySample, } from "./cache-telemetry.js"
+CacheTelemetryReport	export type { CacheTelemetry, CacheTelemetryOptions, CacheTelemetryReport, CacheTelemetrySample, } from "./cache-telemetry.js"
+CacheTelemetrySample	export type { CacheTelemetry, CacheTelemetryOptions, CacheTelemetryReport, CacheTelemetrySample, } from "./cache-telemetry.js"
 CacheUsageReport	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
 CheckpointConflictError	export declare class CheckpointConflictError extends Error
 CliUsageError	export declare class CliUsageError extends Error
@@ -75,6 +81,7 @@ CreateMemorySessionStoreOptions	export type { CreateMemorySessionStoreOptions, C
 CreateSessionEntryOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CredentialRecord	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
 CredentialValueSource	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
+DEFAULT_CACHE_TELEMETRY_CAP	export declare const DEFAULT_CACHE_TELEMETRY_CAP = 256
 DEFAULT_DEVICE_MAX_CHUNK_BYTES	export declare const DEFAULT_DEVICE_MAX_CHUNK_BYTES: number
 DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS	export declare const DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS = 1
 DEFAULT_FEEDBACK_PAGE_SIZE	export declare const DEFAULT_FEEDBACK_PAGE_SIZE = 100
@@ -280,6 +287,7 @@ Principal	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimi
 PrismManifest	export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js"
 PromptInstruction	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 PromptTemplateOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
+ProviderAddUsageError	export declare class ProviderAddUsageError extends Error
 ProviderRegistry	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
 ProviderRegistryOptions	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
 ProviderResolver	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
@@ -455,6 +463,7 @@ createAgentRunLifecycle	export declare function createAgentRunLifecycle(options:
 createAgentSession	export declare function createAgentSession(config: AgentSessionConfig &
 createBatchedRunLedger	export declare function createBatchedRunLedger(target: RunLedger, options?: BatchedRunLedgerOptions): FlushableRunLedger
 createBoundedUploadCache	export declare function createBoundedUploadCache<T>(maxEntries?: number): BoundedUploadCache<T>
+createCacheTelemetry	export declare function createCacheTelemetry(options?: CacheTelemetryOptions): CacheTelemetry
 createChainedCredentialResolver	export declare function createChainedCredentialResolver(resolvers: readonly CredentialResolver[]): CredentialResolver
 createChainedSettingsProvider	export declare function createChainedSettingsProvider(providers: readonly SettingsProvider[]): SettingsProvider
 createContributionRegistries	export declare function createContributionRegistries(options?: ContributionRegistriesOptions): ContributionRegistries
@@ -488,6 +497,7 @@ createOpenAICompatibleProvider	export declare function createOpenAICompatiblePro
 createPathTrustPolicy	export declare function createPathTrustPolicy(options: PathTrustPolicyOptions): TrustPolicy
 createPersistenceMigrationContract	export declare function createPersistenceMigrationContract(): PersistenceMigrationContract
 createPersistenceSchemaModel	export declare function createPersistenceSchemaModel(): PersistenceSchemaModel
+createProviderProject	export declare function createProviderProject(options: ProviderAddOptions, runtime?: ProviderAddRuntime): Promise<ProviderAddResult>
 createProviderRegistry	export declare function createProviderRegistry(providers?: readonly AIProvider[], options?: ProviderRegistryOptions): ProviderRegistry
 createProviderRequestPolicyChain	export declare function createProviderRequestPolicyChain(policies: readonly ProviderRequestPolicy[]): ProviderRequestPolicy
 createProviderResolver	export declare function createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver
@@ -507,6 +517,7 @@ decisionIdentityRef	export declare function decisionIdentityRef(identity: AgentI
 decisionScopesEqual	export declare function decisionScopesEqual(a: DecisionScope, b: DecisionScope): boolean
 decodeConversationReplayCursor	export declare function decodeConversationReplayCursor(encoded: string, expectedThreadId: string, maxBytes?: number): ConversationReplayCursor
 defaultProviderFilename	export declare function defaultProviderFilename(block: MediaContentBlock, fallback: string): string
+defaultProviderTemplatesRoot	export declare function defaultProviderTemplatesRoot(): string
 defaultTemplatesRoot	export declare function defaultTemplatesRoot(): string
 defaultUserConfigPath	export declare function defaultUserConfigPath(appName?: string): string
 defaultUserSettingsPath	export declare function defaultUserSettingsPath(appName?: string): string
@@ -537,6 +548,7 @@ generateValidateReviseLoop	export declare function generateValidateReviseLoop(op
 getContextBudgetReport	export declare function getContextBudgetReport(request: ProviderRequest): ContextBudgetReport | undefined
 getInitUsage	export declare function getInitUsage(templatesRoot?: string): string
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
+getProviderAddUsage	export declare function getProviderAddUsage(): string
 getSessionBranchEntries	export declare function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>
 httpStatusError	export declare function httpStatusError(prefix: string, response: Response, bodyText: string): Error
 identityTelemetryAttributes	export declare function identityTelemetryAttributes(identity: AgentIdentity): Readonly<Record<string, string>>
@@ -599,6 +611,7 @@ parseContextFile	export declare function parseContextFile(text: string, path: st
 parseInitArgs	export declare function parseInitArgs(argv: readonly string[], templatesRoot?: string): InitOptions
 parseJsonObjectArguments	export declare function parseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): JsonObject
 parsePrismManifest	export declare function parsePrismManifest(value: unknown): PrismManifest
+parseProviderAddArgs	export declare function parseProviderAddArgs(argv: readonly string[]): ProviderAddOptions
 parseRetryAfterMs	export declare function parseRetryAfterMs(value: string | null, now?: number): number | undefined
 parseRpcRequest	export declare function parseRpcRequest(value: unknown): RpcRequest
 parseSkillFile	export declare function parseSkillFile(text: string, path: string): Skill
@@ -607,6 +620,7 @@ pathsEqual	export declare function pathsEqual(a: readonly string[] | undefined, 
 pendingDecisionsOf	export declare function pendingDecisionsOf(state: StoredAgentRunState): readonly PendingDecision[] | undefined
 policyList	export declare function policyList(policies: ProviderRequestPolicy | readonly ProviderRequestPolicy[] | undefined): readonly ProviderRequestPolicy[]
 prepareRunFeedback	export declare function prepareRunFeedback(input: AppendRunFeedbackInput, options: PrepareRunFeedbackOptions): Promise<RunFeedbackRecord>
+providerAddUsage	export declare const providerAddUsage: string
 providerContentDelta	export declare function providerContentDelta(content: ContentBlock): ProviderEvent
 providerContinuationRequired	export declare function providerContinuationRequired(cursor: string, reason?: string): ProviderEvent
 providerDone	export declare function providerDone(usage?: Usage): ProviderEvent
@@ -680,6 +694,7 @@ runGuardrails	export declare function runGuardrails<S extends GuardrailStage>(op
 runInitCommand	export declare function runInitCommand(argv: readonly string[], runtime: InitRuntime): Promise<number>
 runInstructionInjectors	export declare function runInstructionInjectors(injectors: readonly InstructionInjector[], ctx: InstructionContext):
 runPromptMode	export declare function runPromptMode(session: AgentSession, options: CliOptions, stdout: Writable, mode: "print" | "json"): Promise<void>
+runProviderAddCommand	export declare function runProviderAddCommand(argv: readonly string[], runtime: ProviderAddRuntime): Promise<number>
 runRpcServer	export declare function runRpcServer(options: RpcServerOptions): Promise<void>
 runRunLedgerConformance	export declare function runRunLedgerConformance(factory: RunLedgerConformanceFactory, options?: RunLedgerConformanceOptions): Promise<void>
 runSessionStoreConformance	export declare function runSessionStoreConformance(factory: SessionStoreConformanceFactory, options?: SessionStoreConformanceOptions): Promise<void>
@@ -712,12 +727,13 @@ toolCallFromArgumentsText	export declare function toolCallFromArgumentsText(id: 
 toolEffectArgumentsHash	export declare function toolEffectArgumentsHash(argumentsValue: JsonObject): string
 toolElicitationRequest	export declare function toolElicitationRequest(tool: ToolDefinition | undefined, args: JsonObject, context: ToolExecutionContext):
 tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): ParseJsonObjectArgumentsResult
-usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System instructions\n --context <text> Context text\n --compact <entries> Auto-compaction threshold\n 
+usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System ins
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
 validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[]
+validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.1.6"
+version	export declare const version = "0.1.7"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

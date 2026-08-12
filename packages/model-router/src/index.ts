@@ -7,8 +7,10 @@ export {
   resolveModelRouterLimits,
 } from "./limits.js";
 export { createModelRouter } from "./router.js";
+export { createCostLatencySelection } from "./selection.js";
 export { createMemoryModelRouterStateStore } from "./state.js";
 export type {
+  CostLatencySelectionOptions,
   CreateModelRouterOptions,
   ModelRouteCandidate,
   ModelRouter,
@@ -22,6 +24,7 @@ export type {
   ModelRouterRateLimit,
   ModelRouterResolveRequest,
   ModelRouterResolveResult,
+  ModelRouterSelectionPolicy,
   ModelRouterStateKey,
   ModelRouterStateOwner,
   ModelRouterStateStore,

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-document-reader",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Optional bounded PDF/Office literal-text extraction adapter for the Prism coding read tool (host-selected parser wiring, fails closed without its optional peer parsers).",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,8 +25,8 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.1.6",
-    "@arnilo/prism-coding-agent": "0.1.6",
+    "@arnilo/prism": "0.1.7",
+    "@arnilo/prism-coding-agent": "0.1.7",
     "mammoth": "^1.8.0",
     "pdf-parse": "^1.1.1"
   },

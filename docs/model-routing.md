@@ -91,6 +91,51 @@ await enterprise.close();
 
 Router is optional. Chain returned `providerRequestPolicy` with other `ProviderRequestPolicy` values. Wire `onDiagnostics` to `@arnilo/prism-policy` when audit export is required. OpenRouter package behavior is unchanged; routing metadata participates only when this gate allows it.
 
+### Selection policies (0.1.7)
+
+By default the router tries candidates in input order: the primary model, then
+`fallbacks` in order. A host can instead supply a `selection` policy on
+`createModelRouter` to rank the candidates before the governance checks run:
+
+```ts
+import { createCostLatencySelection, createModelRouter } from "@arnilo/prism-model-router";
+
+const router = createModelRouter({
+  resolver,
+  selection: createCostLatencySelection({ latencyWeight: 0.5 }),
+  fallbacks: [cheaperModel],
+});
+
+// host-measured provider-call latency feeds the policy's EMA:
+await router.recordOutcome({ identity, provider, model, success: true, latencyMs: 412 });
+```
+
+`ModelRouterSelectionPolicy` is `{ name, rank(candidates, request), observe? }`:
+
+- `rank` must return a **permutation** of the input candidates. Any other
+  result (added, dropped, or duplicated candidates) fails closed with
+  `ERR_PRISM_MODEL_ROUTER_POLICY` — a policy can never widen the allow-list,
+  residency, or budget decisions, because those checks still run per candidate
+  after ranking.
+- `observe` receives outcome feedback from `router.recordOutcome`, including
+  the host-supplied `latencyMs` (validated finite non-negative).
+- The policy name is recorded in selection diagnostics (the redaction cap
+  still applies). Absent `selection`, behavior is identical to 0.1.6.
+
+`createCostLatencySelection()` is the reference policy:
+
+- Ranks by unit price first: `ModelCost.input` + `output` + `cacheRead`,
+  normalized by the cost unit (`per_million_tokens` vs per-token). Models
+  without valid cost metadata rank after all priced models, preserving their
+  relative input order.
+- Breaks cost ties by recent measured latency — an in-memory per-
+  provider/model EMA fed from `recordOutcome` `latencyMs`. Cold start (no
+  samples) is pure cost order.
+- `latencyWeight` (default 0.5) is the EMA smoothing factor: 0 keeps the
+  first sample, 1 tracks only the latest. `ponytail:` the EMA is in-memory and
+  process-local; durable latency statistics would require a
+  `ModelRouterStateStore` contract change and are demand-gated.
+
 ## Security and performance notes
 
 - Allow-list and residency denies never call the underlying resolver.

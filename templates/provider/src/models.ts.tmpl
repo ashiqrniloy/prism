@@ -1,0 +1,16 @@
+import type { ModelConfig } from "@arnilo/prism";
+
+/** Starter catalog for __PROVIDER_ID__: replace with docs-verified model metadata. */
+export interface __PROVIDER_PASCAL__ModelConfig extends Omit<ModelConfig, "provider"> {
+  readonly provider: "__PROVIDER_ID__";
+}
+
+export const __PROVIDER_ID__Models: readonly __PROVIDER_PASCAL__ModelConfig[] = [
+  {
+    provider: "__PROVIDER_ID__",
+    model: "__MODEL_ID__",
+    limits: { contextWindow: 128_000 },
+    cost: { input: 1, output: 2, cacheRead: 0.5, unit: "per_million_tokens" },
+    cache: { kind: "implicit" },
+  },
+];

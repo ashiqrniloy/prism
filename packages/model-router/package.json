@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-model-router",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Optional model governance router: allow-list, residency, budgets, fallback, circuits, and redacted diagnostics.",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,11 +21,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/__tests__/model-router.test.js",
+    "test": "node --test dist/__tests__/model-router.test.js dist/__tests__/selection.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.1.6"
+    "@arnilo/prism": "0.1.7"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."
