@@ -2652,49 +2652,49 @@ describe("docs", () => {
         if (!before.has(file) && /\.js$/.test(file)) emitted.add(file);
       }
       const demos = [
-      "examples/provider-registration.ts",
-      "examples/provider-resolver.ts",
-      "examples/cache-aware-prompt-assembly.ts",
-      "examples/neuralwatt-agent-run.ts",
-      "examples/compaction.ts",
-      "examples/coding-compaction.ts",
-      "examples/acp-coding-host.ts",
-      "examples/observational-memory-recall-status-view.ts",
-      "examples/observational-memory-lifecycle.ts",
-      "examples/skills-progressive-disclosure.ts",
-      "examples/caveman-ponytail.ts",
-      "examples/cli.ts",
-      "examples/rpc.ts",
-      "examples/discover-skills.ts",
-      "examples/instruction-injection.ts",
-      "examples/system-project-prompts.ts",
-      "examples/external-app-db-backed.ts",
-      "examples/minimal-host-app.ts",
-      "examples/custom-builders.ts",
-      "examples/custom-session-store.ts",
-      "examples/custom-tools-skills-context.ts",
-      "examples/extension-package.ts",
-      "examples/workflow-research-and-review.ts",
-      "examples/workflow-parallel-research.ts",
-      "examples/workflow-tool-approval.ts",
-      "examples/workflow-multimodal-document.ts",
-      "examples/workflow-sqlite-resume.ts",
-      "examples/workflow-postgres-resume.ts",
-      "examples/workflow-event-sink.ts",
-      "examples/workflow-rpc-cancel.ts",
-      "examples/workflow-distributed-coordinator.ts",
-      "examples/ag-ui-a2ui.ts",
-      "examples/durable-loops-and-approvals.ts",
-    ];
-    const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
-    for (const file of demos) {
-      const jsFile = join(examplesDir, file.replace(/^examples\//, "").replace(/\.ts$/, ".js"));
-      const result = spawnSync(process.execPath, [jsFile], { encoding: "utf8" });
-      assert.equal(result.status, 0, `${file} exited ${result.status}\n${result.stderr}`);
-      const out = `${result.stdout}\n${result.stderr}`;
-      assert.ok(out.trim().length > 0, `${file} produced no output`);
-      assert.ok(!secret.test(out), `${file} emitted a real-looking secret`);
-    }
+        "examples/provider-registration.ts",
+        "examples/provider-resolver.ts",
+        "examples/cache-aware-prompt-assembly.ts",
+        "examples/neuralwatt-agent-run.ts",
+        "examples/compaction.ts",
+        "examples/coding-compaction.ts",
+        "examples/acp-coding-host.ts",
+        "examples/observational-memory-recall-status-view.ts",
+        "examples/observational-memory-lifecycle.ts",
+        "examples/skills-progressive-disclosure.ts",
+        "examples/caveman-ponytail.ts",
+        "examples/cli.ts",
+        "examples/rpc.ts",
+        "examples/discover-skills.ts",
+        "examples/instruction-injection.ts",
+        "examples/system-project-prompts.ts",
+        "examples/external-app-db-backed.ts",
+        "examples/minimal-host-app.ts",
+        "examples/custom-builders.ts",
+        "examples/custom-session-store.ts",
+        "examples/custom-tools-skills-context.ts",
+        "examples/extension-package.ts",
+        "examples/workflow-research-and-review.ts",
+        "examples/workflow-parallel-research.ts",
+        "examples/workflow-tool-approval.ts",
+        "examples/workflow-multimodal-document.ts",
+        "examples/workflow-sqlite-resume.ts",
+        "examples/workflow-postgres-resume.ts",
+        "examples/workflow-event-sink.ts",
+        "examples/workflow-rpc-cancel.ts",
+        "examples/workflow-distributed-coordinator.ts",
+        "examples/ag-ui-a2ui.ts",
+        "examples/durable-loops-and-approvals.ts",
+      ];
+      const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
+      for (const file of demos) {
+        const jsFile = join(examplesDir, file.replace(/^examples\//, "").replace(/\.ts$/, ".js"));
+        const result = spawnSync(process.execPath, [jsFile], { encoding: "utf8" });
+        assert.equal(result.status, 0, `${file} exited ${result.status}\n${result.stderr}`);
+        const out = `${result.stdout}\n${result.stderr}`;
+        assert.ok(out.trim().length > 0, `${file} produced no output`);
+        assert.ok(!secret.test(out), `${file} emitted a real-looking secret`);
+      }
     } finally {
       for (const file of emitted) rmSync(join(examplesDir, file), { force: true });
     }
