@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.0] - 2026-08-13
+
+### Changed
+- **Explicit sandbox capabilities with deprecated containment projection** (plan 020 Task 4): `SandboxAdapter` gains the optional `capabilities` field (`workspaceCoherent`/`filesystemIsolated`/`networkIsolated`/`processIsolated`/`privilegeIsolated`/`egressRestricted`, immutable booleans; omission or malformed metadata resolves every isolation field `false`). `SandboxCodingComposition.capabilities` is resolved from the real shell/filesystem/repository wiring plus validated adapter metadata — never from duck typing. `containmentClaim` is retained as `@deprecated` and equals the conservative projection `workspaceCoherent && filesystemIsolated && networkIsolated && processIsolated`; the Docker built-in reports `privilegeIsolated: false` by default and `networkIsolated: true` only for mode `none`; the native backend reports filesystem/process/privilege `false` (network isolation and egress restriction only). Authorization should consume the individual capabilities; host-mode and mixed wiring report no isolation.
+
 ## [0.1.6] - 2026-08-11
 
 ### Changed

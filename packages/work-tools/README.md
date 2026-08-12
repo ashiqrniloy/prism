@@ -8,7 +8,9 @@ Optional identity-scoped Microsoft 365 / Google Workspace connectors for Prism.
 npm install @arnilo/prism-work-tools
 ```
 
-Host must install CLIs separately (`@pnp/cli-microsoft365`, `@googleworkspace/cli`) and pass pinned binary paths. Prism never shells model-built commands.
+Host must install CLIs separately (`@pnp/cli-microsoft365`, `@googleworkspace/cli`) and pass pinned **absolute** binary paths (`path.isAbsolute`; relative/empty/NUL values fail at construction). Prism never shells model-built commands.
+
+**Isolated subprocess environment (0.2.0):** children never inherit the host environment. They receive a fixed allow-listed base (`PATH`, `LANG`, `LC_ALL`, `TZ`, `SYSTEMROOT`/`SystemRoot`, `TEMP`, `TMP`, `PATHEXT`, `COMSPEC`), your explicit non-secret `env` map, and the late-bound per-identity token env. `HOME` is forced to the isolated `configDir` and `CLIMICROSOFT365_DISABLETELEMETRY` to `"1"`; overrides, duplicates, NUL, and over-cap (64 names / 64 KiB) env fail closed before spawn. `configDir` must also be absolute. See [Subprocess environment isolation](../../docs/work-tools.md#subprocess-environment-isolation-020-plan-020-task-3) for the migration from 0.1.7 ambient-env behavior.
 
 ## Microsoft 365
 

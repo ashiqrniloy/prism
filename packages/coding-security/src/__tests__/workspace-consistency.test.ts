@@ -135,7 +135,9 @@ test("adversarial: edit then shell cat share sandbox tree", async () => {
     sandbox,
     workspaceRoot: ROOT,
   });
-  assert.equal(composition.containmentClaim, true);
+  assert.equal(composition.capabilities.workspaceCoherent, true);
+  assert.equal(composition.capabilities.filesystemIsolated, false);
+  assert.equal(composition.containmentClaim, false);
 
   const edit = tools.find((t) => t.name === "edit")!;
   const edited = await edit.execute({ path: "edit-me.txt", oldText: "before", newText: "after-edit" }, ctx());
@@ -181,6 +183,8 @@ test("adversarial: host mode write lands on host cwd; no containment claim", asy
       workspaceMode: "host",
     });
     assert.equal(composition.containmentClaim, false);
+    assert.equal(composition.capabilities.workspaceCoherent, true);
+    assert.equal(composition.capabilities.filesystemIsolated, false);
     assert.equal(composition.workspaceRoot, hostRoot);
 
     const write = tools.find((t) => t.name === "write")!;
@@ -201,7 +205,9 @@ test("adversarial: sandbox write does not mutate host cwd", async () => {
       sandbox,
       workspaceRoot: ROOT,
     });
-    assert.equal(composition.containmentClaim, true);
+    assert.equal(composition.capabilities.workspaceCoherent, true);
+    assert.equal(composition.capabilities.filesystemIsolated, false);
+    assert.equal(composition.containmentClaim, false);
 
     const write = tools.find((t) => t.name === "write")!;
     assert.equal((await write.execute({ path: "sand-only.txt", content: "in-tree\n" }, ctx())).error, undefined);
@@ -224,6 +230,14 @@ test("adversarial: mixed wiring escape hatch never claims containment", async ()
       allowMixedWorkspaceWiring: true,
     });
     assert.equal(composition.containmentClaim, false);
+    assert.deepEqual(composition.capabilities, {
+      workspaceCoherent: false,
+      filesystemIsolated: false,
+      networkIsolated: false,
+      processIsolated: false,
+      privilegeIsolated: false,
+      egressRestricted: false,
+    });
     assert.ok(composition.warnings.some((w) => /mixed/i.test(w)));
 
     const write = tools.find((t) => t.name === "write")!;

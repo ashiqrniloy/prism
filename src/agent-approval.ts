@@ -5,6 +5,7 @@ import { activeTools, validateElicitationPayload } from "./agent-tool-dispatch.j
 import {
   Agent,
   AgentDecisionError,
+  AgentRunResume,
   AgentRunState,
   AgentRunStateOptions,
   DecisionScope,
@@ -40,6 +41,83 @@ export function pendingDecisionsOf(state: StoredAgentRunState): readonly Pending
     ];
   }
   return undefined;
+}
+
+/**
+ * Transport-neutral shape validation for the complete `AgentRunResume` input (plan 020 Task 2).
+ * Runs before any checkpoint read/write, agent resolution, subscription, or tool execution so
+ * untyped callers (plain JavaScript, `as any`) cannot make resume fall through to approval or
+ * crash with raw TypeErrors. State-dependent checks (foreign/stale/duplicate ids, scope,
+ * schema, policy) stay in {@link resolveRunDecisions}. Errors never include tool arguments,
+ * elicitation payloads, credentials, or foreign approval details.
+ */
+export function assertValidAgentRunResume(resume: AgentRunResume): void {
+  const invalid = (message: string) => new AgentDecisionError("ERR_PRISM_DECISION_INVALID", message);
+  if (resume === null || typeof resume !== "object" || Array.isArray(resume)) {
+    throw invalid("Resume must be a non-null object");
+  }
+  if (!Number.isSafeInteger(resume.expectedVersion) || resume.expectedVersion <= 0) {
+    throw invalid("Resume expectedVersion must be a positive safe integer");
+  }
+  const hasDecision = resume.decision !== undefined;
+  const hasDecisions = resume.decisions !== undefined;
+  if (hasDecision && hasDecisions) throw invalid("Resume accepts exactly one of decision or decisions");
+  if (!hasDecision && !hasDecisions) throw invalid("Resume requires a decision or decisions");
+  if (hasDecision) {
+    if (resume.decision !== "approve" && resume.decision !== "deny") {
+      throw invalid("Unknown legacy decision");
+    }
+    return;
+  }
+  const decisions = resume.decisions!;
+  if (!Array.isArray(decisions)) throw invalid("Decision batch must be an array");
+  if (decisions.length === 0) throw invalid("Decision batch must not be empty");
+  if (decisions.length > HARD_MAX_PENDING_DECISIONS) {
+    throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Decision batch exceeds ${HARD_MAX_PENDING_DECISIONS} entries`);
+  }
+  const seen = new Set<string>();
+  for (const decision of decisions) {
+    if (decision === null || typeof decision !== "object" || Array.isArray(decision)) {
+      throw invalid("Decision batch entries must be objects");
+    }
+    if (typeof decision.approvalId !== "string" || decision.approvalId.length === 0 || decision.approvalId.length > 128) {
+      throw invalid("Decision approvalId must be a bounded non-empty string");
+    }
+    if (seen.has(decision.approvalId)) {
+      throw new AgentDecisionError("ERR_PRISM_DECISION_DUPLICATE", "Duplicate approval decision in batch");
+    }
+    seen.add(decision.approvalId);
+    if (
+      decision.outcome !== "allow_once" &&
+      decision.outcome !== "allow_for_run" &&
+      decision.outcome !== "reject_once" &&
+      decision.outcome !== "reject_for_run"
+    ) {
+      throw invalid("Unknown approval outcome");
+    }
+    if (decision.reason !== undefined) {
+      if (typeof decision.reason !== "string") throw invalid("Decision reason must be a string");
+      if (Buffer.byteLength(decision.reason, "utf8") > MAX_DECISION_REASON_BYTES) {
+        throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Decision reason exceeds ${MAX_DECISION_REASON_BYTES} bytes`);
+      }
+    }
+    for (const key of ["modifiedArguments", "elicitation"] as const) {
+      const payload = decision[key];
+      if (payload === undefined) continue;
+      if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+        throw invalid(`Decision ${key} must be a JSON object`);
+      }
+      let text: string | undefined;
+      try {
+        text = JSON.stringify(payload);
+      } catch {
+        throw invalid(`Decision ${key} must be a JSON object`);
+      }
+      if (text === undefined || Buffer.byteLength(text, "utf8") > MAX_ELICITATION_BYTES) {
+        throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Decision ${key} exceeds ${MAX_ELICITATION_BYTES} bytes`);
+      }
+    }
+  }
 }
 
 interface ResolvedRunDecisions {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.0] - 2026-08-13
+
+### Changed
+- **Subprocess environment isolation and linear output capture** (plan 020 Task 3): `createCliRunner` children no longer inherit the host `process.env`. The child env is a fixed base allow-list (`PATH`/`LANG`/`LC_ALL`/`TZ`; Windows `SYSTEMROOT`/`SystemRoot`/`TEMP`/`TMP`/`PATHEXT`/`COMSPEC`), then explicit validated `options.env`, then forced controls (`HOME` = `configDir`, `CLIMICROSOFT365_DISABLETELEMETRY=1`), then the late-bound per-identity token layer. Caps 64 names / 64 KiB total (`ERR_PRISM_WORK_ENV`); `binary` and `configDir` must be absolute (`path.isAbsolute`); stdout/stderr capture accumulates chunks and does one final `Buffer.concat` with cap enforcement. Ambient host variables (e.g. secrets) never reach the child; token keys stay out of argv/errors/output.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

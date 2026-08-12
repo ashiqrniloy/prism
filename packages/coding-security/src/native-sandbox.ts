@@ -8,6 +8,7 @@ import { assertAbsoluteExecutable, createSecretRedactor } from "./docker-cli.js"
 import { assertPathInsideRoots } from "./path-containment.js";
 import type {
   DisposableSandbox,
+  SandboxCapabilities,
   SandboxCloseOptions,
   SandboxExecFileRequest,
   SandboxExecRequest,
@@ -272,8 +273,25 @@ interface NativeRunRequest {
   readonly timeout?: number;
 }
 
+/**
+ * Truthful native capability metadata: commands run in a fresh netns with
+ * egress denied (networkIsolated, egressRestricted), but there is NO
+ * filesystem, process, or privilege isolation — commands run as the invoking
+ * OS user with full host-tree access. Never a security boundary for untrusted
+ * code; pair with the Docker backend.
+ */
+const NATIVE_SANDBOX_CAPABILITIES: SandboxCapabilities = Object.freeze({
+  workspaceCoherent: true,
+  filesystemIsolated: false,
+  networkIsolated: true,
+  processIsolated: false,
+  privilegeIsolated: false,
+  egressRestricted: true,
+});
+
 class NativeSandboxSession implements DisposableSandbox {
   readonly id: string;
+  readonly capabilities: SandboxCapabilities = NATIVE_SANDBOX_CAPABILITIES;
   private _lastExportIdentity: SandboxExportMetadata | undefined;
   private state: SandboxStatusState = "running";
   private commandCount = 0;

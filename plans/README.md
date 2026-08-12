@@ -23,5 +23,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [017-Release-0-1-5-Deprecated-Option-Removal.md](017-Release-0-1-5-Deprecated-Option-Removal.md) | 0.1.x — Release 0.1.5 (deprecated-option removal, breaking/documented) | complete (2026-08-11) |
 | [018-Release-0-1-6-Coding-Agent-Capability-Closeouts.md](018-Release-0-1-6-Coding-Agent-Capability-Closeouts.md) | 0.1.x — Release 0.1.6 (coding-agent capability closeouts, demand-gated) | complete |
 | [019-Release-0-1-7-Performance-and-DX.md](019-Release-0-1-7-Performance-and-DX.md) | 0.1.x — Release 0.1.7 (performance and DX) | complete |
+| [020-Release-0-2-0-Fail-Closed-Runtime-and-Sandbox-Security.md](020-Release-0-2-0-Fail-Closed-Runtime-and-Sandbox-Security.md) | 0.2.x — Release 0.2.0 (fail-closed runtime and sandbox security) | complete |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

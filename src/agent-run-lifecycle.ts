@@ -15,8 +15,8 @@ import type {
   OwnershipScope,
   SubscribeOptions,
 } from "./contracts.js";
-import { AgentDecisionError, AgentRunStateError } from "./contracts.js";
-import { pendingDecisionsOf, resolveRunDecisions } from "./agent-approval.js";
+import { AgentRunStateError } from "./contracts.js";
+import { assertValidAgentRunResume, pendingDecisionsOf, resolveRunDecisions } from "./agent-approval.js";
 import { RuntimeAgentSession, throwIfAbortedSignal } from "./agent-session.js";
 
 export interface AgentRunLifecycleAgent {
@@ -178,6 +178,10 @@ async function prepareAgentRunResume(
   signal?: AbortSignal,
 ): Promise<PreparedAgentRunResume> {
   throwIfAbortedSignal(signal);
+  // Plan 020 Task 2: one shared shape assertion before any checkpoint read/write, agent
+  // resolution, subscription, or tool execution. Unknown legacy decisions (e.g. "sideways")
+  // and malformed untyped batches fail closed here instead of falling through to approval.
+  assertValidAgentRunResume(resume);
   const { record, state } = await loadAgentRunState(options.checkpoints, ref, options.ownership);
   if (
     state.definitionRevision !== options.definitionRevision ||
@@ -200,9 +204,6 @@ async function prepareAgentRunResume(
   if (options.persistSessionState && options.includeSkillBodies && state.sessionState?.loadedSkillBodies) {
     session.restoreLoadedSkillBodies(state.sessionState.loadedSkillBodies);
   }
-  if (resume.decision !== undefined && resume.decisions !== undefined) {
-    throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Resume accepts exactly one of decision or decisions");
-  }
   const pendingDecisions = pendingDecisionsOf(state);
   // Legacy approve maps to allow-once on every pending decision; legacy deny keeps its
   // terminal-denied behavior. Batch decisions are validated and applied atomically below.
@@ -217,9 +218,6 @@ async function prepareAgentRunResume(
             signal,
           })
         : undefined;
-  if (resume.decision === undefined && resume.decisions === undefined) {
-    throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Resume requires a decision or decisions");
-  }
   if (resolved && resolved.remaining.length > 0) {
     throwIfAbortedSignal(signal);
     const single = resolved.remaining.length === 1 ? resolved.remaining[0]! : undefined;

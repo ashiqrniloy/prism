@@ -36,7 +36,7 @@ DEFAULT_STOP_GRACE_MS	export declare const DEFAULT_STOP_GRACE_MS = 5000
 DEFAULT_TMP_BYTES	export declare const DEFAULT_TMP_BYTES: number
 DEFAULT_WALL_TIME_MS	export declare const DEFAULT_WALL_TIME_MS: number
 DEFAULT_WORKSPACE_BYTES	export declare const DEFAULT_WORKSPACE_BYTES: number
-DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 DockerCliError	export declare class DockerCliError extends Error
 DockerCliRequest	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
 DockerCliResult	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
@@ -91,22 +91,23 @@ ResolvedDockerSandboxLimits	export type { DockerSandboxLimitOptions, ResolvedDoc
 ResolvedEgressLimits	export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js"
 ResolvedNativeSandboxLimits	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 SANDBOX_FS_SCRIPTS	export declare const SANDBOX_FS_SCRIPTS: Readonly<
-SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCapabilities	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxCodingComposition	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 SandboxCodingCompositionError	export declare class SandboxCodingCompositionError extends Error
 SandboxCodingCompositionResult	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 SandboxCodingToolsOptions	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
-SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxExecutionError	export declare class SandboxExecutionError extends Error
-SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxFsError	export declare class SandboxFsError extends Error
 SandboxFsOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
-SandboxProcessHandle	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxProcessHandle	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxRepositoryOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
-SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxTarError	export declare class SandboxTarError extends Error
 WorkspaceMode	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 assertAbsoluteExecutable	export declare function assertAbsoluteExecutable(path: string, label: string): Promise<string>
@@ -140,10 +141,12 @@ isPathInside	export declare function isPathInside(root: string, target: string):
 isPathInsideReal	export declare function isPathInsideReal(root: string, target: string): Promise<boolean>
 isPrivateAddress	export declare function isPrivateAddress(address: string): boolean
 normalizeAddress	export declare function normalizeAddress(address: string): string
+resolveDockerCapabilities	export declare function resolveDockerCapabilities(network: DockerNetworkConfig): SandboxCapabilities
 resolveDockerSandboxLimits	export declare function resolveDockerSandboxLimits(input?: DockerSandboxLimitOptions): ResolvedDockerSandboxLimits
 resolveEgressLimits	export declare function resolveEgressLimits(input?: EgressLimitOptions): ResolvedEgressLimits
 resolveNativeSandboxLimits	export declare function resolveNativeSandboxLimits(input?: NativeSandboxLimitOptions): ResolvedNativeSandboxLimits
 resolvePinned	export declare function resolvePinned(host: string, resolve?: AddressResolver): Promise<readonly string[]>
+resolveSandboxCapabilities	export declare function resolveSandboxCapabilities(sandbox: SandboxAdapter | undefined): SandboxCapabilities
 resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
 runDockerCli	export declare function runDockerCli(request: DockerCliRequest): Promise<DockerCliResult>
 sha256Hex	export declare function sha256Hex(data: Buffer | string): string

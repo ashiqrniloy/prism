@@ -1,5 +1,30 @@
 # Migration guide
 
+## 0.1.7 → 0.2.0 fail-closed runtime and sandbox security (plan 020)
+
+Release **0.2.0** (plan 020) is the first cut of the 0.2.x review-remediation line: it closes the three security blockers found in the 2026-08-12 comprehensive review. The API surface is **additive-only** (plain compat gate at 0.2.0 shows zero removed/changed declarations; no `--allow-break`), but three behaviors are deliberately tightened for security, so untyped/legacy callers may now fail where 0.1.7 silently proceeded:
+
+1. **Durable-resume decision validation (core).** `resumeAgentRun`/`resumeAgentRunStream` (and the lifecycle/resume-stream entrypoints behind them) now validate the resume payload **before any state claim, checkpoint write, or tool execution**. Unknown legacy decisions (anything other than `approve`/`deny`), malformed decision batches, oversized reasons/elicitation, and duplicate approval ids fail closed with a stable `AgentDecisionError` (`ERR_PRISM_DECISION_INVALID`/`ERR_PRISM_DECISION_LIMIT`/`ERR_PRISM_DECISION_DUPLICATE`), leave the checkpoint version untouched, and execute no tool. In 0.1.7 an unknown decision string (e.g. `"sideways"`) was accepted, the checkpoint was CAS-claimed to `running`, and the suspended tool executed. The HTTP server parser (`readAgentDecisions`) is unchanged — it remains defense in depth, not the security boundary.
+
+   ```js
+   // 0.2.0: fails closed, no side effect, version untouched
+   try {
+     await resumeAgentRun(agent, ref, { expectedVersion: v, decision: "sideways" }, opts);
+   } catch (error) {
+     error.code; // "ERR_PRISM_DECISION_INVALID"
+   }
+   ```
+
+2. **Work-tool subprocess environments (`@arnilo/prism-work-tools`).** `createCliRunner` no longer inherits the full host `process.env`. The child environment is now: fixed base allow-list (`PATH`, `LANG`, `LC_ALL`, `TZ`; Windows adds `SYSTEMROOT`/`SystemRoot`/`TEMP`/`TMP`/`PATHEXT`/`COMSPEC`), then explicit validated `options.env`, then forced controls (`HOME` = `configDir`, `CLIMICROSOFT365_DISABLETELEMETRY=1`), then the late-bound per-identity token layer (`M365_ACCESSTOKEN`/`GOOGLE_ACCESS_TOKEN` style). Caps: 64 names / 64 KiB total (`ERR_PRISM_WORK_ENV`). `binary` and `configDir` must now be **absolute paths** (`path.isAbsolute`), and output capture is linear (single final `Buffer.concat`, capped at `maxStdoutBytes`/`maxStderrBytes`). In 0.1.7 the child inherited every ambient host variable.
+
+3. **Explicit sandbox capabilities (`@arnilo/prism-coding-security`).** `SandboxAdapter` gains the optional `capabilities` field — `workspaceCoherent`/`filesystemIsolated`/`networkIsolated`/`processIsolated`/`privilegeIsolated`/`egressRestricted` (immutable booleans). Omission or malformed metadata resolves every isolation field `false` (fail-closed). `SandboxCodingComposition` now carries a resolved `capabilities` object; the old boolean `containmentClaim` is **deprecated** and is the conservative projection `workspaceCoherent && filesystemIsolated && networkIsolated && processIsolated`. Built-ins: Docker reports `filesystemIsolated: true`/`processIsolated: true`/`networkIsolated: true` only for `--network=none`/attested networks, `privilegeIsolated: false` by default; native sandbox reports `networkIsolated: true`/`egressRestricted: true` but **never** filesystem/process/privilege isolation. In 0.1.7 any `DisposableSandbox`-shaped adapter could make `containmentClaim` report `true` with no isolation-capability inspection; in 0.2.0 an un-attested adapter claims `workspaceCoherent` at most. Authorization should read the individual capabilities, never the deprecated boolean.
+
+**Store compatibility:** 0.2.0 is store-compatible with 0.1.7 in both directions — no persisted-shape change, no migration step. Checkpoint, session-store, approval, and registry payloads are byte-identical; only the resume *input* validation is new.
+
+**Rollout:** upgrade core first (resume validation applies immediately to all hosts), then `@arnilo/prism-work-tools` (pass absolute `binary`/`configDir` and any ambient keys your connector needs via `options.env` — the allow-list is deny-by-default by design), then `@arnilo/prism-coding-security` (capability-aware policy code; the deprecated `containmentClaim` keeps working with the stricter semantics).
+
+**Rollback risk:** restoring 0.1.7 restores all three defects — rollback is **not** a mitigation. Hosts that must roll back should disable resume side effects and work-tool execution at their own boundary until they can return to 0.2.0.
+
 ## 0.1.4 → 0.1.5 deprecated-option removal (documented breaking cut)
 
 Release **0.1.5** (plan 017) removes the deprecated compatibility surface that 0.1.x kept after 0.0.19: the inert provider timeout/retry knobs, the `maxToolRounds` run-option alias, the pre-0.0.19 observational-memory flat keys and worker aliases, the read-tool `autoResizeImages` flag, and the `INIT_PROVIDERS` constant. This is the **documented breaking cut** announced in the 0.1.4 migration section; every other 0.1.x release keeps the compat baseline green. Three roadmap labels from the original 0.1.5 task were corrected during planning and are honored here:

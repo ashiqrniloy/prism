@@ -30,14 +30,72 @@ import {
   type WriteOperations,
   type WriteToolOptions,
 } from "@arnilo/prism-coding-agent";
-import { createSandboxBashOperations, type DisposableSandbox, type SandboxAdapter, type SandboxExportMetadata } from "./sandbox.js";
+import {
+  createSandboxBashOperations,
+  type DisposableSandbox,
+  type SandboxAdapter,
+  type SandboxCapabilities,
+  type SandboxExportMetadata,
+} from "./sandbox.js";
 import { createSandboxFilesystemOperations, createSandboxRepositoryOperations } from "./sandbox-fs-operations.js";
 
 export type WorkspaceMode = "host" | "sandbox";
 
+/** Every capability false; the conservative default for unknown/omitted metadata. */
+const EMPTY_SANDBOX_CAPABILITIES: SandboxCapabilities = Object.freeze({
+  workspaceCoherent: false,
+  filesystemIsolated: false,
+  networkIsolated: false,
+  processIsolated: false,
+  privilegeIsolated: false,
+  egressRestricted: false,
+});
+
+const CAPABILITY_KEYS = [
+  "workspaceCoherent",
+  "filesystemIsolated",
+  "networkIsolated",
+  "processIsolated",
+  "privilegeIsolated",
+  "egressRestricted",
+] as const;
+
+/**
+ * Resolve a sandbox adapter's capability attestation into a frozen, complete
+ * capability object. Omitted metadata, non-object values, missing fields,
+ * non-boolean values, and unknown keys all fail closed to every-field-false —
+ * an adapter can never gain a capability by omission or by interface shape.
+ * Explicit metadata is host attestation, copied/validated/frozen; Prism does
+ * not verify the underlying controls.
+ */
+export function resolveSandboxCapabilities(sandbox: SandboxAdapter | undefined): SandboxCapabilities {
+  const metadata = sandbox?.capabilities;
+  if (!metadata || typeof metadata !== "object") return EMPTY_SANDBOX_CAPABILITIES;
+  const keys = Object.keys(metadata);
+  if (keys.length !== CAPABILITY_KEYS.length) return EMPTY_SANDBOX_CAPABILITIES;
+  for (const key of CAPABILITY_KEYS) {
+    if (typeof (metadata as Record<string, unknown>)[key] !== "boolean") return EMPTY_SANDBOX_CAPABILITIES;
+  }
+  return Object.freeze({
+    workspaceCoherent: metadata.workspaceCoherent,
+    filesystemIsolated: metadata.filesystemIsolated,
+    networkIsolated: metadata.networkIsolated,
+    processIsolated: metadata.processIsolated,
+    privilegeIsolated: metadata.privilegeIsolated,
+    egressRestricted: metadata.egressRestricted,
+  });
+}
+
 export interface SandboxCodingComposition {
   readonly workspaceMode: WorkspaceMode;
+  /**
+   * @deprecated 0.2.0 — use `capabilities`. Conservative projection of
+   * `workspaceCoherent && filesystemIsolated && networkIsolated &&
+   * processIsolated` (privilege isolation excluded). Never authorize a
+   * security-sensitive action from this boolean alone.
+   */
   readonly containmentClaim: boolean;
+  readonly capabilities: SandboxCapabilities;
   readonly mixedWiringAllowed: boolean;
   readonly warnings: readonly string[];
   readonly workspaceRoot: string;
@@ -150,6 +208,30 @@ function requireWorkspaceMode(options: SandboxCodingToolsOptions): WorkspaceMode
   return mode;
 }
 
+function resolveCompositionCapabilities(
+  sandbox: SandboxAdapter | undefined,
+  workspaceMode: WorkspaceMode,
+  backendsBound: boolean,
+  mixedWiringAllowed: boolean,
+  warnings: readonly string[],
+  sandboxShell: boolean,
+): SandboxCapabilities {
+  // Workspace coherence derives from actual wiring; isolation fields derive
+  // only from validated adapter capability metadata — never from execFile/close
+  // duck typing or custom operations being present.
+  const coherent = workspaceMode === "sandbox" ? backendsBound && !mixedWiringAllowed && warnings.length === 0 : !sandboxShell;
+  if (!coherent) return EMPTY_SANDBOX_CAPABILITIES;
+  const isolated = resolveSandboxCapabilities(sandbox);
+  return Object.freeze({
+    workspaceCoherent: true,
+    filesystemIsolated: isolated.filesystemIsolated,
+    networkIsolated: isolated.networkIsolated,
+    processIsolated: isolated.processIsolated,
+    privilegeIsolated: isolated.privilegeIsolated,
+    egressRestricted: isolated.egressRestricted,
+  });
+}
+
 function resolveComposition(
   cwd: string,
   options: SandboxCodingToolsOptions,
@@ -184,12 +266,14 @@ function resolveComposition(
       search: options.search,
     };
 
+    const capabilities = resolveCompositionCapabilities(sandbox, workspaceMode, false, mixedWiringAllowed, warnings, sandboxShell);
     return {
       toolsOptions,
       toolCwd: cwd,
       composition: {
         workspaceMode,
-        containmentClaim: false,
+        containmentClaim: deprecatedContainmentProjection(capabilities),
+        capabilities,
         mixedWiringAllowed,
         warnings,
         workspaceRoot,
@@ -251,7 +335,7 @@ function resolveComposition(
     search: options.search,
   };
 
-  const containmentClaim = backendsBound && !mixedWiringAllowed && warnings.length === 0;
+  const capabilities = resolveCompositionCapabilities(sandbox, workspaceMode, backendsBound, mixedWiringAllowed, warnings, false);
   // Bound sandbox backends observe the container tree — tools must resolve under workspaceRoot.
   const toolCwd = backendsBound ? workspaceRoot : cwd;
   const treeIdentity = treeIdentityFromSandbox(sandbox);
@@ -261,13 +345,25 @@ function resolveComposition(
     toolCwd,
     composition: {
       workspaceMode,
-      containmentClaim,
+      containmentClaim: deprecatedContainmentProjection(capabilities),
+      capabilities,
       mixedWiringAllowed,
       warnings,
       workspaceRoot,
       ...(treeIdentity ? { treeIdentity } : {}),
     },
   };
+}
+
+/**
+ * @deprecated 0.2.0 — conservative projection of the full capability object:
+ * `workspaceCoherent && filesystemIsolated && networkIsolated &&
+ * processIsolated` (privilege isolation excluded because root-in-container
+ * without user namespaces is unreliable). Kept for 0.1.7 compatibility; never
+ * authorize a security-sensitive action from this boolean alone.
+ */
+function deprecatedContainmentProjection(capabilities: SandboxCapabilities): boolean {
+  return capabilities.workspaceCoherent && capabilities.filesystemIsolated && capabilities.networkIsolated && capabilities.processIsolated;
 }
 
 /** Authoritative construction path: tools plus composition metadata. */

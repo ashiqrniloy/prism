@@ -441,6 +441,7 @@ assertToolDispatchConforms	export declare function assertToolDispatchConforms(re
 assertToolEffectStoreConforms	export declare function assertToolEffectStoreConforms(factory: () => ToolEffectStore | Promise<ToolEffectStore>, options?: ToolEffectStoreConformanceOptions): Promise<void>
 assertTrusted	export declare function assertTrusted(policy: TrustPolicy | undefined, request: TrustRequest): Promise<void>
 assertUsageAccounting	export declare function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage
+assertValidAgentRunResume	export declare function assertValidAgentRunResume(resume: AgentRunResume): void
 authMethodKey	export declare function authMethodKey(method: AuthMethod): string
 boundedLoopSnapshot	export declare function boundedLoopSnapshot(name: string, revision: string, snapshot: JsonValue): StoredAgentRunState["loopState"]
 buildOpenAIChatBody	export declare function buildOpenAIChatBody(request: ProviderRequest, options?: OpenAIChatBodyOptions): JsonObject
@@ -734,6 +735,6 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.1.7"
+version	export declare const version = "0.2.0"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

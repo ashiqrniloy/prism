@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { tmpdir } from "node:os";
 import { describe, it } from "node:test";
 import type { AgentIdentity, ToolExecutionContext } from "@arnilo/prism";
 import {
   assertSafeArgv,
   buildGoogleWorkspaceArgv,
   buildMicrosoft365Argv,
+  createCliRunner,
   createGoogleWorkspaceCliAdapter,
   createMemoryIdempotencyStore,
   DEFAULT_GWS_OPS,
@@ -628,5 +630,118 @@ describe("connector token wiring (per-identity, fail-closed)", () => {
     await adapter.runOp("mail.list", {});
     assert.ok(captured.length > 0);
     assert.equal(captured.at(-1)!.env, undefined);
+  });
+});
+
+describe("createCliRunner subprocess isolation (plan 020 Task 3)", () => {
+  const CONFIG_DIR = `${tmpdir()}/prism-work-cfg-${process.pid}`;
+
+  it("ambient canary: unrelated host env never reaches the exec seam, and explicit maps and tokens do", async () => {
+    process.env.PRISM_PROOF_SECRET = "host-secret";
+    try {
+      const seen: NodeJS.ProcessEnv[] = [];
+      const runner = createCliRunner({
+        binary: "/usr/bin/m365",
+        configDir: CONFIG_DIR,
+        env: { LANG: "C.UTF-8", EXTRA_ALLOWED: "x" },
+        exec: async (argv, opts) => {
+          seen.push(opts.env);
+          return { exitCode: 0, stdout: "ok", stderr: "" };
+        },
+      });
+      const result = await runner.exec(["version"], { env: { M365_ACCESSTOKEN: "s3cret" } });
+      assert.equal(result.exitCode, 0);
+      const env = seen[0]!;
+      assert.equal(env.PRISM_PROOF_SECRET, undefined, "ambient secret must not reach the seam");
+      assert.equal(env.HOME, CONFIG_DIR, "HOME forced to the isolated configDir");
+      assert.equal(env.CLIMICROSOFT365_DISABLETELEMETRY, "1", "telemetry disable forced");
+      assert.equal(env.LANG, "C.UTF-8", "explicit host allow-list reaches the child");
+      assert.equal(env.EXTRA_ALLOWED, "x");
+      assert.equal(env.M365_ACCESSTOKEN, "s3cret", "late-bound per-identity token reaches the child");
+      if (process.env.PATH) assert.equal(env.PATH, process.env.PATH, "canonical PATH passes through");
+      // A second ambient set later still cannot leak (base env is captured once at construction).
+      process.env.PRISM_PROOF_SECRET_2 = "also-secret";
+      await runner.exec(["version"]);
+      assert.equal(seen[1]!.PRISM_PROOF_SECRET_2, undefined);
+    } finally {
+      delete process.env.PRISM_PROOF_SECRET;
+      delete process.env.PRISM_PROOF_SECRET_2;
+    }
+  });
+
+  it("ambient canary: a real child inherits only the isolated environment", async () => {
+    process.env.PRISM_PROOF_SECRET = "host-secret";
+    try {
+      const runner = createCliRunner({ binary: process.execPath, configDir: CONFIG_DIR });
+      const result = await runner.exec([
+        "-e",
+        "console.log(JSON.stringify({ secret: process.env.PRISM_PROOF_SECRET ?? null, home: process.env.HOME, telemetry: process.env.CLIMICROSOFT365_DISABLETELEMETRY }))",
+      ]);
+      assert.equal(result.exitCode, 0);
+      const out = JSON.parse(result.stdout) as { secret: string | null; home: string; telemetry: string };
+      assert.equal(out.secret, null, "ambient secret must not reach the real child");
+      assert.equal(out.home, CONFIG_DIR, "HOME forced to the isolated configDir");
+      assert.equal(out.telemetry, "1");
+    } finally {
+      delete process.env.PRISM_PROOF_SECRET;
+    }
+  });
+
+  it("rejects relative, empty, NUL, reserved, duplicate, and over-cap env inputs before spawn", async () => {
+    const ENV = (code: string) => (e: unknown) => e instanceof WorkToolError && e.code === code;
+    assert.throws(() => createCliRunner({ binary: "", configDir: CONFIG_DIR }), ENV("ERR_PRISM_WORK_BINARY"));
+    assert.throws(() => createCliRunner({ binary: "m365", configDir: CONFIG_DIR }), ENV("ERR_PRISM_WORK_BINARY"));
+    assert.throws(() => createCliRunner({ binary: "/usr/bin/m365\0x", configDir: CONFIG_DIR }), ENV("ERR_PRISM_WORK_BINARY"));
+    assert.throws(() => createCliRunner({ binary: "/usr/bin/m365", configDir: "" }), ENV("ERR_PRISM_WORK_CONFIG"));
+    assert.throws(() => createCliRunner({ binary: "/usr/bin/m365", configDir: "tmp/x" }), ENV("ERR_PRISM_WORK_CONFIG"));
+    assert.throws(() => createCliRunner({ binary: "/usr/bin/m365", configDir: `${CONFIG_DIR}\0y` }), ENV("ERR_PRISM_WORK_CONFIG"));
+    const envs: Array<Record<string, string>> = [
+      { "A\0B": "x" },
+      { A: "x\0y" },
+      { "1FOO": "x" },
+      { "A-B": "x" },
+      { TOKEN_X: "1", token_x: "2" },
+      { HOME: "/evil" },
+      { home: "/evil" },
+      { CLIMICROSOFT365_DISABLETELEMETRY: "0" },
+    ];
+    for (const env of envs) {
+      assert.throws(() => createCliRunner({ binary: "/usr/bin/m365", configDir: CONFIG_DIR, env }), ENV("ERR_PRISM_WORK_ENV"));
+    }
+    const many = Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`K${i}`, "v"]));
+    assert.throws(() => createCliRunner({ binary: "/usr/bin/m365", configDir: CONFIG_DIR, env: many }), ENV("ERR_PRISM_WORK_LIMIT"));
+    assert.throws(
+      () => createCliRunner({ binary: "/usr/bin/m365", configDir: CONFIG_DIR, env: { BIG: "x".repeat(70 * 1024) } }),
+      ENV("ERR_PRISM_WORK_LIMIT"),
+    );
+    // Per-call token layer is validated the same way, before any exec.
+    const runner = createCliRunner({
+      binary: "/usr/bin/m365",
+      configDir: CONFIG_DIR,
+      exec: async () => ({ exitCode: 0, stdout: "ok", stderr: "" }),
+    });
+    await assert.rejects(() => runner.exec(["x"], { env: { HOME: "/evil" } }), ENV("ERR_PRISM_WORK_ENV"));
+    await assert.rejects(() => runner.exec(["x"], { env: { M365_ACCESSTOKEN: "a", m365_accesstoken: "b" } }), ENV("ERR_PRISM_WORK_ENV"));
+    await assert.rejects(
+      () => runner.exec(["x"], { env: Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`T${i}`, "v"])) }),
+      ENV("ERR_PRISM_WORK_LIMIT"),
+    );
+  });
+
+  it("captures many chunks linearly with exact bytes/order, tracks stdout/stderr separately, and kills over the cap", async () => {
+    const runner = createCliRunner({ binary: process.execPath, configDir: CONFIG_DIR });
+    const many = await runner.exec(["-e", "for (let i = 0; i < 20000; i++) process.stdout.write('ab')"]);
+    assert.equal(many.exitCode, 0);
+    assert.equal(many.stdout.length, 40000);
+    assert.equal(many.stdout.slice(0, 4), "abab");
+    assert.equal(many.stdout.slice(-4), "abab");
+    const both = await runner.exec(["-e", "process.stdout.write('out'); process.stderr.write('err')"]);
+    assert.equal(both.stdout, "out");
+    assert.equal(both.stderr, "err");
+    const over = createCliRunner({ binary: process.execPath, configDir: CONFIG_DIR, limits: { maxStdoutBytes: 64 } });
+    await assert.rejects(
+      () => over.exec(["-e", "process.stdout.write('x'.repeat(4096))"]),
+      (e: unknown) => e instanceof WorkToolError && e.code === "ERR_PRISM_WORK_LIMIT",
+    );
   });
 });

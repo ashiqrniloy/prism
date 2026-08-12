@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  AgentDecisionError,
   AgentRunError,
   AgentRunStateError,
   AGENT_RUN_STATE_SCHEMA_VERSION,
@@ -183,6 +184,60 @@ describe("durable agent runs", () => {
       events.every((event) => !("runId" in event) || event.runId === suspended.runId),
       true,
     );
+  });
+
+  it("rejects an unknown legacy decision before subscribing, claiming, or dispatching (plan 020 Task 2)", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const store = createMemorySessionStore();
+    let calls = 0;
+    const agent = createAgent({
+      id: "sideways-demo",
+      store,
+      model: { provider: "mock", model: "demo" },
+      provider: (() => {
+        let turn = 0;
+        return {
+          id: "mock",
+          async *generate() {
+            turn += 1;
+            if (turn === 1) {
+              yield { type: "tool_call" as const, call: toolCallContent("call-sideways", "write", {}) };
+              yield providerDone();
+              return;
+            }
+            yield providerTextDelta("finished");
+            yield providerDone();
+          },
+        };
+      })(),
+      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-sideways", name: "write", value: ++calls }) }],
+    });
+    const suspended = await agent.createSession({ id: "sideways-session" }).run("go", {
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    });
+    const ref = { runId: suspended.runId, sessionId: suspended.sessionId };
+    const options = { checkpoints, definitionRevision: "1", maxQueuedEvents: 64, overflow: "close" as const };
+
+    // Stream path: the generator rejects on first pull; zero events, zero claim, zero tool calls.
+    const events: unknown[] = [];
+    await assert.rejects(
+      async () => {
+        for await (const event of resumeAgentRunStream(
+          agent,
+          ref,
+          { expectedVersion: suspended.runState!.version!, decision: "sideways" } as never,
+          options,
+        )) {
+          events.push(event);
+        }
+      },
+      (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
+    );
+    assert.equal(events.length, 0);
+    const { record, state } = await loadAgentRunState(checkpoints, ref);
+    assert.equal(record.version, suspended.runState!.version);
+    assert.equal(state.status, "suspended");
+    assert.equal(calls, 0);
   });
 
   it("streams denial without provider or tool execution", async () => {

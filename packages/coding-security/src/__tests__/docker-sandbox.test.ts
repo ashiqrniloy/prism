@@ -452,6 +452,14 @@ test("import retains tree identity; export hash differs after mutate; compositio
       workspaceRoot: "/workspace",
     });
     assert.equal(composition.containmentClaim, true);
+    assert.deepEqual(composition.capabilities, {
+      workspaceCoherent: true,
+      filesystemIsolated: true,
+      networkIsolated: true,
+      processIsolated: true,
+      privilegeIsolated: false,
+      egressRestricted: true,
+    });
     assert.deepEqual(composition.treeIdentity, {
       sha256: sandbox.importIdentity!.sha256,
       entryCount: sandbox.importIdentity!.entryCount,
@@ -639,6 +647,8 @@ test("protected Docker sandbox matrix", { skip: process.env.PRISM_TEST_DOCKER_SA
         workspaceRoot: "/workspace",
       });
       assert.equal(composition.containmentClaim, true);
+      assert.equal(composition.capabilities.filesystemIsolated, true);
+      assert.equal(composition.capabilities.egressRestricted, true);
       assert.ok(composition.treeIdentity);
       const write = tools.find((t) => t.name === "write")!;
       assert.equal(
@@ -670,6 +680,38 @@ test("protected Docker sandbox matrix", { skip: process.env.PRISM_TEST_DOCKER_SA
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("resolveDockerCapabilities reports only proven fields per network mode", async () => {
+  const { resolveDockerCapabilities, composeEgressSandboxNetwork, EgressError } = await import("../index.js");
+  const attestation = {
+    denyDirectEgress: true,
+    policyFingerprint: "a".repeat(64),
+    policyVersion: 1,
+    startedAt: new Date(0).toISOString(),
+    proxyEndpoint: "http://proxy.internal:3128",
+  } as const;
+  composeEgressSandboxNetwork(attestation, "prism-net");
+  const none = resolveDockerCapabilities({ mode: "none" });
+  assert.deepEqual(none, {
+    workspaceCoherent: true,
+    filesystemIsolated: true,
+    networkIsolated: true,
+    processIsolated: true,
+    privilegeIsolated: false,
+    egressRestricted: true,
+  });
+  const customUnattested = resolveDockerCapabilities({ mode: "custom", name: "prism-net" });
+  assert.equal(customUnattested.networkIsolated, false);
+  assert.equal(customUnattested.egressRestricted, false);
+  const customAttested = resolveDockerCapabilities({ mode: "custom", name: "prism-net", egress: attestation });
+  assert.equal(customAttested.networkIsolated, false);
+  assert.equal(customAttested.egressRestricted, true);
+  // Malformed attestation never reaches capability resolution: compose fails closed.
+  assert.throws(
+    () => composeEgressSandboxNetwork({ denyDirectEgress: false } as never, "prism-net"),
+    (error: unknown) => error instanceof EgressError,
+  );
 });
 
 test("assertBrowserSandboxNetwork requires egress attestation for custom networks", async () => {

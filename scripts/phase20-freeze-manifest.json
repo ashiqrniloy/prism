@@ -1,0 +1,282 @@
+{
+  "$comment": "Phase 20 (0.2.0) Task 1 fail-closed-runtime-and-sandbox-security scope gate. Machine-checkable source of truth consumed by Tasks 2-6 of plans/020-Release-0-2-0-Fail-Closed-Runtime-and-Sandbox-Security.md: the four 0.2.0 implementation items (durable-resume input validation; work-tool subprocess environment isolation + linear output capture; sandbox capability metadata; public-JavaScript/packed/threat-suite regressions) each with an allowed-file scope, task ownership, done-phase content markers, and threat-to-test mapping; the preserved surface that must stay byte-identical for the whole phase (decision-contract types/errors/limits, checkpoint store machinery, work-tool error/limit/type seams, egress attestation validation); allowed/forbidden changes; the compat policy (additive-only EXCEPT the documented security-motivated behavior changes of this plan: runtime resume validation, work-tool env/path behavior, additive sandbox capabilities with containmentClaim retained as deprecated - no declaration removal is planned; --allow-break requires a recorded deviation + plan amendment after a plain reviewed gate); the audit/signed-tag/provenance policy; the protected-gate policy (missing Docker/native evidence records a named blocked gate, never a passing skip); per-task evidence tokens; and the deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json. Amendment requires a recorded deviation entry below. Validated by scripts/phase20-freeze.test.mjs. Baseline evidence for regression comparison at the Task 6 exit gate lives in scripts/phase20-baseline.json (captured at 0.1.7).",
+  "release": "0.2.0",
+  "line": "0.2.x",
+  "type": "fail-closed-runtime-and-sandbox-security",
+  "baseline": "0.1.7 (plan 019 exit gate passed 2026-08-12; signed tag v0.1.7; 50 publishable manifests; audit 0; compat baselines current at 0.1.7; three confirmed review defects: unknown resume decision executes suspended tool, work-tool child inherits full host env, containmentClaim overclaims native/custom sandboxes; HEAD 051470a)",
+  "items": [
+    {
+      "id": "resume-validation",
+      "task": "task2",
+      "title": "Validate durable-resume input in core before side effects",
+      "allowedFiles": [
+        "src/agent-approval.ts",
+        "src/agent-run-lifecycle.ts",
+        "src/__tests__/run-decisions.test.ts",
+        "src/__tests__/agent-run-state.test.ts",
+        "packages/server/src/__tests__/server.test.ts",
+        "docs/agent-session-runtime.md",
+        "docs/public-contracts.md"
+      ],
+      "markers": {
+        "src/agent-approval.ts": ["assertValidAgentRunResume"],
+        "src/agent-run-lifecycle.ts": ["assertValidAgentRunResume"],
+        "src/__tests__/run-decisions.test.ts": ["unknown legacy decision"],
+        "src/__tests__/agent-run-state.test.ts": ["sideways"],
+        "packages/server/src/__tests__/server.test.ts": ["sideways"],
+        "docs/agent-session-runtime.md": ["no-side-effect"],
+        "docs/public-contracts.md": ["resume validation"]
+      },
+      "securityTests": ["T1 unknown legacy decision", "T2 malformed batch", "T3 stale/foreign/duplicate regression", "T5 no-side-effect ordering"],
+      "rationale": "roadmap 0.2.0 item 1 / review blocker 1: prepareAgentRunResume treats any decision other than 'approve'/'deny' as 'no decision given' and proceeds to claim the checkpoint and execute the suspended tool; resolveRunDecisions assumes typed entries so malformed untyped batches crash with raw TypeErrors. One assertValidAgentRunResume in agent-approval.ts invoked at the top of prepareAgentRunResume covers all four public entrypoints (lifecycle resume/resumeStream and free resumeAgentRun/resumeAgentRunStream). Reuses AgentDecisionError codes, HARD_MAX_PENDING_DECISIONS, MAX_DECISION_REASON_BYTES, MAX_ELICITATION_BYTES from the preserved contracts-run-state surface. Server readAgentResume/readAgentDecisions stay unchanged (defense in depth)."
+    },
+    {
+      "id": "work-tools-env",
+      "task": "task3",
+      "title": "Isolate work-tool subprocess environments and linearize output capture",
+      "allowedFiles": [
+        "packages/work-tools/src/cli.ts",
+        "packages/work-tools/src/__tests__/work-tools.test.ts",
+        "docs/work-tools.md",
+        "packages/work-tools/README.md"
+      ],
+      "markers": {
+        "packages/work-tools/src/cli.ts": ["buildCliEnvironment", "collectOutput", "path.isAbsolute"],
+        "packages/work-tools/src/__tests__/work-tools.test.ts": ["ambient"],
+        "docs/work-tools.md": ["absolute"],
+        "packages/work-tools/README.md": ["absolute"]
+      },
+      "negativeMarkers": {
+        "packages/work-tools/src/index.ts": ["buildCliEnvironment", "collectOutput"]
+      },
+      "securityTests": ["T4 ambient secret inheritance", "T5 token env override of reserved keys", "T6 relative/path-hijacked executable/config", "T7 output exhaustion / quadratic capture"],
+      "rationale": "roadmap 0.2.0 item 2 / review blocker 2: createCliRunner builds the child env as {...process.env, ...options.env, HOME, CLIMICROSOFT365_DISABLETELEMETRY}, so every ambient variable reaches the child (manual proof: PRISM_PROOF_SECRET leaked); binary/configDir accept relative paths; defaultExec accumulates output with repeated Buffer.concat (worst-case O(n^2)). Fix: package-local buildCliEnvironment (minimal fixed allow-list base, then explicit options.env, then reserved fixed controls set last; NUL/casing/count/byte validation) + collectOutput (chunk array, one final concat, cap kill) + path.isAbsolute checks. No new public exports (Task 0 approved module-private helpers in cli.ts only); docker/native exact-env behavior is the preserved precedent."
+    },
+    {
+      "id": "sandbox-capabilities",
+      "task": "task4",
+      "title": "Ship explicit sandbox capabilities and conservative compatibility metadata",
+      "allowedFiles": [
+        "packages/coding-security/src/sandbox.ts",
+        "packages/coding-security/src/sandbox-coding-operations.ts",
+        "packages/coding-security/src/docker-sandbox.ts",
+        "packages/coding-security/src/native-sandbox.ts",
+        "packages/coding-security/src/index.ts",
+        "packages/coding-security/src/__tests__/sandbox-coding-operations.test.ts",
+        "packages/coding-security/src/__tests__/workspace-consistency.test.ts",
+        "packages/coding-security/src/__tests__/sandbox-fs-operations.test.ts",
+        "packages/coding-security/src/__tests__/docker-sandbox.test.ts",
+        "packages/coding-security/src/__tests__/native-sandbox.test.ts",
+        "docs/coding-security.md",
+        "docs/host-security.md",
+        "packages/coding-security/README.md"
+      ],
+      "markers": {
+        "packages/coding-security/src/sandbox.ts": ["SandboxCapabilities"],
+        "packages/coding-security/src/sandbox-coding-operations.ts": ["resolveSandboxCapabilities", "@deprecated"],
+        "packages/coding-security/src/docker-sandbox.ts": ["egressRestricted"],
+        "packages/coding-security/src/native-sandbox.ts": ["filesystemIsolated"],
+        "packages/coding-security/src/index.ts": ["SandboxCapabilities"],
+        "packages/coding-security/src/__tests__/sandbox-coding-operations.test.ts": ["capabilit"],
+        "packages/coding-security/src/__tests__/workspace-consistency.test.ts": ["capabilit"],
+        "packages/coding-security/src/__tests__/sandbox-fs-operations.test.ts": ["capabilit"],
+        "packages/coding-security/src/__tests__/docker-sandbox.test.ts": ["egressRestricted"],
+        "packages/coding-security/src/__tests__/native-sandbox.test.ts": ["filesystemIsolated"],
+        "docs/coding-security.md": ["capability metadata"],
+        "docs/host-security.md": ["individual capabilities"],
+        "packages/coding-security/README.md": ["capabilit"]
+      },
+      "securityTests": ["T8 custom capability spoof/omission", "T9 native filesystem overclaim", "T10 Docker custom-network ambiguity", "T11 mixed wiring", "T12 downgrade through deprecated metadata"],
+      "rationale": "roadmap 0.2.0 item 3 / review blocker 3: SandboxCodingComposition.containmentClaim is computed from workspace wiring alone (backendsBound && !mixedWiringAllowed && warnings.length === 0) so native (no filesystem isolation) and duck-typed custom adapters can claim containment. Fix: additive SandboxCapabilities {workspaceCoherent, filesystemIsolated, networkIsolated, egressRestricted, processIsolated, privilegeIsolated} on SandboxAdapter with omission => all false, resolveSandboxCapabilities in sandbox-coding-operations.ts, truthful built-in metadata (native filesystemIsolated false; docker networkIsolated only for mode none, egressRestricted only with attestation, privilegeIsolated false), containmentClaim retained as @deprecated conservative conjunction. CONSTRAINT: src/__tests__/docs.test.ts:1262 asserts docs/coding-security.md still includes 'containmentClaim', so docs keep the deprecated term. Egress validation primitives (egress/) are preserved surface."
+    },
+    {
+      "id": "security-regressions",
+      "task": "task5",
+      "title": "Add public-JavaScript, packed-consumer, and named threat-suite regressions",
+      "allowedFiles": [
+        "scripts/phase20-security.test.mjs",
+        "src/__tests__/install-smoke.test.ts",
+        ".github/workflows/sandbox-browser.yml",
+        ".github/workflows/release.yml"
+      ],
+      "markers": {
+        "scripts/phase20-security.test.mjs": ["sideways", "ambient", "filesystemIsolated"],
+        "src/__tests__/install-smoke.test.ts": ["phase20"],
+        ".github/workflows/sandbox-browser.yml": ["capabilit"]
+      },
+      "securityTests": ["T1 packed consumer", "T4 packed consumer", "T8 packed consumer", "T9 protected native evidence", "T10 protected Docker evidence", "gate accounting"],
+      "rationale": "roadmap 0.2.0 mandatory regression matrix items 1-3 / review blocker evidence: the original resume defect passed TypeScript declarations and existed only at runtime, so regressions must run against built public entrypoints and a fresh packed plain-JavaScript consumer (install-smoke harness), not private source imports. scripts/phase20-security.test.mjs wires into security:threat-suites; sandbox-browser.yml records Docker/native capability evidence and is a required protected gate (missing => 0.2.0 blocked, never a passing skip). release.yml retains the phase-20 security report in publish prerequisites only if sdk:ready does not already cover it (conditional edit; existence is the only done-marker)."
+    }
+  ],
+  "sharedFiles": {
+    "$comment": "Coordination files with multiple or late editors. Rule: while ALL listed editors are pending, the file is byte-identical to the Task 1 baseline hash (absent files stay absent); once any editor is done, the file is editable and the freeze test asserts the per-editor markers below. package.json editors: task1 (npm test wiring), task5 (security:threat-suites wiring), task6 (version bump). baseline/manifest: task1 creates, task5 reserves evidence fields, task6 records exit evidence. plans/020 + plans/README.md: task1 closes Task 1, task6 closes the plan. docs/index.md: tasks 2/3/4 update navigation descriptions, task6 sets the current-release line.",
+    "rule": "editable only by listed editor tasks; all-pending => byte-immutable; done editors assert their markers",
+    "files": {
+      "docs/index.md": {
+        "editors": ["task2", "task3", "task4", "task6"],
+        "markers": {
+          "task2": ["fail-closed durable resume"],
+          "task3": ["isolated subprocess"],
+          "task4": ["sandbox capability"],
+          "task6": ["0.2.0"]
+        }
+      },
+      "package.json": {
+        "editors": ["task1", "task5", "task6"],
+        "markers": {
+          "task1": ["phase20-freeze.test.mjs"],
+          "task5": ["phase20-security.test.mjs"],
+          "task6": ["0.2.0"]
+        }
+      },
+      "scripts/phase20-baseline.json": {
+        "editors": ["task1", "task5", "task6"],
+        "markers": {
+          "task1": ["gitHead"],
+          "task5": ["exitGate"],
+          "task6": ["green"]
+        }
+      },
+      "scripts/phase20-freeze-manifest.json": {
+        "editors": ["task1", "task6"],
+        "markers": {
+          "task1": ["release"],
+          "task6": ["task6"]
+        }
+      },
+      "plans/020-Release-0-2-0-Fail-Closed-Runtime-and-Sandbox-Security.md": {
+        "editors": ["task1", "task6"],
+        "markers": {
+          "task1": ["- [x] Task 1"],
+          "task6": ["To be filled"] 
+        }
+      },
+      "plans/README.md": {
+        "editors": ["task1", "task6"],
+        "markers": {
+          "task1": ["020-Release-0-2-0"],
+          "task6": ["| complete |"]
+        }
+      },
+      "roadmap.md": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["- [x] "]
+        }
+      },
+      "CHANGELOG.md": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["0.2.0"]
+        }
+      },
+      "packages/work-tools/CHANGELOG.md": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["0.2.0"]
+        }
+      },
+      "packages/coding-security/CHANGELOG.md": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["0.2.0"]
+        }
+      },
+      "src/index.ts": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["0.2.0"]
+        }
+      },
+      "docs/migration.md": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["0.2.0"]
+        }
+      },
+      "docs/release-and-install.md": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["0.2.0"]
+        }
+      },
+      "package-lock.json": {
+        "editors": ["task6"],
+        "markers": {
+          "task6": ["0.2.0"]
+        }
+      }
+    }
+  },
+  "preservedSurface": {
+    "active": true,
+    "rule": "These files implement the primitives phase 20 reuses (decision-contract types/errors/limits, checkpoint store machinery, work-tool error/limit/type seams, egress attestation validation). They are byte-immutable for the whole phase; a hash mismatch fails loud at any task state. Deviations require a recorded entry.",
+    "files": {
+      "src/contracts-run-state.ts": "AgentDecisionError codes, resume/decision types, and ALL decision limits are reused verbatim by assertValidAgentRunResume; never edited",
+      "src/agent-run-state.ts": "checkpoint load/save/CAS/fingerprint machinery reused by the resume path; never edited",
+      "packages/work-tools/src/errors.ts": "WorkToolError families reused by env/path validation; never edited",
+      "packages/work-tools/src/limits.ts": "resolveWorkLimits/ResolvedWorkLimits reused unchanged; no public work-limit surface change in 0.2.0",
+      "packages/work-tools/src/types.ts": "WorkCliRunner/WorkCliExecResult/WorkLimits shapes reused; never edited",
+      "packages/coding-security/src/egress/index.ts": "EgressAttestation validation reused for egressRestricted semantics; never edited"
+    }
+  },
+  "allowedChanges": [
+    "Task 1 freeze record: scripts/phase20-freeze-manifest.json, scripts/phase20-baseline.json, scripts/phase20-freeze.test.mjs, package.json npm-test wiring (phase20 after phase19), plans/README.md index row, this plan file's Task 1 checkbox and token",
+    "implementation of exactly the four items within their allowedFiles scopes, per this plan's Tasks 2-5 approach: one assertValidAgentRunResume (agent-approval.ts) invoked at the top of prepareAgentRunResume (agent-run-lifecycle.ts), module-private buildCliEnvironment/collectOutput + path.isAbsolute checks in work-tools cli.ts with no new public exports, additive SandboxCapabilities + resolveSandboxCapabilities with truthful built-in metadata and containmentClaim retained as deprecated",
+    "additive public exports for shipped items plus their docs (docs/agent-session-runtime.md, docs/public-contracts.md, docs/work-tools.md, docs/coding-security.md, docs/host-security.md, package READMEs, docs/index.md navigation descriptions per task with Task 6 final verification; docs/migration.md and CHANGELOGs at Task 6)",
+    "Task 5 regression wiring: scripts/phase20-security.test.mjs appended to the security:threat-suites script, install-smoke packed plain-JS regression inside the existing consumer, sandbox-browser.yml Docker/native capability evidence record, release.yml phase-20 security report retention only if sdk:ready does not already cover it",
+    "baseline evidence updates in scripts/phase20-baseline.json: task5 evidence-field reservation and the Task 6 exitGate record (green only with all tasks done, audit 0, pack determinism, plain reviewed release gate, Docker/native protected evidence present, no blocker skip)",
+    "version bump 0.1.7 -> 0.2.0 across all 50 manifests + lockfile + version-sensitive pins (additive; no new package, manifest count stays 50 publishable)",
+    "compat flow per the manifest compat section: plain release:gate at 0.2.0 reviewed for deltas (expected: runtime-validation behavior notes, work-tool env/path behavior notes, additive sandbox capability types; containmentClaim retained as deprecated); --allow-break ONLY with a recorded deviation entry + plan amendment after the plain reviewed gate; version-literal baseline refresh with --update-baseline only after review",
+    "phase 20 freeze/baseline/tripwire scripts and package.json test-script wiring, plans/README.md index row",
+    "docs/_evidence/phase20-primitive-review.md (Task 0 evidence, already landed)"
+  ],
+  "forbiddenChanges": [
+    "any modification of an item's allowedFiles while its owning task is pending (byte-immutable via baseline hashes; the freeze test fails loud)",
+    "any modification of the preservedSurface files at any point in the phase (decision-contract types/errors/limits, checkpoint store machinery, work-tool error/limit/type seams, egress attestation validation)",
+    "any shared file touched by a task that is not listed as its editor, or before its first editor task is done",
+    "behavior change to any default outside the three documented security fixes: approve/deny and batch resume semantics for VALID inputs stay identical, work-tool limits/timeouts/argv guards stay identical, Docker/native sandbox construction and egress attestation semantics stay identical",
+    "removal of containmentClaim in 0.2.0 (deprecated only; docs/tests must keep the term - docs.test.ts:1262 requires docs/coding-security.md to include 'containmentClaim')",
+    "new runtime or dev dependencies in the dependency-free core or in work-tools/coding-security; no new package, no new export subpath",
+    "0.2.1+ items (provider completion/outbound trust, model-router budget reservation, conversation CAS) and any 0.3.x item (live canary matrix, delegated agents, enterprise adapters, OTel spans, new providers)",
+    "server handler validation changes (readAgentResume/readAgentDecisions stay byte-identical; core runtime is the enforcement point)",
+    "deletion or rewriting of ponytail: comments (intentional documented shortcuts move with their code)",
+    "changes to the frozen 0.1.x support matrix (scripts/phase12-freeze-manifest.json)",
+    "compat baseline regeneration before a clean reviewed plain gate at 0.2.0 exists, or regenerating baselines with any unreviewed breaking delta",
+    "skipping a protected security gate (Docker daemon matrix or native netns evidence) and still recording the 0.2.0 exit gate as green"
+  ],
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.1.7",
+    "promise": "0.2.0 is ADDITIVE-ONLY with three documented security-motivated behavior exceptions from this plan: (1) durable-resume runtime validation - invalid decision shapes now fail closed with ERR_PRISM_DECISION_INVALID before any side effect (no declaration change); (2) work-tool environment/path behavior - ambient env inheritance removed and relative binary/configDir rejected (no declaration change); (3) sandbox capability metadata - additive SandboxCapabilities types and stricter semantics, with containmentClaim RETAINED as @deprecated (no removal). The release gate runs plain at 0.2.0 first and every declaration delta is reviewed; --allow-break is permitted ONLY after a recorded deviation entry + plan amendment documents the reviewed breaking change. The publish graph stays at 50 packages."
+  },
+  "deviations": [],
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.0 changes none of it",
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.2.0",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "migrationTokens": [
+    "0.2.0",
+    "assertValidAgentRunResume",
+    "buildCliEnvironment",
+    "SandboxCapabilities"
+  ],
+  "tasks": {
+    "$comment": "per-task evidence tokens; 'done' when the task passes its checks, 'pending' until then. Task 0 set itself done at the primitive review; Task 1 (this freeze) sets itself done after the baseline is captured and the freeze test is wired; Tasks 2-5 move to done as they land; Task 6 (migration docs, changelog, bump, exit gate) lands last. The phase20-freeze.test.mjs state machine asserts: while an item's task is pending, its allowed files are byte-identical to the Task 1 baseline hashes (absent files stay absent); once a task is done, the item assertions replace the hashes (content markers present, negative markers absent, security tests present); preservedSurface and shared files are checked at every state.",
+    "task0": "done (primitive review at docs/_evidence/phase20-primitive-review.md at HEAD 051470a: reuse-first inventory for all three blockers; three new primitives approved - assertValidAgentRunResume in agent-approval.ts with a single call site at the top of prepareAgentRunResume covering all four public resume entrypoints, module-private buildCliEnvironment/collectOutput in work-tools cli.ts, SandboxCapabilities + resolveSandboxCapabilities consumed by Docker/native/custom/composition; egressRestricted field approved because networkIsolated cannot represent Docker custom-attested networks; 12-threat traceability table mapped to Tasks 2-5 tests; owners/migration/rollback/budget/performance baselines and four explicit security decisions recorded; containmentClaim consumer inventory verified - not in compat baseline, docs.test.ts:1262 requires docs to keep the term)",
+    "task1": "done (freeze record: scripts/phase20-freeze-manifest.json + scripts/phase20-baseline.json captured at 0.1.7 HEAD 051470a (48 file hashes, dependency-name fingerprint, containmentClaim consumer inventory, workToolEnv defect record, exitGate null) + scripts/phase20-freeze.test.mjs wired into npm test after phase19; standalone freeze test green 23/23; plans/README.md row added; plan 020 Task 1 checkbox closed)",
+    "task2": "done (assertValidAgentRunResume exported from agent-approval.ts, one call site at the top of prepareAgentRunResume before loadAgentRunState covering resumeAgentRun/resumeAgentRunStream/lifecycle resume/resumeStream; shape validation: non-null object, positive safe-integer expectedVersion, exactly one of decision/decisions, legacy decision exactly approve/deny, non-empty batch <= HARD_MAX_PENDING_DECISIONS, per-entry object shape with bounded non-empty approvalId (<=128), whitelisted outcome, string reason <= MAX_DECISION_REASON_BYTES, JSON-object modifiedArguments/elicitation <= MAX_ELICITATION_BYTES with cycle-safe stringify; duplicate ids -> ERR_PRISM_DECISION_DUPLICATE, oversize -> ERR_PRISM_DECISION_LIMIT, everything else -> ERR_PRISM_DECISION_INVALID; redundant in-lifecycle discriminant checks removed; core suite 1456/1456 (5 new tests: unknown legacy decision no-write/no-tool, malformed top-level before any checkpoint read via throwing store, 15-case malformed-batch matrix, valid legacy approve regression, stream-path sideways rejection with zero events/claim/dispatch); server 77/77, supervisor 23/23, ag-ui 187/187, workflows 65/65, coding-agent 306/306; docs: agent-session-runtime.md runtime-validation + no-side-effect paragraph, public-contracts.md resume-validation row, docs/index.md navigation entry; server parser untouched as defense in depth)",
+    "task3": "done (module-private buildCliEnvironment + collectOutput in work-tools cli.ts with no new public exports; fixed BASE_ENV_KEYS allow-list (PATH/LANG/LC_ALL/TZ/SYSTEMROOT/SystemRoot/TEMP/TMP/PATHEXT/COMSPEC) + explicit host env + late-bound token env + forced reserved HOME/CLIMICROSOFT365_DISABLETELEMETRY; NUL/invalid-name/string/reserved/case-insensitive-duplicate validation per layer, Windows PATH/system-key casing canonicalized; fixed caps 64 names / 64 KiB mirroring docker-sandbox; path.isAbsolute binary/configDir refusal with existing ERR_PRISM_WORK_BINARY/CONFIG codes; new ERR_PRISM_WORK_ENV for env-layer violations; collectOutput chunk array + one final Buffer.concat(chunks, retained), kill/reject before retaining beyond stdout/stderr caps; work-tools suite 23/23 with 4 new tests: exec-seam ambient canary (PRISM_PROOF_SECRET absent, explicit map + token reach child, HOME/telemetry forced), real-child ambient canary (node -e child proves absence), 14-case pre-spawn validation matrix (relative/empty/NUL binary+configDir, NUL/invalid/duplicate/reserved/case-variant env, 65-name and 70-KiB caps), linear many-chunk capture with exact bytes/order + stdout/stderr separation + over-cap kill; docs/work-tools.md subprocess-environment-isolation section + migration + security bullets, work-tools README isolation paragraph, docs/index.md Work tools entry; no relative-path consumers outside the package (examples + enterprise-postgres integration use absolute paths)",
+    "task4": "done (SandboxCapabilities exported type in sandbox.ts with optional SandboxAdapter.capabilities host attestation, omission => all false; resolveSandboxCapabilities in sandbox-coding-operations.ts validates (exactly the six known boolean fields, unknown/missing/non-boolean/non-object => every field false) and returns a frozen copy; composition capabilities always complete and frozen, workspaceCoherent from actual wiring (sandbox mode: backendsBound && !mixedWiringAllowed && no warnings; host mode: no sandbox shell), isolation fields only from validated adapter metadata; deprecatedContainmentProjection = workspaceCoherent && filesystemIsolated && networkIsolated && processIsolated with @deprecated JSDoc; resolveDockerCapabilities in docker-sandbox.ts (workspaceCoherent/filesystemIsolated/processIsolated true, networkIsolated only for mode none, egressRestricted for mode none or custom+validated EgressAttestation, privilegeIsolated always false) exposed on DockerSandboxSession; native NATIVE_SANDBOX_CAPABILITIES (workspaceCoherent/networkIsolated/egressRestricted true, filesystemIsolated/processIsolated/privilegeIsolated false) on NativeSandboxSession; index.ts additive exports (SandboxCapabilities type, resolveSandboxCapabilities, resolveDockerCapabilities); tests: coding-security suite 99/99 counted (98 pass + 1 NETNS-gated skip): un-attested Disposable auto-wire claims workspaceCoherent only, attested Disposable claims containment, explicit custom attestation copied/validated/frozen + caller mutation cannot change evidence + 6-case malformed matrix (undefined/null/{}/unknown-key/non-boolean-string/non-boolean-number), host/mixed modes all isolation false with warnings preserved, custom tree ops claim coherence but no OS isolation, docker resolveDockerCapabilities matrix (none/custom-unattested/custom-attested, malformed attestation fails closed in composeEgressSandboxNetwork), native T9 capabilities test (filesystemIsolated false, networkIsolated/egressRestricted true, containmentClaim false); existing containmentClaim assertions migrated to capability truth in workspace-consistency + sandbox-fs-operations + docker tests; docs: coding-security.md Sandbox capabilities section with full capability table/meaning/Docker/native/custom columns + four rules + API example comments + native rows/paragraphs, host-security.md individual-capabilities authorization guidance (never the deprecated boolean alone), coding-security README capability paragraph, docs/index.md Coding security entry with sandbox capability metadata; containmentClaim term retained in docs per docs.test.ts:1262; no compat-baseline amendment needed (baseline does not reference containmentClaim)",
+    "task5": "done (scripts/phase20-security.test.mjs ships 4 tests against BUILT PUBLIC package entrypoints - @arnilo/prism resumeAgentRun 'sideways' => AgentDecisionError ERR_PRISM_DECISION_INVALID with zero checkpoint writes (original expectedVersion still resumes; tool executes exactly once), @arnilo/prism-work-tools createCliRunner child env probe proving ambient PRISM_PROOF_SECRET absent + M365_ACCESSTOKEN token layer present + HOME forced to configDir + telemetry disabled + PATH base present, @arnilo/prism-coding-security un-attested Disposable sandbox composition capabilities all-false (workspaceCoherent true, containmentClaim false), malformed custom metadata fails closed, valid attestation frozen-copied, host mode no isolation; gate-accounting test asserts all three blocker IDs executed and none skipped; standalone run 4/4 pass; install-smoke.test.ts extended with packed plain-JS consumer security.mjs (no TypeScript) proving all three blockers from fresh tarball install - new result.securityStatus/securityOut fields + 'packed plain-JS phase20 security regressions run without TypeScript' test; package.json security:threat-suites appends scripts/phase20-security.test.mjs (npm test already builds, so the standalone command's build prerequisite is satisfied by the same build step); sandbox-browser.yml gains native sandbox capability evidence step (coding-security T9 native capabilities test with pass/skip/fail recording), a 0.2.0 blocker gate step (if: always()) that fails when Docker image var or native capability evidence is missing - removing optional passing behavior, and the aggregate report JSON now records dockerEvidence/nativeCapability/capabilities fields; release.yml verify job gains a phase-20 security:threat-suites phase after sdk:ready since npm test does not include it; evidence recorded; task token flipped done after phase20-security.test.mjs 4/4 + install-smoke packed consumer green + freeze test green)",
+    "task6": "done (task6 finalization: docs/migration.md gained the 0.1.7 -> 0.2.0 section (invalid resume refusal with plain-JS example, absolute work-tool paths, minimal env/precedence/reserved keys, sandbox capability before/after, deprecated projection semantics, store compatibility, rollout, rollback risk); root CHANGELOG.md + packages/work-tools/CHANGELOG.md + packages/coding-security/CHANGELOG.md gained 0.2.0 entries; docs/index.md current line moved to 0.2.0 with the full plan-020 narrative; docs/release-and-install.md gained the 0.2.0 publish handoff with the protected-evidence commands; roadmap.md marked all four 0.2.0 items [x]; plans/README.md 020 row flipped to complete; version-sensitive tests updated (src/__tests__/index.test.ts, release.test.ts, docs.test.ts, install-smoke.test.ts tarball names, cli-provider-add.test.ts) and src/index.ts version const bumped to 0.2.0; scripted bump via node scripts/release.mjs bump --from 0.1.7 --to 0.2.0 across all 50 manifests + lockfile regen; plain compat gate at 0.2.0 reviewed: 0 breaking deltas (additive-only; containmentClaim retained deprecated) then --update-baseline refresh and gate green — no --allow-break; exit gate recorded in scripts/phase20-baseline.json (npmTest exitCode 0, coreFail 0, scriptGatesFail 0, sdkReady exitCode 0, audit 0 moderate, pack dry-run 50/50 twice byte-identical, releaseGate 0.2.0 50 packages 0 errors, protectedEvidence dockerSandbox true + nativeNetns true, compatibility breakingDeltas 0 allowBreak false, green true); protected Docker matrix run against digest-pinned ubuntu image (PRISM_TEST_DOCKER_SANDBOX=1, non-root uid assert) and native netns capability proven via unshare --net --map-root-user with T9 running; security:threat-suites 32/32; phase20-freeze.test.mjs green 23/23; format clean; plan 020 Task 6 checkbox [x] with evidence; plan has no remaining 'To be filled' placeholders)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip (inherited from scripts/phase12-freeze-manifest.json); for 0.2.0 the Docker daemon sandbox matrix and native netns capability evidence are REQUIRED protected gates - a missing Docker/native record blocks the exit gate",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.2.0",
+    "itemPolicy": "every shipped item preserves: fail-closed runtime validation before any side effect (resume input shape checked before checkpoint claim, CAS, or tool execution; invalid input performs zero store writes), deny-by-default subprocess environment (only the documented minimal allow-list is inherited; reserved fixed controls cannot be overridden by token env), fail-closed sandbox capability defaults (omitted or invalid custom capability metadata resolves every isolation field false; native never reports filesystem isolation; containmentClaim alone never authorizes a security-sensitive action), and unchanged deny-by-default governance for all untouched surfaces (server parser unchanged as defense in depth; work-tool argv/limits unchanged; egress attestation unchanged). Adversarial suites for each shipped item pass before its task token flips to done; security regressions run against BUILT public entrypoints and a packed plain-JavaScript consumer (the original defect passed TypeScript declarations); any security skip fails loud and cannot satisfy the exit gate; publication stays operator-gated"
+  }
+}

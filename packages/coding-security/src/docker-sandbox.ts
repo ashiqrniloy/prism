@@ -13,6 +13,7 @@ import {
 } from "./docker-cli.js";
 import type {
   DisposableSandbox,
+  SandboxCapabilities,
   SandboxCloseOptions,
   SandboxExecFileRequest,
   SandboxExecRequest,
@@ -113,6 +114,25 @@ export function assertBrowserSandboxNetwork(network: DockerNetworkConfig | undef
     if (error instanceof DockerSandboxError) throw error;
     throw new DockerSandboxError("browserEgress.proxyEndpoint is not a valid URL");
   }
+}
+
+/**
+ * Capabilities established by the validated create options and container
+ * construction: a single coherent workspace tree, container filesystem and
+ * process namespace, network isolation only for mode `none`, egress
+ * restriction only for mode `none` or a custom network carrying a validated
+ * egress attestation, and privilege isolation always false for 0.2.0
+ * (root-in-container without user namespaces is not a reliable claim).
+ */
+export function resolveDockerCapabilities(network: DockerNetworkConfig): SandboxCapabilities {
+  return Object.freeze({
+    workspaceCoherent: true,
+    filesystemIsolated: true,
+    networkIsolated: network.mode === "none",
+    processIsolated: true,
+    privilegeIsolated: false,
+    egressRestricted: network.mode === "none" || (network.mode === "custom" && network.egress !== undefined),
+  });
 }
 
 export interface CreateDockerSandboxOptions {
@@ -363,6 +383,7 @@ async function importSource(input: {
 
 class DockerSandboxSession implements DisposableSandbox {
   readonly id: string;
+  readonly capabilities: SandboxCapabilities;
   readonly importIdentity?: SandboxExportMetadata;
   private _lastExportIdentity: SandboxExportMetadata | undefined;
   private state: SandboxStatusState = "running";
@@ -384,10 +405,12 @@ class DockerSandboxSession implements DisposableSandbox {
       readonly limits: ResolvedDockerSandboxLimits;
       readonly runner: DockerRunner;
       readonly secrets: readonly string[];
+      readonly capabilities: SandboxCapabilities;
       readonly importIdentity?: SandboxExportMetadata;
     },
   ) {
     this.id = opts.containerId;
+    this.capabilities = opts.capabilities;
     this.importIdentity = opts.importIdentity;
     this.execLock = new Semaphore(opts.limits.maxConcurrentExecs);
     this.redact = createSecretRedactor(opts.secrets);
@@ -759,6 +782,7 @@ export async function createDockerSandbox(options: CreateDockerSandboxOptions): 
       limits,
       runner,
       secrets,
+      capabilities: resolveDockerCapabilities(network),
       importIdentity,
     });
   } catch (error) {

@@ -31,11 +31,11 @@ function fixture() {
 
 const missing = async () => new Response("not found", { status: 404 });
 
-test("0.1.7 release graph is exact, publishable, and documented", () => {
-  const version = "0.1.7";
+test("0.2.0 release graph is exact, publishable, and documented", () => {
+  const version = "0.2.0";
   const release = loadRelease(process.cwd());
   // 50 = root + 49 workspace packages (the 0.1.6 plan 018 optional @arnilo/prism-document-reader
-  // grew the graph 49 → 50; 0.1.7 adds no package).
+  // grew the graph 49 → 50; 0.2.0 adds no package).
   assert.equal(release.packages.length, 50);
   assert.doesNotThrow(() => validateRelease(release, version));
   for (const pkg of release.packages) {
@@ -43,6 +43,7 @@ test("0.1.7 release graph is exact, publishable, and documented", () => {
     assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${pkg.manifest.name} missing 0.1.0 changelog`);
   }
   const changelog = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
+  assert.ok(changelog.includes("## [0.2.0] - 2026-08-13"), "root changelog missing 0.2.0 entry");
   assert.ok(changelog.includes("## [0.1.7] - 2026-08-12"), "root changelog missing 0.1.7 entry");
   for (const pkg of ["packages/provider-alibaba"]) {
     const path = join(process.cwd(), pkg, "CHANGELOG.md");

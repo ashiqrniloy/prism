@@ -52,8 +52,40 @@ export interface SandboxCloseOptions {
   readonly signal?: AbortSignal;
 }
 
+/**
+ * Explicit isolation/coherence capabilities of a sandbox backend or composition.
+ *
+ * Every field is a claim that MUST hold before security-sensitive host policy
+ * may rely on it. Omission (or invalid metadata) resolves every field false —
+ * a backend can never gain a capability by omission or by interface shape.
+ *
+ * `workspaceCoherent`: shell, filesystem, and repository tools observe one
+ * workspace tree. `filesystemIsolated`: sandbox processes cannot touch the
+ * host filesystem. `networkIsolated`: no reachable network (or only an
+ * isolated one). `processIsolated`: sandbox processes run in a separate
+ * process namespace. `privilegeIsolated`: sandbox processes cannot obtain
+ * host privileges (root-in-container without user namespaces is NOT reliable).
+ * `egressRestricted`: any network egress is forced through a controlled
+ * proxy/firewall (a dedicated field because `networkIsolated` cannot represent
+ * custom networks that exist but have proxy-constrained egress).
+ */
+export interface SandboxCapabilities {
+  readonly workspaceCoherent: boolean;
+  readonly filesystemIsolated: boolean;
+  readonly networkIsolated: boolean;
+  readonly processIsolated: boolean;
+  readonly privilegeIsolated: boolean;
+  readonly egressRestricted: boolean;
+}
+
 export interface SandboxAdapter {
   exec(request: SandboxExecRequest): Promise<{ exitCode: number | null }>;
+  /**
+   * Optional host attestation of isolation controls. Omitted metadata (or
+   * malformed/non-boolean/unknown fields) resolves every capability false;
+   * this is host attestation, never verified by Prism.
+   */
+  readonly capabilities?: Readonly<SandboxCapabilities>;
 }
 
 /**

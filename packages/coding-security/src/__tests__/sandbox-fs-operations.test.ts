@@ -228,7 +228,9 @@ test("shell-visible file readable via tool after composition auto-wire", async (
     sandbox,
     workspaceRoot: ROOT,
   });
-  assert.equal(composition.containmentClaim, true);
+  assert.equal(composition.capabilities.workspaceCoherent, true);
+  assert.equal(composition.capabilities.filesystemIsolated, false);
+  assert.equal(composition.containmentClaim, false);
   assert.equal(composition.workspaceRoot, ROOT);
 
   const read = tools.find((t) => t.name === "read")!;
@@ -289,7 +291,9 @@ test("sandbox write then git_status/diff via execFile share workspaceRoot tree",
     sandbox,
     workspaceRoot: ROOT,
   });
-  assert.equal(composition.containmentClaim, true);
+  assert.equal(composition.capabilities.workspaceCoherent, true);
+  assert.equal(composition.capabilities.filesystemIsolated, false);
+  assert.equal(composition.containmentClaim, false);
   assert.equal(composition.workspaceRoot, ROOT);
 
   const write = tools.find((t) => t.name === "write")!;
@@ -327,6 +331,8 @@ test("host mode Git stays on host cwd; composition does not claim containment", 
       workspaceMode: "host",
     });
     assert.equal(composition.containmentClaim, false);
+    assert.equal(composition.capabilities.workspaceCoherent, true);
+    assert.equal(composition.capabilities.filesystemIsolated, false);
     assert.equal(composition.workspaceRoot, hostRoot);
 
     const calls: { cwd: string; args: readonly string[] }[] = [];

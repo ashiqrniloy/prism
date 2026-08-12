@@ -18,6 +18,7 @@ import {
   createSandboxCodingTools,
   createSandboxReadOnlyComposition,
   createSandboxReadOnlyTools,
+  resolveSandboxCapabilities,
   type DisposableSandbox,
   type SandboxAdapter,
   SandboxCodingCompositionError,
@@ -160,7 +161,7 @@ test("sandbox mode without backends or DisposableSandbox throws", () => {
   );
 });
 
-test("sandbox mode with DisposableSandbox auto-wires FS backends and claims containment", () => {
+test("sandbox mode with un-attested DisposableSandbox auto-wires FS backends but claims no isolation", () => {
   const sandbox: DisposableSandbox = {
     id: "sb-test",
     exec: async () => ({ exitCode: 0 }),
@@ -181,9 +182,165 @@ test("sandbox mode with DisposableSandbox auto-wires FS backends and claims cont
     workspaceMode: "sandbox",
     sandbox,
   });
-  assert.equal(composition.containmentClaim, true);
+  // Disposable shape (execFile/close) proves capability to call, not OS isolation.
+  assert.equal(composition.capabilities.workspaceCoherent, true);
+  assert.equal(composition.capabilities.filesystemIsolated, false);
+  assert.equal(composition.capabilities.networkIsolated, false);
+  assert.equal(composition.capabilities.processIsolated, false);
+  assert.equal(composition.capabilities.privilegeIsolated, false);
+  assert.equal(composition.capabilities.egressRestricted, false);
+  assert.equal(composition.containmentClaim, false);
   assert.equal(composition.workspaceRoot, "/workspace");
   assert.equal(composition.warnings.length, 0);
+});
+
+test("sandbox mode with attested DisposableSandbox claims containment conservatively", () => {
+  const sandbox: DisposableSandbox = {
+    id: "sb-test",
+    capabilities: {
+      workspaceCoherent: true,
+      filesystemIsolated: true,
+      networkIsolated: true,
+      processIsolated: true,
+      privilegeIsolated: false,
+      egressRestricted: true,
+    },
+    exec: async () => ({ exitCode: 0 }),
+    execFile: async () => ({ exitCode: 0 }),
+    status: async () => ({
+      id: "sb-test",
+      state: "running",
+      image: "test@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      startedAt: 0,
+      lastActivityAt: 0,
+      commandCount: 0,
+    }),
+    stop: async () => undefined,
+    kill: async () => undefined,
+    close: async () => undefined,
+  };
+  const { composition } = createSandboxCodingComposition("/tmp", {
+    workspaceMode: "sandbox",
+    sandbox,
+  });
+  assert.deepEqual(composition.capabilities, {
+    workspaceCoherent: true,
+    filesystemIsolated: true,
+    networkIsolated: true,
+    processIsolated: true,
+    privilegeIsolated: false,
+    egressRestricted: true,
+  });
+  assert.equal(composition.containmentClaim, true);
+});
+
+test("explicit custom attestation is copied, validated, and frozen; malformed metadata fails closed", () => {
+  const valid: DisposableSandbox = {
+    id: "sb-attested",
+    capabilities: {
+      workspaceCoherent: true,
+      filesystemIsolated: true,
+      networkIsolated: false,
+      processIsolated: true,
+      privilegeIsolated: false,
+      egressRestricted: true,
+    },
+    exec: async () => ({ exitCode: 0 }),
+    execFile: async () => ({ exitCode: 0 }),
+    status: async () => ({
+      id: "sb-attested",
+      state: "running",
+      image: "test@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      startedAt: 0,
+      lastActivityAt: 0,
+      commandCount: 0,
+    }),
+    stop: async () => undefined,
+    kill: async () => undefined,
+    close: async () => undefined,
+  };
+  const { composition } = createSandboxCodingComposition("/tmp", { workspaceMode: "sandbox", sandbox: valid });
+  assert.deepEqual(composition.capabilities, valid.capabilities);
+  assert.ok(Object.isFrozen(composition.capabilities));
+  // Caller mutation after composition cannot change the returned evidence.
+  (valid.capabilities as { filesystemIsolated: boolean }).filesystemIsolated = false;
+  assert.equal(composition.capabilities.filesystemIsolated, true);
+
+  const malformed: Array<Record<string, unknown> | undefined> = [
+    undefined,
+    null as unknown as Record<string, unknown>,
+    {},
+    {
+      workspaceCoherent: true,
+      filesystemIsolated: true,
+      networkIsolated: true,
+      processIsolated: true,
+      privilegeIsolated: false,
+      egressRestricted: true,
+      extra: true,
+    },
+    {
+      workspaceCoherent: "yes" as unknown as boolean,
+      filesystemIsolated: true,
+      networkIsolated: true,
+      processIsolated: true,
+      privilegeIsolated: false,
+      egressRestricted: true,
+    },
+    {
+      workspaceCoherent: true,
+      filesystemIsolated: 1 as unknown as boolean,
+      networkIsolated: true,
+      processIsolated: true,
+      privilegeIsolated: false,
+      egressRestricted: true,
+    },
+  ];
+  for (const capabilities of malformed) {
+    const adapter: SandboxAdapter = {
+      capabilities: capabilities as SandboxAdapter["capabilities"],
+      exec: async () => ({ exitCode: 0 }),
+    };
+    assert.deepEqual(
+      resolveSandboxCapabilities(adapter),
+      {
+        workspaceCoherent: false,
+        filesystemIsolated: false,
+        networkIsolated: false,
+        processIsolated: false,
+        privilegeIsolated: false,
+        egressRestricted: false,
+      },
+      `metadata ${JSON.stringify(capabilities)} must resolve every capability false`,
+    );
+  }
+});
+
+test("host and mixed modes report no isolation capability; deprecated projection stays false", () => {
+  const host = createSandboxCodingComposition("/tmp", { workspaceMode: "host" });
+  assert.equal(host.composition.capabilities.workspaceCoherent, true);
+  assert.equal(host.composition.capabilities.filesystemIsolated, false);
+  assert.equal(host.composition.capabilities.networkIsolated, false);
+  assert.equal(host.composition.capabilities.processIsolated, false);
+  assert.equal(host.composition.capabilities.privilegeIsolated, false);
+  assert.equal(host.composition.capabilities.egressRestricted, false);
+  assert.equal(host.composition.containmentClaim, false);
+
+  const mixed = createSandboxCodingComposition("/tmp", {
+    workspaceMode: "host",
+    sandbox: fakeSandbox(),
+    allowMixedWorkspaceWiring: true,
+  });
+  assert.deepEqual(mixed.composition.capabilities, {
+    workspaceCoherent: false,
+    filesystemIsolated: false,
+    networkIsolated: false,
+    processIsolated: false,
+    privilegeIsolated: false,
+    egressRestricted: false,
+  });
+  assert.equal(mixed.composition.containmentClaim, false);
+  assert.ok(mixed.composition.warnings.some((w) => /mixed workspace wiring/.test(w)));
 });
 
 test("sandbox mode without backends allowed via escape hatch with warnings", async () => {
@@ -238,7 +395,7 @@ test("sandbox mode without backends allowed via escape hatch with warnings", asy
   }
 });
 
-test("sandbox mode with custom tree operations claims containment", () => {
+test("sandbox mode with custom tree operations claims workspace coherence but no OS isolation", () => {
   const ops = stubTreeOps();
   const { composition } = createSandboxCodingComposition("/tmp", {
     workspaceMode: "sandbox",
@@ -252,7 +409,13 @@ test("sandbox mode with custom tree operations claims containment", () => {
     repository: { operations: ops.repository },
   });
   assert.equal(composition.workspaceMode, "sandbox");
-  assert.equal(composition.containmentClaim, true);
+  assert.equal(composition.capabilities.workspaceCoherent, true);
+  assert.equal(composition.capabilities.filesystemIsolated, false);
+  assert.equal(composition.capabilities.networkIsolated, false);
+  assert.equal(composition.capabilities.processIsolated, false);
+  assert.equal(composition.capabilities.privilegeIsolated, false);
+  assert.equal(composition.capabilities.egressRestricted, false);
+  assert.equal(composition.containmentClaim, false);
   assert.equal(composition.warnings.length, 0);
   assert.equal(composition.workspaceRoot, "/workspace");
 });

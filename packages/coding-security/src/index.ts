@@ -35,6 +35,7 @@ export {
   composeEgressSandboxNetwork,
   createDockerSandbox,
   DockerSandboxError,
+  resolveDockerCapabilities,
 } from "./docker-sandbox.js";
 export {
   assertPathInsideRoots,
@@ -87,6 +88,7 @@ export {
 export type {
   DisposableSandbox,
   SandboxAdapter,
+  SandboxCapabilities,
   SandboxCloseOptions,
   SandboxExecFileRequest,
   SandboxExecRequest,
@@ -107,6 +109,7 @@ export {
   createSandboxCodingTools,
   createSandboxReadOnlyComposition,
   createSandboxReadOnlyTools,
+  resolveSandboxCapabilities,
   SandboxCodingCompositionError,
 } from "./sandbox-coding-operations.js";
 export type {

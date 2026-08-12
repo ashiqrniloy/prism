@@ -1,0 +1,278 @@
+{
+  "$comment": "Phase 20 (0.2.0) Task 1 baseline evidence, captured at 0.1.7 before any phase-20 implementation edit. npm test / coverage / typecheck / biome / format / secrets / audit / pack / release-gate figures are the verified clean 0.1.7 runs (plan 019 exit gate + this session's clean sequential and coverage runs at HEAD 051470a). fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state.",
+  "captured": "2026-08-12T20:37:30.096Z",
+  "release": "0.1.7",
+  "node": "v24.18.0",
+  "platform": "linux",
+  "gitHead": "051470abf5eacb9bab74749958ba9f78e6a19627",
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<20 freeze/conformance/e2e files> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1451,
+    "corePass": 1451,
+    "coreFail": 0,
+    "scriptGates": 208,
+    "scriptGatesPass": 208,
+    "scriptGatesFail": 0,
+    "scriptGateSuites": 20,
+    "workspaces": "all exit 0 (some suites show pass < tests from skipped/conditional tests, not failures)"
+  },
+  "coverage": {
+    "core": {
+      "lines": 91.92,
+      "branches": 84.19,
+      "functions": 91.35
+    },
+    "combined": {
+      "suites": 44,
+      "tests": 3334,
+      "pass": 3301,
+      "skip": 33
+    },
+    "note": "core gate is the only hard threshold (60/70/75); combined rows are additive reporting"
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "scope": "core + all 49 workspace packages + examples (tsc --noEmit)"
+  },
+  "biome": {
+    "exitCode": 0,
+    "warnings": 61,
+    "infos": 22,
+    "note": "biome.json:22 deprecates linter 'recommended' field (config-only, no violations)"
+  },
+  "format": {
+    "files": 958,
+    "fixes": 0
+  },
+  "secrets": {
+    "trackedFiles": 1509,
+    "findings": 0
+  },
+  "audit": {
+    "level": "moderate",
+    "vulnerabilities": 0
+  },
+  "packDryRun": {
+    "packages": 50,
+    "deterministic": true,
+    "evidence": "two runs byte-identical (log sha256 2b8880823cfd6717b66b0612424c2ca7a9ff546a81c529c062c8e49c8c7425cb); 50 distinct 0.1.7 tarballs"
+  },
+  "releaseGate": {
+    "version": "0.1.7",
+    "packages": 50,
+    "errors": 0,
+    "breakingDeltas": 0,
+    "notes": "plain gate after --update-baseline at 0.1.7; no --allow-break anywhere"
+  },
+  "manifestCount": {
+    "publishable": 50,
+    "workspacePackages": 49,
+    "rootPackage": "@arnilo/prism",
+    "categories": {
+      "provider": 14,
+      "prism": 9,
+      "capability": 26
+    },
+    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages); 0.2.0 adds no package, the count stays 50",
+    "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
+  },
+  "dependencyNames": {
+    "sha256": "bab44803aaecac5854f61183042c9552e391d75a6e1d98031a3f03bdf4c400d7",
+    "packages": 50,
+    "packagesWithRuntimeDeps": 16
+  },
+  "workspaceManifests": {
+    "sha256": "3c0b8d82eaa664a11208b800cd33e8c39e02a976a86c970a5a0ed6ea6c09b437",
+    "count": 49
+  },
+  "compatBaseline": {
+    "sha256": "7149b6e047420d05f975ac869d480018c2128b93c70963c4b0fd0eef74a8984e",
+    "files": 44
+  },
+  "items": [
+    {
+      "id": "resume-validation",
+      "task": "task2",
+      "seamFiles": [
+        "src/agent-approval.ts",
+        "src/agent-run-lifecycle.ts",
+        "src/__tests__/run-decisions.test.ts",
+        "src/__tests__/agent-run-state.test.ts",
+        "packages/server/src/__tests__/server.test.ts",
+        "docs/agent-session-runtime.md",
+        "docs/public-contracts.md"
+      ]
+    },
+    {
+      "id": "work-tools-env",
+      "task": "task3",
+      "seamFiles": [
+        "packages/work-tools/src/cli.ts",
+        "packages/work-tools/src/__tests__/work-tools.test.ts",
+        "docs/work-tools.md",
+        "packages/work-tools/README.md"
+      ]
+    },
+    {
+      "id": "sandbox-capabilities",
+      "task": "task4",
+      "seamFiles": [
+        "packages/coding-security/src/sandbox.ts",
+        "packages/coding-security/src/sandbox-coding-operations.ts",
+        "packages/coding-security/src/docker-sandbox.ts",
+        "packages/coding-security/src/native-sandbox.ts",
+        "packages/coding-security/src/index.ts",
+        "packages/coding-security/src/__tests__/sandbox-coding-operations.test.ts",
+        "packages/coding-security/src/__tests__/workspace-consistency.test.ts",
+        "packages/coding-security/src/__tests__/sandbox-fs-operations.test.ts",
+        "packages/coding-security/src/__tests__/docker-sandbox.test.ts",
+        "packages/coding-security/src/__tests__/native-sandbox.test.ts",
+        "docs/coding-security.md",
+        "docs/host-security.md",
+        "packages/coding-security/README.md"
+      ]
+    },
+    {
+      "id": "security-regressions",
+      "task": "task5",
+      "seamFiles": [
+        "scripts/phase20-security.test.mjs",
+        "src/__tests__/install-smoke.test.ts",
+        ".github/workflows/sandbox-browser.yml",
+        ".github/workflows/release.yml"
+      ]
+    }
+  ],
+  "fileHashes": {
+    "src/agent-approval.ts": "cddfc6bf1c2f8671a36b95c4f65f94bd052e6ae6e4ae2516966a822cc647ae39",
+    "src/agent-run-lifecycle.ts": "50f24439418115aa8e9f5c8a1cedb2eca705d93e49bf7be8b997c5b7d47b12ad",
+    "src/__tests__/run-decisions.test.ts": "e3280bbe1488b30d1190054207b9db2b708a6fef203ce0ef7cc14d6d1e62a44b",
+    "src/__tests__/agent-run-state.test.ts": "4ff178bdfeeeff78f2ee04db657e7d204cb5edcb4eb3722be52510259fcfa48e",
+    "packages/server/src/__tests__/server.test.ts": "ee29fc309e9e76e587be5a52ca2d0e61301fdb033ab38bb94ed7b7b0ef7f78b4",
+    "docs/agent-session-runtime.md": "c7e2842750e8d49a2feefc5992a38d14041b9f30eba7b15583e7cd377ee7e6cb",
+    "docs/public-contracts.md": "530767b50d46b5bb636a1cb162bed4ae47423704b1f940c1cc938bc09e07b139",
+    "packages/work-tools/src/cli.ts": "d69d9418cdbd9efc9f70eb012adef6e0ff120c1fc77c378f0b8742ebc1dd58cc",
+    "packages/work-tools/src/__tests__/work-tools.test.ts": "3cc4d7f00b1bcfdc892cbb51d655d770f6a784cc23526b78dcb8d38afbbba138",
+    "docs/work-tools.md": "f4b41eea8e4153ffbb6256b52b01595599e2b5792060e7ccf5dea28b8fc6d974",
+    "packages/work-tools/README.md": "af53b7774a0c56f1ea520f722e3932f80a73d7049dd58a7a9dca9a2d568fdc4b",
+    "packages/coding-security/src/sandbox.ts": "aabd7ed30739ddc6ea51ca4065457acc986d9bac0bab0742372291e512d4b1f8",
+    "packages/coding-security/src/sandbox-coding-operations.ts": "067c24f2e965a4c0f8e7a4c76a9cee126c1370ec3ae179e4530cb1a3da0a06bb",
+    "packages/coding-security/src/docker-sandbox.ts": "fb47be32a75b084d349adc335f525f5c6bcdb40ea288a4f75a4329bfa34eb65d",
+    "packages/coding-security/src/native-sandbox.ts": "e66f8f2550f988ff605d7bae65fb9529a3bc1c8d2a30b5b320b0aa3f863c3572",
+    "packages/coding-security/src/index.ts": "b4d77c20a3c49962f40891ab8678f014df774b71ddb57c7060a2f5d9ee0206f1",
+    "packages/coding-security/src/__tests__/sandbox-coding-operations.test.ts": "fbbf9bdc6460f403a6097966d907a01bca14986f64228a698b1f98d2c8d786f2",
+    "packages/coding-security/src/__tests__/workspace-consistency.test.ts": "6f26b4f08bfef498713427bdaf007c06ff1c4b43a3b70733bde35fef558b4599",
+    "packages/coding-security/src/__tests__/sandbox-fs-operations.test.ts": "6e7a5333e44e973f66cd9e20909eed27a06a954803888dfc32863b827fc87def",
+    "packages/coding-security/src/__tests__/docker-sandbox.test.ts": "89c62dc5576662a162b6a5069bded583e87956576d84c98456f0f8ab5dacb3df",
+    "packages/coding-security/src/__tests__/native-sandbox.test.ts": "08a4a85528e3f093935e866a6e23e3b755989291fc684c0531d1b213abc3f9ae",
+    "docs/coding-security.md": "56aba5a700e341e502f6f12c8423e9e761dc571d9b14d989c53f747cb6736361",
+    "docs/host-security.md": "da31981f059b0d0e86d96fa6eedc43ccc3992fbfeecc78866e83fbb376999092",
+    "packages/coding-security/README.md": "aea4976008b4e013ede2d49493dad1c36c1f9d4ece504e2cad0a2c5969348355",
+    "scripts/phase20-security.test.mjs": "absent",
+    "src/__tests__/install-smoke.test.ts": "106b784bfe6bab2205e344eefea2f284b11080c90f0829cae4033abefedb4400",
+    ".github/workflows/sandbox-browser.yml": "9c80f704af9d64ce1f60279cabd83e07c2c391ceadd71860e2fdfa1fd9f27f89",
+    ".github/workflows/release.yml": "82bf578ef91835180721c91fc448faa64b69e2b63434abb77a3351b0bf5977f1",
+    "docs/index.md": "58c99845e1d366149b953178f4565c4f1b7e48afba6054a4682cbc745d903ba3",
+    "package.json": "8c67897da04b7964d90b3b2ed8dc76c875caf54d55c9b3bf4437d38498b065d1",
+    "scripts/phase20-baseline.json": "absent",
+    "scripts/phase20-freeze-manifest.json": "ff0cee3caf54afd707e9ff5c5fac24ede144171cd9ed3ca8ca34d8f8ec1fdf09",
+    "plans/020-Release-0-2-0-Fail-Closed-Runtime-and-Sandbox-Security.md": "a5b7d703e6b8bfdde189ceb0434291f4729bf923c603f2bcb86d52793388ede5",
+    "plans/README.md": "50f8ba11aea90cacb4e6482317cf5811e52058fc38fc5575d10f602830014aec",
+    "roadmap.md": "c15731248435551321711fc84e4ddda919abf5196c95c89239bb7f99bf281e1c",
+    "CHANGELOG.md": "1eebd6fa5346a6b175d2eb27ad9670ecc402f184aac74f292ec9c30d298e5dfd",
+    "packages/work-tools/CHANGELOG.md": "347ffb236205d307faea0c7223686fce47245355113588feec4123f2946c56f7",
+    "packages/coding-security/CHANGELOG.md": "221caccfb7422d0067ed31cb101b6e1ce90d6336cb6f1e06901917d49b127bb2",
+    "src/index.ts": "3413f299330703885f5a98e8ef83cb5d12e080c9dcdddf986473cbe2e7d6a65c",
+    "docs/migration.md": "94af09ee2ab70e9dc5c280d903e471a39e63245e5bdb8ef99728cbe298154be3",
+    "docs/release-and-install.md": "2c237a4e8da360f1f7c1057925e95b6b7be8a99d22adc592d516f39d9a488137",
+    "package-lock.json": "752043defd6e182bad543a79e7a4ec677fc426857858611b0746568f40ea7187",
+    "src/contracts-run-state.ts": "faf501b479d59ca4dedd0d9d90ace5bedbb0b9648ecf3acb51085f6fb91c5808",
+    "src/agent-run-state.ts": "203e831429a5c4155bdadf28cc03eeb56e8aa839a7fe568cca30ad4423fcb541",
+    "packages/work-tools/src/errors.ts": "20aa9b717bd91b3acfe7e4f98e5ea52c01519505e48efd54b43c15bbcce6da1f",
+    "packages/work-tools/src/limits.ts": "096992fb79ad543c71912b0aef3034b8a48669d1aa489ebd58b0d33a79647235",
+    "packages/work-tools/src/types.ts": "e0f20e7fc7804e2f2c4030f8f3798caab54a74e0e5455bee29ac8f88c76de63c",
+    "packages/coding-security/src/egress/index.ts": "a289d852a6222830cf12df4ddc44387ac7bbee23ab833b7ad4dc09695ee3a07c"
+  },
+  "preservedSurface": {
+    "src/contracts-run-state.ts": "faf501b479d59ca4dedd0d9d90ace5bedbb0b9648ecf3acb51085f6fb91c5808",
+    "src/agent-run-state.ts": "203e831429a5c4155bdadf28cc03eeb56e8aa839a7fe568cca30ad4423fcb541",
+    "packages/work-tools/src/errors.ts": "20aa9b717bd91b3acfe7e4f98e5ea52c01519505e48efd54b43c15bbcce6da1f",
+    "packages/work-tools/src/limits.ts": "096992fb79ad543c71912b0aef3034b8a48669d1aa489ebd58b0d33a79647235",
+    "packages/work-tools/src/types.ts": "e0f20e7fc7804e2f2c4030f8f3798caab54a74e0e5455bee29ac8f88c76de63c",
+    "packages/coding-security/src/egress/index.ts": "a289d852a6222830cf12df4ddc44387ac7bbee23ab833b7ad4dc09695ee3a07c"
+  },
+  "containmentClaimConsumers": {
+    "code": [
+      "packages/coding-security/src/sandbox-coding-operations.ts (defines containmentClaim at :40,:192,:254,:264)"
+    ],
+    "tests": [
+      "packages/coding-security/src/__tests__/docker-sandbox.test.ts",
+      "packages/coding-security/src/__tests__/sandbox-coding-operations.test.ts",
+      "packages/coding-security/src/__tests__/sandbox-fs-operations.test.ts",
+      "packages/coding-security/src/__tests__/workspace-consistency.test.ts"
+    ],
+    "docs": [
+      "docs/coding-security.md:98,107,154,164,176",
+      "docs/host-security.md:150",
+      "docs/migration.md:523-524",
+      "docs/_evidence/review-coverage-2026-07-21-phase-5.md:55-56",
+      "src/__tests__/docs.test.ts:1262 (asserts docs/coding-security.md includes 'containmentClaim' \u2014 docs must keep the deprecated term)"
+    ],
+    "compatBaseline": "no references (verified: rg containmentClaim scripts/compat-baseline/*.txt = 0)"
+  },
+  "workToolEnv": {
+    "current": "{ ...process.env, ...options.env, HOME: configDir, CLIMICROSOFT365_DISABLETELEMETRY: '1' }",
+    "location": "packages/work-tools/src/cli.ts:111-119 (env) and :87,:94 (Buffer.concat output capture)",
+    "defect": "child inherits the full host process.env (manual proof: PRISM_PROOF_SECRET reached the exec seam); binary/configDir accept relative paths; output capture is worst-case O(n^2) in chunk count",
+    "fix": "buildCliEnvironment minimal allow-list base + explicit options.env + reserved fixed controls set last (NUL/casing/count/byte validation); path.isAbsolute binary/configDir refusal; collectOutput chunk array with one final concat and cap kill"
+  },
+  "exitGate": {
+    "$comment": "0.2.0 exit gate evidence (plan 020 Task 6): recorded after Tasks 0-6 land; green = full npm test + sdk:ready + audit + pack determinism + plain reviewed release:gate at 0.2.0 + Docker/native protected evidence + no blocker skip.",
+    "recordedAt": "2026-08-13T00:00:00.000Z",
+    "green": true,
+    "npmTest": {
+      "exitCode": 0,
+      "corePass": 1457,
+      "coreFail": 0,
+      "suites": 44,
+      "tests": 3372,
+      "pass": 3339,
+      "protectedSkips": 33,
+      "scriptGatesFail": 0
+    },
+    "sdkReady": {
+      "exitCode": 0
+    },
+    "audit": {
+      "vulnerabilities": 0,
+      "level": "moderate"
+    },
+    "packDryRun": {
+      "packages": 50,
+      "deterministic": true,
+      "run1Sha256": "2d7498380bd9d5f3f7465e37af85f45fe748d63ebd84bc984b9e3f67f1387310",
+      "run2Sha256": "2d7498380bd9d5f3f7465e37af85f45fe748d63ebd84bc984b9e3f67f1387310"
+    },
+    "releaseGate": {
+      "version": "0.2.0",
+      "packages": 50,
+      "errors": 0
+    },
+    "protectedEvidence": {
+      "dockerSandbox": true,
+      "nativeNetns": true,
+      "dockerImage": "ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea",
+      "nativeProbe": "unshare --net --map-root-user true"
+    },
+    "compatibility": {
+      "breakingDeltas": 0,
+      "allowBreak": false,
+      "refreshedBaselines": [
+        "arnilo__prism.txt",
+        "arnilo__prism-coding-security.txt"
+      ]
+    }
+  },
+  "exitGateVersion": "0.2.0"
+}

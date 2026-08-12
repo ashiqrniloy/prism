@@ -106,6 +106,28 @@ Mutation tools (`*_mail_draft_send`, `*_draft_*`) create an in-adapter draft and
 
 Call `begin({ identity, key, op })` **before** the external effect. After it succeeds, call `complete`, `fail`, or `markUnknown` with the returned claim token and version. The connector effect stays outside the database transaction, so this is claim-before-effect/deduplication—not exactly-once delivery. Claims default to 15 minutes (hard 60 minutes); expired claims transition to `unknown`; attempts default to 3 (hard 5). Stored rows contain no request body, token, raw provider response, or unrestricted payload.
 
+## Subprocess environment isolation (0.2.0, plan 020 Task 3)
+
+`createCliRunner` never inherits the host environment. The child process receives only:
+
+1. **Fixed platform base** — allow-listed locale/system keys copied from the host: `PATH`, `LANG`, `LC_ALL`, `TZ`, `SYSTEMROOT`/`SystemRoot`, `TEMP`, `TMP`, `PATHEXT`, `COMSPEC`. Nothing else from `process.env` crosses the boundary, so unrelated ambient variables (e.g. `PRISM_PROOF_SECRET`) cannot reach the CLI. Additions to the list are deliberate one-line allow-list changes.
+2. **Explicit host env** — non-secret values passed via the `env` option (e.g. `{ LANG: "C.UTF-8" }`).
+3. **Late-bound per-identity token env** — the `tokenProvider` result, merged per call; never argv, never model context.
+4. **Forced reserved controls** — `HOME` is always the isolated `configDir` and `CLIMICROSOFT365_DISABLETELEMETRY` is always `"1"`; neither the explicit map nor the token layer can override them (any attempt fails closed with `ERR_PRISM_WORK_ENV` before spawn).
+
+Environment maps are validated before spawn: NUL-free, `[A-Za-z_][A-Za-z0-9_]*` names, string values, no case-insensitive duplicate or reserved keys (Windows canonicalizes PATH/system key casing so Node's first-lexicographic-key behavior cannot select an attacker-controlled duplicate), and fixed caps of 64 names / 64 KiB total (`ERR_PRISM_WORK_LIMIT`).
+
+### Host-pinned absolute paths
+
+`binary` and `configDir` must be **absolute** paths (`path.isAbsolute`); empty, relative, or NUL-containing values are rejected at construction with `ERR_PRISM_WORK_BINARY` / `ERR_PRISM_WORK_CONFIG` before any spawn.
+
+### Migration (0.1.7 → 0.2.0)
+
+- Any host env your CLI needed beyond the fixed base must move into the explicit `env` map (non-secret) or the per-identity token layer (secrets).
+- Relative `binary`/`configDir` values now fail at construction; resolve them to absolute paths.
+- Per-call `runOpts.env` keys colliding case-insensitively with `HOME` or the telemetry-disable control now fail closed instead of being silently overridden.
+- Output capture is linear: chunks are accumulated in an array with one final `Buffer.concat`, and the process is killed/rejected before bytes beyond the stdout/stderr caps are retained.
+
 ## Limits
 
 | Resource | Default / hard |
@@ -126,7 +148,8 @@ Approved mutations require core-derived `context.idempotencyKey` and a configure
 - Connector tokens (0.0.14): an optional `tokenProvider` resolves a per-identity access token into an env var per call — never argv, never model context. A missing/expired/revoked/cross-identity/wrong-tenant token fails the call closed before any exec. Refresh is late-bound and single-flighted per account (no refresh storm under reconnect). Build one with `createOAuthWorkTokenProvider()` from `@arnilo/prism-credentials-node`.
 - External mail recipients fail closed unless `externalRecipients.allow` returns true.
 - Anonymous / `anyone` sharing denied.
-- CLI stdout/stderr capped; NDJSON page streams strictly parsed and page-capped; process killed on timeout/abort/overflow.
+- CLI stdout/stderr capped (linear chunk capture, killed/rejected before bytes beyond the cap are retained); NDJSON page streams strictly parsed and page-capped; process killed on timeout/abort/overflow.
+- Subprocess environment isolated (0.2.0): fixed allow-listed base + explicit `env` + late-bound token env; `HOME`/telemetry controls forced; reserved/duplicate/NUL/over-cap env and non-absolute binary/configDir fail before spawn. See [Subprocess environment isolation](#subprocess-environment-isolation-020-plan-020-task-3).
 
 ## Related
 

@@ -45,6 +45,7 @@ jobs:
             phase test:coverage npm run test:coverage
             phase pack:dry-run npm run pack:dry-run
             phase release:gate npm run release:gate
+            phase security:threat-suites npm run security:threat-suites
             echo "== sdk:ready all phases passed"
           } 2>&1 | tee sdk-ready.log
         timeout-minutes: 30

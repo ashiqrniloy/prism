@@ -96,8 +96,10 @@ const result = {
   smokeStatus: -1,
   integrationStatus: -1,
   compositionStatus: -1,
+  securityStatus: -1,
   smokeOut: "",
   integrationOut: "",
+  securityOut: "",
   compositionOut: "",
   junk: [] as string[],
   secretFindings: [] as string[],
@@ -249,7 +251,7 @@ console.log("PACKED INTEGRATION OK");
   result.integrationStatus = integration.status;
   result.integrationOut = integration.stdout + integration.stderr;
 
-  // 5. Compose every 0.1.7 optional capability family from packed public imports.
+  // 5. Compose every 0.2.0 optional capability family from packed public imports.
   writeFileSync(
     join(consumer, "composition.mjs"),
     `
@@ -366,12 +368,92 @@ const postgresSource = createPostgresAgentEventSource({ pool: {}, schema: "prism
 assert.equal(typeof postgresSource.append, "function");
 assert.equal(typeof postgresSource.close, "function");
 await postgresSource.close();
-console.log("PACKED 0.1.7 COMPOSITION OK");
+console.log("PACKED 0.2.0 COMPOSITION OK");
 `,
   );
   const composition = run("node", ["composition.mjs"], consumer);
   result.compositionStatus = composition.status;
   result.compositionOut = composition.stdout + composition.stderr;
+
+  // 5b. Packed plain-JavaScript phase20 security regressions (plan 020 Task 5):
+  //     the three 0.1.7 review blockers proven through the installed tarballs
+  //     with no TypeScript compiler — the original resume defect existed only
+  //     at runtime, so this consumer runs the shipped JavaScript surface.
+  writeFileSync(
+    join(consumer, "security.mjs"),
+    `
+import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  AgentDecisionError, createAgent, createMemoryCheckpointStore, createMemorySessionStore,
+  providerDone, providerTextDelta, resumeAgentRun, toolCallContent,
+} from "@arnilo/prism";
+import { createCodingApprovalPolicy, createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-coding-security";
+import { createCliRunner } from "@arnilo/prism-work-tools";
+
+// --- phase20 blocker 1: unknown durable-resume decision fails closed, no tool call ---
+const executed = [];
+let turn = 0;
+const provider = { id: "mock", async *generate() {
+  turn += 1;
+  if (turn === 1) { yield { type: "tool_call", call: toolCallContent("call-1", "write", { value: "a" }) }; yield providerDone(); return; }
+  yield providerTextDelta("finished"); yield providerDone();
+} };
+const agent = createAgent({
+  id: "packed-phase20", model: { provider: "mock", model: "demo" },
+  store: createMemorySessionStore(), provider,
+  tools: [{ name: "write", parameters: {}, execute: (args, ctx) => { executed.push(ctx.toolCallId); return { toolCallId: ctx.toolCallId, name: "write", value: "done" }; } }],
+});
+const checkpoints = createMemoryCheckpointStore();
+const first = await agent.createSession({ id: "phase20" }).run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+assert.equal(first.status, "suspended");
+const pending = first.interruption.pendingDecisions;
+assert.equal(pending.length, 1);
+const version = first.runState.version;
+const ref = { runId: first.runId, sessionId: first.sessionId };
+let sidewaysError = null;
+try {
+  await resumeAgentRun(agent, ref, { expectedVersion: version, decision: "sideways" }, { checkpoints, definitionRevision: "1" });
+} catch (error) { sidewaysError = error; }
+assert.ok(sidewaysError instanceof AgentDecisionError, "sideways must throw AgentDecisionError");
+assert.equal(sidewaysError.code, "ERR_PRISM_DECISION_INVALID");
+assert.deepEqual(executed, [], "invalid resume executed a tool");
+const approved = await resumeAgentRun(agent, ref, { expectedVersion: version, decisions: [{ approvalId: pending[0].approvalId, outcome: "allow_once" }] }, { checkpoints, definitionRevision: "1" });
+assert.equal(approved.status, "succeeded");
+assert.equal(executed.length, 1, "valid resume must run exactly once");
+
+// --- phase20 blocker 2: work-tool child env isolation (no ambient host env, token isolated, fixed keys) ---
+const configDir = mkdtempSync(join(tmpdir(), "packed-phase20-work-"));
+const runner = createCliRunner({ binary: process.execPath, configDir });
+const probe = "console.log(JSON.stringify({secret: process.env.PRISM_PROOF_SECRET, home: process.env.HOME, telemetry: process.env.CLIMICROSOFT365_DISABLETELEMETRY, token: process.env.M365_ACCESSTOKEN}))";
+process.env.PRISM_PROOF_SECRET = "packed-phase20-ambient-canary";
+const work = await runner.exec(["-e", probe], { env: { M365_ACCESSTOKEN: "packed-phase20-token" } });
+assert.equal(work.exitCode, 0, work.stderr);
+const child = JSON.parse(work.stdout);
+assert.equal(child.secret, undefined, "ambient env leaked into packed work-tool child");
+assert.equal(child.home, configDir);
+assert.equal(child.telemetry, "1");
+assert.equal(child.token, "packed-phase20-token");
+delete process.env.PRISM_PROOF_SECRET;
+
+// --- phase20 blocker 3: un-attested sandbox cannot claim filesystem isolation ---
+const cwd = mkdtempSync(join(tmpdir(), "packed-phase20-sandbox-"));
+const unattested = { execFile: async () => ({ exitCode: 0, stdout: "", stderr: "" }), close: async () => {} };
+const policy = createCodingApprovalPolicy({ roots: [cwd], approve: async () => true });
+const { composition } = createSandboxCodingComposition(cwd, { workspaceMode: "sandbox", sandbox: unattested, executionPolicy: policy });
+assert.equal(composition.capabilities.filesystemIsolated, false, "un-attested sandbox claimed filesystem isolation");
+assert.equal(composition.capabilities.workspaceCoherent, true);
+assert.equal(composition.containmentClaim, false);
+const malformed = resolveSandboxCapabilities({ ...unattested, capabilities: { filesystemIsolated: true, networkIsolated: "yes" } });
+assert.equal(malformed.filesystemIsolated, false, "malformed metadata must fail closed");
+console.log("PACKED PHASE20 SECURITY OK");
+`,
+  );
+  const security = run("node", ["security.mjs"], consumer);
+  result.securityStatus = security.status;
+  result.securityOut = security.stdout + security.stderr;
 
   // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
   // Third-party transitive deps (e.g. `diff`) may ship their own maps; we only gate Prism packages.
@@ -409,30 +491,34 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.integrationStatus, 0, result.integrationOut);
   });
 
-  it("packed 0.1.7 optional capabilities compose through public imports", () => {
+  it("packed 0.2.0 optional capabilities compose through public imports", () => {
     assert.equal(result.compositionStatus, 0, result.compositionOut);
+  });
+
+  it("packed plain-JS phase20 security regressions run without TypeScript", () => {
+    assert.equal(result.securityStatus, 0, result.securityOut);
   });
 
   it("installed packages contain no test artifacts, source maps, or real-looking secrets", () => {
     assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
     assert.deepEqual(result.secretFindings, [], `secret-like value leaked into installed packages: ${result.secretFindings.join(", ")}`);
     assert.equal(
-      (result.integrationOut + result.compositionOut).includes("packed-integration-secret"),
+      (result.integrationOut + result.compositionOut + result.securityOut).includes("packed-integration-secret"),
       false,
       "canary leaked into packed journey output",
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.1.7.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.0.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.1.7.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.2.0.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.1.7.tgz"),
-      `expected 'arnilo-prism-0.1.7.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.2.0.tgz"),
+      `expected 'arnilo-prism-0.2.0.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.1.7.tgz", "arnilo-prism-compaction-0.1.7.tgz", "arnilo-prism-all-0.1.7.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.2.0.tgz", "arnilo-prism-compaction-0.2.0.tgz", "arnilo-prism-all-0.2.0.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

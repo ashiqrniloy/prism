@@ -62,6 +62,31 @@ test("T8: root must be absolute, existing, and readable", async () => {
   });
 });
 
+test("T9: native reports truthful capabilities — filesystem/process/privilege false, network truth", { skip: !NETNS_OK }, async () => {
+  await withRoot(async (root) => {
+    const sb = await createNativeSandbox({ root });
+    assert.deepEqual(sb.capabilities, {
+      workspaceCoherent: true,
+      filesystemIsolated: false,
+      networkIsolated: true,
+      processIsolated: false,
+      privilegeIsolated: false,
+      egressRestricted: true,
+    });
+    // Deprecated projection must be false: native is not a containment boundary.
+    const { createSandboxCodingComposition } = await import("../index.js");
+    const { composition } = createSandboxCodingComposition("/host/ignored", {
+      workspaceMode: "sandbox",
+      sandbox: sb,
+      workspaceRoot: root,
+    });
+    assert.equal(composition.capabilities.filesystemIsolated, false);
+    assert.equal(composition.capabilities.networkIsolated, true);
+    assert.equal(composition.capabilities.egressRestricted, true);
+    assert.equal(composition.containmentClaim, false);
+  });
+});
+
 test("T1: every command runs in a fresh network namespace (argv carries --net)", () => {
   const cmd = buildNativeSpawnCommand(
     { command: "echo x", cwd: "/w" },

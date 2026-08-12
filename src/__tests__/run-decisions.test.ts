@@ -13,6 +13,7 @@ import {
   type JsonObject,
 } from "../index.js";
 import { loadAgentRunState } from "../agent-run-state.js";
+import type { CheckpointStore } from "../contracts-core.js";
 
 function parallelProvider() {
   let turn = 0;
@@ -514,5 +515,175 @@ describe("shared pending decisions", () => {
     );
     assert.equal(result.status, "succeeded");
     assert.deepEqual(executed, []); // elicitation resolved without executing
+  });
+});
+
+describe("durable resume input validation (plan 020 Task 2)", () => {
+  it("unknown legacy decision fails closed with no checkpoint write and no tool call", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const executed: string[] = [];
+    const agent = decisionAgent(executed);
+    const first = await agent.createSession({ id: "s11" }).run("go", { runState: DURABLE(checkpoints) });
+    assert.equal(first.status, "suspended");
+    const ref = { runId: first.runId, sessionId: first.sessionId };
+    const options = { checkpoints, definitionRevision: "1" };
+
+    await assert.rejects(
+      () => resumeAgentRun(agent, ref, { expectedVersion: first.runState!.version!, decision: "sideways" } as never, options),
+      (error: unknown) => {
+        assert.ok(error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID");
+        assert.ok(error.message.includes("Unknown legacy decision"));
+        return true;
+      },
+    );
+    // Zero checkpoint writes, zero tool calls, still suspended at the original version.
+    const { record, state } = await loadAgentRunState(checkpoints, ref);
+    assert.equal(record.version, first.runState!.version);
+    assert.equal(state.status, "suspended");
+    assert.equal(executed.length, 0);
+  });
+
+  it("malformed top-level inputs fail closed before any checkpoint read", async () => {
+    const throwing: CheckpointStore = {
+      saveCheckpoint: async () => {
+        throw new Error("must not write");
+      },
+      loadCheckpoint: async () => {
+        throw new Error("must not read");
+      },
+      listCheckpoints: async () => {
+        throw new Error("must not read");
+      },
+      deleteCheckpoint: async () => {
+        throw new Error("must not write");
+      },
+    };
+    const agent = decisionAgent([]);
+    const options = { checkpoints: throwing, definitionRevision: "1" };
+    const ref = { runId: "r", sessionId: "s" };
+    const cases: Array<[string, unknown]> = [
+      ["null", null],
+      ["string", "resume"],
+      ["number", 42],
+      ["zero version", { expectedVersion: 0, decision: "approve" }],
+      ["fractional version", { expectedVersion: 1.5, decision: "approve" }],
+      ["string version", { expectedVersion: "1", decision: "approve" }],
+      ["neither discriminant", { expectedVersion: 1 }],
+      ["both discriminants", { expectedVersion: 1, decision: "approve", decisions: [] }],
+    ];
+    for (const [label, resume] of cases) {
+      await assert.rejects(
+        () => resumeAgentRun(agent, ref, resume as never, options),
+        (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
+        label,
+      );
+    }
+  });
+
+  it("malformed batches fail closed with stable AgentDecisionError codes", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const executed: string[] = [];
+    const agent = decisionAgent(executed);
+    const first = await agent.createSession({ id: "s12" }).run("go", { runState: DURABLE(checkpoints) });
+    const options = { checkpoints, definitionRevision: "1" };
+    const ref = { runId: first.runId, sessionId: first.sessionId };
+    const version = first.runState!.version!;
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    const cases: Array<[string, unknown, string]> = [
+      ["non-array", { expectedVersion: version, decisions: "not-an-array" }, "ERR_PRISM_DECISION_INVALID"],
+      ["empty", { expectedVersion: version, decisions: [] }, "ERR_PRISM_DECISION_INVALID"],
+      [
+        "over cap",
+        { expectedVersion: version, decisions: Array.from({ length: 129 }, (_, i) => ({ approvalId: `a${i}`, outcome: "allow_once" })) },
+        "ERR_PRISM_DECISION_LIMIT",
+      ],
+      ["primitive entry", { expectedVersion: version, decisions: [42] }, "ERR_PRISM_DECISION_INVALID"],
+      ["missing approvalId", { expectedVersion: version, decisions: [{ outcome: "allow_once" }] }, "ERR_PRISM_DECISION_INVALID"],
+      [
+        "empty approvalId",
+        { expectedVersion: version, decisions: [{ approvalId: "", outcome: "allow_once" }] },
+        "ERR_PRISM_DECISION_INVALID",
+      ],
+      [
+        "oversized approvalId",
+        { expectedVersion: version, decisions: [{ approvalId: "a".repeat(129), outcome: "allow_once" }] },
+        "ERR_PRISM_DECISION_INVALID",
+      ],
+      [
+        "unknown outcome",
+        { expectedVersion: version, decisions: [{ approvalId: "a", outcome: "sideways" }] },
+        "ERR_PRISM_DECISION_INVALID",
+      ],
+      [
+        "duplicate id",
+        {
+          expectedVersion: version,
+          decisions: [
+            { approvalId: "a", outcome: "allow_once" },
+            { approvalId: "a", outcome: "reject_once" },
+          ],
+        },
+        "ERR_PRISM_DECISION_DUPLICATE",
+      ],
+      [
+        "non-string reason",
+        { expectedVersion: version, decisions: [{ approvalId: "a", outcome: "allow_once", reason: 42 }] },
+        "ERR_PRISM_DECISION_INVALID",
+      ],
+      [
+        "oversized reason",
+        { expectedVersion: version, decisions: [{ approvalId: "a", outcome: "allow_once", reason: "x".repeat(2049) }] },
+        "ERR_PRISM_DECISION_LIMIT",
+      ],
+      [
+        "non-object modifiedArguments",
+        { expectedVersion: version, decisions: [{ approvalId: "a", outcome: "allow_once", modifiedArguments: "nope" }] },
+        "ERR_PRISM_DECISION_INVALID",
+      ],
+      [
+        "cyclic modifiedArguments",
+        { expectedVersion: version, decisions: [{ approvalId: "a", outcome: "allow_once", modifiedArguments: cyclic }] },
+        "ERR_PRISM_DECISION_INVALID",
+      ],
+      [
+        "cyclic elicitation",
+        { expectedVersion: version, decisions: [{ approvalId: "a", outcome: "allow_once", elicitation: cyclic }] },
+        "ERR_PRISM_DECISION_INVALID",
+      ],
+      [
+        "oversized modifiedArguments",
+        {
+          expectedVersion: version,
+          decisions: [{ approvalId: "a", outcome: "allow_once", modifiedArguments: { big: "x".repeat(16 * 1024) } }],
+        },
+        "ERR_PRISM_DECISION_LIMIT",
+      ],
+    ];
+    for (const [label, resume, code] of cases) {
+      await assert.rejects(
+        () => resumeAgentRun(agent, ref, resume as never, options),
+        (error: unknown) => error instanceof AgentDecisionError && error.code === code,
+        label,
+      );
+    }
+    // Every rejection left state and version untouched; nothing executed.
+    const { record, state } = await loadAgentRunState(checkpoints, ref);
+    assert.equal(record.version, version);
+    assert.equal(state.status, "suspended");
+    assert.equal(executed.length, 0);
+  });
+
+  it("valid legacy approve and batch paths remain green after the assertion", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const executed: string[] = [];
+    const agent = decisionAgent(executed);
+    const first = await agent.createSession({ id: "s13" }).run("go", { runState: DURABLE(checkpoints) });
+    const ref = { runId: first.runId, sessionId: first.sessionId };
+    const options = { checkpoints, definitionRevision: "1" };
+
+    const result = await resumeAgentRun(agent, ref, { expectedVersion: first.runState!.version!, decision: "approve" }, options);
+    assert.equal(result.status, "succeeded");
+    assert.deepEqual(executed, ['call-1:{"value":"a"}', 'call-2:{"value":"b"}']);
   });
 });
