@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { describe, it } from "node:test";
 
@@ -2630,9 +2630,28 @@ describe("docs", () => {
   });
 
   it("examples_demos_run_to_completion_and_emit_no_secret", () => {
-    // Node 24 strips TypeScript types natively; building core (the test suite
-    // already built dist/) is enough for the `prism` and @arnilo/prism-* resolvers.
-    const demos = [
+    // Compile the examples in place with the repo tsc so the spawned demos run
+    // as plain JS. Running the .ts files directly would make every child load
+    // the amaro type-stripping WASM module, which reserves gigabytes of
+    // virtual address space per process and fails with "Cannot allocate Wasm
+    // memory" on memory-constrained CI runners; compiled children stay small.
+    // Emitting next to the sources keeps import.meta.url-relative fixtures
+    // working; the emitted .js files are removed in the finally block.
+    const examplesDir = join(process.cwd(), "examples");
+    const tsc = join(process.cwd(), "node_modules", "typescript", "bin", "tsc");
+    const before = new Set(readdirSync(examplesDir));
+    const emitted = new Set<string>();
+    try {
+      const emit = spawnSync(
+        process.execPath,
+        [tsc, "-p", join(examplesDir, "tsconfig.json"), "--noEmit", "false", "--declaration", "false", "--sourceMap", "false"],
+        { encoding: "utf8" },
+      );
+      assert.equal(emit.status, 0, `examples emit failed\n${emit.stderr}`);
+      for (const file of readdirSync(examplesDir)) {
+        if (!before.has(file) && /\.js$/.test(file)) emitted.add(file);
+      }
+      const demos = [
       "examples/provider-registration.ts",
       "examples/provider-resolver.ts",
       "examples/cache-aware-prompt-assembly.ts",
@@ -2669,11 +2688,15 @@ describe("docs", () => {
     ];
     const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
     for (const file of demos) {
-      const result = spawnSync(process.execPath, [file], { encoding: "utf8" });
+      const jsFile = join(examplesDir, file.replace(/^examples\//, "").replace(/\.ts$/, ".js"));
+      const result = spawnSync(process.execPath, [jsFile], { encoding: "utf8" });
       assert.equal(result.status, 0, `${file} exited ${result.status}\n${result.stderr}`);
       const out = `${result.stdout}\n${result.stderr}`;
       assert.ok(out.trim().length > 0, `${file} produced no output`);
       assert.ok(!secret.test(out), `${file} emitted a real-looking secret`);
+    }
+    } finally {
+      for (const file of emitted) rmSync(join(examplesDir, file), { force: true });
     }
   });
 
