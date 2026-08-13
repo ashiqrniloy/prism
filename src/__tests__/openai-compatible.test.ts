@@ -29,6 +29,9 @@ function okFetch(lines: readonly string[]): typeof fetch {
   return async () => new Response(sse(lines), { status: 200 });
 }
 
+/** Terminal chunk for a valid completed stream: finish_reason + [DONE] are both required under the strict default. */
+const STOP = JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] });
+
 describe("openai-compatible provider", () => {
   it("keeps provider-owned headers after caller headers", async () => {
     let headers = new Headers();
@@ -61,6 +64,7 @@ describe("openai-compatible provider", () => {
       fetch: okFetch([
         JSON.stringify({ choices: [{ delta: { content: "Hel" } }] }),
         JSON.stringify({ choices: [{ delta: { content: "lo" } }] }),
+        STOP,
         "[DONE]",
       ]),
     });
@@ -85,20 +89,21 @@ describe("openai-compatible provider", () => {
             prompt_tokens_details: { cached_tokens: 4, cache_write_tokens: 5 },
           },
         }),
+        STOP,
         "[DONE]",
       ]),
     });
 
     assert.deepEqual(await collect(provider), [
       { type: "usage", usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3, cacheReadTokens: 4, cacheWriteTokens: 5 } },
-      { type: "done", usage: undefined },
+      { type: "done", usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3, cacheReadTokens: 4, cacheWriteTokens: 5 } },
     ]);
   });
 
   it("maps reasoning content to thinking deltas", async () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
-      fetch: okFetch([JSON.stringify({ choices: [{ delta: { reasoning_content: "think" } }] }), "[DONE]"]),
+      fetch: okFetch([JSON.stringify({ choices: [{ delta: { reasoning_content: "think" } }] }), STOP, "[DONE]"]),
     });
 
     assert.deepEqual(await collect(provider), [
@@ -115,6 +120,7 @@ describe("openai-compatible provider", () => {
           choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup", arguments: '{"id"' } }] } }],
         }),
         JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: ':"1"}' } }] } }] }),
+        STOP,
         "[DONE]",
       ]),
     });
@@ -243,7 +249,7 @@ describe("openai-compatible provider", () => {
       baseUrl: "https://example.test/v1",
       fetch: (async (_url, init) => {
         body = JSON.parse(String(init?.body));
-        return new Response(sse(["[DONE]"]), { status: 200 });
+        return new Response(sse([STOP, "[DONE]"]), { status: 200 });
       }) as typeof fetch,
     });
 
@@ -358,19 +364,30 @@ describe("openai-compatible provider", () => {
     assert.equal(body?.stream, true);
   });
 
-  it("strictCompletion fails truncated streams and carries usage in done", async () => {
+  it("strictCompletion is the shared default: truncated streams fail closed, explicit false opts out", async () => {
+    // default (no option): a stream ending without completion evidence yields an error, never a successful done
     const truncated = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
-      strictCompletion: true,
       fetch: okFetch([JSON.stringify({ choices: [{ delta: { content: "partial" } }] })]),
     });
     const truncatedEvents = await collect(truncated);
     assert.equal(truncatedEvents.at(-1)?.type, "error");
+    assert.equal(
+      truncatedEvents.some((event) => event.type === "done"),
+      false,
+    );
     assert.match(String((truncatedEvents.at(-1) as { error?: { message?: string } }).error?.message), /without completion evidence/);
 
+    // default: finish_reason without [DONE] is still incomplete (both terminal variants required)
+    const missingDone = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      fetch: okFetch([JSON.stringify({ choices: [{ delta: { content: "x" }, finish_reason: "stop" }] })]),
+    });
+    assert.equal((await collect(missingDone)).at(-1)?.type, "error");
+
+    // default: a fully terminated stream succeeds and done carries the final usage
     const complete = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
-      strictCompletion: true,
       fetch: okFetch([
         JSON.stringify({ choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] }),
         JSON.stringify({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 } }),
@@ -385,6 +402,14 @@ describe("openai-compatible provider", () => {
       assert.equal(done.usage?.outputTokens, 2);
       assert.equal(done.usage?.totalTokens, 3);
     }
+
+    // explicit false is the documented opt-out: truncated streams still complete
+    const permissive = createOpenAICompatibleProvider({
+      baseUrl: "https://example.test/v1",
+      strictCompletion: false,
+      fetch: okFetch([JSON.stringify({ choices: [{ delta: { content: "partial" } }] })]),
+    });
+    assert.equal((await collect(permissive)).at(-1)?.type, "done");
   });
 
   it("uses requestFailedPrefix for HTTP errors", async () => {

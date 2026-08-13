@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, providerError, resolveCredentialValue } from "@arnilo/prism";
+import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 
 /** Default Azure OpenAI API version (hosts may override; package never rewrites endpoint host). */
@@ -64,28 +64,33 @@ export function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): 
   const id = options.id ?? "azure";
   const authStyle = options.authStyle ?? "bearer";
   const apiVersion = options.apiVersion ?? AZURE_OPENAI_DEFAULT_API_VERSION;
-  const inner = createOpenAICompatibleProvider({
-    id,
-    baseUrl: endpoint,
-    apiKey: options.credential,
-    authStyle,
-    fetch: options.fetch,
-    chatCompletionsUrl: (request) =>
-      azureChatCompletionsUrl({
-        endpoint,
-        deployment: options.deployment ?? request.model.model,
-        apiVersion,
-      }),
-  });
+  const chatCompletionsUrl = (request: { readonly model: { readonly model: string } }): string =>
+    azureChatCompletionsUrl({
+      endpoint,
+      deployment: options.deployment ?? request.model.model,
+      apiVersion,
+    });
   return {
     id,
     async *generate(request) {
       if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const token = await resolveCredentialValue(options.credential, { provider: id, name: "credential" });
+      // Resolve the credential exactly once per request and hand the resolved
+      // token to the inner provider: a rotating CredentialValueSource must
+      // not be consumed twice (wrapper check + inner auth header) because the
+      // two reads can yield different tokens.
+      const token = await resolveOnce(options.credential, { provider: id, name: "credential" });
       if (!token?.trim()) {
         yield providerError(new Error("Azure OpenAI credential missing"), []);
         return;
       }
+      const inner = createOpenAICompatibleProvider({
+        id,
+        baseUrl: endpoint,
+        apiKey: token,
+        authStyle,
+        fetch: options.fetch,
+        chatCompletionsUrl,
+      });
       yield* inner.generate(request);
     },
   };

@@ -6,7 +6,7 @@ import {
   redactSecrets,
   resolveCredentialValue,
 } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface ZaiModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
   readonly provider?: "zai";
@@ -90,7 +90,7 @@ export async function listZaiModels(options: ListZaiModelsOptions = {}): Promise
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`Z.AI model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as ZaiModelsResponse;
+  const payload = await readBoundedResponseJson<ZaiModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("Z.AI model discovery response missing data array");
   return payload.data.map((entry) => mapZaiModel(entry, { provider }));
 }

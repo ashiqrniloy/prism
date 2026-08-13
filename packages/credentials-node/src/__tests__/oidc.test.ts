@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { IdentityError, MediaContentError } from "@arnilo/prism";
+import { IdentityError, MediaContentError, pinnedFetch } from "@arnilo/prism";
 import { createOidcIdentityVerifier, type OidcClaims } from "../oidc.js";
 
 const ISSUER = "https://id.example.com/tenant";
@@ -506,5 +506,18 @@ describe("createOidcIdentityVerifier", () => {
     const { verifier } = makeVerifier({ fetchImpl });
     const token = await signToken(keys, { claims: { sub: "u", tid: "t" } });
     await assert.rejects(async () => verifier.verify(token), rejectsWith("ERR_PRISM_OIDC_JWKS_FETCH"));
+  });
+
+  it("default JWKS path pins DNS through the core pinnedFetch primitive", async () => {
+    // The default (no fetchImpl) JWKS fetch routes through pinnedFetch: a JWKS
+    // URL resolving to a private address fails closed as ssrf_denied before any
+    // connect (rebinding defense); redirect rejection is covered in pinned-fetch.test.ts.
+    await assert.rejects(
+      () =>
+        pinnedFetch(new URL(JWKS_URL), undefined, {
+          resolver: async () => [{ address: "10.0.0.1", family: 4 }],
+        }),
+      (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+    );
   });
 });

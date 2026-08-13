@@ -8,7 +8,7 @@ import {
   type ProviderMediaScope,
   providerUploadCacheKey,
 } from "@arnilo/prism/providers/media";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface OpenAIFileUploadManagerOptions {
   readonly providerId?: string;
@@ -76,7 +76,12 @@ export function createOpenAIFileUploadManager(options: OpenAIFileUploadManagerOp
       const secrets = token ? [token] : [];
       throw new Error(`OpenAI file upload failed: ${response.status} ${await readBoundedResponseText(response, { secrets })}`);
     }
-    const payload = (await response.json()) as { id?: string };
+    const payload = await readBoundedResponseJson<{ id?: string }>(response, {
+      secrets: token ? [token] : [],
+      // Fail closed on malformed/oversized upload responses: a missing id
+      // must never silently skip the cleanup registry.
+      shape: (value) => typeof value === "object" && value !== null && typeof (value as { id?: unknown }).id === "string",
+    });
     if (!payload.id) throw new Error("OpenAI file upload response missing id");
     cache.set(cacheKey, payload.id);
     uploadedIds.add(payload.id);
@@ -87,7 +92,6 @@ export function createOpenAIFileUploadManager(options: OpenAIFileUploadManagerOp
     const token = await resolveToken();
     const secrets = token ? [token] : [];
     const ids = [...uploadedIds];
-    uploadedIds.clear();
     cache.clear();
     await Promise.all(
       ids.map(async (fileId) => {
@@ -97,11 +101,16 @@ export function createOpenAIFileUploadManager(options: OpenAIFileUploadManagerOp
             headers: token ? { authorization: `Bearer ${token}` } : undefined,
             signal,
           });
-          if (!response.ok) {
+          if (response.ok) {
+            // Retain the id until the DELETE actually succeeds: a failed or
+            // skipped DELETE must leave the id in the registry so a retried
+            // cleanup can still remove the remote file (no leak).
+            uploadedIds.delete(fileId);
+          } else {
             await readBoundedResponseText(response, { secrets });
           }
         } catch {
-          // Best-effort cleanup; retention is bounded by remote provider policy.
+          // Best-effort cleanup; id stays registered for the next cleanup.
         }
       }),
     );

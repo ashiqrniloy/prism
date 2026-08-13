@@ -1,5 +1,5 @@
 import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /**
  * Ollama OpenAI-compatible deployment presets.
@@ -99,7 +99,7 @@ export async function listOllamaModels(options: ListOllamaModelsOptions = {}): P
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`Ollama model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as OllamaModelsResponse;
+  const payload = await readBoundedResponseJson<OllamaModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("Ollama model discovery response missing data array");
   return payload.data.map((entry) => mapOllamaModel(entry));
 }

@@ -1,5 +1,5 @@
 import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH } from "./cache.js";
 
 export interface OpenAIModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
@@ -77,7 +77,7 @@ export async function listOpenAIModels(options: ListOpenAIModelsOptions = {}): P
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`OpenAI model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as OpenAIModelsResponse;
+  const payload = await readBoundedResponseJson<OpenAIModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("OpenAI model discovery response missing data array");
   return payload.data.map((entry) => mapOpenAIModel(entry, { provider }));
 }

@@ -1,4 +1,24 @@
 export { resolveAgentDefinition } from "./agent-definitions.js";
+export {
+  abortableSleep,
+  pollDeviceCodeToken,
+  redactOAuthError,
+  throwIfAborted,
+  type OAuthTokenSuccessPayload,
+  type PollDeviceCodeTokenOptions,
+} from "./oauth-device-code.js";
+export {
+  boundResponse,
+  defaultResolver,
+  isLoopbackAddress,
+  isLoopbackHostname,
+  normalizeHostname,
+  pinnedFetch,
+  raceAbort,
+  requestPinned,
+  resolvePinnedAddress,
+  type PinnedFetchOptions,
+} from "./pinned-fetch.js";
 export type { AgentEventSourceErrorCode } from "./agent-event-source.js";
 export { AgentEventSourceError, createMemoryAgentEventSource } from "./agent-event-source.js";
 export {
@@ -577,5 +597,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.2.0";
+export const version = "0.2.1";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

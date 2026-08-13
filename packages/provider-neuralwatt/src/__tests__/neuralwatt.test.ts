@@ -738,11 +738,19 @@ describe("@arnilo/prism-provider-neuralwatt (implicit vLLM prefix caching)", () 
   it("neuralwatt_cached_tokens_map_to_usage_across_turns", async () => {
     // Turn 1 cold (no cached_tokens), turn 2 warm (cached_tokens present).
     const responses = [
-      ok(rawSse([{ usage: { prompt_tokens: 1000, completion_tokens: 10, total_tokens: 1010 } }])),
+      ok(
+        rawSse([
+          { usage: { prompt_tokens: 1000, completion_tokens: 10, total_tokens: 1010 } },
+          { choices: [{ delta: {}, finish_reason: "stop" }] },
+          "[DONE]",
+        ]),
+      ),
       ok(
         rawSse([
           { choices: [{ delta: { content: "6" } }] },
           { usage: { prompt_tokens: 1020, completion_tokens: 5, total_tokens: 1025, prompt_tokens_details: { cached_tokens: 950 } } },
+          { choices: [{ delta: {}, finish_reason: "stop" }] },
+          "[DONE]",
         ]),
       ),
     ];
@@ -848,7 +856,10 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
   it("neuralwatt_done_terminates_stream", async () => {
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
-      fetch: (async () => ok(rawSse([{ choices: [{ delta: { content: "pre" } }] }]))) as typeof fetch,
+      fetch: (async () =>
+        ok(
+          rawSse([{ choices: [{ delta: { content: "pre" } }] }, { choices: [{ delta: {}, finish_reason: "stop" }] }, "[DONE]"]),
+        )) as typeof fetch,
     });
     const events = await assertProviderStreamConforms({ provider, request });
     assert.equal(events.at(-1)?.type, "done");
@@ -888,6 +899,7 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
         controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'));
         controller.enqueue(encoder.encode(": cost 0.0004\n\n"));
         controller.enqueue(encoder.encode('data: {"usage":{"prompt_tokens":2,"completion_tokens":1,"total_tokens":3}}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -909,6 +921,7 @@ describe("@arnilo/prism-provider-neuralwatt (SSE stream)", () => {
       start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode("data: {not valid json\n\n"));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -969,6 +982,8 @@ describe("@arnilo/prism-provider-neuralwatt (tool-call loop)", () => {
       { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "lookup" } }] } }] },
       { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"q":' } }] } }] },
       { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '"x"}' } }] } }] },
+      { choices: [{ delta: {}, finish_reason: "tool_calls" }] },
+      "[DONE]",
     ];
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
@@ -1055,6 +1070,8 @@ describe("@arnilo/prism-provider-neuralwatt (tool-call loop)", () => {
       { choices: [{ delta: { tool_calls: [{ index: 1, id: "call_b", function: { name: "ping" } }] } }] },
       { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"q":"a"}' } }] } }] },
       { choices: [{ delta: { tool_calls: [{ index: 1, function: { arguments: "{}" } }] } }] },
+      { choices: [{ delta: {}, finish_reason: "tool_calls" }] },
+      "[DONE]",
     ];
     const provider = createNeuralWattProvider({
       apiKey: "fake-neuralwatt-key",
@@ -1088,6 +1105,7 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
           ),
         );
         controller.enqueue(encoder.encode('data: {"usage":{"prompt_tokens":2,"completion_tokens":1,"total_tokens":3}}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1129,6 +1147,7 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(': cost {"request_cost_usd":0.0009}\n\n'));
         controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1163,6 +1182,7 @@ describe("@arnilo/prism-provider-neuralwatt (telemetry)", () => {
         controller.enqueue(encoder.encode(": cost\n\n"));
         controller.enqueue(encoder.encode(': unknown {"x":1}\n\n'));
         controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1249,7 +1269,7 @@ function modelsFixture(): object {
 }
 
 function sse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
+  const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n`;
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));
@@ -1259,8 +1279,9 @@ function sse(events: readonly object[]): ReadableStream<Uint8Array> {
 }
 
 // Like #sse() but does NOT auto-append [DONE]; lets each test control termination.
-function rawSse(events: readonly object[]): ReadableStream<Uint8Array> {
-  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
+function rawSse(events: readonly (object | string)[]): ReadableStream<Uint8Array> {
+  // String elements are emitted verbatim (e.g. "[DONE]"), objects are JSON-serialized.
+  const text = events.map((event) => `data: ${typeof event === "string" ? event : JSON.stringify(event)}\n\n`).join("");
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));

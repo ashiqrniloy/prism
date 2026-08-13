@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { type AgentIdentity, createSecretRedactor, MediaContentError } from "@arnilo/prism";
+import { type AgentIdentity, createSecretRedactor, MediaContentError, pinnedFetch } from "@arnilo/prism";
 import { createMemoryPolicyDecisionStore, createOpaPolicyEvaluator, evaluateAndAppend, PolicyError } from "../index.js";
 import type { OpaDecisionDocument } from "../opa.js";
 
@@ -321,6 +321,23 @@ describe("@arnilo/prism-policy/opa", () => {
       );
       assert.equal(fetchApi.calls, 0);
     }
+  });
+
+  it("default OPA path pins DNS through the core pinnedFetch primitive", async () => {
+    // The default (no fetch option) OPA decision fetch routes through pinnedFetch:
+    // an endpoint resolving to a private address fails closed as ssrf_denied
+    // before any connect (rebinding defense).
+    await assert.rejects(
+      () =>
+        pinnedFetch(
+          new URL(ISSUER_URL),
+          { method: "POST", body: "{}" },
+          {
+            resolver: async () => [{ address: "10.0.0.1", family: 4 }],
+          },
+        ),
+      (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+    );
   });
 
   it("validates action/resource before any network call", async () => {

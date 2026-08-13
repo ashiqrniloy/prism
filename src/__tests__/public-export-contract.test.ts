@@ -13,6 +13,19 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 // and type exports against `dist/index.d.ts`, so a build that drops/renames an
 // export fails the gate. Update both arrays together when the surface changes.
 const FROZEN_VALUE_EXPORTS: readonly string[] = [
+  "abortableSleep",
+  "pollDeviceCodeToken",
+  "redactOAuthError",
+  "throwIfAborted",
+  "boundResponse",
+  "defaultResolver",
+  "isLoopbackAddress",
+  "isLoopbackHostname",
+  "normalizeHostname",
+  "pinnedFetch",
+  "raceAbort",
+  "requestPinned",
+  "resolvePinnedAddress",
   "ToolEffectError",
   "createMemoryToolEffectStore",
   "AGENT_RUN_STATE_NAMESPACE",
@@ -427,6 +440,9 @@ const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
 ];
 
 const FROZEN_TYPE_EXPORTS: readonly string[] = [
+  "OAuthTokenSuccessPayload",
+  "PollDeviceCodeTokenOptions",
+  "PinnedFetchOptions",
   "AgentEventSourceErrorCode",
   "AgentInput",
   "ApprovalOutcome",

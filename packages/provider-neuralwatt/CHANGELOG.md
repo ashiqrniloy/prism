@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): quota read migrated to the bounded readBoundedResponseJson reader; inherited strict stream completion shared default — truncated streams now fail with ProviderTransportError incomplete_delta instead of a successful providerDone.
+
+
 
 ## [0.1.0] - 2026-08-09
 

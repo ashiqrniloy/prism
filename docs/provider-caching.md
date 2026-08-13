@@ -279,7 +279,10 @@ for (const sample of report.samples) {
 - Cardinality is bounded: beyond `maxKeys` distinct provider/model keys, excess
   keys accumulate in a single `__overflow__` bucket; memory cannot grow with
   hostile model names (`ponytail:` ceiling — upgrade to host-configurable caps
-  or LRU eviction only if a real deployment exceeds it).
+  or LRU eviction only if a real deployment exceeds it). The `__overflow__`
+  bucket aggregates mixed provider/model tokens, so it never carries cost
+  metadata: `estimatedSavings`/`currency` are unset there and it reports
+  requests and token totals only.
 - `record()` is O(1) per usage event; `report()` is O(keys). No secrets or
   cache keys are accepted or stored.
 

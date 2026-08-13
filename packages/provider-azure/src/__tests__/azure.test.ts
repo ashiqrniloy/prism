@@ -32,7 +32,7 @@ describe("@arnilo/prism-provider-azure", () => {
         const headers = new Headers(init?.headers);
         seen.auth = headers.get("authorization") ?? undefined;
         seen.apiKey = headers.get("api-key") ?? undefined;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
+        return new Response('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
@@ -69,7 +69,10 @@ describe("@arnilo/prism-provider-azure", () => {
       authStyle: "api-key",
       fetch: async (_input, init) => {
         apiKey = new Headers(init?.headers).get("api-key");
-        return new Response("data: [DONE]\n\n", { status: 200, headers: { "content-type": "text/event-stream" } });
+        return new Response('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
       },
     });
     await collect(keyed);

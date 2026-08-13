@@ -59,7 +59,7 @@ const provider = createVertexProvider({
 
 - No Google Cloud SDK dependency in the package.
 - Custom/private endpoint hosts are preserved.
-- Tokens redacted from errors; no import-time credential prefetch.
+- Tokens redacted from errors; no import-time credential prefetch — the credential is resolved exactly once per request (a rotating `CredentialValueSource` is never consumed twice; the same resolved token drives the wrapper check and the inner auth header).
 - Pair with model-router residency allow-lists on `location`.
 
 ## Related APIs

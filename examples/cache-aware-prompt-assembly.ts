@@ -94,6 +94,7 @@ export async function demo() {
       ok(
         sse([
           { choices: [{ delta: { content: "OpenRouter" } }] },
+          { choices: [{ delta: {}, finish_reason: "stop" }] },
           {
             usage: {
               prompt_tokens: 2000,
@@ -111,6 +112,7 @@ export async function demo() {
       ok(
         sse([
           { choices: [{ delta: { content: "NeuralWatt" } }] },
+          { choices: [{ delta: {}, finish_reason: "stop" }] },
           { usage: { prompt_tokens: 2000, completion_tokens: 20, total_tokens: 2020, prompt_tokens_details: { cached_tokens: 1600 } } },
         ]),
       ),

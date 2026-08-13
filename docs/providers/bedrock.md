@@ -60,6 +60,7 @@ Uses Bedrock’s OpenAI-compatible runtime route (not Converse eventstream). Hos
 ## Security and performance notes
 
 - No AWS SDK; package-local SigV4 only for `bedrock` service.
+- Input headers are normalized once before signing: names are lowercased and duplicate-case keys merge last-wins, so the canonical request always matches the signed header list (no duplicate-case mismatch); query parameters are canonicalized sorted by encoded key then value.
 - Private endpoint hosts are not rewritten to public DNS.
 - Credential secrets are redacted from provider errors.
 - No credential prefetch at import.

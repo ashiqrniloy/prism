@@ -60,7 +60,7 @@ Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...
 
 ## Security and performance notes
 
-- No credential prefetch at import; resolve per request.
+- No credential prefetch at import; the credential is resolved exactly once per request (a rotating `CredentialValueSource` is never consumed twice — the same resolved token drives the wrapper check and the inner auth header).
 - Endpoint host is never rewritten to public DNS.
 - Errors redact credential values via shared transport helpers.
 - No Azure SDK dependency.

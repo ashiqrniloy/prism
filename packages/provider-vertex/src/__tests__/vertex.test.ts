@@ -13,7 +13,7 @@ describe("@arnilo/prism-provider-vertex", () => {
       fetch: async (input, init) => {
         seen.url = String(input);
         seen.auth = new Headers(init?.headers).get("authorization") ?? undefined;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
+        return new Response('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
@@ -58,7 +58,10 @@ describe("@arnilo/prism-provider-vertex", () => {
       credential: "tok",
       fetch: async (input) => {
         url = String(input);
-        return new Response("data: [DONE]\n\n", { status: 200, headers: { "content-type": "text/event-stream" } });
+        return new Response('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
       },
     });
     for await (const _ of custom.generate({

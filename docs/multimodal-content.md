@@ -145,6 +145,7 @@ try {
 - SSRF deny-by-default blocks IPv4/IPv6 loopback, private/unique-local, link-local, unspecified, multicast, IPv4-mapped private, and cloud metadata targets. DNS answers are all classified before one public address is pinned; mixed public/private answers fail closed.
 - `allowedHostnames` is an explicit trust override and may permit a private destination. `denyPrivateHosts: false` is broader and should be reserved for hosts that intentionally own private-network access.
 - DNS lookup, connection, and body streaming share `fetchTimeoutMs` and caller abort; more than 32 resolved addresses, redirects, and oversized response bodies are rejected.
+- Media URL fetches (0.2.1) route through the core `pinnedFetch` primitive — DNS-pinned resolution with per-answer SSRF checks (rebinding defense) and outright 3xx rejection — while keeping the `fetch`/`resolveHostname`/`requestUrl` host seams and the existing byte budgets.
 - MIME validation rejects common magic-byte spoofing; extensions alone are never trusted.
 - Byte budgets use base64 size estimates before decode and re-check decoded bytes after every read/fetch. Complete-request resolution keeps at most the configured request budget plus one bounded item in memory and performs no provider upload/request until validation succeeds.
 - Media errors omit raw bytes/base64 payloads from messages.

@@ -101,6 +101,26 @@ describe("cache telemetry", () => {
     assert.equal(t.report().samples.find((s) => s.model === CACHE_TELEMETRY_OVERFLOW_KEY)?.requests, 8);
   });
 
+  it("overflow bucket never carries mixed-model cost (requests and tokens only)", () => {
+    // T13: the __overflow__ sample aggregates tokens from many provider/model
+    // keys; one record's ModelCost must not be applied to the mixed totals.
+    const t = createCacheTelemetry({ maxKeys: 2 });
+    t.record(usage({ cacheReadTokens: 100 }), model("priced-a", { input: 2, cacheRead: 0.5 }));
+    t.record(usage({ cacheReadTokens: 100 }), model("priced-b", { input: 2, cacheRead: 0.5 }));
+    t.record(usage({ cacheReadTokens: 50 }), model("priced-c", { input: 2, cacheRead: 0.5 }));
+    const overflow = t.report().samples.find((s) => s.model === CACHE_TELEMETRY_OVERFLOW_KEY);
+    assert.ok(overflow, "overflow bucket present");
+    assert.equal(overflow?.requests, 1);
+    assert.equal(overflow?.cacheReadTokens, 50);
+    assert.equal(overflow?.estimatedSavings, undefined, "no cost estimate on mixed-model overflow tokens");
+    assert.equal(overflow?.currency, undefined, "no currency on the overflow bucket");
+    const capped = t.report().samples.filter((s) => s.model !== CACHE_TELEMETRY_OVERFLOW_KEY);
+    assert.ok(
+      capped.every((s) => s.estimatedSavings !== undefined),
+      "capped samples still carry their own cost",
+    );
+  });
+
   it("invalid input: negative/NaN token counts rejected with a typed error; no partial mutation", () => {
     const t = createCacheTelemetry();
     for (const bad of [

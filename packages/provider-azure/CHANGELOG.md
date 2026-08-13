@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): credential resolved exactly once per request (a rotating CredentialValueSource is never consumed twice; the inner OpenAI-compatible provider is re-created with the resolved token per generate); inherited strict stream completion shared default.
+
+
 
 ## [0.1.0] - 2026-08-09
 

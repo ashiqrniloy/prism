@@ -1,5 +1,5 @@
 import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** Official Gemini API base (`v1beta`). Vertex is out of scope for 0.0.12. */
 export const GOOGLE_DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -89,7 +89,7 @@ export async function listGoogleModels(options: ListGoogleModelsOptions = {}): P
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`Google model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as GoogleModelsResponse;
+  const payload = await readBoundedResponseJson<GoogleModelsResponse>(response);
   if (!Array.isArray(payload.models)) throw new Error("Google model discovery response missing models array");
   return payload.models.filter((entry) => supportsGenerateContent(entry)).map((entry) => mapGoogleModel(entry, { provider }));
 }

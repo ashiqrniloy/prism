@@ -141,7 +141,10 @@ export function createCacheTelemetry(options: CacheTelemetryOptions = {}): Cache
         cacheReadTokens: sample.cacheReadTokens,
         inputTokens: sample.inputTokens,
       });
-      if (model?.cost) {
+      // The __overflow__ bucket aggregates mixed provider/model tokens, so it
+      // never carries cost: one model's cost metadata must not be applied to
+      // other models' tokens. It reports requests and token totals only.
+      if (model?.cost && sample !== overflowSample) {
         // cacheSavings depends only on read tokens + cost metadata, so the
         // aggregate equals the sum of per-call savings; feed it the totals
         // to reuse the exact cache-helpers math rather than reimplementing it.

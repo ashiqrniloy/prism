@@ -434,6 +434,14 @@ test("STATE MACHINE: shared files are byte-identical while all editors are pendi
           } else if (marker === "- [x] ") {
             // roadmap: the four 0.2.0 milestone items must be checked at Task 6
             assert.ok((text.match(/- \[x\] /g) ?? []).length >= 4, `roadmap.md has fewer than 4 checked items after ${editor}`);
+          } else if (/^\d+\.\d+\.\d+$/.test(marker)) {
+            // version-literal markers: the 0.2.0 bump must have touched the file, and later releases
+            // advance the literal (plan 021 Task 8 bumped the graph to 0.2.1) — accept the phase
+            // release version or the current root version, whichever the file carries.
+            assert.ok(
+              text.includes(marker) || text.includes(rootPkg.version),
+              `shared file ${file} missing version marker '${marker}' (or current ${rootPkg.version}) required by ${editor}`,
+            );
           } else {
             assert.ok(text.includes(marker), `shared file ${file} missing marker '${marker}' required by ${editor}`);
           }

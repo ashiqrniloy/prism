@@ -6,7 +6,7 @@ import {
   redactSecrets,
   resolveCredentialValue,
 } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { defineOpenRouterModel } from "./model.js";
 
 export interface ListOpenRouterModelsOptions {
@@ -80,7 +80,7 @@ export async function listOpenRouterModels(options: ListOpenRouterModelsOptions 
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`OpenRouter model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as OpenRouterModelsResponse;
+  const payload = await readBoundedResponseJson<OpenRouterModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("OpenRouter model discovery response missing data array");
   return payload.data.map((entry) => mapOpenRouterModel(entry, { provider }));
 }

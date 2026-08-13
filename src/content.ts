@@ -1,7 +1,6 @@
 import { lookup as dnsLookup } from "node:dns/promises";
-import { request as httpRequest, type IncomingMessage } from "node:http";
-import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
+import { pinnedFetch } from "./pinned-fetch.js";
 import type { ContentBlock, ImageContent, Message, ModelConfig, ResourceLoadContext, ResourceLoader } from "./contracts.js";
 import { assertPermission } from "./security.js";
 
@@ -142,14 +141,15 @@ export class MediaContentError extends Error {
     | "audio_too_long"
     | "invalid_base64"
     | "ssrf_denied"
+    | "redirect"
     | "fetch_failed"
     | "fetch_timeout"
     | "resource_required"
     | "mime_mismatch"
     | "unsupported_url_scheme";
 
-  constructor(code: MediaContentError["code"], message: string) {
-    super(message);
+  constructor(code: MediaContentError["code"], message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "MediaContentError";
     this.code = code;
   }
@@ -463,22 +463,39 @@ async function fetchBoundedMediaUrl(url: string, options: FetchBoundedMediaOptio
   try {
     if (options.fetch) return await readFetchResponse(await options.fetch(url, { signal, redirect: "error" }), options.maxBytes);
 
-    const parsed = new URL(url);
-    const hostname = normalizeHostname(parsed.hostname);
-    const family = isIP(hostname);
-    const address = family
-      ? { address: hostname, family: family as 4 | 6 }
-      : await resolvePublicAddress(hostname, options.resolveHostname ?? defaultMediaHostnameResolver, signal, options.ssrf);
-    const bytes = await (options.requestUrl ?? requestPinnedMediaUrl)({
-      url: parsed,
-      address,
-      maxBytes: options.maxBytes,
-      signal,
-    });
-    if (bytes.byteLength > options.maxBytes) {
-      throw new MediaContentError("item_too_large", `Fetched media exceeded ${options.maxBytes} bytes`);
+    if (options.requestUrl) {
+      // Test/custom seam: explicit resolve + caller-provided requester. The default
+      // path below routes through the shared pinnedFetch primitive instead.
+      const parsed = new URL(url);
+      const hostname = normalizeHostname(parsed.hostname);
+      const family = isIP(hostname);
+      const address = family
+        ? { address: hostname, family: family as 4 | 6 }
+        : await resolvePublicAddress(hostname, options.resolveHostname ?? defaultMediaHostnameResolver, signal, options.ssrf);
+      const bytes = await options.requestUrl({
+        url: parsed,
+        address,
+        maxBytes: options.maxBytes,
+        signal,
+      });
+      if (bytes.byteLength > options.maxBytes) {
+        throw new MediaContentError("item_too_large", `Fetched media exceeded ${options.maxBytes} bytes`);
+      }
+      return bytes;
     }
-    return bytes;
+
+    // Default: one DNS-pinned, redirect-free, byte-bounded fetch (task 4).
+    const response = await pinnedFetch(
+      new URL(url),
+      { signal, redirect: "manual" },
+      {
+        errorPrefix: "Media",
+        hostnameErrorPrefix: "Media",
+        resolver: options.resolveHostname ?? defaultMediaHostnameResolver,
+        ssrf: options.ssrf,
+      },
+    );
+    return await readFetchResponse(response, options.maxBytes);
   } catch (error) {
     if (error instanceof MediaContentError) throw error;
     if (timeoutController.signal.aborted) {
@@ -560,43 +577,6 @@ async function readFetchResponse(response: Response, maxBytes: number): Promise<
       // Reader may already be closed after abort/complete.
     }
     reader.releaseLock();
-  }
-  return joinChunks(chunks, total);
-}
-
-function requestPinnedMediaUrl({ url, address, maxBytes, signal }: MediaUrlRequest): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(
-      url,
-      {
-        agent: false,
-        family: address.family,
-        signal,
-        lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
-      },
-      (response) => readIncomingMessage(response, maxBytes).then(resolve, reject),
-    );
-    request.on("error", reject);
-    request.end();
-  });
-}
-
-async function readIncomingMessage(response: IncomingMessage, maxBytes: number): Promise<Uint8Array> {
-  const status = response.statusCode ?? 0;
-  if (status < 200 || status >= 300) {
-    response.resume();
-    throw new MediaContentError("fetch_failed", `Media fetch failed with status ${status}`);
-  }
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for await (const chunk of response) {
-    const bytes = typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk);
-    total += bytes.byteLength;
-    if (total > maxBytes) {
-      response.destroy();
-      throw new MediaContentError("item_too_large", `Fetched media exceeded ${maxBytes} bytes`);
-    }
-    chunks.push(bytes);
   }
   return joinChunks(chunks, total);
 }

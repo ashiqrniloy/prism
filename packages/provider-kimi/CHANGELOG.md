@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): model-discovery success read migrated to the bounded readBoundedResponseJson reader; strict completion opt-in retained.
+
+
 
 ## [0.1.0] - 2026-08-09
 

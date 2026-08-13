@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): model-discovery and embeddings success reads migrated to the bounded readBoundedResponseJson reader (65,536-byte ceiling, depth/property/shape caps); strict completion opt-in retained.
+
+
 
 ## [0.1.2] - 2026-08-10
 

@@ -1,5 +1,5 @@
 import { type CredentialValueSource, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { alibabaBaseUrl, type AlibabaBasePreset } from "./models.js";
 
 /**
@@ -85,7 +85,7 @@ export function createAlibabaEmbedder(options: AlibabaEmbedderOptions): AlibabaE
           const body = await readBoundedResponseText(response, { secrets: [token] });
           throw new Error(`Alibaba embeddings failed: ${response.status} ${redactSecrets(body, [token])}`);
         }
-        const payload = (await response.json()) as AlibabaEmbeddingsResponse;
+        const payload = await readBoundedResponseJson<AlibabaEmbeddingsResponse>(response);
         if (!Array.isArray(payload.data)) throw new Error("Alibaba embeddings response missing data array");
         const byIndex = new Map<number, readonly number[]>();
         for (const entry of payload.data) {

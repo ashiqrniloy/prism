@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): transport pinning lifted to the core pinnedFetch primitive — createSecureMcpFetch and OAuth discovery re-route through it with byte-identical McpBridgeError/McpOAuthError behavior and redirects rejected; boundResponse/defaultResolver/isLoopbackAddress/isLoopbackHostname/normalizeHostname/raceAbort/requestPinned/resolvePinnedAddress remain exported as re-exports from @arnilo/prism (same names/signatures).
+
+
 
 ## [0.1.1] - 2026-08-10
 

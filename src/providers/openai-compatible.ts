@@ -41,7 +41,7 @@ export interface OpenAICompatibleProviderOptions {
   readonly extraHeaders?: (request: ProviderRequest) => Record<string, string>;
   /** Final body transform applied last (token limits, compat stripping). Wins over everything. */
   readonly transformBody?: (body: JsonObject, request: ProviderRequest) => JsonObject;
-  /** Require `[DONE]` and a `finish_reason` before emitting `done`; truncated streams yield an error. `done` then carries the final usage. */
+  /** Require `[DONE]` and a `finish_reason` before emitting `done`; truncated streams yield an error. `done` then carries the final usage. Default `true` (fail-closed); set `false` explicitly to accept streams that end without completion evidence. */
   readonly strictCompletion?: boolean;
   /** Emit the final stream usage on the `done` event (without strict completion checks). */
   readonly doneUsage?: boolean;
@@ -55,7 +55,7 @@ export interface OpenAICompatibleProviderOptions {
 
 export interface OpenAIChatEventsOptions {
   readonly signal?: AbortSignal;
-  /** Require `[DONE]` and a `finish_reason`; `done` then carries the final usage. */
+  /** Require `[DONE]` and a `finish_reason`; `done` then carries the final usage. Default `true` (fail-closed); set `false` explicitly to accept streams that end without completion evidence. */
   readonly strictCompletion?: boolean;
   /** Emit the final stream usage on the `done` event. */
   readonly doneUsage?: boolean;
@@ -133,7 +133,7 @@ export async function* openAIChatEvents(
     yield providerError(new ProviderTransportError("incomplete_delta", `Incomplete tool call delta at index ${incomplete[0]}`));
     return;
   }
-  if (options.strictCompletion && (!sawDoneMarker || !sawFinishReason)) {
+  if ((options.strictCompletion ?? true) && (!sawDoneMarker || !sawFinishReason)) {
     // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
     yield providerError(
       new Error(
@@ -147,7 +147,7 @@ export async function* openAIChatEvents(
   for (const call of tools.values()) {
     yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
-  yield providerDone(options.strictCompletion || options.doneUsage ? usage : undefined);
+  yield providerDone((options.strictCompletion ?? true) || options.doneUsage ? usage : undefined);
 }
 
 interface ToolAccumulator {

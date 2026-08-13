@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, providerError, resolveCredentialValue } from "@arnilo/prism";
+import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 
 export interface VertexProviderOptions {
@@ -44,22 +44,26 @@ export function vertexOpenApiBaseUrl(input: { readonly projectId: string; readon
 export function createVertexProvider(options: VertexProviderOptions): AIProvider {
   const baseUrl = vertexOpenApiBaseUrl(options);
   const id = options.id ?? "vertex";
-  const inner = createOpenAICompatibleProvider({
-    id,
-    baseUrl,
-    apiKey: options.credential,
-    authStyle: "bearer",
-    fetch: options.fetch,
-  });
   return {
     id,
     async *generate(request) {
       if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const token = await resolveCredentialValue(options.credential, { provider: id, name: "credential" });
+      // Resolve the credential exactly once per request and hand the resolved
+      // token to the inner provider: a rotating CredentialValueSource must
+      // not be consumed twice (wrapper check + inner auth header) because the
+      // two reads can yield different tokens.
+      const token = await resolveOnce(options.credential, { provider: id, name: "credential" });
       if (!token?.trim()) {
         yield providerError(new Error("Vertex ADC credential missing"), []);
         return;
       }
+      const inner = createOpenAICompatibleProvider({
+        id,
+        baseUrl,
+        apiKey: token,
+        authStyle: "bearer",
+        fetch: options.fetch,
+      });
       yield* inner.generate(request);
     },
   };

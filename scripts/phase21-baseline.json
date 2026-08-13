@@ -1,0 +1,530 @@
+{
+  "$comment": "Phase 21 (0.2.1) Task 1 baseline evidence, captured at 0.2.0 (HEAD cb9369d, Release 0.2.0 tag state) before any phase-21 implementation edit. npm test / coverage / biome / format / secrets / audit / pack figures are fresh verified runs in this session at cb9369d; typecheck/release-gate/plan-020-exit numbers cite the plan 020 exit gate recorded at the same HEAD. fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state.",
+  "captured": "2026-08-13T09:15:55.539Z",
+  "release": "0.2.0",
+  "node": "v24.18.0",
+  "platform": "linux",
+  "gitHead": "cb9369d113961c01a2f6aae28a0f3c75948b5dbb",
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<phase21 freeze/conformance/e2e files> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1457,
+    "corePass": 1457,
+    "coreFail": 0,
+    "coreSuites": 190,
+    "scriptGates": 231,
+    "scriptGatesPass": 231,
+    "scriptGatesFail": 0,
+    "scriptGateSuites": 16,
+    "workspaceTests": 1684,
+    "workspacePass": 1651,
+    "workspaceSkip": 33,
+    "workspaceFail": 0,
+    "workspaceSuites": 226,
+    "totals": {
+      "tests": 3372,
+      "pass": 3339,
+      "skip": 33,
+      "fail": 0
+    },
+    "note": "totals match the plan 020 exit gate exactly (3372/3339/33) at the same HEAD; 33 skips are protected/live skips"
+  },
+  "coverage": {
+    "core": {
+      "lines": 91.95,
+      "branches": 84.26,
+      "functions": 91.36
+    },
+    "gate": "60/70/75 core gate passed (exit 0); workspace rows are additive reporting only",
+    "note": "core grew from 0.1.7 (91.92/84.19/91.35) with the plan 020 additions"
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "scope": "npm test build (tsc core + all 49 workspaces) + examples tsc --noEmit verified in this session; plan 020 exit gate recorded typecheck 0 at the same HEAD"
+  },
+  "biome": {
+    "exitCode": 0,
+    "warnings": 62,
+    "infos": 22,
+    "errors": 0
+  },
+  "format": {
+    "files": 960,
+    "fixes": 0
+  },
+  "secrets": {
+    "trackedFiles": 1515,
+    "findings": 0
+  },
+  "audit": {
+    "level": "moderate",
+    "vulnerabilities": 0
+  },
+  "packDryRun": {
+    "packages": 50,
+    "deterministic": true,
+    "run1Sha256": "2d7498380bd9d5f3f7465e37af85f45fe748d63ebd84bc984b9e3f67f1387310",
+    "run2Sha256": "2d7498380bd9d5f3f7465e37af85f45fe748d63ebd84bc984b9e3f67f1387310",
+    "note": "identical to the plan 020 exit gate pack evidence at the same HEAD"
+  },
+  "releaseGate": {
+    "version": "0.2.0",
+    "packages": 50,
+    "errors": 0,
+    "breakingDeltas": 0,
+    "notes": "plan 020 exit gate record at HEAD cb9369d (plain gate, no --allow-break)"
+  },
+  "manifestCount": {
+    "publishable": 50,
+    "workspacePackages": 49,
+    "rootPackage": "@arnilo/prism",
+    "categories": {
+      "provider": 14,
+      "prism": 9,
+      "capability": 26
+    },
+    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages); 0.2.1 adds no package, the count stays 50",
+    "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
+  },
+  "dependencyNames": {
+    "sha256": "bab44803aaecac5854f61183042c9552e391d75a6e1d98031a3f03bdf4c400d7",
+    "packages": 50
+  },
+  "workspaceManifests": {
+    "sha256": "1e39687c7d3a4adac1f1fc36b445941d03b7999e62344a76923933b0ccd432e9",
+    "count": 49
+  },
+  "compatBaseline": {
+    "sha256": "da6d347ca88c5e443e9ff57ccf8824fcbb3f292c8f87e074309179b2bc10abe4",
+    "files": 44
+  },
+  "items": [
+    {
+      "id": "strict-completion",
+      "task": "task2",
+      "seamFiles": [
+        "docs/providers/openai-compatible.md",
+        "packages/provider-azure/src/__tests__/azure.test.ts",
+        "packages/provider-bedrock/src/__tests__/bedrock.test.ts",
+        "packages/provider-neuralwatt/src/__tests__/neuralwatt.test.ts",
+        "packages/provider-vertex/src/__tests__/vertex.test.ts",
+        "src/__tests__/openai-compatible.test.ts",
+        "src/providers/openai-compatible.ts"
+      ]
+    },
+    {
+      "id": "bounded-success-bodies",
+      "task": "task3",
+      "seamFiles": [
+        "src/providers/transport.ts",
+        "src/__tests__/provider-transport.test.ts",
+        "packages/provider-alibaba/src/models.ts",
+        "packages/provider-anthropic/src/models.ts",
+        "packages/provider-google/src/models.ts",
+        "packages/provider-kimi/src/models.ts",
+        "packages/provider-neuralwatt/src/models.ts",
+        "packages/provider-ollama/src/models.ts",
+        "packages/provider-openai/src/models.ts",
+        "packages/provider-opencode-go/src/models.ts",
+        "packages/provider-openrouter/src/models.ts",
+        "packages/provider-zai/src/models.ts",
+        "packages/provider-neuralwatt/src/quota.ts",
+        "packages/provider-alibaba/src/embeddings.ts",
+        "packages/provider-neuralwatt/src/__tests__/neuralwatt-quota.test.ts",
+        "packages/provider-alibaba/src/__tests__/embeddings.test.ts",
+        "docs/provider-primitives.md"
+      ]
+    },
+    {
+      "id": "dns-pinning",
+      "task": "task4",
+      "seamFiles": [
+        "src/pinned-fetch.ts",
+        "src/content.ts",
+        "src/__tests__/pinned-fetch.test.ts",
+        "packages/credentials-node/src/oidc.ts",
+        "packages/policy/src/opa.ts",
+        "packages/mcp/src/transport.ts",
+        "packages/credentials-node/src/__tests__/oidc.test.ts",
+        "packages/policy/src/__tests__/opa.test.ts",
+        "docs/credential-storage.md",
+        "docs/policy-and-audit.md",
+        "docs/multimodal-content.md",
+        "docs/mcp-tools.md"
+      ]
+    },
+    {
+      "id": "oauth-consolidation",
+      "task": "task5",
+      "seamFiles": [
+        "src/oauth-device-code.ts",
+        "packages/provider-openai/src/oauth.ts",
+        "packages/credentials-node/src/oauth2.ts",
+        "packages/provider-openai/src/__tests__/codex-oauth.test.ts",
+        "packages/credentials-node/src/__tests__/oauth.test.ts",
+        "docs/credentials-and-redaction.md"
+      ]
+    },
+    {
+      "id": "edge-fixes",
+      "task": "task6",
+      "seamFiles": [
+        "docs/provider-caching.md",
+        "docs/providers/azure.md",
+        "docs/providers/bedrock.md",
+        "docs/providers/vertex.md",
+        "packages/provider-azure/src/__tests__/credential-once.test.ts",
+        "packages/provider-azure/src/provider.ts",
+        "packages/provider-bedrock/src/__tests__/sigv4-canonical.test.ts",
+        "packages/provider-bedrock/src/sigv4.ts",
+        "packages/provider-openai/src/__tests__/openai.test.ts",
+        "packages/provider-openai/src/uploads.ts",
+        "packages/provider-vertex/src/__tests__/credential-once.test.ts",
+        "packages/provider-vertex/src/provider.ts",
+        "src/__tests__/cache-telemetry.test.ts",
+        "src/cache-telemetry.ts"
+      ]
+    },
+    {
+      "id": "security-regressions",
+      "task": "task7",
+      "seamFiles": [
+        "scripts/phase21-security.test.mjs",
+        "src/__tests__/install-smoke.test.ts"
+      ]
+    }
+  ],
+  "fileHashes": {
+    "CHANGELOG.md": "1f9abe2086f2b7f5a2442653c9e67add9881f6a349669d5c4d1ebd2ff4cc4e1a",
+    "docs/credential-storage.md": "5d7197e3f0b2d02ee146c890aff9db8463d281a5be06b4aeeaf25ef0fbf634d6",
+    "docs/credentials-and-redaction.md": "a61704615af03d77a0a6e72527eff11a7a95839c6d58f993ee4934d3782f6070",
+    "docs/index.md": "6f198c09c5e7507a5dbf622717911e49579536b6d5c55b541545a51c7f3c2df4",
+    "docs/mcp-tools.md": "f89a75aad20e5849309b7bebe6d78e773ce9f7d189b1a625a7bccd6a363e7b23",
+    "docs/migration.md": "9d4e3cb9241a76e73acbca6878110dd9fad4488ab762a70f4ec26029a6473dc3",
+    "docs/multimodal-content.md": "80069482e10e8024e4faeebdf044117a36d58a0fa9f813708cb7119cf4738d8b",
+    "docs/policy-and-audit.md": "fc76d42ec1097e2496a10964b005956324da0ac49a7641f72514776345b912b5",
+    "docs/provider-caching.md": "1b0944439e63fab55428b14481c9f6450db1966384e07fd546df33f988afbb83",
+    "docs/provider-primitives.md": "b69609c96f4a5711fd22c2558982129547f312a29a4f187781735ee668acb846",
+    "docs/providers/azure.md": "b6c5d9fdb0273bb8fcec753d5c7787c1a2ec4f9c3e6ea6d377c2411ec3ef6c66",
+    "docs/providers/bedrock.md": "c7f12580674cef404ba1bedfea3a7903eb0030d49026223dea9b9a071a5254d8",
+    "docs/providers/openai-compatible.md": "97b3ba3dcd69b6dd9781db215556265f0a97609cd01f0ce39b854ca18d0545a6",
+    "docs/providers/vertex.md": "3d5391380208cd16ad9e1858cb16dbb07bc896a55196b640c637e90d216d642b",
+    "docs/release-and-install.md": "d7d2e8b9043aa18b8e4819da06c13102dbfa4c6fca8425e865db0aeeeebb57d5",
+    "package-lock.json": "ea87d4b1b6a66755be465afc662f8569e7f90c365e5c1c5d3521b8b6fdc2ea28",
+    "package.json": "ff1858d4518729a477504555a2065acda7c3cfd2d7e53e3dd661bb4e7abcd0ec",
+    "packages/coding-security/src/egress/dns-pin.ts": "1cc43678113e28af968df8ad902ba4ac5803d6d148f56e547d581e9014e2e045",
+    "packages/coding-security/src/egress/index.ts": "a289d852a6222830cf12df4ddc44387ac7bbee23ab833b7ad4dc09695ee3a07c",
+    "packages/credentials-node/CHANGELOG.md": "761e02adb156df7c9c82c5f38a137e59e55ccf06d3a28b0516b7af6c2f93cf3f",
+    "packages/credentials-node/src/__tests__/oauth.test.ts": "27892ca3d022a583b1b6a08887a03a3242fbe9f5d80c0204fa89af6fd66d438b",
+    "packages/credentials-node/src/__tests__/oidc.test.ts": "1aebc73182903884569749d3bc6b823381b0bd944e4e86b4cdcfdf92a6d58987",
+    "packages/credentials-node/src/google-workspace-oauth.ts": "da49376aebcecbe89ebcb10689a19f0983ddb145f0d89210869ec01dd16211ac",
+    "packages/credentials-node/src/microsoft365-oauth.ts": "b41fdaea54cac1b7ea5beec67e20ea29a12a02eefc37caa41d2b8d23f76ddca2",
+    "packages/credentials-node/src/oauth2.ts": "6e19d601cb7506a5808439ebaa75fd230828a3431b4a2406f937ebe6958e2df4",
+    "packages/credentials-node/src/oidc.ts": "39c16370f5c44101e98859435e8d66a5a0db17404df938bfbe65e855503103db",
+    "packages/mcp/CHANGELOG.md": "67962f0dc07539b38621ba1dfdfa6eb3db86e0b626059107e463a711ddeaebb9",
+    "packages/mcp/src/transport.ts": "b7f68fad69469a71380635792a2d8de73614c1a8d25a74cb291f24c94e847e9e",
+    "packages/policy/CHANGELOG.md": "783a25c0fa3ae41d67551690582daeb5a3ed95a5a1101f3318e6be2931defebe",
+    "packages/policy/src/__tests__/opa.test.ts": "79327bf19e0ba36c72ef19794669f3c24e9a0c07c7da4b74af1ce6a08ea44f0b",
+    "packages/policy/src/opa.ts": "11dde581d8db4a0554f7025706066f68915e7a303cd0a1b90974854901cd856d",
+    "packages/provider-alibaba/CHANGELOG.md": "5de068d9f7ed29092fe3c6a756970ec380be7297865b1003c8d53cd2678b7201",
+    "packages/provider-alibaba/src/__tests__/embeddings.test.ts": "2ed5bb406e8d193ab7b1acec3139a85baf09ee74c09e3475977d6be2f3354023",
+    "packages/provider-alibaba/src/embeddings.ts": "012712b708171ea7804b8fd721e1421db024dd028f45ad637f62b4dca18e7b75",
+    "packages/provider-alibaba/src/models.ts": "7926b2bb2090bb8ff2b4a40a315d8a2f6f36160f485c326d6748326de3cbaac3",
+    "packages/provider-alibaba/src/provider.ts": "5c135dbb633b8966d763a8a048ea38d99f6f41213a943ea876deb7237b4de4e4",
+    "packages/provider-anthropic/CHANGELOG.md": "95e21add72e7929a5b7e1489797be488469e96ce8498a2403f1f08eb32c402d3",
+    "packages/provider-anthropic/src/messages.ts": "259eb44480eddd3b67743bf85884220a6a69797564840abc5ff88ec594f2cea1",
+    "packages/provider-anthropic/src/models.ts": "2a0fcb390c48c886de34798f7596f607fca178e26d689516ad616657a0806ff3",
+    "packages/provider-azure/CHANGELOG.md": "be43d25242bbd149669037e96ad63e2d9ce4cf628fbb9504ba0739656ecfb4e4",
+    "packages/provider-azure/src/__tests__/azure.test.ts": "3608e9ff5ab2e77d8afc4caa34abe3e689d188aed9ebc79e6951c8864e545864",
+    "packages/provider-azure/src/provider.ts": "a40484e5e53dca96ffe95e603af24a136796c8d40b63d4eaaf9168e0a5aef4cd",
+    "packages/provider-bedrock/CHANGELOG.md": "ac79be1381d740013ea29c9ac8bc40556aa134fe4e9da0b74fd9f4af000d0906",
+    "packages/provider-bedrock/src/__tests__/bedrock.test.ts": "4a941bcd9f65a35638c61b1c1cdd8c0d8bd7ad3470edff6754e6b09d97ee38ca",
+    "packages/provider-bedrock/src/sigv4.ts": "66c6a7e2c6567e31d123afb282ddae423de727648e9fa493e2694142d57c9834",
+    "packages/provider-google/CHANGELOG.md": "5e4dbbe3ebb30375e353ad33a0604e22ca9de2bb9d8ca0cd61e86a71ce59a523",
+    "packages/provider-google/src/generate-content.ts": "d8b70da5ac8f8c8ef915406eab445c0eab21ca10a0af98be0a619180722c7ef6",
+    "packages/provider-google/src/models.ts": "702fc249943281141d208f4703edbeb30c6646688a05402e4eb4305036bdd368",
+    "packages/provider-kimi/CHANGELOG.md": "9e895fae2b147222ba7fb1b78d92f339c8c1a1c012ac27ba0647b78bce6b6381",
+    "packages/provider-kimi/src/models.ts": "6ab362553d74337b78e1f9579e061d3a4d6324ca704b0ffe5199f1e158666bef",
+    "packages/provider-kimi/src/moonshot.ts": "65d7822e5812cfbf2cd0d18b6afe6817af099848f837fdef4d1f262250ab27f8",
+    "packages/provider-neuralwatt/CHANGELOG.md": "434fcfdaf0c8bb69d18d3b8f4f6b1a3e9670ee3f5201aebe4e3641d9bc32a571",
+    "packages/provider-neuralwatt/src/__tests__/neuralwatt-quota.test.ts": "47757f80330beffdd88ffdebc1a01d686529396ef90a286895373636ec0f3a4d",
+    "packages/provider-neuralwatt/src/models.ts": "74d01c46a84cde69fbe0e60b11e1686a4f282cf38b013c77d9552e074c96cd04",
+    "packages/provider-neuralwatt/src/quota.ts": "b161f05acac335ccb8da744f47d7d6e7806795fc9ec7cf7eae7a3a7af132419d",
+    "packages/provider-ollama/CHANGELOG.md": "62a29ebdfc8d7939f63febeb52dd9b22d0a5190ab38b3b96a90e2086ed578431",
+    "packages/provider-ollama/src/models.ts": "e70a1aabefdd3bdb7705a2ba56b486ef85d39e1e688ab93f00d8313e06dd1561",
+    "packages/provider-ollama/src/provider.ts": "003304e819a425564dd919a455a92e399b596d13c8dcec8ed99ec9d19ae2bf25",
+    "packages/provider-openai/CHANGELOG.md": "293b6e606fe1ed56ccb9bd6bfb379f74cf01f2e1217b8279eaf87a34fdb51783",
+    "packages/provider-openai/src/__tests__/codex-oauth.test.ts": "4fbaa4eca71b1d3b9f207e46843fb7775e9139779c3cd8adeb86731dfe8970c9",
+    "packages/provider-openai/src/__tests__/openai.test.ts": "b3ac5055f994249d4f0d6cd7debf24f305134c1ef03f17a1a217a7aee51a1f5d",
+    "packages/provider-openai/src/models.ts": "ff41b9e4ef90e041032a929a3135adcc1a7a4709155f8543d0d1bafb5a4c4549",
+    "packages/provider-openai/src/oauth.ts": "6c56e567ada2e94ba280ade9cee9dbaba6132ba1870693a3db29612a73ec05a4",
+    "packages/provider-openai/src/uploads.ts": "ea1ce5ccba760efa29f64875cbb07ad67e4863ceb3e07de65cf01dfdb109cc4d",
+    "packages/provider-opencode-go/CHANGELOG.md": "7007674f0f3f7d09abba242b5914d0ba1aab68773669951fd0df12de3e3ee21c",
+    "packages/provider-opencode-go/src/models.ts": "b43fef2834b25d84b9e26b4b775e741c35a2ec53118daf0a962ddf62cda0e1c4",
+    "packages/provider-opencode-go/src/openai-chat.ts": "887934cde9e6037530dc07cab05c64c16cb9bb70e8579a666917dcde1a66f89c",
+    "packages/provider-openrouter/CHANGELOG.md": "d8e6c92c774338c5be93e81851c1453ecd087f07a8722a99295e7b4071d92173",
+    "packages/provider-openrouter/src/models.ts": "6d6064091dc7bdadd550be9221e8d70a257c8222e1665da5dd6de8a24dd61018",
+    "packages/provider-vertex/CHANGELOG.md": "3a22c7e750d5fe46793a2c46797178df7aab2522fd5605d4b7748c231172231c",
+    "packages/provider-vertex/src/__tests__/vertex.test.ts": "3b71424b9ff7ebe4b35be98f55d2d608082d307e23f40e0a63e642228e13452c",
+    "packages/provider-vertex/src/provider.ts": "d923ccdc37ec7c851c601018c65b21ae364d4ba9f7afa434de1d7a3f96a8cc40",
+    "packages/provider-zai/CHANGELOG.md": "0cfdd4973fcf2055b8ec23995562931e5e0f9951dbde5ec1bf921faa4c11a92e",
+    "packages/provider-zai/src/models.ts": "430c16618a427d4bfa3b15e0b15a399f0c1d41dba907c49998fdaafd58725727",
+    "plans/021-Release-0-2-1-Provider-Completion-and-Outbound-Trust-Boundaries.md": "c3968717648ad6cda59082842a2b7261f1c24089608e5e455e3400514a91b8a2",
+    "plans/README.md": "169f37ad9480a9400b6860e2f42a1d05fdb838a1d178ba247b9196d469159f9f",
+    "roadmap.md": "56eda1c10745cc993384e1989ba92acff2adba12fe259eeb7ccb7a3b8e246e68",
+    "scripts/phase21-baseline.json": "absent",
+    "scripts/phase21-freeze-manifest.json": "1b3441af77994e3cca04722e379d54f300795de79840833a6427cf07fa96a889",
+    "scripts/phase21-security.test.mjs": "absent",
+    "src/__tests__/cache-telemetry.test.ts": "c81d5c615319a1fdf37a2d3ea4d3f1b959d2b8641d34e6f695639ac7e2de0bf7",
+    "src/__tests__/install-smoke.test.ts": "0b0a411621ac9bfcf6633cb3f2c1662148f92c8971f576bd672bb16b4e5367dc",
+    "src/__tests__/openai-compatible.test.ts": "4373ea06c212c345ce0a378548ad9f1f2dbbc6d8448ea5bc9283a4ec873b35b3",
+    "src/__tests__/pinned-fetch.test.ts": "absent",
+    "src/__tests__/provider-transport.test.ts": "993d150e3997ac3249f51af1120154300ee7496b40cf1d9a94ae7cd3b06a5044",
+    "src/cache-telemetry.ts": "f8788904fbd1099fa468932bd24f39c3e45281de2a91ef7a84f7e7736b6cc6b9",
+    "src/content.ts": "d31024a78267b0addf3dfd8cb2911f363e30b968705227d3adfb4eac188f4c20",
+    "src/index.ts": "ce21b1d71157c841cf09cf3dbb6579ae17f87d10bbd5c1edc1f68b8863a38ab5",
+    "src/oauth-device-code.ts": "absent",
+    "src/pinned-fetch.ts": "absent",
+    "src/providers/openai-compatible.ts": "417632edc18b91e28d9e345b057bba0c412f3f9dbbcce68cca9fce7c9b1139a6",
+    "src/providers/transport.ts": "aff2eb8fd0b35ca48c69740cee5d9b55e4e3f62bc3308c96832c2b2566c01c6e",
+    "packages/provider-azure/src/__tests__/credential-once.test.ts": "absent",
+    "packages/provider-vertex/src/__tests__/credential-once.test.ts": "absent",
+    "packages/provider-bedrock/src/__tests__/sigv4-canonical.test.ts": "absent",
+    "packages/provider-neuralwatt/src/__tests__/neuralwatt.test.ts": "f80300d94ca233e0557695475d379eecd0a119b7443b609fe3e47c28ca25ff96"
+  },
+  "preservedSurface": {
+    "packages/coding-security/src/egress/dns-pin.ts": "1cc43678113e28af968df8ad902ba4ac5803d6d148f56e547d581e9014e2e045",
+    "packages/coding-security/src/egress/index.ts": "a289d852a6222830cf12df4ddc44387ac7bbee23ab833b7ad4dc09695ee3a07c",
+    "packages/credentials-node/src/microsoft365-oauth.ts": "b41fdaea54cac1b7ea5beec67e20ea29a12a02eefc37caa41d2b8d23f76ddca2",
+    "packages/credentials-node/src/google-workspace-oauth.ts": "da49376aebcecbe89ebcb10689a19f0983ddb145f0d89210869ec01dd16211ac",
+    "packages/provider-alibaba/src/provider.ts": "5c135dbb633b8966d763a8a048ea38d99f6f41213a943ea876deb7237b4de4e4",
+    "packages/provider-kimi/src/moonshot.ts": "65d7822e5812cfbf2cd0d18b6afe6817af099848f837fdef4d1f262250ab27f8",
+    "packages/provider-ollama/src/provider.ts": "003304e819a425564dd919a455a92e399b596d13c8dcec8ed99ec9d19ae2bf25",
+    "packages/provider-opencode-go/src/openai-chat.ts": "887934cde9e6037530dc07cab05c64c16cb9bb70e8579a666917dcde1a66f89c",
+    "packages/provider-anthropic/src/messages.ts": "259eb44480eddd3b67743bf85884220a6a69797564840abc5ff88ec594f2cea1",
+    "packages/provider-google/src/generate-content.ts": "d8b70da5ac8f8c8ef915406eab445c0eab21ca10a0af98be0a619180722c7ef6"
+  },
+  "strictCompletionOptIns": {
+    "current": [
+      "packages/provider-alibaba/src/provider.ts (provider.ts:39,70)",
+      "packages/provider-kimi/src/moonshot.ts (moonshot.ts:35,66)",
+      "packages/provider-ollama/src/provider.ts (provider.ts:33,57)",
+      "packages/provider-opencode-go/src/openai-chat.ts (openai-chat.ts:37)"
+    ],
+    "inheritingPermissiveDefault": [
+      "azure",
+      "bedrock",
+      "vertex",
+      "openrouter",
+      "zai",
+      "neuralwatt"
+    ],
+    "enforcement": "src/providers/openai-compatible.ts:136 (if (options.strictCompletion && (!sawDoneMarker || !sawFinishReason)) -> incomplete_delta); default currently permissive (undefined)"
+  },
+  "unboundedSuccessSites": {
+    "modelDiscovery": [
+      [
+        "packages/provider-alibaba/src/models.ts",
+        106
+      ],
+      [
+        "packages/provider-anthropic/src/models.ts",
+        97
+      ],
+      [
+        "packages/provider-google/src/models.ts",
+        92
+      ],
+      [
+        "packages/provider-kimi/src/models.ts",
+        83
+      ],
+      [
+        "packages/provider-neuralwatt/src/models.ts",
+        91
+      ],
+      [
+        "packages/provider-ollama/src/models.ts",
+        102
+      ],
+      [
+        "packages/provider-openai/src/models.ts",
+        80
+      ],
+      [
+        "packages/provider-opencode-go/src/models.ts",
+        119
+      ],
+      [
+        "packages/provider-openrouter/src/models.ts",
+        83
+      ],
+      [
+        "packages/provider-zai/src/models.ts",
+        93
+      ]
+    ],
+    "other": [
+      [
+        "packages/provider-neuralwatt/src/quota.ts",
+        86
+      ],
+      [
+        "packages/provider-alibaba/src/embeddings.ts",
+        88
+      ],
+      [
+        "packages/provider-openai/src/uploads.ts",
+        79
+      ]
+    ],
+    "oauthDeviceToken": [
+      [
+        "packages/provider-openai/src/oauth.ts",
+        150
+      ],
+      [
+        "packages/provider-openai/src/oauth.ts",
+        209
+      ],
+      [
+        "packages/provider-openai/src/oauth.ts",
+        224
+      ],
+      [
+        "packages/credentials-node/src/oauth2.ts",
+        158
+      ],
+      [
+        "packages/credentials-node/src/oauth2.ts",
+        212
+      ],
+      [
+        "packages/credentials-node/src/oauth2.ts",
+        226
+      ]
+    ],
+    "postHocBounded": "packages/credentials-node/src/oidc.ts:215 response.text() with post-read size bound (maxJwksKeys*maxJwkBytes+slack) - stays, gains DNS pinning in task4",
+    "outOfScope": "packages/mcp/src/auth.ts:403 revocation error detail response.text() (error path only, roadmap names core OpenAI OAuth + credentials-node OAuth) - recorded, not scoped"
+  },
+  "fetchPosture": {
+    "oidc": "assertSsrfAllowedUrl + redirect manual + post-hoc size bound; no DNS pin (credentials-node/src/oidc.ts fetchJwks)",
+    "opa": "assertSsrfAllowedUrl + redirect manual + readBoundedBody maxResponseBytes + bundle-revision pin; no DNS pin (policy/src/opa.ts callOpa)",
+    "content": "assertSsrfAllowedUrl + SsrfPolicy + MIME/aggregation caps; no DNS pin (src/content.ts)",
+    "mcp": "resolvePinnedAddress (1-32 answers, family, loopback, per-candidate assertSsrfAllowedUrl) + requestPinned (lookup hook pins the validated address) + 3xx rejection + boundResponse - the strongest primitive, lifted in task4"
+  },
+  "oauthDuplication": {
+    "files": [
+      "packages/provider-openai/src/oauth.ts",
+      "packages/credentials-node/src/oauth2.ts"
+    ],
+    "duplicated": [
+      "device-code poll loop",
+      "SLOW_DOWN_INCREMENT_MS 5000",
+      "authorization_pending/slow_down handling",
+      "TokenSuccessPayload/TokenErrorPayload shapes",
+      "exchangeToken/parseTokenCredentials",
+      "redactOAuthError",
+      "unbounded success/error JSON reads"
+    ],
+    "consumersOfOauth2": [
+      "packages/credentials-node/src/microsoft365-oauth.ts",
+      "packages/credentials-node/src/google-workspace-oauth.ts"
+    ],
+    "topologyNote": "no provider package depends on credentials-node (verified via package.json grep); both consumers import from @arnilo/prism, so the shared helper lives in core"
+  },
+  "bedrockCanonicalization": {
+    "current": "sigv4.ts:52-60 canonicalHeaders = Object.entries(headers).find(key.toLowerCase()===name) picks first-match while duplicate-case keys both survive the object spread; canonicalQuery sorts entries with an identical a===b branch so repeated query keys are never ordered by value",
+    "defect": "duplicate-case headers produce an inconsistent signed value; repeated query keys violate AWS SigV4 key-then-value ordering"
+  },
+  "uploadCleanup": {
+    "current": "uploads.ts:86-107 cleanup() copies uploadedIds then clears the set and the cache BEFORE issuing DELETEs; a failed DELETE swallows the error and loses the file id",
+    "defect": "failed cleanup DELETEs leak files with no retry path"
+  },
+  "cacheTelemetryOverflow": {
+    "current": "cache-telemetry.ts:99-147 keys beyond CACHE_TELEMETRY_CAP collapse into one shared __overflow__ sample; record() applies if (model?.cost) using the current record model cost to the shared overflow sample",
+    "defect": "one model cost applied to mixed-model overflow tokens"
+  },
+  "exitGate": {
+    "$comment": "0.2.1 exit gate evidence (plan 021 Task 8): recorded after Tasks 0-7 land; green = full npm test + sdk:ready + audit + pack determinism + plain reviewed release:gate at 0.2.1 + live OIDC/OPA protected evidence + no blocker skip.",
+    "recordedAt": "2026-08-13T18:45:00.000Z",
+    "green": true,
+    "npmTest": {
+      "exitCode": 0,
+      "corePass": 1498,
+      "coreFail": 0,
+      "suites": 44,
+      "scriptGatesPass": 255,
+      "scriptGatesFail": 0,
+      "totals": {
+        "tests": 3449,
+        "pass": 3416,
+        "skip": 33,
+        "fail": 0
+      }
+    },
+    "sdkReady": {
+      "exitCode": 0
+    },
+    "audit": {
+      "vulnerabilities": 0,
+      "level": "moderate"
+    },
+    "packDryRun": {
+      "packages": 50,
+      "deterministic": true,
+      "run1Sha256": "669c43596a6005998802a1088890a91de219cdc0b70d4a1b0178e23c12a12be4",
+      "run2Sha256": "669c43596a6005998802a1088890a91de219cdc0b70d4a1b0178e23c12a12be4"
+    },
+    "releaseGate": {
+      "version": "0.2.1",
+      "packages": 50,
+      "errors": 0,
+      "breakingDeltas": 0,
+      "notes": "plain reviewed gate at 0.2.1 after --update-baseline refresh: deltas reviewed were the version literal and @arnilo/prism-mcp transport helpers (boundResponse/defaultResolver/isLoopbackAddress/isLoopbackHostname/normalizeHostname/raceAbort/requestPinned/resolvePinnedAddress) becoming re-exports of the lifted core primitives - same names and signatures, no declaration removed; no --allow-break"
+    },
+    "protectedEvidence": {
+      "oidcOpa": true,
+      "oidc": {
+        "live": true,
+        "idp": "Microsoft AAD v2 (login.microsoftonline.com/common/discovery/v2.0/keys)",
+        "path": "default pinned path of createOidcIdentityVerifier (@arnilo/prism-credentials-node/oidc) - real DNS resolution, real TLS, real JWKS document",
+        "result": "fetch 200 + parse succeeded; bogus-signature RS256 token with unknown kid failed with ERR_PRISM_OIDC_JWKS_KEY_MISSING (key-lookup miss proves keys fetched and searched); 528ms"
+      },
+      "opa": {
+        "live": true,
+        "server": "openpolicyagent/opa:0.68.0-static in docker (127.0.0.1:8181), policy prism/evidence pushed, decision endpoint 200 {\"result\":{\"allow\":true}} via curl",
+        "path": "default pinned path of createOpaPolicyEvaluator (@arnilo/prism-policy)",
+        "result": "fail-closed MediaContentError ssrf_denied against the real server (loopback address never reachable through the pin); decision-success path covered by the built public conformance suite since no public-address OPA endpoint is reachable from this host"
+      },
+      "note": "live runs 2026-08-13 (node v24.19.0); neither is a skip - a missing protected environment records 0.2.1 as blocked"
+    },
+    "compatibility": {
+      "breakingDeltas": 0,
+      "allowBreak": false,
+      "refreshedBaselines": [
+        "arnilo__prism.txt",
+        "arnilo__prism-mcp.txt"
+      ],
+      "notes": "plain pre-refresh gate reviewed: expected deltas were the version literal and the mcp re-export signatures; no unexpected removal; --update-baseline refresh then plain gate green"
+    },
+    "node20": {
+      "version": "v20.20.2",
+      "packedImports": {
+        "tests": 8,
+        "pass": 8,
+        "fail": 0
+      }
+    },
+    "secrets": {
+      "files": 4024,
+      "findings": 0
+    },
+    "threatSuites": {
+      "tests": 42,
+      "pass": 42,
+      "fail": 0
+    }
+  },
+  "exitGateVersion": "0.2.1"
+}

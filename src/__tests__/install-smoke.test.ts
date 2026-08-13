@@ -97,9 +97,11 @@ const result = {
   integrationStatus: -1,
   compositionStatus: -1,
   securityStatus: -1,
+  security21Status: -1,
   smokeOut: "",
   integrationOut: "",
   securityOut: "",
+  security21Out: "",
   compositionOut: "",
   junk: [] as string[],
   secretFindings: [] as string[],
@@ -455,6 +457,85 @@ console.log("PACKED PHASE20 SECURITY OK");
   result.securityStatus = security.status;
   result.securityOut = security.stdout + security.stderr;
 
+  // 5c. Packed plain-JavaScript phase21 security regressions (plan 021 Task 7):
+  //     the 0.2.1 trust-boundary changes proven through the installed tarballs
+  //     with no TypeScript compiler — truncated streams reject, oversized
+  //     bodies abort, pinned fetch fails closed on private answers, device-code
+  //     polls redact secrets, and overflow cache telemetry never mixes costs.
+  writeFileSync(
+    join(consumer, "security21.mjs"),
+    `
+import assert from "node:assert/strict";
+import { createCacheTelemetry, MediaContentError, pinnedFetch, pollDeviceCodeToken } from "@arnilo/prism";
+import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
+import { ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/providers/transport";
+
+// Truncated OpenAI-compatible stream rejects (strictCompletion shared default).
+const truncated = new Response("data: [DONE]\\n\\n", { status: 200, headers: { "content-type": "text/event-stream" } });
+const provider = createOpenAICompatibleProvider({ apiKey: "k", baseUrl: "https://api.example.com/v1", fetch: async () => truncated });
+const events = [];
+for await (const event of provider.generate({ model: { provider: "mock", model: "demo" }, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] })) events.push(event);
+const streamError = events.find((event) => event.type === "error");
+assert.ok(streamError, "truncated stream must error");
+assert.match(String(streamError.error?.message ?? ""), /without completion evidence/);
+assert.equal(events.some((event) => event.type === "done"), false);
+
+// Oversized discovery-shaped body aborts before full buffering.
+const oversized = new Response(JSON.stringify({ data: Array.from({ length: 40000 }, (_, i) => ({ id: "m" + i })) }), { status: 200 });
+let overflowCode = null;
+try {
+  await readBoundedResponseJson(oversized);
+} catch (error) {
+  overflowCode = error instanceof ProviderTransportError ? error.code : null;
+}
+assert.equal(overflowCode, "response_body_overflow");
+
+// DNS-pinned fetch fails closed on a private-address answer (OIDC/OPA/content all route through this).
+const privateAnswer = await pinnedFetch(new URL("https://jwks.example.com/jwks.json"), undefined, {
+  resolver: async () => [{ address: "10.0.0.1", family: 4 }],
+}).then(() => null, (error) => error);
+assert.ok(privateAnswer instanceof MediaContentError);
+assert.equal(privateAnswer.code, "ssrf_denied");
+
+// Device-code poll redacts device_code/user_code from terminal errors.
+const terminal = await pollDeviceCodeToken({
+  errorPrefix: "Packed21",
+  deviceCodeUrl: "https://id.example.com/device",
+  tokenUrl: "https://id.example.com/token",
+  clientId: "client",
+  now: () => 1000000,
+  sleep: async () => {},
+  parseTokenCredentials: (json) => ({ accessToken: json.access_token }),
+  fetchImpl: async (input) => {
+    if (String(input).endsWith("/device")) {
+      return new Response(JSON.stringify({ device_code: "dev-secret", user_code: "USER-CODE", verification_uri: "https://id.example.com/activate", expires_in: 600 }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ error: "access_denied", error_description: "rejected device_code=dev-secret user_code=USER-CODE" }), { status: 400 });
+  },
+}).then(() => null, (error) => error);
+assert.ok(terminal instanceof Error);
+assert.ok(terminal.message.includes("[REDACTED]"));
+assert.equal(terminal.message.includes("dev-secret"), false);
+assert.equal(terminal.message.includes("USER-CODE"), false);
+
+// Overflow cache telemetry never mixes model costs.
+const telemetry = createCacheTelemetry({ maxKeys: 2 });
+const usage = (cacheReadTokens) => ({ inputTokens: 100, cacheReadTokens });
+const model = (name) => ({ provider: "mock", model: name, cost: { input: 2, cacheRead: 0.5 } });
+telemetry.record(usage(100), model("a"));
+telemetry.record(usage(100), model("b"));
+telemetry.record(usage(50), model("c"));
+const overflow = telemetry.report().samples.find((sample) => sample.model === "__overflow__");
+assert.ok(overflow);
+assert.equal(overflow.estimatedSavings, undefined);
+assert.equal(overflow.currency, undefined);
+console.log("PACKED PHASE21 SECURITY OK");
+`,
+  );
+  const security21 = run("node", ["security21.mjs"], consumer);
+  result.security21Status = security21.status;
+  result.security21Out = security21.stdout + security21.stderr;
+
   // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
   // Third-party transitive deps (e.g. `diff`) may ship their own maps; we only gate Prism packages.
   const nodeModules = join(consumer, "node_modules");
@@ -499,26 +580,30 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.securityStatus, 0, result.securityOut);
   });
 
+  it("packed plain-JS phase21 security regressions run without TypeScript", () => {
+    assert.equal(result.security21Status, 0, result.security21Out);
+  });
+
   it("installed packages contain no test artifacts, source maps, or real-looking secrets", () => {
     assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
     assert.deepEqual(result.secretFindings, [], `secret-like value leaked into installed packages: ${result.secretFindings.join(", ")}`);
     assert.equal(
-      (result.integrationOut + result.compositionOut + result.securityOut).includes("packed-integration-secret"),
+      (result.integrationOut + result.compositionOut + result.securityOut + result.security21Out).includes("packed-integration-secret"),
       false,
       "canary leaked into packed journey output",
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.0.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.1.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.2.0.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.2.1.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.2.0.tgz"),
-      `expected 'arnilo-prism-0.2.0.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.2.1.tgz"),
+      `expected 'arnilo-prism-0.2.1.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.2.0.tgz", "arnilo-prism-compaction-0.2.0.tgz", "arnilo-prism-all-0.2.0.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.2.1.tgz", "arnilo-prism-compaction-0.2.1.tgz", "arnilo-prism-all-0.2.1.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

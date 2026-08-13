@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-provider-alibaba",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Alibaba Cloud (Model Studio / DashScope, incl. Coding Plan) provider package for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,7 +26,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.0"
+    "@arnilo/prism": "0.2.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

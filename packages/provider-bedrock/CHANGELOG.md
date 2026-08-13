@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): SigV4 canonicalization lowercases and merges duplicate-case request headers last-wins and sorts query parameters by encoded key then value — duplicate-case or reordered input can no longer produce a malformed signature (single-case input byte-identical); inherited strict stream completion shared default.
+
+
 
 ## [0.1.0] - 2026-08-09
 

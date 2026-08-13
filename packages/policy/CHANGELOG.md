@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): OPA decision fetches DNS-pinned through the core pinnedFetch primitive — redirects rejected and private/metadata/loopback addresses fail closed (MediaContentError ssrf_denied), bundle-revision/body caps unchanged.
+
+
 
 ## [0.1.0] - 2026-08-09
 

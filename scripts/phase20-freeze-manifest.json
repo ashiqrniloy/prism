@@ -19,15 +19,34 @@
         "docs/public-contracts.md"
       ],
       "markers": {
-        "src/agent-approval.ts": ["assertValidAgentRunResume"],
-        "src/agent-run-lifecycle.ts": ["assertValidAgentRunResume"],
-        "src/__tests__/run-decisions.test.ts": ["unknown legacy decision"],
-        "src/__tests__/agent-run-state.test.ts": ["sideways"],
-        "packages/server/src/__tests__/server.test.ts": ["sideways"],
-        "docs/agent-session-runtime.md": ["no-side-effect"],
-        "docs/public-contracts.md": ["resume validation"]
+        "src/agent-approval.ts": [
+          "assertValidAgentRunResume"
+        ],
+        "src/agent-run-lifecycle.ts": [
+          "assertValidAgentRunResume"
+        ],
+        "src/__tests__/run-decisions.test.ts": [
+          "unknown legacy decision"
+        ],
+        "src/__tests__/agent-run-state.test.ts": [
+          "sideways"
+        ],
+        "packages/server/src/__tests__/server.test.ts": [
+          "sideways"
+        ],
+        "docs/agent-session-runtime.md": [
+          "no-side-effect"
+        ],
+        "docs/public-contracts.md": [
+          "resume validation"
+        ]
       },
-      "securityTests": ["T1 unknown legacy decision", "T2 malformed batch", "T3 stale/foreign/duplicate regression", "T5 no-side-effect ordering"],
+      "securityTests": [
+        "T1 unknown legacy decision",
+        "T2 malformed batch",
+        "T3 stale/foreign/duplicate regression",
+        "T5 no-side-effect ordering"
+      ],
       "rationale": "roadmap 0.2.0 item 1 / review blocker 1: prepareAgentRunResume treats any decision other than 'approve'/'deny' as 'no decision given' and proceeds to claim the checkpoint and execute the suspended tool; resolveRunDecisions assumes typed entries so malformed untyped batches crash with raw TypeErrors. One assertValidAgentRunResume in agent-approval.ts invoked at the top of prepareAgentRunResume covers all four public entrypoints (lifecycle resume/resumeStream and free resumeAgentRun/resumeAgentRunStream). Reuses AgentDecisionError codes, HARD_MAX_PENDING_DECISIONS, MAX_DECISION_REASON_BYTES, MAX_ELICITATION_BYTES from the preserved contracts-run-state surface. Server readAgentResume/readAgentDecisions stay unchanged (defense in depth)."
     },
     {
@@ -41,15 +60,33 @@
         "packages/work-tools/README.md"
       ],
       "markers": {
-        "packages/work-tools/src/cli.ts": ["buildCliEnvironment", "collectOutput", "path.isAbsolute"],
-        "packages/work-tools/src/__tests__/work-tools.test.ts": ["ambient"],
-        "docs/work-tools.md": ["absolute"],
-        "packages/work-tools/README.md": ["absolute"]
+        "packages/work-tools/src/cli.ts": [
+          "buildCliEnvironment",
+          "collectOutput",
+          "path.isAbsolute"
+        ],
+        "packages/work-tools/src/__tests__/work-tools.test.ts": [
+          "ambient"
+        ],
+        "docs/work-tools.md": [
+          "absolute"
+        ],
+        "packages/work-tools/README.md": [
+          "absolute"
+        ]
       },
       "negativeMarkers": {
-        "packages/work-tools/src/index.ts": ["buildCliEnvironment", "collectOutput"]
+        "packages/work-tools/src/index.ts": [
+          "buildCliEnvironment",
+          "collectOutput"
+        ]
       },
-      "securityTests": ["T4 ambient secret inheritance", "T5 token env override of reserved keys", "T6 relative/path-hijacked executable/config", "T7 output exhaustion / quadratic capture"],
+      "securityTests": [
+        "T4 ambient secret inheritance",
+        "T5 token env override of reserved keys",
+        "T6 relative/path-hijacked executable/config",
+        "T7 output exhaustion / quadratic capture"
+      ],
       "rationale": "roadmap 0.2.0 item 2 / review blocker 2: createCliRunner builds the child env as {...process.env, ...options.env, HOME, CLIMICROSOFT365_DISABLETELEMETRY}, so every ambient variable reaches the child (manual proof: PRISM_PROOF_SECRET leaked); binary/configDir accept relative paths; defaultExec accumulates output with repeated Buffer.concat (worst-case O(n^2)). Fix: package-local buildCliEnvironment (minimal fixed allow-list base, then explicit options.env, then reserved fixed controls set last; NUL/casing/count/byte validation) + collectOutput (chunk array, one final concat, cap kill) + path.isAbsolute checks. No new public exports (Task 0 approved module-private helpers in cli.ts only); docker/native exact-env behavior is the preserved precedent."
     },
     {
@@ -72,21 +109,54 @@
         "packages/coding-security/README.md"
       ],
       "markers": {
-        "packages/coding-security/src/sandbox.ts": ["SandboxCapabilities"],
-        "packages/coding-security/src/sandbox-coding-operations.ts": ["resolveSandboxCapabilities", "@deprecated"],
-        "packages/coding-security/src/docker-sandbox.ts": ["egressRestricted"],
-        "packages/coding-security/src/native-sandbox.ts": ["filesystemIsolated"],
-        "packages/coding-security/src/index.ts": ["SandboxCapabilities"],
-        "packages/coding-security/src/__tests__/sandbox-coding-operations.test.ts": ["capabilit"],
-        "packages/coding-security/src/__tests__/workspace-consistency.test.ts": ["capabilit"],
-        "packages/coding-security/src/__tests__/sandbox-fs-operations.test.ts": ["capabilit"],
-        "packages/coding-security/src/__tests__/docker-sandbox.test.ts": ["egressRestricted"],
-        "packages/coding-security/src/__tests__/native-sandbox.test.ts": ["filesystemIsolated"],
-        "docs/coding-security.md": ["capability metadata"],
-        "docs/host-security.md": ["individual capabilities"],
-        "packages/coding-security/README.md": ["capabilit"]
+        "packages/coding-security/src/sandbox.ts": [
+          "SandboxCapabilities"
+        ],
+        "packages/coding-security/src/sandbox-coding-operations.ts": [
+          "resolveSandboxCapabilities",
+          "@deprecated"
+        ],
+        "packages/coding-security/src/docker-sandbox.ts": [
+          "egressRestricted"
+        ],
+        "packages/coding-security/src/native-sandbox.ts": [
+          "filesystemIsolated"
+        ],
+        "packages/coding-security/src/index.ts": [
+          "SandboxCapabilities"
+        ],
+        "packages/coding-security/src/__tests__/sandbox-coding-operations.test.ts": [
+          "capabilit"
+        ],
+        "packages/coding-security/src/__tests__/workspace-consistency.test.ts": [
+          "capabilit"
+        ],
+        "packages/coding-security/src/__tests__/sandbox-fs-operations.test.ts": [
+          "capabilit"
+        ],
+        "packages/coding-security/src/__tests__/docker-sandbox.test.ts": [
+          "egressRestricted"
+        ],
+        "packages/coding-security/src/__tests__/native-sandbox.test.ts": [
+          "filesystemIsolated"
+        ],
+        "docs/coding-security.md": [
+          "capability metadata"
+        ],
+        "docs/host-security.md": [
+          "individual capabilities"
+        ],
+        "packages/coding-security/README.md": [
+          "capabilit"
+        ]
       },
-      "securityTests": ["T8 custom capability spoof/omission", "T9 native filesystem overclaim", "T10 Docker custom-network ambiguity", "T11 mixed wiring", "T12 downgrade through deprecated metadata"],
+      "securityTests": [
+        "T8 custom capability spoof/omission",
+        "T9 native filesystem overclaim",
+        "T10 Docker custom-network ambiguity",
+        "T11 mixed wiring",
+        "T12 downgrade through deprecated metadata"
+      ],
       "rationale": "roadmap 0.2.0 item 3 / review blocker 3: SandboxCodingComposition.containmentClaim is computed from workspace wiring alone (backendsBound && !mixedWiringAllowed && warnings.length === 0) so native (no filesystem isolation) and duck-typed custom adapters can claim containment. Fix: additive SandboxCapabilities {workspaceCoherent, filesystemIsolated, networkIsolated, egressRestricted, processIsolated, privilegeIsolated} on SandboxAdapter with omission => all false, resolveSandboxCapabilities in sandbox-coding-operations.ts, truthful built-in metadata (native filesystemIsolated false; docker networkIsolated only for mode none, egressRestricted only with attestation, privilegeIsolated false), containmentClaim retained as @deprecated conservative conjunction. CONSTRAINT: src/__tests__/docs.test.ts:1262 asserts docs/coding-security.md still includes 'containmentClaim', so docs keep the deprecated term. Egress validation primitives (egress/) are preserved surface."
     },
     {
@@ -100,11 +170,26 @@
         ".github/workflows/release.yml"
       ],
       "markers": {
-        "scripts/phase20-security.test.mjs": ["sideways", "ambient", "filesystemIsolated"],
-        "src/__tests__/install-smoke.test.ts": ["phase20"],
-        ".github/workflows/sandbox-browser.yml": ["capabilit"]
+        "scripts/phase20-security.test.mjs": [
+          "sideways",
+          "ambient",
+          "filesystemIsolated"
+        ],
+        "src/__tests__/install-smoke.test.ts": [
+          "phase20"
+        ],
+        ".github/workflows/sandbox-browser.yml": [
+          "capabilit"
+        ]
       },
-      "securityTests": ["T1 packed consumer", "T4 packed consumer", "T8 packed consumer", "T9 protected native evidence", "T10 protected Docker evidence", "gate accounting"],
+      "securityTests": [
+        "T1 packed consumer",
+        "T4 packed consumer",
+        "T8 packed consumer",
+        "T9 protected native evidence",
+        "T10 protected Docker evidence",
+        "gate accounting"
+      ],
       "rationale": "roadmap 0.2.0 mandatory regression matrix items 1-3 / review blocker evidence: the original resume defect passed TypeScript declarations and existed only at runtime, so regressions must run against built public entrypoints and a fresh packed plain-JavaScript consumer (install-smoke harness), not private source imports. scripts/phase20-security.test.mjs wires into security:threat-suites; sandbox-browser.yml records Docker/native capability evidence and is a required protected gate (missing => 0.2.0 blocked, never a passing skip). release.yml retains the phase-20 security report in publish prerequisites only if sdk:ready does not already cover it (conditional edit; existence is the only done-marker)."
     }
   ],
@@ -113,97 +198,183 @@
     "rule": "editable only by listed editor tasks; all-pending => byte-immutable; done editors assert their markers",
     "files": {
       "docs/index.md": {
-        "editors": ["task2", "task3", "task4", "task6"],
+        "editors": [
+          "task2",
+          "task3",
+          "task4",
+          "task6"
+        ],
         "markers": {
-          "task2": ["fail-closed durable resume"],
-          "task3": ["isolated subprocess"],
-          "task4": ["sandbox capability"],
-          "task6": ["0.2.0"]
+          "task2": [
+            "fail-closed durable resume"
+          ],
+          "task3": [
+            "isolated subprocess"
+          ],
+          "task4": [
+            "sandbox capability"
+          ],
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "package.json": {
-        "editors": ["task1", "task5", "task6"],
+        "editors": [
+          "task1",
+          "task5",
+          "task6"
+        ],
         "markers": {
-          "task1": ["phase20-freeze.test.mjs"],
-          "task5": ["phase20-security.test.mjs"],
-          "task6": ["0.2.0"]
+          "task1": [
+            "phase20-freeze.test.mjs"
+          ],
+          "task5": [
+            "phase20-security.test.mjs"
+          ],
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "scripts/phase20-baseline.json": {
-        "editors": ["task1", "task5", "task6"],
+        "editors": [
+          "task1",
+          "task5",
+          "task6"
+        ],
         "markers": {
-          "task1": ["gitHead"],
-          "task5": ["exitGate"],
-          "task6": ["green"]
+          "task1": [
+            "gitHead"
+          ],
+          "task5": [
+            "exitGate"
+          ],
+          "task6": [
+            "green"
+          ]
         }
       },
       "scripts/phase20-freeze-manifest.json": {
-        "editors": ["task1", "task6"],
+        "editors": [
+          "task1",
+          "task6"
+        ],
         "markers": {
-          "task1": ["release"],
-          "task6": ["task6"]
+          "task1": [
+            "release"
+          ],
+          "task6": [
+            "task6"
+          ]
         }
       },
       "plans/020-Release-0-2-0-Fail-Closed-Runtime-and-Sandbox-Security.md": {
-        "editors": ["task1", "task6"],
+        "editors": [
+          "task1",
+          "task6"
+        ],
         "markers": {
-          "task1": ["- [x] Task 1"],
-          "task6": ["To be filled"] 
+          "task1": [
+            "- [x] Task 1"
+          ],
+          "task6": [
+            "To be filled"
+          ]
         }
       },
       "plans/README.md": {
-        "editors": ["task1", "task6"],
+        "editors": [
+          "task1",
+          "task6"
+        ],
         "markers": {
-          "task1": ["020-Release-0-2-0"],
-          "task6": ["| complete |"]
+          "task1": [
+            "020-Release-0-2-0"
+          ],
+          "task6": [
+            "| complete |"
+          ]
         }
       },
       "roadmap.md": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["- [x] "]
+          "task6": [
+            "- [x] "
+          ]
         }
       },
       "CHANGELOG.md": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["0.2.0"]
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "packages/work-tools/CHANGELOG.md": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["0.2.0"]
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "packages/coding-security/CHANGELOG.md": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["0.2.0"]
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "src/index.ts": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["0.2.0"]
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "docs/migration.md": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["0.2.0"]
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "docs/release-and-install.md": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["0.2.0"]
+          "task6": [
+            "0.2.0"
+          ]
         }
       },
       "package-lock.json": {
-        "editors": ["task6"],
+        "editors": [
+          "task6"
+        ],
         "markers": {
-          "task6": ["0.2.0"]
+          "task6": [
+            "0.2.0"
+          ]
         }
       }
     }

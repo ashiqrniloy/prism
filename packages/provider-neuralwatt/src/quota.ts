@@ -1,5 +1,5 @@
 import { type CredentialValueSource, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface GetNeuralWattQuotaOptions {
   readonly apiKey: CredentialValueSource;
@@ -83,5 +83,5 @@ export async function getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Pr
     throw new Error(
       `NeuralWatt quota failed: ${response.status} ${redactSecrets(await readBoundedResponseText(response, { secrets: [token] }), [token])}`,
     );
-  return (await response.json()) as NeuralWattQuota;
+  return readBoundedResponseJson<NeuralWattQuota>(response);
 }

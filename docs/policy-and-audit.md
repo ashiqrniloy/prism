@@ -115,6 +115,7 @@ Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permi
 - Policy version pin fails closed on mismatch.
 - Unrestricted payload field names (`prompt`, `body`, `toolArguments`, …) are rejected before append.
 - Evaluate/append are O(fields) and network-free in-package; remote WORM I/O stays in the host sink/adapter.
+- The OPA decision fetch (0.2.1) is DNS-pinned through the core `pinnedFetch` primitive: one resolve per request, every resolved address SSRF-checked before the connect (rebinding defense), redirects rejected outright, timeouts/retries unchanged, and private-answer denials surface `MediaContentError` (`ssrf_denied`) rather than a transport error.
 - Export never full-scans: page size is capped; raise hard caps only with Phase 8 freeze + tests + docs updates.
 
 ## OPA external policy adapter (`@arnilo/prism-policy/opa`, 0.0.28)

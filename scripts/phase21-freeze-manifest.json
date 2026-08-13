@@ -1,0 +1,767 @@
+{
+  "$comment": "Phase 21 (0.2.1) Task 1 provider-completion-and-outbound-trust-boundaries scope gate. Machine-checkable source of truth consumed by Tasks 2-8 of plans/021-Release-0-2-1-Provider-Completion-and-Outbound-Trust-Boundaries.md: the six 0.2.1 implementation items (strict stream completion; bounded success-body reader; DNS-pinned JWKS/OPA/content fetch; shared bounded OAuth device/token poll; credential/signing/upload/cache edge fixes; public-JavaScript/packed/threat-suite regressions) each with an allowed-file scope, task ownership, done-phase content markers, and threat-to-test mapping; the preserved surface that must stay byte-identical for the whole phase (egress dns-pin primitives - decision 12 no-convergence, OAuth connector consumers of oauth2.ts, the four strictCompletion opt-in adapter files that stay untouched, native streaming adapters); allowed/forbidden changes; the compat policy (additive-only EXCEPT the five documented behavior tightenings of this plan: strictCompletion shared default, bounded success bodies, DNS-pinned fetches with redirect rejection, OAuth consolidation with equivalent behavior, and the four edge fixes - no declaration removal is planned; --allow-break requires a recorded deviation + plan amendment after a plain reviewed gate); the audit/signed-tag/provenance policy; the protected-gate policy (OIDC/OPA provider-identity-policy protected evidence required, never a passing skip); per-task evidence tokens; and the deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json. Amendment requires a recorded deviation entry below. Validated by scripts/phase21-freeze.test.mjs. Baseline evidence for regression comparison at the Task 8 exit gate lives in scripts/phase21-baseline.json (captured at 0.2.0).",
+  "release": "0.2.1",
+  "line": "0.2.x",
+  "type": "provider-completion-and-outbound-trust-boundaries",
+  "baseline": "0.2.0 (plan 020 exit gate passed 2026-08-13; signed tag v0.2.0; 50 publishable manifests; audit 0; compat baselines current at 0.2.0; five confirmed gaps: six OpenAI-compatible adapters accept truncated streams as providerDone, thirteen unbounded response.json() success sites, JWKS/OPA/content fetches have no DNS pin, two duplicated OAuth device/token poll loops, and four credential/signing/upload/cache edge defects; HEAD cb9369d)",
+  "items": [
+    {
+      "id": "strict-completion",
+      "task": "task2",
+      "title": "Make strict completion the shared default for every streaming provider",
+      "allowedFiles": [
+        "docs/providers/openai-compatible.md",
+        "packages/provider-azure/src/__tests__/azure.test.ts",
+        "packages/provider-bedrock/src/__tests__/bedrock.test.ts",
+        "packages/provider-neuralwatt/src/__tests__/neuralwatt.test.ts",
+        "packages/provider-vertex/src/__tests__/vertex.test.ts",
+        "src/__tests__/openai-compatible.test.ts",
+        "src/providers/openai-compatible.ts"
+      ],
+      "markers": {
+        "src/providers/openai-compatible.ts": [
+          "strictCompletion"
+        ],
+        "src/__tests__/openai-compatible.test.ts": [
+          "truncated"
+        ],
+        "docs/providers/openai-compatible.md": [
+          "strict completion"
+        ],
+        "packages/provider-azure/src/__tests__/azure.test.ts": [
+          "finish_reason"
+        ],
+        "packages/provider-bedrock/src/__tests__/bedrock.test.ts": [
+          "finish_reason"
+        ],
+        "packages/provider-vertex/src/__tests__/vertex.test.ts": [
+          "finish_reason"
+        ],
+        "packages/provider-neuralwatt/src/__tests__/neuralwatt.test.ts": [
+          "finish_reason"
+        ]
+      },
+      "securityTests": [
+        "T1 truncated stream succeeds as providerDone",
+        "T2 terminal variant regression",
+        "T3 abort vs truncation",
+        "T14 opt-out downgrade"
+      ],
+      "rationale": "roadmap 0.2.1 item 1: openAIChatEvents/createOpenAICompatibleProvider default strictCompletion to false-undefined, so azure/bedrock/vertex/openrouter/zai/neuralwatt (all six stream through the shared base without the flag) accept EOF without [DONE]/finish_reason as successful providerDone (enforcement exists at openai-compatible.ts:136 and never fires). Fix: flip the shared default to true; existing strictCompletion: false stays honored as the documented opt-out (Task 0 decision 1); alibaba/kimi/ollama/opencode-go keep identical behavior and are preserved surface (their opt-ins stay untouched, no per-adapter flag proliferation). Per-adapter truncated-stream conformance lives in Task 7 built public-entry tests; base conformance here covers the shared path. Anthropic/Google native streaming adapters are out of scope (preserved). SCOPE AMENDMENT (deviation 2): the strict default rejects simplified [DONE]-only mock streams in the adapter package test files (azure/bedrock/vertex/neuralwatt), which assert a successful done; those four test files are owned here for fixture conformance corrections (finish_reason terminal chunks; harness-only, no adapter source change), so their byte-immutability under the edge-fixes scope does not block the shared default. The edge-fixes item keeps its regression fixtures in NEW dedicated files created at Task 6."
+    },
+    {
+      "id": "bounded-success-bodies",
+      "task": "task3",
+      "title": "One dependency-free bounded success-body reader for all non-stream JSON/text endpoints",
+      "allowedFiles": [
+        "src/providers/transport.ts",
+        "src/__tests__/provider-transport.test.ts",
+        "packages/provider-alibaba/src/models.ts",
+        "packages/provider-anthropic/src/models.ts",
+        "packages/provider-google/src/models.ts",
+        "packages/provider-kimi/src/models.ts",
+        "packages/provider-neuralwatt/src/models.ts",
+        "packages/provider-ollama/src/models.ts",
+        "packages/provider-openai/src/models.ts",
+        "packages/provider-opencode-go/src/models.ts",
+        "packages/provider-openrouter/src/models.ts",
+        "packages/provider-zai/src/models.ts",
+        "packages/provider-neuralwatt/src/quota.ts",
+        "packages/provider-alibaba/src/embeddings.ts",
+        "packages/provider-neuralwatt/src/__tests__/neuralwatt-quota.test.ts",
+        "packages/provider-alibaba/src/__tests__/embeddings.test.ts",
+        "docs/provider-primitives.md"
+      ],
+      "markers": {
+        "src/providers/transport.ts": [
+          "readBoundedResponseJson",
+          "response_body_shape"
+        ],
+        "src/__tests__/provider-transport.test.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-alibaba/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-anthropic/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-google/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-kimi/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-neuralwatt/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-ollama/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-openai/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-opencode-go/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-openrouter/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-zai/src/models.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-neuralwatt/src/quota.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-alibaba/src/embeddings.ts": [
+          "readBoundedResponseJson"
+        ],
+        "docs/provider-primitives.md": [
+          "bounded success-body reader"
+        ]
+      },
+      "securityTests": [
+        "T4 oversized chunked body fully buffers",
+        "T5 malformed/shape-mismatched JSON crashes downstream"
+      ],
+      "rationale": "roadmap 0.2.1 item 2: thirteen confirmed unbounded response.json() success sites (ten model-discovery implementations at models.ts:106/97/92/83/91/102/80/119/83/93, neuralwatt quota.ts:86, alibaba embeddings.ts:88, openai uploads.ts:79). Fix: additive readBoundedResponseJson in src/providers/transport.ts composed on readBoundedResponseText (byte cap DEFAULT_MAX_RESPONSE_BODY_BYTES 65536, depth cap 32, property cap 4096, shape check, abort, redaction) with new ProviderTransportError code response_body_shape; the ten model-discovery files + quota + embeddings migrate here. SCOPE NOTE: packages/provider-openai/src/uploads.ts is claimed by the edge-fixes item (task6) so scopes stay disjoint; task6 performs the uploads success-body migration to the same reader. Per-adapter oversized-body assertions live in Task 7 built public-entry tests; the shared bounds conformance in provider-transport.test.ts covers all thirteen shapes."
+    },
+    {
+      "id": "dns-pinning",
+      "task": "task4",
+      "title": "Pin outbound DNS/address decisions for OIDC JWKS, OPA, and content fetches",
+      "allowedFiles": [
+        "src/pinned-fetch.ts",
+        "src/content.ts",
+        "src/__tests__/pinned-fetch.test.ts",
+        "packages/credentials-node/src/oidc.ts",
+        "packages/policy/src/opa.ts",
+        "packages/mcp/src/transport.ts",
+        "packages/credentials-node/src/__tests__/oidc.test.ts",
+        "packages/policy/src/__tests__/opa.test.ts",
+        "docs/credential-storage.md",
+        "docs/policy-and-audit.md",
+        "docs/multimodal-content.md",
+        "docs/mcp-tools.md"
+      ],
+      "markers": {
+        "src/pinned-fetch.ts": [
+          "pinnedFetch"
+        ],
+        "src/content.ts": [
+          "pinnedFetch"
+        ],
+        "packages/credentials-node/src/oidc.ts": [
+          "pinnedFetch"
+        ],
+        "packages/policy/src/opa.ts": [
+          "pinnedFetch"
+        ],
+        "packages/mcp/src/transport.ts": [
+          "pinnedFetch"
+        ],
+        "src/__tests__/pinned-fetch.test.ts": [
+          "rebinding"
+        ],
+        "packages/credentials-node/src/__tests__/oidc.test.ts": [
+          "pinnedFetch"
+        ],
+        "packages/policy/src/__tests__/opa.test.ts": [
+          "pinnedFetch"
+        ],
+        "docs/credential-storage.md": [
+          "DNS-pinned"
+        ],
+        "docs/policy-and-audit.md": [
+          "DNS-pinned"
+        ],
+        "docs/multimodal-content.md": [
+          "DNS-pinned"
+        ],
+        "docs/mcp-tools.md": [
+          "DNS-pinned"
+        ]
+      },
+      "securityTests": [
+        "T6 JWKS/OPA/content DNS rebinding",
+        "T7 redirect rebinding",
+        "T8 IPv4/IPv6 and abort mis-pinning"
+      ],
+      "rationale": "roadmap 0.2.1 item 3: oidc.ts fetchJwks, opa.ts callOpa, and content media fetches verify the URL string via assertSsrfAllowedUrl + redirect manual but connect to whatever the system resolver returns at connect time (DNS-rebinding/mixed-answer exposure); mcp/src/transport.ts already has the strongest primitive (resolvePinnedAddress 1-32 answers + per-candidate assertSsrfAllowedUrl + requestPinned with a node lookup hook that connects only to the pinned address + 3xx rejection + boundResponse). Fix: lift that algorithm verbatim into new core module src/pinned-fetch.ts (pinnedFetch, MediaContentError ssrf_denied on address violations) and route oidc/opa/content/MCP through it; redirects are REJECTED (roadmap 'disabled' branch, Task 0 decision 6); OIDC key caps, OPA bundle-revision pin/body cap, and content MIME/aggregation policy stay. Task 0 decision 12: packages/coding-security/src/egress/dns-pin.ts is NOT converged (proxy-path primitive, preserved surface)."
+    },
+    {
+      "id": "oauth-consolidation",
+      "task": "task5",
+      "title": "Consolidate duplicated OAuth device/token polling and provider parsing",
+      "allowedFiles": [
+        "src/oauth-device-code.ts",
+        "packages/provider-openai/src/oauth.ts",
+        "packages/credentials-node/src/oauth2.ts",
+        "packages/provider-openai/src/__tests__/codex-oauth.test.ts",
+        "packages/credentials-node/src/__tests__/oauth.test.ts",
+        "docs/credentials-and-redaction.md"
+      ],
+      "markers": {
+        "src/oauth-device-code.ts": [
+          "pollDeviceCodeToken"
+        ],
+        "packages/provider-openai/src/oauth.ts": [
+          "pollDeviceCodeToken"
+        ],
+        "packages/credentials-node/src/oauth2.ts": [
+          "pollDeviceCodeToken"
+        ],
+        "packages/provider-openai/src/__tests__/codex-oauth.test.ts": [
+          "pollDeviceCodeToken"
+        ],
+        "packages/credentials-node/src/__tests__/oauth.test.ts": [
+          "pollDeviceCodeToken"
+        ],
+        "docs/credentials-and-redaction.md": [
+          "device/token flow"
+        ]
+      },
+      "securityTests": [
+        "T9 OAuth poll drift / unbounded token body / secret leak"
+      ],
+      "rationale": "roadmap 0.2.1 item 4: provider-openai/src/oauth.ts and credentials-node/src/oauth2.ts duplicate the RFC 8628 device-code poll loop (same SLOW_DOWN_INCREMENT_MS, same TokenSuccessPayload/TokenErrorPayload shapes, same pending/slow_down/expiry/abort/redaction) and both read token success/error bodies unbounded (oauth.ts:150/209/224, oauth2.ts:158/212/226). Fix: one shared bounded pollDeviceCodeToken helper in new core module src/oauth-device-code.ts exported from the core root (verified topology: no provider package depends on credentials-node; both consumers already import from @arnilo/prism), owning the poll loop, backoff, expiry, abort, bounded success reads via readBoundedResponseJson (Task 3 reader), bounded error reads via readBoundedResponseText, redaction, and token-shape parse; provider-specific fields (errorPrefix, accountId, extraTokenParams) stay at the adapters via options. The shared conformance runs against both call sites; microsoft365-oauth.ts/google-workspace-oauth.ts consumers are preserved surface. SCOPE NOTE: docs/credential-storage.md is claimed by the dns-pinning item (task4); the OAuth consolidation docs live in docs/credentials-and-redaction.md here plus the Task 8 migration doc."
+    },
+    {
+      "id": "edge-fixes",
+      "task": "task6",
+      "title": "Fix credential, signing, upload, and cache edge cases",
+      "allowedFiles": [
+        "docs/provider-caching.md",
+        "docs/providers/azure.md",
+        "docs/providers/bedrock.md",
+        "docs/providers/vertex.md",
+        "packages/provider-azure/src/__tests__/credential-once.test.ts",
+        "packages/provider-azure/src/provider.ts",
+        "packages/provider-bedrock/src/__tests__/sigv4-canonical.test.ts",
+        "packages/provider-bedrock/src/sigv4.ts",
+        "packages/provider-openai/src/__tests__/openai.test.ts",
+        "packages/provider-openai/src/uploads.ts",
+        "packages/provider-vertex/src/__tests__/credential-once.test.ts",
+        "packages/provider-vertex/src/provider.ts",
+        "src/__tests__/cache-telemetry.test.ts",
+        "src/cache-telemetry.ts"
+      ],
+      "markers": {
+        "packages/provider-azure/src/provider.ts": [
+          "resolveCredentialValue"
+        ],
+        "packages/provider-vertex/src/provider.ts": [
+          "resolveCredentialValue"
+        ],
+        "packages/provider-bedrock/src/sigv4.ts": [
+          "canonical"
+        ],
+        "packages/provider-openai/src/uploads.ts": [
+          "readBoundedResponseJson"
+        ],
+        "packages/provider-openai/src/__tests__/openai.test.ts": [
+          "retain"
+        ],
+        "src/cache-telemetry.ts": [
+          "overflow"
+        ],
+        "src/__tests__/cache-telemetry.test.ts": [
+          "mixed"
+        ],
+        "docs/providers/azure.md": [
+          "once per request"
+        ],
+        "docs/providers/bedrock.md": [
+          "duplicate-case"
+        ],
+        "docs/providers/vertex.md": [
+          "once per request"
+        ],
+        "docs/provider-caching.md": [
+          "overflow"
+        ],
+        "packages/provider-azure/src/__tests__/credential-once.test.ts": [
+          "resolveCredentialValue"
+        ],
+        "packages/provider-vertex/src/__tests__/credential-once.test.ts": [
+          "resolveCredentialValue"
+        ],
+        "packages/provider-bedrock/src/__tests__/sigv4-canonical.test.ts": [
+          "duplicate-case"
+        ]
+      },
+      "securityTests": [
+        "T10 rotating token consumed twice",
+        "T11 SigV4 duplicate-case/repeated-query mismatch",
+        "T12 failed upload DELETE leaks file",
+        "T13 overflow cost mixing"
+      ],
+      "rationale": "roadmap 0.2.1 item 5: four confirmed single-site defects. (a) azure/provider.ts:70+84 and vertex/provider.ts:50+58 resolve options.credential twice per request (outer wrapper + inner apiKey source) - rotating/single-use credentials consumed twice; fix resolve-once with the resolved string injected per request. (b) sigv4.ts:52-60 canonicalHeaders picks the first Object.entries match while duplicate-case keys both survive the spread, and canonicalQuery never sorts repeated keys by value (a===b branch identical) - fix lowercase merge with last-wins (Task 0 decision) and key-then-value query sort; existing fixtures byte-identical. (c) uploads.ts:86-107 cleanup() clears uploadedIds BEFORE the DELETEs so a failed DELETE leaks the file ID - fix remove-on-success only, retain failed IDs for retry cleanup; also migrates the success response.json() (uploads.ts:79) to the Task 3 readBoundedResponseJson (scope note in bounded-success-bodies). (d) cache-telemetry.ts:99-147 overflow bucket applies the current record's model cost to mixed-model overflow tokens - fix tokens-only overflow (no cost fields), Task 0 decision. SCOPE AMENDMENT (deviation 2): the credential-once and signing-canonicalization regression fixtures moved from azure.test.ts/bedrock.test.ts/vertex.test.ts (now owned by the strict-completion item for fixture conformance) into dedicated new test files created at Task 6: credential-once.test.ts (azure + vertex, resolveCredentialValue appears once per request) and sigv4-canonical.test.ts (bedrock duplicate-case headers / repeated query keys). openai.test.ts stays here for the uploads retention regression."
+    },
+    {
+      "id": "security-regressions",
+      "task": "task7",
+      "title": "Public-JavaScript, packed-consumer, and named threat-suite regressions",
+      "allowedFiles": [
+        "scripts/phase21-security.test.mjs",
+        "src/__tests__/install-smoke.test.ts"
+      ],
+      "markers": {
+        "scripts/phase21-security.test.mjs": [
+          "phase21"
+        ],
+        "src/__tests__/install-smoke.test.ts": [
+          "phase21"
+        ]
+      },
+      "securityTests": [
+        "T1-T15 built public entrypoints",
+        "T1-T15 packed plain JS",
+        "gate accounting"
+      ],
+      "rationale": "roadmap mandatory regression matrix items 5-7 and 10-11: the original gaps are runtime-only (truncated streams, unbounded bodies, unpinned connects, duplicated OAuth, double credential consumption, signature mismatches, leaked upload IDs, mixed overflow cost), so regressions must run against BUILT public package entrypoints and a fresh packed plain-JavaScript consumer (install-smoke harness), not private source imports. scripts/phase21-security.test.mjs wires into security:threat-suites (package.json shared-file editor task7); per-adapter truncated-stream and oversized-body assertions for the six OpenAI-compatible adapters and the ten model-discovery paths live here so item scopes stay disjoint (base/source-level conformance lives in Tasks 2-3 files)."
+    }
+  ],
+  "sharedFiles": {
+    "$comment": "Coordination files with multiple or late editors. Rule: while ALL listed editors are pending, the file is byte-identical to the Task 1 baseline hash (absent files stay absent); once any editor is done, the file is editable and the freeze test asserts the per-editor markers below. package.json editors: task1 (npm test wiring), task7 (security:threat-suites wiring), task8 (version bump). baseline/manifest: task1 creates, task7 reserves exitGate fields, task8 records exit evidence. plans/021 + plans/README.md: task1 closes Task 1, task8 closes the plan. docs/index.md: tasks 2-6 update navigation descriptions, task8 sets the current-release line. src/index.ts: task4 exports pinnedFetch, task5 exports pollDeviceCodeToken, task8 bumps the version const. Changelogs (root + 17 affected packages): task8 records 0.2.1.",
+    "rule": "editable only by listed editor tasks; all-pending => byte-immutable; done editors assert their markers",
+    "files": {
+      "docs/index.md": {
+        "editors": [
+          "task2",
+          "task3",
+          "task4",
+          "task5",
+          "task6",
+          "task8"
+        ],
+        "markers": {
+          "task2": [
+            "strict completion"
+          ],
+          "task3": [
+            "bounded success-body reader"
+          ],
+          "task4": [
+            "DNS-pinned fetch"
+          ],
+          "task5": [
+            "shared bounded device/token flow"
+          ],
+          "task6": [
+            "credential once"
+          ],
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "package.json": {
+        "editors": [
+          "task1",
+          "task7",
+          "task8"
+        ],
+        "markers": {
+          "task1": [
+            "phase21-freeze.test.mjs"
+          ],
+          "task7": [
+            "phase21-security.test.mjs"
+          ],
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "scripts/phase21-baseline.json": {
+        "editors": [
+          "task1",
+          "task7",
+          "task8"
+        ],
+        "markers": {
+          "task1": [
+            "captured"
+          ],
+          "task7": [
+            "exitGate"
+          ],
+          "task8": [
+            "green"
+          ]
+        }
+      },
+      "scripts/phase21-freeze-manifest.json": {
+        "editors": [
+          "task1",
+          "task8"
+        ],
+        "markers": {
+          "task1": [
+            "release"
+          ],
+          "task8": [
+            "exitGate"
+          ]
+        }
+      },
+      "plans/021-Release-0-2-1-Provider-Completion-and-Outbound-Trust-Boundaries.md": {
+        "editors": [
+          "task1",
+          "task8"
+        ],
+        "markers": {
+          "task1": [
+            "- [x] Task 1"
+          ],
+          "task8": [
+            "To be filled"
+          ]
+        }
+      },
+      "plans/README.md": {
+        "editors": [
+          "task1",
+          "task8"
+        ],
+        "markers": {
+          "task1": [
+            "021-Release-0-2-1"
+          ],
+          "task8": [
+            "| complete |"
+          ]
+        }
+      },
+      "roadmap.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "- [x] "
+          ]
+        }
+      },
+      "CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-azure/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-bedrock/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-vertex/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-openrouter/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-zai/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-neuralwatt/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-alibaba/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-anthropic/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-google/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-kimi/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-ollama/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-openai/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/provider-opencode-go/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/credentials-node/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/policy/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "packages/mcp/CHANGELOG.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "src/index.ts": {
+        "editors": [
+          "task4",
+          "task5",
+          "task8"
+        ],
+        "markers": {
+          "task4": [
+            "pinnedFetch"
+          ],
+          "task5": [
+            "pollDeviceCodeToken"
+          ],
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "docs/migration.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "docs/release-and-install.md": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      },
+      "package-lock.json": {
+        "editors": [
+          "task8"
+        ],
+        "markers": {
+          "task8": [
+            "0.2.1"
+          ]
+        }
+      }
+    }
+  },
+  "preservedSurface": {
+    "active": true,
+    "rule": "These files implement the primitives phase 21 reuses without modification (egress DNS pinning - decision 12 no-convergence, OAuth connector consumers that must stay compatible with the shared helper, the four strictCompletion opt-in adapter files whose explicit flags stay untouched by the shared-default flip, and native streaming adapters that keep their own completion semantics). They are byte-immutable for the whole phase; a hash mismatch fails loud at any task state. Deviations require a recorded entry.",
+    "files": {
+      "packages/coding-security/src/egress/dns-pin.ts": "proxy-path DNS pinning primitives (resolvePinned/assertPinned/isPrivateAddress/isMetadataAddress) NOT converged in 0.2.1 (Task 0 decision 12); never edited",
+      "packages/coding-security/src/egress/index.ts": "egress module entry re-exporting dns-pin; never edited",
+      "packages/credentials-node/src/microsoft365-oauth.ts": "consumer of the shared oauth2.ts device flow; the shared pollDeviceCodeToken helper signature must stay compatible; never edited",
+      "packages/credentials-node/src/google-workspace-oauth.ts": "consumer of the shared oauth2.ts device flow; never edited",
+      "packages/provider-alibaba/src/provider.ts": "strictCompletion: true opt-in stays in place when the shared default flips (behavior identical); never edited in 0.2.1",
+      "packages/provider-kimi/src/moonshot.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
+      "packages/provider-ollama/src/provider.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
+      "packages/provider-opencode-go/src/openai-chat.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
+      "packages/provider-anthropic/src/messages.ts": "native streaming completion semantics (not OpenAI-compatible); out of 0.2.1 scope; never edited",
+      "packages/provider-google/src/generate-content.ts": "native streaming completion semantics; out of 0.2.1 scope; never edited"
+    }
+  },
+  "allowedChanges": [
+    "Task 1 freeze record: scripts/phase21-freeze-manifest.json, scripts/phase21-baseline.json, scripts/phase21-freeze.test.mjs, package.json npm-test wiring (phase21 after phase20), plans/README.md 021 index row (landed with this plan), this plan file's Task 1 checkbox and token",
+    "implementation of exactly the six items within their allowedFiles scopes, per this plan's Tasks 2-7 approach: strictCompletion shared default flip in openai-compatible.ts, additive readBoundedResponseJson + response_body_shape in transport.ts with the twelve named non-upload success sites migrated, pinnedFetch in src/pinned-fetch.ts with oidc/opa/content/mcp routed through it and redirects rejected, shared pollDeviceCodeToken in src/oauth-device-code.ts with both OAuth adapters migrated, the four single-site edge fixes (azure/vertex credential-once, bedrock sigv4 canonicalization, openai uploads retention + bounded read, cache-telemetry overflow tokens-only)",
+    "additive public exports for shipped items plus their docs (docs/providers/openai-compatible.md, docs/provider-primitives.md, docs/credential-storage.md, docs/policy-and-audit.md, docs/multimodal-content.md, docs/mcp-tools.md, docs/credentials-and-redaction.md, docs/providers/{azure,bedrock,vertex}.md, docs/provider-caching.md, package READMEs, docs/index.md navigation descriptions per task with Task 8 final verification; docs/migration.md and CHANGELOGs at Task 8)",
+    "Task 7 regression wiring: scripts/phase21-security.test.mjs appended to the security:threat-suites script, install-smoke packed plain-JS regression inside the existing consumer",
+    "baseline evidence updates in scripts/phase21-baseline.json: task7 evidence-field reservation and the Task 8 exitGate record (green only with all tasks done, audit 0, pack determinism, plain reviewed release gate, OIDC/OPA protected evidence present, no blocker skip)",
+    "version bump 0.2.0 -> 0.2.1 across all 50 manifests + lockfile + version-sensitive pins (additive; no new package, manifest count stays 50 publishable)",
+    "compat flow per the manifest compat section: plain release:gate at 0.2.1 reviewed for deltas (expected: additive exports readBoundedResponseJson/pinnedFetch/pollDeviceCodeToken and version literal; five documented behavior tightenings with no declaration removal); --allow-break ONLY with a recorded deviation entry + plan amendment after the plain reviewed gate; version-literal baseline refresh with --update-baseline only after review",
+    "phase 21 freeze/baseline/tripwire scripts and package.json test-script wiring, plans/README.md index row, this plan file's Task 1 checkbox and token",
+    "docs/_evidence/phase21-primitive-review.md (Task 0 evidence, already landed)"
+  ],
+  "forbiddenChanges": [
+    "any modification of an item's allowedFiles while its owning task is pending (byte-immutable via baseline hashes; the freeze test fails loud)",
+    "any modification of the preservedSurface files at any point in the phase (egress dns-pin primitives, OAuth connector consumers, the four strictCompletion opt-in adapter files, native streaming adapters)",
+    "any shared file touched by a task that is not listed as its editor, or before its first editor task is done",
+    "behavior change to any default outside the five documented tightenings: strictCompletion shared default true (explicit false honored as the documented opt-out), bounded success bodies (existing byte ceiling and per-call raise options; readBoundedResponseText callers unchanged), DNS-pinned fetch (redirect-manual/3xx rejection; OIDC key caps, OPA bundle-revision/body caps, content MIME/aggregation caps unchanged), OAuth consolidation (poll cadence, backoff, expiry, redaction behavior equivalent), item-5 edge fixes only at their named call sites",
+    "removal of strictCompletion/doneUsage/mapUsage options, readBoundedResponseText/readSseEvents/ProviderTransportError primitives, assertSsrfAllowedUrl/SsrfPolicy/MediaContentError families, or any existing OAuth/credential option",
+    "new runtime or dev dependencies in the dependency-free core or in credentials-node/policy/provider packages; no new package; no new export subpath beyond the additive core root exports of pinnedFetch + pollDeviceCodeToken and the transport subpath's readBoundedResponseJson",
+    "0.2.2+ items (state concurrency, budget reservation, conversation CAS, build/coverage repair) and any 0.3.x item (new providers, delegated agents, enterprise adapters, live-canary matrix, OTel spans)",
+    "egress dns-pin.ts convergence in 0.2.1 (Task 0 decision 12: proxy-path primitive stays untouched; revisit only with a third direct-connect consumer)",
+    "changes to the frozen 0.1.x support matrix (scripts/phase12-freeze-manifest.json)",
+    "compat baseline regeneration before a clean reviewed plain gate at 0.2.1 exists, or regenerating baselines with any unreviewed breaking delta",
+    "skipping a protected security gate (OIDC/OPA provider/identity/policy protected evidence) and still recording the 0.2.1 exit gate as green",
+    "deletion or rewriting of ponytail: comments (intentional documented shortcuts move with their code)"
+  ],
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.2.0",
+    "promise": "0.2.1 is ADDITIVE-ONLY with five documented behavior tightenings from this plan: (1) strict completion shared default - truncated OpenAI-compatible streams now fail with ProviderTransportError incomplete_delta instead of a successful providerDone (no declaration change; explicit strictCompletion: false remains the documented opt-out); (2) bounded success bodies - readBoundedResponseJson replaces unbounded response.json() at the twelve non-upload named sites plus uploads via task6, oversized/malformed bodies abort with response_body_overflow/response_body_shape (additive reader + additive error code); (3) DNS-pinned fetch - OIDC JWKS/OPA/content fetches resolve once, connect only to a validated public address, and reject 3xx redirects (no declaration change); (4) OAuth consolidation - shared pollDeviceCodeToken helper with equivalent poll cadence/backoff/redaction behavior (additive exports); (5) edge fixes - azure/vertex credential resolved once per request, bedrock duplicate-case/repeated-query signing canonicalization, openai upload failed-DELETE retention, cache-telemetry overflow tokens-only (no declaration changes). The release gate runs plain at 0.2.1 first and every declaration delta is reviewed; --allow-break is permitted ONLY after a recorded deviation entry + plan amendment documents the reviewed breaking change. The publish graph stays at 50 packages."
+  },
+  "deviations": [
+    {
+      "task": "task2",
+      "change": "examples/cache-aware-prompt-assembly.ts and examples/neuralwatt-agent-run.ts mock streams gained finish_reason chunks before [DONE] (docs-gate example harnesses only; no adapter or library source change)",
+      "rationale": "The strictCompletion shared default (this task's documented behavior tightening) rejects the example's simplified [DONE]-only mock stream, which modeled a stream no real provider sends. The example runs under the docs test gate, so its fixture needed the terminal finish_reason chunk; the example's purpose (cache-aware prompt assembly) is unaffected. All six OpenAI-compatible adapter packages and every other shipped source file tightened with zero edits as planned."
+    },
+    {
+      "task": "task2",
+      "change": "Manifest scope amendment: strict-completion gains packages/provider-{azure,bedrock,vertex,neuralwatt}/src/__tests__/azure.test.ts, bedrock.test.ts, vertex.test.ts, neuralwatt.test.ts (fixture conformance); edge-fixes drops those three files and gains new dedicated regression files packages/provider-azure/src/__tests__/credential-once.test.ts, packages/provider-vertex/src/__tests__/credential-once.test.ts, packages/provider-bedrock/src/__tests__/sigv4-canonical.test.ts; scripts/phase21-baseline.json item inventory and fileHashes synced",
+      "rationale": "The strictCompletion shared default rejects the simplified [DONE]-only mock streams in the four adapter package test files, whose tests assert a successful done (azure preserves-URL, bedrock signs-requests, vertex preserves-endpoint, neuralwatt stream/tool-loop/telemetry suites). Those fixtures are corrected as part of this task (finish_reason terminal chunks, harness-only, no adapter source change). The affected files sat in edge-fixes pending scope, so they were moved here; edge-fixes own regression coverage moves to new files created at Task 6, keeping every file owned by exactly one item."
+    },
+    {
+      "task": "task4",
+      "change": "src/__tests__/public-export-contract.test.ts FROZEN_VALUE_EXPORTS gained boundResponse/defaultResolver/isLoopbackAddress/isLoopbackHostname/normalizeHostname/pinnedFetch/raceAbort/requestPinned/resolvePinnedAddress and FROZEN_TYPE_EXPORTS gained PinnedFetchOptions",
+      "rationale": "The task4 primitive lift adds the pinnedFetch surface to the @arnilo/prism root (src/index.ts, a shared file with task4 marker). The build-time frozen-surface gate compares index.ts exports against the frozen lists in public-export-contract.test.ts, which is not a task4 seam file; the lists are updated deliberately as the gate instructs. No export was removed."
+    },
+    {
+      "task": "task5",
+      "change": "scripts/budgets.json root.fileCount baseline 310 -> 326",
+      "rationale": "The two new core modules (task4 pinned-fetch, task5 oauth-device-code) add 4 dist files; the root tarball fileCount crossed the 5% ceiling (326 vs limit 325.5). packedBytes/unpackedBytes stay within tolerance. budgets.json is owned by no item scope and this is the standard release re-baseline recorded in its $comment history (last refresh 0.1.7 Task 2)."
+    }
+  ],
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.1 changes none of it",
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.2.1",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "migrationTokens": [
+    "0.2.1",
+    "strictCompletion",
+    "readBoundedResponseJson",
+    "response_body_shape",
+    "pinnedFetch",
+    "pollDeviceCodeToken"
+  ],
+  "tasks": {
+    "$comment": "per-task evidence tokens; 'done' when the task passes its checks, 'pending' until then. Task 0 set itself done at the primitive review; Task 1 (this freeze) sets itself done after the baseline is captured and the freeze test is wired; Tasks 2-7 move to done as they land; Task 8 (migration docs, changelog, bump, exit gate) lands last. The phase21-freeze.test.mjs state machine asserts: while an item's task is pending, its allowed files are byte-identical to the Task 1 baseline hashes (absent files stay absent); once a task is done, the item assertions replace the hashes (content markers present, security tests present); preservedSurface and shared files are checked at every state.",
+    "task0": "done (primitive review at docs/_evidence/phase21-primitive-review.md at HEAD cb9369d (Release 0.2.0): reuse-first inventory for all five roadmap items; six decisions approved - strictCompletion shared default flip with explicit false honored as the opt-out, additive readBoundedResponseJson (depth 32 / properties 4096 / response_body_shape) with thirteen consumers, pinnedFetch lifted from MCP into src/pinned-fetch.ts with egress dns-pin.ts NOT converged (decision 12), shared pollDeviceCodeToken in src/oauth-device-code.ts (topology verified: no provider package depends on credentials-node), overflow bucket tokens-only, bedrock duplicate-case last-wins; 3xx redirects rejected for JWKS/OPA/content; 15-threat traceability table mapped to Tasks 2-7 tests; owners/migration/rollback/budget/performance baselines and six explicit security decisions recorded)",
+    "task1": "done (freeze record: scripts/phase21-freeze-manifest.json + scripts/phase21-baseline.json captured at 0.2.0 HEAD cb9369d113961c01a2f6aae28a0f3c75948b5dbb (92 file hashes, dependency-name fingerprint bab44803... identical to 0.1.7/0.2.0, workspace-manifest hash, compat-baseline dir hash 44 files, strictCompletion opt-in inventory, 13+6 unbounded success-site inventory, fetch-posture inventory, OAuth duplication inventory, bedrock/upload/cache defect records, exitGate null) + scripts/phase21-freeze.test.mjs wired into npm test after phase20; standalone freeze test green; plans/README.md 021 row landed; plan 021 Task 1 checkbox closed; baseline evidence: npm test exit 0 (1457/1457 core, 231/231 script gates, workspaces 1684 tests/1651 pass/33 skip/0 fail = totals 3372/3339/33), coverage 91.95/84.26/91.36, typecheck 0, biome 62 warnings 0 errors, format 960 files 0 fixes, secrets 1515 files 0 findings, audit 0 moderate, pack 50 deterministic sha 2d7498380bd9d5f3f7465e37af85f45fe748d63ebd84bc984b9e3f67f1387310, release gate 0.2.0 50 packages 0 errors from plan 020 exit gate at the same HEAD)",
+    "task2": "done (strictCompletion shared default flipped in openai-compatible.ts: enforcement check and done-usage carry use (options.strictCompletion ?? true), explicit false honored as the documented opt-out; option JSDoc states default true. Tests: openai-compatible.test.ts STOP terminal fixture for the completion-asserting tests, done carries final usage, new shared-default conformance test (default-truncated error T1, finish_reason-without-[DONE] error T2, complete-stream success with usage on done, explicit-false opt-out T14); four adapter package test files (azure/bedrock/vertex/neuralwatt) gained finish_reason terminal chunks + [DONE] lines in success fixtures (deviation 2 scope amendment; harness-only, zero adapter source edits; six inheriting adapters tighten with no source change). Docs: docs/providers/openai-compatible.md strictCompletion row + openAIChatEvents bullet + outputs row + security note document the fail-closed default and terminal variants; docs/index.md entry updated. Deviations 1-2 recorded (examples harness fixtures + manifest scope amendment with baseline sync). npm test fully green at 0.2.0 with the flip; freeze test green; the four opt-in adapter files untouched (preserved). T14 opt-out downgrade risk owned by the opting host per Task 0 decision 1.)",
+    "task3": "done (additive readBoundedResponseJson<T>(response, options) in src/providers/transport.ts next to readBoundedResponseText: same byte ceiling DEFAULT_MAX_RESPONSE_BODY_BYTES 65536 via composition, maxDepth default 32, maxProperties default 4096 per object/array, caller-supplied shape gate, signal checks (pre/post read, code aborted), malformed JSON / over-limit nesting / over-wide containers / shape failure all throw ProviderTransportError code response_body_shape with static text (never body content or secrets). Twelve success-body sites migrated from unbounded response.json(): ten model-discovery implementations (alibaba/anthropic/google/kimi/neuralwatt/ollama/openai/opencode-go/openrouter/zai models.ts), neuralwatt quota.ts, alibaba embeddings.ts; per-adapter post-parse validation retained as defense in depth; openai uploads.ts stays in task6 scope which performs the same migration. Conformance: provider-transport.test.ts bounded success-body reader suite — thirteen shapes (ten discovery + quota + embeddings + uploads) each with identical-parse and oversized-chunked termination-before-full-buffering (pull-count proof) cases, malformed/empty JSON, depth cap, property/element caps, shape gate pass/fail, abort propagation, secret-free errors. Docs: docs/provider-primitives.md bounded success-body reader API section (signature + performance + security notes), docs/index.md provider-primitives entry updated (marker: bounded success-body reader). npm test fully green at 0.2.0 with the migration; no dependency added; core stays dependency-free.)",
+    "task4": "done (new core module src/pinned-fetch.ts lifts MCP resolvePinnedAddress+requestPinned+raceAbort+boundResponse verbatim as pinnedFetch(url, init, options): one resolve per request, 1..32 address bound, family verification, per-candidate assertSsrfAllowedUrl with candidatePolicy (allow-listed hostnames still private-check answers, fail closed), pinned-lookup connect (rebinding defense), 3xx rejected outright (new MediaContentError code redirect + ErrorOptions cause), byte-bounded response, abort propagation; error messages parameterized by errorPrefix/hostnameErrorPrefix so each caller keeps its taxonomy. Callers routed through it: credentials-node oidc.ts fetchJwks default path (keeps IdentityError taxonomy; oversized JWKS still fails closed as jwksParse via readBoundedResponseText + mapped response_body_overflow; redirects surface IdentityError jwksFetch as before), policy opa.ts default decision fetch (MediaContentError rethrown before OpaFetchError wrapping; timeout/retry semantics unchanged; readBoundedBody stays the byte gate), src/content.ts default media fetch (requestUrl/resolveHostname/fetch host seams unchanged; requestPinnedMediaUrl/readIncomingMessage deleted as moved; ssrf_denied/fetch_failed codes preserved), mcp transport.ts createSecureMcpFetch + oauthDiscoveryFetch re-routed with McpBridgeError/McpOAuthError wrapping byte-identical; local copies deleted, helpers re-exported from @arnilo/prism root so existing importers keep working. src/index.ts root exports pinnedFetch + 8 helpers + PinnedFetchOptions (shared-file marker). Tests: src/__tests__/pinned-fetch.test.ts (rebinding defense T6: public-then-private resolver rejected after first valid fetch, single/mixed private answers, metadata targets, IPv4-mapped/link-local; loopback confinement + opt-in/out; T7 3xx rejected without following Location; T8 address-count/family bounds, IPv4/IPv6 literals without resolver, in-flight abort, content-length precheck + chunked byte bound); oidc.test.ts + opa.test.ts default-path pinning regressions. Docs: credential-storage/policy-and-audit/multimodal-content/mcp-tools all note the DNS-pinned fetch; docs/index.md updated (marker: DNS-pinned fetch). Deviation 3: public-export-contract.test.ts FROZEN_VALUE_EXPORTS/FROZEN_TYPE_EXPORTS updated for the 9 new value + 1 type exports (freeze test file, required by the frozen-surface gate). npm test fully green at 0.2.0 with all four callers re-routed; egress dns-pin.ts untouched (preserved surface, decision 12).)",
+    "task5": "done (shared RFC 8628 device-code helper src/oauth-device-code.ts: pollDeviceCodeToken owns the device-code request, poll loop (authorization_pending continue, slow_down +5s backoff, expiry deadline via now/sleep seams), cancellation, bounded success reads via readBoundedResponseJson with a fail-closed shape gate (device payload requires device_code/user_code/verification_uri strings; token success requires access_token string), bounded error reads via readBoundedResponseText with secret redaction and JSON-with-text-fallback parsing, and token-shape parsing delegated to a caller parseTokenCredentials callback (codex accountId direct; oauth2 accountId fallback). Adapter-specific fields are options (errorPrefix OpenAI / config.id, extraTokenParams merged into poll bodies only, scope), no class hierarchy. Both callers migrated: provider-openai oauth.ts and credentials-node oauth2.ts now call the shared helper for device flows and share throwIfAborted/abortableSleep/redactOAuthError re-exported from the core root; each callers exchangeToken (authorization_code/refresh) also migrated from unbounded response.json() to readBoundedResponseJson + shape gate + bounded redacted error reads, eliminating all six OAuth unbounded sites recorded in the baseline. oauth2.ts keeps revoke/refresh accountId preservation/metadata and its exported PKCE helpers; microsoft365-oauth.ts + google-workspace-oauth.ts consumers untouched (preserved surface). Tests: codex-oauth.test.ts + credentials-node oauth.test.ts cover pending-then-success, slow_down backoff, expiry, abort, terminal-error redaction, and oversized device/token bodies fail closed at the 65536-byte ceiling (T9); both suites assert on the shared helper directly. docs/credentials-and-redaction.md documents the shared bounded device/token flow; docs/index.md entry updated. Deviation 4: budgets.json root.fileCount re-baselined 310 -> 326 (two new core modules push past the 5% ceiling; bytes unchanged). npm test fully green.)",
+    "task6": "done (four single-site root-cause fixes; no public type change): (1) credential-once — azure/vertex provider wrappers resolve the CredentialValueSource exactly once per request via resolveCredentialValue-as-resolveOnce and inject the resolved token as a fixed string into a per-request createOpenAICompatibleProvider instance (rotating/single-use tokens never consumed twice; missing-credential fail-closed preserved; each request re-resolves). (2) Bedrock sigv4.ts canonicalization — caller headers are normalized once (lowercase names, duplicate-case keys merged last-wins) before reserved-name filtering and canonicalization, eliminating the old duplicate-lowercase-key .find ambiguity; canonicalQuery sorts by encoded key then encoded value (AWS spec); single-case/single-key inputs byte-identical (existing fixtures green). (3) OpenAI uploads.ts — readBoundedResponseJson with a fail-closed id shape gate replaces unbounded response.json(); cleanup retains file IDs until the DELETE succeeds (id removed only on success; failed/skipped DELETEs leave the id registered so a retried cleanup still deletes the remote file — no leak; cache.clear() unchanged). (4) cache-telemetry.ts — the __overflow__ bucket never carries cost: estimatedSavings/currency are unset there (one models cost never applied to mixed-model tokens); capped samples keep their own cost. Tests: new credential-once.test.ts (azure + vertex, rotating source resolved exactly once per request and re-resolved per request), sigv4-canonical.test.ts (duplicate-case last-wins merge with single x-test in SignedHeaders, repeated-query key-then-value determinism, single-case byte-identical), openai.test.ts failed-DELETE retention (500 then 200 then no further attempt), cache-telemetry.test.ts mixed-model overflow cost absence (T10-T13). Docs: azure/vertex once-per-request, bedrock duplicate-case canonicalization, provider-caching overflow tokens-only, docs/index.md entries updated. Full npm test green.)",
+    "task7": "done (built-public and packed plain-JS regressions, no TypeScript): scripts/phase21-security.test.mjs runs 10 conformance tests through BUILT PUBLIC package entrypoints only (workspace dist via package exports; no private source imports), covering T1/T2/T14 (truncated OpenAI-compatible stream rejects under the strictCompletion shared default via createOpenAICompatibleProvider, explicit strictCompletion:false completes, and all six inheriting adapters azure/bedrock/vertex/openrouter/zai/neuralwatt reject truncated streams through their public constructors), T3 (listOpenAIModels oversized /models body -> response_body_overflow; readBoundedResponseJson over-deep/over-wide/shape-gate failures -> response_body_shape; bounded payload parses), T4-T6 (pinnedFetch: private 10.0.0.1 and metadata 169.254.169.254 answers -> MediaContentError ssrf_denied, single-resolve rebinding defense proven with a local loopback server and resolverCalls===1, 3xx rejected as code redirect with the Location target never fetched, loopback without allowLoopback fails closed), T7-T9 (pollDeviceCodeToken: slow_down +5000 backoff sleeps [1000,6000], expiry fails closed, terminal access_denied redacts device_code/user_code with [REDACTED] and never surfaces them), T10 (azure rotating credential consumed exactly once per request), T11 (signAwsRequest duplicate-case last-wins merge with x-test signed exactly once and query-order-independent signature), T12 (createOpenAIResponsesProvider default upload manager: 4MiB+1 file uploads, failed DELETE is fail-soft with done emitted, no error, file id never leaks into events; ID-retention semantics stay source-level in task6 openai.test.ts since the manager is not a public export), T13 (createCacheTelemetry maxKeys 2: overflow sample has no estimatedSavings/currency, capped samples keep theirs) plus gate accounting asserting all 9 blocker IDs ran (none skipped). Wired into security:threat-suites (42/42 across phase8-11 + phase20 + phase21). src/__tests__/install-smoke.test.ts gains the packed plain-JS security21.mjs consumer (marker phase21): truncated stream rejects, oversized body aborts with response_body_overflow, pinnedFetch private-answer ssrf_denied, device-code poll redacts, overflow cost not mixed — all against the freshly installed tarballs with no TS compiler; install-smoke suite 8/8. Full npm test green (core 1498/1498, script gates 255/255).",
+    "task8": "done (0.2.1 migration/docs/exit-gate: docs/migration.md 0.2.0 -> 0.2.1 section covering strict-completion default + incomplete_delta, bounded success bodies + caps, DNS-pinned OIDC/OPA/content fetch + redirect rejection, shared OAuth parsing (no public change), the four edge fixes with before/after semantics, plain-JS examples, store compatibility, rollout order, rollback-risk warning; CHANGELOG root + 17 affected packages; docs/index.md current-release line 0.2.1 + navigation verification; docs/release-and-install.md 0.2.1 publish handoff with protected-evidence procedure; roadmap five 0.2.1 items [x]; version bump 0.2.0 -> 0.2.1 across 50 manifests + lockfile (release.mjs bump) with version-sensitive tests, peer pins, tarball names, src/index.ts version const updated; plain compat gate at 0.2.1 reviewed (only version literal + mcp transport helpers re-exported from lifted core primitives, same names/signatures, no removal) then --update-baseline, plain gate green, no --allow-break; exit evidence recorded in scripts/phase21-baseline.json exitGate green with OIDC/OPA protected evidence; plan 021 Task 8 checkbox closed, Compromises/Further Actions filled)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip (inherited from scripts/phase12-freeze-manifest.json); for 0.2.1 the OIDC/OPA provider-identity-policy protected evidence is a REQUIRED protected gate - a missing OIDC/OPA record blocks the exit gate",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.2.1",
+    "itemPolicy": "every shipped item preserves: fail-closed stream completion (EOF without the required done marker/finish reason is a ProviderTransportError, never a successful providerDone; explicit strictCompletion: false is a documented downgrade whose risk the opting host owns), bounded success bodies abort before full buffering (defaults match DEFAULT_MAX_RESPONSE_BODY_BYTES; per-call raises additive and documented; errors redacted), DNS pin + redirect rejection as the trust boundary (URL-string assertSsrfAllowedUrl stays a precheck, never the sole boundary; OIDC/OPA/content connect only to validated public addresses; egress proxy path untouched), shared OAuth parsing redacts device_code/user_code/access_token/refresh_token at both call sites with malformed/oversized token responses failing closed, credential-once/signature-canonical/upload-retention/overflow-tokens-only edge semantics, and unchanged deny-by-default governance for all untouched surfaces (native streaming adapters, egress dns-pin, OAuth connector consumers, server/limits/caps). Adversarial suites for each shipped item pass before its task token flips to done; security regressions run against BUILT public entrypoints and a packed plain-JavaScript consumer; any security skip fails loud and cannot satisfy the exit gate; publication stays operator-gated"
+  }
+}

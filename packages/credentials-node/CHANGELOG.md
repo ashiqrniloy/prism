@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): JWKS fetches DNS-pinned through the core pinnedFetch primitive (redirects rejected, oversized documents fail closed as a parse error never a rotatable transport failure); OAuth2 device flow consolidated onto the shared core pollDeviceCodeToken (bounded reads, fail-closed token shape, [REDACTED] redaction); Microsoft365/Google-Workspace connector consumers stay compatible.
+
+
 
 ## [0.1.0] - 2026-08-09
 

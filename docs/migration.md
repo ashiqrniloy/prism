@@ -1,5 +1,36 @@
 # Migration guide
 
+## 0.2.0 → 0.2.1 provider completion and outbound trust boundaries (plan 021)
+
+Release **0.2.1** (plan 021) tightens the streaming-completion, outbound-fetch, and credential/signing/upload boundaries. The API surface is **additive-only** (plain reviewed compat gate at 0.2.1: the only deltas are the version literal and `@arnilo/prism-mcp` transport helpers `boundResponse`/`defaultResolver`/`isLoopbackAddress`/`isLoopbackHostname`/`normalizeHostname`/`raceAbort`/`requestPinned`/`resolvePinnedAddress` becoming re-exports of the lifted core primitives — same names, same signatures, no removal; no `--allow-break`), with five documented security-motivated behavior tightenings. Untyped/legacy callers may now fail where 0.2.0 silently proceeded:
+
+1. **Strict stream completion is the shared default (all OpenAI-compatible adapters).** `createOpenAICompatibleProvider` now defaults `strictCompletion: true` — a stream that ends without a `[DONE]` marker AND a choice-level `finish_reason` (EOF, network cut, provider truncation) emits a `ProviderTransportError` (`incomplete_delta`) instead of a successful `providerDone`, and a successful done never fabricates usage. This applies to every inheriting adapter: Azure, Bedrock, Vertex, OpenRouter, ZAI, NeuralWatt (Alibaba/Kimi/Ollama/OpenCode-go had already opted in).
+
+   ```js
+   // 0.2.1: truncated stream fails closed
+   for await (const event of provider.generate(request)) {
+     if (event.type === "error") {
+       event.error.code; // "incomplete_delta"
+     }
+   }
+   // explicit opt-out stays available where hosts own truncation detection:
+   createOpenAICompatibleProvider({ ..., strictCompletion: false });
+   ```
+
+2. **Bounded success bodies on non-stream JSON endpoints.** `readBoundedResponseJson` (exported from `@arnilo/prism/providers/transport`) replaces unbounded `response.json()` on all model-discovery `/models` calls, NeuralWatt quota, Alibaba embeddings, OpenAI uploads, and the OAuth success paths. Defaults: 65,536-byte UTF-8 ceiling, max JSON depth 32, max properties 4096, caller-supplied shape gate, abort support, secret-redacted errors. Oversized or malformed bodies abort with `ProviderTransportError` `response_body_overflow`/`response_body_shape` instead of buffering unbounded input.
+
+3. **DNS-pinned OIDC JWKS, OPA, and content fetches; redirects rejected.** The default fetch paths of `credentials-node` JWKS (`@arnilo/prism-credentials-node/oidc`), `policy` OPA decisions, and core content/media fetches now resolve the hostname once (1–32 addresses), validate every candidate against the SSRF policy, and connect only to a pinned address via a lookup-hook socket (no re-resolution). **3xx redirects are rejected outright** (`MediaContentError` code `redirect`) — a redirected fetch is never re-validated or followed. Private/metadata/loopback addresses fail closed (`MediaContentError` `ssrf_denied`). The MCP transport helpers were lifted to the shared core primitive (`pinnedFetch`, `resolvePinnedAddress`, `requestPinned` from `@arnilo/prism`) with byte-identical behavior and are re-exported from `@arnilo/prism-mcp`.
+
+4. **Shared bounded OAuth device/token polling.** Core OpenAI OAuth (`@arnilo/prism-provider-openai`) and `@arnilo/prism-credentials-node` now share `pollDeviceCodeToken` (RFC 8628 poll loop with `authorization_pending` continue, `slow_down` +5 s backoff, expiry deadline, cancellation, bounded success/error reads, fail-closed token-shape gates, `[REDACTED]` secret redaction). No public change — the device/token flows keep their messages and cadence; provider-specific fields stay adapter options.
+
+5. **Credential, signing, upload, and cache edge fixes.** (a) Azure and Vertex resolve a rotating/single-use credential **exactly once per request** — the inner provider signs with the same token the wrapper validated (a `CredentialValueSource` is never consumed twice). (b) Bedrock SigV4 canonicalization lowercases and merges duplicate-case request headers last-wins and sorts query parameters by encoded key then value — duplicate-case or reordered input can no longer produce a malformed signature. (c) OpenAI upload cleanup retains a file id until its `DELETE` succeeds — a failed/skipped cleanup leaves the id registered for a retried cleanup instead of leaking the remote file. (d) The cache-telemetry `__overflow__` bucket never carries cost — it reports requests and token totals only, so one model's cost metadata cannot mix into mixed-model overflow tokens.
+
+**Store compatibility:** 0.2.1 is store-compatible with 0.2.0 in both directions — no persisted-shape change, no migration step. Checkpoint, session-store, approval, and registry payloads are byte-identical; only fetch/stream/credential behavior changed.
+
+**Rollout:** upgrade core first (strict completion and bounded readers apply to all hosts immediately; truncated-stream callers must add `strictCompletion: false` only if they intentionally accept incomplete streams), then `@arnilo/prism-credentials-node` + `@arnilo/prism-policy` (DNS-pinned fetches; ensure JWKS/OPA hosts resolve to public addresses and never redirect), then the provider adapters (Azure/Vertex credential handling, Bedrock signing), then `@arnilo/prism-mcp` (re-export-only change).
+
+**Rollback risk:** restoring 0.2.0 restores all five boundary gaps — rollback is **not** a mitigation. Hosts that must roll back should disable truncated-stream acceptance, unbounded-body endpoints, redirect-following fetches, rotating-credential reuse, and upload cleanup at their own boundary until they can return to 0.2.1.
+
 ## 0.1.7 → 0.2.0 fail-closed runtime and sandbox security (plan 020)
 
 Release **0.2.0** (plan 020) is the first cut of the 0.2.x review-remediation line: it closes the three security blockers found in the 2026-08-12 comprehensive review. The API surface is **additive-only** (plain compat gate at 0.2.0 shows zero removed/changed declarations; no `--allow-break`), but three behaviors are deliberately tightened for security, so untyped/legacy callers may now fail where 0.1.7 silently proceeded:

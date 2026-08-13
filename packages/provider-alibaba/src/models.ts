@@ -1,5 +1,5 @@
 import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /**
  * Alibaba Cloud Model Studio / DashScope OpenAI-compatible deployment presets.
@@ -103,7 +103,7 @@ export async function listAlibabaModels(options: ListAlibabaModelsOptions = {}):
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`Alibaba model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as AlibabaModelsResponse;
+  const payload = await readBoundedResponseJson<AlibabaModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("Alibaba model discovery response missing data array");
   return payload.data.map((entry) => mapAlibabaModel(entry));
 }

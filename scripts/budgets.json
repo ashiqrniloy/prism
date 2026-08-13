@@ -10,8 +10,9 @@
       "tolerance": 0.05
     },
     "fileCount": {
-      "baseline": 310,
-      "tolerance": 0.05
+      "baseline": 326,
+      "tolerance": 0.05,
+      "$comment": "[2026-08-13] phase21 tasks 4-5 add src/pinned-fetch.ts + src/oauth-device-code.ts to the core package (4 dist files total), pushing the root tarball past the 0.1.7 fileCount ceiling (measured 326 vs prior 310; packedBytes/unpackedBytes still within tolerance, measured 0.2.0+). Re-baselined per the release convention recorded below; only fileCount changed."
     },
     "$comment": " [2026-08-12] root packed/unpacked/fileCount baselines refreshed at 0.1.7 Task 2 (HEAD 2ebc08e + cache-telemetry module): dist/cache-telemetry.js + dist/cache-telemetry.d.ts + docs/provider-caching.md telemetry section + docs/index.md entry push the tarball past the 5% ceiling (measured 756151/2627877/310 vs prior 718738/2505460/307)."
   },

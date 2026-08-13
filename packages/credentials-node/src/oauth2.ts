@@ -1,10 +1,13 @@
 import { createHash, randomBytes } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
-import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProvider } from "@arnilo/prism";
-
-const REDACTED = "[REDACTED]";
-const DEFAULT_DEVICE_POLL_INTERVAL_MS = 5_000;
-const SLOW_DOWN_INCREMENT_MS = 5_000;
+import type {
+  OAuthCredentials,
+  OAuthLoginCallbacks,
+  OAuthProvider,
+  OAuthTokenSuccessPayload,
+  PollDeviceCodeTokenOptions,
+} from "@arnilo/prism";
+import { abortableSleep, pollDeviceCodeToken, redactOAuthError, throwIfAborted } from "@arnilo/prism";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** RFC 7636 PKCE verifier: base64url(32 random bytes) = 43 unreserved chars. */
 export function createOAuth2PkceVerifier(bytes = 32): string {
@@ -39,20 +42,41 @@ export interface OAuth2ProviderConfig {
 
 /**
  * Generic OAuth 2.0 provider (PKCE authorization-code + device-code + refresh + revoke),
- * the shared seam behind the Microsoft 365 / Google Workspace workload adapters. Mirrors
- * the 0.0.12 Codex pattern; codes/tokens are redacted in every thrown error.
+ * the shared seam behind the Microsoft 365 / Google Workspace workload adapters. The
+ * device-code flow runs on the shared core `pollDeviceCodeToken` (RFC 8628 poll loop,
+ * bounded bodies, redaction, fail-closed token shape); codes/tokens are redacted in
+ * every thrown error.
  */
 export function createOAuth2Provider(config: OAuth2ProviderConfig): OAuthProvider {
   const fetchImpl = config.fetch ?? fetch;
   const now = config.now ?? Date.now;
   const sleep = config.sleep ?? abortableSleep;
   const clientId = config.clientId ?? `prism-${config.id}`;
+  const parseTokenCredentials = (json: OAuthTokenSuccessPayload): OAuthCredentials => ({
+    access: json.access_token,
+    refresh: json.refresh_token,
+    expires: json.expires_in ? Date.now() + json.expires_in * 1_000 : undefined,
+    accountId: json.account_id ?? config.accountId,
+  });
   return {
     id: config.id,
     async login(callbacks?: OAuthLoginCallbacks) {
       throwIfAborted(callbacks?.signal);
       if (callbacks?.onDeviceCode && config.deviceCodeUrl) {
-        return deviceLogin(config, clientId, fetchImpl, callbacks, now, sleep);
+        const pollOptions: PollDeviceCodeTokenOptions = {
+          fetchImpl,
+          deviceCodeUrl: config.deviceCodeUrl,
+          tokenUrl: config.tokenUrl,
+          clientId,
+          scope: config.scope,
+          extraTokenParams: config.extraTokenParams,
+          callbacks,
+          errorPrefix: config.id,
+          now,
+          sleep,
+          parseTokenCredentials,
+        };
+        return pollDeviceCodeToken(pollOptions);
       }
       const verifier = createOAuth2PkceVerifier();
       const challenge = computeOAuth2S256Challenge(verifier);
@@ -81,6 +105,7 @@ export function createOAuth2Provider(config: OAuth2ProviderConfig): OAuthProvide
         },
         [code, verifier],
         callbacks?.signal,
+        parseTokenCredentials,
       );
     },
     async refresh(credentials) {
@@ -91,6 +116,8 @@ export function createOAuth2Provider(config: OAuth2ProviderConfig): OAuthProvide
         fetchImpl,
         { grant_type: "refresh_token", client_id: clientId, refresh_token: credentials.refresh },
         [credentials.access, credentials.refresh].filter((s): s is string => Boolean(s)),
+        undefined,
+        parseTokenCredentials,
       );
       // Preserve the account binding across refresh so per-identity isolation survives.
       return refreshed.accountId ? refreshed : { ...refreshed, accountId: credentials.accountId };
@@ -116,89 +143,14 @@ export function createOAuth2Provider(config: OAuth2ProviderConfig): OAuthProvide
   };
 }
 
-interface DeviceCodePayload {
-  readonly device_code: string;
-  readonly user_code: string;
-  readonly verification_uri: string;
-  readonly expires_in?: number;
-  readonly interval?: number;
-}
-
-interface TokenSuccessPayload {
-  readonly access_token?: string;
-  readonly refresh_token?: string;
-  readonly expires_in?: number;
-  readonly account_id?: string;
-}
-
-interface TokenErrorPayload {
-  readonly error?: string;
-  readonly error_description?: string;
-}
-
-async function deviceLogin(
-  config: OAuth2ProviderConfig,
-  clientId: string,
-  fetchImpl: typeof fetch,
-  callbacks: OAuthLoginCallbacks,
-  now: () => number,
-  sleep: (ms: number, signal?: AbortSignal) => Promise<void>,
-): Promise<OAuthCredentials> {
-  const body: Record<string, string> = { client_id: clientId };
-  if (config.scope) body.scope = config.scope;
-  const response = await fetchImpl(config.deviceCodeUrl!, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-    signal: callbacks.signal,
-  });
-  if (!response.ok) {
-    throw redactOAuthError(new Error(`${config.id} device code failed: ${response.status}`), []);
-  }
-  const json = (await response.json()) as DeviceCodePayload;
-  const secrets = [json.device_code, json.user_code];
-  const expiresAtMs = now() + (json.expires_in ?? 0) * 1_000;
-  await callbacks.onDeviceCode?.({
-    userCode: json.user_code,
-    verificationUri: json.verification_uri,
-    expiresAt: json.expires_in ? new Date(expiresAtMs).toISOString() : undefined,
-  });
-  let intervalMs = Math.max(1, (json.interval ?? DEFAULT_DEVICE_POLL_INTERVAL_MS / 1_000) * 1_000);
-  while (now() < expiresAtMs) {
-    throwIfAborted(callbacks.signal);
-    await sleep(intervalMs, callbacks.signal);
-    throwIfAborted(callbacks.signal);
-    const tokenResponse = await fetchImpl(config.tokenUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        client_id: clientId,
-        device_code: json.device_code,
-        ...config.extraTokenParams,
-      }),
-      signal: callbacks.signal,
-    });
-    if (tokenResponse.ok) return parseTokenCredentials(config, (await tokenResponse.json()) as TokenSuccessPayload);
-    const errorPayload = await readTokenErrorPayload(tokenResponse);
-    const code = errorPayload.error ?? "unknown_error";
-    if (code === "authorization_pending") continue;
-    if (code === "slow_down") {
-      intervalMs += SLOW_DOWN_INCREMENT_MS;
-      continue;
-    }
-    throw redactOAuthError(new Error(`${config.id} device code login failed: ${code}`), secrets);
-  }
-  throw redactOAuthError(new Error(`${config.id} device code login expired before authorization completed`), secrets);
-}
-
 async function exchangeToken(
   config: OAuth2ProviderConfig,
   _clientId: string,
   fetchImpl: typeof fetch,
   body: Record<string, string>,
   secrets: readonly (string | undefined)[] = [],
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  parseTokenCredentials: (json: OAuthTokenSuccessPayload) => OAuthCredentials,
 ): Promise<OAuthCredentials> {
   const response = await fetchImpl(config.tokenUrl, {
     method: "POST",
@@ -207,42 +159,12 @@ async function exchangeToken(
     signal,
   });
   if (!response.ok) {
-    throw redactOAuthError(new Error(`${config.id} token request failed: ${response.status}`), secrets);
+    const detail = await readBoundedResponseText(response, { secrets });
+    throw redactOAuthError(new Error(`${config.id} token request failed: ${response.status}${detail ? ` ${detail}` : ""}`), secrets);
   }
-  return parseTokenCredentials(config, (await response.json()) as TokenSuccessPayload);
-}
-
-function parseTokenCredentials(config: OAuth2ProviderConfig, json: TokenSuccessPayload): OAuthCredentials {
-  return {
-    access: json.access_token,
-    refresh: json.refresh_token,
-    expires: json.expires_in ? Date.now() + json.expires_in * 1_000 : undefined,
-    accountId: json.account_id ?? config.accountId,
-  };
-}
-
-async function readTokenErrorPayload(response: Response): Promise<TokenErrorPayload> {
-  try {
-    return (await response.json()) as TokenErrorPayload;
-  } catch {
-    return { error: "invalid_token_response" };
-  }
-}
-
-function redactOAuthError(error: Error, secrets: readonly (string | undefined)[]): Error {
-  let message = error.message;
-  for (const secret of secrets) {
-    if (secret) message = message.split(secret).join(REDACTED);
-  }
-  return new Error(message);
-}
-
-function throwIfAborted(signal?: AbortSignal): void {
-  if (signal?.aborted) throw signal.reason ?? new Error("OAuth login aborted");
-}
-
-async function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
-  if (ms <= 0) return;
-  throwIfAborted(signal);
-  await delay(ms, undefined, { signal });
+  const json = await readBoundedResponseJson<OAuthTokenSuccessPayload>(response, {
+    shape: (value: unknown): boolean =>
+      typeof value === "object" && value !== null && typeof (value as Record<string, unknown>).access_token === "string",
+  });
+  return parseTokenCredentials(json);
 }

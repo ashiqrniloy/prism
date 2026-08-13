@@ -6,7 +6,7 @@ import {
   redactSecrets,
   resolveCredentialValue,
 } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** Official OpenCode Go API base (`/chat/completions`, `/messages`, `/models`). */
 export const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1";
@@ -116,7 +116,7 @@ export async function listOpenCodeGoModels(options: ListOpenCodeGoModelsOptions 
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`OpenCode Go model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as OpenCodeGoModelsResponse;
+  const payload = await readBoundedResponseJson<OpenCodeGoModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("OpenCode Go model discovery response missing data array");
   return payload.data.map((entry) => mapOpenCodeGoModel(entry, { provider }));
 }

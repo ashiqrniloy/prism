@@ -137,9 +137,26 @@ export function tryParseJsonObjectArguments(
   text: string,
   options?: { toolName?: string; maxBytes?: number },
 ): { ok: true; value: JsonObject } | { ok: false; error: ProviderTransportError };
+
+/** Read a success body with the same byte ceiling as `readBoundedResponseText`, then parse it as JSON
+ *  with depth/property caps and an optional caller-supplied shape gate. Malformed JSON, over-limit
+ *  nesting/width, or shape failure throw `ProviderTransportError` (code `response_body_shape`). */
+export async function readBoundedResponseJson<T>(
+  response: Response,
+  options?: {
+    secrets?: readonly (string | undefined)[];
+    maxResponseBodyBytes?: number;
+    maxDepth?: number;      // default 32
+    maxProperties?: number; // default 4_096 per object/array
+    shape?: (value: unknown) => boolean; // caller-supplied shape gate, fails closed
+    signal?: AbortSignal;
+  },
+): Promise<T>;
 ```
 
 **Performance:** Single pass over chunks; retained memory is `O(min(buffer, maxBufferBytes))`, not `O(stream)`. No full-stream accumulation.
+
+**Security:** the bounded success-body reader (added in 0.2.1) caps every non-stream JSON response: a hard UTF-8 byte ceiling (`maxResponseBodyBytes`, default 65_536) that cancels the body before full buffering, a nesting depth cap (default 32), a per-container property/element cap (default 4_096), and a caller-supplied shape gate. Malformed JSON, over-limit nesting or width, and shape mismatches all fail closed with `ProviderTransportError` code `response_body_shape`; errors are static text and never embed body content or secrets. It replaces the former unbounded `response.json()` in all ten model-discovery implementations, NeuralWatt quota, Alibaba embeddings, OpenAI uploads (0.2.1 task 6), and the shared OAuth device/token flows (0.2.1 task 5); per-adapter post-parse validation stays as defense in depth.
 
 ### `@arnilo/prism/providers/openai` — **shipped**
 

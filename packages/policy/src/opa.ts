@@ -1,4 +1,4 @@
-import { assertSsrfAllowedUrl, type SecretRedactor, type SsrfPolicy } from "@arnilo/prism";
+import { assertSsrfAllowedUrl, MediaContentError, pinnedFetch, type SecretRedactor, type SsrfPolicy } from "@arnilo/prism";
 import { PolicyError } from "./errors.js";
 import { createPolicyEvaluator } from "./evaluator.js";
 import { assertNoUnrestrictedPayload } from "./prepare.js";
@@ -206,6 +206,7 @@ async function callOpa(
       redirect: "manual",
     });
   } catch (error) {
+    if (error instanceof MediaContentError) throw error; // pinned DNS/redirect denials stay security errors
     if (request.signal?.aborted) throw error;
     if (error instanceof Error && error.name === "AbortError") {
       throw new OpaFetchError("OPA decision timed out", "ERR_PRISM_OPA_TIMEOUT");
@@ -249,7 +250,17 @@ export function createOpaPolicyEvaluator(options: OpaPolicyEvaluatorOptions): Po
   const onFailure = options.onFailure ?? "deny";
   const mapInput = options.mapInput ?? defaultOpaMapInput;
   const mapDecision = options.mapDecision ?? defaultOpaMapDecision;
-  const fetchImpl = options.fetch ?? fetch;
+  const pinnedEvaluateFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    // Default path: DNS-pinned, redirect-free OPA decision fetches via the core
+    // pinnedFetch primitive (0.2.1 task 4); hosts may inject their own fetch.
+    const url = new URL(String(input));
+    return pinnedFetch(url, init, {
+      errorPrefix: "OPA decision",
+      hostnameErrorPrefix: "OPA decision",
+      ssrf: options.ssrf,
+    });
+  };
+  const fetchImpl = options.fetch ?? pinnedEvaluateFetch;
   if (options.requirePolicyVersion !== undefined && !options.requirePolicyVersion.trim()) {
     throw new PolicyError("requirePolicyVersion must be a non-empty string", "ERR_PRISM_POLICY_VALIDATION");
   }

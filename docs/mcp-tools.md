@@ -208,7 +208,7 @@ Remote MCP tools default to `external_mutation`/`unsupported` unless the host `e
 | Risk | Mitigation |
 | --- | --- |
 | Untrusted subprocess (stdio) | Explicit `command` / `args` / `env` / `cwd`; review before deploy |
-| SSRF / DNS rebinding / redirects (HTTP) | Exact HTTPS origins; credentials/fragments/redirects denied; every DNS answer public; one address pinned per request; explicit loopback-only HTTP escape hatch |
+| SSRF / DNS rebinding / redirects (HTTP) | Exact HTTPS origins; credentials/fragments/redirects denied; every DNS answer public; one address pinned per request; explicit loopback-only HTTP escape hatch. Since 0.2.1 the client transport re-routes through the shared core `pinnedFetch` primitive (DNS-pinned fetch) with byte-identical `McpBridgeError`/`McpOAuthError` wrapping |
 | Hostile discovery / schema compilation | Raw SDK `tools/list` requests avoid SDK Ajv output-schema compilation; finite pages/tools/cursors/metadata/schema totals; failed refresh leaves previous tools unchanged |
 | Tool-name shadowing | Prefixed names + `createToolRegistry({ duplicate: "error" })` |
 | MCP Apps metadata/HTML | Explicit extension acknowledgement; bounded nested metadata; app-only tools absent from model list; only linked `ui://` HTML/MIME resource body reaches the host renderer |

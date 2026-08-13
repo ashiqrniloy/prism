@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { type AgentIdentity, type OAuthCredentials, revokeOAuthCredential } from "@arnilo/prism";
+import { type AgentIdentity, type OAuthCredentials, pollDeviceCodeToken, revokeOAuthCredential } from "@arnilo/prism";
 import {
   computeOAuth2S256Challenge,
   createGoogleWorkspaceOAuthProvider,
@@ -262,5 +262,89 @@ describe("createOAuthWorkTokenProvider", () => {
     ]);
     for (const result of results) assert.deepEqual(result, { [envVar]: "fresh" });
     assert.equal(refreshCalls, 1);
+  });
+
+  it("shared pollDeviceCodeToken helper honors expiry, redacts secrets, and bounds bodies (T9 poll drift / secret leak)", async () => {
+    // Expiry deadline: authorization never completes -> poll drift fails closed with a redacted expired error.
+    let now = 1_000;
+    const secretDeviceCode = "dev-secret-code";
+    const secretUserCode = "USER-SECRET";
+    const fetchImpl = (async (url: string | URL | Request) =>
+      String(url).includes("devicecode")
+        ? Response.json({
+            device_code: secretDeviceCode,
+            user_code: secretUserCode,
+            verification_uri: "https://example.test/device",
+            interval: 1,
+            expires_in: 3,
+          })
+        : Response.json({ error: "authorization_pending" }, { status: 400 })) as typeof fetch;
+    await assert.rejects(
+      () =>
+        pollDeviceCodeToken({
+          fetchImpl,
+          deviceCodeUrl: "https://example.test/devicecode",
+          tokenUrl: "https://example.test/token",
+          clientId: "c",
+          errorPrefix: "microsoft365",
+          now: () => now,
+          sleep: async (ms) => {
+            now += ms;
+          },
+          parseTokenCredentials: (json) => ({ access: json.access_token }),
+        }),
+      (error: Error) => {
+        assert.match(error.message, /expired before authorization completed/);
+        assert(!error.message.includes(secretDeviceCode));
+        assert(!error.message.includes(secretUserCode));
+        return true;
+      },
+    );
+    // Terminal error: description is bounded text with secrets redacted before it reaches the message.
+    await assert.rejects(
+      () =>
+        pollDeviceCodeToken({
+          fetchImpl: (async (url: string | URL | Request) =>
+            String(url).includes("devicecode")
+              ? Response.json({
+                  device_code: secretDeviceCode,
+                  user_code: secretUserCode,
+                  verification_uri: "https://example.test/device",
+                  interval: 0,
+                  expires_in: 60,
+                })
+              : Response.json(
+                  { error: "access_denied", error_description: `denied ${secretDeviceCode} ${secretUserCode}` },
+                  { status: 400 },
+                )) as typeof fetch,
+          deviceCodeUrl: "https://example.test/devicecode",
+          tokenUrl: "https://example.test/token",
+          clientId: "c",
+          errorPrefix: "microsoft365",
+          sleep: async () => {},
+          parseTokenCredentials: (json) => ({ access: json.access_token }),
+        }),
+      (error: Error) => {
+        assert.match(error.message, /access_denied/);
+        assert(!error.message.includes(secretDeviceCode));
+        assert(!error.message.includes(secretUserCode));
+        assert(error.message.includes("[REDACTED]"));
+        return true;
+      },
+    );
+    // Oversized device-code body fails closed at the shared byte ceiling.
+    await assert.rejects(
+      () =>
+        pollDeviceCodeToken({
+          fetchImpl: (async () =>
+            new Response("y".repeat(70_000), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch,
+          deviceCodeUrl: "https://example.test/devicecode",
+          tokenUrl: "https://example.test/token",
+          clientId: "c",
+          errorPrefix: "microsoft365",
+          parseTokenCredentials: (json) => ({ access: json.access_token }),
+        }),
+      /exceeded 65536 bytes/,
+    );
   });
 });

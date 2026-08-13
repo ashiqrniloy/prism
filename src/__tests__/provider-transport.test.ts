@@ -10,6 +10,7 @@ import {
   httpStatusError,
   parseJsonObjectArguments,
   parseRetryAfterMs,
+  readBoundedResponseJson,
   readBoundedResponseText,
   readSseData,
   readSseEvents,
@@ -198,3 +199,131 @@ describe("provider transport primitives", () => {
     assert.deepEqual(offenders, [], offenders.join("\n"));
   });
 });
+
+describe("bounded success-body reader", () => {
+  const isDataArray = (v: unknown): boolean => typeof v === "object" && v !== null && Array.isArray((v as { data?: unknown }).data);
+
+  // The thirteen success-body shapes the reader replaces: ten model-discovery responses,
+  // NeuralWatt quota, Alibaba embeddings, OpenAI uploads (task6 migrates the uploads site
+  // to the same reader; conformance covers its shape here).
+  const shapes = [
+    { name: "alibaba models", payload: { data: [{ id: "qwen-max" }] } },
+    { name: "anthropic models", payload: { data: [{ id: "claude" }] } },
+    { name: "google models", payload: { models: [{ name: "gemini" }] } },
+    { name: "kimi models", payload: { data: [{ id: "moonshot" }] } },
+    { name: "neuralwatt models", payload: { data: [{ id: "nw-model" }] } },
+    { name: "ollama models", payload: { data: [{ id: "llama" }] } },
+    { name: "openai models", payload: { data: [{ id: "gpt" }] } },
+    { name: "opencode-go models", payload: { data: [{ id: "og" }] } },
+    { name: "openrouter models", payload: { data: [{ id: "or" }] } },
+    { name: "zai models", payload: { data: [{ id: "zai" }] } },
+    { name: "neuralwatt quota", payload: { balance: { balance_usd: 1.5 }, usage: { lifetime: { tokens: 100 } } } },
+    { name: "alibaba embeddings", payload: { data: [{ embedding: [0.1, 0.2], index: 0 }], model: "m" } },
+    { name: "openai uploads", payload: { id: "file-123", bytes: 10, created_at: 0 } },
+  ] as const;
+
+  for (const { name, payload } of shapes) {
+    it(`parses normal ${name} payloads identically`, async () => {
+      const response = new Response(JSON.stringify(payload), { status: 200 });
+      const parsed = await readBoundedResponseJson(response, {
+        shape: (v): v is typeof payload => deepEqualShape(v, payload),
+      });
+      assert.deepEqual(parsed, payload);
+    });
+
+    it(`rejects oversized chunked ${name} bodies before full buffering`, async () => {
+      let pulls = 0;
+      const total = 40;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (pulls >= total) {
+            controller.close();
+            return;
+          }
+          pulls += 1;
+          controller.enqueue(new TextEncoder().encode(JSON.stringify(payload)));
+        },
+      });
+      await assert.rejects(
+        () => readBoundedResponseJson(new Response(body), { maxResponseBodyBytes: 16 }),
+        (error: unknown) => error instanceof ProviderTransportError && error.code === "response_body_overflow",
+      );
+      assert.ok(pulls < total, `body fully buffered before overflow (pulls=${pulls}/${total})`);
+    });
+  }
+
+  it("rejects malformed JSON with the shape error", async () => {
+    await assert.rejects(
+      () => readBoundedResponseJson(new Response("{ not json")),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "response_body_shape",
+    );
+    await assert.rejects(
+      () => readBoundedResponseJson(new Response("")),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "response_body_shape",
+    );
+  });
+
+  it("rejects over-deep JSON", async () => {
+    const deep = JSON.parse("[1,[2,[3,[4,[5,[6]]]]]]") as unknown;
+    await assert.rejects(
+      () => readBoundedResponseJson(new Response(JSON.stringify(deep)), { maxDepth: 3 }),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "response_body_shape",
+    );
+    const ok = await readBoundedResponseJson(new Response(JSON.stringify(deep)), { maxDepth: 32 });
+    assert.deepEqual(ok, deep);
+  });
+
+  it("rejects over-wide objects and arrays", async () => {
+    await assert.rejects(
+      () => readBoundedResponseJson(new Response(JSON.stringify({ a: 1, b: 2, c: 3 })), { maxProperties: 2 }),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "response_body_shape",
+    );
+    await assert.rejects(
+      () => readBoundedResponseJson(new Response(JSON.stringify([1, 2, 3])), { maxProperties: 2 }),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "response_body_shape",
+    );
+  });
+
+  it("shape gate failures fail closed; passing gates return the parsed value", async () => {
+    await assert.rejects(
+      () => readBoundedResponseJson<{ data: unknown[] }>(new Response(JSON.stringify({ models: [] })), { shape: isDataArray }),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "response_body_shape",
+    );
+    const parsed = await readBoundedResponseJson<{ data: unknown[] }>(new Response(JSON.stringify({ data: [] })), {
+      shape: isDataArray,
+    });
+    assert.deepEqual(parsed, { data: [] });
+  });
+
+  it("honors aborts and never leaks secrets in errors", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await assert.rejects(
+      () => readBoundedResponseJson(new Response("ignored"), { signal: controller.signal, secrets: ["hunter2"] }),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "aborted",
+    );
+    await assert.rejects(
+      () => readBoundedResponseJson(new Response("body contains hunter2 secret but malformed"), { secrets: ["hunter2"] }),
+      (error: unknown) => {
+        assert.ok(error instanceof ProviderTransportError);
+        assert.equal(error.message.includes("hunter2"), false);
+        return error.code === "response_body_shape";
+      },
+    );
+  });
+});
+
+function deepEqualShape(actual: unknown, expected: unknown): boolean {
+  if (typeof expected !== "object" || expected === null) return typeof actual === typeof expected;
+  if (Array.isArray(expected)) {
+    return (
+      Array.isArray(actual) &&
+      actual.length === expected.length &&
+      expected.every((entry, i) => deepEqualShape((actual as unknown[])[i], entry))
+    );
+  }
+  if (Array.isArray(actual) || actual === null) return false;
+  return Object.keys(expected).every((key) =>
+    deepEqualShape((actual as Record<string, unknown>)[key], (expected as Record<string, unknown>)[key]),
+  );
+}

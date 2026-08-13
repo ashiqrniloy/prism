@@ -1,5 +1,5 @@
 import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface KimiModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
   readonly provider?: "kimi-coding" | "moonshot";
@@ -80,7 +80,7 @@ export async function listKimiModels(options: ListKimiModelsOptions = {}): Promi
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`Kimi model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as KimiModelsResponse;
+  const payload = await readBoundedResponseJson<KimiModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("Kimi model discovery response missing data array");
   return payload.data.map((entry) => mapKimiModel(entry, { provider }));
 }

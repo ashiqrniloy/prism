@@ -25,7 +25,8 @@ export type ProviderTransportErrorCode =
   | "response_body_overflow"
   | "aborted"
   | "invalid_json_arguments"
-  | "incomplete_delta";
+  | "incomplete_delta"
+  | "response_body_shape";
 
 export class ProviderTransportError extends Error {
   readonly code: ProviderTransportErrorCode;
@@ -65,6 +66,16 @@ export interface ReadSseEventsOptions extends BoundedStreamLimits {
 
 export interface ReadBoundedResponseTextOptions extends BoundedStreamLimits {
   readonly secrets?: readonly (string | undefined)[];
+}
+
+export interface ReadBoundedResponseJsonOptions extends ReadBoundedResponseTextOptions {
+  /** Max JSON nesting depth. Default: 32. */
+  readonly maxDepth?: number;
+  /** Max object properties / array elements per container. Default: 4_096. */
+  readonly maxProperties?: number;
+  /** Caller-supplied shape gate; failure throws `response_body_shape`. */
+  readonly shape?: (value: unknown) => boolean;
+  readonly signal?: AbortSignal;
 }
 
 export interface ParseJsonObjectArgumentsOptions {
@@ -262,6 +273,47 @@ export async function readBoundedResponseText(response: Response, options?: Read
       // stream may already be closed
     }
   }
+}
+
+function assertJsonBounds(value: unknown, maxDepth: number, maxProperties: number, depth = 0): void {
+  if (depth > maxDepth) {
+    throw new ProviderTransportError("response_body_shape", `JSON nesting exceeded ${maxDepth} levels`);
+  }
+  if (value === null || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    if (value.length > maxProperties) {
+      throw new ProviderTransportError("response_body_shape", `JSON array exceeded ${maxProperties} elements`);
+    }
+    for (const entry of value) assertJsonBounds(entry, maxDepth, maxProperties, depth + 1);
+    return;
+  }
+  const keys = Object.keys(value as Record<string, unknown>);
+  if (keys.length > maxProperties) {
+    throw new ProviderTransportError("response_body_shape", `JSON object exceeded ${maxProperties} properties`);
+  }
+  for (const key of keys) assertJsonBounds((value as Record<string, unknown>)[key], maxDepth, maxProperties, depth + 1);
+}
+
+/** Read a success body with the same byte ceiling as {@link readBoundedResponseText}, then parse it as JSON
+ *  with depth/property caps and an optional caller-supplied shape gate. Malformed JSON, over-limit nesting,
+ *  or shape failure throw `ProviderTransportError` with code `response_body_shape`. */
+export async function readBoundedResponseJson<T>(response: Response, options?: ReadBoundedResponseJsonOptions): Promise<T> {
+  throwIfAborted(options?.signal);
+  const text = await readBoundedResponseText(response, options);
+  throwIfAborted(options?.signal);
+  const maxDepth = options?.maxDepth ?? 32;
+  const maxProperties = options?.maxProperties ?? 4_096;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new ProviderTransportError("response_body_shape", "Response body is not valid JSON");
+  }
+  assertJsonBounds(parsed, maxDepth, maxProperties);
+  if (options?.shape && !options.shape(parsed)) {
+    throw new ProviderTransportError("response_body_shape", "Response body does not match the expected shape");
+  }
+  return parsed as T;
 }
 
 export type ParseJsonObjectArgumentsResult =

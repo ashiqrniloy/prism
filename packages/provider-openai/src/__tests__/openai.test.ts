@@ -7,6 +7,7 @@ import {
   assertSerializedRequestCoversContent,
   assertToolCallDeltasReconstruct,
 } from "@arnilo/prism/testing/provider-conformance";
+import { createOpenAIFileUploadManager } from "../uploads.js";
 import { createOpenAIProviderPackage, createOpenAIResponsesProvider, listOpenAIModels, mapOpenAIModel } from "../index.js";
 
 const request: ProviderRequest = {
@@ -441,6 +442,44 @@ describe("@arnilo/prism-provider-openai responses", () => {
 
   it("map_openai_model_rejects_malformed_entry", () => {
     assert.throws(() => mapOpenAIModel({ id: "" } as any), /missing id/);
+  });
+});
+
+describe("@arnilo/prism-provider-openai upload cleanup retention", () => {
+  it("retains cleanup ids until the DELETE succeeds (no leak on failed cleanup)", async () => {
+    // T12: a failed DELETE must leave the id registered so a retried cleanup
+    // can still remove the remote file; ids are removed only after success.
+    const deletes: Array<{ fileId: string; result: number }> = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/files") && init?.method === "POST") {
+        return new Response(JSON.stringify({ id: "file-leaky" }), { status: 200 });
+      }
+      if (url.includes("/files/file-leaky") && init?.method === "DELETE") {
+        deletes.push({ fileId: "file-leaky", result: deletes.length === 0 ? 500 : 200 });
+        return new Response("{}", { status: deletes.at(-1)!.result });
+      }
+      return new Response("{}", { status: 404 });
+    }) as typeof fetch;
+
+    const manager = createOpenAIFileUploadManager({
+      apiKey: "fake-openai-key",
+      fetch: fetchImpl,
+      inlineMaxBytes: 1,
+      scope: { sessionId: "sess-2" },
+    });
+    await manager.resolveFileWire("application/pdf", Uint8Array.from([1, 2, 3, 4]), "big.pdf");
+
+    await manager.cleanup();
+    assert.equal(deletes.length, 1, "first cleanup attempts the DELETE");
+    assert.equal(deletes[0].result, 500, "first DELETE fails");
+
+    await manager.cleanup();
+    assert.equal(deletes.length, 2, "retained id drives a second cleanup attempt");
+    assert.equal(deletes[1].result, 200, "second DELETE succeeds");
+
+    await manager.cleanup();
+    assert.equal(deletes.length, 2, "successful DELETE removes the id; no further attempts");
   });
 });
 

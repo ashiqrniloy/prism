@@ -248,6 +248,7 @@ const providers = createOpenAIProviderPackage({ apiKey });
 - Never log passphrases, derived keys, or decrypted credential payloads.
 - Optional host KMS: `encryptWithHostKms` / `decryptWithHostKms` wrap a random AES-256-GCM DEK via host `HostKms.wrapKey`/`unwrapKey` (timeout ≤ 60 s). Envelope sizes reuse vault/file caps. Keys are never logged. `createMemoryHostKms` is for tests only.
 - Storage is not OAuth eligibility. A durable store may persist credentials for a provider only after the host selects a provider-authorized flow; it must not be used to piggyback on a vendor CLI or consumer subscription.
+- OIDC JWKS fetches (0.2.1) are DNS-pinned through the core `pinnedFetch` primitive: one resolve per request, every resolved address SSRF-checked before the connect (rebinding defense), redirects rejected outright, and the JWKS body read under a hard byte ceiling; oversized documents fail closed as a parse error, never as a rotatable transport failure.
 - Live keychain tests are opt-in (`PRISM_TEST_KEYCHAIN=1`); default `npm test` stays offline.
 
 ## MCP authentication boundary

@@ -1,5 +1,5 @@
 import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** Official Claude API Messages base. */
 export const ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com/v1";
@@ -94,7 +94,7 @@ export async function listAnthropicModels(options: ListAnthropicModelsOptions = 
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`Anthropic model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = (await response.json()) as AnthropicModelsResponse;
+  const payload = await readBoundedResponseJson<AnthropicModelsResponse>(response);
   if (!Array.isArray(payload.data)) throw new Error("Anthropic model discovery response missing data array");
   return payload.data.map((entry) => mapAnthropicModel(entry, { provider }));
 }

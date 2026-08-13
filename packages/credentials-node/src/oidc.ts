@@ -24,10 +24,12 @@ import {
   IdentityError,
   type IdentityLimits,
   type IdentityVerifier,
+  pinnedFetch,
   type Principal,
   resolveIdentityLimits,
   type SsrfPolicy,
 } from "@arnilo/prism";
+import { ProviderTransportError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** Signature algorithms this adapter can verify. Hosts may only narrow. */
 export type OidcAlgorithm = "RS256" | "ES256";
@@ -175,7 +177,6 @@ export function createOidcIdentityVerifier(options: OidcIdentityVerifierOptions)
   const limits = resolveOidcLimits(options.limits);
   const algorithms = resolveAlgorithms(options.algorithms);
   const identityLimits = resolveIdentityLimits(options.limits?.identity);
-  const fetchImpl = options.fetch ?? fetch;
   const now = options.now ?? Date.now;
   const audience = Array.isArray(options.audience) ? options.audience : [options.audience];
 
@@ -204,15 +205,29 @@ export function createOidcIdentityVerifier(options: OidcIdentityVerifierOptions)
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), limits.jwksFetchTimeoutMs);
     try {
-      const response = await fetchImpl(options.jwksUrl, {
-        signal: controller.signal,
-        // Never follow JWKS redirects: a redirected fetch bypasses the pinned-origin check.
-        redirect: "manual",
-      });
+      // Default path: DNS-pinned, redirect-free, byte-bounded fetch via the core
+      // pinnedFetch primitive (0.2.1 task 4); hosts may inject their own fetch.
+      const response = await (options.fetch
+        ? options.fetch(options.jwksUrl, {
+            signal: controller.signal,
+            // Never follow JWKS redirects: a redirected fetch bypasses the pinned-origin check.
+            redirect: "manual",
+          })
+        : pinnedFetch(
+            new URL(options.jwksUrl),
+            { signal: controller.signal, redirect: "manual" },
+            {
+              errorPrefix: "OIDC JWKS",
+              hostnameErrorPrefix: "OIDC JWKS",
+              ssrf: options.ssrf,
+            },
+          ));
       if (response.status < 200 || response.status >= 300) {
         throw new IdentityError(`JWKS endpoint returned ${response.status}`, REASON.jwksFetch);
       }
-      const text = await response.text();
+      const text = await readBoundedResponseText(response, {
+        maxResponseBodyBytes: limits.maxJwksKeys * limits.maxJwkBytes + JWKS_DOC_SLACK_BYTES,
+      });
       if (text.length > limits.maxJwksKeys * limits.maxJwkBytes + JWKS_DOC_SLACK_BYTES) {
         throw new IdentityError("JWKS document exceeds size bound", REASON.jwksParse);
       }
@@ -237,6 +252,11 @@ export function createOidcIdentityVerifier(options: OidcIdentityVerifierOptions)
       return { keys: boundedKeys, fetchedAt: now() };
     } catch (error) {
       if (error instanceof IdentityError) throw error;
+      if (error instanceof ProviderTransportError && error.code === "response_body_overflow") {
+        // Oversized JWKS bodies fail closed as a parse/bounds error (poisoning path),
+        // never as a rotatable transport failure.
+        throw new IdentityError("JWKS document exceeds size bound", REASON.jwksParse);
+      }
       const message = error instanceof Error ? error.message : String(error);
       throw new IdentityError(`JWKS fetch failed: ${message}`, REASON.jwksFetch);
     } finally {

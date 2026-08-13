@@ -32,33 +32,32 @@ export function signAwsRequest(input: SignAwsRequestInput): Record<string, strin
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const dateStamp = amzDate.slice(0, 8);
   const payloadHash = sha256Hex(input.body);
+  // Normalize caller headers once: lowercase names, last-wins on duplicate
+  // case (object-spread semantics), then filter reserved names. Canonicalizing
+  // from the merged map avoids the old duplicate-lowercase-key .find ambiguity.
+  const merged = new Map<string, string>();
+  for (const [key, value] of Object.entries(input.headers)) merged.set(key.toLowerCase(), value);
   const headers: Record<string, string> = {
     host: url.host,
-    "content-type": input.headers["content-type"] ?? input.headers["Content-Type"] ?? "application/json",
+    "content-type": merged.get("content-type") ?? "application/json",
     "x-amz-date": amzDate,
     "x-amz-content-sha256": payloadHash,
-    ...Object.fromEntries(
-      Object.entries(input.headers).filter(([key]) => {
-        const lower = key.toLowerCase();
-        return lower !== "host" && lower !== "authorization" && lower !== "x-amz-date" && lower !== "x-amz-content-sha256";
-      }),
-    ),
   };
+  for (const [key, value] of merged) {
+    if (key !== "host" && key !== "authorization" && key !== "x-amz-date" && key !== "x-amz-content-sha256") {
+      headers[key] = value;
+    }
+  }
   if (input.credentials.sessionToken) headers["x-amz-security-token"] = input.credentials.sessionToken;
 
-  const signedHeaderNames = Object.keys(headers)
-    .map((key) => key.toLowerCase())
-    .sort();
-  const canonicalHeaders = signedHeaderNames
-    .map((name) => {
-      const match = Object.entries(headers).find(([key]) => key.toLowerCase() === name);
-      return `${name}:${(match?.[1] ?? "").trim().replace(/\s+/g, " ")}\n`;
-    })
-    .join("");
+  const signedHeaderNames = Object.keys(headers).sort();
+  const canonicalHeaders = signedHeaderNames.map((name) => `${name}:${(headers[name] ?? "").trim().replace(/\s+/g, " ")}\n`).join("");
   const signedHeaders = signedHeaderNames.join(";");
+  // AWS sorts encoded keys, then encoded values (repeated keys by value).
   const canonicalQuery = [...url.searchParams.entries()]
-    .sort(([a], [b]) => (a === b ? a.localeCompare(b) : a.localeCompare(b)))
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .map(([key, value]) => [encodeURIComponent(key), encodeURIComponent(value)] as const)
+    .sort(([ka, va], [kb, vb]) => (ka === kb ? va.localeCompare(vb) : ka.localeCompare(kb)))
+    .map(([key, value]) => `${key}=${value}`)
     .join("&");
   const canonicalRequest = [
     input.method.toUpperCase(),

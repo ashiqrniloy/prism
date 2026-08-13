@@ -80,7 +80,7 @@ assertMcpContentWithinLimit	export declare function assertMcpContentWithinLimit(
 assertValidServerId	export declare function assertValidServerId(serverId: string): void
 attachMcpCapabilities	export declare function attachMcpCapabilities(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions & Pick<ConnectMcpCapabilitiesOptions, "maxCapabilityBytes">): Promise<McpCapabilityBridge>
 attachMcpToolBridge	export declare function attachMcpToolBridge(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions): Promise<McpToolBridge>
-boundResponse	export declare function boundResponse(response: Response, maxBytes: number): Response
+boundResponse	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 boundedMcpErrorMessage	export declare function boundedMcpErrorMessage(error: unknown, maxBytes: number): string
 connectMcpCapabilities	export declare function connectMcpCapabilities(options: ConnectMcpCapabilitiesOptions): Promise<McpCapabilityBridge>
 connectMcpTools	export declare function connectMcpTools(options: ConnectMcpToolsOptions): Promise<McpToolBridge>
@@ -93,11 +93,10 @@ createPrismMcpServer	export declare function createPrismMcpServer(options: Creat
 createPrismMcpWebHandler	export declare function createPrismMcpWebHandler(server: McpServer | (() => McpServer | Promise<McpServer>), options?: CreatePrismMcpWebHandlerOptions): Promise<PrismMcpWebHandler>
 createSecureMcpFetch	export declare function createSecureMcpFetch(config: McpStreamableHttpTransport): typeof globalThis.fetch
 defaultMcpNamePrefix	export declare function defaultMcpNamePrefix(serverId: string): string
-defaultResolver	export declare function defaultResolver(hostname: string): Promise<readonly MediaHostAddress[]>
+defaultResolver	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 estimateUtf8Bytes	export declare function estimateUtf8Bytes(value: string): number
 formatMcpToolName	export declare function formatMcpToolName(prefix: string, remoteName: string): string
-isLoopbackAddress	export declare function isLoopbackAddress(value: string): boolean
-isLoopbackHostname	export declare function isLoopbackHostname(value: string): boolean
+isLoopbackAddress	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 listAllMcpTools	export declare function listAllMcpTools(client: Client, signal?: AbortSignal, input?: McpClientLimitsInput): Promise<ListedMcpTool[]>
 mapMcpContentToBlocks	export declare function mapMcpContentToBlocks(content: readonly McpContentBlock[] | undefined, options: MapMcpContentOptions): MapMcpContentResult
 mapMcpToolsToDefinitions	export declare function mapMcpToolsToDefinitions(remoteTools: readonly ListedMcpTool[], context:
@@ -105,13 +104,13 @@ mcpCallError	export declare function mcpCallError(message: string, code?: string
 mcpElicitationDecision	export declare function mcpElicitationDecision(approvalId: string, params: unknown, options?: McpElicitationDecisionOptions): PendingDecision
 mcpElicitationResultFromDecision	export declare function mcpElicitationResultFromDecision(decision: RunDecision, options?:
 measureBoundedJson	export declare function measureBoundedJson(value: unknown, bounds: JsonBounds): JsonMeasurement
-normalizeHostname	export declare function normalizeHostname(value: string): string
+normalizeHostname	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 packageName	export declare const packageName = "@arnilo/prism-mcp"
-raceAbort	export declare function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | null | undefined): Promise<T>
+raceAbort	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 relayStatelessBody	export declare function relayStatelessBody(body: ReadableStream<Uint8Array> | null, onClose: () => void): Response | null
-requestPinned	export declare function requestPinned(url: URL, address: MediaHostAddress, init: RequestInit): Promise<Response>
+requestPinned	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 resolveMcpClientLimits	export declare function resolveMcpClientLimits(input: McpClientLimitsInput, defaults:
 resolveMcpOAuthLimits	export declare function resolveMcpOAuthLimits(input?: McpOAuthLimitsInput): ResolvedMcpOAuthLimits
-resolvePinnedAddress	export declare function resolvePinnedAddress(url: URL, resolver: MediaHostnameResolver, signal: AbortSignal | null | undefined, allowLoopback: boolean): Promise<MediaHostAddress>
+resolvePinnedAddress	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 summarizeMcpContent	export declare function summarizeMcpContent(content: readonly McpContentBlock[] | undefined, maxBytes?: number): string
 validateMcpLimit	export declare function validateMcpLimit(name: string, value: number, hardCap: number): number

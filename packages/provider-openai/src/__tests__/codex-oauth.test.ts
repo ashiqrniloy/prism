@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ProviderRequest } from "@arnilo/prism";
+import { pollDeviceCodeToken } from "@arnilo/prism";
 import { createOpenAICodexOAuthProvider, createOpenAICodexProvider, createOpenAIResponsesProvider } from "../index.js";
 import { computeS256Challenge, createPkceVerifier } from "../oauth.js";
 
@@ -305,6 +306,25 @@ describe("@arnilo/prism-provider-openai codex oauth", () => {
         assert(error.message.includes("[REDACTED]"));
         return true;
       },
+    );
+  });
+
+  it("shared pollDeviceCodeToken helper rejects oversized token bodies (T9 unbounded token body)", async () => {
+    const fetchImpl = (async (url: string | URL | Request) =>
+      String(url).includes("device")
+        ? Response.json({ device_code: "d", user_code: "u", verification_uri: "https://example.test/device", interval: 0, expires_in: 60 })
+        : new Response("x".repeat(70_000), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+    await assert.rejects(
+      () =>
+        pollDeviceCodeToken({
+          fetchImpl,
+          deviceCodeUrl: "https://example.test/device",
+          tokenUrl: "https://example.test/token",
+          clientId: "c",
+          errorPrefix: "OpenAI",
+          parseTokenCredentials: (json) => ({ access: json.access_token }),
+        }),
+      /exceeded 65536 bytes/,
     );
   });
 });

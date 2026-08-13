@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.1] - 2026-08-13
+
+### Changed
+- 0.2.1 (plan 021): device-code OAuth flow consolidated onto the shared core pollDeviceCodeToken (bounded reads, fail-closed token shape, [REDACTED] redaction; authorization-code/refresh exchange bounded via readBoundedResponseJson); upload manager reads bounded and retains cleanup ids until their DELETE succeeds (no remote-file leak on failed cleanup).
+
+
 
 ## [0.1.0] - 2026-08-09
 

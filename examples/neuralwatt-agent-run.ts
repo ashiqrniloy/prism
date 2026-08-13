@@ -63,11 +63,13 @@ async function mockFetch(_url: string | URL | Request, init?: RequestInit) {
         data({ choices: [{ delta: { tool_calls: [{ index: 0, id: "call_lookup", function: { name: "lookup" } }] } }] }),
         data({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"q":' } }] } }] }),
         data({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '"cache"}' } }] } }] }),
+        data({ choices: [{ delta: {}, finish_reason: "tool_calls" }] }),
       ])
     : sse([
         ': energy {"energy_kwh":0.00042,"duration_seconds":0.3}',
         ': cost {"request_cost_usd":0.0009,"cache_savings_usd":0.0012}',
         data({ choices: [{ delta: { content: "Tool result processed." } }] }),
+        data({ choices: [{ delta: {}, finish_reason: "stop" }] }),
         data({ usage: { prompt_tokens: 1200, completion_tokens: 30, total_tokens: 1230, prompt_tokens_details: { cached_tokens: 900 } } }),
       ]);
   return new Response(body, { status: 200 });

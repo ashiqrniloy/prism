@@ -124,6 +124,7 @@ A future provider-local OAuth adapter needs published permission for third-party
 - `resolveCredentialValue()` and `createExplicitCredentialResolver()` do not cache values. Add host-side caching only if a real credential source needs it.
 - `refreshOAuthCredential()` only calls the supplied OAuth provider and optional store; it has no built-in persistence or retry loop.
 - OpenAI Codex device-code OAuth polls inside `createOpenAICodexOAuthProvider().login()` with bounded delays and abort support via `OAuthLoginCallbacks.signal`. Token-endpoint failures redact authorization codes, PKCE verifiers, device/user codes, and access/refresh tokens when those values are known.
+- The shared bounded device/token flow lives in core `pollDeviceCodeToken` (0.2.1) and is used by the OpenAI Codex provider and the credentials-node OAuth 2.0 provider (Microsoft 365 / Google Workspace). It owns the RFC 8628 device-code request and poll loop (`authorization_pending` continue, `slow_down` +5s backoff, expiry deadline, abort), reads every response body under the shared byte ceiling, parses success bodies with a fail-closed shape gate (an `access_token` string is required), and redacts device/user codes, authorization codes, PKCE verifiers, and tokens from every thrown error. Adapter-specific fields (message prefix, extra token params, account binding) are plain options, never subclasses.
 
 ## Related APIs
 
