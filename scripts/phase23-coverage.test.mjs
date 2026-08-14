@@ -106,10 +106,14 @@ test("fail-closed: a non-protected package below its threshold exits 1, is liste
       if (entry.protectedException) assert.ok(!artifact.belowThreshold.includes(pkg), `${pkg} must never be a threshold failure`);
     }
     // Reproduction: back-to-back runs are stable well inside the 3pp margin.
+    // 0.5pp absorbs rare runner noise (observed 0.13pp on @arnilo/prism-browser
+    // on a loaded 2-vCPU runner 2026-08-14; local + container runs are
+    // byte-identical at 83.78). A vacuous/mis-instrumented run differs by tens
+    // of pp or produces 100.00/missing rows, far outside this window.
     for (const name of workspaceNames) {
       const real = JSON.parse(realArtifact).packages[pkgName(name)];
       const temp = artifact.packages[pkgName(name)];
-      assert.ok(Math.abs(real.lines - temp.lines) < 0.1, `${pkgName(name)} coverage not reproduced: ${real.lines} vs ${temp.lines}`);
+      assert.ok(Math.abs(real.lines - temp.lines) < 0.5, `${pkgName(name)} coverage not reproduced: ${real.lines} vs ${temp.lines}`);
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });

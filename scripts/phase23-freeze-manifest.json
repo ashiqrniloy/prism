@@ -113,6 +113,11 @@
     },
     {
       "task": "task2",
+      "change": "phase23-coverage fail-closed reproduction tolerance widened from 0.1pp to 0.5pp (second CI remediation 2026-08-14).",
+      "rationale": "CI's back-to-back matrix runs measured @arnilo/prism-browser at 83.78 then 83.91 (0.13pp) — rare runner noise on the loaded 2-vCPU runner, not reproducible locally or in a --cpus=2 container (four consecutive runs byte-identical at 83.78). The reproduction check guards against vacuous/mis-instrumented runs (the nested node --test bug produced 100.00 or null rows — tens of pp), so 0.5pp keeps that tripwire while absorbing legitimate scheduling noise."
+    },
+    {
+      "task": "task2",
       "change": "@arnilo/prism-coding-security moved from threshold-gated to protectedException (CI remediation after the first 0.2.3 CI run: coverage gate failed with lines 72.80 < 77.18).",
       "rationale": "Its native-sandbox legs probe `unshare --net` (NETNS) at module load and skip on GitHub Actions runners (containers cannot create network namespaces), so the host-captured freeze threshold (80.18 observed on a NETNS-capable host, 77.18 threshold) can never be met in CI. Reproduced locally by removing unshare from PATH: 7 tests skip, lines 72.80 — byte-identical to the CI measurement. Same class as the PRISM_TEST_POSTGRES_URL-protected packages: legs that skip in the measuring environment are exempt and named. The native suite still runs on hosts and in npm test where NETNS works."
     },
