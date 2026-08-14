@@ -112,6 +112,11 @@
       "rationale": "The release skip manifest reads the LATEST phase*-baseline.json; an empty reservation would record the core row blocked."
     },
     {
+      "task": "task2",
+      "change": "@arnilo/prism-coding-security moved from threshold-gated to protectedException (CI remediation after the first 0.2.3 CI run: coverage gate failed with lines 72.80 < 77.18).",
+      "rationale": "Its native-sandbox legs probe `unshare --net` (NETNS) at module load and skip on GitHub Actions runners (containers cannot create network namespaces), so the host-captured freeze threshold (80.18 observed on a NETNS-capable host, 77.18 threshold) can never be met in CI. Reproduced locally by removing unshare from PATH: 7 tests skip, lines 72.80 — byte-identical to the CI measurement. Same class as the PRISM_TEST_POSTGRES_URL-protected packages: legs that skip in the measuring environment are exempt and named. The native suite still runs on hosts and in npm test where NETNS works."
+    },
+    {
       "task": "task3",
       "change": "release.yml verify job's PRISM_TEST_POSTGRES_URL marker is scoped to the release:gate phase only; npm test / test:coverage / security:threat-suites run env-free in the verify job.",
       "rationale": "The initial job-level env leaked the marker into npm test: docs.test's credential-gated demo (examples/workflow-postgres-resume.ts) and the durable integration suites treat env PRESENCE as opt-in, so they attempted a real connection and failed (ECONNREFUSED ::1:5432 / 127.0.0.1:5432 — sdk:ready failure in CI at the docs demo). Env-free phases restore the 0.2.2 behavior (demo reports skipped, durable legs skip); the real durable run stays the postgres-integration job, which is unconditional in publish needs:."
