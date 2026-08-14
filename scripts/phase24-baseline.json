@@ -1,0 +1,113 @@
+{
+  "$comment": "Phase 24 (0.2.4) Task 6 exit-gate evidence, completed 2026-08-15 after Tasks 0-5 passed at HEAD 4138e65 (0.2.3 release state) with the 0.2.4 working tree (uncommitted: Task 1-6 changes + bump + docs). All figures are fresh verified runs in this session at the 0.2.4 working-tree state with PRISM_TEST_POSTGRES_URL set (dockerized postgres:16-alpine on 127.0.0.1:54329, the plan-023 container). Publication remains the operator handoff: signed v0.2.4 tag + npm OIDC after clean protected CI (release.yml verify + postgres-integration + node20-compat + codeql + supply-chain).",
+  "captured": "2026-08-15T01:40:00.000Z",
+  "release": "0.2.4",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "gitHead": "4138e65 (working tree)",
+  "npmTest": {
+    "command": "PRISM_TEST_POSTGRES_URL=... npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<phase gates incl. phase23 suites + phase24-truth> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1533,
+    "corePass": 1533,
+    "coreFail": 0,
+    "scriptGates": 272,
+    "scriptGatesPass": 272,
+    "scriptGatesFail": 0,
+    "workspaceTests": 2034,
+    "workspacePass": 2001,
+    "workspaceSkip": 33,
+    "workspaceFail": 0,
+    "totals": {
+      "tests": 3567,
+      "pass": 3534,
+      "skip": 33,
+      "fail": 0
+    },
+    "note": "3567 tests / 3534 pass / 33 protected-live skips / 0 fail with the Postgres env set (zero BLOCKED gates); 33-skip floor frozen (phase23-skip-manifest asserts >= 33); phase24-truth 12/12 in the gate segment"
+  },
+  "coverage": {
+    "core": {
+      "lines": 90.53,
+      "branches": 84.2,
+      "functions": 90.54
+    },
+    "gate": "60/70/75 core gate passed (exit 0)",
+    "note": "workspace rows use package-local --test-coverage-include=dist/** (denominator fix from plan 023); per-package lines thresholds from scripts/coverage-thresholds.json; 42 workspace suites + core; belowThreshold [] (test:coverage exit 0)"
+  },
+  "threatSuites": {
+    "suites": 50,
+    "pass": 50,
+    "fail": 0,
+    "note": "security:threat-suites = phase8-11 + phase20 + phase21 + phase22 + phase23 over built public entrypoints"
+  },
+  "packDryRun": {
+    "deterministic": true,
+    "packages": 50,
+    "runSha256": "0926355aa63e0979",
+    "note": "two standalone npm run pack:dry-run runs byte-identical (diff empty); sha256 of the pack dry-run log"
+  },
+  "releaseGate": {
+    "version": "0.2.4",
+    "packages": 50,
+    "errors": 0,
+    "breakingDeltas": 0,
+    "note": "plain pre-refresh gate at 0.2.3 before the bump: 0 deltas (Tasks 1-5 introduced no export change); post-bump plain gate at 0.2.4 showed ONLY the version literal delta (changed: version on @arnilo/prism — the d.ts const literal); migration.md 0.2.3 -> 0.2.4 note records the policy; --update-baseline applied; plain gate green after refresh; no --allow-break"
+  },
+  "node20": {
+    "version": "v20.20.2",
+    "packedImports": "24/24",
+    "note": "node20-compat CI job reproduction: npm run build then import every package.json exports default target with node v20.20.2"
+  },
+  "testPostgres": {
+    "tests": 91,
+    "pass": 91,
+    "fail": 0,
+    "note": "session-store-postgres 31 + memory 16 + enterprise-postgres 33 + phase7/phase12-restart-recovery/phase22-conformance 11 against dockerized postgres:16-alpine on 127.0.0.1:54329 (plan-023 container prism-test-pg); durable prism_phase22_* concurrency schemas present; PRISM_TEST_POSTGRES_URL set"
+  },
+  "audit": {
+    "moderateOrHigher": 0
+  },
+  "secrets": {
+    "files": 1552,
+    "findings": 0,
+    "command": "git ls-files -z | xargs -0 node scripts/scan-secrets.mjs"
+  },
+  "compatDeltas": [
+    "version literal 0.2.3 -> 0.2.4 (only delta; the @arnilo/prism d.ts const literal)"
+  ],
+  "protectedEvidence": {
+    "durableConformance": "test:postgres 91/91 (session-store-postgres 31 + memory 16 + enterprise-postgres 33 + phase7/phase12-restart-recovery/phase22-conformance 11) with prism_phase22_* concurrency schemas; phase12 restart-recovery + phase22 state-concurrency legs ran inside npm test with PRISM_TEST_POSTGRES_URL set",
+    "natsRestartDurable": "event-source.test.js 13/13 (restart-stable name + crash-resume from last ack), phase22-security T4, packed security22.mjs consumer",
+    "liveCanaries": "provider OIDC/OPA, MCP, A2A, Brave always protected rows in release-evidence.json, never pass"
+  },
+  "sdkReady": {
+    "exitCode": 0,
+    "note": "PRISM_TEST_POSTGRES_URL=... npm run sdk:ready composite green: typecheck + lint + format:check + npm test (3567/3534/33/0) + test:coverage (core 90.53/84.2/90.54, belowThreshold []) + pack:dry-run + release:evidence (58 surfaces, blocked=false) + release:gate (0.2.4, 50 packages, 0 errors)"
+  },
+  "exitGate": {
+    "green": true,
+    "command": "PRISM_TEST_POSTGRES_URL=postgres://postgres:prism@127.0.0.1:54329/prism_test npm test && npm run security:threat-suites && PRISM_TEST_POSTGRES_URL=... npm run test:postgres && PRISM_TEST_POSTGRES_URL=... npm run sdk:ready && npm audit --audit-level=moderate && git ls-files -z | xargs -0 node scripts/scan-secrets.mjs && npm run pack:dry-run x2 && node scripts/release.mjs gate --version 0.2.4 && node v20.20.2 packed exports imports",
+    "version": "0.2.4",
+    "platform": "linux",
+    "counts": {
+      "npmTest": "3567 tests / 3534 pass / 33 skip / 0 fail",
+      "scriptGates": "272/272",
+      "threatSuites": "50/50",
+      "testPostgres": "91/91",
+      "coreCoverage": "90.53/84.2/90.54 (gate 60/70/75)",
+      "packDryRun": "50 packages deterministic (sha256 0926355aa63e0979)",
+      "releaseGate": "0.2.4 50 packages 0 errors 0 breaking deltas",
+      "node20": "24/24 exports imports"
+    },
+    "protected": {
+      "durableConformance": "present (91/91 with prism_phase22_* concurrency schemas; phase12 restart-recovery + phase22 state-concurrency legs ran with PRISM_TEST_POSTGRES_URL set)",
+      "natsRestartDurable": "event-source.test.js legs in core npm test (13/13 restart-stable name + crash-resume) + packed security22.mjs consumer",
+      "liveCanaries": "always protected rows in the release manifest, never pass (release skip manifest)"
+    },
+    "compat": "version-literal-only reviewed; no removal; no --allow-break",
+    "freeze": "phase24-freeze-manifest tasks 0-6 done",
+    "blocked": false,
+    "note": "All release surfaces recorded in scripts/release-evidence.json (58 surfaces, blocked=false): core npm test pass 3567/3534/33, 42 workspace suites pass, threat suites 50/50, test:postgres durable conformance pass (PRISM_TEST_POSTGRES_URL present), provider live legs + NATS real legs + 4 live canaries protected with named required envs; nothing skipped without reason."
+  }
+}

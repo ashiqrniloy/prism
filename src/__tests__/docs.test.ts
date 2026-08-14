@@ -242,13 +242,15 @@ describe("docs", () => {
   // (49 manifests) + the freeze-test filesystem coherence assertions.
   it("canonical manifest-count narrative: one statement, no stale counts", () => {
     const canonical = readFileSync("docs/release-and-install.md", "utf8");
+    const truth = JSON.parse(readFileSync("scripts/package-truth.json", "utf8"));
     for (const token of [
-      "50 publishable manifests",
-      "49 workspace packages",
-      "14 provider adapters",
-      "9 `prism-*` family/profile packages",
-      "26 capability packages",
-      "ls packages/*/package.json | wc -l",
+      `**${truth.counts.publishable} publishable manifests**`,
+      `**${truth.counts.workspace} workspace packages**`,
+      `${truth.counts.provider} provider adapters`,
+      `${truth.counts.prismFamily} \`prism-*\` family/profile packages`,
+      `${truth.counts.capability} capability packages`,
+      "node scripts/package-truth.mjs",
+      "scripts/package-truth.json",
     ]) {
       assert.ok(canonical.includes(token), `release-and-install.md missing canonical token: ${token}`);
     }
@@ -262,6 +264,122 @@ describe("docs", () => {
     }
   });
 
+  // Plan 024 Task 4: docs truth is derived from scripts/package-truth.json (the
+  // manifest-derived single source), never pinned verbatim — an editorial
+  // reword that keeps the derived value passes; a wrong count/closure/version
+  // fails. If a membership change (0.3.0) alters the artifact, these tests
+  // force the docs to follow.
+  describe("plan 024 Task 4: docs truth derived from the generated artifact", () => {
+    const truth = JSON.parse(readFileSync("scripts/package-truth.json", "utf8")) as {
+      counts: { publishable: number; workspace: number; provider: number; prismFamily: number; capability: number };
+      providers: string[];
+      umbrella: {
+        "prism-providers": { deps: string[]; omitsProviders: string[] };
+        "prism-all": { deps: string[]; closure: number; omits: string[] };
+      };
+      profiles: Record<string, string[]>;
+    };
+    const read = (file: string) => readFileSync(file, "utf8");
+    const readme = read("README.md");
+    const release = read("docs/release-and-install.md");
+
+    it("canonical count statement equals the generated counts", () => {
+      assert.ok(
+        release.includes(`**${truth.counts.publishable} publishable manifests**`),
+        `canonical publishable count must be ${truth.counts.publishable}`,
+      );
+      assert.ok(
+        release.includes(`**${truth.counts.workspace} workspace packages**`),
+        `canonical workspace count must be ${truth.counts.workspace}`,
+      );
+      assert.ok(
+        release.includes(`${truth.counts.provider} provider adapters`),
+        `canonical provider count must be ${truth.counts.provider}`,
+      );
+      assert.ok(
+        release.includes(`${truth.counts.prismFamily} \`prism-*\` family/profile packages`),
+        `canonical family/profile count must be ${truth.counts.prismFamily}`,
+      );
+      assert.ok(
+        release.includes(`${truth.counts.capability} capability packages`),
+        `canonical capability count must be ${truth.counts.capability}`,
+      );
+    });
+
+    it("every generated provider is documented in README and the release page", () => {
+      for (const provider of truth.providers) {
+        assert.ok(readme.includes(provider), `README.md must list generated provider ${provider}`);
+        assert.ok(release.includes(provider), `release page must list generated provider ${provider}`);
+      }
+    });
+
+    it("umbrella wording matches the generated closures and omissions", () => {
+      const providers = truth.umbrella["prism-providers"];
+      const all = truth.umbrella["prism-all"];
+      assert.ok(
+        readme.includes(`${providers.deps.length} of 14 first-party provider adapters`),
+        "README prism-providers row must state the generated 11 of 14",
+      );
+      assert.ok(
+        readme.includes(`${all.deps.length} first-party packages (${all.closure} transitive)`),
+        `README prism-all row must state the generated ${all.deps.length}/${all.closure} closure`,
+      );
+      assert.ok(release.includes(`${providers.deps.length} of 14`), "release page must state 11 of 14 for the provider family");
+      assert.ok(
+        release.includes(
+          `reaches ${all.closure} of the ${truth.counts.workspace} workspace packages (${all.deps.length} direct + ${all.closure - all.deps.length} transitive)`,
+        ),
+        "release checklist must state the generated prism-all closure",
+      );
+      for (const omitted of providers.omitsProviders) {
+        assert.ok(readme.includes(omitted.replace("@arnilo/prism-provider-", "")), `README must name omitted provider ${omitted}`);
+      }
+      // roadmap-notable omission names as README presents them; a new omission
+      // (0.3.0 membership change) fails here until README + this map grow.
+      const omissionReadable: Record<string, string> = {
+        "@arnilo/prism-document-reader": "document-reader",
+        "@arnilo/prism-openapi-tools": "OpenAPI tools",
+        "@arnilo/prism-session-store-nats": "NATS",
+        "@arnilo/prism-caveman": "Caveman",
+        "@arnilo/prism-ponytail": "Ponytail",
+      };
+      for (const omitted of all.omits) {
+        const readable = omissionReadable[omitted];
+        assert.ok(readable, `unexpected prism-all omission ${omitted} — add it to the README wording and this map`);
+        assert.ok(readme.includes(readable), `README must name omitted package ${readable}`);
+      }
+    });
+
+    it("install-profile rows exist for every generated profile", () => {
+      for (const profile of Object.keys(truth.profiles)) {
+        assert.ok(release.includes(`@arnilo/${profile}`), `release page must have an install row for @arnilo/${profile}`);
+      }
+    });
+
+    it("current-line version equals the root manifest version", () => {
+      const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+      assert.ok(read("docs/index.md").includes(`current **${pkg.version}**`), `index.md current-line must be ${pkg.version}`);
+      assert.ok(
+        read("docs/0.1.0-readiness.md").includes(`## Current line (${pkg.version})`),
+        `readiness current-line heading must be ${pkg.version}`,
+      );
+    });
+
+    it("no stale 0.0.x/0.1.x current-line claim remains in docs or roadmap", () => {
+      const stale = /current line \((?:0\.0\.\d+|0\.1\.\d+)\)/i;
+      for (const file of ["README.md", "roadmap.md", ...markdownFiles("docs")]) {
+        assert.doesNotMatch(read(file), stale, `${file} carries a stale current-line version`);
+      }
+    });
+
+    it("roadmap carries no stray/truncated content", () => {
+      const roadmap = read("roadmap.md");
+      for (const pattern of [/TODO/, /FIXME/, /XXX/, /^### 0\.2\.8 /m, /\bVent\b/, /Background observers/]) {
+        assert.doesNotMatch(roadmap, pattern, `roadmap.md contains stray content: ${pattern}`);
+      }
+    });
+  });
+
   it("plan 013 Task 6 freeze: 0.1.1 hardening patch and publish handoff are documented", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -270,7 +388,7 @@ describe("docs", () => {
     assert.ok(migration.includes("## 0.1.0 → 0.1.1 post-release hardening"), "migration.md missing 0.1.1 section");
     assert.ok(release.includes("### 0.1.1 publish handoff (plan 013 Task 6)"), "release page missing 0.1.1 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.1 handoff missing rollback notes");
-    assert.ok(readiness.includes("## Current line (0.1.1)"), "readiness missing 0.1.1 current-line table");
+    assert.ok(readiness.includes("## Previous line (0.1.1)"), "readiness missing 0.1.1 current-line table");
     assert.ok(contracts.includes("0.1.1 verification (plan 013 Task 6)"), "public-contracts missing 0.1.1 verification note");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.1] - 2026-08-10"), "root changelog missing 0.1.1 entry");
     for (const pkg of ["packages/mcp", "packages/ag-ui"]) {
@@ -293,27 +411,43 @@ describe("docs", () => {
   it("plan 016 Task 6 freeze: 0.1.4 god-module split and publish handoff are documented", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     assert.ok(release.includes("### 0.1.4 publish handoff (plan 016 Task 6)"), "release page missing 0.1.4 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.4 handoff missing rollback notes");
-    assert.ok(index.includes("current **0.2.3**"), "index.md current-line entry not at 0.2.3");
+    assert.ok(index.includes(`current **${pkg.version}**`), `index.md current-line entry must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.1.4] - 2026-08-10"), "root changelog missing 0.1.4 entry");
     assert.ok(migration.includes("## 0.1.3 → 0.1.4"), "migration.md missing 0.1.3 → 0.1.4 section");
     assert.ok(migration.includes("no migration step"), "migration.md 0.1.4 section must state no migration step");
   });
+  it("plan 024 Task 6 freeze: 0.2.4 truth handoff, structural-test note, and migration note are documented", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    assert.ok(release.includes("### 0.2.4 publish handoff (plan 024 Task 6)"), "release page missing 0.2.4 handoff");
+    assert.ok(release.includes("**Rollback notes.**"), "0.2.4 handoff missing rollback notes");
+    // Semantic tripwire: the four 0.2.4 topics are present (umbrella correction,
+    // generated-table single-source rule, peer-version policy, structural-test note).
+    assert.ok(release.includes("umbrella wording matches manifests"), "0.2.4 handoff must cover the umbrella-wording correction");
+    assert.ok(release.includes("node scripts/package-truth.mjs"), "0.2.4 handoff must name the generated-table single-source rule");
+    assert.ok(release.includes("peer-version policy Decision A (exact pins)"), "0.2.4 handoff must cover the peer-version policy decision");
+    assert.ok(release.includes("docs semantic, not phrase-only"), "0.2.4 handoff must cover the structural docs-test replacement");
+    assert.ok(migration.includes("## 0.2.3 → 0.2.4"), "migration.md missing the 0.2.3 → 0.2.4 note");
+  });
+
   it("plan 023 Task 6 freeze: 0.2.3 publish handoff, tooling sections, and release evidence are documented", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
     assert.ok(release.includes("### 0.2.3 publish handoff (plan 023 Task 6)"), "release page missing 0.2.3 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.3 handoff missing rollback notes");
     assert.ok(release.includes("## Build serialization"), "release page missing build-serialization section");
     assert.ok(release.includes("### Coverage denominators and per-package thresholds"), "release page missing coverage-threshold section");
     assert.ok(release.includes("### Release evidence and protected skips"), "release page missing skip-manifest section");
     assert.ok(release.includes("### Quality-gate reports and the Biome baseline"), "release page missing Biome-migration section");
-    assert.ok(index.includes("current **0.2.3**"), "index.md current-line entry not at 0.2.3");
+    assert.ok(index.includes(`current **${pkg.version}**`), `index.md current-line entry must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.2.3] - 2026-08-14"), "root changelog missing 0.2.3 entry");
     const section = roadmap.slice(roadmap.indexOf("### 0.2.3 — Build, coverage, and release evidence integrity"));
     const nextSection = section.indexOf("\n### 0.2.4");
@@ -327,8 +461,9 @@ describe("docs", () => {
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
     assert.ok(release.includes("### 0.1.5 publish handoff (plan 017 Task 4)"), "release page missing 0.1.5 handoff");
-    assert.ok(index.includes("current **0.2.3**"), "index.md current-line entry not at 0.2.3");
+    assert.ok(index.includes(`current **${pkg.version}**`), `index.md current-line entry must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.1.5] - 2026-08-11"), "root changelog missing 0.1.5 entry");
     assert.ok(migration.includes("## 0.1.4 → 0.1.5"), "migration.md missing 0.1.4 → 0.1.5 section");
     // every removed symbol and its replacement appears in the breaking-cut section
@@ -432,16 +567,16 @@ describe("docs", () => {
     const contracts = readFileSync("docs/public-contracts.md", "utf8");
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-    assert.ok(readiness.includes("## Current line (0.1.0)"), "readiness current-line table must be 0.1.0");
+    assert.ok(readiness.includes("## Previous line (0.1.0)"), "readiness previous-line table must be 0.1.0");
     assert.ok(readiness.includes("## Remaining for 1.0"), "readiness must list remaining operator gates");
     assert.ok(contracts.includes("## Frozen 0.1.x contract (plan 012 Task 7)"), "public-contracts missing frozen 0.1.x section");
     for (const token of ["Declaration/exports surface", "compat-baseline", "Migration checksums", "additive-only declaration deltas"])
       assert.ok(contracts.includes(token), `public-contracts missing ${token}`);
     assert.ok(release.includes("### 0.1.0 publish handoff (plan 012 Task 7)"), "release page missing 0.1.0 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
-    assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
-    assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.2.3", "root manifest must be at 0.2.3");
+    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
+    assert.equal(pkg.version, "0.2.4", "root manifest must be at 0.2.4");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1898,6 +2033,21 @@ describe("docs", () => {
     }
   });
 
+  it("peer-version policy (plan 024 Task 3): exact pins, atomic upgrade, unsupported mixture, migration note", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    assert.ok(
+      release.includes(`non-optional **exact** \`@arnilo/prism@${pkg.version}\` peer`),
+      "release page must state the exact current peer spec",
+    );
+    assert.ok(release.includes("atomic-upgrade rule"), "release page must state the atomic-upgrade rule");
+    assert.ok(release.includes("ERESOLVE"), "release page must state the unsupported-mixture behavior");
+    assert.ok(release.includes("^1.0.0"), "release page must state the 1.x widening");
+    assert.ok(migration.includes("## 0.2.3 → 0.2.4"), "migration.md must carry the 0.2.3 → 0.2.4 note");
+    assert.ok(migration.includes("atomic-upgrade rule"), "migration note must state the atomic-upgrade rule");
+  });
+
   it("release_and_install_docs_list_every_core_export_subpath_and_current_session_api", () => {
     const docs = readFileSync("docs/release-and-install.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
@@ -2408,7 +2558,7 @@ describe("docs", () => {
       "docs/provider-caching.md",
       "best-effort explicit cache hints",
       "best-effort implicit prefix caching",
-      "all 14 first-party provider adapters",
+      "11 of 14 first-party provider adapters",
     ]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
@@ -2582,7 +2732,7 @@ describe("docs", () => {
     for (const phrase of [
       "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
       "all eleven `@arnilo/prism-provider-*` packages",
-      "All 49 manifests (root + 48 workspace packages: 42 code packages + 6 pure-manifest family/profile packages)",
+      "All 50 manifests (root + 49 workspace packages: 43 code packages + 6 pure-manifest family/profile packages",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",
       "dist/index.js` + `dist/index.d.ts`",

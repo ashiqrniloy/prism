@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-all",
-  "version": "0.2.3",
-  "description": "Complete Prism umbrella: every first-party runtime, capability, provider, and persistence package.",
+  "version": "0.2.4",
+  "description": "Broad Prism umbrella: 20 first-party runtime, capability, provider, and persistence packages (43 transitive; omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail).",
   "license": "MIT",
   "scripts": {
     "pack:dry-run": "npm pack --dry-run"
@@ -11,26 +11,26 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-code": "0.2.3",
-    "@arnilo/prism-sdk": "0.2.3",
-    "@arnilo/prism-providers": "0.2.3",
-    "@arnilo/prism-session-store-sqlite": "0.2.3",
-    "@arnilo/prism-session-store-postgres": "0.2.3",
-    "@arnilo/prism-evals": "0.2.3",
-    "@arnilo/prism-enterprise-postgres": "0.2.3",
-    "@arnilo/prism-memory": "0.2.3",
-    "@arnilo/prism-rag": "0.2.3",
-    "@arnilo/prism-server": "0.2.3",
-    "@arnilo/prism-supervisor": "0.2.3",
-    "@arnilo/prism-web-tools": "0.2.3",
-    "@arnilo/prism-browser": "0.2.3",
-    "@arnilo/prism-ag-ui": "0.2.3",
-    "@arnilo/prism-policy": "0.2.3",
-    "@arnilo/prism-model-router": "0.2.3",
-    "@arnilo/prism-provider-azure": "0.2.3",
-    "@arnilo/prism-provider-bedrock": "0.2.3",
-    "@arnilo/prism-provider-vertex": "0.2.3",
-    "@arnilo/prism-work-tools": "0.2.3"
+    "@arnilo/prism-code": "0.2.4",
+    "@arnilo/prism-sdk": "0.2.4",
+    "@arnilo/prism-providers": "0.2.4",
+    "@arnilo/prism-session-store-sqlite": "0.2.4",
+    "@arnilo/prism-session-store-postgres": "0.2.4",
+    "@arnilo/prism-evals": "0.2.4",
+    "@arnilo/prism-enterprise-postgres": "0.2.4",
+    "@arnilo/prism-memory": "0.2.4",
+    "@arnilo/prism-rag": "0.2.4",
+    "@arnilo/prism-server": "0.2.4",
+    "@arnilo/prism-supervisor": "0.2.4",
+    "@arnilo/prism-web-tools": "0.2.4",
+    "@arnilo/prism-browser": "0.2.4",
+    "@arnilo/prism-ag-ui": "0.2.4",
+    "@arnilo/prism-policy": "0.2.4",
+    "@arnilo/prism-model-router": "0.2.4",
+    "@arnilo/prism-provider-azure": "0.2.4",
+    "@arnilo/prism-provider-bedrock": "0.2.4",
+    "@arnilo/prism-provider-vertex": "0.2.4",
+    "@arnilo/prism-work-tools": "0.2.4"
   },
   "engines": {
     "node": ">=20"

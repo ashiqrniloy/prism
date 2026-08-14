@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -802,17 +802,144 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.3.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.4.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.2.3.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.2.4.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.2.3.tgz"),
-      `expected 'arnilo-prism-0.2.3.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.2.4.tgz"),
+      `expected 'arnilo-prism-0.2.4.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.2.3.tgz", "arnilo-prism-compaction-0.2.3.tgz", "arnilo-prism-all-0.2.3.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.2.4.tgz", "arnilo-prism-compaction-0.2.4.tgz", "arnilo-prism-all-0.2.4.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
+  });
+});
+
+// Plan 024 Task 3: peer-version policy (Decision A — exact pins). A partial
+// upgrade (installed core at the current version + an adapter peering the
+// NEXT version) must fail clearly with ERESOLVE; the matched-set clean install
+// is the main journey above (every tarball at the same exact version,
+// installStatus 0).
+describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => {
+  const stage = mkdtempSync(join(tmpdir(), "prism-peer-mix-"));
+  after(() => rmSync(stage, { recursive: true, force: true }));
+
+  it("a mismatched exact pin fails clearly with npm ERESOLVE naming the conflicting peer", () => {
+    // Fake next-version adapter: real coding-agent source with version + core
+    // peer bumped forward one — the only difference from the real tarball.
+    const fakeVersion = "0.2.5";
+    const fakeDir = join(stage, "fake");
+    cpSync(join(repoRoot, "packages", "coding-agent"), fakeDir, { recursive: true });
+    const manifestPath = join(fakeDir, "package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.version = fakeVersion;
+    manifest.peerDependencies["@arnilo/prism"] = fakeVersion;
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    for (const [cwd, dest] of [
+      [fakeDir, stage],
+      [repoRoot, stage],
+    ]) {
+      const pack = run("npm", ["pack", "--pack-destination", dest], cwd);
+      assert.equal(pack.status, 0, pack.stdout + pack.stderr);
+    }
+
+    const consumer = join(stage, "consumer");
+    mkdirSync(consumer);
+    writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-peer-mix-consumer", type: "module" }, null, 2));
+    const coreInstall = run(
+      "npm",
+      ["install", join(stage, "arnilo-prism-0.2.4.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
+      consumer,
+    );
+    assert.equal(coreInstall.status, 0, coreInstall.stdout + coreInstall.stderr);
+
+    // Decision A is fail-closed: npm refuses the tree instead of silently
+    // resolving an untested pair (no --legacy-peer-deps fallback anywhere).
+    const mix = run(
+      "npm",
+      [
+        "install",
+        join(stage, `arnilo-prism-coding-agent-${fakeVersion}.tgz`),
+        "--offline",
+        "--no-audit",
+        "--no-fund",
+        "--no-update-notifier",
+      ],
+      consumer,
+    );
+    assert.notEqual(mix.status, 0, "an unsupported peer mixture must fail the install");
+    assert.ok(mix.stderr.includes("ERESOLVE"), `expected npm ERESOLVE, got:\n${mix.stdout}${mix.stderr}`);
+    assert.ok(
+      mix.stderr.includes(`@arnilo/prism@"${fakeVersion}"`),
+      `expected the conflicting ${fakeVersion} peer named, got:\n${mix.stdout}${mix.stderr}`,
+    );
+  });
+});
+
+// Plan 024 Task 5: packed plain-JavaScript truth conformance. The before()
+// hook above installed every tarball into `consumer`; these tests read the
+// INSTALLED manifests (the tarballs as npm laid them down — no TS compiler
+// anywhere) and check them against the generated truth artifact: umbrella
+// closures and the packed current-line version.
+describe("packed truth conformance (plan 024 Task 5)", () => {
+  const truth = JSON.parse(readFileSync(join(repoRoot, "scripts", "package-truth.json"), "utf8")) as {
+    umbrella: {
+      "prism-providers": { deps: string[] };
+      "prism-all": { deps: string[]; closure: number };
+    };
+    profiles: Record<string, string[]>;
+  };
+  const installedManifest = (name: string) =>
+    JSON.parse(readFileSync(join(consumer, "node_modules", "@arnilo", name, "package.json"), "utf8")) as {
+      version: string;
+      dependencies: Record<string, string>;
+    };
+  const skipIfInstallFailed = (t: { skip: (msg?: string) => void }) => {
+    if (result.installStatus !== 0) t.skip("install failed; packed truth unverifiable");
+  };
+
+  it("the installed prism-providers tarball depends on exactly 11 provider tarballs (not 14)", (t) => {
+    skipIfInstallFailed(t);
+    const installed = installedManifest("prism-providers");
+    const expected = [...truth.umbrella["prism-providers"].deps].sort();
+    const actual = Object.keys(installed.dependencies).sort();
+    assert.deepEqual(actual, expected, "prism-providers tarball must depend on exactly the generated 11 providers");
+    assert.equal(actual.length, 11, "not 14 — Azure/Bedrock/Vertex are added by prism-all");
+  });
+
+  it("the installed prism-all tarball deps and closure match the generated artifact", (t) => {
+    skipIfInstallFailed(t);
+    const installed = installedManifest("prism-all");
+    assert.deepEqual(
+      Object.keys(installed.dependencies).sort(),
+      [...truth.umbrella["prism-all"].deps].sort(),
+      "prism-all tarball must depend on exactly the generated 20 packages",
+    );
+    assert.ok(existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-azure")), "Azure must be installed via prism-all");
+    const closure = truth.profiles["prism-all"];
+    assert.equal(closure.length, truth.umbrella["prism-all"].closure, "generated closure must match the artifact");
+    for (const name of closure) {
+      assert.ok(
+        existsSync(join(consumer, "node_modules", "@arnilo", name.replace("@arnilo/", ""))),
+        `closure member ${name} must be installed`,
+      );
+    }
+  });
+
+  it("packed current-line: the installed root version equals the docs current-line version", (t) => {
+    skipIfInstallFailed(t);
+    const root = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
+    const installed = installedManifest("prism");
+    assert.equal(installed.version, root.version, "installed core tarball must carry the root manifest version");
+    assert.ok(
+      readFileSync(join(repoRoot, "docs", "index.md"), "utf8").includes(`current **${root.version}**`),
+      "docs/index.md current-line must match the installed version",
+    );
+    assert.ok(
+      readFileSync(join(repoRoot, "docs", "0.1.0-readiness.md"), "utf8").includes(`## Current line (${root.version})`),
+      "readiness current-line heading must match the installed version",
+    );
   });
 });

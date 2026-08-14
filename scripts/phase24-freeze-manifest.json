@@ -1,0 +1,132 @@
+{
+  "$comment": "Phase 24 (0.2.4) package-documentation-and-compatibility-truth scope gate and evidence record. Machine-readable source of truth for plans/024-Release-0-2-4-Package-Documentation-And-Compatibility-Truth.md: the seven 0.2.4 implementation items (primitive review; umbrella wording truth; generated package truth; peer-version policy Decision A; structural docs truth; built/packed truth conformance; docs finalization + bump + exit gate) each with task ownership and evidence tokens, the compat policy (version-literal-only at 0.2.4 — reviewed plain gate deltas: pre-bump gate at 0.2.3 zero deltas; post-bump gate at 0.2.4 the version literal alone on @arnilo/prism; baselines regenerated with --update-baseline, no --allow-break), the protected-gate policy (unchanged from phase23: required surfaces with absent evidence record blocked and fail the release gate; the 33 protected/live skips stay named), per-task evidence tokens, and the deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json. Baseline evidence for the exit gate lives in scripts/phase24-baseline.json (green: true, blocked: false, captured 2026-08-15 at the 0.2.4 working-tree state with PRISM_TEST_POSTGRES_URL set).",
+  "release": "0.2.4",
+  "line": "0.2.x",
+  "type": "package-documentation-and-compatibility-truth",
+  "baseline": "0.2.3 (plan 023 exit gate passed 2026-08-14; signed tag v0.2.3; 50 publishable manifests; audit 0; compat baselines current at 0.2.3; release skip manifest machine-auditable; HEAD 4138e65)",
+  "items": [
+    {
+      "id": "primitive-review",
+      "task": "task0",
+      "title": "Primitive review, truth-drift inventory, threat model, ownership, migration, peer-version decision, budget decisions",
+      "evidence": "docs/_evidence/phase24-primitive-review.md (8 sections): publish graph + umbrella manifest inventory with the drift table (README.md:58/180/185, both umbrella descriptions, both package READMEs, release-and-install rows :33/:39/:873, docs.test.ts:2411 phrase pin), gap decisions (install-smoke + docs.test.ts extension; rejected docs-site generator/Markdown AST/table library/second publish graph/membership change), decision freeze (artifact shape, umbrella wording, Decision A exact pins, generator, structural tests), 8-threat model T1-T8, owner/migration/budget/protected matrix, test mapping, documentation impact, 8 ratifications. No source edited to produce it.",
+      "regression": "threats T1-T8 (false closure, stale current-line, hand-count drift, peer mixture false-green, artifact tamper, brittle snapshot, stray roadmap text, stale peer literal) map to Tasks 1-6 tests, all fail-closed"
+    },
+    {
+      "id": "umbrella-wording",
+      "task": "task1",
+      "title": "Make package claims match manifests (umbrella wording, descriptions, READMEs, omissions)",
+      "evidence": "README.md:58 comment + :180 prism-providers row (11 of 14, omits Azure/Bedrock/Vertex, added separately by prism-all) + :185 prism-all row (20 first-party packages, 43 transitive, omits document-reader/OpenAPI tools/NATS/Caveman/Ponytail); packages/prism-providers/package.json + packages/prism-all/package.json descriptions rewritten to the closure truth; packages/prism-providers/README.md 'What it installs' corrected from 9 to the full 11 (alibaba + ollama were missing) + omissions note; packages/prism-all/README.md intro + 'Smaller installs' rows; docs/release-and-install.md recipe rows :33 ('Install core + provider family (11 of 14)') + :39 ('Install the broad umbrella') + :873 (43 of 49, 20 direct + 23 transitive); docs.test.ts:2411 asserted phrase updated. NO dependencies array changed (membership is 0.3.0).",
+      "regression": "phase24-truth 'no page claims all/every' scan bans the six false-claim shapes; docs.test.ts Task 4 derived umbrella asserts pin the true wording"
+    },
+    {
+      "id": "package-truth",
+      "task": "task2",
+      "title": "Generate package/version/profile tables from manifests as the single source",
+      "evidence": "scripts/package-truth.mjs (dependency-free, node:fs/path only): computePackageTruth() + PRISM_FAMILY 9-name constant + expandWorkspaceDirs + closure BFS over workspace dependencies, emits scripts/package-truth.json (generatedAt, root, counts 50/49/14/9/26/43/6, providers[14], family[9], capability[26], umbrella providers 11 deps + omitsProviders azure/bedrock/vertex / prism-all 20 deps closure 43 omits 5, profiles, peerPolicy Decision A spec=root.version); malformed manifest or unmatched glob exits non-zero; --root/--out flags; artifact COMMITTED (docs tests depend on it; equality asserted in-gate). scripts/phase24-truth.test.mjs 12 tests in the npm test gate segment (generator reproducible modulo generatedAt, artifact equals generator, counts, closures, profiles, peer consistency across all 43 code packages + second-peer map + ponytail external peer, malformed/glob exits, built dist version + surface, docs current-line, umbrella claim scan, gate accounting). Docs regenerated: release-and-install canonical statement + generator hint + 0.2.3 version literals + 50-manifest breakdown; readiness current-line block 0.2.3 + Previous-line demotions (0.1.1, 0.1.0); index current-line; changelogs 0.2.4 entries; docs.test.ts freeze-pin updates (phase12 peer/tarball version-derived, phase48 50-manifest phrase, canonical-count ls token -> generator, plan-013 readiness heading).",
+      "regression": "CLOSURE CORRECTION: the Task 0 hand-walk under-expanded non-provider direct deps (closure 31 / 18 unreachable) was wrong; the generator proves prism-all closure 43 / omits exactly 5 — the roadmap's named omissions are the COMPLETE omission set; all Task 1 wording, evidence doc, and plan numbers corrected to 43"
+    },
+    {
+      "id": "peer-policy",
+      "task": "task3",
+      "title": "Define peer-version policy (Decision A: exact pins, atomic upgrade, mixed patches)",
+      "evidence": "docs/release-and-install.md Extension notes rewritten (bare exact current version peer through 0.2.x, atomic-upgrade rule, ERESOLVE failure for partial upgrades naming the conflicting peer, third-party adapter story, ^1.0.0 widening at 1.x, rollback posture, file:../.. devDep note); docs/migration.md 0.2.3 -> 0.2.4 note; packed proof in install-smoke: fake next-version adapter (0.2.5) against installed core tarball fails with ERESOLVE naming '@arnilo/prism@\"0.2.5\"' (npm quotes the peer); matched-set clean install is the main journey (installStatus 0, becomes the matched 0.2.4 set); bumpRelease verified by inspection (literal-replaces version + exact internal ranges; external @dietrichgebert/ponytail ^4.8.4 untouched; no extension needed); readManifest exported from the generator for the peer-consistency test (module change only, artifact shape unchanged); session-store-codecs inventory correction (42 of 43 declare the file:../.. devDep).",
+      "regression": "phase24-truth peer-consistency test (all 43 code packages peer the bare exact root version, second-peer map exact, no ranges/stars) + install-smoke ERESOLVE refusal"
+    },
+    {
+      "id": "docs-truth-tests",
+      "task": "task4",
+      "title": "Keep docs semantic, not phrase-only (structural truth tests + stray/truncated-text removal)",
+      "evidence": "docs.test.ts describe 'plan 024 Task 4: docs truth derived from the generated artifact' (7 tests): canonical count statement derived from the artifact (hardcoded tokens replaced), every generated provider in README + release page, umbrella wording matches generated closures + omissions (omissionReadable map fails loudly on 0.3.0 membership change), install-profile rows for all 5 generated profiles, current-line equals root manifest version (index + readiness heading), no stale 0.0.x/0.1.x current-line claim in README/docs/roadmap (regex incl. _evidence), roadmap no stray content (TODO/FIXME/XXX, ### 0.2.8 heading, Vent, Background observers). Stray text removed: roadmap 0.2.8 section (heading + 2 junk paragraphs + dangling whitespace line). Readiness '## Current line (0.1.0)' demoted to '## Previous line (0.1.0)' (phase-12 freeze pin updated); phase-16 freeze index assert version-derived; evidence doc §1.2/1.3 quotes reworded so the stale-current-line scan stays green.",
+      "regression": "editorial rewording that keeps a derived value passes; a wrong count/closure/version fails; membership change (0.3.0) fails the omission map until docs + map grow"
+    },
+    {
+      "id": "packed-truth",
+      "task": "task5",
+      "title": "Built public-import and packed-JavaScript truth conformance (umbrella closure, peer mixture, current-line)",
+      "evidence": "scripts/phase24-truth.test.mjs +4 tests (built dist/index.js version export equals root manifest version + frozen surface resolves; docs current-line equals root manifest version; umbrella claim freeze scan across README/release/index/readiness/both umbrella READMEs; gate accounting — roadmap 0.2.4 states all five acceptance criteria). install-smoke.test.ts describe 'packed truth conformance (plan 024 Task 5)' (3 tests over installed node_modules, no TS compiler): installed prism-providers tarball deps == generated 11 provider names; installed prism-all tarball deps == generated 20 + every member of the 43-member closure present + Azure spot-check; packed current-line (installed core version == root manifest == docs current-line). scripts/phase24-baseline.json reserved (exitGate fields null) in Task 5; values recorded in Task 6.",
+      "regression": "a false closure claim cannot ship (packed tarballs vs artifact); an unsupported peer mixture cannot silently install (ERESOLVE); packed current-line drift fails"
+    },
+    {
+      "id": "exit-gate",
+      "task": "task6",
+      "title": "Docs finalization, 0.2.4 bump, and fail-loud exit gate",
+      "evidence": "docs/release-and-install.md '### 0.2.4 publish handoff (plan 024 Task 6)' (umbrella correction with before/after, generated-table single-source rule with plain-JS example, peer-version policy, structural-test note, rollback notes, operator prereq block, protected-evidence paragraph); readiness/index/changelogs/roadmap 0.2.4 checkboxes [x]; node scripts/release.mjs bump --from 0.2.3 --to 0.2.4 (50 manifests + lockfile, exact peers advance, external peer untouched); src/index.ts version const + version-sensitive tests updated (index/cli-provider-add/docs:549/packaging 8 pins/release.test/install-smoke tarball names + Task 3 fake version 0.2.5; 12 workspace skeleton peer pins at the 0.2.4 literal); package-truth.json regenerated (root.version 0.2.4, counts unchanged); compat baselines refreshed with --update-baseline after the reviewed version-literal-only delta, plain gate green; full gates with PRISM_TEST_POSTGRES_URL set (dockerized postgres:16-alpine on 127.0.0.1:54329, plan-023 container): npm test 3567/3534/33/0 zero BLOCKED, test:postgres 91/91, security:threat-suites 50/50, npm audit 0, secret scan 1552 files 0 findings, pack:dry-run twice byte-identical (sha256 0926355aa63e0979), release:gate 0.2.4 50 packages 0 errors 0 breaking deltas, node v20.20.2 packed imports 24/24, publish --dry-run twice byte-identical 50/50 dry-run, sdk:ready exit 0; scripts/phase24-baseline.json exitGate green true blocked false; scripts/phase24-freeze-manifest.json done; plans/README.md complete.",
+      "regression": "contributor-doc semantic tripwire (docs.test.ts: 0.2.4 handoff four topics + migration note); release accounting: skip-manifest tests green (blocked-not-skip, 33-skip floor, canaries never pass); no truth item skipped silently"
+    }
+  ],
+  "allowedChanges": [
+    "freeze/implementation/docs/regressions/baseline/bump/compat/wiring/evidence",
+    "scripts/package-truth.mjs, scripts/package-truth.json (committed artifact), scripts/phase24-truth.test.mjs, scripts/phase24-baseline.json, scripts/phase24-freeze-manifest.json, docs/_evidence/phase24-primitive-review.md",
+    "docs/release-and-install.md, docs/migration.md, docs/index.md, docs/0.1.0-readiness.md, CHANGELOG.md, roadmap.md 0.2.4 items, plans/README.md, README.md",
+    "packages/prism-providers + packages/prism-all package.json description/README/CHANGELOG (wording truth only; no dependencies array change)",
+    "src/index.ts + version-sensitive tests at the 0.2.4 bump literal (index.test.ts, cli-provider-add.test.ts, docs.test.ts, packaging.test.ts, release.test.ts, install-smoke.test.ts tarball names + fake peer version, 12 workspace skeleton index.test.ts peer literals)",
+    "src/__tests__/docs.test.ts (derived truth tests + freeze-pin updates), src/__tests__/install-smoke.test.ts (packed truth + peer-mixture journeys)",
+    "scripts/compat-baseline/* (version-literal refresh via reviewed --update-baseline)"
+  ],
+  "forbiddenChanges": [
+    "pending-scope items (0.2.5+)",
+    "preserved surface: no export removal or signature change (compat promise)",
+    "shared files: docs canonical tokens, freeze manifests, baseline evidence",
+    "defaults: no runtime behavior change (no runtime contract delta)",
+    "removal of any 0.2.x shipped behavior",
+    "deps: zero new runtime dependency names (core remains dependency-free)",
+    "membership: no umbrella dependency array change in 0.2.x (0.3.0 owns the membership decision)",
+    "egress/security gates: no bypass of the protected-gate policy",
+    "support matrix: 0.1.x support matrix stays frozen at phase12-freeze-manifest.json",
+    "baseline: no silent baseline refresh (reviewed --update-baseline only)",
+    "skip items: no phase-24 test may be skippable or vacuous (gate accounting)"
+  ],
+  "compat": {
+    "baselineRelease": "0.2.3",
+    "baseline": "scripts/compat-baseline",
+    "promise": "VERSION-LITERAL-ONLY at 0.2.4. Plain pre-refresh gate at 0.2.3 (before the bump): zero deltas — Tasks 1-5 introduced no export change. Post-bump plain gate at 0.2.4: the only delta is the version literal (changed: version on @arnilo/prism — the d.ts const literal 0.2.3 -> 0.2.4). docs/migration.md gains the 0.2.3 -> 0.2.4 note (version literal + peer-policy Decision A; no runtime contract delta, store-safe rollback). Baselines refreshed with --update-baseline after review; no removal, no --allow-break."
+  },
+  "deviations": [
+    {
+      "task": "task0/task2",
+      "change": "Closure correction 31 -> 43 during Task 2: the Task 0 hand-walk under-expanded non-provider direct deps (missed prism-code -> base/coding-agent/coding-security/mcp and prism-sdk -> credentials-node/observability-opentelemetry/workflows plus compaction/tool-validator and the 2 compaction strategies), recording closure 31 / 18 unreachable.",
+      "rationale": "The manifest-derived generator proved prism-all closure 43 / omits exactly 5 — the roadmap's five notable omissions ARE the complete omission set. All Task 1 wording, the evidence doc, and the plan were corrected to 43; the evidence doc carries a CORRECTION note."
+    },
+    {
+      "task": "task2/task3/task6",
+      "change": "Docs version literals stayed at 0.2.3 (the actual current version) through Tasks 2-5; Task 6's scripted bump advanced them to 0.2.4 in one pass.",
+      "rationale": "Docs never claim an unshipped version (plan 023 precedent: literals advance at the bump task); the ratified 0.2.4 end state is preserved by Task 6."
+    },
+    {
+      "task": "task2",
+      "change": "scripts/package-truth.json is committed (not gitignored like coverage-summary.json/release-evidence.json).",
+      "rationale": "Docs tests and the phase24 leg read the artifact directly; the in-gate equality test (artifact == fresh generator run) provides tamper detection."
+    },
+    {
+      "task": "task2",
+      "change": "phase24-truth.test.mjs is wired into the npm test gate segment (after phase23-quality-gates), not security:threat-suites.",
+      "rationale": "The plan allowed either; the gate segment runs on every npm test and the truth leg needs no protected env."
+    },
+    {
+      "task": "task3",
+      "change": "Peer-consistency test reads all workspace manifests itself (expandWorkspaceDirs + readManifest, exported from the generator) instead of deriving names from the artifact; session-store-codecs is exempt from the file:../.. devDep assert (42 of 43).",
+      "rationale": "The artifact has no name-to-path mapping; exporting readManifest is a generator-module change only, not an artifact-shape change."
+    },
+    {
+      "task": "task3",
+      "change": "The ERESOLVE assert matches npm's quoted peer output: '@arnilo/prism@\"0.2.5\"' (quotes between @ and version).",
+      "rationale": "npm prints the conflicting peer quoted; the bare substring is absent from the error text."
+    },
+    {
+      "task": "task6",
+      "change": "12 workspace skeleton tests keep hardcoded peer pins at the 0.2.4 literal (repo convention, matching packaging/release tests).",
+      "rationale": "They are deliberate pins of the exact-peer policy per package; deriving would duplicate root-manifest reads across 12 files. Further action: consider a shared derived constant."
+    },
+    {
+      "task": "task6",
+      "change": "release:check preflight could not run at the working tree (requires the v0.2.4 tag and a clean tree); publish --dry-run ran twice with --allow-dirty --allow-untagged and the reports are byte-identical.",
+      "rationale": "Registry preflight and tag checks are operator publication steps (same as 0.2.3); the dry-run determinism proof ran fully."
+    },
+    {
+      "task": "task6",
+      "change": "Protected Postgres evidence reuses the plan-023 container (prism-test-pg, postgres:16-alpine on 127.0.0.1:54329, up since 0.2.3).",
+      "rationale": "The container was already running with the right image/credentials; test:postgres 91/91 with durable prism_phase22_* concurrency schemas."
+    }
+  ]
+}

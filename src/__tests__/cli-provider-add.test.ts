@@ -18,7 +18,7 @@ import { runCli } from "../cli-runner.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const templatesRoot = defaultProviderTemplatesRoot();
-const VERSION = "0.2.3";
+const VERSION = "0.2.4";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];

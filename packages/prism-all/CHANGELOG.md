@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.4] - 2026-08-14
+
+### Changed
+- Truth wording (plan 024): description and README now state the manifest closure — 20 direct / 43 transitive first-party packages with the complete omission set (document-reader, OpenAPI tools, NATS, Caveman, Ponytail). Membership unchanged.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

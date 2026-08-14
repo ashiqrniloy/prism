@@ -1,6 +1,6 @@
 # @arnilo/prism-all
 
-Complete Prism umbrella. It installs every first-party package through the coding, application SDK, provider, and persistence profiles.
+Broad Prism umbrella. It installs **20 first-party packages (43 transitive)** across the coding, application SDK, provider, and persistence profiles.
 
 ## Install
 
@@ -28,7 +28,7 @@ Installing this package does not activate providers, network transports/listener
 | Minimal safe runtime | `@arnilo/prism-base` |
 | Coding agent | `@arnilo/prism-code` + chosen provider |
 | Application SDK | `@arnilo/prism-sdk` + chosen provider and persistence adapter |
-| Every first-party provider | `@arnilo/prism-providers` |
-| Everything | `@arnilo/prism-all` |
+| 11 of 14 first-party providers | `@arnilo/prism-providers` |
+| Broad umbrella (43 transitive packages) | `@arnilo/prism-all` |
 
 See [Release and install](../../docs/release-and-install.md) for atomic imports, package contents, limits, and release gates.

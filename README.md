@@ -55,7 +55,7 @@ npm install @arnilo/prism @arnilo/prism-provider-openai    # core + one provider
 npm install @arnilo/prism-base                              # core + compaction + validation
 npm install @arnilo/prism-code @arnilo/prism-provider-openai # coding-agent profile
 npm install @arnilo/prism-sdk @arnilo/prism-provider-openai  # application profile
-npm install @arnilo/prism-all                               # every first-party package
+npm install @arnilo/prism-all                               # broad umbrella (20 direct / 43 transitive packages)
 npm install @arnilo/prism-server @arnilo/prism-workflows    # optional Web API boundary
 npm install @arnilo/prism-supervisor                         # optional local delegation + A2A 1.0
 npm install @arnilo/prism-web-tools                          # optional bounded Brave/Exa/Firecrawl research
@@ -177,12 +177,12 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-credentials-node` | encrypted-file and keychain credentials |
 | `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases/owned run feedback |
 | `@arnilo/prism-session-store-postgres` | PostgreSQL persistence/checkpoints/leases/owned run feedback |
-| `@arnilo/prism-providers` | family: all 14 first-party provider adapters, including AI SDK interoperability |
+| `@arnilo/prism-providers` | family: 11 of 14 first-party provider adapters (omits Azure, Bedrock, Vertex, which `prism-all` adds separately), including AI SDK interoperability |
 | `@arnilo/prism-compaction` | family: both compaction strategies |
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | every first-party package, including both persistence adapters and web tools |
+| `@arnilo/prism-all` | broad umbrella: 20 first-party packages (43 transitive) across runtime, capability, provider, and persistence — omits document-reader, OpenAPI tools, NATS, Caveman, and Ponytail |
 
 ## Scripts
 

@@ -27,5 +27,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [021-Release-0-2-1-Provider-Completion-and-Outbound-Trust-Boundaries.md](021-Release-0-2-1-Provider-Completion-and-Outbound-Trust-Boundaries.md) | 0.2.x — Release 0.2.1 (provider completion and outbound trust boundaries) | complete |
 | [022-Release-0-2-2-Concurrent-State-and-Durability-Integrity.md](022-Release-0-2-2-Concurrent-State-and-Durability-Integrity.md) | 0.2.x — Release 0.2.2 (concurrent state and durability integrity) | complete |
 | [023-Release-0-2-3-Build-Coverage-And-Release-Evidence-Integrity.md](023-Release-0-2-3-Build-Coverage-And-Release-Evidence-Integrity.md) | 0.2.x — Release 0.2.3 (build, coverage, and release evidence integrity) | complete |
+| [024-Release-0-2-4-Package-Documentation-And-Compatibility-Truth.md](024-Release-0-2-4-Package-Documentation-And-Compatibility-Truth.md) | 0.2.x — Release 0.2.4 (package, documentation, and compatibility truth) | complete |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

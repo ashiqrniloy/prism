@@ -283,13 +283,13 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 
 ### 0.2.4 — Package, documentation, and compatibility truth
 
-- [ ] **Make package claims match manifests.** Correct README/profile wording for `prism-providers` and `prism-all`; explicitly list current omissions (`document-reader`, `openapi-tools`, `session-store-nats`, Caveman, Ponytail) without changing umbrella membership in 0.2.x. Actual catalog/membership expansion remains deferred to 0.3.0.
+^- [x] **Make package claims match manifests.** Correct README/profile wording for `prism-providers` and `prism-all`; explicitly list current omissions (`document-reader`, `openapi-tools`, `session-store-nats`, Caveman, Ponytail) without changing umbrella membership in 0.2.x. Actual catalog/membership expansion remains deferred to 0.3.0.
   - Acceptance: no page claims “every” or “all” unless dependency closure proves it; packed-install tests assert documented contents.
-- [ ] **Generate package/version/profile tables.** Use manifests as the single source for package count, provider membership, version, profile closure, and release status. Refresh `docs/0.1.0-readiness.md`, `docs/index.md`, `docs/release-and-install.md`, root/package READMEs, roadmap completion status, and changelogs for the 0.1.7 baseline.
+^- [x] **Generate package/version/profile tables.** Use manifests as the single source for package count, provider membership, version, profile closure, and release status. Refresh `docs/0.1.0-readiness.md`, `docs/index.md`, `docs/release-and-install.md`, root/package READMEs, roadmap completion status, and changelogs for the 0.1.7 baseline.
   - Acceptance: generated checks catch drift; stale 0.1.1/0.0.23 “current line” text and contradictory provider counts are gone.
-- [ ] **Define peer-version policy.** Decide whether exact `@arnilo/prism: 0.1.7` peers remain required until compatibility stabilizes or move to a tested compatible range; document atomic-upgrade expectations and verify mixed supported patches in packed installs.
+^- [x] **Define peer-version policy.** Decide whether exact `@arnilo/prism: 0.1.7` peers remain required until compatibility stabilizes or move to a tested compatible range; document atomic-upgrade expectations and verify mixed supported patches in packed installs.
   - Acceptance: policy is explicit, third-party adapters have a supported range story, unsupported mixtures fail clearly, and release automation enforces internal consistency.
-- [ ] **Keep docs semantic, not phrase-only.** Add structural tests for generated navigation/package data and remove stray/truncated roadmap text; do not add brittle prose snapshots.
+^- [x] **Keep docs semantic, not phrase-only.** Add structural tests for generated navigation/package data and remove stray/truncated roadmap text; do not add brittle prose snapshots.
   - Acceptance: docs tests fail on wrong package closure/version/navigation while permitting editorial changes.
 
 ### 0.2.5 — Maintainability and bounded performance
@@ -328,12 +328,6 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 - [ ] **Field-level data classification and redaction.** Apply policy-driven classification to prompts, tool args/results, artifacts, audit, telemetry, and exports with fail-closed defaults.
 - [ ] **ERP release journey.** Exercise identity, policy, budget reservation, SoD approval, outbox mutation, compensation, audit export, legal hold, replica failover, and restore.
   - Acceptance: atomicity/recovery invariants are documented and tested; no exactly-once claim; security/performance/storage budgets pass. “ERP production ready” remains blocked until the 0.3.0 live-service matrix is recorded.
-  
-### 0.2.8 linux-computer-use, Worktrees
-Background observers — the actually novel bit. Alongside your session, Muse Code runs four persistent observer agents: memory recall, skill recall, goal tracking, and verification. Vent
-
-Managing providers with profiles. Allows using multiple accounts with the same provider Mostly for opencode go
-
 ### Mandatory 0.2.x regression matrix
 
 Before 0.2.x closes, automated tests must prove:

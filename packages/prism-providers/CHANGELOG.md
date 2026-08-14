@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.4] - 2026-08-14
+
+### Changed
+- Truth wording (plan 024): description and README now state the manifest closure — **11 of 14** first-party provider adapters (omits Azure, Bedrock, Vertex, added separately by `@arnilo/prism-all`); the "What it installs" list was corrected from 9 to the full 11 (`@arnilo/prism-provider-alibaba` and `@arnilo/prism-provider-ollama` were missing). Membership unchanged.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed
