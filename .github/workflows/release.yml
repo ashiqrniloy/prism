@@ -24,16 +24,21 @@ jobs:
           cache: "npm"
       - run: npm ci
       - name: verify SDK readiness
-        env:
-          # Declared release profile: the postgres durable legs are a required
-          # release surface (release-evidence manifest attests their env is
-          # present; the postgres-integration job below actually runs them).
-          PRISM_TEST_POSTGRES_URL: "postgres://prism:prism@localhost:5432/prism"
         run: |
           set -o pipefail
           # The sdk:ready gate (npm run sdk:ready) runs phase-by-phase below so
           # a silent failure (no npm error output) still names the failing
           # phase in sdk-ready.log.
+          #
+          # PRISM_TEST_POSTGRES_URL is deliberately NOT ambient here. It is a
+          # declared release-profile marker for release:gate only (the
+          # release-evidence emitter attests the postgres durable surface's
+          # required env is present; the postgres-integration job below runs
+          # the durable legs for real and is unconditional in publish needs:).
+          # If it leaked into npm test / test:coverage, the credential-gated
+          # docs demo (examples/workflow-postgres-resume.ts) and the durable
+          # integration suites would try to connect to a server this job does
+          # not have and fail (ECONNREFUSED); env-free they skip, as in 0.2.2.
           phase() {
             echo "== sdk:ready phase: $1"
             shift
@@ -49,7 +54,7 @@ jobs:
             phase "npm test" npm test
             phase test:coverage npm run test:coverage
             phase pack:dry-run npm run pack:dry-run
-            phase release:gate npm run release:gate
+            PRISM_TEST_POSTGRES_URL="postgres://prism:prism@localhost:5432/prism" phase release:gate npm run release:gate
             phase security:threat-suites npm run security:threat-suites
             echo "== sdk:ready all phases passed"
           } 2>&1 | tee sdk-ready.log
