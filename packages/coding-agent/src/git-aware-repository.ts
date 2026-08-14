@@ -140,7 +140,7 @@ async function* walkGitFiles(
     const absolutePath = join(rootReal, item.path);
     const rootResolved = resolve(rootReal);
     const absResolved = resolve(absolutePath);
-    if (absResolved !== rootResolved && !absResolved.startsWith(rootResolved + "/")) continue;
+    if (absResolved !== rootResolved && !absResolved.startsWith(`${rootResolved}/`)) continue;
 
     let kind: RepoListEntry["kind"] = item.kind;
     let size: number | undefined;

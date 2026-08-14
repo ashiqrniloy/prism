@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { createReadTool, type DocumentReader } from "@arnilo/prism-coding-agent";
-import { createDocumentReader, createDocxParser, createPdfParser, DocumentReaderError, HARD_MAX_DOCUMENT_PAGES } from "../index.js";
+import { createDocumentReader, DocumentReaderError, HARD_MAX_DOCUMENT_PAGES } from "../index.js";
 
 const FIXTURES = new URL("../../src/__tests__/fixtures/", import.meta.url);
 const read = (name: string) => readFile(new URL(name, FIXTURES));

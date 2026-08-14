@@ -78,7 +78,6 @@ export function snapshotLoadedSkillBodies(
 export function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[] {
   validateLoadedSkillBodies(bodies);
   if (bodies.length === 0) return skills;
-  const byName = new Map(skills.map((skill) => [skill.name, skill]));
   const out = skills.map((skill) => {
     const body = bodies.find((entry) => entry.name === skill.name);
     return body ? { ...skill, instructions: body.instructions } : skill;

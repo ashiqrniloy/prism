@@ -282,7 +282,7 @@ describe("ACP session lifecycle (Task 4)", () => {
         "exceeds 2",
       );
       await rejectsWith(
-        connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [], additionalDirectories: ["/" + "x".repeat(5_000)] }),
+        connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [], additionalDirectories: [`/${"x".repeat(5_000)}`] }),
         "path invalid or exceeds",
       );
       assert.equal(capped.recorded.directorySeamCalls.length, 0, "seam must not run for rejected input");
@@ -344,7 +344,7 @@ describe("ACP session lifecycle (Task 4)", () => {
     const sized = makeAgent({ mcp: { select: () => true, transports: ["http"] }, limits: { acpMcpServerConfigBytes: 1024 } });
     await connect(sized.app, async (connection) => {
       await rejectsWith(
-        connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [httpServer({ url: "https://" + "x".repeat(1200) })] }),
+        connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [httpServer({ url: `https://${"x".repeat(1200)}` })] }),
         "config exceeds 1024 bytes",
       );
     });
@@ -354,7 +354,7 @@ describe("ACP session lifecycle (Task 4)", () => {
       await rejectsWith(
         connection.request(methods.agent.session.new, {
           cwd: "/w",
-          mcpServers: [httpServer({ headers: [{ name: "Authorization", value: "Bearer " + "s".repeat(1100) }] })],
+          mcpServers: [httpServer({ headers: [{ name: "Authorization", value: `Bearer ${"s".repeat(1100)}` }] })],
         }),
         "header value exceeds 1024 bytes",
       );

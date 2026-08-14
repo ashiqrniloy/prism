@@ -1468,7 +1468,7 @@ export interface ProductionPersistenceStore {
    *  Additive CAS: pass `expectedVersion` to require the stored version to match before the
    *  write (0 = create-only, a positive number = exact current version); omit it for legacy
    *  last-write-wins. Returns the new `version` when the underlying store supports it. */
-  appendSession?(record: SessionRecord & { readonly expectedVersion?: number }): Promise<{ readonly version: number } | void>;
+  appendSession?(record: SessionRecord & { readonly expectedVersion?: number }): Promise<{ readonly version: number } | undefined>;
   /** DB-friendly branch read (mirrors `SessionStore.readBranchPath`): one ancestor-chain
    *  query instead of `queryEntries({ sessionId })` + in-memory walk. Optional. */
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;

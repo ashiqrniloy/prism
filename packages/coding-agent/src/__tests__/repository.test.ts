@@ -193,6 +193,8 @@ test("repo_search rejects regex mode and evil patterns stay bounded as literal",
 
     const start = Date.now();
     const lit = await tool.execute({ query: "(a+)+$", mode: "literal" }, ctx());
+    // ponytail: wall-clock anti-block guard, ceiling 5s (~1000x actual ~ms);
+    // a slower ceiling would let a regex regression hang the suite
     assert.ok(Date.now() - start < 5_000, "literal evil pattern must not block the event loop");
     assert.equal(lit.error, undefined);
     assert.equal(lit.metadata?.matchCount, 0);

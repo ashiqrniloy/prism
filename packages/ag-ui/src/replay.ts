@@ -103,7 +103,7 @@ export function createAgentEventSourceAgUiReplay<Authorization>(
       throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Replay cursor exceeds maxCursorBytes");
     }
     const run = await options.resolveRun(input);
-    if (!run || !run.ref.sessionId) throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "Run is unavailable");
+    if (!run?.ref.sessionId) throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "Run is unavailable");
     return { run, sessionId: run.ref.sessionId, ownership: options.ownership(input.authorization) };
   };
   return {

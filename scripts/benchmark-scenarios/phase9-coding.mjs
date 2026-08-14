@@ -1,15 +1,4 @@
 #!/usr/bin/env node
-/**
- * Release 0.0.26 network-free benchmark (plan 009 Task 7).
- * Ceilings from Task 0 freeze: enumeration p95 ≤ 2 s on a 100k-file synthetic
- * repository (≤ 2 git invocations); process chunk-page p95 ≤ 10 ms over a
- * 1 GiB spill; LSP 1000-diagnostic normalization p95 ≤ 100 ms; forge 100-page
- * pagination bounded with no per-page duplication; proxy 64 MiB download
- * completes within byte/time caps with resident buffering ≤ 2× maxBytes.
- *
- * Usage: node scripts/benchmark.mjs --scenario phase9-coding
- */
-import { spawn } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
@@ -29,7 +18,7 @@ import { createMemoryToolEffectStore } from "../../dist/index.js";
 import { resolveAgUiA2UiLimits } from "../../packages/ag-ui/dist/a2ui.js";
 import { DEFAULT_AG_UI_LIMITS } from "../../packages/ag-ui/dist/limits.js";
 import { createAgUiEventMapper } from "../../packages/ag-ui/dist/ag-ui-mapper.js";
-import { A2UiSurfaceState, reduceA2UiOps } from "../../packages/ag-ui/dist/renderer/core.js";
+import { reduceA2UiOps } from "../../packages/ag-ui/dist/renderer/core.js";
 import { renderA2UiSurface, DEFAULT_A2UI_CATALOG } from "../../packages/ag-ui/dist/renderer/bind.js";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 5);
@@ -136,7 +125,7 @@ async function measureAgUiMapperSync() {
       toolResult: (result) => `result:${result.toolCallId}`,
       messages: () => [{ id: "u1", role: "user", content: "hi" }],
       reasoning: (content) => ({ text: `summary:${content.type}` }),
-      custom: (event) => ({ name: "prism.usage", value: { tokens: 1 } }),
+      custom: (_event) => ({ name: "prism.usage", value: { tokens: 1 } }),
     },
   });
   const events = [];

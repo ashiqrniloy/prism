@@ -46,7 +46,7 @@ describe("tool result fold", () => {
   });
 
   it("folds aged large tool results in provider view only", async () => {
-    const raw = "payload-" + "x".repeat(DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES);
+    const raw = `payload-${"x".repeat(DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES)}`;
     const history: Message[] = [
       { role: "assistant", content: [{ type: "text", text: "call tool" }] },
       toolMessage("call_1", "lookup", raw, 1),
@@ -93,7 +93,7 @@ describe("tool result fold", () => {
       resolveToolResultFold(
         {
           maxSummaryBytes: 16,
-          summarize: () => "summary-" + "w".repeat(200),
+          summarize: () => `summary-${"w".repeat(200)}`,
         },
         undefined,
       )!,

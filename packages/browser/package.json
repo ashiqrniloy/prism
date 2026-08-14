@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-browser",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Optional Prism browser tools over a host-supplied Playwright Browser: open, snapshot, act, and close with run-owned contexts, egress policy, and upload/download/screenshot quarantine.",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,14 +19,14 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js",
     "test:live": "node --test dist/__tests__/live.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.2",
+    "@arnilo/prism": "0.2.3",
     "playwright-core": "1.61.0"
   },
   "peerDependenciesMeta": {

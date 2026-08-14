@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-session-store-nats",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Optional NATS JetStream AgentEventSource adapter for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,9 +19,9 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
@@ -29,7 +29,7 @@
     "@nats-io/transport-node": "^3.4.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.2"
+    "@arnilo/prism": "0.2.3"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

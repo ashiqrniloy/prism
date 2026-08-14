@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -18,7 +18,7 @@ import { runCli } from "../cli-runner.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const templatesRoot = defaultProviderTemplatesRoot();
-const VERSION = "0.2.2";
+const VERSION = "0.2.3";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];

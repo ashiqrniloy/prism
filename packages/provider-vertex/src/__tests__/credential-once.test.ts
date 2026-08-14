@@ -15,8 +15,7 @@ describe("@arnilo/prism-provider-vertex credential resolution", () => {
         calls += 1;
         return `adc-${calls}`;
       },
-      fetch: async (_input, init) => {
-        const headers = new Headers(init?.headers);
+      fetch: async (_input, _init) => {
         return new Response('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },

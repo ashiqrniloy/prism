@@ -80,7 +80,7 @@ function validateTokens(name: string, value: number | undefined): void {
 }
 
 function sampleFor(
-  usage: Usage,
+  _usage: Usage,
   model: ModelConfig | undefined,
 ): {
   readonly provider: string;

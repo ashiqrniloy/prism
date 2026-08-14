@@ -5,7 +5,7 @@
  * edit tool goes through the four-outcome approval path, and the review mode
  * narrows the host tool set (the mode apply hook rejects edits).
  */
-import { methods, PROTOCOL_VERSION, ndJsonStream } from "@agentclientprotocol/sdk";
+import { ndJsonStream } from "@agentclientprotocol/sdk";
 import { Readable, Writable } from "node:stream";
 import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
 import { createPrismAcpAgent } from "../../packages/ag-ui/dist/acp/index.js";
@@ -97,7 +97,7 @@ const agent = createPrismAcpAgent({
     },
   },
   sessions: {
-    async load({ sessionId, cwd }) {
+    async load({ sessionId, _cwd }) {
       const entry = store.get(sessionId);
       if (!entry) throw new Error(`no session ${sessionId}`);
       return {

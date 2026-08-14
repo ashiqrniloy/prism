@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-coding-security",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Optional execution approval, path containment, and disposable Docker/OCI sandbox adapters for Prism coding tools.",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,14 +19,14 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.2",
-    "@arnilo/prism-coding-agent": "0.2.2"
+    "@arnilo/prism": "0.2.3",
+    "@arnilo/prism-coding-agent": "0.2.3"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

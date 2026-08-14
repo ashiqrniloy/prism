@@ -484,7 +484,7 @@ async function conversationMetadataCasProbe(sessions: ProductionPersistenceStore
   const updateLosers = updates.filter((result) => result.status === "rejected");
   assert.equal(updateWinners.length, 1, "concurrent CAS updates must admit exactly one winner");
   assert.equal(updateLosers.length, 7, "concurrent CAS updates must reject the rest");
-  const winnerVersion = (updateWinners[0] as PromiseFulfilledResult<{ readonly version: number } | void>).value?.version;
+  const winnerVersion = (updateWinners[0] as PromiseFulfilledResult<{ readonly version: number } | undefined>).value?.version;
   assert.equal(winnerVersion, 2, "winner must land at version 2");
   for (const result of updateLosers) {
     const reason = (result as PromiseRejectedResult).reason;

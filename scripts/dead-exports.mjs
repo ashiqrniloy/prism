@@ -59,7 +59,7 @@ const candidates = [];
 for (const [name, defFile] of exported) {
   let refs = 0;
   for (const src of text.values()) {
-    for (const m of src.matchAll(new RegExp(`\\b${name}\\b`, "g"))) {
+    for (const _m of src.matchAll(new RegExp(`\\b${name}\\b`, "g"))) {
       refs += 1;
       if (refs > 1) break;
     }

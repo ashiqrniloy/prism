@@ -302,7 +302,7 @@ describe("createOpenApiTools execute", () => {
     assert.equal(calls[0].url, "https://api.example.com/customers/a%20b?verbose=true");
     const headers0 = calls[0].init.headers as Record<string, string> | undefined;
     assert.equal(headers0?.["X-Trace"], "t-1");
-    assert.equal(headers0?.["authorization"], "Bearer s3cret");
+    assert.equal(headers0?.authorization, "Bearer s3cret");
     assert.equal(calls[0].init.redirect, "manual");
     assert.deepEqual(result.value, { status: 200, body: { id: 1 } });
     const block = result.content?.[0];

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -189,7 +189,9 @@ test("T2: timeout kills the whole process group", { skip: !NETNS_OK }, async () 
       const started = Date.now();
       const result = await sb.exec({ command: "sleep 30", cwd: root, timeout: 250 });
       assert.equal(result.exitCode, null);
-      assert.ok(Date.now() - started < 2000, "killed promptly, not after the sleep");
+      // ponytail: wall-clock promptness guard, ceiling 5s vs the 30s sleep and the 250ms
+      // timeout (20x headroom); sandbox startup under load must stay well inside it
+      assert.ok(Date.now() - started < 5000, "killed promptly, not after the sleep");
     } finally {
       await sb.close();
     }

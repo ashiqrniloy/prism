@@ -221,7 +221,7 @@ describe("Phase 12 protected restart recovery", () => {
     const warm = await runWorker("warm", valueSchema);
     assert.equal(warm.code, 0, `warm worker failed:\n${warm.stdout}\n${warm.stderr}`);
     assert.match(warm.stdout, /WARM OK/);
-    const workers = await Promise.all(Array.from({ length: 16 }, (_, index) => runWorker("append", valueSchema)));
+    const workers = await Promise.all(Array.from({ length: 16 }, (_, _index) => runWorker("append", valueSchema)));
     const appendMs = [];
     for (const w of workers) {
       assert.equal(w.code, 0, `append worker failed:\n${w.stdout}\n${w.stderr}`);

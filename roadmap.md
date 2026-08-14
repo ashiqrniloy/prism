@@ -272,13 +272,13 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 
 ### 0.2.3 — Build, coverage, and release evidence integrity
 
-- [ ] **Prevent partial live `dist/` imports.** Serialize emit-producing commands with a portable lock or compile core/workspaces into staging directories and atomically publish outputs. Keep explicit clean for branch/deletion hygiene; do not assume concurrent `tsc` writes are transactional.
+- [x] **Prevent partial live `dist/` imports.** Serialize emit-producing commands with a portable lock or compile core/workspaces into staging directories and atomically publish outputs. Keep explicit clean for branch/deletion hygiene; do not assume concurrent `tsc` writes are transactional.
   - Acceptance: repeated concurrent build+test, two builds, typecheck+test, and coverage+test stress runs never produce missing exports or partial modules; stale outputs are detected.
-- [ ] **Correct workspace coverage denominators.** Add package-local `--test-coverage-include=dist/**` (or equivalent resolved package path), preserve core gate, and introduce evidence-based package thresholds with protected-integration exceptions shown separately.
+- [x] **Correct workspace coverage denominators.** Add package-local `--test-coverage-include=dist/**` (or equivalent resolved package path), preserve core gate, and introduce evidence-based package thresholds with protected-integration exceptions shown separately.
   - Acceptance: reports exclude imported core files; known recomputed package percentages are reproduced; security/persistence branch gaps cannot silently regress; JSON artifact records skips and denominator.
-- [ ] **Make skipped protection visible.** Default local tests may skip unavailable infrastructure, but release summaries must name every skipped live/protected suite and mark required environments blocked. Keep full live-service expansion scheduled for 0.3.0.
+- [x] **Make skipped protection visible.** Default local tests may skip unavailable infrastructure, but release summaries must name every skipped live/protected suite and mark required environments blocked. Keep full live-service expansion scheduled for 0.3.0.
   - Acceptance: clean release report accounts for all tests, including the current 33 protected/live skips; required release profiles cannot convert missing credentials/services into green.
-- [ ] **Stabilize quality gates.** Resolve current Biome warnings/infos, migrate deprecated Biome configuration, quarantine or replace load-sensitive timing assertions, and make lint/format/unused reports machine-readable.
+- [x] **Stabilize quality gates.** Resolve current Biome warnings/infos, migrate deprecated Biome configuration, quarantine or replace load-sensitive timing assertions, and make lint/format/unused reports machine-readable.
   - Acceptance: zero unexplained lint diagnostics; document-reader performance checks use deterministic envelopes; quality artifacts are retained by CI.
 
 ### 0.2.4 — Package, documentation, and compatibility truth
@@ -330,7 +330,9 @@ Each milestone requires its own numbered plan. Plans that add or change a public
   - Acceptance: atomicity/recovery invariants are documented and tested; no exactly-once claim; security/performance/storage budgets pass. “ERP production ready” remains blocked until the 0.3.0 live-service matrix is recorded.
   
 ### 0.2.8 linux-computer-use, Worktrees
-Background observers — the actually novel bit. Alongside your session, Muse Code runs four persistent observer agents: memory recall, skill recall, goal tracking, and verification
+Background observers — the actually novel bit. Alongside your session, Muse Code runs four persistent observer agents: memory recall, skill recall, goal tracking, and verification. Vent
+
+Managing providers with profiles. Allows using multiple accounts with the same provider Mostly for opencode go
 
 ### Mandatory 0.2.x regression matrix
 

@@ -91,7 +91,7 @@ function getDefaultMode() {
     if (config.defaultMode && RUNTIME_MODES.includes(config.defaultMode.toLowerCase())) {
       return config.defaultMode.toLowerCase();
     }
-  } catch (e) {
+  } catch (_e) {
     // Config file doesn't exist or is invalid — fall through
   }
 

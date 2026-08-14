@@ -276,7 +276,7 @@ test("REMOVAL STATE MACHINE: pending tasks keep their removed symbols present at
         scope.includes(r.symbol),
         `${r.task} pending: ${r.owner}.${r.symbol} must still be present in ${r.file} (pre-removal truth)`,
       );
-      assert.ok(line !== undefined && line.includes(r.symbol), `${r.task} pending: ${r.file}:${r.line} must carry ${r.symbol}`);
+      assert.ok(line?.includes(r.symbol), `${r.task} pending: ${r.file}:${r.line} must carry ${r.symbol}`);
     } else {
       assert.ok(token.startsWith("done"), `${r.task} token must be pending or done, got: ${token}`);
       assert.ok(!scope.includes(r.symbol), `${r.task} done: ${r.owner}.${r.symbol} must be ABSENT from the ${r.owner} scope in ${r.file}`);
@@ -291,6 +291,7 @@ test("Task 2 refusal surface: removed-key/alias TypeError messages exist in the 
   // settings.ts builds its messages from a template with the key interpolated;
   // assert the template exists and every removed key is listed in the frozen table.
   assert.ok(
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal grep target for the frozen 0.1.5 removal-refusal template
     settingsSrc.includes('`Observational memory settings: "${key}" was removed in 0.1.5; use "${replacement}" instead`'),
     "settings.ts must carry the 0.1.5 removal refusal template",
   );
@@ -310,7 +311,7 @@ test("Task 2 refusal surface: removed-key/alias TypeError messages exist in the 
   }
   for (const alias of ["workerProvider", "workerModel"]) {
     assert.ok(
-      composeSrc.includes(`\"${alias}\" was removed in 0.1.5`) && runtimeSrc.includes(`\"${alias}\" was removed in 0.1.5`),
+      composeSrc.includes(`"${alias}" was removed in 0.1.5`) && runtimeSrc.includes(`"${alias}" was removed in 0.1.5`),
       `compose.ts and runtime.ts must refuse the ${alias} alias`,
     );
   }

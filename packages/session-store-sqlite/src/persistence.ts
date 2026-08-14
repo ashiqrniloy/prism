@@ -34,7 +34,6 @@ import {
   type SessionEntry,
   type SessionEntryQuery,
   type SessionQuery,
-  type SessionRecord,
   type SessionSearchHit,
   type SessionSearchQuery,
   type SessionStore,

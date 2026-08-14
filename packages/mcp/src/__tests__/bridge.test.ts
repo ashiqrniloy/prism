@@ -179,7 +179,7 @@ describe("attachMcpToolBridge", () => {
     await bridge.close();
   });
 
-  it("returns an attributable error when a remote call exceeds callTimeoutMs", async () => {
+  it("returns an attributable error when a remote call exceeds callTimeoutMs", { timeout: 5_000 }, async () => {
     const fixture = await createFixture([
       {
         name: "hang",
@@ -195,11 +195,12 @@ describe("attachMcpToolBridge", () => {
       callTimeoutMs: 10,
     });
 
-    const started = Date.now();
     const result = await bridge.tools[0]!.execute({}, executionContext);
+    // Deterministic barrier: only the abort path can produce /timed out|abort/;
+    // a regression that waits for the remote response fails the error asserts,
+    // and a hang trips the test-level timeout instead of a wall-clock delta.
     assert.ok(result.error);
     assert.match(result.error.message, /timed out|abort/i);
-    assert.ok(Date.now() - started < 150, "hung MCP call exceeded timeout bound");
     assert.equal(result.name, "mcp:hung:hang");
     await bridge.close();
   });

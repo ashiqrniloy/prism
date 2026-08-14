@@ -1,0 +1,136 @@
+{
+  "$comment": "Phase 23 (0.2.3) Task 6 exit-gate evidence, completed 2026-08-14 after Tasks 0-5 passed at HEAD 3126fc2 (0.2.2 release state) with the 0.2.3 working tree (uncommitted: Task 1-6 changes + bump + docs). All figures are fresh verified runs in this session at the 0.2.3 working-tree state. Publication remains the operator handoff: signed v0.2.3 tag + npm OIDC after clean protected CI (release.yml verify + postgres-integration + node20-compat + codeql + supply-chain).",
+  "captured": "2026-08-14T13:50:32.009Z",
+  "release": "0.2.3",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "gitHead": "3126fc2 (working tree)",
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<phase gates incl. phase21-freeze + phase23 suites> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1508,
+    "corePass": 1508,
+    "coreFail": 0,
+    "scriptGates": 260,
+    "scriptGatesPass": 260,
+    "scriptGatesFail": 0,
+    "workspaceTests": 1727,
+    "workspacePass": 1694,
+    "workspaceSkip": 33,
+    "workspaceFail": 0,
+    "totals": {
+      "tests": 3495,
+      "pass": 3462,
+      "skip": 33,
+      "fail": 0
+    },
+    "note": "3495 tests / 3462 pass / 33 protected-live skips / 0 fail; 33-skip floor frozen (phase23-skip-manifest asserts >= 33); phase23-quality-gates 5/5 and phase23-build-race 8/8 in the gate segment"
+  },
+  "coverage": {
+    "core": {
+      "lines": 90.49,
+      "branches": 84.16,
+      "functions": 90.54
+    },
+    "gate": "60/70/75 core gate passed (exit 0)",
+    "note": "workspace rows use package-local --test-coverage-include=dist/** (denominator fix); per-package lines thresholds from scripts/coverage-thresholds.json (freeze-run minus 3pp, captured 2026-08-14); 42 workspace suites + core; belowThreshold []"
+  },
+  "threatSuites": {
+    "suites": 50,
+    "pass": 50,
+    "fail": 0,
+    "note": "security:threat-suites = phase8-11 + phase20 + phase21 + phase22 + phase23 (phase23: matrix item 4 build-race public-entry importer + matrix item 12 coverage denominator + gate accounting, built public entrypoints)"
+  },
+  "packDryRun": {
+    "deterministic": true,
+    "packages": 50,
+    "runSha256": "18fa05e18192c0d006a21d4e3556c4a30cadb183",
+    "note": "two standalone npm run pack:dry-run runs byte-identical (diff empty); sha256 of the pack dry-run log"
+  },
+  "releaseGate": {
+    "version": "0.2.3",
+    "packages": 50,
+    "errors": 0,
+    "breakingDeltas": 0,
+    "note": "plain pre-refresh gate at 0.2.3 showed ONLY the version literal delta (changed: version on @arnilo/prism; ag-ui type re-export statement shape restored to the frozen baseline form with biome-ignore + justification); migration.md 0.2.2 -> 0.2.3 no-migration stub records the note; --update-baseline applied; plain gate green after refresh; no --allow-break"
+  },
+  "node20": {
+    "version": "v20.20.2",
+    "packedImports": "24/24",
+    "note": "node20-compat CI job reproduction: npm run build then import every package.json exports default target with node v20.20.2"
+  },
+  "protectedEvidence": {
+    "oidcOpa": "inherited from phase21 (Microsoft AAD JWKS live probe + dockerized OPA fail-closed ssrf_denied); the release workflow re-runs it in CI",
+    "natsRestartDurable": "event-source.test.js 13/13 (restart-stable name + crash-resume from last ack), phase22-security T4, packed security22.mjs consumer",
+    "durableConformance": "test:postgres 91/91 including prism_phase22_* + prism_phase23_* schema legs; phase22-conformance gate BLOCKED-policy verified"
+  },
+  "phase23Security": {
+    "blockers": [
+      "matrix-4-build-race",
+      "matrix-12-coverage-denominator"
+    ],
+    "packedConsumer": "security23.mjs (exports-map surface + version + single-core/no-test-artifacts walk)",
+    "note": "both blocker IDs executed and named in phase23-security.test.mjs gate accounting"
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "note": "npm run build + workspaces + examples tsc --noEmit at the 0.2.3 bump"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 0,
+    "exitCode": 0,
+    "note": "zero diagnostics across 981 files (Task 4); 5 justified biome-ignore comments incl. the 2 ag-ui compat-surface statement-shape freezes; sarif report written by the lint script"
+  },
+  "format": {
+    "exitCode": 0,
+    "note": "biome format --check clean; format --write fixed 3 Task 6 touched files"
+  },
+  "testPostgres": {
+    "tests": 91,
+    "pass": 91,
+    "fail": 0,
+    "note": "session-store-postgres + memory + enterprise-postgres dist+integration suites + phase7 + phase12 + phase22-conformance against dockerized postgres:16-alpine on 127.0.0.1:54329 (protected env PRISM_TEST_POSTGRES_URL present; prism_phase23_* schemas created by the phase22/23 conformance legs)"
+  },
+  "audit": {
+    "moderateOrHigher": 0
+  },
+  "secrets": {
+    "files": 1539,
+    "findings": 0,
+    "command": "git ls-files -z | xargs -0 node scripts/scan-secrets.mjs"
+  },
+  "compatDeltas": [
+    "version literal 0.2.2 -> 0.2.3 (only delta)",
+    "ag-ui acp/index.ts type re-export statements restored to value-style form (compat-surface parser keys ; frozen baseline shape; biome-ignore + justification; no declaration change)"
+  ],
+  "sdkReady": {
+    "exitCode": 0,
+    "note": "npm run sdk:ready composite green with PRISM_TEST_POSTGRES_URL: typecheck + lint + format:check + npm test + test:coverage + pack:dry-run + release:gate (release evidence 58 surfaces, blocked=false)"
+  },
+  "exitGate": {
+    "green": true,
+    "command": "npm test && npm run security:threat-suites && PRISM_TEST_POSTGRES_URL=postgres://postgres:prism@127.0.0.1:54329/prism_test npm run test:postgres && PRISM_TEST_POSTGRES_URL=... npm run sdk:ready && npm audit --audit-level=moderate && git ls-files -z | xargs -0 node scripts/scan-secrets.mjs && npm run pack:dry-run x2 && node scripts/release.mjs gate --version 0.2.3 && node v20.20.2 packed exports imports",
+    "version": "0.2.3",
+    "platform": "linux",
+    "counts": {
+      "npmTest": "3495 tests / 3462 pass / 33 skip / 0 fail",
+      "scriptGates": "260/260",
+      "threatSuites": "50/50",
+      "testPostgres": "91/91",
+      "coreCoverage": "90.49/84.16/90.54 (gate 60/70/75)",
+      "packDryRun": "50 packages deterministic (sha256 18fa05e18192...)",
+      "releaseGate": "0.2.3 50 packages 0 errors 0 breaking deltas",
+      "node20": "24/24 exports imports"
+    },
+    "protected": {
+      "oidcOpa": "phase21 live evidence inherited; CI re-runs",
+      "natsRestartDurable": "present (13/13 + T4 + packed consumer)",
+      "durableConformance": "present (91/91 with prism_phase22_* + prism_phase23_* schemas)"
+    },
+    "compat": "version-literal-only reviewed; no removal; no --allow-break",
+    "freeze": "phase21-freeze done-phase 24/24; phase23-freeze-manifest tasks 0-6 done",
+    "blocked": false,
+    "note": "All release surfaces recorded in scripts/release-evidence.json (58 surfaces, blocked=false): core npm test pass 3495/3462/33, 42 workspace suites pass, threat suites 50/50, test:postgres durable conformance pass (PRISM_TEST_POSTGRES_URL present), provider live legs + NATS real legs + 4 live canaries protected with named required envs; nothing skipped without reason."
+  }
+}

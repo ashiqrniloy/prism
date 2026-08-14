@@ -28,7 +28,7 @@ if (mode === "off") {
 // 1. Write flag file
 try {
   setMode(mode);
-} catch (e) {
+} catch (_e) {
   // Silent fail -- flag is best-effort, don't block the hook
 }
 
@@ -55,7 +55,7 @@ if (!isCodex && !isCopilot)
     if (!hasStatusline && !fs.existsSync(nudgeFlagPath)) {
       try {
         fs.writeFileSync(nudgeFlagPath, "");
-      } catch (e) {
+      } catch (_e) {
         /* best-effort */
       }
       const isWindows = process.platform === "win32";
@@ -63,7 +63,7 @@ if (!isCodex && !isCopilot)
       const scriptPath = path.join(__dirname, scriptName);
       if (isShellSafe(scriptPath)) {
         const command = isWindows ? `powershell -ExecutionPolicy Bypass -File "${scriptPath}"` : `bash "${scriptPath}"`;
-        const statusLineSnippet = '"statusLine": { "type": "command", "command": ' + JSON.stringify(command) + " }";
+        const statusLineSnippet = `"statusLine": { "type": "command", "command": ${JSON.stringify(command)} }`;
         output +=
           "\n\n" +
           "STATUSLINE SETUP NEEDED: The ponytail plugin includes a statusline badge showing active mode " +
@@ -89,12 +89,12 @@ if (!isCodex && !isCopilot)
           "Proactively offer to set this up for the user on first interaction.";
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Silent fail — don't block session start over statusline detection
   }
 
 try {
   writeHookOutput("SessionStart", mode, output);
-} catch (e) {
+} catch (_e) {
   // Silent fail — stdout closed/EPIPE at hook exit must not surface as a hook failure
 }

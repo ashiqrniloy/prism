@@ -224,7 +224,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
 
     // Redirects are rejected outright, never followed: serve 302 from a local
     // loopback server and prove the Location target is never fetched.
-    let redirectTargetFetches = 0;
+    const redirectTargetFetches = 0;
     const server = createServer((_req, res) => {
       res.writeHead(302, { location: "http://localhost:9/redirected" });
       res.end();
@@ -261,8 +261,6 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
 
   it("T7-T9: shared OAuth device-code poll cadence, backoff, expiry, and redaction", async () => {
     const sleeps = [];
-    const pending = () =>
-      new Response(JSON.stringify({ error: "authorization_pending" }), { status: 400, headers: { "content-type": "application/json" } });
     let polls = 0;
     const success = await pollDeviceCodeToken({
       errorPrefix: "Phase21",
@@ -274,7 +272,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
         sleeps.push(ms);
       },
       parseTokenCredentials: (json) => ({ accessToken: json.access_token, refreshToken: json.refresh_token }),
-      fetchImpl: async (input, init) => {
+      fetchImpl: async (input, _init) => {
         const url = String(input);
         if (url.endsWith("/device")) {
           return new Response(

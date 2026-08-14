@@ -23,7 +23,7 @@ if (!mode || mode === "off") {
 function inject() {
   try {
     writeHookOutput("SubagentStart", mode, getPonytailInstructions(mode));
-  } catch (e) {
+  } catch (_e) {
     // Silent fail — a stdout error at hook exit must not surface as a hook failure.
   }
 }
@@ -34,7 +34,7 @@ try {
   if (process.env.PONYTAIL_SUBAGENT_MATCHER) {
     matcherRe = new RegExp(process.env.PONYTAIL_SUBAGENT_MATCHER, "i");
   }
-} catch (e) {
+} catch (_e) {
   matcherRe = null;
 }
 
@@ -61,7 +61,7 @@ function finish() {
   try {
     // Strip UTF-8 BOM some shells prepend when piping (breaks JSON.parse)
     agentType = String(JSON.parse(input.replace(/^\uFEFF/, "")).agent_type || "").trim();
-  } catch (e) {
+  } catch (_e) {
     // Unparseable payload — fall through and inject to be safe.
   }
   if (agentType && !matcherRe.test(agentType)) {

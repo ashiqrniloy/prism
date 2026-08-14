@@ -761,6 +761,6 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.2.2"
+version	export declare const version = "0.2.3"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

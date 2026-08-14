@@ -70,7 +70,7 @@ const treeShake = {
   reachabilityNoWorse: pre.reachableFromAgentsJs !== undefined ? reachableFromAgentsJs <= pre.reachableFromAgentsJs : undefined,
 };
 baseline.treeShake = treeShake;
-writeFileSync(outPath, JSON.stringify(baseline, null, 2) + "\n");
+writeFileSync(outPath, `${JSON.stringify(baseline, null, 2)}\n`);
 
 console.log(`dist/agents.js        ${agentsJsBytes} bytes (pre-split ${pre.distAgentsJsBytes ?? "n/a"})`);
 console.log(`dist/contracts.js     ${contractsJsBytes} bytes (pre-split ${pre.distContractsJsBytes ?? "n/a"})`);

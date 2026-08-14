@@ -4,3 +4,7 @@ release-artifacts/
 bug-reports/
 code-reviews/
 scripts/unused-sweep-report.txt
+scripts/coverage-summary.json
+scripts/release-evidence.json
+scripts/lint-report.sarif
+scripts/unused-report.json

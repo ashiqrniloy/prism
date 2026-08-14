@@ -1,10 +1,7 @@
-import { createHash } from "node:crypto";
 import { resolveLoop, resolveToolConcurrency, singleShotLoop } from "./agent-loops.js";
 import {
-  agentFingerprint,
   boundedLoopSnapshot,
   initialAgentRunState,
-  loadAgentRunState,
   type PendingToolCall,
   publicState,
   type StoredAgentRunState,
@@ -19,9 +16,6 @@ import type {
   AgentEventRecord,
   AgentRunRef,
   AgentRunResult,
-  AgentRunResume,
-  AgentRunResumeOptions,
-  AgentRunResumeStreamOptions,
   AgentRunState,
   AgentRunStateOptions,
   AgentSession,
@@ -31,19 +25,15 @@ import type {
   CompactionOptions,
   CompactionResult,
   ContentBlock,
-  DecisionScope,
   ErrorInfo,
   Guardrails,
-  JsonObject,
   LoopContext,
   Message,
-  NestedRunOutcome,
   NestedRunRef,
   OwnershipScope,
   PendingDecision,
   ProviderEvent,
   ProviderRequest,
-  ProviderRequestPolicy,
   ProviderTurnMetadata,
   ProviderTurnResult,
   RetryMiddlewarePayload,
@@ -63,7 +53,6 @@ import type {
   TextContent,
   ToolCallContent,
   ToolDefinition,
-  ToolExecutionContext,
   ToolEffectStore,
   ToolRegistry,
   ToolResult,
@@ -77,14 +66,10 @@ import {
   AgentRunError,
   AgentRunStateError,
   DEFAULT_MAX_PENDING_DECISIONS,
-  HARD_MAX_ELICITATION_BYTES,
   HARD_MAX_PENDING_DECISIONS,
   MAX_ATTRIBUTION_DEPTH,
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
-  DEFAULT_MAX_STICKY_DECISIONS,
-  MAX_DECISION_REASON_BYTES,
-  MAX_ELICITATION_BYTES,
 } from "./contracts.js";
 import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "./guardrails.js";
 import { type AgentIdentity, identityTelemetryAttributes, ownershipFromIdentity, resolveRunIdentity } from "./identity.js";
@@ -123,7 +108,7 @@ import {
 import { resolveToolResultFold } from "./tool-result-fold.js";
 import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "./structured-output.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
-import { createToolRegistry, dispatchToolCall, resolveToolEffectDeclaration } from "./tools.js";
+import { dispatchToolCall, resolveToolEffectDeclaration } from "./tools.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "./tool-effects.js";
 import {
   ActiveDurableRun,
@@ -666,7 +651,7 @@ export class RuntimeAgentSession implements AgentSession {
         chargeToolRound: (calls) => {
           if (calls.length > 0) limits.charge("maxToolRounds");
           const durable = this.activeDurable;
-          if (!durable || !durable.options.interruptBeforeTool || calls.length === 0) return;
+          if (!durable?.options.interruptBeforeTool || calls.length === 0) return;
           // Round-level gate: record one pending decision per uncovered gated call. Ungated
           // and sticky-allowed calls still dispatch; the suspension fires at the next provider
           // turn (or run end) via suspendGatedRound. Per-call beforeExecute is the backstop

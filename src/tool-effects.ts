@@ -173,7 +173,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
 
     async resolveUnknown(input) {
       const record = current(input);
-      if (!record || record.status !== "unknown" || record.version !== input.expectedVersion) throw conflict();
+      if (record?.status !== "unknown" || record.version !== input.expectedVersion) throw conflict();
       const result = input.result === undefined ? undefined : validateResult(input.result, input);
       const resultRef = input.resultRef === undefined ? undefined : validateReference(input.resultRef);
       return save(

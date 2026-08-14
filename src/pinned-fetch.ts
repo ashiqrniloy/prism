@@ -39,7 +39,6 @@ export interface PinnedFetchOptions {
 /** One DNS-pinned, redirect-free, byte-bounded fetch. See module comment. */
 export async function pinnedFetch(url: URL, init: RequestInit | undefined, options?: PinnedFetchOptions): Promise<Response> {
   const errorPrefix = options?.errorPrefix ?? "Request";
-  const hostnameErrorPrefix = options?.hostnameErrorPrefix ?? errorPrefix;
   if (url.username || url.password) throw new MediaContentError("ssrf_denied", `${errorPrefix} URL must not embed credentials`);
   if (url.hash) throw new MediaContentError("ssrf_denied", `${errorPrefix} URL must not contain a fragment`);
   if (url.protocol !== "http:" && url.protocol !== "https:") {

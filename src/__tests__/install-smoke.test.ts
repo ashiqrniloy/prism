@@ -100,11 +100,13 @@ const result = {
   securityStatus: -1,
   security21Status: -1,
   security22Status: -1,
+  security23Status: -1,
   smokeOut: "",
   integrationOut: "",
   securityOut: "",
   security21Out: "",
   security22Out: "",
+  security23Out: "",
   compositionOut: "",
   junk: [] as string[],
   secretFindings: [] as string[],
@@ -666,6 +668,67 @@ console.log("PACKED PHASE22 SECURITY OK");
   result.security22Status = security22.status;
   result.security22Out = security22.stdout + security22.stderr;
 
+  // 5e. Packed plain-JavaScript phase23 security regressions (plan 023 Task 5):
+  //     the two 0.2.3 build/coverage integrity blockers proven through the
+  //     INSTALLED tarballs with no TypeScript compiler — matrix item 4: the
+  //     built public entry surface (every exports-map specifier) resolves from
+  //     the installed core and exposes the frozen exports; matrix item 12: the
+  //     packed layout holds exactly one shared core copy (no nested duplicate
+  //     that a coverage denominator could double-count) and ships no test
+  //     artifacts, so a packed workspace run can only ever measure package
+  //     code.
+  writeFileSync(
+    join(consumer, "security23.mjs"),
+    `
+import assert from "node:assert/strict";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const consumerRoot = dirname(fileURLToPath(import.meta.url));
+const scopedRoot = join(consumerRoot, "node_modules", "@arnilo");
+const coreDir = join(scopedRoot, "prism");
+
+// --- phase23 blocker 1 (matrix item 4): the installed public entry surface is complete ---
+const corePkg = JSON.parse(readFileSync(join(coreDir, "package.json"), "utf8"));
+const specs = ["@arnilo/prism", ...Object.keys(corePkg.exports ?? {}).filter((key) => key !== ".").map((key) => "@arnilo/prism" + key.slice(1))];
+for (const spec of specs) {
+  const mod = await import(spec);
+  if (spec === "@arnilo/prism") {
+    assert.equal(mod.version, corePkg.version, "installed core must expose the manifest version");
+    for (const name of ["createAgent", "AgentRunError", "resumeAgentRunStream", "createMemoryCheckpointStore"]) {
+      assert.equal(typeof mod[name], "function", "installed core must export " + name);
+    }
+  }
+}
+assert.ok(specs.length >= 10, "exports-map surface must be non-trivial");
+
+// --- phase23 blocker 2 (matrix item 12): one shared core copy, no test artifacts ---
+const nestedCores = [];
+const testDirs = [];
+const stack = [scopedRoot];
+while (stack.length) {
+  const dir = stack.pop();
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const path = join(dir, entry.name);
+    if (entry.name === "node_modules") stack.push(path); // hunt for nested duplicate cores
+    else if (entry.name === "prism" && dir === scopedRoot) continue; // the shared core itself
+    else if (entry.name === "prism") nestedCores.push(path);
+    else if (entry.name === "__tests__" && path.includes("dist")) testDirs.push(path);
+    else stack.push(path);
+  }
+}
+assert.deepEqual(nestedCores, [], "no nested @arnilo/prism duplicate may exist in the packed layout");
+assert.deepEqual(testDirs, [], "packed packages must not ship dist test artifacts");
+assert.ok(statSync(join(coreDir, "dist", "index.js")).isFile(), "installed core dist/index.js must exist");
+console.log("PACKED PHASE23 SECURITY OK");
+`,
+  );
+  const security23 = run("node", ["security23.mjs"], consumer);
+  result.security23Status = security23.status;
+  result.security23Out = security23.stdout + security23.stderr;
+
   // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
   // Third-party transitive deps (e.g. `diff`) may ship their own maps; we only gate Prism packages.
   const nodeModules = join(consumer, "node_modules");
@@ -718,28 +781,37 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.security22Status, 0, result.security22Out);
   });
 
+  it("packed plain-JS phase23 security regressions run without TypeScript", () => {
+    assert.equal(result.security23Status, 0, result.security23Out);
+  });
+
   it("installed packages contain no test artifacts, source maps, or real-looking secrets", () => {
     assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
     assert.deepEqual(result.secretFindings, [], `secret-like value leaked into installed packages: ${result.secretFindings.join(", ")}`);
     assert.equal(
-      (result.integrationOut + result.compositionOut + result.securityOut + result.security21Out + result.security22Out).includes(
-        "packed-integration-secret",
-      ),
+      (
+        result.integrationOut +
+        result.compositionOut +
+        result.securityOut +
+        result.security21Out +
+        result.security22Out +
+        result.security23Out
+      ).includes("packed-integration-secret"),
       false,
       "canary leaked into packed journey output",
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.2.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.3.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.2.2.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.2.3.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.2.2.tgz"),
-      `expected 'arnilo-prism-0.2.2.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.2.3.tgz"),
+      `expected 'arnilo-prism-0.2.3.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.2.2.tgz", "arnilo-prism-compaction-0.2.2.tgz", "arnilo-prism-all-0.2.2.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.2.3.tgz", "arnilo-prism-compaction-0.2.3.tgz", "arnilo-prism-all-0.2.3.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

@@ -39,7 +39,7 @@ function finish() {
           const dmode = parts[2];
           if (dmode === "off" || dmode === "lite" || dmode === "full" || dmode === "ultra") {
             writeDefaultMode(dmode);
-            writeHookOutput("UserPromptSubmit", dmode, "PONYTAIL DEFAULT SET — new sessions start in " + dmode + ".");
+            writeHookOutput("UserPromptSubmit", dmode, `PONYTAIL DEFAULT SET — new sessions start in ${dmode}.`);
           }
           return; // don't fall through to the session-mode switch
         }
@@ -56,7 +56,7 @@ function finish() {
       }
 
       if (isReportOnly) {
-        writeHookOutput("UserPromptSubmit", mode, "PONYTAIL MODE ACTIVE — level: " + mode);
+        writeHookOutput("UserPromptSubmit", mode, `PONYTAIL MODE ACTIVE — level: ${mode}`);
       } else if (mode && mode !== "off") {
         setMode(mode);
         modeSwitched = true;
@@ -64,7 +64,7 @@ function finish() {
         // switch happens we fold the confirmation into the ruleset output
         // below (one JSON on stdout) instead of emitting two separate writes.
         if (!isQoder) {
-          writeHookOutput("UserPromptSubmit", mode, "PONYTAIL MODE CHANGED — level: " + mode);
+          writeHookOutput("UserPromptSubmit", mode, `PONYTAIL MODE CHANGED — level: ${mode}`);
         }
       } else if (mode === "off") {
         clearMode();
@@ -93,17 +93,17 @@ function finish() {
         if (currentMode !== "off") {
           try {
             setMode(currentMode);
-          } catch (e) {}
+          } catch (_e) {}
         }
       }
       if (currentMode && currentMode !== "off") {
         // ponytail: one JSON per invocation — mode-switch confirmation is
         // folded into the ruleset header so Qoder gets both in one write.
-        const header = modeSwitched ? "PONYTAIL MODE CHANGED — level: " + currentMode + "\n\n" : "";
+        const header = modeSwitched ? `PONYTAIL MODE CHANGED — level: ${currentMode}\n\n` : "";
         writeHookOutput("UserPromptSubmit", currentMode, header + getPonytailInstructions(currentMode));
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Silent fail
   }
 }

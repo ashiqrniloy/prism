@@ -58,7 +58,7 @@ function listen(handler) {
   });
 }
 
-function sendJson(response, status, body) {
+function _sendJson(response, status, body) {
   response.writeHead(status, { "content-type": "application/json" });
   response.end(JSON.stringify(body));
 }
@@ -438,7 +438,7 @@ assert.equal(createCustomer.effect.kind, "external_mutation");
 assert.equal(createCustomer.effect.idempotency, "required");
 const effectStore = createMemoryToolEffectStore();
 const registry = createToolRegistry([createCustomer]);
-const result = await dispatchToolCall({
+await dispatchToolCall({
   call: {
     id: "call-1",
     name: "createCustomer",

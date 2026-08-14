@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+// biome-ignore lint/correctness/noUnusedVariables: fixture file copied verbatim from the upstream ponytail hook; getClaudeDir is part of the upstream require surface
 const { getClaudeDir, getConfigDir } = require("./ponytail-config");
 
 const STATE_FILE = ".ponytail-active";
@@ -23,14 +24,14 @@ function setMode(mode) {
 function clearMode() {
   try {
     fs.unlinkSync(statePath);
-  } catch (e) {}
+  } catch (_e) {}
 }
 
 // Live mode written by activate/mode-tracker. Absent flag = ponytail off.
 function readMode() {
   try {
     return fs.readFileSync(statePath, "utf8").trim() || null;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }

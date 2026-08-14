@@ -212,6 +212,40 @@ export async function runRelease({
   return report;
 }
 
+export function checkReleaseEvidence({ manifestPath, root = process.cwd() } = {}) {
+  const path = resolve(root, manifestPath ?? "scripts/release-evidence.json");
+  if (!existsSync(path)) throw new Error(`release evidence missing at ${path}; run npm run release:evidence`);
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    throw new Error(`release evidence unreadable: ${error.message}`);
+  }
+  if (!Array.isArray(manifest.surfaces)) throw new Error("release evidence malformed: surfaces array missing");
+  const states = new Set(["pass", "skip", "blocked", "protected"]);
+  for (const surface of manifest.surfaces) {
+    if (!surface?.name || !states.has(surface.state)) {
+      throw new Error(`release evidence malformed: ${surface?.name ?? "(unnamed)"} state ${surface?.state}`);
+    }
+  }
+  const blocked = manifest.surfaces.filter((surface) => surface.state === "blocked");
+  if (blocked.length) {
+    throw new Error(
+      `release evidence blocked — cannot release:\n${blocked
+        .map(
+          (surface) =>
+            `- ${surface.name}: ${surface.reason ?? "no reason"}${surface.requiredEnv ? ` (required env ${surface.requiredEnv})` : ""}`,
+        )
+        .join("\n")}`,
+    );
+  }
+  const unexplained = manifest.surfaces.filter((surface) => surface.state === "skip" && (!surface.reason || !surface.requiredEnv));
+  if (unexplained.length) {
+    throw new Error(`unexplained skips in release evidence:\n${unexplained.map((surface) => `- ${surface.name}`).join("\n")}`);
+  }
+  return manifest;
+}
+
 function parseArgs(argv) {
   const options = { mode: argv[0] };
   for (let i = 1; i < argv.length; i++) {
@@ -254,6 +288,7 @@ async function main() {
     return;
   }
   if (options.mode === "gate") {
+    checkReleaseEvidence({ root }); // fail fast on blocked/unexplained surfaces before the long gates
     const report = runGates({
       release,
       version: options.version,

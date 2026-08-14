@@ -297,10 +297,29 @@ describe("docs", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     assert.ok(release.includes("### 0.1.4 publish handoff (plan 016 Task 6)"), "release page missing 0.1.4 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.4 handoff missing rollback notes");
-    assert.ok(index.includes("current **0.2.2**"), "index.md current-line entry not at 0.2.2");
+    assert.ok(index.includes("current **0.2.3**"), "index.md current-line entry not at 0.2.3");
     assert.ok(changelog.includes("## [0.1.4] - 2026-08-10"), "root changelog missing 0.1.4 entry");
     assert.ok(migration.includes("## 0.1.3 → 0.1.4"), "migration.md missing 0.1.3 → 0.1.4 section");
     assert.ok(migration.includes("no migration step"), "migration.md 0.1.4 section must state no migration step");
+  });
+  it("plan 023 Task 6 freeze: 0.2.3 publish handoff, tooling sections, and release evidence are documented", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    assert.ok(release.includes("### 0.2.3 publish handoff (plan 023 Task 6)"), "release page missing 0.2.3 handoff");
+    assert.ok(release.includes("**Rollback notes.**"), "0.2.3 handoff missing rollback notes");
+    assert.ok(release.includes("## Build serialization"), "release page missing build-serialization section");
+    assert.ok(release.includes("### Coverage denominators and per-package thresholds"), "release page missing coverage-threshold section");
+    assert.ok(release.includes("### Release evidence and protected skips"), "release page missing skip-manifest section");
+    assert.ok(release.includes("### Quality-gate reports and the Biome baseline"), "release page missing Biome-migration section");
+    assert.ok(index.includes("current **0.2.3**"), "index.md current-line entry not at 0.2.3");
+    assert.ok(changelog.includes("## [0.2.3] - 2026-08-14"), "root changelog missing 0.2.3 entry");
+    const section = roadmap.slice(roadmap.indexOf("### 0.2.3 — Build, coverage, and release evidence integrity"));
+    const nextSection = section.indexOf("\n### 0.2.4");
+    const body = nextSection === -1 ? section : section.slice(0, nextSection);
+    const unchecked = (body.match(/- \[ \] /g) ?? []).length;
+    assert.equal(unchecked, 0, `roadmap 0.2.3 section has ${unchecked} unchecked item(s) after Task 6`);
   });
   it("plan 017 Task 4 freeze: 0.1.5 deprecated-option removal, migration, and publish handoff are documented", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
@@ -309,7 +328,7 @@ describe("docs", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
     assert.ok(release.includes("### 0.1.5 publish handoff (plan 017 Task 4)"), "release page missing 0.1.5 handoff");
-    assert.ok(index.includes("current **0.2.2**"), "index.md current-line entry not at 0.2.2");
+    assert.ok(index.includes("current **0.2.3**"), "index.md current-line entry not at 0.2.3");
     assert.ok(changelog.includes("## [0.1.5] - 2026-08-11"), "root changelog missing 0.1.5 entry");
     assert.ok(migration.includes("## 0.1.4 → 0.1.5"), "migration.md missing 0.1.4 → 0.1.5 section");
     // every removed symbol and its replacement appears in the breaking-cut section
@@ -422,7 +441,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.2.2", "root manifest must be at 0.2.2");
+    assert.equal(pkg.version, "0.2.3", "root manifest must be at 0.2.3");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1181,6 +1200,7 @@ describe("docs", () => {
       "resumeAgentRunStream()",
       "AgentRunLifecycle.resumeStream()",
       "at-least-once",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: literal docs-grep target; the source docs carry the real interpolation
       "${runId}:${version}",
       "default deny",
       "10,000 / 100,000",
@@ -1839,6 +1859,7 @@ describe("docs", () => {
     ]) {
       assert.ok(workflow.includes(phrase), `release workflow missing ${phrase}`);
     }
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal workflow-grep target; the workflow YAML carries the real interpolation
     assert.ok(workflow.includes("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"), "release workflow missing npm authentication");
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 

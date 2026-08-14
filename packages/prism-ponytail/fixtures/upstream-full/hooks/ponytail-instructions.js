@@ -84,16 +84,14 @@ function getPonytailInstructions(mode) {
   const configuredMode = normalizePersistedMode(mode) || DEFAULT_MODE;
 
   if (INDEPENDENT_MODES.has(configuredMode)) {
-    return "PONYTAIL MODE ACTIVE — level: " + configuredMode + ". Behavior defined by /ponytail-" + configuredMode + " skill.";
+    return `PONYTAIL MODE ACTIVE — level: ${configuredMode}. Behavior defined by /ponytail-${configuredMode} skill.`;
   }
 
   const effectiveMode = normalizeMode(configuredMode) || DEFAULT_MODE;
 
   try {
-    return (
-      "PONYTAIL MODE ACTIVE — level: " + effectiveMode + "\n\n" + filterSkillBodyForMode(fs.readFileSync(SKILL_PATH, "utf8"), effectiveMode)
-    );
-  } catch (e) {
+    return `PONYTAIL MODE ACTIVE — level: ${effectiveMode}\n\n${filterSkillBodyForMode(fs.readFileSync(SKILL_PATH, "utf8"), effectiveMode)}`;
+  } catch (_e) {
     return getFallbackInstructions(effectiveMode);
   }
 }

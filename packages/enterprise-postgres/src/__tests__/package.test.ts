@@ -52,7 +52,7 @@ describe("enterprise PostgreSQL package", () => {
     assert.equal(reservationsMigrationChecksum.length, 64);
     assert.match(
       ddl,
-      /ALTER TABLE "prism"\."prism_model_router_budgets"\n  ADD COLUMN IF NOT EXISTS reservations JSONB NOT NULL DEFAULT '\[\]'::jsonb;/,
+      /ALTER TABLE "prism"\."prism_model_router_budgets"\n {2}ADD COLUMN IF NOT EXISTS reservations JSONB NOT NULL DEFAULT '\[\]'::jsonb;/,
     );
     assert.throws(
       () => assertEnterpriseMigrationHistory([{ name: "001_enterprise_state", version: "1", checksum: "wrong" }]),

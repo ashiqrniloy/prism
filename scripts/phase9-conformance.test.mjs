@@ -349,7 +349,6 @@ describe("Phase 9 conformance", () => {
 
   it("adversarial: forge cross-tenant fails closed; token never in argv", async () => {
     const fake = await startFakeGitHub({});
-    const fetchImpl = fakeFetch(fake.baseUrl);
     try {
       assert.throws(
         () =>

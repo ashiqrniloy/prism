@@ -491,7 +491,7 @@ export function createAllowListEgressProxy(options: CreateAllowListEgressProxyOp
         upstream.once("connect", () => {
           try {
             assertPinned(host, upstream.remoteAddress, connectable);
-          } catch (error) {
+          } catch (_error) {
             denied += 1;
             audit({ decision: "deny", host, port, protocol: "https", reason: "ERR_PRISM_EGRESS_DNS: rebinding detected", clientAddress });
             socket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");

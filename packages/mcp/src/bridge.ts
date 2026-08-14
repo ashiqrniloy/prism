@@ -499,7 +499,7 @@ async function readMcpAppResource(state: BridgeState, uri: string): Promise<McpA
   const listed = await listMcpAppResources(state);
   const listedResource = listed.find((candidate) => candidate.uri === uri);
   const content = result.contents.find((candidate) => candidate.uri === uri);
-  if (!content || content.mimeType !== "text/html;profile=mcp-app") throw new McpBridgeError("MCP App resource must be declared HTML");
+  if (content?.mimeType !== "text/html;profile=mcp-app") throw new McpBridgeError("MCP App resource must be declared HTML");
   const text = "text" in content && typeof content.text === "string" ? content.text : undefined;
   const blob = "blob" in content && typeof content.blob === "string" ? decodeHtmlBlob(content.blob) : undefined;
   if ((text === undefined) === (blob === undefined)) throw new McpBridgeError("MCP App resource requires one HTML body");

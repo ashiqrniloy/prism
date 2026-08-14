@@ -1,0 +1,209 @@
+{
+  "captured": "2026-08-14",
+  "marginPp": 3,
+  "packages": {
+    "@arnilo/prism-ag-ui": {
+      "lines": 86.37,
+      "branches": 76.83,
+      "functions": 94.42
+    },
+    "@arnilo/prism-browser": {
+      "lines": 80.91,
+      "branches": 67.06,
+      "functions": 90.76
+    },
+    "@arnilo/prism-coding-agent": {
+      "lines": 84.22,
+      "branches": 75.56,
+      "functions": 90.2
+    },
+    "@arnilo/prism-coding-security": {
+      "lines": 77.18,
+      "branches": 76.05,
+      "functions": 87.15
+    },
+    "@arnilo/prism-compaction-llm": {
+      "lines": 93.2,
+      "branches": 84.77,
+      "functions": 98.18
+    },
+    "@arnilo/prism-compaction-observational-memory": {
+      "lines": 89.73,
+      "branches": 83.78,
+      "functions": 88.64
+    },
+    "@arnilo/prism-credentials-node": {
+      "lines": 86.02,
+      "branches": 81.27,
+      "functions": 80
+    },
+    "@arnilo/prism-document-reader": {
+      "lines": 92.24,
+      "branches": 81.25,
+      "functions": 100
+    },
+    "@arnilo/prism-evals": {
+      "lines": 87.63,
+      "branches": 63.37,
+      "functions": 89.74
+    },
+    "@arnilo/prism-mcp": {
+      "lines": 87.25,
+      "branches": 73.44,
+      "functions": 91.22
+    },
+    "@arnilo/prism-model-router": {
+      "lines": 85.29,
+      "branches": 81.67,
+      "functions": 91.67
+    },
+    "@arnilo/prism-observability-opentelemetry": {
+      "lines": 94.8,
+      "branches": 83.43,
+      "functions": 87.88
+    },
+    "@arnilo/prism-policy": {
+      "lines": 90.78,
+      "branches": 74.55,
+      "functions": 96.23
+    },
+    "@arnilo/prism-caveman": {
+      "lines": 87.39,
+      "branches": 68.47,
+      "functions": 85.37
+    },
+    "@arnilo/prism-openapi-tools": {
+      "lines": 88.85,
+      "branches": 81.3,
+      "functions": 93.75
+    },
+    "@arnilo/prism-ponytail": {
+      "lines": 87.18,
+      "branches": 69.64,
+      "functions": 94.59
+    },
+    "@arnilo/prism-provider-ai-sdk": {
+      "lines": 78.42,
+      "branches": 77.9,
+      "functions": 84.13
+    },
+    "@arnilo/prism-provider-alibaba": {
+      "lines": 89.62,
+      "branches": 86.11,
+      "functions": 89.47
+    },
+    "@arnilo/prism-provider-anthropic": {
+      "lines": 89.5,
+      "branches": 73.58,
+      "functions": 97.44
+    },
+    "@arnilo/prism-provider-azure": {
+      "lines": 75.49,
+      "branches": 66.67,
+      "functions": 85.71
+    },
+    "@arnilo/prism-provider-bedrock": {
+      "lines": 81.94,
+      "branches": 67.5,
+      "functions": 85.71
+    },
+    "@arnilo/prism-provider-google": {
+      "lines": 90.47,
+      "branches": 74.12,
+      "functions": 100
+    },
+    "@arnilo/prism-provider-kimi": {
+      "lines": 85.28,
+      "branches": 73,
+      "functions": 91.38
+    },
+    "@arnilo/prism-provider-neuralwatt": {
+      "lines": 96.71,
+      "branches": 87.89,
+      "functions": 98.63
+    },
+    "@arnilo/prism-provider-ollama": {
+      "lines": 95.96,
+      "branches": 93.55,
+      "functions": 95.24
+    },
+    "@arnilo/prism-provider-openai": {
+      "lines": 88.62,
+      "branches": 83.42,
+      "functions": 92.11
+    },
+    "@arnilo/prism-provider-opencode-go": {
+      "lines": 88.41,
+      "branches": 78.95,
+      "functions": 94.92
+    },
+    "@arnilo/prism-provider-openrouter": {
+      "lines": 89.54,
+      "branches": 83,
+      "functions": 94.12
+    },
+    "@arnilo/prism-provider-vertex": {
+      "lines": 78.25,
+      "branches": 76.47,
+      "functions": 80
+    },
+    "@arnilo/prism-provider-zai": {
+      "lines": 91.1,
+      "branches": 84.31,
+      "functions": 95.12
+    },
+    "@arnilo/prism-rag": {
+      "lines": 91.82,
+      "branches": 74.75,
+      "functions": 96.15
+    },
+    "@arnilo/prism-server": {
+      "lines": 85.66,
+      "branches": 71.5,
+      "functions": 91.19
+    },
+    "@arnilo/prism-session-store-sqlite": {
+      "lines": 77.69,
+      "branches": 66.91,
+      "functions": 79.34
+    },
+    "@arnilo/prism-supervisor": {
+      "lines": 89.08,
+      "branches": 66.67,
+      "functions": 86.24
+    },
+    "@arnilo/prism-tool-validator-json-schema": {
+      "lines": 90.24,
+      "branches": 81.72,
+      "functions": 100
+    },
+    "@arnilo/prism-web-tools": {
+      "lines": 84.67,
+      "branches": 79.64,
+      "functions": 88.24
+    },
+    "@arnilo/prism-work-tools": {
+      "lines": 73.79,
+      "branches": 66.13,
+      "functions": 72.52
+    },
+    "@arnilo/prism-workflows": {
+      "lines": 85.56,
+      "branches": 78.24,
+      "functions": 86.9
+    },
+    "@arnilo/prism-session-store-postgres": {
+      "protectedException": "requires PRISM_TEST_POSTGRES_URL (durable postgres legs)"
+    },
+    "@arnilo/prism-enterprise-postgres": {
+      "protectedException": "requires PRISM_TEST_POSTGRES_URL (durable postgres legs)"
+    },
+    "@arnilo/prism-memory": {
+      "protectedException": "requires PRISM_TEST_POSTGRES_URL (postgres-memory durable legs)"
+    },
+    "@arnilo/prism-session-store-nats": {
+      "protectedException": "requires a real NATS server (real-jetstream legs; offline fake-jetstream seam only in default runs)"
+    }
+  },
+  "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL or real NATS) are exempt and shown separately."
+}

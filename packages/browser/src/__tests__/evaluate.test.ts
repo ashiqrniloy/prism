@@ -10,7 +10,7 @@ import { FakeBrowser, FakeCdpSession } from "./fake-playwright.js";
 
 const testNetwork = { requireContainedProxy: false as const };
 
-function mgr(browser: FakeBrowser, limits: Record<string, number> = { closeGraceMs: 1 }) {
+function _mgr(browser: FakeBrowser, limits: Record<string, number> = { closeGraceMs: 1 }) {
   return createBrowserManager({ browser, limits, networkPolicy: testNetwork });
 }
 

@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -15,11 +15,13 @@ const root = join(new URL(".", import.meta.url).pathname, "..");
 const run = (cmd, args, cwd = root) => spawnSync(cmd, args, { cwd, encoding: "utf8" });
 
 test("sweep driver always exits 0 and writes the combined report", () => {
-  const result = run(process.execPath, ["scripts/sweep-unused.mjs"]);
+  const result = run(process.execPath, ["scripts/sweep-unused.mjs", "--json"]);
   assert.equal(result.status, 0, `driver must exit 0 (non-blocking), got ${result.status}: ${result.stderr}`);
   const report = readFileSync(join(root, "scripts", "unused-sweep-report.txt"), "utf8");
   assert.ok(report.includes("## tsconfig.json"), "report covers the core tsconfig");
   assert.ok(report.includes("dead-export candidate"), "report includes the dead-export scan section");
+  const json = JSON.parse(readFileSync(join(root, "scripts", "unused-report.json"), "utf8"));
+  assert.ok(Array.isArray(json.configs) && json.configs.length >= 40, "--json must write the machine-readable per-tsconfig report");
 });
 
 test("tsc noUnused flags catch a seeded unused local, and the driver stays non-blocking", () => {

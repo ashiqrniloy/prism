@@ -334,7 +334,6 @@ try {
     createDeleteTool(workspace, { executionPolicy: policy }),
     createMoveTool(workspace, { executionPolicy: policy }),
   ]);
-  const effectStore = createMemoryToolEffectStore();
   const context = (id) => ({
     sessionId: "s-1",
     runId: "r-1",

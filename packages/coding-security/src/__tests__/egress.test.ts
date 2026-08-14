@@ -515,7 +515,7 @@ test("egress sandbox composition: network config carries attestation; labels rec
   assert.ok(args.includes("--network=egress-net"));
   assert.ok(args.includes("--label"));
   assert.ok(args.includes("prism.egress.endpoint=http://127.0.0.1:8080"));
-  assert.ok(args.includes("prism.egress.fingerprint=" + "b".repeat(64)));
+  assert.ok(args.includes(`prism.egress.fingerprint=${"b".repeat(64)}`));
   assert.ok(args.includes("prism.egress.policyVersion=2"));
   assert.ok(args.includes("prism.egress.denyDirect=1"));
   assert.throws(

@@ -188,7 +188,7 @@ process.stdin.on("data", (chunk) => {
     try {
       handle(JSON.parse(body));
     } catch (e) {
-      process.stderr.write(String(e) + "\n");
+      process.stderr.write(`${String(e)}\n`);
     }
   }
 });

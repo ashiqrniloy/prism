@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-session-store-postgres",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Optional PostgreSQL SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,18 +19,18 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/__tests__/*.test.js",
-    "test:postgres": "node --test dist/__tests__/*.test.js dist/__tests__/*.integration.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js",
+    "test:postgres": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js dist/__tests__/*.integration.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@arnilo/prism-session-store-codecs": "0.2.2",
+    "@arnilo/prism-session-store-codecs": "0.2.3",
     "pg": "^8.22.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.2"
+    "@arnilo/prism": "0.2.3"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

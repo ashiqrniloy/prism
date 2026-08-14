@@ -21,6 +21,7 @@ for (const pkg of readdirSync(join(root, "packages"))) {
 }
 
 const sections = [];
+const jsonConfigs = [];
 let totalErrors = 0;
 for (const cfg of tsconfigs) {
   const result = spawnSync(tsc, ["--noEmit", "--noUnusedLocals", "--noUnusedParameters", "-p", cfg], {
@@ -32,6 +33,7 @@ for (const cfg of tsconfigs) {
   const diag = [out, err].filter(Boolean).join("\n");
   const count = diag ? diag.split("\n").filter((l) => l.includes("error TS")).length : 0;
   totalErrors += count;
+  jsonConfigs.push({ config: cfg, count });
   sections.push(`## ${cfg} (${count} unused-code diagnostic${count === 1 ? "" : "s"})${diag ? `\n${diag}` : " — clean"}`);
 }
 
@@ -55,6 +57,22 @@ const full = `${report}\n${deadOut || "(scan produced no output)"}\n`;
 
 writeFileSync(join(root, "scripts", "unused-sweep-report.txt"), full);
 process.stdout.write(full);
+if (process.argv.includes("--json")) {
+  writeFileSync(
+    join(root, "scripts", "unused-report.json"),
+    `${JSON.stringify(
+      {
+        generated: new Date().toISOString(),
+        tsconfigs: tsconfigs.length,
+        totalErrors,
+        configs: jsonConfigs,
+        deadExports: deadOut || null,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
 // ponytail: report-only by design — exit 0 even with findings; upgrade to a
 // blocking gate (or knip) if the report noise ever exceeds triage value.
 process.exit(0);

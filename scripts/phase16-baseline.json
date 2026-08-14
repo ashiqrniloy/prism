@@ -95,7 +95,7 @@
     "preSplitState": "src/agents.ts (2576 lines, 4 public exports) and src/contracts.ts (2549 lines, 295 exports) are god-modules (unsplit). dist/agents.js (111049 bytes) holds the runtime bulk (RuntimeAgentSession class + free functions); dist/contracts.js (9420 bytes) is small because contracts.ts is type-only; dist/contracts.d.ts (98825 bytes) holds the declaration bulk. dist/agents.d.ts is tiny (908 bytes) because agents.ts has only 4 public exports (internal class/helpers are not exported). Tasks 1/2 split these behind barrels; Task 3 measures after-split shrinkage of dist/agents.js and dist/contracts.d.ts and the rise in dist module count."
   },
   "treeShake": {
-    "measured": "2026-08-13",
+    "measured": "2026-08-14",
     "agentsJsBytes": 982,
     "contractsJsBytes": 418,
     "distJsCount": 74,

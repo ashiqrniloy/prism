@@ -644,7 +644,7 @@ describe("createCliRunner subprocess isolation (plan 020 Task 3)", () => {
         binary: "/usr/bin/m365",
         configDir: CONFIG_DIR,
         env: { LANG: "C.UTF-8", EXTRA_ALLOWED: "x" },
-        exec: async (argv, opts) => {
+        exec: async (_argv, opts) => {
           seen.push(opts.env);
           return { exitCode: 0, stdout: "ok", stderr: "" };
         },

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-rag",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Optional bounded text and Markdown RAG primitives for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -27,14 +27,14 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/__tests__/rag.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/rag.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.2",
-    "@arnilo/prism-memory": "0.2.2"
+    "@arnilo/prism": "0.2.3",
+    "@arnilo/prism-memory": "0.2.3"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

@@ -34,7 +34,6 @@ import { createMemoryPolicyDecisionStore, createOpaPolicyEvaluator, createPolicy
 import { createArtifactService } from "@arnilo/prism-server";
 import { createS3ArtifactBodyStore } from "@arnilo/prism-server/artifact-bodies";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 
 const SECRET = "conformance-secret-value";
 const redactor = createSecretRedactor([SECRET]);
@@ -81,7 +80,7 @@ function sendJson(response, status, body, headers = {}) {
   response.end(JSON.stringify(body));
 }
 
-function sha256b64url(value) {
+function _sha256b64url(value) {
   return createHash("sha256").update(value).digest("base64url");
 }
 
@@ -693,7 +692,7 @@ describe("Phase 11 conformance — redaction sweep (Task 6)", () => {
       document: OPENAPI_DOC,
       operations: ["createCustomer"],
       server: "https://api.example.com",
-      fetch: async (input, init) => {
+      fetch: async (input, _init) => {
         apiRequests.push(String(input));
         return new Response(JSON.stringify({ id: "c-1", note: `echo ${SECRET}` }), {
           status: 200,

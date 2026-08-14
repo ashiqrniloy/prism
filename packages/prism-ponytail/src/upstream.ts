@@ -48,7 +48,7 @@ export function redactPaths(text: string, paths: readonly string[] = []): string
 export function readBoundedFile(root: string, relativePath: string, maxBytes: number): string {
   const filePath = resolve(root, relativePath);
   const normalizedRoot = resolve(root);
-  if (!filePath.startsWith(normalizedRoot + "/") && filePath !== normalizedRoot) {
+  if (!filePath.startsWith(`${normalizedRoot}/`) && filePath !== normalizedRoot) {
     throw new UpstreamResolveError(redactPaths("Path escapes upstream root", [filePath, normalizedRoot]));
   }
   const data = readFileSync(filePath);

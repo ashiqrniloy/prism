@@ -170,7 +170,7 @@ export function reduceA2UiOps(
 export function readA2UiBatch(event: AGUIEvent): { ops: unknown[]; replace: boolean } | undefined {
   if (event.type === EventType.ACTIVITY_SNAPSHOT && event.activityType === A2UI_ACTIVITY_TYPE) {
     const content = event.content as Record<string, unknown> | undefined;
-    const ops = content && content[A2UI_OPERATIONS_KEY];
+    const ops = content?.[A2UI_OPERATIONS_KEY];
     return Array.isArray(ops) ? { ops, replace: true } : undefined;
   }
   if (event.type === EventType.ACTIVITY_DELTA && event.activityType === A2UI_ACTIVITY_TYPE && Array.isArray(event.patch)) {

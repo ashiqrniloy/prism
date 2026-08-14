@@ -1,0 +1,154 @@
+{
+  "$comment": "Phase 23 (0.2.3) build-coverage-and-release-evidence-integrity scope gate and evidence record. Machine-readable source of truth for plans/023-Release-0-2-3-Build-Coverage-And-Release-Evidence-Integrity.md: the four 0.2.3 implementation items (build serialization; corrected workspace coverage denominators; machine-auditable release skip manifest; stabilized quality gates) each with task ownership and evidence tokens, the compat policy (version-literal-only at 0.2.3 — reviewed plain gate deltas: the version literal alone, after restoring the ag-ui acp/index.ts type re-export statements to the frozen value-style shape; no removal, no declaration change; baselines regenerated with --update-baseline, no --allow-break), the protected-gate policy (durable state-concurrency legs and the release skip manifest: required surfaces with absent evidence record blocked and fail the release gate, never passing skips; the 33 protected/live skips are named), per-task evidence tokens, and the deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json. Baseline evidence for the Task 6 exit gate lives in scripts/phase23-baseline.json (green: true, blocked: false, captured 2026-08-14 at the 0.2.3 working-tree state).",
+  "release": "0.2.3",
+  "line": "0.2.x",
+  "type": "build-coverage-and-release-evidence-integrity",
+  "baseline": "0.2.2 (plan 022 exit gate passed 2026-08-13; signed tag v0.2.2; 50 publishable manifests; audit 0; compat baselines current at 0.2.2; two remaining integrity gaps: concurrent emitters can expose partial live dist (build-clean race only partially fixed in 0.1.1) and workspace coverage rows include imported core dist (wrong denominator); 33 protected/live skips not machine-named in release summaries; Biome 2.x deprecated config + 97 lint diagnostics + load-sensitive timing asserts; HEAD 3126fc2)",
+  "items": [
+    {
+      "id": "build-serialization",
+      "task": "task1",
+      "title": "Prevent partial live dist/ imports: serialize emit-producing commands",
+      "evidence": "scripts/with-build-lock.mjs (dependency-free): one O_EXCL lockfile at node_modules/.prism-build.lock (pid + startedAt, read-back verified, stale-PID reclaim via process.kill(pid,0) with EPERM-as-alive, 1s grace for unparseable content, 100ms backoff to PRISM_BUILD_LOCK_TIMEOUT_MS default 120000, fail-closed exit 1, PRISM_BUILD_LOCK_HELD=1 nesting guard, lock unlinked in finally); wraps root build:core + both node --test segments + test:coverage leaves + coverage:summary + all 43 workspace build/test/test:postgres scripts (idempotent regex prepend, 50 package.json files); orchestrator scripts never hold the lock; scripts/phase23-build-race.test.mjs 8 tests: synthetic partial-dist sensitivity, concurrent build+importer, two builds, typecheck+test, coverage+test, stale-lock reclaim, live-lock-not-stolen fail-closed, clean-unchanged script strings; docs/release-and-install.md '## Build serialization' wrapped/not-wrapped table (direct tsc caveat documented)",
+      "regression": "matrix item 4 (concurrent emit builds plus an importer never observe partial dist), re-proven by phase23-security.test.mjs T1 over built public entrypoints"
+    },
+    {
+      "id": "coverage-denominators",
+      "task": "task2",
+      "title": "Correct workspace coverage denominators: package-local include filters + evidence-based thresholds",
+      "evidence": "scripts/coverage-summary.mjs workspace runCoverage passes --test-coverage-include=dist/** (cwd-relative, excludes real-path root dist/**); core run unchanged with CORE_GATE 60/70/75 and **/packages/** exclude; per-package lines thresholds in scripts/coverage-thresholds.json (min of two back-to-back byte-identical post-fix runs minus 3pp, captured 2026-08-14) with protectedException for env-gated durable-leg packages (session-store-postgres, enterprise-postgres, memory, session-store-nats); artifact scripts/coverage-summary.json {captured, core, packages (lines/branches/functions/denominatorFiles/threshold/pass/protectedException), belowThreshold} with exit 1 on suite failure or non-protected below-threshold; denominator fix lifted polluted rows (mcp 45.47->90.25, rag 19.70->94.82, memory 20.37->72.00, session-store-nats 16.04->93.69, enterprise-postgres 21.93->43.26; session-store-postgres stays 22.89 as protected durable-leg proof); scripts/phase23-coverage.test.mjs 4 tests incl. sabotaged fail-closed run; NODE_TEST_* stripping in all spawned children",
+      "regression": "matrix item 12 (workspace coverage excludes imported core files and records protected skips), re-proven by phase23-security.test.mjs T2 and the packed security23.mjs consumer"
+    },
+    {
+      "id": "skip-manifest",
+      "task": "task3",
+      "title": "Make skipped protection visible: machine-auditable release skip manifest",
+      "evidence": "scripts/release-skip-manifest.mjs (stdlib-only) emits scripts/release-evidence.json: 58 surfaces with states pass/skip/blocked/protected, reason, requiredEnv (env NAMES only, never values), protected flag, count, crossRef to the latest phase*-baseline.json exitGate.counts/protectedEvidence; surfaces: core npm test (counts + 33 skips aggregated), 42 workspace suites from the Task 2 coverage artifact (missing artifact records blocked), security:threat-suites, test:postgres durable conformance (required: absent PRISM_TEST_POSTGRES_URL records blocked), test:nats real JetStream legs (protected gap, roadmap 0.3.0), provider live legs (PRISM_LIVE_PROVIDER_TESTS), 4 live canaries (always protected, never pass); scripts/release.mjs exports checkReleaseEvidence (throws on missing/malformed manifest, any blocked row, any skip lacking reason+requiredEnv) called in gate mode before runGates; package.json release:evidence + release:gate chain; release.yml verify job declares PRISM_TEST_POSTGRES_URL as a release-profile marker + always() upload-artifact (retention 30d); scripts/phase23-skip-manifest.test.mjs 6 tests; release-evidence.json gitignored",
+      "regression": "release report names every skipped live/protected suite (33-skip floor frozen) and required environments record blocked, never green"
+    },
+    {
+      "id": "quality-gates",
+      "task": "task4",
+      "title": "Stabilize quality gates: Biome 2.x migration, zero diagnostics, timing quarantine, machine-readable reports",
+      "evidence": "biome.json migrated to linter.rules.preset 'recommended' (deprecated key removed, rule overrides untouched); 97 diagnostics -> 0 (safe + reviewed --unsafe fixes across 108 files 396+/226-, 10 hand-removed Biome 2.5.5 _-renamed dead side-effect variables across 11 files, 5 justified biome-ignore comments for shell-interpolation probes/verbatim fixtures/grep targets + 2 ag-ui compat-surface statement-shape freezes); biome lint . exit 0 across 981 files; timing quarantine: mcp bridge.test.ts:202 150ms bound replaced by deterministic awaited-outcome barrier with {timeout: 5000}, native-sandbox.test.ts kill-promptness widened 2000->5000 with ponytail comment, repository.test.ts + credentials-node.test.ts keep ceilings with ponytail comments, document-reader keeps the sanctioned budgets.json envelope; npm run lint writes scripts/lint-report.sarif (--reporter=sarif, stable) and npm run sweep:unused writes scripts/unused-report.json (--json), both gitignored and CI-retained (release.yml 'retain quality-gate reports' if: always(), retention 30d); scripts/phase23-quality-gates.test.mjs 5 tests in the wrapped npm test gate segment",
+      "regression": "zero unexplained lint diagnostics; deterministic timing barriers; machine-readable quality artifacts"
+    }
+  ],
+  "allowedChanges": [
+    "freeze/implementation/docs/regressions/baseline/bump/compat/wiring/evidence",
+    "scripts/with-build-lock.mjs, scripts/phase23-*.test.mjs, scripts/fixtures/phase23-public-entry.test.mjs, scripts/coverage-summary.mjs, scripts/coverage-thresholds.json, scripts/release-skip-manifest.mjs, scripts/release.mjs (checkReleaseEvidence), scripts/sweep-unused.mjs (--json)",
+    "package.json scripts (build:core/test/test:coverage/coverage:summary/lint/sweep:unused/release:evidence/release:gate/security:threat-suites) and workspace build/test/test:postgres script prefixes (with-build-lock wrap)",
+    "docs/release-and-install.md, docs/migration.md (no-migration stub), docs/index.md, CHANGELOG.md, roadmap.md 0.2.3 items, plans/README.md",
+    "src/index.ts + version-sensitive tests at the 0.2.3 bump literal",
+    "biome.json preset migration + lint-safe/unsafe fixes (reviewed, semantics-equivalent)",
+    "ag-ui acp/index.ts type re-export statement shape (value-style restored, biome-ignore)"
+  ],
+  "forbiddenChanges": [
+    "pending-scope items (0.2.4+)",
+    "preserved surface: no export removal or signature change (compat promise)",
+    "shared files: docs canonical tokens, freeze manifests, baseline evidence",
+    "defaults: no runtime behavior change (no runtime contract delta)",
+    "removal of any 0.2.x shipped behavior",
+    "deps: zero new runtime dependency names (core remains dependency-free)",
+    "egress/security gates: no bypass of the protected-gate policy",
+    "support matrix: 0.1.x support matrix stays frozen at phase12-freeze-manifest.json",
+    "baseline: no silent baseline refresh (reviewed --update-baseline only)",
+    "skip items: no phase-23 test may be skippable or vacuous (gate accounting)"
+  ],
+  "compat": {
+    "baselineRelease": "0.2.2",
+    "baseline": "scripts/compat-baseline",
+    "promise": "VERSION-LITERAL-ONLY at 0.2.3. Plain reviewed gate at 0.2.3 before --update-baseline: the only delta is the version literal (changed: version on @arnilo/prism). The Task 4 useExportType fix had changed the ag-ui acp/index.ts type re-export statements to `export type` form, which the compat-surface parser keys differently (`type Name` garbage keys vs clean names) and read as removals; the statements were restored to the frozen value-style shape with biome-ignore + justification, so the 0.2.2 baseline holds byte-for-byte apart from the version literal. docs/migration.md gains the 0.2.2 -> 0.2.3 no-migration stub (the gate requires the version note; the section documents no runtime contract delta and store-safe rollback). No removal, no --allow-break."
+  },
+  "deviations": [
+    {
+      "task": "task1",
+      "change": "Root npm test's script-gate segment (22 phase*-conformance/security/freeze .test.mjs files importing dist) is wrapped by the build lock (Option 2), superseding the earlier 'gate segment unwrapped' residual; scripts/phase23-build-race.test.mjs runs unwrapped in its own separate node --test invocation after the wrapped gates so its lock tests acquire the real lock.",
+      "rationale": "The wrapped-gate run had made phase23 inherit PRISM_BUILD_LOCK_HELD=1 and a dead-pid lockfile leftover caused EEXIST in the live-lock test; separating the stress suite keeps the gate segment protected and the lock tests truthful."
+    },
+    {
+      "task": "task1",
+      "change": "All spawned children (with-build-lock runChild, coverage-summary runCoverage, phase23-build-race run, phase23-security spawn) strip NODE_TEST_CONTEXT/NODE_TEST_WORKER_ID.",
+      "rationale": "node --test leaks those vars into spawned children and a nested node --test under that env silently runs zero tests and exits 0 (recursive run() warning), which made importer assertions vacuous and the fail-closed test false-green."
+    },
+    {
+      "task": "task2",
+      "change": "protectedException set finalized at session-store-postgres, enterprise-postgres, memory, session-store-nats (memory added beyond the Task 0 freeze).",
+      "rationale": "memory's workspace coverage glob includes postgres-memory.integration.test.js, an env-gated durable leg that skips without PRISM_TEST_POSTGRES_URL; provider packages gated by PRISM_LIVE_PROVIDER_TESTS stay threshold-gated because offline conformance tests cover their mapping code and protecting all 10 would gut the gate."
+    },
+    {
+      "task": "task2",
+      "change": "Per-package threshold = min of two back-to-back byte-identical post-fix coverage runs minus 3pp (lines hard-gated; branches/functions recorded at observed min for reporting only).",
+      "rationale": "phase22-baseline.json has no per-workspace rows to compare against, so the freeze capture is the first post-fix evidence; 3pp margin absorbs runner noise while 87.25 (mcp) still fails if the include filter breaks."
+    },
+    {
+      "task": "task3",
+      "change": "Canary rows name the implemented canaries (provider OIDC/OPA, MCP, A2A, web/Brave) not the plan's names (OIDC/OPA, S3, MCP-AS, NATS JetStream); canaries always record protected with reason, never pass and never blocked.",
+      "rationale": "scripts/live-canary.mjs implements provider/mcp/a2a/web with PRISM_CANARY_* and PRISM_BRAVE_SEARCH_TOKEN envs; canary envs are always absent in release CI so blocking would make every release impossible."
+    },
+    {
+      "task": "task3",
+      "change": "The manifest keeps a 'test:nats real JetStream legs' protected-gap surface with requiredEnv PRISM_TEST_NATS_URL even though no source references that env; skip attribution is by class with the 33-skip aggregate on the core row.",
+      "rationale": "node --test does not emit per-test-name skip reasons machine-readably; the real-leg expansion is roadmap 0.3.0."
+    },
+    {
+      "task": "task4",
+      "change": "Machine-readable lint report uses --reporter=sarif (--reporter-file=scripts/lint-report.sarif), not the plan text's --reporter=json; format:check stays exit-code-only.",
+      "rationale": "Task 0 froze the sarif deviation; Biome's json reporter is experimental."
+    },
+    {
+      "task": "task4",
+      "change": "Biome 2.5.5 --unsafe noUnusedVariables renames side-effecting unused declarations to _-prefixed names instead of removing them; all 10 were removed by hand; no quarantine suite file was created.",
+      "rationale": "Only one genuinely load-sensitive assert existed (mcp bridge 150ms bound), replaced by a deterministic barrier; the other guards carry documented ponytail: ceilings or use the sanctioned budgets.json envelope."
+    },
+    {
+      "task": "task5",
+      "change": "Packed matrix item 12 cannot run coverage-summary.mjs inside the consumer (tarballs exclude tests and scripts/ — no coverage surface by construction), so the packed journey asserts the single-shared-core copy + no dist/__tests__ artifacts walk, and the source-level T2 carries the runtime denominator proof.",
+      "rationale": "The tarball exclusion is itself the point: no test artifacts can enter a packed coverage denominator."
+    },
+    {
+      "task": "task5",
+      "change": "The reserved phase23-baseline.json carries the 0.2.2 exitGate.counts forward (release: '0.2.3-reserved', green: false, blocked: true) until Task 6 records real evidence.",
+      "rationale": "The release skip manifest reads the LATEST phase*-baseline.json; an empty reservation would record the core row blocked."
+    },
+    {
+      "task": "task6",
+      "change": "ag-ui acp/index.ts type re-export statements restored from `export type {...} from` to the value-style `export { type X, ... } from` form with biome-ignore + justification (Task 4's useExportType fix had changed the statement shape).",
+      "rationale": "The compat-surface parser keys per-name type modifiers literally ('type AcpConfigOption'), so the statement-shape change read as 6 removed exports; restoring the frozen shape keeps the 0.2.3 compat delta to the version literal alone."
+    },
+    {
+      "task": "task6",
+      "change": "docs/migration.md gains a 0.2.2 -> 0.2.3 no-migration stub section.",
+      "rationale": "The compat gate requires a migration.md mention of the release version for any changed delta (here: the version literal); the stub documents no runtime contract delta and store-safe rollback, honoring the plan's no-runtime-section intent."
+    },
+    {
+      "task": "task6",
+      "change": "scripts/phase23-skip-manifest.test.mjs runEmitter no longer re-spreads process.env over the caller's env copy.",
+      "rationale": "`{...process.env, ...env}` resurrected keys the caller deleted from env, so blocked-not-skip recorded pass whenever the ambient env had PRISM_TEST_POSTGRES_URL (sdk:ready with the protected profile); the env parameter is now the authoritative full child env."
+    }
+  ],
+  "releasePolicy": {
+    "exitGate": "scripts/phase23-baseline.json exitGate green=true records command, version, platform, counts, hashes, skips/blocks, compatibility deltas, package graph, and protected evidence; any missing phase-23 item evidence makes green false",
+    "protectedGate": "missing credentials or infrastructure records a named blocked release surface in scripts/release-evidence.json, never a passing skip; checkReleaseEvidence fails the gate on any blocked required surface or unexplained skip",
+    "publication": "signed tag/provenance remain operator-gated after clean protected CI (docs/release-and-install.md 0.2.3 publish handoff)"
+  },
+  "migrationTokens": {
+    "no-migration": "0.2.2 -> 0.2.3: no runtime code path, persisted shape, event schema, default, or exported declaration changed; store-compatible in both directions; rollback = restore 0.2.2 manifests/tag (docs/migration.md 0.2.2 -> 0.2.3 section)"
+  },
+  "tasks": {
+    "$comment": "task0 = primitive review + threat model (docs/_evidence/phase23-primitive-review.md); task1 = build serialization; task2 = coverage denominators; task3 = release skip manifest; task4 = quality gates; task5 = security regression + packed conformance; task6 = docs finalization + bump + exit gate",
+    "task0": "done (primitive review docs/_evidence/phase23-primitive-review.md: primitive inventory, gap-decision table, decision freeze, 8-threat fail-closed model, owner/migration/budget matrix, Task 1-6 test mapping)",
+    "task1": "done (with-build-lock.mjs + 50 wrapped package.json scripts + phase23-build-race.test.mjs 8/8; full npm test exit 0 with 42 wrapped workspace test leaves; lock never left behind)",
+    "task2": "done (coverage-summary.mjs include-filter rewrite + coverage-thresholds.json 38 gated + 4 protectedException + coverage-summary.json artifact + phase23-coverage.test.mjs 4/4 in the test:coverage chain; real run 42 suites + core, belowThreshold [])",
+    "task3": "done (release-skip-manifest.mjs 58 surfaces + checkReleaseEvidence in release.mjs gate + release:evidence/release:gate wiring + release.yml marker env + upload-artifact + phase23-skip-manifest.test.mjs 6/6)",
+    "task4": "done (biome.json preset migration, 97 -> 0 diagnostics, 10 dead _-renames removed, 7 justified biome-ignores, timing quarantine, lint-report.sarif + unused-report.json + phase23-quality-gates.test.mjs 5/5)",
+    "task5": "done (phase23-security.test.mjs 3/3 in security:threat-suites 50/50; packed security23.mjs journey in install-smoke 10/10; phase23-baseline.json reserved then completed in Task 6)",
+    "task6": "done (docs/release-and-install.md 0.2.3 publish handoff + tooling sections, docs/migration.md no-migration stub, docs/index.md current 0.2.3, CHANGELOG.md [0.2.3], roadmap.md 4/4 [x], bump 0.2.2 -> 0.2.3 across 50 manifests + lockfile (51 x 0.2.3, 0 x 0.2.2) + version-sensitive tests, plain reviewed compat gate (version literal only) -> --update-baseline -> plain gate green, npm test 3495/3462/33/0, threat-suites 50/50, test:postgres 91/91, sdk:ready exit 0, audit 0, secrets 1539 files/0 findings, pack dry-run twice byte-identical (sha256 18fa05e18192...), node20 24/24, release gate 0.2.3 50 packages 0 errors, plans/README.md 023 row complete)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip; the release skip manifest names every skip class (33 aggregate on the core row) with reason and required env",
+    "protectedEvidence": "test:postgres 91/91 durable conformance (prism_phase22_* + prism_phase23_* schemas) with PRISM_TEST_POSTGRES_URL present; OIDC/OPA live evidence inherited from phase21 and re-run by CI; live canaries always protected",
+    "audit": "0 moderate-or-higher",
+    "secrets": "0 findings across 1539 tracked files"
+  }
+}

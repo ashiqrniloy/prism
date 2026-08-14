@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-session-store-codecs",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Shared row codecs for Prism SQL session stores; the only store-specific seam is the redacted-boolean representation.",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pack:dry-run": "npm pack --dry-run"
   },
@@ -24,7 +24,7 @@
     "CHANGELOG.md"
   ],
   "peerDependencies": {
-    "@arnilo/prism": "0.2.2"
+    "@arnilo/prism": "0.2.3"
   },
   "engines": {
     "node": ">=20"

@@ -621,6 +621,7 @@ test("protected Docker sandbox matrix", { skip: process.env.PRISM_TEST_DOCKER_SA
 
       const envLeak = await sandbox.execFile({
         file: "/bin/sh",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the string is SHELL interpolation for /bin/sh (env-leak probe), not a JS template
         args: ["-c", "printf '%s' \"${HOST_SECRET:-}\"; printf '|'; printf '%s' \"${PRISM_SANDBOX:-}\""],
         onData: () => undefined,
       });

@@ -45,7 +45,6 @@ import { type AcpClientFilesystem } from "./fs-client.js";
 import { createAcpEventMapper, createAcpLifecycleMapper } from "./mapper.js";
 import { validateMcpServers } from "./mcp-config.js";
 import {
-  type AcpConfigOption,
   type AcpConfigOptionsSeam,
   type AcpModesSeam,
   initialConfigValues,
@@ -226,7 +225,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     registerSession(sessions, limits, active); // T5: registry cap enforced on restore too
     restoredIds.add(entry.sessionId);
   }
-  async function save(entry: PersistedAcpSession, signal: AbortSignal): Promise<void> {
+  async function save(entry: PersistedAcpSession, _signal: AbortSignal): Promise<void> {
     const safe = options.redactor?.redact(entry) ?? entry; // T2: redaction at the store boundary
     validatePersistedSession(safe);
     await options.sessionStore!.save(safe); // store failure fails the request (host sees it)

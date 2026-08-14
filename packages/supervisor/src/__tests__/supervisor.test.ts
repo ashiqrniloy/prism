@@ -145,8 +145,7 @@ describe("createSupervisor", () => {
   });
 
   it("enforces nested cycle, depth, and active-child limits before execution", async () => {
-    let supervisor: ReturnType<typeof createSupervisor>;
-    supervisor = createSupervisor({
+    const supervisor: ReturnType<typeof createSupervisor> = createSupervisor({
       ownership,
       limits: { maxDepth: 2, maxActiveChildren: 1 },
       children: {

@@ -33,7 +33,7 @@ test("framing encode/decode round-trip", () => {
 test("framing rejects oversized and malformed", () => {
   const reader = new LspFrameReader(32);
   assert.throws(
-    () => reader.push(Buffer.from("Content-Length: 100\r\n\r\n" + "x".repeat(100))),
+    () => reader.push(Buffer.from(`Content-Length: 100\r\n\r\n${"x".repeat(100)}`)),
     (e: unknown) => e instanceof LspFrameError && e.code === "ERR_PRISM_LSP_LIMIT",
   );
   const r2 = new LspFrameReader(1024);

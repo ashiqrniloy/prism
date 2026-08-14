@@ -632,7 +632,6 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
     ]) {
       assert.ok(review.includes(item), `review covers ${item}`);
     }
-    const boundaryCount = (review.match(/Trust boundaries/g) ?? []).length;
     assert.ok(review.includes("Threat-to-test traceability"), "review maps threats to tests in the traceability table");
     assert.ok(
       (review.match(/\| T\d+ /g) ?? []).length >= 15,

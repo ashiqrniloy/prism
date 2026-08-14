@@ -112,7 +112,7 @@ export interface ConversationServiceStore {
   /** Required at factory time; optional in the type so persistence unions stay assignable.
    *  Additive CAS: `expectedVersion` requires the stored version to match (0 = create-only);
    *  the returned `version` is the new write version. Throws `SessionMetadataConflictError`. */
-  appendSession?(record: SessionRecord & { readonly expectedVersion?: number }): Promise<{ readonly version: number } | void>;
+  appendSession?(record: SessionRecord & { readonly expectedVersion?: number }): Promise<{ readonly version: number } | undefined>;
   readonly lifecycle?: Pick<PersistenceLifecycleStore, "applyRetention">;
 }
 

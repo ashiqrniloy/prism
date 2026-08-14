@@ -362,6 +362,8 @@ describe("keychain credential store", () => {
       CredentialStoreTimeoutError,
     );
     assert.equal(aborted, true);
+    // ponytail: anti-hang guard for the timeout path, ceiling 1s (10x the 100ms op
+    // timeout); a broken timeout path would hang the suite without the bound
     assert.ok(Date.now() - started < 1000);
   });
 

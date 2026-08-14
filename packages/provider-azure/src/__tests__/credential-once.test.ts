@@ -15,8 +15,7 @@ describe("@arnilo/prism-provider-azure credential resolution", () => {
         calls += 1;
         return `token-${calls}`;
       },
-      fetch: async (_input, init) => {
-        const headers = new Headers(init?.headers);
+      fetch: async (_input, _init) => {
         return new Response('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },

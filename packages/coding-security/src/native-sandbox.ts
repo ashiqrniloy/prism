@@ -513,7 +513,7 @@ class NativeSandboxSession implements DisposableSandbox {
     this.state = "stopped";
   }
 
-  async kill(options?: { signal?: AbortSignal }): Promise<void> {
+  async kill(_options?: { signal?: AbortSignal }): Promise<void> {
     if (this.state === "removed") return;
     this.groupKill("SIGKILL");
     this.state = "stopped";

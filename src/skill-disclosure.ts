@@ -124,5 +124,5 @@ function truncateUtf8Bytes(text: string, maxBytes: number): string {
   const suffix = new TextEncoder().encode("…");
   let end = Math.max(0, maxBytes - suffix.length);
   while (end > 0 && (encoded[end]! & 0xc0) === 0x80) end--;
-  return new TextDecoder().decode(encoded.slice(0, end)) + "…";
+  return `${new TextDecoder().decode(encoded.slice(0, end))}…`;
 }

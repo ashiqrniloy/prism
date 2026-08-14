@@ -201,7 +201,6 @@ async function resumeReplicaB() {
     effectStore: enterprise.toolEffects,
   });
   const ref = { sessionId: state.sessionId, runId: state.runId };
-  const runRef = { ...ref, version: state.version };
 
   // --- no gap / no duplicate for consumers after the crash -----------------
   const page = await persistence.events.page({
