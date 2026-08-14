@@ -8,8 +8,19 @@ import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import { assertPersistenceQueryPaginationConforms, assertTenantScopedQueryIsolation } from "@arnilo/prism/testing/persistence-schema";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
+import { createPersistenceMigrationContract } from "@arnilo/prism/testing/persistence-schema";
 import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import { applySqliteMigrations } from "../migrations.js";
+import {
+  MIGRATION_001_INIT,
+  MIGRATION_002_USAGE_SCOPE,
+  MIGRATION_003_RUN_FEEDBACK,
+  MIGRATION_004_SESSION_SEARCH,
+  MIGRATION_005_LIFECYCLE_HOLD_QUOTA,
+  MIGRATION_006_AGENT_EVENT_SOURCE,
+  MIGRATION_007_AGENT_EVENT_RETENTION_INDEX,
+} from "../ddl.js";
 import { createSqlitePersistence } from "../persistence.js";
 
 const tempDirs: string[] = [];
@@ -135,6 +146,7 @@ describe("createSqlitePersistence", () => {
       "005_lifecycle_hold_quota",
       "006_agent_event_source",
       "007_agent_event_retention_index",
+      "008_session_version",
     ]);
     first.close();
 
@@ -211,7 +223,7 @@ describe("createSqlitePersistence", () => {
     db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
     db.exec("DROP INDEX prism_usage_session_scope_recorded_idx");
     assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
-    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 7);
+    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 8);
     db.close();
   });
 
@@ -518,6 +530,138 @@ describe("createSqlitePersistence", () => {
       RangeError,
     );
 
+    persistence.close();
+  });
+});
+
+describe("appendSession metadata CAS (008_session_version)", () => {
+  const record = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    tenantId: "cas-tenant",
+    userId: "cas-user",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    metadata: { note: "first" },
+    ...extra,
+  });
+
+  function persistenceWithAppend() {
+    const persistence = createSqlitePersistence({ filename: tempDbPath("cas") });
+    if (!persistence.appendSession) throw new Error("appendSession required");
+    return { persistence, appendSession: persistence.appendSession };
+  }
+
+  it("create-only expectedVersion 0 inserts once (version 1) and conflicts on duplicate", async () => {
+    const { persistence, appendSession } = persistenceWithAppend();
+    const created = await appendSession(record("cas-1", { expectedVersion: 0 }));
+    assert.deepEqual(created, { version: 1 });
+    await assert.rejects(appendSession(record("cas-1", { expectedVersion: 0, metadata: { note: "second" } })), (error: unknown) => {
+      assert.equal((error as { code?: string }).code, "metadata_conflict");
+      assert.equal((error as { conflict?: { currentVersion?: number } }).conflict?.currentVersion, 1);
+      return true;
+    });
+    // The duplicate create did not overwrite the winner's metadata.
+    const page = await persistence.querySessions({ id: "cas-1" });
+    const meta = page.items[0]?.metadata;
+    assert.equal((meta as { note?: string } | undefined)?.note, "first");
+    assert.equal(page.items[0]?.version, 1);
+    persistence.close();
+  });
+
+  it("expectedVersion N requires the exact current version and never resurrects a deleted row", async () => {
+    const { persistence, appendSession } = persistenceWithAppend();
+    await appendSession(record("cas-2"));
+    assert.deepEqual(await appendSession(record("cas-2", { expectedVersion: 1, metadata: { note: "second" } })), {
+      version: 2,
+    });
+    // Stale expected version is rejected with the current version in the conflict.
+    await assert.rejects(
+      appendSession(record("cas-2", { expectedVersion: 1, metadata: { note: "stale" } })),
+      (error: unknown) => (error as { conflict?: { currentVersion?: number } }).conflict?.currentVersion === 2,
+    );
+    assert.deepEqual(await appendSession(record("cas-2", { expectedVersion: 2, metadata: { note: "third" } })), {
+      version: 3,
+    });
+    // Deleted row + positive expectedVersion = conflict, never a re-created row.
+    await persistence.lifecycle?.applyRetention({
+      policy: { id: "p", name: "p", createdAt: "1970-01-01T00:00:00.000Z" },
+      candidates: ["cas-2"],
+      tenantId: "cas-tenant",
+      userId: "cas-user",
+    });
+    await assert.rejects(
+      appendSession(record("cas-2", { expectedVersion: 3, metadata: { note: "zombie" } })),
+      (error: unknown) => (error as { conflict?: { currentVersion?: number } }).conflict?.currentVersion === 0,
+    );
+    assert.equal((await persistence.querySessions({ id: "cas-2" })).items.length, 0);
+    persistence.close();
+  });
+
+  it("legacy callers without expectedVersion keep last-write-wins and bump the version", async () => {
+    const { persistence, appendSession } = persistenceWithAppend();
+    await appendSession(record("cas-3"));
+    await appendSession(record("cas-3", { metadata: { note: "legacy-overwrite" }, userId: undefined }));
+    const page = await persistence.querySessions({ id: "cas-3" });
+    const meta = page.items[0]?.metadata;
+    assert.equal((meta as { note?: string } | undefined)?.note, "legacy-overwrite");
+    assert.equal(page.items[0]?.version, 2);
+    persistence.close();
+  });
+
+  it("rejects a cross-ownership CAS write before the version guard", async () => {
+    const { persistence, appendSession } = persistenceWithAppend();
+    await appendSession(record("cas-4"));
+    await assert.rejects(
+      appendSession(record("cas-4", { tenantId: "other-tenant", expectedVersion: 1, metadata: { note: "stolen" } })),
+      (error: unknown) => (error as { code?: string }).code === "metadata_conflict",
+    );
+    const page = await persistence.querySessions({ id: "cas-4" });
+    const meta = page.items[0]?.metadata;
+    assert.equal((meta as { note?: string } | undefined)?.note, "first");
+    persistence.close();
+  });
+
+  it("legacy pre-0.2.2 rows are backfilled to version 1 so branch/archive CAS works on them", async () => {
+    const filename = tempDbPath("cas-legacy-upgrade");
+    const raw = new Database(filename);
+    // Apply migrations 001-007 only (the pre-0.2.2 schema) and record their checksummed history.
+    const steps = createPersistenceMigrationContract().steps.slice(0, 7);
+    for (const step of steps) {
+      const ddl =
+        step.name === "001_init"
+          ? MIGRATION_001_INIT
+          : step.name === "002_usage_scope"
+            ? MIGRATION_002_USAGE_SCOPE
+            : step.name === "003_run_feedback"
+              ? MIGRATION_003_RUN_FEEDBACK
+              : step.name === "004_session_search"
+                ? MIGRATION_004_SESSION_SEARCH
+                : step.name === "005_lifecycle_hold_quota"
+                  ? MIGRATION_005_LIFECYCLE_HOLD_QUOTA
+                  : step.name === "006_agent_event_source"
+                    ? MIGRATION_006_AGENT_EVENT_SOURCE
+                    : MIGRATION_007_AGENT_EVENT_RETENTION_INDEX;
+      raw.exec(ddl);
+      raw
+        .prepare("INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum) VALUES (?, ?, ?, ?, ?, ?)")
+        .run(randomUUID(), step.name, String(step.version), new Date(Date.now() + step.version).toISOString(), "test", step.checksum);
+    }
+    raw
+      .prepare("INSERT INTO prism_sessions (id, tenant_id, user_id, created_at, updated_at, metadata) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(
+        "cas-5",
+        "cas-tenant",
+        "cas-user",
+        "2026-01-01T00:00:00.000Z",
+        "2026-01-01T00:00:00.000Z",
+        '{"prismConversation": {"state": "active"}}',
+      );
+    raw.close();
+    // Reopen: migration 008 applies, backfilling the legacy row to version 1.
+    const persistence = createSqlitePersistence({ filename });
+    if (!persistence.appendSession) throw new Error("appendSession required");
+    const bumped = await persistence.appendSession(record("cas-5", { expectedVersion: 1, metadata: { note: "branched" } }));
+    assert.deepEqual(bumped, { version: 2 });
     persistence.close();
   });
 });

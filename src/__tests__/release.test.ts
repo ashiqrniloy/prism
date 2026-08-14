@@ -32,7 +32,7 @@ function fixture() {
 const missing = async () => new Response("not found", { status: 404 });
 
 test("0.2.0 release graph is exact, publishable, and documented", () => {
-  const version = "0.2.1";
+  const version = "0.2.2";
   const release = loadRelease(process.cwd());
   // 50 = root + 49 workspace packages (the 0.1.6 plan 018 optional @arnilo/prism-document-reader
   // grew the graph 49 → 50; 0.2.0 adds no package).

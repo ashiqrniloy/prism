@@ -4,7 +4,13 @@ import { describe, it } from "node:test";
 import type { Pool } from "pg";
 import { createEnterpriseStateCleanup } from "../cleanup.js";
 import { decodeBoundedJson, encodeBoundedJson } from "../codecs.js";
-import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl, buildEnterpriseMigration002Ddl } from "../ddl.js";
+import {
+  ENTERPRISE_INDEX_NAMES,
+  ENTERPRISE_TABLE_NAMES,
+  buildEnterpriseMigration001Ddl,
+  buildEnterpriseMigration002Ddl,
+  buildEnterpriseMigration003Ddl,
+} from "../ddl.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
 import {
@@ -18,6 +24,7 @@ import { applyEnterpriseMigrations, assertEnterpriseMigrationHistory } from "../
 
 const migrationChecksum = createHash("sha256").update(buildEnterpriseMigration001Ddl("prism"), "utf8").digest("hex");
 const toolEffectsMigrationChecksum = createHash("sha256").update(buildEnterpriseMigration002Ddl("prism"), "utf8").digest("hex");
+const reservationsMigrationChecksum = createHash("sha256").update(buildEnterpriseMigration003Ddl("prism"), "utf8").digest("hex");
 
 describe("enterprise PostgreSQL package", () => {
   it("has inert public import and strict identifier/config validation", async () => {
@@ -32,7 +39,7 @@ describe("enterprise PostgreSQL package", () => {
   });
 
   it("declares every fixed table/index and canonical migration checksum", () => {
-    const ddl = `${buildEnterpriseMigration001Ddl("prism")}\n${buildEnterpriseMigration002Ddl("prism")}`;
+    const ddl = `${buildEnterpriseMigration001Ddl("prism")}\n${buildEnterpriseMigration002Ddl("prism")}\n${buildEnterpriseMigration003Ddl("prism")}`;
     for (const table of ENTERPRISE_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"\\."${table}"`));
     }
@@ -42,6 +49,11 @@ describe("enterprise PostgreSQL package", () => {
     assert.match(ddl, /user_key TEXT NOT NULL/);
     assert.equal(migrationChecksum.length, 64);
     assert.equal(toolEffectsMigrationChecksum.length, 64);
+    assert.equal(reservationsMigrationChecksum.length, 64);
+    assert.match(
+      ddl,
+      /ALTER TABLE "prism"\."prism_model_router_budgets"\n  ADD COLUMN IF NOT EXISTS reservations JSONB NOT NULL DEFAULT '\[\]'::jsonb;/,
+    );
     assert.throws(
       () => assertEnterpriseMigrationHistory([{ name: "001_enterprise_state", version: "1", checksum: "wrong" }]),
       (error: unknown) => error instanceof EnterprisePostgresError && error.code === "ERR_PRISM_ENTERPRISE_POSTGRES_MIGRATION",
@@ -53,6 +65,7 @@ describe("enterprise PostgreSQL package", () => {
       assertEnterpriseMigrationHistory([
         { name: "001_enterprise_state", version: "1", checksum: migrationChecksum },
         { name: "002_tool_effects", version: "2", checksum: toolEffectsMigrationChecksum },
+        { name: "003_router_reservations", version: "3", checksum: reservationsMigrationChecksum },
       ]),
     );
     assert.throws(() => assertEnterpriseMigrationHistory([{ name: "unknown", version: "1", checksum: migrationChecksum }]));

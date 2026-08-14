@@ -1,0 +1,145 @@
+{
+  "$comment": "Phase 22 (0.2.2) Task 6 exit-gate evidence, completed 2026-08-13 after Tasks 0-5 passed at HEAD 7aa4684 (Release 0.2.1 tag state). All figures are fresh verified runs in this session at the 0.2.2 working-tree state (bump applied, compat baselines refreshed, docs finalized). exitGate green records the full evidence surface below; any missing phase-22 item evidence would make green false.",
+  "captured": "2026-08-13T00:00:00.000Z",
+  "release": "0.2.2",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "gitHead": null,
+  "npmTest": {
+    "command": "npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<phase gates incl. phase21-freeze> && npm run test --workspaces --if-present)",
+    "exitCode": 0,
+    "coreTests": 1506,
+    "corePass": 1506,
+    "coreFail": 0,
+    "scriptGates": 255,
+    "scriptGatesPass": 255,
+    "scriptGatesFail": 0,
+    "workspaceTests": 1719,
+    "workspacePass": 1686,
+    "workspaceSkip": 33,
+    "workspaceFail": 0,
+    "totals": {
+      "tests": 3480,
+      "pass": 3447,
+      "skip": 33,
+      "fail": 0
+    },
+    "note": "33 skips are protected/live skips (same set as 0.2.1); phase21-freeze done-phase 24/24; phase22 adds the packed security22 consumer assertion and the phase22-security/threat suites live in security:threat-suites"
+  },
+  "coverage": {
+    "core": {
+      "lines": 90.49,
+      "branches": 84.19,
+      "functions": 90.55
+    },
+    "gate": "60/70/75 core gate passed (exit 0) in sdk:ready",
+    "note": "core lines dropped 91.95 -> 90.49 from the 0.2.2 additions; gate threshold unaffected"
+  },
+  "threatSuites": {
+    "suites": 47,
+    "pass": 47,
+    "fail": 0,
+    "note": "security:threat-suites = phase8-11 + phase20 + phase21 + phase22 (phase22: 4 blockers + gate accounting, built public entrypoints)"
+  },
+  "packDryRun": {
+    "deterministic": true,
+    "packages": 50,
+    "runSha256": "7b5ae5dd4dbb37741f489ec4585365168586cf04b94d6e3cfa6ef1b54a533eaf",
+    "note": "two standalone runs byte-identical (diff empty); sha256 of the pack dry-run log"
+  },
+  "releaseGate": {
+    "version": "0.2.2",
+    "packages": 50,
+    "errors": 0,
+    "breakingDeltas": 0,
+    "note": "plain reviewed gate at 0.2.2 before --update-baseline showed ONLY additive deltas (see compatDeltas); --update-baseline applied; plain gate green after refresh; no --allow-break"
+  },
+  "node20": {
+    "version": "v20.20.2",
+    "packedImports": "24/24",
+    "note": "node20-compat CI job reproduction: npm run build then import every package.json exports default target with node v20.20.2"
+  },
+  "protectedEvidence": {
+    "oidcOpa": "inherited from phase21 (Microsoft AAD JWKS live probe + dockerized OPA fail-closed ssrf_denied); the release workflow re-runs it in CI",
+    "natsRestartDurable": "event-source.test.js 13/13 (restart-stable name + crash-resume from last ack), phase22-security T4, packed security22.mjs consumer",
+    "durableConformance": "test:postgres 91/91 including prism_phase22_* schema legs (sessions/checkpoints/events + enterprise router reservations/idempotency); phase22-conformance gate BLOCKED-policy verified",
+    "note": "OIDC/OPA live probes can never be skips; durable legs recorded as protected evidence with PRISM_TEST_POSTGRES_URL present (dockerized PG)"
+  },
+  "phase22Security": {
+    "blockers": [
+      "budget-reservation",
+      "conversation-metadata-cas",
+      "single-consumer",
+      "nats-durable"
+    ],
+    "packedConsumer": "security22.mjs in install-smoke (9/9 suite; plain node, no TS compiler)",
+    "note": "all four blockers asserted through built public entrypoints and the packed plain-JS consumer"
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "note": "npm run build + workspaces + examples tsc --noEmit"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 75,
+    "exitCode": 0,
+    "note": "warnings are pre-existing FIXABLE useTemplate infos carried from 0.2.1; one new error class fixed in sqlite-persistence.test.ts (noUnsafeOptionalChaining x3); biome.json deserialize DEPRECATED deferred to 0.2.3"
+  },
+  "format": {
+    "exitCode": 0,
+    "note": "biome format --write fixed 17 files (0.2.2 edits); format:check clean"
+  },
+  "testPostgres": {
+    "tests": 91,
+    "pass": 91,
+    "fail": 0,
+    "note": "session-store-postgres + memory + enterprise-postgres dist+integration suites + phase7 + phase12 + phase22-conformance against dockerized postgres:16-alpine on 127.0.0.1:54329"
+  },
+  "audit": {
+    "moderateOrHigher": 0
+  },
+  "secrets": {
+    "files": 1527,
+    "findings": 0,
+    "command": "git ls-files -z | xargs -0 node scripts/scan-secrets.mjs"
+  },
+  "compatDeltas": [
+    "version literal 0.2.1 -> 0.2.2",
+    "PERSISTENCE_SCHEMA_VERSION 7 -> 8",
+    "EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE + EventMultiplexerError (core)",
+    "ModelRouterStateStore reserveBudget/commitBudget/releaseBudget + ModelRouterReservation + ModelRouterBudgets.reservationTtlMs + ModelRouterLimits maxRateKeys/maxBudgetKeys (@arnilo/prism-model-router)",
+    "SessionRecord.version + appendSession expectedVersion (core)",
+    "buildMigration008Ddl + MIGRATION_008_SESSION_VERSION (session-store-postgres)",
+    "buildEnterpriseMigration003Ddl (enterprise-postgres)",
+    "ActiveWorkflowRun.startedAt + ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE + MAX_ACTIVE_WORKFLOW_RUNS + sweepActiveWorkflowRuns (@arnilo/prism-workflows)",
+    "./testing/state-concurrency-conformance subpath (core package.json exports)"
+  ],
+  "sdkReady": {
+    "exitCode": 0,
+    "note": "npm run sdk:ready composite green: typecheck + lint + format:check + npm test + test:coverage + pack:dry-run + release:gate"
+  },
+  "exitGate": {
+    "green": true,
+    "command": "npm test && npm run security:threat-suites && PRISM_TEST_POSTGRES_URL=... npm run test:postgres && npm run sdk:ready && npm audit --audit-level=moderate && git ls-files -z | xargs -0 node scripts/scan-secrets.mjs && npm run pack:dry-run (x2, byte-identical) && node scripts/release.mjs gate --version 0.2.2 && node20 v20.20.2 packed exports imports",
+    "version": "0.2.2",
+    "platform": "linux",
+    "counts": {
+      "npmTest": "3480 tests / 3447 pass / 33 skip / 0 fail",
+      "scriptGates": "255/255",
+      "threatSuites": "47/47",
+      "testPostgres": "91/91",
+      "coreCoverage": "90.49/84.19/90.55 (gate 60/70/75)",
+      "packDryRun": "50 packages deterministic (sha256 7b5ae5dd...)",
+      "releaseGate": "0.2.2 50 packages 0 errors 0 breaking deltas",
+      "node20": "24/24 exports imports"
+    },
+    "protected": {
+      "oidcOpa": "phase21 live evidence inherited; CI re-runs",
+      "natsRestartDurable": "present (13/13 + T4 + packed consumer)",
+      "durableConformance": "present (91/91 with prism_phase22_* schemas)"
+    },
+    "compat": "additive-only reviewed; no removal; no --allow-break",
+    "freeze": "phase21-freeze done-phase 24/24; phase22-freeze-manifest tasks 0-6 done",
+    "blocked": false
+  }
+}

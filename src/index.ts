@@ -227,6 +227,7 @@ export {
   HARD_MAX_STICKY_DECISIONS,
   isSessionAppendConflict,
   isSessionEntryKind,
+  isSessionMetadataConflict,
   isSessionSearchUnsupported,
   MAX_ACTION_CONSTRAINT_BYTES,
   MAX_ACTION_CONSTRAINTS,
@@ -237,9 +238,11 @@ export {
   SESSION_APPEND_CONFLICT_CODE,
   SESSION_ENTRY_KINDS,
   SESSION_ENTRY_SCHEMA_VERSION,
+  SESSION_METADATA_CONFLICT_CODE,
   SESSION_SEARCH_UNSUPPORTED_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SessionAppendConflictError,
+  SessionMetadataConflictError,
   SessionSearchUnsupportedError,
 } from "./contracts.js";
 export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
@@ -300,7 +303,7 @@ export {
   runDevicePolicyConformance,
 } from "./devices.js";
 export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
-export { createEventMultiplexer } from "./event-multiplexer.js";
+export { createEventMultiplexer, EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE, EventMultiplexerError } from "./event-multiplexer.js";
 export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
 export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
 export type {
@@ -597,5 +600,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.2.1";
+export const version = "0.2.2";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

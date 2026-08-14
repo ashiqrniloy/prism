@@ -20,6 +20,7 @@ import {
   MIGRATION_005_LIFECYCLE_HOLD_QUOTA,
   MIGRATION_006_AGENT_EVENT_SOURCE,
   MIGRATION_007_AGENT_EVENT_RETENTION_INDEX,
+  MIGRATION_008_SESSION_VERSION,
 } from "./ddl.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
@@ -49,6 +50,7 @@ export function applySqliteMigrations(db: Database.Database): readonly AppliedPe
       else if (step.name === "005_lifecycle_hold_quota") db.exec(MIGRATION_005_LIFECYCLE_HOLD_QUOTA);
       else if (step.name === "006_agent_event_source") db.exec(MIGRATION_006_AGENT_EVENT_SOURCE);
       else if (step.name === "007_agent_event_retention_index") db.exec(MIGRATION_007_AGENT_EVENT_RETENTION_INDEX);
+      else if (step.name === "008_session_version") db.exec(MIGRATION_008_SESSION_VERSION);
       else throw new Error(`Unknown migration step: ${step.name}`);
       db.prepare(
         `INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum)

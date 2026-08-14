@@ -8,6 +8,7 @@ MIGRATION_004_SESSION_SEARCH	export declare const MIGRATION_004_SESSION_SEARCH =
 MIGRATION_005_LIFECYCLE_HOLD_QUOTA	export declare const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = "\nCREATE TABLE IF NOT EXISTS prism_legal_holds (\n id TEXT NOT NULL PRIMARY KEY,\n tenant_id TEXT,\n account_id TEXT,\n user_id TEXT,\n resource_kind TEXT NOT NULL,\n resource_id TEXT NOT NULL,\n reason TEXT NOT NULL,\n created_at TEXT NOT NULL,\n created_by TEXT,\n metadata TEXT\n)
 MIGRATION_006_AGENT_EVENT_SOURCE	export declare const MIGRATION_006_AGENT_EVENT_SOURCE = "\nCREATE TABLE IF NOT EXISTS prism_agent_event_streams (\n session_id TEXT NOT NULL,\n run_id TEXT NOT NULL,\n next_sequence INTEGER NOT NULL,\n updated_at TEXT NOT NULL,\n PRIMARY KEY (session_id, run_id),\n FOREIGN KEY (session_id) REFERENCES prism_sessions(id)\n)
 MIGRATION_007_AGENT_EVENT_RETENTION_INDEX	export declare const MIGRATION_007_AGENT_EVENT_RETENTION_INDEX = "\nCREATE INDEX IF NOT EXISTS prism_agent_events_owner_timestamp_sequence_idx\n ON prism_agent_events (tenant_id, account_id, user_id, timestamp, sequence, id)\n WHERE redacted = 1
+MIGRATION_008_SESSION_VERSION	export declare const MIGRATION_008_SESSION_VERSION = "\nALTER TABLE prism_sessions ADD COLUMN version INTEGER NOT NULL DEFAULT 0
 SqlitePersistence	export type { SqlitePersistence } from "./persistence.js"
 SqlitePersistenceOptions	export type { SqlitePersistenceOptions } from "./types.js"
 applySqliteMigrations	export declare function applySqliteMigrations(db: Database.Database): readonly AppliedPersistenceMigration[]

@@ -74,9 +74,12 @@ export interface ClosableNatsAgentEventSource extends AgentEventSource {
  * idempotent by `record.id` within the stream's dedupe window (`Nats-Msg-Id`);
  * `page`/`subscribe` replay per subject from an HMAC-signed cursor;
  * `subscribe` uses a durable pull consumer with explicit acks (at-least-once,
- * redelivery after `ack_wait`); `cleanup` enumerates the session prefix and
- * deletes messages older than `before`. Ownership scoping matches the
- * Postgres source: tenant in the subject, account/user enforced at read time.
+ * redelivery after `ack_wait`) and a restart-stable durable name
+ * (`prism_<hmac16>` of `tenantId|sessionId|runId`), so a crashed consumer is
+ * reused at its last-acked position instead of minting a fresh one;
+ * `cleanup` enumerates the session prefix and deletes messages older than
+ * `before`. Ownership scoping matches the Postgres source: tenant in the
+ * subject, account/user enforced at read time.
  */
 export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions): ClosableNatsAgentEventSource {
   if (!options || typeof options !== "object") throw inputError();
@@ -84,6 +87,7 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
   const limits = resolveLimits(options.limits ?? {});
   const cursorSecret = resolveCursorSecret(options.cursorSecret);
   const activeSubscribers = new Set<AsyncGenerator<AgentEventEnvelope>>();
+  const subscriberStops = new Map<AsyncGenerator<AgentEventEnvelope>, AbortController>();
   let closed = false;
 
   const source: ClosableNatsAgentEventSource = {
@@ -141,8 +145,13 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
       assertOpen();
       const read = normalizeRead(input, limits.maxPageSize);
       if (activeSubscribers.size >= limits.maxSubscribers) throw overflowError();
-      const generator = subscribe(read, () => activeSubscribers.delete(generator));
+      // Source-owned stop signal: close() aborts it so a subscriber parked mid-fetch
+      // terminates (its generator throws at the next loop check) instead of leaving
+      // `return()` queued behind a never-yielding await forever.
+      const stop = new AbortController();
+      const generator = subscribe(read, () => activeSubscribers.delete(generator), stop.signal);
       activeSubscribers.add(generator);
+      subscriberStops.set(generator, stop);
       return {
         [Symbol.asyncIterator]() {
           return generator;
@@ -189,6 +198,10 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
     async close() {
       if (closed) return;
       closed = true;
+      // Abort first so each parked generator terminates at its next loop check
+      // (bounded by one `pollIntervalMs`); then `return()` completes instead of
+      // hanging behind the pending fetch.
+      for (const stop of subscriberStops.values()) stop.abort();
       for (const generator of activeSubscribers) {
         try {
           await generator.return(undefined);
@@ -197,12 +210,14 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
         }
       }
       activeSubscribers.clear();
+      subscriberStops.clear();
     },
   };
 
   return source;
 
-  async function* subscribe(read: NormalizedRead, onDone: () => void): AsyncGenerator<AgentEventEnvelope> {
+  async function* subscribe(read: NormalizedRead, onDone: () => void, stopSignal: AbortSignal): AsyncGenerator<AgentEventEnvelope> {
+    const signal = read.signal ? AbortSignal.any([read.signal, stopSignal]) : stopSignal;
     const seen = new Set<string>();
     const after = read.after === undefined ? undefined : await readCursor(read.after, read);
     const startSeq = after === undefined ? 1 : after.sequence + 1;
@@ -211,7 +226,7 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
     const consumer = await createConsumer(name, subject, "explicit", startSeq);
     try {
       while (true) {
-        throwIfAborted(read.signal);
+        throwIfAborted(signal);
         const messages = await consumer.fetch({
           max_messages: Math.min(read.limit, limits.maxPageSize, limits.maxQueuedEvents),
           expires: limits.pollIntervalMs,
@@ -445,11 +460,15 @@ function token(value: string, name: string): string {
 }
 
 function durableName(read: NormalizedRead): string {
+  // Restart-stable durable identity (0.2.2): no random suffix, so a crash leaves a
+  // consumer that a restarting subscribe reuses at its last-acked position. Orphaned
+  // pre-0.2.2 random-suffixed consumers (`prism_<digest>_<random>`) are reclaimed by
+  // hosts via `deleteConsumer`/consumer enumeration outside this narrow seam.
   const digest = createHmac("sha256", "prism-nats-consumer")
     .update(`${read.ownership.tenantId}|${read.sessionId}|${read.runId}`)
     .digest("hex")
     .slice(0, 16);
-  return `prism_${digest}_${randomBytes(4).toString("hex")}`;
+  return `prism_${digest}`;
 }
 
 function ephemeralName(kind: "page" | "cleanup"): string {

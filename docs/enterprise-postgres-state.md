@@ -13,7 +13,7 @@
 | Tool effects | `toolEffects` | Durable `ToolEffectStore` claim/CAS for recoverable tool side effects (migration 002). |
 | Tool effects | `toolEffects` | Durable `ToolEffectStore` claim/CAS for recoverable tool side effects (migration 002). |
 
-`createPostgresEnterpriseState()` opens a host-supplied or adapter-owned `pg` pool, verifies/applies checksum-protected enterprise migrations (`001_enterprise_state`, `002_tool_effects`), and returns those stores plus explicit cleanup and close operations. Importing it performs no I/O. It is separate from session/run persistence in [`@arnilo/prism-session-store-postgres`](postgres-persistence.md).
+`createPostgresEnterpriseState()` opens a host-supplied or adapter-owned `pg` pool, verifies/applies checksum-protected enterprise migrations (`001_enterprise_state`, `002_tool_effects`, `003_router_reservations`), and returns those stores plus explicit cleanup and close operations. Importing it performs no I/O. It is separate from session/run persistence in [`@arnilo/prism-session-store-postgres`](postgres-persistence.md).
 
 ## When to use it
 
@@ -85,7 +85,7 @@ Model-router state is asynchronous and owner/principal/provider/model scoped. Su
 }
 ```
 
-A migration creates `prism_policy_decisions`, `prism_evaluations`, `prism_work_idempotency`, three `prism_model_router_*` tables, and its separate `prism_enterprise_migrations` history. Startup serializes per-schema setup with an advisory transaction lock and rejects checksum or catalog drift rather than silently repairing it.
+A migration creates `prism_policy_decisions`, `prism_evaluations`, `prism_work_idempotency`, three `prism_model_router_*` tables, and its separate `prism_enterprise_migrations` history. Migration `003_router_reservations` adds the nullable-by-default `reservations` JSONB column to `prism_model_router_budgets` (atomic reservation slots for router admission; 0.2.1 readers ignore it). Startup serializes per-schema setup with an advisory transaction lock and rejects checksum or catalog drift rather than silently repairing it.
 
 ## Implementation example
 
@@ -152,7 +152,8 @@ export async function recordEnterpriseState(state: PostgresEnterpriseState) {
 
 ## Extension and configuration notes
 
-- `createModelRouter({ resolver, stateStore: state.modelRouter })` keeps allow-list, residency, fallback, and diagnostics behavior in `@arnilo/prism-model-router`; this package only supplies durable state.
+- `createModelRouter({ resolver, stateStore: state.modelRouter })` keeps allow-list, residency, fallback, and diagnostics behavior in `@arnilo/prism-model-router`; this package only supplies durable state. Router admission reservations (`reserveBudget`/`commitBudget`/`releaseBudget` on `state.modelRouter`) live in the `reservations` JSONB column of `prism_model_router_budgets`: one atomic UPSERT per admission, fencing-token-guarded commit/release in a SERIALIZABLE transaction, and TTL reconciliation as unknown usage; see [Model routing](model-routing.md).
+- Rate/budget/circuit tables are capped like the memory store: `consumeRate`/`readBudget`/`addUsage`/`reserveBudget` accept `maxRateKeys`/`maxBudgetKeys` (the router passes its resolved limits) and evict the least-recently-used row on new-key insert — never the row just inserted, never a budget row holding an active reservation — else fail closed with `ERR_PRISM_MODEL_ROUTER_STATE`. Cleanup prunes expired reservations within its bounded batch.
 - Policy/evaluation/query public contracts stay in their owning packages. This package exports only `createPostgresEnterpriseState`, its options/result types, and `EnterprisePostgresError`; it has no SQL, DDL, codec, queryable, or migration subpath.
 - The fixed schema has no generic key/value table and no background cleanup scheduler. Schedule `state.cleanup()` from an authorized host job, size its bounded batch for the deployment, and monitor unknown work rows for reconciliation. Run protected integration checks with `PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres`; the command rejects an absent URL instead of silently skipping database coverage.
 - The OPA adapter (`@arnilo/prism-policy/opa`, 0.0.28) records decisions into the same `state.policy` store unchanged via `evaluateAndAppend` — see [Policy and audit](policy-and-audit.md#opa-external-policy-adapter-arniloprism-policyopa-008).

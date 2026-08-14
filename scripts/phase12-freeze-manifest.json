@@ -49,7 +49,7 @@
       ],
       "ciImage": "pgvector/pgvector:pg16",
       "driver": "pg@^8.22.0",
-      "schemaVersion": 7,
+      "schemaVersion": 8,
       "extensions": [
         "pgvector (required by @arnilo/prism-memory path only)"
       ]

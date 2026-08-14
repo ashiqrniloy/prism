@@ -262,7 +262,8 @@ runRpcServer({
 
 - Workflow semantics stay in this optional package; generic checkpoint persistence and bounded event fan-in live in core.
 - `ProductionPersistenceStore.checkpoints` and `.leases` are optional generic capabilities. First-party SQLite/PostgreSQL adapters own `prism_checkpoints` / `prism_leases`; workflows only adapt them.
-- `createWorkflowEventBus()` delegates queueing, source fan-in, overflow, abort, and close behavior to core `createEventMultiplexer()`.
+- `createWorkflowEventBus()` delegates queueing, source fan-in, overflow, abort, and close behavior to core `createEventMultiplexer()`, including its single-consumer contract: a second concurrent `subscribe()` is rejected with `EventMultiplexerError` (`ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER`) instead of silently splitting the stream.
+- The in-process active-run registry (`registerActiveWorkflowRun` / `getActiveWorkflowRun` / `abortActiveWorkflowRun`) is **non-durable, in-process only — it does not survive restart**; durable active-run recovery is a later milestone. It is bounded: every register sweeps aborted/leaked entries (runs whose promise never settled) and the registry fails closed at `MAX_ACTIVE_WORKFLOW_RUNS` (512) rather than evicting a live run; `sweepActiveWorkflowRuns()` is available for hosts. Cross-tenant lookups stay ownership-isolated.
 - `createWorkflowCommands()` is optional; hosts can drive `workflow.start` / `enqueue` / `replay` / `status` / `list` / `cancel` / `resume`. The six `schedule.*` commands appear only when a scoped `schedules` service is supplied.
 - Hosts may bridge `WorkflowEvent` into OpenTelemetry or custom sinks; there is no built-in TUI.
 - Agent exclusivity is per session: one active `run()` at a time, same as core.

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-provider-ollama",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Ollama Cloud provider package for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.1"
+    "@arnilo/prism": "0.2.2"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

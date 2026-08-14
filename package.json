@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,6 +33,10 @@
     "./testing/agent-event-source-conformance": {
       "types": "./dist/testing/agent-event-source-conformance.d.ts",
       "default": "./dist/testing/agent-event-source-conformance.js"
+    },
+    "./testing/state-concurrency-conformance": {
+      "types": "./dist/testing/state-concurrency-conformance.d.ts",
+      "default": "./dist/testing/state-concurrency-conformance.js"
     },
     "./testing/session-store-conformance": {
       "types": "./dist/testing/session-store-conformance.d.ts",
@@ -150,13 +154,13 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "pack:dry-run": "npm pack --dry-run && npm run pack:dry-run --workspaces --if-present",
-    "test:postgres": "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs",
+    "test:postgres": "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
     "release:dry-run": "npm run sdk:ready",
     "release:check": "node scripts/release.mjs check",
     "release:publish": "node scripts/release.mjs publish",
     "sdk:ready": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run test:coverage && npm run pack:dry-run && npm run release:gate",
     "release:gate": "node scripts/release.mjs gate",
-    "security:threat-suites": "node --test scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase20-security.test.mjs scripts/phase21-security.test.mjs"
+    "security:threat-suites": "node --test scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase20-security.test.mjs scripts/phase21-security.test.mjs scripts/phase22-security.test.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",

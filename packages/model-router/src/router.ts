@@ -22,9 +22,16 @@ import type {
 } from "./types.js";
 
 const DEFAULT_BUDGET_WINDOW_MS = 24 * 60 * 60_000;
+const DEFAULT_RESERVATION_TTL_MS = 60_000;
 const HARD_BUDGET_WINDOW_MS = 31 * 24 * 60 * 60_000;
 const MAX_STATE_INTEGER = 2_147_483_647;
 const MEMORY_OWNER: ModelRouterStateOwner = { tenantId: "__prism_memory__", principalId: "__prism_memory__" };
+
+interface BudgetReservation {
+  readonly key: ModelRouterStateKey;
+  readonly reservationId: string;
+  readonly fencingToken: string;
+}
 
 function modelKey(model: Pick<ModelConfig, "provider" | "model">): string {
   return `${model.provider}/${model.model}`;
@@ -133,6 +140,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
   const failureThreshold = options.circuit?.failureThreshold ?? DEFAULT_CIRCUIT_FAILURE_THRESHOLD;
   const coolDownMs = options.circuit?.coolDownMs ?? DEFAULT_CIRCUIT_COOLDOWN_MS;
   const budgetWindowMs = resolveBudgetWindow(options.budgets?.windowMs);
+  const budgetReservationTtlMs = resolveReservationTtl(options.budgets?.reservationTtlMs);
   const stateStore = options.stateStore ?? createMemoryModelRouterStateStore();
   const externalState = options.stateStore !== undefined;
   const openRouterPolicy = createOpenRouterGatePolicy(options.allowOpenRouterRouting === true);
@@ -210,27 +218,70 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
     }
   }
 
-  async function assertBudget(key: ModelRouterStateKey, request: ModelRouterResolveRequest, t: number): Promise<void> {
-    const maxTokens = request.maxTokens ?? options.budgets?.maxTokens;
-    const maxCost = request.maxCostUsd ?? options.budgets?.maxCostUsd;
-    if (maxTokens === undefined && maxCost === undefined) return;
-    if (maxTokens !== undefined && !(Number.isFinite(maxTokens) && maxTokens >= 0)) {
+  /**
+   * Budget admission. When the request carries a per-request cap, the full cap is
+   * reserved atomically against remaining capacity (fail-closed; a reservation
+   * pins its capacity until commit, release, or TTL expiry). Cap-less requests
+   * keep the 0.2.1 read-then-compare admission (no amount to reserve) and are
+   * documented as outside the reservation guarantee.
+   */
+  async function assertBudget(
+    key: ModelRouterStateKey,
+    request: ModelRouterResolveRequest,
+    t: number,
+  ): Promise<BudgetReservation | undefined> {
+    const requestMaxTokens = request.maxTokens;
+    const requestMaxCost = request.maxCostUsd;
+    const windowMaxTokens = options.budgets?.maxTokens;
+    const windowMaxCost = options.budgets?.maxCostUsd;
+    if (requestMaxTokens === undefined && requestMaxCost === undefined && windowMaxTokens === undefined && windowMaxCost === undefined) {
+      return undefined;
+    }
+    if (requestMaxTokens !== undefined && !(Number.isFinite(requestMaxTokens) && requestMaxTokens >= 0)) {
       throw new ModelRouterError("maxTokens must be finite non-negative", "ERR_PRISM_MODEL_ROUTER_BUDGET");
     }
-    if (maxCost !== undefined && !(Number.isFinite(maxCost) && maxCost >= 0)) {
+    if (requestMaxCost !== undefined && !(Number.isFinite(requestMaxCost) && requestMaxCost >= 0)) {
       throw new ModelRouterError("maxCostUsd must be finite non-negative", "ERR_PRISM_MODEL_ROUTER_BUDGET");
     }
-    const used = await state(() => stateStore.readBudget({ key, windowMs: budgetWindowMs, now: t }));
-    if (maxTokens !== undefined && used.tokens >= maxTokens)
+    // 0.2.1 semantics: a zero per-request cap always denies (used >= 0).
+    if (requestMaxTokens === 0) throw new ModelRouterError("token budget exhausted", "ERR_PRISM_MODEL_ROUTER_BUDGET");
+    if (requestMaxCost === 0) throw new ModelRouterError("cost budget exhausted", "ERR_PRISM_MODEL_ROUTER_BUDGET");
+    if (requestMaxTokens !== undefined || requestMaxCost !== undefined) {
+      const result = await state(() =>
+        stateStore.reserveBudget({
+          key,
+          // The window budget is the capacity bound; the request cap is the amount
+          // reserved (falling back to the request cap itself when no window budget
+          // is configured, matching the 0.2.1 used >= cap denial).
+          ...(requestMaxTokens === undefined ? {} : { maxTokens: windowMaxTokens ?? requestMaxTokens, tokens: requestMaxTokens }),
+          ...(requestMaxCost === undefined ? {} : { maxCostUsd: windowMaxCost ?? requestMaxCost, costUsd: requestMaxCost }),
+          windowMs: budgetWindowMs,
+          reservationTtlMs: budgetReservationTtlMs,
+          maxBudgetKeys: limits.maxBudgetKeys,
+          now: t,
+        }),
+      );
+      if (!result.admitted) {
+        throw new ModelRouterError("model budget exhausted; retry after capacity frees", "ERR_PRISM_MODEL_ROUTER_BUDGET", undefined, {
+          retryAfterMs: result.retryAfterMs ?? 1,
+        });
+      }
+      return { key, reservationId: result.reservationId!, fencingToken: result.fencingToken! };
+    }
+    const used = await state(() => stateStore.readBudget({ key, windowMs: budgetWindowMs, maxBudgetKeys: limits.maxBudgetKeys, now: t }));
+    if (windowMaxTokens !== undefined && used.tokens >= windowMaxTokens)
       throw new ModelRouterError("token budget exhausted", "ERR_PRISM_MODEL_ROUTER_BUDGET");
-    if (maxCost !== undefined && used.costUsd >= maxCost)
+    if (windowMaxCost !== undefined && used.costUsd >= windowMaxCost)
       throw new ModelRouterError("cost budget exhausted", "ERR_PRISM_MODEL_ROUTER_BUDGET");
+    return undefined;
   }
 
   async function assertRate(key: ModelRouterStateKey, t: number): Promise<void> {
     const cfg = options.rateLimit;
     if (!cfg) return;
-    const result = await state(() => stateStore.consumeRate({ key, maxRequests: cfg.maxRequests, windowMs: cfg.windowMs, now: t }));
+    const result = await state(() =>
+      stateStore.consumeRate({ key, maxRequests: cfg.maxRequests, windowMs: cfg.windowMs, maxRateKeys: limits.maxRateKeys, now: t }),
+    );
     if (!result.admitted) {
       throw new ModelRouterError(
         `rate limit exceeded; retry after ${result.retryAfterMs ?? 1}ms`,
@@ -241,6 +292,20 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
         },
       );
     }
+  }
+
+  /** Best-effort release: TTL expiry is the fail-closed backstop, so a failed release never blocks the deny path. */
+  async function releaseReservation(reservation: BudgetReservation | undefined): Promise<void> {
+    if (reservation === undefined) return;
+    await state(() =>
+      stateStore.releaseBudget({
+        key: reservation.key,
+        reservationId: reservation.reservationId,
+        fencingToken: reservation.fencingToken,
+        windowMs: budgetWindowMs,
+        now: now(),
+      }),
+    ).catch(() => undefined);
   }
 
   async function emit(diagnostics: ModelRouterDiagnostics): Promise<ModelRouterDiagnostics> {
@@ -271,12 +336,14 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
     for (const candidate of candidates) {
       request.signal?.throwIfAborted();
       const key = stateKey(request.identity, candidate.provider, candidate.model);
+      let reservation: BudgetReservation | undefined;
       try {
         assertAllowList(candidate);
         assertResidency(request.residency);
-        await assertBudget(key, request, t);
+        reservation = await assertBudget(key, request, t);
         await assertRate(key, t);
       } catch (error) {
+        await releaseReservation(reservation);
         if (!(error instanceof ModelRouterError)) throw error;
         const reason = denyReason(error.code);
         attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "denied", reason });
@@ -297,43 +364,53 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
         continue;
       }
 
-      const circuit = await state(() =>
-        stateStore.claimCircuitProbe({ key, failureThreshold, coolDownMs, maxKeys: limits.maxCircuitKeys, now: t }),
-      );
-      if (!circuit.admitted) {
-        attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "circuit_open", reason: "circuit_open" });
-        lastDeny = { reason: `circuit open: ${modelKey(candidate)}`, code: "ERR_PRISM_MODEL_ROUTER_CIRCUIT" };
-        continue;
-      }
+      try {
+        const circuit = await state(() =>
+          stateStore.claimCircuitProbe({ key, failureThreshold, coolDownMs, maxKeys: limits.maxCircuitKeys, now: t }),
+        );
+        if (!circuit.admitted) {
+          await releaseReservation(reservation);
+          attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "circuit_open", reason: "circuit_open" });
+          lastDeny = { reason: `circuit open: ${modelKey(candidate)}`, code: "ERR_PRISM_MODEL_ROUTER_CIRCUIT" };
+          continue;
+        }
 
-      const provider: AIProvider | undefined = options.resolver(candidate);
-      if (!provider) {
-        attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "miss", reason: "unknown_provider" });
-        lastDeny = { reason: `Unknown provider: ${candidate.provider}`, code: "ERR_PRISM_MODEL_ROUTER_UNKNOWN_PROVIDER" };
-        continue;
-      }
+        const provider: AIProvider | undefined = options.resolver(candidate);
+        if (!provider) {
+          await releaseReservation(reservation);
+          attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "miss", reason: "unknown_provider" });
+          lastDeny = { reason: `Unknown provider: ${candidate.provider}`, code: "ERR_PRISM_MODEL_ROUTER_UNKNOWN_PROVIDER" };
+          continue;
+        }
 
-      const honorOpenRouter = options.allowOpenRouterRouting === true;
-      const model = honorOpenRouter ? candidate : stripOpenRouterRouting(candidate);
-      attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "selected" });
-      const diagnostics = await emit({
-        outcome: "allow",
-        selectedProvider: candidate.provider,
-        selectedModel: candidate.model,
-        attempts,
-        identityRefs: identityRefs(request.identity),
-        residency: request.residency,
-        region: request.region,
-        openRouterRoutingHonored: honorOpenRouter && hasOpenRouterRouting(candidate),
-        ...(options.selection ? { selection: options.selection.name } : {}),
-      });
-      return {
-        provider,
-        model,
-        diagnostics,
-        ...(circuit.probeToken ? { circuitProbeToken: circuit.probeToken } : {}),
-        providerRequestPolicy: openRouterPolicy,
-      };
+        const honorOpenRouter = options.allowOpenRouterRouting === true;
+        const model = honorOpenRouter ? candidate : stripOpenRouterRouting(candidate);
+        attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "selected" });
+        const diagnostics = await emit({
+          outcome: "allow",
+          selectedProvider: candidate.provider,
+          selectedModel: candidate.model,
+          attempts,
+          identityRefs: identityRefs(request.identity),
+          residency: request.residency,
+          region: request.region,
+          openRouterRoutingHonored: honorOpenRouter && hasOpenRouterRouting(candidate),
+          ...(options.selection ? { selection: options.selection.name } : {}),
+        });
+        return {
+          provider,
+          model,
+          diagnostics,
+          ...(circuit.probeToken ? { circuitProbeToken: circuit.probeToken } : {}),
+          ...(reservation
+            ? { budgetReservation: { reservationId: reservation.reservationId, fencingToken: reservation.fencingToken } }
+            : {}),
+          providerRequestPolicy: openRouterPolicy,
+        };
+      } catch (error) {
+        await releaseReservation(reservation);
+        throw error;
+      }
     }
 
     const diagnostics = await emit({
@@ -371,12 +448,37 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
       if (input.costUsd !== undefined && !(Number.isFinite(input.costUsd) && input.costUsd >= 0)) {
         throw new ModelRouterError("costUsd must be finite non-negative", "ERR_PRISM_MODEL_ROUTER_BUDGET");
       }
+      const key = stateKey(input.identity, input.provider, input.model);
+      if (input.budgetReservation) {
+        const outcome = await state(() =>
+          stateStore.commitBudget({
+            key,
+            reservationId: input.budgetReservation!.reservationId,
+            fencingToken: input.budgetReservation!.fencingToken,
+            ...(input.tokens === undefined ? {} : { tokens: input.tokens }),
+            ...(input.costUsd === undefined ? {} : { costUsd: input.costUsd }),
+            windowMs: budgetWindowMs,
+            now: now(),
+          }),
+        );
+        if (outcome.unknownUsage) {
+          await emit({
+            outcome: "deny",
+            reason: "unknown_usage",
+            attempts: [],
+            identityRefs: identityRefs(input.identity),
+            openRouterRoutingHonored: false,
+          });
+        }
+        return;
+      }
       await state(() =>
         stateStore.addUsage({
-          key: stateKey(input.identity, input.provider, input.model),
+          key,
           tokens: input.tokens,
           costUsd: input.costUsd,
           windowMs: budgetWindowMs,
+          maxBudgetKeys: limits.maxBudgetKeys,
           now: now(),
         }),
       );
@@ -416,6 +518,14 @@ function resolveBudgetWindow(value: number | undefined): number {
     throw new ModelRouterError("budgets.windowMs must be a positive safe integer ≤ 31 days", "ERR_PRISM_MODEL_ROUTER_LIMITS");
   }
   return windowMs;
+}
+
+function resolveReservationTtl(value: number | undefined): number {
+  const ttlMs = value ?? DEFAULT_RESERVATION_TTL_MS;
+  if (!Number.isSafeInteger(ttlMs) || ttlMs < 1 || ttlMs > HARD_BUDGET_WINDOW_MS) {
+    throw new ModelRouterError("budgets.reservationTtlMs must be a positive safe integer ≤ 31 days", "ERR_PRISM_MODEL_ROUTER_LIMITS");
+  }
+  return ttlMs;
 }
 
 function denyReason(code: string): string {

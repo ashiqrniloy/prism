@@ -1,5 +1,16 @@
 export type EventOverflowPolicy = "close" | "drop_oldest" | "drop_newest";
 
+export const EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE = "ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER";
+
+/** Thrown when a second consumer subscribes while one is active (single-consumer contract). */
+export class EventMultiplexerError extends Error {
+  readonly code = EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE;
+  constructor(message = "Event multiplexer already has an active subscriber") {
+    super(message);
+    this.name = "EventMultiplexerError";
+  }
+}
+
 export interface EventOverflowInfo {
   readonly droppedEvents: number;
   readonly maxQueuedEvents: number;
@@ -17,6 +28,13 @@ export interface EventMultiplexerOptions<T> {
 export interface EventMultiplexer<T> {
   publish(event: T): void;
   observe<S>(source: AsyncIterable<S>, map: (event: S) => T): () => void;
+  /**
+   * Single-consumer subscription. A second concurrent subscriber is rejected with
+   * `EventMultiplexerError` (ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER); the slot
+   * frees when the active consumer's iterator completes or is `return()`ed at a
+   * yield, or when the multiplexer closes. A consumer parked awaiting an event is
+   * released by the next `publish`/`close` — `return()` while parked waits for it.
+   */
   subscribe(): AsyncIterable<T>;
   close(): void;
   readonly droppedEvents: number;
@@ -33,6 +51,9 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
   let isClosed = false;
   let droppedEvents = 0;
   let overflowNotified = false;
+  // Single-consumer contract: the parked-waiter design corrupts the queue when two
+  // consumers iterate concurrently, so a second active consumer is rejected instead.
+  let activeConsumer = false;
 
   const abort = () => close();
   if (options.signal?.aborted) isClosed = true;
@@ -129,6 +150,9 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
     options.signal?.removeEventListener("abort", abort);
     finishSources();
     queue.length = 0;
+    // Free the single-consumer slot: a consumer suspended at a yield may never pull
+    // again, and after close a fresh subscriber terminates immediately anyway.
+    activeConsumer = false;
     if (waiter) {
       const resolve = waiter;
       waiter = undefined;
@@ -137,19 +161,25 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
   }
 
   async function* subscribe(): AsyncGenerator<T> {
-    while (true) {
-      if (queue.length > 0) {
-        if (options.compare) queue.sort(options.compare);
-        yield queue.shift()!;
-        continue;
+    if (activeConsumer) throw new EventMultiplexerError();
+    activeConsumer = true;
+    try {
+      while (true) {
+        if (queue.length > 0) {
+          if (options.compare) queue.sort(options.compare);
+          yield queue.shift()!;
+          continue;
+        }
+        if (isClosed) return;
+        const next = await new Promise<IteratorResult<T>>((resolve) => {
+          waiter = resolve;
+        });
+        if (next.done) return;
+        if (next.value === (WAKE as T)) continue;
+        yield next.value;
       }
-      if (isClosed) return;
-      const next = await new Promise<IteratorResult<T>>((resolve) => {
-        waiter = resolve;
-      });
-      if (next.done) return;
-      if (next.value === (WAKE as T)) continue;
-      yield next.value;
+    } finally {
+      activeConsumer = false;
     }
   }
 

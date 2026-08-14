@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.2] - 2026-08-13
+
+### Changed
+- Restart-stable durable consumer identity: the durable name is exactly prism_<hmac16 of tenantId|sessionId|runId> (random suffix removed) so a crash-resumed subscribe continues from the last ack; clean stops delete the durable consumer and reclaim orphaned 0.2.1 prism_<digest>_<random> consumers; the subscribe close() hang (parked generator) fixed with per-subscriber stop signals. See docs/agent-events.md.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

@@ -26,6 +26,8 @@ import {
   runFeedbackPageLimit,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SessionAppendConflictError,
+  SESSION_METADATA_CONFLICT_CODE,
+  SessionMetadataConflictError,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
@@ -497,16 +499,25 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
       return queryTable(pool, qualifyTable(schema, "prism_sessions"), query, filters, mapSessionRow, params);
     },
 
-    async appendSession(record: SessionRecord): Promise<void> {
-      await pool.query(
+    async appendSession(record) {
+      const result = await pool.query(
         `INSERT INTO ${sessions} (
           id, tenant_id, account_id, user_id, parent_session_id,
           agent_definition_id, agent_definition_version, created_at, updated_at,
-          expires_at, retention_policy_id, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          expires_at, retention_policy_id, metadata, version
+        ) SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 1
+        WHERE $13::bigint IS NULL OR $13::bigint = 0
+           OR EXISTS (SELECT 1 FROM ${sessions} WHERE id = $1)
         ON CONFLICT(id) DO UPDATE SET
           updated_at = EXCLUDED.updated_at,
-          metadata = EXCLUDED.metadata`,
+          metadata = EXCLUDED.metadata,
+          version = ${sessions}.version + 1
+        WHERE ($13::bigint IS NULL)
+           OR ($13::bigint > 0 AND ${sessions}.version = $13
+               AND ${sessions}.tenant_id IS NOT DISTINCT FROM $2
+               AND ${sessions}.account_id IS NOT DISTINCT FROM $3
+               AND ${sessions}.user_id IS NOT DISTINCT FROM $4)
+        RETURNING version`,
         [
           record.id,
           record.tenantId ?? null,
@@ -520,8 +531,20 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
           record.expiresAt ?? null,
           record.retentionPolicyId ?? null,
           record.metadata === undefined ? null : JSON.stringify(record.metadata),
+          record.expectedVersion ?? null,
         ],
       );
+      const row = result.rows[0] as { version: number } | undefined;
+      if (!row) {
+        const current = await pool.query(`SELECT version FROM ${sessions} WHERE id = $1`, [record.id]);
+        throw new SessionMetadataConflictError({
+          code: SESSION_METADATA_CONFLICT_CODE,
+          id: record.id,
+          expectedVersion: record.expectedVersion ?? 0,
+          currentVersion: (current.rows[0] as { version: number } | undefined)?.version ?? 0,
+        });
+      }
+      return { version: Number(row.version) };
     },
 
     async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {

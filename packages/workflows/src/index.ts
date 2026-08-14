@@ -1,9 +1,12 @@
 export {
   type ActiveWorkflowRun,
   abortActiveWorkflowRun,
+  ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE,
   getActiveWorkflowRun,
   listActiveWorkflowRuns,
+  MAX_ACTIVE_WORKFLOW_RUNS,
   registerActiveWorkflowRun,
+  sweepActiveWorkflowRuns,
   unregisterActiveWorkflowRun,
 } from "./active-runs.js";
 export {

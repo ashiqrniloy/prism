@@ -1,0 +1,136 @@
+{
+  "$comment": "Phase 22 (0.2.2) concurrent-state-and-durability-integrity scope gate and evidence record. Machine-readable source of truth for plans/022-Release-0-2-2-Concurrent-State-and-Durability-Integrity.md: the four 0.2.2 implementation items (atomic model-budget reservation; atomic conversation metadata version/CAS; single-consumer + restart-stable durable identity + bounded active-run registries; multi-process state conformance) each with task ownership and evidence tokens, the compat policy (additive-only at 0.2.2 — reviewed plain gate deltas: version literal, PERSISTENCE_SCHEMA_VERSION 7->8, EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE/EventMultiplexerError, ModelRouterStateStore reserveBudget/commitBudget/releaseBudget + ModelRouterReservation + reservationTtlMs + maxRateKeys/maxBudgetKeys, SessionRecord.version + appendSession expectedVersion, buildMigration008Ddl/MIGRATION_008_SESSION_VERSION/buildEnterpriseMigration003Ddl, ActiveWorkflowRun.startedAt + ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE/MAX_ACTIVE_WORKFLOW_RUNS/sweepActiveWorkflowRuns, ./testing/state-concurrency-conformance subpath — no removal; baselines regenerated with --update-baseline, no --allow-break), the protected-gate policy (durable state-concurrency legs and NATS restart-durable resume are protected evidence, never passing skips; missing protected env records 0.2.2 as blocked), per-task evidence tokens, and the deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json. Baseline evidence for the Task 6 exit gate lives in scripts/phase22-baseline.json (captured at 0.2.1, completed at the 0.2.2 release state).",
+  "release": "0.2.2",
+  "line": "0.2.x",
+  "type": "concurrent-state-and-durability-integrity",
+  "baseline": "0.2.1 (plan 021 exit gate passed 2026-08-13; signed tag v0.2.1; 50 publishable manifests; audit 0; compat baselines current at 0.2.1; four confirmed race windows: model-router readBudget/consumeRate/addUsage admission can collectively oversubscribe, conversation create/branch/archive read-modify-write can lose updates and resurrect stale archives, EventMultiplexer parks a second subscriber on one queue silently losing events, NATS durableName carries a random suffix so cursor resume does not survive restart; active-run registries unbounded; HEAD 7aa4684)",
+  "items": [
+    {
+      "id": "budget-reservation",
+      "task": "task1",
+      "title": "Atomic model-budget reservation (reserve/commit/release) + rate/budget/circuit cap and eviction",
+      "evidence": "reserveBudget/commitBudget/releaseBudget on memory (packages/model-router/src/state.ts) and durable (packages/enterprise-postgres/src/model-router.ts) stores; ModelRouterReservation {reservationId, fencingToken}; ModelRouterBudgets.reservationTtlMs default 60000 bounded 31 days; maxRateKeys/maxBudgetKeys default 4096 hard 65536 (circuits unchanged 1024/16384); admission rewired to reserve-at-admission with commit/release at outcome (readBudget/addUsage stay for cap-less requests and retrospective accounting); LRU eviction never drops held-reservation rows (capacity-exhausted fail-closed); durable reservations JSONB column via migration 003; TTL-expired late commit charges reserved with unknownUsage true; router tests 24/24, enterprise-postgres 31/31, shared runEnterpriseStoreConformance reservation probes"
+    },
+    {
+      "id": "conversation-metadata-cas",
+      "task": "task2",
+      "title": "Atomic conversation metadata updates (version/CAS) without lost updates or stale archive resurrection",
+      "evidence": "SessionRecord.version (fresh rows start 1) + appendSession expectedVersion (0 create-only, N>0 exact-CAS update-only, omitted legacy last-write-wins); SessionMetadataConflictError metadata_conflict carrying {id, expectedVersion, currentVersion} only, HTTP 409; single-statement INSERT...SELECT...WHERE EXISTS...ON CONFLICT DO UPDATE WHERE version=expectedVersion AND ownership guards; branch cap enforced inside the CAS write; archive wins over stale writers; retention-deleted rows never resurrected (EXISTS guard); ConversationThread.version projected; migration 008 (PERSISTENCE_SCHEMA_VERSION 8) both stores; sqlite-persistence 21/21, server conversations 16/16, postgres integration 16/16"
+    },
+    {
+      "id": "single-consumer",
+      "task": "task3",
+      "title": "Single-consumer EventMultiplexer enforcement",
+      "evidence": "activeConsumer flag inside subscribe() generator body; second concurrent subscriber throws EventMultiplexerError ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER; slot frees on completion/return-at-yield/close (close also clears the flag for parked consumers); doc comment documents the parked-return caveat; tests in checkpoint-event-primitives.test.ts; in-repo consumers (workflow bus, supervisor) already single-subscriber"
+    },
+    {
+      "id": "nats-durable",
+      "task": "task3",
+      "title": "Restart-stable NATS durable consumer identity",
+      "evidence": "durableName exactly prism_<hmac16 of tenantId|sessionId|runId> (random suffix removed); addConsumer is add-or-reuse (JetStreamApiError 10058 swallowed) so a crash-resumed subscribe continues from the last ack; durable consumer deleted in the generator finally on clean stop (cursor resume); orphaned 0.2.1 prism_<digest>_<random> consumers reclaimed via deleteConsumer/enumeration; pre-existing close() hang fixed with per-subscriber source-owned stop AbortControllers; event-source tests 13/13"
+    },
+    {
+      "id": "active-runs",
+      "task": "task3",
+      "title": "Bounded, documented non-durable active-run registries (workflows)",
+      "evidence": "MAX_ACTIVE_WORKFLOW_RUNS 512 non-configurable module constant; sweepActiveWorkflowRuns removes ALL aborted/leaked entries before the cap check on register; at cap with all-live entries register throws WorkflowRuntimeError ERR_PRISM_WORKFLOW_RUN_REGISTRY_OVERFLOW (never FIFO-evicts a live entry); startedAt recorded per entry; no timer/background service; docs/workflows.md non-durability statement; active-runs tests 4/4"
+    },
+    {
+      "id": "state-concurrency-conformance",
+      "task": "task4",
+      "title": "Multi-process state conformance harness (memory + durable) with no timing-only sleeps",
+      "evidence": "@arnilo/prism/testing/state-concurrency-conformance subpath exporting assertStateConcurrencyConforms(factories); seven probes (approval-determinism, checkpoint-cas, cursor-resume, idempotency-retry, router-reservation, conversation-metadata-cas, unknown-outcome) with deterministic barriers and zero setTimeout( in harness source; five legs: core memory (npm test), sqlite :memory: (default workspace test), postgres integration + enterprise durable (test:postgres), NATS seam; scripts/phase22-conformance.test.mjs gate in the test:postgres chain with BLOCKED-gate policy when PRISM_TEST_POSTGRES_URL is absent; budgets.json root pack/unpack rebaselined (800042/2782640)"
+    },
+    {
+      "id": "security-regressions",
+      "task": "task5",
+      "title": "Security regression, built public-import, and packed-JavaScript conformance",
+      "evidence": "scripts/phase22-security.test.mjs (T1 matrix item 9 budget oversubscription, T2 matrix item 8 conversation create/branch/archive + no-resurrect, T3 single-consumer, T4 NATS restart-durable, gate accounting over BLOCKER_IDS budget-reservation/conversation-metadata-cas/single-consumer/nats-durable) running only against BUILT PUBLIC entrypoints; packed plain-JS security22.mjs consumer in install-smoke (tarball install, no TS compiler; @arnilo/prism-session-store-nats added to the manifest list); wired into security:threat-suites (47/47)"
+    }
+  ],
+  "preservedSurface": [
+    "packages/model-router/src/cache-helpers.ts, src/provider-events.ts, src/cli-init.ts stay byte-identical to 0.1.7 (phase19 preserved surface; scripts/phase19-freeze.test.mjs); src/state.ts was removed from the preserved list with a refreshed hash bc7c0d69... in scripts/phase19-baseline.json (0.2.2 Task 1 reservation implementation)"
+  ],
+  "allowedChanges": [
+    "freeze/implementation/docs/regressions/baseline/bump/compat/wiring/evidence files for the six items above",
+    "scripts/phase22-security.test.mjs, scripts/phase22-conformance.test.mjs, scripts/phase22-baseline.json, scripts/phase22-freeze-manifest.json",
+    "src/__tests__/install-smoke.test.ts (security22.mjs consumer + manifest list), public-export-contract.test.ts frozen lists (new value exports), packaging/version-sensitive tests for the 0.2.2 bump",
+    "docs: migration.md, index.md, release-and-install.md, CHANGELOG.md, conversations.md, database-persistence.md, public-contracts.md, agent-events.md, workflows.md, model-routing.md, enterprise-postgres-state.md, package READMEs/changelogs"
+  ],
+  "forbiddenChanges": [
+    "generic locking framework, distributed-transaction coordinator, background sweeper process, broadcast EventMultiplexer option, durable active-run recovery (all 0.2.2 non-goals; see plan 022 Task 0 decisions)",
+    "editing migration 001's checksum or any released-migration DDL (001/002; 003 and 008 are the only new migrations)",
+    "dependency additions (core stays dependency-free; graph stays 50 manifests)",
+    "removing or changing any 0.2.1 public declaration (additive-only compat at 0.2.2)"
+  ],
+  "compat": {
+    "baselineRelease": "0.2.1",
+    "baseline": "scripts/compat-baseline",
+    "promise": "ADDITIVE-ONLY at 0.2.2. Plain reviewed gate at 0.2.2 before --update-baseline: expected deltas are the version literal, PERSISTENCE_SCHEMA_VERSION 7->8, EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE + EventMultiplexerError, ModelRouterStateStore reserveBudget/commitBudget/releaseBudget + ModelRouterReservation + ModelRouterBudgets.reservationTtlMs + ModelRouterLimits maxRateKeys/maxBudgetKeys, SessionRecord.version + appendSession expectedVersion, buildMigration008Ddl + MIGRATION_008_SESSION_VERSION + buildEnterpriseMigration003Ddl, ActiveWorkflowRun.startedAt + ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE + MAX_ACTIVE_WORKFLOW_RUNS + sweepActiveWorkflowRuns, and the ./testing/state-concurrency-conformance subpath. No declaration removal is planned; --allow-break requires a recorded deviation + plan amendment after a plain reviewed gate.",
+    "reviewed": "2026-08-13 plain gate at 0.2.2 reviewed: all deltas additive (verified against git diff of scripts/compat-baseline); --update-baseline applied; plain gate green after refresh; no --allow-break"
+  },
+  "deviations": [
+    {
+      "task": "task1",
+      "change": "plan's five scalar reservation columns became a single reservations JSONB column (migration 003 ALTER TABLE prism_model_router_budgets ADD COLUMN reservations JSONB NOT NULL DEFAULT '[]')",
+      "rationale": "A single-slot row cannot hold N concurrent reservations (acceptance requires N-1 concurrent reservations on one key and memory/durable agreement); migration 001's checksum is already recorded in released 0.2.1 databases so 001 cannot be edited"
+    },
+    {
+      "task": "task1",
+      "change": "fencingToken is a randomUUID (unforgeable per reservation) instead of a monotonic numeric counter",
+      "rationale": "Satisfies the reject-stale-committers intent; monotonic counters are not needed and would require per-key state"
+    },
+    {
+      "task": "task2",
+      "change": "fresh session rows start at version 1 (not 0) and migration 008 backfills legacy version-0 rows to 1",
+      "rationale": "Keeps 'version 0' unambiguous as the create-only sentinel (expectedVersion 0 = no update arm)"
+    },
+    {
+      "task": "task4",
+      "change": "the unknown-outcome probe runs only against the memory store with injectable now; the durable TTL leg stays in the Task 1 integration probe with a real 25ms sleep",
+      "rationale": "The durable store computes expiry from clock_timestamp() so expiry is not injectable and a deterministic no-sleep durable probe is impossible (1ms TTL needs >=1ms wall time, flaky over localhost)"
+    },
+    {
+      "task": "task4",
+      "change": "sqlite harness leg runs ungated in the default workspace npm test instead of test:postgres",
+      "rationale": "sqlite has no test:postgres script (filename ':memory:' serves as the memory leg)"
+    },
+    {
+      "task": "task4",
+      "change": "scripts/phase22-conformance.test.mjs BLOCKED-gate branch fires only when the script runs standalone; in the test:postgres chain require-postgres-url.mjs fails first",
+      "rationale": "Mirrors the accepted phase12-restart-recovery pattern"
+    },
+    {
+      "task": "task5",
+      "change": "the NATS seam is re-implemented structurally in-script (publish/subjects/fetch/acks) rather than importing FakeJetStream",
+      "rationale": "FakeJetStream lives under src/__tests__/ and is not a public export; the script must import only public package entrypoints"
+    }
+  ],
+  "releasePolicy": {
+    "exitGate": "scripts/phase22-baseline.json exitGate green records command, version, platform, counts, hashes, skips/blocks, compatibility deltas, package graph, and protected evidence; any missing phase-22 item evidence makes green false",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.2.2",
+    "secretPolicy": "tracked/unpacked secret scans report zero findings",
+    "protectedGatePolicy": "durable state-concurrency legs (Postgres) and NATS restart-durable resume are REQUIRED protected evidence at the exit gate; missing protected env records 0.2.2 as blocked, never a passing skip (OIDC/OPA protected evidence inherited from phase21 policy)",
+    "publication": "signed tag/provenance remain operator-gated after clean protected CI (docs/release-and-install.md 0.2.2 publish handoff)"
+  },
+  "migrationTokens": {
+    "008_session_version": "ALTER TABLE prism_sessions ADD COLUMN version INTEGER NOT NULL DEFAULT 0, backfilled to 1 (postgres + sqlite; PERSISTENCE_SCHEMA_VERSION 8)",
+    "003_reservations": "ALTER TABLE prism_model_router_budgets ADD COLUMN reservations JSONB NOT NULL DEFAULT '[]' (enterprise-postgres)",
+    "note": "forward-only; 0.2.1 binaries read 0.2.2 databases but ignore the new columns (see docs/migration.md rollback risk)"
+  },
+  "tasks": {
+    "$comment": "per-task evidence tokens; all six tasks land done before the Task 6 exit gate records green.",
+    "task0": "done (primitive review at docs/_evidence/phase22-primitive-review.md at HEAD 7aa4684 (Release 0.2.1): reuse-first inventory for all four roadmap items with file:line locations, confirmed defect walkthroughs, approved decisions per gap item (budget reservation reuses prism_model_router_budgets with a reservations JSONB column; appendSession CAS mirrors CheckpointStore.saveCheckpoint with additive version + expectedVersion; EventMultiplexer rejects a second subscriber; NATS durableName drops the random suffix; active-run registries gain startedAt-based bounded sweep), cross-cutting ownership/migration/rollback/budget decisions, explicit security decisions, rejected approaches (separate reservation table, broadcast multiplexer, generic locking framework, distributed-transaction coordinator, background sweeper), and a threat-to-test traceability table)",
+    "task1": "done (atomic model-budget reservation: memory + durable reserve/commit/release, fencing randomUUID tokens, reservationTtlMs 60000 bounded 31d, TTL-expired late commit charges reserved with unknownUsage true, maxRateKeys/maxBudgetKeys 4096/65536 with LRU eviction that never drops held rows, migration 003 JSONB column, router rewired reserve-at-admission; model-router 24/24, enterprise-postgres 31/31, docs model-routing/enterprise-postgres-state/index refreshed, phase19 state.ts baseline hash refreshed bc7c0d69)",
+    "task2": "done (appendSession version/CAS: SessionRecord.version + expectedVersion 0/N/omitted semantics, SessionMetadataConflictError metadata_conflict versions-only, single-statement INSERT...SELECT...WHERE EXISTS...ON CONFLICT DO UPDATE WHERE, branch cap inside CAS, archive wins, deleted rows never resurrected, ConversationThread.version, migration 008 both stores PERSISTENCE_SCHEMA_VERSION 8, codecs rowToSessionRecord mapping; sqlite-persistence 21/21, server 16/16, postgres integration 16/16, docs conversations/database-persistence/public-contracts/index refreshed)",
+    "task3": "done (single-consumer EventMultiplexer ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER with close-clears-flag, NATS durableName prism_<hmac16> restart-stable with add-or-reuse and close-hang fix via per-subscriber stop AbortControllers, workflows active-run registry MAX_ACTIVE_WORKFLOW_RUNS 512 sweep + fail-closed overflow; core 11/11 multiplexer file, NATS 13/13, workflows 4/4; docs public-contracts/workflows/agent-events/index refreshed)",
+    "task4": "done (state-concurrency-conformance harness with 7 probes, 5 legs, zero setTimeout( in harness source, ./testing/state-concurrency-conformance subpath, scripts/phase22-conformance.test.mjs gate wired into test:postgres chain with BLOCKED policy, budgets rebaselined; full npm test 3479/3446/0, test:postgres 91/91; docs database-persistence/index/release-and-install refreshed)",
+    "task5": "done (scripts/phase22-security.test.mjs 4 blockers + gate accounting over built public entrypoints, packed plain-JS security22.mjs consumer in install-smoke, @arnilo/prism-session-store-nats added to install-smoke manifest list, scripts/phase22-baseline.json created with reserved evidence fields; security:threat-suites 47/47, npm test 3480/3447/0, test:postgres 91/91, install-smoke 9/9)",
+    "task6": "done (migration docs 0.2.1 -> 0.2.2, root + 7 package changelogs, index.md current release 0.2.2, release-and-install 0.2.2 publish handoff, roadmap 0.2.2 items [x], version bump 0.2.1 -> 0.2.2 across 50 manifests + lockfile with version-sensitive tests/peers/tarball names/src version const, plain compat gate at 0.2.2 reviewed additive-only then --update-baseline and plain gate green, no --allow-break, exit evidence in scripts/phase22-baseline.json exitGate green, plans/README.md 022 row complete)"
+  },
+  "security": {
+    "blockedGatePolicy": "missing credentials or infrastructure records a named blocked release gate, never a passing skip; the durable state-concurrency legs (Postgres), NATS restart-durable resume, and the inherited OIDC/OPA provider-identity evidence are REQUIRED protected gates for 0.2.2",
+    "auditPolicy": "npm audit --audit-level=moderate stays at 0 moderate-or-higher findings at 0.2.2",
+    "itemPolicy": "every shipped item preserves: budget accounting never admits beyond reserved capacity and late/expired commits reconcile as unknown_usage (redacted diagnostics), conversation metadata conflicts surface as explicit metadata_conflict (versions only, never content) with no lost update or stale archive resurrection, the EventMultiplexer never silently shares one queue between subscribers, NATS durable resume never replays from the stream head after a crash, and active-run registries fail closed at their cap instead of evicting live runs. Adversarial suites for each shipped item pass against BUILT public entrypoints and a packed plain-JavaScript consumer; any security skip fails loud and cannot satisfy the exit gate; publication stays operator-gated"
+  }
+}

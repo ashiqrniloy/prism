@@ -219,3 +219,12 @@ CREATE INDEX IF NOT EXISTS prism_tool_effects_cleanup_idx
   WHERE status IN ('completed', 'failed_terminal');
 `;
 }
+
+/** Adds atomic budget reservations (JSONB slot per budget window) without mutating migrations 001/002. */
+export function buildEnterpriseMigration003Ddl(schema: string): string {
+  const table = (name: string) => qualifyTable(schema, name);
+  return `
+ALTER TABLE ${table("prism_model_router_budgets")}
+  ADD COLUMN IF NOT EXISTS reservations JSONB NOT NULL DEFAULT '[]'::jsonb;
+`;
+}

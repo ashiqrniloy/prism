@@ -172,6 +172,7 @@ describeIntegration("createPostgresPersistence integration", () => {
       "005_lifecycle_hold_quota",
       "006_agent_event_source",
       "007_agent_event_retention_index",
+      "008_session_version",
     ]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
@@ -370,7 +371,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     ]);
     const persistence = await createPostgresPersistence({ pool, schema });
     const migrations = await persistence.queryMigrations({});
-    assert.equal(migrations.items.length, 7);
+    assert.equal(migrations.items.length, 8);
     await persistence.close();
   });
 
@@ -425,6 +426,100 @@ describeIntegration("createPostgresPersistence integration", () => {
       RangeError,
     );
 
+    await persistence.close();
+  });
+});
+
+describeIntegration("appendSession metadata CAS (008_session_version)", () => {
+  const pools: Pool[] = [];
+
+  after(async () => {
+    while (pools.length > 0) {
+      await pools.pop()!.end();
+    }
+  });
+
+  function createPool(): Pool {
+    const pool = new Pool({ connectionString: postgresUrl, max: 10 });
+    pools.push(pool);
+    return pool;
+  }
+
+  it("create-only, exact-version CAS, ownership guard, and delete-never-resurrects", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    const appendSession = persistence.appendSession!;
+    const record = (id: string, extra: Record<string, unknown> = {}) => ({
+      id,
+      tenantId: "cas-tenant",
+      userId: "cas-user",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      metadata: { note: "first" },
+      ...extra,
+    });
+    // create-only: inserts at version 1; a duplicate create conflicts without overwriting.
+    assert.deepEqual(await appendSession(record("pg-cas-1", { expectedVersion: 0 })), { version: 1 });
+    await assert.rejects(appendSession(record("pg-cas-1", { expectedVersion: 0, metadata: { note: "second" } })), (error: unknown) => {
+      assert.equal((error as { code?: string }).code, "metadata_conflict");
+      assert.equal((error as { conflict?: { currentVersion?: number } }).conflict?.currentVersion, 1);
+      return true;
+    });
+    // Exact-version CAS update.
+    assert.deepEqual(await appendSession(record("pg-cas-1", { expectedVersion: 1, metadata: { note: "second" } })), {
+      version: 2,
+    });
+    await assert.rejects(
+      appendSession(record("pg-cas-1", { expectedVersion: 1, metadata: { note: "stale" } })),
+      (error: unknown) => (error as { conflict?: { currentVersion?: number } }).conflict?.currentVersion === 2,
+    );
+    // Cross-ownership CAS write is rejected before the version guard.
+    await assert.rejects(
+      appendSession(record("pg-cas-1", { tenantId: "other-tenant", expectedVersion: 2, metadata: { note: "stolen" } })),
+      (error: unknown) => (error as { code?: string }).code === "metadata_conflict",
+    );
+    // Delete + positive expectedVersion = conflict with currentVersion 0, never a resurrection.
+    await persistence.lifecycle!.applyRetention({
+      policy: { id: "p", name: "p", createdAt: "1970-01-01T00:00:00.000Z" },
+      candidates: ["pg-cas-1"],
+      tenantId: "cas-tenant",
+      userId: "cas-user",
+    });
+    await assert.rejects(
+      appendSession(record("pg-cas-1", { expectedVersion: 2, metadata: { note: "zombie" } })),
+      (error: unknown) => (error as { conflict?: { currentVersion?: number } }).conflict?.currentVersion === 0,
+    );
+    assert.equal((await persistence.querySessions({ id: "pg-cas-1" })).items.length, 0);
+    // Legacy (no expectedVersion) stays last-write-wins and bumps the version.
+    await appendSession(record("pg-cas-2"));
+    await appendSession(record("pg-cas-2", { metadata: { note: "legacy" } }));
+    assert.equal((await persistence.querySessions({ id: "pg-cas-2" })).items[0]?.version, 2);
+    await persistence.close();
+  });
+
+  it("N concurrent create-only writes admit exactly one; N concurrent CAS branches admit exactly one", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    const appendSession = persistence.appendSession!;
+    const record = (id: string, extra: Record<string, unknown> = {}) => ({
+      id,
+      tenantId: "cas-tenant",
+      userId: "cas-user",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      ...extra,
+    });
+    const creates = await Promise.allSettled(Array.from({ length: 8 }, () => appendSession(record("pg-cas-race", { expectedVersion: 0 }))));
+    assert.equal(creates.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal(creates.filter((r) => r.status === "rejected").length, 7);
+    // One winner, then 8 concurrent CAS branches: exactly one succeeds, 7 conflict.
+    const branches = await Promise.allSettled(
+      Array.from({ length: 8 }, (_, i) => appendSession(record("pg-cas-race", { expectedVersion: 1, metadata: { note: `b${i}` } }))),
+    );
+    assert.equal(branches.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal(branches.filter((r) => r.status === "rejected").length, 7);
     await persistence.close();
   });
 });

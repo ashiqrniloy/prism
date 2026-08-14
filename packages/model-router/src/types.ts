@@ -10,6 +10,12 @@ export interface ModelRouterBudgets {
   readonly maxCostUsd?: number;
   /** Accounting window; default 24h, bounded to 31 days. */
   readonly windowMs?: number;
+  /**
+   * How long an admission reservation pins budget capacity. Runs that outlive the
+   * TTL are reconciled as unknown usage (reserved amount charged, redacted
+   * `unknown_usage` diagnostic). Default 60s; bounded to 31 days.
+   */
+  readonly reservationTtlMs?: number;
 }
 
 export interface ModelRouterRateLimit {
@@ -26,12 +32,18 @@ export interface ModelRouterLimits {
   readonly maxAttempts?: number;
   readonly maxCircuitKeys?: number;
   readonly maxDiagnosticsBytes?: number;
+  /** Hard cap on tracked rate keys (owner x provider x model x window); LRU eviction on insert. */
+  readonly maxRateKeys?: number;
+  /** Hard cap on tracked budget keys; LRU eviction on insert never drops a held reservation's row. */
+  readonly maxBudgetKeys?: number;
 }
 
 export interface ResolvedModelRouterLimits {
   readonly maxAttempts: number;
   readonly maxCircuitKeys: number;
   readonly maxDiagnosticsBytes: number;
+  readonly maxRateKeys: number;
+  readonly maxBudgetKeys: number;
 }
 
 /** Exact owner identity persisted by durable router state. */
@@ -47,22 +59,78 @@ export interface ModelRouterStateKey extends ModelRouterStateOwner {
   readonly model: string;
 }
 
+export interface ModelRouterReservation {
+  readonly reservationId: string;
+  readonly fencingToken: string;
+}
+
 export interface ModelRouterStateStore {
   consumeRate(input: {
     readonly key: ModelRouterStateKey;
     readonly maxRequests: number;
     readonly windowMs: number;
     readonly now: number;
+    /** Hard cap on tracked rate keys; LRU eviction on new-key insert. */
+    readonly maxRateKeys?: number;
   }): Promise<{ readonly admitted: boolean; readonly retryAfterMs?: number }>;
   readBudget(input: {
     readonly key: ModelRouterStateKey;
     readonly windowMs: number;
     readonly now: number;
+    /** Hard cap on tracked budget keys; LRU eviction on new-key insert. */
+    readonly maxBudgetKeys?: number;
   }): Promise<{ readonly tokens: number; readonly costUsd: number }>;
   addUsage(input: {
     readonly key: ModelRouterStateKey;
     readonly tokens?: number;
     readonly costUsd?: number;
+    readonly windowMs: number;
+    readonly now: number;
+    /** Hard cap on tracked budget keys; LRU eviction on new-key insert. */
+    readonly maxBudgetKeys?: number;
+  }): Promise<void>;
+  /**
+   * Atomically reserve budget capacity (max - used - reserved) at admission.
+   * Admits only when the full requested amount fits in every capped dimension;
+   * an expired reservation is treated as released (its capacity is free).
+   */
+  reserveBudget(input: {
+    readonly key: ModelRouterStateKey;
+    readonly tokens?: number;
+    readonly costUsd?: number;
+    readonly maxTokens?: number;
+    readonly maxCostUsd?: number;
+    readonly windowMs: number;
+    readonly reservationTtlMs: number;
+    readonly now: number;
+    /** Hard cap on tracked budget keys; LRU eviction on new-key insert. */
+    readonly maxBudgetKeys?: number;
+  }): Promise<{
+    readonly admitted: boolean;
+    readonly reservationId?: string;
+    readonly fencingToken?: string;
+    readonly retryAfterMs?: number;
+  }>;
+  /**
+   * Apply the actual usage delta versus the reserved amount and release the
+   * reservation. A reservation that expired before commit charges the reserved
+   * amount and reports `unknownUsage: true`; a missing/stale reservation throws
+   * `ERR_PRISM_MODEL_ROUTER_STATE` (outcome unknown, fail loud).
+   */
+  commitBudget(input: {
+    readonly key: ModelRouterStateKey;
+    readonly reservationId: string;
+    readonly fencingToken: string;
+    readonly tokens?: number;
+    readonly costUsd?: number;
+    readonly windowMs: number;
+    readonly now: number;
+  }): Promise<{ readonly unknownUsage: boolean }>;
+  /** Release an uncommitted reservation; stale/foreign fencing tokens are rejected. */
+  releaseBudget(input: {
+    readonly key: ModelRouterStateKey;
+    readonly reservationId: string;
+    readonly fencingToken: string;
     readonly windowMs: number;
     readonly now: number;
   }): Promise<void>;
@@ -194,6 +262,8 @@ export interface ModelRouterResolveResult {
   readonly diagnostics: ModelRouterDiagnostics;
   /** Pass to recordOutcome after a half-open circuit probe. */
   readonly circuitProbeToken?: string;
+  /** Pass to recordUsage to commit the admission reservation against actual usage. */
+  readonly budgetReservation?: ModelRouterReservation;
   /** Chainable policy that strips OpenRouter routing unless router allows it. */
   readonly providerRequestPolicy: ProviderRequestPolicy;
 }
@@ -202,7 +272,15 @@ export interface ModelRouter {
   resolve(request: ModelRouterResolveRequest): Promise<ModelRouterResolveResult>;
   /** Sync `ProviderResolver` facade using router defaults (no per-call budget overrides). */
   readonly providerSource: ProviderResolver;
-  recordUsage(input: { identity: AgentIdentity; provider: string; model: string; tokens?: number; costUsd?: number }): Promise<void>;
+  recordUsage(input: {
+    identity: AgentIdentity;
+    provider: string;
+    model: string;
+    tokens?: number;
+    costUsd?: number;
+    /** Commit the admission reservation returned by resolve against actual usage. */
+    budgetReservation?: ModelRouterReservation;
+  }): Promise<void>;
   recordOutcome(input: {
     identity: AgentIdentity;
     provider: string;

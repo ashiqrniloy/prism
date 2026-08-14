@@ -400,6 +400,15 @@ CREATE INDEX IF NOT EXISTS prism_agent_events_owner_timestamp_sequence_idx
 `;
 }
 
+/** Additive appendSession metadata CAS column; legacy rows backfill to 1 (0 is the create-only sentinel). */
+export function buildMigration008Ddl(schema: string): string {
+  const sessions = qualifyTable(schema, "prism_sessions");
+  return `
+ALTER TABLE ${sessions} ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0;
+UPDATE ${sessions} SET version = 1 WHERE version = 0;
+`;
+}
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",

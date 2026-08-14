@@ -45,10 +45,10 @@ describeIntegration("enterprise PostgreSQL migrations", () => {
     const history = await pool.query(
       `SELECT name, version, checksum FROM ${qualifyTable(schema, "prism_enterprise_migrations")} ORDER BY applied_at ASC, id ASC`,
     );
-    assert.equal(history.rowCount, 2);
+    assert.equal(history.rowCount, 3);
     assert.deepEqual(
       history.rows.map((row) => `${row.name}:${row.version}`),
-      ["001_enterprise_state:1", "002_tool_effects:2"],
+      ["001_enterprise_state:1", "002_tool_effects:2", "003_router_reservations:3"],
     );
     for (const row of history.rows) assert.match(String(row.checksum), /^[a-f0-9]{64}$/);
   });
@@ -68,10 +68,19 @@ describeIntegration("enterprise PostgreSQL migrations", () => {
     );
     assert.deepEqual(
       history.rows.map((row) => `${row.name}:${row.version}`),
-      ["001_enterprise_state:1", "002_tool_effects:2"],
+      ["001_enterprise_state:1", "002_tool_effects:2", "003_router_reservations:3"],
     );
     assert.equal(
       (await pool.query("SELECT 1 FROM pg_tables WHERE schemaname = $1 AND tablename = 'prism_tool_effects'", [schema])).rowCount,
+      1,
+    );
+    assert.equal(
+      (
+        await pool.query(
+          "SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'prism_model_router_budgets' AND column_name = 'reservations'",
+          [schema],
+        )
+      ).rowCount,
       1,
     );
   });

@@ -38,6 +38,7 @@ const packages = [
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
   { dir: "packages/session-store-codecs", name: "@arnilo/prism-session-store-codecs" },
   { dir: "packages/session-store-sqlite", name: "@arnilo/prism-session-store-sqlite" },
+  { dir: "packages/session-store-nats", name: "@arnilo/prism-session-store-nats" },
   { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
   { dir: "packages/enterprise-postgres", name: "@arnilo/prism-enterprise-postgres" },
   { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
@@ -98,10 +99,12 @@ const result = {
   compositionStatus: -1,
   securityStatus: -1,
   security21Status: -1,
+  security22Status: -1,
   smokeOut: "",
   integrationOut: "",
   securityOut: "",
   security21Out: "",
+  security22Out: "",
   compositionOut: "",
   junk: [] as string[],
   secretFindings: [] as string[],
@@ -536,6 +539,133 @@ console.log("PACKED PHASE21 SECURITY OK");
   result.security21Status = security21.status;
   result.security21Out = security21.stdout + security21.stderr;
 
+  // 5d. Packed plain-JavaScript phase22 security regressions (plan 022 Task 5):
+  //     the four 0.2.2 state-concurrency/durability blockers proven through the
+  //     installed tarballs with no TypeScript compiler — parallel router
+  //     reservations cannot oversubscribe, conversation metadata CAS admits one
+  //     writer per version and never revives deleted/archived state, a second
+  //     EventMultiplexer subscriber is rejected, and the NATS durable consumer
+  //     name is restart-stable so a crash-resumed subscribe continues from the
+  //     last ack. The conflict error carries versions only — never metadata.
+  writeFileSync(
+    join(consumer, "security22.mjs"),
+    `
+import assert from "node:assert/strict";
+import { EventMultiplexerError, SessionMetadataConflictError, createEventMultiplexer } from "@arnilo/prism";
+import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
+import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createNatsAgentEventSource } from "@arnilo/prism-session-store-nats";
+
+// --- phase22 blocker 1 (matrix item 9): parallel admissions cannot exceed the reserved budget ---
+const store = createMemoryModelRouterStateStore();
+const key = { tenantId: "packed22", principalId: "p1", provider: "mock", model: "m1" };
+const base = { key, tokens: 26, maxTokens: 100, windowMs: 60000, reservationTtlMs: 60000, now: 1000000 };
+const outcomes = await Promise.all(Array.from({ length: 4 }, () => store.reserveBudget({ ...base })));
+assert.equal(outcomes.filter((o) => o.admitted).length, 3, "3 of 4 reservations of 26/100 admit");
+const denied = outcomes.find((o) => !o.admitted);
+assert.ok(denied && denied.retryAfterMs > 0, "4th reservation denied with retryAfterMs");
+const winner = outcomes.find((o) => o.admitted);
+await store.commitBudget({ key, reservationId: winner.reservationId, fencingToken: winner.fencingToken, tokens: 10, windowMs: 60000, now: 1000001 });
+assert.equal((await store.readBudget({ key, windowMs: 60000, now: 1000002 })).tokens, 10, "live commit records actuals");
+await assert.rejects(
+  () => store.commitBudget({ key, reservationId: winner.reservationId, fencingToken: "forged", windowMs: 60000, now: 1000003 }),
+  (error) => error.code === "ERR_PRISM_MODEL_ROUTER_STATE",
+  "stale fencing token fails closed",
+);
+
+// --- phase22 blocker 2 (matrix item 8): conversation metadata CAS admits one writer per version ---
+const persistence = createSqlitePersistence({ filename: ":memory:" });
+const ownership = { tenantId: "packed22", userId: "u1" };
+const record = (id, metadata, updatedAt, expectedVersion) => ({ id, ...ownership, createdAt: "2026-08-13T00:00:00.000Z", updatedAt, metadata, ...(expectedVersion === undefined ? {} : { expectedVersion }) });
+const sessionId = "packed22-conversation";
+const created = await persistence.appendSession(record(sessionId, { state: "active", writer: "create-0" }, "2026-08-13T00:00:00.000Z", 0));
+assert.equal(created.version, 1);
+const duplicates = await Promise.allSettled(Array.from({ length: 4 }, (_, i) => persistence.appendSession(record(sessionId, { state: "active", writer: "dup-" + i }, "2026-08-13T00:00:01.000Z", 0))));
+assert.equal(duplicates.filter((o) => o.status === "fulfilled").length, 0, "duplicate create-only never overwrites");
+assert.equal(duplicates.filter((o) => o.status === "rejected" && o.reason instanceof SessionMetadataConflictError).length, 4);
+const updates = await Promise.allSettled(Array.from({ length: 4 }, (_, i) => persistence.appendSession(record(sessionId, { state: "active", branch: "b" + i }, "2026-08-13T00:01:00.000Z", 1))));
+assert.equal(updates.filter((o) => o.status === "fulfilled").length, 1, "exactly one CAS update wins");
+assert.equal(updates.filter((o) => o.status === "rejected").length, 3, "the rest conflict");
+const conflict = updates.find((o) => o.status === "rejected").reason;
+assert.equal(conflict.code, "metadata_conflict");
+assert.equal(JSON.stringify(conflict.conflict).includes("branch"), false, "conflict carries versions only, never metadata content");
+await persistence.appendSession(record(sessionId, { state: "archived" }, "2026-08-13T00:02:00.000Z", 2));
+await assert.rejects(
+  () => persistence.appendSession(record(sessionId, { state: "active", zombie: true }, "2026-08-13T00:00:00.000Z", 1)),
+  (error) => error instanceof SessionMetadataConflictError,
+  "stale pre-archive writer cannot revive the archive",
+);
+const archived = await persistence.querySessions({ id: sessionId, limit: 1 });
+assert.equal(archived.items[0].metadata.state, "archived", "archived state survives the stale write");
+const foreign = await persistence.appendSession(record(sessionId, { state: "active", foreign: true }, "2026-08-13T00:03:00.000Z", 2)).then(() => null, (error) => error);
+assert.equal(foreign.code, "metadata_conflict", "cross-ownership CAS write fails closed");
+
+// --- phase22 blocker 3: a second EventMultiplexer subscriber is rejected ---
+const multiplexer = createEventMultiplexer({ maxQueuedEvents: 1024 });
+multiplexer.observe({ async *[Symbol.asyncIterator]() { for (let value = 0; ; value += 1) yield value; } }, (value) => value);
+const first = multiplexer.subscribe();
+assert.deepEqual(await first.next(), { value: 0, done: false });
+const second = multiplexer.subscribe();
+await assert.rejects(
+  () => second.next(),
+  (error) => error instanceof EventMultiplexerError && error.code === "ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER",
+  "second subscriber is rejected, not silently parked",
+);
+await first.return(undefined);
+await multiplexer.close();
+
+// --- phase22 blocker 4: NATS durable consumer name is restart-stable and resumes from the last ack ---
+const messages = new Map();
+const consumers = new Map();
+let nextSeq = 1;
+const seam = {
+  async publish(subject, data, opts) { const seq = nextSeq++; messages.set(seq, { subject, data, msgID: opts.msgID }); return { stream: "test", seq, duplicate: false }; },
+  async addConsumer(_stream, cfg) { const existing = consumers.get(cfg.name); consumers.set(cfg.name, { cfg, acked: existing ? new Set(existing.acked) : new Set() }); },
+  async getConsumer(_stream, name) {
+    const state = consumers.get(name);
+    if (!state) throw new Error("consumer not found: " + name);
+    return { async fetch({ max_messages }) {
+      const filter = state.cfg.filter_subject;
+      const start = state.cfg.opt_start_seq ?? 1;
+      const candidates = [];
+      for (const [seq, message] of messages) {
+        if (seq < start) continue;
+        if (!filter.split(".").every((token, i) => token === "*" || token === message.subject.split(".")[i])) continue;
+        if (state.acked.has(seq)) continue;
+        candidates.push({ seq, data: message.data });
+      }
+      candidates.sort((l, r) => l.seq - r.seq);
+      const batch = candidates.slice(0, max_messages);
+      return { async *[Symbol.asyncIterator]() { for (const item of batch) yield { seq: item.seq, data: item.data, ack: () => state.acked.add(item.seq) }; } };
+    } };
+  },
+  async deleteConsumer(_stream, name) { consumers.delete(name); },
+  async getMessage(_stream, seq) { const m = messages.get(seq); return m ? { data: m.data } : null; },
+  async deleteMessage() {},
+};
+const options = { connection: seam, stream: "packed22-stream", cursorSecret: "packed22-cursor-secret" };
+const source = createNatsAgentEventSource(options);
+const event = (id, type) => ({ id, ...ownership, sessionId: "s1", runId: "r1", type, timestamp: "2026-08-13T00:00:00.000Z", redacted: true, event: { type, sessionId: "s1", runId: "r1", turn: 1 } });
+await source.append(event("n-1", "agent_started"));
+await source.append(event("n-2", "turn_started"));
+const read = { ownership, sessionId: "s1", runId: "r1", limit: 10 };
+const iterator = source.subscribe(read)[Symbol.asyncIterator]();
+assert.equal((await iterator.next()).value.record.id, "n-1");
+assert.equal((await iterator.next()).value.record.id, "n-2");
+const name = [...consumers.keys()][0];
+assert.match(name, /^prism_[0-9a-f]{16}$/, "durable name is prism_<hmac16> with no random suffix");
+const restarted = createNatsAgentEventSource(options); // crash: no close, consumer survives at its ack
+const resumed = await restarted.subscribe(read)[Symbol.asyncIterator]().next();
+assert.equal(resumed.value.record.id, "n-2", "restart resumes from the last ack, not the stream head");
+await source.close();
+await restarted.close();
+console.log("PACKED PHASE22 SECURITY OK");
+`,
+  );
+  const security22 = run("node", ["security22.mjs"], consumer);
+  result.security22Status = security22.status;
+  result.security22Out = security22.stdout + security22.stderr;
+
   // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
   // Third-party transitive deps (e.g. `diff`) may ship their own maps; we only gate Prism packages.
   const nodeModules = join(consumer, "node_modules");
@@ -584,26 +714,32 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.security21Status, 0, result.security21Out);
   });
 
+  it("packed plain-JS phase22 security regressions run without TypeScript", () => {
+    assert.equal(result.security22Status, 0, result.security22Out);
+  });
+
   it("installed packages contain no test artifacts, source maps, or real-looking secrets", () => {
     assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
     assert.deepEqual(result.secretFindings, [], `secret-like value leaked into installed packages: ${result.secretFindings.join(", ")}`);
     assert.equal(
-      (result.integrationOut + result.compositionOut + result.securityOut + result.security21Out).includes("packed-integration-secret"),
+      (result.integrationOut + result.compositionOut + result.securityOut + result.security21Out + result.security22Out).includes(
+        "packed-integration-secret",
+      ),
       false,
       "canary leaked into packed journey output",
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.1.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.2.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.2.1.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.2.2.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.2.1.tgz"),
-      `expected 'arnilo-prism-0.2.1.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.2.2.tgz"),
+      `expected 'arnilo-prism-0.2.2.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.2.1.tgz", "arnilo-prism-compaction-0.2.1.tgz", "arnilo-prism-all-0.2.1.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.2.2.tgz", "arnilo-prism-compaction-0.2.2.tgz", "arnilo-prism-all-0.2.2.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });

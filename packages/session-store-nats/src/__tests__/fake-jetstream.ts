@@ -35,7 +35,15 @@ export class FakeJetStream implements NatsJetStream {
   }
 
   async addConsumer(_stream: string, cfg: NatsJetStreamConsumerConfig): Promise<void> {
-    this.consumers.set(cfg.name, { cfg, acked: new Set(), deliveries: new Map() });
+    // Upsert by name: a restarting durable subscribe reuses the existing consumer's
+    // ack position (cursor resume from the last ack, not the stream head). Ephemeral
+    // page/cleanup consumers use random names, so they always start fresh.
+    const existing = this.consumers.get(cfg.name);
+    this.consumers.set(cfg.name, {
+      cfg,
+      acked: existing?.acked ?? new Set(),
+      deliveries: existing?.deliveries ?? new Map(),
+    });
   }
 
   async getConsumer(_stream: string, name: string): Promise<NatsJetStreamConsumer> {

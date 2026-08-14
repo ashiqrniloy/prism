@@ -113,13 +113,16 @@ Behavior notes:
 - Replay cursors are thread-bound: a cursor minted for one thread is rejected on another (`cursor_thread_mismatch`).
 - Ledger rows from runs that had no redactor are never served by replay/export (fail-closed skip).
 - Export truncates at page granularity when the next page would exceed `exportBytes`; a single page larger than `exportBytes` cannot be exported (raise the cap or page via `replay`).
-- Branch refs live in thread metadata (read-modify-write); concurrent `branch()` calls can lose a ref, so the cap is approximate and the entry tree remains the content source of truth.
+- Branch refs live in thread metadata; every `branch()`/`archive()` write is an optimistic compare-and-swap against the stored session `version`, so concurrent callers cannot lose a ref or resurrect stale state: the loser of a `branch`+`branch`, `branch`+`archive`, or `create`+`create` race gets `metadata_conflict` (HTTP 409) and re-reads/retries if it chooses.
+- `create` with an explicit `id` writes with `expectedVersion: 0` (create-only): a duplicate create never overwrites the winner's metadata and returns the existing thread.
+- `branch()` enforces `maxActiveBranches` on its read snapshot; the version guard inside the same write makes the cap exact even under concurrency (a concurrent branch cannot slip past the cap), and the marker keeps branch refs append-only.
+- `archive()` on an already-archived thread is a no-op; a stale `branch`/`archive` racing a delete fails `not_found` (the row is gone) and the write path never re-creates a deleted thread — delete wins.
 - Deletion purges the whole session ledger (entries, runs, events, tool calls, usage, branches, search rows) through `lifecycle.applyRetention`; legal holds block deletion and report `held: true`.
 
 ## Security and performance notes
 
 - Every operation starts from host-verified ownership (and optional `AgentIdentity`, which must project onto ownership without widening); wrong-user access returns not-found, never leaked existence.
-- `appendSession` upserts set ownership columns only on create; metadata/`updatedAt` on update — ownership is immutable after create.
+- `appendSession` upserts set ownership columns only on create; metadata/`updatedAt` on update — ownership is immutable after create, and the CAS write additionally rejects a mismatched ownership in the same guarded statement.
 - Replay/export serve `redacted: true` ledger rows only and pass through the service redactor; no local paths, raw tool payloads, or secrets are emitted.
 - All loops are bounded by the frozen caps above; review/agent turns consume shared `RunLimits` via the host's `runOptions`.
 - No new permission surface: conversations reuse session/event/identity/redaction/lifecycle seams (roadmap gate 8).

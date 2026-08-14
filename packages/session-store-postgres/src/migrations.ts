@@ -18,6 +18,7 @@ import {
   buildMigration005Ddl,
   buildMigration006Ddl,
   buildMigration007Ddl,
+  buildMigration008Ddl,
 } from "./ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
@@ -44,6 +45,7 @@ export async function applyPostgresMigrations(pool: Pool, schema: string): Promi
       else if (step.name === "005_lifecycle_hold_quota") await client.query(buildMigration005Ddl(schema));
       else if (step.name === "006_agent_event_source") await client.query(buildMigration006Ddl(schema));
       else if (step.name === "007_agent_event_retention_index") await client.query(buildMigration007Ddl(schema));
+      else if (step.name === "008_session_version") await client.query(buildMigration008Ddl(schema));
       else throw new Error(`Unknown migration step: ${step.name}`);
       await client.query(
         `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)

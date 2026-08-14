@@ -153,7 +153,9 @@ DocumentContent	export type { AudioContent, DocumentContent, FileContent } from 
 DuplicateRegistrationOptions	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
 DuplicateRegistrationPolicy	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
 EMPTY_SKILL_DESCRIPTION	export declare const EMPTY_SKILL_DESCRIPTION: "(no description)"
+EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE	export declare const EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE = "ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER"
 EventMultiplexer	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
+EventMultiplexerError	export declare class EventMultiplexerError extends Error
 EventMultiplexerOptions	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
 EventOverflowInfo	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
 EventOverflowPolicy	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
@@ -272,7 +274,7 @@ NestedRunApproval	export type { ApprovalOutcome, DecisionScope, NestedRunApprova
 NestedRunOutcome	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 NestedRunRef	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 PARAMETERIZED_QUERY_GUIDANCE	export declare const PARAMETERIZED_QUERY_GUIDANCE = "Bind every user-supplied value (session ids, idempotency keys, tenant ids, timestamps, JSON payloads) as a query parameter. Quote/validate schema and table identifiers only
-PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 7
+PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 8
 PendingDecision	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 PendingDecisionKind	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 PendingToolCall	export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js"
@@ -329,6 +331,7 @@ RuntimeAgentSession	export declare class RuntimeAgentSession implements AgentSes
 SESSION_APPEND_CONFLICT_CODE	export declare const SESSION_APPEND_CONFLICT_CODE: "session_append_conflict"
 SESSION_ENTRY_KINDS	export declare const SESSION_ENTRY_KINDS: readonly SessionEntryKind[]
 SESSION_ENTRY_SCHEMA_VERSION	export declare const SESSION_ENTRY_SCHEMA_VERSION = 1
+SESSION_METADATA_CONFLICT_CODE	export declare const SESSION_METADATA_CONFLICT_CODE: "metadata_conflict"
 SESSION_SEARCH_UNSUPPORTED_CODE	export declare const SESSION_SEARCH_UNSUPPORTED_CODE: "session_search_unsupported"
 SESSION_SEARCH_WORKSPACE_METADATA_KEY	export declare const SESSION_SEARCH_WORKSPACE_METADATA_KEY: "workspaceRoot"
 SKILL_DISCLOSURE_ERROR_CODE	export declare const SKILL_DISCLOSURE_ERROR_CODE: "skill_disclosure_exceeded"
@@ -341,6 +344,7 @@ SessionBranch	export type { CreateMemorySessionStoreOptions, CreateSessionEntryO
 SessionBranchOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 SessionCachePolicyOptions	export type { SessionCachePolicyOptions } from "./provider-request-policy.js"
 SessionContextSnapshot	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
+SessionMetadataConflictError	export declare class SessionMetadataConflictError extends Error
 SessionSearchUnsupportedError	export declare class SessionSearchUnsupportedError extends Error
 SetTenantQuotaInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 SkillDisclosureError	export declare class SkillDisclosureError extends Error
@@ -437,6 +441,7 @@ assertSerializedRequestCoversContent	export declare function assertSerializedReq
 assertSessionMetadataKey	export declare function assertSessionMetadataKey(key: string): string
 assertSessionStoreConforms	export declare function assertSessionStoreConforms(store: SessionStore, options?: SessionStoreConformanceOptions): Promise<void>
 assertSsrfAllowedUrl	export declare function assertSsrfAllowedUrl(url: string, policy?: SsrfPolicy): void
+assertStateConcurrencyConforms	export declare function assertStateConcurrencyConforms(factories: StateConcurrencyFactories): Promise<readonly string[]>
 assertStructuredOutputRequestSupported	export declare function assertStructuredOutputRequestSupported(model: ModelConfig, options?: ProviderRequestOptions): void
 assertTenantScopedQueryIsolation	export declare function assertTenantScopedQueryIsolation(queryByTenant: (tenantId: string) => Promise<readonly
 assertToolBlocked	export declare function assertToolBlocked(probe: ToolDispatchProbeOptions, expectedReason: string): Promise<void>
@@ -577,6 +582,7 @@ isPdfMediaType	export declare function isPdfMediaType(mediaType: string): boolea
 isResourceHeld	export declare function isResourceHeld(holds: readonly Pick<LegalHoldRecord, "resourceKind" | "resourceId">[], resourceKind: PersistenceResourceKind, resourceId: string): boolean
 isSessionAppendConflict	export declare function isSessionAppendConflict(error: unknown): error is SessionAppendConflictError
 isSessionEntryKind	export declare function isSessionEntryKind(value: unknown): value is SessionEntryKind
+isSessionMetadataConflict	export declare function isSessionMetadataConflict(error: unknown): error is SessionMetadataConflictError
 isSessionSearchUnsupported	export declare function isSessionSearchUnsupported(error: unknown): error is SessionSearchUnsupportedError
 isSkillDisclosureError	export declare function isSkillDisclosureError(error: unknown): error is SkillDisclosureError
 isSkillLoadError	export declare function isSkillLoadError(error: unknown): error is SkillLoadError
@@ -755,6 +761,6 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.2.1"
+version	export declare const version = "0.2.2"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest

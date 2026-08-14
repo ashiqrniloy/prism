@@ -346,3 +346,104 @@ describe("createConversationHandler", () => {
     persistence.close();
   });
 });
+
+describe("conversation metadata CAS (appendSession version guard)", () => {
+  it("duplicate create with the same explicit id never overwrites; concurrent creates settle to one winner", async () => {
+    const { persistence, service } = makeService();
+    const first = await service.create({ ownership, id: "conv-cas-create", title: "winner" });
+    const second = await service.create({ ownership, id: "conv-cas-create", title: "loser" });
+    assert.equal(second.id, first.id);
+    assert.equal(second.title, "winner");
+    // Concurrent create + branch against the winner's fresh version: create is a no-op for
+    // an existing id and the thread's metadata survives.
+    const [a, b] = await Promise.all([
+      service.create({ ownership, id: "conv-cas-race", title: "a" }),
+      service.create({ ownership, id: "conv-cas-race", title: "b" }),
+    ]);
+    assert.equal(a.id, b.id);
+    assert.equal(a.version, 1);
+    assert.equal(b.version, 1);
+    const again = await service.get({ ownership, threadId: a.id });
+    assert.equal(again.title, "a" === a.title ? "a" : "b");
+    assert.equal(again.version, 1);
+    persistence.close();
+  });
+
+  it("branch+branch at cap: exactly one wins, the loser gets metadata_conflict, no ref is lost", async () => {
+    const { persistence, service } = makeService({ limits: { maxActiveBranches: 1 } });
+    const thread = await service.create({ ownership, title: "cap" });
+    const [first, second] = await Promise.allSettled([
+      service.branch({ ownership, threadId: thread.id, leafId: "leaf-a" }),
+      service.branch({ ownership, threadId: thread.id, leafId: "leaf-b" }),
+    ]);
+    const fulfilled = first.status === "fulfilled" ? first : second;
+    const rejected = first.status === "fulfilled" ? second : first;
+    assert.equal(fulfilled.status, "fulfilled");
+    assert.equal(fulfilled.value.branches.length, 1);
+    assert.equal(rejected.status, "rejected");
+    assert.equal((rejected.reason as { reason?: string }).reason, "metadata_conflict");
+    const after = await service.get({ ownership, threadId: thread.id });
+    assert.equal(after.branches.length, 1);
+    // The surviving branch ref belongs to the winner, and the cap still holds.
+    assert.equal(after.branches[0]!.leafId, fulfilled.value.branches[0]!.leafId);
+    await assert.rejects(service.branch({ ownership, threadId: thread.id, leafId: "leaf-c" }), /Too many active branches/);
+    persistence.close();
+  });
+
+  it("branch+archive race: one wins, the loser sees metadata_conflict, the thread is never revived", async () => {
+    const { persistence, service } = makeService();
+    const thread = await service.create({ ownership, title: "race" });
+    const [branch, archive] = await Promise.allSettled([
+      service.branch({ ownership, threadId: thread.id, leafId: "leaf-race" }),
+      service.archive({ ownership, threadId: thread.id }),
+    ]);
+    const after = await service.get({ ownership, threadId: thread.id });
+    if (archive.status === "fulfilled") {
+      // Archive won: the branch lost with a conflict and the thread stays archived.
+      assert.equal(after.state, "archived");
+      assert.equal(after.branches.length, 0);
+      assert.equal(branch.status, "rejected");
+      assert.equal((branch.reason as { reason?: string }).reason, "metadata_conflict");
+    } else {
+      // Branch won: the archive lost with a conflict and the thread stays active with the branch.
+      assert.equal(after.state, "active");
+      assert.equal(after.branches.length, 1);
+      assert.equal(archive.status, "rejected");
+      assert.equal((archive.reason as { reason?: string }).reason, "metadata_conflict");
+    }
+    persistence.close();
+  });
+
+  it("archive on an archived thread is a no-op returning the thread", async () => {
+    const { persistence, service } = makeService();
+    const thread = await service.create({ ownership });
+    assert.equal(thread.version, 1);
+    const archived = await service.archive({ ownership, threadId: thread.id });
+    assert.equal(archived.state, "archived");
+    assert.equal(archived.version, 2);
+    const again = await service.archive({ ownership, threadId: thread.id });
+    assert.equal(again.state, "archived");
+    assert.equal(again.version, 2);
+    persistence.close();
+  });
+
+  it("delete wins: branch/archive after deletion never resurrect the thread", async () => {
+    const { persistence, service } = makeService();
+    const thread = await service.create({ ownership });
+    await service.branch({ ownership, threadId: thread.id, leafId: "leaf-del" });
+    const deleted = await service.delete({ ownership, threadId: thread.id });
+    assert.equal(deleted.deleted, true);
+    await assert.rejects(() => service.branch({ ownership, threadId: thread.id, leafId: "leaf-zombie" }), /not found/);
+    await assert.rejects(() => service.archive({ ownership, threadId: thread.id }), /not found/);
+    persistence.close();
+  });
+
+  it("cross-ownership CAS writes are rejected before the version guard", async () => {
+    const { persistence, service } = makeService();
+    const thread = await service.create({ ownership });
+    await assert.rejects(() => service.get({ ownership: otherOwnership, threadId: thread.id }), /not found/);
+    await assert.rejects(() => service.branch({ ownership: otherOwnership, threadId: thread.id, leafId: "leaf-x" }), /not found/);
+    await assert.rejects(() => service.archive({ ownership: otherOwnership, threadId: thread.id }), /not found/);
+    persistence.close();
+  });
+});

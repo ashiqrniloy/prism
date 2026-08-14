@@ -5,6 +5,8 @@ import {
   createEventMultiplexer,
   createMemoryCheckpointStore,
   createMemoryLeaseStore,
+  EventMultiplexerError,
+  EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE,
   LeaseConflictError,
 } from "../index.js";
 
@@ -141,5 +143,48 @@ describe("EventMultiplexer", () => {
     mux.close();
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(returned, true);
+  });
+
+  it("rejects a second concurrent subscriber and frees the slot on close", async () => {
+    const mux = createEventMultiplexer<number>();
+    const first = mux.subscribe()[Symbol.asyncIterator]();
+    const parked = first.next(); // parks the single consumer on an empty queue
+    const second = mux.subscribe()[Symbol.asyncIterator]();
+    await assert.rejects(
+      second.next(),
+      (error: unknown) => error instanceof EventMultiplexerError && error.code === EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE,
+    );
+    // The rejected subscriber never touches the queue; the first consumer still receives events.
+    mux.publish(1);
+    assert.equal((await parked).value, 1);
+    mux.close();
+    // Slot freed: a fresh subscriber works (and terminates because the mux is closed).
+    const afterClose = mux.subscribe()[Symbol.asyncIterator]();
+    assert.equal((await afterClose.next()).done, true);
+  });
+
+  it("frees the single-consumer slot when the first subscriber returns", async () => {
+    const mux = createEventMultiplexer<number>();
+    const first = mux.subscribe()[Symbol.asyncIterator]();
+    mux.publish(7);
+    assert.equal((await first.next()).value, 7); // consumer suspended at the yield
+    await first.return?.(undefined); // return() completes because the body is at a yield
+    const second = mux.subscribe()[Symbol.asyncIterator]();
+    mux.publish(8);
+    assert.equal((await second.next()).value, 8);
+    mux.close();
+  });
+
+  it("guards only once a subscriber actually starts iterating", async () => {
+    const mux = createEventMultiplexer<number>();
+    mux.publish(5);
+    const created = [mux.subscribe()[Symbol.asyncIterator](), mux.subscribe()[Symbol.asyncIterator]()];
+    // Creating a subscription does not consume the slot; the first to iterate wins.
+    assert.equal((await created[0].next()).value, 5);
+    await assert.rejects(
+      created[1].next(),
+      (error: unknown) => error instanceof EventMultiplexerError && error.code === EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE,
+    );
+    mux.close();
   });
 });

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.2] - 2026-08-13
+
+### Changed
+- Durable Postgres router reservations (migration 003 adds a reservations JSONB column to prism_model_router_budgets), durable reserve/commit/release with CTE eviction and expired-reservation pruning, and the state-concurrency conformance legs for router reservations and idempotency against real Postgres. See docs/migration.md and docs/enterprise-postgres-state.md.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

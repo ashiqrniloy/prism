@@ -27,6 +27,8 @@ import {
   runFeedbackPageLimit,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SessionAppendConflictError,
+  SESSION_METADATA_CONFLICT_CODE,
+  SessionMetadataConflictError,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
@@ -114,12 +116,19 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     `INSERT INTO prism_sessions (
       id, tenant_id, account_id, user_id, parent_session_id,
       agent_definition_id, agent_definition_version, created_at, updated_at,
-      expires_at, retention_policy_id, metadata
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      expires_at, retention_policy_id, metadata, version
+    )
+    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1
+    WHERE ? IS NULL OR ? = 0 OR EXISTS (SELECT 1 FROM prism_sessions WHERE id = ?)
     ON CONFLICT(id) DO UPDATE SET
       updated_at = excluded.updated_at,
-      metadata = excluded.metadata`,
+      metadata = excluded.metadata,
+      version = prism_sessions.version + 1
+    WHERE (? IS NULL)
+       OR (? > 0 AND prism_sessions.version = ? AND tenant_id IS ? AND account_id IS ? AND user_id IS ?)
+    RETURNING version`,
   );
+  const selectSessionVersion = db.prepare(`SELECT version FROM prism_sessions WHERE id = ?`);
   const selectParent = db.prepare(`SELECT 1 FROM prism_session_entries WHERE id = ? AND session_id = ? LIMIT 1`);
   const selectIdempotency = db.prepare(
     `SELECT entry_id FROM prism_session_append_idempotency
@@ -521,8 +530,8 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       return queryTable(db, "prism_sessions", query, filters, mapSessionRow, params);
     },
 
-    async appendSession(record: SessionRecord): Promise<void> {
-      upsertSessionRecord.run(
+    async appendSession(record) {
+      const row = upsertSessionRecord.get(
         record.id,
         record.tenantId ?? null,
         record.accountId ?? null,
@@ -535,7 +544,26 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         record.expiresAt ?? null,
         record.retentionPolicyId ?? null,
         record.metadata === undefined ? null : JSON.stringify(record.metadata),
-      );
+        record.expectedVersion ?? null,
+        record.expectedVersion ?? null,
+        record.id,
+        record.expectedVersion ?? null,
+        record.expectedVersion ?? null,
+        record.expectedVersion ?? null,
+        record.tenantId ?? null,
+        record.accountId ?? null,
+        record.userId ?? null,
+      ) as { version: number } | undefined;
+      if (!row) {
+        const current = selectSessionVersion.get(record.id) as { version: number } | undefined;
+        throw new SessionMetadataConflictError({
+          code: SESSION_METADATA_CONFLICT_CODE,
+          id: record.id,
+          expectedVersion: record.expectedVersion ?? 0,
+          currentVersion: current?.version ?? 0,
+        });
+      }
+      return { version: Number(row.version) };
     },
 
     async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {

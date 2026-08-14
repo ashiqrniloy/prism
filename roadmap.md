@@ -261,13 +261,13 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 
 ### 0.2.2 — Concurrent state and durability integrity
 
-- [ ] **Add atomic model-budget reservation.** Extend memory and durable router state stores with reserve/commit/release semantics so concurrent admissions cannot collectively exceed budget; define crash/lease expiry and unknown-usage reconciliation. Cap and evict rate/budget maps as well as circuit maps.
+- [x] **Add atomic model-budget reservation.** Extend memory and durable router state stores with reserve/commit/release semantics so concurrent admissions cannot collectively exceed budget; define crash/lease expiry and unknown-usage reconciliation. Cap and evict rate/budget maps as well as circuit maps.
   - Acceptance: parallel admission cannot oversubscribe; abandoned reservations expire deterministically; PostgreSQL and memory conformance agree; diagnostics stay bounded/redacted.
-- [ ] **Make conversation metadata updates atomic.** Add version/CAS updates or append-only branch records for create, branch, archive, and delete metadata. Preserve ownership and branch caps without lost updates or stale archive resurrection.
+- [x] **Make conversation metadata updates atomic.** Add version/CAS updates or append-only branch records for create, branch, archive, and delete metadata. Preserve ownership and branch caps without lost updates or stale archive resurrection.
   - Acceptance: concurrent branch+branch, branch+archive, duplicate create, and delete/retention/legal-hold races preserve all valid state or return an explicit conflict.
-- [ ] **Enforce single-consumer and resumable-registry semantics.** `createEventMultiplexer` must reject a second subscriber or deliberately support broadcast; NATS subscriptions must use restart-stable durable identity when durable recovery is claimed; in-process active-run registries need bounded lifecycle cleanup and explicit non-durable documentation.
+- [x] **Enforce single-consumer and resumable-registry semantics.** `createEventMultiplexer` must reject a second subscriber or deliberately support broadcast; NATS subscriptions must use restart-stable durable identity when durable recovery is claimed; in-process active-run registries need bounded lifecycle cleanup and explicit non-durable documentation.
   - Acceptance: duplicate subscribers, restart/resume, terminal cleanup, leaked registration, abort, cursor, and cross-tenant cases are deterministic.
-- [ ] **Add multi-process state conformance.** Run approval, cursor, checkpoint CAS, idempotency, router reservation, conversation metadata, and unknown-outcome recovery against memory and durable implementations.
+- [x] **Add multi-process state conformance.** Run approval, cursor, checkpoint CAS, idempotency, router reservation, conversation metadata, and unknown-outcome recovery against memory and durable implementations.
   - Acceptance: stale versions/fences reject, ownership never crosses tenants, retries are idempotent, and no test relies on timing-only sleeps.
 
 ### 0.2.3 — Build, coverage, and release evidence integrity
@@ -328,6 +328,9 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 - [ ] **Field-level data classification and redaction.** Apply policy-driven classification to prompts, tool args/results, artifacts, audit, telemetry, and exports with fail-closed defaults.
 - [ ] **ERP release journey.** Exercise identity, policy, budget reservation, SoD approval, outbox mutation, compensation, audit export, legal hold, replica failover, and restore.
   - Acceptance: atomicity/recovery invariants are documented and tested; no exactly-once claim; security/performance/storage budgets pass. “ERP production ready” remains blocked until the 0.3.0 live-service matrix is recorded.
+  
+### 0.2.8 linux-computer-use, Worktrees
+Background observers — the actually novel bit. Alongside your session, Muse Code runs four persistent observer agents: memory recall, skill recall, goal tracking, and verification
 
 ### Mandatory 0.2.x regression matrix
 

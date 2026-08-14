@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.2] - 2026-08-13
+
+### Changed
+- The in-process active-run registry is bounded and documented non-durable: registerActiveWorkflowRun sweeps aborted/leaked entries before insert and fails closed at the 512 cap with ERR_PRISM_WORKFLOW_RUN_REGISTRY_OVERFLOW (never evicts a live entry). See docs/workflows.md.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

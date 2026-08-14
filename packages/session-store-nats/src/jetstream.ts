@@ -1,4 +1,4 @@
-import { jetstream, jetstreamManager } from "@nats-io/jetstream";
+import { jetstream, jetstreamManager, JetStreamApiError } from "@nats-io/jetstream";
 import type { NatsConnection } from "@nats-io/transport-node";
 
 /**
@@ -61,7 +61,7 @@ export function createNatsJetStream(connection: NatsConnection): Promise<NatsJet
         return { stream: ack.stream, seq: ack.seq, duplicate: ack.duplicate };
       },
       async addConsumer(stream, cfg) {
-        await jsm.consumers.add(stream, {
+        const config = {
           durable_name: cfg.name,
           filter_subject: cfg.filter_subject,
           ack_policy: cfg.ack_policy,
@@ -69,7 +69,16 @@ export function createNatsJetStream(connection: NatsConnection): Promise<NatsJet
           ...(cfg.opt_start_seq === undefined ? {} : { opt_start_seq: cfg.opt_start_seq }),
           ...(cfg.ack_wait === undefined ? {} : { ack_wait: cfg.ack_wait }),
           ...(cfg.max_deliver === undefined ? {} : { max_deliver: cfg.max_deliver }),
-        });
+        };
+        try {
+          await jsm.consumers.add(stream, config);
+        } catch (error) {
+          // Durable reuse (restart-stable identity): a crashed subscribe leaves its
+          // consumer behind, and re-adding by the same stable name resumes at the
+          // consumer's last-acked position. NATS server error 10058 = "consumer
+          // already exists"; ephemeral page/cleanup names never collide.
+          if (!(error instanceof JetStreamApiError) || error.code !== 10058) throw error;
+        }
       },
       async getConsumer(stream, name) {
         const consumer = await js.consumers.get(stream, name);

@@ -1,17 +1,21 @@
 import { ModelRouterError } from "./errors.js";
 import type { ModelRouterLimits, ResolvedModelRouterLimits } from "./types.js";
 
-/** Phase 8 freeze: attempts 3/8; circuit keys 1024/16384; diagnostics 8 KiB/64 KiB. */
+/** Phase 8 freeze: attempts 3/8; circuit keys 1024/16384; diagnostics 8 KiB/64 KiB. Rate/budget keys 4096/65536 (window dimension inflates cardinality). */
 export const DEFAULT_MODEL_ROUTER_LIMITS: ResolvedModelRouterLimits = {
   maxAttempts: 3,
   maxCircuitKeys: 1_024,
   maxDiagnosticsBytes: 8 * 1024,
+  maxRateKeys: 4_096,
+  maxBudgetKeys: 4_096,
 };
 
 export const HARD_MODEL_ROUTER_LIMITS: ResolvedModelRouterLimits = {
   maxAttempts: 8,
   maxCircuitKeys: 16_384,
   maxDiagnosticsBytes: 64 * 1024,
+  maxRateKeys: 65_536,
+  maxBudgetKeys: 65_536,
 };
 
 export const DEFAULT_CIRCUIT_FAILURE_THRESHOLD = 3;

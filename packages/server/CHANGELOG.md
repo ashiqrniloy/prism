@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.2] - 2026-08-13
+
+### Changed
+- Conversation create/branch/archive now route through the session-store appendSession version/CAS: concurrent writes surface as metadata_conflict mapped to HTTP 409 (carrying versions only, never metadata content); branch caps are enforced inside the CAS write. See docs/conversations.md.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

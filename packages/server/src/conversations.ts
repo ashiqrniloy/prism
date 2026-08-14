@@ -13,6 +13,7 @@ import {
   conversationThreadFromRecord,
   decodeConversationReplayCursor,
   encodeConversationReplayCursor,
+  isSessionMetadataConflict,
   type JsonObject,
   type Message,
   type OwnershipScope,
@@ -108,8 +109,10 @@ export function resolveConversationLimits(input: ConversationLimits = {}): Resol
 export interface ConversationServiceStore {
   querySessions(query: import("@arnilo/prism").SessionQuery): Promise<PersistencePage<SessionRecord>>;
   queryEvents(query: import("@arnilo/prism").AgentEventQuery): Promise<PersistencePage<AgentEventRecord>>;
-  /** Required at factory time; optional in the type so persistence unions stay assignable. */
-  appendSession?(record: SessionRecord): Promise<void>;
+  /** Required at factory time; optional in the type so persistence unions stay assignable.
+   *  Additive CAS: `expectedVersion` requires the stored version to match (0 = create-only);
+   *  the returned `version` is the new write version. Throws `SessionMetadataConflictError`. */
+  appendSession?(record: SessionRecord & { readonly expectedVersion?: number }): Promise<{ readonly version: number } | void>;
   readonly lifecycle?: Pick<PersistenceLifecycleStore, "applyRetention">;
 }
 
@@ -226,7 +229,7 @@ export function createConversationService(store: ConversationServiceStore, optio
 
   async function writeMarker(thread: import("@arnilo/prism").ConversationThread, marker: Parameters<typeof conversationMarkerMetadata>[0]) {
     const now = new Date().toISOString();
-    await appendSession({
+    const result = await appendSession({
       id: thread.id,
       ...(thread.tenantId !== undefined ? { tenantId: thread.tenantId } : {}),
       ...(thread.accountId !== undefined ? { accountId: thread.accountId } : {}),
@@ -234,7 +237,14 @@ export function createConversationService(store: ConversationServiceStore, optio
       createdAt: thread.createdAt,
       updatedAt: now,
       metadata: conversationMarkerMetadata(marker),
+      expectedVersion: thread.version ?? 0,
     });
+    return result?.version ?? (thread.version ?? 0) + 1;
+  }
+
+  /** CAS conflict on create is a race between two get-or-create callers: the winner wins. */
+  function throwMetadataConflict(): never {
+    throw new ConversationError("Conversation thread changed concurrently", "metadata_conflict");
   }
 
   return {
@@ -246,8 +256,8 @@ export function createConversationService(store: ConversationServiceStore, optio
       if (input.title !== undefined) assertBytes(input.title, limits.titleBytes, "title_too_large");
       if (input.requestId !== undefined) assertBytes(input.requestId, limits.requestIdBytes, "request_id_too_large");
       if (input.id !== undefined) {
-        // Idempotent get-or-create for explicit ids. ponytail: concurrent creates race to the
-        // last metadata write; both callers receive a thread and ownership is enforced on read.
+        // Idempotent get-or-create for explicit ids; the create-only CAS below is the
+        // race backstop, so a concurrent create returns the winner's thread untouched.
         const existing = await this.get({ ...input, threadId: id }).catch((error: unknown) => {
           if (error instanceof ConversationError && error.reason === "not_found") return undefined;
           throw error;
@@ -255,18 +265,24 @@ export function createConversationService(store: ConversationServiceStore, optio
         if (existing) return existing;
       }
       const now = new Date().toISOString();
-      await appendSession({
-        id,
-        ...input.ownership,
-        createdAt: now,
-        updatedAt: now,
-        metadata: conversationMarkerMetadata({
-          ...(input.title === undefined ? {} : { title: input.title }),
-          state: "active",
-          ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
-          ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
-        }),
-      });
+      try {
+        await appendSession({
+          id,
+          ...input.ownership,
+          createdAt: now,
+          updatedAt: now,
+          metadata: conversationMarkerMetadata({
+            ...(input.title === undefined ? {} : { title: input.title }),
+            state: "active",
+            ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
+            ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+          }),
+          expectedVersion: 0,
+        });
+      } catch (error) {
+        if (isSessionMetadataConflict(error)) return this.get({ ...input, threadId: id });
+        throw error;
+      }
       return this.get({ ...input, threadId: id });
     },
 
@@ -330,26 +346,36 @@ export function createConversationService(store: ConversationServiceStore, optio
       if (thread.branches.length >= limits.maxActiveBranches) {
         throw new ConversationError("Too many active branches for this thread", "too_many_branches");
       }
-      // ponytail: read-modify-write of branch refs; concurrent branch calls can lose a ref, so
-      // the cap is approximate and the entry tree remains the content source of truth.
-      await writeMarker(thread, {
-        ...(thread.title === undefined ? {} : { title: thread.title }),
-        state: thread.state,
-        branches: [...thread.branches, { leafId, createdAt: new Date().toISOString() }],
-        ...(thread.metadata === undefined ? {} : { metadata: thread.metadata }),
-      });
+      // Branch refs are append-only within the marker; the CAS version guard makes the
+      // read-modify-write atomic, so concurrent branches cannot lose a ref or exceed the cap.
+      try {
+        await writeMarker(thread, {
+          ...(thread.title === undefined ? {} : { title: thread.title }),
+          state: thread.state,
+          branches: [...thread.branches, { leafId, createdAt: new Date().toISOString() }],
+          ...(thread.metadata === undefined ? {} : { metadata: thread.metadata }),
+        });
+      } catch (error) {
+        if (isSessionMetadataConflict(error)) throwMetadataConflict();
+        throw error;
+      }
       return loadThread(input, thread.id);
     },
 
     async archive(input) {
       const thread = await loadThread(input, input.threadId);
       if (thread.state === "archived") return thread;
-      await writeMarker(thread, {
-        ...(thread.title === undefined ? {} : { title: thread.title }),
-        state: "archived",
-        ...(thread.branches.length === 0 ? {} : { branches: thread.branches }),
-        ...(thread.metadata === undefined ? {} : { metadata: thread.metadata }),
-      });
+      try {
+        await writeMarker(thread, {
+          ...(thread.title === undefined ? {} : { title: thread.title }),
+          state: "archived",
+          ...(thread.branches.length === 0 ? {} : { branches: thread.branches }),
+          ...(thread.metadata === undefined ? {} : { metadata: thread.metadata }),
+        });
+      } catch (error) {
+        if (isSessionMetadataConflict(error)) throwMetadataConflict();
+        throw error;
+      }
       return loadThread(input, thread.id);
     },
 
@@ -645,13 +671,15 @@ function conversationErrorResponse(error: unknown): Response {
         ? 404
         : error.reason === "thread_archived"
           ? 409
-          : error.reason === "ownership"
-            ? 403
-            : error.reason === "unsupported"
-              ? 501
-              : error.reason === "not_redacted" || error.reason === "limit_exceeded"
-                ? 500
-                : 400;
+          : error.reason === "metadata_conflict"
+            ? 409
+            : error.reason === "ownership"
+              ? 403
+              : error.reason === "unsupported"
+                ? 501
+                : error.reason === "not_redacted" || error.reason === "limit_exceeded"
+                  ? 500
+                  : 400;
   } else if (error instanceof RangeError) {
     status = 400;
     code = "ERR_PRISM_SERVER_INPUT";

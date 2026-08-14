@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.2] - 2026-08-13
+
+### Changed
+- Atomic model-budget reservation (reserve/commit/release with fencing tokens, TTL expiry and unknown-usage reconciliation), rate/budget key-map caps with LRU eviction that never drops a held-reservation row, and admission rewired to reserve-at-admission (readBudget/addUsage stay for cap-less requests and retrospective accounting). See docs/migration.md 0.2.1 → 0.2.2 and docs/model-routing.md.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

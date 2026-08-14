@@ -1,5 +1,57 @@
 # Migration guide
 
+## 0.2.1 → 0.2.2 concurrent state and durability integrity (plan 022)
+
+Release **0.2.2** (plan 022) makes four concurrency/durability boundaries atomic or fail-loud. The API surface is **additive-only** (plain reviewed compat gate at 0.2.2: expected deltas are the version literal, `ModelRouterStateStore.reserveBudget`/`commitBudget`/`releaseBudget` plus `ModelRouterReservation`/`ModelRouterBudgets.reservationTtlMs`/`ModelRouterLimits.maxRateKeys`/`maxBudgetKeys` (memory + Postgres), `SessionRecord.version` with `appendSession` `expectedVersion`, `EventMultiplexerError` with code `ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER`, and the `@arnilo/prism/testing/state-concurrency-conformance` subpath; no removal, no `--allow-break`). Three of the four changes tighten behavior where 0.2.1 silently accepted a race — concurrent hosts may now see an explicit conflict where 0.2.1 lost an update or oversubscribed a budget:
+
+1. **Atomic model-budget reservation (`model-router`, `enterprise-postgres`).** Admission is now reserve/commit/release: `reserveBudget` runs at admission and fails the request when `used + reserved + requested` would exceed the window max, returning `{ reservationId, fencingToken, admitted, retryAfterMs? }`; `commitBudget` applies the actual usage delta at the outcome (an expired reservation still charges the reserved amount with `unknownUsage: true` so a late commit can never disappear from accounting); `releaseBudget` frees an uncommitted reservation. `readBudget`-based admission stays for requests with no per-request cap, and the 0.2.1 post-hoc `addUsage` remains as retrospective accounting only — it is no longer admission authority.
+
+   ```js
+   // 0.2.1: readBudget then consumeRate then addUsage — concurrent admissions could collectively oversubscribe
+   // 0.2.2: admission reserves the full per-request cap, outcome commits/releases actuals
+   const reservation = await store.reserveBudget({
+     key: { tenantId, principalId, provider, model },
+     tokens: request.maxTokens, costUsd: request.maxCostUsd, // per-request caps, when set
+     windowMs: 24 * 60 * 60 * 1000, reservationTtlMs: 60_000,
+   });
+   if (!reservation.admitted) { /* denied; retry after reservation.retryAfterMs */ }
+   // ... run the request ...
+   await store.commitBudget({
+     key, reservationId: reservation.reservationId,
+     fencingToken: reservation.fencingToken, tokens: actualTokens, windowMs: 24 * 60 * 60 * 1000,
+   });
+   ```
+
+   Reservations expire after `reservationTtlMs` (default 60,000 ms, bounded to 31 days) even if a host never commits, so a crashed request cannot hold capacity forever. Rate/budget/circuit key maps are now capped (`maxRateKeys`/`maxBudgetKeys`, default 4,096, hard cap 65,536; circuits stay 1,024/16,384) with LRU eviction on insert; a budget row holding an active reservation is never evicted (the eviction candidates exclude held rows, and if nothing is evictable the insert fails with `ERR_PRISM_MODEL_ROUTER_STATE` `capacity-exhausted`). The durable Postgres store keeps reservations in a new `reservations` JSONB column on `prism_model_router_budgets` (migration 003, forward-only, applied automatically by `applyEnterpriseMigrations`; existing rows are untouched and read as no reservations).
+
+2. **Atomic conversation metadata (`session-store-postgres`, `session-store-sqlite`, core `SessionRecord`).** `SessionRecord` gains `version` (fresh rows start at 1; migration 008 backfills legacy 0-version rows to 1) and `appendSession` accepts `expectedVersion`: `0` = create-only, `N > 0` = exact-version CAS update-only, omitted = the 0.2.1 last-write-wins behavior for untyped/legacy callers. A stale write throws `SessionMetadataConflictError` (`metadata_conflict`) carrying only `{ id, expectedVersion, currentVersion }` — never metadata content — and the HTTP server maps it to 409. Concurrent create/branch/archive are now single-statement: the branch `maxActiveBranches` cap is enforced inside the CAS write (a concurrent branch at cap-1 fails its version guard instead of silently dropping the oldest ref), archive wins over a stale concurrent write, and a retention-deleted session is never resurrected (the update arm requires the row to still exist).
+
+   ```js
+   // 0.2.1: create could race to the last metadata write; concurrent branch calls could lose a ref
+   // 0.2.2: exactly one concurrent writer wins per version; losers get metadata_conflict
+   const { version } = await persistence.appendSession({
+     id: sessionId, ...ownership, createdAt, updatedAt, metadata: { state: "active" },
+     expectedVersion: 0, // create-only: conflict if the session already exists
+   });
+   try {
+     await persistence.appendSession({ ...record, metadata: { state: "archived" }, expectedVersion: version });
+   } catch (error) {
+     if (error.code === "metadata_conflict") { /* re-read the winning version and retry */ }
+   }
+   ```
+
+3. **Single-consumer `EventMultiplexer` (core).** `createEventMultiplexer().subscribe()` now rejects a second concurrent consumer with `EventMultiplexerError` `ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER` instead of parking both consumers on one queue and silently losing events. The slot frees when the active consumer's iterator completes, is `return()`ed at a yield, or the multiplexer closes. Hosts that previously relied on multiple `subscribe()` calls sharing one multiplexer must either serialize consumption or use the event source's own broadcast `subscribe` (agent-events), which still supports multiple subscribers. `createWorkflowEventBus` and the supervisor (the only in-repo consumers) are unaffected — each already uses a single subscriber.
+
+4. **Restart-stable NATS durable consumer identity (`session-store-nats`).** The durable consumer name is now exactly `prism_<hmac16 of tenantId|sessionId|runId>` — the 0.2.1 random suffix is gone, so a crashed durable subscribe is reused at its last-acked position by a restarting process (cursor resume, at-least-once). Clean stops still delete the durable consumer (resume then relies on the HMAC-signed cursor); only a crash leaves the consumer in place. Pre-0.2.2 consumers minted with the random suffix (`prism_<digest>_<random>`) are orphaned and reclaimed by the existing `deleteConsumer`/consumer-enumeration cleanup path on the next clean stop of a same-subject subscribe.
+
+5. **Bounded, non-durable active-run registries (`workflows`).** The in-process workflow active-run registry is documented as non-durable (no timer, no background service): `registerActiveWorkflowRun` sweeps aborted/leaked entries before every insert and fails closed with `WorkflowRuntimeError` `ERR_PRISM_WORKFLOW_RUN_REGISTRY_OVERFLOW` at the 512 cap instead of evicting a live entry (a live eviction could silently allow a duplicate run). A run whose promise never settles is reclaimed only when it is aborted or the cap forces a sweep — there is no durable recovery of active runs in 0.2.2 (see Further Actions: 0.2.6).
+
+**Store compatibility:** 0.2.2 is **not** rollback-compatible with 0.2.1 in the Postgres/SQLite persisted shape: `prism_sessions` gains a `version` column (migration 008) and `prism_model_router_budgets` gains a `reservations` column (enterprise migration 003). Both migrations are forward-only and additive — 0.2.2 code reads 0.2.1 databases correctly after migration (backfill included); a 0.2.1 binary pointed at a 0.2.2 database still works because the new columns are nullable/defaulted, but it will not maintain versions or reservations. The NATS durable-name change touches no persisted data (consumers are runtime state; orphaned 0.2.1 consumers are reclaimed on the next clean stop).
+
+**Rollout:** upgrade core and the session stores together (migration 008 runs automatically via the existing checksummed `prism_migrations`; the version column must exist before any host writes CAS updates). Then `enterprise-postgres` (migration 003) and `model-router` (reservation admission can be enabled per-host; hosts that never call `recordUsage` rely on TTL expiry). Then `workflows`/`server` (conversation CAS is transparent to clients except new 409 responses), then `session-store-nats`. Branch/archive callers that intentionally lost races in 0.2.1 must now handle `metadata_conflict` (re-read + retry) where they previously accepted last-write-wins.
+
+**Rollback risk:** restoring 0.2.1 against a 0.2.2 database is safe for reads and last-write-wins writes (the new columns are ignored) but silently reopens all four race windows: oversubscription, conversation lost updates, silent multi-subscriber event loss, and non-restart-stable NATS resume. Rollback is therefore only a stopgap, not a mitigation — prefer fixing the failing host on 0.2.2.
+
 ## 0.2.0 → 0.2.1 provider completion and outbound trust boundaries (plan 021)
 
 Release **0.2.1** (plan 021) tightens the streaming-completion, outbound-fetch, and credential/signing/upload boundaries. The API surface is **additive-only** (plain reviewed compat gate at 0.2.1: the only deltas are the version literal and `@arnilo/prism-mcp` transport helpers `boundResponse`/`defaultResolver`/`isLoopbackAddress`/`isLoopbackHostname`/`normalizeHostname`/`raceAbort`/`requestPinned`/`resolvePinnedAddress` becoming re-exports of the lifted core primitives — same names, same signatures, no removal; no `--allow-break`), with five documented security-motivated behavior tightenings. Untyped/legacy callers may now fail where 0.2.0 silently proceeded:

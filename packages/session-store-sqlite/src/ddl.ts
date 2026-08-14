@@ -325,6 +325,11 @@ CREATE INDEX IF NOT EXISTS prism_agent_events_owner_timestamp_sequence_idx
   WHERE redacted = 1;
 `;
 
+export const MIGRATION_008_SESSION_VERSION = `
+ALTER TABLE prism_sessions ADD COLUMN version INTEGER NOT NULL DEFAULT 0;
+UPDATE prism_sessions SET version = 1 WHERE version = 0;
+`;
+
 export const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = `
 CREATE TABLE IF NOT EXISTS prism_legal_holds (
   id TEXT NOT NULL PRIMARY KEY,

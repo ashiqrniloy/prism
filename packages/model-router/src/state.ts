@@ -16,12 +16,21 @@ interface RateState {
   lastUsed: number;
 }
 
+interface Reservation {
+  readonly id: string;
+  readonly tokens: number;
+  readonly costUsd: number;
+  readonly expiresAt: number;
+  readonly fencingToken: string;
+}
+
 interface BudgetState {
   tokens: number;
   costUsd: number;
   windowStart: number;
   windowMs: number;
   lastUsed: number;
+  reservations: Reservation[];
 }
 
 interface CircuitState {
@@ -52,6 +61,7 @@ export function createMemoryModelRouterStateStore(): ModelRouterStateStore {
       stateWindow(input.windowMs);
       const id = keyOf(input.key);
       let state = rates.get(id)?.state;
+      if (!state) evictLruRate(rates, input.maxRateKeys);
       if (!state || state.windowMs !== input.windowMs || input.now - state.windowStart >= input.windowMs) {
         state = { count: 0, windowStart: input.now, windowMs: input.windowMs, lastUsed: input.now };
       }
@@ -72,8 +82,9 @@ export function createMemoryModelRouterStateStore(): ModelRouterStateStore {
       stateWindow(input.windowMs);
       const id = keyOf(input.key);
       let state = budgets.get(id)?.state;
+      if (!state) evictLruBudget(budgets, input.maxBudgetKeys, input.now);
       if (!state || state.windowMs !== input.windowMs || input.now - state.windowStart >= input.windowMs) {
-        state = { tokens: 0, costUsd: 0, windowStart: input.now, windowMs: input.windowMs, lastUsed: input.now };
+        state = { tokens: 0, costUsd: 0, windowStart: input.now, windowMs: input.windowMs, lastUsed: input.now, reservations: [] };
       }
       state.lastUsed = input.now;
       budgets.set(id, { key: input.key, state });
@@ -88,14 +99,141 @@ export function createMemoryModelRouterStateStore(): ModelRouterStateStore {
       stateUsage(input.costUsd, "costUsd");
       const id = keyOf(input.key);
       let state = budgets.get(id)?.state;
+      if (!state) evictLruBudget(budgets, input.maxBudgetKeys, input.now);
       if (!state || state.windowMs !== input.windowMs || input.now - state.windowStart >= input.windowMs) {
-        state = { tokens: 0, costUsd: 0, windowStart: input.now, windowMs: input.windowMs, lastUsed: input.now };
+        state = { tokens: 0, costUsd: 0, windowStart: input.now, windowMs: input.windowMs, lastUsed: input.now, reservations: [] };
       }
       if (input.tokens !== undefined) state.tokens += input.tokens;
       if (input.costUsd !== undefined) state.costUsd += input.costUsd;
       if (!Number.isFinite(state.tokens) || !Number.isFinite(state.costUsd)) {
         throw new ModelRouterError("router budget exceeds finite range", "ERR_PRISM_MODEL_ROUTER_BUDGET");
       }
+      state.lastUsed = input.now;
+      budgets.set(id, { key: input.key, state });
+    },
+
+    async reserveBudget(input) {
+      validateKey(input.key);
+      stateClock(input.now);
+      stateWindow(input.windowMs);
+      positiveInteger(input.reservationTtlMs, "reservation TTL", MAX_WINDOW_MS);
+      stateUsage(input.tokens, "tokens");
+      stateUsage(input.costUsd, "costUsd");
+      stateLimit(input.maxTokens, "maxTokens");
+      stateLimit(input.maxCostUsd, "maxCostUsd");
+      if (input.tokens === undefined && input.costUsd === undefined) {
+        throw new ModelRouterError("reservation requires tokens or costUsd", "ERR_PRISM_MODEL_ROUTER_VALIDATION");
+      }
+      const id = keyOf(input.key);
+      let state = budgets.get(id)?.state;
+      if (!state) evictLruBudget(budgets, input.maxBudgetKeys, input.now);
+      if (!state || state.windowMs !== input.windowMs || input.now - state.windowStart >= input.windowMs) {
+        state = { tokens: 0, costUsd: 0, windowStart: input.now, windowMs: input.windowMs, lastUsed: input.now, reservations: [] };
+      }
+      // Expired reservations are treated as released: excluded from capacity and
+      // kept only so a late commit can still reconcile (charged as unknown usage).
+      const active = state.reservations.filter((reservation) => reservation.expiresAt > input.now);
+      const reservedTokens = active.reduce((sum, reservation) => sum + reservation.tokens, 0);
+      const reservedCost = active.reduce((sum, reservation) => sum + reservation.costUsd, 0);
+      const remainingTokens = input.maxTokens === undefined ? undefined : input.maxTokens - state.tokens - reservedTokens;
+      const remainingCost = input.maxCostUsd === undefined ? undefined : input.maxCostUsd - state.costUsd - reservedCost;
+      if (
+        (input.tokens !== undefined && remainingTokens !== undefined && input.tokens > remainingTokens) ||
+        (input.costUsd !== undefined && remainingCost !== undefined && input.costUsd > remainingCost)
+      ) {
+        const earliestRelease = Math.min(
+          active.reduce((earliest, reservation) => Math.min(earliest, reservation.expiresAt), Number.POSITIVE_INFINITY),
+          state.windowStart + state.windowMs,
+        );
+        return { admitted: false, retryAfterMs: Math.max(1, earliestRelease - input.now) };
+      }
+      const reservation: Reservation = {
+        id: randomUUID(),
+        tokens: input.tokens ?? 0,
+        costUsd: input.costUsd ?? 0,
+        expiresAt: input.now + input.reservationTtlMs,
+        fencingToken: randomUUID(),
+      };
+      state.reservations.push(reservation);
+      state.lastUsed = input.now;
+      budgets.set(id, { key: input.key, state });
+      return { admitted: true, reservationId: reservation.id, fencingToken: reservation.fencingToken };
+    },
+
+    async commitBudget(input) {
+      validateKey(input.key);
+      stateClock(input.now);
+      stateWindow(input.windowMs);
+      stateUsage(input.tokens, "tokens");
+      stateUsage(input.costUsd, "costUsd");
+      reservationRef(input.reservationId, input.fencingToken);
+      const id = keyOf(input.key);
+      const entry = budgets.get(id);
+      const state = entry?.state;
+      if (!state || state.windowMs !== input.windowMs) {
+        throw new ModelRouterError("reservation not found; outcome unknown", "ERR_PRISM_MODEL_ROUTER_STATE");
+      }
+      const reservation = state.reservations.find((candidate) => candidate.id === input.reservationId);
+      if (!reservation) {
+        throw new ModelRouterError("reservation not found; outcome unknown", "ERR_PRISM_MODEL_ROUTER_STATE");
+      }
+      if (reservation.fencingToken !== input.fencingToken) {
+        throw new ModelRouterError("reservation fencing mismatch", "ERR_PRISM_MODEL_ROUTER_STATE");
+      }
+      if (input.now - state.windowStart >= state.windowMs) {
+        // The window rolled over: the reservation belongs to a dead window. Charge
+        // the reserved amount into a fresh window (mirrors addUsage window reset).
+        budgets.set(id, {
+          key: input.key,
+          state: {
+            tokens: reservation.tokens,
+            costUsd: reservation.costUsd,
+            windowStart: input.now,
+            windowMs: state.windowMs,
+            lastUsed: input.now,
+            reservations: [],
+          },
+        });
+        return { unknownUsage: true };
+      }
+      if (reservation.expiresAt <= input.now) {
+        state.tokens += reservation.tokens;
+        state.costUsd += reservation.costUsd;
+        state.reservations = state.reservations.filter((candidate) => candidate.id !== input.reservationId);
+        state.lastUsed = input.now;
+        budgets.set(id, { key: input.key, state });
+        return { unknownUsage: true };
+      }
+      state.tokens += input.tokens ?? 0;
+      state.costUsd += input.costUsd ?? 0;
+      if (!Number.isFinite(state.tokens) || !Number.isFinite(state.costUsd)) {
+        throw new ModelRouterError("router budget exceeds finite range", "ERR_PRISM_MODEL_ROUTER_BUDGET");
+      }
+      state.reservations = state.reservations.filter((candidate) => candidate.id !== input.reservationId);
+      state.lastUsed = input.now;
+      budgets.set(id, { key: input.key, state });
+      return { unknownUsage: false };
+    },
+
+    async releaseBudget(input) {
+      validateKey(input.key);
+      stateClock(input.now);
+      stateWindow(input.windowMs);
+      reservationRef(input.reservationId, input.fencingToken);
+      const id = keyOf(input.key);
+      const entry = budgets.get(id);
+      const state = entry?.state;
+      if (!state || state.windowMs !== input.windowMs) {
+        throw new ModelRouterError("reservation not found; outcome unknown", "ERR_PRISM_MODEL_ROUTER_STATE");
+      }
+      const reservation = state.reservations.find((candidate) => candidate.id === input.reservationId);
+      if (!reservation) {
+        throw new ModelRouterError("reservation not found; outcome unknown", "ERR_PRISM_MODEL_ROUTER_STATE");
+      }
+      if (reservation.fencingToken !== input.fencingToken) {
+        throw new ModelRouterError("reservation fencing mismatch", "ERR_PRISM_MODEL_ROUTER_STATE");
+      }
+      state.reservations = state.reservations.filter((candidate) => candidate.id !== input.reservationId);
       state.lastUsed = input.now;
       budgets.set(id, { key: input.key, state });
     },
@@ -171,6 +309,17 @@ export function createMemoryModelRouterStateStore(): ModelRouterStateStore {
       if (removed >= limit) return { removed };
       removed += removeExpiredWindows(budgets, input.owner, input.now, limit - removed);
       if (removed >= limit) return { removed };
+      for (const [id, entry] of budgets) {
+        if (removed >= limit) break;
+        if (!sameOwner(entry.key, input.owner)) continue;
+        const before = entry.state.reservations.length;
+        entry.state.reservations = entry.state.reservations.filter((reservation) => reservation.expiresAt > input.now);
+        if (entry.state.reservations.length < before) {
+          budgets.set(id, entry);
+          removed += 1;
+        }
+      }
+      if (removed >= limit) return { removed };
       const circuitEntries = [...circuits.entries()]
         .filter(([, entry]) => {
           const state = entry.state;
@@ -213,6 +362,25 @@ function evictClosedCircuit(circuits: Map<string, StateEntry<CircuitState>>, max
     .sort(([, a], [, b]) => a.state.lastUsed - b.state.lastUsed || keyOf(a.key).localeCompare(keyOf(b.key)))[0];
   if (!candidate) throw new ModelRouterError("router state capacity exhausted", "ERR_PRISM_MODEL_ROUTER_STATE");
   circuits.delete(candidate[0]);
+}
+
+function evictLruRate(rates: Map<string, StateEntry<RateState>>, maxKeys: number | undefined): void {
+  if (maxKeys === undefined || rates.size < maxKeys) return;
+  const candidate = [...rates.entries()].sort(
+    ([, a], [, b]) => a.state.lastUsed - b.state.lastUsed || keyOf(a.key).localeCompare(keyOf(b.key)),
+  )[0];
+  if (!candidate) throw new ModelRouterError("router state capacity exhausted", "ERR_PRISM_MODEL_ROUTER_STATE");
+  rates.delete(candidate[0]);
+}
+
+function evictLruBudget(budgets: Map<string, StateEntry<BudgetState>>, maxKeys: number | undefined, now: number): void {
+  if (maxKeys === undefined || budgets.size < maxKeys) return;
+  // A row holding an active reservation is pinned and never evicted.
+  const candidate = [...budgets.entries()]
+    .filter(([, entry]) => !entry.state.reservations.some((reservation) => reservation.expiresAt > now))
+    .sort(([, a], [, b]) => a.state.lastUsed - b.state.lastUsed || keyOf(a.key).localeCompare(keyOf(b.key)))[0];
+  if (!candidate) throw new ModelRouterError("router state capacity exhausted", "ERR_PRISM_MODEL_ROUTER_STATE");
+  budgets.delete(candidate[0]);
 }
 
 function keyOf(key: ModelRouterStateKey): string {
@@ -263,6 +431,23 @@ function stateWindow(value: unknown): void {
 function stateUsage(value: unknown, label: string): void {
   if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
     throw new ModelRouterError(`${label} must be finite non-negative`, "ERR_PRISM_MODEL_ROUTER_BUDGET");
+  }
+}
+
+function stateLimit(value: unknown, label: string): void {
+  if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
+    throw new ModelRouterError(`${label} must be finite non-negative`, "ERR_PRISM_MODEL_ROUTER_BUDGET");
+  }
+}
+
+function reservationRef(reservationId: string, fencingToken: string): void {
+  for (const [value, label] of [
+    [reservationId, "reservationId"],
+    [fencingToken, "fencingToken"],
+  ] as const) {
+    if (typeof value !== "string" || !value || Buffer.byteLength(value, "utf8") > 128) {
+      throw new ModelRouterError(`${label} is required and bounded`, "ERR_PRISM_MODEL_ROUTER_STATE");
+    }
   }
 }
 

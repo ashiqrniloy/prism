@@ -297,7 +297,7 @@ describe("docs", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     assert.ok(release.includes("### 0.1.4 publish handoff (plan 016 Task 6)"), "release page missing 0.1.4 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.4 handoff missing rollback notes");
-    assert.ok(index.includes("current **0.2.1**"), "index.md current-line entry not at 0.2.1");
+    assert.ok(index.includes("current **0.2.2**"), "index.md current-line entry not at 0.2.2");
     assert.ok(changelog.includes("## [0.1.4] - 2026-08-10"), "root changelog missing 0.1.4 entry");
     assert.ok(migration.includes("## 0.1.3 → 0.1.4"), "migration.md missing 0.1.3 → 0.1.4 section");
     assert.ok(migration.includes("no migration step"), "migration.md 0.1.4 section must state no migration step");
@@ -309,7 +309,7 @@ describe("docs", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
     assert.ok(release.includes("### 0.1.5 publish handoff (plan 017 Task 4)"), "release page missing 0.1.5 handoff");
-    assert.ok(index.includes("current **0.2.1**"), "index.md current-line entry not at 0.2.1");
+    assert.ok(index.includes("current **0.2.2**"), "index.md current-line entry not at 0.2.2");
     assert.ok(changelog.includes("## [0.1.5] - 2026-08-11"), "root changelog missing 0.1.5 entry");
     assert.ok(migration.includes("## 0.1.4 → 0.1.5"), "migration.md missing 0.1.4 → 0.1.5 section");
     // every removed symbol and its replacement appears in the breaking-cut section
@@ -422,7 +422,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes("@arnilo/prism@0.1.0"), "release page peer pin must be 0.1.0");
     assert.ok(release.includes("arnilo-prism-0.1.0.tgz"), "release page tarball names must be 0.1.0");
-    assert.equal(pkg.version, "0.2.1", "root manifest must be at 0.2.1");
+    assert.equal(pkg.version, "0.2.2", "root manifest must be at 0.2.2");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1786,8 +1786,8 @@ describe("docs", () => {
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
-      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs",
-      "root test:postgres should require an explicit PostgreSQL URL and cover adapters plus Phase 7/12 process conformance and restart recovery",
+      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
+      "root test:postgres should require an explicit PostgreSQL URL and cover adapters plus Phase 7/12/22 process conformance, restart recovery, and state concurrency",
     );
 
     for (const phrase of [

@@ -26,6 +26,8 @@ export interface ConversationThread extends OwnershipScope {
   readonly updatedAt: string;
   /** Branch leaves recorded by the conversation service; the entry tree remains the content source of truth. */
   readonly branches: readonly ConversationBranchRef[];
+  /** CAS write version (stored `SessionRecord.version`); undefined on legacy rows. */
+  readonly version?: number;
   /** Host-supplied create metadata; never credentials or raw transcripts. */
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -125,6 +127,7 @@ export function conversationThreadFromRecord(record: SessionRecord): Conversatio
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     branches: Object.freeze(branches),
+    version: record.version ?? 0,
     ...(metadata === undefined ? {} : { metadata }),
   };
 }

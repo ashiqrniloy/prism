@@ -1,12 +1,18 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
-import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl, buildEnterpriseMigration002Ddl } from "./ddl.js";
+import {
+  ENTERPRISE_INDEX_NAMES,
+  ENTERPRISE_TABLE_NAMES,
+  buildEnterpriseMigration001Ddl,
+  buildEnterpriseMigration002Ddl,
+  buildEnterpriseMigration003Ddl,
+} from "./ddl.js";
 import { EnterprisePostgresError, asEnterprisePostgresError } from "./errors.js";
 import { ENTERPRISE_MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
 interface EnterpriseMigration {
-  readonly name: "001_enterprise_state" | "002_tool_effects";
-  readonly version: "1" | "2";
+  readonly name: "001_enterprise_state" | "002_tool_effects" | "003_router_reservations";
+  readonly version: "1" | "2" | "3";
   readonly checksum: string;
   readonly ddl: (schema: string) => string;
 }
@@ -51,6 +57,12 @@ const MIGRATIONS: readonly EnterpriseMigration[] = [
     version: "2",
     checksum: createHash("sha256").update(buildEnterpriseMigration002Ddl("prism"), "utf8").digest("hex"),
     ddl: buildEnterpriseMigration002Ddl,
+  },
+  {
+    name: "003_router_reservations",
+    version: "3",
+    checksum: createHash("sha256").update(buildEnterpriseMigration003Ddl("prism"), "utf8").digest("hex"),
+    ddl: buildEnterpriseMigration003Ddl,
   },
 ];
 
@@ -166,6 +178,7 @@ const EXPECTED_TABLES: readonly ExpectedTable[] = [
       { name: "cost_usd", type: "double precision", nullable: false },
       { name: "last_used_at", type: "timestamp with time zone", nullable: false },
       { name: "expires_at", type: "timestamp with time zone", nullable: false },
+      { name: "reservations", type: "jsonb", nullable: false },
     ],
     primaryKey: ["tenant_id", "account_key", "user_key", "principal_id", "provider", "model", "window_ms"],
   },

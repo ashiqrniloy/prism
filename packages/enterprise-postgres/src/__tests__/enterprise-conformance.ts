@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AgentIdentity } from "@arnilo/prism";
 import type { EvaluationStore } from "@arnilo/prism-evals";
-import type { ModelRouterStateStore } from "@arnilo/prism-model-router";
+import { ModelRouterError, type ModelRouterStateStore } from "@arnilo/prism-model-router";
 import type { PolicyDecisionStore } from "@arnilo/prism-policy";
 import type { IdempotencyStore } from "@arnilo/prism-work-tools";
 
@@ -84,5 +84,87 @@ export async function runEnterpriseStoreConformance(stores: EnterpriseConformanc
   await stores.modelRouter.recordCircuitOutcome({ key, success: false, failureThreshold: 1, coolDownMs: 60_000, maxKeys: 16_384, now: 0 });
   assert.deepEqual(await stores.modelRouter.claimCircuitProbe({ key, failureThreshold: 1, coolDownMs: 60_000, maxKeys: 16_384, now: 0 }), {
     admitted: false,
+  });
+
+  // Reservation agreement: parallel admissions never oversubscribe; commit/release
+  // reconcile actuals; stale fencing is rejected; TTL expiry charges the reserved
+  // amount as unknown usage. Same probe runs against memory and durable stores.
+  const reservationKey = { ...key, model: "reserved" };
+  const parallel = await Promise.all(
+    Array.from({ length: 4 }, () =>
+      stores.modelRouter.reserveBudget({
+        key: reservationKey,
+        tokens: 26,
+        maxTokens: 100,
+        windowMs: 60_000,
+        reservationTtlMs: 60_000,
+        now: 0,
+      }),
+    ),
+  );
+  assert.equal(parallel.filter((result) => result.admitted).length, 3);
+  assert.equal(parallel.filter((result) => !result.admitted).length, 1);
+  assert.ok(parallel.find((result) => !result.admitted)?.retryAfterMs !== undefined);
+  const admitted = parallel.filter((result) => result.admitted);
+  // Stale/foreign fencing on a held reservation is rejected.
+  await assert.rejects(
+    () =>
+      stores.modelRouter.commitBudget({
+        key: reservationKey,
+        reservationId: admitted[2]!.reservationId!,
+        fencingToken: "stale",
+        tokens: 1,
+        windowMs: 60_000,
+        now: 1_000,
+      }),
+    (error: unknown) => error instanceof ModelRouterError && error.code === "ERR_PRISM_MODEL_ROUTER_STATE",
+  );
+  // Actual (10) < reserved (26): remainder released; window total reflects actuals only.
+  const committed = await stores.modelRouter.commitBudget({
+    key: reservationKey,
+    reservationId: admitted[0]!.reservationId!,
+    fencingToken: admitted[0]!.fencingToken!,
+    tokens: 10,
+    windowMs: 60_000,
+    now: 1_000,
+  });
+  assert.equal(committed.unknownUsage, false);
+  await stores.modelRouter.releaseBudget({
+    key: reservationKey,
+    reservationId: admitted[1]!.reservationId!,
+    fencingToken: admitted[1]!.fencingToken!,
+    windowMs: 60_000,
+    now: 1_000,
+  });
+  assert.deepEqual(await stores.modelRouter.readBudget({ key: reservationKey, windowMs: 60_000, now: 1_000 }), {
+    tokens: 10,
+    costUsd: 0,
+  });
+
+  // TTL expiry: a 1ms reservation is expired after a real tick; the late commit
+  // charges the reserved amount and reports unknown usage on both stores.
+  const ttlKey = { ...key, model: "ttl" };
+  const shortLived = await stores.modelRouter.reserveBudget({
+    key: ttlKey,
+    tokens: 7,
+    maxTokens: 100,
+    windowMs: 60_000,
+    reservationTtlMs: 1,
+    now: 0,
+  });
+  assert.ok(shortLived.admitted);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  const late = await stores.modelRouter.commitBudget({
+    key: ttlKey,
+    reservationId: shortLived.reservationId!,
+    fencingToken: shortLived.fencingToken!,
+    tokens: 1,
+    windowMs: 60_000,
+    now: Date.now(),
+  });
+  assert.equal(late.unknownUsage, true);
+  assert.deepEqual(await stores.modelRouter.readBudget({ key: ttlKey, windowMs: 60_000, now: Date.now() }), {
+    tokens: 7,
+    costUsd: 0,
   });
 }

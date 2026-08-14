@@ -2,7 +2,13 @@ import type { OwnershipScope } from "@arnilo/prism";
 import { WorkflowCheckpointError, WorkflowRuntimeError } from "./errors.js";
 import { exactOwnershipKey } from "./util.js";
 
-/** In-process run registry. Durable adapters own persistence. */
+/**
+ * In-process, non-durable active-run registry (single process only — does not
+ * survive restart; durable active-run recovery is a later milestone). Bounded
+ * lifecycle: `registerActiveWorkflowRun` sweeps aborted/leaked entries on every
+ * insert and fails closed at `MAX_ACTIVE_WORKFLOW_RUNS`; hosts can also call
+ * `sweepActiveWorkflowRuns()` explicitly. Durable adapters own persistence.
+ */
 export interface ActiveWorkflowRun {
   readonly workflowId: string;
   readonly runId: string;
@@ -12,10 +18,27 @@ export interface ActiveWorkflowRun {
   readonly startedAt: string;
 }
 
+/** Cap on concurrent in-process run registrations (parallel to the A2A task registry cap 512). */
+export const MAX_ACTIVE_WORKFLOW_RUNS = 512;
+
+export const ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE = "ERR_PRISM_WORKFLOW_RUN_REGISTRY_OVERFLOW";
+
 const activeRuns = new Map<string, ActiveWorkflowRun>();
 
 function keyOf(workflowId: string, runId: string, ownership?: OwnershipScope): string {
   return JSON.stringify([workflowId, runId, exactOwnershipKey(ownership)]);
+}
+
+/** Removes registrations whose run was aborted but never unregistered (leaked), oldest first. */
+export function sweepActiveWorkflowRuns(): number {
+  let removed = 0;
+  for (const [key, run] of activeRuns) {
+    if (run.controller.signal.aborted) {
+      activeRuns.delete(key);
+      removed += 1;
+    }
+  }
+  return removed;
 }
 
 export function registerActiveWorkflowRun(input: {
@@ -28,6 +51,17 @@ export function registerActiveWorkflowRun(input: {
   const key = keyOf(input.workflowId, input.runId, input.ownership);
   if (activeRuns.has(key)) {
     throw new WorkflowRuntimeError("Workflow run is already active", "ERR_PRISM_WORKFLOW_ALREADY_ACTIVE");
+  }
+  // Bounded lifecycle: a run whose promise never settles leaks its registration
+  // forever (the finally-unregister never runs), so every register sweeps aborted
+  // entries first; if the cap is still reached the registry fails closed rather
+  // than evicting a live entry (which would allow a duplicate concurrent run).
+  sweepActiveWorkflowRuns();
+  if (activeRuns.size >= MAX_ACTIVE_WORKFLOW_RUNS) {
+    throw new WorkflowRuntimeError(
+      `Active workflow run registry is full (${MAX_ACTIVE_WORKFLOW_RUNS}); abort or await leaked runs first`,
+      ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE,
+    );
   }
   activeRuns.set(key, {
     ...input,

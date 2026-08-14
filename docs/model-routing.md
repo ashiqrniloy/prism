@@ -17,22 +17,24 @@ Do not put secrets, prompts, or raw OpenRouter keys into diagnostics. Do not hon
 | `createModelRouter({ resolver, stateStore?, ... })` | Wraps host `ProviderResolver`; omit `stateStore` for in-process memory state or pass durable async state. |
 | `allowList.providers` / `allowList.models` | Exact provider id / model id or `provider/model` |
 | `allowedResidencies` | Request residency must match when configured |
-| `budgets` / per-call `maxTokens` / `maxCostUsd` | Finite non-negative ceilings; `recordUsage` charges |
+| `budgets` / per-call `maxTokens` / `maxCostUsd` | Finite non-negative ceilings; requests with a per-call cap reserve it atomically at admission; `recordUsage` commits actuals against the reservation |
+| `budgets.reservationTtlMs` | How long an admission reservation pins capacity (default 60s); a run that outlives it reconciles as unknown usage |
 | `rateLimit` | Per identity+model key window |
 | `circuit` | Failure threshold + cooldown; keys capped |
 | `fallbacks` | Ordered candidates after primary; total attempts capped |
 | `allowOpenRouterRouting` | Default `false`; when false, routing metadata is stripped |
 | `onDiagnostics` | Optional redacted hook (e.g. policy ledger evidence ref) |
-| `router.resolve({ model, identity?, residency?, ... })` | Rich async selection |
+| `router.resolve({ model, identity?, residency?, maxTokens?, ... })` | Rich async selection; returns `budgetReservation` when a per-request cap was reserved |
 | `router.providerSource` | Sync facade only for memory state; with `stateStore` it throws `ERR_PRISM_MODEL_ROUTER_ASYNC_STATE` rather than bypass durable checks. |
 
-Frozen caps (default / hard): attempts `3 / 8`, circuit keys `1,024 / 16,384`, diagnostics `8 KiB / 64 KiB`.
+Frozen caps (default / hard): attempts `3 / 8`, circuit keys `1,024 / 16,384`, diagnostics `8 KiB / 64 KiB`, rate keys `4,096 / 65,536`, budget keys `4,096 / 65,536`.
 
 ## Outputs / response / events
 
-- `ModelRouterResolveResult` — selected `provider` + possibly stripped `model`, `diagnostics`, and `providerRequestPolicy`.
-- Deny throws `ModelRouterError` with code + redacted `diagnostics` (allow-list/residency/budget fail closed without calling resolver).
-- `await recordOutcome({ identity, success, circuitProbeToken? })` opens/closes circuits; `await recordUsage({ identity, ... })` advances budgets. Pass the probe token returned by `resolve` for a half-open outcome.
+- `ModelRouterResolveResult` — selected `provider` + possibly stripped `model`, `diagnostics`, and `providerRequestPolicy`; `budgetReservation` carries the admission reservation handle when the request had a per-call budget cap.
+- Deny throws `ModelRouterError` with code + redacted `diagnostics` (allow-list/residency/budget fail closed without calling resolver); budget denies carry `details.retryAfterMs`.
+- `await recordOutcome({ identity, success, circuitProbeToken? })` opens/closes circuits; `await recordUsage({ identity, budgetReservation?, ... })` commits the reservation against actual usage (pass the handle returned by `resolve`) or advances budgets directly. Pass the probe token returned by `resolve` for a half-open outcome.
+- A reservation whose TTL elapses before `recordUsage` charges the **reserved** amount and emits one redacted `unknown_usage` diagnostic (deterministic reconciliation, never a silent drop).
 
 ## Request/response example
 
@@ -139,10 +141,11 @@ await router.recordOutcome({ identity, provider, model, success: true, latencyMs
 ## Security and performance notes
 
 - Allow-list and residency denies never call the underlying resolver.
-- Without `stateStore`, budget/rate/circuit state is process-local, memory-capped, and oldest keys evict. It is not a cross-replica production path.
-- With `stateStore: createPostgresEnterpriseState(...).modelRouter`, rate/budget updates and circuit probes are atomic across replicas, use database time, and are owner/principal/provider/model scoped. Router calls become asynchronous and require verified identity.
-- Diagnostics carry identity refs and attempt outcomes only — no prompts/secrets. Durable state stores at most bounded numeric/timestamp/token material, never prompts or credentials.
-- Selection is O(attempts × state operations); no provider network I/O happens inside state updates. Recorded 0.0.23 PostgreSQL p95 point operations stayed under 50 ms and cursor/cleanup pages under 100 ms on the documented fixture.
+- Budget admission is **reservation-based** when the request carries a per-request cap: `resolve` atomically reserves the full cap against remaining capacity (`max − used − reserved`) and returns a `budgetReservation` handle; parallel admissions can never collectively exceed the reserved budget. Commit the handle in `recordUsage` with the actual tokens/cost (a negative remainder is released back); release happens automatically on internal denial (rate limit, circuit open, provider miss), on TTL expiry, or on an explicit late commit (which charges the reserved amount as unknown usage). Requests without a per-request cap keep read-then-compare admission (`used >= cap` denies) and are outside the reservation guarantee.
+- Without `stateStore`, budget/rate/circuit state is process-local, memory-capped (rate/budget/circuit keys), and LRU-evicts on insert; a held reservation's budget row is never evicted. It is not a cross-replica production path.
+- With `stateStore: createPostgresEnterpriseState(...).modelRouter`, rate/budget updates, reservations, and circuit probes are atomic across replicas, use database time, and are owner/principal/provider/model scoped. Router calls become asynchronous and require verified identity.
+- Diagnostics carry identity refs and attempt outcomes only — no prompts/secrets, tokens, or reservation material. Durable state stores at most bounded numeric/timestamp/token material, never prompts or credentials.
+- Selection is O(attempts × state operations); no provider network I/O happens inside state updates. Reservation is one atomic UPSERT (denial adds one retry-after query); commit/release are O(1) row updates. Recorded 0.0.23 PostgreSQL p95 point operations stayed under 50 ms and cursor/cleanup pages under 100 ms on the documented fixture.
 - Raising hard caps requires a reviewed release update with tests and docs.
 
 ## Related APIs

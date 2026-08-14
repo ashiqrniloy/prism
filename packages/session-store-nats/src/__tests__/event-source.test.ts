@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
 import type { AgentEventRecord, AgentEventSourceError, OwnershipScope } from "@arnilo/prism";
 import { createNatsAgentEventSource } from "../event-source.js";
@@ -115,6 +116,68 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     }
     assert.equal(seen.length, 3);
     // The durable consumer was cleaned up after terminal.
+    assert.equal(jetstream.consumers.size, 0);
+    await source.close();
+  });
+
+  it("mints a restart-stable durable name bound to ownership", async () => {
+    const digest = (ownershipScope: OwnershipScope) =>
+      createHmac("sha256", "prism-nats-consumer").update(`${ownershipScope.tenantId}|session-1|run-1`).digest("hex").slice(0, 16);
+    const jetstream = new FakeJetStream();
+    const source = makeSource(jetstream);
+    const first = makeSource(jetstream);
+    const second = makeSource(jetstream);
+    await source.append(terminal());
+    // First subscribe: exactly one durable consumer at the stable name — never a
+    // fresh random-suffixed consumer.
+    const it1 = first.subscribe(read)[Symbol.asyncIterator]();
+    assert.equal((await it1.next()).done, false);
+    assert.deepEqual([...jetstream.consumers.keys()], [`prism_${digest(read.ownership)}`]);
+    // Clean close terminates the parked generator (stop signal) and removes the consumer.
+    await first.close();
+    assert.equal(jetstream.consumers.size, 0);
+    // Restart with the same connection/ownership: the exact same durable name is reused.
+    await source.append(terminal());
+    const it2 = second.subscribe(read)[Symbol.asyncIterator]();
+    assert.equal((await it2.next()).done, false);
+    assert.deepEqual([...jetstream.consumers.keys()], [`prism_${digest(read.ownership)}`]);
+    await second.close();
+    // Ownership is bound into the name: another tenant cannot reuse this consumer.
+    const otherRead = { ownership: otherOwnership, sessionId: "session-1", runId: "run-1" };
+    assert.notEqual(`prism_${digest(otherRead.ownership)}`, `prism_${digest(read.ownership)}`);
+    await source.close();
+  });
+
+  it("resumes from the durable consumer's last ack after a crash (stable name reuse)", async () => {
+    const digest = createHmac("sha256", "prism-nats-consumer")
+      .update(`${read.ownership.tenantId}|${read.sessionId}|${read.runId}`)
+      .digest("hex")
+      .slice(0, 16);
+    const jetstream = new FakeJetStream();
+    const source = makeSource(jetstream);
+    const first = await source.append(record());
+    await source.append(record());
+    await source.append(terminal());
+    // Crash model: the pre-0.2.2/random-suffix durable consumer is gone, but a crashed
+    // subscribe leaves its consumer behind with the acks it recorded. Seed exactly that
+    // state at the stable name: consume + ack the first event, then restart.
+    await jetstream.addConsumer("prism_agent_events", {
+      name: `prism_${digest}`,
+      filter_subject: "prism.agent-events.tenant.session-1.run-1",
+      ack_policy: "explicit",
+      deliver_policy: "all",
+    });
+    const crashed = await jetstream.getConsumer("prism_agent_events", `prism_${digest}`);
+    const crashBatch = await crashed.fetch({ max_messages: 1, expires: 100 });
+    for await (const message of crashBatch) message.ack();
+    // Restart: a fresh subscribe with no cursor must NOT replay the acked event — the
+    // stable name is reused and the consumer's position continues from the last ack.
+    const seen: string[] = [];
+    for await (const envelope of source.subscribe(read)) {
+      seen.push(envelope.record.id);
+    }
+    assert.equal(seen.length, 2);
+    assert.notEqual(seen[0], first.id);
     assert.equal(jetstream.consumers.size, 0);
     await source.close();
   });

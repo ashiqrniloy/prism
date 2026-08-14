@@ -16,6 +16,7 @@ assertEnterpriseSchemaReady	export declare function assertEnterpriseSchemaReady(
 boundsError	export declare function boundsError(message: string): never
 buildEnterpriseMigration001Ddl	export declare function buildEnterpriseMigration001Ddl(schema: string): string
 buildEnterpriseMigration002Ddl	export declare function buildEnterpriseMigration002Ddl(schema: string): string
+buildEnterpriseMigration003Ddl	export declare function buildEnterpriseMigration003Ddl(schema: string): string
 cleanupExpiredPostgresToolEffects	export declare function cleanupExpiredPostgresToolEffects(pool: Pool, schema: string, input: CleanupScope): Promise<
 createEnterpriseStateCleanup	export declare function createEnterpriseStateCleanup(pool: Pool, schema: string): (input: EnterpriseStateCleanupInput) => Promise<EnterpriseStateCleanupResult>
 createPostgresEnterpriseState	export declare function createPostgresEnterpriseState(options: PostgresEnterpriseStateOptions): Promise<PostgresEnterpriseState>

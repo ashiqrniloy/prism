@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.2] - 2026-08-13
+
+### Changed
+- Atomic conversation metadata: prism_sessions.version (migration 008, backfilled to 1) and appendSession expectedVersion CAS (0 = create-only, N>0 = exact-version update, omitted = last-write-wins); stale writes throw SessionMetadataConflictError metadata_conflict; concurrent create/branch/archive are single-statement and retention-deleted rows are never resurrected. See docs/migration.md and docs/conversations.md.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

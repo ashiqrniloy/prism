@@ -2,15 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   abortActiveWorkflowRun,
+  ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE,
   cancelWorkflowRun,
   createMemoryWorkflowCheckpoints,
   defineWorkflow,
   functionNode,
   getActiveWorkflowRun,
   listActiveWorkflowRuns,
+  MAX_ACTIVE_WORKFLOW_RUNS,
   registerActiveWorkflowRun,
   runWorkflow,
   suspend,
+  sweepActiveWorkflowRuns,
   unregisterActiveWorkflowRun,
   WorkflowAbortError,
   WorkflowCheckpointError,
@@ -109,5 +112,68 @@ describe("owned active workflow runs", () => {
       ownership: victim,
     });
     assert.equal(cancelled.status, "aborted");
+  });
+
+  it("sweeps aborted registrations whose promise never settled, and re-admits the same run", () => {
+    const controller = new AbortController();
+    registerActiveWorkflowRun({ workflowId: "leaky", runId: "run-1", ownership: victim, definitionHash: "v1", controller });
+    // The run was aborted but its finally never ran (hung host) — the entry leaks.
+    controller.abort(new Error("host restarted"));
+    assert.equal(getActiveWorkflowRun("leaky", "run-1", victim)?.controller.signal.aborted, true);
+    assert.equal(sweepActiveWorkflowRuns(), 1);
+    assert.equal(getActiveWorkflowRun("leaky", "run-1", victim), undefined);
+    // Sweep also runs automatically on register: the re-admitted run is live again.
+    registerActiveWorkflowRun({
+      workflowId: "leaky",
+      runId: "run-1",
+      ownership: victim,
+      definitionHash: "v1",
+      controller: new AbortController(),
+    });
+    assert.ok(getActiveWorkflowRun("leaky", "run-1", victim));
+    unregisterActiveWorkflowRun("leaky", "run-1", victim);
+  });
+
+  it("fails closed at the registry cap rather than evicting live entries", () => {
+    const registered: Array<{ workflowId: string; runId: string; controller: AbortController }> = [];
+    try {
+      for (let index = 0; index < MAX_ACTIVE_WORKFLOW_RUNS; index += 1) {
+        const controller = new AbortController();
+        registerActiveWorkflowRun({
+          workflowId: "busy",
+          runId: `run-${index}`,
+          ownership: victim,
+          definitionHash: "v1",
+          controller,
+        });
+        registered.push({ workflowId: "busy", runId: `run-${index}`, controller });
+      }
+      assert.throws(
+        () =>
+          registerActiveWorkflowRun({
+            workflowId: "busy",
+            runId: "overflow",
+            ownership: victim,
+            definitionHash: "v1",
+            controller: new AbortController(),
+          }),
+        (error: unknown) => error instanceof WorkflowRuntimeError && error.code === ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE,
+      );
+      // Abort the oldest registration (simulating a leaked run): the next register's
+      // automatic sweep frees the slot, so the overflow run is admitted.
+      registered[0].controller.abort();
+      registerActiveWorkflowRun({
+        workflowId: "busy",
+        runId: "overflow",
+        ownership: victim,
+        definitionHash: "v1",
+        controller: new AbortController(),
+      });
+      assert.ok(getActiveWorkflowRun("busy", "run-0", victim) === undefined);
+      assert.ok(getActiveWorkflowRun("busy", "overflow", victim));
+    } finally {
+      for (const entry of registered) unregisterActiveWorkflowRun(entry.workflowId, entry.runId, victim);
+      unregisterActiveWorkflowRun("busy", "overflow", victim);
+    }
   });
 });

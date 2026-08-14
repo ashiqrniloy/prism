@@ -14,6 +14,7 @@ buildMigration004Ddl	export declare function buildMigration004Ddl(schema: string
 buildMigration005Ddl	export declare function buildMigration005Ddl(schema: string): string
 buildMigration006Ddl	export declare function buildMigration006Ddl(schema: string): string
 buildMigration007Ddl	export declare function buildMigration007Ddl(schema: string): string
+buildMigration008Ddl	export declare function buildMigration008Ddl(schema: string): string
 createPostgresAgentEventSource	export declare function createPostgresAgentEventSource(options: PostgresAgentEventSourceOptions): ClosablePostgresAgentEventSource
 createPostgresCheckpointStore	export declare function createPostgresCheckpointStore(pool: Pool, schema?: string): CheckpointStore
 createPostgresLeaseStore	export declare function createPostgresLeaseStore(pool: Pool, schema?: string): LeaseStore

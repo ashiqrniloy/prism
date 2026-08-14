@@ -354,6 +354,7 @@ export function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionR
         expiresAt: row.expires_at ? String(row.expires_at) : undefined,
         retentionPolicyId: row.retention_policy_id ? String(row.retention_policy_id) : undefined,
         metadata: parseJson(row.metadata as string | null),
+        version: row.version === null || row.version === undefined ? undefined : Number(row.version),
       };
     },
     rowToBranchRecord(row: Record<string, unknown>): BranchRecord {

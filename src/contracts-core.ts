@@ -1022,6 +1022,35 @@ export interface SessionBranchHandle {
 /** Stable error code carried by `SessionAppendConflictError`. */
 export const SESSION_APPEND_CONFLICT_CODE = "session_append_conflict" as const;
 
+/** CAS conflict code for `appendSession` metadata writes. Stable and message-independent. */
+export const SESSION_METADATA_CONFLICT_CODE = "metadata_conflict" as const;
+
+/** Conflict details carried by `SessionMetadataConflictError`. Versions only; never metadata content. */
+export interface SessionMetadataConflict {
+  readonly code: typeof SESSION_METADATA_CONFLICT_CODE;
+  readonly id: string;
+  readonly expectedVersion: number;
+  readonly currentVersion: number;
+}
+
+/**
+ * Thrown when `appendSession` is called with an `expectedVersion` CAS guard and the
+ * stored session's version no longer matches (concurrent create/branch/archive, or a
+ * delete raced the write). Recognize via the stable `code` or `isSessionMetadataConflict`.
+ */
+export class SessionMetadataConflictError extends Error {
+  readonly code = SESSION_METADATA_CONFLICT_CODE;
+  constructor(readonly conflict: SessionMetadataConflict) {
+    super(`session metadata conflict: expected version ${conflict.expectedVersion}, current ${conflict.currentVersion}`);
+    this.name = "SessionMetadataConflictError";
+  }
+}
+
+/** Type guard keyed off the stable `code` (works across bundles; not message text). */
+export function isSessionMetadataConflict(error: unknown): error is SessionMetadataConflictError {
+  return error instanceof Error && (error as { code?: unknown }).code === SESSION_METADATA_CONFLICT_CODE;
+}
+
 /** Conflict details carried by `SessionAppendConflictError`. Carries no secrets. */
 export interface SessionAppendConflict {
   readonly code: typeof SESSION_APPEND_CONFLICT_CODE;
@@ -1177,6 +1206,8 @@ export interface SessionRecord extends OwnershipScope {
   readonly expiresAt?: string;
   readonly retentionPolicyId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /** Write version for optimistic metadata CAS; undefined on legacy/never-written rows. */
+  readonly version?: number;
 }
 
 /** Stored branch handle / leaf pointer. The leaf is the current entry id for the branch. */
@@ -1433,8 +1464,11 @@ export interface ProductionPersistenceStore {
   queryRetentionPolicies(query: RetentionPolicyQuery): Promise<PersistencePage<RetentionPolicy>>;
   queryMigrations(query: MigrationQuery): Promise<PersistencePage<MigrationRecord>>;
   /** Optional session-record write capability (conversation threads, host-managed sessions).
-   *  Upserts by id; ownership columns are set on create, `metadata`/`updatedAt` on update. */
-  appendSession?(record: SessionRecord): Promise<void>;
+   *  Upserts by id; ownership columns are set on create, `metadata`/`updatedAt` on update.
+   *  Additive CAS: pass `expectedVersion` to require the stored version to match before the
+   *  write (0 = create-only, a positive number = exact current version); omit it for legacy
+   *  last-write-wins. Returns the new `version` when the underlying store supports it. */
+  appendSession?(record: SessionRecord & { readonly expectedVersion?: number }): Promise<{ readonly version: number } | void>;
   /** DB-friendly branch read (mirrors `SessionStore.readBranchPath`): one ancestor-chain
    *  query instead of `queryEntries({ sessionId })` + in-memory walk. Optional. */
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
