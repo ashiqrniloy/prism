@@ -14,6 +14,10 @@
  *             window (fail closed, never silent double-apply). Prints
  *             RESTART RECOVERY OK + reconnectMs.
  *   append  — contention probe: append one durable event, print appendMs.
+ *   warm    — apply all migrations + create the probe session/stream rows once
+ *             (driver-side warm-up so append workers measure the steady-state
+ *             point op, not DDL lock waits from concurrent migration bursts;
+ *             0.2.2 amendment, plan 022 Task 6).
  *
  * Uses the same workspace-dist imports as scripts/fixtures/phase7-worker.mjs.
  */
@@ -34,8 +38,8 @@ import {
 import { Pool } from "pg";
 
 const input = JSON.parse(process.env.PRISM_PHASE12_WORKER_INPUT ?? "null");
-if (!input || typeof input !== "object" || !["run", "resume", "append"].includes(input.mode ?? "")) {
-  throw new Error("PRISM_PHASE12_WORKER_INPUT with mode run|resume|append is required");
+if (!input || typeof input !== "object" || !["run", "resume", "append", "warm"].includes(input.mode ?? "")) {
+  throw new Error("PRISM_PHASE12_WORKER_INPUT with mode run|resume|append|warm is required");
 }
 if (typeof input.url !== "string" || typeof input.schema !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(input.schema)) {
   throw new Error("invalid phase 12 worker database input");
@@ -412,9 +416,27 @@ async function appendProbe() {
   writeSync(1, `APPEND ${JSON.stringify({ appendMs: Math.round(appendMs * 100) / 100 })}\n`);
 }
 
+async function warmProbe() {
+  const { persistence, enterprise } = await open();
+  await persistence.events.append({
+    id: "warm-seed",
+    sessionId: "probe-s",
+    runId: "probe-r",
+    type: "turn_started",
+    timestamp: "2026-08-09T00:00:00.000Z",
+    event: { type: "turn_started", sessionId: "probe-s", runId: "probe-r", turn: 1 },
+    redacted: true,
+    ...ownership,
+  });
+  await persistence.close();
+  await enterprise.close();
+  writeSync(1, "WARM OK\n");
+}
+
 try {
   if (input.mode === "run") await runReplicaA();
   else if (input.mode === "resume") await resumeReplicaB();
+  else if (input.mode === "warm") await warmProbe();
   else await appendProbe();
 } finally {
   if (input.mode !== "run") await pool.end();

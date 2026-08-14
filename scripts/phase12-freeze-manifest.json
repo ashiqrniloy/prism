@@ -25,6 +25,14 @@
         "change": "rootPackedBytes baseline regenerated 678541 -> 713454 (limit 5% tolerance) because plan 012 Tasks 1-5 added ~35 KB of release-evidence files (packed-install journey fixtures, restart-recovery worker/driver/evidence, benchmark-0.1.0 envelope script/test/evidence) to scripts/ which is packed into the root tarball",
         "rationale": "the new files are frozen-contract evidence mandated by plan 012 itself (allowed featureFreeze category 'release tooling and evidence scripts'); the ceiling is regenerated, not loosened: 5% tolerance and all other ceilings are unchanged, and the budget-gate still enforces the regenerated baseline with the same tolerance",
         "task": "plan 012 Task 5"
+      },
+      {
+        "id": "dev-002",
+        "date": "2026-08-14",
+        "scope": "capacity.postgresEvidence.pointOpP95Ms probe methodology (plan 022 Task 6 amendment)",
+        "change": "append contention probe now warms the schema once (new worker mode 'warm': applies all migrations and seeds the probe session/stream rows) before spawning the 16 append workers, so the measured point op excludes DDL lock waits from concurrent migration bursts",
+        "rationale": "CI cold p95 was 320.99ms against the frozen 50ms ceiling while the append SQL is byte-identical to 0.2.1 (git diff empty for scripts/phase12-restart-recovery.test.mjs, scripts/fixtures/phase12-restart-worker.mjs, packages/session-store-postgres/src/event-source.ts). Migration 008 (ALTER TABLE prism_sessions ADD COLUMN version + backfill UPDATE) is the first post-001 DDL taking ACCESS EXCLUSIVE on prism_sessions, the table every append upserts; 16 serialized straggler batches (advisory-lock serialized) blocked concurrent appends ~20ms each on the GitHub 2-vCPU runner. Warming removes the DDL-burst coupling entirely (re-opens only verify checksums), restoring the measurement to steady-state 16-way hot-row contention: local warm p95 15.1ms (max 15.8ms) vs 50ms ceiling. Ceiling unchanged.",
+        "task": "plan 022 Task 6 (post-release CI failure remediation)"
       }
     ]
   },

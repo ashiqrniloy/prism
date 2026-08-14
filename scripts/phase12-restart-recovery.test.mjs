@@ -211,6 +211,16 @@ describe("Phase 12 protected restart recovery", () => {
 
   it("records append contention p95 under the frozen point-op ceiling", async () => {
     const valueSchema = schema();
+    // 0.2.2 amendment (plan 022 Task 6): warm the schema once so the 16
+    // append workers measure the steady-state point op. Without it, each
+    // worker's open() runs the full migration batch (serialized by advisory
+    // locks) and migration 008's ALTER TABLE prism_sessions (ACCESS EXCLUSIVE,
+    // the first post-001 DDL on that table) blocks concurrent appends' session
+    // upserts, inflating the tail (CI cold p95 320.99ms vs frozen 50ms ceiling
+    // while the append SQL itself is byte-identical to 0.2.1).
+    const warm = await runWorker("warm", valueSchema);
+    assert.equal(warm.code, 0, `warm worker failed:\n${warm.stdout}\n${warm.stderr}`);
+    assert.match(warm.stdout, /WARM OK/);
     const workers = await Promise.all(Array.from({ length: 16 }, (_, index) => runWorker("append", valueSchema)));
     const appendMs = [];
     for (const w of workers) {

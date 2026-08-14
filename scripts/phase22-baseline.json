@@ -93,7 +93,7 @@
     "tests": 91,
     "pass": 91,
     "fail": 0,
-    "note": "session-store-postgres + memory + enterprise-postgres dist+integration suites + phase7 + phase12 + phase22-conformance against dockerized postgres:16-alpine on 127.0.0.1:54329"
+    "note": "session-store-postgres + memory + enterprise-postgres dist+integration suites + phase7 + phase12 + phase22-conformance against dockerized postgres:16-alpine on 127.0.0.1:54329 post-release CI remediation (2026-08-14): phase12 append-contention p95 failed CI at 320.99ms vs the frozen 50ms ceiling (cold). Root cause: migration 008's ALTER TABLE prism_sessions (first post-001 DDL with ACCESS EXCLUSIVE on the table every append upserts) + serialized straggler migration batches blocked concurrent appends on the 2-vCPU runner; append SQL byte-identical to 0.2.1. Fix: the contention probe warms the schema once (worker mode 'warm') before the 16 appenders; local warm contention p95 8.19ms vs 50ms ceiling; deviation dev-002 recorded in phase12-freeze-manifest featureFreeze.deviations; evidence refreshed in scripts/phase12-restart-recovery.json."
   },
   "audit": {
     "moderateOrHigher": 0
@@ -140,6 +140,7 @@
     },
     "compat": "additive-only reviewed; no removal; no --allow-break",
     "freeze": "phase21-freeze done-phase 24/24; phase22-freeze-manifest tasks 0-6 done",
-    "blocked": false
+    "blocked": false,
+    "note": " Post-tag CI failure: postgres-integration phase12 append contention (320.99ms > 50ms) remediated by warming the probe (dev-002); CI re-run pending green."
   }
 }
