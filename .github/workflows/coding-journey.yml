@@ -1,0 +1,200 @@
+name: coding-journey
+
+on:
+  schedule:
+    - cron: "19 7 * * 4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coding-journey
+  cancel-in-progress: true
+
+jobs:
+  protected-coding-journey:
+    name: "protected real coding-agent journey (0.2.6, plan 026)"
+    environment: coding-journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: prism
+          POSTGRES_PASSWORD: prism
+          POSTGRES_DB: prism
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prism -d prism"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+      - name: install Playwright chromium (host-pinned)
+        run: npx --no-install playwright-core install chromium
+      - name: materialize provider adapter (real LLM provider, host-pinned)
+        run: |
+          # Resides inside the workspace so the bare provider specifier
+          # resolves through the repo node_modules (never a /tmp import path).
+          cat > .github/prism-journey-provider.mjs <<'EOF'
+          import { createOpenAIResponsesProvider, openAIModels } from "@arnilo/prism-provider-openai";
+          export function createJourneyProvider() {
+            const model = process.env.PRISM_CODING_PROVIDER_MODEL
+              ? { provider: "openai", model: process.env.PRISM_CODING_PROVIDER_MODEL }
+              : openAIModels[0];
+            return {
+              provider: createOpenAIResponsesProvider({ apiKey: process.env.PRISM_CODING_PROVIDER_API_KEY }),
+              request: {
+                model,
+                messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }],
+              },
+            };
+          }
+          export function journeySecrets() {
+            return [process.env.PRISM_CODING_PROVIDER_API_KEY].filter(Boolean);
+          }
+          EOF
+      - name: materialize host PTY adapter (python3 pty.fork + TIOCSWINSZ, no node-pty)
+        run: |
+          cat > /tmp/prism-journey-pty-host.mjs <<'EOF'
+          import { spawn } from "node:child_process";
+          import { writeFileSync, mkdtempSync } from "node:fs";
+          import { tmpdir } from "node:os";
+          import { join } from "node:path";
+          const HELPER = `
+          import os, pty, termios, struct, fcntl, signal, sys, json, threading, time, shutil
+          sh = shutil.which(sys.argv[1]) or "/bin/sh"
+          pid, master = pty.fork()
+          if pid == 0:
+              try: os.setpgrp()
+              except OSError: pass
+              os.execv(sh, [sh, "-i"])
+          def reply(o): sys.stderr.write(json.dumps(o) + "\\n"); sys.stderr.flush()
+          def pump():
+              while True:
+                  try: data = os.read(master, 65536)
+                  except OSError: break
+                  if not data: break
+                  try: os.write(1, data)
+                  except OSError: break
+          threading.Thread(target=pump, daemon=True).start()
+          def waiter(req_id, timeout_ms):
+              deadline = time.time() + timeout_ms / 1000
+              while time.time() < deadline:
+                  done, _ = os.waitpid(pid, os.WNOHANG)
+                  if done == pid:
+                      reply({"id": req_id, "exitCode": 0})
+                      time.sleep(0.2)
+                      os._exit(0)
+                      return
+                  time.sleep(0.05)
+              reply({"id": req_id, "error": "timeout"})
+          for line in sys.stdin:
+              if not line.strip(): continue
+              try: m = json.loads(line)
+              except Exception: reply({"error": "bad-json"}); continue
+              rid = m.get("id"); t = m.get("type")
+              if t == "write":
+                  try: os.write(master, bytes.fromhex(m["data"])); reply({"id": rid, "ok": True})
+                  except Exception as e: reply({"id": rid, "error": str(e)})
+              elif t == "resize":
+                  try:
+                      fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", m["rows"], m["cols"], 0, 0))
+                      reply({"id": rid, "ok": True})
+                  except Exception as e: reply({"id": rid, "error": str(e)})
+              elif t == "signal":
+                  try: os.kill(pid, getattr(signal, m["name"])); reply({"id": rid, "ok": True})
+                  except Exception as e: reply({"id": rid, "error": str(e)})
+              elif t == "kill":
+                  try: os.kill(pid, signal.SIGKILL)
+                  except Exception: pass
+                  reply({"id": rid, "ok": True})
+                  time.sleep(0.1)
+                  os._exit(0)
+              elif t == "release":
+                  reply({"id": rid, "ok": True})
+                  time.sleep(0.1)
+                  os._exit(0)
+              elif t == "wait":
+                  threading.Thread(target=waiter, args=(rid, m["timeoutMs"]), daemon=True).start()
+          `;
+          const helperPath = join(mkdtempSync(join(tmpdir(), "prism-python-pty-")), "helper.py");
+          writeFileSync(helperPath, HELPER);
+          let requestSeq = 0;
+          export function createPtyBackend() {
+            return {
+              capabilities: { resize: true },
+              startPty({ file, onData }) {
+                const py = spawn("python3", [helperPath, file], { stdio: ["pipe", "pipe", "pipe"] });
+                let replyBuf = "";
+                const pending = new Map();
+                py.stderr.on("data", (chunk) => {
+                  replyBuf += chunk.toString();
+                  let idx;
+                  while ((idx = replyBuf.indexOf("\n")) >= 0) {
+                    const line = replyBuf.slice(0, idx); replyBuf = replyBuf.slice(idx + 1);
+                    let parsed;
+                    try { parsed = JSON.parse(line); } catch { continue; }
+                    const w = parsed.id !== undefined ? pending.get(parsed.id) : undefined;
+                    if (w) { pending.delete(parsed.id); w(parsed); }
+                  }
+                });
+                py.stdout.on("data", (chunk) => onData?.(chunk));
+                py.once("exit", () => { for (const [, w] of pending) w({ error: "helper exited" }); pending.clear(); });
+                const command = (m) => new Promise((res, rej) => {
+                  const id = `r${++requestSeq}`;
+                  const payload = { id, ...m };
+                  const timeout = setTimeout(() => { pending.delete(id); rej(new Error(`no reply for ${id}`)); }, 30_000);
+                  pending.set(id, (reply) => { clearTimeout(timeout); res(reply); });
+                  py.stdin.write(JSON.stringify(payload) + "\n", (e) => { if (e) { clearTimeout(timeout); pending.delete(id); rej(e); } });
+                });
+                const check = (reply) => { if (reply.error) throw new Error(reply.error); };
+                return {
+                  metadata: { engine: "python3 pty + TIOCSWINSZ" },
+                  async resize({ columns, rows }) { check(await command({ type: "resize", cols: columns, rows })); },
+                  async write(data) { check(await command({ type: "write", data: Buffer.from(data).toString("hex") })); },
+                  async signal(name) { check(await command({ type: "signal", name })); },
+                  async kill() { check(await command({ type: "kill" })); },
+                  async release() { check(await command({ type: "release" })); },
+                  async wait() { const r = await command({ type: "wait", timeoutMs: 30_000 }); return { exitCode: r.exitCode ?? null }; },
+                };
+              },
+            };
+          }
+          EOF
+      - name: run the protected real coding journey
+        timeout-minutes: 25
+        env:
+          PRISM_CODING_JOURNEY: "1"
+          PRISM_TEST_POSTGRES_URL: postgres://prism:prism@localhost:5432/prism
+          PRISM_TEST_DOCKER_BIN: /usr/bin/docker
+          PRISM_TEST_DOCKER_IMAGE: ${{ vars.PRISM_TEST_DOCKER_IMAGE }}
+          PRISM_TEST_DOCKER_USER: ${{ vars.PRISM_TEST_DOCKER_USER }}
+          PRISM_LIVE_PLAYWRIGHT: "1"
+          PRISM_CODING_FORGE_REPOSITORY: ${{ vars.PRISM_CODING_FORGE_REPOSITORY }}
+          PRISM_CODING_FORGE_TOKEN: ${{ secrets.PRISM_CODING_FORGE_TOKEN }}
+          PRISM_CODING_PROVIDER: ${{ github.workspace }}/.github/prism-journey-provider.mjs
+          PRISM_CODING_PROVIDER_API_KEY: ${{ secrets.PRISM_CODING_PROVIDER_API_KEY }}
+          PRISM_CODING_PROVIDER_MODEL: ${{ vars.PRISM_CODING_PROVIDER_MODEL }}
+          PRISM_TEST_PTY_BACKEND: /tmp/prism-journey-pty-host.mjs
+        run: node --test scripts/phase26-coding-journey.test.mjs
+      - name: retain the protected coding journey report
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: phase26-coding-journey-report-${{ github.run_id }}
+          path: scripts/phase26-coding-journey-report.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -637,7 +637,7 @@
   "task4": "done",
   "task5": "done",
   "task6": "done",
-  "task7": "pending",
+  "task7": "done",
   "task8": "pending"
  },
  "demand": {
@@ -865,6 +865,11 @@
    "id": "D-T5-1",
    "what": "Task 0 recorded the two new task5 test files under packages/coding-agent/src/process/__tests__/ and packages/ag-ui/src/acp/__tests__/, but no such test directories exist in either package: the package test scripts glob dist/__tests__/*.test.js, so tests under those paths would compile but never run. Both tests live in the packages' real test directories (packages/coding-agent/src/__tests__/process-recovery.test.ts and packages/ag-ui/src/__tests__/acp-recovery.test.ts); the manifest allowedFiles and baseline seams were updated to those paths. No cap, state machine, compat, or API change; the test content is unchanged.",
    "review": "Path correction only; test discovery verified by running both suites from dist/__tests__."
+  },
+  {
+   "id": "D-T7-1",
+   "what": "Task 7's packed journey integration exposed a shape mismatch in the Task 6 review helper: the server ArtifactRecord carries the artifact id as `id` (src/artifacts.ts), while assertCodingPatchAccepted compared `artifact.artifactId` which never exists on the real record, throwing ERR_PRISM_REVIEW_OWNERSHIP for every real attach. Fixed review.ts to read `artifact.id` (CodingReviewArtifactRecord.id, documented against ArtifactRecord.id) and updated review.test.ts recordFor/ownership mocks to the real shape; no cap/state-machine/API change to the manifest surface. review.ts + review.test.ts are outside Task 7's frozen allowedFiles, so this deviation records the amendment.",
+   "review": "Real-record integration proof: the patch-review journey leg (server createArtifactService over Postgres + assertCodingPatchAccepted) now derives pending -> accepted -> superseded against the actual ArtifactRecord shape; unit suite 13/13."
   }
  ],
  "regeneratedFiles": {

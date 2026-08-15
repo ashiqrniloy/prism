@@ -106,6 +106,10 @@ Credentials resolve per call through the host resolver; GitHub App installation 
 
 Tokens never appear in argv, git config files, logs, model context, or stored events: REST uses the `Authorization` header on a bounded `fetch`, and git uses `GIT_CONFIG_*` environment variables scoped to the single push process. Request bodies and responses are bounded by `payloadBytes` (streamed, content-length pre-checked); timeouts and rate-limit backoff respect `requestTimeoutMs` and `Retry-After`; page fetches stop at `pagesPerOperation`. Repository binding is fixed at construction; tenant binding is checked per mutation; ownership mismatch fails closed. Rate-limit responses map to `ERR_PRISM_FORGE_RATE_LIMIT`, 404 to `ERR_PRISM_FORGE_API`, 422 to `ERR_PRISM_FORGE_STALE`, 401/403 to `ERR_PRISM_FORGE_AUTH`, and cap violations to `ERR_PRISM_FORGE_LIMIT`.
 
+## Protected journey cross-link (0.2.6, plan 026 Task 7)
+
+The protected coding journey runs the real forge leg end to end: the packed consumer clones `PRISM_CODING_FORGE_REPOSITORY`, pushes the run-suffixed branch, creates the PR with lookup-before-create idempotency (the ToolEffectStore dedupes replays), reads check runs, reconciles the handoff, and cleans up by closing the PR (`PATCH state=closed`) and deleting the branch — credentials late-bound via the resolver and `GIT_CONFIG_*` env, never argv or logs. See [Release and install](release-and-install.md).
+
 ## Related APIs
 
 - [Tool effects](tool-effects.md): `ToolEffectStore` idempotency and unknown-outcome recovery used by every forge mutation

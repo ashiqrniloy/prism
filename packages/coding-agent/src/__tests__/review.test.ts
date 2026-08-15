@@ -39,7 +39,7 @@ function recordFor(
   overrides?: Partial<CodingReviewArtifactRecord>,
 ): CodingReviewArtifactRecord {
   return {
-    artifactId: review.artifactId,
+    id: review.artifactId,
     threadId: review.threadId,
     revisions: [
       {
@@ -221,7 +221,7 @@ test("ownership: artifact bound to a different thread or artifact is refused", (
     (e: unknown) => e instanceof CodingPatchReviewError && e.code === "ERR_PRISM_REVIEW_OWNERSHIP",
   );
   assert.throws(
-    () => assertCodingPatchAccepted({ review, artifact: recordFor(review, { artifactId: "other-artifact" }) }),
+    () => assertCodingPatchAccepted({ review, artifact: recordFor(review, { id: "other-artifact" }) }),
     (e: unknown) => e instanceof CodingPatchReviewError && e.code === "ERR_PRISM_REVIEW_OWNERSHIP",
   );
 });

@@ -1,9 +1,9 @@
 {
-  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD b3bdd07) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
-  "captured": "2026-08-15T20:28:52.410Z",
+  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD 4ca3cc9) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
+  "captured": "2026-08-15T21:58:14.876Z",
   "release": "0.2.6",
   "baselineRelease": "0.2.5",
-  "gitHead": "b3bdd07",
+  "gitHead": "4ca3cc9",
   "node": "v24.19.0",
   "platform": "linux",
   "inherited": {
@@ -69,8 +69,8 @@
   },
   "seams": {
     ".github/workflows/coding-journey.yml": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "d9b85774a3b96942148a2017f09daf0b61a39b209efd44d985feff46967b2ec4",
+      "status": "present"
     },
     "CHANGELOG.md": {
       "sha256": "d35cf2291f55f03a7c9b4b1a33895c4a19c91b0f078036f0c5f9e4771fef1d55",
@@ -85,7 +85,7 @@
       "status": "present"
     },
     "docs/browser-automation.md": {
-      "sha256": "1e51092c472d398581a5203ba4cf2a847cc0248086925a4fb06b2481ba4e63a2",
+      "sha256": "55fc59922cc3b1eee330df342cbd85fdc6fddf71cf655b2923003a91d4355dd4",
       "status": "present"
     },
     "docs/coding-review-and-diagnostics.md": {
@@ -93,7 +93,7 @@
       "status": "present"
     },
     "docs/coding-security.md": {
-      "sha256": "7deee90cf442c6c5cd2eb62cd28a6d528601d4f0d8803eec05d1c0c6a59977d6",
+      "sha256": "f20de5f517cb817101473efea7497a6086a1a237c58d07af40074004d4ed81c7",
       "status": "present"
     },
     "docs/indexed-code-search.md": {
@@ -129,7 +129,7 @@
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/language-diagnostics.test.ts": {
-      "sha256": "be98efeeb6601c70ac94e8aaa719e70b654a98f62fc063adf93de218bbd4f6fb",
+      "sha256": "0cec7e04cdb7e991a288f3b3b7ab80f83296362d23ebd5dceea8e8d6117a527a",
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/process-pty.test.ts": {
@@ -141,7 +141,7 @@
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/review.test.ts": {
-      "sha256": "aea22b8d806e9bca3673e100edafae0e27827fe86860b6cba4001e3b2684e26d",
+      "sha256": "3b9e648b39aaef332f1b2b17eabd36b6a93a2bb382c3204ae3fc5fb95068fc60",
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts": {
@@ -213,7 +213,7 @@
       "status": "present"
     },
     "packages/coding-agent/src/review.ts": {
-      "sha256": "ec1fd4447376abec97cea34bf6ed73ff8ab67f40ff32275bfde233637ef6f4e1",
+      "sha256": "362403fe51057bfc78ecae9ef924e280248eb6c8bb503c580e571a55d7778df3",
       "status": "present"
     },
     "packages/coding-agent/src/search.ts": {
@@ -229,11 +229,11 @@
       "status": "present"
     },
     "scripts/fixtures/phase26-coding-journey.mjs": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "867ee5e0d5d97cb10b640b16fb836172da3da74c889c9519e9e8e4f4fbbca1de",
+      "status": "present"
     },
     "scripts/package-truth.json": {
-      "sha256": "8e16e1271e63ca5f24e8d7a450ba312e8b6d71b4643e3dde22b3e23ffa41e127",
+      "sha256": "a4af534a46ff4d55826969b83f8f53d64b7a9d6f30c278a8e1881d20040051d6",
       "status": "present"
     },
     "scripts/phase26-baseline.mjs": {
@@ -241,12 +241,12 @@
       "status": "present"
     },
     "scripts/phase26-coding-journey-report.json": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "b56c7a4542bc199104ffa3b10cb9be7c9501db77f4a9fc707d2e57afe6ae213c",
+      "status": "present"
     },
     "scripts/phase26-coding-journey.test.mjs": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "ca39a3ffcc33c78ca1e66a35b05277d88590e05990ea1c328e49744acf11588a",
+      "status": "present"
     },
     "scripts/phase26-freeze.test.mjs": {
       "sha256": "38287ad87dcf5fdcf8b09cd9aa2a9c0d7327b2a8d2aa1c0dc5ab7da3b1cd3a12",
@@ -265,7 +265,7 @@
       "status": "present"
     },
     "scripts/release-skip-manifest.mjs": {
-      "sha256": "871a761cf3699f805d57ebd125413d71c0bb7f657b61efc94c8d0ab0783563fb",
+      "sha256": "551d44065f991f396b6fdaab556a71f0aba186a3cc5348d631606e046995de7c",
       "status": "present"
     }
   },

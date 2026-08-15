@@ -134,7 +134,8 @@ export interface CodingReviewArtifactInput {
 
 /** Structural subset of the server ArtifactRecord for acceptance checks. */
 export interface CodingReviewArtifactRecord {
-  readonly artifactId: string;
+  /** Server artifact id (ArtifactRecord.id); must equal review.artifactId. */
+  readonly id: string;
   readonly threadId: string;
   readonly revisions: readonly {
     readonly version: number;
@@ -330,7 +331,7 @@ export interface AssertCodingPatchAcceptedResult {
  */
 export function assertCodingPatchAccepted(input: AssertCodingPatchAcceptedInput): AssertCodingPatchAcceptedResult {
   const { review, artifact } = input;
-  if (artifact.threadId !== review.threadId || artifact.artifactId !== review.artifactId) {
+  if (artifact.threadId !== review.threadId || artifact.id !== review.artifactId) {
     throw new CodingPatchReviewError("ERR_PRISM_REVIEW_OWNERSHIP", "artifact does not belong to this review thread");
   }
   const bound = artifact.revisions.find((revision) => revision.hash === review.patch.sha256);
