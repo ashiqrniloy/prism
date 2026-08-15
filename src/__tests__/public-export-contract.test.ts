@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
+
+// Read every file under a directory tree matching a suffix (layout-agnostic union for split modules).
+function readTree(dir: string, suffix: string): string {
+  const out: string[] = [];
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, ent.name);
+    if (ent.isDirectory()) out.push(readTree(full, suffix));
+    else if (ent.name.endsWith(suffix)) out.push(readFileSync(full, "utf8"));
+  }
+  return out.join("\n");
+}
 
 // ponytail: SDK surface freeze. The root `@arnilo/prism` barrel is the public
 // API; these two snapshots pin every value and type export of `src/index.ts` so
@@ -792,14 +803,14 @@ describe("public-export contract (build-time, pre-pack)", () => {
     const indexDts = readFileSync(join(repoRoot, "dist/index.d.ts"), "utf8");
     // 0.1.4 split: the declarations live in the split contract d.ts modules, resolved through
     // the contracts.d.ts barrel; scan the union so the check is layout-agnostic.
+    // 0.2.5 plan 025 Task 1: contracts-core split into contracts-core/*.d.ts; scan the tree
+    // (layout-agnostic) so the SDK contract types are found regardless of split depth.
     const contractsDts = [
-      "dist/contracts.d.ts",
-      "dist/contracts-core.d.ts",
-      "dist/contracts-run-state.d.ts",
-      "dist/contracts-protocol.d.ts",
-    ]
-      .map((p) => readFileSync(join(repoRoot, p), "utf8"))
-      .join("\n");
+      readFileSync(join(repoRoot, "dist/contracts.d.ts"), "utf8"),
+      readTree(join(repoRoot, "dist/contracts-core"), ".d.ts"),
+      readFileSync(join(repoRoot, "dist/contracts-run-state.d.ts"), "utf8"),
+      readFileSync(join(repoRoot, "dist/contracts-protocol.d.ts"), "utf8"),
+    ].join("\n");
     assert.ok(indexDts.includes('export type * from "./contracts.js"'), "root index.d.ts must re-export contract types");
     const missing = REQUIRED_SDK_CONTRACT_TYPES.filter(
       (name) => !new RegExp(`export\\s+(?:interface|type|class)\\s+${name}\\b`).test(contractsDts),
@@ -810,9 +821,12 @@ describe("public-export contract (build-time, pre-pack)", () => {
   it("phase39_public_protocol_exports_and_types_do_not_drift", async () => {
     const prism = (await import("../index.js")) as Record<string, unknown>;
     assert.equal(typeof prism.providerToolCallDelta, "function");
-    const contractsSrc = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
-      .map((p) => readFileSync(join(repoRoot, p), "utf8"))
-      .join("\n");
+    // 0.2.5 plan 025 Task 1: contracts-core split into src/contracts-core/*.ts; scan the tree.
+    const contractsSrc = [
+      readTree(join(repoRoot, "src/contracts-core"), ".ts"),
+      readFileSync(join(repoRoot, "src/contracts-run-state.ts"), "utf8"),
+      readFileSync(join(repoRoot, "src/contracts-protocol.ts"), "utf8"),
+    ].join("\n");
     assert.ok(contractsSrc.includes("export interface ToolCallDeltaContent"));
     assert.ok(readFileSync(join(repoRoot, "src/index.ts"), "utf8").includes('export type * from "./contracts.js"'));
     assert.deepEqual(readPkg(".").exports?.["./testing/provider-conformance"], {

@@ -118,7 +118,9 @@ HARD_MAX_STREAM_EVENTS	export declare const HARD_MAX_STREAM_EVENTS = 100000
 HARD_MAX_TEXT_BYTES	export declare const HARD_MAX_TEXT_BYTES: number
 HARD_REQUEST_TIMEOUT_MS	export declare const HARD_REQUEST_TIMEOUT_MS: number
 RenderA2UiSurfaceOptions	export type { A2UiCatalog, A2UiComponentRenderer, A2UiRenderContext, Dom, DomNode, RenderA2UiSurfaceOptions } from "./bind.js"
+abortOn	export declare function abortOn(source: AbortSignal): AbortController
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxBytes: number, limits: Pick<ResolvedAgUiLimits, "maxJsonDepth" | "maxJsonProperties" | "maxJsonArrayItems">, name: string): void
+buildAcpCoding	export declare function buildAcpCoding(seams: AcpCodingSeams | undefined, capabilities: ResolvedAcpClientCapabilities, client: AgentContext, sessionId: string | undefined): Promise<AcpCodingContext | undefined>
 composeAgUiProjections	export declare function composeAgUiProjections(...projections: readonly (AgUiProjection | undefined)[]): AgUiProjection
 createA2UiRenderer	export declare function createA2UiRenderer(options: CreateA2UiRendererOptions): A2UiRenderer
 createAcpClientFilesystem	export declare function createAcpClientFilesystem(client: AgentContext, sessionId: string, options?: AcpClientFilesystemOptions): AcpClientFilesystem
@@ -141,16 +143,23 @@ createPersistenceAgUiReplay	export declare function createPersistenceAgUiReplay<
 createPrismAcpAgent	export declare function createPrismAcpAgent<Authorization extends AcpAuthorization = AcpAuthorization>(options: CreatePrismAcpAgentOptions<Authorization>): AgentApp
 createReasoningEncryptedValue	export declare function createReasoningEncryptedValue(options: CreateReasoningEncryptedValueOptions): AgUiReasoningProjection | undefined
 createStateFromStoreProjection	export declare function createStateFromStoreProjection(store: AgUiStateStore, options?: CreateStateFromStoreProjectionOptions): AgUiProjection
+decisionFor	export declare function decisionFor(response: RequestPermissionResponse, interruption: Extract<AgentEvent,
+decisionForElicitation	export declare function decisionForElicitation(responses: readonly CreateElicitationResponse[], decisions: readonly ElicitationPendingDecision[]):
 defaultAgUiInput	export declare function defaultAgUiInput(input: ParsedAgUiInput, limits: ResolvedAgUiLimits): string
 deriveAppEffectKey	export declare function deriveAppEffectKey(input: AppEffectKeyInput): string
+elicit	export declare function elicit(client: AgentContext, sessionId: string, event: Extract<AgentEvent,
 extractAgUiA2UiActions	export declare function extractAgUiA2UiActions(input: ParsedAgUiInput, limits: ResolvedAgUiLimits, maxPayloadBytes?: number): readonly AgUiA2UiAction[]
+forward	export declare function forward<Authorization extends AcpAuthorization>(source: AsyncIterable<AgentEvent>, current: ActiveSession, authorization: Authorization, sessionId: string, client: AgentContext, signal: AbortSignal, limits: ReturnType<typeof resolveAgUiLimits>, options: CreatePrismAcpAgentOptions<Authorization>, clientCapabilities: ResolvedAcpClientCapabilities): Promise<void>
 hashJson	export declare function hashJson(value: unknown): string
 initialConfigValues	export declare function initialConfigValues(seam: AcpConfigOptionsSeam | undefined): Map<string, boolean | string>
 initialModeId	export declare function initialModeId(seam: AcpModesSeam | undefined): string | undefined
 jsonDiff	export declare function jsonDiff(from: unknown, to: unknown, path?: string): unknown[]
+notify	export declare function notify(client: AgentContext, sessionId: string, update: SessionUpdate, budget: AcpStreamBudget, limits: ReturnType<typeof resolveAgUiLimits>): Promise<void>
 ownershipKey	export declare function ownershipKey(ownership: OwnershipScope): string
 packageName	export declare const packageName = "@arnilo/prism-ag-ui"
 parseAgUiInput	export declare function parseAgUiInput(value: unknown, limits: ResolvedAgUiLimits): ParsedAgUiInput
+parseCursor	export declare function parseCursor(cursor: string | null | undefined): number
+permission	export declare function permission(client: AgentContext, sessionId: string, event: Extract<AgentEvent,
 projectAcpPrompt	export declare function projectAcpPrompt(prompt: readonly
 projectAgUiJson	export declare function projectAgUiJson(value: unknown, maxBytes: number, limits: ResolvedAgUiLimits, name: string): unknown | undefined
 projectAgUiPatch	export declare function projectAgUiPatch(value: readonly unknown[] | undefined, maxOperations: number, maxBytes: number, limits: ResolvedAgUiLimits, name: string): readonly unknown[] | undefined
@@ -158,6 +167,7 @@ projectCoWorkEvent	export declare function projectCoWorkEvent(event: CoWorkEvent
 readA2UiBatch	export declare function readA2UiBatch(event: AGUIEvent):
 reconcileAppEffect	export declare function reconcileAppEffect(input: ReconcileAppEffectInput): Promise<ToolEffectRecord | undefined>
 reduceA2UiOps	export declare function reduceA2UiOps(surfaces: Map<string, A2UiSurfaceState>, ops: readonly unknown[], a2uiLimits: ResolvedAgUiA2UiLimits, base?: ResolvedAgUiLimits, replace?: boolean): A2UiReduceResult
+registerSession	export declare function registerSession(sessions: Map<string, ActiveSession>, limits: ReturnType<typeof resolveAgUiLimits>, binding: ActiveSession): void
 renderA2UiSurface	export declare function renderA2UiSurface(surface: A2UiSurfaceModel, catalog: A2UiCatalog, dom: Dom, options?: RenderA2UiSurfaceOptions): DomNode
 resolveAcpAgentCapabilities	export declare function resolveAcpAgentCapabilities(options: AcpCapabilitiesSource): AgentCapabilities
 resolveAcpClientCapabilities	export declare function resolveAcpClientCapabilities(client?: ClientCapabilities): ResolvedAcpClientCapabilities
@@ -165,8 +175,14 @@ resolveAgUiA2UiLimits	export declare function resolveAgUiA2UiLimits(options?: Ag
 resolveAgUiCapabilities	export declare function resolveAgUiCapabilities<Authorization extends AgUiAuthorization = AgUiAuthorization>(options: Pick<CreateAgUiHandlerOptions<Authorization>, "capabilities" | "input" | "interrupts" | "lifecycle" | "projection" | "replay" | "resolveRun">): AgentCapabilities
 resolveAgUiLimits	export declare function resolveAgUiLimits(options?: AgUiLimitOptions): ResolvedAgUiLimits
 resolvePointer	export declare function resolvePointer(root: unknown, pointer: string): unknown
+resolveSessionInputs	export declare function resolveSessionInputs<Authorization extends AcpAuthorization>(params:
+session	export declare function session(sessions: ReadonlyMap<string, ActiveSession>, id: string): ActiveSession
+sessionState	export declare function sessionState<Authorization extends AcpAuthorization>(active: ActiveSession, options: CreatePrismAcpAgentOptions<Authorization>, clientCapabilities: ResolvedAcpClientCapabilities):
+toPrismPrompt	export declare function toPrismPrompt(projected: AcpPromptResult): import("@arnilo/prism").Message
 toSessionConfigOptions	export declare function toSessionConfigOptions(seam: AcpConfigOptionsSeam, values: ReadonlyMap<string, boolean | string>): SessionConfigOption[]
+toSessionInfo	export declare function toSessionInfo(summary: AcpSessionSummary): SessionInfo
 toSessionModeState	export declare function toSessionModeState(seam: AcpModesSeam, currentModeId: string): SessionModeState
+truncate	export declare function truncate(value: string, maxBytes: number): string
 truncateA2UiText	export declare function truncateA2UiText(value: string, maxBytes: number): string
 truncateUtf8	export declare function truncateUtf8(value: string, maxBytes: number): string
 type AcpAuthorization	export { type AcpAuthorization, type AcpCodingContext, type AcpCodingSeams, type AcpSessionBinding, type CreatePrismAcpAgentOptions, createPrismAcpAgent, } from "./agent.js"

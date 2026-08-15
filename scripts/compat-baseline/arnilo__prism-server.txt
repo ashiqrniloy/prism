@@ -113,6 +113,7 @@ HARD_MAX_RESPONSE_BYTES	export declare const HARD_MAX_RESPONSE_BYTES: number
 HARD_MAX_STREAM_BYTES	export declare const HARD_MAX_STREAM_BYTES: number
 HARD_MAX_STREAM_EVENTS	export declare const HARD_MAX_STREAM_EVENTS = 100000
 HARD_REQUEST_TIMEOUT_MS	export declare const HARD_REQUEST_TIMEOUT_MS: number
+JSON_HEADERS	export declare const JSON_HEADERS:
 MemoryRateLimiterOptions	export type { MemoryRateLimiterOptions, PrismServerRateLimitDenial, PrismServerRateLimiter, PrismServerRateLimitInput, } from "./rate-limit.js"
 PRISM_DEPLOYMENT_LEASE_NAMESPACE	export declare const PRISM_DEPLOYMENT_LEASE_NAMESPACE = "prism.server.deployment"
 PrismAgentEventReplay	export type { CreatePrismEventReplayOptions, CreatePrismReplayHandlerOptions, PrismAgentEventReplay, PrismEventReplay, PrismEventReplayRequest, } from "./replay.js"
@@ -144,6 +145,11 @@ ResolvedConversationLimits	export type { ConversationAuthorizationInput, Convers
 ResolvedPrismDeploymentLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
 ResolvedPrismServerLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
 S3ArtifactBodyError	export declare class S3ArtifactBodyError extends Error
+SSE_HEADERS	export declare const SSE_HEADERS:
+addHeaders	export declare function addHeaders(response: Response, extra?: Readonly<Record<string, string>>): Response
+assertRequestPolicy	export declare function assertRequestPolicy(request: Request, hosts?: readonly string[], origins?: readonly string[]): void
+authorize	export declare function authorize(options: CreatePrismHandlerOptions, request: Request, operation: PrismServerOperation, capabilityId: string, timeoutMs: number): Promise<PrismServerAuthorization | false>
+awaitWithSignal	export declare function awaitWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T>
 awsUriEncode	export declare function awsUriEncode(value: string): string
 canonicalHeaders	export declare function canonicalHeaders(headers: Readonly<Record<string, string>>, signedHeaders: readonly string[]): string
 canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
@@ -160,17 +166,38 @@ createPrismHandler	export declare function createPrismHandler(options: CreatePri
 createPrismHealthHandler	export declare function createPrismHealthHandler(options?: CreatePrismHealthHandlerOptions): PrismRequestHandler
 createPrismReplayHandler	export declare function createPrismReplayHandler(options: CreatePrismReplayHandlerOptions): import("./types.js").PrismRequestHandler
 createS3ArtifactBodyStore	export declare function createS3ArtifactBodyStore(options: S3ArtifactBodyStoreOptions): ArtifactBodyStore
+createSession	export declare function createSession(exposure: Agent | PrismAgentExposure, authorization: PrismServerAuthorization): Promise<
+errorResponse	export declare function errorResponse(error: unknown, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response
 isAdmitOperation	export declare function isAdmitOperation(operation: string): boolean
+json	export declare function json(value: unknown, status: number, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response
+normalizeBasePath	export declare function normalizeBasePath(value: string): string
+ownedSignal	export declare function ownedSignal(request: Request, timeoutMs: number, disconnectAborts: boolean):
 packageName	export declare const packageName = "@arnilo/prism-server"
+parseRoute	export declare function parseRoute(request: Request, base: string): Route | undefined
 presignV4	export declare function presignV4(input: SigV4PresignInput): Promise<string>
+readAgentInput	export declare function readAgentInput(value: unknown): string | Message | readonly Message[]
+readAgentResume	export declare function readAgentResume(body: JsonObject):
+readJsonObject	export declare function readJsonObject(request: Request, maxBytes: number, signal: AbortSignal): Promise<JsonObject>
+readOptionalId	export declare function readOptionalId(value: unknown, name: string): string | undefined
+readOptionalObject	export declare function readOptionalObject(value: unknown, name: string): JsonObject | undefined
+readPositiveInteger	export declare function readPositiveInteger(value: unknown, name: string): number
+readRequiredId	export declare function readRequiredId(value: unknown, name: string): string
+readRequiredString	export declare function readRequiredString(value: unknown, name: string): string
+readResume	export declare function readResume(body: JsonObject): WorkflowResumeRequest
+readScheduleStatus	export declare function readScheduleStatus(value: string | null): WorkflowScheduleStatus | undefined
+replayCursor	export declare function replayCursor(request: Request, maxBytes: number): string | undefined
 resolveArtifactBodyLimits	export declare function resolveArtifactBodyLimits(input?: ArtifactBodyLimits): ResolvedArtifactBodyLimits
 resolveArtifactLimits	export declare function resolveArtifactLimits(input?: ArtifactLimits): ResolvedArtifactLimits
 resolveConversationLimits	export declare function resolveConversationLimits(input?: ConversationLimits): ResolvedConversationLimits
 resolvePrismDeploymentLimits	export declare function resolvePrismDeploymentLimits(input?: PrismDeploymentLimits): ResolvedPrismDeploymentLimits
 resolvePrismServerLimits	export declare function resolvePrismServerLimits(input?: PrismServerLimits): ResolvedPrismServerLimits
 s3ObjectKey	export declare function s3ObjectKey(ref: ArtifactBodyRef): string
+sameOwnership	export declare function sameOwnership(left: PrismServerAuthorization["ownership"], right: PrismServerAuthorization["ownership"]): boolean
 sha256Hex	export declare function sha256Hex(data: Uint8Array): Promise<string>
 signArtifactDeliveryLink	export declare function signArtifactDeliveryLink(token: ArtifactDeliveryToken, secret: string): string
 signRequestV4	export declare function signRequestV4(input: SigV4RequestSignInput): Promise<
 signV4	export declare function signV4(input: SigV4SignInput): Promise<SigV4Signature>
+sse	export declare function sse(source: AsyncIterable<AgentEvent | WorkflowEvent>, owned: ReturnType<typeof ownedSignal>, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions, release: () => void): Response
+sseAgentEvents	export declare function sseAgentEvents(source: AsyncIterable<AgentEventEnvelope>, owned: ReturnType<typeof ownedSignal>, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions, release: () => void): Response
+validId	export declare function validId(value: string): boolean
 verifyArtifactDeliveryLink	export declare function verifyArtifactDeliveryLink(link: string, secret: string, maxBytes?: number): ArtifactDeliveryToken

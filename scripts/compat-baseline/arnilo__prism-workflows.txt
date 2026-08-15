@@ -87,6 +87,7 @@ WorkflowToolApproval	export type { AgentNodeDefinition, ConditionalNodeDefinitio
 abortActiveWorkflowRun	export declare function abortActiveWorkflowRun(workflowId: string, runId: string, ownership: OwnershipScope | undefined, definitionHash: string, reason?: unknown): boolean
 adapterByteLimits	export declare function adapterByteLimits(options?: WorkflowCheckpointAdapterOptions):
 agentNode	export declare function agentNode(config: Omit<AgentNodeDefinition, "kind">): AgentNodeDefinition
+applyConditionalSkip	export declare function applyConditionalSkip(state: SchedulerState, nodeId: string, passed: boolean, emit: (event: WorkflowEventInput) => void): void
 assertOwnershipForLoad	export declare function assertOwnershipForLoad(expected: WorkflowCheckpointSaveInput["ownership"] | undefined, actual: WorkflowCheckpointRecord["ownership"] | undefined): void
 assertOwnershipForSave	export declare function assertOwnershipForSave(existing: WorkflowCheckpointRecord | null | undefined, input: WorkflowCheckpointSaveInput): void
 assertVersionAdvance	export declare function assertVersionAdvance(existing: WorkflowCheckpointRecord | null | undefined, version: number): void
@@ -95,6 +96,7 @@ boundCheckpointValue	export declare function boundCheckpointValue(value: unknown
 boundNodeOutput	export declare function boundNodeOutput(output: unknown, options?:
 buildGraph	export declare function buildGraph(workflow: WorkflowDefinition):
 cancelWorkflowRun	export declare function cancelWorkflowRun(input: CancelWorkflowRunInput): Promise<CancelWorkflowRunResult>
+cloneState	export declare function cloneState(value: JsonObject): JsonObject
 combineSignals	export declare function combineSignals(signals: readonly (AbortSignal | undefined)[]): AbortSignal | undefined
 conditionalNode	export declare function conditionalNode(config: Omit<ConditionalNodeDefinition, "kind">): ConditionalNodeDefinition
 createMemoryWorkflowCheckpoints	export declare function createMemoryWorkflowCheckpoints(options?: WorkflowCheckpointAdapterOptions): WorkflowCheckpointAdapter
@@ -110,15 +112,18 @@ enqueueWorkflow	export declare function enqueueWorkflow(workflow: WorkflowDefini
 errorCode	export declare function errorCode(error: unknown): string | number | undefined
 errorMessage	export declare function errorMessage(error: unknown): string
 exactOwnershipKey	export declare function exactOwnershipKey(ownership?: OwnershipScope): string
+executeScheduler	export declare function executeScheduler(state: SchedulerState, options: RunWorkflowOptions): Promise<WorkflowRunResult>
 fanOutNode	export declare function fanOutNode(config: Omit<FanOutNodeDefinition, "kind">): FanOutNodeDefinition
 functionNode	export declare function functionNode(config: Omit<FunctionNodeDefinition, "kind">): FunctionNodeDefinition
 getActiveWorkflowRun	export declare function getActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): ActiveWorkflowRun | undefined
 getWorkflowRun	export declare function getWorkflowRun(checkpoints: WorkflowCheckpointAdapter, input: WorkflowCheckpointLoadInput): Promise<WorkflowCheckpointRecord | null>
 hashWorkflowDefinition	export declare function hashWorkflowDefinition(workflow: WorkflowDefinition): string
 isAbortError	export declare function isAbortError(error: unknown): boolean
+isWorkflowSuspension	export declare function isWorkflowSuspension(value: unknown): value is WorkflowSuspension
 joinNode	export declare function joinNode(config?: Omit<JoinNodeDefinition, "kind">): JoinNodeDefinition
 listActiveWorkflowRuns	export declare function listActiveWorkflowRuns(filter?:
 listWorkflowRuns	export declare function listWorkflowRuns(checkpoints: WorkflowCheckpointAdapter, input?: WorkflowCheckpointListInput): Promise<WorkflowCheckpointListPage>
+markRemaining	export declare function markRemaining(state: SchedulerState, status: "aborted" | "skipped"): void
 measureJsonBytes	export declare function measureJsonBytes(value: unknown): number
 nodeKindOf	export declare function nodeKindOf(node: WorkflowNodeDefinition): string
 normalizeStatuses	export declare function normalizeStatuses(status: WorkflowRunStatus | readonly WorkflowRunStatus[] | undefined): Set<WorkflowRunStatus> | undefined
@@ -128,17 +133,23 @@ ownershipMatches	export declare function ownershipMatches(expected: OwnershipSco
 packageName	export declare const packageName = "@arnilo/prism-workflows"
 parseCheckpointValue	export declare function parseCheckpointValue(raw: unknown): WorkflowCheckpointValue
 parseListOffsetCursor	export declare function parseListOffsetCursor(cursor?: string): number
+parseStateHistory	export declare function parseStateHistory(history: Readonly<Record<string, JsonObject>> | undefined, current: JsonObject): Map<number, JsonObject>
+persistCheckpoint	export declare function persistCheckpoint(state: SchedulerState, options: RunWorkflowOptions, emit: (event: WorkflowEventInput) => void): Promise<void>
 prepareCheckpointRecord	export declare function prepareCheckpointRecord(input: WorkflowCheckpointSaveInput, options:
 redactCheckpointOutputs	export declare function redactCheckpointOutputs(value: WorkflowCheckpointRecord["value"], redactor?: SecretRedactor): WorkflowCheckpointRecord["value"]
 redactValue	export declare function redactValue<T>(value: T, redactor?: SecretRedactor): T
 registerActiveWorkflowRun	export declare function registerActiveWorkflowRun(input:
+releaseSuccessors	export declare function releaseSuccessors(state: SchedulerState, nodeId: string, emit: (event: WorkflowEventInput) => void): void
 replayWorkflow	export declare function replayWorkflow(workflow: WorkflowDefinition, input: ReplayWorkflowInput, options: ReplayWorkflowOptions): Promise<WorkflowRunResult>
 resolveListLimit	export declare function resolveListLimit(limit?: number): number
 resolveMaxFanOut	export declare function resolveMaxFanOut(workflow: WorkflowDefinition, node: WorkflowNodeDefinition): number
+resultFromRecord	export declare function resultFromRecord(workflowId: string, record: WorkflowCheckpointRecord): WorkflowRunResult
 resumeWorkflow	export declare function resumeWorkflow(workflow: WorkflowDefinition, ref:
 runCheckpointAdapterConformance	export declare function runCheckpointAdapterConformance(label: string, create: () => WorkflowCheckpointAdapter | Promise<WorkflowCheckpointAdapter>): Promise<void>
+runNode	export declare function runNode(state: SchedulerState, nodeId: string, options: RunWorkflowOptions, bus: WorkflowEventBus, emit: (event: WorkflowEventInput) => void, activeSessions: Map<string, AgentSession>): Promise<void>
 runWorkflow	export declare function runWorkflow(workflow: WorkflowDefinition, input: unknown, options?: RunWorkflowOptions): Promise<WorkflowRunResult>
 sampleValue	export declare function sampleValue(overrides?: Partial<WorkflowCheckpointValue>): WorkflowCheckpointValue
+skipNode	export declare function skipNode(state: SchedulerState, nodeId: string, reason: string, emit: (event: WorkflowEventInput) => void): void
 sleep	export declare function sleep(ms: number, signal?: AbortSignal): Promise<void>
 stableStringify	export declare function stableStringify(value: unknown): string
 startWorkflowBackground	export declare const startWorkflowBackground: typeof enqueueWorkflow
@@ -173,7 +184,9 @@ type WorkflowScheduleRecord	export { type CreateWorkflowScheduleInput, type Crea
 type WorkflowScheduleStatus	export { type CreateWorkflowScheduleInput, type CreateWorkflowSchedulesOptions, createWorkflowSchedules, type WorkflowScheduleCalculator, type WorkflowScheduleCalculatorInput, type WorkflowScheduleEvent, type WorkflowScheduleListInput, type WorkflowScheduleListPage, type WorkflowScheduleRecord, type WorkflowScheduleStatus, type WorkflowSchedules, } from "./schedules.js"
 type WorkflowSchedules	export { type CreateWorkflowScheduleInput, type CreateWorkflowSchedulesOptions, createWorkflowSchedules, type WorkflowScheduleCalculator, type WorkflowScheduleCalculatorInput, type WorkflowScheduleEvent, type WorkflowScheduleListInput, type WorkflowScheduleListPage, type WorkflowScheduleRecord, type WorkflowScheduleStatus, type WorkflowSchedules, } from "./schedules.js"
 unregisterActiveWorkflowRun	export declare function unregisterActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): void
+updateWorkflowState	export declare function updateWorkflowState(state: SchedulerState, patch: JsonObject, updateOptions: import("../types.js").WorkflowStateUpdateOptions | undefined, options: RunWorkflowOptions): Promise<Readonly<JsonObject>>
 utf8ByteLength	export declare function utf8ByteLength(value: string): number
+validateState	export declare function validateState(state: SchedulerState, options: RunWorkflowOptions): Promise<void>
 validateWorkflowLimit	export declare function validateWorkflowLimit(name: string, value: number, hardCap: number): number
 validateWorkflowLimits	export declare function validateWorkflowLimits(limits?: WorkflowLimits): void
 workflowNode	export declare function workflowNode(config: Omit<NestedWorkflowNodeDefinition, "kind">): NestedWorkflowNodeDefinition

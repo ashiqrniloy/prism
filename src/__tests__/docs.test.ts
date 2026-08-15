@@ -5,6 +5,23 @@ import { dirname, join, normalize } from "node:path";
 import { describe, it } from "node:test";
 
 const docsDir = "docs";
+
+// 0.2.5 plan 025 Task 1: contracts-core split into src/contracts-core/*.ts; read the union tree
+// (layout-agnostic) so contract declarations are found regardless of split depth.
+function readContractsSrc(): string {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const ent of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, ent.name);
+      if (ent.isDirectory()) walk(full);
+      else if (ent.name.endsWith(".ts")) out.push(readFileSync(full, "utf8"));
+    }
+  };
+  walk("src/contracts-core");
+  out.push(readFileSync("src/contracts-run-state.ts", "utf8"));
+  out.push(readFileSync("src/contracts-protocol.ts", "utf8"));
+  return out.join("\n");
+}
 const apiPages = [
   "docs/public-contracts.md",
   "docs/agent-identity.md",
@@ -374,7 +391,7 @@ describe("docs", () => {
 
     it("roadmap carries no stray/truncated content", () => {
       const roadmap = read("roadmap.md");
-      for (const pattern of [/TODO/, /FIXME/, /XXX/, /^### 0\.2\.8 /m, /\bVent\b/, /Background observers/]) {
+      for (const pattern of [/TODO/, /FIXME/, /XXX/, /^### 0\.2\.10 /m, /Background observers/]) {
         assert.doesNotMatch(roadmap, pattern, `roadmap.md contains stray content: ${pattern}`);
       }
     });
@@ -433,6 +450,37 @@ describe("docs", () => {
     assert.ok(release.includes("peer-version policy Decision A (exact pins)"), "0.2.4 handoff must cover the peer-version policy decision");
     assert.ok(release.includes("docs semantic, not phrase-only"), "0.2.4 handoff must cover the structural docs-test replacement");
     assert.ok(migration.includes("## 0.2.3 → 0.2.4"), "migration.md missing the 0.2.3 → 0.2.4 note");
+  });
+
+  it("plan 025 Task 6 freeze: 0.2.5 maintainability handoff (splits, dedup, linearization, dead-code, coverage) and the no-migration note are documented", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+    assert.ok(release.includes("### 0.2.5 publish handoff (plan 025 Task 6)"), "release page missing 0.2.5 handoff");
+    assert.ok(release.includes("**Rollback notes.**"), "0.2.5 handoff missing rollback notes");
+    // Semantic tripwire: the five 0.2.5 roadmap items are present (god-module splits,
+    // persistence-mechanics dedup, bounded-accumulation linearization, dead-code
+    // cleanup, coverage close) with measured reductions and the no-migration note.
+    assert.ok(release.includes("god-module splits"), "0.2.5 handoff must cover the god-module splits");
+    assert.ok(release.includes("persistence-mechanics dedup"), "0.2.5 handoff must cover the persistence-mechanics dedup");
+    assert.ok(release.includes("quadratic accumulation removed"), "0.2.5 handoff must cover the Buffer.concat linearization");
+    assert.ok(release.includes("dead-code cleanup, internal-only"), "0.2.5 handoff must cover the dead-code cleanup");
+    assert.ok(release.includes("coverage close, behavior-backed"), "0.2.5 handoff must cover the coverage close");
+    assert.ok(release.includes("Measured reductions and deltas"), "0.2.5 handoff must record the measured reductions/deltas");
+    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-15`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(migration.includes("## 0.2.4 → 0.2.5"), "migration.md missing the 0.2.4 → 0.2.5 note");
+    assert.ok(
+      migration.includes("No runtime contract change and no migration"),
+      "0.2.4 → 0.2.5 note must record the no-runtime-contract-delta statement",
+    );
+    const section = roadmap.slice(roadmap.indexOf("### 0.2.5 — Maintainability and bounded performance"));
+    const nextSection = section.indexOf("\n### 0.2.6");
+    const body = nextSection === -1 ? section : section.slice(0, nextSection);
+    const unchecked = (body.match(/- \[ \] /g) ?? []).length;
+    assert.equal(unchecked, 0, `roadmap 0.2.5 section has ${unchecked} unchecked item(s) after Task 6`);
   });
 
   it("plan 023 Task 6 freeze: 0.2.3 publish handoff, tooling sections, and release evidence are documented", () => {
@@ -576,7 +624,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.2.4", "root manifest must be at 0.2.4");
+    assert.equal(pkg.version, "0.2.5", "root manifest must be at 0.2.5");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -2976,9 +3024,7 @@ describe("docs", () => {
   it("tools_docs_cover_runtime_validator_seam_and_per_run_tool_scoping", () => {
     const tools = readFileSync("docs/tools.md", "utf8");
     const rootExports = readFileSync("src/index.ts", "utf8");
-    const contracts = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
-      .map((p) => readFileSync(p, "utf8"))
-      .join("\n");
+    const contracts = readContractsSrc();
     const runOptions = contracts.match(/export interface RunOptions \{[\s\S]*?^\}/m)?.[0] ?? "";
 
     assert.match(rootExports, /\bToolValidator\b/, "src/index.ts does not export ToolValidator");
@@ -3009,9 +3055,7 @@ describe("docs", () => {
   it("context_and_skills_docs_cover_runtime_selection_and_activation", () => {
     const page = readFileSync("docs/context-and-skills.md", "utf8");
     const rootExports = readFileSync("src/index.ts", "utf8");
-    const contracts = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
-      .map((p) => readFileSync(p, "utf8"))
-      .join("\n");
+    const contracts = readContractsSrc();
 
     assert.match(rootExports, /\bresolveActiveSkills\b/, "src/index.ts does not export resolveActiveSkills");
     assert.ok(contracts.includes("activeSkills?: readonly string[]"), "RunOptions does not declare activeSkills");

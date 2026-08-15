@@ -8,7 +8,6 @@ import {
   type BranchQuery,
   type CheckpointStore,
   DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
-  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   type LeaseStore,
   type MigrationQuery,
   type PersistencePage,
@@ -17,7 +16,6 @@ import {
   type RetentionPolicyQuery,
   RunFeedbackError,
   type RunFeedbackQuery,
-  type RunFeedbackRecord,
   type RunFeedbackStore,
   type RunLedger,
   type RunQuery,
@@ -42,7 +40,17 @@ import {
   type UsageQuery,
   type UsageRecord,
 } from "@arnilo/prism";
-import { createSessionRowMappers, type SessionEntryRow } from "@arnilo/prism-session-store-codecs";
+import {
+  clipSearchSnippet,
+  createSessionRowMappers,
+  decodeBranchCursor,
+  encodeBranchCursor,
+  entrySearchFields,
+  parseSessionMetadata,
+  rowToRunFeedbackRecord as mapFeedbackRow,
+  safeSearchMetadata,
+  type SessionEntryRow,
+} from "@arnilo/prism-session-store-codecs";
 import Database from "better-sqlite3";
 import {
   applySqliteMigrations,
@@ -933,45 +941,8 @@ function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery):
   };
 }
 
-function entrySearchFields(entry: SessionEntry): { label: string; summary: string; body: string } {
-  const texts: string[] = [];
-  for (const block of entry.message?.content ?? []) {
-    if (block.type === "text" && typeof block.text === "string") texts.push(block.text);
-  }
-  // ponytail: 64KiB body cap keeps FTS dual-write bounded; raise if hosts need longer message search.
-  return {
-    label: entry.label ?? "",
-    summary: entry.summary ?? "",
-    body: texts.join("\n").slice(0, 64 * 1024),
-  };
-}
-
 function fts5Phrase(query: string): string {
   return `"${query.replaceAll('"', '""')}"`;
-}
-
-function clipSearchSnippet(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  const bytes = new TextEncoder().encode(value);
-  if (bytes.byteLength <= DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES) return value;
-  return new TextDecoder().decode(bytes.slice(0, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES));
-}
-
-function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined {
-  if (!raw) return undefined;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Readonly<Record<string, unknown>>) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function safeSearchMetadata(metadata: Readonly<Record<string, unknown>> | undefined): Readonly<Record<string, unknown>> | undefined {
-  if (!metadata) return undefined;
-  const workspaceRoot = metadata[SESSION_SEARCH_WORKSPACE_METADATA_KEY];
-  if (typeof workspaceRoot !== "string") return undefined;
-  return { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot };
 }
 
 function buildOwnershipFilters(scope: { tenantId?: string; accountId?: string; userId?: string }): string[] {
@@ -1032,55 +1003,12 @@ function queryTable<T>(
   };
 }
 
-function encodeBranchCursor(offset: number): string {
-  return String(offset);
-}
-
-function decodeBranchCursor(cursor: string): number {
-  const value = Number(cursor);
-  if (!Number.isInteger(value) || value < 0) throw new Error("Invalid branch pagination cursor");
-  return value;
-}
-
 const mapSessionRow = rowToSessionRecord;
 const mapBranchRow = rowToBranchRecord;
 const mapRunRow = (row: Record<string, unknown>) => rowToRunRecord(row as never);
 const mapEventRow = (row: Record<string, unknown>) => rowToAgentEventRecord(row as never);
 const mapToolCallRow = (row: Record<string, unknown>) => rowToToolCallRecord(row as never);
 const mapUsageRow = (row: Record<string, unknown>) => rowToUsageRecord(row as never);
-const mapFeedbackRow = (row: Record<string, unknown>): RunFeedbackRecord =>
-  Object.freeze({
-    id: String(row.id),
-    runId: String(row.run_id),
-    sessionId: String(row.session_id),
-    traceId: row.trace_id === null ? undefined : String(row.trace_id),
-    rating: row.rating === null ? undefined : Number(row.rating),
-    comment: row.comment === null ? undefined : String(row.comment),
-    tags: Object.freeze(parseStringArray(row.tags)),
-    scorerIds: Object.freeze(parseStringArray(row.scorer_ids)),
-    evaluationIds: Object.freeze(parseStringArray(row.evaluation_ids)),
-    createdAt: String(row.created_at),
-    createdBy: row.created_by === null ? undefined : String(row.created_by),
-    tenantId: String(row.tenant_id),
-    accountId: row.account_id === null ? undefined : String(row.account_id),
-    userId: row.user_id === null ? undefined : String(row.user_id),
-    metadata: row.metadata === null ? undefined : deepFreeze(JSON.parse(String(row.metadata)) as Readonly<Record<string, unknown>>),
-  });
-
-function deepFreeze<T>(value: T): T {
-  if (value && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
-
-function parseStringArray(value: unknown): string[] {
-  const parsed: unknown = JSON.parse(String(value));
-  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string"))
-    throw new RunFeedbackError("Invalid stored feedback array");
-  return parsed;
-}
 const mapAgentDefinitionRow = rowToAgentDefinitionRecord;
 const mapRetentionRow = rowToRetentionPolicy;
 const mapMigrationRow = rowToMigrationRecord;

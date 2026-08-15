@@ -42,9 +42,31 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { test } from "node:test";
 
 const url = (path) => new URL(path, import.meta.url);
+// Task 1 (0.2.5) split contracts-core.ts + agent-session.ts into a barrel + a sibling
+// family dir (src/contracts-core/*, src/agent-session/*). Read the module = barrel +
+// family so "stays in <module>" assertions hold after the split.
+function readModule(rel) {
+  const abs = fileURLToPath(url(rel));
+  let text = readFileSync(abs, "utf8");
+  const dir = abs.replace(/\.ts$/, "");
+  try {
+    if (statSync(dir).isDirectory()) {
+      for (const entry of readdirSync(dir)) {
+        if (entry.endsWith(".ts") && !entry.endsWith(".d.ts") && !entry.includes("__tests__")) {
+          text += `\n${readFileSync(join(dir, entry), "utf8")}`;
+        }
+      }
+    }
+  } catch {
+    /* no sibling family dir */
+  }
+  return text;
+}
 const manifest = JSON.parse(readFileSync(url("./phase16-freeze-manifest.json"), "utf8"));
 const baseline = JSON.parse(readFileSync(url("./phase16-baseline.json"), "utf8"));
 const rootPkg = JSON.parse(readFileSync(url("../package.json"), "utf8"));
@@ -256,10 +278,10 @@ test("baseline splitBaseline block records the pre-split dist/source snapshot tr
 test("BARREL INTENT (Tasks 1-2 landed): src/contracts.ts and src/agents.ts are barrels over the split modules", () => {
   const agents = readFileSync(url("../src/agents.ts"), "utf8");
   const contracts = readFileSync(url("../src/contracts.ts"), "utf8");
-  const core = readFileSync(url("../src/contracts-core.ts"), "utf8");
+  const core = readModule("../src/contracts-core.ts");
   const runState = readFileSync(url("../src/contracts-run-state.ts"), "utf8");
   const protocol = readFileSync(url("../src/contracts-protocol.ts"), "utf8");
-  const session = readFileSync(url("../src/agent-session.ts"), "utf8");
+  const session = readModule("../src/agent-session.ts");
   const approval = readFileSync(url("../src/agent-approval.ts"), "utf8");
   const dispatch = readFileSync(url("../src/agent-tool-dispatch.ts"), "utf8");
   const lifecycle = readFileSync(url("../src/agent-run-lifecycle.ts"), "utf8");

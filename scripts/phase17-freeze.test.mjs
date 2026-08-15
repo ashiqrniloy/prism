@@ -26,9 +26,30 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { test } from "node:test";
 
 const url = (path) => new URL(path, import.meta.url);
+// Task 1 (0.2.5) split contracts-core.ts + agent-session.ts into a barrel + a sibling
+// family dir. Read the module = barrel + family so "stays in <module>" assertions hold.
+function readModule(rel) {
+  const abs = fileURLToPath(url(rel));
+  let text = readFileSync(abs, "utf8");
+  const dir = abs.replace(/\.ts$/, "");
+  try {
+    if (statSync(dir).isDirectory()) {
+      for (const entry of readdirSync(dir)) {
+        if (entry.endsWith(".ts") && !entry.endsWith(".d.ts") && !entry.includes("__tests__")) {
+          text += `\n${readFileSync(join(dir, entry), "utf8")}`;
+        }
+      }
+    }
+  } catch {
+    /* no sibling family dir */
+  }
+  return text;
+}
 const manifest = JSON.parse(readFileSync(url("./phase17-freeze-manifest.json"), "utf8"));
 const baseline = JSON.parse(readFileSync(url("./phase17-baseline.json"), "utf8"));
 const rootPkg = JSON.parse(readFileSync(url("../package.json"), "utf8"));
@@ -38,7 +59,7 @@ const TASKS = ["task1", "task2", "task3", "task4"];
 
 /** Extract the body of `export interface <owner> { ... }` from a source file; module-scope owners scan the whole file. */
 function ownerScope(owner, file) {
-  const src = readFileSync(url(`../${file}`), "utf8");
+  const src = readModule(`../${file}`);
   const m = src.match(new RegExp(`export interface ${owner}\\s*\\{`));
   if (!m) return src; // module-scope owner (const/CLI flag/export surface) — whole file is the scope
   // walk braces from the interface opening to the matching close at depth 0

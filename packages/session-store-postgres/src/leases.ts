@@ -1,4 +1,5 @@
-import { LeaseConflictError, type LeaseRecord, type LeaseStore, type OwnershipScope } from "@arnilo/prism";
+import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
+import { assertOwnershipScope } from "@arnilo/prism-session-store-codecs";
 import type { Pool } from "pg";
 import { qualifyTable } from "./identifiers.js";
 
@@ -67,7 +68,7 @@ RETURNING *`,
       );
       if (result.rowCount) return toRecord(result.rows[0] as Row);
       const current = await load(input.namespace, input.key);
-      if (current) assertOwnership(input, current);
+      if (current) assertOwnershipScope(input, current, () => new LeaseConflictError("Lease ownership mismatch"));
       return null;
     },
     async renewLease(input) {
@@ -91,7 +92,7 @@ RETURNING *`,
       );
       if (result.rowCount) return toRecord(result.rows[0] as Row);
       const current = await load(input.namespace, input.key);
-      if (current) assertOwnership(input, current);
+      if (current) assertOwnershipScope(input, current, () => new LeaseConflictError("Lease ownership mismatch"));
       return null;
     },
     async releaseLease(input) {
@@ -105,13 +106,13 @@ WHERE namespace=$1 AND key=$2 AND owner_id=$3 AND token=$4
       );
       if (result.rowCount) return true;
       const current = await load(input.namespace, input.key);
-      if (current) assertOwnership(input, current);
+      if (current) assertOwnershipScope(input, current, () => new LeaseConflictError("Lease ownership mismatch"));
       return false;
     },
     async getLease(input) {
       if (input.signal?.aborted) throw input.signal.reason ?? new DOMException("Aborted", "AbortError");
       const current = await load(input.namespace, input.key, true);
-      if (current) assertOwnership(input, current);
+      if (current) assertOwnershipScope(input, current, () => new LeaseConflictError("Lease ownership mismatch"));
       return current;
     },
   };
@@ -146,8 +147,4 @@ function validate(namespace: string, key: string, ownerId: string, ttlMs?: numbe
     (token !== undefined && !token)
   )
     throw new LeaseConflictError("Invalid lease input");
-}
-function assertOwnership(expected: OwnershipScope, actual: OwnershipScope): void {
-  if (expected.tenantId !== actual.tenantId || expected.accountId !== actual.accountId || expected.userId !== actual.userId)
-    throw new LeaseConflictError("Lease ownership mismatch");
 }

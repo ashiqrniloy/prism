@@ -294,15 +294,15 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 
 ### 0.2.5 — Maintainability and bounded performance
 
-- [ ] **Split remaining god-modules by cohesive state machine.** Prioritize `src/agent-session.ts` (run setup, provider turn, durable suspension, tool round, persistence/ledger), then `contracts-core`, workflow run, server handler, repository, and ACP agent. Preserve public barrels and avoid one-implementation interfaces/factories.
+- [x] **Split remaining god-modules by cohesive state machine.** Prioritize `src/agent-session.ts` (run setup, provider turn, durable suspension, tool round, persistence/ledger), then `contracts-core`, workflow run, server handler, repository, and ACP agent. Preserve public barrels and avoid one-implementation interfaces/factories.
   - Acceptance: behavior/exports remain compatible or migrated; complexity and file-size reductions are measured; hot-path benchmarks and tree-shaking do not regress.
-- [ ] **Deduplicate PostgreSQL/SQLite persistence mechanics.** Move proven shared ownership filters, cursor codecs, schema/migration checks, lifecycle/checkpoint shapes, metadata parsing, and search clipping into `session-store-codecs`; leave SQL dialect/query execution in each adapter.
+- [x] **Deduplicate PostgreSQL/SQLite persistence mechanics.** Move proven shared ownership filters, cursor codecs, schema/migration checks, lifecycle/checkpoint shapes, metadata parsing, and search clipping into `session-store-codecs`; leave SQL dialect/query execution in each adapter.
   - Acceptance: cross-store conformance proves identical semantics; no generic ORM/query builder or new runtime dependency is added.
-- [ ] **Remove quadratic bounded accumulation.** Replace repeated `Buffer.concat` in language framing, tar parsing, and CLI capture with chunk arrays or bounded ring/stream processing; retain byte caps and abort behavior.
+- [x] **Remove quadratic bounded accumulation.** Replace repeated `Buffer.concat` in language framing, tar parsing, and CLI capture with chunk arrays or bounded ring/stream processing; retain byte caps and abort behavior.
   - Acceptance: near-limit benchmarks show linear copying and bounded peak memory; overflow remains fail closed.
-- [ ] **Finish dead-code cleanup.** Remove stale `agent-session` imports/constants, `cache-telemetry` locals, `skill-load` map/scans, and confirmed dead exports; preserve intentionally public exports and documented `ponytail:` ceilings.
+- [x] **Finish dead-code cleanup.** Remove stale `agent-session` imports/constants, `cache-telemetry` locals, `skill-load` map/scans, and confirmed dead exports; preserve intentionally public exports and documented `ponytail:` ceilings.
   - Acceptance: unused sweep is clean or has explicit reviewed allow-list; no package API disappears without migration evidence.
-- [ ] **Close low-coverage core behavior.** Add focused tests for conversations, artifacts, approval, compaction, and weak conformance-helper branches; test behavior rather than line count.
+- [x] **Close low-coverage core behavior.** Add focused tests for conversations, artifacts, approval, compaction, and weak conformance-helper branches; test behavior rather than line count.
   - Acceptance: every new branch/loop/parser/security path leaves one runnable regression; package and core thresholds stay above recorded baselines.
 
 ### 0.2.6 — Fully featured coding-agent readiness
@@ -328,6 +328,19 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 - [ ] **Field-level data classification and redaction.** Apply policy-driven classification to prompts, tool args/results, artifacts, audit, telemetry, and exports with fail-closed defaults.
 - [ ] **ERP release journey.** Exercise identity, policy, budget reservation, SoD approval, outbox mutation, compensation, audit export, legal hold, replica failover, and restore.
   - Acceptance: atomicity/recovery invariants are documented and tested; no exactly-once claim; security/performance/storage budgets pass. “ERP production ready” remains blocked until the 0.3.0 live-service matrix is recorded.
+  
+### 0.2.8 - Coding agent capabilities
+
+- Background observer (Observational Memory, Recall, Tool use, Skill activation, Input token suppression)
+- Vent
+- Ponytail and Caveman
+- Evaluate all of the coding tools to make sure it has all the capabilities required for coding agents to do the job in the most correct and efficient way.
+- Computer use package: Linux
+
+### 0.2.9 - Autonomous updates for packages other than core
+- Setup docs and skills such that only packages with updates get released
+- Not all packages are needed to be updated with the same version
+
 ### Mandatory 0.2.x regression matrix
 
 Before 0.2.x closes, automated tests must prove:

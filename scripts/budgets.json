@@ -12,9 +12,9 @@
       "$comment": "[2026-08-13] plan 022 Task 4 harness rebaseline; see packedBytes."
     },
     "fileCount": {
-      "baseline": 326,
+      "baseline": 356,
       "tolerance": 0.05,
-      "$comment": "[2026-08-13] phase21 tasks 4-5 add src/pinned-fetch.ts + src/oauth-device-code.ts to the core package (4 dist files total), pushing the root tarball past the 0.1.7 fileCount ceiling (measured 326 vs prior 310; packedBytes/unpackedBytes still within tolerance, measured 0.2.0+). Re-baselined per the release convention recorded below; only fileCount changed."
+      "$comment": "[2026-08-15] plan 025 Task 1 splits the two root god-modules into cohesive family sub-files behind preserved barrels (src/contracts-core/ → 10 families, src/agent-session/ → 4 families), adding dist/contracts-core/*.js + dist/contracts-core/*.d.ts and dist/agent-session/*.js + dist/agent-session/*.d.ts to the root tarball (measured 356 fileCount vs prior 326; packedBytes 822927 / unpackedBytes 2850932 still within 5% tolerance, so only fileCount is re-baselined per the release convention). The .map files stay excluded via `!dist/**/*.map`. The split is a planned maintainability change (roadmap 0.2.5); the public surface is byte-identical (compat gate zero breaking deltas)."
     },
     "$comment": " [2026-08-12] root packed/unpacked/fileCount baselines refreshed at 0.1.7 Task 2 (HEAD 2ebc08e + cache-telemetry module): dist/cache-telemetry.js + dist/cache-telemetry.d.ts + docs/provider-caching.md telemetry section + docs/index.md entry push the tarball past the 5% ceiling (measured 756151/2627877/310 vs prior 718738/2505460/307)."
   },

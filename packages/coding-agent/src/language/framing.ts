@@ -26,7 +26,20 @@ export function encodeLspFrame(message: unknown): Buffer {
  * Rejects malformed headers, non-decimal Content-Length, and oversized bodies.
  */
 export class LspFrameReader {
-  private buf = Buffer.alloc(0);
+  // ponytail: chunk-array accumulator — O(1) append per push, no whole-buffer re-concat
+  // (the 0.2.4 `this.buf = Buffer.concat([this.buf, chunk])` was O(input * chunks)).
+  // A completed frame copies only its header+body region (bounded by maxMessageBytes),
+  // so total copying is O(input). The header separator scan peeks min(retained, 64KiB)
+  // per unparsed frame; for the rare many-frames-per-large-chunk case that is a 64KiB-
+  // per-frame copy (linear, 64x constant) — upgrade to a streaming separator search
+  // if pipelined-frame throughput matters. A separator beyond the 64KiB header bound
+  // is rejected (stricter DoS guard than 0.2.4, which accepted it; no test exercises
+  // >64KiB headers — the bound exists precisely to reject unbounded header growth).
+  private chunks: Buffer[] = [];
+  private offset = 0; // consumed prefix bytes in chunks[0]
+  private retained = 0; // total unconsumed bytes
+  private cachedBodyStart = -1; // -1 = header not yet parsed; else body starts at this absolute unconsumed offset
+  private cachedContentLength = 0;
   private readonly maxMessageBytes: number;
 
   constructor(maxMessageBytes: number) {
@@ -36,7 +49,8 @@ export class LspFrameReader {
   /** Push stdout/stderr chunk; return complete parsed JSON values (order preserved). */
   push(chunk: Buffer): unknown[] {
     if (chunk.length === 0) return [];
-    this.buf = Buffer.concat([this.buf, chunk]);
+    this.chunks.push(chunk);
+    this.retained += chunk.length;
     const out: unknown[] = [];
     for (;;) {
       const parsed = this.tryParseOne();
@@ -46,29 +60,85 @@ export class LspFrameReader {
     return out;
   }
 
-  private tryParseOne(): unknown | undefined {
-    const sep = indexOfHeaderSep(this.buf);
-    if (sep < 0) {
-      // Bound header scan buffer so a missing separator cannot grow forever.
-      if (this.buf.length > Math.min(this.maxMessageBytes, 64 * 1024)) {
-        throw new LspFrameError("ERR_PRISM_LSP_FRAMING", "LSP header exceeds bound without separator");
+  /** Copy `n` unconsumed bytes starting at absolute unconsumed offset `start` (no advance). */
+  private peekAt(start: number, n: number): Buffer {
+    const out = Buffer.allocUnsafe(n);
+    let written = 0;
+    let i = 0;
+    let off = this.offset;
+    let skip = start;
+    while (skip > 0) {
+      const c = this.chunks[i]!;
+      const avail = c.length - off;
+      if (skip >= avail) {
+        skip -= avail;
+        i++;
+        off = 0;
+      } else {
+        off += skip;
+        skip = 0;
       }
-      return undefined;
+    }
+    while (written < n) {
+      const c = this.chunks[i]!;
+      const take = Math.min(c.length - off, n - written);
+      c.copy(out, written, off, off + take);
+      written += take;
+      i++;
+      off = 0;
+    }
+    return out;
+  }
+
+  /** Advance the unconsumed cursor by `n` (drop fully-consumed chunks). */
+  private drop(n: number): void {
+    let remaining = n;
+    while (remaining > 0 && this.chunks.length > 0) {
+      const first = this.chunks[0]!;
+      const avail = first.length - this.offset;
+      if (remaining >= avail) {
+        remaining -= avail;
+        this.chunks.shift();
+        this.offset = 0;
+      } else {
+        this.offset += remaining;
+        remaining = 0;
+      }
+    }
+    this.retained -= n;
+  }
+
+  private tryParseOne(): unknown | undefined {
+    if (this.retained === 0) return undefined;
+    const headerBound = Math.min(this.maxMessageBytes, 64 * 1024);
+
+    if (this.cachedBodyStart < 0) {
+      // Bound header scan buffer so a missing separator cannot grow forever.
+      const scanLen = Math.min(this.retained, headerBound);
+      const view = this.peekAt(0, scanLen);
+      const sep = indexOfHeaderSep(view);
+      if (sep < 0) {
+        if (this.retained > headerBound) {
+          throw new LspFrameError("ERR_PRISM_LSP_FRAMING", "LSP header exceeds bound without separator");
+        }
+        return undefined;
+      }
+      const headerText = view.subarray(0, sep).toString("ascii");
+      const contentLength = parseContentLength(headerText);
+      if (contentLength > this.maxMessageBytes) {
+        throw new LspFrameError("ERR_PRISM_LSP_LIMIT", `LSP message body ${contentLength} exceeds maxMessageBytes ${this.maxMessageBytes}`);
+      }
+      this.cachedBodyStart = sep + 4;
+      this.cachedContentLength = contentLength;
     }
 
-    const headerText = this.buf.subarray(0, sep).toString("ascii");
-    const contentLength = parseContentLength(headerText);
-    if (contentLength > this.maxMessageBytes) {
-      throw new LspFrameError("ERR_PRISM_LSP_LIMIT", `LSP message body ${contentLength} exceeds maxMessageBytes ${this.maxMessageBytes}`);
-    }
+    const bodyEnd = this.cachedBodyStart + this.cachedContentLength;
+    if (this.retained < bodyEnd) return undefined;
 
-    const bodyStart = sep + 4;
-    const bodyEnd = bodyStart + contentLength;
-    if (this.buf.length < bodyEnd) return undefined;
-
-    const body = this.buf.subarray(bodyStart, bodyEnd);
-    this.buf = this.buf.subarray(bodyEnd);
-
+    const body = this.peekAt(this.cachedBodyStart, this.cachedContentLength);
+    this.drop(bodyEnd);
+    this.cachedBodyStart = -1;
+    this.cachedContentLength = 0;
     let value: unknown;
     try {
       value = JSON.parse(body.toString("utf8"));

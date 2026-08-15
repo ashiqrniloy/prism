@@ -1,0 +1,129 @@
+{
+  "$comment": "Phase 25 (0.2.5) maintainability-and-bounded-performance scope gate and evidence record. Machine-readable source of truth for plans/025-Release-0-2-5-Maintainability-And-Bounded-Performance.md: the seven 0.2.5 implementation items (primitive review; god-module split; persistence-mechanics dedup; bounded-accumulation removal; dead-code cleanup; coverage close; docs finalization + bump + exit gate) each with task ownership and evidence tokens, the compat policy (additive-only at 0.2.5 — reviewed plain gate deltas: pre-refresh gate at the 0.2.4 working tree showed the version literal + 105 additive internal-helper exports only, zero removed/changed; baselines regenerated with --update-baseline, no --allow-break), the protected-gate policy (unchanged from phase23: required surfaces with absent evidence record blocked and fail the release gate; the named protected/live skips stay named), per-task evidence tokens, and the deviation log. This is a scope gate, NOT a release-contract support matrix; the 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json. Baseline evidence for the exit gate lives in scripts/phase25-baseline.json (green: true, blocked: false, captured 2026-08-15 at the 0.2.5 working-tree state; PRISM_TEST_POSTGRES_URL set for protected legs).",
+  "release": "0.2.5",
+  "line": "0.2.x",
+  "type": "maintainability-and-bounded-performance",
+  "baseline": "0.2.4 (plan 024 exit gate passed 2026-08-15; signed tag v0.2.4 NOT yet created — publication is the operator handoff; 50 publishable manifests; audit 0; compat baselines current at 0.2.5 post-refresh; release skip manifest machine-auditable; HEAD 236ee8c)",
+  "items": [
+    {
+      "id": "primitive-review",
+      "task": "task0",
+      "title": "Primitive review, god-module/dedup/perf/dead-code/coverage inventory, threat model, ownership, migration, budget decisions",
+      "evidence": "docs/_evidence/phase25-primitive-review.md (42,821 bytes): six god-module inventories, session-store-codecs surface, adapter manifests, dedup helper analysis, dead-export/unused-sweep results, 9 ratified decisions D1-D6 + threat model T1-T6, each mapped to a concrete task test with fail-closed posture. No source edited to produce it.",
+      "regression": "threats T1-T6 (compat break, semantics-silent dedup, bounds regression, false dead-export removal, coverage padding, tree-shaking/benchmark regression) map to Tasks 1-6 tests, all fail-closed"
+    },
+    {
+      "id": "god-module-split",
+      "task": "task1",
+      "title": "Split remaining god-modules by cohesive state machine (compat-preserving barrels)",
+      "evidence": "six splits behind preserved barrels: contracts-core.ts 1719L -> 10 families (max 403L, +0 symbols), agent-session.ts 2049L -> 4 modules (1686-L RuntimeAgentSession class kept, recorded reason, +19), workflows/run.ts 1227L -> 6 families (max 417L, +13), server/handler.ts 1005L -> 8 families (max 444L, +27), coding-agent/repository.ts 974L -> 7 families (max 299L, +9), ag-ui/acp/agent.ts 836L -> 8 families (max 386L, +16); 84 total additive internal helpers, 0 removed/changed; no exports-map subpath; ponytail comments preserved; scripts/phase25-split-engine.mjs + per-module drivers + scripts/phase25-compat-diff.mjs (dev-only audit trail); layout-agnostic test updates (public-export-contract, core-boundaries, docs).",
+      "regression": "phase25-compat-diff 0 breaking on all 6 packages; public-export-contract 170/170; release-gate 8/8; sweep-unused 3/3"
+    },
+    {
+      "id": "persistence-dedup",
+      "task": "task2",
+      "title": "Deduplicate PostgreSQL/SQLite persistence mechanics into session-store-codecs",
+      "evidence": "21 pure helpers moved (ownership assertOwnershipScope/assertOwnershipRequired/ownershipScope, checkpoint staleCheckpoint*/encodeCheckpointJson/decodeCheckpointCursor, cursor encodeBranchCursor/decodeBranchCursor, lifecycle rowToTenantQuota/assertHoldReason/lifecyclePageLimit, search entrySearchFields/clipSearchSnippet/parseSessionMetadata/safeSearchMetadata, util deepFreeze/parseStringArray/throwIfAborted, feedback rowToRunFeedbackRecord) re-exported from codecs src/index.ts (single-entry exports map, additive surface); codecs 426->624L dependency-free (stdlib only, no SQL dialect); adapters shrank 273L total; SQL fragments/DDL/query execution stay per-adapter; ADAPTER_TABLE_NAMES/ADAPTER_INDEX_NAMES + row shapes stay per-adapter (surface + dialect reasons); no manifest change (codecs already a runtime dep at 0.2.4); codecs README Since 0.2.5 paragraph.",
+      "regression": "adapter conformance 37/37 (sqlite + postgres); cross-store conformance legs in test:postgres 91/91; compat-diff 0 breaking (codecs +21 ADDED); adapters public surfaces unchanged (postgres 30, sqlite 23 symbols)"
+    },
+    {
+      "id": "bounded-accumulation",
+      "task": "task3",
+      "title": "Remove quadratic bounded accumulation (framing, tar; audit CLI)",
+      "evidence": "LspFrameReader (packages/coding-agent/src/language/framing.ts) -> chunk-array two-phase reader (chunks/offset/retained, peekAt/drop, cached header parse; header-scan capped at min(retained, 64KiB)); summarizeTarStream (packages/coding-security/src/sandbox-tar.ts) -> chunk-array acc with take/drop keeping hash/byteCount per raw chunk; caps + overflow fail-closed byte-identical (ERR_PRISM_LSP_LIMIT/ERR_PRISM_LSP_FRAMING/SandboxTarError); CLI collectOutput audited already linear (plan 020); scripts/phase25-bounded-accumulation.test.mjs (10 tests, wired into the npm test gate segment after phase24-truth) asserts linear copying via allocBytes instrumentation, near-cap parse, over-cap fail-closed, tar sha256/entryCount/byteCount vs an independent hash, fail-closed tar-entry-type rejection; benchmark: framing ~100-200x faster at N=4000 (1298.4ms -> 11.2ms), tar linear at 8MiB.",
+      "regression": "probe 10/10 in npm test; budget-gate re-baselined root fileCount 326->356 (Task 1 split dist files) with dated $comment; benchmark-0.1.0 gate green"
+    },
+    {
+      "id": "dead-code",
+      "task": "task4",
+      "title": "Finish dead-code cleanup (stale agent-session/cache-telemetry/skill-load + confirmed dead exports)",
+      "evidence": "scripts/phase25-dead-exports-raw.txt (62 candidates) + docs/_evidence/phase25-dead-exports-triage.md (10,973 bytes, tarball-excluded): 2 removals (PostgresPersistenceCloseOptions, SqlitePersistenceCloseOptions — internal type aliases never re-exported from adapter indexes, pure deletions, compat-diff 0 breaking proving the gate never tracked them) + 60 allow-listed (37 test-used false positives, 20 dead-but-compat-tracked deferred to the 0.3.0 breaking cut incl. security guards, 3 public type aliases deferred); D4a named-internal audit (agent-session/cache-telemetry/skill-load) recorded no-op (sweep-unused zero diagnostics; skill-load map/Set builds load-bearing); no public export removed -> no docs/migration.md removal note required.",
+      "regression": "dead-exports.mjs re-run 60 candidates all on the allow-list; adapter conformance 37/37; compat-diff 0 breaking; npm test green"
+    },
+    {
+      "id": "coverage",
+      "task": "task5",
+      "title": "Close low-coverage core behavior (conversations, artifacts, approval, compaction, conformance-helper branches)",
+      "evidence": "76 behavior-backed tests: agent-approval-coverage 43 (pendingDecisionsOf/assertValidAgentRunResume/resolveRunDecisions branches + pure helpers; agent-approval.ts had no direct test), conversations-coverage 22 (cursor codec validation + thread projection + marker serialization; root conversations.ts was 16% covered), artifacts-coverage 6 (approval-state projection, checkpoint key, error-code map), tool-effect-store-coverage 5 (option-defaults + violation throws; branches 38.89 -> 81.82); compaction relies on its 17 existing package suites (observational-memory 10 + llm 7); core coverage 90.53/84.2/90.54 -> 91.43/84.80/91.60 (env-set run) / 91.39/84.78/91.60 (no-env final); all 39 non-protected packages above thresholds; UNBLOCKING FIXES: stale roadmap test guard (docs.test.ts version pattern 0.2.8 -> 0.2.10, removed stale \\bVent\\b) for the user's intentional 0.2.8/0.2.9 + Vent roadmap content, 3 freeze tests (phase15/16/17) made layout-agnostic via readModule (broken by the Task 1 splits, hidden behind the roadmap && chain failure), biome lint diagnostics auto-fixed (SARIF 0).",
+      "regression": "test:coverage exit 0 (core row + per-package rows above thresholds at 3pp margin); phase23-coverage 4/4; phase23-skip-manifest 6/6"
+    },
+    {
+      "id": "release",
+      "task": "task6",
+      "title": "Docs finalization, 0.2.5 bump, and fail-loud exit gate",
+      "evidence": "docs/release-and-install.md 0.2.5 publish handoff section (five roadmap topics + measured reductions/deltas + rollback notes + operator prereq block) + current-line literals (peer 0.2.5, tarball names); docs/migration.md 0.2.4 -> 0.2.5 note (no runtime contract delta, no migration); docs/index.md current line 0.2.5 + plan-025 cut summary; docs/0.1.0-readiness.md current-line block 0.2.5; CHANGELOG.md 0.2.5 entry; session-store-codecs README Since 0.2.5 paragraph (Task 2); roadmap 0.2.5 five checkboxes [x]; plans/README 025 complete; docs.test.ts plan-025 Task 6 freeze test; version-sensitive pins advanced (release/index/cli-provider-add/packaging 8/install-smoke tarball names + fake peer 0.2.6/docs.test root-manifest/12 workspace skeleton peer pins); bump node scripts/release.mjs bump --from 0.2.4 --to 0.2.5 (50 manifests + lockfile, exact peers advance; external @dietrichgebert/ponytail ^4.8.4 untouched); package-truth.json regenerated (root.version 0.2.5, counts 50/49/14/9/26/43/6 unchanged); compat sequence: pre-refresh plain gate version-literal + 105 additive only, --update-baseline (6 files, 106+/1-), plain gate green, no --allow-break; full exit gate green (npm test 3654/3654, test:coverage 91.39/84.78/91.60, threat-suites 50/50, test:postgres 91/91, sdk:ready exit 0, audit 0, secrets 1559/0, pack dry-run x2 byte-identical, release.mjs gate 0.2.5 0 breaking, node v20.20.2 packed imports 14/14).",
+      "regression": "plan-025 Task 6 docs freeze test + phase24-truth 12 + phase25-bounded-accumulation 10 all green; exit evidence in scripts/phase25-baseline.json (green: true)"
+    }
+  ],
+  "compatPolicy": {
+    "additiveOnly": true,
+    "expectedDeltas": [
+      "version literal 0.2.4 -> 0.2.5",
+      "+105 additive internal-helper exports (84 Task 1 + 21 codecs)"
+    ],
+    "removedOrChanged": 0,
+    "allowBreakUsed": false,
+    "updateBaseline": true,
+    "migrationNote": "docs/migration.md ## 0.2.4 -> 0.2.5 (no runtime contract delta; no removal note needed)"
+  },
+  "protectedPolicy": {
+    "unchangedFrom": "phase23",
+    "requiredSurfaces": [
+      "test:postgres durable conformance (PRISM_TEST_POSTGRES_URL)",
+      "cross-store conformance legs (Task 2)",
+      "nats restart-durable (real NATS server)",
+      "live canaries (OIDC/OPA, MCP, A2A, Brave)"
+    ],
+    "absentEvidence": "blocked and fails the release gate (never a passing skip)"
+  },
+  "deviations": [
+    {
+      "id": "roadmap-guard-fix",
+      "task": "task5",
+      "what": "docs.test.ts roadmap guard fixed (version pattern 0.2.8 -> 0.2.10, removed \\bVent\\b) — the user's intentional 0.2.8/0.2.9 roadmap sections + Vent capability were blocked by a stale guard; fixing was necessary to unblock the && test chain + coverage gate",
+      "review": "user should review the roadmap content vs the guard change"
+    },
+    {
+      "id": "freeze-test-layout",
+      "task": "task5",
+      "what": "phase15/16/17 freeze tests made layout-agnostic (readModule reads the barrel + sibling family dir) — Task 1's splits had broken them; hidden behind the roadmap && chain failure since Task 1",
+      "review": "intent preserved (stays-in-module assertions now cover the split trees)"
+    },
+    {
+      "id": "task1-additive-symbols",
+      "task": "task1",
+      "what": "84 internal cross-family helpers exported (additive) — the split engine must export them for cross-file use; compat gate tolerates additions; no exports-map subpath",
+      "review": "expected + reviewed; matches the 0.1.4 precedent"
+    },
+    {
+      "id": "session-class-deferral",
+      "task": "task1",
+      "what": "RuntimeAgentSession kept as one 1686-L class in session.ts (single TS class cannot span files without exporting private methods)",
+      "review": "recorded reason; method-extraction deferred to a follow-up"
+    },
+    {
+      "id": "ddl-const-deferral",
+      "task": "task2",
+      "what": "ADAPTER_TABLE_NAMES/ADAPTER_INDEX_NAMES + checkpoint/lifecycle row shapes stay per-adapter (compat-surface + dialect parsing outweigh the dedup win)",
+      "review": "D2 invited verification; extraction deferred to a future 0.3.0 compat break"
+    },
+    {
+      "id": "task4-deferred-dead",
+      "task": "task4",
+      "what": "20 dead-but-compat-tracked exports + 3 public type aliases deferred to the 0.3.0 breaking cut (additive-only rule; gate tracks export declare locals, type-alias removal is gate-invisible)",
+      "review": "removal list recorded in docs/_evidence/phase25-dead-exports-triage.md"
+    },
+    {
+      "id": "coverage-env-artifact",
+      "task": "task6",
+      "what": "test:coverage run without PRISM_TEST_POSTGRES_URL for the CI-comparable artifact (postgres 24.22 protected visible-low); the env-set run measured 91.43/84.80/91.60",
+      "review": "the phase23-security T2 denominator proof requires the no-env artifact"
+    },
+    {
+      "id": "transient-phase23-flake",
+      "task": "task6",
+      "what": "phase23-coverage fail-closed reproduction failed once inside sdk:ready (coding-agent row null); did not reproduce in 5 subsequent runs; recorded as a load flake",
+      "review": "re-run sdk:ready if it reappears; not a regression"
+    }
+  ]
+}

@@ -15,8 +15,30 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { test } from "node:test";
 import { packedFilePaths } from "./release-gates.mjs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 const url = (path) => new URL(path, import.meta.url);
+// Task 1 (0.2.5) split contracts-core.ts + agent-session.ts into a barrel + a sibling
+// family dir (src/contracts-core/*, src/agent-session/*). Read the module = barrel +
+// family so "stays in <module>" assertions hold after the split.
+function readModule(rel) {
+  const abs = fileURLToPath(url(rel));
+  let text = readFileSync(abs, "utf8");
+  const dir = abs.replace(/\.ts$/, "");
+  try {
+    if (statSync(dir).isDirectory()) {
+      for (const entry of readdirSync(dir)) {
+        if (entry.endsWith(".ts") && !entry.endsWith(".d.ts") && !entry.includes("__tests__")) {
+          text += `\n${readFileSync(join(dir, entry), "utf8")}`;
+        }
+      }
+    }
+  } catch {
+    /* no sibling family dir */
+  }
+  return text;
+}
 const manifest = JSON.parse(readFileSync(url("./phase15-freeze-manifest.json"), "utf8"));
 const baseline = JSON.parse(readFileSync(url("./phase15-baseline.json"), "utf8"));
 const rootPkg = JSON.parse(readFileSync(url("../package.json"), "utf8"));
@@ -285,7 +307,7 @@ test("opt-in checkpoint persistence (Task 4): seams present, opt-in default off,
     .join("\n");
   const runState = readFileSync(url("../src/agent-run-state.ts"), "utf8");
   // 0.1.4 agents split: the session runtime moved to agent-session.ts.
-  const agents = readFileSync(url("../src/agent-session.ts"), "utf8");
+  const agents = readModule("../src/agent-session.ts");
   const lifecycle = readFileSync(url("../src/agent-run-lifecycle.ts"), "utf8");
   const rps = readFileSync(url("../packages/coding-agent/src/read-path-set.ts"), "utf8");
   const rpsIndex = readFileSync(url("../packages/coding-agent/src/index.ts"), "utf8");

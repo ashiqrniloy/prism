@@ -20,7 +20,3 @@ export interface SqlitePersistenceOptions {
   /** Existing open database handle (advanced). Caller owns lifecycle when set. */
   readonly database?: Database.Database;
 }
-
-export interface SqlitePersistenceCloseOptions {
-  readonly database?: Database.Database;
-}

@@ -171,7 +171,11 @@ function parseOctal(buf: Buffer): number {
  */
 export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: TarBounds): Promise<TarExportSummary> {
   const hash: Hash = createHash("sha256");
-  let pending = Buffer.alloc(0);
+  // ponytail: chunk-array accumulator — O(1) append per stream chunk, no whole-pending
+  // re-concat (the 0.2.4 `pending = Buffer.concat([pending, chunk])` was O(input * chunks)).
+  // 512B headers copy once each (contiguous); file data is advanced past (drop) without
+  // copying since the hash already consumed each chunk via `hash.update`. Total copying O(input).
+  const acc = { chunks: [] as Buffer[], offset: 0, retained: 0 };
   let entryCount = 0;
   let byteCount = 0;
   let fileRemaining = 0;
@@ -179,10 +183,54 @@ export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: 
   let sawZeroBlock = false;
   let finished = false;
 
+  const peekAt = (start: number, n: number): Buffer => {
+    const out = Buffer.allocUnsafe(n);
+    let written = 0;
+    let i = 0;
+    let off = acc.offset;
+    let skip = start;
+    while (skip > 0) {
+      const c = acc.chunks[i]!;
+      const avail = c.length - off;
+      if (skip >= avail) {
+        skip -= avail;
+        i++;
+        off = 0;
+      } else {
+        off += skip;
+        skip = 0;
+      }
+    }
+    while (written < n) {
+      const c = acc.chunks[i]!;
+      const take = Math.min(c.length - off, n - written);
+      c.copy(out, written, off, off + take);
+      written += take;
+      i++;
+      off = 0;
+    }
+    return out;
+  };
+  const drop = (n: number): void => {
+    let remaining = n;
+    while (remaining > 0 && acc.chunks.length > 0) {
+      const first = acc.chunks[0]!;
+      const avail = first.length - acc.offset;
+      if (remaining >= avail) {
+        remaining -= avail;
+        acc.chunks.shift();
+        acc.offset = 0;
+      } else {
+        acc.offset += remaining;
+        remaining = 0;
+      }
+    }
+    acc.retained -= n;
+  };
   const take = (n: number): Buffer | undefined => {
-    if (pending.length < n) return undefined;
-    const out = pending.subarray(0, n);
-    pending = pending.subarray(n);
+    if (acc.retained < n) return undefined;
+    const out = peekAt(0, n);
+    drop(n);
     return out;
   };
 
@@ -193,17 +241,18 @@ export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: 
       throw new SandboxTarError(`export exceeded max bytes (${bounds.maxBytes})`);
     }
     if (finished) continue;
-    pending = pending.length === 0 ? Buffer.from(chunk) : Buffer.concat([pending, chunk]);
+    acc.chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    acc.retained += chunk.length;
 
     while (true) {
       if (fileRemaining > 0) {
-        if (pending.length === 0) break;
-        const n = Math.min(fileRemaining, pending.length);
-        pending = pending.subarray(n);
+        if (acc.retained === 0) break;
+        const n = Math.min(fileRemaining, acc.retained);
+        drop(n);
         fileRemaining -= n;
         if (fileRemaining === 0 && skipPadding > 0) {
-          if (pending.length < skipPadding) break;
-          pending = pending.subarray(skipPadding);
+          if (acc.retained < skipPadding) break;
+          drop(skipPadding);
           skipPadding = 0;
         }
         continue;
@@ -214,7 +263,9 @@ export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: 
       if (header.every((b) => b === 0)) {
         if (sawZeroBlock) {
           finished = true;
-          pending = Buffer.alloc(0);
+          acc.chunks = [];
+          acc.offset = 0;
+          acc.retained = 0;
           break;
         }
         sawZeroBlock = true;

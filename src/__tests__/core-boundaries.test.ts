@@ -29,9 +29,10 @@ const allSrcFiles = sourceFiles("src", (path) => path.endsWith(".ts") && !path.i
 const allSrcText = allSrcFiles.map((path) => readFileSync(path, "utf8")).join("\n");
 
 // Contracts split at 0.1.4 into contracts-core / contracts-run-state / contracts-protocol
-// behind the contracts.ts barrel; boundary scans read the union of the split modules
-// (the barrel itself carries no declarations).
-const contractsText = ["src/contracts-core.ts", "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
+// behind the contracts.ts barrel; 0.2.5 plan 025 Task 1 split contracts-core into
+// src/contracts-core/*.ts. Boundary scans read the union of the split modules
+// (the barrels themselves carry no declarations) — layout-agnostic via the tree.
+const contractsText = [...sourceFiles("src/contracts-core", () => true), "src/contracts-run-state.ts", "src/contracts-protocol.ts"]
   .map((path) => readFileSync(path, "utf8"))
   .join("\n");
 const toolsText = readFileSync("src/tools.ts", "utf8");
@@ -197,6 +198,7 @@ describe("core prompt-file boundaries", () => {
       "src/system-prompts.ts",
       "src/contracts.ts",
       "src/contracts-core.ts",
+      ...sourceFiles("src/contracts-core", () => true),
       "src/contracts-run-state.ts",
       "src/contracts-protocol.ts",
     ]) {

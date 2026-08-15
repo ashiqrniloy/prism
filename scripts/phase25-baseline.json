@@ -1,0 +1,105 @@
+{
+  "$comment": "Phase 25 (0.2.5) Task 6 exit-gate evidence, completed 2026-08-15 after Tasks 0-5 passed (plan 024 exit green at 236ee8c, 0.2.4 release state) with the 0.2.5 working tree (uncommitted: Task 1-6 changes + bump + docs + compat baseline refresh). All figures are fresh verified runs in this session at the 0.2.5 working-tree state; PRISM_TEST_POSTGRES_URL set for the protected legs (dockerized postgres:16-alpine on 127.0.0.1:54329, the plan-023 container). One transient observation: the phase23-coverage fail-closed reproduction failed once inside sdk:ready (coding-agent row null) and did not reproduce in 5 subsequent runs (4 standalone + full sdk:ready); recorded as a load flake, not a regression. Publication remains the operator handoff: signed v0.2.5 tag + npm OIDC after clean protected CI (release.yml verify + postgres-integration + node20-compat + codeql + supply-chain).",
+  "captured": "2026-08-15T08:05:00.000Z",
+  "release": "0.2.5",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "gitHead": "236ee8c (0.2.4 release state; 0.2.5 working tree)",
+  "npmTest": {
+    "command": "PRISM_TEST_POSTGRES_URL=... npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<phase gates incl. phase23 suites + phase24-truth + phase25-bounded-accumulation> && npm run test --workspaces --if-present)",
+    "tests": 3654,
+    "pass": 3654,
+    "fail": 0,
+    "skip": 0,
+    "note": "45 segments; dist/__tests__ 1598/1598 (0.2.4 baseline 3567/3534/33/0 -> +87: 76 Task 5 tests + 10 phase25-bounded-accumulation probe + 1 plan-025 Task 6 docs freeze test)"
+  },
+  "coverage": {
+    "core": {
+      "lines": 91.39,
+      "branches": 84.78,
+      "functions": 91.6
+    },
+    "gate": "60/70/75 core gate passed (exit 0) at the floor 90.53/84.2/90.54",
+    "note": "npm run test:coverage exit 0 (no PRISM_TEST_POSTGRES_URL, matching CI: postgres/enterprise/memory/nats durable legs skip so the protected visible-low proof holds, session-store-postgres 24.22 vs the 22.89 0.2.4 baseline); all 39 non-protected packages above scripts/coverage-thresholds.json (3pp margin); core raised from 90.53/84.2/90.54 by the 76 Task 5 behavior-backed tests (the env-set run measured 91.43/84.80/91.60)"
+  },
+  "threatSuites": {
+    "suites": 50,
+    "pass": 50,
+    "fail": 0,
+    "note": "security:threat-suites = phase8-11 + phase20-23 over built public entrypoints; the phase23-security T2 denominator proof reads the no-env coverage artifact (postgres 24.22 < 40)"
+  },
+  "packDryRun": {
+    "deterministic": true,
+    "packages": 50,
+    "runSha256": "cf9b12175cbc98c3",
+    "note": "two standalone npm run pack:dry-run runs byte-identical (diff empty after timestamp normalization)"
+  },
+  "releaseGate": {
+    "version": "0.2.5",
+    "packages": 50,
+    "errors": 0,
+    "breakingDeltas": 0,
+    "note": "plain pre-refresh gate at 0.2.4 (working tree): ONLY the version literal changed on @arnilo/prism (the d.ts const) — the 105 additive helper exports pass silently; migration.md 0.2.4 -> 0.2.5 note present; reviewed, --update-baseline (6 baseline files, 106 insertions/1 deletion), plain gate green; no --allow-break"
+  },
+  "node20": {
+    "version": "v20.20.2",
+    "packedImports": "14/14",
+    "note": "node20-compat CI job reproduction: node v20.20.2 --test dist/__tests__/install-smoke.test.js (the packed-imports suite: every documented core subpath + every first-party package + validator/tools/approval/capabilities/security regressions) 14 pass 0 fail"
+  },
+  "testPostgres": {
+    "tests": 91,
+    "pass": 91,
+    "fail": 0,
+    "note": "session-store-postgres 31 + memory 16 + enterprise-postgres 33 + phase7/phase12-restart-recovery/phase22-conformance 11 against dockerized postgres:16-alpine on 127.0.0.1:54329 (plan-023 container); incl. the Task 2 cross-store conformance legs (state-concurrency + run-ledger + session-store conformance) unchanged at 0.2.5"
+  },
+  "audit": {
+    "moderateOrHigher": 0
+  },
+  "secrets": {
+    "files": 1559,
+    "findings": 0,
+    "command": "git ls-files -z | xargs -0 node scripts/scan-secrets.mjs"
+  },
+  "compatDeltas": [
+    "version literal 0.2.4 -> 0.2.5 (the @arnilo/prism d.ts const literal)",
+    "+105 additive internal-helper exports: 84 Task 1 cross-family helpers (root +19, coding-agent +9, workflows +13, server +27, ag-ui +16; contracts-core +0) + 21 session-store-codecs helpers (Task 2); 0 removed, 0 changed; no exports-map subpath added"
+  ],
+  "protectedEvidence": {
+    "durableConformance": "test:postgres 91/91 (session-store-postgres 31 + memory 16 + enterprise-postgres 33 + phase7/phase12-restart-recovery/phase22-conformance 11) with prism_phase22_* concurrency schemas; cross-store conformance legs (state-concurrency/run-ledger/session-store) prove identical Postgres/SQLite semantics after the Task 2 codecs dedup",
+    "sdkReady": "exit 0 (typecheck + lint + format:check + npm test + test:coverage + pack:dry-run + release:evidence + release:gate)"
+  },
+  "sdkReady": {
+    "exitCode": 0,
+    "note": "PRISM_TEST_POSTGRES_URL=... npm run sdk:ready composite green: typecheck + lint + format:check (0 diagnostics, 0 format diffs) + npm test (3654/3654) + test:coverage (core 91.39/84.78/91.60, belowThreshold []) + pack:dry-run + release:evidence (58 surfaces, zero blocked) + release:gate (compat 0 breaking at 0.2.5)"
+  },
+  "exitGate": {
+    "green": true,
+    "command": "PRISM_TEST_POSTGRES_URL=postgresql://postgres:prism@127.0.0.1:54329/prism_test npm test && npm run test:coverage && npm run security:threat-suites && PRISM_TEST_POSTGRES_URL=... npm run test:postgres && PRISM_TEST_POSTGRES_URL=... npm run sdk:ready && npm audit --audit-level=moderate && git ls-files -z | xargs -0 node scripts/scan-secrets.mjs && npm run pack:dry-run x2 && node scripts/release.mjs gate --version 0.2.5 && node v20.20.2 packed imports",
+    "version": "0.2.5",
+    "platform": "linux",
+    "counts": {
+      "npmTest": "3654 tests / 3654 pass / 0 fail",
+      "scriptGates": "(dist/__tests__ 1598 + gate segments + workspace suites; all green)",
+      "threatSuites": "50/50",
+      "testPostgres": "91/91",
+      "coreCoverage": "91.39/84.78/91.60 (gate 60/70/75; floor 90.53/84.2/90.54)",
+      "packDryRun": "50 packages deterministic (twice byte-identical)",
+      "releaseGate": "0.2.5 50 packages 0 errors 0 breaking deltas",
+      "node20": "14/14 packed imports (install-smoke suite under v20.20.2)"
+    },
+    "measurements": {
+      "fileSizeComplexity": "six god-module monoliths (totaling ~8.2 kL: contracts-core 1719, agent-session 2049, workflows/run 1227, server/handler 1005, coding-agent/repository 974, ag-ui/acp/agent 836) split into family files with max sizes 299-444 L (agent-session session.ts 1686-L RuntimeAgentSession class kept intact, recorded reason); adapters shrank 273 L (postgres 1104->1041, sqlite 1088->1010) while codecs grew 426->624 (+198, net -75)",
+      "treeShaking": "no regression: root packed bytes unchanged 800,042 (in budget at 5% tolerance); startup importMs within the 250 ms ceiling (benchmark-0.1.0 gate green); root fileCount 326->356 is Task 1 split dist files (.map excluded), re-baselined 2026-08-15 with a dated ; no exports-map subpath added so tree-shaking shape is unchanged",
+      "nearLimitPerf": "framing: chunk-array two-phase reader, ~100-200x faster at N=4000 chunks (1298.4 ms -> 11.2 ms), linear ratios 1.3x/2.1x/1.0x; tar: chunk-array take/drop, linear at 8 MiB (8.5 ms); both with byte-identical caps (ERR_PRISM_LSP_LIMIT/ERR_PRISM_LSP_FRAMING/SandboxTarError) and fail-closed overflow; the 10-test phase25-bounded-accumulation probe (in npm test) asserts linear copying by allocBytes instrumentation",
+      "coverage": "core 90.53/84.2/90.54 -> 91.39/84.78/91.60 with 76 behavior-backed tests (approval 43, conversations 22, artifacts 6, tool-effect-store 5); all 39 non-protected packages above evidence thresholds (3pp margin)"
+    },
+    "protected": {
+      "durableConformance": "present (91/91 with prism_phase22_* concurrency schemas; cross-store conformance legs ran with PRISM_TEST_POSTGRES_URL set)",
+      "natsRestartDurable": "nats legs skip without a NATS server (named in the release skip manifest; protected, never a passing skip)",
+      "liveCanaries": "protected rows (provider OIDC/OPA, MCP, A2A, Brave), never pass",
+      "blocked": "none (0 blocked surfaces in release:evidence)"
+    },
+    "compat": "pre-refresh plain gate: version literal + 105 additive only; --update-baseline (no --allow-break); post-refresh plain gate green (0 breaking deltas)",
+    "note": "phase-25 freeze done-state passes: 6/6 plan items executed (Tasks 0-5) + Task 6 exit evidence complete; publication remains the operator handoff (signed v0.2.5 tag + npm OIDC)"
+  }
+}

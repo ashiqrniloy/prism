@@ -313,6 +313,8 @@ applyTextEdits	export declare function applyTextEdits(content: string, edits: re
 askUserDecisionResumeSchema	export declare function askUserDecisionResumeSchema(request: Pick<AskUserDecisionSuspendData, "selectionMode" | "allowCustom" | "options">): JsonObject
 assertAbsoluteGit	export declare function assertAbsoluteGit(path: string): Promise<string>
 assertCodingResumeAllowed	export declare function assertCodingResumeAllowed(input:
+assertDeadline	export declare function assertDeadline(deadlineAt: number | undefined): void
+assertNotAborted	export declare function assertNotAborted(signal: AbortSignal | undefined): void
 atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
 buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetadata(input:
 classifyGitApplyEffect	export declare function classifyGitApplyEffect(args: JsonObject): ToolEffectDeclaration
@@ -376,8 +378,12 @@ generateUnifiedPatch	export declare function generateUnifiedPatch(path: string, 
 getShellConfig	export declare function getShellConfig(customShellPath?: string): ShellConfig
 gitRequireOk	export declare function gitRequireOk(runner: BoundGitRunner, request: GitExecRequest, label: string): Promise<GitExecResult>
 gitText	export declare function gitText(result: GitExecResult, stream?: "stdout" | "stderr"): string
+globLocal	export declare function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryGlobResult>
 isBinaryBuffer	export declare function isBinaryBuffer(buffer: Buffer): boolean
+isPathInsideRoot	export declare function isPathInsideRoot(root: string, target: string): boolean
 killProcessTree	export declare function killProcessTree(pid: number): void
+kindFromDirent	export declare function kindFromDirent(dirent: Dirent): RepoEntryKind
+listLocal	export declare function listLocal(request: RepositoryListRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryListResult>
 matchGlobPattern	export declare function matchGlobPattern(pattern: string, path: string): boolean
 normalizeForFuzzyMatch	export declare function normalizeForFuzzyMatch(text: string): string
 normalizeToLF	export declare function normalizeToLF(text: string): string
@@ -408,7 +414,9 @@ resolveToCwd	export declare function resolveToCwd(filePath: string, cwd: string)
 restoreLineEndings	export declare function restoreLineEndings(text: string, ending: "\r\n" | "\n"): string
 runCodingGoalVerify	export declare function runCodingGoalVerify(options: RunCodingGoalVerifyOptions): Promise<WorkflowRunResult>
 runGitCli	export declare function runGitCli(request: GitExecRequest &
+searchLocal	export declare function searchLocal(request: RepositorySearchRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositorySearchResult>
 sha256Hex	export declare function sha256Hex(data: Buffer): string
+shouldSkipName	export declare function shouldSkipName(name: string, includeHidden: boolean, exclude: ReadonlySet<string>): boolean
 stripBom	export declare function stripBom(content: string):
 suspendAskUserDecision	export declare function suspendAskUserDecision(request: AskUserDecisionSuspendData | Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "allowCustom" | "toolCallId" | "sessionId" | "runId">, options?: SuspendAskUserDecisionOptions): WorkflowSuspension<AskUserDecisionAnswer>
 toAskUserDecisionSuspendData	export declare function toAskUserDecisionSuspendData(request:
@@ -424,5 +432,6 @@ validateCodingLimitAllowZero	export declare function validateCodingLimitAllowZer
 validateGlobPattern	export declare function validateGlobPattern(pattern: string, maxPatternBytes: number, options?:
 verifyCodingArtifactBytes	export declare function verifyCodingArtifactBytes(ref: CodingArtifactRef, bytes: Buffer, limits?: CodingCheckpointLimitOptions): void
 waitForChildProcess	export declare function waitForChildProcess(child: ChildProcess): Promise<number | null>
+walkRepository	export declare function walkRepository(rootReal: string, startAbsolute: string, limits: RepositoryWalkLimits): AsyncGenerator<RepositoryWalkEvent>
 withFileMutationQueue	export declare function withFileMutationQueue<T>(filePath: string, fn: () => Promise<T>): Promise<T>
 writeCodingPlanFile	export declare function writeCodingPlanFile(input:

@@ -27,7 +27,3 @@ export interface PostgresPersistenceOptions {
   /** Skip automatic migration on open (tests only). */
   readonly skipMigrations?: boolean;
 }
-
-export interface PostgresPersistenceCloseOptions {
-  readonly pool?: Pool;
-}

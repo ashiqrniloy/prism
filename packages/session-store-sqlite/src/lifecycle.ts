@@ -1,16 +1,20 @@
 import { randomUUID } from "node:crypto";
 import {
   type ApplyRetentionInput,
-  DEFAULT_LIFECYCLE_PAGE_SIZE,
-  HARD_LIFECYCLE_PAGE_SIZE,
-  HARD_MAX_HOLD_REASON_BYTES,
   type LegalHoldExportItem,
   type LegalHoldRecord,
   type OwnershipScope,
   PersistenceLifecycleError,
   type PersistenceLifecycleStore,
-  type TenantQuota,
 } from "@arnilo/prism";
+import {
+  assertOwnershipRequired,
+  assertOwnershipScope,
+  assertHoldReason as assertReason,
+  lifecyclePageLimit as pageLimit,
+  ownershipScope as ownership,
+  rowToTenantQuota as rowToQuota,
+} from "@arnilo/prism-session-store-codecs";
 import type Database from "better-sqlite3";
 
 export function createSqlitePersistenceLifecycle(db: Database.Database): PersistenceLifecycleStore {
@@ -53,11 +57,15 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
         | { tenant_id: string | null; account_id: string | null; user_id: string | null }
         | undefined;
       if (!row) return false;
-      assertSameOwnership(input, {
-        tenantId: row.tenant_id ?? undefined,
-        accountId: row.account_id ?? undefined,
-        userId: row.user_id ?? undefined,
-      });
+      assertOwnershipScope(
+        input,
+        {
+          tenantId: row.tenant_id ?? undefined,
+          accountId: row.account_id ?? undefined,
+          userId: row.user_id ?? undefined,
+        },
+        () => new PersistenceLifecycleError("ownership mismatch", "ERR_PRISM_LIFECYCLE_OWNERSHIP"),
+      );
       return db.prepare("DELETE FROM prism_legal_holds WHERE id = ?").run(input.id).changes > 0;
     },
 
@@ -291,50 +299,6 @@ function rowToHold(row: Record<string, unknown>): LegalHoldRecord {
   };
 }
 
-function rowToQuota(row: Record<string, unknown>): TenantQuota {
-  return {
-    resourceKind: row.resource_kind as TenantQuota["resourceKind"],
-    limit: Number(row.limit_count),
-    used: Number(row.used_count),
-    updatedAt: String(row.updated_at),
-    ...(row.tenant_id == null ? {} : { tenantId: String(row.tenant_id) }),
-    ...(row.account_id == null ? {} : { accountId: String(row.account_id) }),
-    ...(row.user_id == null ? {} : { userId: String(row.user_id) }),
-  };
-}
-
-function ownership(input: OwnershipScope): OwnershipScope {
-  return {
-    ...(input.tenantId === undefined ? {} : { tenantId: input.tenantId }),
-    ...(input.accountId === undefined ? {} : { accountId: input.accountId }),
-    ...(input.userId === undefined ? {} : { userId: input.userId }),
-  };
-}
-
 function assertOwnership(input: OwnershipScope): void {
-  if (![input.tenantId, input.accountId, input.userId].some((value) => typeof value === "string" && value.length > 0)) {
-    throw new PersistenceLifecycleError("ownership required", "ERR_PRISM_LIFECYCLE_OWNERSHIP");
-  }
-}
-
-function assertSameOwnership(expected: OwnershipScope, actual: OwnershipScope): void {
-  if (expected.tenantId !== actual.tenantId || expected.accountId !== actual.accountId || expected.userId !== actual.userId) {
-    throw new PersistenceLifecycleError("ownership mismatch", "ERR_PRISM_LIFECYCLE_OWNERSHIP");
-  }
-}
-
-function assertReason(reason: string): string {
-  if (typeof reason !== "string" || !reason.trim()) throw new PersistenceLifecycleError("reason is required", "ERR_PRISM_LIFECYCLE_HOLD");
-  if (Buffer.byteLength(reason, "utf8") > HARD_MAX_HOLD_REASON_BYTES) {
-    throw new PersistenceLifecycleError("reason exceeds limit", "ERR_PRISM_LIFECYCLE_HOLD");
-  }
-  return reason;
-}
-
-function pageLimit(limit?: number): number {
-  const resolved = limit ?? DEFAULT_LIFECYCLE_PAGE_SIZE;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > HARD_LIFECYCLE_PAGE_SIZE) {
-    throw new PersistenceLifecycleError(`limit must be 1..${HARD_LIFECYCLE_PAGE_SIZE}`, "ERR_PRISM_LIFECYCLE_LIMITS");
-  }
-  return resolved;
+  assertOwnershipRequired(input, () => new PersistenceLifecycleError("ownership required", "ERR_PRISM_LIFECYCLE_OWNERSHIP"));
 }
