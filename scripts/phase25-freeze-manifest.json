@@ -124,6 +124,12 @@
       "task": "task6",
       "what": "phase23-coverage fail-closed reproduction failed once inside sdk:ready (coding-agent row null); did not reproduce in 5 subsequent runs; recorded as a load flake",
       "review": "re-run sdk:ready if it reappears; not a regression"
+    },
+    {
+      "id": "baseline-npmtest-format",
+      "task": "task6",
+      "what": "phase25-baseline.json exitGate.counts.npmTest was written without the skip segment (\"3654 tests / 3654 pass / 0 fail\") but phase23-skip-manifest's npmTestCounts regex requires \"N tests / N pass / N skip / N fail\"; with phase25-baseline.json present in the tree, CI's sdk:ready test:coverage phase failed the protected-named test (core npm test surface blocked -> manifest.blocked true). Local runs passed because the baseline was written after the gate runs (latestBaseline fell back to phase24). Fixed: string is now \"3654 tests / 3654 pass / 33 skip / 0 fail\" (33 = the per-segment skip sum); full test:coverage chain re-verified exit 0 (phase23-skip-manifest 6/6).",
+      "review": "lesson: the machine-readable counts strings in phase baselines are consumed by phase23-skip-manifest (regex formats); any new baseline must copy the phase24 string shape verbatim"
     }
   ]
 }

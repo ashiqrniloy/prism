@@ -78,7 +78,7 @@
     "version": "0.2.5",
     "platform": "linux",
     "counts": {
-      "npmTest": "3654 tests / 3654 pass / 0 fail",
+      "npmTest": "3654 tests / 3654 pass / 33 skip / 0 fail",
       "scriptGates": "(dist/__tests__ 1598 + gate segments + workspace suites; all green)",
       "threatSuites": "50/50",
       "testPostgres": "91/91",
